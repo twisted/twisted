@@ -550,18 +550,7 @@ class PosixProcessTestCase(SignalMixin, unittest.TestCase, PosixProcessBase):
         exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_twisted.py")
         p = Accumulator()
-        # As trial chdirs to _trial_temp after startup, this makes any
-        # possible relative entries in PYTHONPATH invalid. Attempt to
-        # fix that up.  Otherwise process_twisted.py will use the
-        # installed Twisted, which isn't really guaranteed to exist at
-        # this stage.
-        def fixup(l):
-            for path in l:
-                if os.path.isabs(path):
-                    yield path
-                else:
-                    yield os.path.join(os.path.pardir, path)
-        env = {"PYTHONPATH": os.pathsep.join(fixup(sys.path))}
+        env = {"PYTHONPATH": os.pathsep.join(sys.path)}
         reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=env,
                              path=None, usePTY=self.usePTY)
         p.transport.write("hello, world")

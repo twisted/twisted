@@ -112,7 +112,9 @@ class Options(usage.Options):
                       ", ".join(app.reactorTypes.keys()) + "."],
                      ["logfile", "l", "test.log", "log file name"],
                      ["random", "z", None,
-                      "Run tests in random order using the specified seed"]]
+                      "Run tests in random order using the specified seed"],
+                     ['temp-directory', None, '_trial_temp',
+                      'Path to use as working directory for tests.']]
 
     zsh_actions = {"reactor":"(%s)" % " ".join(app.reactorTypes.keys())}
     zsh_actionDescr = {"logfile":"log file name",
@@ -152,8 +154,10 @@ class Options(usage.Options):
         print "Using %s reactor" % app.reactorTypes[reactorName]
 
     def opt_coverage(self):
-        """Generate coverage information in the given directory
-        (relative to _trial_temp). Requires Python 2.3.3."""
+        """
+        Generate coverage information in the given directory (relative to
+        trial temporary working directory). Requires Python 2.3.3.
+        """
         coverdir = 'coverage'
         print "Setting coverage directory to %s." % (coverdir,)
         import trace
@@ -185,7 +189,7 @@ class Options(usage.Options):
         trace.find_executable_linenos = find_executable_linenos
         # end monkey patch ------------------------------
 
-        self.coverdir = os.path.abspath(os.path.join('_trial_temp', coverdir))
+        self.coverdir = os.path.abspath(os.path.join(self['temp-directory'], coverdir))
         self.tracer = trace.Trace(count=1, trace=0)
         sys.settrace(self.tracer.globaltrace)
 
@@ -344,7 +348,8 @@ def _makeRunner(config):
                               profile=config['profile'],
                               logfile=config['logfile'],
                               tracebackFormat=config['tbformat'],
-                              realTimeErrors=config['rterrors'])
+                              realTimeErrors=config['rterrors'],
+                              workingDirectory=config['temp-directory'])
 
 
 def run():

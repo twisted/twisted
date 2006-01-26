@@ -203,6 +203,11 @@ class TestRunner(unittest.TestCase):
         result = my_runner._makeResult()
         self.assertEqual(result.__class__, self.config['reporter'])
 
+    def test_runner_working_directory(self):
+        self.parseOptions(['--temp-directory', 'some_path'])
+        runner = self.getRunner()
+        self.assertEquals(runner.workingDirectory, 'some_path')
+
     def test_runner_dry_run(self):
         self.parseOptions(['--dry-run', '--reporter', 'capturing',
                            'twisted.trial.test.sample'])
@@ -213,7 +218,8 @@ class TestRunner(unittest.TestCase):
         self.assertEqual(self.dryRunReport, result._calls)
 
     def test_runner_normal(self):
-        self.parseOptions(['--reporter', 'capturing',
+        self.parseOptions(['--temp-directory', self.mktemp(),
+                           '--reporter', 'capturing',
                            'twisted.trial.test.sample'])
         my_runner = self.getRunner()
         loader = runner.TestLoader()

@@ -10,7 +10,10 @@ def runTrial(*args):
     config = trial.Options()
     config.parseOptions(args)
     output = StringIO.StringIO()
-    myRunner = runner.TrialRunner(reporter.VerboseTextReporter, stream=output)
+    myRunner = runner.TrialRunner(
+        reporter.VerboseTextReporter,
+        stream=output,
+        workingDirectory=config['temp-directory'])
     suite = trial._getSuite(config)
     result = myRunner.run(suite)
     return output.getvalue()
@@ -34,12 +37,12 @@ class TestImportErrors(packages.PackageTest):
         oldPath = sys.path[:]
         sys.path.append(self.parent)
         try:
-            return runTrial(*args)
+            return self.runTrialPure(*args)
         finally:
             sys.path = oldPath
 
     def runTrialPure(self, *args):
-        return runTrial(*args)
+        return runTrial('--temp-directory', self.mktemp(), *args)
  
     def _print(self, stuff):
         print stuff

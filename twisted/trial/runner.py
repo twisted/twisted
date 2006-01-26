@@ -390,13 +390,13 @@ class TrialRunner(object):
     
     def _setUpTestdir(self):
         currentDir = os.getcwd()
-        testdir = os.path.normpath(os.path.abspath("_trial_temp"))
+        testdir = os.path.normpath(os.path.abspath(self.workingDirectory))
         if os.path.exists(testdir):
            try:
                shutil.rmtree(testdir)
            except OSError, e:
-               print ("could not remove path, caught OSError [Errno %s]: %s"
-                      % (e.errno,e.strerror))
+               print ("could not remove %r, caught OSError [Errno %s]: %s"
+                      % (testdir, e.errno,e.strerror))
                try:
                    os.rename(testdir,
                              os.path.abspath("_trial_temp_old%s"
@@ -418,7 +418,8 @@ class TrialRunner(object):
                  stream=sys.stdout,
                  profile=False,
                  tracebackFormat='default',
-                 realTimeErrors=False):
+                 realTimeErrors=False,
+                 workingDirectory=None):
         self.reporterFactory = reporterFactory
         self.logfile = logfile
         self.mode = mode
@@ -426,6 +427,7 @@ class TrialRunner(object):
         self.tbformat = tracebackFormat
         self.rterrors = realTimeErrors
         self._result = None
+        self.workingDirectory = workingDirectory or '_trial_temp'
         if profile:
             self.run = util.profiled(self.run, 'profile.data')
 
