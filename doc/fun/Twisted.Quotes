@@ -5454,3 +5454,12 @@ exarkun: poop
 <zooko> I'm often reminded of the adage about sausage and legislation.
 <zooko> I use Linux, and I'm happy with it, but the more I learn about the development process the less comfortable I am.
 %
+<foom> haha, OSX had a suid tool called "dsidentity" which checked your privileges by looking at the "USER" environment variable.
+<dash> that is bad
+<radix> woot
+<radix> /Library/Receipts/MacOSXUpdateCombo10.4.3.pkg/Contents/Resources/postflight_actions/dsidentity.sh
+<radix> haha
+<radix> and the contents of that script are /bin/rm -f "$3/usr/sbin/dsidentity"
+<landonf> What happens when you take a bunch of Mac developers and drop them into UNIX-land ?
+<dash> landonf: hilarity ensues
+%
