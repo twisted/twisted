@@ -17,7 +17,7 @@ import time
 import cgi
 
 # twisted imports
-from twisted.internet import interfaces
+from twisted.internet import interfaces, error
 from twisted.python import log, components
 from zope.interface import implements
 
@@ -375,10 +375,11 @@ class Request(object):
         self.chanRequest.finish()
 
     def _error(self, reason):
-        log.err(reason)
-        from twisted.internet import main
-        if reason.value is not main.CONNECTION_LOST:
-            # If the connection was lost, don't bother doing extra work.
+        if reason.check(error.ConnectionLost):
+            log.msg("Request error: " + reason.getErrorMessage())
+        else:
+            log.err(reason)
+            # Only bother with cleanup on errors other than lost connection.
             self.chanRequest.abortConnection()
         
     def writeResponse(self, response):

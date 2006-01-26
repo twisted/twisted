@@ -219,6 +219,7 @@ class _TLSMixin:
 
         if done:
             self.stopWriting()
+            # Note that this is tested for by identity below.
             return main.CONNECTION_DONE
         else:
             self.startWriting()
