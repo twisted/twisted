@@ -842,6 +842,7 @@ class MyHCProtocol(MyProtocol):
 class MyHCFactory(protocol.ServerFactory):
 
     called = 0
+    protocolConnectionMade = None
 
     def buildProtocol(self, addr):
         self.called += 1
