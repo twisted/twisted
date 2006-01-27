@@ -66,7 +66,7 @@ def makeTodo(value):
             errors = [errors]
         return Todo(reason=reason, errors=errors)
     if isinstance(value, failure.Failure):
-        return Todo(reason=str(value.value))
+        return Todo(reason=value.getErrorMessage())
 
 
 class _Assertions(pyunit.TestCase, object):
@@ -484,9 +484,8 @@ class TestCase(_Assertions):
         if len(f.value.args) > 0:
             reason = f.value.args[0]
         else:
-            warnings.warn(("Do not raise unittest.SkipTest or "
-                           "unittest.TodoTest with no arguments! Give a reason "
-                           "for skipping tests!"),
+            warnings.warn(("Do not raise unittest.SkipTest with no "
+                           "arguments! Give a reason for skipping tests!"),
                           stacklevel=2)
             reason = f
         return reason
