@@ -150,9 +150,12 @@ class ThrottlingTestCase(unittest.TestCase):
             return results
 
         def _cleanup(results):
-            for c in c2, c4: c.transport.loseConnection()
-            p.stopListening()
-            return defer.DeferredList([c2.dDisconnected, c4.dDisconnected])
+            for c in c2, c4:
+                c.transport.loseConnection()
+            return defer.DeferredList([
+                defer.maybeDeferred(p.stopListening),
+                c2.dDisconnected,
+                c4.dDisconnected])
         
         theDeferred.addCallback(_connect123)
         theDeferred.addCallback(_check123)
