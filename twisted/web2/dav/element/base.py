@@ -113,8 +113,8 @@ class WebDAVElement (object):
                 break
             else:
                 if not (isinstance(child, PCDATAElement) and child.isWhitespace()):
-                    raise ValueError("Child of type %s not allowed in %s element"
-                                     % (child.sname(), self))
+                    log.warn("Child of type %s is unexpected and therefore ignored in %s element"
+                             % (child.sname(), self))
 
         for qname, (min, max) in allowed_children.items():
             if min != 0:
@@ -126,23 +126,27 @@ class WebDAVElement (object):
         #
         # Validate that attributes have known names
         #
+        my_attributes = {}
+
         if self.allowed_attributes:
             for name in attributes:
-                if name not in self.allowed_attributes:
-                    raise ValueError("Attribute %s not allowed in %s element"
-                                     % (name, self))
+                if name in self.allowed_attributes:
+                    my_attributes[name] = attributes[name]
+                else:
+                    log.warn("Attribute %s is unexpected and therefore ignored in %s element"
+                             % (name, self))
     
             for name, required in self.allowed_attributes.items():
-                if required and name not in attributes:
+                if required and name not in my_attributes:
                     raise ValueError("Attribute %s is required in %s element"
                                      % (name, self))
 
         elif not isinstance(self, WebDAVUnknownElement):
             if attributes:
-                raise ValueError("Attributes %s not allowed in %s element"
-                                 % (attributes.keys(), self))
+                log.warn("Attributes %s are unexpected and therefore ignored in %s element"
+                         % (attributes.keys(), self))
 
-        self.attributes = attributes
+        self.attributes = my_attributes
 
     def __repr__(self):
         if hasattr(self, "children"):
