@@ -29,7 +29,7 @@ PIPE_ATTRS_INHERITABLE = win32security.SECURITY_ATTRIBUTES()
 PIPE_ATTRS_INHERITABLE.bInheritHandle = 1
 
 from zope.interface import implements
-from twisted.internet.interfaces import IProcessTransport
+from twisted.internet.interfaces import IProcessTransport, IConsumer
 
 from twisted.python import components
 from twisted.python.win32 import cmdLineQuote
@@ -83,7 +83,7 @@ class Process:
         msvcrt.setmode(sys.stderr.fileno(), os.O_BINARY)
 
     """
-    implements(IProcessTransport)
+    implements(IProcessTransport, IConsumer)
 
     buffer = ''
 
@@ -303,5 +303,32 @@ class Process:
 
     def doReadErr(self):
         return self._doReadPipe('hStderrR', self.protocol.errReceived, self.closeStderr)
+
+    # IConsumer
+    producer = None
+    streaming = False
+    def registerProducer(self, producer, streaming):
+        if self.producer is not None:
+            raise RuntimeError('duplicate producer')
+        self.producer = producer
+        self.streaming = streaming
+        if not streaming:
+            producer.resumeProducing()
+        self.reactor.callLater(0.01, self._checkEmpty)
+
+    def _checkEmpty(self):
+        if not self.closed and self.producer is not None:
+            if self.outQueue.empty():
+                delay = 0.01
+                if self.producerPaused or not self.streaming:
+                    self.producer.resumeProducing()
+            else:
+                delay = 0.1
+                self.producer.pauseProducing()
+            self.reactor.callLater(delay, self._checkEmpty)
+
+    def unregisterProducer(self):
+        del self.producer
+        del self.streaming
 
 components.backwardsCompatImplements(Process)
