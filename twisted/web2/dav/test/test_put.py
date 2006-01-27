@@ -77,7 +77,7 @@ class PUT(twisted.web2.dav.test.util.TestCase):
                 def do_test(response): check_result(response, path)
     
                 request = SimpleRequest(self.site, "PUT", uri)
-                request.stream = FileStream(file(path))
+                request.stream = FileStream(file(path, "rb"))
     
                 yield (request, do_test, dst_path)
 
@@ -107,7 +107,7 @@ class PUT(twisted.web2.dav.test.util.TestCase):
                                   % (response.code, code))
 
                 request = SimpleRequest(self.site, "PUT", dst_uri)
-                request.stream = FileStream(file(__file__))
+                request.stream = FileStream(file(__file__, "rb"))
     
                 if code == responsecode.CREATED:
                     if os.path.isfile(dst_path):
@@ -135,6 +135,6 @@ class PUT(twisted.web2.dav.test.util.TestCase):
                           % (response.code, responsecode.CONFLICT))
 
         request = SimpleRequest(self.site, "PUT", dst_uri)
-        request.stream = FileStream(file(__file__))
+        request.stream = FileStream(file(__file__, "rb"))
 
         return self.send(request, check_result, dst_path)
