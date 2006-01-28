@@ -563,7 +563,7 @@ class MicroDOMParser(XMLParser):
     # TD, HEAD, BASE, META, HTML all have optional closing tags
 
     soonClosers = 'area link br img hr input base meta'.split()
-    laterClosers = {'p': ['p'],
+    laterClosers = {'p': ['p', 'dt'],
                     'dt': ['dt','dd'],
                     'dd': ['dt', 'dd'],
                     'li': ['li'],
@@ -650,11 +650,15 @@ class MicroDOMParser(XMLParser):
         # print ' '*self.indentlevel, 'start tag',name
         # self.indentlevel += 1
         parent = self._getparent()
-        if (self.beExtremelyLenient and isinstance(parent, Element) and
-            self.laterClosers.has_key(parent.tagName) and
-            name in self.laterClosers[parent.tagName]):
-            self.gotTagEnd(parent.tagName)
-            parent = self._getparent()
+        if (self.beExtremelyLenient and isinstance(parent, Element)):
+            parentName = parent.tagName
+            myName = name
+            if self.caseInsensitive:
+                parentName = parentName.lower()
+                myName = myName.lower()
+            if myName in self.laterClosers.get(parentName, []):
+                self.gotTagEnd(parent.tagName)
+                parent = self._getparent()
         attributes = _unescapeDict(attributes)
         namespaces = self.nsstack[-1][0]
         newspaces = {}

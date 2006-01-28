@@ -404,6 +404,13 @@ alert("I hate you");
         actual = d.documentElement.toxml()
         self.assertEquals(expected, actual)
 
+    def testLaterCloserCaseInsensitive(self):
+        s = "<DL><p><DT>foo<DD>bar</DL>"
+        d = microdom.parseString(s, beExtremelyLenient=1)
+        expected = "<dl><p></p><dt>foo</dt><dd>bar</dd></dl>"
+        actual = d.documentElement.toxml()
+        self.assertEquals(expected, actual)
+
     def testLaterCloserTable(self):
         s = ("<table>"
              "<tr><th>name<th>value<th>comment"
