@@ -806,7 +806,7 @@ class _ProcessStreamerProtocol(protocol.ProcessProtocol):
                        self._inputError)
 
     def _inputError(self, f):
-        log.msg("Error in input stream for process %s" % self.transport.pid)
+        log.msg("Error in input stream for %r" % self.transport)
         log.err(f)
         self.transport.closeStdin()
     
@@ -855,10 +855,6 @@ class ProcessStreamer(object):
         reactor.spawnProcess(self._protocol, self._program, self._args, env=self._env)
         del self._env
         return self._protocol.resultDeferred.addErrback(lambda _: _.trap(ti_error.ProcessDone))
-
-    def getPID(self):
-        """Return the PID of the process."""
-        return self._protocol.transport.pid
 
 ##############################
 ####   generatorToStream  ####

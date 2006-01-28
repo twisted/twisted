@@ -249,6 +249,9 @@ class Process(styles.Ephemeral):
     debug = False
     debug_child = False
 
+    status = -1
+    pid = None
+
     def __init__(self, reactor, command, args, environment, path, proto,
                  uid=None, gid=None, childFDs=None):
         """Spawn an operating-system process.
@@ -682,10 +685,15 @@ class Process(styles.Ephemeral):
         except:
             log.err()
 
+    def __repr__(self):
+        return "<%s pid=%s status=%s>" % (self.__class__.__name__,
+                                          self.pid, self.status)
 
 class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
     """An operating-system Process that uses PTY support."""
-
+    status = -1
+    pid = None
+    
     def __init__(self, reactor, command, args, environment, path, proto,
                  uid=None, gid=None, usePTY=None):
         """Spawn an operating-system process.
@@ -888,3 +896,7 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
             if io.args[0] == errno.EAGAIN:
                 return 0
             return CONNECTION_LOST
+
+    def __repr__(self):
+        return "<%s pid=%s status=%s>" % (self.__class__.__name__,
+                                          self.pid, self.status)
