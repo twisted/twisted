@@ -29,7 +29,7 @@ from zope.interface import implements
 from twisted.words import iwords, ewords
 
 from twisted.python.components import registerAdapter, backwardsCompatImplements
-from twisted.cred import portal, credentials
+from twisted.cred import portal, credentials, error as ecred
 from twisted.spread import pb
 from twisted.web import resource
 from twisted.words.protocols import irc
@@ -388,11 +388,18 @@ class IRCUser(irc.IRC):
                 NICKSERV,
                 nickname,
                 "Already logged in.  No pod people allowed!")
-        else:
+        elif err.check(ecred.UnauthorizedLogin):
             self.privmsg(
                 NICKSERV,
                 nickname,
                 "Login failed.  Goodbye.")
+        else:
+            log.msg("Unhandled error during login:")
+            log.err(err)
+            self.privmsg(
+                NICKSERV,
+                nickname,
+                "Server error during login.  Sorry.")
         self.transport.loseConnection()
 
 
@@ -1026,7 +1033,8 @@ class WordsRealm(object):
 
 
     def requestAvatar(self, avatarId, mind, *interfaces):
-        assert isinstance(avatarId, str)
+        if isinstance(avatarId, str):
+            avatarId = avatarId.decode(self._encoding)
 
         def gotAvatar(avatar):
             if avatar.realm is not None:
@@ -1041,7 +1049,6 @@ class WordsRealm(object):
                     return iface, facet, self.logoutFactory(avatar, facet)
             raise NotImplementedError(self, interfaces)
 
-        avatarId = avatarId.decode(self._encoding)
         return self.getUser(avatarId).addCallback(gotAvatar)
 
 
