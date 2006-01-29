@@ -1615,7 +1615,7 @@ class UnsolicitedResponseTestCase(IMAP4HelperMixin, unittest.TestCase):
         E = self.client.events
         self.assertEquals(E, [['newMessages', 20, None], ['newMessages', None, 10]])
 
-class HandCraftedTestCase(unittest.TestCase):
+class HandCraftedTestCase(IMAP4HelperMixin, unittest.TestCase):
     def testTrailingLiteral(self):
         transport = StringTransport()
         c = imap4.IMAP4Client()
@@ -1639,25 +1639,26 @@ class HandCraftedTestCase(unittest.TestCase):
         d.addCallback(cbLogin)
         return d
 
-
     def testPathelogicalScatteringOfLiterals(self):
+        self.server.checker.addUser('testuser', 'password-test')
         transport = StringTransport()
-        c = imap4.IMAP4Server()
-        c.makeConnection(transport)
+        self.server.makeConnection(transport)
 
         transport.clear()
-        c.lineReceived("01 LOGIN {8}")
+        self.server.dataReceived("01 LOGIN {8}\r\n")
         self.assertEquals(transport.value(), "+ Ready for 8 octets of text\r\n")
 
         transport.clear()
-        c.lineReceived("testuser {8}")
-        self.assertEquals(transport.value(), "+ Ready for 8 octets of text\r\n")
+        self.server.dataReceived("testuser {13}\r\n")
+        self.assertEquals(transport.value(), "+ Ready for 13 octets of text\r\n")
 
         transport.clear()
-        c.lineReceived("password")
-        self.assertEquals(transport.value(), "01 OK Login succeeded\r\n")
-        self.assertEquals(c.state, 'auth')
-    testPathelogicalScatteringOfLiterals.todo = "Parsing this protocol is hard :("
+        self.server.dataReceived("password-test\r\n")
+        self.assertEquals(transport.value(), "01 OK LOGIN succeeded\r\n")
+        self.assertEquals(self.server.state, 'auth')
+
+        self.server.connectionLost(error.ConnectionDone("Connection done."))
+
 
 class FakeyServer(imap4.IMAP4Server):
     state = 'select'

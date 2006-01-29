@@ -685,6 +685,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         Parse an astring from the line, return (arg, rest), possibly
         via a deferred (to handle literals)
         """
+        line = line.strip()
         if not line:
             raise IllegalClientResponse("Missing argument")
         d = None
@@ -2054,10 +2055,14 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             lastPart = line.rfind(' ')
             if lastPart != -1:
                 lastPart = line[lastPart + 1:]
-                if lastPart.startswith('{') and lastPart.endswith('}'):
+                if lastPart.endswith('}'):
                     # It's a literal a-comin' in
+                    s = lastPart.rfind("{")
+                    if s == -1:
+                        # no matching '{' found
+                        raise IllegalServerResponse(line)
                     try:
-                        octets = int(lastPart[1:-1])
+                        octets = int(lastPart[s + 1:-1])
                     except ValueError:
                         raise IllegalServerResponse(line)
                     self._tag, parts = line.split(None, 1)
