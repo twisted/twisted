@@ -29,7 +29,6 @@ for doc in doc/core/{man,howto,howto/tutorial,howto/policy,specifications,vision
     $LORE -p --output latex --config section $doc/*.xhtml
 done
 
-cp admin/book.tex doc/core/howto
 cd doc/core/howto
 
 for i in 1 2; do latex book.tex < /dev/null; done
