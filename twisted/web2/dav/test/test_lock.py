@@ -22,7 +22,6 @@
 # DRI: Wilfredo Sanchez, wsanchez@apple.com
 ##
 
-from twisted.trial.unittest import TodoTest
 import twisted.web2.dav.test.util
 
 class LOCK_UNLOCK(twisted.web2.dav.test.util.TestCase):
@@ -48,6 +47,6 @@ class LOCK_UNLOCK(twisted.web2.dav.test.util.TestCase):
         """
         LOCK, UNLOCK request
         """
-        raise TodoTest("test unimplemented")
+        raise NotImplementedError
 
-    test_LOCK_UNLOCK.todo = "LOCK/UNLOCK unimplemented"
+    test_LOCK_UNLOCK.skip = "LOCK/UNLOCK unimplemented"

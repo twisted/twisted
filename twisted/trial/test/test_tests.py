@@ -193,14 +193,11 @@ class TestTodo(unittest.TestCase, ResultsTestMixin):
             """unexpected success"""
         test_todo3.todo = 'todo3'
 
-        def test_todo4(self):
-            raise unittest.TodoTest('todo4')
-
     def setUp(self):
         self.loadSuite(TestTodo.TodoTests)
     
     def test_counting(self):
-        self.assertCount(4)
+        self.assertCount(3)
 
     def test_results(self):
         self.suite(self.reporter)
@@ -208,12 +205,12 @@ class TestTodo(unittest.TestCase, ResultsTestMixin):
         self.failUnlessEqual(self.reporter.errors, [])
         self.failUnlessEqual(self.reporter.failures, [])
         self.failUnlessEqual(self.reporter.skips, [])
-        self.failUnlessEqual(len(self.reporter.expectedFailures), 3)
+        self.failUnlessEqual(len(self.reporter.expectedFailures), 2)
         self.failUnlessEqual(len(self.reporter.unexpectedSuccesses), 1)
     
     def test_expectedFailures(self):
         self.suite(self.reporter)
-        expectedReasons = ['todo1', 'todo2', 'todo4']
+        expectedReasons = ['todo1', 'todo2']
         reasonsGiven = [ r.reason
                          for t, e, r in self.reporter.expectedFailures ]
         self.failUnlessEqual(expectedReasons, reasonsGiven)
