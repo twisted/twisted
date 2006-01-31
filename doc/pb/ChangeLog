@@ -1,3 +1,10 @@
+2006-01-26  Brian Warner  <warner@lothar.com>
+
+	* test/test_banana.py (ErrorfulSlicer.next): don't use callLater()
+	with non-zero timeout
+	* test/test_promise.py (TestPromise.test2): same
+	* test/common.py (HelperTarget.remote_defer): same
+
 2006-01-25  Brian Warner  <warner@lothar.com>
 
 	* copyable.py: refactor ICopyable and IRemoteCopy to make it

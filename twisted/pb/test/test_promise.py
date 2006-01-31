@@ -77,7 +77,7 @@ class TestPromise(unittest.TestCase):
         # p3 shouldn't fire until t.d is fired
         d3 = when(p3)
         d3.addCallback(self._test2_3)
-        reactor.callLater(0.1, t.d.callback, 35)
+        reactor.callLater(0, t.d.callback, 35)
         return defer.DeferredList([d0a, d0b, d1, d3])
 
     def _test2_0a(self, res, results):

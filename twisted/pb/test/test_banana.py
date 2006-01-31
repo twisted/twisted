@@ -782,7 +782,7 @@ class ErrorfulSlicer(slicer.BaseSlicer):
             raise Violation("next failed")
         if obj == "deferred-good":
             d = defer.Deferred()
-            reactor.callLater(0.3, d.callback, None)
+            reactor.callLater(0, d.callback, None)
             return d
         if obj == "deferred-bad":
             d = defer.Deferred()
