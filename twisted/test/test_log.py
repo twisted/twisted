@@ -97,18 +97,12 @@ class EvilReprStr(EvilStr, EvilRepr):
     pass
 
 class LogPublisherTestCaseMixin:
-    def setUpClass(self):
+    def setUp(self):
         # Fuck you Python.
         reload(sys)
         self._origEncoding = sys.getdefaultencoding()
         sys.setdefaultencoding('ascii')
 
-    def tearDownClass(self):
-        sys.setdefaultencoding(self._origEncoding)
-        # Fuck you very much.
-        del sys.setdefaultencoding
-
-    def setUp(self):
         self.out = FakeFile()
         self.lp = log.LogPublisher()
         self.flo = log.FileLogObserver(self.out)
@@ -117,6 +111,9 @@ class LogPublisherTestCaseMixin:
     def tearDown(self):
         for chunk in self.out:
             self.failUnless(isinstance(chunk, str), "%r was not a string" % (chunk,))
+        # Fuck you very much.
+        sys.setdefaultencoding(self._origEncoding)
+        del sys.setdefaultencoding
 
 class LogPublisherTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
 
