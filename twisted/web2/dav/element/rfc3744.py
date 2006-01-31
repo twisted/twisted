@@ -454,41 +454,6 @@ class Resource (WebDAVElement):
     }
 
 ##
-# Section 8 (Access Control Methods)
-##
-
-class NoACEConflict (WebDAVEmptyElement):
-    name = "no-ace-conflict"
-
-class NoProtectedACEConflict (WebDAVEmptyElement):
-    name = "no-protected-ace-conflict"
-
-class NoInheritedACEConflict (WebDAVEmptyElement):
-    name = "no-inherited-ace-conflict"
-
-class LimitedNumberOfACEs (WebDAVEmptyElement):
-    name = "limited-number-of-aces"
-
-# DenyBeforeGrant is defined above.
-# GrantOnly is defined above.
-# NoInvert is defined above.
-
-class NoAbstract (WebDAVEmptyElement):
-    name = "no-abstract"
-
-class NotSupportedPrivilege (WebDAVEmptyElement):
-    name = "not-supported-privilege"
-
-class MissingRequiredPrincipal (WebDAVEmptyElement):
-    name = "missing-required-principal"
-
-class RecognizedPrincipal (WebDAVEmptyElement):
-    name = "recognized-principal"
-
-class AllowedPrincipal (WebDAVEmptyElement):
-    name = "allowed-principal"
-
-##
 # Section 9 (Access Control Reports)
 ##
 
