@@ -230,8 +230,7 @@ class MinimalReporter(Reporter):
     def printSummary(self):
         numTests = self.testsRun
         t = (self._somethingStopped(), numTests, numTests,
-             len(self.couldNotImport), len(self.errors),
-             len(self.failures), len(self.skips))
+             len(self.errors), len(self.failures), len(self.skips))
         self.stream.write(' '.join(map(str,t))+'\n')
 
 

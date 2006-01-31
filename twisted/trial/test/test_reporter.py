@@ -125,6 +125,13 @@ class PyunitTest(unittest.TestCase):
         output = result.getDescription(self.test)
         self.failUnlessEqual(output, 'test_foo')
 
+    def test_minimalReporter(self):
+        result = reporter.MinimalReporter(self.stream)
+        self.test.run(result)
+        result.printSummary()
+        output = self.stream.getvalue().strip().split(' ')
+        self.failUnlessEqual(output[1:], ['1', '1', '0', '0', '0'])
+
 
 class TrialTest(unittest.TestCase):
     def setUp(self):
