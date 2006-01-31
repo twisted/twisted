@@ -108,20 +108,20 @@ class WebDAVElement (object):
 
                 if min is not None and min > 0: min -= 1
                 if max is not None:
-                    assert max > 0, "Too many children of type %s for %s" % (child.sname(), self)
+                    assert max > 0, "Too many children of type %s for %s" % (child.sname(), self.sname())
                     max -= 1
                 allowed_children[qname] = (min, max)
                 my_children.append(child)
                 break
             else:
                 if not (isinstance(child, PCDATAElement) and child.isWhitespace()):
-                    log.warn("Child of type %s is unexpected and therefore ignored in %s element"
-                             % (child.sname(), self))
+                    log.msg("Child of type %s is unexpected and therefore ignored in %s element"
+                            % (child.sname(), self))
 
         for qname, (min, max) in allowed_children.items():
             if min != 0:
                 raise ValueError("Not enough children of type {%s}%s for %s"
-                                 % (qname[0], qname[1], self))
+                                 % (qname[0], qname[1], self.sname()))
 
         self.children = my_children
 
@@ -135,8 +135,8 @@ class WebDAVElement (object):
                 if name in self.allowed_attributes:
                     my_attributes[name] = attributes[name]
                 else:
-                    log.warn("Attribute %s is unexpected and therefore ignored in %s element"
-                             % (name, self))
+                    log.msg("Attribute %s is unexpected and therefore ignored in %s element"
+                            % (name, self))
     
             for name, required in self.allowed_attributes.items():
                 if required and name not in my_attributes:
@@ -145,16 +145,13 @@ class WebDAVElement (object):
 
         elif not isinstance(self, WebDAVUnknownElement):
             if attributes:
-                log.warn("Attributes %s are unexpected and therefore ignored in %s element"
-                         % (attributes.keys(), self))
+                log.msg("Attributes %s are unexpected and therefore ignored in %s element"
+                        % (attributes.keys(), self))
 
         self.attributes = my_attributes
 
     def __repr__(self):
-        if hasattr(self, "children"):
-            return "<%s %r: %r>" % (self.sname(), self.attributes, self.children)
-        else:
-            return "<%s %r>" % (self.sname(), self.attributes)
+        return "<%s %r: %r>" % (self.sname(), self.attributes, self.children)
 
     def __eq__(self, other):
         if isinstance(other, WebDAVElement):
