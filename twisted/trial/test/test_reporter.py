@@ -47,7 +47,7 @@ class TestErrorReporting(unittest.TestCase):
         time1 = the_reporter._somethingStopped()
         time.sleep(0.01)
         time2 = the_reporter._somethingStopped()
-        self.failUnless(time1 < time2)
+        self.failUnless(time1 < time2, 'Asserted: %s < %s' % (time1, time2))
         self.assertEqual(the_reporter._last_time, time2)
         
     def testFormatErroredMethod(self):
