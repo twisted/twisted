@@ -263,10 +263,10 @@ class FileLogObserver:
             try:
                 text = ('Invalid format string or unformattable object in log message: %r, %s' % (fmtString, crap))
             except:
-                 try:
+                try:
                     text = 'UNFORMATTABLE OBJECT WRITTEN TO LOG with fmt %r, MESSAGE LOST' % (fmtString,)
-                 except:
-                     text = 'PATHOLOGICAL ERROR IN BOTH FORMAT STRING AND MESSAGE DETAILS, MESSAGE LOST'
+                except:
+                    text = 'PATHOLOGICAL ERROR IN BOTH FORMAT STRING AND MESSAGE DETAILS, MESSAGE LOST'
         return text
 
     def emit(self, eventDict):
