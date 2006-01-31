@@ -40,6 +40,9 @@ from twisted.web2.dav.fileop import rmdir
 from twisted.web2.dav.util import joinURL
 from twisted.web2.dav.static import DAVFile
 
+class TodoTest(Exception):
+    pass
+
 class TestCase(unittest.TestCase):
     docroot = property(lambda(self): self.site.resource.fp.path)
 
@@ -94,12 +97,12 @@ class TestCase(unittest.TestCase):
             for filename in files:
                 yield (
                     os.path.join(dir, filename),
-                    url_quote(os.path.join(dir[l:], filename))
+                    url_quote(os.path.join("/", dir[l:], filename))
                 )
             for dirname in subdirs:
                 yield (
                     os.path.join(dir, dirname),
-                    url_quote(os.path.join(dir[l:], dirname)) + "/"
+                    url_quote(os.path.join("/", dir[l:], dirname)) + "/"
                 )
 
     def mkdtemp(self, prefix):
@@ -122,6 +125,12 @@ class TestCase(unittest.TestCase):
         response.addCallback(callback)
 
         return response
+
+    def _ebDeferTestMethod(self, f, result):
+        if f.check(TodoTest):
+            result.addExpectedFailure(self, f, unittest.makeTodo(f.getErrorMessage()))
+        else:
+            return unittest.TestCase._ebDeferTestMethod(self, f, result)
 
 class SimpleRequest:
     implements(IRequest)

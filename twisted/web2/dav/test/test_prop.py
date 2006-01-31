@@ -24,6 +24,7 @@
 
 import random
 
+from twisted.trial.unittest import SkipTest
 from twisted.web2 import responsecode
 from twisted.web2.iweb import IResponse
 from twisted.web2.stream import MemoryStream
@@ -105,7 +106,6 @@ class PROP(twisted.web2.dav.test.util.TestCase):
 
         return self.send(request, check_result)
 
-
     def test_PROPPATCH(self):
         """
         PROPPATCH request
@@ -118,6 +118,4 @@ class PROP(twisted.web2.dav.test.util.TestCase):
         # Response is text/xml or application/xml
         # Test None namespace in property
         # Try setting a live prop
-        raise NotImplementedError()
-
-    test_PROPPATCH.skip = "test unimplemented"
+        raise SkipTest("test unimplemented")
