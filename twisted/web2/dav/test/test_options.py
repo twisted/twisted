@@ -24,38 +24,42 @@
 
 import os
 
-from twisted.internet.defer import maybeDeferred, DeferredList
 from twisted.web2.iweb import IResponse
 
 import twisted.web2.dav.test.util
-from twisted.web2.dav.test.util import SimpleRequest
-from twisted.web2.dav.static import DAVFile
+from twisted.web2.dav.test.util import SimpleRequest, serialize
 
 class OPTIONS(twisted.web2.dav.test.util.TestCase):
     """
     OPTIONS request
     """
-    def test_OPTIONS(self):
+    def test_DAV1(self):
         """
-        OPTIONS request
+        DAV level 1
         """
-        def do_test(response):
+        return self._test_level("1")
+
+    def test_DAV2(self):
+        """
+        DAV level 2
+        """
+        return self._test_level("2")
+
+    test_DAV2.todo = "DAV level 2 unimplemented"
+
+    def _test_level(self, level):
+        def doTest(response):
             response = IResponse(response)
 
             dav = response.headers.getHeader("dav")
             if not dav: self.fail("no DAV header: %s" % (response.headers,))
-            self.assertIn("1", dav, "no DAV level 1 header")
-            self.assertIn("2", dav, "no DAV level 2 header")
+            self.assertIn(level, dav, "no DAV level %s header" % (level,))
 
-        responses = []
+            return response
 
-        for path, uri in self.list():
-            request = SimpleRequest(self.site, "OPTIONS", uri)
-            resource = DAVFile(path)
-            response = maybeDeferred(resource.renderHTTP, request)
-
-            response.addCallback(do_test)
-
-            responses.append(response)
+        def work():
+            for path, uri in self.list():
+                request = SimpleRequest(self.site, "OPTIONS", uri)
+                yield(request, doTest, path)
             
-        return DeferredList(responses)
+        return serialize(self.send, work())

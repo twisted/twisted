@@ -82,8 +82,7 @@ class DAVFile (File):
 
     Extends twisted.web2.static.File to handle WebDAV methods.
     """
-    # FIXME: Until we actualy implement locking, "2" is a lie.
-    davComplianceClasses = ("1", "2")
+    davComplianceClasses = ("1",) # "2"
 
     def __init__(self, path,
                  defaultType="text/plain",
