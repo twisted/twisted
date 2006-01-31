@@ -194,7 +194,7 @@ class Reporter(TestResult):
     
     def printErrors(self):
         self.write('\n')
-        self._printResults('[SKIPPED]', self.skips, str)
+        self._printResults('[SKIPPED]', self.skips, lambda x : '%s\n' % x)
         self._printResults('[TODO]', self.expectedFailures,
                            self._printExpectedFailure)
         self._printResults('[FAIL]', self.failures,
