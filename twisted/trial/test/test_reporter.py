@@ -159,3 +159,47 @@ class TrialTest(unittest.TestCase):
         output = result.getDescription(self.test)
         self.failUnlessEqual(output, "test_timing")
 
+
+class SkipTest(unittest.TestCase):
+    def setUp(self):
+        self.stream = StringIO.StringIO()
+        self.result = reporter.Reporter(self.stream)
+        self.test = TestErrorReporting('test_timing')
+
+    def test_accumulation(self):
+        self.result.addSkip(self.test, 'some reason')
+        self.failUnlessEqual(1, len(self.result.skips))
+
+    def test_success(self):
+        self.result.addSkip(self.test, 'some reason')
+        self.failUnlessEqual(True, self.result.wasSuccessful())
+
+    def test_summary(self):
+        self.result.addSkip(self.test, 'some reason')
+        self.result.printSummary()
+        output = self.stream.getvalue()
+        prefix = 'PASSED '
+        self.failUnless(output.startswith(prefix))
+        self.failUnlessEqual(output[len(prefix):].strip(), '(skips=1)')
+
+    def test_basicErrors(self):
+        self.result.addSkip(self.test, 'some reason')
+        self.result.printErrors()
+        output = self.stream.getvalue().splitlines()[-1]
+        self.failUnlessEqual(output.strip(), 'some reason')
+
+    def test_booleanSkip(self):
+        self.result.addSkip(self.test, True)
+        self.result.printErrors()
+        output = self.stream.getvalue().splitlines()[-1]
+        self.failUnlessEqual(output.strip(), 'True')
+
+    def test_exceptionSkip(self):
+        try:
+            1/0
+        except Exception, e:
+            error = e
+        self.result.addSkip(self.test, error)
+        self.result.printErrors()
+        output = '\n'.join(self.stream.getvalue().splitlines()[3:]).strip()
+        self.failUnlessEqual(output, str(e))

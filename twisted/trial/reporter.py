@@ -175,38 +175,34 @@ class Reporter(TestResult):
         fail.frames = oldFrames
         return result
 
-    def printExpectedFailures(self):
-        for test, error, todo in self.expectedFailures:
+    def _printResults(self, flavour, errors, formatter):
+        for content in errors:
             self.writeln(self.doubleSeparator)
-            self.writeln('%s: %s' % ("[TODO]", test.id()))
+            self.writeln('%s: %s' % (flavour, content[0].id()))
             self.writeln('')
-            self.writeln(todo.reason)
-            self.write(self._formatFailureTraceback(error))
+            self.write(formatter(*(content[1:])))
 
-    def printErrorList(self, flavour, errors):
-        for test, error in errors:
-            self.writeln(self.doubleSeparator)
-            self.writeln('%s: %s' % (flavour, test.id()))
-            self.writeln('')
-            self.write(self._formatFailureTraceback(error))
+    def _printExpectedFailure(self, error, todo):
+        return 'Reason: %r\n%s' % (todo.reason,
+                                   self._formatFailureTraceback(error))
 
-    def printUnexpectedSuccesses(self):
-        for test, todo in self.unexpectedSuccesses:
-            self.writeln(self.doubleSeparator)
-            self.writeln('%s: %s' % ('[SUCCESS!?!]', test.id()))
-            self.writeln('')
-            self.writeln('Reason: %r' % (todo.reason))
-            if todo.errors:
-                self.writeln('Expected errors: %s' % (', '.join(todo.errors),))
-            self.writeln('')
-
+    def _printUnexpectedSuccess(self, todo):
+        ret = 'Reason: %r\n' % (todo.reason,)
+        if todo.errors:
+            ret += 'Expected errors: %s\n' % (', '.join(todo.errors),)
+        return ret
+    
     def printErrors(self):
         self.write('\n')
-        self.printErrorList("[SKIPPED]", self.skips)
-        self.printExpectedFailures()
-        self.printErrorList("[FAIL]", self.failures)
-        self.printErrorList("[ERROR]", self.errors)
-        self.printUnexpectedSuccesses()
+        self._printResults('[SKIPPED]', self.skips, str)
+        self._printResults('[TODO]', self.expectedFailures,
+                           self._printExpectedFailure)
+        self._printResults('[FAIL]', self.failures,
+                           self._formatFailureTraceback)
+        self._printResults('[ERROR]', self.errors,
+                           self._formatFailureTraceback)
+        self._printResults('[SUCCESS!?!]', self.unexpectedSuccesses,
+                           self._printUnexpectedSuccess)
 
     def printSummary(self):
         summaries = []
