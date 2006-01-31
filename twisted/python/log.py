@@ -12,7 +12,7 @@ import time
 import warnings
 
 # Sibling Imports
-from twisted.python import util, context
+from twisted.python import util, context, reflect
 
 # Backwards compat
 try:
@@ -248,33 +248,45 @@ class FileLogObserver:
         self.write = f.write
         self.flush = f.flush
 
+    def _safeFormat(self, fmtString, crap):
+        #There's a way we could make this if not safer at least more
+        #informative: perhaps some sort of str/repr wrapper objects
+        #could be wrapped around the things inside of 'crap'. That way
+        #if the event dict contains an object with a bad __repr__, we
+        #can only cry about that individual object instead of the
+        #entire event dict.
+        try:
+            text = fmtString % crap
+        except KeyboardInterrupt:
+            raise
+        except:
+            try:
+                text = ('Invalid format string or unformattable object in log message: %r, %s' % (fmtString, crap))
+            except:
+                 try:
+                    text = 'UNFORMATTABLE OBJECT WRITTEN TO LOG with fmt %r, MESSAGE LOST' % (fmtString,)
+                 except:
+                     text = 'PATHOLOGICAL ERROR IN BOTH FORMAT STRING AND MESSAGE DETAILS, MESSAGE LOST'
+        return text
+
     def emit(self, eventDict):
         edm = eventDict['message']
         if not edm:
             if eventDict['isError'] and eventDict.has_key('failure'):
                 text = eventDict['failure'].getTraceback()
             elif eventDict.has_key('format'):
-                try:
-                    text = eventDict['format'] % eventDict
-                except KeyboardInterrupt:
-                    raise
-                except:
-                    try:
-                        text = ('Invalid format string in log message: %s'
-                                % eventDict)
-                    except:
-                        text = 'UNFORMATTABLE OBJECT WRITTEN TO LOG, MESSAGE LOST'
+                text = self._safeFormat(eventDict['format'], eventDict)
             else:
                 # we don't know how to log this
                 return
         else:
-            text = ' '.join(map(str, edm))
+            text = ' '.join(map(reflect.safe_str, edm))
 
         timeStr = time.strftime(self.timeFormat, time.localtime(eventDict['time']))
         fmtDict = {'system': eventDict['system'], 'text': text.replace("\n", "\n\t")}
-        msgStr = " [%(system)s] %(text)s\n" % fmtDict
+        msgStr = self._safeFormat("[%(system)s] %(text)s\n", fmtDict)
 
-        util.untilConcludes(self.write, timeStr + msgStr)
+        util.untilConcludes(self.write, timeStr + " " + msgStr)
         util.untilConcludes(self.flush)  # Hoorj!
 
     def start(self):

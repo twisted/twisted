@@ -83,8 +83,20 @@ class FakeFile(list):
     def flush(self):
         pass
 
+class EvilStr:
+    def __str__(self):
+        1/0
 
-class LogPublisherTestCase(unittest.TestCase):
+class EvilRepr:
+    def __str__(self):
+        return "Happy Evil Repr"
+    def __repr__(self):
+        1/0
+
+class EvilReprStr(EvilStr, EvilRepr):
+    pass
+
+class LogPublisherTestCaseMixin:
     def setUpClass(self):
         # Fuck you Python.
         reload(sys)
@@ -106,6 +118,8 @@ class LogPublisherTestCase(unittest.TestCase):
         for chunk in self.out:
             self.failUnless(isinstance(chunk, str), "%r was not a string" % (chunk,))
 
+class LogPublisherTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
+
     def testSingleString(self):
         self.lp.msg("Hello, world.")
         self.assertEquals(len(self.out), 1)
@@ -118,7 +132,50 @@ class LogPublisherTestCase(unittest.TestCase):
         self.assertEquals(len(self.out), 1)
 
     def testSingleUnicode(self):
-        self.assertRaises(
-            UnicodeError,
-            self.lp.msg, u"Hello, \N{VULGAR FRACTION ONE HALF} world.")
-        self.assertEquals(len(self.out), 0)
+        self.lp.msg(u"Hello, \N{VULGAR FRACTION ONE HALF} world.")
+        self.assertEquals(len(self.out), 1)
+        self.assertIn('with str error Traceback', self.out[0])
+        self.assertIn('UnicodeEncodeError', self.out[0])
+
+class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
+    def testLoggingAnObjectWithBroken__str__(self):
+        #HELLO, MCFLY
+        self.lp.msg(EvilStr())
+        self.assertEquals(len(self.out), 1)
+        # Logging system shouldn't need to crap itself for this trivial case
+        self.assertNotIn('UNFORMATTABLE', self.out[0])
+
+    def testFormattingAnObjectWithBroken__str__(self):
+        self.lp.msg(format='%(blat)s', blat=EvilStr())
+        self.assertEquals(len(self.out), 1)
+        self.assertIn('Invalid format string or unformattable object', self.out[0])
+
+    def testBrokenSystem__str__(self):
+        self.lp.msg('huh', system=EvilStr())
+        self.assertEquals(len(self.out), 1)
+        self.assertIn('Invalid format string or unformattable object', self.out[0])
+
+    def testFormattingAnObjectWithBroken__repr__Indirect(self):
+        self.lp.msg(format='%(blat)s', blat=[EvilRepr()])
+        self.assertEquals(len(self.out), 1)
+        self.assertIn('UNFORMATTABLE OBJECT', self.out[0])
+
+    def testSystemWithBroker__repr__Indirect(self):
+        self.lp.msg('huh', system=[EvilRepr()])
+        self.assertEquals(len(self.out), 1)
+        self.assertIn('UNFORMATTABLE OBJECT', self.out[0])
+
+    def testSimpleBrokenFormat(self):
+        self.lp.msg(format='hooj %s %s', blat=1)
+        self.assertEquals(len(self.out), 1)
+        self.assertIn('Invalid format string or unformattable object', self.out[0])
+
+    def testRidiculousFormat(self):
+        self.lp.msg(format=42, blat=1)
+        self.assertEquals(len(self.out), 1)
+        self.assertIn('Invalid format string or unformattable object', self.out[0])
+
+    def testEvilFormat__repr__And__str__(self):
+        self.lp.msg(format=EvilReprStr(), blat=1)
+        self.assertEquals(len(self.out), 1)
+        self.assertIn('PATHOLOGICAL', self.out[0])
