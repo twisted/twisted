@@ -76,6 +76,8 @@ class WebDAVElement (object):
     sname = classmethod(sname)
 
     def __init__(self, *children, **attributes):
+        super(WebDAVElement, self).__init__()
+
         if self.allowed_children is None:
             raise NotImplementedError("WebDAVElement subclass %s is not implemented."
                                       % (self.__class__.__name__,))
@@ -232,6 +234,8 @@ class PCDATAElement (object):
     sname = classmethod(sname)
 
     def __init__(self, data):
+        super(PCDATAElement, self).__init__()
+
         if data is None:
             data = ""
         elif type(data) is unicode:
@@ -486,6 +490,8 @@ class FixedOffset (datetime.tzinfo):
     Fixed offset in minutes east from UTC.
     """
     def __init__(self, offset, name=None):
+        super(FixedOffset, self).__init__()
+
         self._offset = datetime.timedelta(minutes=offset)
         self._name   = name
 

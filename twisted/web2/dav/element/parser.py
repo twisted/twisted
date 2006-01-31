@@ -190,6 +190,8 @@ class WebDAVDocument (object):
         """
         root_element must be a WebDAVElement instance.
         """
+        super(WebDAVDocument, self).__init__()
+
         if not isinstance(root_element, WebDAVElement):
             raise ValueError("Not a WebDAVElement: %r" % (obj,))
 
