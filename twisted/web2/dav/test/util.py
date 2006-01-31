@@ -32,7 +32,7 @@ from random import randrange, choice
 from zope.interface import implements
 from twisted.python import log
 from twisted.trial import unittest
-from twisted.internet.defer import maybeDeferred, Deferred, DeferredList
+from twisted.internet.defer import maybeDeferred, Deferred
 from twisted.web2.iweb import IRequest
 from twisted.web2.http_headers import Headers
 from twisted.web2.stream import MemoryStream
