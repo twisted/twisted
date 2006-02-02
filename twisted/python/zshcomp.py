@@ -12,7 +12,7 @@ Maintainer: U{Eric Mangold<mailto:teratorn@twistedmatrix.com>}
 
 To build completion functions for your own commands, and not
 twisted commands, then just do something like this:
-    o = mymodule.MyOptions
+    o = mymodule.MyOptions()
     f = file('_mycommand', 'w')
     Builder("mycommand", o, f).write()
 
