@@ -116,7 +116,7 @@ class WebDAVElement (object):
             else:
                 if not (isinstance(child, PCDATAElement) and child.isWhitespace()):
                     log.msg("Child of type %s is unexpected and therefore ignored in %s element"
-                            % (child.sname(), self))
+                            % (child.sname(), self.sname()))
 
         for qname, (min, max) in allowed_children.items():
             if min != 0:
@@ -136,22 +136,25 @@ class WebDAVElement (object):
                     my_attributes[name] = attributes[name]
                 else:
                     log.msg("Attribute %s is unexpected and therefore ignored in %s element"
-                            % (name, self))
+                            % (name, self.sname()))
     
             for name, required in self.allowed_attributes.items():
                 if required and name not in my_attributes:
                     raise ValueError("Attribute %s is required in %s element"
-                                     % (name, self))
+                                     % (name, self.sname()))
 
         elif not isinstance(self, WebDAVUnknownElement):
             if attributes:
                 log.msg("Attributes %s are unexpected and therefore ignored in %s element"
-                        % (attributes.keys(), self))
+                        % (attributes.keys(), self.sname()))
 
         self.attributes = my_attributes
 
     def __repr__(self):
-        return "<%s %r: %r>" % (self.sname(), self.attributes, self.children)
+        if hasattr(self, "attributes") and hasattr(self, "children"):
+            return "<%s %r: %r>" % (self.sname(), self.attributes, self.children)
+        else:
+            return "<%s>" % (self.sname())
 
     def __eq__(self, other):
         if isinstance(other, WebDAVElement):
