@@ -30,7 +30,7 @@ class Data(resource.Resource):
     
     def __init__(self, data, type):
         self.data = data
-        self.type = http_headers.MimeType.fromString(self.type)
+        self.type = http_headers.MimeType.fromString(type)
         self.created_time = time.time()
     
     def etag(self):

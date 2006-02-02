@@ -4,6 +4,22 @@ from twisted.web2.test.test_server import BaseCase
 from twisted.web2 import static
 from twisted.web2 import http_headers
 from twisted.web2 import stream
+from twisted.web2 import iweb
+
+class TestData(BaseCase):
+    def test_data(self):
+        text = "Hello, World\n"
+        data = static.Data(text, "text/plain")
+
+        self.assertEquals(data.data, text)
+        self.assertEquals(data.type, http_headers.MimeType("text", "plain"))
+        self.assertEquals(data.contentType(), http_headers.MimeType("text", "plain"))
+        self.failUnless(data.etag())
+
+        def checkStream(data):
+            self.assertEquals(str(data), text)
+
+        return stream.readStream(iweb.IResponse(data.render(None)).stream, checkStream)
 
 class TestFileSaver(BaseCase):
     def setUpClass(self):
@@ -58,28 +74,28 @@ Content-Type: %s\r
         d.addCallback(self._CbAssertInResponse, expected_response, failure)
         return d
 
-    def testEnforcesMaxBytes(self):
+    def test_enforcesMaxBytes(self):
         return self.assertInResponse(self.uploadFile('FileNameOne', 'myfilename',
                                          'text/html', 'X'*32),
                               (200, {}, 'exceeds maximum length'))
 
-    def testEnforcesMimeType(self):
+    def test_enforcesMimeType(self):
         return self.assertInResponse(self.uploadFile('FileNameOne', 'myfilename',
                                               'application/x-python', 'X'),
                               (200, {}, 'type not allowed'))
 
-    def testInvalidField(self):
+    def test_invalidField(self):
         return self.assertInResponse(self.uploadFile('NotARealField', 'myfilename',
                                               'text/html', 'X'),
                               (200, {}, 'not a valid field'))
 
-    def testReportFileSave(self):
+    def test_reportFileSave(self):
         return self.assertInResponse(self.uploadFile('FileNameOne', 'myfilename',
                                               'text/plain',
                                               'X'),
                               (200, {}, 'Saved file'))
 
-    def testCompareFileContents(self):
+    def test_compareFileContents(self):
         def gotFname(fname):
             contents = file(fname, 'r').read()
             self.assertEquals(contents, 'Test contents')
@@ -88,6 +104,3 @@ Content-Type: %s\r
                                'Test contents').addCallback(
             self.fileNameFromResponse
             ).addCallback(gotFname)
-
-        
-
