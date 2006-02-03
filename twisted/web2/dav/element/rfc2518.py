@@ -194,7 +194,7 @@ class MultiStatus (WebDAVElement):
     name = "multistatus"
 
     allowed_children = {
-        (dav_namespace, "response"           ): (1, None),
+        (dav_namespace, "response"           ): (0, None),
         (dav_namespace, "responsedescription"): (0, 1),
     }
 
