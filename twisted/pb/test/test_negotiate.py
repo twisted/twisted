@@ -84,7 +84,10 @@ class BaseMixin:
         return portnum
 
     def makeHTTPServer(self):
-        from twisted.web import server, resource, static
+        try:
+            from twisted.web import server, resource, static
+        except ImportError:
+            raise unittest.SkipTest('this test needs twisted.web')
         root = resource.Resource()
         root.putChild("", static.Data("hello\n", "text/plain"))
         s = internet.TCPServer(0, server.Site(root))
@@ -185,7 +188,10 @@ class Versus(BaseMixin, unittest.TestCase):
     testVersusHTTPServerUnencrypted.timeout = 10
 
     def testVersusHTTPClientUnencrypted(self):
-        from twisted.web import error
+        try:
+            from twisted.web import error
+        except ImportError:
+            raise unittest.SkipTest('this test needs twisted.web')
         url, portnum = self.makeServer(False)
         d = self.connectHTTPClient(portnum)
         d.addCallbacks(lambda res: self.fail("this is supposed to fail"),
@@ -196,7 +202,10 @@ class Versus(BaseMixin, unittest.TestCase):
     def testVersusHTTPClientEncrypted(self):
         if not crypto:
             raise unittest.SkipTest("crypto not available")
-        from twisted.web import error
+        try:
+            from twisted.web import error
+        except ImportError:
+            raise unittest.SkipTest('this test needs twisted.web')
         url, portnum = self.makeServer(True)
         d = self.connectHTTPClient(portnum)
         d.addCallbacks(lambda res: self.fail("this is supposed to fail"),
