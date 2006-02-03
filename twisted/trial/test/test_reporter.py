@@ -42,6 +42,7 @@ class TestErrorReporting(unittest.TestCase):
     def test_timing(self):
         the_reporter = reporter.Reporter()
         the_reporter._somethingStarted()
+        time.sleep(0.01)
         the_reporter._somethingStarted()
         time.sleep(0.01)
         time1 = the_reporter._somethingStopped()
