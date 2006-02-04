@@ -436,12 +436,17 @@ class POP3TLSTestCase(unittest.TestCase):
             ]
         sf.protocol.context = ServerTLSContext()
         port = reactor.listenTCP(0, sf)
+        H = port.getHost().host
+        P = port.getHost().port
 
         cp = SimpleClient(defer.Deferred(), ClientTLSContext())
         cf = protocol.ClientFactory()
         cf.protocol = lambda: cp
 
-        conn = reactor.connectTCP(port.getHost().host, port.getHost().port, cf)
+        if H == '0.0.0.0':
+            H = '127.0.0.1'
+
+        conn = reactor.connectTCP('127.0.0.1', P, cf)
 
         def cbConnected(ignored):
             log.msg("Connected to server; starting TLS")
