@@ -1073,6 +1073,12 @@ class IProcessTransport(ITransport):
     def closeStderr(self):
         """Close stderr."""
 
+    def closeChildFD(self, descriptor):
+        """
+        Close a file descriptor which is connected to the child process, identified
+        by its FD in the child process.
+        """
+
     def loseConnection(self):
         """Close stdin, stderr and stdout."""
 
