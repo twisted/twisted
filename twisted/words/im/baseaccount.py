@@ -53,8 +53,10 @@ class AccountManager:
         return self.accounts[accountName].logOn(chatui)
 
     def disconnect(self, accountName):
-        self.accounts[accountName].logOff()
+        pass
+        #self.accounts[accountName].logOff()  - not yet implemented
 
     def quit(self):
-        for account in self.accounts.values():
-            account.logOff()
+        pass
+        #for account in self.accounts.values():
+        #    account.logOff()  - not yet implemented

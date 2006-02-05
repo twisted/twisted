@@ -207,8 +207,7 @@ class TOCProto(basesupport.AbstractClientMixin, toc.TOCClient):
 
 class TOCAccount(basesupport.AbstractAccount):
     implements(interfaces.IAccount)
-    gatewayType = 'TOC'
-    protocol = 'AIM'
+    gatewayType = "AIM (TOC)"
 
     _groupFactory = TOCGroup
     _personFactory = TOCPerson
