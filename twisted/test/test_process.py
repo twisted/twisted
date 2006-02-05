@@ -177,6 +177,27 @@ class TestManyProcessProtocol(TestProcessProtocol):
 class ProcessTestCase(SignalMixin, unittest.TestCase):
     """Test running a process."""
 
+    usePTY = False
+
+    def testStdio(self):
+        """twisted.internet.stdio test."""
+        exe = sys.executable
+        scriptPath = util.sibpath(__file__, "process_twisted.py")
+        p = Accumulator()
+        env = {"PYTHONPATH": os.pathsep.join(sys.path)}
+        reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=env,
+                             path=None, usePTY=self.usePTY)
+        p.transport.write("hello, world")
+        p.transport.write("abc")
+        p.transport.write("123")
+        p.transport.closeStdin()
+        spinUntil(lambda :p.closed, 10)
+        self.assertEquals(p.outF.getvalue(), "hello, worldabc123",
+                          "Output follows:\n"
+                          "%s\n"
+                          "Error message from process_twisted follows:\n"
+                          "%s\n" % (p.outF.getvalue(), p.errF.getvalue()))
+
     def testProcess(self):
         exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_tester.py")
@@ -545,25 +566,6 @@ class PosixProcessBase:
 class PosixProcessTestCase(SignalMixin, unittest.TestCase, PosixProcessBase):
     # add three non-pty test cases
         
-    def testStdio(self):
-        """twisted.internet.stdio test."""
-        exe = sys.executable
-        scriptPath = util.sibpath(__file__, "process_twisted.py")
-        p = Accumulator()
-        env = {"PYTHONPATH": os.pathsep.join(sys.path)}
-        reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=env,
-                             path=None, usePTY=self.usePTY)
-        p.transport.write("hello, world")
-        p.transport.write("abc")
-        p.transport.write("123")
-        p.transport.closeStdin()
-        spinUntil(lambda :p.closed, 10)
-        self.assertEquals(p.outF.getvalue(), "hello, worldabc123",
-                          "Output follows:\n"
-                          "%s\n"
-                          "Error message from process_twisted follows:\n"
-                          "%s\n" % (p.outF.getvalue(), p.errF.getvalue()))
-
     def testStderr(self):
         # we assume there is no file named ZZXXX..., both in . and in /tmp
         if not os.path.exists('/bin/ls'):

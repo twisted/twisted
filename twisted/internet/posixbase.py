@@ -49,7 +49,7 @@ if platformType == 'posix':
     import process
     processEnabled = True
 
-if platformType == "win32":
+if platform.isWindows():
     try:
         import win32process
         processEnabled = True
@@ -287,7 +287,7 @@ class PosixReactorBase(ReactorBase):
                 raise ValueError("The usePTY parameter is not supported on Windows.")
             if childFDs:
                 raise ValueError("Customizing childFDs is not supported on Windows.")
-            
+
             if win32process:
                 from twisted.internet._dumbwin32proc import Process
                 return Process(self, processProtocol, executable, args, env, path)
