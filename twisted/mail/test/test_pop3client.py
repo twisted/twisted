@@ -446,7 +446,7 @@ class POP3TLSTestCase(unittest.TestCase):
         if H == '0.0.0.0':
             H = '127.0.0.1'
 
-        conn = reactor.connectTCP('127.0.0.1', P, cf)
+        conn = reactor.connectTCP(H, P, cf)
 
         def cbConnected(ignored):
             log.msg("Connected to server; starting TLS")

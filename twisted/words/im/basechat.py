@@ -68,6 +68,7 @@ class Conversation:
         @type person: L{Person<interfaces.IPerson>}
         @type chatui: L{ChatUI}
         """
+        assert person is not None
         self.chatui = chatui
         self.person = person
 
@@ -190,6 +191,7 @@ class ChatUI:
         self.groupConversations = {} # cache of all group windows
         self.persons = {}            # keys are (name, client)
         self.groups = {}             # cache of all groups
+        self.contactGroups = {}
         self.onlineClients = []      # list of message sources currently online
         self.contactsList = ContactsList(self)
 
@@ -199,7 +201,6 @@ class ChatUI:
         @type client: L{Client<interfaces.IClient>}
         @returns: client, so that I may be used in a callback chain
         """
-        print "signing onto", client.accountName
         self.onlineClients.append(client)
         self.contactsList.registerAccountClient(client)
         return client
@@ -209,7 +210,6 @@ class ChatUI:
 
         @type client: L{Client<interfaces.IClient>}
         """
-        print "signing off from", client.accountName
         self.onlineClients.remove(client)
         self.contactsList.unregisterAccountClient(client)
 
@@ -258,6 +258,13 @@ class ChatUI:
         else:
             conv.show()
         return conv
+
+    def getContactGroup(self, name, client):
+        group = self.contactGroups.get(name)
+        if group is None:
+            group = client.account.getContactGroup(name)
+            self.contactGroups[name] = group
+        return group
 
     def getPerson(self, name, client):
         """For the given name and account client, returns the instance of the

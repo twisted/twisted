@@ -14,11 +14,24 @@ from twisted.words.im.locals import ONLINE, OFFLINE, OfflineError
 from twisted.words.im import interfaces
 
 from twisted.internet.protocol import Protocol
-
+from twisted.internet import defer
 from twisted.python.reflect import prefixedMethods
 from twisted.persisted import styles
 
 from twisted.internet import error
+
+class AbstractContactGroup:
+    def __init__(self, name, account):
+        self.name = name
+        self.account = account
+        self.people = {}
+
+    def getPerson(self, name):
+        person = self.people.get(name)
+        if person is None:
+            person = self.account._personFactory(name, self.account)
+            self.people[name] = person
+        return person
 
 class AbstractGroup:
     def __init__(self, name, account):
@@ -147,20 +160,29 @@ class AbstractAccount(styles.Versioned):
     _isOnline = 0
     _isConnecting = 0
     client = None
+    
+    defaultHost = None
+    defaultPort = None
 
     _groupFactory = AbstractGroup
     _personFactory = AbstractPerson
-
+    _contactGroupFactory = AbstractContactGroup
+    
     persistanceVersion = 2
 
-    def __init__(self, accountName, autoLogin, username, password, host, port):
+    def __init__(self, accountName, autoLogin, username, password, host = None, port = None):
+        if host is None:
+            host = self.defaultHost
+        if port is None:
+            port = self.defaultPort
+
         self.accountName = accountName
         self.autoLogin = autoLogin
         self.username = username
         self.password = password
         self.host = host
         self.port = port
-
+        self.contactGroups = {}
         self._groups = {}
         self._persons = {}
 
@@ -203,7 +225,26 @@ class AbstractAccount(styles.Versioned):
             d.addCallback(chatui.registerAccountClient)
             return d
         else:
-            raise error.ConnectionError("Connection in progress")
+            raise error.ConnectInProgressError()
+
+    def logOff(self, chatui):
+        if self._isOnline and (not self._isConnecting):
+            d = defer.maybeDeferred(self._startLogOff, chatui)
+            d.addErrback(self._logOffFailed)
+            d.addCallback(lambda _: self._cb_logOff())
+            d.addCallback(lambda _: chatui.unregisterAccountClient(self.client))
+            return d
+        else:
+            raise error.ConnectError()
+
+    def _logOffFailed(self, f):
+        log.err(f)
+
+    def _cb_logOff(self):
+        self._isOnline = 0
+
+    def _startLogOff(self, chatui):
+        self.client.transport.loseConnection()
 
     def getGroup(self, name):
         """Group factory.
@@ -215,6 +256,13 @@ class AbstractAccount(styles.Versioned):
         if group is None:
             group = self._groupFactory(name, self)
             self._groups[name] = group
+        return group
+
+    def getContactGroup(self, name):
+        group = self.contactGroups.get(name)
+        if group is None:
+            group = self._contactGroupFactory(name, self)
+            self.contactGroups[name] = group
         return group
 
     def getPerson(self, name):
