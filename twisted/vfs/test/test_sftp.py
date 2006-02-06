@@ -133,14 +133,14 @@ class SFTPAdapterTest(unittest.TestCase):
     def test_setAttrs(self):
         for mtime in [1, 2, int(time.time())]:
             try:
-                self.sftp.setAttrs('/ned', {'mtime': mtime})
+                self.sftp.setAttrs('/file.txt', {'mtime': mtime})
             except NotImplementedError:
                 raise unittest.SkipTest(
                     "The VFS backend %r doesn't support setAttrs" 
                     % (self.root,))
             else:
-                self.assertEqual(mtime, 
-                                 self.sftp.getAttrs('/ned', False)['mtime'])
+                self.assertEqual(
+                    mtime, self.sftp.getAttrs('/file.txt', False)['mtime'])
 
     def test_dirlistWithoutAttrs(self):
         self.ned.getMetadata = self.f.getMetadata = lambda: {}
