@@ -1,7 +1,11 @@
 import os
 
-from twisted.conch.ssh.filetransfer import FXF_READ, FXF_WRITE, FXF_CREAT, FXF_APPEND, FXF_EXCL
+from twisted.conch.ssh.filetransfer import FXF_READ, FXF_WRITE, FXF_CREAT
+from twisted.conch.ssh.filetransfer import FXF_APPEND, FXF_EXCL
+from twisted.conch.ssh.filetransfer import SFTPError
+from twisted.conch.ssh.filetransfer import FX_NO_SUCH_FILE
 from twisted.trial import unittest
+from twisted.internet import defer
 
 from twisted.vfs import ivfs, pathutils
 from twisted.vfs.adapters import sftp
@@ -45,9 +49,10 @@ class SFTPAdapterTest(unittest.TestCase):
         child = self.sftp.openFile('new file.txt', FXF_READ|FXF_CREAT, None)
         self.failUnless(ivfs.IFileSystemNode.providedBy(child))
 
-        # But not with FXF_READ alone.
-        self.assertRaises(IOError,
-                       self.sftp.openFile, 'new file 2.txt', FXF_READ, None)
+        # But opening with FXF_READ alone should fail with FX_NO_SUCH_FILE.
+        e = self.assertRaises(SFTPError,
+           self.sftp.openFile, 'new file 2.txt', FXF_READ, None)
+        self.assertEqual(FX_NO_SUCH_FILE, e.code)
 
         # The FXF_WRITE flag alone can create a file.
         child = self.sftp.openFile('new file 3.txt', FXF_WRITE, None)
@@ -101,6 +106,13 @@ class SFTPAdapterTest(unittest.TestCase):
         self._assertNodes('/', ['.', '..', 'file.txt', 'ned', 'dir'])
         self._assertNodes('/dir', ['.', '..'])
 
+    def test_makeSubDirectory(self):
+        self.sftp.makeDirectory('/dir', None)
+        self.sftp.makeDirectory('/dir/subdir', None)
+        self._assertNodes('/', ['.', '..', 'file.txt', 'ned', 'dir'])
+        self._assertNodes('/dir', ['.', '..', 'subdir'])
+        self._assertNodes('/dir/subdir', ['.', '..'])
+
     def test_removeDirectory(self):
         self.sftp.makeDirectory('/dir', None)
         self.sftp.removeDirectory('/dir')
@@ -130,4 +142,36 @@ class SFTPAdapterOSFSTest(SFTPAdapterTest):
         path = self.mktemp()
         os.mkdir(path)
         return osfs.OSDirectory(path)
+
+
+class DummyDir(inmem.FakeDirectory):
+    def createDirectory(self, childName):
+        d = defer.Deferred()
+        d2 = defer.maybeDeferred(inmem.FakeDirectory.createDirectory, 
+                                 self, childName)
+        from twisted.internet import reactor
+        reactor.callLater(1, d2.chainDeferred, d)
+        return d
+
+class SFTPAdapterDeferredTestCase(unittest.TestCase):
+    def setUp(self):
+        root = DummyDir()
+        filesystem = pathutils.FileSystem(root)
+        self.filesystem = filesystem
+
+        avatar = sftp.VFSConchUser('radix', root)
+        self.sftp = sftp.AdaptFileSystemUserToISFTP(avatar)
+
+    def _assertNodes(self, dir, mynodes):
+        nodes = [x[0] for x in self.filesystem.fetch(dir).children()]
+        nodes.sort()
+        mynodes.sort()
+        return self.assertEquals(nodes, mynodes)
+
+    def test_makeDirectoryDeferred(self):
+        # Allow Deferreds to be returned from createDirectory
+        d = defer.maybeDeferred(self.sftp.makeDirectory, '/dir', None)
+        def cb(result):
+            self._assertNodes('/', ['.', '..', 'dir'])
+        return d.addCallback(cb)
 

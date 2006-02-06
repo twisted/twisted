@@ -83,7 +83,7 @@ class AdaptFileSystemUserToISFTP:
         elif parentNode.exists(basename):
             child = parentNode.child(basename)
         else:
-            raise IOError("File doesn't exist!")
+            raise SFTPError(FX_NO_SUCH_FILE, filename)
         child.open(openFlags)
         return child
 
