@@ -95,11 +95,11 @@ class DAVFile (File):
 
         Does not accept the processors and ignoredExts arguments, unlike File.
         """
-        File.__init__(self, path,
-                      defaultType = defaultType,
-                      ignoredExts = (),
-                      processors  = None,
-                      indexNames  = indexNames)
+        super(DAVFile, self).__init__(path,
+                                      defaultType = defaultType,
+                                      ignoredExts = (),
+                                      processors  = None,
+                                      indexNames  = indexNames)
 
     def __repr__(self):
         return "<%s: %s>" % (self.__class__.__name__, self.fp.path)
@@ -364,7 +364,7 @@ class DAVFile (File):
         except HTTPError, e:
             response = succeed(e.response)
         else:
-            response = maybeDeferred(File.renderHTTP, self, request)
+            response = maybeDeferred(super(DAVFile, self).renderHTTP, request)
 
         assert response, "No response"
 
