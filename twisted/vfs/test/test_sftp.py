@@ -1,4 +1,5 @@
 import os
+import time
 
 from twisted.conch.ssh.filetransfer import FXF_READ, FXF_WRITE, FXF_CREAT
 from twisted.conch.ssh.filetransfer import FXF_APPEND, FXF_EXCL
@@ -128,6 +129,18 @@ class SFTPAdapterTest(unittest.TestCase):
         attrs = self.sftp.getAttrs('/ned', None).keys()
         attrs.sort()
         self.failUnless(sftpAttrs, attrs)
+
+    def test_setAttrs(self):
+        for mtime in [1, 2, int(time.time())]:
+            try:
+                self.sftp.setAttrs('/ned', {'mtime': mtime})
+            except NotImplementedError:
+                raise unittest.SkipTest(
+                    "The VFS backend %r doesn't support setAttrs" 
+                    % (self.root,))
+            else:
+                self.assertEqual(mtime, 
+                                 self.sftp.getAttrs('/ned', False)['mtime'])
 
     def test_dirlistWithoutAttrs(self):
         self.ned.getMetadata = self.f.getMetadata = lambda: {}

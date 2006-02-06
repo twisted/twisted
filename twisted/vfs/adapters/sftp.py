@@ -172,11 +172,24 @@ class AdaptFileSystemUserToISFTP:
                 }
 
     def getAttrs(self, path, followLinks):
-        return self._attrify(self.filesystem.fetch(path))
-
+        try:
+            node = self.filesystem.fetch(path)
+        except ivfs.NotFoundError, e:
+            raise SFTPError(FX_NO_SUCH_FILE, e.args[0])
+        return self._attrify(node)
 
     def setAttrs(self, path, attrs):
-        raise NotImplementedError("NO SETATTR")
+        try:
+            node = self.filesystem.fetch(path)
+        except ivfs.NotFoundError, e:
+            raise SFTPError(FX_NO_SUCH_FILE, e.args[0])
+        try:
+            # XXX: setMetadata isn't yet part of the IFileSystemNode interface
+            # (but it should be).  So we catch AttributeError, and translate it
+            # to NotImplementedError because it's slightly nicer for clients.
+            node.setMetadata(attrs)
+        except AttributeError:
+            raise NotImplementedError("NO SETATTR")
 
     def readLink(self, path):
         raise NotImplementedError("NO LINK")

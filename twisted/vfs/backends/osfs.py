@@ -41,6 +41,20 @@ class OSNode:
             "nlink"        : s.st_nlink
         }
 
+    def setMetadata(self, attrs):
+        if 'uid' in attrs and 'gid' in attrs:
+            os.chown(self.realPath, attrs["uid"], attrs["gid"])
+        if 'permissions' in attrs:
+            os.chmod(self.realPath, attrs["permissions"])
+        if 'atime' in attrs or 'mtime' in attrs:
+            if None in (attrs.get("atime"), attrs.get("mtime")):
+                st = os.stat(self.realPath)
+                atime = attrs.get("atime", st.st_atime)
+                mtime = attrs.get("mtime", st.st_mtime)
+            else:
+                atime = attrs['atime']
+                mtime = attrs['mtime']
+            os.utime(self.realPath, (atime, mtime))
 
     def rename(self, newName):
         from twisted.vfs import pathutils

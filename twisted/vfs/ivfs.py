@@ -33,6 +33,22 @@ class IFileSystemNode(Interface):
         particular value isn't available as gracefully as possible.
         """
 
+    # XXX: There should be a setMetadata, probably taking a map of the same form
+    # returned by getMetadata (although obviously keys like 'nlink' aren't
+    # settable.  Something like:
+    # def setMetadata(metadata):
+    #     """Sets metadata for a node.
+    #
+    #     Unrecognised keys will be ignored (but invalid values for a recognised
+    #     key may cause an error to be raised).
+    #     
+    #     Typical keys are 'permissions', 'uid', 'gid', 'atime' and 'mtime'.
+    #     
+    #     @param metadata: a dict, like the one getMetadata returns.
+    #     """
+    # osfs.OSNode implements this; other backends should be similarly updated.
+    #   -- spiv, 2006-06-02
+
     def remove():
         """
         Removes this node.
