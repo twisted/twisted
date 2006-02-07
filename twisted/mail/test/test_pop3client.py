@@ -435,16 +435,13 @@ class POP3TLSTestCase(unittest.TestCase):
             ['+OK'] # QUIT response
             ]
         sf.protocol.context = ServerTLSContext()
-        port = reactor.listenTCP(0, sf)
+        port = reactor.listenTCP(0, sf, interface='127.0.0.1')
         H = port.getHost().host
         P = port.getHost().port
 
         cp = SimpleClient(defer.Deferred(), ClientTLSContext())
         cf = protocol.ClientFactory()
         cf.protocol = lambda: cp
-
-        if H == '0.0.0.0':
-            H = '127.0.0.1'
 
         conn = reactor.connectTCP(H, P, cf)
 
