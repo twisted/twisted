@@ -131,7 +131,7 @@ class SFTPAdapterTest(unittest.TestCase):
         self.failUnless(sftpAttrs, attrs)
 
     def test_setAttrs(self):
-        for mtime in [1, 2, int(time.time())]:
+        for mtime in [86401, 200000, int(time.time())]:
             try:
                 self.sftp.setAttrs('/file.txt', {'mtime': mtime})
             except NotImplementedError:
