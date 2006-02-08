@@ -391,7 +391,8 @@ class DebugInfo:
                 log.msg("(debug: " + debugInfo + ")", isError=True)
             log.err(self.failResult)
 
-<<<<<<< .working
+
+
 class FirstError(Exception):
     """First error to occur in a DeferredList if fireOnOneErrback is set.
     
