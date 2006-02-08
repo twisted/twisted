@@ -27,15 +27,24 @@ class Data(resource.Resource):
     """
     This is a static, in-memory resource.
     """
-    
     def __init__(self, data, type):
         self.data = data
         self.type = http_headers.MimeType.fromString(type)
         self.created_time = time.time()
     
     def etag(self):
-        return http_headers.ETag("%X-%X" % (self.created_time, hash(self.data)),
-                                 weak=(time.time() - self.created_time <= 1))
+        lastModified = self.lastModified()
+        return http_headers.ETag("%X-%X" % (lastModified, hash(self.data)),
+                                 weak=(time.time() - lastModified <= 1))
+
+    def lastModified(self):
+        return self.creationDate()
+
+    def creationDate(self):
+        return self.created_time
+
+    def contentLength(self):
+        return len(self.data)
 
     def contentType(self):
         return self.type
