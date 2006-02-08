@@ -76,8 +76,8 @@ def main(args):
         printProjectInfo()
         sys.exit(0)
         
-    # special case common options
-    if args[0] in ('install','build'):
+    # if it's not a project name, it's a command name
+    if args[0] not in subprojects:
         project = 'all'
     else:
         project = args[0]
