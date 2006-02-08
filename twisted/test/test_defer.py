@@ -336,7 +336,7 @@ class DeferredTestCase(unittest.TestCase):
 
 class AlreadyCalledTestCase(unittest.TestCase):
     def setUp(self):
-        self._deferredWasDebugging = defer.Deferred.debug
+        self._deferredWasDebugging = defer.getDebugging()
         defer.setDebugging(True)
 
     def tearDown(self):
