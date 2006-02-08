@@ -391,6 +391,7 @@ class DebugInfo:
                 log.msg("(debug: " + debugInfo + ")", isError=True)
             log.err(self.failResult)
 
+<<<<<<< .working
 class FirstError(Exception):
     """First error to occur in a DeferredList if fireOnOneErrback is set.
     
@@ -427,6 +428,11 @@ class FirstError(Exception):
             return (self.subFailure == other.subFailure and 
                     self.index == other.index)
         return False
+
+try:
+    from twisted.internet.cdefer import Deferred, setDebugging
+except ImportError:
+    pass
 
 class DeferredList(Deferred):
     """I combine a group of deferreds into one callback.
