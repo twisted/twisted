@@ -298,8 +298,8 @@ class DeferredTestCase(unittest.TestCase):
         l = []
         dl = [defer.succeed(1), defer.fail(ValueError)]
         defer.gatherResults(dl).addErrback(l.append)
-        self.assert_(isinstance(l[0], failure.Failure))
         self.assertEquals(len(l), 1)
+        self.assert_(isinstance(l[0], failure.Failure))
         # get rid of error
         dl[1].addErrback(lambda e: 1)
 
