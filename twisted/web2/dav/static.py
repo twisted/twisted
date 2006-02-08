@@ -60,12 +60,12 @@ except ImportError:
 #
 # FIXME: We need an IDAVResource interface.
 #  - isCollection()
-#  - getChildren()
+#  - findChildren()
 #  - hasProperty()
 #  - readProperty()
 #  - writeProperty()
 #  - removeProperty()
-# eg. see FIXME comment in getChildren()
+# eg. see FIXME comment in findChildren()
 #
 
 #
@@ -260,7 +260,7 @@ class DAVFile (File):
         for child in self.listChildren(): return True
         return self.fp.isdir()
 
-    def getChildren(self, depth):
+    def findChildren(self, depth):
         """
         Returns a list of child resources for the given depth. (RFC 2518,
         section 9.2)
@@ -279,13 +279,13 @@ class DAVFile (File):
                 if child:
                     #
                     # FIXME: This code breaks if we encounter a child that isn't
-                    # a DAVFile (ie. has isCollection() and getChildren()). This
+                    # a DAVFile (ie. has isCollection() and findChildren()). This
                     # may be an argument for an IDAVResource interface.
                     #
                     if child.isCollection():
                         yield (child, name + "/")
                         if depth == "infinity":
-                            for grandchild in child.getChildren(depth):
+                            for grandchild in child.findChildren(depth):
                                 yield (grandchild[0], name + "/" + grandchild[1])
                     else:
                         yield (child, name)

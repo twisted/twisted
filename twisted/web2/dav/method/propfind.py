@@ -92,7 +92,7 @@ def http_PROPFIND(self, request):
         xml_responses = []
 
         resources = [(self, None)]
-        resources.extend(self.getChildren(depth))
+        resources.extend(self.findChildren(depth))
 
         for resource, uri in resources:
             if uri is None:
