@@ -1,6 +1,11 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+import warnings
+warnings.warn(
+    "Create your own event dispatching mechanism, "
+    "twisted.python.dispatch will soon be no more.",
+    DeprecationgWarning, 2)
 
 
 class EventDispatcher:
