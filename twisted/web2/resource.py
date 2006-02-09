@@ -64,7 +64,7 @@ class MetaDataMixin(object):
         """
         @return: True if the resource exists on the server, False otherwise.
         """
-        return False
+        return True
 
 class RenderMixin(MetaDataMixin):
     """
