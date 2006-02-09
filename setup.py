@@ -12,10 +12,11 @@ import sys, os, os.path
 # Projects to which `all' refers.
 subprojects = [
     'core', 'conch', 'lore', 'mail', 'names',
-    'pair', 'runner', 'web', 'words', 'news']
+    'pair', 'runner', 'web', 'words', 'news',
+    'flow']
 
 # Projects which actually have to be specified by name
-otherSubProjects = ['pb', 'flow', 'web2']
+otherSubProjects = ['pb', 'web2']
 
 specialPaths = {'core': 'twisted/topfiles/setup.py'}
 specialModules = {'core': 'twisted'}
