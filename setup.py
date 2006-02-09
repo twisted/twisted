@@ -9,8 +9,13 @@ Distutils-launcher for Twisted projects.
 
 import sys, os, os.path
 
-subprojects = ('core', 'conch', 'flow', 'lore', 'mail', 'names', 'pair',
-               'runner', 'web', 'words', 'news', 'pb')
+# Projects to which `all' refers.
+subprojects = [
+    'core', 'conch', 'lore', 'mail', 'names',
+    'pair', 'runner', 'web', 'words', 'news']
+
+# Projects which actually have to be specified by name
+otherSubProjects = ['pb', 'flow', 'web2']
 
 specialPaths = {'core': 'twisted/topfiles/setup.py'}
 specialModules = {'core': 'twisted'}
@@ -33,8 +38,9 @@ def firstLine(doc):
     return ""
 
 def runSetup(project, args):
-    setupPy = specialPaths.get(project,
-                   os.path.join('twisted', project, 'topfiles', 'setup.py'))
+    setupPy = specialPaths.get(
+        project,
+        os.path.join('twisted', project, 'topfiles', 'setup.py'))
 
     if not os.path.exists(setupPy):
         sys.stderr.write("Error: No such project '%s'.\n" % (project,))
@@ -44,8 +50,9 @@ def runSetup(project, args):
     result = os.spawnv(os.P_WAIT, sys.executable,
                        [sys.executable, setupPy] + args)
     if result != 0:
-        sys.stderr.write("Error: Subprocess exited with result %d for project %s\n" %
-                         (result, project))
+        sys.stderr.write(
+            "Error: Subprocess exited with result %d for project %s\n" %
+            (result, project))
         sys.exit(1)
 
 def printProjectInfo(out=sys.stdout):
@@ -59,40 +66,38 @@ or   setup.py core --help
 
 """)
     out.write(" %-10s %-10s %s\n" % ("Project", "Version", "Description"))
-    
+
     for project in subprojects:
         try:
-            mod = namedModule(specialModules.get(project, 'twisted.'+project))
+            mod = namedModule(specialModules.get(project, 'twisted.' + project))
         except (AttributeError, ImportError):
             out.write(" %-10s **unable to import**\n" % (project,))
         else:
             out.write(" %-10s %-10s %s\n" %
                       (project, mod.__version__, firstLine(mod.__doc__)))
-        
+
 
 def main(args):
-    os.putenv("PYTHONPATH", "."+os.pathsep+os.getenv("PYTHONPATH", ""))
+    os.putenv("PYTHONPATH", "." + os.pathsep + os.getenv("PYTHONPATH", ""))
     if len(args) == 0 or args[0] in ('-h', '--help'):
         printProjectInfo()
         sys.exit(0)
-        
+
     # if it's not a project name, it's a command name
-    if args[0] not in ('all',) + subprojects:
+    if args[0] not in ('all',) + subprojects + otherSubProjects:
         project = 'all'
     else:
         project = args[0]
         args = args[1:]
-    
+
     if project == 'all':
         for project in subprojects:
             runSetup(project, args)
     else:
         runSetup(project, args)
-        
+
 if __name__ == "__main__":
     try:
         main(sys.argv[1:])
     except KeyboardInterrupt:
         sys.exit(1)
-
-    
