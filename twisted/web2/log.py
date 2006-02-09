@@ -129,7 +129,7 @@ class BaseCommonAccessLoggingObserver(object):
                 tz = self.computeTimezoneForLog(time.altzone)
                 self.tzForLogAlt = tz
 
-        return '%d/%s/%02d:%02d:%02d:%02d %s' % (
+        return '%02d/%s/%02d:%02d:%02d:%02d %s' % (
             D, monthname[M], Y, h, m, s, tz)
 
 
