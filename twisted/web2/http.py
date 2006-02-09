@@ -120,7 +120,7 @@ class StatusResponse (Response):
         else:
             mime_params = {}
 
-        Response.__init__(self, code=code, stream=output)
+        super(StatusResponse, self).__init__(code=code, stream=output)
 
         self.headers.setHeader("content-type", http_headers.MimeType("text", "html", mime_params))
 
@@ -134,8 +134,8 @@ class RedirectResponse (StatusResponse):
     A Response object that contains a redirect.
     """
     def __init__(self, location):
-        StatusResponse.__init__(
-            self, responsecode.MOVED_PERMANENTLY,
+        super(RedirectResponse, self).__init__(
+            responsecode.MOVED_PERMANENTLY,
             "Document moved to %s." % (location,)
         )
 
