@@ -98,14 +98,6 @@ def parsePOSTData(request):
     else:
         raise http.HTTPError(responsecode.BAD_REQUEST)
 
-class StopTraversal(object):
-    """
-    Indicates to Request._handleSegment that it should stop handling
-    path segments.
-    """
-    pass
-
-
 class Request(http.Request):
     """
     vars:
@@ -308,13 +300,6 @@ class Request(http.Request):
                 lambda actualRes: self._handleSegment(
                     (actualRes, newpath), res, path))
 
-        if newpath is StopTraversal:
-            # We need to rethink how to do this.
-            #if newres is res:
-                return res
-            #else:
-            #    raise ValueError("locateChild must not return StopTraversal with a resource other than self.")
-
         newres = iweb.IResource(newres)
         if newres is res:
             assert not newpath is path, "URL traversal cycle detected when attempting to locateChild %r from resource %r." % (path, res)
@@ -405,4 +390,4 @@ class Site(object):
         return Request(site=self, *args, **kwargs)
 
 
-__all__ = ['Request', 'Site', 'StopTraversal', 'VERSION', 'defaultHeadersFilter', 'doTrace', 'parsePOSTData', 'preconditionfilter']
+__all__ = ['Request', 'Site', 'VERSION', 'defaultHeadersFilter', 'doTrace', 'parsePOSTData', 'preconditionfilter']

@@ -227,7 +227,7 @@ class LeafResource(RenderMixin):
     implements(iweb.IResource)
 
     def locateChild(self, request, segments):
-        return self, server.StopTraversal
+        return self, ()
 
 class WrapperResource(object):
     """A helper class for resources which just change some state

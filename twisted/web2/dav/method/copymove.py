@@ -36,7 +36,6 @@ from twisted.python.filepath import FilePath
 from twisted.internet.defer import maybeDeferred
 from twisted.web2 import responsecode
 from twisted.web2.http import StatusResponse
-from twisted.web2.server import StopTraversal
 from twisted.web2.dav.fileop import copy, delete, move
 
 # FIXME: This is circular

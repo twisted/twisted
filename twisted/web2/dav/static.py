@@ -45,7 +45,6 @@ from twisted.web2.static import File
 from twisted.web2.iweb import IResponse
 from twisted.web2.http import HTTPError, RedirectResponse
 from twisted.web2.http_headers import ETag
-from twisted.web2.server import StopTraversal
 from twisted.web2.dav import davxml
 from twisted.web2.dav.util import bindMethods
 from twisted.web2.dav.props import WebDAVPropertyStore as LivePropertyStore
@@ -430,7 +429,7 @@ class DAVFile (File):
         # the new resource?  Insert them to segments?
         #
         sibling = request.site.resource
-        while segments and segments is not StopTraversal:        
+        while segments:
             sibling, segments = sibling.locateChild(request, segments)
         return sibling
 

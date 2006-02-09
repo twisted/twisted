@@ -414,7 +414,7 @@ class OldResourceAdapter(object):
         import server
         request = iweb.IOldRequest(req)
         if self.original.isLeaf:
-            return self, server.StopTraversal
+            return self, ()
         name = segments[0]
         if name == '':
             res = self

@@ -198,6 +198,18 @@ class SampleWebTest(BaseCase):
             (self.root, 'http://host/remoteAddr'),
             (200, {}, "Remote Addr: 'remotehost'"))
 
+    def test_testLeafresource(self):
+	class TestResource(resource.LeafResource):
+	    def render(self, req):
+		return http.Response(stream="prepath:%s postpath:%s" % (
+			req.prepath,
+			req.postpath))
+
+	return self.assertResponse(
+	    (TestResource(), 'http://host/consumed/path/segments'),
+	    (200, {}, "prepath:['consumed', 'path', 'segments'] postpath:[]"))
+
+
 class URLParsingTest(BaseCase):
     class TestResource(resource.LeafResource):
         def render(self, req):

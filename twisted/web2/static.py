@@ -298,7 +298,7 @@ class File(resource.RenderMixin):
             fpath = self.fp.child(path)
         else:
             # Request is for a directory (collection) resource
-            return (self, server.StopTraversal)
+            return self, ()
 
         # Don't run processors on directories - if someone wants their own
         # customized directory rendering, subclass File instead.

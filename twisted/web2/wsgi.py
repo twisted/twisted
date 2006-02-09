@@ -39,7 +39,7 @@ class WSGIResource(object):
         return d
     
     def locateChild(self, request, segments):
-        return self, server.StopTraversal
+        return self, ()
             
 def callInReactor(__f, *__a, **__kw):
     from twisted.internet import reactor
