@@ -33,7 +33,7 @@ def makeUnsatisfiable(request, oldresponse):
     if request.headers.hasHeader('if-range'):
         return oldresponse # Return resource instead of error
     response = http.Response(responsecode.REQUESTED_RANGE_NOT_SATISFIABLE)
-    response.setHeader("content-range", ('bytes', None, None, oldresponse.stream.length))
+    response.headers.setHeader("content-range", ('bytes', None, None, oldresponse.stream.length))
     return response
 
 def makeSegment(inputStream, lastOffset, start, end):
