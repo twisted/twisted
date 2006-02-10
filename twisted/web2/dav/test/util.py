@@ -122,7 +122,11 @@ class TestCase(unittest.TestCase):
 
         resource = self.resource_class(path)
         response = maybeDeferred(resource.renderHTTP, request)
-        response.addCallback(callback)
+
+        if type(callback) is tuple:
+            response.addCallbacks(*callback)
+        else:
+            response.addCallback(callback)
 
         return response
 
