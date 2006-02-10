@@ -2,12 +2,14 @@
 # See LICENSE for details.
 
 
-"""I deal with static resources.
+"""
+I deal with static resources.
 """
 
 # System Imports
 import os, time, stat
 import tempfile
+import md5
 
 # Sibling Imports
 from twisted.web2 import http_headers, resource
@@ -17,11 +19,6 @@ from twisted.web2 import http, iweb, stream, responsecode, server, dirlist
 from twisted.python import filepath
 from twisted.internet.defer import succeed, maybeDeferred
 from zope.interface import implements
-
-dangerousPathError = http.HTTPError(responsecode.NOT_FOUND) #"Invalid request URL."
-
-def isDangerous(path):
-    return path == '..' or '/' in path or os.sep in path
 
 class MetaDataMixin(object):
     """
@@ -129,61 +126,6 @@ class Data(resource.Resource):
 
     def render(self, req):
         return http.Response(responsecode.OK, stream=self.data)
-
-def addSlash(request):
-    return "http%s://%s%s/" % (
-        request.isSecure() and 's' or '',
-        request.getHeader("host"),
-        (request.uri.split('?')[0]))
-
-def loadMimeTypes(mimetype_locations=['/etc/mime.types']):
-    """
-    Multiple file locations containing mime-types can be passed as a list.
-    The files will be sourced in that order, overriding mime-types from the
-    files sourced beforehand, but only if a new entry explicitly overrides
-    the current entry.
-    """
-    import mimetypes
-    # Grab Python's built-in mimetypes dictionary.
-    contentTypes = mimetypes.types_map
-    # Update Python's semi-erroneous dictionary with a few of the
-    # usual suspects.
-    contentTypes.update(
-        {
-            '.conf':  'text/plain',
-            '.diff':  'text/plain',
-            '.exe':   'application/x-executable',
-            '.flac':  'audio/x-flac',
-            '.java':  'text/plain',
-            '.ogg':   'application/ogg',
-            '.oz':    'text/x-oz',
-            '.swf':   'application/x-shockwave-flash',
-            '.tgz':   'application/x-gtar',
-            '.wml':   'text/vnd.wap.wml',
-            '.xul':   'application/vnd.mozilla.xul+xml',
-            '.py':    'text/plain',
-            '.patch': 'text/plain',
-        }
-    )
-    # Users can override these mime-types by loading them out configuration
-    # files (this defaults to ['/etc/mime.types']).
-    for location in mimetype_locations:
-        if os.path.exists(location):
-            contentTypes.update(mimetypes.read_mime_types(location))
-            
-    return contentTypes
-
-def getTypeAndEncoding(filename, types, encodings, defaultType):
-    p, ext = os.path.splitext(filename)
-    ext = ext.lower()
-    if encodings.has_key(ext):
-        enc = encodings[ext]
-        ext = os.path.splitext(p)[1].lower()
-    else:
-        enc = None
-    type = types.get(ext, defaultType)
-    return type, enc
-
 
 class File(StaticRenderMixin):
     """
@@ -451,8 +393,6 @@ class File(StaticRenderMixin):
                               self.processors, self.indexNames[:])
 
 
-import md5
-
 class FileSaver(resource.PostableResource):
     allowedTypes = (http_headers.MimeType('text', 'plain'),
                     http_headers.MimeType('text', 'html'),
@@ -548,7 +488,73 @@ class FileSaver(resource.PostableResource):
 #     def locateChild(self, request):
 #         return None, ()
 
+##
+# Utilities
+##
+
+dangerousPathError = http.HTTPError(responsecode.NOT_FOUND) #"Invalid request URL."
+
+def isDangerous(path):
+    return path == '..' or '/' in path or os.sep in path
+
+def addSlash(request):
+    return "http%s://%s%s/" % (
+        request.isSecure() and 's' or '',
+        request.getHeader("host"),
+        (request.uri.split('?')[0]))
+
+def loadMimeTypes(mimetype_locations=['/etc/mime.types']):
+    """
+    Multiple file locations containing mime-types can be passed as a list.
+    The files will be sourced in that order, overriding mime-types from the
+    files sourced beforehand, but only if a new entry explicitly overrides
+    the current entry.
+    """
+    import mimetypes
+    # Grab Python's built-in mimetypes dictionary.
+    contentTypes = mimetypes.types_map
+    # Update Python's semi-erroneous dictionary with a few of the
+    # usual suspects.
+    contentTypes.update(
+        {
+            '.conf':  'text/plain',
+            '.diff':  'text/plain',
+            '.exe':   'application/x-executable',
+            '.flac':  'audio/x-flac',
+            '.java':  'text/plain',
+            '.ogg':   'application/ogg',
+            '.oz':    'text/x-oz',
+            '.swf':   'application/x-shockwave-flash',
+            '.tgz':   'application/x-gtar',
+            '.wml':   'text/vnd.wap.wml',
+            '.xul':   'application/vnd.mozilla.xul+xml',
+            '.py':    'text/plain',
+            '.patch': 'text/plain',
+        }
+    )
+    # Users can override these mime-types by loading them out configuration
+    # files (this defaults to ['/etc/mime.types']).
+    for location in mimetype_locations:
+        if os.path.exists(location):
+            contentTypes.update(mimetypes.read_mime_types(location))
+            
+    return contentTypes
+
+def getTypeAndEncoding(filename, types, encodings, defaultType):
+    p, ext = os.path.splitext(filename)
+    ext = ext.lower()
+    if encodings.has_key(ext):
+        enc = encodings[ext]
+        ext = os.path.splitext(p)[1].lower()
+    else:
+        enc = None
+    type = types.get(ext, defaultType)
+    return type, enc
+
+##
 # Test code
+##
+
 if __name__ == '__builtin__':
     # Running from twistd -y
     from twisted.application import service, strports
