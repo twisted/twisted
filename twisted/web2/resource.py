@@ -25,6 +25,26 @@ class RenderMixin(object):
             self._allowed_methods = tuple([name[5:] for name in dir(self) if name.startswith('http_')])
         return self._allowed_methods
 
+    def checkPreconditions(self, request):
+        """
+        Checks all preconditions imposed by this resource upon a request made
+        against it.
+        @param request: the request to process.
+        @raise http.HTTPError: if any precondition fails.
+        """
+        #
+        # http.checkPreconditions() gets called by the server after every
+        # GET or HEAD request.
+        #
+        # For other methods, we need to know to bail out before request
+        # processing, especially for methods that modify server state (eg. PUT).
+        # We also would like to do so even for methods that don't, if those
+        # methods might be expensive to process.  We're assuming that GET and
+        # HEAD are not expensive.
+        #
+        if request.method not in ("GET", "HEAD"):
+            http.checkPreconditions(request)
+
     def renderHTTP(self, request):
         """
         See L{iweb.IResource.renderHTTP}.
@@ -51,6 +71,8 @@ class RenderMixin(object):
             response = http.Response(responsecode.NOT_ALLOWED)
             response.headers.setHeader("allow", self.allowedMethods())
             return response
+
+        self.checkPreconditions(request)
 
         return method(request)
 
