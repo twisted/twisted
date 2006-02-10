@@ -534,16 +534,18 @@ dispatch incoming clients to the credential checkers, and then to request
 Avatars for any which survive the authentication process.</p>
 
 <p>Fourth, we made a simple checker (an object which implements
-<code>IChecker</code>) to hold valid user/password pairs. The checker gets
-registered with the portal, so it knows who to ask when new clients connect.
-We use a checker named <code>InMemoryDatabaseDontUse</code>, which suggests
-that 1: all the username/password pairs are kept in memory instead of being
-saved to a database or something, and 2: you shouldn't use it. The
-admonition against using it is because there are better schemes: keeping
-everything in memory will not work when you have thousands or millions of
-users to keep track of, the passwords will be stored in the .tap file when
-the application shuts down (possibly a security risk), and finally it is a
-nuisance to add or remove users after the checker is constructed.</p>
+<code>IChecker</code>) to hold valid user/password pairs. The checker
+gets registered with the portal, so it knows who to ask when new
+clients connect.  We use a checker named
+<code>InMemoryUsernamePasswordDatabaseDontUse</code>, which suggests
+that 1: all the username/password pairs are kept in memory instead of
+being saved to a database or something, and 2: you shouldn't use
+it. The admonition against using it is because there are better
+schemes: keeping everything in memory will not work when you have
+thousands or millions of users to keep track of, the passwords will be
+stored in the .tap file when the application shuts down (possibly a
+security risk), and finally it is a nuisance to add or remove users
+after the checker is constructed.</p>
 
 <p>Fifth, we create a <code>pb.PBServerFactory</code> to listen on a TCP
 port. This factory knows how to connect the remote client to the Portal, so

@@ -18,6 +18,6 @@ class MyRealm:
         return pb.IPerspective, MyPerspective(avatarId), lambda:None
 
 p = portal.Portal(MyRealm())
-p.registerChecker(checkers.InMemoryDatabaseDontUse(user1="pass1"))
+p.registerChecker(checkers.InMemoryUsernamePasswordDatabaseDontUse(user1="pass1"))
 reactor.listenTCP(8800, pb.PBServerFactory(p))
 reactor.run()
