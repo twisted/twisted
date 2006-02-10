@@ -17,7 +17,7 @@ from twisted.web2 import http, iweb, stream, responsecode, server, dirlist
 
 # Twisted Imports
 from twisted.python import filepath
-from twisted.internet.defer import succeed, maybeDeferred
+from twisted.internet.defer import maybeDeferred
 from zope.interface import implements
 
 class MetaDataMixin(object):
@@ -74,6 +74,15 @@ class MetaDataMixin(object):
         return True
 
 class StaticRenderMixin(resource.RenderMixin, MetaDataMixin):
+    def checkPreconditions(self, request):
+        if request.method not in ("GET", "HEAD"):
+            http.checkPreconditions(
+                request,
+                entityExists = self.exists(),
+                etag         = self.etag(),
+                lastModified = self.lastModified(),
+            )
+
     def renderHTTP(self, request):
         """
         See L{resource.RenderMixIn.renderHTTP}.
