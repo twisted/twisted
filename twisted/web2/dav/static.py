@@ -104,137 +104,6 @@ class DAVFile (File):
         return "<%s: %s>" % (self.__class__.__name__, self.fp.path)
 
     ##
-    # HTTP
-    ##
-
-    #
-    # Preconditions
-    #
-
-    def checkIfMatch(self, request):
-        """
-        Check the If-Match header against the resource.
-        Raise HTTPError if we shouldn't continue.
-        (RFC 2616, section 14.24)
-        """
-        #
-        # NOTE: RFC 2616 (HTTP) section 14.25, and 14.26 say:
-        #   If the request would, without the If-Match header field, result in
-        #   anything other than a 2xx status, then the If-Match header MUST be
-        #   ignored.
-        # This implies that we have to attempt the request, check the status,
-        # and act on the If-Match header only if the request resulted in an
-        # non-error status.  That seems rather expensive.  Furthermore, for many
-        # operations, such as PUT, COPY, MOVE and DELETE, we'd have to back out
-        # the successful operation first.  Ouch!
-        #
-        # Roy Fielding says that only likely errors which are detectable early
-        # apply here, so no ouch is necessary.  Specifically: "You only need to
-        # check things that are exposed via the HTTP interface, such as
-        # authorization."  Sounds good.
-        #
-        match = request.headers.getHeader("if-match")
-        if match:
-            if match == ("*",):
-                if not self.exists():
-                    raise HTTPError(responsecode.PRECONDITION_FAILED)
-            else:
-                my_etag = self.etag()
-                if my_etag is None:
-                    raise HTTPError(responsecode.PRECONDITION_FAILED)
-                for etag in match:
-                    if etag.match(my_etag, True): break
-                else:
-                    raise HTTPError(responsecode.PRECONDITION_FAILED)
-
-    def checkIfNoneMatch(self, request):
-        """
-        Check the If-None-Match header against the resource.
-        Raise HTTPError if we shouldn't continue.
-        (RFC 2616, section 14.26)
-        """
-        #
-        # NOTE: See NOTE in checkIfMatch re: ignoring the header 
-        #
-        match = request.headers.getHeader("if-none-match")
-        if match:
-            if len(match) == 1 and match[0] == "*":
-                if self.exists():
-                    raise HTTPError(responsecode.PRECONDITION_FAILED)
-            else:
-                if request.method in ("GET", "HEAD"):
-                    error = HTTPError(responsecode.NOT_MODIFIED)
-                    #
-                    # Don't use weak ETags in a Range request.  HTTP allows it,
-                    # but it can produce a corrupt entity on the client side.
-                    #
-                    if request.headers.hasHeader("range"):
-                        strong = True
-                    else:
-                        strong = False
-                else:
-                    error = HTTPError(responsecode.PRECONDITION_FAILED)
-                    strong = True
-
-                my_etag = self.etag()
-                if my_etag is not None:
-                    for etag in match:
-                        if my_etag.match(ETag(etag), strongCompare=strong):
-                            raise error
-
-    def checkIfModifiedSince(self, request):
-        """
-        Check the If-Modified-Since header against the resource.
-        Raise HTTPError if we shouldn't continue.
-        (RFC 2616, section 14.25)
-        """
-        #
-        # FIXME: Check the Range header.  See 14.35.  I don't understand
-        # the implications of 14.35.2.
-        #
-        ims = request.headers.getHeader("if-modified-since")
-        if ims:
-            if ims < self.lastModified():
-                raise HTTPError(responsecode.NOT_MODIFIED)
-
-    def checkIfUnmodifiedSince(self, request):
-        """
-        Check the If-Unmodified-Since header against the resource.
-        Raise HTTPError if we shouldn't continue.
-        (RFC 2616, section 14.28)
-        """
-        ius = request.headers.getHeader("if-unmodified-since")
-        if ius:
-            if ius >= self.lastModified():
-                raise HTTPError(responsecode.PRECONDITION_FAILED)
-
-    def checkPreconditions(self, request):
-        """
-        Check preconditions on the request.
-        """
-        failure = None
-
-        for test in (
-            self.checkIfMatch,
-            self.checkIfNoneMatch,
-            self.checkIfModifiedSince,
-            self.checkIfUnmodifiedSince,
-        ):
-            try:
-                test(request)
-            except HTTPError, e:
-                #
-                # RFC 2518, section 13.3.4: Don't respond with Not Modified
-                # unless all four match/modified preconditions agree.
-                #
-                if e.response.code == responsecode.NOT_MODIFIED:
-                    if failure is None: failure = Failure()
-                else:
-                    Failure().raiseException()
-
-        if failure is not None: failure.raiseException()
-
-    ##
     # WebDAV
     ##
 
@@ -355,18 +224,6 @@ class DAVFile (File):
         if self.isCollection() and request.uri[-1:] != "/":
             return RedirectResponse(request.uri + "/")
 
-        #
-        # Generate response and append common headers
-        #
-        try:
-            self.checkPreconditions(request)
-        except HTTPError, e:
-            response = succeed(e.response)
-        else:
-            response = maybeDeferred(super(DAVFile, self).renderHTTP, request)
-
-        assert response, "No response"
-
         def setHeaders(response):
             response = IResponse(response)
 
@@ -383,8 +240,7 @@ class DAVFile (File):
 
             return response
 
-        response.addCallback(setHeaders)
-        return response
+        return maybeDeferred(super(DAVFile, self).renderHTTP, request).addCallback(setHeaders)
 
     ##
     # Workarounds for issues with File
