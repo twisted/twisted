@@ -55,12 +55,12 @@ always run regardless of whether your test passes or fails (like a bare
 <code>except</code> clause in a try-except construct). Exceptions in
 <code>tearDown</code> are flagged as errors and flunk the test.</p>
 
-<p>If your code uses Deferreds or depends on the reactor running, you
-can return a Deferred from your test method, setUp, or tearDown and
-Trial will do the right thing. That is, it will run the reactor for
-you until the Deferred has triggered and its callbacks have been
-run. Don't use <code>reactor.run()</code> or
-<code>reactor.stop()</code> in your tests.</p>
+<p>If your code uses Deferreds or depends on the reactor running, you can
+return a Deferred from your test method, setUp, or tearDown and Trial will
+do the right thing. That is, it will run the reactor for you until the
+Deferred has triggered and its callbacks have been run. Don't use
+<code>reactor.run()</code>, <code>reactor.stop()</code>, or
+<code>reactor.iterate()</code> in your tests.</p>
 
 <p>Calls to <code>reactor.callLater</code> create <code class="API"
 base="twisted.internet.interfaces">IDelayedCall</code>s.  These need to be run
