@@ -40,9 +40,8 @@ def defaultHeadersFilter(request, response):
 defaultHeadersFilter.handleErrors = True
 
 def preconditionfilter(request, response):
-    newresponse = http.checkPreconditions(request, response)
-    if newresponse is not None:
-        return newresponse
+    if request.method in ("GET", "HEAD"):
+        http.checkPreconditions(request, response)
     return response
 
 def doTrace(request):
