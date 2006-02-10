@@ -29,6 +29,7 @@ from twisted.internet.defer import Deferred
 from twisted.web2 import responsecode
 from twisted.web2.iweb import IResponse
 from twisted.web2.stream import FileStream
+from twisted.web2.http import HTTPError
 
 import twisted.web2.dav.test.util
 from twisted.web2.dav.test.util import SimpleRequest, serialize
@@ -46,7 +47,7 @@ class PUT(twisted.web2.dav.test.util.TestCase):
 
         dst_uri = "/put_simple"
 
-        def check_result(response, path):
+        def checkResult(response, path):
             response = IResponse(response)
 
             if response.code not in (
@@ -74,7 +75,7 @@ class PUT(twisted.web2.dav.test.util.TestCase):
                 # Can't really PUT something you can't read
                 if not os.path.isfile(path): continue
     
-                def do_test(response): check_result(response, path)
+                def do_test(response): checkResult(response, path)
     
                 request = SimpleRequest(self.site, "PUT", uri)
                 request.stream = FileStream(file(path, "rb"))
@@ -99,12 +100,16 @@ class PUT(twisted.web2.dav.test.util.TestCase):
                 responsecode.NO_CONTENT,
                 responsecode.CREATED,
             ):
-                def check_result(response, code=code):
+                def checkResult(response, code=code):
                     response = IResponse(response)
 
                     if response.code != code:
                         self.fail("Incorrect response code for PUT (%s != %s)"
                                   % (response.code, code))
+
+                def onError(f):
+                    f.trap(HTTPError)
+                    return checkResult(f.value.response)
 
                 request = SimpleRequest(self.site, "PUT", dst_uri)
                 request.stream = FileStream(file(__file__, "rb"))
@@ -116,7 +121,7 @@ class PUT(twisted.web2.dav.test.util.TestCase):
                 elif code == responsecode.PRECONDITION_FAILED:
                     request.headers.setHeader("if-none-match", ("*",))
     
-                yield (request, check_result, dst_path)
+                yield (request, (checkResult, onError), dst_path)
 
         return serialize(self.send, work())
 
@@ -127,7 +132,7 @@ class PUT(twisted.web2.dav.test.util.TestCase):
         dst_path = os.path.join(self.docroot, "put", "no", "parent")
         dst_uri = "/put/no/parent"
 
-        def check_result(response):
+        def checkResult(response):
             response = IResponse(response)
 
             if response.code != responsecode.CONFLICT:
@@ -137,4 +142,4 @@ class PUT(twisted.web2.dav.test.util.TestCase):
         request = SimpleRequest(self.site, "PUT", dst_uri)
         request.stream = FileStream(file(__file__, "rb"))
 
-        return self.send(request, check_result, dst_path)
+        return self.send(request, checkResult, dst_path)
