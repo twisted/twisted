@@ -8,65 +8,11 @@ I hold the lowest-level L{Resource} class and related mix-in classes.
 
 # System Imports
 from twisted.python import components
-from twisted.internet.defer import succeed, maybeDeferred
 from zope.interface import implements
 
 from twisted.web2 import iweb, http, server, responsecode
 
-class MetaDataMixin(object):
-    """
-    Mix-in class for L{iweb.IResource} which provides methods for accessing resource
-    metadata specified by HTTP.
-    """
-    def etag(self):
-        """
-        @return: The current etag for the resource if available, None otherwise.
-        """
-        return None
-
-    def lastModified(self):
-        """
-        @return: The last modified time of the resource if available, None otherwise.
-        """
-        return None
-
-    def creationDate(self):
-        """
-        @return: The creation date of the resource if available, None otherwise.
-        """
-        return None
-
-    def contentLength(self):
-        """
-        @return: The size in bytes of the resource if available, None otherwise.
-        """
-        return None
-
-    def contentType(self):
-        """
-        @return: The MIME type of the resource if available, None otherwise.
-        """
-        return None
-
-    def contentEncoding(self):
-        """
-        @return: The encoding of the resource if available, None otherwise.
-        """
-        return None
-
-    def displayName(self):
-        """
-        @return: The display name of the resource if available, None otherwise.
-        """
-        return None
-
-    def exists(self):
-        """
-        @return: True if the resource exists on the server, False otherwise.
-        """
-        return True
-
-class RenderMixin(MetaDataMixin):
+class RenderMixin(object):
     """
     Mix-in class for L{iweb.IResource} which provides a dispatch mechanism for
     handling HTTP methods.
@@ -81,7 +27,7 @@ class RenderMixin(MetaDataMixin):
 
     def renderHTTP(self, request):
         """
-        See L{iweb.IResource}C{.renderHTTP}.
+        See L{iweb.IResource.renderHTTP}.
 
         This implementation will dispatch the given C{request} to another method
         of C{self} named C{http_}METHOD, where METHOD is the HTTP method used by
@@ -106,22 +52,7 @@ class RenderMixin(MetaDataMixin):
             response.headers.setHeader("allow", self.allowedMethods())
             return response
 
-        def setHeaders(response):
-            response = iweb.IResponse(response)
-
-            # Content-* headers refer to the response content, not (necessarily) to
-            # the resource content, so they depend on the request method, and
-            # therefore can't be set here.
-            for (header, value) in (
-                ("etag", self.etag()),
-                ("last-modified", self.lastModified()),
-            ):
-                if value is not None:
-                    response.headers.setHeader(header, value)
-
-            return response
-
-        return maybeDeferred(method, request).addCallback(setHeaders)
+        return method(request)
 
     def http_OPTIONS(self, request):
         """
@@ -258,4 +189,4 @@ class WrapperResource(object):
         return self.res
     
 
-__all__ = ['MetaDataMixin', 'RenderMixin', 'Resource', 'PostableResource', 'LeafResource', 'WrapperResource']
+__all__ = ['RenderMixin', 'Resource', 'PostableResource', 'LeafResource', 'WrapperResource']

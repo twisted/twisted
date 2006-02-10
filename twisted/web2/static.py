@@ -15,6 +15,7 @@ from twisted.web2 import http, iweb, stream, responsecode, server, dirlist
 
 # Twisted Imports
 from twisted.python import filepath
+from twisted.internet.defer import succeed, maybeDeferred
 from zope.interface import implements
 
 dangerousPathError = http.HTTPError(responsecode.NOT_FOUND) #"Invalid request URL."
@@ -22,6 +23,83 @@ dangerousPathError = http.HTTPError(responsecode.NOT_FOUND) #"Invalid request UR
 def isDangerous(path):
     return path == '..' or '/' in path or os.sep in path
 
+class MetaDataMixin(object):
+    """
+    Mix-in class for L{iweb.IResource} which provides methods for accessing resource
+    metadata specified by HTTP.
+    """
+    def etag(self):
+        """
+        @return: The current etag for the resource if available, None otherwise.
+        """
+        return None
+
+    def lastModified(self):
+        """
+        @return: The last modified time of the resource if available, None otherwise.
+        """
+        return None
+
+    def creationDate(self):
+        """
+        @return: The creation date of the resource if available, None otherwise.
+        """
+        return None
+
+    def contentLength(self):
+        """
+        @return: The size in bytes of the resource if available, None otherwise.
+        """
+        return None
+
+    def contentType(self):
+        """
+        @return: The MIME type of the resource if available, None otherwise.
+        """
+        return None
+
+    def contentEncoding(self):
+        """
+        @return: The encoding of the resource if available, None otherwise.
+        """
+        return None
+
+    def displayName(self):
+        """
+        @return: The display name of the resource if available, None otherwise.
+        """
+        return None
+
+    def exists(self):
+        """
+        @return: True if the resource exists on the server, False otherwise.
+        """
+        return True
+
+class StaticRenderMixin(resource.RenderMixin, MetaDataMixin):
+    def renderHTTP(self, request):
+        """
+        See L{resource.RenderMixIn.renderHTTP}.
+
+        This implementation automatically sets some headers on the response
+        based on data available from L{MetaDataMixin} methods.
+        """
+        def setHeaders(response):
+            response = iweb.IResponse(response)
+
+            # Content-* headers refer to the response content, not (necessarily) to
+            # the resource content, so they depend on the request method, and
+            # therefore can't be set here.
+            for (header, value) in (
+                ("etag", self.etag()),
+                ("last-modified", self.lastModified()),
+            ):
+                if value is not None:
+                    response.headers.setHeader(header, value)
+
+            return response
+
+        return maybeDeferred(super(StaticRenderMixin, self).renderHTTP, request).addCallback(setHeaders)
 
 class Data(resource.Resource):
     """
@@ -107,7 +185,7 @@ def getTypeAndEncoding(filename, types, encodings, defaultType):
     return type, enc
 
 
-class File(resource.RenderMixin):
+class File(StaticRenderMixin):
     """
     File is a resource that represents a plain non-interpreted file
     (although it can look for an extension like .rpy or .cgi and hand the
