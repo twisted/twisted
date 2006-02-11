@@ -198,8 +198,14 @@ class Win32Reactor(posixbase.PosixReactorBase):
 
     doIteration = doWaitForMultipleEvents
 
-    def spawnProcess(self, processProtocol, executable, args=(), env={}, path=None, usePTY=0):
+    def spawnProcess(self, processProtocol, executable, args=(), env={}, path=None, uid=None, gid=None, usePTY=0):
         """Spawn a process."""
+        if uid is not None:
+            raise ValueError("Setting UID is unsupported on this platform.")
+        if gid is not None:
+            raise ValueError("Setting GID is unsupported on this platform.")
+        if usePTY:
+            raise ValueError("PTYs are unsupported on this platform.")
         return Process(self, processProtocol, executable, args, env, path)
 
 components.backwardsCompatImplements(Win32Reactor)
