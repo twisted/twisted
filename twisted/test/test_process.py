@@ -184,6 +184,7 @@ class ProcessTestCase(SignalMixin, unittest.TestCase):
         exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_twisted.py")
         p = Accumulator()
+        d = p.endedDeferred = defer.Deferred()
         env = {"PYTHONPATH": os.pathsep.join(sys.path)}
         reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=env,
                              path=None, usePTY=self.usePTY)
@@ -191,12 +192,15 @@ class ProcessTestCase(SignalMixin, unittest.TestCase):
         p.transport.write("abc")
         p.transport.write("123")
         p.transport.closeStdin()
-        spinUntil(lambda :p.closed, 10)
-        self.assertEquals(p.outF.getvalue(), "hello, worldabc123",
-                          "Output follows:\n"
-                          "%s\n"
-                          "Error message from process_twisted follows:\n"
-                          "%s\n" % (p.outF.getvalue(), p.errF.getvalue()))
+
+        def processEnded(ign):
+            self.assertEquals(p.outF.getvalue(), "hello, worldabc123",
+                              "Output follows:\n"
+                              "%s\n"
+                              "Error message from process_twisted follows:\n"
+                              "%s\n" % (p.outF.getvalue(), p.errF.getvalue()))
+        return d.addCallback(processEnded)
+
 
     def testProcess(self):
         exe = sys.executable
@@ -267,20 +271,26 @@ class ProcessTestCase(SignalMixin, unittest.TestCase):
             return err
 
         return finished.addCallback(asserts).addErrback(takedownProcess)
+    testEcho.timeout = 60 # XXX This should not be.  There is already a
+                          # global timeout value.  Why do you think this
+                          # test can complete more quickly?
+
 
     def testCommandLine(self):
         args = [r'a\"b ', r'a\b ', r' a\\"b', r' a\\b', r'"foo bar" "', '\tab', '"\\', 'a"b', "a'b"]
         pyExe = sys.executable
         scriptPath = util.sibpath(__file__, "process_cmdline.py")
         p = Accumulator()
+        d = p.endedDeferred = defer.Deferred()
         reactor.spawnProcess(p, pyExe, [pyExe, "-u", scriptPath]+args, env=None,
                              path=None)
-        spinUntil(lambda :p.closed)
-        self.assertEquals(p.errF.getvalue(), "")
-        recvdArgs = p.outF.getvalue().splitlines()
-        self.assertEquals(recvdArgs, args)
+
+        def processEnded(ign):
+            self.assertEquals(p.errF.getvalue(), "")
+            recvdArgs = p.outF.getvalue().splitlines()
+            self.assertEquals(recvdArgs, args)
+        return d.addCallback(processEnded)
     
-    testEcho.timeout = 60
 
 class TwoProcessProtocol(protocol.ProcessProtocol):
     finished = 0
@@ -481,18 +491,23 @@ class FDTest(SignalMixin, unittest.TestCase):
         exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_linger.py")
         p = Accumulator()
+        d = p.endedDeferred = defer.Deferred()
         reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=None,
                              path=None,
                              childFDs={1:"r", 2:2},
                              )
-        spinUntil(lambda :p.closed, 7)
-        self.failUnlessEqual(p.outF.getvalue(),
-                             "here is some text\ngoodbye\n")
+        def processEnded(ign):
+            self.failUnlessEqual(p.outF.getvalue(),
+                                 "here is some text\ngoodbye\n")
+        return d.addCallback(processEnded)
+
+
 
 class Accumulator(protocol.ProcessProtocol):
     """Accumulate data from a process."""
 
     closed = 0
+    endedDeferred = None
 
     def connectionMade(self):
         # print "connection made"
@@ -517,6 +532,9 @@ class Accumulator(protocol.ProcessProtocol):
 
     def processEnded(self, reason):
         self.closed = 1
+        if self.endedDeferred is not None:
+            d, self.endedDeferred = self.endedDeferred, None
+            d.callback(None)
 
 
 class PosixProcessBase:
@@ -572,14 +590,16 @@ class PosixProcessTestCase(SignalMixin, unittest.TestCase, PosixProcessBase):
             raise RuntimeError("/bin/ls not found")
 
         p = Accumulator()
+        d = p.endedDeferred = defer.Deferred()
         reactor.spawnProcess(p, '/bin/ls',
                              ["/bin/ls",
                               "ZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"],
                              env=None, path="/tmp",
                              usePTY=self.usePTY)
 
-        spinUntil(lambda :p.closed)
-        self.assertEquals(lsOut, p.errF.getvalue())
+        def processEnded(ign):
+            self.assertEquals(lsOut, p.errF.getvalue())
+        return d.addCallback(processEnded)
 
     def testProcess(self):
         if os.path.exists('/bin/gzip'): cmd = '/bin/gzip'
@@ -587,16 +607,20 @@ class PosixProcessTestCase(SignalMixin, unittest.TestCase, PosixProcessBase):
         else: raise RuntimeError("gzip not found in /bin or /usr/bin")
         s = "there's no place like home!\n" * 3
         p = Accumulator()
+        d = p.endedDeferred = defer.Deferred()
         reactor.spawnProcess(p, cmd, [cmd, "-c"], env=None, path="/tmp",
                              usePTY=self.usePTY)
         p.transport.write(s)
         p.transport.closeStdin()
 
-        spinUntil(lambda :p.closed, 10)
-        f = p.outF
-        f.seek(0, 0)
-        gf = gzip.GzipFile(fileobj=f)
-        self.assertEquals(gf.read(), s)
+        def processEnded(ign):
+            f = p.outF
+            f.seek(0, 0)
+            gf = gzip.GzipFile(fileobj=f)
+            self.assertEquals(gf.read(), s)
+        return d.addCallback(processEnded)
+
+
     
 class PosixProcessTestCasePTY(SignalMixin, unittest.TestCase, PosixProcessBase):
     """Just like PosixProcessTestCase, but use ptys instead of pipes."""
@@ -612,12 +636,18 @@ class PosixProcessTestCasePTY(SignalMixin, unittest.TestCase, PosixProcessBase):
         exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_tty.py")
         p = Accumulator()
-        
+        d = p.endedDeferred = defer.Deferred()
         reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=None,
                             path=None, usePTY=self.usePTY)
         p.transport.write("hello world!\n")
-        spinUntil(lambda :p.closed, 10)
-        self.assertEquals(p.outF.getvalue(), "hello world!\r\nhello world!\r\n", "Error message from process_tty follows:\n\n%s\n\n" % p.outF.getvalue())
+
+        def processEnded(ign):
+            self.assertEquals(
+                p.outF.getvalue(),
+                "hello world!\r\nhello world!\r\n",
+                "Error message from process_tty follows:\n\n%s\n\n" % p.outF.getvalue())
+        return d.addCallback(processEnded)
+
 
     def testBadArgs(self):
         pyExe = sys.executable
@@ -632,14 +662,17 @@ class Win32ProcessTestCase(SignalMixin, unittest.TestCase):
         pyExe = sys.executable
         scriptPath = util.sibpath(__file__, "process_stdinreader.py")
         p = Accumulator()
+        d = p.endedDeferred = defer.Deferred()
         reactor.spawnProcess(p, pyExe, [pyExe, "-u", scriptPath], env=None,
                              path=None)
         p.transport.write("hello, world")
         p.transport.closeStdin()
 
-        spinUntil(lambda :p.closed)
-        self.assertEquals(p.errF.getvalue(), "err\nerr\n")
-        self.assertEquals(p.outF.getvalue(), "out\nhello, world\nout\n")
+        def processEnded(ign):
+            self.assertEquals(p.errF.getvalue(), "err\nerr\n")
+            self.assertEquals(p.outF.getvalue(), "out\nhello, world\nout\n")
+        return d.addCallback(processEnded)
+
 
     def testBadArgs(self):
         pyExe = sys.executable
