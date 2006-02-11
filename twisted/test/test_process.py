@@ -92,7 +92,7 @@ class EchoProtocol(protocol.ProcessProtocol):
         # test writeSequence
         self.transport.writeSequence([self.s, self.s])
         self.buffer = self.s * self.n
-    
+
     def outReceived(self, data):
         if buffer(self.buffer, self.count, len(data)) != buffer(data):
             self.failure = ("wrong bytes received", data, self.count)
@@ -114,7 +114,7 @@ class SignalProtocol(protocol.ProcessProtocol):
         self.signal = sig
         self.going = 1
         self.testcase = testcase
-        
+
     def outReceived(self, data):
         self.transport.signalProcess(self.signal)
 
@@ -146,7 +146,7 @@ class SignalMixin:
     #      class used where it matters?
     #        - spiv, 2005-04-01
     sigchldHandler = None
-    
+
     def setUpClass(self):
         # make sure SIGCHLD handler is installed, as it should be on
         # reactor.run(). Do this because the reactor may not have been run
@@ -157,7 +157,7 @@ class SignalMixin:
                                                 reactor._handleSigchld)
         else:
             log.msg("Skipped installing SIGCHLD signal handler.")
-    
+
     def tearDownClass(self):
         if self.sigchldHandler:
             log.msg("Uninstalled SIGCHLD signal handler.")
@@ -166,7 +166,7 @@ class SignalMixin:
 class TestManyProcessProtocol(TestProcessProtocol):
     def __init__(self):
         self.deferred = defer.Deferred()
- 
+
     def processEnded(self, reason):
         TestProcessProtocol.processEnded(self, reason)
         if reason.check(error.ProcessDone):
@@ -227,7 +227,7 @@ class ProcessTestCase(SignalMixin, unittest.TestCase):
             pass
 
     def testManyProcesses(self):
-        
+
         def _check(results, protocols):
             for p in protocols:
                 self.failUnless(p.finished)
@@ -236,23 +236,23 @@ class ProcessTestCase(SignalMixin, unittest.TestCase):
                 f = p.reason
                 f.trap(error.ProcessTerminated)
                 self.assertEquals(f.value.exitCode, 23)
-        
+
         exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_tester.py")
         args = [exe, "-u", scriptPath]
         protocols = []
         deferreds = []
-                   
+
         for i in xrange(50):
             p = TestManyProcessProtocol()
             protocols.append(p)
             reactor.spawnProcess(p, exe, args, env=None)
             deferreds.append(p.deferred)
-        
+
         deferredList = defer.DeferredList(deferreds, consumeErrors=True)
         deferredList.addCallback(_check, protocols)
         return deferredList
-            
+
     def testEcho(self):
         finished = defer.Deferred()
         p = EchoProtocol(finished)
@@ -290,7 +290,7 @@ class ProcessTestCase(SignalMixin, unittest.TestCase):
             recvdArgs = p.outF.getvalue().splitlines()
             self.assertEquals(recvdArgs, args)
         return d.addCallback(processEnded)
-    
+
 
 class TwoProcessProtocol(protocol.ProcessProtocol):
     finished = 0
@@ -299,7 +299,7 @@ class TwoProcessProtocol(protocol.ProcessProtocol):
         pass
     def processEnded(self, reason):
         self.finished = 1
-        
+
 class TestTwoProcessesBase:
     def setUp(self):
         self.processes = [None, None]
@@ -312,7 +312,7 @@ class TestTwoProcessesBase:
         scriptPath = util.sibpath(__file__, "process_reader.py")
         for num in (0,1):
             self.pp[num] = TwoProcessProtocol()
-            self.pp[num].num = num 
+            self.pp[num].num = num
             p = reactor.spawnProcess(self.pp[num],
                                      exe, [exe, "-u", scriptPath], env=None,
                                      usePTY=usePTY)
@@ -325,14 +325,14 @@ class TestTwoProcessesBase:
         self.failIf(pp.finished, "Process finished too early")
         p.loseConnection()
         if self.verbose: print self.pp[0].finished, self.pp[1].finished
-        
+
     def check(self):
         #print self.pp[0].finished, self.pp[1].finished
         #print "  ", self.pp[0].num, self.pp[1].num
         if self.pp[0].finished and self.pp[1].finished:
             self.done = 1
         return self.done
-            
+
     def testClose(self):
         if self.verbose: print "starting processes"
         self.createProcesses()
@@ -376,7 +376,7 @@ class TestTwoProcessesPosix(TestTwoProcessesBase, SignalMixin, unittest.TestCase
         reactor.callLater(1, self.close, 0)
         reactor.callLater(2, self.close, 1)
         spinUntil(self.check, 5)
-    
+
     def testKillPty(self):
         if self.verbose: print "starting processes"
         self.createProcesses(usePTY=1)
@@ -583,7 +583,7 @@ class PosixProcessBase:
 
 class PosixProcessTestCase(SignalMixin, unittest.TestCase, PosixProcessBase):
     # add three non-pty test cases
-        
+
     def testStderr(self):
         # we assume there is no file named ZZXXX..., both in . and in /tmp
         if not os.path.exists('/bin/ls'):
@@ -621,7 +621,7 @@ class PosixProcessTestCase(SignalMixin, unittest.TestCase, PosixProcessBase):
         return d.addCallback(processEnded)
 
 
-    
+
 class PosixProcessTestCasePTY(SignalMixin, unittest.TestCase, PosixProcessBase):
     """Just like PosixProcessTestCase, but use ptys instead of pipes."""
     usePTY = 1
@@ -682,7 +682,7 @@ class Win32ProcessTestCase(SignalMixin, unittest.TestCase):
         self.assertRaises(ValueError, reactor.spawnProcess, p, pyExe, pyArgs, gid=1)
         self.assertRaises(ValueError, reactor.spawnProcess, p, pyExe, pyArgs, usePTY=1)
         self.assertRaises(ValueError, reactor.spawnProcess, p, pyExe, pyArgs, childFDs={1:'r'})
-        
+
 class UtilTestCase(unittest.TestCase):
     def setUpClass(klass):
         j = os.path.join
@@ -690,34 +690,34 @@ class UtilTestCase(unittest.TestCase):
         foobaz = j("foo", "baz")
         bazfoo = j("baz", "foo")
         barfoo = j("baz", "bar")
-        
+
         for d in "foo", foobar, foobaz, "baz", bazfoo, barfoo:
             if os.path.exists(d):
                 shutil.rmtree(d, True)
             os.mkdir(d)
-        
+
         f = file(j(foobaz, "executable"), "w")
         f.close()
         os.chmod(j(foobaz, "executable"), 0700)
-        
+
         f = file(j("foo", "executable"), "w")
         f.close()
         os.chmod(j("foo", "executable"), 0700)
-        
+
         f = file(j(bazfoo, "executable"), "w")
         f.close()
         os.chmod(j(bazfoo, "executable"), 0700)
-        
+
         f = file(j(bazfoo, "executable.bin"), "w")
         f.close()
         os.chmod(j(bazfoo, "executable.bin"), 0700)
-        
+
         f = file(j(barfoo, "executable"), "w")
         f.close()
-      
+
         klass.oldPath = os.environ['PATH']
         os.environ['PATH'] = os.pathsep.join((foobar, foobaz, bazfoo, barfoo))
-    
+
     def tearDownClass(klass):
         j = os.path.join
         os.environ['PATH'] = klass.oldPath
@@ -725,8 +725,8 @@ class UtilTestCase(unittest.TestCase):
         foobaz = j("foo", "baz")
         bazfoo = j("baz", "foo")
         barfoo = j("baz", "bar")
-        
-       
+
+
         os.remove(j(foobaz, "executable"))
         os.remove(j("foo", "executable"))
         os.remove(j(bazfoo, "executable"))
@@ -735,14 +735,14 @@ class UtilTestCase(unittest.TestCase):
 
         for d in foobar, foobaz, bazfoo, barfoo, "foo", "baz":
             os.rmdir(d)
-     
+
     def testWhich(self):
         j = os.path.join
         paths = procutils.which("executable")
         self.assertEquals(paths, [
             j("foo", "baz", "executable"), j("baz", "foo", "executable")
         ])
-    
+
     def testWhichPathExt(self):
         j = os.path.join
         old = os.environ.get('PATHEXT', None)
@@ -785,7 +785,7 @@ class ClosingPipes(unittest.TestCase):
             callback=lambda _: self.fail("I wanted an errback."),
             errback=self._endProcess, errbackArgs=(p,))
         reactor.spawnProcess(p, sys.executable,
-                             [sys.executable, '-u', '-c', 
+                             [sys.executable, '-u', '-c',
                               r'raw_input(); import sys, os; os.write(%d, "foo\n"); sys.exit(42)' % fd],
                              env=None)
         p.transport.write('go\n')
@@ -806,7 +806,7 @@ class ClosingPipes(unittest.TestCase):
                     'Child should fail due to EPIPE.')
         reason.trap(error.ProcessTerminated)
         # child must not get past that write without raising
-        self.failIfEqual(reason.value.exitCode, 42, 
+        self.failIfEqual(reason.value.exitCode, 42,
                          'process reason was %r' % reason)
         self.failUnlessEqual(p.output, '')
         return p.errput
