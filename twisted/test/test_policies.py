@@ -10,7 +10,7 @@ from StringIO import StringIO
 from twisted.trial import unittest
 from twisted.trial.util import fireWhenDoneFunc
 from twisted.test.proto_helpers import StringTransportWithDisconnection
-from twisted.test.test_task import Clock
+from twisted.test.time_helpers import Clock
 
 import time
 

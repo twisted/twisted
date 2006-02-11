@@ -7,7 +7,7 @@ from twisted.trial.util import spinUntil
 from twisted.internet import reactor, protocol, error, app, abstract
 from twisted.internet import interfaces
 
-from twisted.test.test_task import Clock
+from twisted.test.time_helpers import Clock
 
 try:
     from twisted.internet import ssl

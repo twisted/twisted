@@ -2433,7 +2433,7 @@ class Timeout(IMAP4HelperMixin, unittest.TestCase):
         self.failUnless(self.stillConnected)
 
     def testIdleClientDoesDisconnect(self):
-        from twisted.test.test_task import Clock
+        from twisted.test.time_helpers import Clock
         c = Clock()
         c.install()
         try:
