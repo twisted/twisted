@@ -8,53 +8,69 @@ from twisted.internet import task, reactor, defer
 
 from twisted.python import failure
 
+class TestableLoopingCall(task.LoopingCall):
+    def __init__(self, clock, *a, **kw):
+        super(TestableLoopingCall, self).__init__(*a, **kw)
+        self._callLater = lambda delay: clock.callLater(delay, self)
+        self._seconds = clock.seconds
+
+
+
+class FakeDelayedCall(object):
+    def __init__(self, when, clock, what, a, kw):
+        self.clock = clock
+        self.when = when
+        self.what = what
+        self.a = a
+        self.kw = kw
+
+
+    def __call__(self):
+        return self.what(*self.a, **self.kw)
+
+
+    def cancel(self):
+        self.clock.calls.remove((self.when, self))
+
+
+
 class Clock(object):
     rightNow = 0.0
 
-    def __call__(self):
+    def __init__(self):
+        self.calls = []
+
+    def seconds(self):
         return self.rightNow
 
-    def install(self):
-        # Violation is fun.
-        from twisted.internet import base, task
-        from twisted.python import runtime
-        self.base_original = base.seconds
-        self.task_original = task.seconds
-        self.runtime_original = runtime.seconds
-        base.seconds = self
-        task.seconds = self
-        runtime.seconds = self
+    def callLater(self, when, what, *a, **kw):
+        self.calls.append((self.seconds() + when, FakeDelayedCall(self.seconds() + when, self, what, a, kw)))
+        return self.calls[-1][1]
 
-    def uninstall(self):
-        from twisted.internet import base, task
-        from twisted.python import runtime
-        base.seconds = self.base_original
-        runtime.seconds = self.runtime_original
-        task.seconds = self.task_original
-    
     def adjust(self, amount):
         self.rightNow += amount
 
-    def pump(self, reactor, timings):
+    def runUntilCurrent(self):
+        while self.calls and self.calls[0][0] < self.seconds():
+            when, call = self.calls.pop(0)
+            call()
+
+    def pump(self, timings):
         timings = list(timings)
         timings.reverse()
-        self.adjust(timings.pop())
+        self.calls.sort()
         while timings:
             self.adjust(timings.pop())
-            reactor.iterate()
-            reactor.iterate()
+            self.runUntilCurrent()
+
+
 
 class TestException(Exception):
     pass
 
+
+
 class LoopTestCase(unittest.TestCase):
-    def setUpClass(self):
-        self.clock = Clock()
-        self.clock.install()
-
-    def tearDownClass(self):
-        self.clock.uninstall()
-
     def testBasicFunction(self):
         # Arrange to have time advanced enough so that our function is
         # called a few times.
@@ -62,14 +78,21 @@ class LoopTestCase(unittest.TestCase):
         # happens before any time has elapsed.
         timings = [0.05, 0.1, 0.1]
 
+        clock = Clock()
+
         L = []
         def foo(a, b, c=None, d=None):
             L.append((a, b, c, d))
 
-        lc = task.LoopingCall(foo, "a", "b", d="d")
+        lc = TestableLoopingCall(clock, foo, "a", "b", d="d")
         D = lc.start(0.1)
 
-        self.clock.pump(reactor, timings)
+        theResult = []
+        def saveResult(result):
+            theResult.append(result)
+        D.addCallback(saveResult)
+
+        clock.pump(timings)
 
         self.assertEquals(len(L), 3,
                           "got %d iterations, not 3" % (len(L),))
@@ -81,51 +104,74 @@ class LoopTestCase(unittest.TestCase):
             self.assertEquals(d, "d")
 
         lc.stop()
-        self.clock.adjust(10)
-        reactor.iterate()
-        self.assertEquals(len(L), 3,
-                          "got extra iterations after stopping: " + repr(L))
-        self.failUnless(D.called)
-        self.assertIdentical(D.result, lc)
+        self.assertIdentical(theResult[0], lc)
+
+        # Make sure it isn't planning to do anything further.
+        self.failIf(clock.calls)
+
 
     def testDelayedStart(self):
         timings = [0.05, 0.1, 0.1]
 
-        L = []
-        lc = task.LoopingCall(L.append, None)
-        d = lc.start(0.1, now=False)
+        clock = Clock()
 
-        self.clock.pump(reactor, timings)
+        L = []
+        lc = TestableLoopingCall(clock, L.append, None)
+        d = lc.start(0.1, now=False)
+        
+        theResult = []
+        def saveResult(result):
+            theResult.append(result)
+        d.addCallback(saveResult)
+
+        clock.pump(timings)
 
         self.assertEquals(len(L), 2,
                           "got %d iterations, not 2" % (len(L),))
         lc.stop()
-        self.clock.adjust(10)
-        reactor.iterate()
-        self.assertEquals(len(L), 2,
-                          "got extra iterations after stopping: " + repr(L))
-        self.failUnless(d.called)
-        self.assertIdentical(d.result, lc)
+        self.assertIdentical(theResult[0], lc)
+
+        self.failIf(clock.calls)
 
 
+    def testBadDelay(self):
+        lc = task.LoopingCall(lambda: None)
+        self.assertRaises(ValueError, lc.start, -1)
+
+
+    # Make sure that LoopingCall.stop() prevents any subsequent calls.
+    def _stoppingTest(self, delay):
+        ran = []
+        def foo():
+            ran.append(None)
+
+        clock = Clock()
+        lc = TestableLoopingCall(clock, foo)
+        d = lc.start(delay, now=False)
+        lc.stop()
+        self.failIf(ran)
+        self.failIf(clock.calls)
+
+
+    def testStopAtOnce(self):
+        return self._stoppingTest(0)
+
+
+    def testStoppingBeforeDelayedStart(self):
+        return self._stoppingTest(10)
+
+
+
+class ReactorLoopTestCase(unittest.TestCase):
+    # Slightly inferior tests which exercise interactions with an actual
+    # reactor.
     def testFailure(self):
         def foo(x):
             raise TestException(x)
 
         lc = task.LoopingCall(foo, "bar")
-        d = lc.start(0.1)
-        d.addCallbacks(self._testFailure_nofailure,
-                       self._testFailure_yesfailure)
-        return d
+        return self.assertFailure(lc.start(0.1), TestException)
 
-    def _testFailure_nofailure(self, res):
-        # NOTE: this branch does not work. I think it's a trial
-        # bug. Replace the 'raise TestException' above with a 'return
-        # 12' and this test will hang.
-        self.fail("test did not raise an exception when it was supposed to")
-
-    def _testFailure_yesfailure(self, err):
-        err.trap(TestException)
 
     def testFailAndStop(self):
         def foo(x):
@@ -133,23 +179,8 @@ class LoopTestCase(unittest.TestCase):
             raise TestException(x)
 
         lc = task.LoopingCall(foo, "bar")
-        d = lc.start(0.1)
-        self.assertFailure(d, TestException)
-        return d
+        return self.assertFailure(lc.start(0.1), TestException)
 
-    def testBadDelay(self):
-        lc = task.LoopingCall(lambda: None)
-        self.assertRaises(ValueError, lc.start, -1)
-
-    def testStoppingBeforeDelayedStart(self):
-        ran = []
-        def foo():
-            ran.append(True)
-
-        lc = task.LoopingCall(foo)
-        d = lc.start(10, now=False)
-        lc.stop()
-        self.failIf(ran)
 
     def testEveryIteration(self):
         ran = []
@@ -161,27 +192,10 @@ class LoopTestCase(unittest.TestCase):
 
         lc = task.LoopingCall(foo)
         d = lc.start(0)
-        x = unittest.wait(d)
-        self.assertEquals(len(ran), 6)
+        def stopped(ign):
+            self.assertEquals(len(ran), 6)
+        return d.addCallback(stopped)
 
-    def testStopAtOnce(self):
-        # Make sure that LoopingCall.stop() prevents any subsequent
-        # calls, period.
-        ran = []
-
-        def foo():
-            ran.append(None)
-
-        lc = task.LoopingCall(foo)
-        lc.start(0, now=False)
-        lc.stop()
-
-        # Just to be extra certain
-        reactor.iterate()
-        reactor.iterate()
-        reactor.iterate()
-
-        self.failUnless(len(ran) == 0)
 
     def testStopAtOnceLater(self):
         # Ensure that even when LoopingCall.stop() is called from a
@@ -194,6 +208,7 @@ class LoopTestCase(unittest.TestCase):
         self._lc.start(1, now=False)
         reactor.callLater(0, self._callback_for_testStopAtOnceLater, d)
         return d
+
 
     def _callback_for_testStopAtOnceLater(self, d):
         self._lc.stop()

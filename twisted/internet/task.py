@@ -32,6 +32,11 @@ class LoopingCall:
     count = None
     starttime = None
 
+    def _callLater(self, delay):
+        return reactor.callLater(delay, self)
+
+    _seconds = staticmethod(seconds)
+
     def __init__(self, f, *a, **kw):
         self.f = f
         self.a = a
@@ -57,7 +62,7 @@ class LoopingCall:
             raise ValueError, "interval must be >= 0"
         self.running = True
         d = self.deferred = defer.Deferred()
-        self.starttime = seconds()
+        self.starttime = self._seconds()
         self.count = 0
         self.interval = interval
         if now:
@@ -95,17 +100,17 @@ class LoopingCall:
 
     def _reschedule(self):
         if self.interval == 0:
-            self.call = reactor.callLater(0, self)
+            self.call = self._callLater(0)
             return
 
-        fromNow = self.starttime - seconds()
+        fromNow = self.starttime - self._seconds()
 
         while self.running:
             self.count += 1
             fromStart = self.count * self.interval
             delay = fromNow + fromStart
             if delay > 0:
-                self.call = reactor.callLater(delay, self)
+                self.call = self._callLater(delay)
                 return
 
     def __repr__(self):
