@@ -1,13 +1,105 @@
 """In-memory VFS backend."""
 
-import time
 import cStringIO
-
 from zope.interface import implements
-
 from twisted.vfs import ivfs, pathutils
+from twisted.internet import defer
 
-__all__ = ['FakeDirectory', 'FakeFile']
+__all__ = ['InMemNode']
+
+class InMemNode(object):
+    implements(ivfs.IFileSystemNode)
+    def __init__(self, segments=[], filesystem={}):
+        self.segments = segments
+        self.filesystem = filesystem
+
+    def child(self, *segments):
+        return InMemNode(self.segments + list(segments), self.filesystem)
+
+    def _getMe(self):
+        try:
+            curr = self.filesystem
+            for segment in self.segments:
+                curr = curr[segment]   
+            return curr
+        except KeyError:
+            return None
+
+    def children(self):
+        try:
+            me = self._getMe()
+            if me is None: 
+                return defer.fail(ivfs.NotFoundError(
+                "%s not found" % self))
+            return defer.succeed(
+                [(name, self.child(name)) for name in me.keys()])
+        except AttributeError:
+            return defer.fail(ivfs.NotAContainerError(
+                "%s doesn't implement children" % self))
+            
+    def isdir(self):
+        me = self._getMe()
+        if me is None: 
+            return defer.fail(ivfs.NotFoundError(
+                "%s not found" % self))
+        return defer.succeed(isinstance(me, type({})))
+
+    def isfile(self):
+        me = self._getMe()
+        if me is None: 
+            return defer.fail(ivfs.NotFoundError(
+                "%s not found" % self))
+        return defer.succeed(not isinstance(me, type({})))
+            
+    def exists(self):
+        return (self._getMe() is None
+            ) and defer.succeed(False) or defer.succeed(True)
+
+    def createDirectory(self, name):
+        me = self._getMe()
+        if me is None: 
+            return defer.fail(ivfs.NotFoundError(
+                "%s not found" % self))
+        try:
+            if me.has_key(name):
+                return defer.fail(ivfs.VFSError(
+                    "%s can't create %s - node already exists" % (
+                        self, name)))
+            me[name] = {}
+        except AttributeError:
+            return defer.fail(ivfs.NotAContainerError(
+                "%s doesn't implement createDirectory" % self))
+        return defer.succeed(None)
+
+    def createFile(self, name, exclusive=True):
+        me = self._getMe()
+        if me is None: 
+            return defer.fail(ivfs.NotFoundError(
+                "%s not found" % self))
+        def _go(isfile):
+            try:
+                if me.has_key(name) and (exclusive or isfile):
+                    return defer.fail(ivfs.VFSError(
+                        "%s can't create %s - node already exists" % (
+                            self, name)))
+                me[name] = ''
+            except AttributeError:
+                return defer.fail(ivfs.NotAContainerError(
+                    "%s doesn't implement createDirectory" % self))
+            return defer.succeed(None)
+        return self.isfile().addCallback(_go)
+
+    def __str__(self):
+        return "inmem node: /%s" % "/".join(self.segments)
+        
+
+
+
+
+        
+
+#XXX - old inmem, getting axed soon, just here for reference
+
 
 class _FakeNode:
     """Base class.  Don't instantiate directly."""

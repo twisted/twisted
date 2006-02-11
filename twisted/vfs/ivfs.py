@@ -9,6 +9,10 @@ class PermissionError(VFSError):
 class NotFoundError(VFSError):
     """The file or directory does not exist."""
 
+class NotAContainerError(VFSError):
+    """A container-like method called on a non-container-like node"""
+
+
 class IFileSystemNode(Interface):
 
     parent = Attribute(
@@ -86,34 +90,63 @@ class IFileSystemLeaf(IFileSystemNode):
         Writes data to leaf from the given offset.
         """
 
+
+
 class IFileSystemContainer(IFileSystemNode):
 
     def children():
         """
-        returns a list of 2 element tuples
-        [ ( path, nodeObject ) ]
+        @returns: a Deferred which will fire with a list of 2 element tuples
+            [(segment, nodeObject)]
+
+        @raises ivfs.NotAContainerError: if this node isn't a container
+        @raises ivfs.NotFoundError: if this node does not exist
         """
 
-    def child(childName):
+    def child(*segments):
         """
-        returns a node object for child childName
+        @returns: immediately with a node object representing a
+            filesystem resource at the path pointed to by segments.
+            note this resource may not even actually exist.
         """
 
     def createDirectory(childName):
-        """
-        Creates a new folder named childName under this folder.
-        An error is raised if the folder already exists.
+        """Creates a new folder named childName under this folder.
+
+        @raises ivfs.VFSError: if the node already exists.
+        @raises ivfs.NotAContainerError: if this node isn't a container
+        @raises ivfs.NotFoundError: if this node does not exist
         """
 
     def createFile(childName, exclusive=True):
-        """
-        Creates a new file named childName under this folder.
+        """Creates a new file named childName under this folder.
 
-        If exclusive is True (the default), an error is raised if the file
-        already exists.
+        @raises ivfs.VFSError: if the node already exists and is a container or
+            if exclusive is True (the default) and the node already exists 
+            and is a leaf
+        @raises ivfs.NotAContainerError: if this node isn't a container
+        @raises ivfs.NotFoundError: if this node does not exist
         """
 
-    def exists(childName):
+    def isdir():
         """
-        returns True if container has a child childName, False otherwise
+        @returns: a Deferred which will fire with True is this node
+            is a container or False otherwise
+
+        @raises ivfs.NotFoundError: if this node does not exist
         """
+
+    def isfile():
+        """
+        @returns: a Deferred which will fire with True is this node
+            is a leaf or False otherwise
+
+        @raises ivfs.NotFoundError: if this node does not exist
+        """
+
+    def exists():
+        """
+        @returns: a Deferred which will callback with True if this node exists
+            or False otherwise
+        """
+
