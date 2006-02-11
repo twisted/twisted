@@ -244,7 +244,7 @@ def _wait(d, timeout=None, running=[]):
             if timeoutCall.active():
                 timeoutCall.cancel()
             else:
-                f = failure.Failure(defer.TimeoutError())
+                f = failure.Failure(defer.TimeoutError('_wait timed out'))
                 return f
 
         if results:

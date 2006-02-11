@@ -209,3 +209,14 @@ class TestTimeout(TestTester):
         self.failUnlessEqual(len(result.errors), 1)
         self._wasTimeout(result.errors[0][1])
         
+    def test_callbackReturnsNonCallingDeferred(self):
+        #hacky timeout
+        # raises KeyboardInterrupt because Trial sucks
+        from twisted.internet import reactor
+        call = reactor.callLater(2, reactor.crash)
+        result = self.runTest('test_calledButNeverCallback')
+        if call.active():
+            call.cancel()
+        self.failIf(result.wasSuccessful())
+        self.failUnlessEqual(len(result.errors), 1)
+        self._wasTimeout(result.errors[0][1])

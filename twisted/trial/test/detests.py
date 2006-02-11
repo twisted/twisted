@@ -174,6 +174,15 @@ class TimeoutTests(unittest.TestCase):
         return d
     test_errorPropagation.timeout = 0.1
 
+    def test_calledButNeverCallback(self):
+        d = defer.Deferred()
+        def neverFire(r):
+            return defer.Deferred()
+        d.addCallback(neverFire)
+        d.callback(1)
+        return d
+    test_calledButNeverCallback.timeout = 0.1
+
 
 class TestClassTimeoutAttribute(unittest.TestCase):
     timeout = 0.2

@@ -300,8 +300,28 @@ class TestCase(_Assertions):
         if self.__class__._testCaseInstance.__class__ != self.__class__:
             self.__class__._testCaseInstance = self            
 
-    def _run(self, methodName):
+    def _run(self, methodName, result):
         from twisted.internet import reactor
+        timeout = self.getTimeout()
+        def onTimeout(d):
+            e = defer.TimeoutError("%r (%s) still running at %s secs"
+                % (self, methodName, timeout))
+            f = failure.Failure(e)
+            # try to errback the deferred that the test returns (for no gorram
+            # reason) (see issue1005 and test_errorPropagation in test_deferred)
+            try:
+                d.errback(f)
+            except defer.AlreadyCalledError:
+                # if the deferred has been called already but the *back chain is
+                # still unfinished, crash the reactor and report timeout error
+                # ourself.
+                reactor.crash()
+                self._timedOut = True # see self._wait
+                todo = self.getTodo()
+                if todo is not None and todo.expected(f):
+                    result.addExpectedFailure(self, f, todo)
+                else:
+                    result.addError(self, f)
         if self._shared:
             test = self.__class__._testCaseInstance
         else:
@@ -309,7 +329,7 @@ class TestCase(_Assertions):
         method = getattr(test, methodName)
         d = defer.maybeDeferred(utils.runWithWarningsSuppressed,
                                 self.getSuppress(), method)
-        call = reactor.callLater(self.getTimeout(), defer.timeout, d)
+        call = reactor.callLater(timeout, onTimeout, d)
         d.addBoth(lambda x : call.active() and call.cancel() or x)
         return d
 
@@ -327,7 +347,7 @@ class TestCase(_Assertions):
             d = defer.succeed(None)
             d.addCallback(self.deferSetUp, result)
             return d
-        d = self._run('setUpClass')
+        d = self._run('setUpClass', result)
         d.addCallbacks(self.deferSetUp, self._ebDeferSetUpClass,
                        callbackArgs=(result,),
                        errbackArgs=(result,))
@@ -346,7 +366,7 @@ class TestCase(_Assertions):
             self.__class__._instancesRun.remove(self)
 
     def deferSetUp(self, ignored, result):
-        d = self._run('setUp')
+        d = self._run('setUp', result)
         d.addCallbacks(self.deferTestMethod, self._ebDeferSetUp,
                        callbackArgs=(result,),
                        errbackArgs=(result,))
@@ -362,7 +382,7 @@ class TestCase(_Assertions):
                 result.stop()
 
     def deferTestMethod(self, ignored, result):
-        d = self._run(self._testMethodName)
+        d = self._run(self._testMethodName, result)
         d.addCallbacks(self._cbDeferTestMethod, self._ebDeferTestMethod,
                        callbackArgs=(result,),
                        errbackArgs=(result,))
@@ -393,7 +413,7 @@ class TestCase(_Assertions):
             result.addError(self, f)
 
     def deferTearDown(self, ignored, result):
-        d = self._run('tearDown')
+        d = self._run('tearDown', result)
         d.addErrback(self._ebDeferTearDown, result)
         return d
 
@@ -405,7 +425,7 @@ class TestCase(_Assertions):
         self._passed = False
 
     def deferTearDownClass(self, ignored, result):
-        d = self._run('tearDownClass')
+        d = self._run('tearDownClass', result)
         d.addErrback(self._ebTearDownClass, result)
         return d
 
@@ -436,6 +456,7 @@ class TestCase(_Assertions):
 
     def run(self, result):
         log.msg("--> %s <--" % (self.id()))
+        self._timedOut = False
         if self._shared and self not in self.__class__._instances:
             self.__class__._instances.add(self)
         result.startTest(self)
@@ -453,7 +474,7 @@ class TestCase(_Assertions):
         else:
             d = self.deferSetUp(None, result)
         try:
-            util.wait(d, timeout=None)
+            self._wait(d)
         finally:
             self._cleanUp(result)
             result.stopTest(self)            
@@ -518,6 +539,62 @@ class TestCase(_Assertions):
         dirname = tempfile.mkdtemp('', '', base)
         return os.path.join(dirname, 'temp')
     
+    def _wait(self, d, running=[]):
+        """Take a Deferred that only ever callbacks. Block until it happens.
+        """
+        from twisted.internet import reactor
+        if running:
+            raise WaitIsNotReentrantError, REENTRANT_WAIT_ERROR_MSG
+    
+        results = []
+        def append(any):
+            if results is not None:
+                results.append(any)
+        def crash(ign):
+            if results is not None:
+                reactor.crash()
+        def stop():
+            reactor.crash()
+    
+        running.append(None)
+        try:
+            d.addBoth(append)
+            if results:
+                # d might have already been fired, in which case append is called 
+                # synchronously. Avoid any reactor stuff.
+                return
+            d.addBoth(crash)
+            reactor.stop = stop
+            try:
+                reactor.run()
+            finally:
+                del reactor.stop
+    
+            # If the reactor was crashed elsewhere due to a timeout, hopefully
+            # that crasher also reported an error. Just return.
+            # _timedOut is most likely to be set when d has fired but hasn't
+            # completed its callback chain (see self._run)
+            if results or self._timedOut: #defined in run() and _run()
+                return
+
+            # If the timeout didn't happen, and we didn't get a result or
+            # a failure, then the user probably aborted the test, so let's
+            # just raise KeyboardInterrupt.
+    
+            # FIXME: imagine this:
+            # web/test/test_webclient.py:
+            # exc = self.assertRaises(error.Error, unittest.wait, method(url))
+            #
+            # wait() will raise KeyboardInterrupt, and assertRaises will
+            # swallow it. Therefore, wait() raising KeyboardInterrupt is
+            # insufficient to stop trial. A suggested solution is to have
+            # this code set a "stop trial" flag, or otherwise notify trial
+            # that it should really try to stop as soon as possible.
+            raise KeyboardInterrupt()
+        finally:
+            results = None
+            running.pop()
+
 
 class TestVisitor(object):
     
