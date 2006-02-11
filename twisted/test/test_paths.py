@@ -317,7 +317,7 @@ class FilePathTestCase(unittest.TestCase):
         f.close()
 
         # Opening a file exclusively must fail if that file exists already.
-        nonexistent.alwaysCreate = True
+        nonexistent.requireCreate(True)
         nonexistent.open('w').close()
         existent = nonexistent
         del nonexistent
