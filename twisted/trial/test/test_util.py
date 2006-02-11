@@ -5,6 +5,7 @@ from twisted.trial.test import packages
 
 import sys, os, time
 
+suppress = [(['ignore', 'Do NOT use wait.*'], {})]
 
 class WaitReentrancyTest(unittest.TestCase):
 

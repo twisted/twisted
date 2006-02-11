@@ -270,40 +270,11 @@ def _wait(d, timeout=None, running=[]):
 
 
 def wait(d, timeout=DEFAULT_TIMEOUT, useWaitError=False):
-    """Waits (spins the reactor) for a Deferred to arrive, then returns or
-    throws an exception, based on the result. The difference between this and
-    deferredResult is that it actually throws the original exception, not the
-    Failure, so synchronous exception handling is much more sane.
-
-    There are some caveats to follow when using this method:
-
-      - There is an important restriction on the use of this method which may
-        be difficult to predict at the time you're writing the test.The issue
-        is that the reactor's L{twisted.internet.base.runUntilCurrent} is not
-        reentrant, therefore wait is B{I{not reentrant!}} This means that you
-        cannot call wait from within a callback of a deferred you are waiting
-        on. Also, you may or may not be able to call wait on deferreds which
-        you have not created, as the originating API may violate this rule
-        without your knowledge. For an illustrative example, see
-        L{twisted.trial.test.test_trial.WaitReentrancyTest}
-
-      - If you are relying on the original traceback for some reason, do
-        useWaitError=True. Due to the way that Deferreds and Failures work, the
-        presence of the original traceback stack cannot be guaranteed without
-        passing this flag (see below).
-
-    @param timeout: None indicates that we will wait indefinately, the default
-        is to wait 4.0 seconds.
-    @type timeout: types.FloatType
-
-    @param useWaitError: The exception thrown is a
-        L{twisted.trial.util.WaitError}, which saves the original failure object
-        or objects in a list .failures, to aid in the retrieval of the original
-        stack traces.  The tradeoff is between wait() raising the original
-        exception *type* or being able to retrieve the original traceback
-        reliably. (see issue 769)
-    @type useWaitError: boolean
+    """Do NOT use this ever. 
     """
+    warnings.warn("Do NOT use wait. It is a bad and buggy and deprecated since "
+                  "Twisted 2.2.",
+                  category=DeprecationWarning, stacklevel=2)
     if timeout is DEFAULT_TIMEOUT:
         timeout = DEFAULT_TIMEOUT_DURATION
     try:
