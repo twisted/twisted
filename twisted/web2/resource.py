@@ -32,18 +32,7 @@ class RenderMixin(object):
         @param request: the request to process.
         @raise http.HTTPError: if any precondition fails.
         """
-        #
-        # http.checkPreconditions() gets called by the server after every
-        # GET or HEAD request.
-        #
-        # For other methods, we need to know to bail out before request
-        # processing, especially for methods that modify server state (eg. PUT).
-        # We also would like to do so even for methods that don't, if those
-        # methods might be expensive to process.  We're assuming that GET and
-        # HEAD are not expensive.
-        #
-        if request.method not in ("GET", "HEAD"):
-            http.checkPreconditions(request)
+        http.checkPreconditions(request)
 
     def renderHTTP(self, request):
         """
@@ -72,7 +61,18 @@ class RenderMixin(object):
             response.headers.setHeader("allow", self.allowedMethods())
             return response
 
-        self.checkPreconditions(request)
+        #
+        # http.checkPreconditions() gets called by the server after every
+        # GET or HEAD request.
+        #
+        # For other methods, we need to know to bail out before request
+        # processing, especially for methods that modify server state (eg. PUT).
+        # We also would like to do so even for methods that don't, if those
+        # methods might be expensive to process.  We're assuming that GET and
+        # HEAD are not expensive.
+        #
+        if request.method not in ("GET", "HEAD"):
+            self.checkPreconditions(request)
 
         return method(request)
 
