@@ -177,7 +177,8 @@ class MyOptions(usage.Options):
     #zsh_altArgDescr = {"foo":"use this description for foo instead"}
     #zsh_multiUse = ["foo", "bar"]
     #zsh_mutuallyExclusive = [("foo", "bar"), ("bar", "baz")]
-    #zsh_actions = {"foo":'_files -g "*.foo"', "bar":"(one two three)"}
+    zsh_actions = {"host":"_hosts",
+                   "toolkit":"(%s)" % (' '.join(getAvailableToolkits()),)}
     #zsh_actionDescr = {"logfile":"log file name", "random":"random seed"}
 
 if __name__ == '__main__':
