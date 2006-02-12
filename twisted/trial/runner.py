@@ -159,14 +159,19 @@ class PyUnitTestCase(object):
 class TrialSuite(TestSuite):
 
     def _bail(self):
-        from twisted.internet import reactor
+        from twisted.internet import reactor, utils
         d = defer.Deferred()
         reactor.addSystemEventTrigger('after', 'shutdown', lambda: d.callback(None))
         reactor.fireSystemEvent('shutdown') # radix's suggestion
         treactor = interfaces.IReactorThreads(reactor, None)
         if treactor is not None:
             treactor.suggestThreadPoolSize(0)
-        util.wait(d) # so that the shutdown event completes
+        # As long as TestCase does crap stuff with the reactor we need to 
+        # manually shutdown the reactor here, and that requires util.wait
+        # :(
+        # so that the shutdown event completes
+        utils.suppressWarnings(lambda: util.wait(d), 
+                               (['ignore', 'Do NOT use wait.*'], {}))
 
     def run(self, result):
         try:
