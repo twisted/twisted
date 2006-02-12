@@ -16,7 +16,15 @@ class InMemNode(object):
     def child(self, *segments):
         return InMemNode(self.segments + list(segments), self.filesystem)
 
-    def _getMe(self):
+    def parent(self):
+        if len(self.segments):
+            return InMemNode(self.segments[:-1], self.filesystem)
+        return self
+
+    def path(self):
+        return self.segments
+
+    def _getNode(self):
         try:
             curr = self.filesystem
             for segment in self.segments:
@@ -25,64 +33,119 @@ class InMemNode(object):
         except KeyError:
             return None
 
+    def remove(self):
+        if not len(self.segments):
+            return defer.fail(ivfs.PermissionError(
+                "%s can't move root node" % self))
+        def _go(isdir):
+            if isdir and len(self._getNode()):
+                return defer.fail(ivfs.VFSError(
+                    "%s cannot remove non-empty directory" % self))
+            parentNode = self.parent()._getNode()
+            del parentNode[self.segments[-1]]
+            return defer.succeed(None)
+        return self.isdir().addCallback(_go)
+
+    def rename(self, segments):
+        node = self._getNode()
+        if node is None: 
+            return defer.fail(ivfs.NotFoundError("%s not found" % self))
+
+        targetParent = InMemNode(segments[:-1], self.filesystem)
+
+        def _checkParentIsDir(isdir):
+            if not isdir:
+                return defer.fail(ivfs.VFSError(
+                    "%s target parent is not a container" % targetParent))
+
+            targetFile = targetParent.child(segments[-1])
+
+            def _checkTargetExists(exists):
+                def _doRename():
+
+
+
+                def _checkTargetIsFile(isfile):
+                    if not isfile:
+                        return defer.fail(ivfs.VFSError(
+                            "%s rename can't clobber containers" % targetFile))
+                    return _doRename()
+                if exists:
+                    return targetFile.isfile().addCallback(_checkTargetIsFile)
+                return _doRename()
+
+            return targetFile.exists().addCallback(_checkTargetExists)
+
+        return targetParent.isdir().addCallback(_checkParentIsDir)
+
+
+
+targetParent._getNode()[segments[-1]] = node
+del self.parent()._getNode()[self.segments[-1]]
+return defer.succeed(None)        
+
+
+
+
+        
+
     def children(self):
+        node = self._getNode()
+        if node is None: 
+            return defer.fail(ivfs.NotFoundError("%s not found" % self))
         try:
-            me = self._getMe()
-            if me is None: 
-                return defer.fail(ivfs.NotFoundError(
-                "%s not found" % self))
             return defer.succeed(
-                [(name, self.child(name)) for name in me.keys()])
+                [(name, self.child(name)) for name in node.keys()])
         except AttributeError:
             return defer.fail(ivfs.NotAContainerError(
                 "%s doesn't implement children" % self))
             
     def isdir(self):
-        me = self._getMe()
-        if me is None: 
+        node = self._getNode()
+        if node is None: 
             return defer.fail(ivfs.NotFoundError(
                 "%s not found" % self))
-        return defer.succeed(isinstance(me, type({})))
+        return defer.succeed(isinstance(node, type({})))
 
     def isfile(self):
-        me = self._getMe()
-        if me is None: 
+        node = self._getNode()
+        if node is None: 
             return defer.fail(ivfs.NotFoundError(
                 "%s not found" % self))
-        return defer.succeed(not isinstance(me, type({})))
+        return defer.succeed(not isinstance(node, type({})))
             
     def exists(self):
-        return (self._getMe() is None
+        return (self._getNode() is None
             ) and defer.succeed(False) or defer.succeed(True)
 
     def createDirectory(self, name):
-        me = self._getMe()
-        if me is None: 
+        node = self._getNode()
+        if node is None: 
             return defer.fail(ivfs.NotFoundError(
                 "%s not found" % self))
         try:
-            if me.has_key(name):
+            if node.has_key(name):
                 return defer.fail(ivfs.VFSError(
                     "%s can't create %s - node already exists" % (
                         self, name)))
-            me[name] = {}
+            node[name] = {}
         except AttributeError:
             return defer.fail(ivfs.NotAContainerError(
                 "%s doesn't implement createDirectory" % self))
         return defer.succeed(None)
 
     def createFile(self, name, exclusive=True):
-        me = self._getMe()
-        if me is None: 
+        node = self._getNode()
+        if node is None: 
             return defer.fail(ivfs.NotFoundError(
                 "%s not found" % self))
         def _go(isfile):
             try:
-                if me.has_key(name) and (exclusive or isfile):
+                if node.has_key(name) and (exclusive or isfile):
                     return defer.fail(ivfs.VFSError(
                         "%s can't create %s - node already exists" % (
                             self, name)))
-                me[name] = ''
+                node[name] = ''
             except AttributeError:
                 return defer.fail(ivfs.NotAContainerError(
                     "%s doesn't implement createDirectory" % self))

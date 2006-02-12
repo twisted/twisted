@@ -11,11 +11,27 @@ class InMemTest(unittest.TestCase):
             'afile': 'some data',
             'adir': {
                 'anotherfile': 'more data',
+                'anotherdir': {},
             }
         })
 
     def tearDown(self):
         pass
+
+    def test_child(self):
+        return self.assertEqual(self.root.child('adir').path(),
+            ['adir'])
+
+    def test_child_empty(self):
+        return self.assertEqual(self.root.child('adir').child().path(),
+            ['adir'])
+
+    def test_parent(self):
+        return self.assertEqual(self.root.child('adir', 'anotherfile').parent().path(),
+            ['adir'])
+
+    def test_parent_root(self):
+        return self.assertEqual(self.root.parent().path(), [])
 
     def test_exists_does(self):
         return self.root.child('adir').exists().addCallback(self.assert_)
@@ -124,4 +140,67 @@ class InMemTest(unittest.TestCase):
         d = self.root.child('froar').createFile('afile')
         self.assertFailure(d, ivfs.NotFoundError)
         return d
+
+    def test_remove_leaf(self):
+        def _check(result):
+            return self.root.child('adir', 'anotherfile').exists(
+                ).addCallback(self.assertNot)
+        return self.root.child('adir', 'anotherfile').remove().addCallback(_check)
+        
+    def test_remove_container(self):
+        def _check(result):
+            return self.root.child('adir', 'anotherdir').exists(
+                ).addCallback(self.assertNot)
+        return self.root.child('adir', 'anotherdir').remove().addCallback(_check)
+
+    def test_remove_root(self):
+        d = inmem.InMemNode().remove()
+        self.assertFailure(d, ivfs.PermissionError)
+        return d
+
+    def test_remove_nonEmptyContainer(self):
+        d = self.root.child('adir').remove()
+        self.assertFailure(d, ivfs.VFSError)
+        return d
+
+    def test_remove_notFound(self):
+        d = self.root.child('froar').remove()
+        self.assertFailure(d, ivfs.NotFoundError)
+        return d
+
+    #XXX - check the contents of files once read is up
+    def test_rename(self):
+        def _check(result):
+            return self.root.child('adir', 'anotherfile').exists(
+                ).addCallback(self.assertNot)
+        return self.root.child('adir', 'anotherfile').rename(['adir', 
+            'anotherdir', 'anotherfile']).addCallback(_check)
+
+    def test_rename_clobber(self):
+        def _check(result):
+            return self.root.child('afile').exists(
+                ).addCallback(self.assertNot)
+        return self.root.child('afile').rename(['adir', 'anotherfile']
+            ).addCallback(_check)
+
+    def test_rename_toContainer(self):
+        d = self.root.child('afile').rename(['adir'])
+        self.assertFailure(d, ivfs.VFSError)
+        return d
+
+    def test_rename_noParent(self):
+        d = self.root.child('afile').rename(['froar', 'afile'])
+        self.assertFailure(d, ivfs.VFSError)
+        return d
+
+    def test_rename_nonContainerParent(self):
+        d = self.root.child('afile').rename(['adir', 'anotherfile', 'afile'])
+        self.assertFailure(d, ivfs.VFSError)
+        return d
+
+    def test_rename_notFound(self):
+        d = self.root.child('froar').rename(['froar2'])
+        self.assertFailure(d, ivfs.NotFoundError)
+        return d
+
 

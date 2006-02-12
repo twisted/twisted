@@ -15,9 +15,126 @@ class NotAContainerError(VFSError):
 
 class IFileSystemNode(Interface):
 
-    parent = Attribute(
-        """parent node"""
-    )
+    def child(*segments):
+        """
+        @returns: immediately with a node object representing a
+            filesystem resource at the path pointed to by segments relative
+            to this node. Note this resource may not even actually exist. 
+            If segments is empty the current node will be returned.
+        """
+
+    def parent():
+        """
+        @returns: immediately with this nodes parent.  If this node
+            is the root node, it returns itself.
+        """
+
+    def path():
+        """
+        @returns: immediately with the absolute path segments for this
+            node.
+        """
+
+    def children():
+        """
+        @returns: a Deferred which will fire with a list of 2 element tuples
+            [(segment, nodeObject)]
+
+        @raises ivfs.NotAContainerError: if this node isn't a container
+        @raises ivfs.NotFoundError: if this node does not exist
+        """
+
+    def createDirectory(name):
+        """Creates a new folder named name under this folder.
+
+        @raises ivfs.VFSError: if the node already exists.
+        @raises ivfs.NotAContainerError: if this node isn't a container
+        @raises ivfs.NotFoundError: if this node does not exist
+        """
+
+    def createFile(name, exclusive=True):
+        """Creates a new file named name under this folder.
+
+        @raises ivfs.VFSError: if the node already exists and is a container or
+            if exclusive is True (the default) and the node already exists 
+            and is a leaf
+        @raises ivfs.NotAContainerError: if this node isn't a container
+        @raises ivfs.NotFoundError: if this node does not exist
+        """
+
+    def isdir():
+        """
+        @returns: a Deferred which will fire with True is this node
+            is a container or False otherwise
+
+        @raises ivfs.NotFoundError: if this node does not exist
+        """
+
+    def isfile():
+        """
+        @returns: a Deferred which will fire with True is this node
+            is a leaf or False otherwise
+
+        @raises ivfs.NotFoundError: if this node does not exist
+        """
+
+    def exists():
+        """
+        @returns: a Deferred which will callback with True if this node exists
+            or False otherwise
+        """
+
+    def remove():
+        """Removes this node.
+
+        @returns: a Deferred which will fire with None once the node 
+            is removed
+
+        @raises ivfs.VFSError: if the node is a directory and is not empty.
+        @raises ivfs.PermissionError: always raised if called on the 
+            filesystem root
+        @raises ivfs.NotFoundError: if this node does not exist
+        """
+
+    def rename(segments):
+        """renames this node to the absolute path segments supplied. 
+            If the destination is an existing file, that file 
+            is clobbered.  The rename is not atomic.
+
+        @returns: a Deferred which will fire with None once the node 
+            is renamed
+
+        @raises: ivfs.VFSError: if the destination is an existing directory
+        @raises: ivfs.VFSError: if the destination's parent doesn't exist
+            or isn't a container.
+        @raises ivfs.NotFoundError: if this node does not exist
+        """
+
+
+
+    #XXX - still to be updated
+
+    def open(flags):
+        """
+        Opens the file with flags. Flags should be a bitmask based on
+        the os.O_* flags.
+        """
+
+    def close():
+        """closes this node"""
+
+    def readChunk(offset, length):
+        """
+        Leaf should have been previously opened with suitable flags.
+        Reads length bytes or until the end of file from this leaf from
+        the given offset.
+        """
+
+    def writeChunk(offset, data):
+        """
+        Leaf should have been previously opened with suitable flags.
+        Writes data to leaf from the given offset.
+        """
 
     def getMetadata():
         """
@@ -53,100 +170,14 @@ class IFileSystemNode(Interface):
     # osfs.OSNode implements this; other backends should be similarly updated.
     #   -- spiv, 2006-06-02
 
-    def remove():
-        """
-        Removes this node.
-        An error is raised if the node is a directory and is not empty.
-        """
-
-    def rename(newName):
-        """
-        Renames this node to newName.  newName can be in a different
-        directory.  If the destination is an existing directory, an
-        error will be raised.
-        """
 
 
+
+#XXX - going soon, just for backwards compatibility
 class IFileSystemLeaf(IFileSystemNode):
-    def open(flags):
-        """
-        Opens the file with flags. Flags should be a bitmask based on
-        the os.O_* flags.
-        """
-
-    def close():
-        """closes this node"""
-
-    def readChunk(offset, length):
-        """
-        Leaf should have been previously opened with suitable flags.
-        Reads length bytes or until the end of file from this leaf from
-        the given offset.
-        """
-
-    def writeChunk(offset, data):
-        """
-        Leaf should have been previously opened with suitable flags.
-        Writes data to leaf from the given offset.
-        """
-
-
+    pass
 
 class IFileSystemContainer(IFileSystemNode):
+    pass
 
-    def children():
-        """
-        @returns: a Deferred which will fire with a list of 2 element tuples
-            [(segment, nodeObject)]
-
-        @raises ivfs.NotAContainerError: if this node isn't a container
-        @raises ivfs.NotFoundError: if this node does not exist
-        """
-
-    def child(*segments):
-        """
-        @returns: immediately with a node object representing a
-            filesystem resource at the path pointed to by segments.
-            note this resource may not even actually exist.
-        """
-
-    def createDirectory(childName):
-        """Creates a new folder named childName under this folder.
-
-        @raises ivfs.VFSError: if the node already exists.
-        @raises ivfs.NotAContainerError: if this node isn't a container
-        @raises ivfs.NotFoundError: if this node does not exist
-        """
-
-    def createFile(childName, exclusive=True):
-        """Creates a new file named childName under this folder.
-
-        @raises ivfs.VFSError: if the node already exists and is a container or
-            if exclusive is True (the default) and the node already exists 
-            and is a leaf
-        @raises ivfs.NotAContainerError: if this node isn't a container
-        @raises ivfs.NotFoundError: if this node does not exist
-        """
-
-    def isdir():
-        """
-        @returns: a Deferred which will fire with True is this node
-            is a container or False otherwise
-
-        @raises ivfs.NotFoundError: if this node does not exist
-        """
-
-    def isfile():
-        """
-        @returns: a Deferred which will fire with True is this node
-            is a leaf or False otherwise
-
-        @raises ivfs.NotFoundError: if this node does not exist
-        """
-
-    def exists():
-        """
-        @returns: a Deferred which will callback with True if this node exists
-            or False otherwise
-        """
 
