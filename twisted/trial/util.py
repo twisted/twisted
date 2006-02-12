@@ -210,7 +210,8 @@ REENTRANT_WAIT_ERROR_MSG = ("already waiting on a deferred, do not call wait() "
 class WaitIsNotReentrantError(Exception):
     pass
 
-def _wait(d, timeout=None, running=[]):
+_wait_is_running = []
+def _wait(d, timeout=None, running=_wait_is_running):
     from twisted.internet import reactor
     if running:
         raise WaitIsNotReentrantError, REENTRANT_WAIT_ERROR_MSG

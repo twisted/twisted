@@ -1,4 +1,5 @@
 from twisted.python import log
+from twisted.internet import utils
 from twisted.internet import defer, reactor, threads, interfaces
 from twisted.trial import unittest, util
 from twisted.trial.test import packages
@@ -42,6 +43,19 @@ class WaitReentrancyTest(unittest.TestCase):
 
     def testReentrantWait(self):
         self.assertRaises(util.WaitIsNotReentrantError, self._reentrantWait)
+        
+    def test_twoWaitImplementations(self):
+        # If this test times out, then wait is being re-entered.
+        tc = TestMktemp('test_name')
+        tc._timedOut = False # whitebox
+        d = defer.Deferred()
+        def _runsInsideWait(r):
+            d = defer.Deferred()
+            self.assertRaises(util.WaitIsNotReentrantError, util.wait, d)
+        d.addCallback(utils.suppressWarnings(_runsInsideWait, *suppress))
+        reactor.callLater(0, d.callback, 'yo')
+        tc._wait(d)
+    test_twoWaitImplementations.timeout = 4
 
 
 class TestMktemp(unittest.TestCase):

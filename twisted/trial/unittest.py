@@ -539,7 +539,7 @@ class TestCase(_Assertions):
         dirname = tempfile.mkdtemp('', '', base)
         return os.path.join(dirname, 'temp')
     
-    def _wait(self, d, running=[]):
+    def _wait(self, d, running=util._wait_is_running):
         """Take a Deferred that only ever callbacks. Block until it happens.
         """
         from twisted.internet import reactor
