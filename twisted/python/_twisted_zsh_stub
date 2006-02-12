@@ -23,7 +23,7 @@
 local dir old_fpath python_code run shebang
 
 function debug () {
-    echo $1 >> /tmp/debug
+    echo $@ >> /tmp/debug
 }
 
 #debug "START _twisted_stub"
@@ -33,7 +33,9 @@ function load_twisted_completions() {
     shebang=$(head -1 $commands[twistd])
     [[ $shebang != \#\!* ]] && echo 'ERROR: invalid shebang line for test script "twistd"' && return 1
     PYTHON=$shebang[3,-1]
+    PYTHON=${PYTHON# *}
 
+    #debug PYTHON -$PYTHON-
     python_code='
 import twisted, os.path
 dir = os.path.dirname(twisted.__file__)
@@ -49,7 +51,7 @@ print dir + os.sep + os.path.join("python", "zsh")
         autoload +X _manhole _tap2rpm
         fpath=($old_fpath)
     else
-        echo 'ERROR: Cannot find twisted completion function files in'
+        echo 'ERROR: Cannot find twisted completion function files in:'
         echo "$dir"
         return 1
     fi
