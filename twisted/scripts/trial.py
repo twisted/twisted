@@ -116,7 +116,8 @@ class Options(usage.Options):
                      ['temp-directory', None, '_trial_temp',
                       'Path to use as working directory for tests.']]
 
-    zsh_actions = {"reactor":"(%s)" % " ".join(app.reactorTypes.keys())}
+    zsh_actions = {"reactor":"(%s)" % " ".join(app.reactorTypes.keys()),
+                   "tbformat":"(plain emacs cgitb)"}
     zsh_actionDescr = {"logfile":"log file name",
                        "random":"random seed"}
     zsh_extras = ["*:file|module|package|TestCase|testMethod:_files -g '*.py'"]
@@ -128,6 +129,9 @@ class Options(usage.Options):
     def __init__(self):
         self['tests'] = []
         self._loadReporters()
+
+        # Yes, I know I'm mutating a class variable.
+        self.zsh_actions["reporter"] = "(%s)" % " ".join(self.optToQual.keys())
         usage.Options.__init__(self)
 
     def _loadReporters(self):
