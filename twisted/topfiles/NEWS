@@ -1,4 +1,43 @@
-2.1.0 (To Be Announced):
+2.2.0 (2006-02-12)
+==================
+
+Features
+--------
+ - Twisted no longer works with Python 2.2
+ - FTP server supports more clients
+ - Process support on Windows
+ - twisted.internet.stdio improved (including Windows support!)
+ - Trial:
+   - Continued Trial refactoring
+   - Default trial reporter is verbose black&white when color isn't supported
+   - Deferreds returned in trial tests that don't fire before the
+     unittest timeout now have their errback fired with a TimeoutError
+   - raising SkipTest in setUp and setUpClass skips tests
+   - Test suites are failed if there are import errors
+
+Fixes
+-----
+ - iocpreactor fixes
+ - Threadpool fixes
+ - Fixed infinite loops in datagramReceived edge cases
+ - Issues resolved: 654, 773, 998, 1005, 1008, 1116, 1123, 1198, 1221,
+   1232, 1233, 1236, 1240, 1244, 1258, 1263, 1265, 1266, 1271, 1275,
+   1293, 1294, 1298, 1308, 1316, 1317, 1321, 1341, 1344, 1353, 1359,
+   1372, 1374, 1377, 1379, 1380, 1385, 1388, 1389, 1413, 1422, 1426,
+   1434, 1435, 1448, 1449, 1456
+
+Deprecations
+------------
+ - Trial:
+   - spinWhile and spinUntil
+   - util.wait
+   - extract_tb and format_exception
+   - util.suppressWarnings
+   - runReactor is gone
+
+
+2.1.0 (2005-11-06)
+==================
 
 Features
 --------
@@ -56,7 +95,8 @@ Deprecations
    firstError.subFailure and firstError.index instead.
  - whenThreaded now simply calls the passed function synchronously.
 
-2.0.1 (May 9, 2005):
+2.0.1 (2005-05-09)
+===================
 Minor bug fix release.
 
 SVN rev (file) - [bug number] description
@@ -76,7 +116,8 @@ SVN rev (file) - [bug number] description
 13748 (twisted/internet/gtk2reactor.py) - [552] [994] Initialize threading properly.
 
 
-2.0.0 (March 25, 2005):
+2.0.0 (2005-03-25)
+==================
 
 Major new features
 ------------------
@@ -150,7 +191,8 @@ twisted.enterprise
  - Don't log exceptions extraneously
 
 
-1.3.0 (May 14, 2004):
+1.3.0 (2004-05-14)
+==================
 
 - Address objects for IPv4 and Unix addresses throughout twisted.internet.
 - Improved connected UDP APIs.
