@@ -61,7 +61,7 @@ class InMemNodeSync(object):
             raise ivfs.NotAContainerError(
                 "%s doesn't implement createDirectory" % self)
         if node.has_key(name):
-            raise ivfs.VFSError(
+            raise ivfs.AlreadyExistsError(
                 "%s can't create %s - node already exists" % (
                     self, name))
         node[name] = {}
@@ -139,7 +139,7 @@ class _FakeNode:
                                     pathutils.dirname(newName))
 ##         newParent = self.filesystem.fetch(self.filesystem.dirname(newName))
         if newParent.exists(pathutils.basename(newName)):
-            raise ivfs.VFSError(
+            raise ivfs.AlreadyExistsError(
                 "Cannot rename over the top of an existing directory")
         self.name = pathutils.basename(pathutils.basename(newName))
         newParent._children[self.name] = self
@@ -175,14 +175,14 @@ class FakeDirectory(_FakeNode):
 
     def createFile(self, childName, exclusive=False):
         if exclusive and self.exists(childName):
-            raise ivfs.VFSError("%r already exists" % (childName,))
+            raise ivfs.AlreadyExistsError("%r already exists" % (childName,))
         child = FakeFile(childName, self)
         child.create()
         return child
 
     def createDirectory(self, childName):
         if self.exists(childName):
-            raise ivfs.VFSError("%r already exists" % (childName,))
+            raise ivfs.AlreadyExistsError("%r already exists" % (childName,))
         child = FakeDirectory(childName, self)
         child.create()
         return child

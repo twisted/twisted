@@ -10,7 +10,7 @@ import stat
 import time
 import errno
 
-from twisted.vfs import ivfs
+from twisted.vfs import ivfs, decorator
 from twisted.internet import defer
 from twisted.python import filepath
 
@@ -20,7 +20,7 @@ __all__ = ['OSDirectory', 'OSFile', 'RunWithPrivSep', 'SetUIDProxy',
            'ForceCreateModeProxy', 'OSFS']
 
 
-class OSFS(object):
+class SyncOSFS(object):
     def __init__(self, realdir, segments=None, parent=None):
         self.base = realdir
         self.segments = segments or []
@@ -36,32 +36,47 @@ class OSFS(object):
         return self.segments[-1]
 
     def child(self, *segments):
-        return OSFS(self.base, self.segments + list(segments), parent=self)
+        return SyncOSFS(self.base, self.segments + list(segments), parent=self)
 
     def children(self):
         try:
             childs = [self.child(seg) for seg in self._getCur().listdir()]
         except OSError, e:
             if e.errno == errno.ENOTDIR:
-                return defer.fail(ivfs.NotAContainerError())
+                raise ivfs.NotAContainerError()
             if e.errno == errno.ENOENT:
-                return defer.fail(ivfs.NotFoundError())
-        return defer.succeed(childs)
+                raise ivfs.NotFoundError()
+        return childs
 
     def path(self):
         return self.segments
 
     def createDirectory(self, name):
-        return defer.succeed(self._getCur().child(name).createDirectory())
+        try:
+            return self._getCur().child(name).createDirectory()
+        except OSError, e:
+            if e.errno == errno.EEXIST:
+                raise ivfs.AlreadyExistsError("Already Exists")
 
     def isdir(self):
         if not self.exists():
-            
-        try:
-            return defer.succeed(self._getCur().isdir())
-        except OSError, e:
-            if e.errno == errno.ENOENT:
-                return defer.fail(ivfs.NotFoundError())
+            raise ivfs.NotFoundError()
+        return self._getCur().isdir()
+
+    def exists(self):
+        return self._getCur().exists()
+
+def OSFS(*args, **kwargs):
+    """FUCKTORY
+    """
+    return decorator.CommonWrapperDecorator(
+        SyncOSFS(*args, **kwargs),
+        factoryMethods = ['child'],
+        wrapper = defer.execute,
+        wrappedMethods = decorator.introspectMethods(
+            SyncOSFS,
+            exceptMethods = ['child', 'parent', 'path', 'name']),
+        wrapStyle = decorator.IndirectWrap)
 
 class OSNode:
 

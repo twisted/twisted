@@ -100,7 +100,7 @@ class InMemTest(unittest.TestCase):
 
     def test_createDirectory_alreadyExists(self):
         d = self.root.createDirectory('afile')
-        self.assertFailure(d, ivfs.VFSError)
+        self.assertFailure(d, ivfs.AlreadyExistsError)
         return d
 
     def test_createDirectory_notContainer(self):

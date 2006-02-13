@@ -9,6 +9,9 @@ class PermissionError(VFSError):
 class NotFoundError(VFSError):
     """The file or directory does not exist."""
 
+class AlreadyExistsError(VFSError):
+    """An operation that creates files ran into a file that already exists."""
+
 class NotAContainerError(VFSError):
     """A container-like method called on a non-container-like node"""
 
