@@ -113,7 +113,7 @@ def InMemNode(*args, **kwargs):
         wrapper = defer.execute,
         wrappedMethods = decorator.introspectMethods(
             InMemNodeSync,
-            exceptMethods = ['child', 'parent', 'path']),
+            exceptMethods = ['child', 'parent', 'path', 'name']),
         wrapStyle = decorator.IndirectWrap)
     
 
