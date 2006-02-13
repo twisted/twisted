@@ -22,6 +22,13 @@ class InMemTest(unittest.TestCase):
         return self.assertEqual(self.root.child('adir').path(),
             ['adir'])
 
+    def test_childname(self):
+        self.assertEqual(self.root.child('adir').name(), 'adir')
+
+    def test_childchildname(self):
+        self.assertEqual(self.root.child('adir').child('anotherfile').name(),
+                         'anotherfile')
+
     def test_child_empty(self):
         return self.assertEqual(self.root.child('adir').child().path(),
             ['adir'])
@@ -45,9 +52,9 @@ class InMemTest(unittest.TestCase):
     def test_exists_doesnt_1deep(self):
         self.root.child('adir', 'badfile').exists().addCallback(self.assertNot)
 
-    def test_children(self):        
+    def test_children(self):
         def _check(children):
-            names = [name for name, ob in children]
+            names = [node.name() for node in children]
             names.sort()
             self.assertEqual(names, ['adir', 'afile'])
         return self.root.children().addCallback(_check)
@@ -146,7 +153,7 @@ class InMemTest(unittest.TestCase):
             return self.root.child('adir', 'anotherfile').exists(
                 ).addCallback(self.assertNot)
         return self.root.child('adir', 'anotherfile').remove().addCallback(_check)
-        
+
     def test_remove_container(self):
         def _check(result):
             return self.root.child('adir', 'anotherdir').exists(

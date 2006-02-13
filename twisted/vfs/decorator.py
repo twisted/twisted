@@ -28,8 +28,7 @@ class Decorator(object):
 
 class CommonWrapperDecorator(Decorator):
     def __init__(self, target, factoryMethods=[],
-        wrapper=lambda x: x, wrappedMethods=[], wrapStyle=DirectWrap
-    ):
+                 wrapper=lambda x: x, wrappedMethods=[], wrapStyle=DirectWrap):
         self.wrapper = wrapper
         self.wrappedMethods = wrappedMethods
         self.wrapStyle = wrapStyle

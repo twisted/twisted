@@ -11,11 +11,57 @@ import time
 import errno
 
 from twisted.vfs import ivfs
+from twisted.internet import defer
+from twisted.python import filepath
 
 from zope.interface import implements
 
 __all__ = ['OSDirectory', 'OSFile', 'RunWithPrivSep', 'SetUIDProxy',
-           'ForceCreateModeProxy']
+           'ForceCreateModeProxy', 'OSFS']
+
+
+class OSFS(object):
+    def __init__(self, realdir, segments=None, parent=None):
+        self.base = realdir
+        self.segments = segments or []
+        self.parent = parent
+
+    def _getCur(self):
+        file = self.base
+        for seg in self.segments:
+            file = file.child(seg)
+        return file
+
+    def name(self):
+        return self.segments[-1]
+
+    def child(self, *segments):
+        return OSFS(self.base, self.segments + list(segments), parent=self)
+
+    def children(self):
+        try:
+            childs = [self.child(seg) for seg in self._getCur().listdir()]
+        except OSError, e:
+            if e.errno == errno.ENOTDIR:
+                return defer.fail(ivfs.NotAContainerError())
+            if e.errno == errno.ENOENT:
+                return defer.fail(ivfs.NotFoundError())
+        return defer.succeed(childs)
+
+    def path(self):
+        return self.segments
+
+    def createDirectory(self, name):
+        return defer.succeed(self._getCur().child(name).createDirectory())
+
+    def isdir(self):
+        if not self.exists():
+            
+        try:
+            return defer.succeed(self._getCur().isdir())
+        except OSError, e:
+            if e.errno == errno.ENOENT:
+                return defer.fail(ivfs.NotFoundError())
 
 class OSNode:
 

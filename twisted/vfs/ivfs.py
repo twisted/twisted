@@ -15,6 +15,11 @@ class NotAContainerError(VFSError):
 
 class IFileSystemNode(Interface):
 
+    def name():
+        """
+        @returns: a string, suitable for use as a segment.
+        """
+
     def child(*segments):
         """
         @returns: immediately with a node object representing a
@@ -37,8 +42,7 @@ class IFileSystemNode(Interface):
 
     def children():
         """
-        @returns: a Deferred which will fire with a list of 2 element tuples
-            [(segment, nodeObject)]
+        @returns: a Deferred which will fire with a list of nodes.
 
         @raises ivfs.NotAContainerError: if this node isn't a container
         @raises ivfs.NotFoundError: if this node does not exist

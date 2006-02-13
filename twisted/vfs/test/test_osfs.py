@@ -68,3 +68,23 @@ class OSVFSTest(unittest.TestCase):
         self.failUnless(IFileSystemLeaf.providedBy(child))
         self.assertIn('foo', [name for name, child in osdir.children()])
 
+from twisted.vfs.test import test_inmem
+class OSFSNewTest(test_inmem.InMemTest):
+    def setUp(self):
+        self.dir = dir = self.mktemp()
+        os.mkdir(dir)
+        os.mkdir(os.path.join(dir, 'adir'))
+        os.mkdir(os.path.join(dir, 'adir', 'anotherdir'))
+        f = open(os.path.join(dir, 'afile'), 'w')
+        f.write('some data')
+        f.close()
+        f = open(os.path.join(dir, 'adir', 'anotherfile'), 'w')
+        f.write('more data')
+        f.close()
+        from twisted.python import filepath
+        self.root = osfs.OSFS(filepath.FilePath(dir))
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.dir)
+

@@ -12,6 +12,9 @@ class InMemNodeSync(object):
         self.segments = segments
         self.filesystem = filesystem
 
+    def name(self):
+        return self.segments[-1]
+
     def child(self, *segments):
         return InMemNodeSync(self.segments + list(segments), self.filesystem)
 
@@ -34,7 +37,7 @@ class InMemNodeSync(object):
 
     def children(self):
         try:
-            return [(name, self.child(name)) for name in self._getNode().keys()]
+            return [self.child(name) for name in self._getNode().keys()]
         except AttributeError:
             raise ivfs.NotAContainerError(
                 "%s doesn't implement children" % self)

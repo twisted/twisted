@@ -5,6 +5,23 @@ from twisted.python import filepath
 from twisted.python.runtime import platform
 from twisted.trial import unittest
 
+# __init__(*segments), child(*segments), parent,
+# most of the stat methods (not the one that actually calls stat),
+# sibling, and requireCreate
+
+class PathTestCase(unittest.TestCase):
+    def setUp(self):
+        self.path = filepath.Path([])
+
+    def test_child(self):
+        c = self.path.child('hello')
+        self.assertEquals(c.path(), ['hello'])
+
+    def test_parent(self):
+        c = self.path.child('hello')
+        self.assertEquals(c.parent(), [])
+
+
 class FilePathTestCase(unittest.TestCase):
 
     f1content = "file 1"
