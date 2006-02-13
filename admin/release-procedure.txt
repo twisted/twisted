@@ -43,9 +43,12 @@
 
 3. Put ZopeInterface-*.tgz in twistedballs
 
-4. ./admin/release-twisted --commands=makeBallSumo
+4. ./admin/change-versions, and make sure all the versions are
+   appropriately specified for the tarballs you've included.
 
-5. Distribute, announce, etc.
+5. ./admin/release-twisted --commands=makeBallSumo
+
+6. Distribute, announce, etc.
 
 = CREATING A NEW SUBPROJECT =
 
