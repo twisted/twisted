@@ -66,28 +66,26 @@ or   setup.py core --help
 
 
 def main(args):
-    os.putenv("PYTHONPATH", "."+os.pathsep+os.getenv("PYTHONPATH", ""))
+    os.environ["PYTHONPATH"] = "." + os.pathsep + os.getenv("PYTHONPATH", "")
     if len(args) == 0 or args[0] in ('-h', '--help'):
         printProjectInfo()
         sys.exit(0)
-        
-    # special case common options
-    if args[0] in ('install','build'):
+
+    # if it's not a project name, it's a command name
+    if args[0] not in ['all'] + subprojects + otherSubProjects:
         project = 'all'
     else:
         project = args[0]
         args = args[1:]
-    
+
     if project == 'all':
         for project in subprojects:
             runSetup(project, args)
     else:
         runSetup(project, args)
-        
+
 if __name__ == "__main__":
     try:
         main(sys.argv[1:])
     except KeyboardInterrupt:
         sys.exit(1)
-
-    
