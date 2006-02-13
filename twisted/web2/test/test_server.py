@@ -207,7 +207,7 @@ class SampleWebTest(BaseCase):
 
         return self.assertResponse(
             (TestResource(), 'http://host/consumed/path/segments'),
-            (200, {}, "prepath:['consumed', 'path', 'segments'] postpath:[]"))
+            (200, {}, "prepath:[] postpath:['consumed', 'path', 'segments']"))
 
 
 class URLParsingTest(BaseCase):

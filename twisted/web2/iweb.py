@@ -28,15 +28,11 @@ class IResource(Interface):
                  with specified resource and segments, calling the
                  appropriate method on the specified resource.
                  
-                 If you return (self, []), this instructs web2 to
-                 immediately stop the lookup stage, and switch to
-                 the rendering stage, leaving the remaining path alone
-                 for your render function to handle.
-
-                 If you return (None, []) this instructs web2 that
-                 no page was found for the current request.
-
-                 An empty tuple () will stop the traversal as well.
+                 If you return (self, L{server.StopTraversal}), this
+                 instructs web2 to immediately stop the lookup stage,
+                 and switch to the rendering stage, leaving the
+                 remaining path alone for your render function to
+                 handle.
         """
 
     def renderHTTP(req):
