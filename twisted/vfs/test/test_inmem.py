@@ -123,13 +123,13 @@ class InMemTest(unittest.TestCase):
         self.assertFailure(d, ivfs.VFSError)
         return d
 
-    def test_createFile_alreadyExists_leafNonExclusive(self):
-        def _check(result):
-            #XXX - check that the file is truncated
-            return self.root.child('afile').isfile(
-                ).addCallback(self.assert_)
-        return self.root.createFile('afile', False
-            ).addCallback(_check)
+    # def test_createFile_alreadyExists_leafNonExclusive(self):
+        # def _check(result):
+            # #XXX - check that the file is truncated
+            # return self.root.child('afile').isfile(
+                # ).addCallback(self.assert_)
+        # return self.root.createFile('afile', False
+            # ).addCallback(_check)
 
     def test_createFile_notContainer(self):
         d = self.root.child('afile').createFile('afile')
@@ -199,8 +199,7 @@ class InMemTest(unittest.TestCase):
         return d
 
     def test_rename_notFound(self):
-        d = self.root.child('froar').rename(['froar2'])
+        d = self.root.child('froar').rename(['adir', 'froar'])
         self.assertFailure(d, ivfs.NotFoundError)
         return d
-
 
