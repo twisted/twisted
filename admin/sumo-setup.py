@@ -9,8 +9,8 @@ Distutils-launcher for Twisted projects.
 
 import sys, os, glob
 
-subprojects = ('core', 'conch', 'flow', 'lore', 'mail', 'names', 'pair',
-               'runner', 'web', 'words', 'news')
+subprojects = ['core', 'conch', 'flow', 'lore', 'mail', 'names', 'pair',
+               'runner', 'web', 'words', 'news']
 
 
 def runInDir(dir, f, *args, **kw):
@@ -72,7 +72,7 @@ def main(args):
         sys.exit(0)
 
     # if it's not a project name, it's a command name
-    if args[0] not in ['all'] + subprojects + otherSubProjects:
+    if args[0] not in ['all'] + subprojects:
         project = 'all'
     else:
         project = args[0]

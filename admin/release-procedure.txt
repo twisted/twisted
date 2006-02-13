@@ -39,6 +39,7 @@
 1. From Twisted trunk WC, mkdir twistedballs
 
 2. Put all current subproject tarballs into twistedballs
+   This step is REALLY tedious. Should figure out a better way to do this.
 
 3. Put ZopeInterface-*.tgz in twistedballs
 
