@@ -369,7 +369,7 @@ class TreeReporter(Reporter):
     def upDownError(self, method, error, warn, printStatus):
         self.write(self.color("  %s" % method, self.RED))
         if printStatus:
-            self.endLine(['ERROR'], self.RED)
+            self.endLine('[ERROR]', self.RED)
         super(TreeReporter, self).upDownError(method, error, warn, printStatus)
         
     def startTest(self, method):
