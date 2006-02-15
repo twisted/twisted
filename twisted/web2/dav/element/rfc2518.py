@@ -32,6 +32,7 @@ See RFC 2518: http://www.ietf.org/rfc/rfc2518.txt
 
 from twisted.web2 import responsecode
 from twisted.web2.dav.element.base import *
+from twisted.web2.http_headers import MimeType
 
 ##
 # Section 12
@@ -502,6 +503,9 @@ class GETContentType (WebDAVTextElement):
     accept headers. (RFC 2518, section 13.5)
     """
     name = "getcontenttype"
+
+    def mimeType():
+        return MimeType.fromString(str(self))
 
 class GETETag (WebDAVTextElement):
     """
