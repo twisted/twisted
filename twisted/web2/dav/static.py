@@ -111,14 +111,14 @@ class DAVFile (File):
     def contentType(self):
         # Allow dead property to override
         if (davxml.dav_namespace, "getcontenttype") in self.deadProperties:
-            return self.deadProperties[(davxml.dav_namespace, "getcontenttype")]
+            return self.deadProperties[(davxml.dav_namespace, "getcontenttype")].mimeType()
         else:
             return super(DAVFile, self).contentType()
 
     def displayName(self):
         # Allow dead property to override
         if (davxml.dav_namespace, "displayname") in self.deadProperties:
-            return self.deadProperties[(davxml.dav_namespace, "displayname")]
+            return str(self.deadProperties[(davxml.dav_namespace, "displayname")])
         else:
             return super(DAVFile, self).displayName()
 
