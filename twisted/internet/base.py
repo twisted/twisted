@@ -288,7 +288,7 @@ class ReactorBase:
             # if the waker isn't installed, the reactor isn't running, and
             # therefore doesn't need to be woken up
 
-    def doIteration(self):
+    def doIteration(self, delay):
         """Do one iteration over the readers and writers we know about."""
         raise NotImplementedError
 
