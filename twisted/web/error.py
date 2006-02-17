@@ -36,6 +36,7 @@ class ErrorPage(resource.Resource):
 
     def render(self, request):
         request.setResponseCode(self.code)
+        request.setHeader("content-type", "text/html")
         return ("""<html>
         <head><title>%s - %s</title></head>
         <body><h1>%s</h1>
