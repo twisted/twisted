@@ -114,7 +114,7 @@ class DictClient(basic.LineReceiver):
                 self.transport.LoseConnection()
                 return
             code = int(line[:3])
-	    line = line[4:]
+            line = line[4:]
         method = getattr(self, 'dictCode_%s_%s' % (code, self.state), self.dictCode_default)
         method(line)
 
@@ -209,7 +209,7 @@ class DictClient(basic.LineReceiver):
         """n matches found, text follows"""
         self.mode = "text"
         self.result = []
-	self.data = []
+        self.data = []
 
     def dictCode_text_define(self, line):
         """A line of definition text received"""
@@ -284,7 +284,7 @@ class DictLookup(DictClient):
     def protocolError(self, reason):
         if not self.factory.done:
             self.factory.d.errback(InvalidResponse(reason))
-	    self.factory.clientDone()
+            self.factory.clientDone()
 
     def dictConnected(self):
         if self.factory.queryType == "define":

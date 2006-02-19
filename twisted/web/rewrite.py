@@ -7,7 +7,7 @@ from twisted.web import resource
 class RewriterResource(resource.Resource):
 
     def __init__(self, orig, *rewriteRules):
-	resource.Resource.__init__(self)
+        resource.Resource.__init__(self)
         self.resource = orig
         self.rewriteRules = list(rewriteRules)
 

@@ -242,20 +242,20 @@ class XMLParser(Protocol):
             else:
                 self._parseError("Invalid '[' in tag-name")
         else:
-	    if self.beExtremelyLenient:
-		self.bodydata = '<'
-		return 'unentity'
+            if self.beExtremelyLenient:
+                self.bodydata = '<'
+                return 'unentity'
             self._parseError('Invalid tag character: %r'% byte)
 
     def begin_unentity(self, byte):
-	self.bodydata += byte
+        self.bodydata += byte
 
     def do_unentity(self, byte):
-	self.bodydata += byte
-	return 'bodydata'
+        self.bodydata += byte
+        return 'bodydata'
 
     def end_unentity(self):
-	self.gotText(self.bodydata)
+        self.gotText(self.bodydata)
 
     def begin_expectcdata(self, byte):
         self.cdatabuf = byte
