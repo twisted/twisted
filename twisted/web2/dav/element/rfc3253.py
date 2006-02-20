@@ -155,7 +155,7 @@ class SupportedReport (WebDAVElement):
     #   Absent any better guidance, we'll allow no children for this element for
     # the time being.
     #
-    allowed_children = { (dav_namespace, "Report"): (0, 1) }
+    allowed_children = { (dav_namespace, "report"): (0, 1) }
 
 class SupportedReportSet (WebDAVElement):
     """
