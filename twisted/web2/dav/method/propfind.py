@@ -114,7 +114,7 @@ def http_PROPFIND(self, request):
                 resource_properties = resource.properties
 
                 if search_properties is "all":
-                    properties_to_enumerate = resource_properties.keys()
+                    properties_to_enumerate = resource_properties.allpropKeys()
                 else:
                     properties_to_enumerate = search_properties
         
