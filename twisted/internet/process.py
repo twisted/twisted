@@ -630,7 +630,12 @@ class Process(styles.Ephemeral):
             signalID = getattr(signal, 'SIG'+signalID)
         if self.pid is None:
             raise ProcessExitedAlready
-        os.kill(self.pid, signalID)
+        try:
+            os.kill(self.pid, signalID)
+        except OSError, e:
+            if e.errno == errno.ESRCH:
+                raise ProcessExitedAlready
+            raise
 
     def processEnded(self, status):
         # this is called when the child terminates (SIGCHLD)
