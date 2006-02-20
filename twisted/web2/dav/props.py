@@ -37,6 +37,7 @@ from twisted.python import log
 
 from twisted.web2.dav import davxml
 from twisted.web2.dav.davxml import dav_namespace
+from twisted.web2.dav.davxml import lookupElement
 
 class WebDAVPropertyStore (object, UserDict.DictMixin):
     """
@@ -138,12 +139,21 @@ class WebDAVPropertyStore (object, UserDict.DictMixin):
         return list(self.liveProperties) + list(self.deadProperties)
 
     def allpropKeys(self):
+        """
+        Some DAV properties should not be returned to a C{DAV:allprop} request.
+        RFC 3253 defines several such properties.  This method computes a subset
+        of the property qnames returned by L{keys} by filtering out elements
+        whose class have the C{.hidden} attribute set to C{True}.
+        @return: a list of keys which are appropriate for use in a
+            C{DAV:allprop} request.   
+        """
         keys = []
 
         for key in self.keys():
-            if key in davxml.elements_by_tag_name:
-                element_class = davxml.elements_by_tag_name[key]
-                if not element_class.hidden:
+            try:
+                if not lookupElement(key).hidden:
                     keys.append(key)
+            except KeyError:
+                pass
 
         return keys
