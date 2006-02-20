@@ -135,7 +135,7 @@ class WebDAVPropertyStore (object, UserDict.DictMixin):
         for key in self.deadProperties: yield key
 
     def keys(self):
-        return tuple(self.liveProperties) + tuple(self.deadProperties)
+        return list(self.liveProperties) + list(self.deadProperties)
 
     def allpropKeys(self):
         keys = []
