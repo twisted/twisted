@@ -1092,6 +1092,9 @@ class IProcessTransport(ITransport):
               if possible.
           - an integer, where it represents a POSIX
               signal ID.
+
+        @raise L{twisted.internet.error.ProcessExitedAlready}: Raised if the
+        process has already exited.
         """
 
 
