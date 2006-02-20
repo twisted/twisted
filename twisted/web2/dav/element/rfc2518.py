@@ -504,7 +504,7 @@ class GETContentType (WebDAVTextElement):
     """
     name = "getcontenttype"
 
-    def mimeType():
+    def mimeType(self):
         return MimeType.fromString(str(self))
 
 class GETETag (WebDAVTextElement):
