@@ -38,6 +38,7 @@ from twisted.python import log
 from twisted.web2.dav import davxml
 from twisted.web2.dav.davxml import dav_namespace
 from twisted.web2.dav.davxml import lookupElement
+from twisted.web2.http_headers import generateContentType
 
 class WebDAVPropertyStore (object, UserDict.DictMixin):
     """
@@ -82,7 +83,9 @@ class WebDAVPropertyStore (object, UserDict.DictMixin):
                 return davxml.GETETag.fromString(self.resource.etag().generate())
     
             if name == "getcontenttype":
-                return davxml.GETContentType.fromString(self.resource.contentType())
+                mimeType = self.resource.contentType()
+                mimeType.params = None # WebDAV getcontenttype property does not include parameters
+                return davxml.GETContentType.fromString(generateContentType(mimeType))
         
             if name == "getcontentlength":
                 return davxml.GETContentLength.fromString(self.resource.contentLength())
