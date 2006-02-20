@@ -61,5 +61,5 @@ __all__ = (
     registerElements(twisted.web2.dav.element.rfc2518) +
     registerElements(twisted.web2.dav.element.rfc3253) +
     registerElements(twisted.web2.dav.element.rfc3744) +
-    ["registerElements", "WebDAVDocument", "encodeXMLName", "decodeXMLName"]
+    ["registerElements", "WebDAVDocument", "lookupElement", "encodeXMLName", "decodeXMLName"]
 )
