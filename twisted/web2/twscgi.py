@@ -36,7 +36,7 @@ def doSCGI(request, host, port):
     if request.stream.length is None:
         return http.Response(responsecode.LENGTH_REQUIRED)
     factory = SCGIClientProtocolFactory(request)
-    reactor.connectTCP(self.host, self.port, factory)
+    reactor.connectTCP(host, port, factory)
     return factory.deferred
     
 class SCGIClientProtocol(basic.LineReceiver):
@@ -96,7 +96,7 @@ class SCGIClientProtocol(basic.LineReceiver):
         # The connection is closed and all data has been streamed via the
         # response. Tell the response stream it's over.
         self.response.stream.finish()
-        
+    
     
 class SCGIClientProtocolFactory(protocol.ClientFactory):
     """SCGI client protocol factory.
@@ -109,6 +109,7 @@ class SCGIClientProtocolFactory(protocol.ClientFactory):
     the HTTP response from the server once it has been recieved.
     """
     protocol = SCGIClientProtocol
+    noisy = False # Make Factory shut up
     
     def __init__(self, request):
         self.request = request
