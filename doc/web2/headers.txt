@@ -77,7 +77,8 @@ Response headers:
 
 General headers:
 
- - Cache-Control: TODO
+ - Cache-Control: dictionary of cache control directives
+     e.g. { 'no-cache': ['PROXY-AUTHENTICATE'], 'no-store': None, "max-age": 5 }
  - Date: seconds since Epoch 
      e.g. ``1112321588``, from ``time.time()``
  - Pragma: TODO
