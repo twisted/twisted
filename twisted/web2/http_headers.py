@@ -1070,9 +1070,17 @@ def parseDepth(depth):
     return depth
 
 def parseOverWrite(overwrite):
-    if   overwrite == "F": return False
-    elif overwrite == "T": return True
+    if overwrite == "F":
+        return False
+    elif overwrite == "T":
+        return True
     raise ValueError("Invalid overwrite header value: %s" % (overwrite,))
+
+def generateOverWrite(overwrite):
+    if overwrite:
+        return "T"
+    else:
+        return "F"
 
 ##### Random stuff that looks useful.
 # def sortMimeQuality(s):
@@ -1405,7 +1413,7 @@ generator_dav_headers = {
     'Destination' : (singleHeader),
    #'If'          : (),
    #'Lock-Token'  : (),
-   #'Overwrite'   : (),
+    'Overwrite'   : (),
    #'Status-URI'  : (),
    #'Timeout'     : (),
 }
