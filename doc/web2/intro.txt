@@ -4,15 +4,17 @@ Twisted.web2 is an asynchronous HTTP 1.1 server written for the Twisted_ interne
 
 It also includes a simple web framework with request and response objects, static file support, error handling, form upload support, HTTP range support, pre-built parsers for all standard headers, and a bunch of other goodies.
 
-It is deployable as a standard TCP or SSL web server, or as a CGI script invoked by another server. Other deployment mechanisms (such as SCGI) are planned.
+It is deployable as a standalone HTTP or HTTPS server, as a HTTP[S] server proxied behind another server, or as a SCGI, FastCGI, or CGI script. 
 
-In addition to running native twisted.web2 applications, it can also run any WSGI or CGI application, or, via compatibility wrappers, most applications written for the older twisted.web and nevow APIs.
+In addition to running native twisted.web2 applications, it can also run any WSGI or CGI application, or, via compatibility wrappers, most applications written for the older twisted.web API.
 
 Currently, twisted.web2 does not include a HTTP client or proxy, but will at a future date.
 
+Finally, it includes a DAV server library.
+
 What twisted.web2 is not
 ------------------------
-Twisted.web2 is not a templating framework. It provides mechanisms for locating and running code associated with a URL, but does not provide any means for separating code and data or to ease the task of generating HTML. Nevow (www.nevow.com) is a templating framework which is recommended for use with twisted.web2.
+Twisted.web2 is not a templating framework. It provides mechanisms for locating and running code associated with a URL, but does not provide any means for separating code and data or to ease the task of generating HTML.
 
 Twisted.web2 is in general fairly speedy. However, keep in mind that it is a python program, and, while it is empirically "fast enough", it cannot match Apache in static file serving speed. <insert actual measurements here>
 
@@ -25,30 +27,15 @@ When you have finished this tutorial, you should be able to write some simple re
 Simple application
 ------------------
 
-.. python::
+.. pythonfile :: examples/intro/simple.py
 
-  from twisted.web2 import server, http, resource, channel
-
-  class Toplevel(resource.Resource):
-    addSlash = True
-    def render(self, ctx):
-      return http.Response(stream="Hello monkey!")
-
-  site = server.Site(Toplevel())
-
-  # Standard twisted application Boilerplate
-  from twisted.application import service, strports
-  application = service.Application("demoserver")
-  s = strports.service('tcp:8080', channel.HTTPFactory(site))
-  s.setServiceParent(application)
-
-Save this program as ``example1.py``, and then run it via ``twistd -ny example1.py``. ``twistd`` is the Twisted runner; it knows how to execute applications by looking for the magic ``application`` variable declared at top-level. You can also run your server daemonized, via ``twistd -oy example1.py``. You can then access your server via the url "http://localhost:8080/". For more deployment options, see the deployment_ chapter.
+This program is also in the file ``examples/intro/simple.py``. Run it via ``twistd -ny simple.py``. ``twistd`` is the Twisted runner; it knows how to execute applications by looking for the ``application`` variable declared at top-level. You can also run your server in the background (daemonized), via ``twistd -y simple.py``. You can access your server via the url "http://localhost:8080/". For more deployment options, see the deployment_ chapter.
 
 What this is doing
 ~~~~~~~~~~~~~~~~~~
 A resource is responsible for handling one segment of the URL. Here, we have created a resource to handle the top level of the url hierarchy. The ``addSlash = True`` setting tells twisted.web2 that this is a directory-like resource. This means that it will add a "/" to the end of the URL automatically, if needed, and respond under that name. Root resources should always have ``addSlash = True``. 
 
-The defined class has just a single method: ``render``. This method takes a single argument: ``ctx``, which contains all the state related to the current rendering operation. This particular render method  always returns the same data, so we won't use ``ctx``. We'll get back to it later.
+The defined class has just a single method: ``render``. This method takes a single argument: ``request``, which contains all the state related to the current rendering operation. This particular render method always returns the same data, so we won't use ``request``. We'll get back to it later.
 
 Here, the ``render`` method simply returns a ``http.Response`` object containing the output. 
 
@@ -58,53 +45,15 @@ Child resources
 ~~~~~~~~~~~~~~~
 Of course, what good is a webserver that can only serve up a single page? So, you can also add child resources to your top-level resource, via ``child_<name>`` attributes.
 
-.. python::
-
-  import os.path, time
-  from twisted.web2 import server, http, resource, channel
-  from twisted.web2 import static, http_headers, responsecode
-  
-  class Child(resource.Resource):
-    creation_time = time.time()
-    text = 'Yo Ho Ho and a bottle of rum.'
-    content_type = http_headers.MimeType('text', 'plain')
-    
-    def render(self, ctx):
-      return http.Response(
-        responsecode.OK,
-        {'last-modified': self.creation_time,
-        'etag': http_headers.ETag(str(hash(self.text))),
-        'content-type': self.content_type},
-        self.text)
-
-  class Toplevel(resource.Resource):
-    addSlash = True
-    child_monkey = static.File(os.path.dirname(static.__file__)+'/static.py')
-    child_elephant = Child()
-
-    def render(self, ctx):
-      return http.Response(
-        200, 
-        {'content-type': http_headers.MimeType('text', 'html')},
-        """<html><body>
-        <a href="monkey">The source code of twisted.web2.static</a><br>
-        <a href="elephant">A defined child</a></body></html>""")
-
-  site = server.Site(Toplevel())
-
-  # Standard twisted application Boilerplate
-  from twisted.application import service, strports
-  application = service.Application("demoserver")
-  s = strports.service('tcp:8080', channel.HTTPFactory(site))
-  s.setServiceParent(application)
+.. pythonfile:: examples/intro/children.py
 
 Here a few new concepts have been introduced:
 
 - Adding child resources. Any resource can have children, by adding child_name attributes. The child_foo attributes can also be methods, and, if even that is not powerful enough for you, it is possible to override the method lookup machinery at an even lower level. See `Resource Traversal`_ for more details.
 
-- `static.File`_ lets you serve a file off the disk. With this, you get a lot of functionality: automatic Content-Type setting from the file extension, last-modified and etag calculation, and the ability to hook in custom processors for certain file types. It will also generate directory listings if you point it at a directory instead of a file.
+- :apidoc:`twisted.web2.static.File` lets you serve a file off the disk. With this, you get a lot of functionality: automatic Content-Type setting from the file extension, last-modified and etag calculation, and the ability to hook in custom processors for certain file types. It will also generate directory listings if you point it at a directory instead of a file.
 
-- `http.Response`_ takes three arguments: the response code, the output headers, and the output stream. For more information, see `Resource APIs`_.
+- :apidoc:`twisted.web2.http.Response` takes three arguments: the response code, the output headers, and the output stream. For more information, see `Resource APIs`_.
 
 As an aside for those who know a bit about HTTP, note that just by setting the Last-Modified and ETag response headers, you enable automatic precondition checks which support the If-Modified-Since, If-Unmodified-Since, If-Match, and If-None-Match input headers. This allows the client to request that the resource only be sent if it has changed since the last time the client downloaded it, saving bandwidth. Also, the Range and If-Range headers are supported on every resource, allowing partial downloads, and default values for the "Server" and "Date" headers are added to the output for you automatically.
 
@@ -114,6 +63,3 @@ As an aside for those who know a bit about HTTP, note that just by setting the L
 .. _Resource Traversal: xyzzy
 .. _Resource APIs: resource-apis.html
 .. _deployment: deployment.html
-.. _static.File: apidocs
-.. _http.Response: apidocs
-.. _stream module: apidocs

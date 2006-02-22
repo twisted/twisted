@@ -24,13 +24,13 @@ The *root resource* is the top-level object in the URL space; it conceptually
 represents the URI "/". The Twisted.Web2 *object traversal* and *object publishing*
 machinery uses only two methods to locate an object suitable for publishing and
 to generate the HTML from it; these methods are described in the interface
-``twisted.web2.iweb.IResource``::
+:apidoc:`twisted.web2.iweb.IResource`:
 
-
+.. python::
   class IResource(Interface):
       """
 	  I am a web resource.
-      ""
+      """
 
       def locateChild(self, request, segments):
           """Locate another object which can be adapted to IResource.
@@ -56,8 +56,9 @@ to generate the HTML from it; these methods are described in the interface
           """
 
 Let's examine what happens when object traversal occurs over a very simple root
-resource::
+resource:
 
+.. python::
   from twisted.web2 import iweb, http, stream
 
   class SimpleRoot(object):
@@ -102,8 +103,9 @@ direct children. For example, a ``Directory`` object may only know about the
 contents of a single directory, but if it contains other directories, it does
 not know about the contents of them. Let's examine a simple ``Directory`` object
 which can provide directory listings and serves up objects for child directories
-and files::
+and files:
 
+.. python::
   from twisted.web2 import resource
 
   class Directory(resource.Resource):
@@ -159,12 +161,13 @@ called, and the result is sent to the browser.
 
 Consuming one URI segment at a time by checking to see if a requested resource
 exists and returning a new object is a very common pattern. Web2's default
-implementation of ``twisted.web2.iweb.IResource``, ``twisted.web2.resource.Resource``, contains an implementation of
+implementation of :apidoc:`twisted.web2.iweb.IResource`, :apidoc:`twisted.web2.resource.Resource`, contains an implementation of
 ``locateChild`` which provides more convenient hooks for implementing object
 traversal. One of these hooks is ``childFactory``. Let us imagine for the sake of
 example that we wished to render a tree of dictionaries. Our data structure
-might look something like this::
+might look something like this:
 
+.. python::
     tree = dict(
         one=dict(
             foo=None,
@@ -183,9 +186,10 @@ Given this data structure, the valid URIs would be:
 * /two/baz
 * /two/baz/quux
 
-Let us construct a ``twisted.web2.resource.Resource`` subclass which uses the default ``locateChild``
-implementation and overrides the ``childFactory`` hook instead::
+Let us construct a :apidoc:`twisted.web2.resource.Resource` subclass which uses the default ``locateChild``
+implementation and overrides the ``childFactory`` hook instead:
 
+.. python::
   from twisted.web2 import http, resource, stream
 
   class DictTree(resource.Resource):
@@ -218,10 +222,11 @@ equivalent ``locateChild`` implementation would have been.
 Often we may wish to have some hardcoded URLs which are not dynamically
 generated based on some data structure. For example, we might have an
 application which uses an external CSS stylesheet, an external JavaScript file,
-and a folder full of images. The ``twisted.web2.resource.Resource`` ``locateChild`` implementation provides a
+and a folder full of images. The :apidoc:`twisted.web2.resource.Resource` ``locateChild`` implementation provides a
 convenient way for us to express these relationships by using ``child``-prefixed
-methods::
+methods:
 
+.. python::
   from twisted.web2 import resource, http, static
 
   class Linker(resource.Resource):
@@ -253,8 +258,9 @@ return a global resource instance, an instance which was previously inserted in
 a dict, or lazily create and cache dynamic resource instances on the fly. The
 ``resource.Resource`` ``locateChild`` implementation also provides a convenient way to express
 that one global resource instance should always be used for a particular url,
-the ``child``-prefixed attribute::
+the ``child``-prefixed attribute:
 
+.. python::
   class FasterLinker(Linker):
       child_css = static.File('/Users/dp/styles.css')
       child_scripts = static.File('/Users/dp/scripts.js')
@@ -267,8 +273,9 @@ When a URL contains dots, which is quite common in normal URLs, it is simple
 enough to handle these URL segments in ``locateChild`` or ``childFactory`` -- one of the
 passed segments will simply be a string containing a dot. However, it is not
 immediately obvious how one would express a URL segment with a dot in it when
-using ``child``-prefixed methods. The solution is really quite simple::
+using ``child``-prefixed methods. The solution is really quite simple:
 
+.. python::
   class DotChildren(resource.Resource):
       return '<html><head><script type="text/javascript" src="scripts.js" /></head></html>'
 
@@ -312,7 +319,7 @@ Conclusion
 ==========
 
 Twisted.web2 makes it easy to handle complex URL hierarchies. The most basic object
-traversal interface, ``twisted.web2.iweb.IResource.locateChild``, provides powerful and
+traversal interface, :apidoc:`twisted.web2.iweb.IResource.locateChild`, provides powerful and
 flexible control over the entire object traversal process. Web2's canonical
 ``IResource`` implementation, ``resource.Resource``, also includes the convenience hooks
 ``childFactory`` along with ``child``-prefixed method and attribute semantics to

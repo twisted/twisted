@@ -1,9 +1,8 @@
 import sys
 import os
 import time
-from StringIO import StringIO
 
-from nevow import flat, tags as T
+from tag import serialize, tagmaker as T
 
 import hier
 
@@ -37,44 +36,13 @@ except:
 
 try:
     from docutils.core import publish_string
-    from docutils.parsers import rst
-    from docutils import nodes, utils, io
 except ImportError:
     error("Error during import: Docutils is required.",99)
 
-try:
-    from twisted.python import htmlizer
-except ImportError:
-    error("Error during import: twisted.python.htmlizer is required", 99)
 
-def python(name, arguments, options, content, lineno,
-           content_offset, block_text, state, state_machine):
-    inp = StringIO('\n'.join(content))
-    outp = StringIO()
-    htmlizer.filter(inp, outp, writer=htmlizer.SmallerHTMLWriter)
-    html = outp.getvalue()
-    return [nodes.raw('', html, format='html')]
-python.content = 1
+import formatters
 
-def pythonfile(name, arguments, options, content, lineno,
-               content_offset, block_text, state, state_machine):
-    fname = arguments[0]
-    source_dir = os.path.dirname(
-        os.path.abspath(state.document.current_source))
-    path = os.path.normpath(os.path.join(source_dir, arguments[0]))
-    path = utils.relative_path(None, path)
-    state.document.settings.record_dependencies.add(path)
-    encoding = options.get('encoding', state.document.settings.input_encoding)
-    raw_file = io.FileInput(
-        source_path=path, encoding=encoding,
-        error_handler=state.document.settings.input_encoding_error_handler,
-        handle_io_errors=None)
-    content = raw_file.read()
-    return python(name, None, None, [content], None, None, None, None, None)
 
-pythonfile.arguments = (1, 0, 1)
-rst.directives.register_directive('python', python)
-rst.directives.register_directive('pythonfile', pythonfile)
 
 TEMPLATE = \
 '''~~~~~~~~~~
@@ -121,11 +89,11 @@ def navBar(name,flathier):
         if name in child_pages:
             parent = flathier[ind][0],flathier[ind][1]
 
-    return flat.flatten(
+    return serialize(
         [T.a(name="top",id="top"),
-        T.div(_class="navbar")[
-            T.span(_class="docTitle")[hier.title[LANGUAGE]],T.br,
-            T.span(_class="right")[
+        T.div(class_="navbar")[
+            T.span(class_="docTitle")[hier.title[LANGUAGE]],T.br,
+            T.span(class_="right")[
                 prev and [conf["prev"], ": ",
                 T.a(href=[prev[0],".html"])["[", prev[1][0],"]",]] or "",
                 parent and [conf["up"],": ",
@@ -156,21 +124,20 @@ def footer(node):
     if not tree:
         directory = ""
     else:
-        directory = [T.div(_class="directoryHeader")[conf["sub"]],
+        directory = [T.div(class_="directoryHeader")[conf["sub"]],
             T.blockquote[
             genDirectory(name != conf["toc"] and (name.split(" ")[0] + ".") or "" ,tree),
             ],T.hr()]
 
-    return flat.flatten([directory,
-    T.a(href="#top")["[",conf["top"],"]"],T.span(_class="genNote")
-        [conf["updatedOn"], ' ' ,time.strftime("%a, %d %b %Y",time.localtime(time.time()))]]) 
+    return serialize([directory,
+    T.a(href="#top")["[",conf["top"],"]"],T.span(class_="genNote")
+        [conf["updatedOn"], ' ' ,time.strftime("%a, %d %b %Y",time.localtime(time.time()))]])
 
 def generateHtml(outpath,text,name,node,flathier):
     title, tree = node
-    print outpath
     # Apply our basic template before docstring work.
     text = TEMPLATE % text
-    html = publish_string(text, writer_name = 'html', destination_path=outpath, settings_overrides={'stylesheet':None, 'stylesheet_path':"../html/default.css"})
+    html = publish_string(text, writer_name = 'html', destination_path=outpath, settings_overrides={'stylesheet':None, 'stylesheet_path':"html/default.css"})
 
     # Insert the title.
     html = html.replace("$title",title,3)
@@ -190,7 +157,7 @@ def generateHtml(outpath,text,name,node,flathier):
     return html
 
 def startNode(name):
-    sys.stdout.write("%-70s" % ("Processing '%s':" % name))
+    sys.stdout.write("%-60s" % ("Processing '%s':" % name))
     sys.stdout.flush()
 
 def endNode():
@@ -244,6 +211,9 @@ def go():
             continue
 
         outpath = os.path.join(htmldir,name + ".html")
+        if not os.path.exists(os.path.dirname(outpath)):
+            os.makedirs(os.path.dirname(outpath))
+        
         if ext == 'py':
             html = generateExample(outpath,path,name,node,flathier)
         else:
