@@ -54,6 +54,9 @@ class RenderMixin(object):
         If an appropriate C{http_*} method is not found, a
         L{responsecode.NOT_ALLOWED}-status response is returned, with an
         appropriate C{allow} header.
+
+        @param request: the request to process.
+        @return: an object adaptable to L{iweb.IResponse}.
         """
         method = getattr(self, 'http_' + request.method, None)
         if not method:
@@ -79,6 +82,8 @@ class RenderMixin(object):
     def http_OPTIONS(self, request):
         """
         Respond to a OPTIONS request.
+        @param request: the request to process.
+        @return: an object adaptable to L{iweb.IResponse}.
         """
         response = http.Response(responsecode.OK)
         response.headers.setHeader("allow", self.allowedMethods())
@@ -87,12 +92,16 @@ class RenderMixin(object):
     def http_TRACE(self, request):
         """
         Respond to a TRACE request.
+        @param request: the request to process.
+        @return: an object adaptable to L{iweb.IResponse}.
         """
         return server.doTrace(request)
 
     def http_HEAD(self, request):
         """
         Respond to a HEAD request.
+        @param request: the request to process.
+        @return: an object adaptable to L{iweb.IResponse}.
         """
         return self.http_GET(request)
     
@@ -100,8 +109,11 @@ class RenderMixin(object):
         """
         Respond to a GET request.
 
-        Dispatches the given C{request} to C{self.render} and returns its
-        result.
+        This implementation validates that the request body is empty and then
+        dispatches the given C{request} to L{render} and returns its result.
+
+        @param request: the request to process.
+        @return: an object adaptable to L{iweb.IResponse}.
         """
         if request.stream.length != 0:
             return responsecode.REQUEST_ENTITY_TOO_LARGE
@@ -111,6 +123,9 @@ class RenderMixin(object):
     def render(self, request):
         """
         Subclasses should implement this method to do page rendering.
+        See L{http_GET}.
+        @param request: the request to process.
+        @return: an object adaptable to L{iweb.IResponse}.
         """
         raise NotImplementedError("Subclass must implement render method.")
 
@@ -124,8 +139,13 @@ class Resource(RenderMixin):
     addSlash = False
     
     def locateChild(self, request, segments):
-        """Return a tuple of (child, segments) representing the Resource
-        below this after consuming the segments which are not returned.
+        """
+        Locates a child resource of this resource.
+        @param request: the request to process.
+        @param segments: a sequence of URL path segments.
+        @return: a tuple of C{(child, segments)} containing the child
+        of this resource which matches one or more of the given C{segments} in
+        sequence, and a list of remaining segments.
         """
         w = getattr(self, 'child_%s' % (segments[0], ), None)
         
@@ -144,24 +164,30 @@ class Resource(RenderMixin):
         return None, []
     
     def child_(self, request):
-        """I'm how requests for '' (urls ending in /) get handled :)
+        """
+        This method locates a child with a trailing C{"/"} in the URL.
+        @param request: the request to process.
         """
         if self.addSlash and len(request.postpath) == 1:
             return self
         return None
         
     def putChild(self, path, child):
-        """Register a static child. "o.putChild('foo', something)" is the
-        same as "o.child_foo = something".
-        
-        You almost certainly don't want '/' in your path. If you
-        intended to have the root of a folder, e.g. /foo/, you want
-        path to be ''.
+        """
+        Register a static child.
+
+        This implementation registers children by assigning them to attributes
+        with a C{child_} prefix.  C{resource.putChild("foo", child)} is
+        therefore same as C{o.child_foo = child}.
+
+        @param path: the name of the child to register.  You almost certainly
+            don't want C{"/"} in C{path}. If you want to add a "directory"
+            resource (e.g. C{/foo/}) specify C{path} as C{""}.
+        @param child: an object adaptable to L{iweb.IResource}.
         """
         setattr(self, 'child_%s' % (path, ), child)
     
     def http_GET(self, request):
-        """Ensures there is no incoming body data, and calls render."""
         if self.addSlash and request.prepath[-1] != '':
             # If this is a directory-ish resource...
             return http.RedirectResponse(request.unparseURL(path=request.path+'/'))
@@ -171,32 +197,48 @@ class Resource(RenderMixin):
 components.backwardsCompatImplements(Resource)
 
 class PostableResource(Resource):
+    """
+    A L{Resource} capable of handling the POST request method.
+    """
     def http_POST(self, request):
-        """Reads and parses the incoming body data then calls render."""
+        """
+        Respond to a POST request.
+        Reads and parses the incoming body data then calls L{render}.
+        @param request: the request to process.
+        @return: an object adaptable to L{iweb.IResponse}.
+        """
         return server.parsePOSTData(request).addCallback(
             lambda res: self.render(request))
         
 class LeafResource(RenderMixin):
+    """
+    A L{Resource} with no children.
+    """
     implements(iweb.IResource)
 
     def locateChild(self, request, segments):
         return self, server.StopTraversal
 
 class WrapperResource(object):
-    """A helper class for resources which just change some state
-    before passing the request on to a contained resource."""
+    """
+    An L{iweb.IResource} implementation which wraps a L{RenderMixin} instance
+    and provides a hook in which a subclass can implement logic that is called
+    before request processing on the contained L{Resource}.
+    """
     implements(iweb.IResource)
     
     def __init__(self, res):
         self.res=res
 
     def hook(self, request):
-        """Override this method in order to do something before
-        passing control on to the wrapped resource. Must either return
-        None or a Deferred which is waited upon, but whose result is
-        ignored.
         """
-        raise NotImplementedError
+        Override this method in order to do something before passing control on
+        to the wrapped resource's C{renderHTTP} and C{locateChild} methods.
+        @return: None or a L{Deferred}.  If a deferred object is return, it's
+            value is ignored, but C{renderHTTP} and C{locateChild} are chain
+            onto the deferred as callbacks.
+        """
+        raise NotImplementedError()
     
     def locateChild(self, request, segments):
         x = self.hook(request)
