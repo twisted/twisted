@@ -173,7 +173,7 @@ class IReactorTCP(Interface):
 
         @param interface: the hostname to bind to, defaults to '' (all)
 
-        @returns: an object that satisfies the IListeningPort interface
+        @returns: an object that satisfies the L{IListeningPort} interface
 
         @raise CannotListenError: as defined here L{twisted.internet.error.CannotListenError}, if it
            cannot listen on this port (e.g., it cannot bind to the required port
