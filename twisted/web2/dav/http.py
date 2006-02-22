@@ -105,7 +105,7 @@ class ResponseQueue (object):
     Stores a list of (typically error) responses for use in a
     L{MultiStatusResponse}.
     """
-    def __init__(self, path_basename, method, success_code):
+    def __init__(self, path_basename, method, success_response):
         """
         @param path_basename: the base path for all responses to be added to the 
             queue.
@@ -113,14 +113,14 @@ class ResponseQueue (object):
             C{path_basename}, which will be stripped from the beginning of each
             path to determine the response's URI.
         @param method: the name of the method generating the queue.
-        @param success_code: the response code to return is lieu of a
-            L{MultiStatusResponse} if no responses are added.
+        @param success_response: the response to return in lieu of a
+            L{MultiStatusResponse} if no responses are added to this queue.
         """
         self.responses         = []
         self.path_basename     = path_basename
         self.path_basename_len = len(path_basename)
         self.method            = method
-        self.success_code      = success_code
+        self.success_response  = success_response
 
     def add(self, path, what):
         """
@@ -156,14 +156,14 @@ class ResponseQueue (object):
     def response(self):
         """
         Generate a L{MultiStatusResponse} with the responses contained in the queue
-        or, if no such responses, return the C{success_code} provided to
+        or, if no such responses, return the C{success_response} provided to
         L{__init__}.
         @return: the response.
         """
         if self.responses:
             return MultiStatusResponse(self.responses)
         else:
-            return self.success_code
+            return self.success_response
 
 ##
 # Exceptions and response codes
