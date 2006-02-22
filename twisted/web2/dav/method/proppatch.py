@@ -69,7 +69,7 @@ def http_PROPPATCH(self, request):
             log.err(error)
             return StatusResponse(responsecode.BAD_REQUEST, error)
 
-        responses = ResponseQueue(self.fp.path, "DELETE", responsecode.NO_CONTENT)
+        responses = ResponseQueue(self.fp.path, "PROPPATCH", responsecode.NO_CONTENT)
         undo_actions = []
 
         try:
