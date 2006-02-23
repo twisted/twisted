@@ -64,7 +64,7 @@ class PROP(twisted.web2.dav.test.util.TestCase):
                         properties = propstat.childOfType(davxml.PropertyContainer).children
 
                         if status.code != responsecode.OK:
-                            self.fail("PROPFIND failed (status %s) to locate live properties: %r"
+                            self.fail("PROPFIND failed (status %s) to locate live properties: %s"
                                       % (status.code, properties))
 
                         for property in properties:

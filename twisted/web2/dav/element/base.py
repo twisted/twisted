@@ -150,6 +150,9 @@ class WebDAVElement (object):
 
         self.attributes = my_attributes
 
+    def __str__(self):
+        return self.sname()
+
     def __repr__(self):
         if hasattr(self, "attributes") and hasattr(self, "children"):
             return "<%s %r: %r>" % (self.sname(), self.attributes, self.children)
@@ -223,7 +226,7 @@ class WebDAVElement (object):
         found = None
         for child in self.childrenOfType(child_type):
             if found:
-                raise ValueError("Multiple %s elements found in %s" % (child_type.sname(), self))
+                raise ValueError("Multiple %s elements found in %s" % (child_type.sname(), self.toxml()))
             found = child
         return found
 
