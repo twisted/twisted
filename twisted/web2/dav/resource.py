@@ -103,7 +103,7 @@ class DAVPropertyMixIn(MetaDataMixin):
         try:
             self.getProperties()[property.qname()] = property
         except ValueError:
-            log.err("Read-only property %s: %s" % (property.sname(),))
+            log.err("Read-only property %s" % (property.sname(),))
             raise HTTPError(responsecode.CONFLICT)
 
     def removeProperty(self, property):
