@@ -131,8 +131,8 @@ class DAVFile (DAVPropertyMixIn, File):
 
     def getDeadProperties(self):
         if not hasattr(self, "_dead_properties"):
-            self._properties = DeadPropertyStore(self)
-        return self._properties
+            self._dead_properties = DeadPropertyStore(self)
+        return self._dead_properties
 
     ##
     # Render
