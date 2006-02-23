@@ -37,6 +37,7 @@ from twisted.internet.defer import maybeDeferred
 from twisted.web2 import responsecode
 from twisted.web2.http import StatusResponse
 from twisted.web2.server import StopTraversal
+from twisted.web2.dav.idav import IDAVResource
 from twisted.web2.dav.fileop import copy, delete, move
 
 # FIXME: This is circular
@@ -102,17 +103,26 @@ def prepareForCopy(self, request):
     except ValueError, e:
         return StatusResponse(responsecode.BAD_GATEWAY, str(e))
 
-    #
     # Destination must be a DAV resource
-    #
-    # FIXME: A better check would be for adaptability to an IDAVResource
-    # interface; another reason why IDAVResource is probably a good idea.
-    if not isinstance(destination, twisted.web2.dav.static.DAVFile):
+    try:
+        destination = IDAVResource(destination)
+    except TypeError:
         log.err("Attempt to %s to a non-DAV resource: (%s) %s"
                 % (request.method, destination.__class__, destination_uri))
         return StatusResponse(
             responsecode.FORBIDDEN,
             "Destination %s is not a WebDAV resource." % (destination_uri,)
+        )
+
+    # FIXME: Right, now we don't know how to copy into a non-DAVFile collection.
+    # We may need some more API in IDAVResource.
+    # So far, we need: .exists(), .locateParent()?
+
+    if not isinstance(destination, twisted.web2.dav.static.DAVFile):
+        log.err("DAV copy between non-DAVFile DAV resources isn't implemented")
+        return StatusResponse(
+            responsecode.NOT_IMPLEMENTED,
+            "Destination %s is not a DAVFile resource." % (destination_uri,)
         )
 
     #
@@ -121,7 +131,7 @@ def prepareForCopy(self, request):
 
     overwrite = request.headers.getHeader("overwrite", True)
 
-    if destination.fp.exists() and not overwrite:
+    if destination.exists() and not overwrite:
         log.err("Attempt to %s onto existing file without overwrite  flag enabled: %s"
                 % (request.method, destination.fp.path))
         return StatusResponse(

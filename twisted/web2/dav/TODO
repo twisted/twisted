@@ -5,12 +5,8 @@ ISite:
   Create ISite interface
   Add locateSiblingResource()? (I have it in DAVFile, which is an IResource)
 
-IDAVResource:
-  Create IDAVResource interface
-
 Integrate authentication configuration into DAV methods.
 
-Most HTTP preconditions up to Resource.
 pre/post conditions per method (see deltaV)
 
 Figure out how to do logging without hacking renderHTTP()

@@ -37,6 +37,7 @@ import time
 import urllib
 import urlparse
 
+from zope.interface import implements
 from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.internet.defer import succeed, maybeDeferred
@@ -47,6 +48,7 @@ from twisted.web2.http import HTTPError, RedirectResponse
 from twisted.web2.http_headers import ETag
 from twisted.web2.server import StopTraversal
 from twisted.web2.dav import davxml
+from twisted.web2.dav.idav import IDAVResource
 from twisted.web2.dav.util import bindMethods
 from twisted.web2.dav.props import WebDAVPropertyStore as LivePropertyStore
 
@@ -56,17 +58,6 @@ except ImportError:
     log.msg("No dead property store available; using nonePropertyStore.")
     log.msg("Setting of dead properties will not be allowed.")
     from twisted.web2.dav.noneprops import NonePropertyStore as DeadPropertyStore
-
-#
-# FIXME: We need an IDAVResource interface.
-#  - isCollection()
-#  - findChildren()
-#  - hasProperty()
-#  - readProperty()
-#  - writeProperty()
-#  - removeProperty()
-# eg. see FIXME comment in findChildren()
-#
 
 #
 # FIXME: How can we abstract out the file operations from the DAV logic?
@@ -82,7 +73,9 @@ class DAVFile (File):
 
     Extends twisted.web2.static.File to handle WebDAV methods.
     """
-    davComplianceClasses = ("1",) # "2"
+    implements(IDAVResource)
+
+    davComplianceClasses = ("1",) # Add "2" when we have locking
 
     def __init__(self, path,
                  defaultType="text/plain",
@@ -105,7 +98,7 @@ class DAVFile (File):
         return "<%s: %s>" % (self.__class__.__name__, self.fp.path)
 
     ##
-    # WebDAV
+    # HTTP
     ##
 
     def contentType(self):
@@ -122,20 +115,20 @@ class DAVFile (File):
         else:
             return super(DAVFile, self).displayName()
 
+    ##
+    # WebDAV
+    ##
+
     def isCollection(self):
         """
-        Returns True if this resource is a collection resource, False otherwise.
+        See L{IDAVResource.isCollection}.
         """
         for child in self.listChildren(): return True
         return self.fp.isdir()
 
     def findChildren(self, depth):
         """
-        Returns a list of child resources for the given depth. (RFC 2518,
-        section 9.2)
-        Because resources do not know their request URIs, chidren are returned
-        as tuples (resource, uri), where uri is a URL path relative to this
-        resource and resource is the child resource.
+        See L{IDAVResource.findChildren}.
         """
         #
         # I'd rather call this children(), but self.children is inherited from
@@ -144,13 +137,12 @@ class DAVFile (File):
         assert depth in ("0", "1", "infinity"), "Invalid depth: %s" % (depth,)
         if depth != "0" and self.isCollection():
             for name in self.listChildren():
-                child = self.getChild(name)
-                if child:
-                    #
-                    # FIXME: This code breaks if we encounter a child that isn't
-                    # a DAVFile (ie. has isCollection() and findChildren()). This
-                    # may be an argument for an IDAVResource interface.
-                    #
+                try:
+                    child = IDAVResource(self.getChild(name))
+                except TypeError:
+                    child = None
+
+                if child is not None:
                     if child.isCollection():
                         yield (child, name + "/")
                         if depth == "infinity":
@@ -164,15 +156,13 @@ class DAVFile (File):
 
     def hasProperty(self, property):
         """
-        property is a davxml.WebDAVElement instance.
-        Returns True if the given property is set.
+        See L{IDAVResource.hasProperty}.
         """
         return (property.qname() in self.properties)
 
     def readProperty(self, property):
         """
-        property is a davxml.WebDAVElement instance.
-        Returns the value of the given property.
+        See L{IDAVResource.readProperty}.
         """
         try:
             return self.properties[property.qname()]
@@ -182,8 +172,7 @@ class DAVFile (File):
 
     def writeProperty(self, property):
         """
-        property is a davxml.WebDAVElement instance.
-        Returns the value of the given property.
+        See L{IDAVResource.writeProperty}.
         """
         try:
             self.properties[property.qname()] = property
@@ -193,8 +182,7 @@ class DAVFile (File):
 
     def removeProperty(self, property):
         """
-        property is a davxml.WebDAVElement instance.
-        Removes the given property.
+        See L{IDAVResource.removeProperty}.
         """
         try:
             del(self.properties[property.qname()])
