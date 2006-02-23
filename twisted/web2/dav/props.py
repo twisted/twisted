@@ -63,9 +63,9 @@ class WebDAVPropertyStore (object, UserDict.DictMixin):
         ((dav_namespace, "displayname"   ), davxml.DisplayName   ),
     )
 
-    def __init__(self, resource):
-        self.resource = resource
-        self.deadProperties = resource.deadProperties
+    def __init__(self, resource, deadProperties):
+        self.resource       = resource
+        self.deadProperties = deadProperties
 
     def __getitem__(self, key):
         namespace, name = key

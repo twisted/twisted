@@ -39,18 +39,14 @@ import urlparse
 
 from zope.interface import implements
 from twisted.python import log
-from twisted.python.failure import Failure
-from twisted.internet.defer import succeed, maybeDeferred
-from twisted.web2 import responsecode
+from twisted.internet.defer import maybeDeferred
 from twisted.web2.static import File
 from twisted.web2.iweb import IResponse
-from twisted.web2.http import HTTPError, RedirectResponse
-from twisted.web2.http_headers import ETag
+from twisted.web2.http import RedirectResponse
 from twisted.web2.server import StopTraversal
-from twisted.web2.dav import davxml
 from twisted.web2.dav.idav import IDAVResource
+from twisted.web2.dav.resource import DAVPropertyMixIn
 from twisted.web2.dav.util import bindMethods
-from twisted.web2.dav.props import WebDAVPropertyStore as LivePropertyStore
 
 try:
     from twisted.web2.dav.xattrprops import xattrPropertyStore as DeadPropertyStore
@@ -67,7 +63,7 @@ except ImportError:
 # DAVFile could then inherrit from both File and DAVResource.
 #
 
-class DAVFile (File):
+class DAVFile (DAVPropertyMixIn, File):
     """
     WebDAV-accessible File resource.
 
@@ -96,24 +92,6 @@ class DAVFile (File):
 
     def __repr__(self):
         return "<%s: %s>" % (self.__class__.__name__, self.fp.path)
-
-    ##
-    # HTTP
-    ##
-
-    def contentType(self):
-        # Allow dead property to override
-        if (davxml.dav_namespace, "getcontenttype") in self.deadProperties:
-            return self.deadProperties[(davxml.dav_namespace, "getcontenttype")].mimeType()
-        else:
-            return super(DAVFile, self).contentType()
-
-    def displayName(self):
-        # Allow dead property to override
-        if (davxml.dav_namespace, "displayname") in self.deadProperties:
-            return str(self.deadProperties[(davxml.dav_namespace, "displayname")])
-        else:
-            return super(DAVFile, self).displayName()
 
     ##
     # WebDAV
@@ -151,47 +129,10 @@ class DAVFile (File):
                     else:
                         yield (child, name)
 
-    properties     = property(LivePropertyStore)
-    deadProperties = property(DeadPropertyStore)
-
-    def hasProperty(self, property):
-        """
-        See L{IDAVResource.hasProperty}.
-        """
-        return (property.qname() in self.properties)
-
-    def readProperty(self, property):
-        """
-        See L{IDAVResource.readProperty}.
-        """
-        try:
-            return self.properties[property.qname()]
-        except KeyError:
-            log.err("No such property %s" % (property.sname(),))
-            raise HTTPError(responsecode.CONFLICT)
-
-    def writeProperty(self, property):
-        """
-        See L{IDAVResource.writeProperty}.
-        """
-        try:
-            self.properties[property.qname()] = property
-        except ValueError:
-            log.err("Read-only property %s" % (property.sname(),))
-            raise HTTPError(responsecode.CONFLICT)
-
-    def removeProperty(self, property):
-        """
-        See L{IDAVResource.removeProperty}.
-        """
-        try:
-            del(self.properties[property.qname()])
-        except ValueError:
-            log.err("Read-only property %s" % (property.sname(),))
-            raise HTTPError(responsecode.CONFLICT)
-        except KeyError:
-            log.err("No such property %s" % (property.sname(),))
-            raise HTTPError(responsecode.CONFLICT)
+    def getDeadProperties(self):
+        if not hasattr(self, "_dead_properties"):
+            self._properties = DeadPropertyStore(self)
+        return self._properties
 
     ##
     # Render
