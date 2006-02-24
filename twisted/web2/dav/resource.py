@@ -26,7 +26,11 @@
 web2.dav interfaces.
 """
 
-__all__ = ["DAVPropertyMixIn", "DAVResource"]
+__all__ = [
+    "DAVPropertyMixIn",
+    "DAVResource",
+    "DAVLeafResource"
+]
 
 import urllib
 
@@ -36,6 +40,7 @@ from twisted.internet.defer import maybeDeferred
 from twisted.web2 import responsecode
 from twisted.web2.http import HTTPError, RedirectResponse
 from twisted.web2.iweb import IResponse
+from twisted.web2.resource import LeafResource
 from twisted.web2.static import MetaDataMixin, StaticRenderMixin
 from twisted.web2.dav import davxml
 from twisted.web2.dav.idav import IDAVResource
@@ -158,7 +163,11 @@ class DAVResource (DAVPropertyMixIn, StaticRenderMixin):
         This implementation raises L{NotImplementedError}; a subclass must
         override this method.
         """
-        raise NotImplementedError("Subclass must implement findChildren()")
+        assert depth in ("0", "1", "infinity"), "Invalid depth: %s" % (depth,)
+        if depth == "0" or not self.isCollection():
+            return ()
+        else:
+            raise NotImplementedError("Subclass must implement findChildren()")
 
     def davComplianceClasses(self):
         """
@@ -202,3 +211,9 @@ class DAVResource (DAVPropertyMixIn, StaticRenderMixin):
 
         return maybeDeferred(super(DAVResource, self).renderHTTP, request).addCallback(setHeaders)
 
+class DAVLeafResource (DAVResource, LeafResource):
+    """
+    DAV resource with no children.
+    """
+    def findChildren(self, depth):
+        return ()
