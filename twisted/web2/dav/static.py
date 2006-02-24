@@ -32,20 +32,13 @@ See RFC 3253: http://www.ietf.org/rfc/rfc3253.txt (WebDAV + Versioning)
 
 __all__ = ["DAVFile"]
 
-import os
-import time
-import urllib
 import urlparse
 
-from zope.interface import implements
 from twisted.python import log
-from twisted.internet.defer import maybeDeferred
 from twisted.web2.static import File
-from twisted.web2.iweb import IResponse
-from twisted.web2.http import RedirectResponse
 from twisted.web2.server import StopTraversal
 from twisted.web2.dav.idav import IDAVResource
-from twisted.web2.dav.resource import DAVPropertyMixIn
+from twisted.web2.dav.resource import DAVResource
 from twisted.web2.dav.util import bindMethods
 
 try:
@@ -55,24 +48,12 @@ except ImportError:
     log.msg("Setting of dead properties will not be allowed.")
     from twisted.web2.dav.noneprops import NonePropertyStore as DeadPropertyStore
 
-#
-# FIXME: How can we abstract out the file operations from the DAV logic?
-# Inheriting file File ties us somewhat to a File-based backing store.
-# What would be better is to have a DAVResource class with subclasses that
-# implement different backing stores.
-# DAVFile could then inherrit from both File and DAVResource.
-#
-
-class DAVFile (DAVPropertyMixIn, File):
+class DAVFile (DAVResource, File):
     """
     WebDAV-accessible File resource.
 
     Extends twisted.web2.static.File to handle WebDAV methods.
     """
-    implements(IDAVResource)
-
-    davComplianceClasses = ("1",) # Add "2" when we have locking
-
     def __init__(self, path,
                  defaultType="text/plain",
                  indexNames=None):
@@ -96,6 +77,14 @@ class DAVFile (DAVPropertyMixIn, File):
     ##
     # WebDAV
     ##
+
+    def davComplianceClasses(self):
+        return ("1",) # Add "2" when we have locking
+
+    def deadProperties(self):
+        if not hasattr(self, "_dead_properties"):
+            self._dead_properties = DeadPropertyStore(self)
+        return self._dead_properties
 
     def isCollection(self):
         """
@@ -128,49 +117,6 @@ class DAVFile (DAVPropertyMixIn, File):
                                 yield (grandchild[0], name + "/" + grandchild[1])
                     else:
                         yield (child, name)
-
-    def getDeadProperties(self):
-        if not hasattr(self, "_dead_properties"):
-            self._dead_properties = DeadPropertyStore(self)
-        return self._dead_properties
-
-    ##
-    # Render
-    ##
-
-    def renderHTTP(self, request):
-
-        # FIXME: This is for testing with litmus; comment out when not in use
-        #litmus = request.headers.getRawHeaders("x-litmus")
-        #if litmus: log.msg("*** Litmus test: %s ***" % (litmus,))
-
-        # FIXME: Learn how to use twisted logging facility, wsanchez
-        protocol = "HTTP/%s.%s" % request.clientproto
-        log.msg("%s %s %s" % (request.method, urllib.unquote(request.uri), protocol))
-
-        #
-        # If this is a collection and the URI doesn't end in "/", redirect.
-        #
-        if self.isCollection() and request.uri[-1:] != "/":
-            return RedirectResponse(request.uri + "/")
-
-        def setHeaders(response):
-            response = IResponse(response)
-
-            response.headers.setHeader("dav", self.davComplianceClasses)
-
-            #
-            # If this is a collection and the URI doesn't end in "/", add a
-            # Content-Location header.  This is needed even if we redirect such
-            # requests (as above) in the event that this resource was created or
-            # modified by the request.
-            #
-            if self.isCollection() and request.uri[-1:] != "/":
-                response.headers.setHeader("content-location", request.uri + "/")
-
-            return response
-
-        return maybeDeferred(super(DAVFile, self).renderHTTP, request).addCallback(setHeaders)
 
     ##
     # Workarounds for issues with File
