@@ -236,7 +236,7 @@ class BlockingResolver:
 
 components.backwardsCompatImplements(BlockingResolver)
 
-class ReactorBase:
+class ReactorBase(object):
     """Default base class for Reactors.
     """
 
