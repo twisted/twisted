@@ -24,12 +24,18 @@
 
 """
 WebDAV support for Twisted Web2.
+
+See RFC 2616: http://www.ietf.org/rfc/rfc2616.txt (HTTP)
+See RFC 2518: http://www.ietf.org/rfc/rfc2518.txt (WebDAV)
+See RFC 3253: http://www.ietf.org/rfc/rfc3253.txt (WebDAV Versioning Extentions)
+See RFC 3744: http://www.ietf.org/rfc/rfc3744.txt (WebDAV Access Control Protocol)
 """
 
 __version__ = 'SVN-Trunk'
 version = __version__
 
 __all__ = [
+    "acl",
     "static",
     "davxml",
     "http",

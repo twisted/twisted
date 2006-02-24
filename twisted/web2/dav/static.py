@@ -24,10 +24,6 @@
 
 """
 WebDAV-aware static resources.
-
-See RFC 2616: http://www.ietf.org/rfc/rfc2616.txt (HTTP)
-See RFC 2518: http://www.ietf.org/rfc/rfc2518.txt (WebDAV)
-See RFC 3253: http://www.ietf.org/rfc/rfc3253.txt (WebDAV + Versioning)
 """
 
 __all__ = ["DAVFile"]

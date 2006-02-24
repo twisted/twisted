@@ -23,7 +23,7 @@
 ##
 
 """
-web2.dav interfaces.
+WebDAV resources.
 """
 
 __all__ = [
