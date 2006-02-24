@@ -43,12 +43,12 @@ class IDAVResource(IResource):
 
     def findChildren(self, depth):
         """
-        Returns a list of child resources for the given depth.
+        Returns an iterable of child resources for the given depth.
         Because resources do not know their request URIs, chidren are returned
         as tuples C{(resource, uri)}, where C{resource} is the child resource
         and C{uri} is a URL path relative to this resource.
         @param depth: the search depth (one of "0", "1", or "infinity")
-        @return: an iterable of tuples.
+        @return: an iterable of tuples C{(resource, uri)}.
         """
 
     def hasProperty(self, property):

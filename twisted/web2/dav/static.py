@@ -97,10 +97,6 @@ class DAVFile (DAVResource, File):
         """
         See L{IDAVResource.findChildren}.
         """
-        #
-        # I'd rather call this children(), but self.children is inherited from
-        # File.  I'd call that static_children or something more specific.
-        #
         assert depth in ("0", "1", "infinity"), "Invalid depth: %s" % (depth,)
         if depth != "0" and self.isCollection():
             for name in self.listChildren():
