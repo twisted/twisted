@@ -95,16 +95,28 @@ class DAVPropertyMixIn (MetaDataMixin):
         """
         See L{IDAVResource.hasProperty}.
         """
-        return (property.qname() in self.properties())
+        if type(property) is tuple:
+            qname = property
+        else:
+            qname = property.qname()
+
+        return (qname in self.properties())
 
     def readProperty(self, property):
         """
         See L{IDAVResource.readProperty}.
         """
+        if type(property) is tuple:
+            qname = property
+            sname = "{%s}%s" % property
+        else:
+            qname = property.qname()
+            sname = property.sname()
+
         try:
-            return self.properties()[property.qname()]
+            return self.properties()[qname]
         except KeyError:
-            log.err("No such property %s" % (property.sname(),))
+            log.err("No such property %s" % (sname,))
             raise HTTPError(responsecode.CONFLICT)
 
     def writeProperty(self, property):
@@ -116,6 +128,43 @@ class DAVPropertyMixIn (MetaDataMixin):
         except ValueError:
             log.err("Read-only property %s" % (property.sname(),))
             raise HTTPError(responsecode.CONFLICT)
+
+    def hasDeadProperty(self, property):
+        """
+        Same as L{hasProperty}, but bypasses the live property store and checks
+        directly from the dead property store.
+        """
+        if type(property) is tuple:
+            qname = property
+        else:
+            qname = property.qname()
+
+        return (qname in self.deadProperties())
+
+    def readDeadProperty(self, property):
+        """
+        Same as L{readProperty}, but bypasses the live property store and reads
+        directly from the dead property store.
+        """
+        if type(property) is tuple:
+            qname = property
+        else:
+            qname = property.qname()
+
+        return self.deadProperties()[qname]
+
+    def writeDeadProperty(self, property):
+        """
+        Same as L{writeProperty}, but bypasses the live property store and
+        writes directly to the dead property store.
+        Note that this should not be used unless you know that you are writing
+        to an overrideable live property, as this bypasses the logic which
+        protects protected properties.  The result of writing to a
+        non-overrideable live property with this method is undefined; the value
+        in the dead property store may or may not be ignored when reading the
+        property with L{readProperty}.
+        """
+        self.deadProperties()[property.qname()] = property
 
     def removeProperty(self, property):
         """
@@ -135,14 +184,14 @@ class DAVPropertyMixIn (MetaDataMixin):
     # to override the values of some HTTP metadata.
     #
     def contentType(self):
-        if (davxml.dav_namespace, "getcontenttype") in self.deadProperties():
-            return self.deadProperties()[(davxml.dav_namespace, "getcontenttype")].mimeType()
+        if self.hasDeadProperty((davxml.dav_namespace, "getcontenttype")):
+            return self.readDeadProperty((davxml.dav_namespace, "getcontenttype")).mimeType()
         else:
             return super(DAVPropertyMixIn, self).contentType()
 
     def displayName(self):
-        if (davxml.dav_namespace, "displayname") in self.deadProperties():
-            return str(self.deadProperties()[(davxml.dav_namespace, "displayname")])
+        if self.hasDeadProperty((davxml.dav_namespace, "displayname")):
+            return str(self.readDeadProperty((davxml.dav_namespace, "displayname")))
         else:
             return super(DAVPropertyMixIn, self).displayName()
 
