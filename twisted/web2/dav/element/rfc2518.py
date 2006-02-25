@@ -475,6 +475,8 @@ class CreationDate (WebDAVDateTimeElement):
     13.1)
     """
     name = "creationdate"
+    # MAY be protected as per RFC2518bis.  We may make this more flexible later.
+    protected = True
 
 class DisplayName (WebDAVTextElement):
     """
@@ -496,6 +498,7 @@ class GETContentLength (WebDAVTextElement):
     accept headers. (RFC 2518, section 13.4)
     """
     name = "getcontentlength"
+    protected = True
 
 class GETContentType (WebDAVTextElement):
     """
@@ -513,6 +516,7 @@ class GETETag (WebDAVTextElement):
     accept headers. (RFC 2518, section 13.6)
     """
     name = "getetag"
+    protected = True
 
 class GETLastModified (DateTimeHeaderElement):
     """
@@ -520,12 +524,14 @@ class GETLastModified (DateTimeHeaderElement):
     headers. (RFC 2518, section 13.7)
     """
     name = "getlastmodified"
+    protected = True
 
 class LockDiscovery (WebDAVElement):
     """
     Describes the active locks on a resource. (RFC 2518, section 13.8)
     """
     name = "lockdiscovery"
+    protected = True
 
     allowed_children = { (dav_namespace, "activelock"): (0, None) }
 
@@ -534,6 +540,7 @@ class ResourceType (WebDAVElement):
     Specifies the nature of the resource. (RFC 2518, section 13.9)
     """
     name = "resourcetype"
+    protected = True
 
     allowed_children = { WebDAVElement: (0, None) }
 
@@ -556,5 +563,6 @@ class SupportedLock (WebDAVElement):
     resource. (RFC 2518, section 13.11)
     """
     name = "supportedlock"
+    protected = True
 
     allowed_children = { (dav_namespace, "lockentry"): (0, None) }
