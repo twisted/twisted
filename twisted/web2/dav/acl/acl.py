@@ -109,7 +109,7 @@ class DAVPrincipalResource (DAVLeafResource):
         """
         return ()
 
-    def groups(self):
+    def groupMemberships(self):
         """
         Provides the URLs of the group principals in which the principal is
         directly a member.  (RFC 3744, section 4.4)

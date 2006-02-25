@@ -89,13 +89,13 @@ class xattrPropertyStore (object, UserDict.DictMixin):
         return doc.root_element
 
     def __setitem__(self, key, value):
+        log.msg("Writing property %r on file %s"
+                % (key, self.resource.fp.path))
+
         output = StringIO.StringIO()
         value.writeXML(output)
         value = output.getvalue()
         output.close()
-
-        log.msg("Writing property %r on file %s"
-                % (key, self.resource.fp.path))
 
         self.attrs[self._encode(key)] = value
 
