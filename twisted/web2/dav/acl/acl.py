@@ -54,6 +54,10 @@ class DAVPrincipalResource (DAVLeafResource):
     """
     Resource representing a WebDAV principal.  (RFC 3744, section 2)
     """
+    ##
+    # WebDAV
+    ##
+
     def davComplianceClasses(self):
         return ("1",)
 
@@ -62,3 +66,57 @@ class DAVPrincipalResource (DAVLeafResource):
 
     def findChildren(self, depth):
         return ()
+
+    ##
+    # ACL
+    ##
+
+    def alternateURIs(self):
+        """
+        Provides the URIs of network resources with additional descriptive
+        information about the principal, for example, a URI to an LDAP record.
+        (RFC 3744, section 4.1)
+
+        This implementation returns C{()}.  Subclasses should override this
+        method to provide alternate URIs for this resource if appropriate.
+
+        @return: a iterable of URIs.
+        """
+        return ()
+
+    def principalURL(self):
+        """
+        Provides the URL which must be used to identify this principal in ACL
+        requests.  (RFC 3744, section 4.2)
+
+        This implementation raises L{NotImplementedError}.  Subclasses must
+        override this method to provide the principal URL for this resource.
+
+        @return: a URL.
+        """
+        raise NotImplementedError("Subclass must implement principalURL()")
+
+    def groupMembers(self):
+        """
+        Provides the principal URLs of principals that are direct members of
+        this (group) principal.  (RFC 3744, section 4.3)
+
+        This implementation returns C{()}, which is appropriate for non-group
+        principals.  Subclasses should override this method to provide member
+        URLs for this resource if appropriate.
+
+        @return: a iterable of principal URLs.
+        """
+        return ()
+
+    def groups(self):
+        """
+        Provides the URLs of the group principals in which the principal is
+        directly a member.  (RFC 3744, section 4.4)
+
+        This implementation raises L{NotImplementedError}.  Subclasses must
+        override this method to provide the group URLs for this resource.
+
+        @return: a iterable of group principal URLs.
+        """
+        raise NotImplementedError("Subclass must implement groups()")
