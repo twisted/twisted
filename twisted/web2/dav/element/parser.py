@@ -62,6 +62,15 @@ def registerElements(module):
 
             qname = element_class.namespace, element_class.name
 
+            if qname in elements_by_tag_name:
+                if element_class.abstract or elements_by_tag_name[qname] == element_class:
+                    continue
+                else:
+                    raise AssertionError(
+                        "Attempting to register qname %s multiple times: (%r, %r)"
+                        % (qname, elements_by_tag_name[qname], element_class)
+                    )
+
             if not (qname in elements_by_tag_name and issubclass(element_class, elements_by_tag_name[qname])):
                 elements_by_tag_name[qname] = element_class
                 element_names.append(element_class.__name__)

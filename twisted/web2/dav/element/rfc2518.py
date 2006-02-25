@@ -205,6 +205,7 @@ class Response (WebDAVElement):
     resource and/or its properties. (RFC 2518, section 12.9.1)
     """
     name = "response"
+    abstract = True
 
     allowed_children = {
         (dav_namespace, "href"               ): (1, None),

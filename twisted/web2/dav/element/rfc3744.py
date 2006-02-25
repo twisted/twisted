@@ -171,7 +171,7 @@ class GroupMembership (WebDAVElement):
     Property which indentifies the group principals in which a principal is
     directly a member. (RFC 3744, section 4.4)
     """
-    name = "group-member-set"
+    name = "group-membership"
     hidden = True
     protected = True
 
@@ -411,7 +411,7 @@ class InheritedACLSet (WebDAVElement):
     Property which contains a set of URLs that identify other resources that
     also control the access to this resource. (RFC 3744, section 5.7)
     """
-    name = "inherited"
+    name = "inherited-acl-set"
     hidden = True
     protected = True
 
