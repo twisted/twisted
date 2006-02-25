@@ -205,7 +205,6 @@ class Response (WebDAVElement):
     resource and/or its properties. (RFC 2518, section 12.9.1)
     """
     name = "response"
-    abstract = True
 
     allowed_children = {
         (dav_namespace, "href"               ): (1, None),
@@ -250,6 +249,8 @@ class StatusResponse (Response):
     """
     Specialized derivative of Response for resource status.
     """
+    unregistered = True
+
     allowed_children = {
         (dav_namespace, "href"               ): (1, None),
         (dav_namespace, "status"             ): (1, 1),
@@ -260,6 +261,8 @@ class PropertyStatusResponse (Response):
     """
     Specialized derivative of Response for property status.
     """
+    unregistered = True
+
     allowed_children = {
         (dav_namespace, "href"               ): (1, 1),
         (dav_namespace, "propstat"           ): (1, None),

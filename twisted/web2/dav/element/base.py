@@ -68,7 +68,7 @@ class WebDAVElement (object):
     allowed_attributes = None          # Allowed attribute names
     hidden             = False         # Don't list in PROPFIND with <allprop>
     protected          = False         # See RFC 3253 section 1.4.1
-    abstract           = False         # Abstract class; doesn't instantiate
+    unregistered       = False         # Subclass of factory; doesn't register
 
     def qname(self): return (self.namespace, self.name)
     def sname(self): return "{%s}%s" % (self.namespace, self.name)

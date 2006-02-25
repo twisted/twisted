@@ -58,18 +58,16 @@ def registerElements(module):
 
         if type(element_class) is type and issubclass(element_class, WebDAVElement):
             if element_class.namespace is None: continue
-            if element_class.name      is None: continue
+            if element_class.name is None: continue
+            if element_class.unregistered: continue
 
             qname = element_class.namespace, element_class.name
 
             if qname in elements_by_tag_name:
-                if element_class.abstract or elements_by_tag_name[qname] == element_class:
-                    continue
-                else:
-                    raise AssertionError(
-                        "Attempting to register qname %s multiple times: (%r, %r)"
-                        % (qname, elements_by_tag_name[qname], element_class)
-                    )
+                raise AssertionError(
+                    "Attempting to register qname %s multiple times: (%r, %r)"
+                    % (qname, elements_by_tag_name[qname], element_class)
+                )
 
             if not (qname in elements_by_tag_name and issubclass(element_class, elements_by_tag_name[qname])):
                 elements_by_tag_name[qname] = element_class
