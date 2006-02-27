@@ -29,7 +29,7 @@ This API is considered private to static.py and is therefore subject to
 change.
 """
 
-__all__ = ["DACLPropertyStore"]
+__all__ = ["DAVPrincipalPropertyStore"]
 
 from twisted.python import log
 
