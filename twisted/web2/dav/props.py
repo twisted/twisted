@@ -31,8 +31,6 @@ change.
 
 __all__ = ["WebDAVPropertyStore"]
 
-import UserDict
-
 from twisted.python import log
 
 from twisted.web2.dav import davxml
@@ -40,7 +38,7 @@ from twisted.web2.dav.davxml import dav_namespace
 from twisted.web2.dav.davxml import lookupElement
 from twisted.web2.http_headers import generateContentType
 
-class WebDAVPropertyStore (object, UserDict.DictMixin):
+class WebDAVPropertyStore (object):
     """
     A mapping object of DAV properties for a DAV resource.
     Keys are the names of the associated properties, values are
@@ -62,14 +60,14 @@ class WebDAVPropertyStore (object, UserDict.DictMixin):
         self.resource       = resource
         self.deadProperties = deadProperties
 
-    def __getitem__(self, key):
-        namespace, name = key
+    def get(self, qname, request):
+        namespace, name = qname
 
         if namespace == dav_namespace:
             if name == "resourcetype":
                 # Allow live property to be overriden by dead property
-                if key in self.deadProperties:
-                    return self.deadProperties[key]
+                if self.deadProperties.contains(qname):
+                    return self.deadProperties.get(qname)
                 if self.resource.isCollection():
                     return davxml.ResourceType.collection
                 return davxml.ResourceType.empty
@@ -100,56 +98,54 @@ class WebDAVPropertyStore (object, UserDict.DictMixin):
                     davxml.LockEntry(davxml.LockScope.shared   , davxml.LockType.write),
                 )
 
-        return self.deadProperties[key]
+        return self.deadProperties.get(qname)
 
-    def __setitem__(self, key, value):
-        assert isinstance(value, davxml.WebDAVElement)
+    def set(self, property, request):
+        assert isinstance(property, davxml.WebDAVElement)
 
-        clazz = lookupElement(key)
+        if property.protected:
+            raise ValueError("Protected property %r may be set." % (qname,))
 
-        if clazz.protected:
-            raise ValueError("Protected property %r may be set." % (key,))
-
-        if not isinstance(value, clazz):
-            raise ValueError("Invalid value for %s property: %r" % (key, value))
-
-        self.deadProperties[key] = value
+        self.deadProperties.set(property)
 
         # Update the resource because we've modified it
         self.resource.fp.restat()
 
-    def __delitem__(self, key):
-        if key in self.liveProperties:
-            raise ValueError("Live property %s cannot be removed." % (key,))
+    def delete(self, qname, request):
+        if qname in self.liveProperties:
+            raise ValueError("Live property %s cannot be deleted." % (qname,))
 
-        del(self.deadProperties[key])
+        self.deadProperties.delete(qname)
 
-    def __contains__(self, key):
-        return key in self.liveProperties or key in self.deadProperties
+    def contains(self, qname, request):
+        return qname in self.liveProperties or self.deadProperties.contains(qname)
 
-    def __iter__(self):
-        for key in self.liveProperties: yield key
-        for key in self.deadProperties: yield key
+    def list(self, request):
+        # FIXME: A set would be better here, that that's a python 2.4+ feature.
 
-    def keys(self):
-        return list(self.liveProperties) + list(self.deadProperties)
+        qnames = list(self.liveProperties)
 
-    def allpropKeys(self):
+        for qname in self.deadProperties.list():
+            qnames.append(qname)
+
+        return qnames
+
+    def allprop(self, request):
         """
-        Some DAV properties should not be returned to a C{DAV:allprop} request.
+        Some DAV properties should not be returned to a C{DAV:allprop} query.
         RFC 3253 defines several such properties.  This method computes a subset
-        of the property qnames returned by L{keys} by filtering out elements
+        of the property qnames returned by L{list} by filtering out elements
         whose class have the C{.hidden} attribute set to C{True}.
-        @return: a list of keys which are appropriate for use in a
-            C{DAV:allprop} request.   
+        @return: a list of qnames of properties which are defined and are
+            appropriate for use in response to a C{DAV:allprop} query.   
         """
-        keys = []
+        qnames = []
 
-        for key in self.keys():
+        for qname in self.list(request):
             try:
-                if not lookupElement(key).hidden:
-                    keys.append(key)
+                if not lookupElement(qname).hidden:
+                    qnames.append(qname)
             except KeyError:
                 pass
 
-        return keys
+        return qnames

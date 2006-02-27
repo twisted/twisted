@@ -51,18 +51,20 @@ class IDAVResource(IResource):
         @return: an iterable of tuples C{(resource, uri)}.
         """
 
-    def hasProperty(self, property):
+    def hasProperty(self, property, request):
         """
         Checks whether the given property is defined on this resource.
-        @param property: an empty L{davxml.WebDAVElement} instance.
+        @param property: an empty L{davxml.WebDAVElement} instance or a qname
+            tuple.
         @return: C{True} if the given property is set on this resource, C{False}
             otherwise.
         """
 
-    def readProperty(self, property):
+    def readProperty(self, property, request):
         """
         Reads the given property on this resource.
-        @param property: an empty L{davxml.WebDAVElement} instance.
+        @param property: an empty L{davxml.WebDAVElement} instance or a qname
+            tuple.
         @return: a matching L{davxml.WebDAVElement} instance containing the
             value of the given property.
         @raise HTTPError: (containing a response with a status code of
@@ -70,7 +72,7 @@ class IDAVResource(IResource):
             resource.
         """
 
-    def writeProperty(self, property):
+    def writeProperty(self, property, request):
         """
         Writes the given property on this resource.
         @param property: a L{davxml.WebDAVElement} instance.
@@ -78,10 +80,10 @@ class IDAVResource(IResource):
             L{responsecode.CONFLICT}) if C{property} is a read-only property.
         """
 
-    def removeProperty(self, property):
+    def removeProperty(self, property, request):
         """
         Removes the given property from this resource.
-        @param property: a L{davxml.WebDAVElement} instance.
+        @param property: a L{davxml.WebDAVElement} instance or a qname tuple.
         @raise HTTPError: (containing a response with a status code of
             L{responsecode.CONFLICT}) if C{property} is a read-only property or
             if the property does not exist.

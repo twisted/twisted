@@ -33,15 +33,13 @@ __all__ = ["xattrPropertyStore"]
 
 import os
 import urllib
-import StringIO
 import xattr
-import UserDict
 
 from twisted.python import log
 
 from twisted.web2.dav import davxml
 
-class xattrPropertyStore (object, UserDict.DictMixin):
+class xattrPropertyStore (object):
     """
     This implementation uses Bob Ippolito's xattr package.
     Note that the Bob's xattr package is Darwin specific, at least presently.
@@ -82,48 +80,32 @@ class xattrPropertyStore (object, UserDict.DictMixin):
         self.resource = resource
         self.attrs = xattr.xattr(self.resource.fp.path)
 
-    def __getitem__(self, key):
-        value = self.attrs[self._encode(key)]
+    def get(self, qname):
+        value = self.attrs[self._encode(qname)]
         doc = davxml.WebDAVDocument.fromString(value)
 
         return doc.root_element
 
-    def __setitem__(self, key, value):
-        log.msg("Writing property %r on file %s"
-                % (key, self.resource.fp.path))
+    def set(self, property):
+        log.msg("Writing property %s on file %s"
+                % (property.sname(), self.resource.fp.path))
 
-        output = StringIO.StringIO()
-        value.writeXML(output)
-        value = output.getvalue()
-        output.close()
+        self.attrs[self._encode(property.qname())] = property.toxml()
 
-        self.attrs[self._encode(key)] = value
+    def delete(self, qname):
+        log.msg("Deleting property {%s}%s on file %s"
+                % (qname[0], qname[1], self.resource.fp.path))
 
-    def __delitem__(self, key):
-        log.msg("Deleting property %r on file %s"
-                % (key, self.resource.fp.path))
+        del(self.attrs[self._encode(qname)])
 
-        del(self.attrs[self._encode(key)])
-
-    def __contains__(self, key):
+    def contains(self, qname):
         try:
-            return self._encode(key) in self.attrs
+            return self._encode(qname) in self.attrs
         except TypeError:
             return False
 
-    def __iter__(self):
+    def list(self):
         prefix     = self.deadPropertyXattrPrefix
         prefix_len = len(prefix)
 
-        for key in self.attrs:
-            if key.startswith(prefix):
-                yield self._decode(key)
-            else:
-                # FIXME: What to do with non-DAV xattrs?
-                pass
-
-    def keys(self):
-        prefix     = self.deadPropertyXattrPrefix
-        prefix_len = len(prefix)
-
-        return [ self._decode(key) for key in self.attrs if key.startswith(prefix) ]
+        return [ self._decode(name) for name in self.attrs if name.startswith(prefix) ]

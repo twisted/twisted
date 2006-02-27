@@ -64,7 +64,7 @@ class DAVPropertyMixIn (MetaDataMixin):
 
         This implementation uses a L{twisted.web2.dav.WebDAVPropertyStore} which
         is constructed with the dead property store returned by
-        L{deadProperties}.
+        L{deadProperties} and cached.
 
         @return: a dict-like object from which one can read and to which one can
             write properties.  Keys are qname tuples (ie. C{(namespace, name)})
@@ -91,7 +91,7 @@ class DAVPropertyMixIn (MetaDataMixin):
         """
         raise NotImplementedError("Subclass must implement deadProperties()")
 
-    def hasProperty(self, property):
+    def hasProperty(self, property, request):
         """
         See L{IDAVResource.hasProperty}.
         """
@@ -100,9 +100,9 @@ class DAVPropertyMixIn (MetaDataMixin):
         else:
             qname = property.qname()
 
-        return (qname in self.properties())
+        return self.properties().contains(qname, request)
 
-    def readProperty(self, property):
+    def readProperty(self, property, request):
         """
         See L{IDAVResource.readProperty}.
         """
@@ -113,21 +113,24 @@ class DAVPropertyMixIn (MetaDataMixin):
             qname = property.qname()
             sname = property.sname()
 
-        try:
-            return self.properties()[qname]
-        except KeyError:
-            log.err("No such property %s" % (sname,))
-            raise HTTPError(responsecode.CONFLICT)
+        return self.properties().get(qname, request)
 
-    def writeProperty(self, property):
+    def writeProperty(self, property, request):
         """
         See L{IDAVResource.writeProperty}.
         """
-        try:
-            self.properties()[property.qname()] = property
-        except ValueError:
-            log.err("Read-only property %s" % (property.sname(),))
-            raise HTTPError(responsecode.CONFLICT)
+        self.properties().set(property, request)
+
+    def removeProperty(self, property, request):
+        """
+        See L{IDAVResource.removeProperty}.
+        """
+        if type(property) is tuple:
+            qname = property
+        else:
+            qname = property.qname()
+
+        self.properties().delete(qname, request)
 
     def hasDeadProperty(self, property):
         """
@@ -139,7 +142,7 @@ class DAVPropertyMixIn (MetaDataMixin):
         else:
             qname = property.qname()
 
-        return (qname in self.deadProperties())
+        return self.deadProperties().contains(qname)
 
     def readDeadProperty(self, property):
         """
@@ -151,7 +154,7 @@ class DAVPropertyMixIn (MetaDataMixin):
         else:
             qname = property.qname()
 
-        return self.deadProperties()[qname]
+        return self.deadProperties().get(qname)
 
     def writeDeadProperty(self, property):
         """
@@ -164,20 +167,7 @@ class DAVPropertyMixIn (MetaDataMixin):
         in the dead property store may or may not be ignored when reading the
         property with L{readProperty}.
         """
-        self.deadProperties()[property.qname()] = property
-
-    def removeProperty(self, property):
-        """
-        See L{IDAVResource.removeProperty}.
-        """
-        try:
-            del(self.properties()[property.qname()])
-        except ValueError:
-            log.err("Read-only property %s" % (property.sname(),))
-            raise HTTPError(responsecode.CONFLICT)
-        except KeyError:
-            log.err("No such property %s" % (property.sname(),))
-            raise HTTPError(responsecode.CONFLICT)
+        self.deadProperties().set(property)
 
     #
     # Overrides some methods in MetaDataMixin in order to allow DAV properties

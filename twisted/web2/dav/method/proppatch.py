@@ -91,10 +91,10 @@ def http_PROPPATCH(self, request):
                     # queue.
                     #
                     if self.hasProperty(property):
-                        old_property = self.readProperty(property)
-                        def undo(): self.writeProperty(old_property)
+                        old_property = self.readProperty(property, request)
+                        def undo(): self.writeProperty(old_property, request)
                     else:
-                        def undo(): self.removeProperty(property)
+                        def undo(): self.removeProperty(property, request)
 
                     try:
                         action(property)
@@ -107,10 +107,10 @@ def http_PROPPATCH(self, request):
 
                 if isinstance(set_or_remove, davxml.Set):
                     for property in properties:
-                        do(self.writeProperty, property)
+                        do(self.writeProperty, property, request)
                 elif isinstance(set_or_remove, davxml.Remove):
                     for property in properties:
-                        do(self.removeProperty, property)
+                        do(self.removeProperty, property, request)
                 else:
                     raise AssertionError("Unknown child of PropertyUpdate: %s"
                                          % (set_or_remove,))

@@ -103,7 +103,7 @@ def http_PROPFIND(self, request):
         
             if search_properties is "names":
                 properties_by_status = {
-                    responsecode.OK: [propertyName(p) for p in resource.properties()]
+                    responsecode.OK: [propertyName(p) for p in resource.properties().list(request)]
                 }
             else:
                 properties_by_status = {
@@ -114,14 +114,14 @@ def http_PROPFIND(self, request):
                 resource_properties = resource.properties()
 
                 if search_properties is "all":
-                    properties_to_enumerate = resource_properties.allpropKeys()
+                    properties_to_enumerate = resource_properties.allprop(request)
                 else:
                     properties_to_enumerate = search_properties
         
                 for property in properties_to_enumerate:
-                    if property in resource_properties:
+                    if property in resource_properties.list(request):
                         try:
-                            properties_by_status[responsecode.OK].append(resource_properties[property])
+                            properties_by_status[responsecode.OK].append(resource_properties.get(property, request))
                         except:
                             f = Failure()
 
