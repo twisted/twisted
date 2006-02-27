@@ -37,9 +37,9 @@ from twisted.web2.dav import davxml
 from twisted.web2.dav.davxml import dav_namespace
 from twisted.web2.dav.props import WebDAVPropertyStore
 
-class DACLPropertyStore (WebDAVPropertyStore):
+class DAVPrincipalPropertyStore (WebDAVPropertyStore):
     """
-    A mapping object of DAV properties for a WebDAV ACL principal resource.
+    A mapping object of DAV properties for a WebDAV principal resource.
     """
     liveProperties = WebDAVPropertyStore.liveProperties + (
     )
