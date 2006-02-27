@@ -86,3 +86,33 @@ class IDAVResource(IResource):
             L{responsecode.CONFLICT}) if C{property} is a read-only property or
             if the property does not exist.
         """
+
+class IDAVPrincipalResource (IDAVResource):
+    def alternateURIs(self):
+        """
+        Provides the URIs of network resources with additional descriptive
+        information about the principal, for example, a URI to an LDAP record.
+        (RFC 3744, section 4.1)
+        @return: a iterable of URIs.
+        """
+
+    def principalURL(self):
+        """
+        Provides the URL which must be used to identify this principal in ACL
+        requests.  (RFC 3744, section 4.2)
+        @return: a URL.
+        """
+
+    def groupMembers(self):
+        """
+        Provides the principal URLs of principals that are direct members of
+        this (group) principal.  (RFC 3744, section 4.3)
+        @return: a iterable of principal URLs.
+        """
+
+    def groupMemberships(self):
+        """
+        Provides the URLs of the group principals in which the principal is
+        directly a member.  (RFC 3744, section 4.4)
+        @return: a iterable of group principal URLs.
+        """

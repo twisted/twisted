@@ -34,6 +34,7 @@ __all__ = ["DAVPrincipalPropertyStore"]
 from twisted.python import log
 
 from twisted.web2.dav import davxml
+from twisted.web2.dav.idav import IDAVPrincipalResource
 from twisted.web2.dav.davxml import dav_namespace
 from twisted.web2.dav.props import WebDAVPropertyStore
 
@@ -43,6 +44,9 @@ class DAVPrincipalPropertyStore (WebDAVPropertyStore):
     """
     liveProperties = WebDAVPropertyStore.liveProperties + (
     )
+
+    def __init__(self, resource, deadProperties):
+        return super(DAVPrincipalPropertyStore, self).__init__(IDAVPrincipalResource(resource), deadProperties)
 
     def __getitem__(self, key):
         namespace, name = key
