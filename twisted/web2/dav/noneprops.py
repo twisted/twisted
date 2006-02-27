@@ -31,11 +31,10 @@ change.
 
 __all__ = ["NonePropertyStore"]
 
-import UserDict
+from twisted.web2 import responsecode
+from twisted.web2.http import HTTPError, StatusResponse
 
-from twisted.web2.dav import davxml
-
-class NonePropertyStore (object, UserDict.DictMixin):
+class NonePropertyStore (object):
     """
     DAV property store which contains no properties and does not allow
     properties to be set.
@@ -43,22 +42,17 @@ class NonePropertyStore (object, UserDict.DictMixin):
     def __init__(self, resource):
         self.resource = resource
 
-    def __getitem__(self, key):
-        raise KeyError(key)
+    def get(self, qname):
+        raise HTTPError(responsecode.NOT_FOUND, StatusResponse("No such property: {%s}%s" % qname))
 
-    def __setitem__(self, key, value):
-        # Raise a permission denied error here, which will show up as a
-        # FORBIDDEN response to the client.
-        raise IOError(errno.EACCES, "permission denied for property %r on resource %s" % (key, self.resource))
+    def set(self, property):
+        raise HTTPError(responsecode.NOT_FOUND, StatusResponse("Permission denied for setting property: %s" % (property,)))
 
-    def __delitem__(self, key):
-        raise KeyError(key)
+    def delete(self, qname):
+        raise HTTPError(responsecode.NOT_FOUND, StatusResponse("No such property: {%s}%s" % qname))
 
-    def __contains__(self, key):
+    def contains(self, qname):
         return False
 
-    def __iter__(self):
-        return iter(())
-
-    def keys(self):
+    def list(self):
         return ()
