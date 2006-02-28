@@ -190,12 +190,11 @@ class TokenStorageBanana(TokenBananaMixin, StorageBanana):
         self.transport.disconnectReason = tokens.BananaFailure()
 
 def encodeTokens(obj, debug=0):
-    from twisted.trial.util import deferredResult
     b = TokenStorageBanana()
     b.debug = debug
     d = b.send(obj)
-    deferredResult(d)
-    return b.tokens
+    d.addCallback(lambda res: b.tokens)
+    return d
 def decodeTokens(tokens, debug=0):
     b = TokenStorageBanana()
     b.debug = debug

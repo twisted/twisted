@@ -1,3 +1,8 @@
+2006-02-27  Brian Warner  <warner@lothar.com>
+
+	* debug.py (encodeTokens): return a Deferred rather than use
+	deferredResult
+
 2006-02-02  Brian Warner  <warner@lothar.com>
 
 	* test_negotiate.py: skip pb-vs-web tests when we don't have
