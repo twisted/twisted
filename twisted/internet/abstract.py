@@ -159,9 +159,7 @@ class FileDescriptor(log.Logger, styles.Ephemeral, object):
     def write(self, data):
         """Reliably write some data.
 
-        If there is no buffered data this tries to write this data immediately,
-        otherwise this adds data to be written the next time this file descriptor is
-        ready for writing.
+        The data is buffered until his file descriptor is ready for writing.
         """
         if isinstance(data, unicode): # no, really, I mean it
             raise TypeError("Data must not be unicode")
