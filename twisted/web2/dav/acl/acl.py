@@ -30,8 +30,6 @@ __all__ = ["DAVPrincipalCollection", "DAVPrincipalResource"]
 
 from zope.interface import implements
 from twisted.web2.resource import LeafResource
-from twisted.web2.dav import davxml
-from twisted.web2.dav.davxml import dav_namespace
 from twisted.web2.dav.idav import IDAVPrincipalResource
 from twisted.web2.dav.resource import DAVResource, DAVLeafResource
 
@@ -72,31 +70,6 @@ class DAVPrincipalResource (DAVLeafResource):
 
     def findChildren(self, depth):
         return ()
-
-    def readProperty(self, property, request):
-        if type(property) is tuple:
-            qname = property
-            sname = "{%s}%s" % property
-        else:
-            qname = property.qname()
-            sname = property.sname()
-
-        namespace, name = qname
-
-        if namespace == dav_namespace:
-            if name == "alternate-uri-set":
-                return davxml.AlternateURISet(*[davxml.HRef(u) for u in self.alternateURIs()])
-
-            if name == "principal-url":
-                return davxml.PrincipalURL(davxml.HRef(self.principalURL()))
-
-            if name == "group-member-set":
-                return davxml.GroupMemberSet(*[davxml.HRef(p) for p in self.groupMembers()])
-
-            if name == "group-membership":
-                return davxml.GroupMemberSet(*[davxml.HRef(g) for g in self.groupMemberships()])
-
-        return super(DAVPrincipalResource, self).readProperty(qname, request)
 
     ##
     # ACL

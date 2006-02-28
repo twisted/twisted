@@ -57,7 +57,7 @@ def report_DAV__expand_property(self, request, expand_property):
         if not namespace: namespace = dav_namespace
 
         if (namespace, name) == (dav_namespace, "allprop"):
-            for all_property in self.listAllProp(request):
+            for all_property in self.properties().allpropKeys():
                 properties[all_property.qname()] = property
         else:
             properties[(namespace, name)] = property
@@ -71,9 +71,9 @@ def report_DAV__expand_property(self, request, expand_property):
     }
 
     for property in properties:
-        if property in self.listProperties(request):
+        if property in self.properties():
             try:
-                value = self.readProperty(property, request)
+                value = self.properties()[property]
                 if isinstance(value, davxml.HRef):
                     raise NotImplementedError()
                 else:
