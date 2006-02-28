@@ -92,6 +92,9 @@ class xattrPropertyStore (object):
 
         self.attrs[self._encode(property.qname())] = property.toxml()
 
+        # Update the resource because we've modified it
+        self.resource.fp.restat()
+
     def delete(self, qname):
         log.msg("Deleting property {%s}%s on file %s"
                 % (qname[0], qname[1], self.resource.fp.path))

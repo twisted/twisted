@@ -39,10 +39,12 @@ from twisted.python import log
 from twisted.internet.defer import maybeDeferred
 from twisted.web2 import responsecode
 from twisted.web2.http import HTTPError, RedirectResponse
+from twisted.web2.http_headers import generateContentType
 from twisted.web2.iweb import IResponse
 from twisted.web2.resource import LeafResource
 from twisted.web2.static import MetaDataMixin, StaticRenderMixin
 from twisted.web2.dav import davxml
+from twisted.web2.dav.davxml import dav_namespace, lookupElement
 from twisted.web2.dav.idav import IDAVResource
 from twisted.web2.dav.props import WebDAVPropertyStore
 
@@ -51,29 +53,16 @@ class DAVPropertyMixIn (MetaDataMixin):
     Mix-in class which implements the DAV property access API in
     L{IDAVResource}.
     """
-    def properties(self):
-        """
-        Provides internal access to the WebDAV property store.  You probably
-        shouldn't be calling this directly if you can use the property accessors
-        in the IDAVResource API instead.  However, a subclass may chose to
-        override this method to provide it's own property store.
-
-        Note that this property store contains both dead and live properties;
-        live properties are often not writeable, whereas dead properties usually
-        are (assuming you have permission).
-
-        This implementation uses a L{twisted.web2.dav.WebDAVPropertyStore} which
-        is constructed with the dead property store returned by
-        L{deadProperties} and cached.
-
-        @return: a dict-like object from which one can read and to which one can
-            write properties.  Keys are qname tuples (ie. C{(namespace, name)})
-            as returned by L{davxml.WebDAVElement.qname()} and values are
-            L{davxml.WebDAVElement} instances.
-        """
-        if not hasattr(self, "_properties"):
-            self._properties = WebDAVPropertyStore(self, self.deadProperties())
-        return self._properties
+    liveProperties = (
+        (dav_namespace, "resourcetype"    ),
+        (dav_namespace, "getetag"         ),
+        (dav_namespace, "getcontenttype"  ),
+        (dav_namespace, "getcontentlength"),
+        (dav_namespace, "getlastmodified" ),
+        (dav_namespace, "creationdate"    ),
+        (dav_namespace, "displayname"     ),
+        (dav_namespace, "supportedlock"   ),
+    )
 
     def deadProperties(self):
         """
@@ -100,7 +89,7 @@ class DAVPropertyMixIn (MetaDataMixin):
         else:
             qname = property.qname()
 
-        return self.properties().contains(qname, request)
+        return qname in self.liveProperties or self.deadProperties().contains(qname)
 
     def readProperty(self, property, request):
         """
@@ -113,13 +102,55 @@ class DAVPropertyMixIn (MetaDataMixin):
             qname = property.qname()
             sname = property.sname()
 
-        return self.properties().get(qname, request)
+        namespace, name = qname
+
+        if namespace == dav_namespace:
+            if name == "resourcetype":
+                # Allow live property to be overriden by dead property
+                if self.deadProperties().contains(qname):
+                    return self.deadProperties().get(qname)
+                if self.isCollection():
+                    return davxml.ResourceType.collection
+                return davxml.ResourceType.empty
+    
+            if name == "getetag":
+                return davxml.GETETag.fromString(self.etag().generate())
+    
+            if name == "getcontenttype":
+                mimeType = self.contentType()
+                mimeType.params = None # WebDAV getcontenttype property does not include parameters
+                return davxml.GETContentType.fromString(generateContentType(mimeType))
+        
+            if name == "getcontentlength":
+                return davxml.GETContentLength.fromString(self.contentLength())
+
+            if name == "getlastmodified":
+                return davxml.GETLastModified.fromDate(self.lastModified())
+
+            if name == "creationdate":
+                return davxml.CreationDate.fromDate(self.creationDate())
+
+            if name == "displayname":
+                return davxml.DisplayName.fromString(self.displayName())
+
+            if name == "supportedlock":
+                return davxml.SupportedLock(
+                    davxml.LockEntry(davxml.LockScope.exclusive, davxml.LockType.write),
+                    davxml.LockEntry(davxml.LockScope.shared   , davxml.LockType.write),
+                )
+
+        return self.deadProperties().get(qname)
 
     def writeProperty(self, property, request):
         """
         See L{IDAVResource.writeProperty}.
         """
-        self.properties().set(property, request)
+        assert isinstance(property, davxml.WebDAVElement)
+
+        if property.protected:
+            raise ValueError("Protected property %r may not be set." % (property,))
+
+        self.deadProperties().set(property)
 
     def removeProperty(self, property, request):
         """
@@ -130,7 +161,43 @@ class DAVPropertyMixIn (MetaDataMixin):
         else:
             qname = property.qname()
 
-        self.properties().delete(qname, request)
+        if qname in self.liveProperties:
+            raise ValueError("Live property %s cannot be deleted." % (property,))
+
+        self.deadProperties().delete(qname)
+
+    def listProperties(self, request):
+        """
+        See L{IDAVResource.listProperties}.
+        """
+        # FIXME: A set would be better here, that that's a python 2.4+ feature.
+
+        qnames = list(self.liveProperties)
+
+        for qname in self.deadProperties().list():
+            qnames.append(qname)
+
+        return qnames
+
+    def listAllprop(self, request):
+        """
+        Some DAV properties should not be returned to a C{DAV:allprop} query.
+        RFC 3253 defines several such properties.  This method computes a subset
+        of the property qnames returned by L{list} by filtering out elements
+        whose class have the C{.hidden} attribute set to C{True}.
+        @return: a list of qnames of properties which are defined and are
+            appropriate for use in response to a C{DAV:allprop} query.   
+        """
+        qnames = []
+
+        for qname in self.listProperties(request):
+            try:
+                if not lookupElement(qname).hidden:
+                    qnames.append(qname)
+            except KeyError:
+                pass
+
+        return qnames
 
     def hasDeadProperty(self, property):
         """
