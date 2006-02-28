@@ -89,6 +89,12 @@ class IDAVResource(IResource):
             if the property does not exist.
         """
 
+    def listProperties(self, request):
+        """
+        @return: an iterable of qnames for all properties defined for this
+            resource.
+        """
+
 class IDAVPrincipalResource (IDAVResource):
     def alternateURIs(self):
         """

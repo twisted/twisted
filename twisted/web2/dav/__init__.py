@@ -34,12 +34,15 @@ See RFC 3744: http://www.ietf.org/rfc/rfc3744.txt (WebDAV Access Control Protoco
 __version__ = 'SVN-Trunk'
 version = __version__
 
-__all__ = [
+__all__ = [ 
     "acl",
-    "static",
+    "fileop",
     "davxml",
     "http",
-    "fileop",
+    "idav",
+    "noneprops",
+    "resource",
+    "static",
     "util",
-    "props",
+    "xattrprops",
 ]
