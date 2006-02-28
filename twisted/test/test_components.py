@@ -535,5 +535,19 @@ class TestZope(unittest.TestCase):
         # Make sure it cuts off the self from old t.p.c signatures.
         self.assertEquals(IAdder['add'].getSignatureString(), "(a, b)")
         self.assertEquals(IZope['amethod'].getSignatureString(), "(a, b)")
+
+    def testClassIsGCd(self):
+        import weakref, gc
+        class Test(object):
+            zinterface.implements(IZope)
+        # Do some stuff with it
+        components.backwardsCompatImplements(Test)
+        IZope(Test())
+
+        # Make a weakref to it, then ensure the weakref goes away
+        r = weakref.ref(Test)
+        del Test
+        gc.collect()
+        self.assertEquals(r(), None)
         
 warnings.filterwarnings('default', **compWarn)

@@ -152,8 +152,8 @@ def backwardsCompatImplements(klass):
     """
     for subclass in klass.__bases__:
         fixClassImplements(subclass)
-    
-    _fixedClasses[klass] = True # so fixClassImplements will skip it
+
+    klass.__implements_upgraded__ = 1 # so fixClassImplements will skip it
     klass.__implements__ = _implementsTuple(declarations.implementedBy(klass))
 
 
@@ -166,7 +166,6 @@ class _Nothing:
     """Default value for functions which raise if default not passed.
     """
 
-_fixedClasses = {}
 def fixClassImplements(klass):
     """Switch class from __implements__ to zope implementation.
 
@@ -175,8 +174,9 @@ def fixClassImplements(klass):
     than using this yourself, it's better to port your code to the new
     API.
     """
-    if _fixedClasses.has_key(klass):
+    if "__implements_upgraded__" in klass.__dict__:
         return
+    
     if not hasattr(klass, "__implements__"):
         return
     if isinstance(klass.__implements__, _implementsTuple):
@@ -192,7 +192,7 @@ def fixClassImplements(klass):
         iList = tupleTreeToList(klass.__implements__)
         if iList:
             declarations.classImplementsOnly(klass, *iList)
-        _fixedClasses[klass] = 1
+        klass.__implements_upgraded__ = 1
 
 ALLOW_DUPLICATES = 0
 
