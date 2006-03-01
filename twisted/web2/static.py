@@ -94,9 +94,9 @@ class StaticRenderMixin(resource.RenderMixin, MetaDataMixin):
 
             # Don't provide additional resource information to error responses
             if response.code < 400:
-                # Content-* headers refer to the response content, not (necessarily) to
-                # the resource content, so they depend on the request method, and
-                # therefore can't be set here.
+                # Content-* headers refer to the response content, not
+                # (necessarily) to the resource content, so they depend on the
+                # request method, and therefore can't be set here.
                 for (header, value) in (
                     ("etag", self.etag()),
                     ("last-modified", self.lastModified()),
@@ -106,10 +106,14 @@ class StaticRenderMixin(resource.RenderMixin, MetaDataMixin):
 
             return response
 
-        try:
-            return maybeDeferred(super(StaticRenderMixin, self).renderHTTP, request).addCallback(setHeaders)
-        except HTTPError, e:
-            return setHeaders(e.response)
+        def onError(f):
+            # If we get an HTTPError, run its response through setHeaders() as
+            # well.
+            f.trap(http.HTTPError)
+            return setHeaders(f.value.response)
+
+        d = maybeDeferred(super(StaticRenderMixin, self).renderHTTP, request)
+        return d.addCallbacks(setHeaders, onError)
 
 class Data(resource.Resource):
     """

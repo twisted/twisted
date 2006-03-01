@@ -314,10 +314,14 @@ class DAVResource (DAVPropertyMixIn, StaticRenderMixin):
 
             return response
 
-        try:
-            return maybeDeferred(super(DAVResource, self).renderHTTP, request).addCallback(setHeaders)
-        except HTTPError, e:
-            return setHeaders(e.response)
+        def onError(f):
+            # If we get an HTTPError, run its response through setHeaders() as
+            # well.
+            f.trap(HTTPError)
+            return setHeaders(f.value.response)
+
+        d = maybeDeferred(super(DAVResource, self).renderHTTP, request)
+        return d.addCallbacks(setHeaders, onError)
 
 class DAVLeafResource (DAVResource, LeafResource):
     """
