@@ -1,8 +1,6 @@
 # Copyright 2005 Divmod, Inc.  See LICENSE file for details
-# -*- test-case-name: vertex.test.test_sslverify -*-
 
-import md5
-from itertools import count
+import itertools, md5
 from OpenSSL import SSL, crypto
 
 from twisted.python import reflect
@@ -10,7 +8,7 @@ from twisted.internet.defer import Deferred
 
 # Private - shared between all ServerContextFactories, counts up to
 # provide a unique session id for each context
-_sessionCounter = count().next
+_sessionCounter = itertools.count().next
 
 class _SSLApplicationData(object):
     def __init__(self):
@@ -554,7 +552,7 @@ class OpenSSLCertificateOptions(object):
                  verifyOnce=True,
                  enableSingleUseKeys=True,
                  enableSessions=True,
-                 fixBrokenPeers=True):
+                 fixBrokenPeers=False):
         """
         Create an OpenSSL context SSL connection context factory.
 
@@ -592,8 +590,11 @@ class OpenSSLCertificateOptions(object):
 
         @param fixBrokenPeers: If True, enable various non-spec protocol fixes
         for broken SSL implementations.  This should be entirely safe,
-        according to the OpenSSL documentation, but YMMV.
+        according to the OpenSSL documentation, but YMMV.  This option is now
+        off by default, because it causes problems with connections between
+        peers using OpenSSL 0.9.8a.
         """
+
         assert (privateKey is None) == (certificate is None), "Specify neither or both of privateKey and certificate"
         self.privateKey = privateKey
         self.certificate = certificate
@@ -610,7 +611,7 @@ class OpenSSLCertificateOptions(object):
         self.verifyOnce = verifyOnce
         self.enableSingleUseKeys = enableSingleUseKeys
         self.enableSessions = enableSessions
-        self.fixBrokenPeers = True
+        self.fixBrokenPeers = fixBrokenPeers
 
     def __getstate__(self):
         d = super(OpenSSLCertificateOptions, self).__getstate__()
@@ -671,4 +672,3 @@ class OpenSSLCertificateOptions(object):
             ctx.set_session_id(sessionName)
 
         return ctx
-

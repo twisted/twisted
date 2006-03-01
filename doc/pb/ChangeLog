@@ -1,3 +1,12 @@
+2006-02-28  Brian Warner  <warner@lothar.com>
+
+	* sslverify.py: update to latest version (r5075) from Vertex SVN,
+	to fix a problem reported on OS-X with python2.4 . Removed the
+	test-case-name tag to prevent troubles with buildbot on systems
+	that don't also have vertex installed. I need to find a better
+	solution for this in the long run: I don't want newpb to depend
+	upon Vertex, but I also don't want to duplicate code.
+
 2006-02-27  Brian Warner  <warner@lothar.com>
 
 	* debug.py (encodeTokens): return a Deferred rather than use
