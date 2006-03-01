@@ -75,6 +75,7 @@ class FilePath:
     # __slots__ = 'path abs'.split()
 
     statinfo = None
+    path = None
 
     def __init__(self, path, alwaysCreate=False):
         self.path = abspath(path)
@@ -242,7 +243,7 @@ class FilePath:
         return splitext(self.path)
 
     def __repr__(self):
-        return 'FilePath(%r)' % self.path
+        return 'FilePath(%r)' % (self.path,)
 
     def touch(self):
         try:
