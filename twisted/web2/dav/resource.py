@@ -314,7 +314,10 @@ class DAVResource (DAVPropertyMixIn, StaticRenderMixin):
 
             return response
 
-        return maybeDeferred(super(DAVResource, self).renderHTTP, request).addCallback(setHeaders)
+        try:
+            return maybeDeferred(super(DAVResource, self).renderHTTP, request).addCallback(setHeaders)
+        except HTTPError, e:
+            return setHeaders(e.response)
 
 class DAVLeafResource (DAVResource, LeafResource):
     """

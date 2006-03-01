@@ -92,19 +92,24 @@ class StaticRenderMixin(resource.RenderMixin, MetaDataMixin):
         def setHeaders(response):
             response = iweb.IResponse(response)
 
-            # Content-* headers refer to the response content, not (necessarily) to
-            # the resource content, so they depend on the request method, and
-            # therefore can't be set here.
-            for (header, value) in (
-                ("etag", self.etag()),
-                ("last-modified", self.lastModified()),
-            ):
-                if value is not None:
-                    response.headers.setHeader(header, value)
+            # Don't provide additional resource information to error responses
+            if response.code < 400:
+                # Content-* headers refer to the response content, not (necessarily) to
+                # the resource content, so they depend on the request method, and
+                # therefore can't be set here.
+                for (header, value) in (
+                    ("etag", self.etag()),
+                    ("last-modified", self.lastModified()),
+                ):
+                    if value is not None:
+                        response.headers.setHeader(header, value)
 
             return response
 
-        return maybeDeferred(super(StaticRenderMixin, self).renderHTTP, request).addCallback(setHeaders)
+        try:
+            return maybeDeferred(super(StaticRenderMixin, self).renderHTTP, request).addCallback(setHeaders)
+        except HTTPError, e:
+            return setHeaders(e.response)
 
 class Data(resource.Resource):
     """
