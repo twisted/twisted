@@ -11,7 +11,7 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 import socket # needed only for sync-dns
-from zope.interface import implements
+from zope.interface import implements, classImplements
 
 import imp
 import sys
@@ -240,11 +240,7 @@ class ReactorBase(object):
     """Default base class for Reactors.
     """
 
-    _implList = [IReactorCore, IReactorTime, IReactorPluggableResolver]
-    if platform.supportsThreads():
-        _implList.append(IReactorThreads)
-    implements(*_implList)
-    del _implList
+    implements(IReactorCore, IReactorTime, IReactorPluggableResolver)
 
     installed = 0
     usingThreads = 0
@@ -604,6 +600,9 @@ class ReactorBase(object):
             assert callable(f), "%s is not callable" % (f,)
             # See comment in the other callFromThread implementation.
             self.threadCallQueue.append((f, args, kw))
+
+if platform.supportsThreads():
+    classImplements(ReactorBase, IReactorThreads)
 
 components.backwardsCompatImplements(ReactorBase)
 
