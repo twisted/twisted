@@ -40,6 +40,7 @@ __all__ = [
 ]
 
 import urllib
+from urlparse import urlsplit, urlunsplit
 import posixpath # Careful; this module is not documented as public API
 
 from twisted.python import log
@@ -91,18 +92,23 @@ def normalizeURL(url):
     @param url: a URL.
     @return: the normalized representation of C{url}.
     """
-    url = posixpath.normpath(urllib.unquote(url))
+    def cleanup(path):
+        # For some silly reason, posixpath.normpath doesn't clean up '//' at the
+        # start of a filename, so let's clean it up here.
+        if path[0] == "/":
+            count = 0
+            for char in path:
+                if char != "/": break
+                count += 1
+            path = path[count-1:]
 
-    # For some silly reason, posixpath.normpath doesn't clean up '//' at the
-    # start of a filename, so let's clean it up here.
-    if url[0] == "/":
-        count = 0
-        for char in url:
-            if char != "/": break
-            count += 1
-        url = url[count-1:]
-    
-    return urllib.quote(url)
+        return path
+
+    (scheme, host, path, query, fragment) = urlsplit(cleanup(url))
+
+    path = cleanup(posixpath.normpath(urllib.unquote(path)))
+
+    return urlunsplit((scheme, host, urllib.quote(path), query, fragment))
 
 def joinURL(*urls):
     """
