@@ -28,7 +28,7 @@ WebDAV-aware static resources.
 
 __all__ = ["DAVFile"]
 
-import urlparse
+from urlparse import urlsplit
 
 from twisted.python import log
 from twisted.web2.static import File
@@ -130,7 +130,7 @@ class DAVFile (DAVResource, File):
         # Parse the URI
         #
     
-        (scheme, host, path, params, querystring, fragment) = urlparse.urlparse(uri, "http")
+        (scheme, host, path, query, fragment) = urlsplit(uri)
     
         # Request hostname and destination hostname have to be the same.
         if host and host != request.headers.getHeader("host"):
@@ -149,7 +149,7 @@ class DAVFile (DAVResource, File):
         # FIXME: site isn't in the IRequest interface, and there needs to be an
         # ISite interface.
         #
-        # FIXME: How do I get params, querystring, and fragment passed down to
+        # FIXME: How do I get query and fragment passed down to
         # the new resource?  Insert them to segments?
         #
         sibling = request.site.resource

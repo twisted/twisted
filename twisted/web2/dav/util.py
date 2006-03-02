@@ -40,7 +40,6 @@ __all__ = [
 ]
 
 import urllib
-import urlparse
 import posixpath # Careful; this module is not documented as public API
 
 from twisted.python import log

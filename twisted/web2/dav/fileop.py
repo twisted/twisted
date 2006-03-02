@@ -39,7 +39,7 @@ __all__ = [
 
 import os
 import urllib
-import urlparse
+from urlparse import urlsplit
 
 from twisted.python import log
 from twisted.python.filepath import FilePath
@@ -99,7 +99,7 @@ def delete(uri, filepath, depth="infinity"):
         # recursive filsystem deletes fail.
         #
 
-        uri_path = urllib.unquote(urlparse.urlparse(uri)[2])
+        uri_path = urllib.unquote(urlsplit(uri)[2])
         if uri_path[-1] == "/": uri_path = uri_path[:-1]
 
         log.msg("Deleting directory %s" % (filepath.path,))
