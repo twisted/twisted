@@ -142,7 +142,11 @@ def parentForURL(url):
     url = normalizeURL(url)
 
     index = url.rfind("/")
-    if index is 0: return None
+    if index is 0:
+        if url == "/":
+            return None
+        else:
+            return "/"
     if index is -1: raise ValueError("Invalid URL: %s" % (url,))
 
     return url[:index]
