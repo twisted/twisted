@@ -33,7 +33,6 @@ __all__ = [
     "allDataFromStream",
     "davXMLFromStream",
     "noDataFromStream",
-    "pathForURL",
     "normalizeURL",
     "joinURL",
     "parentForURL",
@@ -41,6 +40,7 @@ __all__ = [
 ]
 
 import urllib
+import urlparse
 import posixpath # Careful; this module is not documented as public API
 
 from twisted.python import log
@@ -52,9 +52,6 @@ from twisted.web2.dav import davxml
 ##
 # Reading request body
 ##
-
-# FIXME: response objects also have streams, and clients may find these useful,
-# so let's generalize these...
 
 def allDataFromStream(stream, filter=None):
     data = []
@@ -88,21 +85,6 @@ def noDataFromStream(stream):
 ##
 # URLs
 ##
-
-def pathForURL(url):
-    """
-    Extract the path portion from the given URL.
-    @param url: a URL.
-    @return: the path portion of the given URL.
-    """
-    if url.startswith("http://"):
-        start = url.find("/", 7)
-        if start is -1: raise ValueError("Invalid URL: %s" % (url,))
-        return url[start:]
-    elif url.startswith("/"):
-        return url
-    else:
-        raise ValueError("Invalid URL: %s" % (url,))
 
 def normalizeURL(url):
     """

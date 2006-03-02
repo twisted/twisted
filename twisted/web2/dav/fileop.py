@@ -39,6 +39,7 @@ __all__ = [
 
 import os
 import urllib
+import urlparse
 
 from twisted.python import log
 from twisted.python.filepath import FilePath
@@ -48,7 +49,6 @@ from twisted.web2 import responsecode
 from twisted.web2.http import StatusResponse
 from twisted.web2.stream import FileStream, readIntoFile
 from twisted.web2.dav.http import ResponseQueue, statusForFailure
-from twisted.web2.dav.util import pathForURL
 
 def delete(uri, filepath, depth="infinity"):
     """
@@ -99,7 +99,7 @@ def delete(uri, filepath, depth="infinity"):
         # recursive filsystem deletes fail.
         #
 
-        uri_path = urllib.unquote(pathForURL(uri))
+        uri_path = urllib.unquote(urlparse.urlparse(uri)[2])
         if uri_path[-1] == "/": uri_path = uri_path[:-1]
 
         log.msg("Deleting directory %s" % (filepath.path,))
