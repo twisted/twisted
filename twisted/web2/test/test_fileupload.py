@@ -64,9 +64,10 @@ class MultipartTests(unittest.TestCase):
             self.assertEquals(args, expected_args)
         
             # Read file data back into memory to compare.
-            files = dict([(name, (filename, ctype, f.read()))
-                          for (name, (filename, ctype, f)) in files.items()])
-            self.assertEquals(files, expected_files)
+            out = {}
+            for name, l in files.items():
+                out[name] = [(filename, ctype, f.read()) for (filename, ctype, f) in l]
+            self.assertEquals(out, expected_files)
 
         #data=cStringIO.StringIO(data)
         #t=time.time()
@@ -91,9 +92,36 @@ blah
 blah\r
 -----------------------------155781040421463194511908194298--\r
 """,
-            {'foo':'Foo Bar'},
-            {'file':('filename', MimeType('text', 'html'),
-                     "Contents of a file\nblah\nblah")})
+            {'foo':['Foo Bar']},
+            {'file':[('filename', MimeType('text', 'html'),
+                      "Contents of a file\nblah\nblah")]})
+
+    def testMultipleUpload(self):
+        return self.doTest(
+            'xyz',
+"""--xyz\r
+Content-Disposition: form-data; name="foo"\r
+\r
+Foo Bar\r
+--xyz\r
+Content-Disposition: form-data; name="foo"\r
+\r
+Baz\r
+--xyz\r
+Content-Disposition: form-data; name="file"; filename="filename"\r
+Content-Type: text/html\r
+\r
+blah\r
+--xyz\r
+Content-Disposition: form-data; name="file"; filename="filename"\r
+Content-Type: text/plain\r
+\r
+bleh\r
+--xyz--\r
+""",
+            {'foo':['Foo Bar', 'Baz']},
+            {'file':[('filename', MimeType('text', 'html'), "blah"),
+                     ('filename', MimeType('text', 'plain'), "bleh")]})
 
     def testStupidFilename(self):
         return self.doTest(
@@ -108,8 +136,8 @@ blah\r
 ------------0xKhTmLbOuNdArY--\r
 """,
             {},
-            {'file':('foo"; name="foobar.txt', MimeType('text', 'plain'),
-                     "Contents of a file\nblah\nblah")})
+            {'file':[('foo"; name="foobar.txt', MimeType('text', 'plain'),
+                      "Contents of a file\nblah\nblah")]})
     
     def testEmptyFilename(self):
         return self.doTest(
@@ -122,8 +150,8 @@ qwertyuiop\r
 --curlPYafCMnsamUw9kSkJJkSen41sAV--\r
 """,
             {},
-            {'foo':('', MimeType('application', 'octet-stream'),
-                     "qwertyuiop")})
+            {'foo':[('', MimeType('application', 'octet-stream'),
+                     "qwertyuiop")]})
 
 
 # Failing parses

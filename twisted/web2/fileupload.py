@@ -273,14 +273,15 @@ def parseMultipartFormData(stream, boundary,
         if filename is None:
             # Is a normal form field
             outfile.seek(0)
-            args[fieldname] = data = outfile.read()
+            data = outfile.read()
+            args.setdefault(fieldname, []).append(data)
             maxMem -= len(data)
             maxSize -= len(data)
         else:
             # Is a file upload
             maxSize -= outfile.tell()
             outfile.seek(0)
-            files[fieldname] = (filename, ctype, outfile)
+            files.setdefault(fieldname, []).append((filename, ctype, outfile))
         
         
     yield args, files

@@ -470,12 +470,12 @@ class FileSaver(resource.PostableResource):
         if req.files:
             for fieldName in req.files:
                 if fieldName in self.expectedFields:
-                    try:
-                        outname = self.writeFile(*req.files[fieldName])
-                        content.append("Saved file %s<br />" % outname)
-                        
-                    except IOError, err:
-                        content.append(str(err) + "<br />")
+                    for finfo in req.files[fieldName]:
+                        try:
+                            outname = self.writeFile(*finfo)
+                            content.append("Saved file %s<br />" % outname)
+                        except IOError, err:
+                            content.append(str(err) + "<br />")
                 else:
                     content.append("%s is not a valid field" % fieldName)
 
