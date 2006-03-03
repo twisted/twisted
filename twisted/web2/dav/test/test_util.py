@@ -32,10 +32,26 @@ class Utilities(twisted.web2.dav.test.util.TestCase):
     """
     Utilities.
     """
-    def test_pathForURL(self):
+    def test_normalizeURL(self):
         self.assertEquals(normalizeURL("http://server//foo"), "http://server/foo")
         self.assertEquals(normalizeURL("http://server/foo/.."), "http://server/")
         self.assertEquals(normalizeURL("/foo/bar/..//"), "/foo")
         self.assertEquals(normalizeURL("//foo///bar/../baz"), "/foo/baz")
         self.assertEquals(normalizeURL("///../"), "/")
         self.assertEquals(normalizeURL("/.."), "/")
+
+    def test_joinURL(self):
+        self.assertEquals(joinURL("http://server/foo/"), "http://server/foo/")
+        self.assertEquals(joinURL("http://server/foo", "/bar"), "http://server/foo/bar")
+        self.assertEquals(joinURL("http://server/foo", "bar"), "http://server/foo/bar")
+        self.assertEquals(joinURL("http://server/foo/", "/bar"), "http://server/foo/bar")
+        self.assertEquals(joinURL("http://server/foo/", "/bar/.."), "http://server/foo")
+        self.assertEquals(joinURL("http://server/foo/", "/bar/../"), "http://server/foo/")
+        self.assertEquals(joinURL("http://server/foo/../", "/bar"), "http://server/bar")
+        self.assertEquals(joinURL("/foo/"), "/foo/")
+        self.assertEquals(joinURL("/foo", "/bar"), "/foo/bar")
+        self.assertEquals(joinURL("/foo", "bar"), "/foo/bar")
+        self.assertEquals(joinURL("/foo/", "/bar"), "/foo/bar")
+        self.assertEquals(joinURL("/foo/", "/bar/.."), "/foo")
+        self.assertEquals(joinURL("/foo/", "/bar/../"), "/foo/")
+        self.assertEquals(joinURL("/foo/../", "/bar"), "/bar")

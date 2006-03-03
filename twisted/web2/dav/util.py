@@ -116,7 +116,12 @@ def joinURL(*urls):
     @param urls: URLs to join.
     @return: the normalized URL formed by combining each URL in C{urls}.
     """
-    return "/".join([normalizeURL(url).rstrip("/") for url in urls])
+    if len(urls) > 0 and len(urls[-1]) > 0 and urls[-1][-1] == "/":
+        trailing = "/"
+    else:
+        trailing = ""
+
+    return normalizeURL("/".join([url for url in urls])) + trailing
 
 def parentForURL(url):
     """
