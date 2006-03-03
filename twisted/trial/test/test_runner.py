@@ -5,14 +5,13 @@
 #
 # Author: Robert Collins <robertc@robertcollins.net>
 
-import os
+import StringIO
 from zope.interface import implements
 
 from twisted.trial.itrial import IReporter
 from twisted.trial import unittest, runner
 from twisted.python import reflect
 from twisted.scripts import trial
-from twisted.plugins import twisted_trial
 
 
 class CapturingDebugger(object):
@@ -40,22 +39,6 @@ class CapturingReporter(object):
         self._calls = []
         self.shouldStop = False
         
-    def setUpReporter(self):
-        """performs reporter setup. DEPRECATED"""
-        self._calls.append('setUp')
-
-    def tearDownReporter(self):
-        """performs reporter termination. DEPRECATED"""
-        self._calls.append('tearDown')
-
-    def reportImportError(self, name, exc):
-        """report an import error
-        @param name: the name that could not be imported
-        @param exc: the exception
-        @type exc: L{twisted.python.failure.Failure}
-        """
-        self._calls.append('importError')
-
     def startTest(self, method):
         """report the beginning of a run of a single test method
         @param method: an object that is adaptable to ITestMethod
@@ -67,28 +50,6 @@ class CapturingReporter(object):
         @param method: an object that is adaptable to ITestMethod
         """
         self._calls.append('stopTest')
-
-    def startTrial(self, expectedTests):
-        """kick off this trial run
-        @param expectedTests: the number of tests we expect to run
-        """
-        self._calls.append('startTrial')
-
-    def startClass(self, klass):
-        "called at the beginning of each TestCase with the class"
-        self._calls.append('startClass')
-
-    def endClass(self, klass):
-        "called at the end of each TestCase with the class"
-        self._calls.append('endClass')
-
-    def startSuite(self, module):
-        "called at the beginning of each module"
-        self._calls.append('startSuite')
-
-    def endSuite(self, module):
-        "called at the end of each module"
-        self._calls.append('endSuite')
 
     def cleanupErrors(self, errs):
         """called when the reactor has been left in a 'dirty' state
@@ -129,6 +90,44 @@ class TestImports(unittest.TestCase):
     def test_imports(self):
         from twisted.trial.runner import TrialRunner
 
+
+class TestTrialRunner(unittest.TestCase):
+
+    def setUp(self):
+        self.stream = StringIO.StringIO()
+        self.runner = runner.TrialRunner(CapturingReporter, stream=self.stream)
+        self.test = TestImports('test_imports')
+
+    def _getObservers(self):
+        from twisted.python import log
+        return log.theLogPublisher.observers
+
+    def test_addObservers(self):
+        originalCount = len(self._getObservers())
+        self.runner.run(self.test)
+        newCount = len(self._getObservers())
+        self.failUnlessEqual(originalCount + 2, newCount)
+        
+    def test_addObservers_repeat(self):
+        self.runner.run(self.test)
+        count = len(self._getObservers())
+        self.runner.run(self.test)
+        newCount = len(self._getObservers())
+        self.failUnlessEqual(count, newCount)
+
+    def test_logFileAlwaysActive(self):
+        """test that a new file is opened on each run"""
+        self.runner.run(self.test)
+        fd = self.runner._logFileObserver
+        self.runner.run(self.test)
+        fd2 = self.runner._logFileObserver
+        self.failIf(fd is fd2, "Should have created a new file observer")
+
+    def test_logFileGetsClosed(self):
+        self.runner.run(self.test)
+        fd = self.runner._logFileObject
+        self.runner.run(self.test)
+        self.failUnless(fd.closed)
 
 class TestRunner(unittest.TestCase):
     

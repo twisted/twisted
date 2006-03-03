@@ -9,15 +9,14 @@
 from __future__ import generators
 import pdb, shutil
 import os, glob, types, warnings, sys, inspect, imp
-import fnmatch, random, inspect, doctest, time
+import fnmatch, random, doctest, time
 from os.path import join as opj
 
 from twisted.internet import defer, interfaces
-from twisted.python import components, reflect, log, failure
+from twisted.python import reflect, log, failure
 from twisted.python.util import dsu
-from twisted.trial import itrial, util, unittest
-from twisted.trial.itrial import ITestCase, IReporter
-import zope.interface as zi
+from twisted.trial import util, unittest
+from twisted.trial.itrial import ITestCase
 
 pyunit = __import__('unittest')
 
@@ -349,7 +348,7 @@ class TestLoader(object):
         suites = []
         for name in names:
             suites.append(self.loadTestsFromName(name, module))
-        return self.suiteClass(suite)
+        return self.suiteClass(suites)
 
 
 class DryRunVisitor(unittest.TestVisitor):
@@ -432,20 +431,37 @@ class TrialRunner(object):
         self.rterrors = realTimeErrors
         self._result = None
         self.workingDirectory = workingDirectory or '_trial_temp'
+        self._logFileObserver = None
+        self._logFileObject = None
+        self._logWarnings = False
         if profile:
             self.run = util.profiled(self.run, 'profile.data')
 
     def _setUpLogging(self):
+        self._setUpLogFile()
+        self._setUpLogWarnings()
+
+    def _setUpLogFile(self):
+        if self._logFileObserver is not None:
+            self._logFileObject.close()
+            log.removeObserver(self._logFileObserver.emit)
+        if self.logfile == '-':
+            logFile = sys.stdout
+        else:
+            logFile = file(self.logfile, 'a')
+        self._logFileObject = logFile
+        self._logFileObserver = log.FileLogObserver(logFile)
+        log.startLoggingWithObserver(self._logFileObserver.emit, 0)
+
+    def _setUpLogWarnings(self):
+        if self._logWarnings:
+            return
         def seeWarnings(x):
            if x.has_key('warning'):
                print
                print x['format'] % x
         log.addObserver(seeWarnings)
-        if self.logfile == '-':
-           logFileObj = sys.stdout
-        else:
-           logFileObj = file(self.logfile, 'a')
-        log.startLogging(logFileObj, 0)
+        self._logWarnings = True
 
     def run(self, test):
         """Run the test or suite and return a result object."""
