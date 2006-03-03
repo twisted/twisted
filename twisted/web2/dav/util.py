@@ -114,7 +114,9 @@ def joinURL(*urls):
     """
     Appends URLs in series.
     @param urls: URLs to join.
-    @return: the normalized URL formed by combining each URL in C{urls}.
+    @return: the normalized URL formed by combining each URL in C{urls}.  The
+        returned URL will contain a trailing C{"/"} if and only if the last
+        given URL contains a trailing C{"/"}.
     """
     if len(urls) > 0 and len(urls[-1]) > 0 and urls[-1][-1] == "/":
         trailing = "/"
@@ -125,11 +127,11 @@ def joinURL(*urls):
 
 def parentForURL(url):
     """
-    Extracts the URL of a containing collection resource for the resource
+    Extracts the URL of the containing collection resource for the resource
     corresponding to a given URL.
     @param url: a URL.
-    @return: the normalized URL of a collection resource containing the
-    resource corresponding to C{url}.
+    @return: the normalized URL of the collection resource containing the
+        resource corresponding to C{url}.
     """
     url = normalizeURL(url)
 
