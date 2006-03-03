@@ -55,3 +55,4 @@ class Utilities(twisted.web2.dav.test.util.TestCase):
         self.assertEquals(joinURL("/foo/", "/bar/.."), "/foo")
         self.assertEquals(joinURL("/foo/", "/bar/../"), "/foo/")
         self.assertEquals(joinURL("/foo/../", "/bar"), "/bar")
+        self.assertEquals(joinURL("/foo", "/../"), "/")

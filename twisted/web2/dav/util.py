@@ -123,7 +123,11 @@ def joinURL(*urls):
     else:
         trailing = ""
 
-    return normalizeURL("/".join([url for url in urls])) + trailing
+    url = normalizeURL("/".join([url for url in urls]))
+    if url == "/":
+        return "/"
+    else:
+        return url + trailing
 
 def parentForURL(url):
     """
