@@ -186,7 +186,7 @@ class File(StaticRenderMixin):
         """
         super(File, self).__init__()
 
-        self._children = {}
+        self.putChildren = {}
         self.fp = filepath.FilePath(path)
         # Remove the dots from the path to split
         self.defaultType = defaultType
@@ -290,7 +290,7 @@ class File(StaticRenderMixin):
         @param name: the name of the child (a URI path segment)
         @param child: the child to register
         """
-        self._children[name] = child
+        self.putChildren[name] = child
 
     def getChild(self, name):
         """
@@ -300,7 +300,7 @@ class File(StaticRenderMixin):
         if name == "":
             return self
 
-        child = self._children.get(name, None)
+        child = self.putChildren.get(name, None)
         if child: return child
 
         child_fp = self.fp.child(name)
@@ -313,8 +313,9 @@ class File(StaticRenderMixin):
         """
         @return: a sequence of the names of all known children of this resource.
         """
-        children = self._children.keys()
-        if self.fp.isdir(): children += self.fp.listdir()
+        children = self.putChildren.keys()
+        if self.fp.isdir():
+            children += [c for c in self.fp.listdir() if c not in children]
         return children
 
     def locateChild(self, req, segments):
