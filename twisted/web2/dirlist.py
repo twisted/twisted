@@ -10,7 +10,7 @@ import stat
 import time
 
 # twisted imports
-from twisted.web2 import iweb, resource, http
+from twisted.web2 import iweb, resource, http, http_headers
 
 def formatFileSize(size):
     if size < 1024:
@@ -112,6 +112,8 @@ class DirectoryLister(resource.Resource):
             even = not even
                 
         s+="</table></div></body></html>"
-        return http.Response(200, {}, s)
+        response = http.Response(200, {}, s)
+        response.headers.setHeader("content-type", http_headers.MimeType('text', 'html'))
+        return response
 
 __all__ = ['DirectoryLister']
