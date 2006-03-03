@@ -67,9 +67,6 @@ def http_PROPFIND(self, request):
 
             container = find.children[0]
 
-            #
-            # FIXME: skip hidden props
-            #
             if isinstance(container, davxml.AllProperties):
                 # Get all properties
                 search_properties = "all"

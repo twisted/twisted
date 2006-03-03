@@ -47,6 +47,8 @@ from twisted.web2.dav import davxml
 from twisted.web2.dav.davxml import dav_namespace, lookupElement
 from twisted.web2.dav.idav import IDAVResource
 
+twisted_dav_namespace = "http://twistedmatrix.com/xml_namespace/dav/"
+
 class DAVPropertyMixIn (MetaDataMixin):
     """
     Mix-in class which implements the DAV property access API in
@@ -61,6 +63,8 @@ class DAVPropertyMixIn (MetaDataMixin):
         (dav_namespace, "creationdate"    ),
         (dav_namespace, "displayname"     ),
         (dav_namespace, "supportedlock"   ),
+
+        (twisted_dav_namespace, "resource-class"),
     )
 
     def deadProperties(self):
@@ -138,6 +142,14 @@ class DAVPropertyMixIn (MetaDataMixin):
                     davxml.LockEntry(davxml.LockScope.shared   , davxml.LockType.write),
                 )
 
+        if namespace == twisted_dav_namespace:
+            if name == "resource-class":
+                class ResourceClass (davxml.WebDAVTextElement):
+                    namespace = twisted_dav_namespace
+                    name = "resource-class"
+                    hidden = False
+                return ResourceClass.fromString(self.__class__.__name__)
+
         return self.deadProperties().get(qname)
 
     def writeProperty(self, property, request):
@@ -194,7 +206,8 @@ class DAVPropertyMixIn (MetaDataMixin):
                 if not lookupElement(qname).hidden:
                     qnames.append(qname)
             except KeyError:
-                pass
+                # Unknown element
+                qnames.append(qname)
 
         return qnames
 
