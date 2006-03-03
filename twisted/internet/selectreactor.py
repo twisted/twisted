@@ -24,7 +24,7 @@ from twisted.python import log, components
 from twisted.persisted import styles
 from twisted.python.runtime import platformType
 
-import select
+import select, socket
 from errno import EINTR, EBADF
 
 # global state for selector
@@ -105,7 +105,7 @@ class SelectReactor(posixbase.PosixReactorBase):
                 # result) was passed
                 log.err()
                 self._preenDescriptors()
-            except (select.error, IOError), se:
+            except (socket.error, select.error, IOError), se:
                 # select(2) encountered an error
                 if se.args[0] in (0, 2):
                     # windows does this if it got an empty list
@@ -137,14 +137,21 @@ class SelectReactor(posixbase.PosixReactorBase):
     def _doReadOrWrite(self, selectable, method, dict):
         try:
             why = getattr(selectable, method)()
-            handfn = getattr(selectable, 'fileno', None)
-            if not handfn:
-                why = _NO_FILENO
-            elif handfn() == -1:
-                why = _NO_FILEDESC
         except:
             why = sys.exc_info()[1]
             log.err()
+        else:
+            handfn = getattr(selectable, 'fileno', None)
+            if not handfn:
+                why = _NO_FILENO
+            else:
+                try:
+                    if handfn() == -1:
+                        why = _NO_FILEDESC
+                except (socket.error, IOError), se:
+                    if se.args[0] == EBADF:
+                        self._preenDescriptors()
+                    why = se
         if why:
             self._disconnectSelectable(selectable, why, method=="doRead")
     
