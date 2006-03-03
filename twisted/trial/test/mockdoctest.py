@@ -1,8 +1,6 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-# Author: Jonathan D. Simms <slyphon@twistedmatrix.com>
-
 # this module is a trivial class with doctests and a __test__ attribute
 # to test trial's doctest support with python2.4
 
