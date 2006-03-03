@@ -90,7 +90,10 @@ def normalizeURL(url):
     """
     Normalized a URL.
     @param url: a URL.
-    @return: the normalized representation of C{url}.
+    @return: the normalized representation of C{url}.  The returned URL will
+        never contain a trailing C{"/"}; it is up to the caller to determine
+        whether the resource referred to by the URL is a collection and add a
+        trailing C{"/"} if so.
     """
     def cleanup(path):
         # For some silly reason, posixpath.normpath doesn't clean up '//' at the
@@ -133,21 +136,26 @@ def parentForURL(url):
     """
     Extracts the URL of the containing collection resource for the resource
     corresponding to a given URL.
-    @param url: a URL.
+    @param url: an absolute (server-relative is OK) URL.
     @return: the normalized URL of the collection resource containing the
-        resource corresponding to C{url}.
+        resource corresponding to C{url}.  The returned URL will always contain
+        a trailing C{"/"}.
     """
-    url = normalizeURL(url)
+    (scheme, host, path, query, fragment) = urlsplit(normalizeURL(url))
 
-    index = url.rfind("/")
+    index = path.rfind("/")
     if index is 0:
-        if url == "/":
+        if path == "/":
             return None
         else:
-            return "/"
-    if index is -1: raise ValueError("Invalid URL: %s" % (url,))
+            path = "/"
+    else:
+        if index is -1:
+            raise ValueError("Invalid URL: %s" % (url,))
+        else:
+            path = path[:index] + "/"
 
-    return url[:index]
+    return urlunsplit((scheme, host, path, query, fragment))
 
 ##
 # Python magic
