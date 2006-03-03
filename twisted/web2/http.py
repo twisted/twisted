@@ -74,13 +74,15 @@ class Response(object):
     
     def __init__(self, code=None, headers=None, stream=None):
         if code is not None:
-            self.code=int(code)
+            self.code = int(code)
+
         if headers is not None:
             if isinstance(headers, dict):
                 headers = http_headers.Headers(headers)
             self.headers=headers
         else:
             self.headers = http_headers.Headers()
+
         if stream is not None:
             self.stream = IByteStream(stream)
 
@@ -94,13 +96,18 @@ class Response(object):
 
 class StatusResponse (Response):
     """
-    A Response object which simply contains a status code and a description of
+    A L{Response} object which simply contains a status code and a description of
     what happened.
     """
-    description = None
-
-    def __init__(self, code, description):
-        title = cgi.escape(responsecode.RESPONSES[code])
+    def __init__(self, code, description, title=None):
+        """
+        @param code: a response code in L{responsecode.RESPONSES}.
+        @param description: a string description.
+        @param title: the message title.  If not specified or C{None}, defaults
+            to C{responsecode.RESPONSES[code]}.
+        """
+        if title is None:
+            title = cgi.escape(responsecode.RESPONSES[code])
 
         output = "".join((
             "<html>",
@@ -131,9 +138,12 @@ class StatusResponse (Response):
 
 class RedirectResponse (StatusResponse):
     """
-    A Response object that contains a redirect.
+    A L{Response} object that contains a redirect to another network location.
     """
     def __init__(self, location):
+        """
+        @param location: the URI to redirect to.
+        """
         super(RedirectResponse, self).__init__(
             responsecode.MOVED_PERMANENTLY,
             "Document moved to %s." % (location,)

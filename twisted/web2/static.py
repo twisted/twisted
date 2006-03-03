@@ -318,7 +318,7 @@ class File(StaticRenderMixin):
         """
         See L{IResource}C{.locateChild}.
         """
-        # If a static child is set up, return it
+        # If getChild() finds a child resource, return it
         child = self.getChild(segments[0])
         if child is not None: return (child, segments[1:])
         
