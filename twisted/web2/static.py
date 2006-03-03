@@ -297,6 +297,9 @@ class File(StaticRenderMixin):
         Look up a child resource.
         @return: the child of this resource with the given name.
         """
+        if name == "":
+            return self
+
         child = self._children.get(name, None)
         if child: return child
 
