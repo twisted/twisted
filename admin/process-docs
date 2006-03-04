@@ -5,6 +5,8 @@
 # Also required is the 'ps2pdf13' program, part of the (debian) package
 # 'gs-common' (as of 2004-07-30).
 
+VERSION=$1
+
 set -e
 
 templ=doc/core/howto/template.tpl
@@ -27,7 +29,7 @@ for doc in doc/core doc/core/{man,examples,howto,howto/tutorial,howto/policy,spe
 		echo $'\t'"HTML"
 		$LORE \
 			-p --config template=$templ --config ext=.html \
-			--config version=$1 \
+			--config version=$VERSION \
 			-l $(echo $doc | sed -e 's/^doc\///' | sed -e 's/\(^\|\/\)[^.\/]\+/\1../g')/../core/documentation/howto/ \
 			$doc/*.xhtml
 		echo $'\t'"LaTeX"
