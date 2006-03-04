@@ -19,7 +19,7 @@ for man in doc/*/man; do
 	$LORE -p --input man --output lore --config ext=-man.xhtml $man/*.1
 done
 
-for doc in doc/core/{man,examples,howto,howto/tutorial,howto/policy,specifications,vision,upgrades,upgrades/2.0} doc/{conch,flow,lore,mail,names,pair,web,words}/{examples,howto} doc/mail/tutorial/smtpclient; do
+for doc in doc/core doc/core/{man,examples,howto,howto/tutorial,howto/policy,specifications,vision,upgrades,upgrades/2.0} doc/{conch,flow,lore,mail,names,pair,web,words}/{examples,howto} doc/mail/tutorial/smtpclient; do
 	if [ -e "$doc" ]; then
 		echo "Processing $doc"
 		echo $'\t'"Lint"
@@ -28,7 +28,7 @@ for doc in doc/core/{man,examples,howto,howto/tutorial,howto/policy,specificatio
 		$LORE \
 			-p --config template=$templ --config ext=.html \
 			--config version=$1 \
-			-l $(echo $doc | sed -e 's/^doc\///' | sed -e 's/\(^\|\/\)[^.\/]\+/\1../g')/core/howto/ \
+			-l $(echo $doc | sed -e 's/^doc\///' | sed -e 's/\(^\|\/\)[^.\/]\+/\1../g')/../core/documentation/howto/ \
 			$doc/*.xhtml
 		echo $'\t'"LaTeX"
 		$LORE -p --output latex --config section $doc/*.xhtml
