@@ -19,7 +19,7 @@ for man in doc/*/man; do
 	$LORE -p --input man --output lore --config ext=-man.xhtml $man/*.1
 done
 
-for doc in doc/core/{man,howto,howto/tutorial,howto/policy,specifications,vision} doc/{conch,flow,lore,names,pair,web,words}/{examples,howto} doc/mail/tutorial/smtpclient; do
+for doc in doc/core/{man,examples,howto,howto/tutorial,howto/policy,specifications,vision,upgrades,upgrades/2.0} doc/{conch,flow,lore,mail,names,pair,web,words}/{examples,howto} doc/mail/tutorial/smtpclient; do
 	if [ -e "$doc" ]; then
 		echo "Processing $doc"
 		echo $'\t'"Lint"
