@@ -13,7 +13,7 @@ templ=doc/core/howto/template.tpl
 
 if sh -c 'which python2.2 > /dev/null'; then PYTHON=2.2; fi
 if sh -c 'which python2.3 > /dev/null'; then PYTHON=2.3; fi
-LORE="python$PYTHON ./bin/lore/lore"
+LORE="python$PYTHON ./bin/lore/lore --config baseurl=http://twistedmatrix.com/documents/current/api/%s.html"
 
 echo "Processing manual pages"
 for man in doc/*/man; do
