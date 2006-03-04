@@ -13,20 +13,28 @@ if sh -c 'which python2.2 > /dev/null'; then PYTHON=2.2; fi
 if sh -c 'which python2.3 > /dev/null'; then PYTHON=2.3; fi
 LORE="python$PYTHON ./bin/lore/lore"
 
-echo "Man-->Lore"
+echo "Processing manual pages"
 for man in doc/*/man; do
-    $LORE -p --input man --output lore --config ext=-man.xhtml $man/*.1
+	echo $'\t'"$man"
+	$LORE -p --input man --output lore --config ext=-man.xhtml $man/*.1
 done
 
-for doc in doc/core/{man,howto,howto/tutorial,howto/policy,specifications,vision} doc/{conch,flow,lore,names,pair,web,words}/howto doc/mail/tutorial/smtpclient; do
-    echo "Lore-->Lint"
-    $LORE -n --output lint $doc/*.xhtml |sed 's/^/WARNING: /'
-    echo "Lore-->HTML"
-    $LORE -p --config template=$templ \
-    --config ext=.html --config version=$1 -l $(echo $doc | sed -e 's/^doc\///' | sed -e 's/\(^\|\/\)[^.\/]\+/\1../g')/core/howto/ \
-    $doc/*.xhtml
-    echo "Lore-->LaTeX"
-    $LORE -p --output latex --config section $doc/*.xhtml
+for doc in doc/core/{man,howto,howto/tutorial,howto/policy,specifications,vision} doc/{conch,flow,lore,names,pair,web,words}/{examples,howto} doc/mail/tutorial/smtpclient; do
+	if [ -e "$doc" ]; then
+		echo "Processing $doc"
+		echo $'\t'"Lint"
+		$LORE -n --output lint $doc/*.xhtml |sed 's/^/WARNING: /'
+		echo $'\t'"HTML"
+		$LORE \
+			-p --config template=$templ --config ext=.html \
+			--config version=$1 \
+			-l $(echo $doc | sed -e 's/^doc\///' | sed -e 's/\(^\|\/\)[^.\/]\+/\1../g')/core/howto/ \
+			$doc/*.xhtml
+		echo $'\t'"LaTeX"
+		$LORE -p --output latex --config section $doc/*.xhtml
+	else
+		echo "Skipping non-existent $doc"
+	fi
 done
 
 cd doc/core/howto
