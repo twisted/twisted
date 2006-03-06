@@ -934,7 +934,7 @@ class IProtocolFactory(Interface):
         and the Port will close the connection.
 
         @param addr: The address of the newly-established connection
-        @ptype addr: (host, port)
+        @type addr: (host, port)
         @returns: None if the connection was refused, otherwise an object
         implementing IProtocol.
         @rtype: None or L{IProtocol}.

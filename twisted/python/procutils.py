@@ -5,7 +5,7 @@
 
 """Utilities for dealing with processes.
 
-@stability: Unstable
+API Stability: Unstable
 """
 
 import os
