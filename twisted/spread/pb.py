@@ -1683,20 +1683,20 @@ class IUsernameMD5Password(ICredentials):
         """Validate these credentials against the correct password.
 
         @param password: The correct, plaintext password against which to
-        @check.
+            check.
 
         @return: a deferred which becomes, or a boolean indicating if the
-        password matches.
+            password matches.
         """
 
     def checkMD5Password(self, password):
         """Validate these credentials against the correct MD5 digest of password.
 
         @param password: The correct, plaintext password against which to
-        @check.
+            check.
 
         @return: a deferred which becomes, or a boolean indicating if the
-        password matches.
+            password matches.
         """
 
 
