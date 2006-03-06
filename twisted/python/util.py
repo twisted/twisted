@@ -474,7 +474,7 @@ class IntervalDifferential:
     def __init__(self, intervals, default=60):
         """
         @type intervals: C{list} of C{int}, C{long}, or C{float} param
-        @intervals: The intervals between instants.
+        @param intervals: The intervals between instants.
 
         @type default: C{int}, C{long}, or C{float}
         @param default: The duration to generate if the intervals list
