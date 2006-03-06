@@ -167,13 +167,13 @@ class PBService(service.MultiService):
                      - debug_slow: if True, wait half a second between
                                    each negotiation response
 
-    @itype tubID: string
-    @ivar  tubID: a global identifier for this Tub, possibly including
-                  authentication information, hash of SSL certificate
+    @type tubID: string
+    @ivar tubID: a global identifier for this Tub, possibly including
+                 authentication information, hash of SSL certificate
 
     @ivar brokers: maps TubIDs to L{Broker} instances
 
-    @itype listeners: maps strport to TCPServer service
+    @ivar listeners: maps strport to TCPServer service
 
     @ivar referenceToName: maps Referenceable to a name
     @ivar nameToReference: maps name to Referenceable
