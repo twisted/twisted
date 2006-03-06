@@ -33,7 +33,7 @@ import time, sys
 
 class MessageLogger:
     """
-    An independant logger class (because separation of application
+    An independent logger class (because separation of application
     and protocol logic is a good thing).
     """
     def __init__(self, file):
