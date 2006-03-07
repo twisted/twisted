@@ -30,6 +30,7 @@ __all__ = [
     "ErrorResponse",
     "MultiStatusResponse",
     "ResponseQueue",
+    "PropertyStatusResponseQueue",
     "statusForFailure",
 ]
 
@@ -167,6 +168,84 @@ class ResponseQueue (object):
             return MultiStatusResponse(self.responses)
         else:
             return self.success_response
+
+class PropertyStatusResponseQueue (object):
+    """
+    Stores a list of propstat elements for use in a L{Response}
+    in a L{MultiStatusResponse}.
+    """
+    def __init__(self, method, uri, success_response):
+        """
+        @param method:           the name of the method generating the queue.
+        @param uri:              the href for the response.
+        @param success_response: the status to return if no
+            L{PropertyStatus} are added to this queue.
+        """
+        self.method            = method
+        self.propstats         = [davxml.HRef.fromString(uri)]
+        self.success_response  = success_response
+
+    def add(self, what, property):
+        """
+        Add a response.
+        @param what: a status code or a L{Failure} for the given path.
+        @param property: the property whose status is being reported.  This must
+            be an empty element (C{len(property.children) == 0}).
+        """
+        assert len(property.children) == 0
+
+        if type(what) is int:
+            code    = what
+            error   = None
+            message = responsecode.RESPONSES[code]
+        elif isinstance(what, Failure):
+            code    = statusForFailure(what)
+            error   = errorForFailure(what)
+            message = messageForFailure(what)
+        else:
+            raise AssertionError("Unknown data type: %r" % (what,))
+
+        if code > 400: # Error codes only
+            log.err("Error during %s for %s: %s" % (self.method, property, message))
+
+        children = []
+        children.append(property)
+        children.append(davxml.Status.fromResponseCode(code))
+        if error is not None:
+            children.append(error)
+        if message is not None:
+            children.append(davxml.ResponseDescription.fromString(message))
+        self.propstats.append(davxml.PropertyStatus(*children))
+
+    def error(self):
+        """
+        Convert any 2xx codes in the propstat responses to 424 Failed Dependency.
+        """
+        for propstat in self.propstats:
+            # Check the status
+            changed_status = False
+            for index, child in enumerate(propstat.children):
+                if isinstance(child, davxml.Status) and (child.code / 100 == 2):
+                    # Change the code
+                    propstat.children[index] = davxml.Status.fromResponseCode(
+                        responsecode.FAILED_DEPENDENCY
+                    )
+                    changed_status = True
+                elif changed_status and isinstance(child, davxml.ResponseDescription):
+                    propstat.children[index] = davxml.ResponseDescription.fromString(
+                        responsecode.RESPONSES[responsecode.FAILED_DEPENDENCY]
+                    )
+
+    def response(self):
+        """
+        Generate a response from the responses contained in the queue or, if
+        there are no such responses, return the C{success_response} provided to
+        L{__init__}.
+        @return: a L{davxml.PropertyStatusResponse}.
+        """
+        if len(self.propstats) == 1:
+            self.propstats.append(davxml.Status.fromResponseCode(self.success_response))
+        return davxml.PropertyStatusResponse(*self.propstats)
 
 ##
 # Exceptions and response codes
