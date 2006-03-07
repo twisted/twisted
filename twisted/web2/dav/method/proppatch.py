@@ -85,19 +85,19 @@ def http_PROPPATCH(self, request):
 
                 properties = container.children
 
-                def do(action, property):
+                def do(action, property, request):
                     #
-                    # Perform action(property) while maintaining the undo
-                    # queue.
+                    # Perform action(property, request) while maintaining the
+                    # undo queue.
                     #
-                    if self.hasProperty(property):
+                    if self.hasProperty(property, request):
                         old_property = self.readProperty(property, request)
                         def undo(): self.writeProperty(old_property, request)
                     else:
                         def undo(): self.removeProperty(property, request)
 
                     try:
-                        action(property)
+                        action(property, request)
                     except:
                         responses.add(self.fp.path, Failure())
                     else:
