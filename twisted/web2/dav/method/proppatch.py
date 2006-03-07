@@ -32,9 +32,9 @@ __all__ = ["http_PROPPATCH"]
 from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.web2 import responsecode
-from twisted.web2.http import HTTPError, StatusResponse
+from twisted.web2.http import StatusResponse
 from twisted.web2.dav import davxml
-from twisted.web2.dav.http import MultiStatusResponse, PropStatResponseQueue
+from twisted.web2.dav.http import ResponseQueue
 from twisted.web2.dav.util import davXMLFromStream
 
 def http_PROPPATCH(self, request):
@@ -69,10 +69,8 @@ def http_PROPPATCH(self, request):
             log.err(error)
             return StatusResponse(responsecode.BAD_REQUEST, error)
 
-        responses = PropStatResponseQueue("PROPPATCH", request.uri, responsecode.NO_CONTENT)
+        responses = ResponseQueue(self.fp.path, "PROPPATCH", responsecode.NO_CONTENT)
         undo_actions = []
-
-        got_an_error = [False]
 
         try:
             #
@@ -87,9 +85,9 @@ def http_PROPPATCH(self, request):
 
                 properties = container.children
 
-                def do(action, property):
+                def do(action, property, request):
                     #
-                    # Perform action(property, request) while maintaining an
+                    # Perform action(property, request) while maintaining the
                     # undo queue.
                     #
                     if self.hasProperty(property, request):
@@ -99,34 +97,20 @@ def http_PROPPATCH(self, request):
                         def undo(): self.removeProperty(property, request)
 
                     try:
-                        propitem = davxml.lookupElement(property.qname())()
-                    except KeyError:
-                        class UnknownElement (davxml.WebDAVUnknownElement):
-                            namespace = property.qname()[0]
-                            name      = property.qname()[1]
-                        propitem = UnknownElement()
-
-                    try:
                         action(property, request)
-                    except ValueError, e:
-                        # Convert ValueError exception into HTTPError
-                        responses.add(Failure(exc_value=HTTPError(StatusResponse(responsecode.FORBIDDEN, str(e)))), davxml.PropertyContainer(propitem))
-                        got_an_error[0] = True
                     except:
-                        responses.add(Failure(), davxml.PropertyContainer(propitem))
-                        got_an_error[0] = True
+                        responses.add(self.fp.path, Failure())
                     else:
-                        responses.add(responsecode.OK, davxml.PropertyContainer(propitem))
-                        
-                        # Only add undo for those that succeed because those that fail will not have changed               
-                        undo_actions.append(undo)
+                        responses.add(self.fp.path, responsecode.OK)                        
+
+                    undo_actions.append(undo)
 
                 if isinstance(set_or_remove, davxml.Set):
                     for property in properties:
-                        do(self.writeProperty, property)
+                        do(self.writeProperty, property, request)
                 elif isinstance(set_or_remove, davxml.Remove):
                     for property in properties:
-                        do(self.removeProperty, property)
+                        do(self.removeProperty, property, request)
                 else:
                     raise AssertionError("Unknown child of PropertyUpdate: %s"
                                          % (set_or_remove,))
@@ -139,16 +123,10 @@ def http_PROPPATCH(self, request):
             for action in undo_actions: action()
             raise
 
-        # If we had an error we need to undo any changes that did succeed and change status of
-        # those to 424 Failed Dependency.
-        if got_an_error[0]:
-            for action in undo_actions: action()
-            responses.error()
-
         #
         # Return response
         #
-        return MultiStatusResponse([responses.response()])
+        return responses.response()
 
     def gotError(f):
         log.err("Error while handling PROPPATCH body: %s" % (f,))
