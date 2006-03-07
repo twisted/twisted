@@ -46,11 +46,18 @@ class DAVPrincipalResource (DAVLeafResource):
     # WebDAV
     ##
 
+    liveProperties = DAVLeafResource.liveProperties + (
+        (dav_namespace, "alternate-uri-set"),
+        (dav_namespace, "principal-url"    ),
+        (dav_namespace, "group-member-set" ),
+        (dav_namespace, "group-membership" ),
+    )
+
     def davComplianceClasses(self):
         return ("1",)
 
     def isCollection(self):
-        return True
+        return False
 
     def findChildren(self, depth):
         return ()
