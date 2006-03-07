@@ -138,7 +138,7 @@ class AlternateURISet (WebDAVElement):
     Property which contains the URIs of network resources with additional
     descriptive information about the principal. (RFC 3744, section 4.1)
     """
-    name = "alternate-URI-set"
+    name = "alternate-uri-set"
     hidden = True
     protected = True
 
@@ -149,7 +149,7 @@ class PrincipalURL (WebDAVElement):
     Property which contains the URL that must be used to identify this principal
     in an ACL request. (RFC 3744, section 4.2)
     """
-    name = "principal-URL"
+    name = "principal-url"
     hidden = True
     protected = True
 
