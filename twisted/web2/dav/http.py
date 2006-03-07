@@ -39,7 +39,7 @@ from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.web2 import responsecode
 from twisted.web2.iweb import IResponse
-from twisted.web2.http import Response, HTTPError
+from twisted.web2.http import Response, HTTPError, StatusResponse
 from twisted.web2.http_headers import MimeType
 from twisted.web2.stream import MemoryStream
 from twisted.web2.dav import davxml
@@ -133,10 +133,12 @@ class ResponseQueue (object):
 
         if type(what) is int:
             code    = what
+            error   = None
             message = responsecode.RESPONSES[code]
         elif isinstance(what, Failure):
             code    = statusForFailure(what)
-            message = str(what)
+            error   = errorForFailure(what)
+            message = messageForFailure(what)
         else:
             raise AssertionError("Unknown data type: %r" % (what,))
 
@@ -145,19 +147,20 @@ class ResponseQueue (object):
 
         uri = path[self.path_basename_len:]
 
-        self.responses.append(
-            davxml.StatusResponse(
-                davxml.HRef.fromString(uri),
-                davxml.Status.fromResponseCode(code),
-                davxml.ResponseDescription.fromString(message)
-            )
-        )
+        children = []
+        children.append(davxml.HRef.fromString(uri))
+        children.append(davxml.Status.fromResponseCode(code))
+        if error is not None:
+            children.append(error)
+        if message is not None:
+            children.append(davxml.ResponseDescription.fromString(message))
+        self.responses.append(davxml.StatusResponse(*children))
 
     def response(self):
         """
-        Generate a L{MultiStatusResponse} with the responses contained in the queue
-        or, if no such responses, return the C{success_response} provided to
-        L{__init__}.
+        Generate a L{MultiStatusResponse} with the responses contained in the
+        queue or, if no such responses, return the C{success_response} provided
+        to L{__init__}.
         @return: the response.
         """
         if self.responses:
@@ -202,3 +205,17 @@ def statusForFailure(failure, what=None):
         return code
     else:
         failure.raiseException()
+
+def errorForFailure(failure):
+    if failure.check(HTTPError) and isinstance(failure.value.response, ErrorResponse):
+        return davxml.Error(failure.value.response.error)
+    else:
+        return None
+
+def messageForFailure(failure):
+    if failure.check(HTTPError):
+        if isinstance(failure.value.response, ErrorResponse):
+            return None
+        if isinstance(failure.value.response, StatusResponse):
+            return failure.value.response.description
+    return str(failure)
