@@ -26,7 +26,7 @@
 WebDAV ACL resources.
 """
 
-__all__ = ["DAVPrincipalCollection", "DAVPrincipalResource"]
+__all__ = ["DAVPrincipalResource"]
 
 from zope.interface import implements
 from twisted.web2.resource import LeafResource
@@ -34,25 +34,7 @@ from twisted.web2.dav import davxml
 from twisted.web2.dav.davxml import dav_namespace
 from twisted.web2.dav.idav import IDAVPrincipalResource
 from twisted.web2.dav.resource import DAVResource, DAVLeafResource
-
-class DAVPrincipalCollection (DAVResource):
-    """
-    Collection resource which contains principal resources.
-    """
-    def davComplianceClasses(self):
-        return ("1",)
-
-    def isCollection(self):
-        return True
-
-    def findChildren(self, depth):
-        if depth != "0":
-            raise HTTPError(StatusResponse(
-                responsecode.FORBIDDEN,
-                "PROFIND with depth %s is not allowed in principal collection resources" % (depth,)
-            ))
-
-        return ()
+from twisted.web2.dav.util import unimplemented
 
 class DAVPrincipalResource (DAVLeafResource):
     """
@@ -118,7 +100,7 @@ class DAVPrincipalResource (DAVLeafResource):
         This implementation raises L{NotImplementedError}.  Subclasses must
         override this method to provide the principal URL for this resource.
         """
-        raise NotImplementedError("Subclass must implement principalURL()")
+        unimplemented(self)
 
     def groupMembers(self):
         """
@@ -137,5 +119,5 @@ class DAVPrincipalResource (DAVLeafResource):
         This implementation raises L{NotImplementedError}.  Subclasses must
         override this method to provide the group URLs for this resource.
         """
-        raise NotImplementedError("Subclass must implement groups()")
+        unimplemented(self)
   

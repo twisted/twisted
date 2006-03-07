@@ -46,6 +46,7 @@ from twisted.web2.static import MetaDataMixin, StaticRenderMixin
 from twisted.web2.dav import davxml
 from twisted.web2.dav.davxml import dav_namespace, lookupElement
 from twisted.web2.dav.idav import IDAVResource
+from twisted.web2.dav.util import unimplemented
 
 twisted_dav_namespace = "http://twistedmatrix.com/xml_namespace/dav/"
 
@@ -81,7 +82,7 @@ class DAVPropertyMixIn (MetaDataMixin):
             as returned by L{davxml.WebDAVElement.qname()} and values are
             L{davxml.WebDAVElement} instances.
         """
-        raise NotImplementedError("Subclass must implement deadProperties()")
+        unimplemented(self)
 
     def hasProperty(self, property, request):
         """
@@ -273,7 +274,7 @@ class DAVResource (DAVPropertyMixIn, StaticRenderMixin):
         This implementation raises L{NotImplementedError}; a subclass must
         override this method.
         """
-        raise NotImplementedError("Subclass must implement isCollection()")
+        unimplemented(self)
 
     def findChildren(self, depth):
         """
@@ -285,7 +286,7 @@ class DAVResource (DAVPropertyMixIn, StaticRenderMixin):
         if depth == "0" or not self.isCollection():
             return ()
         else:
-            raise NotImplementedError("Subclass must implement findChildren()")
+            unimplemented(self)
 
     def davComplianceClasses(self):
         """
@@ -293,7 +294,7 @@ class DAVResource (DAVPropertyMixIn, StaticRenderMixin):
         @return: a sequence of strings denoting WebDAV compliance classes.  For
             example, a DAV level 2 server might return ("1", "2").
         """
-        raise NotImplementedError("Subclass must implement davComplianceClasses()")
+        unimplemented(self)
 
     def renderHTTP(self, request):
 

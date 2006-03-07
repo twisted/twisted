@@ -162,6 +162,15 @@ def parentForURL(url):
 # Python magic
 ##
 
+def unimplemented(obj):
+    """
+    Throw an exception signifying that the current method is unimplemented
+    and should not have been invoked.
+    """
+    import inspect
+    caller = inspect.getouterframes(inspect.currentframe())[1][3]
+    raise NotImplementedError("Method %s is unimplemented in subclass %s" % (caller, obj.__class__))
+
 def bindMethods(module, clazz, prefixes=("http_", "report_")):
     """
     Binds all functions in the given module (as defined by that module's
