@@ -2,7 +2,7 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-CONTINUE                       = 100
+CONTINUE                        = 100
 SWITCHING                       = 101
 
 OK                              = 200
@@ -40,6 +40,9 @@ REQUEST_URI_TOO_LONG            = 414
 UNSUPPORTED_MEDIA_TYPE          = 415
 REQUESTED_RANGE_NOT_SATISFIABLE = 416
 EXPECTATION_FAILED              = 417
+UNPROCESSABLE_ENTITY            = 422 # RFC 2518
+LOCKED                          = 423 # RFC 2518
+FAILED_DEPENDENCY               = 424 # RFC 2518
 
 INTERNAL_SERVER_ERROR           = 500
 NOT_IMPLEMENTED                 = 501
@@ -94,6 +97,9 @@ RESPONSES = {
     UNSUPPORTED_MEDIA_TYPE: "Unsupported Media Type",
     REQUESTED_RANGE_NOT_SATISFIABLE: "Requested Range not satisfiable",
     EXPECTATION_FAILED: "Expectation Failed",
+    UNPROCESSABLE_ENTITY: "Unprocessable Entity",
+    LOCKED: "Locked",
+    FAILED_DEPENDENCY: "Failed Dependency",
 
     # 500
     INTERNAL_SERVER_ERROR: "Internal Server Error",
