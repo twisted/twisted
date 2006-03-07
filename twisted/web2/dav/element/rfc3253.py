@@ -41,6 +41,7 @@ class Error (WebDAVElement):
     Specifies an error condition. (RFC 3253, section 1.6)
     """
     # FIXME: RFC 3253 doesn't quite seem to define this element...
+    # FIXME: Move when we update to RFC 2518bis
     name = "error"
 
     allowed_children = { WebDAVElement: (0, None) }

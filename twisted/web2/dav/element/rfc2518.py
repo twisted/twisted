@@ -210,6 +210,7 @@ class Response (WebDAVElement):
         (dav_namespace, "href"               ): (1, None),
         (dav_namespace, "status"             ): (1, 1),
         (dav_namespace, "propstat"           ): (1, None),
+        (dav_namespace, "error"              ): (0, 1),        # 2518bis
         (dav_namespace, "responsedescription"): (0, 1),
     }
 
@@ -254,6 +255,7 @@ class StatusResponse (Response):
     allowed_children = {
         (dav_namespace, "href"               ): (1, None),
         (dav_namespace, "status"             ): (1, 1),
+        (dav_namespace, "error"              ): (0, 1),        # 2518bis
         (dav_namespace, "responsedescription"): (0, 1),
     }
 
@@ -266,6 +268,7 @@ class PropertyStatusResponse (Response):
     allowed_children = {
         (dav_namespace, "href"               ): (1, 1),
         (dav_namespace, "propstat"           ): (1, None),
+        (dav_namespace, "error"              ): (0, 1),        # 2518bis
         (dav_namespace, "responsedescription"): (0, 1),
     }
 
@@ -279,6 +282,7 @@ class PropertyStatus (WebDAVElement):
     allowed_children = {
         (dav_namespace, "prop"               ): (1, 1),
         (dav_namespace, "status"             ): (1, 1),
+        (dav_namespace, "error"              ): (0, 1),        # 2518bis
         (dav_namespace, "responsedescription"): (0, 1),
     }
 
