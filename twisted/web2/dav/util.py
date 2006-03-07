@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.web2.test.test_util -*-
 ##
 # Copyright (c) 2005 Apple Computer, Inc. All rights reserved.
 #
