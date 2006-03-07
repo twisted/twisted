@@ -34,14 +34,14 @@ class IDAVResource(IResource):
     """
     WebDAV resource.
     """
-    def isCollection(self):
+    def isCollection():
         """
         Checks whether this resource is a collection resource.
         @return: C{True} if this resource is a collection resource, C{False}
             otherwise.
         """
 
-    def findChildren(self, depth):
+    def findChildren(depth):
         """
         Returns an iterable of child resources for the given depth.
         Because resources do not know their request URIs, chidren are returned
@@ -51,7 +51,7 @@ class IDAVResource(IResource):
         @return: an iterable of tuples C{(resource, uri)}.
         """
 
-    def hasProperty(self, property, request):
+    def hasProperty(property, request):
         """
         Checks whether the given property is defined on this resource.
         @param property: an empty L{davxml.WebDAVElement} instance or a qname
@@ -60,7 +60,7 @@ class IDAVResource(IResource):
             otherwise.
         """
 
-    def readProperty(self, property, request):
+    def readProperty(property, request):
         """
         Reads the given property on this resource.
         @param property: an empty L{davxml.WebDAVElement} instance or a qname
@@ -72,7 +72,7 @@ class IDAVResource(IResource):
             resource.
         """
 
-    def writeProperty(self, property, request):
+    def writeProperty(property, request):
         """
         Writes the given property on this resource.
         @param property: a L{davxml.WebDAVElement} instance.
@@ -80,7 +80,7 @@ class IDAVResource(IResource):
             L{responsecode.CONFLICT}) if C{property} is a read-only property.
         """
 
-    def removeProperty(self, property, request):
+    def removeProperty(property, request):
         """
         Removes the given property from this resource.
         @param property: a L{davxml.WebDAVElement} instance or a qname tuple.
@@ -89,14 +89,14 @@ class IDAVResource(IResource):
             if the property does not exist.
         """
 
-    def listProperties(self, request):
+    def listProperties(request):
         """
         @return: an iterable of qnames for all properties defined for this
             resource.
         """
 
 class IDAVPrincipalResource (IDAVResource):
-    def alternateURIs(self):
+    def alternateURIs():
         """
         Provides the URIs of network resources with additional descriptive
         information about the principal, for example, a URI to an LDAP record.
@@ -104,21 +104,21 @@ class IDAVPrincipalResource (IDAVResource):
         @return: a iterable of URIs.
         """
 
-    def principalURL(self):
+    def principalURL():
         """
         Provides the URL which must be used to identify this principal in ACL
         requests.  (RFC 3744, section 4.2)
         @return: a URL.
         """
 
-    def groupMembers(self):
+    def groupMembers():
         """
         Provides the principal URLs of principals that are direct members of
         this (group) principal.  (RFC 3744, section 4.3)
         @return: a iterable of principal URLs.
         """
 
-    def groupMemberships(self):
+    def groupMemberships():
         """
         Provides the URLs of the group principals in which the principal is
         directly a member.  (RFC 3744, section 4.4)
