@@ -32,9 +32,9 @@ __all__ = ["http_PROPPATCH"]
 from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.web2 import responsecode
-from twisted.web2.http import StatusResponse
+from twisted.web2.http import HTTPError, StatusResponse
 from twisted.web2.dav import davxml
-from twisted.web2.dav.http import ResponseQueue
+from twisted.web2.dav.http import MultiStatusResponse, PropertyStatusResponseQueue
 from twisted.web2.dav.util import davXMLFromStream
 
 def http_PROPPATCH(self, request):
@@ -69,64 +69,93 @@ def http_PROPPATCH(self, request):
             log.err(error)
             return StatusResponse(responsecode.BAD_REQUEST, error)
 
-        responses = ResponseQueue(self.fp.path, "PROPPATCH", responsecode.NO_CONTENT)
-        undo_actions = []
+        responses = PropertyStatusResponseQueue("PROPPATCH", request.uri, responsecode.NO_CONTENT)
+        undoActions = []
+
+        gotError = False
 
         try:
             #
             # Update properties
             #
-            for set_or_remove in update.children:
-                assert len(set_or_remove.children) == 1
+            for setOrRemove in update.children:
+                assert len(setOrRemove.children) == 1
 
-                container = set_or_remove.children[0]
+                container = setOrRemove.children[0]
 
                 assert isinstance(container, davxml.PropertyContainer)
 
                 properties = container.children
 
-                def do(action, property, request):
+                def do(action, property):
                     #
-                    # Perform action(property, request) while maintaining the
+                    # Perform action(property, request) while maintaining an
                     # undo queue.
                     #
                     if self.hasProperty(property, request):
-                        old_property = self.readProperty(property, request)
-                        def undo(): self.writeProperty(old_property, request)
+                        oldProperty = self.readProperty(property, request)
+                        def undo(): self.writeProperty(oldProperty, request)
                     else:
                         def undo(): self.removeProperty(property, request)
 
                     try:
+                        Property = davxml.lookupElement(property.qname())
+                    except KeyError:
+                        class Property (davxml.WebDAVUnknownElement):
+                            namespace = property.qname()[0]
+                            name      = property.qname()[1]
+
+                    try:
                         action(property, request)
+                    except ValueError, e:
+                        # Convert ValueError exception into HTTPError
+                        responses.add(
+                            Failure(exc_value=HTTPError(StatusResponse(responsecode.FORBIDDEN, str(e)))),
+                            davxml.PropertyContainer(Property())
+                        )
+                        return False
                     except:
-                        responses.add(self.fp.path, Failure())
+                        responses.add(Failure(), davxml.PropertyContainer(Property()))
+                        return False
                     else:
-                        responses.add(self.fp.path, responsecode.OK)                        
+                        responses.add(responsecode.OK, davxml.PropertyContainer(Property()))
 
-                    undo_actions.append(undo)
+                        # Only add undo action for those that succeed because those that fail will not have changed               
+                        undoActions.append(undo)
 
-                if isinstance(set_or_remove, davxml.Set):
+                        return True
+
+                if isinstance(setOrRemove, davxml.Set):
                     for property in properties:
-                        do(self.writeProperty, property, request)
-                elif isinstance(set_or_remove, davxml.Remove):
+                        if not do(self.writeProperty, property):
+                            gotError = True
+                elif isinstance(setOrRemove, davxml.Remove):
                     for property in properties:
-                        do(self.removeProperty, property, request)
+                        if not do(self.removeProperty, property):
+                            gotError = True
                 else:
-                    raise AssertionError("Unknown child of PropertyUpdate: %s"
-                                         % (set_or_remove,))
+                    raise AssertionError("Unknown child of PropertyUpdate: %s" % (setOrRemove,))
         except:
             #
             # If there is an error, we have to back out whatever we have
             # operations we have done because PROPPATCH is an
             # all-or-nothing request.
             #
-            for action in undo_actions: action()
+            for action in undoActions:
+                action()
             raise
+
+        # If we had an error we need to undo any changes that did succeed and change status of
+        # those to 424 Failed Dependency.
+        if gotError:
+            for action in undoActions:
+                action()
+            responses.error()
 
         #
         # Return response
         #
-        return responses.response()
+        return MultiStatusResponse([responses.response()])
 
     def gotError(f):
         log.err("Error while handling PROPPATCH body: %s" % (f,))
