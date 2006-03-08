@@ -153,7 +153,7 @@ class PrincipalURL (WebDAVElement):
     hidden = True
     protected = True
 
-    allowed_children = { (dav_namespace, "href"): (1, 1) }
+    allowed_children = { (dav_namespace, "href"): (0, 1) }
 
 class GroupMemberSet (WebDAVElement):
     """
