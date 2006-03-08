@@ -187,7 +187,8 @@ class DAVPropertyMixIn (MetaDataMixin):
         qnames = list(self.liveProperties)
 
         for qname in self.deadProperties().list():
-            qnames.append(qname)
+            if qname not in qnames:
+                qnames.append(qname)
 
         return qnames
 
