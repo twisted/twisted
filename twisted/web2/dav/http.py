@@ -189,11 +189,8 @@ class PropertyStatusResponseQueue (object):
         """
         Add a response.
         @param what: a status code or a L{Failure} for the given path.
-        @param property: the property whose status is being reported.  This must
-            be an empty element (C{len(property.children) == 0}).
+        @param property: the property whose status is being reported.
         """
-        assert len(property.children) == 0, "Property %s is not empty." % (property.toxml(),)
-
         if type(what) is int:
             code    = what
             error   = None
@@ -204,6 +201,10 @@ class PropertyStatusResponseQueue (object):
             message = messageForFailure(what)
         else:
             raise AssertionError("Unknown data type: %r" % (what,))
+
+        if len(property.children) > 0:
+            # Re-instantiate as empty element.
+            property = property.__class__()
 
         if code > 400: # Error codes only
             log.err("Error during %s for %s: %s" % (self.method, property, message))

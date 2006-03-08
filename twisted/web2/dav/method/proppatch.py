@@ -99,26 +99,19 @@ def http_PROPPATCH(self, request):
                         def undo(): self.removeProperty(property, request)
 
                     try:
-                        Property = davxml.lookupElement(property.qname())
-                    except KeyError:
-                        class Property (davxml.WebDAVUnknownElement):
-                            namespace = property.qname()[0]
-                            name      = property.qname()[1]
-
-                    try:
                         action(property, request)
                     except ValueError, e:
                         # Convert ValueError exception into HTTPError
                         responses.add(
                             Failure(exc_value=HTTPError(StatusResponse(responsecode.FORBIDDEN, str(e)))),
-                            Property()
+                            property
                         )
                         return False
                     except:
-                        responses.add(Failure(), Property())
+                        responses.add(Failure(), property)
                         return False
                     else:
-                        responses.add(responsecode.OK, Property())
+                        responses.add(responsecode.OK, property)
 
                         # Only add undo action for those that succeed because those that fail will not have changed               
                         undoActions.append(undo)
