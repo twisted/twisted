@@ -111,14 +111,14 @@ def http_PROPPATCH(self, request):
                         # Convert ValueError exception into HTTPError
                         responses.add(
                             Failure(exc_value=HTTPError(StatusResponse(responsecode.FORBIDDEN, str(e)))),
-                            davxml.PropertyContainer(Property())
+                            Property()
                         )
                         return False
                     except:
-                        responses.add(Failure(), davxml.PropertyContainer(Property()))
+                        responses.add(Failure(), Property())
                         return False
                     else:
-                        responses.add(responsecode.OK, davxml.PropertyContainer(Property()))
+                        responses.add(responsecode.OK, Property())
 
                         # Only add undo action for those that succeed because those that fail will not have changed               
                         undoActions.append(undo)

@@ -192,7 +192,7 @@ class PropertyStatusResponseQueue (object):
         @param property: the property whose status is being reported.  This must
             be an empty element (C{len(property.children) == 0}).
         """
-        assert len(property.children) == 0
+        assert len(property.children) == 0, "Property %s is not empty." % (property.toxml(),)
 
         if type(what) is int:
             code    = what
@@ -209,7 +209,7 @@ class PropertyStatusResponseQueue (object):
             log.err("Error during %s for %s: %s" % (self.method, property, message))
 
         children = []
-        children.append(property)
+        children.append(davxml.PropertyContainer(property))
         children.append(davxml.Status.fromResponseCode(code))
         if error is not None:
             children.append(error)
