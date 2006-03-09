@@ -29,6 +29,8 @@ See RFC 2616: http://www.ietf.org/rfc/rfc2616.txt (HTTP)
 See RFC 2518: http://www.ietf.org/rfc/rfc2518.txt (WebDAV)
 See RFC 3253: http://www.ietf.org/rfc/rfc3253.txt (WebDAV Versioning Extentions)
 See RFC 3744: http://www.ietf.org/rfc/rfc3744.txt (WebDAV Access Control Protocol)
+
+See also: http://skrb.org/ietf/http_errata.html (Errata to RFC 2616)
 """
 
 __version__ = 'SVN-Trunk'
