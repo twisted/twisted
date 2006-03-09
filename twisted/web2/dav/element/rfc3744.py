@@ -131,7 +131,16 @@ class Principal (WebDAVElement):
         (dav_namespace, "self"           ): (0, 1),
     }
 
-    def __init__(self): raise NotImplementedError()
+    def __init__(self, *children, **attributes):
+        super(Principal, self).__init__(*children, **attributes)
+
+        if len(self.children) != 1:
+            raise ValueError(
+                "Exactly one of DAV:href, DAV:all, DAV:authenticated, "
+                "DAV:unauthenticated, DAV:property or DAV:self is required for "
+                "%s, got: %r"
+                % (self.sname(), self.children)
+            )
 
 class AlternateURISet (WebDAVElement):
     """
@@ -282,7 +291,42 @@ class ACE (WebDAVElement):
         (dav_namespace, "inherited"): (0, 1),
     }
 
-    def __init__(self): raise NotImplementedError()
+    def __init__(self, *children, **attributes):
+        super(ACE, self).__init__(*children, **attributes)
+
+        principalOrInvert = False
+        grantOrDeny       = False
+
+        for child in self.children:
+            namespace, name = child.qname()
+
+            if name in ("principal", "invert"):
+                if principalOrInvert:
+                    raise ValueError(
+                        "Only one of DAV:principal or DAV:invert allowed in %s, got: %s"
+                        % (self.sname(), self.children)
+                    )
+                principalOrInvert = True
+
+            if name in ("grant", "deny"):
+                if grantOrDeny:
+                    raise ValueError(
+                        "Only one of DAV:grant or DAV:deny allowed in %s, got: %s"
+                        % (self.sname(), self.children)
+                    )
+                grantOrDeny = True
+
+        if not principalOrInvert:
+            raise ValueError(
+                "One of DAV:principal or DAV:invert is required in %s, got: %s"
+                % (self.sname(), self.children)
+            )
+
+        if not grantOrDeny:
+            raise ValueError(
+                "One of DAV:grant or DAV:deny is required in %s, got: %s"
+                % (self.sname(), self.children)
+            )
 
 # For DAV:principal element (RFC 3744, section 5.5.1) see Principal class above.
 
@@ -290,13 +334,13 @@ class ACE (WebDAVElement):
 
 class Authenticated (WebDAVEmptyElement):
     """
-    Principal which matches authenticaed users. (RFC 3744, section 5.5.1)
+    Principal which matches authenticated users. (RFC 3744, section 5.5.1)
     """
     name = "authenticated"
 
 class Unauthenticated (WebDAVEmptyElement):
     """
-    Principal which matches unauthenticaed users. (RFC 3744, section 5.5.1)
+    Principal which matches unauthenticated users. (RFC 3744, section 5.5.1)
     """
     name = "unauthenticated"
 
@@ -404,7 +448,20 @@ class RequiredPrincipal (WebDAVElement):
         (dav_namespace, "property"       ): (0, None),
     }
 
-    def __init__(self): raise NotImplementedError()
+    def __init__(self, *children, **attributes):
+        super(RequiredPrincipal, self).__init__(*children, **attributes)
+
+        type = None
+
+        for child in self.children:
+            if type is None:
+                type = child.qname()
+            elif child.qname() != type:
+                raise ValueError(
+                    "Only one of DAV:all, DAV:authenticated, DAV:unauthenticated, "
+                    "DAV:self, DAV:href or DAV:property allowed for %s, got: %s"
+                    % (self.sname(), self.children)
+                )
 
 class InheritedACLSet (WebDAVElement):
     """
@@ -468,7 +525,19 @@ class ACLPrincipalPropSet (WebDAVElement):
 
     allowed_children = { WebDAVElement: (0, None) }
 
-    def __init__(self): raise NotImplementedError()
+    def __init__(self, *children, **attributes):
+        super(ACLPrincipalPropSet, self).__init__(*children, **attributes)
+
+        prop = False
+        
+        for child in self.children:
+            if child.qname() == (dav_namespace, "prop"):
+                if prop:
+                    raise ValueError(
+                        "Only one DAV:prop allowed for %s, got: %s"
+                        % (self.sname(), self.children)
+                    )
+                prop = True
 
 class PrincipalMatch (WebDAVElement):
     """
@@ -484,7 +553,27 @@ class PrincipalMatch (WebDAVElement):
         (dav_namespace, "prop"              ): (0, 1),
     }
 
-    def __init__(self): raise NotImplementedError()
+    def __init__(self, *children, **attributes):
+        super(PrincipalMatch, self).__init__(*children, **attributes)
+
+        principalPropertyOrSelf = False
+
+        for child in self.children:
+            namespace, name = child.qname()
+
+            if name in ("principal-property", "self"):
+                if principalPropertyOrSelf:
+                    raise ValueError(
+                        "Only one of DAV:principal-property or DAV:self allowed in %s, got: %s"
+                        % (self.sname(), self.children)
+                    )
+                principalPropertyOrSelf = True
+
+        if not principalPropertyOrSelf:
+            raise ValueError(
+                "One of DAV:principal-property or DAV:self is required in %s, got: %s"
+                % (self.sname(), self.children)
+            )
 
 class PrincipalProperty (WebDAVElement):
     """

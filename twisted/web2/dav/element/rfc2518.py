@@ -387,7 +387,7 @@ class KeepAlive (WebDAVElement):
 
         type = None
 
-        for child in children:
+        for child in self.children:
             if type is None:
                 type = child.qname()
             elif child.qname() != type:
@@ -455,7 +455,7 @@ class PropertyFind (WebDAVElement):
 
         if len(self.children) != 1:
             raise ValueError(
-                "Exactly one of DAV:allprop, DAV:propname, DAV:prop required for %s, got: %r"
+                "Exactly one of DAV:allprop, DAV:propname or DAV:prop is required for %s, got: %r"
                 % (self.sname(), self.children)
             )
 
