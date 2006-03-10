@@ -134,7 +134,7 @@ class Principal (WebDAVElement):
     def __init__(self, *children, **attributes):
         super(Principal, self).__init__(*children, **attributes)
 
-        if len(self.children) != 1:
+        if len(self.children) > 1:
             raise ValueError(
                 "Exactly one of DAV:href, DAV:all, DAV:authenticated, "
                 "DAV:unauthenticated, DAV:property or DAV:self is required for "
