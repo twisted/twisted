@@ -294,39 +294,59 @@ class ACE (WebDAVElement):
     def __init__(self, *children, **attributes):
         super(ACE, self).__init__(*children, **attributes)
 
-        principalOrInvert = False
-        grantOrDeny       = False
+        self.principal   = None
+        self.invert      = None
+        self.allow       = None
+        self.priviledges = None
+        self.inherited   = None
+        self.protected   = False
 
         for child in self.children:
             namespace, name = child.qname()
 
+            assert namespace == dav_namespace
+
             if name in ("principal", "invert"):
-                if principalOrInvert:
+                if self.principal is not None:
                     raise ValueError(
                         "Only one of DAV:principal or DAV:invert allowed in %s, got: %s"
                         % (self.sname(), self.children)
                     )
-                principalOrInvert = True
+                if name == "invert":
+                    self.invert    = True
+                    self.principal = child.children[0]
+                else:
+                    self.invert    = False
+                    self.principal = child
 
-            if name in ("grant", "deny"):
-                if grantOrDeny:
+            elif name in ("grant", "deny"):
+                if allow is not None:
                     raise ValueError(
                         "Only one of DAV:grant or DAV:deny allowed in %s, got: %s"
                         % (self.sname(), self.children)
                     )
-                grantOrDeny = True
+                self.allow       = (name == "grant")
+                self.priviledges = child.children
 
-        if not principalOrInvert:
+            elif name == "inherited":
+                self.inherited = str(child.children[0])
+
+            elif name == "protected":
+                self.protected = True
+
+        if self.principal is None:
             raise ValueError(
                 "One of DAV:principal or DAV:invert is required in %s, got: %s"
                 % (self.sname(), self.children)
             )
+        assert self.invert is not None
 
-        if not grantOrDeny:
+        if self.allow is None:
             raise ValueError(
                 "One of DAV:grant or DAV:deny is required in %s, got: %s"
                 % (self.sname(), self.children)
             )
+        assert self.priviledges is not None
 
 # For DAV:principal element (RFC 3744, section 5.5.1) see Principal class above.
 
@@ -360,7 +380,7 @@ class Invert (WebDAVEmptyElement):
     """
     name = "invert"
 
-    allowed_children = { (dav_namespace, "principal"): (1, None) }
+    allowed_children = { (dav_namespace, "principal"): (1, 1) }
 
 class Grant (WebDAVElement):
     """
