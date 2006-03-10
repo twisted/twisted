@@ -566,13 +566,14 @@ class DeferredModelTestCase(unittest.TestCase):
         channel.site = FakeSite(_TestPage())
         request = channel.makeFakeRequest('/')
 
-        while not request.finished:
-            reactor.iterate()
-        
-        dom = microdom.parseXMLString(request.written.getvalue())
-        spanElems = domhelpers.findNodesNamed(dom, 'span')
-        for spanElem in spanElems:
-            self.failUnlessEqual('The Result', spanElem.childNodes[0].data)
+        d = request.notifyFinish()
+        def check(_):
+            dom = microdom.parseXMLString(request.written.getvalue())
+            spanElems = domhelpers.findNodesNamed(dom, 'span')
+            for spanElem in spanElems:
+                self.failUnlessEqual('The Result', spanElem.childNodes[0].data)
+                
+        return d.addCallback(check)
         
 
 class MyMacroPage(page.Page):
