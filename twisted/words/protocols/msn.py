@@ -1801,6 +1801,9 @@ class SwitchboardClient(MSNEventBase):
                     continue
             if self._checkFileInvitation(message, info) or self._checkFileInfo(message, info) or self._checkFileResponse(message, info):
                 return 0
+        elif 'text/x-clientcaps' in cTypes:
+            # do something with capabilities
+            return 0
         return 1
 
     # negotiation

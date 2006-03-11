@@ -253,6 +253,11 @@ class MessageHandlingTests(unittest.TestCase):
     def tearDown(self):
         self.client = None
 
+    def testClientCapabilitiesCheck(self):
+        m = msn.MSNMessage()
+        m.setHeader('Content-Type', 'text/x-clientcaps')
+        self.assertEquals(self.client.checkMessage(m), 0, 'Failed to detect client capability message')
+        
     def testTypingCheck(self):
         m = msn.MSNMessage()
         m.setHeader('Content-Type', 'text/x-msmsgscontrol')
