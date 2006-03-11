@@ -95,7 +95,31 @@ class IDAVResource(IResource):
             resource.
         """
 
+    def principalCollections():
+        """
+        Provides the URIs of collection resources which contain principal
+        resources which may be used in access control entries on this resource.
+        (RFC 3744, section 5.8)
+        @return: an iterable of URIs referring to collection resources which
+            implement the C{DAV:principal-property-search} C{REPORT}.
+        """
+
+    def accessControlList():
+        """
+        @return: the L{davxml.ACL} element containing the access control list
+            for this resource.
+        """
+
+    def supportedPrivileges():
+        """
+        @return: a sequence of the access control privileges which are
+            supported by this resource.
+        """
+
 class IDAVPrincipalResource (IDAVResource):
+    """
+    WebDAV principal resource.  (RFC 3744, section 2)
+    """
     def alternateURIs():
         """
         Provides the URIs of network resources with additional descriptive

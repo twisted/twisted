@@ -269,6 +269,10 @@ class DAVPropertyMixIn (MetaDataMixin):
 class DAVResource (DAVPropertyMixIn, StaticRenderMixin):
     implements(IDAVResource)
 
+    ##
+    # DAV
+    ##
+
     def davComplianceClasses(self):
         """
         This implementation raises L{NotImplementedError}.
@@ -298,28 +302,31 @@ class DAVResource (DAVPropertyMixIn, StaticRenderMixin):
         else:
             unimplemented(self)
 
-    def principalCollections():
+    ##
+    # ACL
+    ##
+
+    def principalCollections(self):
         """
         See L{IDAVAccessControlList.principalCollections}.
         """
         return ()
 
-    def elements():
+    def accessControlList(self):
         """
-        See L{IDAVAccessControlList.elements}.
+        See L{IDAVAccessControlList.accessControlList}.
         """
-        return ()
+        return allACL
 
-    def supportedPriviledges():
+    def supportedPrivileges(self):
         """
-        See L{IDAVAccessControlList.supportedPriviledges}.
+        See L{IDAVAccessControlList.supportedPrivileges}.
         """
-        return davxml.SupportedPrivilegeSet(
-            davxml.SupportedPrivilege(
-                davxml.All(),
-                davxml.Description("All access")
-            )
-        )
+        return allPrivilegeSet
+
+    ##
+    # HTTP
+    ##
 
     def renderHTTP(self, request):
 
@@ -368,3 +375,22 @@ class DAVLeafResource (DAVResource, LeafResource):
     """
     def findChildren(self, depth):
         return ()
+
+##
+# Utilities
+##
+
+allACL = davxml.ACL(
+    davxml.ACE(
+        davxml.Principal(davxml.All()),
+        davxml.Grant(davxml.Privilege(davxml.All())),
+        davxml.Protected()
+    )
+)
+
+allPrivilegeSet = davxml.SupportedPrivilegeSet(
+    davxml.SupportedPrivilege(
+        davxml.Privilege(davxml.All()),
+        davxml.Description("All access", **{"xml:lang": "en"})
+    )
+)
