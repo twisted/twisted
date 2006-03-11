@@ -13,3 +13,4 @@ class One(pb.Root):
 
 from twisted.internet import reactor
 reactor.listenTCP(8800, pb.PBServerFactory(One()))
+reactor.run()
