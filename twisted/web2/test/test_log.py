@@ -1,5 +1,5 @@
 from twisted.trial import unittest
-from twisted.web2 import log, iweb, resource
+from twisted.web2 import log, iweb, resource, http
 from twisted.web2.test.test_server import BaseCase, BaseTestResource
 
 from twisted.python import log as tlog
@@ -20,6 +20,10 @@ class TestLogWrapperResource(resource.WrapperResource):
                                  
         req.addResponseFilter(_logFilter, atEnd=True)
 
+class NoneStreamResource(resource.Resource):
+    def render(self, req):
+        return http.Response(200)
+    
 class TestLogging(BaseCase):
     def setUp(self):
         self.blo = BufferingLogObserver()
@@ -27,6 +31,7 @@ class TestLogging(BaseCase):
 
         # some default resource setup
         self.resrc = BaseTestResource()
+        self.resrc.child_emptystream = NoneStreamResource()
         self.resrc.addSlash = True
         self.resrc.responseHeaders = {'Date': 0.0}
         
@@ -107,7 +112,18 @@ class TestLogging(BaseCase):
 
         return d
 
+    def testLogNoneResponseStream(self):
+        uri = 'http://localhost/emptystream'
+        method = 'GET'
         
+        def _cbCheckLog(response):
+            self.assertLogged(method=method, uri=uri, status=200,
+                              length=0)
+            
+        d = self.getResponseFor(self.root, uri, method=method)
+        d.addCallback(_cbCheckLog)
+
+        return d
 
         
 

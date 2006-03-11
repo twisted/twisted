@@ -71,8 +71,11 @@ def logFilter(request, response, startTime=None):
                  loginfo=loginfo)
         # Or just...
         # ILogger(ctx).log(...) ?
-        
-    response.stream=_LogByteCounter(response.stream, _log)
+
+    if response.stream:
+        response.stream=_LogByteCounter(response.stream, _log)
+    else:
+        _log(True, 0)
     return response
 
 logFilter.handleErrors = True
