@@ -142,7 +142,7 @@ def http_PROPFIND(self, request):
 
                 propstats.append(xml_propstat)
 
-            xml_resource = davxml.HRef(uri)
+            xml_resource = davxml.HRef.fromString(uri)
             xml_response = davxml.PropertyStatusResponse(xml_resource, *propstats)
 
             xml_responses.append(xml_response)

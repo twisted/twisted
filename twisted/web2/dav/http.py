@@ -149,12 +149,12 @@ class ResponseQueue (object):
         uri = path[self.path_basename_len:]
 
         children = []
-        children.append(davxml.HRef(uri))
+        children.append(davxml.HRef.fromString(uri))
         children.append(davxml.Status.fromResponseCode(code))
         if error is not None:
             children.append(error)
         if message is not None:
-            children.append(davxml.ResponseDescription(message))
+            children.append(davxml.ResponseDescription.fromString(message))
         self.responses.append(davxml.StatusResponse(*children))
 
     def response(self):
@@ -182,7 +182,7 @@ class PropertyStatusResponseQueue (object):
             L{PropertyStatus} are added to this queue.
         """
         self.method            = method
-        self.propstats         = [davxml.HRef(uri)]
+        self.propstats         = [davxml.HRef.fromString(uri)]
         self.success_response  = success_response
 
     def add(self, what, property):
@@ -215,7 +215,7 @@ class PropertyStatusResponseQueue (object):
         if error is not None:
             children.append(error)
         if message is not None:
-            children.append(davxml.ResponseDescription(message))
+            children.append(davxml.ResponseDescription.fromString(message))
         self.propstats.append(davxml.PropertyStatus(*children))
 
     def error(self):
@@ -233,7 +233,7 @@ class PropertyStatusResponseQueue (object):
                     )
                     changed_status = True
                 elif changed_status and isinstance(child, davxml.ResponseDescription):
-                    propstat.children[index] = davxml.ResponseDescription(
+                    propstat.children[index] = davxml.ResponseDescription.fromString(
                         responsecode.RESPONSES[responsecode.FAILED_DEPENDENCY]
                     )
 

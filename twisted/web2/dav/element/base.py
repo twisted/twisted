@@ -70,11 +70,8 @@ class WebDAVElement (object):
     protected          = False         # See RFC 3253 section 1.4.1
     unregistered       = False         # Subclass of factory; doesn't register
 
-    def qname(self):
-        return (self.namespace, self.name)
-
-    def sname(self):
-        return "{%s}%s" % (self.namespace, self.name)
+    def qname(self): return (self.namespace, self.name)
+    def sname(self): return "{%s}%s" % (self.namespace, self.name)
 
     qname = classmethod(qname)
     sname = classmethod(sname)
@@ -98,11 +95,7 @@ class WebDAVElement (object):
         my_children = []
 
         for child in children:
-            if child is None:
-                continue
-
-            if isinstance(child, (str, unicode)):
-                child = PCDATAElement(child)
+            if child is None: continue
 
             assert isinstance(child, (WebDAVElement, PCDATAElement)), "Not an element: %r" % (child,)
 
@@ -114,8 +107,7 @@ class WebDAVElement (object):
                 else:
                     continue
 
-                if min is not None and min > 0:
-                    min -= 1
+                if min is not None and min > 0: min -= 1
                 if max is not None:
                     assert max > 0, "Too many children of type %s for %s" % (child.sname(), self.sname())
                     max -= 1
@@ -363,8 +355,10 @@ class WebDAVTextElement (WebDAVElement):
     def fromString(clazz, string):
         if string is None:
             return clazz()
-        elif isinstance(string, (str, unicode)):
+        elif type(string) is str:
             return clazz(PCDATAElement(string))
+        elif type(string) is unicode:
+            return clazz(PCDATAElement(string.encode("utf-8")))
         else:
             return clazz(PCDATAElement(str(string)))
 

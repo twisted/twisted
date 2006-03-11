@@ -29,6 +29,7 @@ WebDAV ACL resources.
 __all__ = ["DAVPrincipalResource"]
 
 from zope.interface import implements
+from twisted.web2.resource import LeafResource
 from twisted.web2.dav import davxml
 from twisted.web2.dav.davxml import dav_namespace
 from twisted.web2.dav.idav import IDAVPrincipalResource
@@ -73,16 +74,16 @@ class DAVPrincipalResource (DAVLeafResource):
 
         if namespace == dav_namespace:
             if name == "alternate-uri-set":
-                return davxml.AlternateURISet(*[davxml.HRef(u) for u in self.alternateURIs()])
+                return davxml.AlternateURISet(*[davxml.HRef.fromString(u) for u in self.alternateURIs()])
 
             if name == "principal-url":
-                return davxml.PrincipalURL(davxml.HRef(self.principalURL()))
+                return davxml.PrincipalURL(davxml.HRef.fromString(self.principalURL()))
 
             if name == "group-member-set":
-                return davxml.GroupMemberSet(*[davxml.HRef(p) for p in self.groupMembers()])
+                return davxml.GroupMemberSet(*[davxml.HRef.fromString(p) for p in self.groupMembers()])
 
             if name == "group-membership":
-                return davxml.GroupMemberSet(*[davxml.HRef(g) for g in self.groupMemberships()])
+                return davxml.GroupMemberSet(*[davxml.HRef.fromString(g) for g in self.groupMemberships()])
 
         return super(DAVPrincipalResource, self).readProperty(qname, request)
 
