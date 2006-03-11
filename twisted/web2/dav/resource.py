@@ -160,7 +160,7 @@ class DAVPropertyMixIn (MetaDataMixin):
         assert isinstance(property, davxml.WebDAVElement)
 
         if property.protected:
-            raise ValueError("Protected property %r may not be set." % (property,))
+            raise HTTPError(responsecode.FORBIDDEN, StatusResponse("Protected property %s may not be set." % (property.sname(),)))
 
         self.deadProperties().set(property)
 
@@ -174,7 +174,7 @@ class DAVPropertyMixIn (MetaDataMixin):
             qname = property.qname()
 
         if qname in self.liveProperties:
-            raise ValueError("Live property %s cannot be deleted." % (property,))
+            raise HTTPError(responsecode.FORBIDDEN, StatusResponse("Live property %s cannot be deleted." % (property.sname(),)))
 
         self.deadProperties().delete(qname)
 
@@ -280,8 +280,9 @@ class DAVResource (DAVPropertyMixIn, StaticRenderMixin):
     def findChildren(self, depth):
         """
         See L{IDAVResource.findChildren}.
-        This implementation raises L{NotImplementedError}; a subclass must
-        override this method.
+        This implementation raises returns C{()} if C{depth} is C{0} and this
+        resource is a collection.  Otherwise, it raises L{NotImplementedError};
+        a subclass must override this method.
         """
         assert depth in ("0", "1", "infinity"), "Invalid depth: %s" % (depth,)
         if depth == "0" or not self.isCollection():
