@@ -260,11 +260,13 @@ class Request(http.Request):
             failedDeferred = self._processingFailed(failure.Failure())
             return
         
-        d = self._getChild(self.site.resource, self.postpath)
+        d = defer.Deferred()
+        d.addCallback(self._getChild, self.site.resource, self.postpath)
         d.addCallback(lambda res, req: res.renderHTTP(req), self)
         d.addCallback(self._cbFinishRender)
         d.addErrback(self._processingFailed)
-
+        d.callback(None)
+        
     def preprocessRequest(self):
         """Do any request processing that doesn't follow the normal
         resource lookup procedure. "OPTIONS *" is handled here, for
@@ -278,20 +280,20 @@ class Request(http.Request):
         # This is where CONNECT would go if we wanted it
         return None
     
-    def _getChild(self, res, path):
+    def _getChild(self, _, res, path):
         """Create a PageContext for res, call res.locateChild, and pass the
         result on to _handleSegment."""
 
         self.resources.append(res)
 
         if not path:
-            return defer.succeed(res)
+            return res
 
-        return defer.maybeDeferred(
-            res.locateChild, self, path
-        ).addCallback(
-            self._handleSegment, res, path
-        )
+        result = res.locateChild(self, path)
+        if isinstance(result, defer.Deferred):
+            return result.addCallback(self._handleSegment, res, path)
+        else:
+            return self._handleSegment(result, res, path)
 
     def _handleSegment(self, result, res, path):
         """Handle the result of a locateChild call done in _getChild."""
@@ -323,7 +325,7 @@ class Request(http.Request):
         for x in xrange(len(path) - len(newpath)):
             self.prepath.append(self.postpath.pop(0))
 
-        return self._getChild(newres, newpath)
+        return self._getChild(None, newres, newpath)
 
     def _processingFailed(self, reason):
         if reason.check(http.HTTPError) is not None:
