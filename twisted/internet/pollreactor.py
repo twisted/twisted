@@ -18,9 +18,12 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 # System imports
 import select, errno, sys
 
+from zope.interface import implements
+
 # Twisted imports
 from twisted.python import log, threadable, failure
 from twisted.internet import main, posixbase, error
+from twisted.internet.interfaces import IReactorFDSet
 
 # globals
 reads = {}
@@ -33,7 +36,8 @@ POLL_DISCONNECTED = (select.POLLHUP | select.POLLERR | select.POLLNVAL)
 
 class PollReactor(posixbase.PosixReactorBase):
     """A reactor that uses poll(2)."""
-
+    implements(IReactorFDSet)
+    
     def _updateRegistration(self, fd):
         """Register/unregister an fd with the poller."""
         try:
