@@ -8,6 +8,8 @@ from StringIO import StringIO
 
 from docutils.parsers import rst
 from docutils import nodes, utils, io
+
+from txt2html import error
 try:
     from twisted.python import htmlizer
 except ImportError:
@@ -46,7 +48,6 @@ rst.directives.register_directive('pythonfile', pythonfile)
 def apidoc_reference_role(role, rawtext, text, lineno, inliner,
                           options={}, content=[]):
     refuri = "%s%s.html" % (apidocRoot, text)
-    rst.roles.set_classes(options)
     node = nodes.reference(rawtext, text, refuri=refuri, **options)
     return [node], []
 
@@ -57,7 +58,6 @@ def pkgapidoc_reference_role(role, rawtext, text, lineno, inliner,
     else:
         ref = apidocDefaultPackage
     refuri = "%s%s.html" % (apidocRoot, ref)
-    rst.roles.set_classes(options)
     node = nodes.reference(rawtext, text, refuri=refuri, **options)
     return [node], []
 

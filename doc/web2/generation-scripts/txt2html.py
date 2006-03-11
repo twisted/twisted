@@ -4,10 +4,8 @@ import time
 
 from tag import serialize, tagmaker as T
 
-import hier
-
 PROGNAME = sys.argv[0]
-USAGE = "%s text_directory html_directory language_code" % PROGNAME
+USAGE = "%s hier.cfg text_directory html_directory language_code" % PROGNAME
 
 def error(msg,exitcode=0,usage=False):
     sys.stderr.write("%s: %s\n" % (PROGNAME,msg))
@@ -18,10 +16,13 @@ def error(msg,exitcode=0,usage=False):
     if exitcode:
         sys.exit(exitcode)
 
-if len(sys.argv) != 4:
+if len(sys.argv) != 5:
     error("Incorrect number of arguments",1,True)
 
-LANGUAGE = sys.argv[3]
+hier = {}
+exec open(sys.argv[1]) in hier
+
+LANGUAGE = sys.argv[4]
 
 import qdlocale as locale
 try:
@@ -30,7 +31,7 @@ except:
     error("Could not load locale configuration for '%s'" % LANGUAGE,4)
 
 try:
-    _dc = hier.title[LANGUAGE]
+    _dc = hier['title'][LANGUAGE]
 except:
     error("No title specified for locale '%s'" % LANGUAGE,5)
 
@@ -92,7 +93,7 @@ def navBar(name,flathier):
     return serialize(
         [T.a(name="top",id="top"),
         T.div(class_="navbar")[
-            T.span(class_="docTitle")[hier.title[LANGUAGE]],T.br,
+            T.span(class_="docTitle")[hier['title'][LANGUAGE]],T.br,
             T.span(class_="right")[
                 prev and [conf["prev"], ": ",
                 T.a(href=[prev[0],".html"])["[", prev[1][0],"]",]] or "",
@@ -195,9 +196,9 @@ def generateExample(outpath, path, name, node, flathier):
 
 def go():
 
-    txtdir, htmldir = sys.argv[1:3]
+    txtdir, htmldir = sys.argv[2:4]
     
-    flathier = flattenHier(({conf["defaultPage"]:(conf["toc"],hier.hier)},))
+    flathier = flattenHier(({conf["defaultPage"]:(conf["toc"],hier['hier'])},))
 
     for name,node in flathier[1:]:
         startNode(name)

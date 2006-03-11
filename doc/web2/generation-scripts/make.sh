@@ -1,3 +1,3 @@
 #!/bin/sh
-python generation-scripts/txt2html.py . html en
+python generation-scripts/txt2html.py hierarchy.cfg . html en
 
