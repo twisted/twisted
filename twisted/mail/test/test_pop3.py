@@ -143,10 +143,10 @@ Someone set up us the bomb!\015
         ])
         server =  MyVirtualPOP3()
         server.service = self.factory
-        loopback.loopbackTCP(server, client)
-        
-        output = '\r\n'.join(client.response) + '\r\n'
-        self.assertEquals(output, self.expectedOutput)
+        def check(ignored):
+            output = '\r\n'.join(client.response) + '\r\n'
+            self.assertEquals(output, self.expectedOutput)            
+        return loopback.loopbackTCP(server, client).addCallback(check)
 
     def testLoopback(self):
         protocol =  MyVirtualPOP3()

@@ -35,35 +35,6 @@ DEFAULT_TIMEOUT = object()
 DEFAULT_TIMEOUT_DURATION = 120.0
 
 
-def deferredResult(d, timeout=None):
-    """
-    Waits for a Deferred to arrive, then returns or throws an exception,
-    based on the result.
-    """
-    warnings.warn("Do NOT use deferredResult.  Return a Deferred from your "
-                  "test.", stacklevel=2, category=DeprecationWarning)
-    result = _wait(d, timeout)
-    if isinstance(result, failure.Failure):
-        raise result
-    else:
-        return result
-
-def deferredError(d, timeout=None):
-    """
-    Waits for deferred to fail, and it returns the Failure.
-
-    If the deferred succeeds, raises FailTest.
-    """
-    warnings.warn("Do NOT use deferredError.  Return a Deferred from your "
-                  "test.", stacklevel=2, category=DeprecationWarning)
-    from twisted.trial import unittest
-    result = _wait(d, timeout)
-    if isinstance(result, failure.Failure):
-        return result
-    else:
-        raise unittest.FailTest, "Deferred did not fail: %r" % (result,)
-
-
 class FailureError(Exception):
     """Wraps around a Failure so it can get re-raised as an Exception"""
 
@@ -161,47 +132,6 @@ class _Janitor(object):
     def doGcCollect(cls):
          gc.collect()
 
-def fireWhenDoneFunc(d, f):
-    """Returns closure that when called calls f and then callbacks d.
-    """
-    def newf(*args, **kw):
-        rtn = f(*args, **kw)
-        d.callback('')
-        return rtn
-    return util.mergeFunctionMetadata(f, newf)
-
-def spinUntil(f, timeout=DEFAULT_TIMEOUT_DURATION,
-              msg="condition not met before timeout"):
-    """spin the reactor while condition returned by f() == False or timeout
-    seconds have elapsed i.e. spin until f() is True
-    """
-    warnings.warn("Do NOT use spinUntil.  Return a Deferred from your "
-                  "test.", stacklevel=2, category=DeprecationWarning)
-    assert callable(f)
-    from twisted.internet import reactor
-    now = time.time()
-    stop = now + timeout
-    while not f():
-        if time.time() >= stop:
-            raise defer.TimeoutError, msg
-        reactor.iterate(0.1)
-
-def spinWhile(f, timeout=DEFAULT_TIMEOUT_DURATION,
-              msg="f did not return false before timeout"):
-    """spin the reactor while condition returned by f() == True or until
-    timeout seconds have elapsed i.e. spin until f() is False
-    """
-    warnings.warn("Do NOT use spinWhile.  Return a Deferred from your "
-                  "test.", stacklevel=2, category=DeprecationWarning)
-    assert callable(f)
-    from twisted.internet import reactor
-    now = time.time()
-    stop = now + timeout
-    while f():
-        if time.time() >= stop:
-            raise defer.TimeoutError, msg
-        reactor.iterate(0.1)
-
 REENTRANT_WAIT_ERROR_MSG = ("already waiting on a deferred, do not call wait() "
                             "in callbacks or from threads "
                             "until such time as runUntilCurrent becomes "
@@ -257,7 +187,7 @@ def _wait(d, timeout=None, running=_wait_is_running):
 
         # FIXME: imagine this:
         # web/test/test_webclient.py:
-        # exc = self.assertRaises(error.Error, unittest.wait, method(url))
+        # exc = self.assertRaises(error.Error, util.wait, method(url))
         #
         # wait() will raise KeyboardInterrupt, and assertRaises will
         # swallow it. Therefore, wait() raising KeyboardInterrupt is
@@ -293,62 +223,6 @@ def wait(d, timeout=DEFAULT_TIMEOUT, useWaitError=False):
         else:
             r.raiseException()
     return r
-
-def extract_tb(tb, limit=None):
-    """DEPRECATED in Twisted 2.2"""
-    warnings.warn("Deprecated in Twisted 2.2", category=DeprecationWarning)
-    from twisted.trial import unittest, runner
-    l = traceback.extract_tb(tb, limit)
-    util_file = __file__.replace('.pyc','.py')
-    unittest_file = unittest.__file__.replace('.pyc','.py')
-    runner_file = runner.__file__.replace('.pyc','.py')
-    framework = [(unittest_file, '_runPhase'), # Tester._runPhase
-                 (unittest_file, '_main'),     # Tester._main
-                 (runner_file, 'runTest'),     # [ITestRunner].runTest
-                 ]
-    # filename, line, funcname, sourcetext
-    while (l[0][0], l[0][2]) in framework:
-        del l[0]
-
-    if (l[-1][0] == unittest_file) and (l[-1][2] in _failureConditionals):
-        del l[-1]
-    return l
-
-def format_exception(eType, eValue, tb, limit=None):
-    """DEPRECATED in Twisted 2.2"""
-    warnings.warn("Deprecated in Twisted 2.2", category=DeprecationWarning)
-    from twisted.trial import unittest
-    result = [x.strip()+'\n' for x in
-              failure.Failure(eValue,eType,tb).getBriefTraceback().split('\n')]
-    return result
-    # Only mess with tracebacks if they are from an explicitly failed
-    # test.
-    # XXX isinstance
-    if eType != unittest.FailTest:
-        return traceback.format_exception(eType, eValue, tb, limit)
-
-    tb_list = extract_tb(tb, limit)
-
-    l = ["Traceback (most recent call last):\n"]
-    l.extend(traceback.format_list(tb_list))
-    l.extend(traceback.format_exception_only(eType, eValue))
-    return l
-
-def suppressWarnings(f, *warningz):
-    warnings.warn("Don't use this.  Use the .suppress attribute instead",
-                  category=DeprecationWarning, stacklevel=2)
-    def enclosingScope(warnings, warningz):
-        exec """def %s(*args, **kwargs):
-    for warning in warningz:
-        warnings.filterwarnings('ignore', *warning)
-    try:
-        return f(*args, **kwargs)
-    finally:
-        for warning in warningz:
-            warnings.filterwarnings('default', *warning)
-""" % (f.func_name,) in locals()
-        return locals()[f.func_name]
-    return enclosingScope(warnings, warningz)
 
 
 def suppress(action='ignore', **kwarg):
@@ -481,6 +355,4 @@ def findObject(name):
 
 
 __all__ = ['FailureError', 'DirtyReactorWarning', 'DirtyReactorError',
-           'PendingTimedCallsError', 'WaitIsNotReentrantError',
-           'deferredResult', 'deferredError', 'wait', 'extract_tb',
-           'format_exception', 'suppressWarnings']
+           'PendingTimedCallsError', 'WaitIsNotReentrantError', 'wait']

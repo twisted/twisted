@@ -9,7 +9,6 @@ import os, errno, warnings, sys, time, tempfile, sets
 from twisted.internet import defer, utils
 from twisted.python import failure, log, reflect
 from twisted.trial import itrial, util
-from twisted.trial.util import deferredResult, deferredError
 
 pyunit = __import__('unittest')
 
@@ -583,7 +582,7 @@ class TestCase(_Assertions):
     
             # FIXME: imagine this:
             # web/test/test_webclient.py:
-            # exc = self.assertRaises(error.Error, unittest.wait, method(url))
+            # exc = self.assertRaises(error.Error, util.wait, method(url))
             #
             # wait() will raise KeyboardInterrupt, and assertRaises will
             # swallow it. Therefore, wait() raising KeyboardInterrupt is
@@ -612,12 +611,6 @@ class TestVisitor(object):
 
     def visitTrialAfter(self, testSuite):
         """Visit the TestSuite testSuite after its children."""
-
-
-def wait(*args, **kwargs):
-    warnings.warn("Do NOT use wait().  Just return a Deferred",
-                  stacklevel=2, category=DeprecationWarning)
-    return util.wait(*args, **kwargs)
 
 
 class _SubTestCase(TestCase):
@@ -653,8 +646,5 @@ for methodName in _assertions:
     globals()[methodName] = deprecate(methodName)
 
 
-__all__ = [
-    'TestCase', 'deferredResult', 'deferredError', 'wait', 'TestResult',
-    'FailTest', 'SkipTest'
-    ]
+__all__ = ['TestCase', 'wait', 'FailTest', 'SkipTest']
 

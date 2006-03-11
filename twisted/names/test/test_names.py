@@ -10,7 +10,7 @@ from __future__ import nested_scopes
 import socket, operator, copy
 
 from twisted.trial import unittest
-from twisted.trial.util import wait, spinUntil
+from twisted.trial.util import wait
 
 from twisted.internet import reactor, defer, error
 from twisted.names import client, server, common, authority, hosts, dns
@@ -154,33 +154,36 @@ class ServerDNSTestCase(unittest.TestCase):
     
     def tearDown(self):
         self.listenerTCP.loseConnection()
-        wait(defer.maybeDeferred(self.listenerUDP.stopListening))
-        if getattr(self.resolver.protocol, 'transport', None) is not None:
-            wait(defer.maybeDeferred(self.resolver.protocol.transport.stopListening))
-        spinUntil(lambda :self.listenerUDP.disconnected and 
-                          self.listenerTCP.disconnected)
+        d = defer.maybeDeferred(self.listenerUDP.stopListening)
+        def disconnectTransport(ignored):
+            if getattr(self.resolver.protocol, 'transport', None) is not None:
+                return self.resolver.protocol.transport.stopListening()
+        d.addCallback(disconnectTransport)
+        d.addCallback(lambda x : self.failUnless(
+            self.listenerUDP.disconnected
+            and self.listenerTCP.disconnected))
+        return d
                    
     def namesTest(self, d, r):
         self.response = None
         def setDone(response):
             self.response = response
+
+        def checkResults(ignored):
+            if isinstance(self.response, failure.Failure):
+                raise self.response
+            results = justPayload(self.response)
+            assert len(results) == len(r), "%s != %s" % (map(str, results), map(str, r))
+            for rec in results:
+                assert rec in r, "%s not in %s" % (rec, map(str, r))
+
         d.addBoth(setDone)
-
-        spinUntil(lambda :self.response)
-
-        if isinstance(self.response, failure.Failure):
-            raise self.response
-
-        results = justPayload(self.response)
-        
-        assert len(results) == len(r), "%s != %s" % (map(str, results), map(str, r))
-        for rec in results:
-            assert rec in r, "%s not in %s" % (rec, map(str, r))
-
+        d.addCallback(checkResults)
+        return d
 
     def testAddressRecord1(self):
         """Test simple DNS 'A' record queries"""
-        self.namesTest(
+        return self.namesTest(
             self.resolver.lookupAddress('test-domain.com'),
             [dns.Record_A('127.0.0.1', ttl=19283784)]
         )
@@ -188,7 +191,7 @@ class ServerDNSTestCase(unittest.TestCase):
 
     def testAddressRecord2(self):
         """Test DNS 'A' record queries with multiple answers"""
-        self.namesTest(
+        return self.namesTest(
             self.resolver.lookupAddress('host.test-domain.com'),
             [dns.Record_A('123.242.1.5', ttl=19283784), dns.Record_A('0.255.0.255', ttl=19283784)]
         )
@@ -196,14 +199,14 @@ class ServerDNSTestCase(unittest.TestCase):
 
     def testAdressRecord3(self):
         """Test DNS 'A' record queries with edge cases"""
-        self.namesTest(
+        return self.namesTest(
             self.resolver.lookupAddress('host-two.test-domain.com'),
             [dns.Record_A('255.255.255.254', ttl=19283784), dns.Record_A('0.0.0.0', ttl=19283784)]
         )
 
     def testAuthority(self):
         """Test DNS 'SOA' record queries"""
-        self.namesTest(
+        return self.namesTest(
             self.resolver.lookupAuthority('test-domain.com'),
             [soa_record]
         )
@@ -211,7 +214,7 @@ class ServerDNSTestCase(unittest.TestCase):
 
     def testMailExchangeRecord(self):
         """Test DNS 'MX' record queries"""
-        self.namesTest(
+        return self.namesTest(
             self.resolver.lookupMailExchange('test-domain.com'),
             [dns.Record_MX(10, 'host.test-domain.com', ttl=19283784)]
         )
@@ -219,7 +222,7 @@ class ServerDNSTestCase(unittest.TestCase):
 
     def testNameserver(self):
         """Test DNS 'NS' record queries"""
-        self.namesTest(
+        return self.namesTest(
             self.resolver.lookupNameservers('test-domain.com'),
             [dns.Record_NS('39.28.189.39', ttl=19283784)]
         )
@@ -227,14 +230,14 @@ class ServerDNSTestCase(unittest.TestCase):
 
     def testHINFO(self):
         """Test DNS 'HINFO' record queries"""
-        self.namesTest(
+        return self.namesTest(
             self.resolver.lookupHostInfo('test-domain.com'),
             [dns.Record_HINFO(os='Linux', cpu='A Fast One, Dontcha know', ttl=19283784)]
         )
 
     def testPTR(self):
         """Test DNS 'PTR' record queries"""
-        self.namesTest(
+        return self.namesTest(
             self.resolver.lookupPointer('123.93.84.28.in-addr.arpa'),
             [dns.Record_PTR('test.host-reverse.lookup.com', ttl=11193983)]
         )
@@ -242,21 +245,21 @@ class ServerDNSTestCase(unittest.TestCase):
 
     def testCNAME(self):
         """Test DNS 'CNAME' record queries"""
-        self.namesTest(
+        return self.namesTest(
             self.resolver.lookupCanonicalName('test-domain.com'),
             [dns.Record_CNAME('canonical.name.com', ttl=19283784)]
         )
 
     def testCNAMEAdditional(self):
         """Test additional processing for CNAME records"""
-        self.namesTest(
+        return self.namesTest(
         self.resolver.lookupAddress('cname.test-domain.com'),
         [dns.Record_CNAME('test-domain.com', ttl=19283784), dns.Record_A('127.0.0.1', ttl=19283784)]
     )
 
     def testMB(self):
         """Test DNS 'MB' record queries"""
-        self.namesTest(
+        return self.namesTest(
             self.resolver.lookupMailBox('test-domain.com'),
             [dns.Record_MB('mailbox.test-domain.com', ttl=19283784)]
         )
@@ -264,7 +267,7 @@ class ServerDNSTestCase(unittest.TestCase):
 
     def testMG(self):
         """Test DNS 'MG' record queries"""
-        self.namesTest(
+        return self.namesTest(
             self.resolver.lookupMailGroup('test-domain.com'),
             [dns.Record_MG('mail.group.someplace', ttl=19283784)]
         )
@@ -272,7 +275,7 @@ class ServerDNSTestCase(unittest.TestCase):
 
     def testMR(self):
         """Test DNS 'MR' record queries"""
-        self.namesTest(
+        return self.namesTest(
             self.resolver.lookupMailRename('test-domain.com'),
             [dns.Record_MR('mail.redirect.or.whatever', ttl=19283784)]
         )
@@ -280,7 +283,7 @@ class ServerDNSTestCase(unittest.TestCase):
 
     def testMINFO(self):
         """Test DNS 'MINFO' record queries"""
-        self.namesTest(
+        return self.namesTest(
             self.resolver.lookupMailboxInfo('test-domain.com'),
             [dns.Record_MINFO(rmailbx='r mail box', emailbx='e mail box', ttl=19283784)]
         )
@@ -288,14 +291,14 @@ class ServerDNSTestCase(unittest.TestCase):
 
     def testSRV(self):
         """Test DNS 'SRV' record queries"""
-        self.namesTest(
+        return self.namesTest(
             self.resolver.lookupService('http.tcp.test-domain.com'),
             [dns.Record_SRV(257, 16383, 43690, 'some.other.place.fool', ttl=19283784)]
         )
 
     def testAFSDB(self):
         """Test DNS 'AFSDB' record queries"""
-        self.namesTest(
+        return self.namesTest(
             self.resolver.lookupAFSDatabase('test-domain.com'),
             [dns.Record_AFSDB(subtype=1, hostname='afsdb.test-domain.com', ttl=19283784)]
         )
@@ -303,7 +306,7 @@ class ServerDNSTestCase(unittest.TestCase):
 
     def testRP(self):
         """Test DNS 'RP' record queries"""
-        self.namesTest(
+        return self.namesTest(
             self.resolver.lookupResponsibility('test-domain.com'),
             [dns.Record_RP(mbox='whatever.i.dunno', txt='some.more.text', ttl=19283784)]
         )
@@ -311,7 +314,7 @@ class ServerDNSTestCase(unittest.TestCase):
 
     def testTXT(self):
         """Test DNS 'TXT' record queries"""
-        self.namesTest(
+        return self.namesTest(
             self.resolver.lookupText('test-domain.com'),
             [dns.Record_TXT('A First piece of Text', 'a SecoNd piece', ttl=19283784),
              dns.Record_TXT('Some more text, haha!  Yes.  \0  Still here?', ttl=19283784)]
@@ -320,7 +323,7 @@ class ServerDNSTestCase(unittest.TestCase):
 
     def testWKS(self):
         """Test DNS 'WKS' record queries"""
-        self.namesTest(
+        return self.namesTest(
             self.resolver.lookupWellKnownServices('test-domain.com'),
             [dns.Record_WKS('12.54.78.12', socket.IPPROTO_TCP, '\x12\x01\x16\xfe\xc1\x00\x01', ttl=19283784)]
         )
@@ -329,7 +332,7 @@ class ServerDNSTestCase(unittest.TestCase):
     def testSomeRecordsWithTTLs(self):
         result_soa = copy.copy(my_soa)
         result_soa.ttl = my_soa.expire
-        self.namesTest(
+        return self.namesTest(
             self.resolver.lookupAllRecords('my-domain.com'),
             [result_soa,
              dns.Record_A('1.2.3.4', ttl='1S'),
@@ -341,14 +344,14 @@ class ServerDNSTestCase(unittest.TestCase):
 
     def testAAAA(self):
         """Test DNS 'AAAA' record queries (IPv6)"""
-        self.namesTest(
+        return self.namesTest(
             self.resolver.lookupIPV6Address('test-domain.com'),
             [dns.Record_AAAA('AF43:5634:1294:AFCB:56AC:48EF:34C3:01FF', ttl=19283784)]
         )
 
     def testA6(self):
         """Test DNS 'A6' record queries (IPv6)"""
-        self.namesTest(
+        return self.namesTest(
             self.resolver.lookupAddress6('test-domain.com'),
             [dns.Record_A6(0, 'ABCD::4321', '', ttl=19283784),
              dns.Record_A6(12, '0:0069::0', 'some.network.tld', ttl=19283784),
@@ -363,14 +366,14 @@ class ServerDNSTestCase(unittest.TestCase):
         for r in results:
             if r.ttl is None:
                 r.ttl = default_ttl
-        self.namesTest(
+        return self.namesTest(
             self.resolver.lookupZone('test-domain.com').addCallback(lambda r: (r[0][:-1],)),
             results
         )
 
     def testSimilarZonesDontInterfere(self):
         """Tests that unrelated zones don't mess with each other."""
-        self.namesTest(
+        return self.namesTest(
             self.resolver.lookupAddress("anothertest-domain.com"),
             [dns.Record_A('1.2.3.4', ttl=19283784)]
         )

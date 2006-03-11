@@ -4,7 +4,7 @@
 
 import sys
 
-from twisted.trial import unittest, util
+from twisted.trial import unittest
 try:
     from twisted.conch import unix
     from twisted.conch.scripts import cftp
@@ -80,13 +80,16 @@ class CFTPClientTestBase(SFTPTestBase):
         self.server = reactor.listenTCP(0, fac, interface="127.0.0.1")
 
     def stopServer(self):
-        if hasattr(self.server.factory, 'proto'):
-            self.server.factory.proto.expectedLoseConnection = 1
-            self.server.factory.proto.transport.loseConnection()
-            util.spinWhile(lambda:self.server.factory.proto.transport.connected)
-        self.server.stopListening()
-        util.spinWhile(lambda:self.server.connected)
-        reactor.iterate()
+        if not hasattr(self.server.factory, 'proto'):
+            return self._cbStopServer(None)
+        self.server.factory.proto.expectedLoseConnection = 1
+        d = defer.maybeDeferred(
+            self.server.factory.proto.transport.loseConnection)
+        d.addCallback(self._cbStopServer)
+        return d
+
+    def _cbStopServer(self, ignored):
+        return defer.maybeDeferred(self.server.stopListening)
 
     def tearDownClass(self):
         for f in ['dsa_test.pub', 'dsa_test', 'kh_test']:
@@ -136,14 +139,15 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, CFTPClientTestBase):
             return
         test_process.SignalMixin.tearDownClass(self)
         CFTPClientTestBase.tearDownClass(self)
-        self.stopServer()
+        d = self.stopServer()
+        d.addCallback(self._killProcess)
+        return d
+
+    def _killProcess(self, ignored):
         try:
             self.processProtocol.transport.signalProcess('KILL')
         except error.ProcessExitedAlready:
             pass
-        reactor.iterate(0.1)
-        reactor.iterate(0.1)
-        reactor.iterate(0.1)
 
     def _getCmdResult(self, cmd):
         self.processProtocol.clearBuffer()
@@ -277,7 +281,7 @@ class TestOurServerBatchFile(test_process.SignalMixin, CFTPClientTestBase):
 
     def tearDown(self):
         CFTPClientTestBase.tearDown(self)
-        self.stopServer()
+        return self.stopServer()
 
     def tearDownClass(self):
         test_process.SignalMixin.tearDownClass(self)
@@ -367,18 +371,18 @@ class TestOurServerUnixClient(test_process.SignalMixin, CFTPClientTestBase):
         vhk = default.verifyHostKey
         self.conn = conn = test_conch.SSHTestConnectionForUnix(None)
         uao = default.SSHUserAuthClient(o['user'], o, conn)
-        connect.connect(o['host'], int(o['port']), o, vhk, uao)
-        util.spinWhile(lambda: not conn.connected)
+        return connect.connect(o['host'], int(o['port']), o, vhk, uao)
 
     def tearDownClass(self):
         test_process.SignalMixin.tearDownClass(self)
         CFTPClientTestBase.tearDownClass(self)
-        self.stopServer()
+        d = defer.maybeDeferred(self.conn.transport.loseConnection)
+        d.addCallback(lambda x : self.stopServer())
+        return d
 
     def _getBatchOutput(self, f):
         fn = tempfile.mktemp()
         open(fn, 'w').write(f)
-        l = []
         port = self.server.getHost().port
         cmds = ('-p %i -l testuser '
                     '-K unix '
@@ -388,30 +392,25 @@ class TestOurServerUnixClient(test_process.SignalMixin, CFTPClientTestBase):
         log.msg('running %s %s' % (sys.executable, cmds))
         env = os.environ.copy()
         env['PYTHONPATH'] = os.pathsep.join(sys.path)
+        if hasattr(self.server.factory, 'proto'):
+            self.server.factory.proto.expectedLoseConnection = 1
         d = getProcessOutputAndValue(sys.executable, cmds, env=env)
-        d.setTimeout(10)
-        d.addBoth(l.append)
-        while not l:
-            if hasattr(self.server.factory, 'proto'):
-                self.server.factory.proto.expectedLoseConnection = 1
-            reactor.iterate(0.1)
-        os.remove(fn)
-        result = l[0]
-        if isinstance(result, failure.Failure):
-            raise result.value
-        else:
-            log.msg(result[1])
-            return result[0]
+        def cleanup(res):
+            os.remove(fn)
+            return res[0]
+        d.addBoth(cleanup)
+        return d
 
     def testBatchFile(self):
         cmds = """pwd
 exit
 """
-        res = self._getBatchOutput(cmds)
-        self.failIf(res.find('sftp_test') == -1, "sftp_test not in %r" % (res,))
-        self.conn.transport.loseConnection()
-        util.spinWhile(lambda:not self.conn.transport.transport.connected)
-        self.stopServer()
+        d = self._getBatchOutput(cmds)
+        d.addCallback(
+            lambda res : self.failIf(res.find('sftp_test') == -1,
+                                     "sftp_test not in %r" % (res,)))
+        return d
+
 
 if not unix or not Crypto or not interfaces.IReactorProcess(reactor, None):
     TestOurServerCmdLineClient.skip = "don't run w/o spawnprocess or PyCrypto"

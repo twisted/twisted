@@ -17,7 +17,7 @@ import tempfile
 
 from zope.interface import providedBy
 
-from twisted.trial import unittest
+from twisted.trial import unittest, util as trialutil
 from twisted.mail import smtp
 from twisted.mail import pop3
 from twisted.names import dns
@@ -238,7 +238,7 @@ class MaildirAppendStringTestCase(unittest.TestCase):
         mbox.AppendFactory = FailingMaildirMailboxAppendMessageTask
         for i in xrange(1, 11):
             self.assertEquals(
-                unittest.wait(mbox.appendMessage("X" * i)),
+                trialutil.wait(mbox.appendMessage("X" * i)),
                 None)
         self.assertEquals(len(mbox.listMessages()),
                           10)
@@ -269,7 +269,7 @@ class MaildirAppendFileTestCase(unittest.TestCase):
             temp.write("X" * i)
             temp.seek(0,0)
             self.assertEquals(
-                unittest.wait(mbox.appendMessage(temp)),
+                trialutil.wait(mbox.appendMessage(temp)),
                 None)
             temp.close()
         self.assertEquals(len(mbox.listMessages()),

@@ -6,7 +6,6 @@
 """Session Initialization Protocol tests."""
 
 from twisted.trial import unittest
-from twisted.trial.util import spinUntil
 from twisted.protocols import sip
 from twisted.internet import defer, reactor
 
@@ -561,9 +560,11 @@ class Client(sip.Base):
     def __init__(self):
         sip.Base.__init__(self)
         self.received = []
+        self.deferred = defer.Deferred()
 
     def handle_response(self, response, addr):
         self.received.append(response)
+        self.deferred.callback(self.received)
 
 
 class LiveTest(unittest.TestCase):
@@ -579,12 +580,11 @@ class LiveTest(unittest.TestCase):
                               self.serverPort.getHost().port)
 
     def tearDown(self):
-        self.clientPort.stopListening()
-        self.serverPort.stopListening()
         for d, uri in self.registry.users.values():
             d.cancel()
-        reactor.iterate()
-        reactor.iterate()
+        d1 = defer.maybeDeferred(self.clientPort.stopListening)
+        d2 = defer.maybeDeferred(self.serverPort.stopListening)
+        return defer.gatherResults([d1, d2])
 
     def testRegister(self):
         p = self.clientPort.getHost().port
@@ -594,10 +594,13 @@ class LiveTest(unittest.TestCase):
         r.addHeader("via", sip.Via("127.0.0.1", port=p).toString())
         self.client.sendMessage(sip.URL(host="127.0.0.1", port=self.serverAddress[1]),
                                 r)
-        spinUntil(lambda: len(self.client.received))
-        self.assertEquals(len(self.client.received), 1)
-        r = self.client.received[0]
-        self.assertEquals(r.code, 200)
+        d = self.client.deferred
+        def check(received):
+            self.assertEquals(len(received), 1)
+            r = received[0]
+            self.assertEquals(r.code, 200)
+        d.addCallback(check)
+        return d
 
     def testAmoralRPort(self):
         # rport is allowed without a value, apparently because server
@@ -613,10 +616,13 @@ class LiveTest(unittest.TestCase):
         r.addHeader("via", sip.Via("127.0.0.1", port=p, rport=True).toString())
         self.client.sendMessage(sip.URL(host="127.0.0.1", port=self.serverAddress[1]),
                                 r)
-        spinUntil(lambda: len(self.client.received))
-        self.assertEquals(len(self.client.received), 1)
-        r = self.client.received[0]
-        self.assertEquals(r.code, 200)
+        d = self.client.deferred
+        def check(received):
+            self.assertEquals(len(received), 1)
+            r = received[0]
+            self.assertEquals(r.code, 200)
+        d.addCallback(check)
+        return d
         
 
 registerRequest = """

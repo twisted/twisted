@@ -14,7 +14,7 @@ from twisted.internet import defer, protocol, reactor
 from twisted.internet.error import ProcessTerminated
 from twisted.protocols import loopback
 from twisted.python import failure, log
-from twisted.trial import unittest, util
+from twisted.trial import unittest
 
 from test_recvline import LoopbackRelay
 
@@ -706,13 +706,13 @@ class SSHProtocolTestCase(unittest.TestCase):
         self.server.makeConnection(self.serverTransport)
         self.client.makeConnection(self.clientTransport)
 
-        def _notDone():
-            while self.serverTransport.buffer or self.clientTransport.buffer:
-                log.callWithContext({'system': 'serverTransport'}, self.serverTransport.clearBuffer)
-                log.callWithContext({'system': 'clientTransport'}, self.clientTransport.clearBuffer)
-            return self.server.done and self.client.done
+        while self.serverTransport.buffer or self.clientTransport.buffer:
+            log.callWithContext({'system': 'serverTransport'},
+                                self.serverTransport.clearBuffer)
+            log.callWithContext({'system': 'clientTransport'},
+                                self.clientTransport.clearBuffer)
+        self.failIf(self.server.done and self.client.done)
 
-        util.spinWhile(_notDone)
 
 class TestSSHFactory(unittest.TestCase):
 

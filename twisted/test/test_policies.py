@@ -8,7 +8,6 @@ from __future__ import nested_scopes
 from StringIO import StringIO
 
 from twisted.trial import unittest
-from twisted.trial.util import fireWhenDoneFunc
 from twisted.test.proto_helpers import StringTransportWithDisconnection
 from twisted.test.time_helpers import Clock
 
@@ -105,6 +104,14 @@ class WrapperTestCase(unittest.TestCase):
         self.assertIdentical(p.wrappedProtocol.factory, f)
 
 
+class WrappingFactory(policies.WrappingFactory):
+    protocol = lambda s, f, p: p
+    
+    def startFactory(self):
+        policies.WrappingFactory.startFactory(self)
+        self.deferred.callback(None)
+
+
 class ThrottlingTestCase(unittest.TestCase):
 
     def doIterations(self, count=5):
@@ -115,11 +122,11 @@ class ThrottlingTestCase(unittest.TestCase):
         server = Server()
         c1, c2, c3, c4 = [SimpleProtocol() for i in range(4)]
         tServer = policies.ThrottlingFactory(server, 2)
-        theDeferred = defer.Deferred()
-        tServer.startFactory = fireWhenDoneFunc(theDeferred, tServer.startFactory)
+        wrapTServer = WrappingFactory(tServer)
+        wrapTServer.deferred = defer.Deferred()
         
         # Start listening
-        p = reactor.listenTCP(0, tServer, interface="127.0.0.1")
+        p = reactor.listenTCP(0, wrapTServer, interface="127.0.0.1")
         n = p.getHost().port
         
         def _connect123(results):
@@ -157,13 +164,13 @@ class ThrottlingTestCase(unittest.TestCase):
                 c2.dDisconnected,
                 c4.dDisconnected])
         
-        theDeferred.addCallback(_connect123)
-        theDeferred.addCallback(_check123)
-        theDeferred.addCallback(_lose1)
-        theDeferred.addCallback(_connect4)
-        theDeferred.addCallback(_check4)
-        theDeferred.addCallback(_cleanup)
-        return theDeferred
+        wrapTServer.deferred.addCallback(_connect123)
+        wrapTServer.deferred.addCallback(_check123)
+        wrapTServer.deferred.addCallback(_lose1)
+        wrapTServer.deferred.addCallback(_connect4)
+        wrapTServer.deferred.addCallback(_check4)
+        wrapTServer.deferred.addCallback(_cleanup)
+        return wrapTServer.deferred
 
     def testWriteLimit(self):
         server = Server()

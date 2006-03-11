@@ -9,7 +9,6 @@ Test running processes.
 from __future__ import nested_scopes, generators
 
 from twisted.trial import unittest
-from twisted.trial.util import spinUntil, spinWhile
 from twisted.python import log
 
 import gzip
@@ -31,14 +30,14 @@ from twisted.python import util, runtime, components
 from twisted.python import procutils
 
 class TrivialProcessProtocol(protocol.ProcessProtocol):
-    finished = 0
+    def __init__(self, d):
+        self.deferred = d
+    
     def processEnded(self, reason):
-        self.finished = 1
         self.reason = reason
+        self.deferred.callback(None)
 
 class TestProcessProtocol(protocol.ProcessProtocol):
-
-    finished = 0
 
     def connectionMade(self):
         self.stages = [1]
@@ -70,8 +69,9 @@ class TestProcessProtocol(protocol.ProcessProtocol):
         self.stages.append(5)
 
     def processEnded(self, reason):
-        self.finished = 1
         self.reason = reason
+        self.deferred.callback(None)
+
 
 class EchoProtocol(protocol.ProcessProtocol):
 
@@ -110,34 +110,33 @@ class EchoProtocol(protocol.ProcessProtocol):
 
 
 class SignalProtocol(protocol.ProcessProtocol):
-    def __init__(self, sig, testcase):
+    def __init__(self, deferred, sig):
+        self.deferred = deferred
         self.signal = sig
-        self.going = 1
-        self.testcase = testcase
 
     def outReceived(self, data):
         self.transport.signalProcess(self.signal)
 
     def processEnded(self, reason):
-        self.going = 0
         if not reason.check(error.ProcessTerminated):
-            self.failure = "wrong termination: %s" % reason
+            self.deferred.callback("wrong termination: %s" % reason)
             return
         v = reason.value
         if v.exitCode is not None:
-            self.failure = "SIG%s: exitCode is %s, not None" % \
-                           (self.signal, v.exitCode)
+            self.deferred.callback("SIG%s: exitCode is %s, not None" % 
+                                   (self.signal, v.exitCode))
             return
         if v.signal != getattr(signal,'SIG'+self.signal):
-            self.failure = "SIG%s: .signal was %s, wanted %s" % \
-                           (self.signal, v.signal,
-                            getattr(signal,'SIG'+self.signal))
+            self.deferred.callback("SIG%s: .signal was %s, wanted %s" % 
+                                   (self.signal, v.signal,
+                                    getattr(signal,'SIG'+self.signal)))
             return
         if os.WTERMSIG(v.status) != getattr(signal,'SIG'+self.signal):
-            self.failure = 'SIG%s: %s' % (self.signal,
-                                          os.WTERMSIG(v.status))
+            self.deferred.callback('SIG%s: %s'
+                                   % (self.signal, os.WTERMSIG(v.status)))
             return
-        self.failure = None
+        self.deferred.callback(None)
+        
 
 class SignalMixin:
     # XXX: Trial now does this (see
@@ -168,7 +167,7 @@ class TestManyProcessProtocol(TestProcessProtocol):
         self.deferred = defer.Deferred()
 
     def processEnded(self, reason):
-        TestProcessProtocol.processEnded(self, reason)
+        self.reason = reason
         if reason.check(error.ProcessDone):
             self.deferred.callback(None)
         else:
@@ -205,32 +204,30 @@ class ProcessTestCase(SignalMixin, unittest.TestCase):
     def testProcess(self):
         exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_tester.py")
+        d = defer.Deferred()
         p = TestProcessProtocol()
+        p.deferred = d
         reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=None)
-
-        spinUntil(lambda :p.finished, 10)
-        self.failUnless(p.finished)
-        self.assertEquals(p.stages, [1, 2, 3, 4, 5])
-
-        # test status code
-        f = p.reason
-        f.trap(error.ProcessTerminated)
-        self.assertEquals(f.value.exitCode, 23)
-        # would .signal be available on non-posix?
-        #self.assertEquals(f.value.signal, None)
-
-        try:
-            import process_tester, glob
-            for f in glob.glob(process_tester.test_file_match):
-                os.remove(f)
-        except:
-            pass
+        def check(ignored):
+            self.assertEquals(p.stages, [1, 2, 3, 4, 5])
+            f = p.reason
+            f.trap(error.ProcessTerminated)
+            self.assertEquals(f.value.exitCode, 23)
+            # would .signal be available on non-posix?
+            # self.assertEquals(f.value.signal, None)
+            try:
+                import process_tester, glob
+                for f in glob.glob(process_tester.test_file_match):
+                    os.remove(f)
+            except:
+                pass
+        d.addCallback(check)
+        return d
 
     def testManyProcesses(self):
 
         def _check(results, protocols):
             for p in protocols:
-                self.failUnless(p.finished)
                 self.assertEquals(p.stages, [1, 2, 3, 4, 5], "[%d] stages = %s" % (id(p.transport), str(p.stages)))
                 # test status code
                 f = p.reason
@@ -293,12 +290,15 @@ class ProcessTestCase(SignalMixin, unittest.TestCase):
 
 
 class TwoProcessProtocol(protocol.ProcessProtocol):
-    finished = 0
     num = -1
+    finished = 0
+    def __init__(self):
+        self.deferred = defer.Deferred()
     def outReceived(self, data):
         pass
     def processEnded(self, reason):
         self.finished = 1
+        self.deferred.callback(None)
 
 class TestTwoProcessesBase:
     def setUp(self):
@@ -326,26 +326,21 @@ class TestTwoProcessesBase:
         p.loseConnection()
         if self.verbose: print self.pp[0].finished, self.pp[1].finished
 
-    def check(self):
-        #print self.pp[0].finished, self.pp[1].finished
-        #print "  ", self.pp[0].num, self.pp[1].num
-        if self.pp[0].finished and self.pp[1].finished:
-            self.done = 1
-        return self.done
+    def _onClose(self):
+        return defer.gatherResults([ p.deferred for p in self.pp ])
 
     def testClose(self):
         if self.verbose: print "starting processes"
         self.createProcesses()
         reactor.callLater(1, self.close, 0)
         reactor.callLater(2, self.close, 1)
-        spinUntil(self.check, 5)
+        return self._onClose()
 
 class TestTwoProcessesNonPosix(TestTwoProcessesBase, SignalMixin, unittest.TestCase):
     pass
 
 class TestTwoProcessesPosix(TestTwoProcessesBase, SignalMixin, unittest.TestCase):
     def tearDown(self):
-        self.check()
         for i in (0,1):
             pp, process = self.pp[i], self.processes[i]
             if not pp.finished:
@@ -353,7 +348,7 @@ class TestTwoProcessesPosix(TestTwoProcessesBase, SignalMixin, unittest.TestCase
                     os.kill(process.pid, signal.SIGTERM)
                 except OSError:
                     print "OSError"
-        spinUntil(self.check, 5, msg="unable to shutdown child processes")
+        return self._onClose()
 
     def kill(self, num):
         if self.verbose: print "kill [%d] with SIGTERM" % num
@@ -368,31 +363,33 @@ class TestTwoProcessesPosix(TestTwoProcessesBase, SignalMixin, unittest.TestCase
         self.createProcesses(usePTY=0)
         reactor.callLater(1, self.kill, 0)
         reactor.callLater(2, self.kill, 1)
-        spinUntil(self.check, 5)
+        return self._onClose()
 
     def testClosePty(self):
         if self.verbose: print "starting processes"
         self.createProcesses(usePTY=1)
         reactor.callLater(1, self.close, 0)
         reactor.callLater(2, self.close, 1)
-        spinUntil(self.check, 5)
+        return self._onClose()
 
     def testKillPty(self):
         if self.verbose: print "starting processes"
         self.createProcesses(usePTY=1)
         reactor.callLater(1, self.kill, 0)
         reactor.callLater(2, self.kill, 1)
-        spinUntil(self.check, 5)
+        return self._onClose()
 
 class FDChecker(protocol.ProcessProtocol):
     state = 0
     data = ""
-    done = False
     failed = None
+
+    def __init__(self, d):
+        self.deferred = d
 
     def fail(self, why):
         self.failed = why
-        self.done = True
+        self.deferred.callback(None)
 
     def connectionMade(self):
         self.transport.writeToChild(0, "abcd")
@@ -463,7 +460,7 @@ class FDChecker(protocol.ProcessProtocol):
         if rc != 0:
             self.fail("processEnded with rc %d" % rc)
             return
-        self.done = True
+        self.deferred.callback(None)
 
 class FDTest(SignalMixin, unittest.TestCase):
     def NOTsetUp(self):
@@ -476,13 +473,14 @@ class FDTest(SignalMixin, unittest.TestCase):
     def testFD(self):
         exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_fds.py")
-        p = FDChecker()
+        d = defer.Deferred()
+        p = FDChecker(d)
         reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=None,
                              path=None,
                              childFDs={0:"w", 1:"r", 2:2,
                                        3:"w", 4:"r", 5:"w"})
-        spinUntil(lambda :p.done, 5)
-        self.failIf(p.failed, p.failed)
+        d.addCallback(lambda x : self.failIf(p.failed, p.failed))
+        return d
 
     def testLinger(self):
         # See what happens when all the pipes close before the process
@@ -546,40 +544,59 @@ class PosixProcessBase:
         elif os.path.exists('/usr/bin/true'): cmd = '/usr/bin/true'
         else: raise RuntimeError("true not found in /bin or /usr/bin")
 
-        p = TrivialProcessProtocol()
+        d = defer.Deferred()
+        p = TrivialProcessProtocol(d)
         reactor.spawnProcess(p, cmd, ['true'], env=None,
                              usePTY=self.usePTY)
-
-        spinUntil(lambda :p.finished)
-        p.reason.trap(error.ProcessDone)
-        self.assertEquals(p.reason.value.exitCode, 0)
-        self.assertEquals(p.reason.value.signal, None)
+        def check(ignored):
+            p.reason.trap(error.ProcessDone)
+            self.assertEquals(p.reason.value.exitCode, 0)
+            self.assertEquals(p.reason.value.signal, None)
+        d.addCallback(check)
+        return d
 
     def testAbnormalTermination(self):
         if os.path.exists('/bin/false'): cmd = '/bin/false'
         elif os.path.exists('/usr/bin/false'): cmd = '/usr/bin/false'
         else: raise RuntimeError("false not found in /bin or /usr/bin")
 
-        p = TrivialProcessProtocol()
+        d = defer.Deferred()
+        p = TrivialProcessProtocol(d)
         reactor.spawnProcess(p, cmd, ['false'], env=None,
                              usePTY=self.usePTY)
 
-        spinUntil(lambda :p.finished)
-        p.reason.trap(error.ProcessTerminated)
-        self.assertEquals(p.reason.value.exitCode, 1)
-        self.assertEquals(p.reason.value.signal, None)
+        def check(ignored):
+            p.reason.trap(error.ProcessTerminated)
+            self.assertEquals(p.reason.value.exitCode, 1)
+            self.assertEquals(p.reason.value.signal, None)
+        d.addCallback(check)
+        return d
 
-    def testSignal(self):
+    def _testSignal(self, sig):
         exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_signal.py")
-        signals = ('HUP', 'INT', 'KILL')
-        for sig in signals:
-            p = SignalProtocol(sig, self)
-            reactor.spawnProcess(p, exe, [exe, "-u", scriptPath, sig],
-                                 env=None,
-                                 usePTY=self.usePTY)
-            spinWhile(lambda :p.going)
-            self.failIf(p.failure, p.failure)
+        d = defer.Deferred()
+        p = SignalProtocol(d, sig)
+        reactor.spawnProcess(p, exe, [exe, "-u", scriptPath, sig],
+                             env=None,
+                             usePTY=self.usePTY)
+        return d
+        
+    def testSignalHUP(self):
+        d = self._testSignal('HUP')
+        d.addCallback(self.failIf)
+        return d
+
+    def testSignalINT(self):
+        d = self._testSignal('INT')
+        d.addCallback(self.failIf)
+        return d
+
+    def testSignalKILL(self):
+        d = self._testSignal('KILL')
+        d.addCallback(self.failIf)
+        return d
+        
 
 class PosixProcessTestCase(SignalMixin, unittest.TestCase, PosixProcessBase):
     # add three non-pty test cases

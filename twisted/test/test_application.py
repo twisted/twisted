@@ -313,6 +313,17 @@ class TestAppSupport(unittest.TestCase):
         app.startApplication(appl, 0)
         self.assert_(service.IService(appl).running)
 
+
+class Foo(basic.LineReceiver):
+    def connectionMade(self):
+        self.transport.write('lalala\r\n')
+    def lineReceived(self, line):
+        self.factory.line = line
+        self.transport.loseConnection()
+    def connectionLost(self, reason):
+        self.factory.d.callback(self.factory.line)
+
+
 class TestInternet(unittest.TestCase):
 
     def testUNIX(self):
@@ -326,24 +337,17 @@ class TestInternet(unittest.TestCase):
         if os.path.exists('.hello.skt'):
             os.remove('hello.skt')
         c.listenUNIX('./hello.skt', factory)
-        class Foo(basic.LineReceiver):
-            def connectionMade(self):
-                self.transport.write('lalala\r\n')
-            def lineReceived(self, line):
-                self.factory.line = line
-                self.transport.loseConnection()
         factory = protocol.ClientFactory()
+        factory.d = defer.Deferred()
         factory.protocol = Foo
         factory.line = None
         c.connectUNIX('./hello.skt', factory)
         s.privilegedStartService()
         s.startService()
-        util.spinWhile(lambda :factory.line is None)
-        util.wait(defer.maybeDeferred(s.stopService))
-        self.assertEqual(factory.line, 'lalala')
-
-        # Cleanup the reactor
-        util.wait(TestEcho.d)
+        factory.d.addCallback(self.assertEqual, 'lalala')
+        factory.d.addCallback(lambda x : s.stopService())
+        factory.d.addCallback(lambda x : TestEcho.d)
+        return factory.d
     testUNIX.suppress = oldAppSuppressions
 
     def testTCP(self):
@@ -356,22 +360,15 @@ class TestInternet(unittest.TestCase):
         s.privilegedStartService()
         s.startService()
         num = list(s)[0]._port.getHost().port
-        class Foo(basic.LineReceiver):
-            def connectionMade(self):
-                self.transport.write('lalala\r\n')
-            def lineReceived(self, line):
-                self.factory.line = line
-                self.transport.loseConnection()
         factory = protocol.ClientFactory()
+        factory.d = defer.Deferred()
         factory.protocol = Foo
         factory.line = None
         c.connectTCP('127.0.0.1', num, factory)
-        util.spinWhile(lambda :factory.line is None)
-        util.wait(defer.maybeDeferred(s.stopService))
-        self.assertEqual(factory.line, 'lalala')
-
-        # Cleanup the reactor
-        util.wait(TestEcho.d)
+        factory.d.addCallback(self.assertEqual, 'lalala')
+        factory.d.addCallback(lambda x : s.stopService())
+        factory.d.addCallback(lambda x : TestEcho.d)
+        return factory.d
     testTCP.suppress = oldAppSuppressions
 
     def testCalling(self):
@@ -529,22 +526,15 @@ class TestInternet2(unittest.TestCase):
         t = internet.TCPServer(0, factory)
         t.setServiceParent(s)
         num = t._port.getHost().port
-        class Foo(basic.LineReceiver):
-            def connectionMade(self):
-                self.transport.write('lalala\r\n')
-            def lineReceived(self, line):
-                self.factory.line = line
-                self.transport.loseConnection()
         factory = protocol.ClientFactory()
+        factory.d = defer.Deferred()
         factory.protocol = Foo
         factory.line = None
         internet.TCPClient('127.0.0.1', num, factory).setServiceParent(s)
-        util.spinWhile(lambda :factory.line is None)
-        self.assertEqual(factory.line, 'lalala')
-
-        # Cleanup the reactor
-        util.wait(defer.maybeDeferred(s.stopService))
-        util.wait(TestEcho.d)
+        factory.d.addCallback(self.assertEqual, 'lalala')
+        factory.d.addCallback(lambda x : s.stopService())
+        factory.d.addCallback(lambda x : TestEcho.d)
+        return factory.d
 
     def testUDP(self):
         if not interfaces.IReactorUDP(reactor, None):
@@ -553,14 +543,11 @@ class TestInternet2(unittest.TestCase):
         t = internet.TCPServer(0, p)
         t.startService()
         num = t._port.getHost().port
-        l = []
-        defer.maybeDeferred(t.stopService).addCallback(l.append)
-        util.spinWhile(lambda :not l)
-        t = internet.TCPServer(num, p)
-        t.startService()
-        l = []
-        defer.maybeDeferred(t.stopService).addCallback(l.append)
-        util.spinWhile(lambda :not l)
+        def onStop(ignored):
+            t = internet.TCPServer(num, p)
+            t.startService()
+            return t.stopService()
+        return defer.maybeDeferred(t.stopService).addCallback(onStop)
 
     def testPrivileged(self):
         factory = protocol.ServerFactory()
@@ -570,24 +557,17 @@ class TestInternet2(unittest.TestCase):
         t.privileged = 1
         t.privilegedStartService()
         num = t._port.getHost().port
-        class Foo(basic.LineReceiver):
-            def connectionMade(self):
-                self.transport.write('lalala\r\n')
-            def lineReceived(self, line):
-                self.factory.line = line
-                self.transport.loseConnection()
         factory = protocol.ClientFactory()
+        factory.d = defer.Deferred()
         factory.protocol = Foo
         factory.line = None
         c = internet.TCPClient('127.0.0.1', num, factory)
         c.startService()
-        util.spinWhile(lambda :factory.line is None)
-        self.assertEqual(factory.line, 'lalala')
-
-        # Cleanup the reactor
-        util.wait(defer.maybeDeferred(c.stopService))
-        util.wait(defer.maybeDeferred(t.stopService))
-        util.wait(TestEcho.d)
+        factory.d.addCallback(self.assertEqual, 'lalala')
+        factory.d.addCallback(lambda x : c.stopService())
+        factory.d.addCallback(lambda x : t.stopService())
+        factory.d.addCallback(lambda x : TestEcho.d)
+        return factory.d
 
     def testConnectionGettingRefused(self):
         factory = protocol.ServerFactory()
@@ -596,13 +576,12 @@ class TestInternet2(unittest.TestCase):
         t.startService()
         num = t._port.getHost().port
         t.stopService()
-        l = []
+        d = defer.Deferred()
         factory = protocol.ClientFactory()
-        factory.clientConnectionFailed = lambda *args: l.append(None)
+        factory.clientConnectionFailed = lambda *args: d.callback(None)
         c = internet.TCPClient('127.0.0.1', num, factory)
         c.startService()
-        util.spinWhile(lambda :not l)
-        self.assertEqual(l, [None])
+        return d
 
     def testUNIX(self):
         # FIXME: This test is far too dense.  It needs comments.
@@ -616,30 +595,26 @@ class TestInternet2(unittest.TestCase):
         TestEcho.d = defer.Deferred()
         t = internet.UNIXServer('echo.skt', factory)
         t.setServiceParent(s)
-        class Foo(basic.LineReceiver):
-            def connectionMade(self):
-                self.transport.write('lalala\r\n')
-            def lineReceived(self, line):
-                self.factory.line = line
-                self.transport.loseConnection()
         factory = protocol.ClientFactory()
         factory.protocol = Foo
+        factory.d = defer.Deferred()
         factory.line = None
         internet.UNIXClient('echo.skt', factory).setServiceParent(s)
-        util.spinWhile(lambda :factory.line is None)
-        self.assertEqual(factory.line, 'lalala')
-        util.wait(defer.maybeDeferred(s.stopService))
-        util.wait(TestEcho.d)
+        factory.d.addCallback(self.assertEqual, 'lalala')
+        factory.d.addCallback(lambda x : s.stopService())
+        factory.d.addCallback(lambda x : TestEcho.d)
+        factory.d.addCallback(self._cbTestUnix, factory, s)
+        return factory.d
 
+    def _cbTestUnix(self, ignored, factory, s):
         TestEcho.d = defer.Deferred()
         factory.line = None
+        factory.d = defer.Deferred()
         s.startService()
-        util.spinWhile(lambda :factory.line is None)
-        self.assertEqual(factory.line, 'lalala')
-
-        # Cleanup the reactor
-        util.wait(defer.maybeDeferred(s.stopService))
-        util.wait(TestEcho.d)
+        factory.d.addCallback(self.assertEqual, 'lalala')
+        factory.d.addCallback(lambda x : s.stopService())
+        factory.d.addCallback(lambda x : TestEcho.d)
+        return factory.d
 
     def testVolatile(self):
         if not interfaces.IReactorUNIX(reactor, None):
@@ -676,35 +651,10 @@ class TestInternet2(unittest.TestCase):
         t.stopService()
         self.failIf(t.running)
         factory = protocol.ClientFactory()
-        l = []
-        factory.clientConnectionFailed = lambda *args: l.append(None)
+        d = defer.Deferred()
+        factory.clientConnectionFailed = lambda *args: d.callback(None)
         reactor.connectUNIX('echo.skt', factory)
-        util.spinWhile(lambda :not l)
-        self.assertEqual(l, [None])
-
-    def testTimer(self):
-        l = []
-        t = internet.TimerService(1, l.append, "hello")
-        t.startService()
-        util.spinWhile(lambda :not l, timeout=30)
-        t.stopService()
-        self.failIf(t.running)
-        self.assertEqual(l, ["hello"])
-        l.pop()
-
-        # restart the same TimerService
-        t.startService()
-        util.spinWhile(lambda :not l, timeout=30)
-
-        t.stopService()
-        self.failIf(t.running)
-        self.assertEqual(l, ["hello"])
-        l.pop()
-        t = internet.TimerService(0.01, l.append, "hello")
-        t.startService()
-        util.spinWhile(lambda :len(l) < 10, timeout=30)
-        t.stopService()
-        self.assertEqual(l, ["hello"]*10)
+        return d
 
     def testPickledTimer(self):
         target = TimerTarget()
@@ -717,12 +667,19 @@ class TestInternet2(unittest.TestCase):
         self.failIf(t.running)
 
     def testBrokenTimer(self):
+        d = defer.Deferred()
         t = internet.TimerService(1, lambda: 1 / 0)
+        oldFailed = t._failed
+        def _failed(why):
+            oldFailed(why)
+            d.callback(None)
+        t._failed = _failed
         t.startService()
-        util.spinWhile(lambda :t._loop.running, timeout=30)
-        t.stopService()
-        self.assertEquals([ZeroDivisionError],
-                          [o.value.__class__ for o in log.flushErrors(ZeroDivisionError)])
+        d.addCallback(lambda x : t.stopService)
+        d.addCallback(lambda x : self.assertEqual(
+            [ZeroDivisionError],
+            [o.value.__class__ for o in log.flushErrors(ZeroDivisionError)]))
+        return d
 
     def testEverythingThere(self):
         trans = 'TCP UNIX SSL UDP UNIXDatagram Multicast'.split()
@@ -742,6 +699,59 @@ class TestInternet2(unittest.TestCase):
                         (prefix == "connect" and method == "UDP"))
                 o = getattr(internet, tran+side)()
                 self.assertEqual(service.IService(o), o)
+
+
+class TestTimerBasic(unittest.TestCase):
+
+    def testTimerRuns(self):
+        d = defer.Deferred()
+        self.t = internet.TimerService(1, d.callback, 'hello')
+        self.t.startService()
+        d.addCallback(self.assertEqual, 'hello')
+        d.addCallback(lambda x : self.t.stopService())
+        d.addCallback(lambda x : self.failIf(self.t.running))
+        return d
+
+    def tearDown(self):
+        return self.t.stopService()
+        
+    def testTimerRestart(self):
+        # restart the same TimerService
+        d1 = defer.Deferred()
+        d2 = defer.Deferred()
+        work = [(d2, "bar"), (d1, "foo")]
+        def trigger():
+            d, arg = work.pop()
+            d.callback(arg)
+        self.t = internet.TimerService(1, trigger)
+        self.t.startService()
+        def onFirstResult(result):
+            self.assertEqual(result, 'foo')
+            return self.t.stopService()
+        def onFirstStop(ignored):
+            self.failIf(self.t.running)
+            self.t.startService()
+            return d2
+        def onSecondResult(result):
+            self.assertEqual(result, 'bar')
+            self.t.stopService()
+        d1.addCallback(onFirstResult)
+        d1.addCallback(onFirstStop)
+        d1.addCallback(onSecondResult)
+        return d1
+
+    def testTimerLoops(self):
+        l = []
+        def trigger(data, number, d):
+            l.append(data)
+            if len(l) == number:
+                d.callback(l)
+        d = defer.Deferred()
+        self.t = internet.TimerService(0.01, trigger, "hello", 10, d)
+        self.t.startService()
+        d.addCallback(self.assertEqual, ['hello'] * 10)
+        d.addCallback(lambda x : self.t.stopService())
+        return d    
 
 
 class TestCompat(unittest.TestCase):

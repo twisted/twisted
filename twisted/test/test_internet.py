@@ -3,8 +3,7 @@
 
 
 from twisted.trial import unittest
-from twisted.trial.util import spinUntil
-from twisted.internet import reactor, protocol, error, app, abstract
+from twisted.internet import reactor, protocol, error, app, abstract, defer
 from twisted.internet import interfaces
 
 from twisted.test.time_helpers import Clock
@@ -199,12 +198,13 @@ class InterfaceTestCase(unittest.TestCase):
 
     _called = 0
 
-    def _callback(self, x, **d):
+    def _callback(self, deferred, x, **d):
         """Callback for testCallLater"""
         self.assertEquals(x, 1)
         self.assertEquals(d, {'a': 1})
         self._called = 1
         self._calledTime = time.time()
+        deferred.callback(None)
 
     def testCallLater(self):
         # add and remove a callback
@@ -215,16 +215,17 @@ class InterfaceTestCase(unittest.TestCase):
 
         self.assertRaises(error.AlreadyCancelled, i.cancel)
 
-        i = reactor.callLater(0.5, self._callback, 1, a=1)
+        d = defer.Deferred()
+        i = reactor.callLater(0.5, self._callback, d, 1, a=1)
         start = time.time()
 
-        spinUntil(lambda :self._called, 5)
-
-        self.assertApproximates(self._calledTime, start + 0.5, 0.2 )
-        self.assertRaises(error.AlreadyCalled, i.cancel)
-
-        del self._called
-        del self._calledTime
+        def check(ignored):
+            self.assertApproximates(self._calledTime, start + 0.5, 0.2 )
+            self.assertRaises(error.AlreadyCalled, i.cancel)
+            del self._called
+            del self._calledTime
+        d.addCallback(check)
+        return d
 
 
     def testCallLaterDelayAndReset(self):
@@ -477,6 +478,7 @@ class DelayedTestCase(unittest.TestCase):
         self.finished = 0
         self.counter = 0
         self.timers = {}
+        self.deferred = defer.Deferred()
         # ick. Sometimes there are magic timers already running:
         # popsicle.Freezer.tick . Kill off all such timers now so they won't
         # interfere with the test. Of course, this kind of requires that
@@ -519,6 +521,7 @@ class DelayedTestCase(unittest.TestCase):
     def done(self, tag):
         self.finished = 1
         self.callback(tag)
+        self.deferred.callback(None)
 
     def addTimer(self, when, callback):
         self.timers[self.counter] = reactor.callLater(when * 0.01, callback,
@@ -545,8 +548,8 @@ class DelayedTestCase(unittest.TestCase):
         del self.timers[which]
         self.checkTimers()
 
-        spinUntil(lambda :self.finished, 5)
-        self.checkTimers()
+        self.deferred.addCallback(lambda x : self.checkTimers())
+        return self.deferred
 
     def testActive(self):
         dcall = reactor.callLater(0, lambda: None)

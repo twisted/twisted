@@ -4,7 +4,7 @@
 
 """Tests for twisted.enterprise.adbapi."""
 
-from twisted.trial import unittest
+from twisted.trial import unittest, util
 
 import os, stat, tempfile
 
@@ -27,7 +27,7 @@ class ADBAPITestBase:
         skip = "ADB-API requires threads, no way to test without them"
 
     def wait(self, d, timeout=10.0):
-        return unittest.wait(d, timeout=timeout)
+        return util.wait(d, timeout=timeout)
 
     def setUp(self):
         self.startDB()
@@ -206,7 +206,7 @@ class ReconnectTestBase:
         skip = "ADB-API requires threads, no way to test without them"
 
     def wait(self, d, timeout=10.0):
-        return unittest.wait(d, timeout=timeout)
+        return util.wait(d, timeout=timeout)
 
     def setUp(self):
         if self.good_sql is None:

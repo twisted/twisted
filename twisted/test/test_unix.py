@@ -9,14 +9,13 @@ from twisted.internet import interfaces, reactor, protocol, error, address, defe
 from twisted.python import components, lockfile, failure
 from twisted.protocols import loopback
 from twisted.trial import unittest
-from twisted.trial.util import spinWhile, spinUntil, wait
 
 
 class MyProtocol(protocol.Protocol):
     made = closed = failed = 0
     data = ""
     def connectionMade(self):
-        self.made = 1
+        self.deferred.callback(None)
 
     def dataReceived(self, data):
         self.data += data
@@ -30,11 +29,12 @@ class TestClientFactory(protocol.ClientFactory):
     def __init__(self, testcase, name):
         self.testcase = testcase
         self.name = name
-
+        self.deferred = defer.Deferred()
 
     def buildProtocol(self, addr):
         self.testcase.assertEquals(address.UNIXAddress(self.name), addr)
         self.protocol = MyProtocol()
+        self.protocol.deferred = self.deferred
         return self.protocol
 
 class Factory(protocol.Factory):
@@ -43,6 +43,7 @@ class Factory(protocol.Factory):
     def __init__(self, testcase, name):
         self.testcase = testcase
         self.name = name
+        self.deferred = defer.Deferred()
 
     def stopFactory(self):
         self.stopped = True
@@ -50,6 +51,7 @@ class Factory(protocol.Factory):
     def buildProtocol(self, addr):
         self.testcase.assertEquals(None, addr)
         self.protocol = p = MyProtocol()
+        self.protocol.deferred = self.deferred
         return p
 
 
@@ -67,26 +69,16 @@ class PortCleanerUpper(unittest.TestCase):
         self.ports = []
 
     def tearDown(self):
-        self.cleanPorts(*self.ports)
+        return self.cleanPorts(*self.ports)
 
     def _addPorts(self, *ports):
         for p in ports:
             self.ports.append(p)
 
     def cleanPorts(self, *ports):
-        for p in ports:
-            if not hasattr(p, 'disconnected'):
-                raise RuntimeError, ("You handed something to cleanPorts that"
-                                     " doesn't have a disconnected attribute, dummy!")
-            if not p.disconnected:
-                d = getattr(p, self.callToLoseCnx)()
-                if isinstance(d, defer.Deferred):
-                    wait(d)
-                else:
-                    try:
-                        spinUntil(lambda :p.disconnected)
-                    except:
-                        failure.Failure().printTraceback()
+        ds = [ defer.maybeDeferred(p.loseConnection)
+               for p in ports if p.connected ]
+        return defer.gatherResults(ds)
 
 
 class UnixSocketTestCase(PortCleanerUpper):
@@ -98,12 +90,11 @@ class UnixSocketTestCase(PortCleanerUpper):
         l = reactor.listenUNIX(filename, f)
         tcf = TestClientFactory(self, filename)
         c = reactor.connectUNIX(filename, tcf)
-
-        spinUntil(lambda :getattr(f.protocol, 'made', None) and
-                          getattr(tcf.protocol, 'made', None))
-
-        self._addPorts(l, c.transport, tcf.protocol.transport, f.protocol.transport)
-
+        d = defer.gatherResults([f.deferred, tcf.deferred])
+        d.addCallback(lambda x : self._addPorts(l, c.transport,
+                                                tcf.protocol.transport,
+                                                f.protocol.transport))
+        return d
 
     def testMode(self):
         filename = self.mktemp()
@@ -122,15 +113,17 @@ class UnixSocketTestCase(PortCleanerUpper):
         self.failUnless(lockfile.isLocked(filename + ".lock"))
         tcf = TestClientFactory(self, filename)
         c = reactor.connectUNIX(filename, tcf, checkPID=1)
-
-        spinUntil(lambda :getattr(f.protocol, 'made', None) and
-                          getattr(tcf.protocol, 'made', None))
-
-        self._addPorts(l, c.transport, tcf.protocol.transport, f.protocol.transport)
-        self.cleanPorts(*self.ports)
-
-        self.failIf(lockfile.isLocked(filename + ".lock"))
-
+        d = defer.gatherResults([f.deferred, tcf.deferred])
+        def _portStuff(ignored):
+            self._addPorts(l, c.transport, tcf.protocol.transport,
+                           f.protocol.transport)
+            return self.cleanPorts(*self.ports)
+        def _check(ignored):
+            self.failIf(lockfile.isLocked(filename + ".lock"), 'locked')
+        d.addCallback(_portStuff)
+        d.addCallback(_check)
+        return d
+    
 
     def testSocketLocking(self):
         filename = self.mktemp()
@@ -191,29 +184,41 @@ class ClientProto(protocol.ConnectedDatagramProtocol):
     started = stopped = False
     gotback = None
 
+    def __init__(self):
+        self.deferredStarted = defer.Deferred()
+        self.deferredGotBack = defer.Deferred()
+
     def stopProtocol(self):
         self.stopped = True
 
     def startProtocol(self):
         self.started = True
+        self.deferredStarted.callback(None)
 
     def datagramReceived(self, data):
         self.gotback = data
+        self.deferredGotBack.callback(None)
 
 class ServerProto(protocol.DatagramProtocol):
     started = stopped = False
     gotwhat = gotfrom = None
 
+    def __init__(self):
+        self.deferredStarted = defer.Deferred()
+        self.deferredGotWhat = defer.Deferred()
+
     def stopProtocol(self):
         self.stopped = True
 
     def startProtocol(self):
         self.started = True
+        self.deferredStarted.callback(None)
 
     def datagramReceived(self, data, addr):
         self.gotfrom = addr
-        self.gotwhat = data
         self.transport.write("hi back", addr)
+        self.gotwhat = data
+        self.deferredGotWhat.callback(None)
 
 class DatagramUnixSocketTestCase(PortCleanerUpper):
     """Test datagram UNIX sockets."""
@@ -225,21 +230,28 @@ class DatagramUnixSocketTestCase(PortCleanerUpper):
         s = reactor.listenUNIXDatagram(serveraddr, sp)
         c = reactor.connectUNIXDatagram(serveraddr, cp, bindAddress = clientaddr)
 
+        d = defer.gatherResults([sp.deferredStarted, cp.deferredStarted])
+        def write(ignored):
+            cp.transport.write("hi")
+            return defer.gatherResults([sp.deferredGotWhat,
+                                        cp.deferredGotBack])
 
-        spinUntil(lambda:sp.started and cp.started)
+        def cleanup(ignored):
+            d1 = defer.maybeDeferred(s.stopListening)
+            d1.addCallback(lambda x : os.unlink(clientaddr))
+            d2 = defer.maybeDeferred(c.stopListening)
+            d2.addCallback(lambda x : os.unlink(serveraddr))
+            return defer.gatherResults([d1, d2])
 
-        cp.transport.write("hi")
+        def _cbTestExchange(ignored):
+            self.failUnlessEqual("hi", sp.gotwhat)
+            self.failUnlessEqual(clientaddr, sp.gotfrom)
+            self.failUnlessEqual("hi back", cp.gotback)
 
-        spinUntil(lambda:sp.gotwhat == "hi" and cp.gotback == "hi back")
-
-        s.stopListening()
-        c.stopListening()
-        os.unlink(clientaddr)
-        os.unlink(serveraddr)
-        spinWhile(lambda:s.connected and c.connected)
-        self.failUnlessEqual("hi", sp.gotwhat)
-        self.failUnlessEqual(clientaddr, sp.gotfrom)
-        self.failUnlessEqual("hi back", cp.gotback)
+        d.addCallback(write)
+        d.addCallback(cleanup)
+        d.addCallback(_cbTestExchange)
+        return d
 
     def testCannotListen(self):
         addr = self.mktemp()

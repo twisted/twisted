@@ -1738,9 +1738,12 @@ class NewStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
         ).addCallback(self._cbStopClient
         ).addErrback(self._ebGeneral)
 
-        loopback.loopbackTCP(self.server, self.client, noisy=False)
-        self.assertEquals(self.result, self.expected)
-        self.assertEquals(self.storeArgs, self.expectedArgs)
+        def check(ignored):
+            self.assertEquals(self.result, self.expected)
+            self.assertEquals(self.storeArgs, self.expectedArgs)
+        d = loopback.loopbackTCP(self.server, self.client, noisy=False)
+        d.addCallback(check)
+        return d
 
     def testSetFlags(self, uid=0):
         self.function = self.client.setFlags
@@ -1763,7 +1766,7 @@ class NewStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
         msg.add(5)
         msg.add(9)
         self.expectedArgs = ((msg, ['\\A', '\\B', 'C'], 0), {'uid': 0})
-        self._storeWork()
+        return self._storeWork()
 
 
 class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
@@ -1800,8 +1803,9 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
         ).addCallback(self._cbStopClient
         ).addErrback(self._ebGeneral)
 
-        loopback.loopbackTCP(self.server, self.client, noisy=False)
-        self.assertEquals(self.result, self.expected)
+        d = loopback.loopbackTCP(self.server, self.client, noisy=False)
+        d.addCallback(lambda x : self.assertEquals(self.result, self.expected))
+        return d
 
     def testFetchUID(self):
         self.function = lambda m, u: self.client.fetchUID(m)
@@ -1817,7 +1821,7 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
             1: {'UID': '999'},
             2: {'UID': '10101'},
         }
-        self._fetchWork(0)
+        return self._fetchWork(0)
 
     def testFetchFlags(self, uid=0):
         self.function = self.client.fetchFlags
@@ -1830,10 +1834,10 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
             0: {'FLAGS': ['FlagA', 'FlagB', '\\FlagC']},
             1: {'FLAGS': ['\\FlagC', 'FlagA', 'FlagB']},
         }
-        self._fetchWork(uid)
+        return self._fetchWork(uid)
 
     def testFetchFlagsUID(self):
-        self.testFetchFlags(1)
+        return self.testFetchFlags(1)
 
     def testFetchInternalDate(self, uid=0):
         self.function = self.client.fetchInternalDate
@@ -1850,10 +1854,10 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
             2: {'INTERNALDATE': '10-Mar-1992 02:44:30 -0600'},
             3: {'INTERNALDATE': '11-Jan-2000 14:40:24 -0800'},
         }
-        self._fetchWork(uid)
+        return self._fetchWork(uid)
 
     def testFetchInternalDateUID(self):
-        self.testFetchInternalDate(1)
+        return self.testFetchInternalDate(1)
 
     def testFetchEnvelope(self, uid=0):
         self.function = self.client.fetchEnvelope
@@ -1875,10 +1879,10 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
                     None, None, None, 'id-id-id-yayaya']
             }
         }
-        self._fetchWork(uid)
+        return self._fetchWork(uid)
 
     def testFetchEnvelopeUID(self):
-        self.testFetchEnvelope(1)
+        return self.testFetchEnvelope(1)
 
     def testFetchBodyStructure(self, uid=0):
         self.function = self.client.fetchBodyStructure
@@ -1893,10 +1897,10 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
             'text', 'plain', [['name', 'thing'], ['key', 'value']],
             'this-is-the-content-id', 'describing-the-content-goes-here!',
             '8BIT', '20', '4', None, None, None]}}
-        self._fetchWork(uid)
+        return self._fetchWork(uid)
 
     def testFetchBodyStructureUID(self):
-        self.testFetchBodyStructure(1)
+        return self.testFetchBodyStructure(1)
     
     def testFetchSimplifiedBody(self, uid=0):
         self.function = self.client.fetchSimplifiedBody
@@ -1914,10 +1918,10 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
             }
         }
 
-        self._fetchWork(uid)
+        return self._fetchWork(uid)
 
     def testFetchSimplifiedBodyUID(self):
-        self.testFetchSimplifiedBody(1)
+        return self.testFetchSimplifiedBody(1)
 
     def testFetchSimplifiedBodyText(self, uid=0):
         self.function = self.client.fetchSimplifiedBody
@@ -1932,10 +1936,10 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
             }
         }
 
-        self._fetchWork(uid)
+        return self._fetchWork(uid)
 
     def testFetchSimplifiedBodyTextUID(self):
-        self.testFetchSimplifiedBodyText(1)
+        return self.testFetchSimplifiedBodyText(1)
 
     def testFetchSimplifiedBodyRFC822(self, uid=0):
         self.function = self.client.fetchSimplifiedBody
@@ -1957,10 +1961,10 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
             }
         }
 
-        self._fetchWork(uid)
+        return self._fetchWork(uid)
 
     def testFetchSimplifiedBodyRFC822UID(self):
-        self.testFetchSimplifiedBodyRFC822(1)
+        return self.testFetchSimplifiedBodyRFC822(1)
 
     def testFetchMessage(self, uid=0):
         self.function = self.client.fetchMessage
@@ -1971,10 +1975,10 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.expected = {
             0: {'RFC822': 'Header: Value\r\n\r\nBODY TEXT\r\n'}
         }
-        self._fetchWork(uid)
+        return self._fetchWork(uid)
 
     def testFetchMessageUID(self):
-        self.testFetchMessage(1)
+        return self.testFetchMessage(1)
 
     def testFetchHeaders(self, uid=0):
         self.function = self.client.fetchHeaders
@@ -1985,10 +1989,10 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.expected = {
             0: {'RFC822.HEADER': imap4._formatHeaders({'H1': 'V1', 'H2': 'V2'})},
         }
-        self._fetchWork(uid)
+        return self._fetchWork(uid)
 
     def testFetchHeadersUID(self):
-        self.testFetchHeaders(1)
+        return self.testFetchHeaders(1)
 
     def testFetchBody(self, uid=0):
         self.function = self.client.fetchBody
@@ -1999,10 +2003,10 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.expected = {
             0: {'RFC822.TEXT': 'Body goes here\r\n'},
         }
-        self._fetchWork(uid)
+        return self._fetchWork(uid)
 
     def testFetchBodyUID(self):
-        self.testFetchBody(1)
+        return self.testFetchBody(1)
 
     def testFetchSize(self, uid=0):
         self.function = self.client.fetchSize
@@ -2013,10 +2017,10 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.expected = {
             0: {'RFC822.SIZE': '20'},
         }
-        self._fetchWork(uid)
+        return self._fetchWork(uid)
 
     def testFetchSizeUID(self):
-        self.testFetchSize(1)
+        return self.testFetchSize(1)
 
     def testFetchFull(self, uid=0):
         self.function = self.client.fetchFull
@@ -2041,10 +2045,10 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
                 'ENVELOPE': [None, None, [[None, None, None]], [[None, None, None]], None, None, None, None, None, None],
                 'BODY': [None, None, [], None, None, None, '12']},
         }
-        self._fetchWork(uid)
+        return self._fetchWork(uid)
 
     def testFetchFullUID(self):
-        self.testFetchFull(1)
+        return self.testFetchFull(1)
 
     def testFetchAll(self, uid=0):
         self.function = self.client.fetchAll
@@ -2065,10 +2069,10 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
                 'INTERNALDATE': '15-Apr-2003 19:43:44 +0200',
                 'FLAGS': []},
         }
-        self._fetchWork(uid)
+        return self._fetchWork(uid)
 
     def testFetchAllUID(self):
-        self.testFetchAll(1)
+        return self.testFetchAll(1)
 
     def testFetchFast(self, uid=0):
         self.function = self.client.fetchFast
@@ -2081,10 +2085,10 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
                 'INTERNALDATE': '19-Mar-2003 19:22:21 -0500',
                 'RFC822.SIZE': '0'},
         }
-        self._fetchWork(uid)
+        return self._fetchWork(uid)
 
     def testFetchFastUID(self):
-        self.testFetchFast(1)
+        return self.testFetchFast(1)
 
 
 class FetchSearchStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
@@ -2123,17 +2127,19 @@ class FetchSearchStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
         ).addCallback(self._cbStopClient
         ).addErrback(self._ebGeneral)
 
-        loopback.loopbackTCP(self.server, self.client, noisy=False)
+        def check(ignored):
+            # Ensure no short-circuiting wierdness is going on
+            self.failIf(self.result is self.expected)
 
-        # Ensure no short-circuiting wierdness is going on
-        self.failIf(self.result is self.expected)
-
-        self.assertEquals(self.result, self.expected)
-        self.assertEquals(self.uid, self.server_received_uid)
-        self.assertEquals(
-            imap4.parseNestedParens(self.query),
-            self.server_received_query
-        )
+            self.assertEquals(self.result, self.expected)
+            self.assertEquals(self.uid, self.server_received_uid)
+            self.assertEquals(
+                imap4.parseNestedParens(self.query),
+                self.server_received_query
+            )
+        d = loopback.loopbackTCP(self.server, self.client, noisy=False)
+        d.addCallback(check)
+        return d
 
     def testSearch(self):
         self.query = imap4.Or(
@@ -2142,7 +2148,7 @@ class FetchSearchStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
         )
         self.expected = [1, 4, 5, 7]
         self.uid = 0
-        self._searchWork(0)
+        return self._searchWork(0)
 
     def testUIDSearch(self):
         self.query = imap4.Or(
@@ -2151,7 +2157,7 @@ class FetchSearchStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
         )
         self.uid = 1
         self.expected = [1, 2, 3]
-        self._searchWork(1)
+        return self._searchWork(1)
 
     def getUID(self, msg):
         try:
@@ -2175,24 +2181,26 @@ class FetchSearchStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
         ).addCallback(self._cbStopClient
         ).addErrback(self._ebGeneral)
 
-        loopback.loopbackTCP(self.server, self.client, noisy=False)
+        def check(ignored):
+            # Ensure no short-circuiting wierdness is going on
+            self.failIf(self.result is self.expected)
 
-        # Ensure no short-circuiting wierdness is going on
-        self.failIf(self.result is self.expected)
+            self.parts and self.parts.sort()
+            self.server_received_parts and self.server_received_parts.sort()
 
-        self.parts and self.parts.sort()
-        self.server_received_parts and self.server_received_parts.sort()
+            if self.uid:
+                for (k, v) in self.expected.items():
+                    v['UID'] = str(k)
 
-        if self.uid:
-            for (k, v) in self.expected.items():
-                v['UID'] = str(k)
+            self.assertEquals(self.result, self.expected)
+            self.assertEquals(self.uid, self.server_received_uid)
+            self.assertEquals(self.parts, self.server_received_parts)
+            self.assertEquals(imap4.parseIdList(self.messages),
+                              imap4.parseIdList(self.server_received_messages))
 
-        self.assertEquals(self.result, self.expected)
-        self.assertEquals(self.uid, self.server_received_uid)
-        self.assertEquals(self.parts, self.server_received_parts)
-        self.assertEquals(imap4.parseIdList(self.messages),
-                          imap4.parseIdList(self.server_received_messages))
-
+        d = loopback.loopbackTCP(self.server, self.client, noisy=False)
+        d.addCallback(check)
+        return d
 
 class FakeMailbox:
     def __init__(self):
@@ -2304,7 +2312,7 @@ class TLSTestCase(IMAP4HelperMixin, unittest.TestCase):
     clientCTX = ClientTLSContext and ClientTLSContext()
 
     def loopback(self):
-        loopback.loopbackTCP(self.server, self.client, noisy=False)
+        return loopback.loopbackTCP(self.server, self.client, noisy=False)
 
     def testAPileOfThings(self):
         SimpleServer.theAccount.addMailbox('inbox')
@@ -2330,11 +2338,13 @@ class TLSTestCase(IMAP4HelperMixin, unittest.TestCase):
         methods = [login, list, status, examine, logout]
         map(self.connected.addCallback, map(strip, methods))
         self.connected.addCallbacks(self._cbStopClient, self._ebGeneral)
-        self.loopback()
-
-        self.assertEquals(self.server.startedTLS, True)
-        self.assertEquals(self.client.startedTLS, True)
-        self.assertEquals(len(called), len(methods))
+        def check(ignored):
+            self.assertEquals(self.server.startedTLS, True)
+            self.assertEquals(self.client.startedTLS, True)
+            self.assertEquals(len(called), len(methods))        
+        d = self.loopback()
+        d.addCallback(check)
+        return d
 
     def testLoginLogin(self):
         self.server.checker.addUser('testuser', 'password-test')
@@ -2348,8 +2358,9 @@ class TLSTestCase(IMAP4HelperMixin, unittest.TestCase):
             ).addCallback(self._cbStopClient
             ).addErrback(self._ebGeneral)
 
-        self.loopback()
-        self.assertEquals(len(success), 1)
+        d = self.loopback()
+        d.addCallback(lambda x : self.assertEquals(len(success), 1))
+        return d
 
     def testStartTLS(self):
         success = []
@@ -2359,8 +2370,9 @@ class TLSTestCase(IMAP4HelperMixin, unittest.TestCase):
         self.connected.addCallback(success.append)
         self.connected.addErrback(self._ebGeneral)
 
-        self.loopback()
-        self.failUnless(success)
+        d = self.loopback()
+        d.addCallback(lambda x : self.failUnless(success))
+        return d
 
     def testFailedStartTLS(self):
         failure = []
@@ -2373,9 +2385,10 @@ class TLSTestCase(IMAP4HelperMixin, unittest.TestCase):
         self.connected.addCallback(self._cbStopClient)
         self.connected.addErrback(self._ebGeneral)
 
-        self.loopback()
-        self.failUnless(failure)
-        self.assertIdentical(failure[0], imap4.IMAP4Exception)
+        def check(ignored):
+            self.failUnless(failure)
+            self.assertIdentical(failure[0], imap4.IMAP4Exception)
+        return self.loopback().addCallback(check)
         
 class SlowMailbox(SimpleMailbox):
     howSlow = 2

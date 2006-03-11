@@ -52,10 +52,13 @@ class LoopbackTestCase(unittest.TestCase):
             s.transport.loseConnection()
         s.conn.addCallback(sendALine)
 
-        self.loopbackFunc.im_func(s, c)
-        self.assertEquals(c.lines, ["THIS IS LINE ONE!"])
-        self.assertEquals(s.connLost, 1)
-        self.assertEquals(c.connLost, 1)
+        def check(ignored):
+            self.assertEquals(c.lines, ["THIS IS LINE ONE!"])
+            self.assertEquals(s.connLost, 1)
+            self.assertEquals(c.connLost, 1)
+        d = defer.maybeDeferred(self.loopbackFunc.im_func, s, c)
+        d.addCallback(check)
+        return d
     
     def testSneakyHiddenDoom(self):
         s = DoomProtocol()
@@ -65,13 +68,24 @@ class LoopbackTestCase(unittest.TestCase):
             s.sendLine("DOOM LINE")
         s.conn.addCallback(sendALine)
         
-        self.loopbackFunc.im_func(s, c)
-        self.assertEquals(s.lines, ['Hello 1', 'Hello 2', 'Hello 3'])
-        self.assertEquals(c.lines, ['DOOM LINE', 'Hello 1', 'Hello 2', 'Hello 3'])
-        self.assertEquals(s.connLost, 1)
-        self.assertEquals(c.connLost, 1)
+        def check(ignored):
+            self.assertEquals(s.lines, ['Hello 1', 'Hello 2', 'Hello 3'])
+            self.assertEquals(c.lines, ['DOOM LINE', 'Hello 1', 'Hello 2', 'Hello 3'])
+            self.assertEquals(s.connLost, 1)
+            self.assertEquals(c.connLost, 1)
+        d = defer.maybeDeferred(self.loopbackFunc.im_func, s, c)
+        d.addCallback(check)
+        return d
 
 class LoopbackTCPTestCase(LoopbackTestCase):
     loopbackFunc = loopback.loopbackTCP
 
+
+class LoopbackUNIXTestCase(LoopbackTestCase):
+    loopbackFunc = loopback.loopbackUNIX
+
+    def setUp(self):
+        from twisted.internet import reactor, interfaces
+        if interfaces.IReactorUNIX(reactor, None) is None:
+            raise unittest.SkipTest("Current reactor does not support UNIX sockets")
 

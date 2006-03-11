@@ -9,7 +9,7 @@ from twisted.protocols import loopback
 from twisted.internet import reactor, defer, error, protocol, interfaces
 from twisted.python import log
 
-from twisted.trial import unittest
+from twisted.trial import unittest, util
 from twisted.test.proto_helpers import StringTransport
 from twisted.protocols import basic
 
@@ -246,7 +246,7 @@ class POP3ClientMessageTestCase(unittest.TestCase):
         p.dataReceived("+OK Message incoming\r\n")
         p.dataReceived("La la la here is message text\r\n")
         p.dataReceived("..Further message text\r\n.\r\n")
-        self.assertIdentical(unittest.wait(d), f)
+        self.assertIdentical(util.wait(d), f)
         self.assertEquals(c.data, ["La la la here is message text",
                                    ".Further message text"])
 
@@ -273,7 +273,7 @@ class POP3ClientMessageTestCase(unittest.TestCase):
         p.dataReceived("Line the first!  Woop\r\n")
         p.dataReceived("Line the last!  Bye\r\n")
         p.dataReceived(".\r\n")
-        self.assertIdentical(unittest.wait(d), f)
+        self.assertIdentical(util.wait(d), f)
         self.assertEquals(c.data, ["Line the first!  Woop",
                                    "Line the last!  Bye"])
 
@@ -406,7 +406,7 @@ class POP3HelperMixin:
         return failure
 
     def loopback(self):
-        loopback.loopbackTCP(self.server, self.client, noisy=False)
+        return loopback.loopbackTCP(self.server, self.client, noisy=False)
 
 
 class TLSServerFactory(protocol.ServerFactory):
@@ -506,7 +506,7 @@ class POP3TimeoutTestCase(POP3HelperMixin, unittest.TestCase):
         map(self.connected.addCallback, map(strip, methods))
         self.connected.addCallback(self._cbStopClient)
         self.connected.addErrback(self._ebGeneral)
-        self.loopback()
+        return self.loopback()
 
 
 if ClientTLSContext is None:

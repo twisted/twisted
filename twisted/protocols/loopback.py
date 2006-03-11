@@ -13,9 +13,9 @@ import tempfile
 from zope.interface import implements
 
 # Twisted Imports
-from twisted.internet import interfaces, protocol, main
+from twisted.protocols import policies
+from twisted.internet import interfaces, protocol, main, defer
 from twisted.python import failure, components
-from twisted.trial.util import spinUntil, spinWhile
 
 class LoopbackRelay:
 
@@ -101,6 +101,7 @@ class LoopbackClientFactory(protocol.ClientFactory):
 
     def __init__(self, protocol):
         self.disconnected = 0
+        self.deferred = defer.Deferred()
         self.protocol = protocol
 
     def buildProtocol(self, addr):
@@ -108,44 +109,49 @@ class LoopbackClientFactory(protocol.ClientFactory):
 
     def clientConnectionLost(self, connector, reason):
         self.disconnected = 1
+        self.deferred.callback(None)
+
+
+class _FireOnClose(policies.ProtocolWrapper):
+    def __init__(self, protocol, factory):
+        policies.ProtocolWrapper.__init__(self, protocol, factory)
+        self.deferred = defer.Deferred()
+
+    def connectionLost(self, reason):
+        policies.ProtocolWrapper.connectionLost(self, reason)
+        self.deferred.callback(None)
 
 
 def loopbackTCP(server, client, port=0, noisy=True):
     """Run session between server and client protocol instances over TCP."""
     from twisted.internet import reactor
-    f = protocol.Factory()
+    f = policies.WrappingFactory(protocol.Factory())
+    serverWrapper = _FireOnClose(f, server)
     f.noisy = noisy
-    f.buildProtocol = lambda addr, p=server: p
+    f.buildProtocol = lambda addr: serverWrapper
     serverPort = reactor.listenTCP(port, f, interface='127.0.0.1')
-    reactor.iterate()
     clientF = LoopbackClientFactory(client)
     clientF.noisy = noisy
     reactor.connectTCP('127.0.0.1', serverPort.getHost().port, clientF)
-
-    # this needs to wait until:
-    #  A: the client has disconnected
-    #  B: the server has noticed, and its own socket has disconnected
-    #  C: the listening socket has been shut down
-    spinUntil(lambda :clientF.disconnected)        # A
-    spinWhile(lambda :server.transport.connected)  # B
-    serverPort.stopListening()
-    spinWhile(lambda :serverPort.connected)        # C
+    d = clientF.deferred
+    d.addCallback(lambda x: serverWrapper.deferred)
+    d.addCallback(lambda x: serverPort.stopListening())
+    return d
 
 
 def loopbackUNIX(server, client, noisy=True):
     """Run session between server and client protocol instances over UNIX socket."""
     path = tempfile.mktemp()
     from twisted.internet import reactor
-    f = protocol.Factory()
+    f = policies.WrappingFactory(protocol.Factory())
+    serverWrapper = _FireOnClose(f, server)
     f.noisy = noisy
-    f.buildProtocol = lambda addr, p=server: p
+    f.buildProtocol = lambda addr: serverWrapper
     serverPort = reactor.listenUNIX(path, f)
-    reactor.iterate()
     clientF = LoopbackClientFactory(client)
     clientF.noisy = noisy
     reactor.connectUNIX(path, clientF)
-
-    spinUntil(lambda :clientF.disconnected)        # A
-    spinWhile(lambda :server.transport.connected)  # B
-    serverPort.stopListening()
-    spinWhile(lambda :serverPort.connected)        # C
+    d = clientF.deferred
+    d.addCallback(lambda x: serverWrapper.deferred)
+    d.addCallback(lambda x: serverPort.stopListening())
+    return d

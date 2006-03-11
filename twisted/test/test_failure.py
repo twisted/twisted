@@ -10,8 +10,9 @@ Test cases for failure module.
 
 import sys
 import StringIO
+import traceback
 
-from twisted.trial import unittest, util
+from twisted.trial import unittest
 
 
 from twisted.python import failure
@@ -69,7 +70,7 @@ class FailureTestCase(unittest.TestCase):
         try:
             f.raiseException()
         except ZeroDivisionError:
-            tb = util.extract_tb(sys.exc_info()[2])
+            tb = traceback.extract_tb(sys.exc_info()[2])
             return tb[-1][-1]
         else:
             raise Exception(

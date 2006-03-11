@@ -30,8 +30,9 @@ class FileSenderTestCase(unittest.TestCase):
         s = BufferingServer()
         c = FileSendingClient(StringIO.StringIO(testStr))
         
-        loopback.loopbackTCP(s, c)
-        self.assertEquals(s.buffer, testStr)
+        d = loopback.loopbackTCP(s, c)
+        d.addCallback(lambda x : self.assertEquals(s.buffer, testStr))
+        return d
 
     def testSendingEmptyFile(self):
         fileSender = basic.FileSender()

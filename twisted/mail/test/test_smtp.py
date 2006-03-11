@@ -150,7 +150,7 @@ class MyESMTPClient(MyClient, smtp.ESMTPClient):
 
 class LoopbackMixin:
     def loopback(self, server, client):
-        loopback.loopbackTCP(server, client)
+        return loopback.loopbackTCP(server, client)
 
 class LoopbackTestCase(LoopbackMixin):
     def testMessages(self):
@@ -162,7 +162,7 @@ class LoopbackTestCase(LoopbackMixin):
         protocol.service = factory
         protocol.factory = factory
         clientProtocol = self.clientClass()
-        self.loopback(protocol, clientProtocol)
+        return self.loopback(protocol, clientProtocol)
     testMessages.suppress = [util.suppress(message='DomainSMTP', category=DeprecationWarning)]
 
 class LoopbackSMTPTestCase(LoopbackTestCase, unittest.TestCase):
@@ -211,8 +211,10 @@ class SMTPClientTestCase(unittest.TestCase, LoopbackMixin):
         # this test is disabled temporarily
         client = MySMTPClient()
         server = FakeSMTPServer()
-        self.loopback(server, client)
-        self.assertEquals(server.buffer, self.expected_output)
+        d = self.loopback(server, client)
+        d.addCallback(lambda x :
+                      self.assertEquals(server.buffer, self.expected_output))
+        return d
 
 class DummySMTPMessage:
 
@@ -402,9 +404,9 @@ class AuthTestCase(unittest.TestCase, LoopbackMixin):
         cAuth = imap4.CramMD5ClientAuthenticator('testuser')
         client.registerAuthenticator(cAuth)
 
-        self.loopback(server, client)
-
-        self.assertEquals(server.authenticated, 1)
+        d = self.loopback(server, client)
+        d.addCallback(lambda x : self.assertEquals(server.authenticated, 1))
+        return d
 
 class SMTPHelperTestCase(unittest.TestCase):
     def testMessageID(self):
@@ -458,10 +460,11 @@ class TLSTestCase(unittest.TestCase, LoopbackMixin):
         client = NoticeTLSClient(contextFactory=clientCTX)
         server = DummyESMTP(contextFactory=serverCTX)
 
-        self.loopback(server, client)
+        def check(ignored):
+            self.assertEquals(client.tls, True)
+            self.assertEquals(server.startedTLS, True)
 
-        self.assertEquals(client.tls, True)
-        self.assertEquals(server.startedTLS, True)
+        return self.loopback(server, client).addCallback(check)
 
 if ClientTLSContext is None:
     for case in (TLSTestCase,):
@@ -493,11 +496,12 @@ class TimeoutTestCase(unittest.TestCase, LoopbackMixin):
             address.IPv4Address('TCP', 'example.net', 25))
         server = protocol.Protocol()
 
-        self.loopback(client, server)
-        after = time.time()
-        self.failIf(after - before > 1.0)
-
-        return self.assertFailure(onDone, smtp.SMTPTimeoutError)
+        def check(ignored):
+            after = time.time()
+            self.failIf(after - before > 1.0)
+            return self.assertFailure(onDone, smtp.SMTPTimeoutError)
+            
+        return self.loopback(client, server).addCallback(check)
 
 
     def testSMTPClient(self):

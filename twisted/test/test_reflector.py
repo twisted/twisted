@@ -4,7 +4,7 @@
 
 """Tests for twisted.enterprise reflectors."""
 
-from twisted.trial import unittest
+from twisted.trial import unittest, util as trialutil
 
 import os, random
 
@@ -101,7 +101,7 @@ class ReflectorTestBase:
     count = 100 # a parameter used for running iterative tests
 
     def wait(self, d, timeout=10.0):
-        return unittest.wait(d, timeout=timeout)
+        return trialutil.wait(d, timeout=timeout)
 
     def randomizeRow(self, row):
         return randomizeRow(row, self.nulls_ok, self.trailing_spaces_ok)
