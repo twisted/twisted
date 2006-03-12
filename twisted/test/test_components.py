@@ -281,7 +281,7 @@ class AdapterTestCase(unittest.TestCase):
         o = object()
         a = Adept(o)
         self.assertRaises(components.CannotAdapt, IAdder, a)
-        self.assertEquals(IAdder(a, None), None)
+        self.assertEquals(IAdder(a, default=None), None)
 
     def testMultipleInterfaceRegistration(self):
         class IMIFoo(components.Interface):
