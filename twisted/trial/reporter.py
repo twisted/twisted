@@ -294,8 +294,8 @@ class VerboseTextReporter(Reporter):
 
 class TimingTextReporter(VerboseTextReporter):
     def stopTest(self, method):
-        self.write("(%.03f secs)\n" % self._last_time)
         super(TimingTextReporter, self).stopTest(method)
+        self.write("(%.03f secs)\n" % self._last_time)
 
 
 class TreeReporter(Reporter):

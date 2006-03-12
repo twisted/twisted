@@ -204,3 +204,23 @@ class SkipTest(unittest.TestCase):
         self.result.printErrors()
         output = '\n'.join(self.stream.getvalue().splitlines()[3:]).strip()
         self.failUnlessEqual(output, str(e))
+
+
+class TestReporter(unittest.TestCase):
+    resultFactory = reporter.Reporter
+    
+    def setUp(self):
+        self.test = TestErrorReporting('test_timing')
+        self.stream = StringIO.StringIO()
+        self.result = self.resultFactory(self.stream)
+    
+    def test_startStop(self):
+        self.result.startTest(self.test)
+        self.result.stopTest(self.test)
+        self.assertTrue(self.result._last_time > 0)
+        self.assertEqual(self.result.testsRun, 1)
+        self.assertEqual(self.result.wasSuccessful(), True)
+
+
+class TestTimingReporter(TestReporter):
+    resultFactory = reporter.TimingTextReporter
