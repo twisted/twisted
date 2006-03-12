@@ -61,5 +61,3 @@ class ResolverChain(common.ResolverBase):
                 FailureHandler(r.lookupAllRecords, name, timeout)
             )
         return d
-
-components.backwardsCompatImplements(ResolverChain)

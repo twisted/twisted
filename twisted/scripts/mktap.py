@@ -4,7 +4,6 @@
 import sys, os
 
 from zope.interface import Interface, Attribute, implements
-from twisted.python.components import backwardsCompatImplements
 
 from twisted.application import service, compat, app
 from twisted.persisted import sob
@@ -234,4 +233,3 @@ class _tapHelper(object):
             return namedAny(self.module).makeService
         return get,
     makeService = property(*makeService())
-backwardsCompatImplements(_tapHelper)

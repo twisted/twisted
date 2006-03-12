@@ -102,7 +102,6 @@ class Portal:
         this will not be in connectionLost (such as in a web-based session), it
         will always be at the end of a user's interactive session.
         """
-        components.fixClassImplements(credentials.__class__)
         ifac = interface.providedBy(credentials)
         for i in ifac:
             c = self.checkers.get(i)

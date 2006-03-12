@@ -55,7 +55,6 @@ class AllowAnonymousAccess:
     def requestAvatarId(self, credentials):
         return defer.succeed(ANONYMOUS)
 
-components.backwardsCompatImplements(AllowAnonymousAccess)
 
 class InMemoryUsernamePasswordDatabaseDontUse:
     """An extremely simple credentials checker.
@@ -94,7 +93,6 @@ class InMemoryUsernamePasswordDatabaseDontUse:
         else:
             return defer.fail(error.UnauthorizedLogin())
 
-components.backwardsCompatImplements(InMemoryUsernamePasswordDatabaseDontUse)
 
 class FilePasswordDB:
     """A file-based, text-based username/password database.
@@ -232,7 +230,7 @@ class FilePasswordDB:
         except KeyError:
             return defer.fail(error.UnauthorizedLogin())
         else:
-            up = credentials.IUsernamePassword(c, default=None)
+            up = credentials.IUsernamePassword(c, None)
             if self.hash:
                 if up is not None:
                     h = self.hash(up.username, up.password, p)
@@ -242,7 +240,6 @@ class FilePasswordDB:
             else:
                 return defer.maybeDeferred(c.checkPassword, p
                     ).addCallback(self._cbPasswordMatch, u)
-components.backwardsCompatImplements(FilePasswordDB)
 
 class PluggableAuthenticationModulesChecker:
     interface.implements(ICredentialsChecker)
@@ -257,7 +254,6 @@ class PluggableAuthenticationModulesChecker:
         d.addCallback(lambda x: credentials.username)
         return d
 
-components.backwardsCompatImplements(PluggableAuthenticationModulesChecker)
 
 # For backwards compatibility
 # Allow access as the old name.

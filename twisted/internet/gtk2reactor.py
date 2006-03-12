@@ -220,8 +220,6 @@ class Gtk2Reactor(posixbase.PosixReactorBase):
         # grumble
         _simtag = gobject.timeout_add(int(timeout * 1010), self.simulate)
 
-components.backwardsCompatImplements(Gtk2Reactor)
-
 
 class PortableGtkReactor(selectreactor.SelectReactor):
     """Reactor that works on Windows.

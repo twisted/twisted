@@ -21,8 +21,6 @@ class BaseChangeNotified:
     def reportNoChange(self):
         pass
 
-components.backwardsCompatImplements(BaseChangeNotified)
-
 class ChangeChecker:
 
     working = 0

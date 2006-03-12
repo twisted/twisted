@@ -65,7 +65,6 @@ class Page(model.MethodModel, controller.Controller, view.View):
     def renderView(self, request):
         return view.View.render(self, request,
                                 doneCallback=self.gatheredControllers)
-components.backwardsCompatImplements(Page)
 
 class LivePage(model.MethodModel, controller.LiveController, view.LiveView):
 
@@ -106,4 +105,3 @@ class LivePage(model.MethodModel, controller.LiveController, view.LiveView):
     def renderView(self, request):
         return view.View.render(self, request,
                                 doneCallback=self.gatheredControllers)
-components.backwardsCompatImplements(LivePage)

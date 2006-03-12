@@ -229,8 +229,6 @@ class Port(base.BasePort):
         """
         return address.IPv4Address('UDP', *(self.socket.getsockname() + ('INET_UDP',)))
 
-components.backwardsCompatImplements(Port)
-
 
 class ConnectedPort(Port):
     """DEPRECATED.
@@ -304,8 +302,6 @@ class ConnectedPort(Port):
         """
         return address.IPv4Address('UDP', self.remotehost, self.remoteport, 'INET_UDP')
 
-components.backwardsCompatImplements(ConnectedPort)
-
 
 class MulticastMixin:
     """Implement multicast functionality."""
@@ -376,8 +372,6 @@ class MulticastPort(MulticastMixin, Port):
                 skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         return skt
 
-components.backwardsCompatImplements(MulticastPort)
-
 
 class ConnectedMulticastPort(MulticastMixin, ConnectedPort):
     """DEPRECATED.
@@ -385,5 +379,3 @@ class ConnectedMulticastPort(MulticastMixin, ConnectedPort):
     Connected UDP Port that supports multicasting."""
 
     implements(interfaces.IMulticastTransport)
-
-components.backwardsCompatImplements(ConnectedMulticastPort)

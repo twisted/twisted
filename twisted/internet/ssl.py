@@ -136,8 +136,6 @@ class Client(tcp.Client):
         self.startWriting()
         tcp.Client._connectDone(self)
 
-components.backwardsCompatImplements(Client)
-
 
 class Server(tcp.Server):
     """I am an SSL server.
@@ -154,8 +152,6 @@ class Server(tcp.Server):
         """Return address of peer."""
         h, p = self.client
         return address.IPv4Address('TCP', h, p, 'SSL')
-
-components.backwardsCompatImplements(Server)
 
 
 class Port(tcp.Port):

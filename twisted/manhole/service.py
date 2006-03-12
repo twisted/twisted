@@ -369,8 +369,6 @@ class Realm:
             p.detached(mind, avatarId)
         return (pb.IPerspective, p, detached)
 
-components.backwardsCompatImplements(Realm)
-
 
 class Service(service.Service):
 

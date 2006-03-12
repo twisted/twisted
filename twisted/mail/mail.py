@@ -191,8 +191,6 @@ class BounceDomain:
     def getCredentialsCheckers(self):
         return []
 
-components.backwardsCompatImplements(BounceDomain)
-
 
 class FileMessage:
     """A file we can write an email too."""
@@ -215,8 +213,6 @@ class FileMessage:
     def connectionLost(self):
         self.fp.close()
         os.remove(self.name)
-
-components.backwardsCompatImplements(FileMessage)
 
 
 class MailService(service.MultiService):

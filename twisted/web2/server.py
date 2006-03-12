@@ -335,7 +335,7 @@ class Request(http.Request):
             # Otherwise, it was a random exception, so give a
             # ICanHandleException implementer a chance to render the page.
             def _processingFailed_inner(reason):
-                handler = iweb.ICanHandleException(self, default=self)
+                handler = iweb.ICanHandleException(self, self)
                 return handler.renderHTTP_exception(self, reason)
             d = defer.maybeDeferred(_processingFailed_inner, reason)
         

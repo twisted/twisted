@@ -85,7 +85,6 @@ class TOCGroup(basesupport.AbstractGroup):
             raise locals.OfflineError
         self.account.client.chat_leave(self.roomID)
 
-components.backwardsCompatImplements(TOCGroup)
 
 class TOCProto(basesupport.AbstractClientMixin, toc.TOCClient):
     def __init__(self, account, chatui, logonDeferred):
@@ -220,4 +219,3 @@ class TOCAccount(basesupport.AbstractAccount):
         d.addErrback(logonDeferred.errback)
         return logonDeferred
 
-components.backwardsCompatImplements(TOCAccount)

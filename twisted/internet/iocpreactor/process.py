@@ -388,6 +388,3 @@ class Process(object):
 
     def unregisterProducer(self):
         pass
-
-
-components.backwardsCompatImplements(Process)

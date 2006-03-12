@@ -12,7 +12,6 @@ TODO: add log that logs to a file.
 # twisted imports
 from twisted.persisted import dirdbm
 from twisted.internet import defer
-from twisted.python.components import backwardsCompatImplements
 from zope.interface import implements
 
 # sibling imports
@@ -47,6 +46,3 @@ class DirDBMLog:
         for i in range(index, self.currentIndex + 1):
             result.append(self.db[str(i)])
         return result
-
-
-backwardsCompatImplements(DirDBMLog)

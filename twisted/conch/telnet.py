@@ -11,7 +11,6 @@ API Stability: Unstable
 import struct
 
 from zope.interface import implements
-from twisted.python.components import backwardsCompatImplements
 
 from twisted.application import internet
 from twisted.internet import protocol, interfaces as iinternet, defer
@@ -297,7 +296,6 @@ class TelnetProtocol(protocol.Protocol):
 
     def disableRemote(self, option):
         pass
-backwardsCompatImplements(TelnetProtocol)
 
 
 class Telnet(protocol.Protocol):
@@ -851,7 +849,6 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
         for slcFunction, slcValue, slcWhat in chunks:
             # Later, we should parse stuff.
             'SLC', ord(slcFunction), ord(slcValue), ord(slcWhat)
-backwardsCompatImplements(TelnetBootstrapProtocol)
 
 from twisted.protocols import basic
 

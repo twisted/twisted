@@ -108,7 +108,6 @@ class CramMD5Credentials:
         verify = hmac.HMAC(password, self.challenge).hexdigest()
         return verify == self.response
 
-components.backwardsCompatImplements(CramMD5Credentials)
 
 class UsernameHashedPassword:
     interface.implements(IUsernameHashedPassword)
@@ -120,7 +119,6 @@ class UsernameHashedPassword:
     def checkPassword(self, password):
         return self.hashed == password
 
-components.backwardsCompatImplements(UsernameHashedPassword)
 
 class UsernamePassword:
     interface.implements(IUsernamePassword)
@@ -132,12 +130,10 @@ class UsernamePassword:
     def checkPassword(self, password):
         return self.password == password
 
-components.backwardsCompatImplements(UsernamePassword)
 
 class Anonymous:
     interface.implements(IAnonymous)
 
-components.backwardsCompatImplements(Anonymous)
 
 class ISSHPrivateKey(ICredentials):
     """I encapsulate an SSH public key to be checked against a users private
@@ -164,7 +160,6 @@ class SSHPrivateKey:
         self.sigData = sigData
         self.signature = signature
         
-components.backwardsCompatImplements(SSHPrivateKey)
 
 class IPluggableAuthenticationModules(ICredentials):
     """I encapsulate the authentication of a user via PAM (Pluggable
@@ -188,4 +183,3 @@ class PluggableAuthenticationModules:
         self.username = username
         self.pamConversion = pamConversion
         
-components.backwardsCompatImplements(PluggableAuthenticationModules)

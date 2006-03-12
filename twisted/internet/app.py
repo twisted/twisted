@@ -86,8 +86,6 @@ class _AbstractServiceCollection:
         """Remove a service from this collection."""
         del self.services[service.serviceName]
 
-components.backwardsCompatImplements(_AbstractServiceCollection)
-
 
 class ApplicationService(Accessor, styles.Versioned):
     """I am a service you can add to an application.

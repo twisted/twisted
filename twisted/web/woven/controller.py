@@ -258,7 +258,6 @@ class Controller(resource.Resource):
         process is complete.
         """
         pass
-components.backwardsCompatImplements(Controller)
 
 WOVEN_PATH = os.path.split(woven.__file__)[0]
 

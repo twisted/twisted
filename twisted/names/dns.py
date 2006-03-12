@@ -1231,10 +1231,3 @@ class DNSProtocol(protocol.Protocol):
         return d
 
 
-# backwards compatability __implements__
-def _compat():
-    import types
-    for v in globals().values():
-        if isinstance(v, (type, types.ClassType)) and v.__module__ == "twisted.names.dns":
-            components.backwardsCompatImplements(v)
-_compat()

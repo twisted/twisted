@@ -48,8 +48,6 @@ class Chargen(protocol.Protocol):
     def stopProducing(self):
         pass
 
-components.backwardsCompatImplements(Chargen)
-
 
 class QOTD(protocol.Protocol):
     """Return a quote of the day (RFC 865)"""

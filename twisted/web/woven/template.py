@@ -96,7 +96,6 @@ class NodeMutator:
     implements(INodeMutator)
     def __init__(self, data):
         self.data = data
-components.backwardsCompatImplements(NodeMutator)
 
 class NodeNodeMutator(NodeMutator):
     """A NodeNodeMutator replaces the node that is passed in to generate
@@ -373,4 +372,3 @@ class DOMController(controller.Controller, Resource):
     def process(self, request, **kwargs):
         log.msg("Processing results: ", kwargs)
         return RESTART_RENDERING
-components.backwardsCompatImplements(DOMController)

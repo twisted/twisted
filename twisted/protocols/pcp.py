@@ -98,8 +98,6 @@ class BasicProducerConsumerProxy:
     def __repr__(self):
         return '<%s@%x around %s>' % (self.__class__, id(self), self.consumer)
 
-components.backwardsCompatImplements(BasicProducerConsumerProxy)
-
 
 class ProducerConsumerProxy(BasicProducerConsumerProxy):
     """ProducerConsumerProxy with a finite buffer.

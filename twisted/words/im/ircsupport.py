@@ -82,8 +82,6 @@ class IRCGroup(basesupport.AbstractGroup):
         self.account.client.leave(self.name)
         self.account.client.getGroupConversation(self.name,1)
 
-components.backwardsCompatImplements(IRCGroup)
-
 
 class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
     def __init__(self, account, chatui, logonDeferred=None):
@@ -269,5 +267,3 @@ class IRCAccount(basesupport.AbstractAccount):
         d = cc.connectTCP(self.host, self.port)
         d.addErrback(logonDeferred.errback)
         return logonDeferred
-
-components.backwardsCompatImplements(IRCAccount)

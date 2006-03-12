@@ -14,7 +14,6 @@ running = False
 
 begintest = '''
 from zope.interface import classProvides
-from twisted.python.components import backwardsCompatImplements
 
 from twisted.plugin import ITestPlugin, IPlugin
 
@@ -26,7 +25,6 @@ class FourthTestPlugin:
         pass
     test1 = staticmethod(test1)
 
-backwardsCompatImplements(FourthTestPlugin)
 '''
 
 extratest = '''
@@ -40,7 +38,6 @@ class FifthTestPlugin:
     def test1():
         pass
     test1 = staticmethod(test1)
-backwardsCompatImplements(FifthTestPlugin)
 '''
 
 class PluginTestCase(unittest.TestCase):

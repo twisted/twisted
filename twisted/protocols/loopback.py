@@ -73,8 +73,6 @@ class LoopbackRelay:
     def logPrefix(self):
         return 'Loopback(%r)' % (self.target.__class__.__name__,)
 
-components.backwardsCompatImplements(LoopbackRelay)
-
 def loopback(server, client, logFile=None):
     """Run session between server and client.
     """

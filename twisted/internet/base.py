@@ -174,8 +174,6 @@ class DelayedCall(styles.Ephemeral):
         return "".join(L)
 
 
-components.backwardsCompatImplements(DelayedCall)
-
 class ThreadedResolver:
     implements(IResolverSimple)
 
@@ -219,8 +217,6 @@ class ThreadedResolver:
         lookupDeferred.addBoth(self._checkTimeout, name, lookupDeferred)
         return userDeferred
 
-components.backwardsCompatImplements(ThreadedResolver)
-
 class BlockingResolver:
     implements(IResolverSimple)
 
@@ -233,8 +229,6 @@ class BlockingResolver:
             return defer.fail(err)
         else:
             return defer.succeed(address)
-
-components.backwardsCompatImplements(BlockingResolver)
 
 class ReactorBase(object):
     """Default base class for Reactors.
@@ -604,8 +598,6 @@ class ReactorBase(object):
 if platform.supportsThreads():
     classImplements(ReactorBase, IReactorThreads)
 
-components.backwardsCompatImplements(ReactorBase)
-
 
 class BaseConnector(styles.Ephemeral):
     """Basic implementation of connector.
@@ -687,8 +679,6 @@ class BaseConnector(styles.Ephemeral):
 
     def getDestination(self):
         raise NotImplementedError, "implement in subclasses"
-
-components.backwardsCompatImplements(BaseConnector)
 
 
 class BasePort(abstract.FileDescriptor):

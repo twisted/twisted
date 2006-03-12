@@ -9,7 +9,6 @@ else should.
 
 from zope.interface import classProvides
 
-from twisted.python.components import backwardsCompatImplements
 from twisted.plugin import IPlugin, ITestPlugin, ITestPlugin2
 
 class TestPlugin:
@@ -22,8 +21,6 @@ class TestPlugin:
 
     test1 = staticmethod(test1)
 
-backwardsCompatImplements(TestPlugin)
-
 
 class AnotherTestPlugin:
     """Another plugin used solely for testing purposes.
@@ -34,8 +31,6 @@ class AnotherTestPlugin:
         pass
     test = staticmethod(test)
 
-backwardsCompatImplements(AnotherTestPlugin)
-
 
 class ThirdTestPlugin:
     """Another plugin used solely for testing purposes.
@@ -45,6 +40,3 @@ class ThirdTestPlugin:
     def test():
         pass
     test = staticmethod(test)
-
-backwardsCompatImplements(ThirdTestPlugin)
-

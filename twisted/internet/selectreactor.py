@@ -173,8 +173,6 @@ class SelectReactor(posixbase.PosixReactorBase):
     def removeAll(self):
         return self._removeAll(reads, writes)
     
-components.backwardsCompatImplements(SelectReactor)
-
 
 def install():
     """Configure the twisted mainloop to be run using the select() reactor.

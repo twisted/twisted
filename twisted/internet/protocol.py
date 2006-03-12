@@ -100,8 +100,6 @@ class Factory:
         p.factory = self
         return p
 
-components.backwardsCompatImplements(Factory)
-
 
 class ClientFactory(Factory):
     """A Protocol factory for clients.
@@ -376,8 +374,6 @@ class Protocol(BaseProtocol):
         @type reason: L{twisted.python.failure.Failure}
         """
 
-components.backwardsCompatImplements(Protocol)
-
 
 class ProtocolToConsumerAdapter(components.Adapter):
     """
@@ -396,8 +392,6 @@ class ProtocolToConsumerAdapter(components.Adapter):
 
 components.registerAdapter(ProtocolToConsumerAdapter, interfaces.IProtocol,
                            interfaces.IConsumer)
-components.backwardsCompatImplements(ProtocolToConsumerAdapter)
-
 
 class ConsumerToProtocolAdapter(components.Adapter):
     """
@@ -419,8 +413,6 @@ class ConsumerToProtocolAdapter(components.Adapter):
 
 components.registerAdapter(ConsumerToProtocolAdapter, interfaces.IConsumer,
                            interfaces.IProtocol)
-components.backwardsCompatImplements(ConsumerToProtocolAdapter)
-
 
 class ProcessProtocol(BaseProtocol):
     """Processes have some additional methods besides receiving data.
@@ -633,8 +625,6 @@ class FileWrapper:
     def stopProducing(self):
         self.loseConnection()
         
-components.backwardsCompatImplements(FileWrapper)
-
 
 __all__ = ["Factory", "ClientFactory", "ReconnectingClientFactory", "connectionDone", 
            "Protocol", "ProcessProtocol", "FileWrapper", "ServerFactory",

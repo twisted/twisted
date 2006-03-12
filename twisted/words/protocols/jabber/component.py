@@ -91,7 +91,6 @@ class Service(service.Service):
 
     def send(self, obj):
         self.parent.send(obj)
-components.backwardsCompatImplements(Service)
 
 class ServiceManager(service.MultiService):
     """ Business logic representing a managed component connection to a Jabber router

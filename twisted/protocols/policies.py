@@ -75,8 +75,6 @@ class ProtocolWrapper(Protocol):
         self.factory.unregisterProtocol(self)
         self.wrappedProtocol.connectionLost(reason)
 
-components.backwardsCompatImplements(ProtocolWrapper)
-
 
 class WrappingFactory(ClientFactory):
     """Wraps a factory and its protocols, and keeps track of them."""

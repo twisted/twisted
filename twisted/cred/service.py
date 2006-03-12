@@ -168,4 +168,3 @@ class Service(app.ApplicationService):
         if self.authorizer is not None:
             self.authorizer.setServiceCollection(parent)
 
-components.backwardsCompatImplements(Service)

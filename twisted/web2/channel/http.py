@@ -485,7 +485,7 @@ class HTTPChannelRequest(HTTPParser):
 
     def getHostInfo(self):
         t=self.channel.transport
-        secure = interfaces.ISSLTransport(t, default=None) is not None
+        secure = interfaces.ISSLTransport(t, None) is not None
         host = t.getHost()
         host.host = _cachedGetHostByAddr(host.host)
         return host, secure

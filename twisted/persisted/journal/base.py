@@ -168,8 +168,6 @@ class WrapperCommand:
         del d["obj"]
         return d
 
-components.backwardsCompatImplements(WrapperCommand)
-
 
 def command(methodName, cmdClass=WrapperCommand):
     """Wrap a method so it gets turned into command automatically.
@@ -216,8 +214,6 @@ class ServiceWrapperCommand:
             return cmp(self.__dict__, other.__dict__)
         else:
             return 0
-
-components.backwardsCompatImplements(ServiceWrapperCommand)
 
 
 def serviceCommand(methodName, cmdClass=ServiceWrapperCommand):

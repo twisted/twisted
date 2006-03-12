@@ -834,7 +834,7 @@ class MXTestCase(unittest.TestCase):
         self.assertEqual(str(againMX.name), str(nextMX.name))
 
 class LiveFireExercise(unittest.TestCase):
-    if interfaces.IReactorUDP(reactor, default=None) is None:
+    if interfaces.IReactorUDP(reactor, None) is None:
         skip = "UDP support is required to determining MX records"
 
     def setUp(self):
@@ -1184,7 +1184,7 @@ class ProcessAliasTestCase(test_process.SignalMixin, unittest.TestCase):
             mail.alias.MessageWrapper(DummyProcess(), 'echo')
         ])
 
-if interfaces.IReactorProcess(reactor, default=None) is None:
+if interfaces.IReactorProcess(reactor, None) is None:
     ProcessAliasTestCase = "IReactorProcess not supported"
 
 class TestDomain:

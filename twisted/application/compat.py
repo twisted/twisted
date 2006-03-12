@@ -338,8 +338,6 @@ class _ServiceNetwork:
 
 components.registerAdapter(_ServiceNetwork,
                            service.IServiceCollection, IOldApplication)
-components.backwardsCompatImplements(_ServiceNetwork)
-components.backwardsCompatImplements(_NewService)
 
 
 _mapping = []

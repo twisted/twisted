@@ -886,7 +886,7 @@ class Request:
         if self._forceSSL:
             return True
         transport = getattr(getattr(self, 'channel', None), 'transport', None)
-        if interfaces.ISSLTransport(transport, default=None) is not None:
+        if interfaces.ISSLTransport(transport, None) is not None:
             return True
         return False
 
@@ -941,7 +941,6 @@ class Request:
     def connectionLost(self, reason):
         """connection was lost"""
         pass
-components.backwardsCompatImplements(Request)
 
 class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     """A receiver for HTTP requests."""

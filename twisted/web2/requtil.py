@@ -47,7 +47,6 @@ class AppRoot:
         url = prePathURL(request)
         self.root = url[:url.rindex("/")]
 
-components.backwardsCompatImplements(AppRoot)
 components.registerAdapter(AppRoot, iweb.IRequest, IAppRoot)
 
 class ISession(components.Interface):

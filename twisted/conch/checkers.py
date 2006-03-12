@@ -66,7 +66,6 @@ class UNIXPasswordDatabase:
         
         return defer.fail(UnauthorizedLogin())
 
-components.backwardsCompatImplements(UNIXPasswordDatabase)
 
 class SSHPublicKeyDatabase:
     credentialInterfaces = ISSHPrivateKey,
@@ -130,7 +129,6 @@ class SSHPublicKeyDatabase:
             return failure.Failure(UnauthorizedLogin())
         return f
 
-components.backwardsCompatImplements(SSHPublicKeyDatabase)
 
 class SSHProtocolChecker:
     interface.implements(ICredentialsChecker)
@@ -176,4 +174,3 @@ class SSHProtocolChecker:
         """
         return 1
 
-components.backwardsCompatImplements(SSHProtocolChecker)

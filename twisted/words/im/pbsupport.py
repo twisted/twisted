@@ -92,8 +92,6 @@ class TwistedWordsGroup(basesupport.AbstractGroup):
                                                           self.name)
 
 
-components.backwardsCompatImplements(TwistedWordsGroup)
-
 
 class TwistedWordsClient(pb.Referenceable, basesupport.AbstractClientMixin):
     """In some cases, this acts as an Account, since it a source of text
@@ -260,4 +258,3 @@ class PBAccount(basesupport.AbstractAccount):
         print 'Not connected.'
         return error
 
-components.backwardsCompatImplements(PBAccount)

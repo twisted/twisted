@@ -306,12 +306,5 @@ def loadApplication(filename, kind, passphrase=None):
         application = compat.convert(application)
     return application
 
-
-# add backwards compatible __implements__ attribute
-components.backwardsCompatImplements(Service)
-components.backwardsCompatImplements(MultiService)
-components.backwardsCompatImplements(Process)
-
-
 __all__ = ['IService', 'Service', 'IServiceCollection', 'MultiService',
            'IProcess', 'Process', 'Application', 'loadApplication']

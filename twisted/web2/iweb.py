@@ -51,8 +51,6 @@ class SpecialAdaptInterfaceClass(interface.InterfaceClass):
             return result
         
         result = IOldNevowResource(other, None)
-        if hasattr(result, "__class__"):
-            components.fixClassImplements(result.__class__)
         if result is not None:
             return IResource(result)
 IResource.__class__ = SpecialAdaptInterfaceClass

@@ -171,7 +171,6 @@ class TCPConnector:
     def connect(self, factory):
         reactor.connectTCP(self.host, self.port, factory)
 
-components.backwardsCompatImplements(TCPConnector)
 
 class UNIXConnector:
     implements(IConnector)
@@ -181,7 +180,6 @@ class UNIXConnector:
     def connect(self, factory):
         reactor.connectUNIX(self.socket, factory)
 
-components.backwardsCompatImplements(UNIXConnector)
 
 def ReverseProxyResource(host, port, path):
     return ReverseProxyResourceConnector(TCPConnector(host, port), path)
@@ -215,5 +213,3 @@ class ReverseProxyResourceConnector:
                                      request)
         self.connector.connect(clientFactory)
         return server.NOT_DONE_YET
-
-components.backwardsCompatImplements(ReverseProxyResourceConnector)

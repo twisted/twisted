@@ -30,7 +30,6 @@ from twisted.python import log, failure
 from twisted.mail import mail
 from twisted.mail import alias
 from twisted.internet import interfaces, defer, reactor
-from twisted.python.components import backwardsCompatImplements
 
 from twisted import cred
 import twisted.cred.portal
@@ -366,7 +365,6 @@ class StringListMailbox:
 
     def sync(self):
         pass
-backwardsCompatImplements(StringListMailbox)
 
 class MaildirDirdbmDomain(AbstractMaildirDomain):
     """A Maildir Domain where membership is checked by a dirdbm file
@@ -442,7 +440,6 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
             mbox,
             lambda: None
         )
-backwardsCompatImplements(MaildirDirdbmDomain)
 
 class DirdbmDatabase:
     implements(cred.checkers.ICredentialsChecker)
@@ -460,4 +457,3 @@ class DirdbmDatabase:
             if c.checkPassword(self.dirdbm[c.username]):
                 return c.username
         raise cred.error.UnauthorizedLogin()
-backwardsCompatImplements(DirdbmDatabase)

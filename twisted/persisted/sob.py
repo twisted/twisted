@@ -130,8 +130,6 @@ class Persistent:
 
 # "Persistant" has been present since 1.0.7, so retain it for compatibility
 Persistant = Persistent
-components.backwardsCompatImplements(Persistent)
-
 
 class _EverythingEphemeral(styles.Ephemeral):
 

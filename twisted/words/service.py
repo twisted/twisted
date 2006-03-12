@@ -28,7 +28,7 @@ from zope.interface import implements
 
 from twisted.words import iwords, ewords
 
-from twisted.python.components import registerAdapter, backwardsCompatImplements
+from twisted.python.components import registerAdapter
 from twisted.cred import portal, credentials, error as ecred
 from twisted.spread import pb
 from twisted.web import resource
@@ -122,8 +122,6 @@ class Group(object):
     def iterusers(self):
         # XXX Deferred?
         return iter(self.users.values())
-backwardsCompatImplements(Group)
-
 
 
 class User(object):
@@ -170,7 +168,6 @@ class User(object):
     def logout(self):
         for g in self.groups[:]:
             self.leave(g)
-backwardsCompatImplements(User)
 
 
 NICKSERV = 'NickServ!NickServ@services'
@@ -852,7 +849,6 @@ class IRCUser(irc.IRC):
         Parameters: <name> <password>
         """
         self.sendMessage(irc.ERR_NOOPERHOST, ":O-lines not applicable")
-backwardsCompatImplements(IRCUser)
 
 
 class IRCFactory(protocol.ServerFactory):
@@ -916,7 +912,6 @@ class PBMindReference(pb.RemoteReference):
             PBGroup(self.realm, self.avatar, group),
             PBUser(self.realm, self.avatar, user),
             reason)
-backwardsCompatImplements(PBMindReference)
 pb.setUnjellyableForClass(PBMind, PBMindReference)
 
 
@@ -956,7 +951,6 @@ class PBGroupReference(pb.RemoteReference):
 
     def send(self, message):
         return self.callRemote("send", message)
-backwardsCompatImplements(PBGroupReference)
 pb.setUnjellyableForClass(PBGroup, PBGroupReference)
 
 class PBUser(pb.Referenceable):
@@ -992,7 +986,6 @@ class ChatAvatar(pb.Referenceable):
         d.addCallback(cbGroup)
         return d
 registerAdapter(ChatAvatar, iwords.IUser, pb.IPerspective)
-backwardsCompatImplements(ChatAvatar)
 
 class AvatarReference(pb.RemoteReference):
     def join(self, groupName):
@@ -1143,7 +1136,6 @@ class WordsRealm(object):
         d.addCallbacks(cbLookup, ebLookup)
         d.addCallback(self.addGroup)
         return d
-backwardsCompatImplements(WordsRealm)
 
 
 class InMemoryWordsRealm(WordsRealm):

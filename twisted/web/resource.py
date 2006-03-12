@@ -195,8 +195,6 @@ class Resource:
         the framework will handle this correctly.
         """
         return self.render_GET(request)
-components.backwardsCompatImplements(Resource)
-        
 
 
 #t.w imports

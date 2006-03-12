@@ -451,10 +451,10 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         tryTLS = 'STLS' in caps
 
         #If our transport supports switching to TLS, we might want to try to switch to TLS.
-        tlsableTransport = interfaces.ITLSTransport(self.transport, default=None) is not None
+        tlsableTransport = interfaces.ITLSTransport(self.transport, None) is not None
 
         # If our transport is not already using TLS, we might want to try to switch to TLS.
-        nontlsTransport = interfaces.ISSLTransport(self.transport, default=None) is None
+        nontlsTransport = interfaces.ISSLTransport(self.transport, None) is None
 
         if not self.startedTLS and tryTLS and tlsableTransport and nontlsTransport:
             d = self.startTLS()

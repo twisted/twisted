@@ -456,6 +456,5 @@ if unixEnabled:
     classImplements(PosixReactorBase, IReactorUNIX, IReactorUNIXDatagram)
 if processEnabled:
     classImplements(PosixReactorBase, IReactorProcess)
-components.backwardsCompatImplements(PosixReactorBase)
 
 __all__ = ["PosixReactorBase"]

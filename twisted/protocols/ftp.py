@@ -455,9 +455,6 @@ class DTP(object, protocol.Protocol):
     def stopProducing(self):
         self.transport.stopProducing()
 
-components.backwardsCompatImplements(DTP)
-
-
 class DTPFactory(protocol.ClientFactory):
     implements(IDTPFactory)
 
@@ -511,8 +508,6 @@ class DTPFactory(protocol.ClientFactory):
 
     def clientConnectionFailed(self, connector, reason):
         self.deferred.errback(PortConnectionError(reason))
-
-components.backwardsCompatImplements(DTPFactory)
 
 # -- FTP-PI (Protocol Interpreter) --
 
@@ -1145,8 +1140,6 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         if self.dtpInstance is not None:
             self.dtpInstance = None
 
-components.backwardsCompatImplements(FTP)
-
 
 class FTPFactory(policies.LimitTotalConnectionsFactory):
     """A factory for producing ftp protocol instances
@@ -1627,8 +1620,6 @@ class FTPRealm:
                     avatar = FTPShell(filepath.FilePath("/home/" + avatarId))
                 return IFTPShell, avatar, getattr(avatar, 'logout', lambda: None)
         raise NotImplementedError("Only IFTPShell interface is supported by this realm")
-components.backwardsCompatImplements(FTPRealm)
-
 
 # --- FTP CLIENT  -------------------------------------------------------------
 
@@ -1728,8 +1719,6 @@ class SenderProtocol(protocol.Protocol):
 
     def finish(self):
         self.transport.loseConnection()
-
-components.backwardsCompatImplements(SenderProtocol)
 
 
 def decodeHostPort(line):

@@ -54,5 +54,3 @@ class RawUDPProtocol(protocol.AbstractDatagramProtocol):
         for proto in self.udpProtos.get(header.dest, ()):
             proto.datagramReceived(data[8:],
                                    (source, header.source))
-
-components.backwardsCompatImplements(RawUDPProtocol)

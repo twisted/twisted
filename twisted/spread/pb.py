@@ -74,8 +74,7 @@ from twisted.internet import reactor, defer, protocol, error
 from twisted.cred import authorizer, service, perspective, identity
 from twisted.cred.portal import Portal
 from twisted.persisted import styles
-from twisted.python.components import Interface, registerAdapter, backwardsCompatImplements
-from twisted.python.components import backwardsCompatImplements
+from twisted.python.components import Interface, registerAdapter
 
 from zope.interface import implements
 
@@ -245,8 +244,6 @@ class Avatar:
             raise
         return broker.serialize(state, self, method, args, kw)
 
-components.backwardsCompatImplements(Avatar)
-
 class Perspective(perspective.Perspective, Avatar):
     """
     This class is DEPRECATED, because it relies on old cred
@@ -406,7 +403,6 @@ class RemoteReference(Serializable, styles.Ephemeral):
             self.broker.sendDecRef(self.luid)
 
 setUnjellyableForClass("remote", RemoteReference)
-components.backwardsCompatImplements(RemoteReference)
 
 class Local:
     """(internal) A reference to a local object.
@@ -1713,7 +1709,6 @@ class _PortalRoot:
     def rootObject(self, broker):
         return _PortalWrapper(self.portal, broker)
 
-components.backwardsCompatImplements(_PortalRoot)
 registerAdapter(_PortalRoot, Portal, IPBRoot)
 
 
@@ -1763,5 +1758,3 @@ class _PortalAuthChallenger(Referenceable):
         md.update(self.challenge)
         correct = md.digest()
         return self.response == correct
-
-backwardsCompatImplements(_PortalAuthChallenger)

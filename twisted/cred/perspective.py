@@ -181,4 +181,3 @@ class Perspective:
             log.msg(" (multiple references attached: %s)" % self._attachedCount)
         return self
 
-components.backwardsCompatImplements(Perspective)

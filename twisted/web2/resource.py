@@ -194,7 +194,6 @@ class Resource(RenderMixin):
             
         return super(Resource, self).http_GET(request)
 
-components.backwardsCompatImplements(Resource)
 
 class PostableResource(Resource):
     """

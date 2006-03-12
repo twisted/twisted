@@ -347,8 +347,6 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
                 break
         
     
-components.backwardsCompatImplements(ThreadedSelectReactor)
-
 
 def install():
     """Configure the twisted mainloop to be run using the select() reactor.

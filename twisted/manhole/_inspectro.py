@@ -80,8 +80,6 @@ class InspectorNode(Adapter):
     def format(self):
         return (self.slot, self.origstr())
 
-components.backwardsCompatImplements(InspectorNode)
-
 
 class ConstantNode(InspectorNode):
     def __len__(self):

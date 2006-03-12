@@ -915,8 +915,6 @@ class BasicAuthorizer:
             return cred.credentials.UsernamePassword(*p)
         raise SIPError(400)
 
-components.backwardsCompatImplements(BasicAuthorizer)
-
 
 class DigestedCredentials(cred.credentials.UsernameHashedPassword):
     """Yet Another Simple Digest-MD5 authentication scheme"""
@@ -991,8 +989,6 @@ class DigestAuthorizer:
             return DigestedCredentials(username, auth, self.outstanding)
         except:
             raise SIPError(400)
-
-components.backwardsCompatImplements(DigestAuthorizer)
 
 
 class RegisterProxy(Proxy):
@@ -1193,5 +1189,3 @@ class InMemoryRegistry:
 
     def unregisterAddress(self, domainURL, logicalURL, physicalURL):
         return self._expireRegistration(logicalURL.username)
-
-components.backwardsCompatImplements(InMemoryRegistry)

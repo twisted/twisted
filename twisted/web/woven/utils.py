@@ -115,7 +115,6 @@ class WovenLivePage:
             self.inputCache.append(inp)
         else:
             self.input(inp)
-components.backwardsCompatImplements(WovenLivePage)
 
 class Stack:
     def __init__(self, stack=None):

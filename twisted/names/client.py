@@ -318,8 +318,6 @@ class Resolver(common.ResolverBase):
         connector.disconnect()
         return (result, [], [])
 
-components.backwardsCompatImplements(Resolver)
-
 
 class AXFRController:
     timeoutCall = None

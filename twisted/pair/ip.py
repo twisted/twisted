@@ -71,5 +71,3 @@ class IPProtocol(protocol.AbstractDatagramProtocol):
                                    more_fragments=header.more_fragments,
                                    ttl=header.ttl,
                                    )
-
-components.backwardsCompatImplements(IPProtocol)

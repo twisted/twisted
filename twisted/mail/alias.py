@@ -315,13 +315,4 @@ class AliasGroup(AliasBase):
         for a in self.aliases:
             r.append(a.resolve(aliasmap, memo))
         return MultiWrapper(filter(None, r))
-
-
-components.backwardsCompatImplements(AddressAlias)
-components.backwardsCompatImplements(FileWrapper)
-components.backwardsCompatImplements(FileAlias)
-components.backwardsCompatImplements(MessageWrapper)
-components.backwardsCompatImplements(ProcessAlias)
-components.backwardsCompatImplements(MultiWrapper)
-components.backwardsCompatImplements(AliasGroup)
-
+    

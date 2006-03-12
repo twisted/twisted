@@ -308,8 +308,6 @@ class FileDescriptor(log.Logger, styles.Ephemeral, object):
         """
         return -1
 
-components.backwardsCompatImplements(FileDescriptor)
-
 
 def isIPAddress(addr):
     parts = string.split(addr, '.')

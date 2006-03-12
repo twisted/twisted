@@ -35,7 +35,6 @@ class UnixSSHRealm:
         user = UnixConchUser(username)
         return interfaces[0], user, user.logout
 
-#components.backwardsCompatImplements(UnixSSHRealm)
 
 class UnixConchUser(ConchUser):
 
@@ -294,7 +293,6 @@ class SSHSessionForUnixConchUser:
                 self.avatar.conn.transport.sendIgnore('\x00'*(8+len(data)))
         self.oldWrite(data)
 
-#components.backwardsCompatImplements(SSHSessionForUnixConchUser)
 
 class SFTPServerForUnixConchUser:
 
@@ -383,7 +381,6 @@ class SFTPServerForUnixConchUser:
 
     def extendedRequest(self, extName, extData):
         raise NotImplementedError
-#components.backwardsCompatImplements(SFTPServerForUnixConchUser
 
 class UnixSFTPFile:
 
@@ -434,7 +431,6 @@ class UnixSFTPFile:
     def setAttrs(self, attrs):
         raise NotImplementedError
 
-#components.backwardsCompatImplements(UnixSFTPFile)
 
 class UnixSFTPDirectory:
 

@@ -236,6 +236,3 @@ class Process(_pollingfile._PollingTimer):
     def stopProducing(self):
         self.loseConnection()
 
-
-
-components.backwardsCompatImplements(Process)

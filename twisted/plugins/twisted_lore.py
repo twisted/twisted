@@ -1,6 +1,5 @@
 
 from zope.interface import implements
-from twisted.python.components import backwardsCompatImplements
 
 from twisted.lore.scripts.lore import IProcessor
 from twisted.plugin import IPlugin
@@ -12,7 +11,6 @@ class _LorePlugin(object):
         self.name = name
         self.moduleName = moduleName
         self.description = description
-backwardsCompatImplements(_LorePlugin)
 
 DefaultProcessor = _LorePlugin(
     "lore",

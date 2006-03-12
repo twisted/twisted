@@ -104,8 +104,7 @@ def backwardsCompatImplements(klass):
     zope.interface using class to a class wanting old twisted
     components interface behaviors.
     """
-    # I will enable this warning after removing all calls to this function.
-#    warnings.warn("components.backwardsCompatImplements doesn't do anything in Twisted 2.3.", ComponentsDeprecationWarning, stacklevel=2)
+    warnings.warn("components.backwardsCompatImplements doesn't do anything in Twisted 2.3.", ComponentsDeprecationWarning, stacklevel=2)
 
 def fixClassImplements(klass):
     """DEPRECATED.

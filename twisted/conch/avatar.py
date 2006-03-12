@@ -35,5 +35,3 @@ class ConchUser:
         if not f:
             return 0
         return f(data)
-
-components.backwardsCompatImplements(ConchUser)

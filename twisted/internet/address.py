@@ -95,9 +95,6 @@ class UNIXAddress(object):
     def __str__(self):
         return 'UNIXSocket(%r)' % (self.name,)
 
-components.backwardsCompatImplements(IPv4Address)
-components.backwardsCompatImplements(UNIXAddress)
-
 
 # These are for buildFactory backwards compatability due to
 # stupidity-induced inconsistency.

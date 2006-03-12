@@ -153,8 +153,6 @@ class Root(Referenceable):
         """
         return self
 
-components.backwardsCompatImplements(Root)
-
 
 class ViewPoint(Referenceable):
     """

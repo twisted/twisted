@@ -208,8 +208,6 @@ class Win32Reactor(posixbase.PosixReactorBase):
             raise ValueError("PTYs are unsupported on this platform.")
         return Process(self, processProtocol, executable, args, env, path)
 
-components.backwardsCompatImplements(Win32Reactor)
-
 
 def install():
     threadable.init(1)

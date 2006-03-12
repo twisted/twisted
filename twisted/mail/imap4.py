@@ -528,7 +528,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def connectionMade(self):
         self.tags = {}
-        self.canStartTLS = interfaces.ITLSTransport(self.transport, default=None) is not None
+        self.canStartTLS = interfaces.ITLSTransport(self.transport, None) is not None
         self.setTimeout(self.timeOut)
         self.sendServerGreeting()
 
@@ -543,7 +543,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         self.transport.loseConnection()
         if self.mbox:
             self.mbox.removeListener(self)
-            cmbx = ICloseableMailbox(self.mbox, default=None)
+            cmbx = ICloseableMailbox(self.mbox, None)
             if cmbx is not None:
                 maybeDeferred(cmbx.close).addErrback(log.err)
             self.mbox = None
@@ -1079,7 +1079,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def do_NAMESPACE(self, tag):
         personal = public = shared = None
-        np = INamespacePresenter(self.account, default=None)
+        np = INamespacePresenter(self.account, None)
         if np is not None:
             personal = np.getPersonalNamespaces()
             public = np.getSharedNamespaces()
@@ -1102,7 +1102,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def _selectWork(self, tag, name, rw, cmdName):
         if self.mbox:
             self.mbox.removeListener(self)
-            cmbx = ICloseableMailbox(self.mbox, default=None)
+            cmbx = ICloseableMailbox(self.mbox, None)
             if cmbx is not None:
                 maybeDeferred(cmbx.close).addErrback(log.err)
             self.mbox = None
@@ -1368,7 +1368,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         d = None
         if self.mbox.isWriteable():
             d = maybeDeferred(self.mbox.expunge)
-        cmbx = ICloseableMailbox(self.mbox, default=None)
+        cmbx = ICloseableMailbox(self.mbox, None)
         if cmbx is not None:
             if d is not None:
                 d.addCallback(lambda result: cmbx.close())
@@ -1410,7 +1410,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         log.err(failure)
 
     def do_SEARCH(self, tag, charset, query, uid=0):
-        sm = ISearchableMailbox(self.mbox, default=None)
+        sm = ISearchableMailbox(self.mbox, None)
         if sm is not None:
             maybeDeferred(sm.search, query, uid=uid).addCallbacks(
                 self.__cbSearch, self.__ebSearch,
@@ -1706,7 +1706,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             _w = self.transport.write
         _w('RFC822 ')
         _f()
-        mf = IMessageFile(msg, default=None)
+        mf = IMessageFile(msg, None)
         if mf is not None:
             return FileProducer(mf.open()
                 ).beginProducing(self.transport
@@ -1749,7 +1749,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                     ).beginProducing(self.transport
                     )
             else:
-                mf = IMessageFile(msg, default=None)
+                mf = IMessageFile(msg, None)
                 if mf is not None:
                     return FileProducer(mf.open()).beginProducing(self.transport)
                 return MessageProducer(msg).beginProducing(self.transport)
@@ -1849,7 +1849,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         addedIDs = []
         failures = []
 
-        fastCopyMbox = IMessageCopier(mbox, default=None)
+        fastCopyMbox = IMessageCopier(mbox, None)
         for (id, msg) in messages:
             if fastCopyMbox is not None:
                 d = maybeDeferred(fastCopyMbox.copy, msg)
@@ -1862,7 +1862,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             flags = msg.getFlags()
             date = msg.getInternalDate()
 
-            body = IMessageFile(msg, default=None)
+            body = IMessageFile(msg, None)
             if body is not None:
                 bodyFile = body.open()
                 d = maybeDeferred(mbox.addMessage, bodyFile, flags, date)
@@ -1923,8 +1923,6 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.sendUntaggedResponse('%d EXISTS' % exists, async=True)
         if recent is not None:
             self.sendUntaggedResponse('%d RECENT' % recent, async=True)
-
-components.backwardsCompatImplements(IMAP4Server)
 
 
 class UnhandledResponse(IMAP4Exception): pass
@@ -2479,10 +2477,10 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         tryTLS = 'STARTTLS' in capabilities
 
         # If our transport supports switching to TLS, we might want to try to switch to TLS.
-        tlsableTransport = interfaces.ITLSTransport(self.transport, default=None) is not None
+        tlsableTransport = interfaces.ITLSTransport(self.transport, None) is not None
 
         # If our transport is not already using TLS, we might want to try to switch to TLS.
-        nontlsTransport = interfaces.ISSLTransport(self.transport, default=None) is None
+        nontlsTransport = interfaces.ISSLTransport(self.transport, None) is None
 
         if not self.startedTLS and tryTLS and tlsableTransport and nontlsTransport:
             d = self.startTLS()
@@ -3560,8 +3558,6 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
     def newMessages(self, exists, recent):
         """Override me"""
 
-components.backwardsCompatImplements(IMAP4Client)
-
 
 class IllegalIdentifierError(IMAP4Exception): pass
 
@@ -4011,8 +4007,6 @@ class CramMD5ClientAuthenticator:
         response = hmac.HMAC(secret, chal).hexdigest()
         return '%s %s' % (self.user, response)
 
-components.backwardsCompatImplements(CramMD5ClientAuthenticator)
-
 class LOGINAuthenticator:
     implements(IClientAuthentication)
 
@@ -4032,8 +4026,6 @@ class LOGINAuthenticator:
         # Respond to something like "Password:"
         return secret
 
-components.backwardsCompatImplements(LOGINAuthenticator)
-
 class PLAINAuthenticator:
     implements(IClientAuthentication)
 
@@ -4045,8 +4037,6 @@ class PLAINAuthenticator:
 
     def challengeResponse(self, secret, chal):
         return '%s\0%s\0' % (self.user, secret)
-
-components.backwardsCompatImplements(PLAINAuthenticator)
 
 
 class MailboxException(IMAP4Exception): pass
@@ -4380,8 +4370,6 @@ class MemoryAccount(object):
     def getOtherNamespaces(self):
         return None
 
-
-components.backwardsCompatImplements(MemoryAccount)
 
 
 _statusRequestDict = {

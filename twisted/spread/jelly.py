@@ -286,8 +286,6 @@ class Jellyable:
             jellier.jelly(self.getStateFor(jellier))])
         return jellier.preserve(self, sxp)
 
-components.backwardsCompatImplements(Jellyable)
-
 
 class Unjellyable:
     """
@@ -303,8 +301,6 @@ class Unjellyable:
     def unjellyFor(self, unjellier, jellyList):
         state = unjellier.unjelly(jellyList[1])
         self.setStateFor(unjellier, state)
-
-components.backwardsCompatImplements(Unjellyable)
 
 
 class _Jellier:

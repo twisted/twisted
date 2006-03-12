@@ -170,8 +170,6 @@ class FilePager(Pager):
         self.producer.resumeProducing()
         self.collector.callRemote("gotPage", val)
 
-components.backwardsCompatImplements(FilePager)
-
 
 ### Utility paging stuff.
 from twisted.spread import pb

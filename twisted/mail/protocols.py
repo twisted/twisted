@@ -71,8 +71,6 @@ class DomainDeliveryBase:
             ret.append(self.service.domains[user.dest.domain].startMessage(user))
         return ret
 
-components.backwardsCompatImplements(DomainDeliveryBase)
-
 
 class SMTPDomainDelivery(DomainDeliveryBase):
     protocolName = 'smtp'

@@ -374,5 +374,4 @@ class ManholeClient(components.Adapter, pb.Referenceable):
             raise OfflineError
         return self.perspective.callRemote("do", text)
 
-components.backwardsCompatImplements(ManholeClient)
 components.registerAdapter(ManholeClient, ManholeWindow, IManholeClient)

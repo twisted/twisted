@@ -20,7 +20,7 @@ from __future__ import nested_scopes
 
 __version__ = '$Revision: 1.5 $'[11:-2]
 
-from twisted.python.components import Interface, backwardsCompatImplements
+from twisted.python.components import Interface
 
 # TODO: Investigate whether we should be using os.times()[-1] instead of
 # time.time.  time.time, it has been pointed out, can go backwards.  Is
@@ -163,8 +163,6 @@ class HierarchicalBucketFilter:
                 del self.buckets[key]
 
         self.lastSweep = time()
-
-backwardsCompatImplements(HierarchicalBucketFilter)
 
 
 class FilterByHost(HierarchicalBucketFilter):

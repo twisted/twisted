@@ -1649,8 +1649,6 @@ class CramMD5ClientAuthenticator:
         response = hmac.HMAC(secret, chal).hexdigest()
         return '%s %s' % (self.user, response)
 
-components.backwardsCompatImplements(CramMD5ClientAuthenticator)
-
 
 class LOGINAuthenticator:
     implements(IClientAuthentication)
@@ -1667,8 +1665,6 @@ class LOGINAuthenticator:
         elif chal == 'Password:':
             return secret
 
-components.backwardsCompatImplements(LOGINAuthenticator)
-
 class PLAINAuthenticator:
     implements(IClientAuthentication)
 
@@ -1683,8 +1679,6 @@ class PLAINAuthenticator:
            return "%s\0%s\0%s" % (self.user, self.user, secret)
         else:
            return "%s\0%s" % (self.user, secret)
-
-components.backwardsCompatImplements(PLAINAuthenticator)
 
 
 class ESMTPSender(SenderMixin, ESMTPClient):

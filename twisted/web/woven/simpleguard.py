@@ -48,7 +48,6 @@ class MarkAuthenticatedResource:
     def getChildWithDefault(self, path, request):
         request.setComponent(Authenticated, self.authenticated)
         return self.resource.getChildWithDefault(path, request)
-components.backwardsCompatImplements(MarkAuthenticatedResource)
 
 
 class MarkingRealm:
@@ -69,7 +68,6 @@ class MarkingRealm:
                     lambda:None)
         else:
             return resource.IResource, self.nonauthenticated, lambda:None
-components.backwardsCompatImplements(MarkingRealm)
 
 
 def parentRedirect(_):

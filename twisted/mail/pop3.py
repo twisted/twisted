@@ -51,8 +51,6 @@ class APOPCredentials:
             return True
         return False
 
-components.backwardsCompatImplements(APOPCredentials)
-
 
 class _HeadersPlusNLines:
     def __init__(self, f, n):
@@ -131,7 +129,6 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
     blocked = None
 
     def connectionMade(self):
-        components.fixClassImplements(self.factory.__class__)
         if self.magic is None:
             self.magic = self.generateMagic()
         self.successResponse(self.magic)
@@ -527,8 +524,6 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             )
         raise cred.error.UnauthorizedLogin()
 
-components.backwardsCompatImplements(POP3)
-
 
 class IServerFactory(components.Interface):
     """Interface for querying additional parameters of this POP3 server.
@@ -648,8 +643,6 @@ class Mailbox:
         pass
     def sync(self):
         pass
-
-components.backwardsCompatImplements(Mailbox)
 
 
 NONE, SHORT, FIRST_LONG, LONG = range(4)

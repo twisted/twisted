@@ -435,8 +435,6 @@ class PickleStorage:
                 self.db['moderators'] = dict(moderators)
                 self.flush()
 
-components.backwardsCompatImplements(PickleStorage)
-
 
 class Group:
     name = None
@@ -679,8 +677,6 @@ class NewsShelf:
             return defer.fail(NewsServerError("No such group: " + group))
         else:
             return defer.succeed((index, a.getHeader('Message-ID'), StringIO.StringIO(a.body)))
-
-components.backwardsCompatImplements(NewsShelf)
 
 
 class NewsStorageAugmentation:
@@ -984,8 +980,6 @@ class NewsStorageAugmentation:
         ).addCallback(
             lambda (index, id, body): (index, id, StringIO.StringIO(body))
         )
-
-components.backwardsCompatImplements(NewsStorageAugmentation)
 
 ####
 #### XXX - make these static methods some day

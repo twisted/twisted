@@ -227,8 +227,6 @@ class DatagramPort(udp.Port):
     def getHost(self):
         return address.UNIXAddress(self.socket.getsockname())
 
-components.backwardsCompatImplements(DatagramPort)
-
 
 class ConnectedDatagramPort(DatagramPort):
     """A connected datagram UNIX socket."""
@@ -295,5 +293,3 @@ class ConnectedDatagramPort(DatagramPort):
 
     def getPeer(self):
         return address.UNIXAddress(self.remoteaddr)
-
-components.backwardsCompatImplements(ConnectedDatagramPort)

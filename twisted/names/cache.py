@@ -94,5 +94,3 @@ class CacheResolver(common.ResolverBase):
     def clearEntry(self, query):
         del self.cache[query]
         del self.cancel[query]
-
-components.backwardsCompatImplements(CacheResolver)

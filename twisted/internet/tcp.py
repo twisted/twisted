@@ -270,7 +270,6 @@ def _getTLSClass(klass, _existing={}):
     if klass not in _existing:
         class TLSConnection(_TLSMixin, klass):
             implements(interfaces.ISSLTransport)
-        components.backwardsCompatImplements(TLSConnection)
         _existing[klass] = TLSConnection
     return _existing[klass]
 
@@ -424,8 +423,6 @@ class Connection(abstract.FileDescriptor, _SocketCloser):
 
 if SSL:
     classImplements(Connection, interfaces.ITLSTransport)
-components.backwardsCompatImplements(Connection)
-
 
 class BaseClient(Connection):
     """A base class for client TCP (and similiar) sockets.
@@ -827,8 +824,6 @@ class Port(base.BasePort, _SocketCloser):
         This indicates the server's address.
         """
         return address.IPv4Address('TCP', *(self.socket.getsockname() + ('INET',)))
-
-components.backwardsCompatImplements(Port)
 
 class Connector(base.BaseConnector):
     def __init__(self, host, port, factory, timeout, bindAddress, reactor=None):

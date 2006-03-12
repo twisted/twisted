@@ -55,5 +55,3 @@ class EthernetProtocol(protocol.AbstractDatagramProtocol):
                                    dest=header.dest,
                                    source=header.source,
                                    protocol=header.proto)
-
-components.backwardsCompatImplements(EthernetProtocol)
