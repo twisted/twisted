@@ -1726,7 +1726,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def spew_body(self, part, id, msg, _w=None, _f=None):
         if _w is None:
             _w = self.transport.write
-        for p in part.part or ():
+        for p in part.part:
             msg = msg.getSubPart(p)
         if part.header:
             hdrs = msg.getHeaders(part.header.negate, *part.header.fields)
@@ -1744,10 +1744,16 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         elif part.empty:
             _w(str(part) + ' ')
             _f()
-            mf = IMessageFile(msg, default=None)
-            if mf is not None:
-                return FileProducer(mf.open()).beginProducing(self.transport)
-            return MessageProducer(msg).beginProducing(self.transport)
+            if part.part:
+                return FileProducer(msg.getBodyFile()
+                    ).beginProducing(self.transport
+                    )
+            else:
+                mf = IMessageFile(msg, default=None)
+                if mf is not None:
+                    return FileProducer(mf.open()).beginProducing(self.transport)
+                return MessageProducer(msg).beginProducing(self.transport)
+            
         else:
             _w('BODY ' + collapseNestedLists([getBodyStructure(msg)]))
 
@@ -2028,7 +2034,10 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
     def _setupForLiteral(self, rest, octets):
         self._pendingBuffer = self.messageFile(octets)
         self._pendingSize = octets
-        self._parts = [rest, '\r\n']
+        if self._parts is None:
+            self._parts = [rest, '\r\n']
+        else:
+            self._parts.extend([rest, '\r\n'])
         self.setRawMode()
 
     def connectionMade(self):
@@ -2057,28 +2066,25 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         if self.timeout > 0:
             self.resetTimeout()
 
-        if self._parts is None:
-            lastPart = line.rfind(' ')
-            if lastPart != -1:
-                lastPart = line[lastPart + 1:]
-                if lastPart.endswith('}'):
-                    # It's a literal a-comin' in
-                    s = lastPart.rfind("{")
-                    if s == -1:
-                        # no matching '{' found
-                        raise IllegalServerResponse(line)
-                    try:
-                        octets = int(lastPart[s + 1:-1])
-                    except ValueError:
-                        raise IllegalServerResponse(line)
+        lastPart = line.rfind(' ')
+        if lastPart != -1:
+            lastPart = line[lastPart + 1:]
+            if lastPart.startswith('{') and lastPart.endswith('}'):
+                # It's a literal a-comin' in
+                try:
+                    octets = int(lastPart[1:-1])
+                except ValueError:
+                    raise IllegalServerResponse(line)
+                if self._parts is None:
                     self._tag, parts = line.split(None, 1)
-                    self._setupForLiteral(parts, octets)
-                    return
                 else:
-                    # It isn't a literal at all
-                    self._regularDispatch(line)
-            else:
-                self._regularDispatch(line)
+                    parts = line
+                self._setupForLiteral(parts, octets)
+                return
+
+        if self._parts is None:
+            # It isn't a literal at all
+            self._regularDispatch(line)
         else:
             # If an expression is in progress, no tag is required here
             # Since we didn't find a literal indicator, this expression
@@ -5001,25 +5007,27 @@ class _FetchParser:
         header = None
         mime = None
         text = None
-        part = None
+        part = ()
         empty = False
         partialBegin = None
         partialLength = None
         def __str__(self):
             base = 'BODY'
             part = ''
+            separator = ''
             if self.part:
-                part = '.'.join([str(x + 1) for x in self.part]) + '.'
+                part = '.'.join([str(x + 1) for x in self.part])
+                separator = '.'
 #            if self.peek:
 #                base += '.PEEK'
             if self.header:
-                base += '[%s%s]' % (part, self.header,)
+                base += '[%s%s%s]' % (part, separator, self.header,)
             elif self.text:
-                base += '[%sTEXT]' % (part,)
+                base += '[%s%sTEXT]' % (part, separator)
             elif self.mime:
-                base += '[%sMIME]' % (part,)
+                base += '[%s%sMIME]' % (part, separator)
             elif self.empty:
-                base += '[]'
+                base += '[%s]' % (part,)
             if self.partialBegin is not None:
                 base += '<%d.%d>' % (self.partialBegin, self.partialLength)
             return base
@@ -5082,10 +5090,13 @@ class _FetchParser:
                 # print 'Entering state_' + self.state[-1] + ' with', repr(s)
                 state = self.state.pop()
                 try:
-                    s = s[getattr(self, 'state_' + state)(s):]
+                    used = getattr(self, 'state_' + state)(s)
                 except:
                     self.state.append(state)
                     raise
+                else:
+                    # print state, 'consumed', repr(s[:used])
+                    s = s[used:]
         finally:
             self.remaining = s
 
@@ -5180,20 +5191,20 @@ class _FetchParser:
         self.state.extend(('section', 'part_number'))
         return 1
 
+    _partExpr = re.compile(r'(\d+(?:\.\d+)*)\.?')
     def state_part_number(self, s):
-        last = -1
-        dot = s.find('.')
-        parts = []
-        while dot != -1 and s[last + 1].isdigit():
-            parts.append(int(s[last + 1:dot]) - 1)
-            last, dot = dot, s.find('.', dot + 1)
-        self.parts = parts
-        return last + 1
+        m = self._partExpr.match(s)
+        if m is not None:
+            self.parts = [int(p) - 1 for p in m.groups()[0].split('.')]
+            return m.end()
+        else:
+            self.parts = []
+            return 0
 
     def state_section(self, s):
-        # Grab [HEADER] or [HEADER.FIELDS (Header list)] or
-        # [HEADER.FIELDS.NOT (Header list)], [TEXT], or [MIME]
-        # or simply []
+        # Grab "HEADER]" or "HEADER.FIELDS (Header list)]" or
+        # "HEADER.FIELDS.NOT (Header list)]" or "TEXT]" or "MIME]" or
+        # just "]".
 
         l = s.lower()
         used = 0
@@ -5219,7 +5230,7 @@ class _FetchParser:
             elif l.startswith('header.fields'):
                 used += 13
             else:
-                raise Exception("Unhandled section contents")
+                raise Exception("Unhandled section contents: %r" % (l,))
 
             self.pending_body.header = h
             self.state.extend(('finish_section', 'header_list', 'whitespace'))
@@ -5415,7 +5426,7 @@ __all__ = [
     'PLAINCredentials', 'LOGINCredentials',
 
     # Simple query interface
-    'Query', 'Not', 'Or', 
+    'Query', 'Not', 'Or',
     
     # Miscellaneous
     'MemoryAccount',

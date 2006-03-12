@@ -819,6 +819,41 @@ class SimpleClient(imap4.IMAP4Client):
         self.events.append(['newMessages', exists, recent])
         self.transport.loseConnection()
 
+    def fetchBodyParts(self, message, parts):
+        """Fetch some parts of the body.
+
+        @param message: message with parts to fetch
+        @type message: C{str}
+        @param parts: a list of int/str
+        @type parts: C{list}
+        """
+        cmd = "%s (BODY[%s]" % (message, parts[0])
+        for p in parts[1:]:
+            cmd += " BODY[%s]" % p
+        cmd += ")"
+        d = self.sendCommand(imap4.Command("FETCH", cmd,
+                                           wantResponse=("FETCH",)))
+        d.addCallback(self.__cb_fetchBodyParts)
+        return d
+
+    def __cb_fetchBodyParts(self, (lines, last)):
+        info = {}
+        for line in lines:
+            parts = line.split(None, 2)
+            if len(parts) == 3:
+                if parts[1] == "FETCH":
+                    try:
+                        mail_id = int(parts[0])
+                    except ValueError:
+                        raise imap4.IllegalServerResponse, line
+                    else:
+                        body_parts = imap4.parseNestedParens(parts[2])[0]
+                        dict_parts = {}
+                        for i in range(len(body_parts)/3):
+                            dict_parts[body_parts[3*i+1][0]] = body_parts[3*i+2]
+                        info[mail_id] = dict_parts
+        return info
+
 class IMAP4HelperMixin:
     serverCTX = None
     clientCTX = None
@@ -2057,6 +2092,44 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
     def testFetchBodyUID(self):
         return self.testFetchBody(1)
 
+    def testFetchBodyParts(self):
+        self.function = self.client.fetchBodyParts
+        self.messages = '1'
+        parts = [1, 2]
+        outerBody = ''
+        innerBody1 = 'Contained body message text.  Squarge.'
+        innerBody2 = 'Secondary <i>message</i> text of squarge body.'
+        headers = util.OrderedDict()
+        headers['from'] = 'sender@host'
+        headers['to'] = 'recipient@domain'
+        headers['subject'] = 'booga booga boo'
+        headers['content-type'] = 'multipart/alternative; boundary="xyz"'
+        innerHeaders = util.OrderedDict()
+        innerHeaders['subject'] = 'this is subject text'
+        innerHeaders['content-type'] = 'text/plain'
+        innerHeaders2 = util.OrderedDict()
+        innerHeaders2['subject'] = '<b>this is subject</b>'
+        innerHeaders2['content-type'] = 'text/html'
+        self.msgObjs = [FakeyMessage(
+            headers, (), None, outerBody, 123,
+            [FakeyMessage(innerHeaders, (), None, innerBody1, None, None),
+             FakeyMessage(innerHeaders2, (), None, innerBody2, None, None)])]
+        self.expected = {
+            0: {'1': innerBody1, '2': innerBody2},
+        }
+
+        def result(R):
+            self.result = R
+
+        self.connected.addCallback(lambda _: self.function(self.messages, parts))
+        self.connected.addCallback(result)
+        self.connected.addCallback(self._cbStopClient)
+        self.connected.addErrback(self._ebGeneral)
+
+        d = loopback.loopbackTCP(self.server, self.client, noisy=False)
+        d.addCallback(lambda ign: self.assertEquals(self.result, self.expected))
+        return d
+ 
     def testFetchSize(self, uid=0):
         self.function = self.client.fetchSize
         self.messages = '1:100,2:*'
