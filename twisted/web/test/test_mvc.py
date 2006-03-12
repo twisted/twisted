@@ -33,7 +33,7 @@ class MyView(view.View):
         # pretend self.foo is what the user now sees on their screen
         self.foo = self.model.foo
         self.random = self.model.random
-        self.controller = components.getAdapter(self.model, interfaces.IController, None)
+        self.controller = interfaces.IController(self.model, None)
 
     def modelChanged(self, changed):
         if changed.has_key('foo'):
@@ -86,7 +86,7 @@ class MVCTestCase(unittest.TestCase):
         self.model = MyModel("foo")
 
     def getView(self):
-        return components.getAdapter(self.model, interfaces.IView, None)
+        return interfaces.IView(self.model, None)
 
     def testViewConstruction(self):
         view = self.getView()

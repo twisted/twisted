@@ -7,11 +7,7 @@
 I contain ResourceUnpickler, which will unpickle any python object
 named with the file extension .trp.
 """
-import sys, os
 from pickle import Unpickler
-
-from twisted.python.components import implements, getAdapter
-from twisted.web.resource import IResource
 
 def ResourceUnpickler(path, registry = None):
     fl = open(path)

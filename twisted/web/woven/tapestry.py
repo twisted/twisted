@@ -163,7 +163,7 @@ class Tapestry(Resource):
             p = cm(request)
             if isinstance(p, Deferred):
                 return util.DeferredResource(p)
-            adapter = components.getAdapter(p, IResource, None)
+            adapter = IResource(p, None)
             if adapter is not None:
                 return adapter
         # maybe we want direct support for ModelLoader?

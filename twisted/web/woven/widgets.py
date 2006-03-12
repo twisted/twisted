@@ -1009,10 +1009,7 @@ class DeferredWidget(Widget):
         if isinstance(model, components.Componentized):
             view = model.getAdapter(interfaces.IView)
         if not view and hasattr(model, '__class__'):
-            view = components.getAdapter(model,
-                    interfaces.IView,
-                    None,
-                    components.getAdapterClassWithInheritance)
+            view = interfaces.IView(model, None)
         
         if view:
             view["id"] = self.attributes.get('id', '')

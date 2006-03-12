@@ -388,11 +388,9 @@ class View:
         elif node.attributes.get("model"):
             # If no "controller" attribute was specified on the node, see if
             # there is a IController adapter registerred for the model.
-            controller = components.getAdapter(
+            controller = interfaces.IController(
                             model,
-                            interfaces.IController,
-                            None,
-                            components.getAdapterClassWithInheritance)
+                            None)
 
         return controller
 
@@ -472,10 +470,7 @@ class View:
             if isinstance(model, components.Componentized):
                 view = model.getAdapter(interfaces.IView)
             if not view and hasattr(model, '__class__'):
-                view = components.getAdapter(model,
-                                interfaces.IView,
-                                None,
-                                components.getAdapterClassWithInheritance)
+                view = interfaces.IView(model, None)
 
         return view
 
@@ -678,7 +673,7 @@ def registerViewForModel(view, model):
     Registers `view' as an adapter of `model' for L{interfaces.IView}.
     """
     components.registerAdapter(view, model, interfaces.IView)
-#     adapter = components.getAdapter(model, resource.IResource, None)
+#     adapter = resource.IResource(model, None)
 #     components.fixClassImplements(view.__class__)
 #     if adapter is None and resource.IResource.providedBy(view):
 #         components.registerAdapter(view, model, resource.IResource)

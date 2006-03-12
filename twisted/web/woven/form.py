@@ -8,7 +8,7 @@ from __future__ import nested_scopes
 # Twisted Imports
 
 from twisted.python import formmethod, failure
-from twisted.python.components import registerAdapter, getAdapter
+from twisted.python.components import registerAdapter
 from twisted.web import domhelpers, resource, util
 from twisted.internet import defer
 
@@ -504,12 +504,12 @@ class FormProcessor(resource.Resource):
         return v
 
     def modelFactory(self, outObj):
-        adapt = getAdapter(outObj, interfaces.IModel, outObj)
+        adapt = interfaces.IModel(outObj, outObj)
         # print 'factorizing', adapt
         return adapt
 
     def viewFactory(self, model):
-        # return getAdapter(model, interfaces.IView)
+        # return interfaces.IView(model)
         if model is None:
             bodyStr = '''
             <table model="hack" style="background-color: #99f">

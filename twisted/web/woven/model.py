@@ -19,7 +19,7 @@ from twisted.web.woven import interfaces
 class _Nothing: pass
 
 def adaptToIModel(m, parent=None, submodel=None):
-    adapted = components.getAdapter(m, interfaces.IModel, None, components.getAdapterClassWithInheritance)
+    adapted = interfaces.IModel(m, None)
     if adapted is None:
         adapted = Wrapper(m)
     adapted.parent = parent

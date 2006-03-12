@@ -64,7 +64,7 @@ class TestRealm:
             avatar = TestAvatar(avatarId)
             self.avatars[avatarId] = avatar
         avatar.login()
-        return (interfaces[0], components.getAdapter(avatar, interfaces[0]),
+        return (interfaces[0], interfaces[0](avatar),
                 avatar.logout)
 
 class NewCredTest(unittest.TestCase):

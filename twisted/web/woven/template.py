@@ -247,7 +247,7 @@ class DOMTemplate(Resource):
         into the DOM tree. Return the new node.
         """
         if not isinstance(result, defer.Deferred):
-            adapter = components.getAdapter(result, INodeMutator, None, components.getAdapterClassWithInheritance)
+            adapter = INodeMutator(result, None)
             if adapter is None:
                 raise NotImplementedError(
                     "Your factory method returned %s, but there is no "
@@ -366,7 +366,7 @@ class DOMController(controller.Controller, Resource):
 
     def render(self, request):
         self.setUp(request)
-        self.view = components.getAdapter(self.model, interfaces.IView, None)
+        self.view = interfaces.IView(self.model, None)
         self.view.setController(self)
         return self.view.render(request)
 

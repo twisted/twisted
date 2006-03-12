@@ -205,7 +205,7 @@ class Controller(resource.Resource):
             if self.viewFactory is not None:
                 self.setView(self.makeView(self.model, None))
             else:
-                self.setView(components.getAdapter(self.model, interfaces.IView, None))
+                self.setView(interfaces.IView(self.model, None))
             self.view.setController(self)
         return self.view.render(request, doneCallback=self.gatheredControllers)
 

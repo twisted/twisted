@@ -4,6 +4,8 @@
 
 """Test cases for Twisted component architecture."""
 
+from zope import interface as zinterface
+
 from twisted.trial import unittest, util
 from twisted.python import components
 import warnings
@@ -34,8 +36,8 @@ class IMultiply(components.Interface):
 
 class IntAdder:
     """Class that implements IAdder interface."""
-
-    __implements__ = IAdder
+    
+    zinterface.implements(IAdder)
 
     def add(self, a, b):
         return a + b
@@ -43,7 +45,7 @@ class IntAdder:
 class Sub:
     """Class that implements ISub."""
 
-    __implements__ = ISub
+    zinterface.implements(ISub)
 
     def add(self, a, b):
         return 3
@@ -52,7 +54,7 @@ class Sub:
 class IntMultiplyWithAdder:
     """Multiply, using Adder object."""
 
-    __implements__ = IMultiply
+    zinterface.implements(IMultiply)
 
     def __init__(self, adder):
         self.adder = adder
@@ -68,7 +70,7 @@ components.registerAdapter(IntMultiplyWithAdder, IntAdder, IMultiply)
 class MultiplyAndAdd:
     """Multiply and add."""
 
-    __implements__ = (IAdder, IMultiply)
+    zinterface.implements(IAdder, IMultiply)
 
     def add(self, a, b):
         return a + b
@@ -81,7 +83,7 @@ class IFoo(ISub):
 
 class FooAdapterForMAA:
 
-    __implements__ = IFoo
+    zinterface.implements(IFoo)
 
     def __init__(self, instance):
         self.instance = instance
@@ -95,21 +97,11 @@ components.registerAdapter(FooAdapterForMAA, MultiplyAndAdd, IFoo)
 class InterfacesTestCase(unittest.TestCase):
     """Test interfaces."""
 
-    tuples = ([1, [1]],
-              [(2, 3), [2, 3]],
-              [(2, (3, (4,)), (1, 5)), [2, 3, 4, 1, 5]],
-              [(), []],
-              )
-
     def testModules(self):
         self.assertEquals(components.Interface.__module__, "twisted.python.components")
         self.assertEquals(IAdder.__module__, "twisted.test.test_components")
         self.assertEquals(IFoo.__module__, "twisted.test.test_components")
     
-    def testTupleTrees(self):
-        for tree, result in self.tuples:
-            self.assertEquals(components.tupleTreeToList(tree), result)
-
     def testClasses(self):
         components.fixClassImplements(Sub)
         components.fixClassImplements(MultiplyAndAdd)
@@ -120,36 +112,16 @@ class InterfacesTestCase(unittest.TestCase):
 
     def testInstances(self):
         o = MultiplyAndAdd()
-        self.assert_( components.implements(o, IMultiply) )
-        self.assert_( components.implements(o, IMultiply) )
+        self.assert_( IMultiply.providedBy(o) )
+        self.assert_( IMultiply.providedBy(o) )
 
         o = Sub()
-        self.assert_( components.implements(o, IAdder) )
-        self.assert_( components.implements(o, ISub) )
+        self.assert_( IAdder.providedBy(o) )
+        self.assert_( ISub.providedBy(o) )
 
     def testOther(self):
-        self.assert_( not components.implements(3, ISub) )
-        self.assert_( not components.implements("foo", ISub) )
-
-    def testGetInterfaces(self):
-        l = components.getInterfaces(Sub)
-        l.sort()
-        l2 = [IAdder, ISub]
-        l2.sort()
-        self.assertEquals(l, l2)
-
-        l = components.getInterfaces(MultiplyAndAdd)
-        l.sort()
-        l2 = [IAdder, IMultiply]
-        l2.sort()
-        self.assertEquals(l, l2)
-
-    def testSuperInterfaces(self):
-        l = components.superInterfaces(ISub)
-        l.sort()
-        l2 = [ISub, IAdder]
-        l2.sort()
-        self.assertEquals(l, l2)
+        self.assert_( not ISub.providedBy(3) )
+        self.assert_( not ISub.providedBy("foo") )
 
 
 class Compo(components.Componentized):
@@ -169,7 +141,7 @@ class IElapsed(components.Interface):
         """
 
 class Adept(components.Adapter):
-    __implements__ = IAdept,
+    zinterface.implements(IAdept)
     def __init__(self, orig):
         self.original = orig
         self.num = 0
@@ -178,7 +150,7 @@ class Adept(components.Adapter):
         return self.num, self.original.inc()
 
 class Elapsed(components.Adapter):
-    __implements__ = IElapsed
+    zinterface.implements(IElapsed)
     def elapsedFunc(self):
         return 1
 
@@ -201,11 +173,11 @@ class ITest3(components.Interface):
 class ITest4(components.Interface):
     pass
 class Test(components.Adapter):
-    __implements__ = ITest, ITest3, ITest4
+    zinterface.implements(ITest, ITest3, ITest4)
     def __init__(self, orig):
         pass
 class Test2:
-    __implements__ = ITest2,
+    zinterface.implements(ITest2)
     temporaryAdapter = 1
     def __init__(self, orig):
         pass
@@ -254,12 +226,12 @@ class AdapterTestCase(unittest.TestCase):
 
     def testNoAdapter(self):
         o = Sub()
-        multiplier = components.getAdapter(o, IMultiply, None)
+        multiplier = IMultiply(o, None)
         self.assertEquals(multiplier, None)
 
     def testSelfIsAdapter(self):
         o = IntAdder()
-        adder = components.getAdapter(o, IAdder, None)
+        adder = IAdder(o, None)
         self.assert_( o is adder )
 
     def testGetAdapter(self):
@@ -267,7 +239,7 @@ class AdapterTestCase(unittest.TestCase):
         self.assertEquals(o.add(3, 4), 7)
 
         # get an object implementing IMultiply
-        multiplier = components.getAdapter(o, IMultiply, None)
+        multiplier = IMultiply(o, None)
 
         # check that it complies with the IMultiply interface
         self.assertEquals(multiplier.multiply(3, 4), 12)
@@ -278,13 +250,13 @@ class AdapterTestCase(unittest.TestCase):
 
     def testGetSubAdapter(self):
         o = MultiplyAndAdd()
-        self.assert_( not components.implements(o, IFoo) )
-        foo = components.getAdapter(o, IFoo, None)
+        self.assert_( not IFoo.providedBy(o) )
+        foo = IFoo(o, None)
         self.assert_( isinstance(foo, FooAdapterForMAA) )
 
     def testParentInterface(self):
         o = Sub()
-        adder = components.getAdapter(o, IAdder, None)
+        adder = IAdder(o, None)
         self.assertIdentical(o, adder)
 
     def testBadRegister(self):
@@ -317,7 +289,7 @@ class AdapterTestCase(unittest.TestCase):
         class IMIBar(components.Interface):
             pass
         class MIFooer(components.Adapter):
-            __implements__ = IMIFoo, IMIBar
+            zinterface.implements(IMIFoo, IMIBar)
         class Blegh:
             pass
         components.registerAdapter(MIFooer, Blegh, IMIFoo, IMIBar)
@@ -325,20 +297,15 @@ class AdapterTestCase(unittest.TestCase):
         self.assert_(isinstance(IMIBar(Blegh()), MIFooer))
 
 class IMeta(components.Interface):
-    def __adapt__(o, dflt):
-        if hasattr(o, 'add'):
-            return o
-        elif hasattr(o, 'num'):
-            return MetaAdder(o)
-        return dflt
+    pass
 
 class MetaAdder(components.Adapter):
-    __implements__ = IMeta
+    zinterface.implements(IMeta)
     def add(self, num):
         return self.original.num + num
 
 class BackwardsAdder(components.Adapter):
-    __implements__ = IMeta
+    zinterface.implements(IMeta)
     def add(self, num):
         return self.original.num - num
 
@@ -359,7 +326,7 @@ class ComponentNumber(components.Componentized):
         components.Componentized.__init__(self)
 
 class ComponentMeta(components.Adapter):
-    __implements__ = IMeta
+    zinterface.implements(IMeta)
     def __init__(self, original):
         components.Adapter.__init__(self, original)
         self.num = self.original.num
@@ -386,7 +353,7 @@ class IAttrXX(components.Interface):
         pass
 
 class Xcellent:
-    __implements__ = IAttrX
+    zinterface.implements(IAttrX)
     def x(self):
         return 'x!'
 
@@ -407,32 +374,11 @@ class TestMetaInterface(unittest.TestCase):
         n = MetaNumber(1)
         self.assertEquals(IMeta(n).add(1), 2)
 
-    def testInterfaceAdaptMethod(self):
-        a = FakeAdder()
-        self.assertIdentical(IMeta(a), a)
-        n2 = FakeNumber()
-        self.assertEquals(IMeta(n2).add(3), 6)
-
     def testComponentizedInteraction(self):
         c = ComponentNumber()
         IMeta(c).add(1)
         IMeta(c).add(1)
         self.assertEquals(IMeta(c).add(1), 3)
-
-    def testRegistryPersistence(self):
-        n = MetaNumber(1)
-        i1 = IMeta(n, persist=True)
-        i2 = IMeta(n, persist=True)
-        i3 = IMeta(n, persist=False)
-        i4 = IMeta(n)
-        self.assertIdentical(i1, i2)
-        self.assertNotEqual(i1, i3)
-        self.assertIdentical(i1, i4)
-        import weakref
-        r = weakref.ref(i1)
-        del i1, i2, i3, i4
-        self.assertNotEqual(r(), IMeta(n))
-        self.assertNotEqual(IMeta(n), IMeta(n))
 
     def testAdapterWithCmp(self):
         # Make sure that a __cmp__ on an adapter doesn't break anything
@@ -445,19 +391,19 @@ class IISource2(components.Interface): pass
 class IIDest1(components.Interface): pass
 
 class Dest1Impl(components.Adapter):
-    __implements__ = IIDest1
+    zinterface.implements(IIDest1)
 
 class Dest1Impl2(components.Adapter):
-    __implements__ = IIDest1
+    zinterface.implements(IIDest1)
 
 class Source12:
-    __implements__ = IISource1, IISource2
+    zinterface.implements(IISource1, IISource2)
 
 class Source21:
-    __implements__ = IISource2, IISource1
+    zinterface.implements(IISource2, IISource1)
 
-IISource1.adaptWith(Dest1Impl,  IIDest1)
-IISource2.adaptWith(Dest1Impl2, IIDest1)
+components.registerAdapter(Dest1Impl, IISource1, IIDest1)
+components.registerAdapter(Dest1Impl2, IISource2, IIDest1)
 
 class TestInterfaceInterface(unittest.TestCase):
 
@@ -470,15 +416,6 @@ class TestInterfaceInterface(unittest.TestCase):
         self.failUnless(isinstance(d, Dest1Impl2), str(s21))
 
 
-class TestZIBC(unittest.TestCase):
-    def testAttributes(self):
-        class IFoo(components.Interface):
-            a = 3
-        self.assertEquals(IFoo.a, 3)
-
-
-from zope import interface as zinterface
-
 class IZope(zinterface.Interface):
     def amethod(a, b):
         pass
@@ -486,21 +423,7 @@ class IZope(zinterface.Interface):
 class Zopeable:
     pass
 
-class Zoper:
-    zinterface.implements(IZope, IAdder)
-components.backwardsCompatImplements(Zoper) # add __implements__
-
 components.registerAdapter(lambda o: id(o), Zopeable, IZope)
-
-class SubZoper(Zoper):
-    zinterface.implements(ISub)
-
-
-class OldStyle:
-    __implements__ = IAdder
-class NewSubOfOldStyle(OldStyle):
-    zinterface.implements(IZope)
-components.backwardsCompatImplements(NewSubOfOldStyle)
 
 class TestZope(unittest.TestCase):
 
@@ -508,29 +431,6 @@ class TestZope(unittest.TestCase):
         x = Zopeable()
         self.assertEquals(id(x), IZope(x))
 
-    def testOldSubclass(self):
-        # someone has third party class that subclasses Zoper,
-        # and expects Zoper to have __implements__ since Zoper
-        # was originally written for twisted 1.3, pre zope.interface
-        class IFoo(components.Interface):
-            pass
-        class ThirdParty(Zoper):
-            __implements__ = Zoper.__implements__, IFoo
-        self.assert_(components.implements(ThirdParty(), IAdder))
-        self.assert_(components.implements(ThirdParty(), IFoo))
-        self.assert_(components.implements(ThirdParty(), IZope))
-
-    def testNewSubclass(self):
-        # new-style implementing class subclasses backwardsCompatImplements class
-        o = SubZoper()
-        self.assert_(components.implements(o, IZope))
-        self.assert_(components.implements(o, ISub))
-
-    def testNewSubclassOfOld(self):
-        o = NewSubOfOldStyle()
-        self.assert_(components.implements(o, IZope))
-        self.assert_(components.implements(o, IAdder))
-        
     def testSignatureString(self):
         # Make sure it cuts off the self from old t.p.c signatures.
         self.assertEquals(IAdder['add'].getSignatureString(), "(a, b)")
