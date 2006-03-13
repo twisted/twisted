@@ -218,6 +218,25 @@ class LeafResource(RenderMixin):
     def locateChild(self, request, segments):
         return self, server.StopTraversal
 
+class RedirectResource(LeafResource):
+    """
+    A L{LeafResource} which always performs a redirect.
+    """
+    implements(iweb.IResource)
+
+    def __init__(self, *args, **kwargs):
+        """
+        Parameters are URL components and are the same as those for
+        L{urlparse.urlunparse}.  URL components which are not specified will
+        default to the corresponding component of the URL of the request being
+        redirected.
+        """
+        self._args   = args
+        self._kwargs = kwargs
+
+    def renderHTTP(self, request):
+        return http.RedirectResponse(request.unparseURL(*self._args, **self._kwargs))
+
 class WrapperResource(object):
     """
     An L{iweb.IResource} implementation which wraps a L{RenderMixin} instance
