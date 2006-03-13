@@ -126,7 +126,7 @@ class DAVPropertyMixIn (MetaDataMixin):
                 return davxml.GETContentType(generateContentType(mimeType))
         
             if name == "getcontentlength":
-                return davxml.GETContentLength(self.contentLength())
+                return davxml.GETContentLength(str(self.contentLength()))
 
             if name == "getlastmodified":
                 return davxml.GETLastModified.fromDate(self.lastModified())
