@@ -198,7 +198,7 @@ class SampleWebTest(BaseCase):
             (self.root, 'http://host/remoteAddr'),
             (200, {}, "Remote Addr: 'remotehost'"))
 
-    def test_testLeafresource(self):
+    def test_leafresource(self):
         class TestResource(resource.LeafResource):
             def render(self, req):
                 return http.Response(stream="prepath:%s postpath:%s" % (
@@ -209,6 +209,17 @@ class SampleWebTest(BaseCase):
             (TestResource(), 'http://host/consumed/path/segments'),
             (200, {}, "prepath:[] postpath:['consumed', 'path', 'segments']"))
 
+    def test_redirectResource(self):
+        redirectResource = resource.RedirectResource(scheme='https',
+                                                     host='localhost',
+                                                     port=443,
+                                                     path='/foo',
+                                                     querystring='bar=baz')
+
+        return self.assertResponse(
+            (redirectResource, 'http://localhost/'),
+            (301, {'location': 'https://localhost/foo?bar=baz'}, None))
+    
 
 class URLParsingTest(BaseCase):
     class TestResource(resource.LeafResource):
