@@ -54,12 +54,11 @@ class DAVFile (DAVResource, File):
                  defaultType="text/plain",
                  indexNames=None):
         """
-        Create a file with the given path.
-
-        The defaultType and indexNames arguments are passed on to the File
-        superclass.
-
-        Does not accept the processors and ignoredExts arguments, unlike File.
+        @param path: the path of the file backing this resource.
+        @param defaultType: the default mime type (as a string) for this
+            resource and (eg. child) resources derived from it.
+        @param indexNames: a sequence of index file names.
+        @param acl: an L{IDAVAccessControlList} with the .
         """
         super(DAVFile, self).__init__(path,
                                       defaultType = defaultType,

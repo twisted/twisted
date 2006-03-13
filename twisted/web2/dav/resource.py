@@ -118,15 +118,15 @@ class DAVPropertyMixIn (MetaDataMixin):
                 return davxml.ResourceType.empty
     
             if name == "getetag":
-                return davxml.GETETag.fromString(self.etag().generate())
+                return davxml.GETETag(self.etag().generate())
     
             if name == "getcontenttype":
                 mimeType = self.contentType()
                 mimeType.params = None # WebDAV getcontenttype property does not include parameters
-                return davxml.GETContentType.fromString(generateContentType(mimeType))
+                return davxml.GETContentType(generateContentType(mimeType))
         
             if name == "getcontentlength":
-                return davxml.GETContentLength.fromString(self.contentLength())
+                return davxml.GETContentLength(self.contentLength())
 
             if name == "getlastmodified":
                 return davxml.GETLastModified.fromDate(self.lastModified())
@@ -135,7 +135,7 @@ class DAVPropertyMixIn (MetaDataMixin):
                 return davxml.CreationDate.fromDate(self.creationDate())
 
             if name == "displayname":
-                return davxml.DisplayName.fromString(self.displayName())
+                return davxml.DisplayName(self.displayName())
 
             if name == "supportedlock":
                 return davxml.SupportedLock(
@@ -149,7 +149,7 @@ class DAVPropertyMixIn (MetaDataMixin):
                     namespace = twisted_dav_namespace
                     name = "resource-class"
                     hidden = False
-                return ResourceClass.fromString(self.__class__.__name__)
+                return ResourceClass(self.__class__.__name__)
 
         return self.deadProperties().get(qname)
 
@@ -269,6 +269,18 @@ class DAVPropertyMixIn (MetaDataMixin):
 class DAVResource (DAVPropertyMixIn, StaticRenderMixin):
     implements(IDAVResource)
 
+    ##
+    # DAV
+    ##
+
+    def davComplianceClasses(self):
+        """
+        This implementation raises L{NotImplementedError}.
+        @return: a sequence of strings denoting WebDAV compliance classes.  For
+            example, a DAV level 2 server might return ("1", "2").
+        """
+        unimplemented(self)
+
     def isCollection(self):
         """
         See L{IDAVResource.isCollection}.
@@ -290,13 +302,31 @@ class DAVResource (DAVPropertyMixIn, StaticRenderMixin):
         else:
             unimplemented(self)
 
-    def davComplianceClasses(self):
+    ##
+    # ACL
+    ##
+
+    def principalCollections(self):
         """
-        This implementation raises L{NotImplementedError}.
-        @return: a sequence of strings denoting WebDAV compliance classes.  For
-            example, a DAV level 2 server might return ("1", "2").
+        See L{IDAVAccessControlList.principalCollections}.
         """
-        unimplemented(self)
+        return ()
+
+    def accessControlList(self):
+        """
+        See L{IDAVAccessControlList.accessControlList}.
+        """
+        return allACL
+
+    def supportedPrivileges(self):
+        """
+        See L{IDAVAccessControlList.supportedPrivileges}.
+        """
+        return allPrivilegeSet
+
+    ##
+    # HTTP
+    ##
 
     def renderHTTP(self, request):
 
@@ -345,3 +375,22 @@ class DAVLeafResource (DAVResource, LeafResource):
     """
     def findChildren(self, depth):
         return ()
+
+##
+# Utilities
+##
+
+allACL = davxml.ACL(
+    davxml.ACE(
+        davxml.Principal(davxml.All()),
+        davxml.Grant(davxml.Privilege(davxml.All())),
+        davxml.Protected()
+    )
+)
+
+allPrivilegeSet = davxml.SupportedPrivilegeSet(
+    davxml.SupportedPrivilege(
+        davxml.Privilege(davxml.All()),
+        davxml.Description("All access", **{"xml:lang": "en"})
+    )
+)

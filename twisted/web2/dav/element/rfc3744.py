@@ -294,12 +294,12 @@ class ACE (WebDAVElement):
     def __init__(self, *children, **attributes):
         super(ACE, self).__init__(*children, **attributes)
 
-        self.principal   = None
-        self.invert      = None
-        self.allow       = None
-        self.priviledges = None
-        self.inherited   = None
-        self.protected   = False
+        self.principal  = None
+        self.invert     = None
+        self.allow      = None
+        self.privileges = None
+        self.inherited  = None
+        self.protected  = False
 
         for child in self.children:
             namespace, name = child.qname()
@@ -320,13 +320,13 @@ class ACE (WebDAVElement):
                     self.principal = child
 
             elif name in ("grant", "deny"):
-                if allow is not None:
+                if self.allow is not None:
                     raise ValueError(
                         "Only one of DAV:grant or DAV:deny allowed in %s, got: %s"
                         % (self.sname(), self.children)
                     )
-                self.allow       = (name == "grant")
-                self.priviledges = child.children
+                self.allow      = (name == "grant")
+                self.privileges = child.children
 
             elif name == "inherited":
                 self.inherited = str(child.children[0])
@@ -346,7 +346,7 @@ class ACE (WebDAVElement):
                 "One of DAV:grant or DAV:deny is required in %s, got: %s"
                 % (self.sname(), self.children)
             )
-        assert self.priviledges is not None
+        assert self.privileges is not None
 
 # For DAV:principal element (RFC 3744, section 5.5.1) see Principal class above.
 
