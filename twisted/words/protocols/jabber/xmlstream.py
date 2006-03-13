@@ -6,7 +6,7 @@
 from OpenSSL import SSL
 
 from twisted.internet import ssl
-from twisted.words.xish import xmlstream
+from twisted.words.xish import domish, xmlstream
 from twisted.words.xish.xmlstream import STREAM_CONNECTED_EVENT
 from twisted.words.xish.xmlstream import STREAM_START_EVENT
 from twisted.words.xish.xmlstream import STREAM_END_EVENT

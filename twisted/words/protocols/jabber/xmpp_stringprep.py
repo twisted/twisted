@@ -160,11 +160,11 @@ class NamePrep:
     
     The following steps are performed by C{prepare()}:
     
-      * Split the domain name in labels at the dots (RFC 3490, 3.1)
-      * Apply nameprep proper on each label (RFC 3491)
-      * Enforce the restrictions on ASCII characters in host names by
+      - Split the domain name in labels at the dots (RFC 3490, 3.1)
+      - Apply nameprep proper on each label (RFC 3491)
+      - Enforce the restrictions on ASCII characters in host names by
         assuming STD3ASCIIRules to be true. (STD 3)
-      * Rejoin the labels using the label separator U+002E (full stop).
+      - Rejoin the labels using the label separator U+002E (full stop).
     
     """
 

@@ -12,7 +12,7 @@ unit of interaction is a direct child element of the root element (stanza).
 The most prominent use of XML Streams is Jabber, but this module is generically
 usable. See Twisted Words for Jabber specific protocol support.
 
-Maintainer: U{Ralph Meijer<mailto:twisted@ralphm.ik.nu>)
+Maintainer: U{Ralph Meijer<mailto:twisted@ralphm.ik.nu>}
 """
 
 from twisted.internet import protocol
@@ -59,7 +59,7 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
         self._initializeStream()
         self.dispatch(self, STREAM_CONNECTED_EVENT)
 
-    def dataReceived(self, buf):
+    def dataReceived(self, data):
         """ Called whenever data is received.
 
         Passes the data to the XML parser. This can result in calls to the
@@ -68,13 +68,13 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
         connection.
         """
         try:
-            if self.rawDataInFn: self.rawDataInFn(buf)
-            self.stream.parse(buf)
+            if self.rawDataInFn: self.rawDataInFn(data)
+            self.stream.parse(data)
         except domish.ParserError:
             self.dispatch(self, STREAM_ERROR_EVENT)
             self.transport.loseConnection()
 
-    def connectionLost(self, _):
+    def connectionLost(self, reason):
         """ Called when the connection is shut down.
 
         Dispatches the L{STREAM_END_EVENT}.
@@ -97,7 +97,7 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
 
     def onElement(self, element):
         """ Called whenever a direct child element of the root element has
-            been received.
+        been received.
 
         Dispatches the received element.
         """
@@ -158,7 +158,7 @@ class XmlStreamFactory(protocol.ReconnectingClientFactory):
     def __init__(self):
         self.bootstraps = []
 
-    def buildProtocol(self, _):
+    def buildProtocol(self, addr):
         """ Create an instance of XmlStream.
 
         The returned instance will have bootstrap event observers registered
