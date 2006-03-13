@@ -245,8 +245,8 @@ class WrapperResource(object):
     """
     implements(iweb.IResource)
     
-    def __init__(self, res):
-        self.res=res
+    def __init__(self, resource):
+        self.resource=resource
 
     def hook(self, request):
         """
@@ -261,14 +261,14 @@ class WrapperResource(object):
     def locateChild(self, request, segments):
         x = self.hook(request)
         if x is not None:
-            return x.addCallback(lambda data: (self.res, segments))
-        return self.res, segments
+            return x.addCallback(lambda data: (self.resource, segments))
+        return self.resource, segments
 
     def renderHTTP(self, request):
         x = self.hook(request)
         if x is not None:
-            return x.addCallback(lambda data: self.res)
-        return self.res
+            return x.addCallback(lambda data: self.resource)
+        return self.resource
     
 
 __all__ = ['RenderMixin', 'Resource', 'PostableResource', 'LeafResource', 'WrapperResource']
