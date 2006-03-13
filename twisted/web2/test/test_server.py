@@ -4,7 +4,7 @@ A test harness for the twisted.web2 server.
 
 from zope.interface import implements
 from twisted.web2 import http, http_headers, iweb, server
-from twisted.web2 import resource, responsecode, stream
+from twisted.web2 import resource, stream
 from twisted.trial import unittest, util
 from twisted.internet import defer, address, error as ti_error
 
@@ -153,7 +153,6 @@ class BaseCase(unittest.TestCase):
             self.assertEquals(headers.getHeader(key), value)
         self.assertEquals(failed, expectedfailure)
 
-
 class SampleWebTest(BaseCase):
     class SampleTestResource(BaseTestResource):
         addSlash = True
@@ -276,3 +275,46 @@ class TestDeferredRendering(BaseCase):
         return self.assertResponse(
             (self.ResourceWithDeferreds(), 'http://host/deferred'),
             (200, {}, 'This is a fake resource.'))
+
+class RedirectResourceTest(BaseCase):
+    def html(url):
+        return "<html><head><title>Moved Permanently</title></head><body><h1>Moved Permanently</h1><p>Document moved to %s.</p></body></html>" % (url,)
+    html = staticmethod(html)
+
+    def test_noRedirect(self):
+        # This is useless, since it's a loop, but hey
+        ds = []
+        for url in ("http://host/", "http://host/foo"):
+            ds.append(self.assertResponse(
+                (resource.RedirectResource(), url),
+                (301, {"location": url}, self.html(url))
+            ))
+        return defer.DeferredList(ds)
+
+    def test_hostRedirect(self):
+        ds = []
+        for url1, url2 in (
+            ("http://host/", "http://other/"),
+            ("http://host/foo", "http://other/foo"),
+        ):
+            ds.append(self.assertResponse(
+                (resource.RedirectResource(host="other"), url1),
+                (301, {"location": url2}, self.html(url2))
+            ))
+        return defer.DeferredList(ds)
+
+    def test_pathRedirect(self):
+        root = BaseTestResource()
+        redirect = resource.RedirectResource(path="/other")
+        root.putChild("r", redirect)
+
+        ds = []
+        for url1, url2 in (
+            ("http://host/r", "http://host/other"),
+            ("http://host/r/foo", "http://host/other"),
+        ):
+            ds.append(self.assertResponse(
+                (resource.RedirectResource(path="/other"), url1),
+                (301, {"location": url2}, self.html(url2))
+            ))
+        return defer.DeferredList(ds)
