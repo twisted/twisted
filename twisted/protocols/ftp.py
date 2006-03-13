@@ -818,7 +818,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         return d
 
 
-    def ftp_NLST(self, path):
+    def ftp_NLST(self, path='.'):
         # XXX: why is this check different to ftp_RETR/ftp_STOR?
         if self.dtpInstance is None or not self.dtpInstance.isConnected:
             return defer.fail(BadCmdSequenceError('must send PORT or PASV before RETR'))
@@ -1465,10 +1465,15 @@ class FTPAnonymousShell(object):
 
     def list(self, path, keys=()):
         path = self._path(path)
-        if path.isdir():
+        try:
             entries = path.listdir()
-        else:
-            entries = [None]
+        except (IOError, OSError), e:
+            if e.errno == errno.ENOENT:
+                entries = []
+            elif e.errno == errno.ENOTDIR:
+                entries = ['']
+            else:
+                return errnoToFailure(e.errno, path)
 
         results = []
         for fName in entries:
