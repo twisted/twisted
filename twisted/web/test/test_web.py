@@ -242,15 +242,15 @@ resource = Data('dynamic world','text/plain')
         self.assertNotEquals(child_without_ext, f.childNotFound)
 
 class DummyChannel:
-    class Baz:
+    class TCP:
         port = 80
         def getPeer(self):
             return IPv4Address("TCP", 'client.example.com', 12344)
         def getHost(self):
             return IPv4Address("TCP", 'example.com', self.port)
-    class SSLBaz(Baz):
+    class SSL(TCP):
         implements(interfaces.ISSLTransport)
-    transport = Baz()
+    transport = TCP()
     site = server.Site(resource.Resource())
 
 class TestRequest(unittest.TestCase):
@@ -274,7 +274,7 @@ class TestRequest(unittest.TestCase):
 
     def testPrePathURLNonDefault(self):
         d = DummyChannel()
-        d.transport = DummyChannel.Baz()
+        d.transport = DummyChannel.TCP()
         d.transport.port = 81
         request = server.Request(d, 1)
         request.setHost('example.com', 81)
@@ -284,7 +284,7 @@ class TestRequest(unittest.TestCase):
 
     def testPrePathURLSSLPort(self):
         d = DummyChannel()
-        d.transport = DummyChannel.Baz()
+        d.transport = DummyChannel.TCP()
         d.transport.port = 443
         request = server.Request(d, 1)
         request.setHost('example.com', 443)
@@ -294,7 +294,7 @@ class TestRequest(unittest.TestCase):
 
     def testPrePathURLSSLPortAndSSL(self):
         d = DummyChannel()
-        d.transport = DummyChannel.SSLBaz()
+        d.transport = DummyChannel.SSL()
         d.transport.port = 443
         request = server.Request(d, 1)
         request.setHost('example.com', 443)
@@ -304,7 +304,7 @@ class TestRequest(unittest.TestCase):
 
     def testPrePathURLHTTPPortAndSSL(self):
         d = DummyChannel()
-        d.transport = DummyChannel.SSLBaz()
+        d.transport = DummyChannel.SSL()
         d.transport.port = 80
         request = server.Request(d, 1)
         request.setHost('example.com', 80)
@@ -314,7 +314,7 @@ class TestRequest(unittest.TestCase):
 
     def testPrePathURLSSLNonDefault(self):
         d = DummyChannel()
-        d.transport = DummyChannel.SSLBaz()
+        d.transport = DummyChannel.SSL()
         d.transport.port = 81
         request = server.Request(d, 1)
         request.setHost('example.com', 81)
@@ -324,7 +324,7 @@ class TestRequest(unittest.TestCase):
 
     def testPrePathURLSetSSLHost(self):
         d = DummyChannel()
-        d.transport = DummyChannel.Baz()
+        d.transport = DummyChannel.TCP()
         d.transport.port = 81
         request = server.Request(d, 1)
         request.setHost('foo.com', 81, 1)
@@ -343,7 +343,7 @@ class RootResource(resource.Resource):
 class RememberURLTest(unittest.TestCase):
     def createServer(self, r):
         chan = DummyChannel()
-        chan.transport = DummyChannel.Baz()
+        chan.transport = DummyChannel.TCP()
         chan.site = server.Site(r)
         return chan
 
@@ -387,7 +387,7 @@ class NewRenderTestCase(unittest.TestCase):
     def _getReq(self):
         d = DummyChannel()
         d.site.resource.putChild('newrender', NewRenderResource())
-        d.transport = DummyChannel.Baz()
+        d.transport = DummyChannel.TCP()
         d.transport.port = 81
         request = server.Request(d, 1)
         request.setHost('example.com', 81)
