@@ -5,7 +5,7 @@ import warnings
 warnings.warn(
     "Create your own event dispatching mechanism, "
     "twisted.python.dispatch will soon be no more.",
-    DeprecationgWarning, 2)
+    DeprecationWarning, 2)
 
 
 class EventDispatcher:
