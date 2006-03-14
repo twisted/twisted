@@ -6,7 +6,7 @@ import string, random, copy
 from cStringIO import StringIO
 
 from twisted.web import server, resource, util
-from twisted.internet import defer, interfaces
+from twisted.internet import defer, interfaces, error
 from twisted.web import http
 from twisted.protocols import loopback
 from twisted.python import log, reflect
@@ -331,7 +331,16 @@ class TestRequest(unittest.TestCase):
         request.gotLength(0)
         request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
         self.assertEqual(request.prePathURL(), 'https://foo.com:81/foo/bar')
-        
+
+    def testNotifyFinishConnectionLost(self):
+        d = DummyChannel()
+        d.transport = DummyChannel.TCP()
+        request = server.Request(d, 1)
+        finished = request.notifyFinish()
+        request.connectionLost(error.ConnectionDone("Connection done"))
+        return self.assertFailure(finished, error.ConnectionDone)
+
+
 class RootResource(resource.Resource):
     isLeaf=0
     def getChildWithDefault(self, name, request):
