@@ -65,14 +65,15 @@ class DAVPropertyMixIn (MetaDataMixin):
     # they are included.
     #
     liveProperties = (
-        (dav_namespace, "resourcetype"    ),
-        (dav_namespace, "getetag"         ),
-        (dav_namespace, "getcontenttype"  ),
-        (dav_namespace, "getcontentlength"),
-        (dav_namespace, "getlastmodified" ),
-        (dav_namespace, "creationdate"    ),
-        (dav_namespace, "displayname"     ),
-        (dav_namespace, "supportedlock"   ),
+        (dav_namespace, "resourcetype"           ),
+        (dav_namespace, "getetag"                ),
+        (dav_namespace, "getcontenttype"         ),
+        (dav_namespace, "getcontentlength"       ),
+        (dav_namespace, "getlastmodified"        ),
+        (dav_namespace, "creationdate"           ),
+        (dav_namespace, "displayname"            ),
+        (dav_namespace, "supportedlock"          ),
+        (dav_namespace, "supported-privilege-set"),
 
         (twisted_dav_namespace, "resource-class"),
     )
@@ -151,6 +152,9 @@ class DAVPropertyMixIn (MetaDataMixin):
                     davxml.LockEntry(davxml.LockScope.exclusive, davxml.LockType.write),
                     davxml.LockEntry(davxml.LockScope.shared   , davxml.LockType.write),
                 )
+
+            if name == "supported-privilege-set":
+                return self.supportedPrivileges()
 
         if namespace == twisted_dav_namespace:
             if name == "resource-class":
