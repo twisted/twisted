@@ -33,6 +33,7 @@ from urlparse import urlsplit
 from twisted.python import log
 from twisted.web2.static import File
 from twisted.web2.server import StopTraversal
+from twisted.web2.dav import davxml
 from twisted.web2.dav.idav import IDAVResource
 from twisted.web2.dav.resource import DAVResource
 from twisted.web2.dav.util import bindMethods
@@ -108,6 +109,60 @@ class DAVFile (DAVResource, File):
                                 yield (grandchild[0], name + "/" + grandchild[1])
                     else:
                         yield (child, name)
+
+    ##
+    # ACL
+    ##
+
+    def supportedPrivileges(self):
+        if not hasattr(DAVFile, "_supportedPrivilegeSet"):
+            DAVFile._supportedPrivilegeSet = davxml.SupportedPrivilegeSet(
+                davxml.SupportedPrivilege(
+                    davxml.Privilege(davxml.All()),
+                    davxml.Description("all privileges", **{"xml:lang": "en"}),
+                    davxml.SupportedPrivilege(
+                        davxml.Privilege(davxml.Read()),
+                        davxml.Description("read resource", **{"xml:lang": "en"}),
+                    ),
+                    davxml.SupportedPrivilege(
+                        davxml.Privilege(davxml.Write()),
+                        davxml.Description("write resource", **{"xml:lang": "en"}),
+                        davxml.SupportedPrivilege(
+                            davxml.Privilege(davxml.WriteProperties()),
+                            davxml.Description("write resource properties", **{"xml:lang": "en"}),
+                        ),
+                        davxml.SupportedPrivilege(
+                            davxml.Privilege(davxml.WriteContent()),
+                            davxml.Description("write resource content", **{"xml:lang": "en"}),
+                        ),
+                        davxml.SupportedPrivilege(
+                            davxml.Privilege(davxml.Bind()),
+                            davxml.Description("add child resource", **{"xml:lang": "en"}),
+                        ),
+                        davxml.SupportedPrivilege(
+                            davxml.Privilege(davxml.Unbind()),
+                            davxml.Description("remove child resource", **{"xml:lang": "en"}),
+                        ),
+                    ),
+                    davxml.SupportedPrivilege(
+                        davxml.Privilege(davxml.Unlock()),
+                        davxml.Description("unlock resource without ownership", **{"xml:lang": "en"}),
+                    ),
+                    davxml.SupportedPrivilege(
+                        davxml.Privilege(davxml.ReadACL()),
+                        davxml.Description("read resource access control list", **{"xml:lang": "en"}),
+                    ),
+                    davxml.SupportedPrivilege(
+                        davxml.Privilege(davxml.WriteACL()),
+                        davxml.Description("write resource access control list", **{"xml:lang": "en"}),
+                    ),
+                    davxml.SupportedPrivilege(
+                        davxml.Privilege(davxml.ReadCurrentUserPrivilegeSet()),
+                        davxml.Description("read privileges for current principal", **{"xml:lang": "en"}),
+                    ),
+                ),
+            )
+        return DAVFile._supportedPrivilegeSet
 
     ##
     # Workarounds for issues with File
