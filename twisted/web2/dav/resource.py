@@ -38,7 +38,7 @@ from zope.interface import implements
 from twisted.python import log
 from twisted.internet.defer import maybeDeferred
 from twisted.web2 import responsecode
-from twisted.web2.http import HTTPError, RedirectResponse
+from twisted.web2.http import HTTPError, RedirectResponse, StatusResponse
 from twisted.web2.http_headers import generateContentType
 from twisted.web2.iweb import IResponse
 from twisted.web2.resource import LeafResource
@@ -169,7 +169,7 @@ class DAVPropertyMixIn (MetaDataMixin):
         assert isinstance(property, davxml.WebDAVElement)
 
         if property.protected:
-            raise HTTPError(responsecode.FORBIDDEN, StatusResponse("Protected property %s may not be set." % (property.sname(),)))
+            raise HTTPError(StatusResponse(responsecode.FORBIDDEN, "Protected property %s may not be set." % (property.sname(),)))
 
         self.deadProperties().set(property)
 
@@ -183,7 +183,7 @@ class DAVPropertyMixIn (MetaDataMixin):
             qname = property.qname()
 
         if qname in self.liveProperties:
-            raise HTTPError(responsecode.FORBIDDEN, StatusResponse("Live property %s cannot be deleted." % (property.sname(),)))
+            raise HTTPError(StatusResponse(responsecode.FORBIDDEN, "Live property %s cannot be deleted." % (property.sname(),)))
 
         self.deadProperties().delete(qname)
 
