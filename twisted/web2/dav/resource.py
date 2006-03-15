@@ -284,6 +284,7 @@ class DAVResource (DAVPropertyMixIn, StaticRenderMixin):
     def isCollection(self):
         """
         See L{IDAVResource.isCollection}.
+
         This implementation raises L{NotImplementedError}; a subclass must
         override this method.
         """
@@ -292,6 +293,7 @@ class DAVResource (DAVPropertyMixIn, StaticRenderMixin):
     def findChildren(self, depth):
         """
         See L{IDAVResource.findChildren}.
+
         This implementation raises returns C{()} if C{depth} is C{0} and this
         resource is a collection.  Otherwise, it raises L{NotImplementedError};
         a subclass must override this method.
@@ -308,24 +310,27 @@ class DAVResource (DAVPropertyMixIn, StaticRenderMixin):
 
     def principalCollections(self):
         """
-        (RFC 3744, section 5.8)
-        @return: a sequence of URIs which refer to collection resources that
-            contain the principal resources that may be used by the access
-            control list for this resource.
+        See L{IDAVResource.principalCollections}.
+
+        This implementation returns C{()}.
         """
         return ()
 
     def accessControlList(self):
         """
-        @return: a L{davxml.ACL} element containing the access control list for
-            this resource.
+        See L{IDAVResource.accessControlList}.
+
+        This implementation returns an ACL granting all privileges to all
+        principals.
         """
         return allACL
 
     def supportedPrivileges(self):
         """
-        @return: a L{davxml.SupportedPrivilegeSet} element describing the access
-            control privileges which are supported by this resource.
+        See L{IDAVResource.supportedPrivileges}.
+
+        This implementation returns a supported privilege set containing only
+        the DAV:all privilege.
         """
         return allPrivilegeSet
 

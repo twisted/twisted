@@ -100,7 +100,7 @@ class IDAVResource(IResource):
         Provides the URIs of collection resources which contain principal
         resources which may be used in access control entries on this resource.
         (RFC 3744, section 5.8)
-        @return: an iterable of URIs referring to collection resources which
+        @return: a sequence of URIs referring to collection resources which
             implement the C{DAV:principal-property-search} C{REPORT}.
         """
 
