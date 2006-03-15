@@ -55,6 +55,15 @@ class DAVPropertyMixIn (MetaDataMixin):
     Mix-in class which implements the DAV property access API in
     L{IDAVResource}.
     """
+    #
+    # Live properties which are always present and computed (not kept in the
+    # dead property store).
+    # Live properties which are not always defined don't belong in this list
+    # (such as properties which are verified by the server, but kept in the
+    # dead property store).
+    # This list is used by hasProperty() and listProperties() to make sure that
+    # they are included.
+    #
     liveProperties = (
         (dav_namespace, "resourcetype"    ),
         (dav_namespace, "getetag"         ),
@@ -196,8 +205,8 @@ class DAVPropertyMixIn (MetaDataMixin):
         """
         Some DAV properties should not be returned to a C{DAV:allprop} query.
         RFC 3253 defines several such properties.  This method computes a subset
-        of the property qnames returned by L{list} by filtering out elements
-        whose class have the C{.hidden} attribute set to C{True}.
+        of the property qnames returned by L{listProperties} by filtering out
+        elements whose class have the C{.hidden} attribute set to C{True}.
         @return: a list of qnames of properties which are defined and are
             appropriate for use in response to a C{DAV:allprop} query.   
         """
