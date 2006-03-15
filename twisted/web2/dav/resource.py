@@ -65,15 +65,17 @@ class DAVPropertyMixIn (MetaDataMixin):
     # they are included.
     #
     liveProperties = (
-        (dav_namespace, "resourcetype"           ),
-        (dav_namespace, "getetag"                ),
-        (dav_namespace, "getcontenttype"         ),
-        (dav_namespace, "getcontentlength"       ),
-        (dav_namespace, "getlastmodified"        ),
-        (dav_namespace, "creationdate"           ),
-        (dav_namespace, "displayname"            ),
-        (dav_namespace, "supportedlock"          ),
-        (dav_namespace, "supported-privilege-set"),
+        (dav_namespace, "resourcetype"            ),
+        (dav_namespace, "getetag"                 ),
+        (dav_namespace, "getcontenttype"          ),
+        (dav_namespace, "getcontentlength"        ),
+        (dav_namespace, "getlastmodified"         ),
+        (dav_namespace, "creationdate"            ),
+        (dav_namespace, "displayname"             ),
+        (dav_namespace, "supportedlock"           ),
+        (dav_namespace, "supported-privilege-set" ),
+        (dav_namespace, "acl"                     ),
+        (dav_namespace, "principal-collection-set"),
 
         (twisted_dav_namespace, "resource-class"),
     )
@@ -155,6 +157,12 @@ class DAVPropertyMixIn (MetaDataMixin):
 
             if name == "supported-privilege-set":
                 return self.supportedPrivileges()
+
+            if name == "acl":
+                return self.accessControlList()
+
+            if name == "principal-collection-set":
+                return davxml.PrincipalCollectionSet(*[davxml.HRef(u) for u in self.principalCollections()])
 
         if namespace == twisted_dav_namespace:
             if name == "resource-class":
