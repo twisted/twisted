@@ -308,19 +308,24 @@ class DAVResource (DAVPropertyMixIn, StaticRenderMixin):
 
     def principalCollections(self):
         """
-        See L{IDAVAccessControlList.principalCollections}.
+        (RFC 3744, section 5.8)
+        @return: a sequence of URIs which refer to collection resources that
+            contain the principal resources that may be used by the access
+            control list for this resource.
         """
         return ()
 
     def accessControlList(self):
         """
-        See L{IDAVAccessControlList.accessControlList}.
+        @return: a L{davxml.ACL} element containing the access control list for
+            this resource.
         """
         return allACL
 
     def supportedPrivileges(self):
         """
-        See L{IDAVAccessControlList.supportedPrivileges}.
+        @return: a L{davxml.SupportedPrivilegeSet} element describing the access
+            control privileges which are supported by this resource.
         """
         return allPrivilegeSet
 
@@ -391,6 +396,6 @@ allACL = davxml.ACL(
 allPrivilegeSet = davxml.SupportedPrivilegeSet(
     davxml.SupportedPrivilege(
         davxml.Privilege(davxml.All()),
-        davxml.Description("All access", **{"xml:lang": "en"})
+        davxml.Description("all privileges", **{"xml:lang": "en"})
     )
 )
