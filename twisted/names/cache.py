@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.names.test.test_names -*-
+# -*- test-case-name: twisted.names.test -*-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -51,7 +51,7 @@ class CacheResolver(common.ResolverBase):
 
     def _lookup(self, name, cls, type, timeout):
         now = time.time()
-        q = dns.Query(name, cls, type)
+        q = dns.Query(name, type, cls)
         try:
             when, (ans, auth, add) = self.cache[q]
         except KeyError:

@@ -56,7 +56,7 @@ class Resolver(common.ResolverBase):
     
     def discoveredAuthority(self, auth, name, cls, type, timeout):
         from twisted.names import client
-        q = dns.Query(name, cls, type)
+        q = dns.Query(name, type, cls)
         r = client.Resolver(servers=[(auth, dns.PORT)])
         d = r.queryUDP([q], timeout)
         d.addCallback(r.filterAnswers)
