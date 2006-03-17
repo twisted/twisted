@@ -151,7 +151,7 @@ class ServerDNSTestCase(unittest.TestCase):
                 break
 
         self.resolver = client.Resolver(servers=[('127.0.0.1', port)])
-    
+
     def tearDown(self):
         self.listenerTCP.loseConnection()
         d = defer.maybeDeferred(self.listenerUDP.stopListening)
@@ -163,7 +163,7 @@ class ServerDNSTestCase(unittest.TestCase):
             self.listenerUDP.disconnected
             and self.listenerTCP.disconnected))
         return d
-                   
+
     def namesTest(self, d, r):
         self.response = None
         def setDone(response):
@@ -550,7 +550,7 @@ class ResolvConfHandling(unittest.TestCase):
         r = client.Resolver(resolv=resolvConf)
         self.assertEquals(r.dynServers, [('127.0.0.1', 53)])
         r._parseCall.cancel()
-    
+
     def testEmpty(self):
         resolvConf = self.mktemp()
         fObj = file(resolvConf, 'w')

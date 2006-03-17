@@ -1,4 +1,3 @@
-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -35,7 +34,7 @@ class FailureHandler:
 
 class ResolverChain(common.ResolverBase):
     """Lookup an address using multiple C{IResolver}s"""
-    
+
     implements(interfaces.IResolver)
 
 

@@ -148,11 +148,11 @@ typeToMethod = {
     dns.MINFO: 'lookupMailboxInfo',
     dns.MX:    'lookupMailExchange',
     dns.TXT:   'lookupText',
-    
+
     dns.RP:    'lookupResponsibility',
     dns.AFSDB: 'lookupAFSDatabase',
     dns.SRV:   'lookupService',
-    
+
     dns.AXFR:         'lookupZone',
     dns.ALL_RECORDS:  'lookupAllRecords',
 }

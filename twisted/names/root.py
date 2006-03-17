@@ -53,7 +53,7 @@ class Resolver(common.ResolverBase):
             ).addCallback(self.discoveredAuthority, name, cls, type, timeout
             )
         return d
-    
+
     def discoveredAuthority(self, auth, name, cls, type, timeout):
         from twisted.names import client
         q = dns.Query(name, type, cls)
@@ -89,7 +89,7 @@ def lookupAddress(host, atServer, p=None):
 def extractAuthority(msg, cache):
     records = msg.answers + msg.authority + msg.additional
     nameservers = [r for r in records if r.type == dns.NS]
-    
+
     # print 'Records for', soFar, ':', records
     # print 'NS for', soFar, ':', nameservers
 
@@ -117,9 +117,9 @@ def discoverAuthority(host, roots, cache=None, p=None):
 
     parts = host.rstrip('.').split('.')
     parts.reverse()
-    
+
     authority = rootAuths.pop()
-    
+
     soFar = ''
     for part in parts:
         soFar = part + '.' + soFar
@@ -156,7 +156,7 @@ def discoverAuthority(host, roots, cache=None, p=None):
     yield authority
 
 discoverAuthority = defer.deferredGenerator(discoverAuthority)
-    
+
 def makePlaceholder(deferred, name):
     def placeholder(*args, **kw):
         deferred.addCallback(lambda r: getattr(r, name)(*args, **kw))
@@ -183,7 +183,7 @@ class DeferredResolver:
 
 def bootstrap(resolver):
     """Lookup the root nameserver addresses using the given resolver
-    
+
     Return a Resolver which will eventually become a C{root.Resolver}
     instance that has references to all the root servers that we were able
     to look up.
@@ -207,4 +207,3 @@ if __name__ == '__main__':
         d.addCallbacks(log.msg, log.err).addBoth(lambda _: reactor.stop())
         from twisted.internet import reactor
         reactor.run()
-

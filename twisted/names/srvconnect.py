@@ -1,3 +1,6 @@
+# Copyright (c) 2001-2006 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 import random
 
 from zope.interface import implements

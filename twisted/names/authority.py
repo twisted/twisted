@@ -16,7 +16,7 @@ import common
 
 def getSerial(filename = '/tmp/twisted-names.serial'):
     """Return a monotonically increasing (across program runs) integer.
-    
+
     State is stored in the given file.  If it does not exist, it is
     created with rw-/---/--- permissions.
     """
@@ -60,7 +60,7 @@ def getSerial(filename = '/tmp/twisted-names.serial'):
 
 class FileAuthority(common.ResolverBase):
     """An Authority that is loaded from a file."""
-    
+
     soa = None
     records = None
 
@@ -80,16 +80,16 @@ class FileAuthority(common.ResolverBase):
         authority = []
         additional = []
         default_ttl = max(self.soa[1].minimum, self.soa[1].expire)
-        
+
         domain_records = self.records.get(name.lower())
-       
+
         if domain_records:
             for record in domain_records:
                 if record.ttl is not None:
                     ttl = record.ttl
                 else:
                     ttl = default_ttl
-                    
+
                 if record.TYPE == type or type == dns.ALL_RECORDS:
                     results.append(
                         dns.RRHeader(name, record.TYPE, dns.IN, ttl, record, auth=True)
@@ -114,7 +114,7 @@ class FileAuthority(common.ResolverBase):
                             section.append(
                                 dns.RRHeader(n, dns.A, dns.IN, rec.ttl or default_ttl, rec, auth=True)
                             )
-          
+
             return defer.succeed((results, authority, additional))
         else:
             if name.lower().endswith(self.soa[0].lower()):
@@ -162,7 +162,7 @@ class PySourceAuthority(FileAuthority):
         execfile(filename, g, l)
         if not l.has_key('zone'):
             raise ValueError, "No zone defined in " + filename
-        
+
         self.records = {}
         for rr in l['zone']:
             if isinstance(rr[1], dns.Record_SOA):
@@ -186,7 +186,7 @@ class PySourceAuthority(FileAuthority):
 
 class BindAuthority(FileAuthority):
     """An Authority that loads BIND configuration files"""
-    
+
     def loadFile(self, filename):
         self.origin = os.path.basename(filename) + '.' # XXX - this might suck
         lines = open(filename).readlines()
@@ -229,9 +229,9 @@ class BindAuthority(FileAuthority):
     def parseLines(self, lines):
         TTL = 60 * 60 * 3
         ORIGIN = self.origin
-        
+
         self.records = {}
-        
+
         for (line, index) in zip(lines, range(len(lines))):
             if line[0] == '$TTL':
                 TTL = dns.str2time(line[1])
@@ -263,7 +263,7 @@ class BindAuthority(FileAuthority):
             r = record(*rdata)
             r.ttl = ttl
             self.records.setdefault(domain.lower(), []).append(r)
-            
+
             print 'Adding IN Record', domain, ttl, r
             if type == 'SOA':
                 self.soa = (domain, r)
@@ -287,7 +287,7 @@ class BindAuthority(FileAuthority):
             owner = line[0]
             line = line[1:]
 #            print 'owner is ', owner
-        
+
         if line[0].isdigit() or line[0] in MARKERS:
             domain = owner
             owner = origin

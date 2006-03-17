@@ -1,4 +1,5 @@
-# -*- coding: Latin-1 -*-
+# Copyright (c) 2001-2006 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 from twisted.internet import task, defer
 from twisted.names import dns
@@ -68,7 +69,7 @@ class SecondaryAuthority(common.ResolverBase):
     def _lookup(self, name, cls, type, timeout=None):
         if not self.soa or not self.records:
             return defer.fail(failure.Failure(dns.DomainError(name)))
-        
+
 
         return FileAuthority.__dict__['_lookup'](self, name, cls, type, timeout)
 

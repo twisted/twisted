@@ -872,7 +872,7 @@ class Record_MX(tputil.FancyStrMixin, tputil.FancyEqMixin):
         return self.name
 
     exchange = property(exchange)
-    
+
     def __hash__(self):
         return hash((self.preference, self.name))
 
@@ -1132,7 +1132,7 @@ class DNSDatagramProtocol(protocol.DatagramProtocol):
         m = Message(id, recDes=1)
         m.queries = queries
 
-        resultDeferred = defer.Deferred()        
+        resultDeferred = defer.Deferred()
         cancelCall = reactor.callLater(timeout, self._clearFailed, resultDeferred, id)
         self.liveMessages[id] = (resultDeferred, cancelCall)
 
@@ -1229,5 +1229,3 @@ class DNSProtocol(protocol.Protocol):
         m.queries = queries
         self.writeMessage(m)
         return d
-
-

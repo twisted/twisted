@@ -114,7 +114,7 @@ class Resolver(common.ResolverBase):
             resolvConf = file(self.resolv)
         except IOError, e:
             if e.errno == errno.ENOENT:
-                # Missing resolv.conf is treated the same as an empty resolv.conf 
+                # Missing resolv.conf is treated the same as an empty resolv.conf
                 self.parseConfig(())
             else:
                 raise
@@ -356,7 +356,7 @@ class AXFRController:
             if self.deferred is not None:
                 self.deferred.callback(self.records)
                 self.deferred = None
-            
+
 
 
 from twisted.internet.base import ThreadedResolver as _ThreadedResolverImpl

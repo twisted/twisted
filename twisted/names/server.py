@@ -8,11 +8,11 @@ Async DNS server
 
 API Stability: Unstable
 
-Future plans: 
+Future plans:
     - Better config file format maybe
     - Make sure to differentiate between different classes
-    - notice truncation bit 
-  
+    - notice truncation bit
+
 Important: No additional processing is done on some of the record types.
 This violates the most basic RFC and is just plain annoying
 for resolvers to deal with.  Fix it.
@@ -75,7 +75,7 @@ class DNSServerFactory(protocol.ServerFactory):
             protocol.writeMessage(message)
         else:
             protocol.writeMessage(message, address)
-        
+
         if self.verbose > 1:
             log.msg("Processed query in %0.3f seconds" % (time.time() - message.timeReceived))
 
@@ -90,7 +90,7 @@ class DNSServerFactory(protocol.ServerFactory):
         message.authority = auth
         message.additional = add
         self.sendReply(protocol, message, address)
-        
+
         l = len(ans) + len(auth) + len(add)
         if self.verbose:
             log.msg("Lookup found %d record%s" % (l, l != 1 and "s" or ""))
@@ -107,7 +107,7 @@ class DNSServerFactory(protocol.ServerFactory):
         else:
             message.rCode = dns.ESERVER
             log.err(failure)
-        
+
         self.sendReply(protocol, message, address)
         if self.verbose:
             log.msg("Lookup failed")
@@ -117,7 +117,7 @@ class DNSServerFactory(protocol.ServerFactory):
         # Discard all but the first query!  HOO-AAH HOOOOO-AAAAH
         # (no other servers implement multi-query messages, so we won't either)
         query = message.queries[0]
-        
+
         return self.resolver.query(query).addCallback(
             self.gotResolverResponse, protocol, message, address
         ).addErrback(
@@ -155,7 +155,7 @@ class DNSServerFactory(protocol.ServerFactory):
 
     def messageReceived(self, message, proto, address = None):
         message.timeReceived = time.time()
-    
+
         if self.verbose:
             if self.verbose > 1:
                 s = ' '.join([str(q) for q in message.queries])

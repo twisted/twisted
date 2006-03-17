@@ -17,9 +17,9 @@ class CacheResolver(common.ResolverBase):
     """A resolver that serves records from a local, memory cache."""
 
     implements(interfaces.IResolver)
-    
+
     cache = None
-    
+
     def __init__(self, cache = None, verbose = 0):
         common.ResolverBase.__init__(self)
 
@@ -32,7 +32,7 @@ class CacheResolver(common.ResolverBase):
 
     def __setstate__(self, state):
         self.__dict__ = state
-        
+
         now = time.time()
         for (k, (when, (ans, add, ns))) in self.cache.items():
             diff = now - when
@@ -86,7 +86,7 @@ class CacheResolver(common.ResolverBase):
         m = s[0].ttl
         for r in s:
             m = min(m, r.ttl)
-        
+
         from twisted.internet import reactor
         self.cancel[query] = reactor.callLater(m, self.clearEntry, query)
 

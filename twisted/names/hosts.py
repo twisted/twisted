@@ -1,4 +1,3 @@
-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -41,7 +40,7 @@ class Resolver(common.ResolverBase, styles.Versioned):
         self.typeToMethod = {}
         for (k, v) in common.typeToMethod.items():
             self.typeToMethod[k] = getattr(self, v)
-    
+
 
     def __init__(self, file='/etc/hosts', ttl = 60 * 60):
         common.ResolverBase.__init__(self)
@@ -59,4 +58,4 @@ class Resolver(common.ResolverBase, styles.Versioned):
 
 
     # When we put IPv6 support in, this'll need a real impl
-    lookupAllRecords = lookupAddress 
+    lookupAllRecords = lookupAddress
