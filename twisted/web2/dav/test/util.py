@@ -31,6 +31,7 @@ from random import randrange, choice
 
 from zope.interface import implements
 from twisted.python import log
+from twisted.python.filepath import FilePath
 from twisted.trial import unittest
 from twisted.internet.defer import maybeDeferred, Deferred
 from twisted.web2.iweb import IRequest
@@ -68,7 +69,7 @@ class TestCase(unittest.TestCase):
         )
     
         for dir in dirs: os.mkdir(dir)
-    
+
         src = os.path.dirname(__file__)
         files = [
             os.path.join(src, f)
@@ -84,6 +85,9 @@ class TestCase(unittest.TestCase):
             while fc:
                 fc -= 1
                 copy(choice(files), dir)
+
+        for path in files[:8]:
+            copy(path, docroot)
     
         self.site = Site(self.resource_class(docroot))
 

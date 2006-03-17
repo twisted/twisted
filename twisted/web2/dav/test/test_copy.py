@@ -51,33 +51,33 @@ class COPY(twisted.web2.dav.test.util.TestCase):
         os.mkdir(dst)
 
         def check_result(response, path, uri, depth, dst_path):
+            response = IResponse(response)
+
+            if response.code != responsecode.CREATED:
+                self.fail("Incorrect response code for COPY %s (depth=%r): %s" % (uri, depth, response.code))
+
             # FIXME: I can't figure out how these files are getting here;
             # the next line shouldn't be necessary, but somehow is.
             if path.startswith(dst): return
 
             if os.path.isfile(path):
                 if not os.path.isfile(dst_path):
-                    self.fail("COPY %s (depth=%r) produced no output file"
-                              % (uri, depth))
+                    self.fail("COPY %s (depth=%r) produced no output file" % (uri, depth))
                 if not cmp(path, dst_path):
-                    self.fail("COPY %s (depth=%r) produced different file"
-                              % (uri, depth))
+                    self.fail("COPY %s (depth=%r) produced different file" % (uri, depth))
                 os.remove(dst_path)
 
             elif os.path.isdir(path):
                 if not os.path.isdir(dst_path):
-                    self.fail("COPY %s (depth=%r) produced no output directory"
-                              % (uri, depth))
+                    self.fail("COPY %s (depth=%r) produced no output directory" % (uri, depth))
 
                 if depth in ("infinity", None):
                     if dircmp(path, dst_path):
-                        self.fail("COPY %s (depth=%r) produced different directory"
-                                  % (uri, depth))
+                        self.fail("COPY %s (depth=%r) produced different directory" % (uri, depth))
 
                 elif depth == "0":
                     for filename in os.listdir(dst_path):
-                        self.fail("COPY %s (depth=%r) shouldn't copy directory contents (eg. %s)"
-                                  % (uri, depth, filename))
+                        self.fail("COPY %s (depth=%r) shouldn't copy directory contents (eg. %s)" % (uri, depth, filename))
 
                 else: raise AssertionError("Unknown depth: %r" % (depth,))
 
