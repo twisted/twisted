@@ -792,8 +792,10 @@ class SimpleServer(imap4.IMAP4Server):
 
         imap4.IMAP4Server.lineReceived(self, line)
 
+    _username = 'testuser'
+    _password = 'password-test'
     def authenticateLogin(self, username, password):
-        if username == 'testuser' and password == 'password-test':
+        if username == self._username and password == self._password:
             return imap4.IAccount, self.theAccount, lambda: None
         raise cred.error.UnauthorizedLogin()
 
@@ -957,6 +959,22 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
 
         self.assertEquals(self.server.account, None)
         self.assertEquals(self.server.state, 'unauth')
+
+
+    def testLoginRequiringQuoting(self):
+        self.server._username = '{test}user'
+        self.server._password = '{test}password'
+
+        def login():
+            d = self.client.login('{test}user', '{test}password')
+            d.addBoth(self._cbStopClient)
+
+        self.connected.addCallback(strip(login)).addErrback(self._ebGeneral)
+        self.loopback()
+
+        self.assertEquals(self.server.account, SimpleServer.theAccount)
+        self.assertEquals(self.server.state, 'auth')
+
 
     def testNamespace(self):
         self.namespaceArgs = None

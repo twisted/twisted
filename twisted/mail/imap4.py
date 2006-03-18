@@ -2494,7 +2494,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         else:
             if nontlsTransport:
                 log.msg("Server has no TLS support. logging in over cleartext!")
-            args = ' '.join((username, password))
+            args = ' '.join((_quote(username), _quote(password)))
             return self.sendCommand(Command('LOGIN', args))
 
     def _startedTLS(self, result, context):
@@ -2504,7 +2504,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         return result
 
     def __cbLoginTLS(self, result, username, password):
-        args = ' '.join((username, password))
+        args = ' '.join((_quote(username), _quote(password)))
         return self.sendCommand(Command('LOGIN', args))
 
     def __ebLoginTLS(self, failure):
