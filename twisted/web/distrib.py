@@ -297,4 +297,7 @@ class UserDirectory(page.Page):
             self.putChild(name, rs)
             return rs
         else:
-            return static.File(os.path.join(pw_dir, self.userDirName))
+            path = os.path.join(pw_dir, self.userDirName)
+            if not os.path.exists(path):
+                return error.NoResource()
+            return static.File(path)
