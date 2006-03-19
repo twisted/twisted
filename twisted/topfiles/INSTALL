@@ -42,7 +42,3 @@ Installation
     is:
 
       python setup.py install
-  
-  * RPM (Redhat, Mandrake, SuSE, etc)
-    For RPM based platforms there is a spec file in the admin/ folder in the
-    tarball.
