@@ -5,6 +5,7 @@ from twisted.conch.ssh.filetransfer import FXF_READ, FXF_WRITE, FXF_CREAT
 from twisted.conch.ssh.filetransfer import FXF_APPEND, FXF_EXCL
 from twisted.conch.ssh.filetransfer import SFTPError
 from twisted.conch.ssh.filetransfer import FX_NO_SUCH_FILE
+from twisted.conch.interfaces import ISFTPFile
 from twisted.trial import unittest
 from twisted.internet import defer
 
@@ -43,12 +44,12 @@ class SFTPAdapterTest(unittest.TestCase):
 
     def test_openFile(self):
         child = self.sftp.openFile('file.txt', 0, None)
-        self.failUnless(ivfs.IFileSystemNode.providedBy(child))
+        self.failUnless(ISFTPFile.providedBy(child))
 
     def test_openNewFile(self):
         # Opening a new file should work if FXF_CREAT is passed
         child = self.sftp.openFile('new file.txt', FXF_READ|FXF_CREAT, None)
-        self.failUnless(ivfs.IFileSystemNode.providedBy(child))
+        self.failUnless(ISFTPFile.providedBy(child))
 
         # But opening with FXF_READ alone should fail with FX_NO_SUCH_FILE.
         e = self.assertRaises(SFTPError,
@@ -57,15 +58,15 @@ class SFTPAdapterTest(unittest.TestCase):
 
         # The FXF_WRITE flag alone can create a file.
         child = self.sftp.openFile('new file 3.txt', FXF_WRITE, None)
-        self.failUnless(ivfs.IFileSystemNode.providedBy(child))
+        self.failUnless(ISFTPFile.providedBy(child))
 
         # So, of course FXF_WRITE plus FXF_READ can too.
         child = self.sftp.openFile('new file 4.txt', FXF_WRITE|FXF_READ, None)
-        self.failUnless(ivfs.IFileSystemNode.providedBy(child))
+        self.failUnless(ISFTPFile.providedBy(child))
 
         # The FXF_APPEND flag alone can create a file.
         child = self.sftp.openFile('new file 5.txt', FXF_APPEND, None)
-        self.failUnless(ivfs.IFileSystemNode.providedBy(child))
+        self.failUnless(ISFTPFile.providedBy(child))
 
     def test_openNewFileExclusive(self):
         # Creating a file should fail if the FXF_EXCL flag is given and the file
@@ -76,7 +77,7 @@ class SFTPAdapterTest(unittest.TestCase):
 
         # But if the file doesn't exist, then it should work.
         child = self.sftp.openFile('new file.txt', flags, None)
-        self.failUnless(ivfs.IFileSystemNode.providedBy(child))
+        self.failUnless(ISFTPFile.providedBy(child))
 
     def test_removeFile(self):
         self.sftp.removeFile('/file.txt')
@@ -125,12 +126,21 @@ class SFTPAdapterTest(unittest.TestCase):
             keys.sort()
             self.failUnless(sftpAttrs, keys)
 
-    def test_getAttrs(self):
+    def test_getAttrsPath(self):
+        # getAttrs by path name
         attrs = self.sftp.getAttrs('/ned', None).keys()
         attrs.sort()
         self.failUnless(sftpAttrs, attrs)
 
-    def test_setAttrs(self):
+    def test_getAttrsFile(self):
+        # getAttrs on an open file
+        path = 'file.txt'
+        child = self.sftp.openFile(path, 0, None)
+        attrs = child.getAttrs()
+        self.failUnlessEqual(7, attrs['size'])
+
+    def test_setAttrsPath(self):
+        # setAttrs on a path name
         for mtime in [86401, 200000, int(time.time())]:
             try:
                 self.sftp.setAttrs('/file.txt', {'mtime': mtime})
@@ -141,6 +151,20 @@ class SFTPAdapterTest(unittest.TestCase):
             else:
                 self.assertEqual(
                     mtime, self.sftp.getAttrs('/file.txt', False)['mtime'])
+
+    def test_setAttrsFile(self):
+        # setAttrs on an open file
+        file = self.sftp.openFile('file.txt', 0, None)
+        for mtime in [86401, 200000, int(time.time())]:
+            try:
+                file.setAttrs({'mtime': mtime})
+            except NotImplementedError:
+                raise unittest.SkipTest(
+                    "The VFS backend %r doesn't support setAttrs" 
+                    % (self.root,))
+            else:
+                self.assertEqual(
+                    mtime, file.getAttrs()['mtime'])
 
     def test_dirlistWithoutAttrs(self):
         self.ned.getMetadata = self.f.getMetadata = lambda: {}
