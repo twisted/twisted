@@ -7,9 +7,9 @@ from __future__ import nested_scopes
 
 """Generic TCP tests."""
 
-import socket, time, os
+import socket, time
 from zope.interface import implements
-from twisted.trial import unittest, util
+from twisted.trial import unittest
 from twisted.python import log
 
 from twisted.internet import protocol, reactor, defer, interfaces
@@ -54,6 +54,9 @@ class ClosingFactory(protocol.ServerFactory):
 
 class MyProtocol(protocol.Protocol):
     made = closed = failed = 0
+
+    closedDeferred = None
+
     data = ""
 
     factory = None
@@ -71,6 +74,9 @@ class MyProtocol(protocol.Protocol):
 
     def connectionLost(self, reason):
         self.closed = 1
+        if self.closedDeferred is not None:
+            d, self.closedDeferred = self.closedDeferred, None
+            d.callback(None)
 
 
 class MyServerFactory(protocol.ServerFactory):
@@ -967,21 +973,26 @@ class HalfCloseTestCase(PortCleanerUpper):
         self.p = p = reactor.listenTCP(0, f, interface="127.0.0.1")
         self.ports.append(p)
         d = loopUntil(lambda :p.connected)
-        d.addCallback(lambda _:
-                      protocol.ClientCreator(reactor, MyHCProtocol
-                                             ).connectTCP(p.getHost().host,
-                                                          p.getHost().port))
+
+        self.cf = protocol.ClientCreator(reactor, MyHCProtocol)
+
+        d.addCallback(lambda _: self.cf.connectTCP(p.getHost().host,
+                                                   p.getHost().port))
         d.addCallback(self._setUp)
         return d
 
     def _setUp(self, client):
         self.client = client
+        self.clientProtoConnectionLost = self.client.closedDeferred = defer.Deferred()
         self.assertEquals(self.client.transport.connected, 1)
+        # Wait for the server to notice there is a connection, too.
+        return loopUntil(lambda: getattr(self.f, 'protocol', None) is not None)
 
     def tearDown(self):
         self.assertEquals(self.client.closed, 0)
         self.client.transport.loseConnection()
         d = defer.maybeDeferred(self.p.stopListening)
+        d.addCallback(lambda ign: self.clientProtoConnectionLost)
         d.addCallback(self._tearDown)
         return d
 
