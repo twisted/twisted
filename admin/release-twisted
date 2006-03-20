@@ -73,7 +73,9 @@ class Options(usage.Options):
         ['commands', None, 'exportTemp,makeDocAll,makeBallAll,makeBallSumo',
          "(optional) Comma-separated list of individual steps to run"],
         ['release-source', None, '/trunk',
-         "SVN path to be released."]
+         "SVN path to be released."],
+        ['sumo-version', None, None,
+         "Version of Twisted (affects tarball/directory name)"],
         ]
 
 
@@ -110,6 +112,7 @@ def main():
         print command.__name__
         print "="*len(command.__name__)
         runChdirSafe(command, opts)
+
 
 ##
 # Utilities
@@ -192,7 +195,7 @@ def makeBallAll(opts):
 
 def makeBallCore(opts):
     ver = getVersion('core')
-    tdir = "Twisted-%s" % (ver,)
+    tdir = "TwistedCore-%s" % (ver,)
     if not os.path.exists('Twisted.exp'):
         raise DirectoryDoesntExist("MakeBalls: Twisted.exp doesn't exist")
 
@@ -220,9 +223,11 @@ def makeBallCore(opts):
 
 
 def makeBallSumo(opts):
-    ver = time.strftime('%Y-%m-%d')
+    ver = opts['sumo-version']
+    if not ver:
+        raise Exception("Please provide a --sumo-version")
     basever = getVersion('core')
-    tdir = "TwistedSumo-%s" % (ver,)
+    tdir = "Twisted-%s" % (ver,)
     if not os.path.exists('twistedballs'):
         raise Exception("Please create a 'twistedballs' directory and "
                         "populate it with tarballs of Twisted projects "
@@ -273,8 +278,6 @@ def createSubprojectDirectory(proj, version):
 def makeMakeBall(proj):
     def makeBall(opts):
         projver = getVersion(proj)
-        if not projver:
-            raise "NEED --%s-version!" % (proj,)
         projdir = 'Twisted%s-%s' % (proj.capitalize(), projver,)
         createSubprojectDirectory(proj, projver)
         tar(projdir)

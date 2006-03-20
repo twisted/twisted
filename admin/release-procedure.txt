@@ -17,7 +17,9 @@
 5. Switch to that branch.
 
 6. Run ./admin/change-versions. Specify the versions of whatever
-   you're releasing.
+   you're releasing. Core should be versioned as release.major.minor,
+   where minors are only bugfixes, majors are functionality
+   increases, and releases are major milestones.
 
 7. Run the release script: 
    ./admin/release-twisted --commands=exportTemp,makeDocProj,makeBallProj
@@ -46,7 +48,11 @@
 4. ./admin/change-versions, and make sure all the versions are
    appropriately specified for the tarballs you've included.
 
-5. ./admin/release-twisted --commands=makeBallSumo
+5. './admin/release-twisted --commands=makeBallSumo --sumo-version=a.b.x.y'
+   where 'a.b.x' is the version of Twisted Core contained in this
+   release (see point 6 in "Releasing Core or a Subproject" above),
+   and 'y' is simply a monotonically increasing nonnegative integer as
+   long as 'a.b.x' is the same as the last release.
 
 6. Distribute, announce, etc.
 
