@@ -50,8 +50,8 @@ class FileTransferBase(protocol.Protocol):
                 continue
             try:
                 f(data)
-            except Exception, e:
-                log.err(e)
+            except:
+                log.err()
                 continue
                 reqId ,= struct.unpack('!L', data[:4])
                 self._ebStatus(failure.Failure(e), reqId)
