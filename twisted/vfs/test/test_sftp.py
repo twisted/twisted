@@ -29,7 +29,9 @@ class SFTPAdapterTest(unittest.TestCase):
 
         # Create a file 'file.txt'
         self.f = f = root.createFile('file.txt')
-        f.open(os.O_WRONLY).writeChunk(0, 'wobble\n')
+        flags = os.O_WRONLY
+        flags |= getattr(os, 'O_BINARY', 0)  # for windows
+        f.open(flags).writeChunk(0, 'wobble\n')
         f.close()
 
         self.root = root
