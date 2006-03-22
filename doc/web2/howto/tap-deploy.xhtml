@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE XHTML PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+  <head>
+    <title>Twisted.Web2 Deployment with mktap</title>
+  </head>
+  <body>
+    <h1>Twisted.Web2 Deployment with mktap</h1>
+
+    <p>While Twisted.Web2 can be deployed in a variety of flexible and
+      complicated ways, occasionally a simpler approach is desired.  For
+      this Web2 makes use of TAPs created by the mktap commandline utility.  
+      This document outlines a few of the approaches for creating, 
+      configuring, and deploying a Twisted.Web2 with mktap.</p>
+
+    <p>Since the Web2 mktap plugin is a work in progress it is
+      suggested that you refer to the output of the following command
+      for further information</p>
+
+    <pre class="shell">
+% mktap web2 --help
+    </pre>
+
+    <h2>Simple Servers</h2>
+
+    <h3>Static Files</h3>
+
+    <p>Perhaps the simplest possible Twisted.Web2 configuration is to
+      serve a bunch of static files from a directory.</p>
+
+    <pre class="shell">
+% mktap web2 --path /some/path
+    </pre>
+
+    <p>In case you've forgotten mktap 101 this will create a file in
+      the current directory called web2.tap, you can then launch this
+      server configuration with the following command.</p>
+
+    <pre class="shell">
+% twistd -nf web2
+2006/03/02 00:29 PST [-] Log opened.
+2006/03/02 00:29 PST [-] twistd SVN-Trunk (/usr/bin/python 2.4.2) starting up
+2006/03/02 00:29 PST [-] reactor class: twisted.internet.selectreactor.SelectReactor
+2006/03/02 00:29 PST [-] Loading web2.tap...
+2006/03/02 00:29 PST [-] Loaded.
+2006/03/02 00:29 PST [-] twisted.web2.channel.http.HTTPFactory starting on 8080
+2006/03/02 00:29 PST [-] Starting factory &lt;twisted.web2.channel.http.HTTPFactory instance at 0x7787ee4c&gt;
+    </pre>
+
+    <p>You now have a HTTP server serving static files on port 8080,
+      and if you open it in a web browser you'll see something like
+      this in your terminal.</p>
+
+    <pre class="shell">
+2006/03/02 00:29 PST [HTTPChannel,0,127.0.0.1] 127.0.0.1 - - [02/Mar/2006:00:29:14 -0700] "GET / HTTP/1.1" 200 2577 "-" "Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.8.0.1) Gecko/20060224 Ubuntu/dapper Firefox/1.5.0.1"
+    </pre>
+
+    <p>By default the TAP plugin logs to the standard twistd logfile.  
+      However if you specify the <code class="shell">--logfile</code> 
+      option twistd will log to the specified file in the Common Access 
+      Logging format.</p>
+
+    <pre class="shell">
+% mktap web2 --path /some/path --logfile ./access.log
+    </pre>
+
+    <h3>Dynamic Resources</h3>
+    <p>Twisted.Web2's tap plugin is also perfectly capable of serving
+      up a dynamic Resource or two.  In the name of completeness here
+      is a simple resource.</p>
+
+    <a class="py-listing" href="../examples/hello.py">
+      Listing 1: Hello World</a>
+
+    <p>To use it from mktap you simply have to make sure it's in your
+      PYTHONPATH and tell mktap to use it as its root resource.</p>
+
+    <pre class="shell">
+% mktap web2 --class=hello.HelloWorld
+    </pre>
+
+    <p>It's important to keep in mind that this class will be created
+      with no arguments passed to the constructor.</p>
+
+    <h3>The one line WebDAV configuration</h3>
+    <p>Creating a WebDAV server is as easy as serving a static
+      directory.  In fact you could say it's even easier, because there
+      is one character less to type.</p>
+
+    <p>But before I tell you how to do it, a word of warning:  This is
+      a fully writeable webdav server with absolutely no protections
+      of any kind, no HTTP Authentication, no DAV ACLs, just a directory
+      on your hard disk that you're presenting to the world to be
+      written by whomever should stumble across it.  In other words,
+      don't do this on a publically accessible system.  It's simply
+      here for you to fool around with in the privacy of your own home.</p>
+   
+    <pre class="shell">
+% mktap web2 --dav /some/path
+    </pre>
+
+    <h2>Virtual Hosts</h2>
+
+    <p>Now for something a little different, and a little more
+      advanced.  The TAP plugin supports several ways of configuring a server
+      that uses Named Virtual Hosting.</p>
+
+    <h3>Just a bunch of directories</h3>
+    <p>The first method of serving virtual hosts involves a bunch of
+      directories that correspond to the root directory of a virtual
+      host.</p>
+
+    <p>For example:</p>
+    <pre class="shell">
+% ls servers
+test.example.com
+foo.example.com
+mail.example.com
+% mktap web2 --vhost-path servers/
+    </pre>
+
+    <p>Each of the directories under <code class="shell">servers</code> is served out as
+      a <code class="API" base="twisted.web2">static.File</code> when
+      you visit the appropriate url, for example
+      http://test.example.com:8080/ will give you the contents of
+      <code class="shell">servers/test.example.com</code> (assuming
+      test.example.com points to the actual place where the server is
+      running.)
+    </p>
+
+    <h3>Adding a Single Virtual Host</h3>
+    <p>You can also add a single virtual host at a time, either in
+      a seperate directory structure with 
+      <code class="shell">--vhost-static</code> or as a dynamic resource
+      with <code class="shell">--vhost-class</code>.  You can use as
+      many of these arguments as you wish, even combining them with 
+      <code class="shell">--vhost-path</code>.</p>
+
+    <p>For example the following command will give us a web2.tap that
+      serves two virtual hosts, images.example.com and example.com which
+      will serve our dynamic application (
+      <a href="../examples/hello.py" class="py-filename">Hello World</a>.)</p>
+
+    <pre class="shell">
+% mktap web2 --vhost-static=images.example.com=images/ --vhost-class=example.com=hello.HelloWorld
+    </pre>
+
+    <h2>Conclusion</h2>
+    <p>Web2's TAP plugin is a great way to get start a server and start 
+      playing around.  However there are many other ways to deploy web2, 
+      and the TAP plugin is meant to be a stepping stone to more advanced 
+      techniques such as those mentioned in the deployment howto.</p>
+
+  </body>
+</html>
