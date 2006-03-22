@@ -76,6 +76,7 @@ def logFilter(request, response, startTime=None):
         response.stream=_LogByteCounter(response.stream, _log)
     else:
         _log(True, 0)
+
     return response
 
 logFilter.handleErrors = True
@@ -172,7 +173,24 @@ class BaseCommonAccessLoggingObserver(object):
         """Stop observing log events."""
         tlog.removeObserver(self.emit)
 
+class FileAccessLoggingObserver(BaseCommonAccessLoggingObserver):
+    """I log requests to a single logfile
+    """
+    
+    def __init__(self, logpath):
+        self.logpath = logpath
+                
+    def logMessage(self, message):
+        self.f.write(message + '\n')
 
+    def start(self):
+        super(FileAccessLoggingObserver, self).start()
+        self.f = open(self.logpath, 'a', 1)
+        
+    def stop(self):
+        super(FileAccessLoggingObserver, self).stop()
+        self.f.close()
+                
 class DefaultCommonAccessLoggingObserver(BaseCommonAccessLoggingObserver):
     """Log requests to default twisted logfile."""
     def logMessage(self, message):

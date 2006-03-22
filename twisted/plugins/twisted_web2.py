@@ -17,3 +17,12 @@ class _Web2ResourcePlugin(object):
 TestResource = _Web2ResourcePlugin("TestResource",
                            "twisted.web2.plugin.TestResource",
                            "I'm a test resource")
+
+
+from twisted.scripts.mktap import _tapHelper
+
+TwistedWeb2 = _tapHelper('Twisted Web2',
+                         'twisted.web2.tap',
+                         ("An HTTP/1.1 web server that can serve from a "
+                          "filesystem or application resource."),
+                         "web2")
