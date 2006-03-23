@@ -60,10 +60,10 @@ class IService(components.Interface):
         """
 
     def startService(self):
-        """Start the the service."""
+        """Start the service."""
 
     def stopService(self):
-        """Stop the the service.
+        """Stop the service.
 
         @rtype: C{Deferred}
         @return: a deferred which is triggered when the service has
