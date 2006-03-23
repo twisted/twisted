@@ -46,10 +46,8 @@ class APOPCredentials:
 
     def checkPassword(self, password):
         seed = self.magic + password
-        my_digest = md5.new(seed).hexdigest()
-        if my_digest == self.digest:
-            return True
-        return False
+        myDigest = md5.new(seed).hexdigest()
+        return myDigest == self.digest
 
 
 class _HeadersPlusNLines:
@@ -71,7 +69,7 @@ class _HeadersPlusNLines:
             df, sz = data.find('\r\n\r\n'), 4
             if df == -1:
                 df, sz = data.find('\n\n'), 2
-            if df!=-1:
+            if df != -1:
                 df += sz
                 val = data[:df]
                 data = data[df:]

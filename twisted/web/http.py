@@ -311,9 +311,11 @@ def fromChunk(data):
     """
     prefix, rest = data.split('\r\n', 1)
     length = int(prefix, 16)
-    if not rest[length:length+2] == '\r\n':
+    if length < 0:
+        raise ValueError("Chunk length must be >= 0, not %d" % (length,))
+    if not rest[length:length + 2] == '\r\n':
         raise ValueError, "chunk must end with CRLF"
-    return rest[:length], rest[length+2:]
+    return rest[:length], rest[length + 2:]
 
 
 def parseContentRange(header):
@@ -595,8 +597,6 @@ class Request:
                         self.channel.transport.loseConnection()
                         return
                     raise
-            else:
-                pass
 
         self.process()
 
@@ -734,15 +734,15 @@ class Request:
         twisted.web.server.Session class for details.
         """
         cookie = '%s=%s' % (k, v)
-        if expires != None:
+        if expires is not None:
             cookie = cookie +"; Expires=%s" % expires
-        if domain != None:
+        if domain is not None:
             cookie = cookie +"; Domain=%s" % domain
-        if path != None:
+        if path is not None:
             cookie = cookie +"; Path=%s" % path
-        if max_age != None:
+        if max_age is not None:
             cookie = cookie +"; Max-Age=%s" % max_age
-        if comment != None:
+        if comment is not None:
             cookie = cookie +"; Comment=%s" % comment
         if secure:
             cookie = cookie +"; Secure"
@@ -1064,7 +1064,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         """Check if the channel should close or not."""
         connection = request.getHeader('connection')
         if connection:
-            tokens = map(lambda x: x.lower(), connection.split(' '))
+            tokens = map(str.lower, connection.split(' '))
         else:
             tokens = []
 

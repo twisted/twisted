@@ -244,6 +244,7 @@ class ChunkingTestCase(unittest.TestCase):
     def testChunks(self):
         for s in self.strings:
             self.assertEquals((s, ''), http.fromChunk(''.join(http.toChunk(s))))
+        self.assertRaises(ValueError, http.fromChunk, '-5\r\nmalformed!\r\n')
 
     def testConcatenatedChunks(self):
         chunked = ''.join([''.join(http.toChunk(t)) for t in self.strings])

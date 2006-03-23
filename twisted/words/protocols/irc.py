@@ -164,8 +164,7 @@ class IRC(protocol.Protocol):
         of LineReceiver to turn "line mode" on and off was not
         required.)
         """
-        self.buffer = self.buffer + data
-        lines = string.split(self.buffer, LF)
+        lines = (self.buffer + data).split(LF)
         # Put the (possibly empty) element after the last LF back in the
         # buffer
         self.buffer = lines.pop()
@@ -178,7 +177,7 @@ class IRC(protocol.Protocol):
                 line = line[:-1]
             prefix, command, params = parsemsg(line)
             # mIRC is a big pile of doo-doo
-            command = string.upper(command)
+            command = command.upper()
             # DEBUG: log.msg( "%s %s %s" % (prefix, command, params))
 
             self.handleCommand(command, prefix, params)

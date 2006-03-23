@@ -17,7 +17,10 @@ import struct
 
 from twisted.internet import defer
 from twisted.protocols import basic
-from twisted.python import log
+from twisted.python import log, failure
+
+_MIN_PORT = 1
+_MAX_PORT = 2 ** 16 - 1
 
 class IdentError(Exception):
     """
@@ -79,7 +82,10 @@ class IdentServer(basic.LineOnlyReceiver):
             except ValueError:
                 self.invalidQuery()
             else:
-                self.validQuery(portOnServer, portOnClient)
+                if _MIN_PORT <= portOnServer <= _MAX_PORT and _MIN_PORT <= portOnClient <= _MAX_PORT:
+                    self.validQuery(portOnServer, portOnClient)
+                else:
+                    self._ebLookup(failure.Failure(InvalidPort()), portOnServer, portOnClient)
     
     def invalidQuery(self):
         self.transport.loseConnection()

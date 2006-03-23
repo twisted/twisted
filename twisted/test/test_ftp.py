@@ -238,6 +238,12 @@ class BasicFTPServerTestCase(FTPServerTestCase):
     def testDecodeHostPort(self):
         self.assertEquals(ftp.decodeHostPort('25,234,129,22,100,23'),
                 ('25.234.129.22', 25623))
+        nums = range(6)
+        for i in range(6):
+            badValue = list(nums)
+            badValue[i] = 256
+            s = ','.join(map(str, badValue))
+            self.assertRaises(ValueError, ftp.decodeHostPort, s)
 
     def testPASV(self):
         # Login

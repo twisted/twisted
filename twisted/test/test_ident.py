@@ -101,6 +101,14 @@ class ServerParserTestCase(unittest.TestCase):
         errs = log.flushErrors(NewException)
         self.assertEquals(len(errs), 1)
 
+        for port in -1, 0, 65536, 65537:
+            del L[:]
+            p.lineReceived('%d, 5' % (port,))
+            p.lineReceived('5, %d' % (port,))
+            self.assertEquals(
+                L, ['%d, 5 : ERROR : INVALID-PORT' % (port,),
+                    '5, %d : ERROR : INVALID-PORT' % (port,)])
+
     def testSuccess(self):
         p = TestIdentServer()
         p.makeConnection(StringTransport())
