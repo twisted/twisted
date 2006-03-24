@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2006 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -11,7 +11,7 @@ Copyright information for Twisted.
 version="SVN-Trunk"
 longversion="Twisted %s" % version
 copyright="""\
-Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+Copyright (c) 2001-2006 Twisted Matrix Laboratories.
 See LICENSE for details."""
 
 disclaimer='''
