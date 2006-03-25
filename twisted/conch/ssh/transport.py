@@ -20,6 +20,7 @@ import md5
 import sha
 import zlib
 import math # for math.log
+import array
 
 # external library imports
 from Crypto import Util
@@ -681,7 +682,7 @@ class SSHCiphers:
             return _DummyCipher()
         mod = __import__('Crypto.Cipher.%s'%modName, {}, {}, 'x')
         if counterMode:
-            return mod.new(key[:keySize], mod.MODE_CTR, iv[:mod.block_size], counter=_Counter(iv, mod))
+            return mod.new(key[:keySize], mod.MODE_CTR, iv[:mod.block_size], counter=_Counter(iv, mod.block_size))
         else:
             return mod.new(key[: keySize], mod.MODE_CBC, iv[: mod.block_size])
 
@@ -723,20 +724,42 @@ class SSHCiphers:
         return mac == outer.digest()
 
 class _Counter:
-    def __init__(self, iv, mod):
-        iv=iv[:mod.block_size]
-        self.count = getMP('\xff\xff\xff\xff'+iv)[0]
-        self.bs = mod.block_size
+    """
+    Stateful counter which returns results packed in a byte string
+    """
+    def __init__(self, initialVector, blockSize):
+        """
+        @type initialVector: C{str}
+        @param initialVector: A byte string representing the initial counter value.
+
+        @type blockSize: C{int}
+        @param blockSize: The length of the output buffer, as well as the
+        number of bytes at the beginning of L{initialVector} to consider.
+        """
+        initialVector = initialVector[:blockSize]
+        self.count = getMP('\xff\xff\xff\xff' + initialVector)[0]
+        self.blockSize = blockSize
+        self.count = Util.number.long_to_bytes(self.count - 1)
+        self.count = '\x00' * (self.blockSize - len(self.count)) + self.count
+        self.count = array.array('c', self.count)
+        self.len = len(self.count) - 1
+
+
     def __call__(self):
-        ret = MP(self.count)[4:]
-        if ret[0]=='\x00':
-            ret=ret[1:]
-        if len(ret) < self.bs:
-            ret = '\x00'*(self.bs-len(ret)) + ret
-        self.count += 1
-        if self.count == 2L ** self.bs:
-            self.count = 0
-        return ret
+        """
+        Increment the counter and return the new value.
+        """
+        i = self.len
+        while i > -1:
+            self.count[i] = n = chr((ord(self.count[i]) + 1) % 256)
+            if n == '\x00':
+                i -= 1
+            else:
+                return self.count.tostring()
+
+        self.count = array.array('c', '\x00' * self.blockSize)
+        return self.count.tostring()
+
 
 
 def buffer_dump(b, title = None):

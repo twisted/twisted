@@ -20,6 +20,7 @@ from test_recvline import LoopbackRelay
 
 import struct
 
+
 class ConchTestRealm:
 
     def requestAvatar(self, avatarID, mind, *interfaces):
@@ -242,6 +243,17 @@ if Crypto: # stuff that needs PyCrypto to even import
 
     from test_keys import publicRSA_openssh, privateRSA_openssh
     from test_keys import publicDSA_openssh, privateDSA_openssh
+
+
+    class UtilityTestCase(unittest.TestCase):
+        def testCounter(self):
+            c = transport._Counter('\x00\x00', 2)
+            for i in xrange(256 * 256):
+                self.assertEquals(c(), struct.pack('!H', i + 1))
+            # It should wrap around, too.
+            for i in xrange(256 * 256):
+                self.assertEquals(c(), struct.pack('!H', i + 1))
+
 
     class ConchTestPublicKeyChecker(checkers.SSHPublicKeyDatabase):
         def checkKey(self, credentials):
