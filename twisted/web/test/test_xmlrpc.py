@@ -3,8 +3,6 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-# 
-
 """Test XML-RPC support."""
 
 try:
@@ -28,6 +26,8 @@ class TestRuntimeError(RuntimeError):
 
 class TestValueError(ValueError):
     pass
+
+
 
 class Test(XMLRPC):
 
@@ -85,6 +85,21 @@ class Test(XMLRPC):
 
     xmlrpc_dict.help = 'Help for dict.'
 
+class TestAuthHeader(Test):
+    """
+    This is used to get the header info so that we can test
+    authentication.
+    """
+    def __init__(self):
+        Test.__init__(self)
+        self.request = None
+
+    def render(self, request):
+        self.request = request
+        return Test.render(self, request)
+
+    def xmlrpc_authinfo(self):
+        return self.request.getUser(), self.request.getPassword()
 
 class XMLRPCTestCase(unittest.TestCase):
 
@@ -133,6 +148,36 @@ class XMLRPCTestCase2(XMLRPCTestCase):
 
     def proxy(self):
         return xmlrpc.Proxy("http://127.0.0.1:%d" % self.port)
+
+
+class XMLRPCTestAuthenticated(XMLRPCTestCase):
+    """
+    Test with authenticated proxy. We run this with the same inout/ouput as
+    above.
+    """
+    user = "username"
+    password = "asecret"
+
+    def setUp(self):
+        self.p = reactor.listenTCP(0, server.Site(TestAuthHeader()),
+                                   interface="127.0.0.1")
+        self.port = self.p.getHost().port
+
+
+    def testAuthInfoInURL(self):
+        p = xmlrpc.Proxy("http://%s:%s@127.0.0.1:%d/" % (self.user, self.password, self.port))
+        return p.callRemote("authinfo").addCallback(self.assertEquals, [self.user, self.password])
+
+
+    def testExplicitAuthInfo(self):
+        p = xmlrpc.Proxy("http://127.0.0.1:%d/" % (self.port,), self.user, self.password)
+        return p.callRemote("authinfo").addCallback(self.assertEquals, [self.user, self.password])
+
+
+    def testExplicitAuthInfoOverride(self):
+        p = xmlrpc.Proxy("http://wrong:info@127.0.0.1:%d/" % (self.port,), self.user, self.password)
+        return p.callRemote("authinfo").addCallback(self.assertEquals, [self.user, self.password])
+
 
 
 class XMLRPCTestIntrospection(XMLRPCTestCase):

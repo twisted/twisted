@@ -38,7 +38,6 @@ Binary = xmlrpclib.Binary
 Boolean = xmlrpclib.Boolean
 DateTime = xmlrpclib.DateTime
 
-
 class NoSuchFunction(Fault):
     """There is no function by the given name."""
     pass
@@ -243,11 +242,15 @@ def addIntrospection(xmlrpc):
 class QueryProtocol(http.HTTPClient):
 
     def connectionMade(self):
-        self.sendCommand('POST', self.factory.url)
+        self.sendCommand('POST', self.factory.path)
         self.sendHeader('User-Agent', 'Twisted/XMLRPClib')
         self.sendHeader('Host', self.factory.host)
         self.sendHeader('Content-type', 'text/xml')
         self.sendHeader('Content-length', str(len(self.factory.payload)))
+        if self.factory.user:
+            auth = '%s:%s' % (self.factory.user, self.factory.password)
+            auth = auth.encode('base64').strip()
+            self.sendHeader('Authorization', 'Basic %s' % (auth,))
         self.endHeaders()
         self.transport.write(self.factory.payload)
 
@@ -272,8 +275,9 @@ class QueryFactory(protocol.ClientFactory):
     deferred = None
     protocol = QueryProtocol
 
-    def __init__(self, url, host, method, *args):
-        self.url, self.host = url, host
+    def __init__(self, path, host, method, user=None, password=None, *args):
+        self.path, self.host = path, host
+        self.user, self.password = user, password
         self.payload = payloadTemplate % (method, xmlrpclib.dumps(args))
         self.deferred = defer.Deferred()
 
@@ -308,22 +312,58 @@ class Proxy:
 
     Use proxy.callRemote('foobar', *args) to call remote method
     'foobar' with *args.
+
     """
 
-    def __init__(self, url):
-        parts = urlparse.urlparse(url)
-        self.url = urlparse.urlunparse(('', '')+parts[2:])
-        if self.url == "":
-            self.url = "/"
-        if ':' in parts[1]:
-            self.host, self.port = parts[1].split(':')
-            self.port = int(self.port)
+    def __init__(self, url, user=None, password=None):
+        """
+        @type url: C{str}
+        @param url: The URL to which to post method calls.  Calls will be made
+        over SSL if the scheme is HTTPS.  If netloc contains username or
+        password information, these will be used to authenticate, as long as
+        the C{user} and C{password} arguments are not specified.
+
+        @type user: C{str} or None
+        @param user: The username with which to authenticate with the server
+        when making calls.  If specified, overrides any username information
+        embedded in C{url}.  If not specified, a value may be taken from C{url}
+        if present.
+
+        @type password: C{str} or None
+        @param password: The password with which to authenticate with the
+        server when making calls.  If specified, overrides any password
+        information embedded in C{url}.  If not specified, a value may be taken
+        from C{url} if present.
+        """
+        scheme, netloc, path, params, query, fragment = urlparse.urlparse(url)
+        netlocParts = netloc.split('@')
+        if len(netlocParts) == 2:
+            userpass = netlocParts.pop(0).split(':')
+            self.user = userpass.pop(0)
+            try:
+                self.password = userpass.pop(0)
+            except:
+                self.password = None
         else:
-            self.host, self.port = parts[1], None
-        self.secure = parts[0] == 'https'
+            self.user = self.password = None
+        hostport = netlocParts[0].split(':')
+        self.host = hostport.pop(0)
+        try:
+            self.port = int(hostport.pop(0))
+        except:
+            self.port = None
+        self.path = path
+        if self.path in ['', None]:
+            self.path = '/'
+        self.secure = (scheme == 'https')
+        if user is not None:
+            self.user = user
+        if password is not None:
+            self.password = password
 
     def callRemote(self, method, *args):
-        factory = QueryFactory(self.url, self.host, method, *args)
+        factory = QueryFactory(self.path, self.host, method, self.user,
+            self.password, *args)
         if self.secure:
             from twisted.internet import ssl
             reactor.connectSSL(self.host, self.port or 443,
