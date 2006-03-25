@@ -98,6 +98,9 @@ class TestTrialRunner(unittest.TestCase):
         self.runner = runner.TrialRunner(CapturingReporter, stream=self.stream)
         self.test = TestImports('test_imports')
 
+    def tearDown(self):
+        self.runner._tearDownLogFile()
+        
     def _getObservers(self):
         from twisted.python import log
         return log.theLogPublisher.observers
@@ -133,6 +136,7 @@ class TestRunner(unittest.TestCase):
     
     def setUp(self):
         unittest.TestCase.setUp(self)
+        self.runners = []        
         self.config = trial.Options()
         # whitebox hack a reporter in, because plugins are CACHED and will
         # only reload if the FILE gets changed.
@@ -183,18 +187,28 @@ class TestRunner(unittest.TestCase):
             'addSuccess',
             'stopTest',
             ]
-        
+
+    def tearDown(self):
+        for x in self.runners:
+            x._tearDownLogFile()
+        self.runners = []
+
     def parseOptions(self, args):
         self.config.parseOptions(args)
 
     def getRunner(self):
-        return trial._makeRunner(self.config)
+        r = trial._makeRunner(self.config)
+        self.runners.append(r)
+        return r
     
     def test_runner_can_get_reporter(self):
         self.parseOptions([])
         reporter = self.config['reporter']
         my_runner = self.getRunner()
-        self.assertEqual(reporter, my_runner._makeResult().__class__)
+        try:
+            self.assertEqual(reporter, my_runner._makeResult().__class__)
+        finally:
+            my_runner._tearDownLogFile()
 
     def test_runner_get_result(self):
         self.parseOptions([])
@@ -205,7 +219,10 @@ class TestRunner(unittest.TestCase):
     def test_runner_working_directory(self):
         self.parseOptions(['--temp-directory', 'some_path'])
         runner = self.getRunner()
-        self.assertEquals(runner.workingDirectory, 'some_path')
+        try:
+            self.assertEquals(runner.workingDirectory, 'some_path')
+        finally:
+            runner._tearDownLogFile()
 
     def test_runner_dry_run(self):
         self.parseOptions(['--dry-run', '--reporter', 'capturing',

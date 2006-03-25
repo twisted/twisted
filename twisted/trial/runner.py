@@ -392,6 +392,7 @@ class TrialRunner(object):
         return dbg
     
     def _setUpTestdir(self):
+        self._tearDownLogFile()
         currentDir = os.getcwd()
         testdir = os.path.normpath(os.path.abspath(self.workingDirectory))
         if os.path.exists(testdir):
@@ -441,10 +442,17 @@ class TrialRunner(object):
         self._setUpLogFile()
         self._setUpLogWarnings()
 
-    def _setUpLogFile(self):
+    def _tearDownLogFile(self):
         if self._logFileObserver is not None:
-            self._logFileObject.close()
             log.removeObserver(self._logFileObserver.emit)
+            self._logFileObserver = None
+        if self._logFileObject is not None:
+            self._logFileObject.close()
+            self._logFileObject = None
+            
+            
+    def _setUpLogFile(self):
+        self._tearDownLogFile()
         if self.logfile == '-':
             logFile = sys.stdout
         else:
@@ -478,14 +486,18 @@ class TrialRunner(object):
             # open question - should this be self.debug() instead.
             debugger = self._getDebugger()
             oldDir = self._setUpTestdir()
-            self._setUpLogging()
-            debugger.runcall(suite.run, result)
-            os.chdir(oldDir)
+            try:
+                self._setUpLogging()
+                debugger.runcall(suite.run, result)
+            finally:
+                os.chdir(oldDir)
         else:
             oldDir = self._setUpTestdir()
-            self._setUpLogging()
-            suite.run(result)
-            os.chdir(oldDir)
+            try:
+                self._setUpLogging()
+                suite.run(result)
+            finally:
+                os.chdir(oldDir)
         endTime = time.time()
         result.printErrors()
         result.writeln(result.separator)
