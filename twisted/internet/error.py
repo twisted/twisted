@@ -41,6 +41,13 @@ class CannotListenError(BindError):
         return "Couldn't listen on %s:%s: %s." % (iface, self.port,
                                                  self.socketError)
 
+
+class MulticastJoinError(Exception):
+    """
+    An attempt to join a multicast group failed.
+    """
+
+
 class MessageLengthError(Exception):
     """Message is too long to send"""
 

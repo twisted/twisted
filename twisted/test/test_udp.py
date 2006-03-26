@@ -521,6 +521,14 @@ class MulticastTestCase(unittest.TestCase):
             self.runUntilSuccess(o.transport.joinGroup, "225.0.0.250")
             self.runUntilSuccess(o.transport.leaveGroup, "225.0.0.250")
 
+
+    def testJoinFailure(self):
+        # 127.0.0.1 is not a multicast address, so joining it should fail.
+        return self.assertFailure(
+            self.client.transport.joinGroup("127.0.0.1"),
+            error.MulticastJoinError)
+
+
     def testMulticast(self):
         c = Server()
         p = reactor.listenMulticast(0, c)

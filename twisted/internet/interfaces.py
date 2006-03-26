@@ -1208,7 +1208,11 @@ class IMulticastTransport(Interface):
         """Set time to live on multicast packets."""
 
     def joinGroup(self, addr, interface=""):
-        """Join a multicast group. Returns Deferred of success."""
+        """Join a multicast group. Returns Deferred of success or failure.
+
+        If an error occurs, the returned Deferred will fail with
+        L{error.MulticastJoinError}.
+        """
 
     def leaveGroup(self, addr, interface=""):
         """Leave multicast group, return Deferred of success."""

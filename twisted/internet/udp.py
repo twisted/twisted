@@ -35,7 +35,7 @@ else:
 # Twisted Imports
 from twisted.internet import protocol, base, defer, address
 from twisted.persisted import styles
-from twisted.python import log, reflect, components
+from twisted.python import log, reflect, components, failure
 
 # Sibling Imports
 import abstract, error, interfaces
@@ -347,8 +347,10 @@ class MulticastMixin:
             cmd = socket.IP_ADD_MEMBERSHIP
         else:
             cmd = socket.IP_DROP_MEMBERSHIP
-        self.socket.setsockopt(socket.IPPROTO_IP, cmd, addr + interface)
-        return 1
+        try:
+            self.socket.setsockopt(socket.IPPROTO_IP, cmd, addr + interface)
+        except socket.error, e:
+            return failure.Failure(error.MulticastJoinError(addr, interface, *e.args))
 
     def leaveGroup(self, addr, interface=""):
         """Leave multicast group, return Deferred of success."""
