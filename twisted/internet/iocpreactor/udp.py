@@ -3,8 +3,11 @@
 
 
 import socket
+import struct
+import operator
 
 from twisted.internet import interfaces, defer, error, protocol, address
+from twisted.internet.udp import MulticastMixin
 from twisted.internet.abstract import isIPAddress
 from twisted.persisted import styles
 from twisted.python import log, failure, reflect
@@ -118,7 +121,7 @@ class Port(log.Logger, styles.Ephemeral, object):
     def handle_listening_readErr(self, ret, bytes):
         log.msg("read failed with err %s" % (ret,))
         # TODO: use Failures or something
-        if ret == 1234: # ERROR_PORT_UNREACHABLE
+        if ret == ERROR_PORT_UNREACHABLE:
             self.protocol.connectionRefused()
         if self.reading:
             self.startReading()
@@ -192,3 +195,20 @@ class Port(log.Logger, styles.Ephemeral, object):
     def getHost(self):
         return address.IPv4Address('UDP', *(self.socket.getsockname() + ('INET_UDP',)))
 
+
+class MulticastPort(MulticastMixin, Port):
+    """UDP Port that supports multicasting."""
+
+    implements(interfaces.IMulticastTransport)
+
+    def __init__(self, bindAddress, proto, maxPacketSize=8192, listenMultiple=False):
+        Port.__init__(self, bindAddress, proto, maxPacketSize)
+        self.listenMultiple = listenMultiple
+
+    def createInternetSocket(self):
+        skt = Port.createInternetSocket(self)
+        if self.listenMultiple:
+            skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            if hasattr(socket, "SO_REUSEPORT"):
+                skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        return skt

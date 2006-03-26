@@ -3,7 +3,7 @@
 
 
 from twisted.internet import defer, base, main
-from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorArbitrary, IReactorProcess
+from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorMulticast, IReactorArbitrary, IReactorProcess
 from twisted.python import threadable, log, reflect
 from zope.interface import implements, implementsOnly
 
@@ -11,10 +11,9 @@ import tcp, udp, process, process_waiter
 from _iocp import iocpcore
 
 class Proactor(iocpcore, base.ReactorBase, log.Logger):
-    # TODO: IReactorArbitrary, IReactorUDP, IReactorMulticast,
     # IReactorSSL (or leave it until exarkun finishes TLS)
     # IReactorCore (cleanup)
-    implementsOnly(IReactorTCP, IReactorUDP, IReactorArbitrary, IReactorProcess)
+    implementsOnly(IReactorTCP, IReactorUDP, IReactorMulticast, IReactorArbitrary, IReactorProcess)
     handles = None
     iocp = None
 
@@ -76,6 +75,12 @@ class Proactor(iocpcore, base.ReactorBase, log.Logger):
            
     def listenUDP(self, port, protocol, interface='', maxPacketSize=8192):
         p = udp.Port((interface, port), protocol, maxPacketSize)
+        p.startListening()
+        return p
+
+
+    def listenMulticast(self, port, protocol, interface='', maxPacketSize=8192, listenMultiple=False):
+        p = udp.MulticastPort((interface, port), protocol, maxPacketSize)
         p.startListening()
         return p
 
