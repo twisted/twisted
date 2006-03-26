@@ -506,7 +506,7 @@ class IMessage(components.Interface):
         semantics should be to discard the message
         """
 
-class SMTP(basic.LineReceiver, policies.TimeoutMixin):
+class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
     """SMTP server-side protocol."""
 
     timeout = 600
@@ -602,12 +602,6 @@ class SMTP(basic.LineReceiver, policies.TimeoutMixin):
             self.mode = COMMAND
             del self.__messages
         self.sendCode(500, 'Line too long')
-
-    def rawDataReceived(self, data):
-        """Throw away rest of long line"""
-        rest = string.split(data, '\r\n', 1)
-        if len(rest) == 2:
-            self.setLineMode(rest[1])
 
     def do_UNKNOWN(self, rest):
         self.sendCode(500, 'Command not implemented')
