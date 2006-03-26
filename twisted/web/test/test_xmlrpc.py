@@ -15,7 +15,7 @@ else:
     from twisted.web.xmlrpc import XMLRPC, addIntrospection
 
 from twisted.trial import unittest
-from twisted.web import server
+from twisted.web import server, static
 from twisted.internet import reactor, defer
 from twisted.python import log
 
@@ -230,3 +230,17 @@ class XMLRPCTestIntrospection(XMLRPCTestCase):
             d.addCallback(self.assertEquals, expected)
             dl.append(d)
         return defer.DeferredList(dl, fireOnOneErrback=True)
+
+
+class XMLRPCClientErrorHandling(unittest.TestCase):
+    def setUp(self):
+        self.resource = static.File(__file__)
+        self.resource.isLeaf = True
+        self.port = reactor.listenTCP(0, server.Site(self.resource), interface='127.0.0.1')
+
+    def tearDown(self):
+        return self.port.stopListening()
+
+    def testErroneousResponse(self):
+        proxy = xmlrpc.Proxy("http://127.0.0.1:%d/" % (self.port.getHost().port,))
+        return self.assertFailure(proxy.callRemote("someMethod"), Exception)

@@ -24,7 +24,7 @@ import urlparse
 # Sibling Imports
 from twisted.web import resource, server
 from twisted.internet import defer, protocol, reactor
-from twisted.python import log, reflect
+from twisted.python import log, reflect, failure
 from twisted.web import http
 
 # These are deprecated, use the class level definitions
@@ -286,8 +286,8 @@ class QueryFactory(protocol.ClientFactory):
             return
         try:
             response = xmlrpclib.loads(contents)
-        except xmlrpclib.Fault, error:
-            self.deferred.errback(error)
+        except:
+            self.deferred.errback(failure.Failure())
             self.deferred = None
         else:
             self.deferred.callback(response[0][0])
