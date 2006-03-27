@@ -6,8 +6,8 @@
 
 """Post-office Protocol version 3
 
-@author U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
-@author U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+@author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
+@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 
 API Stability: Unstable
 """

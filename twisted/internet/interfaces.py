@@ -1093,8 +1093,8 @@ class IProcessTransport(ITransport):
           - an integer, where it represents a POSIX
               signal ID.
 
-        @raise L{twisted.internet.error.ProcessExitedAlready}: Raised if the
-        process has already exited.
+        @raise twisted.internet.error.ProcessExitedAlready: The process has
+        already exited.
         """
 
 
@@ -1124,7 +1124,9 @@ class IUDPTransport(Interface):
         @param addr: a tuple of (ip, port). For connected transports must
                      be the address the transport is connected to, or None.
                      In non-connected mode this is mandatory.
-        @raise L{MessageLengthError<twisted.internet.error.MessageLengthError>}
+
+        @raise twisted.internet.error.MessageLengthError: C{packet} was too
+        long.
         """
 
     def connect(self, host, port):

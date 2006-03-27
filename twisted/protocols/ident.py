@@ -26,7 +26,7 @@ class IdentError(Exception):
     """
     Can't determine connection owner; reason unknown.
     """
-    
+
     identDescription = 'UNKNOWN-ERROR'
 
     def __str__(self):
@@ -66,7 +66,7 @@ class IdentServer(basic.LineOnlyReceiver):
     particular TCP connection. Given a TCP port number pair, it returns a
     character string which identifies the owner of that connection on the
     server's system.
-    
+
     Server authors should subclass this class and override the lookup method.
     The default implementation returns an UNKNOWN-ERROR response for every
     query.
@@ -86,10 +86,10 @@ class IdentServer(basic.LineOnlyReceiver):
                     self.validQuery(portOnServer, portOnClient)
                 else:
                     self._ebLookup(failure.Failure(InvalidPort()), portOnServer, portOnClient)
-    
+
     def invalidQuery(self):
         self.transport.loseConnection()
-    
+
     def validQuery(self, portOnServer, portOnClient):
         serverAddr = self.transport.getHost()[1], portOnServer
         clientAddr = self.transport.getPeer()[1], portOnClient
@@ -97,7 +97,7 @@ class IdentServer(basic.LineOnlyReceiver):
             ).addCallback(self._cbLookup, portOnServer, portOnClient
             ).addErrback(self._ebLookup, portOnServer, portOnClient
             )
-    
+
     def _cbLookup(self, (sysName, userId), sport, cport):
         self.sendLine('%d, %d : USERID : %s : %s' % (sport, cport, sysName, userId))
 
@@ -107,19 +107,19 @@ class IdentServer(basic.LineOnlyReceiver):
         else:
             log.err(failure)
             self.sendLine('%d, %d : ERROR : %s' % (sport, cport, IdentError(failure.value)))
- 
+
     def lookup(self, serverAddress, clientAddress):
         """Lookup user information about the specified address pair.
-        
-        Return value should be a two-tuple of system name and username. 
-        Acceptable values for the system name may be found online at
 
-            <http://www.iana.org/assignments/operating-system-names>
-        
+        Return value should be a two-tuple of system name and username.
+        Acceptable values for the system name may be found online at::
+
+            U{http://www.iana.org/assignments/operating-system-names}
+
         This method may also raise any IdentError subclass (or IdentError
         itself) to indicate user information will not be provided for the
         given query.
-        
+
         A Deferred may also be returned.
 
         @param serverAddress: A two-tuple representing the server endpoint
@@ -184,14 +184,14 @@ class IdentClient(basic.LineOnlyReceiver):
 
     def __init__(self):
         self.queries = []
-    
+
     def lookup(self, portOnServer, portOnClient):
         """Lookup user information about the specified address pair.
         """
         self.queries.append((defer.Deferred(), portOnServer, portOnClient))
         if len(self.queries) > 1:
             return self.queries[-1][0]
-        
+
         self.sendLine('%d, %d' % (portOnServer, portOnClient))
         return self.queries[-1][0]
 
@@ -208,7 +208,7 @@ class IdentClient(basic.LineOnlyReceiver):
         for q in self.queries:
             q[0].errback(IdentError(reason))
         self.queries = []
-    
+
     def parseResponse(self, deferred, line):
         parts = line.split(':', 2)
         if len(parts) != 3:

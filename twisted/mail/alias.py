@@ -10,9 +10,10 @@ API Stability: Unstable
 
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 
-TODO: Monitor files for reparsing
-      Handle non-local alias targets
-      Handle maildir alias targets
+TODO::
+    Monitor files for reparsing
+    Handle non-local alias targets
+    Handle maildir alias targets
 """
 
 import os
@@ -40,16 +41,16 @@ def handle(result, line, filename, lineNo):
 
 def loadAliasFile(domains, filename=None, fp=None):
     """Load a file containing email aliases.
-    
-    Lines in the file should be formatted like so:
-    
+
+    Lines in the file should be formatted like so::
+
         username: alias1,alias2,...,aliasN
-    
+
     Aliases beginning with a | will be treated as programs, will be run, and
     the message will be written to their stdin.
-    
+
     Aliases without a host part will be assumed to be addresses on localhost.
-    
+
     If a username is specified multiple times, the aliases for each are joined
     together as if they had all been on one line.
 
@@ -58,11 +59,11 @@ def loadAliasFile(domains, filename=None, fp=None):
 
     @type filename: C{str}
     @param filename: The filename from which to load aliases.
-    
+
     @type fp: Any file-like object.
     @param fp: If specified, overrides C{filename}, and aliases are read from
     it.
-    
+
     @rtype: C{dict}
     @return: A dictionary mapping usernames to C{AliasGroup} objects.
     """

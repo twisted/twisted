@@ -181,16 +181,29 @@ def parseOptions(argv):
 
 class Configuration:
     """
-    @ivar allowUIDs
-    @ivar allowGIDs
-    @ivar denyUIDs
-    @ivar denyGIDs
-    @ivar useraccess
-    @ivar groupaccess
-    @ivar identities
-    @ivar smarthost
-    @ivar domain
-    @ivar defaultAccess
+    @ivar allowUIDs: A list of UIDs which are allowed to send mail.
+    @ivar allowGIDs: A list of GIDs which are allowed to send mail.
+    @ivar denyUIDs: A list of UIDs which are not allowed to send mail.
+    @ivar denyGIDs: A list of GIDs which are not allowed to send mail.
+
+    @type defaultAccess: C{bool}
+    @ivar defaultAccess: C{True} if access will be allowed when no other access
+    control rule matches or C{False} if it will be denied in that case.
+
+    @ivar useraccess: Either C{'allow'} to check C{allowUID} first
+    or C{'deny'} to check C{denyUID} first.
+
+    @ivar groupaccess: Either C{'allow'} to check C{allowGID} first or
+    C{'deny'} to check C{denyGID} first.
+
+    @ivar identities: A C{dict} mapping hostnames to credentials to use when
+    sending mail to that host.
+
+    @ivar smarthost: C{None} or a hostname through which all outgoing mail will
+    be sent.
+
+    @ivar domain: C{None} or the hostname with which to identify ourselves when
+    connecting to an MTA.
     """
     def __init__(self):
         self.allowUIDs = []
@@ -199,12 +212,13 @@ class Configuration:
         self.denyGIDs = []
         self.useraccess = 'deny'
         self.groupaccess= 'deny'
-        
+
         self.identities = {}
         self.smarthost = None
         self.domain = None
-        
+
         self.defaultAccess = True
+
 
 def loadConfig(path):
     # [useraccess]

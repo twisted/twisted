@@ -901,14 +901,20 @@ class TOCClient(protocol.Protocol):
 
     def tocNICK(self,data):
         """
-        NICK:<format of nickname>
+        Handle a message that looks like::
+
+            NICK:<format of nickname>
         """
         self.username=data[0]
 
     def tocCONFIG(self,data):
         """
-        CONFIG:<config>
-        format of config data:
+        Handle a message that looks like::
+
+            CONFIG:<config>
+
+        Format of config data:
+
             - g: group.  all users until next g or end of config are in this group
             - b: buddy
             - p: person on the permit list
@@ -941,7 +947,9 @@ class TOCClient(protocol.Protocol):
 
     def tocIM_IN(self,data):
         """
-        IM_IN:<user>:<autoreply T|F>:message
+        Handle a message that looks like::
+
+            IM_IN:<user>:<autoreply T|F>:message
         """
         user=data[0]
         autoreply=(data[1]=='T')
@@ -950,7 +958,9 @@ class TOCClient(protocol.Protocol):
 
     def tocUPDATE_BUDDY(self,data):
         """
-        UPDATE_BUDDY:<username>:<online T|F>:<warning level>:<signon time>:<idle time (minutes)>:<user class>
+        Handle a message that looks like::
+
+            UPDATE_BUDDY:<username>:<online T|F>:<warning level>:<signon time>:<idle time (minutes)>:<user class>
         """
         data=list(data)
         online=(data[1]=='T')
@@ -963,20 +973,26 @@ class TOCClient(protocol.Protocol):
 
     def tocERROR(self,data):
         """
-        ERROR:<error code>:<misc. data>
+        Handle a message that looks like::
+
+            ERROR:<error code>:<misc. data>
         """
         code,args=data[0],data[1:]
         self.hearError(int(code),args)
 
     def tocEVILED(self,data):
         """
-        EVILED:<current warning level>:<user who warned us>
+        Handle a message that looks like::
+
+            EVILED:<current warning level>:<user who warned us>
         """
         self.hearWarning(data[0],data[1])
 
     def tocCHAT_JOIN(self,data):
         """
-        CHAT_JOIN:<room id>:<room name>
+        Handle a message that looks like::
+
+            CHAT_JOIN:<room id>:<room name>
         """
         #self.chatJoined(int(data[0]),data[1])
         self._roomnames[int(data[0])]=data[1]
@@ -984,7 +1000,9 @@ class TOCClient(protocol.Protocol):
 
     def tocCHAT_UPDATE_BUDDY(self,data):
         """
-        CHAT_UPDATE_BUDDY:<room id>:<in room? T/F>:<user 1>:<user 2>...
+        Handle a message that looks like::
+
+            CHAT_UPDATE_BUDDY:<room id>:<in room? T/F>:<user 1>:<user 2>...
         """
         roomid=int(data[0])
         inroom=(data[1]=='T')
@@ -997,7 +1015,10 @@ class TOCClient(protocol.Protocol):
 
     def tocCHAT_IN(self,data):
         """
-        CHAT_IN:<room id>:<username>:<whisper T/F>:<message>
+        Handle a message that looks like::
+
+            CHAT_IN:<room id>:<username>:<whisper T/F>:<message>
+
         whisper isn't used
         """
         whisper=(data[2]=='T')
@@ -1008,13 +1029,17 @@ class TOCClient(protocol.Protocol):
 
     def tocCHAT_INVITE(self,data):
         """
-        CHAT_INVITE:<room name>:<room id>:<username>:<message>
+        Handle a message that looks like::
+
+            CHAT_INVITE:<room name>:<room id>:<username>:<message>
         """
         self.chatInvited(int(data[1]),data[0],data[2],data[3])
 
     def tocCHAT_LEFT(self,data):
         """
-        CHAT_LEFT:<room id>
+        Handle a message that looks like::
+
+            CHAT_LEFT:<room id>
         """
         self.chatLeft(int(data[0]))
         del self._receivedchatmembers[int(data[0])]
@@ -1022,8 +1047,10 @@ class TOCClient(protocol.Protocol):
 
     def tocRVOUS_PROPOSE(self,data):
         """
-        RVOUS_PROPOSE:<user>:<uuid>:<cookie>:<seq>:<rip>:<pip>:<vip>:<port>
-              [:tlv tag1:tlv value1[:tlv tag2:tlv value2[:...]]]
+        Handle a message that looks like::
+
+            RVOUS_PROPOSE:<user>:<uuid>:<cookie>:<seq>:<rip>:<pip>:<vip>:<port>
+                  [:tlv tag1:tlv value1[:tlv tag2:tlv value2[:...]]]
         """
         user,uid,cookie,seq,rip,pip,vip,port=data[:8]
         cookie=base64.decodestring(cookie)

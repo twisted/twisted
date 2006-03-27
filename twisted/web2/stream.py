@@ -86,13 +86,13 @@ class IByteStream(IStream):
     def split(point):
         """Split this stream into two, at byte position 'point'.
 
-        Returns a tuple of (before, after). After calling split,
-        no other methods should be called on this stream. Doing
-        so will have undefined behavior.
+        Returns a tuple of (before, after). After calling split, no other
+        methods should be called on this stream. Doing so will have undefined
+        behavior.
 
-        Implementation note:
-        If you cannot implement split easily, you may implement it as:
-          return fallbackSplit(self, point)
+        If you cannot implement split easily, you may implement it as::
+
+            return fallbackSplit(self, point)
         """
 
     def close():

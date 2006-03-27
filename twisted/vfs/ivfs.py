@@ -17,20 +17,19 @@ class IFileSystemNode(Interface):
 
     def getMetadata():
         """
-        returns a map of arbitrary metadata. As an example, here's what
-        SFTP expects (but doesn't require):
-        {
-            'size'         : size of file in bytes,
-            'uid'          : owner of the file,
-            'gid'          : group owner of the file,
-            'permissions'  : file permissions,
-            'atime'        : last time the file was accessed,
-            'mtime'        : last time the file was modified,
-            'nlink'        : number of links to the file
-        }
+        returns a map of arbitrary metadata. As an example, here's what SFTP
+        expects (but doesn't require):
 
-        Protocols that need metadata should handle the case when a
-        particular value isn't available as gracefully as possible.
+            - C{'size'}: size of file in bytes
+            - C{'uid'}: owner of the file
+            - C{'gid'}: group owner of the file
+            - C{'permissions'}: file permissions
+            - C{'atime'}: last time the file was accessed
+            - C{'mtime'}: last time the file was modified
+            - C{'nlink'}: number of links to the file
+
+        Protocols that need metadata should handle the case when a particular
+        value isn't available as gracefully as possible.
         """
 
     # XXX: There should be a setMetadata, probably taking a map of the same form

@@ -602,16 +602,16 @@ class Negotiation(protocol.Protocol):
         negotiation decisions.
 
         This method returns a tuple of DECISION,PARAMS. There are a few
-        different possibilities:
+        different possibilities::
 
-         We are the master, we make a negotiation decision: DECISION is the
-         block of data to send back to the non-master side, PARAMS are the
-         connection parameters we will use ourselves.
+            - We are the master, we make a negotiation decision: DECISION is
+            the block of data to send back to the non-master side, PARAMS are
+            the connection parameters we will use ourselves.
 
-         We are the master, we can't accomodate their request: raise
-         NegotiationError
+            - We are the master, we can't accomodate their request: raise
+            NegotiationError
 
-         We are not the master: DECISION is None
+            - We are not the master: DECISION is None
         """
 
         if self.debugNegotiation:

@@ -10,7 +10,7 @@ class RemoteInterfaceClass(interface.InterfaceClass):
     z.i extracts, and the methods can be specified with a RemoteMethodSchema
     directly).
 
-    RemoteInterfaces can accept the following additional attribute:
+    RemoteInterfaces can accept the following additional attribute::
 
      __remote_name__: can be set to a string to specify the globally-unique
                       name for this interface. This should be a URL in a

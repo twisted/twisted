@@ -2,26 +2,28 @@
 # See LICENSE for details.
 
 """
-This module implements a zsh code generator which generates completion code
-for commands that use twisted.python.usage. This is the stuff that makes
-pressing Tab at the command line work.
+This module implements a zsh code generator which generates completion code for
+commands that use twisted.python.usage. This is the stuff that makes pressing
+Tab at the command line work.
 
 API Stability: API? what API?
 
-Maintainer: U{Eric Mangold<mailto:teratorn@twistedmatrix.com>}
+@maintainer: U{Eric Mangold<mailto:teratorn@twistedmatrix.com>}
 
-To build completion functions for your own commands, and not
-twisted commands, then just do something like this:
+To build completion functions for your own commands, and not Twisted commands,
+then just do something like this::
+
     o = mymodule.MyOptions()
     f = file('_mycommand', 'w')
-    Builder("mycommand", o, f).write()
+    Builder(\"mycommand\", o, f).write()
 
-Then all you have to do is place the generated file somewhere in your $fpath,
-and restart zsh. Note the "site-functions" directory in your $fpath where you
-may install 3rd-party completion functions (like the one you're building). Use
-the siteFunctionsPath function below to locate this directory programmatically.
+Then all you have to do is place the generated file somewhere in your
+C{$fpath}, and restart zsh. Note the \"site-functions\" directory in your
+C{$fpath} where you may install 3rd-party completion functions (like the one
+you're building). Use the C{siteFunctionsPath} function below to locate this
+directory programmatically.
 
-SPECIAL CLASS VARIABLES. You may set these on your usage.Options subclass.
+SPECIAL CLASS VARIABLES. You may set these on your usage.Options subclass::
 
     zsh_altArgDescr
     zsh_multiUse
@@ -30,88 +32,94 @@ SPECIAL CLASS VARIABLES. You may set these on your usage.Options subclass.
     zsh_actionDescr
     zsh_extras
 
-Here is what they mean (with examples):
+Here is what they mean (with examples)::
 
-    zsh_altArgDescr = {"foo":"use this description for foo instead"}
-        A dict mapping long option names to alternate descriptions.  When
-        this variable is present, the descriptions contained here will override
-        those descriptions provided in the optFlags and optParameters variables.
+    zsh_altArgDescr = {\"foo\":\"use this description for foo instead\"}
+        A dict mapping long option names to alternate descriptions.  When this
+        variable is present, the descriptions contained here will override
+        those descriptions provided in the optFlags and optParameters
+        variables.
 
-    zsh_multiUse = ["foo", "bar"]
+    zsh_multiUse = [\"foo\", \"bar\"]
         A sequence containing those long option names which may appear on the
-        command line more than once. By default, options will only be
-        completed one time.
+        command line more than once. By default, options will only be completed
+        one time.
 
-    zsh_mutuallyExclusive = [("foo", "bar"), ("bar", "baz")]
+    zsh_mutuallyExclusive = [(\"foo\", \"bar\"), (\"bar\", \"baz\")]
         A sequence of sequences, with each sub-sequence containing those long
-        option names that are mutually exclusive. That is, those options
-        that cannot appear on the command line together.
+        option names that are mutually exclusive. That is, those options that
+        cannot appear on the command line together.
 
-    zsh_actions = {"foo":'_files -g "*.foo"', "bar":"(one two three)",
-            "colors":"_values -s , 'colors to use' red green blue"}
-        A dict mapping long option names to Zsh "actions". These actions
-        define what will be completed as the argument to the given option.
-        By default, all files/dirs will be completed if no action is given.
+    zsh_actions = {\"foo\":'_files -g \"*.foo\"', \"bar\":\"(one two three)\",
+            \"colors\":\"_values -s , 'colors to use' red green blue\"}
+        A dict mapping long option names to Zsh \"actions\". These actions
+        define what will be completed as the argument to the given option.  By
+        default, all files/dirs will be completed if no action is given.
 
-        As you can see in the example above. The "foo" option will have
-        files that end in .foo completed when the user presses Tab. The
-        "bar" option will have either of the strings "one", "two", or
-        "three" compelted when the user presses Tab.
-        
-        "colors" will allow multiple arguments to be completed, seperated by
-        commas. The possible arguments are red, green, and blue. Examples:
+        As you can see in the example above. The \"foo\" option will have files
+        that end in .foo completed when the user presses Tab. The \"bar\"
+        option will have either of the strings \"one\", \"two\", or \"three\"
+        compelted when the user presses Tab.
+
+        \"colors\" will allow multiple arguments to be completed, seperated by
+        commas. The possible arguments are red, green, and blue. Examples::
+
             my_command --foo some-file.foo --colors=red,green
             my_command --colors=green
             my_command --colors=green,blue
 
         Actions may take many forms, and it is beyond the scope of this
-        document to illustrate them all. Please refer to the documention
-        for the Zsh _arguments function. zshcomp is basically a front-end
-        to Zsh's _arguments completion function.
+        document to illustrate them all. Please refer to the documention for
+        the Zsh _arguments function. zshcomp is basically a front-end to Zsh's
+        _arguments completion function.
 
         That documentation is available on the zsh web site at this URL:
-        http://zsh.sunsite.dk/Doc/Release/zsh_19.html#SEC124
+        U{http://zsh.sunsite.dk/Doc/Release/zsh_19.html#SEC124}
 
-    zsh_actionDescr = {"logfile":"log file name", "random":"random seed"}
+    zsh_actionDescr = {\"logfile\":\"log file name\", \"random\":\"random seed\"}
         A dict mapping long option names to a description for the corresponding
-        zsh "action". These descriptions are show above the generated matches
+        zsh \"action\". These descriptions are show above the generated matches
         when the user is doing completions for this option.
 
-        Normally Zsh does not show these descriptions unless you have "verbose"
-        completion turned on. Turn on verbosity with this in your ~/.zshrc
+        Normally Zsh does not show these descriptions unless you have
+        \"verbose\" completion turned on. Turn on verbosity with this in your
+        ~/.zshrc::
+
             zstyle ':completion:*' verbose yes
             zstyle ':completion:*:descriptions' format '%B%d%b'
 
-    zsh_extras = [":file to read from:action", ":file to write to:action"]
+    zsh_extras = [\":file to read from:action\", \":file to write to:action\"]
         A sequence of extra arguments that will be passed verbatim to Zsh's
         _arguments completion function. The _arguments function does all the
-        hard work of doing command line completions. You can see how
-        zshcomp invokes the _arguments call by looking at the generated
-        completion files that this module creates.
+        hard work of doing command line completions. You can see how zshcomp
+        invokes the _arguments call by looking at the generated completion
+        files that this module creates.
 
    *** NOTE ***
-        
+
         You will need to use this variable to describe completions for normal
         command line arguments. That is, those arguments that are not
-        associated with an option. That is, the arguments that are
-        given to the parseArgs method of your usage.Options subclass.
+        associated with an option. That is, the arguments that are given to the
+        parseArgs method of your usage.Options subclass.
 
-        In the example above, the 1st non-option argument will be described
-        as "file to read from" and completion options will be generated
-        in accordance with the "action". (See above about zsh "actions")
-        The 2nd non-option argument will be described as "file to write to"
-        and the action will be interpreted likewise.
+        In the example above, the 1st non-option argument will be described as
+        \"file to read from\" and completion options will be generated in
+        accordance with the \"action\". (See above about zsh \"actions\") The
+        2nd non-option argument will be described as \"file to write to\" and
+        the action will be interpreted likewise.
 
         Things you can put here are all documented under the _arguments
-        function here: http://zsh.sunsite.dk/Doc/Release/zsh_19.html#SEC124
+        function here: U{http://zsh.sunsite.dk/Doc/Release/zsh_19.html#SEC124}
 
 Zsh Notes:
 
-To enable advanced completion add something like this to your ~/.zshrc
+To enable advanced completion add something like this to your ~/.zshrc::
+
     autoload -U compinit
     compinit
 
-For some extra verbosity, and general niceness add these lines too:
+For some extra verbosity, and general niceness add these lines too::
+
     zstyle ':completion:*' verbose yes
     zstyle ':completion:*:descriptions' format '%B%d%b'
     zstyle ':completion:*:messages' format '%d'

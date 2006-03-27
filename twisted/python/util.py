@@ -457,13 +457,13 @@ class IntervalDifferential:
     Given a list of intervals, generate the amount of time to sleep between
     \"instants\".
 
-    For example, given 7, 11 and 13, the three (infinite) sequences
+    For example, given 7, 11 and 13, the three (infinite) sequences::
 
         7 14 21 28 35 ...
         11 22 33 44 ...
         13 26 39 52 ...
 
-    will be generated, merged, and used to produce:
+    will be generated, merged, and used to produce::
 
         (7, 0) (4, 1) (2, 2) (1, 0) (7, 0) (1, 1) (4, 2) (2, 0) (5, 1) (2, 0)
 

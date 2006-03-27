@@ -425,11 +425,15 @@ class PosixReactorBase(ReactorBase):
         return c
 
     def _removeAll(self, readers, writers):
-        """Remove all readers and writers, and return list of Selectables.
-        Meant for calling from subclasses, to implement removeAll, like:
+        """
+        Remove all readers and writers, and return list of Selectables.
+
+        Meant for calling from subclasses, to implement removeAll, like::
+
           def removeAll(self):
               return self._removeAll(reads, writes)
-        where reads, writes are iterables.
+
+        where C{reads} and C{writes} are iterables.
         """
         readers = [reader for reader in readers if
                    reader is not self.waker]

@@ -10,7 +10,7 @@ API Stability: Semi-stable
 
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 
-To do:
+To do::
   Suspend idle timeout while server is processing
   Use an async message parser instead of buffering in memory
   Figure out a way to not queue multi-message client requests (Flow? A simple callback?)
@@ -2518,7 +2518,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with namespace
-        information.  An example of this information is:
+        information.  An example of this information is::
 
             [[['', '/']], [], []]
 
@@ -3605,7 +3605,7 @@ _NO_QUOTES = (
 def Query(sorted=0, **kwarg):
     """Create a query string
 
-    Among the accepted keywords are:
+    Among the accepted keywords are::
 
         all         : If set to a true value, search all messages in the
                       current mailbox
@@ -4550,8 +4550,8 @@ class IMessagePart(components.Interface):
         @type part: C{int}
         @param part: The number of the part to retrieve, indexed from 0.
 
-        @raise C{IndexError}: Raised if the specified part does not exist.
-        @raise C{TypeError}: Raised if this message is not multipart.
+        @raise IndexError: Raised if the specified part does not exist.
+        @raise TypeError: Raised if this message is not multipart.
 
         @rtype: Any object implementing C{IMessagePart}.
         @return: The specified sub-part.

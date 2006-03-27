@@ -6,7 +6,7 @@
 """
 Nevow support for lore.
 
-Do something like:
+Do something like::
 
   lore -inevow --config pageclass=some.module.SomePageSubclass [other-opts]
 

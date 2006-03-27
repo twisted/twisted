@@ -33,8 +33,8 @@ class NameVirtualHost(resource.Resource):
         
     def addHost(self, name, resrc):
         """Add a host to this virtual host. - The Fun Stuff(TM)
-            
-        This associates a host named 'name' with a resource 'resrc'
+
+        This associates a host named 'name' with a resource 'resrc'::
 
             nvh.addHost('nevow.com', nevowDirectory)
             nvh.addHost('divmod.org', divmodDirectory)
@@ -71,27 +71,30 @@ class NameVirtualHost(resource.Resource):
 
 
 class AutoVHostURIRewrite(object):
-    """ I do request mangling to insure that children know what host they are being 
-        accessed from behind apache2.
+    """
+    I do request mangling to insure that children know what host they are being
+    accessed from behind apache2.
 
-        Usage:
-        -Twisted-
+    Usage:
+
+        - Twisted::
+
             root = MyResource()
             vur = vhost.AutoVHostURIRewrite(root)
-            
-        -Apache2-
-        <Location /whatever/>
-          ProxyPass http://localhost:8538/
-          RequestHeader set X-App-Location /whatever/
-        </Location>
 
-        If the trailing / is ommitted in the second argument to ProxyPass VHostURIRewrite
-        will return a 404 response code.
+        - Apache2::
 
-        If proxying HTTPS, add:
-          RequestHeader set X-App-Scheme https
-        to the apache config.
+            <Location /whatever/>
+              ProxyPass http://localhost:8538/
+              RequestHeader set X-App-Location /whatever/
+            </Location>
 
+        If the trailing / is ommitted in the second argument to ProxyPass
+        VHostURIRewrite will return a 404 response code.
+
+        If proxying HTTPS, add this to the Apache config::
+
+            RequestHeader set X-App-Scheme https
     """
     implements(iweb.IResource)
 
@@ -129,24 +132,28 @@ class AutoVHostURIRewrite(object):
         return self.resource, segments
         
 class VHostURIRewrite(object):
-    """ I do request mangling to insure that children know what host they are being 
-        accessed from behind mod_proxy.
+    """
+    I do request mangling to insure that children know what host they are being
+    accessed from behind mod_proxy.
 
-        Usage:
-        -Twisted-
+    Usage:
+
+        - Twisted::
+
             root = MyResource()
             vur = vhost.VHostURIRewrite(uri='http://hostname:port/path', resource=root)
             server.Site(vur)
-            
-        -Apache-
+
+        - Apache::
+
             <VirtualHost hostname:port>
                 ProxyPass /path/ http://localhost:8080/
                 Servername hostname
             </VirtualHost>
 
-        If the trailing / is ommitted in the second argument to ProxyPass VHostURIRewrite
-        will return a 404 response code.
-        
+        If the trailing / is ommitted in the second argument to ProxyPass
+        VHostURIRewrite will return a 404 response code.
+
         uri must be a fully specified uri complete with scheme://hostname/path/
     """
 

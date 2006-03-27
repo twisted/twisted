@@ -5,10 +5,11 @@
 # Author: Clark Evans  (cce@clarkevans.com)
 # 
 
-""" flow.controller
+"""
+flow.controller
 
-    This implements the various flow controllers, that is, those
-    things which run the flow stack.   
+This implements the various flow controllers, that is, those things which run
+the flow stack.
 """
 
 from base import *
@@ -16,17 +17,16 @@ from wrap import wrap
 from twisted.internet import defer
 
 class Block(Controller,Stage):
-    """ A controller which blocks on Cooperate events
+    """
+    A controller which blocks on Cooperate events
 
-        This converts a Stage into an iterable which can be used 
-        directly in python for loops and other iteratable constructs.
-        It does this by eating any Cooperate values and sleeping.
-        This is largely helpful for testing or within a threaded
-        environment.  It converts other stages into one which 
-        does not emit cooperate events.
+    This converts a Stage into an iterable which can be used directly in python
+    for loops and other iteratable constructs.  It does this by eating any
+    Cooperate values and sleeping.  This is largely helpful for testing or
+    within a threaded environment.  It converts other stages into one which
+    does not emit cooperate events, ie::
 
         [1,2, Cooperate(), 3] => [1,2,3]
-
     """
     def __init__(self, stage, *trap):
         Stage.__init__(self)
@@ -47,20 +47,22 @@ class Block(Controller,Stage):
             return stage.next()
 
 class Deferred(Controller, defer.Deferred):
-    """ wraps up a Stage with a Deferred interface
- 
-        In this version, the results of the Stage are used to 
-        construct a list of results and then sent to deferred.  Further,
-        in this version Cooperate is implemented via reactor's callLater.
+    """
+    wraps up a Stage with a Deferred interface
 
-            from twisted.internet import reactor
-            from twisted.flow import flow
-            
-            def res(x): print x
-            d = flow.Deferred([1,2,3])
-            d.addCallback(res)
-            reactor.iterate()
+    In this version, the results of the Stage are used to construct a list of
+    results and then sent to deferred.  Further, in this version Cooperate is
+    implemented via reactor's callLater.
 
+    For example::
+
+        from twisted.internet import reactor
+        from twisted.flow import flow
+
+        def res(x): print x
+        d = flow.Deferred([1,2,3])
+        d.addCallback(res)
+        reactor.iterate()
     """
     def __init__(self, stage, *trap):
         defer.Deferred.__init__(self)

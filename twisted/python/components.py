@@ -7,7 +7,7 @@
 """Component architecture for Twisted, based on Zope3 components.
 
 Using the Zope3 API directly is strongly recommended. Everything
-you need is in the top-level of the zope.interface package, e.g.:
+you need is in the top-level of the zope.interface package, e.g.::
 
    from zope.interface import Interface, implements
 
@@ -20,9 +20,9 @@ you need is in the top-level of the zope.interface package, e.g.:
    print IFoo.implementedBy(Foo) # True
    print IFoo.providedBy(Foo()) # True
 
-The one exception is twisted.python.components.registerAdapter, which
-is still the way to register adapters (at least, if you want Twisted's
-global adapter registry).
+The one exception is L{twisted.python.components.registerAdapter}, which is
+still the way to register adapters (at least, if you want Twisted's global
+adapter registry).
 """
 
 # twisted imports

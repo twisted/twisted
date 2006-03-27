@@ -9,11 +9,12 @@ lookup a record, starting from the root nameservers.
 
 API Stability: Unstable
 
-@author U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 
-todo: robustify it
-      break discoverAuthority into several smaller functions
-      documentation
+todo::
+    robustify it
+    break discoverAuthority into several smaller functions
+    documentation
 """
 
 from __future__ import generators

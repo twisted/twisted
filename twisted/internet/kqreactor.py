@@ -19,46 +19,46 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 
 
 
-You're going to need to patch PyKqueue:
+You're going to need to patch PyKqueue::
 
-=====================================================
---- PyKQueue-1.3/kqsyscallmodule.c	Sun Jan 28 21:59:50 2001
-+++ PyKQueue-1.3/kqsyscallmodule.c.new	Tue Jul 30 18:06:08 2002
-@@ -137,7 +137,7 @@
- }
- 
- statichere PyTypeObject KQEvent_Type = {
--  PyObject_HEAD_INIT(NULL)
-+  PyObject_HEAD_INIT(&PyType_Type)
-   0,                             // ob_size
-   "KQEvent",                     // tp_name
-   sizeof(KQEventObject),         // tp_basicsize
-@@ -291,13 +291,14 @@
- 
-   /* Build timespec for timeout */
-   totimespec.tv_sec = timeout / 1000;
--  totimespec.tv_nsec = (timeout % 1000) * 100000;
-+  totimespec.tv_nsec = (timeout % 1000) * 1000000;
- 
-   // printf("timespec: sec=%d nsec=%d\n", totimespec.tv_sec, totimespec.tv_nsec);
- 
-   /* Make the call */
--
-+  Py_BEGIN_ALLOW_THREADS
-   gotNumEvents = kevent (self->fd, changelist, haveNumEvents, triggered, wantNumEvents, &totimespec);
-+  Py_END_ALLOW_THREADS
- 
-   /* Don't need the input event list anymore, so get rid of it */
-   free (changelist);
-@@ -361,7 +362,7 @@
- statichere PyTypeObject KQueue_Type = {
- 	/* The ob_type field must be initialized in the module init function
- 	 * to be portable to Windows without using C++. */
--	PyObject_HEAD_INIT(NULL)
-+	PyObject_HEAD_INIT(&PyType_Type)
- 	0,			/*ob_size*/
- 	"KQueue",			/*tp_name*/
- 	sizeof(KQueueObject),	/*tp_basicsize*/
+    =====================================================
+    --- PyKQueue-1.3/kqsyscallmodule.c	Sun Jan 28 21:59:50 2001
+    +++ PyKQueue-1.3/kqsyscallmodule.c.new	Tue Jul 30 18:06:08 2002
+    @@ -137,7 +137,7 @@
+     }
+     
+     statichere PyTypeObject KQEvent_Type = {
+    -  PyObject_HEAD_INIT(NULL)
+    +  PyObject_HEAD_INIT(&PyType_Type)
+       0,                             // ob_size
+       "KQEvent",                     // tp_name
+       sizeof(KQEventObject),         // tp_basicsize
+    @@ -291,13 +291,14 @@
+     
+       /* Build timespec for timeout */
+       totimespec.tv_sec = timeout / 1000;
+    -  totimespec.tv_nsec = (timeout % 1000) * 100000;
+    +  totimespec.tv_nsec = (timeout % 1000) * 1000000;
+     
+       // printf("timespec: sec=%d nsec=%d\\n", totimespec.tv_sec, totimespec.tv_nsec);
+     
+       /* Make the call */
+    -
+    +  Py_BEGIN_ALLOW_THREADS
+       gotNumEvents = kevent (self->fd, changelist, haveNumEvents, triggered, wantNumEvents, &totimespec);
+    +  Py_END_ALLOW_THREADS
+     
+       /* Don't need the input event list anymore, so get rid of it */
+       free (changelist);
+    @@ -361,7 +362,7 @@
+     statichere PyTypeObject KQueue_Type = {
+            /* The ob_type field must be initialized in the module init function
+             * to be portable to Windows without using C++. */
+    -	PyObject_HEAD_INIT(NULL)
+    +	PyObject_HEAD_INIT(&PyType_Type)
+            0,			/*ob_size*/
+            "KQueue",			/*tp_name*/
+            sizeof(KQueueObject),	/*tp_basicsize*/
 
 """
 

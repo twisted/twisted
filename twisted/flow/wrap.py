@@ -142,43 +142,46 @@ class _Deferred(Stage):
            return
 
 def wrap(obj, *trap):
-    """ Wraps various objects for use within a flow
+    """
+    Wraps various objects for use within a flow
 
-        The following example illustrates many different
-        ways in which regular objects can be wrapped by
-        the flow module to behave in a cooperative manner.
+    The following example illustrates many different ways in which regular
+    objects can be wrapped by the flow module to behave in a cooperative
+    manner.
 
-            # required imports
-            from __future__ import generators
-            from twisted.flow import flow
-            from twisted.internet import reactor, defer
-            
-            # save this function, it is used everwhere
-            def printFlow(source):
-                def printer(source):
-                    source = flow.wrap(source)
-                    while True:
-                        yield source
-                        print source.next()
-                d = flow.Deferred(printer(source))
-                d.addCallback(lambda _: reactor.stop())
-                reactor.run()
-          
-            source = "string"
-            printFlow(source)
+    For example::
 
-            source = ["one",flow.Cooperate(1),"two"]
-            printFlow(source)
+        # required imports
+        from __future__ import generators
+        from twisted.flow import flow
+        from twisted.internet import reactor, defer
 
-            def source():
-                yield "aeye"
-                yield flow.Cooperate()
-                yield "capin"
-            printFlow(source)
+        # save this function, it is used everwhere
+        def printFlow(source):
+            def printer(source):
+                source = flow.wrap(source)
+                while True:
+                    yield source
+                    print source.next()
+            d = flow.Deferred(printer(source))
+            d.addCallback(lambda _: reactor.stop())
+            reactor.run()
 
-            source = Deferred()
-            reactor.callLater(1, lambda: source.callback("howdy"))
-            printFlow(source)
+        source = "string"
+        printFlow(source)
+
+        source = ["one",flow.Cooperate(1),"two"]
+        printFlow(source)
+
+        def source():
+            yield "aeye"
+            yield flow.Cooperate()
+            yield "capin"
+        printFlow(source)
+
+        source = Deferred()
+        reactor.callLater(1, lambda: source.callback("howdy"))
+        printFlow(source)
 
     """
     if isinstance(obj, Stage):

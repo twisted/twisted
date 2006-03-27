@@ -127,15 +127,17 @@ class DocTestSuite(TestSuite):
 
 
 class PyUnitTestCase(object):
-    """This class decorates the pyunit.TestCase class, mainly to work around
-    the differences between unittest in Python 2.3 and unittest in Python 2.4
-    These differences are:
-    - The way doctest unittests describe themselves
-    - Where the implementation of TestCase.run is (used to be in __call__)
+    """
+    This class decorates the pyunit.TestCase class, mainly to work around the
+    differences between unittest in Python 2.3 and unittest in Python 2.4 These
+    differences are::
+
+        - The way doctest unittests describe themselves
+        - Where the implementation of TestCase.run is (used to be in __call__)
 
     It also implements visit, which we like.
     """
-    
+
     def __init__(self, test):
         self._test = test
         test.id = self.id

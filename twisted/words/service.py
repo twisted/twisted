@@ -9,17 +9,22 @@ Implements new cred things for words.
 
 How does this thing work?
 
-1) Network connection on some port expecting to speak some protocol
-2) Protocol-specific authentication, resulting in some kind of credentials object
-3) twisted.cred.portal login using those credentials for the interface
-   IUser and with something implementing IChatClient as the mind
-4) successful login results in an IUser avatar the protocol can
-   call methods on, and state added to the realm such that the mind
-   will have methods called on it as is necessary
-5) protocol specific actions lead to calls onto the avatar; remote
-   events lead to calls onto the mind
-6) protocol specific hangup, realm is notified, user is removed
-   from active play, the end.
+  - Network connection on some port expecting to speak some protocol
+
+  - Protocol-specific authentication, resulting in some kind of credentials object
+
+  - twisted.cred.portal login using those credentials for the interface
+    IUser and with something implementing IChatClient as the mind
+
+  - successful login results in an IUser avatar the protocol can call
+    methods on, and state added to the realm such that the mind will have
+    methods called on it as is necessary
+
+  - protocol specific actions lead to calls onto the avatar; remote events
+    lead to calls onto the mind
+
+  - protocol specific hangup, realm is notified, user is removed from active
+    play, the end.
 """
 
 from time import time, ctime

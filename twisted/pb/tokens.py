@@ -297,7 +297,7 @@ class IUnslicer(Interface):
         """Called when the Close token is received. Returns a tuple of
         (object/referenceable-deferred, complete-deferred), or an
         BananaFailure if something went wrong. There are four potential
-        cases:
+        cases::
 
          (obj, None): the object is complete and ready to go
          (d1, None): the object cannot be referenced yet, probably

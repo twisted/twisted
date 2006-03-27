@@ -2,38 +2,38 @@
 
 """
 primitive constraints:
-   types.StringType: string with maxLength=1k
-   String(maxLength=1000): string with arbitrary maxLength
-   types.BooleanType: boolean
-   types.IntType: integer that fits in s_int32_t
-   types.LongType: integer with abs(num) < 2**8192 (fits in 1024 bytes)
-   Int(maxBytes=1024): integer with arbitrary maxValue=2**(8*maxBytes)
-   types.FloatType: number
-   Number(maxBytes=1024): float or integer with maxBytes
-   interface: instance which implements (or adapts to) the Interface
-   class: instance of the class or a subclass
-   # unicode? types? none?
+   - types.StringType: string with maxLength=1k
+   - String(maxLength=1000): string with arbitrary maxLength
+   - types.BooleanType: boolean
+   - types.IntType: integer that fits in s_int32_t
+   - types.LongType: integer with abs(num) < 2**8192 (fits in 1024 bytes)
+   - Int(maxBytes=1024): integer with arbitrary maxValue=2**(8*maxBytes)
+   - types.FloatType: number
+   - Number(maxBytes=1024): float or integer with maxBytes
+   - interface: instance which implements (or adapts to) the Interface
+   - class: instance of the class or a subclass
+   - # unicode? types? none?
 
 container constraints:
-   TupleOf(constraint1, constraint2..): fixed size, per-element constraint
-   ListOf(constraint, maxLength=30): all elements obey constraint
-   DictOf(keyconstraint, valueconstraint): keys and values obey constraints
-   AttributeDict(*attrTuples, ignoreUnknown=False):
-    attrTuples are (name, constraint)
-    ignoreUnknown=True means that received attribute names which aren't
-     listed in attrTuples should be ignored instead of raising an
-     UnknownAttrName exception
+   - TupleOf(constraint1, constraint2..): fixed size, per-element constraint
+   - ListOf(constraint, maxLength=30): all elements obey constraint
+   - DictOf(keyconstraint, valueconstraint): keys and values obey constraints
+   - AttributeDict(*attrTuples, ignoreUnknown=False):
+      - attrTuples are (name, constraint)
+      - ignoreUnknown=True means that received attribute names which aren't
+        listed in attrTuples should be ignored instead of raising an
+        UnknownAttrName exception
 
 composite constraints:
-   tuple: alternatives: must obey one of the different constraints
+   - tuple: alternatives: must obey one of the different constraints
 
 modifiers:
-   Shared(constraint, refLimit=None): object may be referenced multiple times
+   - Shared(constraint, refLimit=None): object may be referenced multiple times
      within the serialization domain (question: which domain?). All
      constraints default to refLimit=1, and a MultiplyReferenced exception
      is raised as soon as the reference count goes above the limit.
      refLimit=None means no limit is enforced.
-   Optional(name, constraint, default=None): key is not required. If not
+   - Optional(name, constraint, default=None): key is not required. If not
             provided and default is None, key/attribute will not be created
             Only valid inside DictOf and AttributeDict.
    

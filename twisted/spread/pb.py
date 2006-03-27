@@ -1565,7 +1565,7 @@ class PBClientFactory(protocol.ClientFactory):
     def getRootObject(self):
         """Get root object of remote PB server.
 
-        @return Deferred of the root object.
+        @return: Deferred of the root object.
         """
         if self._broker and not self._broker.disconnected:
            return defer.succeed(self._root)
@@ -1579,7 +1579,7 @@ class PBClientFactory(protocol.ClientFactory):
 
         New systems should use login() instead.
 
-        @return Deferred of RemoteReference to the perspective.
+        @return: Deferred of RemoteReference to the perspective.
         """
         warnings.warn("Update your backend to use PBServerFactory, and then use login().",
                       DeprecationWarning, 2)
@@ -1621,10 +1621,10 @@ class PBClientFactory(protocol.ClientFactory):
     def login(self, credentials, client=None):
         """Login and get perspective from remote PB server.
 
-        Currently only credentials implementing IUsernamePassword are
-        supported.
+        Currently only credentials implementing
+        L{twisted.cred.credentials.IUsernamePassword} are supported.
 
-        @return Deferred of RemoteReference to the perspective.
+        @return: Deferred of RemoteReference to the perspective.
         """
         d = self.getRootObject()
         d.addCallback(self._cbSendUsername, credentials.username, credentials.password, client)

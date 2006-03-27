@@ -402,9 +402,9 @@ class _Jellier:
 
 
 class NullReference(Exception):
-    
-    """This object is a marker for when a reference is made to an object
-    that can't be referenced, i.e.
+    """
+    This object is a marker for when a reference is made to an object that
+    can't be referenced, i.e.::
 
         (tuple (tuple (reference 1)))
 

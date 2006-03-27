@@ -167,9 +167,9 @@ class IGroup(Interface):
 
         @type metadata: dict
         @param metadata: Valid keys for this dictionary include:
-        
-            style: associated with one of:
-                emote: indicates this is an action
+
+            - C{'style'}: associated with one of:
+                - C{'emote'}: indicates this is an action
         """
 
     def join(self):

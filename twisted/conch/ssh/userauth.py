@@ -410,13 +410,11 @@ class SSHUserAuthClient(service.SSHService):
         """
         Returns a C{Deferred} with the responses to the promopts.
 
-        name is the name of the authentication currently
-        in progress.
-        instruction describes what the authentication wants.
-        prompts is a list of (prompt, echo) pairs.
-            prompt is the prompt to display.
-            echo is a C{bool}.  If False, do not display what the
-            user types for this prompt.
+        @param name: The name of the authentication currently in progress.
+        @param instruction: Describes what the authentication wants. 
+        @param prompts: A list of (prompt, echo) pairs, where prompt is a
+        string to display and echo is a boolean indicating whether the
+        user's response should be echoed as they type it.
         """
         return defer.fail(NotImplementedError())
 

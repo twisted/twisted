@@ -759,20 +759,25 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin, object):
         policies.TimeoutMixin.timeoutConnection(self)
 
     def lingeringClose(self):
-        """This is a bit complicated. This process is necessary to ensure
-        proper workingness when HTTP pipelining is in use.
-        
+        """
+        This is a bit complicated. This process is necessary to ensure proper
+        workingness when HTTP pipelining is in use.
+
         Here is what it wants to do:
-        1)  Finish writing any buffered data, then close our write side.
-        
-            While doing so, read and discard any incoming data.
-        2)  When that happens (writeConnectionLost called), wait up to 20
-            seconds for the remote end to close their write side (our read
-            side).
-        3a) If they do (readConnectionLost called), close the socket,
-            and cancel the timeout.
-        3b) If that doesn't happen, the timer fires, and makes the socket
-            close anyways.
+
+            1.  Finish writing any buffered data, then close our write side.
+                While doing so, read and discard any incoming data.
+
+            2.  When that happens (writeConnectionLost called), wait up to 20
+                seconds for the remote end to close their write side (our read
+                side).
+
+            3.
+                - If they do (readConnectionLost called), close the socket,
+                  and cancel the timeout.
+
+                - If that doesn't happen, the timer fires, and makes the
+                  socket close anyways.
         """
         
         # Close write half

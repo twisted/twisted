@@ -14,7 +14,7 @@ and output on the current process.
 It should work on any UNIX and also on Win32 (with some caveats: due to
 platform limitations, it will perform very poorly on Win32).
 
-Future Plans:
+Future Plans::
 
     support for stderr, perhaps
     Rewrite to use the reactor instead of an ad-hoc mechanism for connecting

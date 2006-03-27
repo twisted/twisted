@@ -74,7 +74,7 @@ def makeService(options):
 
     @type options: C{dict}
     @param options: A mapping describing the configuration of
-    the desired service.  Recognized key/value pairs are:
+    the desired service.  Recognized key/value pairs are::
 
         "telnetPort": strports description of the address on which
                       to listen for telnet connections.  If None,

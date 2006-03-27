@@ -8,9 +8,9 @@ A simple guard framework for implementing web sites that only need
 'Anonymous' vs 'Logged on' distinction, but nothing more.
 
 If you need
- * multiple levels of access, or
- * multiple-interface applications, or
- * anything else more complex than 'Logged on' and 'Not logged on'
+ - multiple levels of access, or
+ - multiple-interface applications, or
+ - anything else more complex than 'Logged on' and 'Not logged on'
 
 you need to use twisted.web.woven.guard directly.
 """

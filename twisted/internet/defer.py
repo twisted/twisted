@@ -539,7 +539,7 @@ class waitForDeferred:
     really), with the help of generators.
 
     There are two important functions involved: waitForDeferred, and
-    deferredGenerator.
+    deferredGenerator.  They are used together, like this::
 
         def thingummy():
             thing = waitForDeferred(makeSomeRequestResultingInDeferred())
@@ -565,7 +565,7 @@ class waitForDeferred:
     instead.
 
     The Deferred returned from your deferred generator may also
-    errback if your generator raised an exception.
+    errback if your generator raised an exception.  For example::
 
         def thingummy():
             thing = waitForDeferred(makeSomeRequestResultingInDeferred())
@@ -669,10 +669,10 @@ class _ConcurrencyPrimitive(object):
         lock or semaphore is acquired, the callable will be invoked
         with those arguments.
 
-        The callable may return a Deferred; if it does, the lock or 
+        The callable may return a Deferred; if it does, the lock or
         semaphore won't be released until that Deferred fires.
 
-        @return Deferred of function result.
+        @return: Deferred of function result.
         """
         if len(args) < 2:
             if not args:

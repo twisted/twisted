@@ -6,7 +6,7 @@
 
 Don't use this module directly.  Use twisted.mail.pop3 instead.
 
-@author U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 
 API Stability: Unstable
 """
@@ -97,9 +97,9 @@ def _codeStatusSplit(line):
 
 def _dotUnquoter(line):
     """
-    '.' characters which begin a line of a message are doubled to avoid
-    confusing with the terminating '.\r\n' sequence.  This function unquotes
-    them.
+    C{'.'} characters which begin a line of a message are doubled to avoid
+    confusing with the terminating C{'.\\r\\n'} sequence.  This function
+    unquotes them.
     """
     if line.startswith('..'):
         return line[1:]
@@ -568,7 +568,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         results.
 
         @return: A Deferred which fires with a C{dict} mapping C{str}
-        to C{None} or C{list}s of C{str}.  For example,
+        to C{None} or C{list}s of C{str}.  For example::
 
             C: CAPA
             S: +OK Capability list follows
@@ -583,7 +583,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             S: IMPLEMENTATION Shlemazle-Plotz-v302
             S: .
 
-        will be lead to a result of
+        will be lead to a result of::
 
             | {'TOP': None,
             |  'USER': None,

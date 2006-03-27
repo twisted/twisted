@@ -70,11 +70,11 @@ class Listener(protocol.ServerFactory):
         'tcp:0' (meaning 'please allocate me something'), and if the Listener
         is active (it is attached to a Tub which is in the 'running' state),
         this method will return the port number that was allocated. This is
-        useful for the following pattern:
+        useful for the following pattern::
 
-         t = PBService()
-         l = t.listenOn('tcp:0')
-         t.setLocation('localhost:%d' % l.getPortnum())
+            t = PBService()
+            l = t.listenOn('tcp:0')
+            t.setLocation('localhost:%d' % l.getPortnum())
         """
 
         assert self.s.running
@@ -252,9 +252,9 @@ class PBService(service.MultiService):
         how to reach it from the outside world. You need to use this because
         the Tub can't do it without help. If you do a
         C{s.listenOn('tcp:1234')}, and the host is known as
-        C{foo.example.com}, then it would be appropriate to do:
+        C{foo.example.com}, then it would be appropriate to do::
 
-         s.setLocation('foo.example.com:1234')
+            s.setLocation('foo.example.com:1234')
 
         You must set the location before you can register any references.
 

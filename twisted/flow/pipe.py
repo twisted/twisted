@@ -4,12 +4,13 @@
 #
 # Author: Clark Evans  (cce@clarkevans.com)
 
-""" flow.pipe
-
-    This contains various filter stages which have exactly one 
-    input stage.  These stages take a single input and modify its
-    results, ie a rewrite stage.
 """
+flow.pipe
+
+This contains various filter stages which have exactly one input stage.  These
+stages take a single input and modify its results, ie a rewrite stage.
+"""
+
 from base import *
 from wrap import wrap
 from twisted.python.failure import Failure
@@ -47,26 +48,27 @@ class Pipe(Stage):
         raise NotImplementedError
 
 class Filter(Pipe):
-    """ flow equivalent to filter:  Filter(function, source, ... )
+    """
+    flow equivalent to filter:  Filter(function, source, ... )
 
-        Yield those elements from a source stage for which a function
-        returns true.   If the function is None, the identity 
-        function is assumed, that is, all items yielded that are
-        false (zero or empty) are discarded.
+    Yield those elements from a source stage for which a function returns true.
+    If the function is None, the identity function is assumed, that is, all
+    items yielded that are false (zero or empty) are discarded.
 
-            def odd(val):
-                if val % 2:
-                    return True
-            
-            def range():
-                yield 1
-                yield 2
-                yield 3
-                yield 4
-            
-            source = flow.Filter(odd,range)
-            printFlow(source)
+    For example::
 
+        def odd(val):
+            if val % 2:
+                return True
+
+        def range():
+            yield 1
+            yield 2
+            yield 3
+            yield 4
+
+        source = flow.Filter(odd,range)
+        printFlow(source)
     """
     def __init__(self, func, source, *trap):
         Pipe.__init__(self, source, *trap)

@@ -265,24 +265,26 @@ class Process(styles.Ephemeral):
         nuances of setXXuid on UNIX: it will assume that either your effective
         or real UID is 0.)
 
-        @param childFDs: a dictionary mapping
-            fd_in_child -> current_fd_in_parent/'r'/'w'
+        @param childFDs: a dictionary mapping fd_in_child to
+                         current_fd_in_parent/'r'/'w'.
 
-             If the value is a number, it specifies one of the parent's fds
-             that will be remapped to the child's fd. This is useful for
-             things like inetd and shell-like file redirection.
+                         If the value is a number, it specifies one of the
+                         parent's fds that will be remapped to the child's
+                         fd. This is useful for things like inetd and
+                         shell-like file redirection.
 
-             If it is the string 'r', a pipe will be created and attached to
-             the child at that fd number, and the parent will be able to
-             read from the pipe. This is useful for the child's stdout and
-             stderr.
+                         If it is the string 'r', a pipe will be created and
+                         attached to the child at that fd number, and the
+                         parent will be able to read from the pipe. This is
+                         useful for the child's stdout and stderr.
 
-             If it is the string 'w', a pipe will be created and attached,
-             and the parent will be able to write into that pipe. This is
-             useful for the child's stdin.
+                         If it is the string 'w', a pipe will be created and
+                         attached, and the parent will be able to write into
+                         that pipe. This is useful for the child's stdin.
 
-            If childFDs is not passed, the default behaviour is to use a
-            mapping that opens the usual stdin/stdout/stderr pipes.
+                         If childFDs is not passed, the default behaviour is to
+                         use a mapping that opens the usual stdin/stdout/stderr
+                         pipes.
         """
         if not proto:
             assert 'r' not in childFDs.values()
@@ -432,22 +434,25 @@ class Process(styles.Ephemeral):
         'command 2>&1' would correspond to an fdmap of {0:0, 1:1, 2:1}.
         'command >foo.txt' would be {0:0, 1:os.open('foo.txt'), 2:2}.
 
-        Step 1: close all file descriptors that aren't values of fdmap.
-        This means 0 .. maxfds.
+        This is accomplished in two steps::
 
-        Step 2: for each childFD:
-         if fdmap[childFD] == childFD, the descriptor is already in place.
-         Make sure the CLOEXEC flag is not set, then delete the entry from
-         fdmap.
+            1. close all file descriptors that aren't values of fdmap.  This means
+               0 .. maxfds.
 
-         if childFD is in fdmap.values(), then the target descriptor is
-         busy. Use os.dup() to move it elsewhere, update all fdmap[childFD]
-         items that point to it, then close the original. Then fall through
-         to the next case.
+            2. for each childFD::
 
-         now fdmap[childFD] is not in fdmap.values(), and is free. Use
-         os.dup2() to move it to the right place, then close the original.
+                 - if fdmap[childFD] == childFD, the descriptor is already in
+                   place.  Make sure the CLOEXEC flag is not set, then delete the
+                   entry from fdmap.
 
+                 - if childFD is in fdmap.values(), then the target descriptor is
+                   busy. Use os.dup() to move it elsewhere, update all
+                   fdmap[childFD] items that point to it, then close the
+                   original. Then fall through to the next case.
+
+                 - now fdmap[childFD] is not in fdmap.values(), and is free. Use
+                   os.dup2() to move it to the right place, then close the
+                   original.
         """
 
         debug = self.debug_child

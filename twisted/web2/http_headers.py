@@ -164,12 +164,12 @@ def tokenize(header, foldCase=True):
     """Tokenize a string according to normal HTTP header parsing rules.
 
     In particular:
-    - Whitespace is irrelevant and eaten next to special separator tokens.
-      Its existance (but not amount) is important between character strings.
-    - Quoted string support including embedded backslashes.
-    - Case is insignificant (and thus lowercased), except in quoted strings.
-       (unless foldCase=False)
-    - Multiple headers are concatenated with ','
+     - Whitespace is irrelevant and eaten next to special separator tokens.
+       Its existance (but not amount) is important between character strings.
+     - Quoted string support including embedded backslashes.
+     - Case is insignificant (and thus lowercased), except in quoted strings.
+        (unless foldCase=False)
+     - Multiple headers are concatenated with ','
 
     NOTE: not all headers can be parsed with this function.
 

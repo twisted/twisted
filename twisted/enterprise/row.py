@@ -29,7 +29,7 @@ class RowObject:
     Once created, the "key column" attributes cannot be changed.
 
 
-    Class Attributes that users must supply:
+    Class Attributes that users must supply::
 
        rowKeyColumns     # list of key columns in form: [(columnName, typeName)]
        rowTableName      # name of database table

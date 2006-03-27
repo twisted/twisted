@@ -297,6 +297,8 @@ class LimitConnectionsByPeer(WrappingFactory):
 class LimitTotalConnectionsFactory(ServerFactory):
     """Factory that limits the number of simultaneous connections.
 
+    API Stability: Unstable
+
     @type connectionCount: C{int}
     @ivar connectionCount: number of current connections.
     @type connectionLimit: C{int} or C{None}
@@ -305,8 +307,6 @@ class LimitTotalConnectionsFactory(ServerFactory):
     @cvar overflowProtocol: Protocol to use for new connections when
         connectionLimit is exceeded.  If C{None} (the default value), excess
         connections will be closed immediately.
-
-    API Stability: Unstable
     """
     connectionCount = 0
     connectionLimit = None

@@ -119,15 +119,11 @@ class IFileSystem(Interface):
         directory can have different implicit children depending
         on what sort of filesystem it has been placed in
 
-        - may not be the best idea ...
+        (This may not be the best idea)
 
-        returns a list of 2 element tuples:
+        returns a list of 2 element tuples, C{[ ( path, nodeObject ) ]}, e.g.::
 
-        [ ( path, nodeObject ) ]
-
-        eg.
-
-        [ ( ".", dir ), ( "..", dir.parent ) ]
+            [ ( ".", dir ), ( "..", dir.parent ) ]
         """
 
 

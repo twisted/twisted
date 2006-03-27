@@ -490,7 +490,8 @@ class FileTransferClient(FileTransferBase):
         The flags and their values are listed at the bottom of this file.
 
         attrs is a list of attributes to open the file with.  It is a
-        dictionary, consisting of 0 or more keys.  The possible keys are:
+        dictionary, consisting of 0 or more keys.  The possible keys are::
+
             size: the size of the file in bytes
             uid: the user ID of the file as an integer
             gid: the group ID of the file as an integer

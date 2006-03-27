@@ -729,12 +729,13 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
     def ftp_PASV(self):
         """Request for a passive connection
 
-        from the rfc:
-            This command requests the server-DTP to "listen" on a data
-            port (which is not its default data port) and to wait for a
-            connection rather than initiate one upon receipt of a
-            transfer command.  The response to this command includes the
-            host and port address this server is listening on.
+        from the rfc::
+
+            This command requests the server-DTP to \"listen\" on a data port
+            (which is not its default data port) and to wait for a connection
+            rather than initiate one upon receipt of a transfer command.  The
+            response to this command includes the host and port address this
+            server is listening on.
         """
         # if we have a DTP port set up, lose it.
         if self.dtpFactory is not None:
@@ -1276,13 +1277,20 @@ class IFTPShell(Interface):
         keys.  The following are possible elements of keys, and the
         values which should be returned for them:
 
-            'size': size in bytes, as an integer (this is kinda required)
-            'directory': boolean indicating the type of this entry
-            'permissions': a bitvector (see os.stat(foo).st_mode)
-            'hardlinks': Number of hard links to this entry
-            'modified': number of seconds since the epoch since entry was modified
-            'owner': string indicating the user owner of this entry
-            'group': string indicating the group owner of this entry
+            - C{'size'}: size in bytes, as an integer (this is kinda required)
+
+            - C{'directory'}: boolean indicating the type of this entry
+
+            - C{'permissions'}: a bitvector (see os.stat(foo).st_mode)
+
+            - C{'hardlinks'}: Number of hard links to this entry
+
+            - C{'modified'}: number of seconds since the epoch since entry was
+              modified
+
+            - C{'owner'}: string indicating the user owner of this entry
+
+            - C{'group'}: string indicating the group owner of this entry
         """
 
 

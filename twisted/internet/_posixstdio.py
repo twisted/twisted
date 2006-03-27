@@ -1,9 +1,10 @@
+# -*- test-case-name: twisted.test.test_stdio -*-
 
 """Standard input/out/err support.
 
 API Stability: unstable (pending deprecation in favor of a reactor-based API)
 
-Future Plans:
+Future Plans::
 
     support for stderr, perhaps
     Rewrite to use the reactor instead of an ad-hoc mechanism for connecting

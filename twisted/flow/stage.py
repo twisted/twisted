@@ -5,35 +5,36 @@
 # Author: Clark Evans  (cce@clarkevans.com)
 #
 
-""" flow.stage 
-
-    Various stages for manipulating data flows, in particular, those
-    stages which take more than one input stages or alternative input,
-    such as a callback.
-
 """
+flow.stage
+
+Various stages for manipulating data flows, in particular, those stages which
+take more than one input stages or alternative input, such as a callback.
+"""
+
 from base import *
 from wrap import wrap
 from twisted.python.failure import Failure
 
 class Map(Stage):
-    """ flow equivalent to map:  Map(function, stage, ... )
- 
-        Apply a function to every item yielded and yield the results.
-        If additional stages are passed, the function must take that
-        many arguments and is applied to the items of all lists in 
-        parallel.  If a list is shorter than another, it is assumed
-        to be extended with None items.    If the function is None,
-        the identity function is assumed; if there are multiple list
-        arguments, Map stage returns a sequence consisting of tuples
-        containing the corresponding items from all lists.
+    """
+    flow equivalent to map:  Map(function, stage, ... )
 
-            def fn(val):
-                return val + 10
-            
-            source = flow.Map(fn,range(4))
-            printFlow(source)
-            
+    Apply a function to every item yielded and yield the results.  If
+    additional stages are passed, the function must take that many arguments
+    and is applied to the items of all lists in parallel.  If a list is shorter
+    than another, it is assumed to be extended with None items.  If the
+    function is None, the identity function is assumed; if there are multiple
+    list arguments, Map stage returns a sequence consisting of tuples
+    containing the corresponding items from all lists.
+
+    For example::
+
+        def fn(val):
+            return val + 10
+
+        source = flow.Map(fn,range(4))
+        printFlow(source)
     """
     def __init__(self, func, stage, *stages):
         Stage.__init__(self)
@@ -85,24 +86,27 @@ class Map(Stage):
         self._index  = 0
 
 class Zip(Map):
-    """ Zips two or more stages into a stream of N tuples
+    """
+    Zips two or more stages into a stream of N tuples
 
-            source = flow.Zip([1,flow.Cooperate(),2,3],["one","two"])
-            printFlow(source)
+    For example::
+
+        source = flow.Zip([1,flow.Cooperate(),2,3],["one","two"])
+        printFlow(source)
 
     """
     def __init__(self, *stages):
         Map.__init__(self, None, stages[0], *stages[1:])
 
 class Concurrent(Stage):
-    """ Executes stages concurrently
+    """
+    Executes stages concurrently
 
-        This stage allows two or more stages (branches) to be executed 
-        at the same time.  It returns each stage as it becomes available.
-        This can be used if you have N callbacks, and you want to yield 
-        and wait for the first available one that produces results.   Once
-        a stage is retuned, its next() method should be used to extract 
-        the value for the stage.
+    This stage allows two or more stages (branches) to be executed at the same
+    time.  It returns each stage as it becomes available.  This can be used if
+    you have N callbacks, and you want to yield and wait for the first
+    available one that produces results.  Once a stage is retuned, its next()
+    method should be used to extract the value for the stage.
     """
 
     class Instruction(CallLater):
@@ -155,11 +159,13 @@ class Concurrent(Stage):
         self.stop = True
 
 class Merge(Stage):
-    """ Merges two or more Stages results into a single stream
+    """
+    Merges two or more Stages results into a single stream
 
-            source = flow.Zip([1,flow.Cooperate(),2,3],["one","two"])
-            printFlow(source)
+    For example::
 
+        source = flow.Zip([1,flow.Cooperate(),2,3],["one","two"])
+        printFlow(source)
     """
     def __init__(self, *stages):
         Stage.__init__(self)
@@ -180,18 +186,20 @@ class Merge(Stage):
         self.failure =  self.concurrent.failure
 
 class Callback(Stage):
-    """ Converts a single-thread push interface into a pull interface.
-   
-        Once this stage is constructed, its result, errback, and 
-        finish member variables may be called by a producer.   The
-        results of which can be obtained by yielding the Callback and
-        then calling next().   For example:
+    """
+    Converts a single-thread push interface into a pull interface.
 
-            source = flow.Callback()
-            reactor.callLater(0, lambda: source.result("one"))
-            reactor.callLater(.5, lambda: source.result("two"))
-            reactor.callLater(1, lambda: source.finish())
-            printFlow(source)
+    Once this stage is constructed, its result, errback, and finish member
+    variables may be called by a producer.  The results of which can be
+    obtained by yielding the Callback and then calling next().
+
+    For example::
+
+        source = flow.Callback()
+        reactor.callLater(0, lambda: source.result("one"))
+        reactor.callLater(.5, lambda: source.result("two"))
+        reactor.callLater(1, lambda: source.finish())
+        printFlow(source)
 
     """
     # TODO: Potentially rename this 'Consumer' and make it

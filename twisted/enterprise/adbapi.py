@@ -136,34 +136,33 @@ class ConnectionPool:
     def __init__(self, dbapiName, *connargs, **connkw):
         """Create a new ConnectionPool.
 
-        @param dbapiName: an import string to use to obtain a DB-API
-                          compatible module (e.g. 'pyPgSQL.PgSQL')
+        Any positional or keyword arguments other than those documented here
+        are passed to the DB-API object when connecting. Use these arguments to
+        pass database names, usernames, passwords, etc.
+
+        @param dbapiName: an import string to use to obtain a DB-API compatible
+                          module (e.g. 'pyPgSQL.PgSQL')
 
         @param cp_min: the minimum number of connections in pool (default 3)
 
         @param cp_max: the maximum number of connections in pool (default 5)
 
-        @param cp_noisy: generate informational log messages during
-                         operation (default False)
+        @param cp_noisy: generate informational log messages during operation
+                         (default False)
 
-        @param cp_openfun: a callback invoked after every connect()
-                           on the underlying DB-API object. The callback
-                           is passed a new DB-API connection object.
-                           This callback can setup per-connection
-                           state such as charset, timezone, etc.
+        @param cp_openfun: a callback invoked after every connect() on the
+                           underlying DB-API object. The callback is passed a
+                           new DB-API connection object.  This callback can
+                           setup per-connection state such as charset,
+                           timezone, etc.
 
-        @param cp_reconnect: detect connections which have failed
-                             and reconnect (default False). Failed
-                             connections may result in ConnectionLost
-                             exceptions, which indicate the query may
-                             need to be re-sent.
+        @param cp_reconnect: detect connections which have failed and reconnect
+                             (default False). Failed connections may result in
+                             ConnectionLost exceptions, which indicate the
+                             query may need to be re-sent.
 
-        @param cp_good_sql: an sql query which should always succeed
-                            and change no state (default 'select 1')
-
-        Any remaining positional and keyword arguments are passed
-        to the DB-API object when connecting. Use these arguments
-        to pass database names, usernames, passwords, etc.
+        @param cp_good_sql: an sql query which should always succeed and change
+                            no state (default 'select 1')
         """
 
         self.dbapiName = dbapiName
