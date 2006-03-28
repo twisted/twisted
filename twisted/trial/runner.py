@@ -161,7 +161,8 @@ class TrialSuite(TestSuite):
     def _bail(self):
         from twisted.internet import reactor, utils
         d = defer.Deferred()
-        reactor.addSystemEventTrigger('after', 'shutdown', lambda: d.callback(None))
+        reactor.addSystemEventTrigger('after', 'shutdown',
+                                      lambda: d.callback(None))
         reactor.fireSystemEvent('shutdown') # radix's suggestion
         treactor = interfaces.IReactorThreads(reactor, None)
         if treactor is not None:
@@ -170,8 +171,8 @@ class TrialSuite(TestSuite):
         # manually shutdown the reactor here, and that requires util.wait
         # :(
         # so that the shutdown event completes
-        utils.suppressWarnings(lambda: util.wait(d), 
-                               (['ignore', 'Do NOT use wait.*'], {}))
+        utils.runWithWarningsSuppressed([(['ignore', 'Do NOT use wait.*'], {})],
+                                        util.wait, d)
 
     def run(self, result):
         try:
@@ -451,8 +452,7 @@ class TrialRunner(object):
         if self._logFileObject is not None:
             self._logFileObject.close()
             self._logFileObject = None
-            
-            
+
     def _setUpLogFile(self):
         self._tearDownLogFile()
         if self.logfile == '-':

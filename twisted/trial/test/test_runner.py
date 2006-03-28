@@ -9,7 +9,7 @@ import StringIO
 from zope.interface import implements
 
 from twisted.trial.itrial import IReporter
-from twisted.trial import unittest, runner
+from twisted.trial import unittest, runner, reporter
 from twisted.python import reflect
 from twisted.scripts import trial
 
@@ -264,3 +264,25 @@ class TestTrialSuite(unittest.TestCase):
         from twisted.trial.runner import TrialSuite
 
     # FIXME, HTF do you test the reactor can be cleaned up ?!!!
+
+
+class TestUntilFailure(unittest.TestCase):
+    class FailAfter(unittest.TestCase):
+        count = []
+        def test_foo(self):
+            self.count.append(None)
+            if len(self.count) == 3:
+                self.fail('Count reached 3')
+
+    def setUp(self):
+        TestUntilFailure.FailAfter.count = []
+        self.test = TestUntilFailure.FailAfter('test_foo')
+
+    def test_runUntilFailure(self):
+        stream = StringIO.StringIO()
+        trialRunner = runner.TrialRunner(reporter.Reporter, stream=stream)
+        result = trialRunner.runUntilFailure(self.test)
+        self.failUnlessEqual(result.testsRun, 1)
+        self.failIf(result.wasSuccessful())
+        self.failUnlessEqual(len(result.failures), 1)
+        
