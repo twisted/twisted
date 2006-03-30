@@ -455,6 +455,9 @@ class TestCase(_Assertions):
 
     def run(self, result):
         log.msg("--> %s <--" % (self.id()))
+        from twisted.trial import reporter
+        if not isinstance(result, reporter.TestResult):
+            result = PyUnitResultAdapter(result)
         self._timedOut = False
         if self._shared and self not in self.__class__._instances:
             self.__class__._instances.add(self)
@@ -593,6 +596,64 @@ class TestCase(_Assertions):
         finally:
             results = None
             running.pop()
+
+
+class UnsupportedTrialFeature(Exception):
+    """A feature of twisted.trial was used that pyunit cannot support."""
+
+
+class PyUnitResultAdapter(object):
+    def __init__(self, original):
+        self.original = original
+
+    def _exc_info(self, err):
+        from twisted.trial import reporter
+        if isinstance(err, failure.Failure):
+            # Unwrap the Failure into a exc_info tuple.
+            # XXX: if err.tb is a real traceback and not stringified, we should
+            #      use that.
+            err = (err.type, err.value, None)
+        return err
+
+    def startTest(self, method):
+        self.original.startTest(method)
+
+    def stopTest(self, method):
+        self.original.stopTest(method)
+
+    def addFailure(self, test, fail):
+        self.original.addFailure(test, self._exc_info(fail))
+
+    def addError(self, test, error):
+        self.original.addError(test, self._exc_info(error))
+
+    def _unsupported(self, test, feature, info):
+        self.original.addFailure(
+            test, 
+            (UnsupportedTrialFeature, 
+             UnsupportedTrialFeature(feature, info), 
+             None))
+
+    def addSkip(self, test, reason):
+        self._unsupported(test, 'skip', reason)
+
+    def addUnexpectedSuccess(self, test, todo):
+        self._unsupported(test, 'unexpected success', todo)
+        
+    def addExpectedFailure(self, test, error):
+        self._unsupported(test, 'expected failure', error)
+
+    def addSuccess(self, test):
+        self.original.addSuccess(test)
+
+    def upDownError(self, method, error, warn, printStatus):
+        pass
+
+    def cleanupErrors(self, errs):
+        pass
+    
+    def startSuite(self, name):
+        pass
 
 
 class TestVisitor(object):
