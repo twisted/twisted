@@ -65,6 +65,15 @@ class ParseCorrectnessTest(unittest.TestCase):
         self.failUnlessEqual(self.nice.opts['myflag'], "PONY!")
         self.failUnlessEqual(self.nice.opts['myparam'], "Tofu WITH A PONY!")
 
+class OutputTest(unittest.TestCase):
+    def test_uppercasing(self):
+        """Error output case adjustment does not mangle options
+        """
+        opt = WellBehaved()
+        e = self.assertRaises(usage.UsageError,
+                              opt.parseOptions, ['-Z'])
+        self.assertEquals(str(e), 'Option -Z not recognized')
+
 class InquisitionOptions(usage.Options):
     optFlags = [
         ('expect', 'e'),

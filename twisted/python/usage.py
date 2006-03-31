@@ -155,7 +155,8 @@ class Options(dict):
             opts, args = getopt.getopt(options,
                                        self.shortOpt, self.longOpt)
         except getopt.error, e:
-            raise UsageError, str(e).capitalize()
+            s = str(e)
+            raise UsageError, s[:1].upper()+s[1:]
 
 
         for opt, arg in opts:
