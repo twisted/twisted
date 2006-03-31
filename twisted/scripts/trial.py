@@ -147,10 +147,17 @@ class Options(usage.Options):
                 self['reporter'] = reflect.namedAny(qual)
 
     def _supportsColor(self):
-        supportedTerms = ['xterm', 'xterm-color', 'linux', 'screen']
-        if not os.environ.has_key('TERM'):
+        # assuming stderr
+        import sys
+        if not sys.stderr.isatty():
+            return False # auto color only on TTYs
+        try:
+            import curses
+            curses.setupterm()
+            return curses.tigetnum("colors") > 2
+        except:
+            # guess false in case of error
             return False
-        return os.environ['TERM'] in supportedTerms
 
     def opt_reactor(self, reactorName):
         # this must happen before parseArgs does lots of imports
