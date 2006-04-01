@@ -8,7 +8,7 @@ select() - this is pretty much only useful on Windows.
 
 from zope.interface import implements
 
-from twisted.internet.interfaces import IConsumer, IProducer
+from twisted.internet.interfaces import IConsumer, IPushProducer
 
 MIN_TIMEOUT = 0.000000001
 MAX_TIMEOUT = 0.1
@@ -98,7 +98,7 @@ import pywintypes
 
 class _PollableReadPipe(_PollableResource):
 
-    implements(IProducer)
+    implements(IPushProducer)
 
     def __init__(self, pipe, receivedCallback, lostCallback):
         # security attributes for pipes
@@ -107,8 +107,9 @@ class _PollableReadPipe(_PollableResource):
         self.lostCallback = lostCallback
 
     def checkWork(self):
-        numBytesRead = 0
         finished = 0
+        fullDataRead = []
+
         while 1:
             try:
                 buffer, bytesToRead, result = win32pipe.PeekNamedPipe(self.pipe, 1)
@@ -116,15 +117,17 @@ class _PollableReadPipe(_PollableResource):
                 if not bytesToRead:
                     break
                 hr, data = win32file.ReadFile(self.pipe, bytesToRead, None)
-                numBytesRead += len(data)
-                self.receivedCallback(data)
+                fullDataRead.append(data)
             except win32api.error:
                 finished = 1
                 break
 
+        dataBuf = ''.join(fullDataRead)
+        if dataBuf:
+            self.receivedCallback(dataBuf)
         if finished:
             self.cleanup()
-        return numBytesRead
+        return len(dataBuf)
 
     def cleanup(self):
         self.deactivate()
@@ -136,6 +139,15 @@ class _PollableReadPipe(_PollableResource):
         except pywintypes.error:
             # You can't close std handles...?
             pass
+
+    def stopProducing(self):
+        self.close()
+
+    def pauseProducing(self):
+        self.deactivate()
+
+    def resumeProducing(self):
+        self.activate()
 
 
 FULL_BUFFER_SIZE = 64 * 1024

@@ -1,14 +1,38 @@
 # -*- test-case-name: twisted.test.test_process.ProcessTestCase.testStdio -*-
 
-from twisted.internet.interfaces import IHalfCloseableProtocol
+import win32api
+import os, msvcrt
+
+from zope.interface import implements
+
+from twisted.internet.interfaces import IHalfCloseableProtocol, ITransport, IAddress
+from twisted.internet.interfaces import IConsumer, IPushProducer
 
 from twisted.internet import _pollingfile, main
 
-import win32api
+class Win32PipeAddress(object):
+    implements(IAddress)
 
 class StandardIO(_pollingfile._PollingTimer):
+
+    implements(ITransport,
+               IConsumer,
+               IPushProducer)
+
+    disconnecting = False
+    disconnected = False
+
     def __init__(self, proto):
+        """
+        Start talking to standard IO with the given protocol.
+
+        Also, put it stdin/stdout/stderr into binary mode.
+        """
         from twisted.internet import reactor
+
+        for stdfd in range(0, 1, 2):
+            msvcrt.setmode(stdfd, os.O_BINARY)
+
         _pollingfile._PollingTimer.__init__(self, reactor)
         self.proto = proto
 
@@ -44,12 +68,49 @@ class StandardIO(_pollingfile._PollingTimer):
     def checkConnLost(self):
         self.connsLost += 1
         if self.connsLost >= 2:
+            self.disconnecting = True
+            self.disconnected = True
             self.proto.connectionLost(main.CONNECTION_DONE)
+
+    # ITransport
 
     def write(self, data):
         self.stdout.write(data)
 
+    def writeSequence(self, seq):
+        self.stdout.write(''.join(seq))
+
     def loseConnection(self):
+        self.disconnecting = True
         self.stdin.close()
         self.stdout.close()
+
+    def getPeer(self):
+        return Win32PipeAddress()
+
+    def getHost(self):
+        return Win32PipeAddress()
+
+    # IConsumer
+
+    def registerProducer(self, producer, streaming):
+        return self.stdout.registerProducer(producer, streaming)
+
+    def unregisterProducer(self):
+        return self.stdout.unregisterProducer()
+
+    # def write() above
+
+    # IProducer
+
+    def stopProducing(self):
+        self.stdin.stopProducing()
+
+    # IPushProducer
+
+    def pauseProducing(self):
+        self.stdin.pauseProducing()
+
+    def resumeProducing(self):
+        self.stdin.resumeProducing()
 
