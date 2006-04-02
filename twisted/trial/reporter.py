@@ -43,26 +43,16 @@ class TestResult(pyunit.TestResult, object):
                    len(self.expectedFailures), len(self.skips),
                    len(self.unexpectedSuccesses)))
 
-    def _somethingStarted(self):
-        """Note that something has started."""
-        self._timings.append(time.time())
-
-    def _somethingStopped(self):
-        """Note that something has finished, and get back its duration.
-        
-        The value is also stored in self._last_time to ease multiple 
-        accesses.
-        """
-        self._last_time = time.time() - self._timings.pop()
-        return self._last_time
+    def _getTime(self):
+        return time.time()
 
     def startTest(self, test):
         super(TestResult, self).startTest(test)
-        self._somethingStarted()
+        self._testStarted = self._getTime()
 
     def stopTest(self, method):
         super(TestResult, self).stopTest(method)
-        self._somethingStopped()
+        self._lastTime = self._getTime() - self._testStarted
 
     def addFailure(self, test, fail):
         if isinstance(fail, tuple):
@@ -113,7 +103,6 @@ class Reporter(TestResult):
 
     def startTest(self, test):
         super(Reporter, self).startTest(test)
-        self._somethingStarted()
 
     def addFailure(self, test, fail):
         super(Reporter, self).addFailure(test, fail)
@@ -220,12 +209,19 @@ class Reporter(TestResult):
 
 
 class MinimalReporter(Reporter):
+    _runStarted = None
+    
+    def startTest(self, test):
+        super(MinimalReporter, self).startTest(test)
+        if self._runStarted is None:
+            self._runStarted = self._getTime()
+    
     def printErrors(self):
         pass
 
     def printSummary(self):
         numTests = self.testsRun
-        t = (self._somethingStopped(), numTests, numTests,
+        t = (self._runStarted - self._getTime(), numTests, numTests,
              len(self.errors), len(self.failures), len(self.skips))
         self.stream.write(' '.join(map(str,t))+'\n')
 
@@ -295,7 +291,7 @@ class VerboseTextReporter(Reporter):
 class TimingTextReporter(VerboseTextReporter):
     def stopTest(self, method):
         super(TimingTextReporter, self).stopTest(method)
-        self.write("(%.03f secs)\n" % self._last_time)
+        self.write("(%.03f secs)\n" % self._lastTime)
 
 
 class TreeReporter(Reporter):

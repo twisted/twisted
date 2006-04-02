@@ -8,6 +8,7 @@ import time, re, StringIO
 from twisted.trial import unittest, runner, reporter
 from twisted.trial.test import erroneous
 
+
 class TestErrorReporting(unittest.TestCase):
     doubleSeparator = re.compile(r'^=+$')
     
@@ -39,18 +40,6 @@ class TestErrorReporting(unittest.TestCase):
         result.printErrors()
         return output.getvalue()
     
-    def test_timing(self):
-        the_reporter = reporter.Reporter()
-        the_reporter._somethingStarted()
-        time.sleep(0.01)
-        the_reporter._somethingStarted()
-        time.sleep(0.01)
-        time1 = the_reporter._somethingStopped()
-        time.sleep(0.01)
-        time2 = the_reporter._somethingStopped()
-        self.failUnless(time1 < time2, 'Asserted: %s < %s' % (time1, time2))
-        self.assertEqual(the_reporter._last_time, time2)
-        
     def testFormatErroredMethod(self):
         suite = self.loader.loadClass(erroneous.TestFailureInSetUp)
         output = self.runTests(suite).splitlines()
@@ -101,7 +90,7 @@ class TestErrorReporting(unittest.TestCase):
         self.assertSubstring(erroneous.HIDDEN_EXCEPTION_MSG, output)
 
 
-class PyunitTest(unittest.TestCase):
+class PyunitTestNames(unittest.TestCase):
     def setUp(self):
         from twisted.trial.test import sample
         self.stream = StringIO.StringIO()
@@ -134,19 +123,17 @@ class PyunitTest(unittest.TestCase):
         self.failUnlessEqual(output[1:], ['1', '1', '0', '0', '0'])
 
 
-class TrialTest(unittest.TestCase):
+class TrialTestNames(unittest.TestCase):
     def setUp(self):
         from twisted.trial.test import sample
         self.stream = StringIO.StringIO()
-        self.test = TestErrorReporting('test_timing')
+        self.test = sample.FooTest('test_foo')
     
     def test_verboseReporter(self):
         result = reporter.VerboseTextReporter(self.stream)
         result.startTest(self.test)
         output = self.stream.getvalue()
-        self.failUnlessEqual(
-            output, ('twisted.trial.test.test_reporter.TestErrorReporting'
-                     '.test_timing ... '))
+        self.failUnlessEqual(output, self.test.id() + ' ... ')
 
     def test_treeReporter(self):
         result = reporter.TreeReporter(self.stream)
@@ -158,14 +145,15 @@ class TrialTest(unittest.TestCase):
     def test_getDescription(self):
         result = reporter.TreeReporter(self.stream)
         output = result.getDescription(self.test)
-        self.failUnlessEqual(output, "test_timing")
+        self.failUnlessEqual(output, "test_foo")
 
 
 class SkipTest(unittest.TestCase):
     def setUp(self):
+        from twisted.trial.test import sample
         self.stream = StringIO.StringIO()
         self.result = reporter.Reporter(self.stream)
-        self.test = TestErrorReporting('test_timing')
+        self.test = sample.FooTest('test_foo')
 
     def test_accumulation(self):
         self.result.addSkip(self.test, 'some reason')
@@ -210,14 +198,21 @@ class TestReporter(unittest.TestCase):
     resultFactory = reporter.Reporter
     
     def setUp(self):
-        self.test = TestErrorReporting('test_timing')
+        from twisted.trial.test import sample
+        self.test = sample.FooTest('test_foo')
         self.stream = StringIO.StringIO()
         self.result = self.resultFactory(self.stream)
+        self._timer = 0
+        self.result._getTime = self._getTime
+
+    def _getTime(self):
+        self._timer += 1
+        return self._timer
     
     def test_startStop(self):
         self.result.startTest(self.test)
         self.result.stopTest(self.test)
-        self.assertTrue(self.result._last_time > 0)
+        self.assertTrue(self.result._lastTime > 0)
         self.assertEqual(self.result.testsRun, 1)
         self.assertEqual(self.result.wasSuccessful(), True)
 
