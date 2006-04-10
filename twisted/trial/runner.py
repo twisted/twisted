@@ -171,8 +171,7 @@ class TrialSuite(TestSuite):
         # manually shutdown the reactor here, and that requires util.wait
         # :(
         # so that the shutdown event completes
-        utils.runWithWarningsSuppressed([(['ignore', 'Do NOT use wait.*'], {})],
-                                        util.wait, d)
+        unittest.TestCase('mktemp')._wait(d)
 
     def run(self, result):
         try:

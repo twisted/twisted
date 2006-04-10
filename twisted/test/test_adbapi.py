@@ -4,7 +4,7 @@
 
 """Tests for twisted.enterprise.adbapi."""
 
-from twisted.trial import unittest, util
+from twisted.trial import unittest
 
 import os, stat, tempfile
 
@@ -26,18 +26,16 @@ class ADBAPITestBase:
     if interfaces.IReactorThreads(reactor, None) is None:
         skip = "ADB-API requires threads, no way to test without them"
 
-    def wait(self, d, timeout=10.0):
-        return util.wait(d, timeout=timeout)
-
     def setUp(self):
         self.startDB()
         self.dbpool = self.makePool(cp_openfun=self.openfun)
         self.dbpool.start()
 
     def tearDown(self):
-        self.wait(self.dbpool.runOperation('DROP TABLE simple'))
-        self.dbpool.close()
-        self.stopDB()
+        d =  self.dbpool.runOperation('DROP TABLE simple')
+        d.addCallback(lambda res: self.dbpool.close())
+        d.addCallback(lambda res: self.stopDB())
+        return d
 
     def openfun(self, conn):
         self.openfun_called[conn] = True
@@ -49,96 +47,136 @@ class ADBAPITestBase:
             self.failUnless(self.openfun_called.has_key(conn))
 
     def testPool(self):
-        self.wait(self.dbpool.runOperation(simple_table_schema))
-
+        d = self.dbpool.runOperation(simple_table_schema)
         if self.test_failures:
-            # make sure failures are raised correctly
-            try:
-                self.wait(self.dbpool.runQuery("select * from NOTABLE"))
-                self.fail('no exception')
-            except:
-                pass
+            d.addCallback(self._testPool_1_1)
+            d.addCallback(self._testPool_1_2)
+            d.addCallback(self._testPool_1_3)
+            d.addCallback(self._testPool_1_4)
+            d.addCallback(lambda res: log.flushErrors())
+        d.addCallback(self._testPool_2)
+        d.addCallback(self._testPool_3)
+        d.addCallback(self._testPool_4)
+        d.addCallback(self._testPool_5)
+        d.addCallback(self._testPool_6)
+        d.addCallback(self._testPool_7)
+        d.addCallback(self._testPool_8)
+        d.addCallback(self._testPool_9)
+        return d
 
-            try:
-                self.wait(self.dbpool.runOperation("deletexxx from NOTABLE"))
-                self.fail('no exception')
-            except:
-                pass
+    def _testPool_1_1(self, res):
+        d = defer.maybeDeferred(self.dbpool.runQuery, "select * from NOTABLE")
+        d.addCallbacks(lambda res: self.fail('no exception'),
+                       lambda f: None)
+        return d
 
-            try:
-                self.wait(self.dbpool.runInteraction(self.bad_interaction))
-                self.fail('no exception')
-            except:
-                pass
-                
-            try:
-                self.wait(self.dbpool.runWithConnection(self.bad_withConnection))
-                self.fail('no exception')
-            except:
-                pass
-            log.flushErrors()
+    def _testPool_1_2(self, res):
+        d = defer.maybeDeferred(self.dbpool.runOperation,
+                                "deletexxx from NOTABLE")
+        d.addCallbacks(lambda res: self.fail('no exception'),
+                       lambda f: None)
+        return d
 
+    def _testPool_1_3(self, res):
+        d = defer.maybeDeferred(self.dbpool.runInteraction,
+                                self.bad_interaction)
+        d.addCallbacks(lambda res: self.fail('no exception'),
+                       lambda f: None)
+        return d
+
+    def _testPool_1_4(self, res):
+        d = defer.maybeDeferred(self.dbpool.runWithConnection,
+                                self.bad_withConnection)
+        d.addCallbacks(lambda res: self.fail('no exception'),
+                       lambda f: None)
+        return d
+
+    def _testPool_2(self, res):
         # verify simple table is empty
         sql = "select count(1) from simple"
-        row = self.wait(self.dbpool.runQuery(sql))
-        self.failUnless(int(row[0][0]) == 0, "Interaction not rolled back")
+        d = self.dbpool.runQuery(sql)
+        def _check(row):
+            self.failUnless(int(row[0][0]) == 0, "Interaction not rolled back")
+            self.checkOpenfunCalled()
+        d.addCallback(_check)
+        return d
 
-        self.checkOpenfunCalled()
-
+    def _testPool_3(self, res):
+        sql = "select count(1) from simple"
         inserts = []
         # add some rows to simple table (runOperation)
         for i in range(self.num_iterations):
             sql = "insert into simple(x) values(%d)" % i
             inserts.append(self.dbpool.runOperation(sql))
-        self.wait(defer.gatherResults(inserts), timeout=self.num_iterations)
-        del inserts
+        d = defer.gatherResults(inserts)
 
-        # make sure they were added (runQuery)
-        sql = "select x from simple order by x";
-        rows = self.wait(self.dbpool.runQuery(sql))
-        self.failUnless(len(rows) == self.num_iterations,
-                        "Wrong number of rows")
-        for i in range(self.num_iterations):
-            self.failUnless(len(rows[i]) == 1, "Wrong size row")
-            self.failUnless(rows[i][0] == i, "Values not returned.")
+        def _select(res):
+            # make sure they were added (runQuery)
+            sql = "select x from simple order by x";
+            d = self.dbpool.runQuery(sql)
+            return d
+        d.addCallback(_select)
 
+        def _check(rows):
+            self.failUnless(len(rows) == self.num_iterations,
+                            "Wrong number of rows")
+            for i in range(self.num_iterations):
+                self.failUnless(len(rows[i]) == 1, "Wrong size row")
+                self.failUnless(rows[i][0] == i, "Values not returned.")
+        d.addCallback(_check)
+
+        return d
+
+    def _testPool_4(self, res):
         # runInteraction
-        res = self.wait(self.dbpool.runInteraction(self.interaction))
-        self.assertEquals(res, "done")
+        d = self.dbpool.runInteraction(self.interaction)
+        d.addCallback(lambda res: self.assertEquals(res, "done"))
+        return d
 
+    def _testPool_5(self, res):
         # withConnection
-        res = self.wait(self.dbpool.runWithConnection(self.withConnection))
-        self.assertEquals(res, "done")
+        d = self.dbpool.runWithConnection(self.withConnection)
+        d.addCallback(lambda res: self.assertEquals(res, "done"))
+        return d
 
+    def _testPool_6(self, res):
         # Test a withConnection cannot be closed
-        res = self.wait(self.dbpool.runWithConnection(self.close_withConnection))
+        d = self.dbpool.runWithConnection(self.close_withConnection)
+        return d
 
+    def _testPool_7(self, res):
         # give the pool a workout
         ds = []
         for i in range(self.num_iterations):
             sql = "select x from simple where x = %d" % i
             ds.append(self.dbpool.runQuery(sql))
         dlist = defer.DeferredList(ds, fireOnOneErrback=True)
-        result = self.wait(dlist, timeout=self.num_iterations / 5.0)
-        for i in range(self.num_iterations):
-            self.failUnless(result[i][1][0][0] == i, "Value not returned")
+        def _check(result):
+            for i in range(self.num_iterations):
+                self.failUnless(result[i][1][0][0] == i, "Value not returned")
+        dlist.addCallback(_check)
+        return dlist
 
+    def _testPool_8(self, res):
         # now delete everything
         ds = []
         for i in range(self.num_iterations):
             sql = "delete from simple where x = %d" % i
             ds.append(self.dbpool.runOperation(sql))
         dlist = defer.DeferredList(ds, fireOnOneErrback=True)
-        self.wait(dlist, timeout=self.num_iterations / 5.0)
+        return dlist
 
+    def _testPool_9(self, res):
         # verify simple table is empty
         sql = "select count(1) from simple"
-        row = self.wait(self.dbpool.runQuery(sql))
-        self.failUnless(int(row[0][0]) == 0,
-                        "Didn't successfully delete table contents")
+        d = self.dbpool.runQuery(sql)
+        def _check(row):
+            self.failUnless(int(row[0][0]) == 0,
+                            "Didn't successfully delete table contents")
+            self.checkConnect()
+        d.addCallback(_check)
+        return d
 
-        self.checkConnect()
-    
     def checkConnect(self):
         """Check the connect/disconnect synchronous calls."""
         conn = self.dbpool.connect()
@@ -197,16 +235,11 @@ class ADBAPITestBase:
             curs.close()
         
 
-ADBAPITestBase.timeout = 30.0
-
 class ReconnectTestBase:
     """Test the asynchronous DB-API code with reconnect."""
 
     if interfaces.IReactorThreads(reactor, None) is None:
         skip = "ADB-API requires threads, no way to test without them"
-
-    def wait(self, d, timeout=10.0):
-        return util.wait(d, timeout=timeout)
 
     def setUp(self):
         if self.good_sql is None:
@@ -215,41 +248,58 @@ class ReconnectTestBase:
         self.dbpool = self.makePool(cp_max=1, cp_reconnect=True,
                                     cp_good_sql=self.good_sql)
         self.dbpool.start()
-        self.wait(self.dbpool.runOperation(simple_table_schema))
+        return self.dbpool.runOperation(simple_table_schema)
 
     def tearDown(self):
-        self.wait(self.dbpool.runOperation('DROP TABLE simple'))
-        self.dbpool.close()
-        self.stopDB()
+        d = self.dbpool.runOperation('DROP TABLE simple')
+        d.addCallback(lambda res: self.dbpool.close())
+        d.addCallback(lambda res: self.stopDB())
+        return d
 
     def testPool(self):
-        sql = "select count(1) from simple"
-        row = self.wait(self.dbpool.runQuery(sql))
-        self.failUnless(int(row[0][0]) == 0, "Table not empty")
+        d = defer.succeed(None)
+        d.addCallback(self._testPool_1)
+        d.addCallback(self._testPool_2)
+        if not self.early_reconnect:
+            d.addCallback(self._testPool_3)
+        d.addCallback(self._testPool_4)
+        d.addCallback(self._testPool_5)
+        return d
 
+    def _testPool_1(self, res):
+        sql = "select count(1) from simple"
+        d = self.dbpool.runQuery(sql)
+        def _check(row):
+            self.failUnless(int(row[0][0]) == 0, "Table not empty")
+        d.addCallback(_check)
+        return d
+
+    def _testPool_2(self, res):
         # reach in and close the connection manually
         self.dbpool.connections.values()[0].close()
 
-        if not self.early_reconnect:
-            try:
-                self.wait(self.dbpool.runQuery(sql))
-                self.fail('no exception')
-            except ConnectionLost:
-                pass
-            except:
-                self.fail('not connection lost')
+    def _testPool_3(self, res):
+        sql = "select count(1) from simple"
+        d = defer.maybeDeferred(self.dbpool.runQuery, sql)
+        d.addCallbacks(lambda res: self.fail('no exception'),
+                       lambda f: f.trap(ConnectionLost))
+        return d
 
-        row = self.wait(self.dbpool.runQuery(sql))
-        self.failUnless(int(row[0][0]) == 0, "Table not empty")
+    def _testPool_4(self, res):
+        sql = "select count(1) from simple"
+        d = self.dbpool.runQuery(sql)
+        def _check(row):
+            self.failUnless(int(row[0][0]) == 0, "Table not empty")
+        d.addCallback(_check)
+        return d
 
+    def _testPool_5(self, res):
         sql = "select * from NOTABLE" # bad sql
-        try:
-            self.wait(self.dbpool.runQuery(sql))
-            self.fail('no exception')
-        except ConnectionLost:
-            self.fail('connection lost exception')
-        except:
-            pass
+        d = defer.maybeDeferred(self.dbpool.runQuery, sql)
+        d.addCallbacks(lambda res: self.fail('no exception'),
+                       lambda f: self.failIf(f.check(ConnectionLost)))
+        return d
+
 
 class DBTestConnector:
     """A class which knows how to test for the presence of

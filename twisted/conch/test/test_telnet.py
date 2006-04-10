@@ -4,9 +4,11 @@
 
 from zope.interface import implements
 
+from twisted.internet import defer
+
 from twisted.conch import telnet
 
-from twisted.trial import unittest, util
+from twisted.trial import unittest
 from twisted.test import proto_helpers
 
 class TestProtocol:
@@ -384,8 +386,9 @@ class TelnetTestCase(unittest.TestCase):
 
         self.p.dataReceived(telnet.IAC + telnet.WILL + '\x42')
 
-        self.assertEquals(util.wait(d), True)
-        self._enabledHelper(h, eR=['\x42'])
+        d.addCallback(self.assertEquals, True)
+        d.addCallback(lambda _:  self._enabledHelper(h, eR=['\x42']))
+        return d        
 
     def testRefusedEnableRequest(self):
         # Try to enable an option through the user-level API.  This
@@ -398,8 +401,9 @@ class TelnetTestCase(unittest.TestCase):
 
         self.p.dataReceived(telnet.IAC + telnet.WONT + '\x42')
 
-        self.assertRaises(telnet.OptionRefused, util.wait, d)
-        self._enabledHelper(self.p.protocol)
+        d = self.assertFailure(d, telnet.OptionRefused)
+        d.addCallback(lambda _: self._enabledHelper(self.p.protocol))
+        return d
 
     def testAcceptedDisableRequest(self):
         # Try to disable an option through the user-level API.  This
@@ -415,8 +419,10 @@ class TelnetTestCase(unittest.TestCase):
 
         self.p.dataReceived(telnet.IAC + telnet.WONT + '\x42')
 
-        self.assertEquals(util.wait(d), True)
-        self._enabledHelper(self.p.protocol, dR=['\x42'])
+        d.addCallback(self.assertEquals, True)
+        d.addCallback(lambda _: self._enabledHelper(self.p.protocol,
+                                                    dR=['\x42']))
+        return d
 
     def testNegotiationBlocksFurtherNegotiation(self):
         # Try to disable an option, then immediately try to enable it, then
@@ -424,33 +430,46 @@ class TelnetTestCase(unittest.TestCase):
         # fail quickly with the right exception.
         s = self.p.getOptionState('\x24')
         s.him.state = 'yes'
+        d2 = self.p.dont('\x24') # fires after the first line of _final
 
-        d = self.p.dont('\x24')
+        def _do(x):
+            d = self.p.do('\x24')
+            return self.assertFailure(d, telnet.AlreadyNegotiating)
 
-        self.assertRaises(telnet.AlreadyNegotiating, util.wait, self.p.do('\x24'))
-        self.assertRaises(telnet.AlreadyNegotiating, util.wait, self.p.dont('\x24'))
-        self.p.dataReceived(telnet.IAC + telnet.WONT + '\x24')
-        self._enabledHelper(self.p.protocol, dR=['\x24'])
+        def _dont(x):
+            d = self.p.dont('\x24')
+            return self.assertFailure(d, telnet.AlreadyNegotiating)
 
-        # Make sure we allow this
-        self.p.protocol.remoteEnableable = ('\x24',)
+        def _final(x):
+            self.p.dataReceived(telnet.IAC + telnet.WONT + '\x24')
+            # an assertion that only passes if d2 has fired 
+            self._enabledHelper(self.p.protocol, dR=['\x24'])
+            # Make sure we allow this
+            self.p.protocol.remoteEnableable = ('\x24',)
+            d = self.p.do('\x24')
+            self.p.dataReceived(telnet.IAC + telnet.WILL + '\x24')
+            d.addCallback(self.assertEquals, True)
+            d.addCallback(lambda _: self._enabledHelper(self.p.protocol,
+                                                        eR=['\x24'],
+                                                        dR=['\x24']))
+            return d
 
-        d = self.p.do('\x24')
-        self.p.dataReceived(telnet.IAC + telnet.WILL + '\x24')
-        self.assertEquals(util.wait(d), True)
-        self._enabledHelper(self.p.protocol, eR=['\x24'], dR=['\x24'])
+        d = _do(None)
+        d.addCallback(_dont)
+        d.addCallback(_final)
+        return d
 
     def testSuperfluousDisableRequestRaises(self):
         # Try to disable a disabled option.  Make sure it fails properly.
         d = self.p.dont('\xab')
-        self.assertRaises(telnet.AlreadyDisabled, util.wait, d)
+        return self.assertFailure(d, telnet.AlreadyDisabled)
 
     def testSuperfluousEnableRequestRaises(self):
         # Try to disable a disabled option.  Make sure it fails properly.
         s = self.p.getOptionState('\xab')
         s.him.state = 'yes'
         d = self.p.do('\xab')
-        self.assertRaises(telnet.AlreadyEnabled, util.wait, d)
+        return self.assertFailure(d, telnet.AlreadyEnabled)
 
     def testLostConnectionFailsDeferreds(self):
         d1 = self.p.do('\x12')
@@ -462,6 +481,7 @@ class TelnetTestCase(unittest.TestCase):
 
         self.p.connectionLost(TestException("Total failure!"))
 
-        self.assertRaises(TestException, util.wait, d1)
-        self.assertRaises(TestException, util.wait, d2)
-        self.assertRaises(TestException, util.wait, d3)
+        d1 = self.assertFailure(d1, TestException)
+        d2 = self.assertFailure(d2, TestException)
+        d3 = self.assertFailure(d3, TestException)
+        return defer.gatherResults([d1, d2, d3])

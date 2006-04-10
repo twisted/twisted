@@ -4,7 +4,7 @@
 
 """Tests for twisted.enterprise reflectors."""
 
-from twisted.trial import unittest, util as trialutil
+from twisted.trial import unittest
 
 import os, random
 
@@ -100,17 +100,19 @@ class ReflectorTestBase:
 
     count = 100 # a parameter used for running iterative tests
 
-    def wait(self, d, timeout=10.0):
-        return trialutil.wait(d, timeout=timeout)
-
     def randomizeRow(self, row):
         return randomizeRow(row, self.nulls_ok, self.trailing_spaces_ok)
 
     def setUp(self):
-        self.reflector = self.createReflector()
+        d = self.createReflector()
+        d.addCallback(self._cbSetUp)
+        return d
+
+    def _cbSetUp(self, reflector):
+        self.reflector = reflector
 
     def tearDown(self):
-        self.destroyReflector()
+        return self.destroyReflector()
 
     def destroyReflector(self):
         pass
@@ -122,20 +124,30 @@ class ReflectorTestBase:
         values = self.randomizeRow(row)
 
         # save it
-        self.wait(self.reflector.insertRow(row))
+        d = self.reflector.insertRow(row)
 
-        # now load it back in
-        whereClause = [("key_string", EQUAL, "first")]
-        d = self.reflector.loadObjectsFrom(tableName, whereClause=whereClause)
-        d.addCallback(self.gotData)
-        self.wait(d)
+        def _loadBack(_):
+            # now load it back in
+            whereClause = [("key_string", EQUAL, "first")]
+            d = self.reflector.loadObjectsFrom(tableName,
+                                               whereClause=whereClause)
+            return d.addCallback(self.gotData)
 
-        # make sure it came back as what we saved
-        self.failUnless(len(self.data) == 1, "no row")
-        parent = self.data[0]
-        self.failUnless(rowMatches(parent, values), "no match")
+        def _getParent(_):
+            # make sure it came back as what we saved
+            self.failUnless(len(self.data) == 1, "no row")
+            parent = self.data[0]
+            self.failUnless(rowMatches(parent, values), "no match")
+            return parent
 
+        d.addCallback(_loadBack)
+        d.addCallback(_getParent)
+        d.addCallback(self._cbTestReflector)
+        return d
+
+    def _cbTestReflector(self, parent):
         # create some child rows
+        test_values = {}
         inserts = []
         child_values = {}
         for i in range(0, self.num_iterations):
@@ -146,113 +158,127 @@ class ReflectorTestBase:
             child_values[i] = values
             inserts.append(self.reflector.insertRow(row))
             row = None
-        self.wait(defer.gatherResults(inserts), timeout=self.num_iterations)
-        del inserts
+        #del inserts
+        d = defer.gatherResults(inserts)
+        values = [None]
 
-        d = self.reflector.loadObjectsFrom(childTableName, parentRow=parent)
-        d.addCallback(self.gotData)
-        self.wait(d)
+        def _loadObjects(_):
+            d = self.reflector.loadObjectsFrom(childTableName, parentRow=parent)
+            return d.addCallback(self.gotData)
 
-        self.failUnless(len(self.data) == self.num_iterations,
-                        "no rows on query")
-        self.failUnless(len(parent.childRows) == self.num_iterations,
-                        "did not load child rows: %d" % len(parent.childRows))
-        for child in parent.childRows:
-            self.failUnless(rowMatches(child, child_values[child.childId]),
-                            "child %d does not match" % child.childId)
+        def _checkLoadObjects(_):
+            self.failUnless(len(self.data) == self.num_iterations,
+                            "no rows on query")
+            self.failUnless(len(parent.childRows) == self.num_iterations,
+                            "did not load child rows: %d" % len(parent.childRows))
+            for child in parent.childRows:
+                self.failUnless(rowMatches(child, child_values[child.childId]),
+                                "child %d does not match" % child.childId)
 
-        # loading these objects a second time should not re-add them
-        # to the parentRow.
-        d = self.reflector.loadObjectsFrom(childTableName, parentRow=parent)
-        d.addCallback(self.gotData)
-        self.wait(d)
+        def _checkLoadObjects2(_):
+            self.failUnless(len(self.data) == self.num_iterations,
+                            "no rows on query")
+            self.failUnless(len(parent.childRows) == self.num_iterations,
+                            "child rows added twice!: %d" % len(parent.childRows))
 
-        self.failUnless(len(self.data) == self.num_iterations,
-                        "no rows on query")
-        self.failUnless(len(parent.childRows) == self.num_iterations,
-                        "child rows added twice!: %d" % len(parent.childRows))
+        def _changeParent(_):
+            # now change the parent
+            values[0] = self.randomizeRow(parent)
+            return self.reflector.updateRow(parent)
 
-        # now change the parent
-        values = self.randomizeRow(parent)
-        self.wait(self.reflector.updateRow(parent))
-        parent = None
+        def _loadBack(_):
+            # now load it back in
+            whereClause = [("key_string", EQUAL, "first")]
+            d = self.reflector.loadObjectsFrom(tableName, whereClause=whereClause)
+            return d.addCallback(self.gotData)
 
-        # now load it back in
-        whereClause = [("key_string", EQUAL, "first")]
-        d = self.reflector.loadObjectsFrom(tableName, whereClause=whereClause)
-        d.addCallback(self.gotData)
-        self.wait(d)
+        def _checkLoadBack(_):
+            # make sure it came back as what we saved
+            self.failUnless(len(self.data) == 1, "no row")
+            parent = self.data[0]
+            self.failUnless(rowMatches(parent, values[0]), "no match")
+            # save parent
+            test_values[parent.key_string] = values[0]
+            parent = None
 
-        # make sure it came back as what we saved
-        self.failUnless(len(self.data) == 1, "no row")
-        parent = self.data[0]
-        self.failUnless(rowMatches(parent, values), "no match")
+        def _saveMoreTestRows(_):
+            # save some more test rows
+            ds = []
+            for i in range(0, self.num_iterations):
+                row = TestRow()
+                row.assignKeyAttr("key_string", "bulk%d"%i)
+                test_values[row.key_string] = self.randomizeRow(row)
+                ds.append(self.reflector.insertRow(row))
+            return defer.gatherResults(ds)
 
-        # save parent
-        test_values = {}
-        test_values[parent.key_string] = values
-        parent = None
+        def _loadRowsBack(_):
+            # now load them all back in
+            d = self.reflector.loadObjectsFrom("testTable")
+            return d.addCallback(self.gotData)
 
-        # save some more test rows
-        for i in range(0, self.num_iterations):
-            row = TestRow()
-            row.assignKeyAttr("key_string", "bulk%d"%i)
-            test_values[row.key_string] = self.randomizeRow(row)
-            self.wait(self.reflector.insertRow(row))
-            row = None
+        def _checkRowsBack(_):
+            # make sure they are the same
+            self.failUnless(len(self.data) == self.num_iterations + 1,
+                            "query did not get rows")
+            for row in self.data:
+                self.failUnless(rowMatches(row, test_values[row.key_string]),
+                                "child %s does not match" % row.key_string)
 
-        # now load them all back in
-        d = self.reflector.loadObjectsFrom("testTable")
-        d.addCallback(self.gotData)
-        self.wait(d, 100.0)
+        def _changeRows(_):
+            # now change them all
+            ds = []
+            for row in self.data:
+                test_values[row.key_string] = self.randomizeRow(row)
+                ds.append(self.reflector.updateRow(row))
+            d = defer.gatherResults(ds)
+            return d.addCallback(_cbChangeRows)
 
-        # make sure they are the same
-        self.failUnless(len(self.data) == self.num_iterations + 1,
-                        "query did not get rows")
-        for row in self.data:
-            self.failUnless(rowMatches(row, test_values[row.key_string]),
-                            "child %s does not match" % row.key_string)
+        def _cbChangeRows(_):
+            self.data = None
 
-        # now change them all
-        for row in self.data:
-            test_values[row.key_string] = self.randomizeRow(row)
-            self.wait(self.reflector.updateRow(row))
-        self.data = None
+        def _deleteRows(_):
+            # now delete them
+            ds = []
+            for row in self.data:
+                ds.append(self.reflector.deleteRow(row))
+            d = defer.gatherResults(ds)
+            return d.addCallback(_cbChangeRows)
 
-        # load'em back
-        d = self.reflector.loadObjectsFrom("testTable")
-        d.addCallback(self.gotData)
-        self.wait(d)
+        def _checkRowsDeleted(_):
+            self.failUnless(len(self.data) == 0, "rows were not deleted")
 
-        # make sure they are the same
-        self.failUnless(len(self.data) == self.num_iterations + 1,
-                        "query did not get rows")
-        for row in self.data:
-            self.failUnless(rowMatches(row, test_values[row.key_string]),
-                            "child %s does not match" % row.key_string)
+        d.addCallback(_loadObjects)
+        d.addCallback(_checkLoadObjects)
+        d.addCallback(_loadObjects)
+        d.addCallback(_checkLoadObjects2)
+        d.addCallback(_changeParent)
+        d.addCallback(_loadBack)
+        d.addCallback(_checkLoadBack)
+        d.addCallback(_saveMoreTestRows)
+        d.addCallback(_loadRowsBack)
+        d.addCallback(_checkRowsBack)
+        d.addCallback(_changeRows)
+        d.addCallback(_loadRowsBack)
+        d.addCallback(_checkRowsBack)
+        d.addCallback(_deleteRows)
+        d.addCallback(_loadRowsBack)
+        d.addCallback(_checkRowsDeleted)
+        return d
 
-        # now delete them
-        for row in self.data:
-            self.wait(self.reflector.deleteRow(row))
-        self.data = None
 
-        # load'em back
-        d = self.reflector.loadObjectsFrom("testTable")
-        d.addCallback(self.gotData)
-        self.wait(d)
-
-        self.failUnless(len(self.data) == 0, "rows were not deleted")
-
+    def testSaveAndDelete(self):
         # create one row to work with
         row = TestRow()
         row.assignKeyAttr("key_string", "first")
         values = self.randomizeRow(row)
-
         # save it
-        self.wait(self.reflector.insertRow(row))
+        d = self.reflector.insertRow(row)
+        def _deleteRow(_):
+            # delete it
+            return self.reflector.deleteRow(row)
+        d.addCallback(_deleteRow)
+        return d
 
-        # delete it
-        self.wait(self.reflector.deleteRow(row))
 
     def gotData(self, data):
         self.data = data
@@ -268,27 +294,30 @@ class SQLReflectorTestBase(ReflectorTestBase):
         self.dbpool.start()
 
         if self.can_clear:
-            try:
-                self.wait(self.dbpool.runOperation('DROP TABLE testTable'))
-            except:
-                pass
+            d = self.dbpool.runOperation('DROP TABLE testTable')
+            d.addCallback(lambda _:
+                          self.dbpool.runOperation('DROP TABLE childTable'))
+            d.addErrback(lambda _: None)
+        else:
+            d = defer.succeed(None)
 
-            try:
-                self.wait(self.dbpool.runOperation('DROP TABLE childTable'))
-            except:
-                pass
-
-        self.wait(self.dbpool.runOperation(main_table_schema))
-        self.wait(self.dbpool.runOperation(child_table_schema))
+        d.addCallback(lambda _: self.dbpool.runOperation(main_table_schema))
+        d.addCallback(lambda _: self.dbpool.runOperation(child_table_schema))
         reflectorClass = self.escape_slashes and SQLReflector \
                          or NoSlashSQLReflector
-        return reflectorClass(self.dbpool, [TestRow, ChildRow])
+        d.addCallback(lambda _:
+                      reflectorClass(self.dbpool, [TestRow, ChildRow]))
+        return d
 
     def destroyReflector(self):
-        self.wait(self.dbpool.runOperation('DROP TABLE testTable'))
-        self.wait(self.dbpool.runOperation('DROP TABLE childTable'))
-        self.dbpool.close()
-        self.stopDB()
+        d = self.dbpool.runOperation('DROP TABLE testTable')
+        d.addCallback(lambda _:
+                      self.dbpool.runOperation('DROP TABLE childTable'))
+        def close(_):
+            self.dbpool.close()
+            self.stopDB()
+        d.addCallback(close)
+        return d
 
 # GadflyReflectorTestCase SQLiteReflectorTestCase PyPgSQLReflectorTestCase
 # PsycopgReflectorTestCase MySQLReflectorTestCase FirebirdReflectorTestCase

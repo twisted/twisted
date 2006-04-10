@@ -10,7 +10,6 @@ from __future__ import nested_scopes
 import socket, operator, copy
 
 from twisted.trial import unittest
-from twisted.trial.util import wait
 
 from twisted.internet import reactor, defer, error
 from twisted.names import client, server, common, authority, hosts, dns
@@ -459,37 +458,37 @@ class HostsTestCase(unittest.TestCase):
                 ('EXAMPLE.EXAMPLETHING', '1.1.1.1'),
                 ('HOOJY', '1.1.1.2'),
                 ]
-
-        for name, ip in data:
-            self.assertEquals(
-                wait(self.resolver.getHostByName(name)),
-                ip)
+        ds = [self.resolver.getHostByName(n).addCallback(self.assertEqual, ip)
+              for n, ip in data]
+        return defer.gatherResults(ds)
 
     def testLookupAddress(self):
-        stuff = wait(self.resolver.lookupAddress('HOOJY'))
-        self.assertEquals(stuff[0][0].payload.dottedQuad(), '1.1.1.2')
+        d = self.resolver.lookupAddress('HOOJY')
+        d.addCallback(lambda x: self.assertEqual(x[0][0].payload.dottedQuad(),
+                                                 '1.1.1.2'))
+        return d
 
     def testIPv6(self):
-        self.assertEquals(
-            wait(self.resolver.lookupIPV6Address('ip6thingy')),
-            '::1') #???
+        d = self.resolver.lookupIPV6Address('ip6thingy')
+        d.addCallback(self.assertEqual, '::1')
+        return d
 
     testIPv6.skip = 'IPv6 support is not in our hosts resolver yet'
 
     def testNotImplemented(self):
-        self.assertRaises(
-            NotImplementedError,
-            lambda: wait(self.resolver.lookupMailExchange('EXAMPLE')))
+        return self.assertFailure(self.resolver.lookupMailExchange('EXAMPLE'),
+                                  NotImplementedError)
 
     def testQuery(self):
-        self.assertEquals(
-            wait(self.resolver.query(dns.Query('EXAMPLE')))[0][0].payload.dottedQuad(),
-            '1.1.1.1')
+        d = self.resolver.query(dns.Query('EXAMPLE'))
+        d.addCallback(lambda x: self.assertEqual(x[0][0].payload.dottedQuad(),
+                                                 '1.1.1.1'))
+        return d
 
     def testNotFound(self):
-        self.assertRaises(
-            dns.DomainError,
-            wait, self.resolver.lookupAddress('foueoa'))
+        return self.assertFailure(self.resolver.lookupAddress('foueoa'),
+                                  dns.DomainError)
+
 
 class FakeDNSDatagramProtocol(object):
     transport = object()

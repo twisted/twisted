@@ -17,7 +17,7 @@ import tempfile
 
 from zope.interface import providedBy
 
-from twisted.trial import unittest, util as trialutil
+from twisted.trial import unittest
 from twisted.mail import smtp
 from twisted.mail import pop3
 from twisted.names import dns
@@ -236,10 +236,15 @@ class MaildirAppendStringTestCase(unittest.TestCase):
     def testAppend(self):
         mbox = mail.maildir.MaildirMailbox(self.d)
         mbox.AppendFactory = FailingMaildirMailboxAppendMessageTask
+        ds = []
         for i in xrange(1, 11):
-            self.assertEquals(
-                trialutil.wait(mbox.appendMessage("X" * i)),
-                None)
+            ds.append(mbox.appendMessage("X" * i))
+            ds[-1].addCallback(self.assertEqual, None)
+        d = defer.gatherResults(ds)
+        d.addCallback(self._cbTestAppend, mbox)
+        return d
+
+    def _cbTestAppend(self, result, mbox):
         self.assertEquals(len(mbox.listMessages()),
                           10)
         self.assertEquals(len(mbox.getMessage(5).read()), 6)
@@ -264,14 +269,19 @@ class MaildirAppendFileTestCase(unittest.TestCase):
 
     def testAppend(self):
         mbox = mail.maildir.MaildirMailbox(self.d)
+        ds = []
+        def _check(res, t):
+            t.close()
+            self.assertEqual(res, None)
         for i in xrange(1, 11):
             temp = tempfile.TemporaryFile()
             temp.write("X" * i)
             temp.seek(0,0)
-            self.assertEquals(
-                trialutil.wait(mbox.appendMessage(temp)),
-                None)
-            temp.close()
+            ds.append(mbox.appendMessage(temp))
+            ds[-1].addCallback(_check, temp)
+        return defer.gatherResults(ds).addCallback(self._cbTestAppend, mbox)
+
+    def _cbTestAppend(self, result, mbox):
         self.assertEquals(len(mbox.listMessages()),
                           10)
         self.assertEquals(len(mbox.getMessage(5).read()), 6)

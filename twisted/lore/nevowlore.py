@@ -4,7 +4,11 @@
 #
 
 """
-Nevow support for lore.
+Nevow support for lore. DEPRECATED.
+
+Don't use this module, it will be removed in the release of Twisted
+after 2.3. If you want static templating with Nevow, instantiate a
+rend.Page() and call renderString (or renderSynchronously) yourself.
 
 Do something like::
 
@@ -15,6 +19,11 @@ API Stability: unstable
 Maintainer: U{Christopher Armstrong<mailto:radix@twistedmatrix.com>}
 
 """
+
+import warnings
+warnings.warn("twisted.lore.nevowlore is deprecated. Please instantiate "
+              "rend.Page and call renderString or renderSynchronously "
+              "yourself.", DeprecationWarning, stacklevel=2)
 
 import os
 
@@ -40,6 +49,17 @@ def parseStringAndReport(s):
     except IOError, e:
         raise process.ProcessingFailure(e.strerror)
 
+def ____wait(d):
+    "."
+    from twisted.internet import reactor
+    from twisted.python import failure
+    l = []
+    d.addBoth(l.append)
+    while not l:
+        reactor.iterate()
+    if isinstance(l[0], failure.Failure):
+        l[0].raiseException()
+    return l[0]
 
 def nevowify(filename, linkrel, ext, url, templ, options=None, outfileGenerator=tree.getOutputFileName):
     if options is None:
@@ -48,8 +68,7 @@ def nevowify(filename, linkrel, ext, url, templ, options=None, outfileGenerator=
     pclass = reflect.namedObject(pclass)
     page = pclass(docFactory=loaders.htmlfile(filename))
     s = page.renderString()
-    from twisted.trial.util import wait
-    s = wait(s)
+    s = ____wait(s)
 
     newFilename = outfileGenerator(filename, ext)
 

@@ -1,7 +1,6 @@
 import tempfile, operator, sys, os
 
 from twisted.trial import unittest
-from twisted.trial.util import wait
 from twisted.internet import reactor, defer, interfaces
 from twisted.python import log
 from zope.interface import Interface, Attribute, implements
@@ -206,12 +205,15 @@ class FallbackSplitTest(unittest.TestCase):
     def test_split(self):
         s = TestStreamer(['abcd', defer.succeed('efgh'), 'ijkl'])
         left,right = stream.fallbackSplit(s, 5)
-        
         self.assertEquals(left.length, 5)
         self.assertEquals(right.length, None)
-        
         self.assertEquals(bufstr(left.read()), 'abcd')
-        self.assertEquals(bufstr(wait(left.read())), 'e')
+        d = left.read()
+        d.addCallback(self._cbSplit, left, right)
+        return d
+
+    def _cbSplit(self, result, left, right):
+        self.assertEquals(bufstr(result), 'e')
         self.assertEquals(left.read(), None)
 
         self.assertEquals(bufstr(right.read().result), 'fgh')
@@ -278,7 +280,12 @@ class FallbackSplitTest(unittest.TestCase):
         s = TestStreamer(['abcd', defer.succeed('efgh'), 'ijkl'])
         left,right = stream.fallbackSplit(s, 5)
         left.close()
-        self.assertEquals(bufstr(wait(right.read())), 'fgh')
+        d = right.read()
+        d.addCallback(self._cbCloseleft, right)
+        return d
+
+    def _cbCloseleft(self, result, right):
+        self.assertEquals(bufstr(result), 'fgh')
         self.assertEquals(bufstr(right.read()), 'ijkl')
         self.assertEquals(right.read(), None)
 

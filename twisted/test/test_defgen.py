@@ -40,8 +40,7 @@ class DefGenTests(unittest.TestCase):
 
 
     def testBasics(self):
-        self.assertEquals(util.wait(self._genWoosh()), "WOOSH")
-
+        return self._genWoosh().addCallback(self.assertEqual, 'WOOSH')
 
     def testBuggyGen(self):
         def _genError():
@@ -49,7 +48,7 @@ class DefGenTests(unittest.TestCase):
             1/0
         _genError = deferredGenerator(_genError)
 
-        self.assertRaises(ZeroDivisionError, util.wait, _genError())
+        return self.assertFailure(_genError(), ZeroDivisionError)
 
 
     def testNothing(self):
@@ -57,7 +56,7 @@ class DefGenTests(unittest.TestCase):
             if 0: yield 1
         _genNothing = deferredGenerator(_genNothing)
 
-        self.assertEquals(util.wait(_genNothing()), None)
+        return _genNothing().addCallback(self.assertEqual, None)
 
     def testDeferredYielding(self):
         # See the comment _deferGenerator about d.callback(Deferred).
@@ -65,7 +64,7 @@ class DefGenTests(unittest.TestCase):
             yield getThing()
         _genDeferred = deferredGenerator(_genDeferred)
 
-        self.assertRaises(TypeError, util.wait, _genDeferred())
+        return self.assertFailure(_genDeferred(), TypeError)
 
     def testStackUsage(self):
         # Make sure we don't blow the stack when yielding immediately
@@ -79,7 +78,7 @@ class DefGenTests(unittest.TestCase):
             yield 0
 
         _loop = deferredGenerator(_loop)
-        self.assertEquals(util.wait(_loop()), 0)
+        return _loop().addCallback(self.assertEqual, 0)
 
     def testStackUsage2(self):
         def _loop():
@@ -89,5 +88,5 @@ class DefGenTests(unittest.TestCase):
             yield 0
 
         _loop = deferredGenerator(_loop)
-        self.assertEquals(util.wait(_loop()), 0)
+        return _loop().addCallback(self.assertEqual, 0)
 

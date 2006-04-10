@@ -132,98 +132,6 @@ class _Janitor(object):
     def doGcCollect(cls):
          gc.collect()
 
-REENTRANT_WAIT_ERROR_MSG = ("already waiting on a deferred, do not call wait() "
-                            "in callbacks or from threads "
-                            "until such time as runUntilCurrent becomes "
-                            "reentrant. (see issue 781)")
-
-class WaitIsNotReentrantError(Exception):
-    pass
-
-_wait_is_running = []
-def _wait(d, timeout=None, running=_wait_is_running):
-    from twisted.internet import reactor
-    if running:
-        raise WaitIsNotReentrantError, REENTRANT_WAIT_ERROR_MSG
-
-    results = []
-    def append(any):
-        if results is not None:
-            results.append(any)
-    def crash(ign):
-        if results is not None:
-            reactor.crash()
-    def stop():
-        reactor.crash()
-
-    running.append(None)
-    try:
-        d.addBoth(append)
-        if results:
-            return results[0]
-        d.addBoth(crash)
-        if timeout is None:
-            timeoutCall = None
-        else:
-            timeoutCall = reactor.callLater(timeout, reactor.crash)
-        reactor.stop = stop
-        try:
-            reactor.run()
-        finally:
-            del reactor.stop
-        if timeoutCall is not None:
-            if timeoutCall.active():
-                timeoutCall.cancel()
-            else:
-                f = failure.Failure(defer.TimeoutError('_wait timed out'))
-                return f
-
-        if results:
-            return results[0]
-
-        # If the timeout didn't happen, and we didn't get a result or
-        # a failure, then the user probably aborted the test, so let's
-        # just raise KeyboardInterrupt.
-
-        # FIXME: imagine this:
-        # web/test/test_webclient.py:
-        # exc = self.assertRaises(error.Error, util.wait, method(url))
-        #
-        # wait() will raise KeyboardInterrupt, and assertRaises will
-        # swallow it. Therefore, wait() raising KeyboardInterrupt is
-        # insufficient to stop trial. A suggested solution is to have
-        # this code set a "stop trial" flag, or otherwise notify trial
-        # that it should really try to stop as soon as possible.
-        raise KeyboardInterrupt()
-    finally:
-        results = None
-        running.pop()
-
-
-def wait(d, timeout=DEFAULT_TIMEOUT, useWaitError=False):
-    """Do NOT use this ever. 
-    """
-    warnings.warn("Do NOT use wait. It is a bad and buggy and deprecated since "
-                  "Twisted 2.2.",
-                  category=DeprecationWarning, stacklevel=2)
-    if timeout is DEFAULT_TIMEOUT:
-        timeout = DEFAULT_TIMEOUT_DURATION
-    try:
-        r = _wait(d, timeout)
-    except KeyboardInterrupt:
-        raise
-    except:
-        #  it would be nice if i didn't have to armor this call like
-        # this (with a blank except:, but we *are* calling user code
-        r = failure.Failure()
-
-    if isinstance(r, failure.Failure):
-        if useWaitError:
-            raise FailureError(r)
-        else:
-            r.raiseException()
-    return r
-
 
 def suppress(action='ignore', **kwarg):
     """sets up the .suppress tuple properly, pass options to this method
@@ -248,10 +156,6 @@ def suppress(action='ignore', **kwarg):
     level by specifying .suppress = []
     """
     return ((action,), kwarg)
-
-
-def timedRun(timeout, f, *a, **kw):
-    return wait(defer.maybeDeferred(f, *a, **kw), timeout, useWaitError=True)
 
 
 def testFunction(f):
@@ -355,4 +259,4 @@ def findObject(name):
 
 
 __all__ = ['FailureError', 'DirtyReactorWarning', 'DirtyReactorError',
-           'PendingTimedCallsError', 'WaitIsNotReentrantError', 'wait']
+           'PendingTimedCallsError']

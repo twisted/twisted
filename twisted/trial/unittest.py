@@ -258,6 +258,9 @@ class _Assertions(pyunit.TestCase, object):
     assertNotSubstring = failIfSubstring
 
 
+_wait_is_running = []
+
+
 class TestCase(_Assertions):
     zi.implements(itrial.ITestCase)
     failureException = FailTest
@@ -541,7 +544,7 @@ class TestCase(_Assertions):
         dirname = tempfile.mkdtemp('', '', base)
         return os.path.join(dirname, 'temp')
     
-    def _wait(self, d, running=util._wait_is_running):
+    def _wait(self, d, running=_wait_is_running):
         """Take a Deferred that only ever callbacks. Block until it happens.
         """
         from twisted.internet import reactor
@@ -585,7 +588,7 @@ class TestCase(_Assertions):
     
             # FIXME: imagine this:
             # web/test/test_webclient.py:
-            # exc = self.assertRaises(error.Error, util.wait, method(url))
+            # exc = self.assertRaises(error.Error, wait, method(url))
             #
             # wait() will raise KeyboardInterrupt, and assertRaises will
             # swallow it. Therefore, wait() raising KeyboardInterrupt is

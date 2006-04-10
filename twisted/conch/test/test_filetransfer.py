@@ -4,7 +4,7 @@
 
 import sys
 
-from twisted.trial import unittest, util
+from twisted.trial import unittest
 try:
     from twisted.conch import unix
 except ImportError:
@@ -147,101 +147,251 @@ class TestOurServerOurClient(SFTPTestBase):
             self.serverTransport.clearBuffer()
             self.clientTransport.clearBuffer()
 
-    def _waitWithBuffer(self, d, timeout=10):
+    def _delayedEmptyBuffers(self):
         reactor.callLater(0.1, self._emptyBuffers)
-        return util.wait(d, timeout)
 
     def testServerVersion(self):
         self.failUnlessEqual(self._serverVersion, 3)
         self.failUnlessEqual(self._extData, {'conchTest' : 'ext data'})
 
-    def testOpenFile(self):
-        d = self.client.openFile("testfile1", filetransfer.FXF_READ | \
-                filetransfer.FXF_WRITE, {})
-        openFile = self._waitWithBuffer(d)
-        self.failUnlessEqual(filetransfer.ISFTPFile(openFile), openFile)
-        bytes = self._waitWithBuffer(openFile.readChunk(0, 20))
-        self.failUnlessEqual(bytes, 'a'*10 + 'b'*10)
-        self._waitWithBuffer(openFile.writeChunk(20, 'c'*10))
-        bytes = self._waitWithBuffer(openFile.readChunk(0, 30))
-        self.failUnlessEqual(bytes, 'a'*10 + 'b'*10 + 'c'*10)
-        attrs = self._waitWithBuffer(openFile.getAttrs())
-        self._waitWithBuffer(openFile.close())
-        d = openFile.getAttrs()
-        self.failUnlessRaises(filetransfer.SFTPError, self._waitWithBuffer, d)
-        log.flushErrors()
-        attrs2 = self._waitWithBuffer(self.client.getAttrs('testfile1'))
-        self.failUnlessEqual(attrs, attrs2)
+    def testOpenFileIO(self):
+        d = self.client.openFile("testfile1", filetransfer.FXF_READ | 
+                                 filetransfer.FXF_WRITE, {})
+        self._emptyBuffers()
+
+        def _fileOpened(openFile):
+            self.failUnlessEqual(openFile, filetransfer.ISFTPFile(openFile))
+            d = _readChunk(openFile)
+            d.addCallback(_writeChunk, openFile)
+            return d
+            
+        def _readChunk(openFile):
+            d = openFile.readChunk(0, 20)
+            self._emptyBuffers()
+            d.addCallback(self.failUnlessEqual, 'a'*10 + 'b'*10)
+            return d
+
+        def _writeChunk(_, openFile):
+            d = openFile.writeChunk(20, 'c'*10)
+            self._emptyBuffers()
+            d.addCallback(_readChunk2, openFile)
+            return d
+
+        def _readChunk2(_, openFile):
+            d = openFile.readChunk(0, 30)
+            self._emptyBuffers()
+            d.addCallback(self.failUnlessEqual, 'a'*10 + 'b'*10 + 'c'*10)
+            return d
+
+        d.addCallback(_fileOpened)
+        return d
+
+    def testClosedFileGetAttrs(self):
+        d = self.client.openFile("testfile1", filetransfer.FXF_READ | 
+                                 filetransfer.FXF_WRITE, {})
+        self._emptyBuffers()
+
+        def _getAttrs(_, openFile):
+            d = openFile.getAttrs()
+            self._emptyBuffers()
+            return d
+
+        def _err(f):
+            log.flushErrors()
+            return f
+
+        def _close(openFile):
+            d = openFile.close()
+            self._emptyBuffers()
+            d.addCallback(_getAttrs, openFile)
+            d.addErrback(_err)
+            return self.assertFailure(d, filetransfer.SFTPError)
+
+        d.addCallback(_close)
+        return d
+
+    def testOpenFileAttributes(self):
+        d = self.client.openFile("testfile1", filetransfer.FXF_READ | 
+                                 filetransfer.FXF_WRITE, {})
+        self._emptyBuffers()
+
+        def _getAttrs(openFile):
+            d = openFile.getAttrs()
+            self._emptyBuffers()
+            d.addCallback(_getAttrs2)
+            return d
+
+        def _getAttrs2(attrs1):
+            d = self.client.getAttrs('testfile1')
+            self._emptyBuffers()
+            d.addCallback(self.failUnlessEqual, attrs1)
+            return d
+
+        return d.addCallback(_getAttrs)
+
+
+    def testOpenFileSetAttrs(self):
         # XXX test setAttrs
         # Ok, how about this for a start?  It caught a bug :)  -- spiv.
-        attrs['atime'] = 0
-        self._waitWithBuffer(self.client.setAttrs('testfile1', attrs))
-        attrs3 = self._waitWithBuffer(self.client.getAttrs('testfile1'))
-        self.failUnlessEqual(attrs, attrs3)
+        d = self.client.openFile("testfile1", filetransfer.FXF_READ | 
+                                 filetransfer.FXF_WRITE, {})
+        self._emptyBuffers()
+
+        def _getAttrs(openFile):
+            d = openFile.getAttrs()
+            self._emptyBuffers()
+            d.addCallback(_setAttrs)
+            return d
+
+        def _setAttrs(attrs):
+            attrs['atime'] = 0
+            d = self.client.setAttrs('testfile1', attrs)
+            self._emptyBuffers()
+            d.addCallback(_getAttrs2)
+            d.addCallback(self.failUnlessEqual, attrs)
+            return d
+
+        def _getAttrs2(_):
+            d = self.client.getAttrs('testfile1')
+            self._emptyBuffers()
+            return d
+
+        d.addCallback(_getAttrs)
+        return d
 
     def testRemoveFile(self):
         d = self.client.getAttrs("testRemoveFile")
-        result = self._waitWithBuffer(d)
-        d = self.client.removeFile("testRemoveFile")
-        result = self._waitWithBuffer(d)
-        d = self.client.removeFile("testRemoveFile")
-        self.failUnlessRaises(filetransfer.SFTPError, self._waitWithBuffer, d)
+        self._emptyBuffers()
+        def _removeFile(ignored):
+            d = self.client.removeFile("testRemoveFile")
+            self._emptyBuffers()
+            return d
+        d.addCallback(_removeFile)
+        d.addCallback(_removeFile)
+        return self.assertFailure(d, filetransfer.SFTPError)
 
     def testRenameFile(self):
         d = self.client.getAttrs("testRenameFile")
-        attrs = self._waitWithBuffer(d)
-        d = self.client.renameFile("testRenameFile", "testRenamedFile")
-        result = self._waitWithBuffer(d)
-        d = self.client.getAttrs("testRenamedFile")
-        self.failUnlessEqual(self._waitWithBuffer(d), attrs)
+        self._emptyBuffers()
+        def _rename(attrs):
+            d = self.client.renameFile("testRenameFile", "testRenamedFile")
+            self._emptyBuffers()
+            d.addCallback(_testRenamed, attrs)
+            return d
+        def _testRenamed(_, attrs):
+            d = self.client.getAttrs("testRenamedFile")
+            self._emptyBuffers()
+            d.addCallback(self.failUnlessEqual, attrs)
+        return d.addCallback(_rename)
 
-    def testDirectory(self):
+    def testDirectoryBad(self):
         d = self.client.getAttrs("testMakeDirectory")
-        self.failUnlessRaises(filetransfer.SFTPError, self._waitWithBuffer, d)
+        self._emptyBuffers()
+        return self.assertFailure(d, filetransfer.SFTPError)
+
+    def testDirectoryCreation(self):
         d = self.client.makeDirectory("testMakeDirectory", {})
-        result = self._waitWithBuffer(d)
-        d = self.client.getAttrs("testMakeDirectory")
-        attrs = self._waitWithBuffer(d)
+        self._emptyBuffers()
+
+        def _getAttrs(_):
+            d = self.client.getAttrs("testMakeDirectory")
+            self._emptyBuffers()
+            return d
+
         # XXX not until version 4/5
         # self.failUnlessEqual(filetransfer.FILEXFER_TYPE_DIRECTORY&attrs['type'],
         #                     filetransfer.FILEXFER_TYPE_DIRECTORY)
 
-        d = self.client.removeDirectory("testMakeDirectory")
-        result = self._waitWithBuffer(d)
-        d = self.client.getAttrs("testMakeDirectory")
-        self.failUnlessRaises(filetransfer.SFTPError, self._waitWithBuffer, d)
+        def _removeDirectory(_):
+            d = self.client.removeDirectory("testMakeDirectory")
+            self._emptyBuffers()
+            return d
+
+        d.addCallback(_getAttrs)
+        d.addCallback(_removeDirectory)
+        d.addCallback(_getAttrs)
+        return self.assertFailure(d, filetransfer.SFTPError)
 
     def testOpenDirectory(self):
         d = self.client.openDirectory('')
-        openDir = self._waitWithBuffer(d)
+        self._emptyBuffers()
         files = []
-        for f in openDir:
-            if isinstance(f, defer.Deferred):
-                try:
-                    f = self._waitWithBuffer(f)
-                except EOFError:
-                    break
-            files.append(f[0])
-        files.sort()
-        self.failUnlessEqual(files, ['.testHiddenFile', 'testDirectory',
-                'testRemoveFile', 'testRenameFile', 'testfile1'])
-        d = openDir.close()
-        result = self._waitWithBuffer(d)
 
-    def testLink(self):
+        def _getFiles(openDir):
+            def append(f):
+                files.append(f)
+                return openDir
+            d = defer.maybeDeferred(openDir.next)
+            self._emptyBuffers()
+            d.addCallback(append)
+            d.addCallback(_getFiles)
+            d.addErrback(_close, openDir)
+            return d
+
+        def _checkFiles(ignored):
+            fs = list(zip(*files)[0])
+            fs.sort()
+            self.failUnlessEqual(fs,
+                                 ['.testHiddenFile', 'testDirectory',
+                                  'testRemoveFile', 'testRenameFile',
+                                  'testfile1'])
+
+        def _close(_, openDir):
+            d = openDir.close()
+            self._emptyBuffers()
+            return d
+
+        d.addCallback(_getFiles)
+        d.addCallback(_checkFiles)
+        return d
+
+    def testLinkDoesntExist(self):
         d = self.client.getAttrs('testLink')
-        self.failUnlessRaises(filetransfer.SFTPError, self._waitWithBuffer, d)
-        self._waitWithBuffer(self.client.makeLink('testLink', 'testfile1'))
-        attrs = self._waitWithBuffer(self.client.getAttrs('testLink',1))
-        attrs2 = self._waitWithBuffer(self.client.getAttrs('testfile1'))
-        self.failUnlessEqual(attrs, attrs2)
-        link = self._waitWithBuffer(self.client.readLink('testLink'))
-        self.failUnlessEqual(link, os.path.join(os.getcwd(), 'sftp_test', 'testfile1'))
-        realPath = self._waitWithBuffer(self.client.realPath('testLink'))
-        self.failUnlessEqual(realPath, os.path.join(os.getcwd(), 'sftp_test', 'testfile1'))
+        self._emptyBuffers()
+        return self.assertFailure(d, filetransfer.SFTPError)
+
+    def testLinkSharesAttrs(self):
+        d = self.client.makeLink('testLink', 'testfile1')
+        self._emptyBuffers()
+        def _getFirstAttrs(_):
+            d = self.client.getAttrs('testLink', 1)
+            self._emptyBuffers()
+            return d
+        def _getSecondAttrs(firstAttrs):
+            d = self.client.getAttrs('testfile1')
+            self._emptyBuffers()
+            d.addCallback(self.assertEqual, firstAttrs)
+            return d
+        d.addCallback(_getFirstAttrs)
+        return d.addCallback(_getSecondAttrs)
+
+    def testLinkPath(self):
+        d = self.client.makeLink('testLink', 'testfile1')
+        self._emptyBuffers()
+        def _readLink(_):
+            d = self.client.readLink('testLink')
+            self._emptyBuffers()
+            d.addCallback(self.failUnlessEqual,
+                          os.path.join(os.getcwd(), 'sftp_test', 'testfile1'))
+            return d
+        def _realPath(_):
+            d = self.client.realPath('testLink')
+            self._emptyBuffers()
+            d.addCallback(self.failUnlessEqual, 
+                          os.path.join(os.getcwd(), 'sftp_test', 'testfile1'))
+            return d
+        d.addCallback(_readLink)
+        d.addCallback(_realPath)
+        return d
 
     def testExtendedRequest(self):
         d = self.client.extendedRequest('testExtendedRequest', 'foo')
-        self.failUnlessEqual(self._waitWithBuffer(d), 'bar')
+        self._emptyBuffers()
+        d.addCallback(self.failUnlessEqual, 'bar')
+        d.addCallback(self._cbTestExtendedRequest)
+        return d
+
+    def _cbTestExtendedRequest(self, ignored):
         d = self.client.extendedRequest('testBadRequest', '')
-        self.failUnlessRaises(NotImplementedError, self._waitWithBuffer, d)
+        self._emptyBuffers()
+        return self.assertFailure(d, NotImplementedError)

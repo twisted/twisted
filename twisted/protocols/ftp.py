@@ -660,7 +660,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             if cmd == 'PASS':
                 return self.ftp_PASS(*params)
             else:
-                return BAD_CMD_SEQ
+                return BAD_CMD_SEQ, "PASS required after USER"
 
         elif self.state == self.AUTHED:
             method = getattr(self, "ftp_" + cmd, None)
@@ -672,7 +672,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             if cmd == 'RNTO':
                 return self.ftp_RNTO(*params)
             else:
-                return BAD_CMD_SEQ, "Blah"
+                return BAD_CMD_SEQ, "RNTO required after RNFR"
 
 
     def ftp_USER(self, username):
