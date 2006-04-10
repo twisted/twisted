@@ -23,6 +23,9 @@ class LoopingCall:
     @ivar f: The function to call.
     @ivar a: A tuple of arguments to pass the function.
     @ivar kw: A dictionary of keyword arguments to pass to the function.
+
+    If C{f} returns a deferred, rescheduling will not take place until the
+    deferred has fired. The result value is ignored.
     """
 
     call = None
@@ -54,7 +57,8 @@ class LoopingCall:
 
         @return: A Deferred whose callback will be invoked with
         C{self} when C{self.stop} is called, or whose errback will be
-        invoked if the function raises an exception.
+        invoked when the function raises an exception or returned a
+        deferred that has its errback invoked.
         """
         assert not self.running, ("Tried to start an already running "
                                   "LoopingCall.")
@@ -84,19 +88,22 @@ class LoopingCall:
             d.callback(self)
 
     def __call__(self):
-        self.call = None
-        try:
-            self.f(*self.a, **self.kw)
-        except:
-            self.running = False
-            d, self.deferred = self.deferred, None
-            d.errback()
-        else:
+        def cb(result):
             if self.running:
                 self._reschedule()
             else:
                 d, self.deferred = self.deferred, None
                 d.callback(self)
+
+        def eb(failure):
+            self.running = False
+            d, self.deferred = self.deferred, None
+            d.errback(failure)
+
+        self.call = None
+        d = defer.maybeDeferred(self.f, *self.a, **self.kw)
+        d.addCallback(cb)
+        d.addErrback(eb)
 
     def _reschedule(self):
         if self.interval == 0:

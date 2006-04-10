@@ -29,6 +29,10 @@ class FakeDelayedCall(object):
         return self.what(*self.a, **self.kw)
 
 
+    def __repr__(self):
+        return "<FakeDelayedCall of %r>" % (self.what,)
+
+
     def cancel(self):
         self.clock.calls.remove((self.when, self))
 
@@ -51,7 +55,7 @@ class Clock(object):
         self.rightNow += amount
 
     def runUntilCurrent(self):
-        while self.calls and self.calls[0][0] < self.seconds():
+        while self.calls and self.calls[0][0] <= self.seconds():
             when, call = self.calls.pop(0)
             call()
 
@@ -213,3 +217,43 @@ class ReactorLoopTestCase(unittest.TestCase):
     def _callback_for_testStopAtOnceLater(self, d):
         self._lc.stop()
         reactor.callLater(0, d.callback, "success")
+
+    def testWaitDeferred(self):
+        # Tests if the callable isn't scheduled again before the returned
+        # deferred has fired.
+        timings = [0.2, 0.8]
+        clock = Clock()
+
+        def foo():
+            d = defer.Deferred()
+            d.addCallback(lambda _: lc.stop())
+            clock.callLater(1, d.callback, None)
+            return d
+
+        lc = TestableLoopingCall(clock, foo)
+        d = lc.start(0.2)
+        clock.pump(timings)
+        self.failIf(clock.calls)
+
+    def testFailurePropagation(self):
+        # Tests if the failure of the errback of the deferred returned by the
+        # callable is propagated to the lc errback.
+        # 
+        # To make sure this test does not hang trial when LoopingCall does not
+        # wait for the callable's deferred, it also checks there are no
+        # calls in the clock's callLater queue.
+        timings = [0.3]
+        clock = Clock()
+
+        def foo():
+            d = defer.Deferred()
+            clock.callLater(0.3, d.errback, TestException())
+            return d
+
+        lc = TestableLoopingCall(clock, foo)
+        d = lc.start(1)
+        self.assertFailure(d, TestException)
+
+        clock.pump(timings)
+        self.failIf(clock.calls)
+        return d
