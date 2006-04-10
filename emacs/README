@@ -1,0 +1,6 @@
+This is Twisted support for Emacs.
+ 
+pb*.el, jelly.el, banana.el, manhole.el: ignore.
+ 
+twisted-dev.el: An emacs minor mode for making development
+awesome. See that file for documentation.
