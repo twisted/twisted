@@ -73,19 +73,22 @@ class FTPServerTestCase(unittest.TestCase):
         # Hook the server's buildProtocol to make the protocol instance
         # accessible to tests.
         buildProtocol = self.factory.buildProtocol
+        d1 = defer.Deferred()
         def _rememberProtocolInstance(addr):
             protocol = buildProtocol(addr)
             self.serverProtocol = protocol.wrappedProtocol
+            d1.callback(None)
             return protocol
         self.factory.buildProtocol = _rememberProtocolInstance
 
         # Connect a client to it
         portNum = self.port.getHost().port
         clientCreator = protocol.ClientCreator(reactor, ftp.FTPClientBasic)
-        d = clientCreator.connectTCP("127.0.0.1", portNum)
+        d2 = clientCreator.connectTCP("127.0.0.1", portNum)
         def gotClient(client):
             self.client = client
-        return d.addCallback(gotClient)
+        d2.addCallback(gotClient)
+        return defer.gatherResults([d1, d2])
 
     def tearDown(self):
         # Clean up sockets
