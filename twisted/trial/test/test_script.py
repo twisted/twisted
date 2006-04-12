@@ -1,7 +1,7 @@
-import inspect, StringIO, sys, sets
+import StringIO, sys, sets
 from twisted.trial import unittest
 from twisted.scripts import trial
-from twisted.python import util, usage
+from twisted.python import util
 
 
 def sibpath(filename):
@@ -21,8 +21,8 @@ class TestModuleTest(unittest.TestCase):
 
     def test_testmoduleOnModule(self):
         self.config.opt_testmodule(sibpath('moduletest.py'))
-        self.failUnlessEqual('twisted.trial.test.test_test_visitor',
-                             self.config['tests'][0])
+        self.failUnlessEqual(['twisted.trial.test.test_test_visitor'],
+                             self.config['tests'])
 
     def test_testmoduleOnScript(self):
         self.config.opt_testmodule(sibpath('scripttest.py'))

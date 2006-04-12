@@ -223,9 +223,6 @@ class Options(usage.Options):
         if isTestFile(filename):
             self['tests'].append(filename)
         else:
-            for test in getTestModules(filename):
-                if test not in self['tests']:
-                    self['tests'].append(test)
             self['tests'].extend(getTestModules(filename))
 
     def opt_spew(self):
