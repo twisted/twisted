@@ -223,7 +223,7 @@ Null prefix argument turns off the mode."
 	 (if (string=
 	      (substring (buffer-file-name) 0 (length full-twisted-path))
 	      full-twisted-path)
-	     (twisted-dev-mode)
+	     (twisted-dev-mode t)
 	   )))))
 
 (add-hook
