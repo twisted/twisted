@@ -124,19 +124,6 @@
   (with-cd twisted-dev-scratch-directory
 	   (hack-local-variables)
 	   (let* ((bfn (buffer-file-name))
-		  (trial-command-line
-		   (if test-case-name
-		       test-case-name
-		     (if (and bfn (string-match "test_.*\\.py" bfn))
-			 bfn
-		       (if (or noprompt (twisted-dev-confirm twisted-dev-confirm-run-all
-							     "Can't find specific test to run.  Run them all?"
-							     "Okay, running!"
-							     "Forget about it."))
-			   "twisted.test")))) ;; TODO: package should be
-                                              ;; determined by location of
-                                              ;; source file.
-
 		  ;; this whole pile of crap is to compensate for the fact that
 
 		  ;;   a. debian glibc is buggy with 2.6.5+ kernels and sends
@@ -157,9 +144,9 @@
                   ;;   but that could be changed)
 
 		  (shell-script-name (format "%s/trialscript" twisted-dev-scratch-directory))
-                  (full-trial-command-line (format "trial --rterrors --reporter=bwverbose --tbformat=emacs %s -x%s"
+                  (full-trial-command-line (format "trial --rterrors --reporter=bwverbose --tbformat=emacs %s --testmodule=%s"
                                                    (if debug "--debug" "")
-                                                   trial-command-line))
+                                                   bfn))
 		  (full-command-line (if twisted-dev-isnt-windows
                                          (progn
                                            (shell-command
@@ -172,7 +159,7 @@
                                            (format "sh %s" shell-script-name))
                                        full-trial-command-line))
                   )
-	     (if trial-command-line
+	     (if bfn
 		 (funcall (if debug 'better-pdb 'compile)
 			  full-command-line))
 	     full-command-line)))

@@ -1,3 +1,12 @@
+x.x.x (yyyy-mm-dd)
+==================
+
+Features
+--------
+ - twisted-dev-mode's F9 now uses trial's --testmodule feature, rather than
+   trying to guess what tests to run.  This will break files using the "-x"
+   test-case-name hack (just use a comma separated list instead).
+
 2.2.0 (2006-02-12)
 ==================
 
