@@ -22,12 +22,12 @@ from twisted.internet import defer, protocol, reactor
 from twisted.python import log, filepath
 
 # Sibling Imports
-import http
-import resource
-import responsecode
-import server
-import static
-import stream
+from twisted.web2 import http
+from twisted.web2 import resource
+from twisted.web2 import responsecode
+from twisted.web2 import server
+from twisted.web2 import static
+from twisted.web2 import stream
 
 
 headerNameTranslation = ''.join([c.isalnum() and c.upper() or '_' for c in map(chr, range(256))])
@@ -315,6 +315,14 @@ class CGIProcessProtocol(protocol.ProcessProtocol):
 
 
 class CGIDirectory(resource.Resource, filepath.FilePath):
+    """A directory that serves only CGI scripts (to infinite depth)
+    and does not support directory listings.
+
+    @param pathname: A path to the directory that you wish to serve
+                     CGI scripts from, for example /var/www/cgi-bin/
+    @type pathname: str
+    """
+    
     addSlash = True
     
     def __init__(self, pathname):
@@ -324,8 +332,7 @@ class CGIDirectory(resource.Resource, filepath.FilePath):
     def locateChild(self, request, segments):
         fnp = self.child(segments[0])
         if not fnp.exists():
-            print fnp.path, 'does not exist'
-            return static.File.childNotFound, ()
+            raise http.HTTPError(responsecode.NOT_FOUND)
         elif fnp.isdir():
             return CGIDirectory(fnp.path), segments[1:]
         else:
