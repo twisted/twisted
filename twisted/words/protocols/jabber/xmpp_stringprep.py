@@ -4,6 +4,7 @@
 # See LICENSE for details.
 
 import sys, warnings
+from zope.interface import Interface, implements
 
 if sys.version_info < (2,3,2):
     import re
@@ -32,28 +33,28 @@ else:
 
 del sys, warnings
 
-class ILookupTable:
+class ILookupTable(Interface):
     """ Interface for character lookup classes. """
 
-    def lookup(self, c):
+    def lookup(c):
         """ Return whether character is in this table. """
 
-class IMappingTable:
+class IMappingTable(Interface):
     """ Interface for character mapping classes. """
 
-    def map(self, c):
+    def map(c):
         """ Return mapping for character. """
 
 class LookupTableFromFunction:
 
-    __implements__ = ILookupTable
+    implements(ILookupTable)
 
     def __init__(self, in_table_function):
         self.lookup = in_table_function
 
 class LookupTable:
 
-    __implements__ = ILookupTable
+    implements(ILookupTable)
 
     def __init__(self, table):
         self._table = table
@@ -63,14 +64,14 @@ class LookupTable:
 
 class MappingTableFromFunction:
 
-    __implements__ = IMappingTable
+    implements(IMappingTable)
 
     def __init__(self, map_table_function):
         self.map = map_table_function
 
 class EmptyMappingTable:
     
-    __implements__ = IMappingTable
+    implements(IMappingTable)
 
     def __init__(self, in_table_function):
         self._in_table_function = in_table_function
@@ -212,7 +213,7 @@ if crippled:
                        prohibiteds=[LookupTable([u' ', u'"', u'&', u"'", u'/',
                                                  u':', u'<', u'>', u'@'])],
                        check_unassigneds=False,
-                       check_bidi=False) 
+                       check_bidi=False)
 
     resourceprep = Profile(normalize=False,
                            check_unassigneds=False,
