@@ -10,8 +10,8 @@ that process transports work with IHalfCloseableProtocols.
 
 import sys
 
-from twisted.internet import stdio, protocol, reactor
-from twisted.python import log
+from twisted.internet import stdio, protocol
+from twisted.python import log, reflect
 
 
 class ProducerChild(protocol.Protocol):
@@ -24,5 +24,7 @@ class ProducerChild(protocol.Protocol):
 
 
 if __name__ == '__main__':
+    reflect.namedAny(sys.argv[1]).install()
+    from twisted.internet import reactor
     stdio.StandardIO(ProducerChild())
     reactor.run()

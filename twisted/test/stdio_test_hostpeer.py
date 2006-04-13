@@ -8,7 +8,10 @@ L{twisted.test.test_stdio.StandardInputOutputTestCase.testHostAndPeer} to test
 that ITransport.getHost() and ITransport.getPeer() work for process transports.
 """
 
-from twisted.internet import stdio, protocol, reactor
+import sys
+
+from twisted.internet import stdio, protocol
+from twisted.python import reflect
 
 class HostPeerChild(protocol.Protocol):
     def connectionMade(self):
@@ -23,5 +26,7 @@ class HostPeerChild(protocol.Protocol):
 
 
 if __name__ == '__main__':
+    reflect.namedAny(sys.argv[1]).install()
+    from twisted.internet import reactor
     stdio.StandardIO(HostPeerChild())
     reactor.run()

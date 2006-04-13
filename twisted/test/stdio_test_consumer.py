@@ -10,8 +10,8 @@ that process transports implement IConsumer properly.
 
 import sys
 
-from twisted.python import log
-from twisted.internet import stdio, protocol, reactor
+from twisted.python import log, reflect
+from twisted.internet import stdio, protocol
 from twisted.protocols import basic
 
 def failed(err):
@@ -33,5 +33,7 @@ class ConsumerChild(protocol.Protocol):
 
 
 if __name__ == '__main__':
-    stdio.StandardIO(ConsumerChild(sys.argv[1]))
+    reflect.namedAny(sys.argv[1]).install()
+    from twisted.internet import reactor
+    stdio.StandardIO(ConsumerChild(sys.argv[2]))
     reactor.run()

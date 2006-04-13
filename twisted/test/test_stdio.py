@@ -42,7 +42,7 @@ class StandardInputOutputTestCase(unittest.TestCase):
         return reactor.spawnProcess(
             proto,
             sys.executable,
-            ["python", filepath.FilePath(__file__).sibling(sibling).path] + list(args),
+            ["python", filepath.FilePath(__file__).sibling(sibling).path, reactor.__class__.__module__] + list(args),
             env=subenv,
             )
 
