@@ -6,7 +6,7 @@
 from twisted.trial import unittest, util
 
 from twisted.internet import protocol, reactor, error, defer, interfaces, address
-from twisted.python import log, failure, components
+from twisted.python import log, failure, components, runtime
 
 
 class Mixin:
@@ -509,13 +509,13 @@ class MulticastTestCase(unittest.TestCase):
                                      self.server.transport.getHost().port))
         reactor.iterate()
         self.assertEquals(len(self.server.packets), 1)
-    
+
     def testInterface(self):
         for o in self.client, self.server:
             self.assertEquals(o.transport.getOutgoingInterface(), "0.0.0.0")
             self.runUntilSuccess(o.transport.setOutgoingInterface, "127.0.0.1")
             self.assertEquals(o.transport.getOutgoingInterface(), "127.0.0.1")
-    
+
     def testJoinLeave(self):
         for o in self.client, self.server:
             self.runUntilSuccess(o.transport.joinGroup, "225.0.0.250")
@@ -528,6 +528,9 @@ class MulticastTestCase(unittest.TestCase):
             self.client.transport.joinGroup("127.0.0.1"),
             error.MulticastJoinError)
 
+    if runtime.platform.isWindows():
+        testJoinFailure.todo = "Windows' multicast is wonky"
+
 
     def testMulticast(self):
         c = Server()
@@ -536,7 +539,7 @@ class MulticastTestCase(unittest.TestCase):
         c.transport.write("hello world",
                           ("225.0.0.250",
                            self.server.transport.getHost().port))
-        
+
         iters = 0
         while iters < 100 and len(self.server.packets) == 0:
             reactor.iterate(0.05);

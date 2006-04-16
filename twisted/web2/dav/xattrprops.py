@@ -31,9 +31,14 @@ change.
 
 __all__ = ["xattrPropertyStore"]
 
-import os
 import urllib
+
 import xattr
+
+
+if getattr(xattr, 'xattr', None) is None:
+    raise ImportError("wrong xattr package installed")
+
 
 from twisted.python import log
 
@@ -41,8 +46,13 @@ from twisted.web2.dav import davxml
 
 class xattrPropertyStore (object):
     """
-    This implementation uses Bob Ippolito's xattr package.
-    Note that the Bob's xattr package is Darwin specific, at least presently.
+
+    This implementation uses Bob Ippolito's xattr package, available from:
+
+        http://undefined.org/python/#xattr
+
+    Note that the Bob's xattr package is specific to Linux and Darwin, at least
+    presently.
     """
     #
     # Dead properties are stored as extended attributes on disk.  In order to

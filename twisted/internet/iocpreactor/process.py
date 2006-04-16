@@ -30,7 +30,7 @@ from win32event import QS_ALLEVENTS
 from zope.interface import implements
 from twisted.internet import error
 from twisted.python import failure, components
-from twisted.python.win32 import cmdLineQuote
+from twisted.python.win32 import quoteArguments
 from twisted.internet.interfaces import IProcessTransport, IConsumer
 
 # sibling imports
@@ -229,7 +229,7 @@ class Process(object):
         StartupInfo.dwFlags = win32process.STARTF_USESTDHANDLES
         
         # create the process
-        cmdline = ' '.join([cmdLineQuote(a) for a in args])
+        cmdline = quoteArguments(args)
         self.hProcess, hThread, dwPid, dwTid = win32process.CreateProcess(
                 command,     # name
                 cmdline,     # command line

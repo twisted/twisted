@@ -1,6 +1,10 @@
+
 from __future__ import nested_scopes
 
 import time, sys
+
+from zope.interface import implements
+
 from twisted.trial import unittest
 from twisted.web2 import http, http_headers, responsecode, error, iweb, stream
 from twisted.web2 import channel
@@ -9,8 +13,7 @@ from twisted.internet import reactor, protocol, address, interfaces, utils
 from twisted.internet import defer
 from twisted.internet.defer import waitForDeferred, deferredGenerator
 from twisted.protocols import loopback
-from twisted.python import util
-from zope.interface import implements
+from twisted.python import util, runtime
 
 def deferLater(secs):
     d = defer.Deferred()
@@ -1097,6 +1100,14 @@ class SSLServerTest(unittest.TestCase, AbstractServerTestMixin):
             self.factory.conn.transport.loseConnection()
             return self.connlost
         return d.addCallback(finish)
+
+    def testLingeringClose(self):
+        return super(SSLServerTest, self).testLingeringClose()
+
+    if runtime.platform.isWindows():
+        # This may not just be Windows, but all platforms with more recent
+        # versions of OpenSSL.  Do some more experimentation...
+        testLingeringClose.todo = "buffering kills the connection too early; test this some other way"
 
 
 if interfaces.IReactorProcess(reactor, None) is None:

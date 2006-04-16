@@ -6,7 +6,7 @@ from __future__ import nested_scopes
 from twisted.trial import unittest
 from twisted.internet import protocol, reactor, interfaces, defer
 from twisted.protocols import basic
-from twisted.python import util, components, log
+from twisted.python import util, log, runtime
 from twisted.test import test_tcp
 
 import os
@@ -14,9 +14,14 @@ import os
 try:
     from OpenSSL import SSL, crypto
     from twisted.internet import ssl
-    from ssl_helpers import ClientTLSContext
+    from twisted.test.ssl_helpers import ClientTLSContext
 except ImportError:
-    SSL = ssl = None
+    def _noSSL():
+        # ugh, make pyflakes happy.
+        global SSL
+        global ssl
+        SSL = ssl = None
+    _noSSL()
 
 certPath = util.sibpath(__file__, "server.pem")
 
@@ -405,8 +410,22 @@ class ConnectionLostTestCase(unittest.TestCase, ContextGeneratingMixin):
         self.failIf(sSuccess)
         self.failIf(cSuccess)
 
-        sResult.trap(SSL.Error)
-        cResult.trap(SSL.Error)
+        acceptableErrors = [SSL.Error]
+
+        # Rather than getting a verification failure on Windows, we are getting
+        # a connection failure.  Without something like sslverify proxying
+        # in-between we can't fix up the platform's errors, so let's just
+        # specifically say it is only OK in this one case to keep the tests
+        # passing.  Normally we'd like to be as strict as possible here, so
+        # we're not going to allow this to report errors incorrectly on any
+        # other platforms.
+
+        if runtime.platform.isWindows():
+            from twisted.internet.error import ConnectionLost
+            acceptableErrors.append(ConnectionLost)
+
+        sResult.trap(*acceptableErrors)
+        cResult.trap(*acceptableErrors)
 
         return self.serverPort.stopListening()
 

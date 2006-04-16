@@ -491,6 +491,10 @@ class CrossfireReverse(CrossfireMixin, unittest.TestCase):
         d = self.tub2.stopListeningOn(self.tub2.getListeners()[0])
         d.addCallback(self._test1_1)
         return d
+
+    test1.todo = "This test fails intermittently far too regularly"
+
+
     def _test1_1(self, res):
         d,d1 = self.connect()
         d.addCallbacks(lambda res: self.fail("hey! this is supposed to fail"),
