@@ -143,7 +143,7 @@ class SOCKSv4(protocol.Protocol):
 class SOCKSv4Factory(protocol.Factory):
     """A factory for a SOCKSv4 proxy.
     
-    Constructor accepts one argument, a logfile.
+    Constructor accepts one argument, a log file name.
     """
     
     def __init__(self, log):
