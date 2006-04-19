@@ -7,6 +7,8 @@ from __future__ import generators
 
 import types
 
+from zope.interface import implements, Interface, Attribute
+
 def _splitPrefix(name):
     """ Internal method for splitting a prefixed Element name into its
         respective parts """
@@ -23,10 +25,11 @@ G_PREFIXES = { "http://www.w3.org/XML/1998/namespace":"xml" }
 
 class _ListSerializer:
     """ Internal class which serializes an Element tree into a buffer """
-    def __init__(self, prefixes = None):
+    def __init__(self, prefixes=None):
         self.writelist = []
         self.prefixes = prefixes or {}
         self.prefixes.update(G_PREFIXES)
+        self.prefixStack = [G_PREFIXES.values()]
         self.prefixCounter = 0
 
     def getValue(self):
@@ -38,7 +41,14 @@ class _ListSerializer:
             self.prefixCounter = self.prefixCounter + 1
         return self.prefixes[uri]
 
-    def serialize(self, elem, closeElement = 1):
+    def prefixInScope(self, prefix):
+        stack = self.prefixStack
+        for i in range(-1, (len(self.prefixStack)+1) * -1, -1):
+            if prefix in stack[i]:
+                return True
+        return False
+
+    def serialize(self, elem, closeElement=1, defaultUri=''):
         # Optimization shortcuts
         write = self.writelist.append
 
@@ -56,26 +66,51 @@ class _ListSerializer:
         parent = elem.parent
         name = elem.name
         uri = elem.uri
-        defaultUri = elem.defaultUri
-        
-        # Seralize element name
-        if defaultUri == uri:
-            if parent == None or defaultUri == parent.defaultUri:
-                write("<%s" % (name))
-            else:
-                write("<%s xmlns='%s'" % (name, defaultUri))
-        else:
+        defaultUri, currentDefaultUri = elem.defaultUri, defaultUri
+
+        self.prefixStack.append([])
+
+        # Inherit the default namespace
+        if defaultUri is None:
+            defaultUri = currentDefaultUri
+
+        if uri is None:
+            uri = defaultUri
+
+        prefix = None
+        if uri != defaultUri or uri in self.prefixes:
             prefix = self.getPrefix(uri)
-            if parent == None or elem.defaultUri == parent.defaultUri:
-                write("<%s:%s xmlns:%s='%s'" % (prefix, name, prefix, uri))
-            else:
-               write("<%s:%s xmlns:%s='%s' xmlns='%s'" % (prefix, name, prefix, uri, defaultUri))
+            inScope = self.prefixInScope(prefix)
+
+        # Create the starttag
+
+        if not prefix:
+            write("<%s" % (name))
+        else:
+            write("<%s:%s" % (prefix, name))
+
+            if not inScope:
+                write(" xmlns:%s='%s'" % (prefix, uri))
+                self.prefixStack[-1].append(prefix)
+                inScope = True
+
+        if defaultUri != currentDefaultUri and \
+           (uri != defaultUri or not prefix or not inScope):
+            write(" xmlns='%s'" % (defaultUri))
 
         # Serialize attributes
         for k,v in elem.attributes.items():
-            # If the attribute name is a list, it's a qualified attribute
+            # If the attribute name is a tuple, it's a qualified attribute
             if isinstance(k, types.TupleType):
-                write(" %s:%s='%s'" % (self.getPrefix(k[0]), k[1], escapeToXml(v, 1)))
+                attr_uri, attr_name = k
+                attr_prefix = self.getPrefix(attr_uri)
+
+                if not self.prefixInScope(attr_prefix):
+                    write(" xmlns:%s='%s'" % (attr_prefix, attr_uri))
+                    self.prefixStack[-1].append(attr_prefix)
+
+                write(" %s:%s='%s'" % (attr_prefix, attr_name,
+                                       escapeToXml(v, 1)))
             else:
                 write((" %s='%s'" % ( k, escapeToXml(v, 1))))
 
@@ -89,14 +124,16 @@ class _ListSerializer:
         if len(elem.children) > 0:
             write(">")
             for c in elem.children:
-                self.serialize(c)
+                self.serialize(c, defaultUri=defaultUri)
             # Add closing tag
-            if defaultUri == uri:
+            if not prefix:
                 write("</%s>" % (name))
             else:
-                write("</%s:%s>" % (self.getPrefix(uri), name))
+                write("</%s:%s>" % (prefix, name))
         else:
             write("/>")
+
+        self.prefixStack.pop()
 
 
 SerializerClass = _ListSerializer
@@ -127,24 +164,24 @@ def unescapeFromXml(text):
     text = text.replace("&amp;", "&")
     return text
 
-def generateOnlyKlass(list, klass):
+def generateOnlyInterface(list, int):
     """ Filters items in a list by class
     """
     for n in list:
-        if n.__class__ == klass:
+        if int.providedBy(n):
             yield n
 
 def generateElementsQNamed(list, name, uri):
     """ Filters Element items in a list with matching name and URI. """
     for n in list:
-        if n.__class__ == Element and n.name == name and n.uri == uri:
+        if IElement.providedBy(n) and n.name == name and n.uri == uri:
             yield n
 
 def generateElementsNamed(list, name):
     """ Filters Element items in a list with matching name, regardless of URI.
     """
     for n in list:
-        if n.__class__ == Element and n.name == name:
+        if IElement.providedBy(n) and n.name == name:
             yield n
 
 
@@ -162,22 +199,157 @@ class Namespace:
     def __getitem__(self, n):
         return (self._uri, n)
 
+class IElement(Interface):
+    """ Interface to XML element nodes.
+
+    See L{Element} for a detailed example of its general use.
+
+    @warning: this Interface is not yet complete!
+    """
+
+    uri = Attribute(""" Element's namespace URI """)
+    name = Attribute(""" Element's local name """)
+    defaultUri = Attribute(""" Default namespace URI of child elements """)
+    attributes = Attribute(""" Dictionary of element attributes """)
+    children = Attribute(""" List of child nodes """)
+    parent = Attribute(""" Reference to element's parent element """)
+
+    def toXml(prefixes=None, closeElement=1, defaultUri=''):
+        """ Serializes object to a (partial) XML document
+        
+        @param prefixes: dictionary that maps namespace URIs to suggested
+                         prefix names.
+        @type prefixes: L{dict}
+        @param closeElement: flag that determines whether to include the
+                             closing tag of the element in the serialized
+                             string. A value of C{0} only generates the
+                             element's start tag. A value of C{1} yields a
+                             complete serialization.
+        @type closeElement: L{int}
+        @param defaultUri: Initial default namespace URI. This is most useful
+                           for partial rendering, where the logical parent
+                           element (of which the starttag was already
+                           serialized) declares a default namespace that should
+                           be inherited.
+        @type defaultUri: L{str}
+        @return: (partial) serialized XML
+        @rtype: L{unicode}
+        """
+
+    def addElement(name, defaultUri = None, content = None):
+        """ Create an element and add as child.
+
+        The new element is added to this element as a child, and will have
+        this element as its parent.
+
+        @param name: element name. This can be either a L{unicode} object that
+                     contains the local name, or a tuple of (uri, local_name)
+                     for a fully qualified name. In the former case,
+                     the namespace URI is inherited from this element.
+        @type name: L{unicode} or L{tuple} of (L{unicode}, L{unicode})
+        @param defaultUri: default namespace URI for child elements. If
+                           C{None}, this is inherited from this element.
+        @type defaultUri: L{unicode}
+        @param content: text contained by the new element.
+        @type content: L{unicode}
+        @return: the created element
+        @rtype: object providing L{IElement}
+        """
+
+    def addChild(node):
+        """ Adds a node as child of this element.
+
+        The C{node} will be added to the list of childs of this element, and
+        will have this element set as its parent when C{node} provides
+        L{IElement}.
+
+        @param node: the child node.
+        @type node: L{unicode} or object implementing L{IElement}
+        """
 
 class Element(object):
-    """ Object representing a container (a.k.a. tag or element) in an HTML or XML document.
+    """ Represents an XML element node.
 
     An Element contains a series of attributes (name/value pairs), content
     (character data), and other child Element objects. When building a document
     with markup (such as HTML or XML), use this object as the starting point.
 
-    @type uri: L{str}
+    Element objects fully support XML Namespaces. The fully qualified name of
+    the XML Element it represents is stored in the C{uri} and C{name}
+    attributes, where C{uri} holds the namespace URI. There is also a default
+    namespace, for child elements. This is stored in the C{defaultUri}
+    attribute. Note that C{''} means the empty namespace.
+    
+    Serialization of Elements through C{toXml()} will use these attributes
+    for generating proper serialized XML. When both C{uri} and C{defaultUri}
+    are not None in the Element and all of its descendents, serialization
+    proceeds as expected:
+
+      >>> from twisted.words.xish import domish
+      >>> root = domish.Element(('myns', 'root'))
+      >>> root.addElement('child', content='test')
+      <twisted.words.xish.domish.Element object at 0x83002ac>
+      >>> root.toXml()
+      u"<root xmlns='myns'><child>test</child></root>"
+    
+    For partial serialization, needed for streaming XML, a special value for
+    namespace URIs can be used: C{None}.
+    
+    Using C{None} as the value for C{uri} means: this element is in whatever
+    namespace inherited by the closest logical ancestor when the complete XML
+    document has been serialized. The serialized start tag will have a
+    non-prefixed name, and no xmlns declaration will be generated.
+    
+    Similarly, C{None} for C{defaultUri} means: the default namespace for my
+    child elements is inherited from the logical ancestors of this element,
+    when the complete XML document has been serialized.
+
+    To illustrate, an example from a Jabber stream. Assume the start tag of the
+    root element of the stream has already been serialized, along with several
+    complete child elements, and sent off, looking like this:
+
+      <stream:stream xmlns:stream='http://etherx.jabber.org/streams'
+                     xmlns='jabber:client' to='example.com'>
+        ...
+
+    Now suppose we want to send a complete element represented by an
+    object C{message} created like:
+
+      >>> message = domish.Element((None, 'message'))
+      >>> message['to'] = 'user@example.com'
+      >>> message.addElement('body', content='Hi!')
+      <twisted.words.xish.domish.Element object at 0x8276e8c>
+      >>> message.toXml()
+      u"<message to='user@example.com'><body>Hi!</body></message>"
+
+    As, you can see, this XML snippet has no xmlns declaration. When sent
+    off, it inherits the C{jabber:client} namespace from the root element.
+    Note that this renders the same as using C{''} instead of C{None}:
+
+      >>> presence = domish.Element(('', 'presence'))
+      >>> presence.toXml()
+      u"<presence/>"
+
+    However, if this object has a parent defined, the difference becomes
+    clear:
+
+      >>> child = message.addElement(('http://example.com/', 'envelope'))
+      >>> child.addChild(presence)
+      <twisted.words.xish.domish.Element object at 0x8276fac>
+      >>> message.toXml()
+      u"<message to='user@example.com'><body>Hi!</body><envelope xmlns='http://example.com/'><presence xmlns=''/></envelope></message>"
+
+    As, you can see, the <presence/> element is now in the empty namespace, not
+    in the default namespace of the parent or the streams'.
+
+    @type uri: L{unicode} or None
     @ivar uri: URI of this Element's name
 
-    @type defaultUri: L{str}
-    @ivar defaultUri: URI this Element exists within
-
-    @type name: L{str}
+    @type name: L{unicode}
     @ivar name: Name of this Element
+
+    @type defaultUri: L{unicode} or None
+    @ivar defaultUri: URI this Element exists within
 
     @type children: L{list}
     @ivar children: List of child Elements and content
@@ -189,7 +361,11 @@ class Element(object):
     @ivar attributes: Dictionary of attributes associated with this Element.
 
     """
+
+    implements(IElement)
+
     _idCounter = 0
+
     def __init__(self, qname, defaultUri = None, attribs = None):
         """
         @param qname: Tuple of (uri, name)
@@ -206,12 +382,15 @@ class Element(object):
     def __getattr__(self, key):
         # Check child list for first Element with a name matching the key
         for n in self.children:
-            if n.__class__ == Element and n.name == key:
+            if IElement.providedBy(n) and n.name == key:
                 return n
             
         # Tweak the behaviour so that it's more friendly about not
         # finding elements -- we need to document this somewhere :)
-        return None
+        if key.startswith('_'):
+            raise AttributeError(key)
+        else:
+            return None
             
     def __getitem__(self, key):
         return self.attributes[self._dqa(key)]
@@ -231,7 +410,7 @@ class Element(object):
 
     def _dqa(self, attr):
         """ Dequalify an attribute key as needed """
-        if isinstance(attr, types.TupleType) and attr[0] == self.uri:
+        if isinstance(attr, types.TupleType) and not attr[0]:
             return attr[1]
         else:
             return attr
@@ -260,7 +439,7 @@ class Element(object):
 
     def addChild(self, node):
         """ Add a child to this Element. """
-        if node.__class__ == Element:
+        if IElement.providedBy(node):
             node.parent = self
         self.children.append(node)
         return self.children[-1]
@@ -275,16 +454,14 @@ class Element(object):
         return c[-1]
 
     def addElement(self, name, defaultUri = None, content = None):
-        """ Add a new child Element to this Element.
-        
-        Preferred method.
-        """
         result = None
         if isinstance(name, type(())):
-            defaultUri = defaultUri or name[0]
+            if defaultUri is None:
+                defaultUri = name[0]
             self.children.append(Element(name, defaultUri))
         else:
-            defaultUri = defaultUri or self.defaultUri
+            if defaultUri is None:
+                defaultUri = self.defaultUri
             self.children.append(Element((self.uri, name), defaultUri))
 
         result = self.children[-1]
@@ -308,17 +485,17 @@ class Element(object):
 
     def elements(self):
         """ Iterate across all children of this Element that are Elements. """
-        return generateOnlyKlass(self.children, Element)
+        return generateOnlyInterface(self.children, IElement)
 
-    def toXml(self, prefixes = None, closeElement = 1):
+    def toXml(self, prefixes=None, closeElement=1, defaultUri=''):
         """ Serialize this Element and all children to a string. """
         s = SerializerClass(prefixes)
-        s.serialize(self, closeElement)
+        s.serialize(self, closeElement=closeElement, defaultUri=defaultUri)
         return s.getValue()
 
     def firstChildElement(self):
         for c in self.children:
-            if c.__class__ == Element:
+            if IElement.providedBy(c):
                 return c
         return None
 
@@ -384,7 +561,7 @@ else:
             for k, v in attributes.items():
                 if k.startswith("xmlns"):
                     x, p = _splitPrefix(k)
-                    if (x == None): # I.e.  default declaration
+                    if (x is None): # I.e.  default declaration
                         defaultUri = v
                     else:
                         localPrefixes[p] = v
@@ -395,12 +572,15 @@ else:
 
             # Determine default namespace for this element; if there
             # is one
-            if defaultUri == None and len(self.defaultNsStack) > 0:
-                defaultUri = self.defaultNsStack[-1]
+            if defaultUri is None:
+                if len(self.defaultNsStack) > 0:
+                    defaultUri = self.defaultNsStack[-1]
+                else:
+                    defaultUri = ''
 
             # Fix up name
             prefix, name = _splitPrefix(name)
-            if prefix == None: # This element is in the default namespace
+            if prefix is None: # This element is in the default namespace
                 uri = defaultUri
             else:
                 # Find the URI for the prefix
@@ -409,7 +589,7 @@ else:
             # Pass 2 - Fix up and escape attributes
             for k, v in attributes.items():
                 p, n = _splitPrefix(k)
-                if p == None:
+                if p is None:
                     attribs[n] = v
                 else:
                     attribs[(self.findUri(p)), n] = unescapeFromXml(v)
@@ -423,7 +603,7 @@ else:
             # Document already started
             if self.documentStarted:
                 # Starting a new packet
-                if self.currElem == None:
+                if self.currElem is None:
                     self.currElem = e
                 # Adding to existing element
                 else:
@@ -460,19 +640,19 @@ else:
 
         def gotTagEnd(self, name):
             # Ensure the document hasn't already ended
-            if self.rootElem == None:
+            if self.rootElem is None:
                 # XXX: Write more legible explanation
                 raise ParserError, "Element closed after end of document."
 
             # Fix up name
             prefix, name = _splitPrefix(name)
-            if prefix == None:
+            if prefix is None:
                 uri = self.defaultNsStack[-1]
             else:
                 uri = self.findUri(prefix)
 
             # End of document
-            if self.currElem == None:
+            if self.currElem is None:
                 # Ensure element name and uri matches
                 if self.rootElem.name != name or self.rootElem.uri != uri:
                     raise ParserError, "Mismatched root elements"
@@ -493,7 +673,8 @@ else:
 
                 # Check for parent null parent of current elem;
                 # that's the top of the stack
-                if self.currElem.parent == None:
+                if self.currElem.parent is None:
+                    self.currElem.parent = self.rootElem
                     self.ElementEvent(self.currElem)
                     self.currElem = None
 
@@ -529,7 +710,7 @@ class ExpatElementStream:
         # Generate a qname tuple from the provided name
         qname = name.split(" ")
         if len(qname) == 1:
-            qname = (None, name)
+            qname = ('', name)
 
         # Process attributes
         for k, v in attrs.items():
@@ -555,12 +736,12 @@ class ExpatElementStream:
 
     def _onEndElement(self, _):
         # Check for null current elem; end of doc
-        if self.currElem == None:
+        if self.currElem is None:
             self.DocumentEndEvent()
             
         # Check for parent that is None; that's
         # the top of the stack
-        elif self.currElem.parent == None:
+        elif self.currElem.parent is None:
             self.ElementEvent(self.currElem)
             self.currElem = None
 
@@ -576,12 +757,12 @@ class ExpatElementStream:
     def _onStartNamespace(self, prefix, uri):
         # If this is the default namespace, put
         # it on the stack
-        if prefix == None:
+        if prefix is None:
             self.defaultNsStack.append(uri)
 
     def _onEndNamespace(self, prefix):
         # Remove last element on the stack
-        if prefix == None:
+        if prefix is None:
             self.defaultNsStack.pop()
 
 ## class FileParser(ElementStream):

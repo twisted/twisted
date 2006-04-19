@@ -225,6 +225,20 @@ class XmlStream(xmlstream.XmlStream):
         sh += '>'
         self.send(sh)
 
+    def send(self, obj):
+        """ Send data over the stream.
+
+        This overrides L{xmlstream.Xmlstream.send} to use the default namespace
+        of the stream header when serializing L{domish.IElement}s. It is
+        assumed that if you pass an object that provides L{domish.IElement},
+        it represents a direct child of the stream's root element.
+        """
+
+        if domish.IElement.providedBy(obj):
+            obj = obj.toXml(defaultUri=self.namespace)
+
+        xmlstream.XmlStream.send(self, obj)
+
     def connectionMade(self):
         """ Called when a connection is made.
 

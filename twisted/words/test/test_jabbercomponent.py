@@ -9,6 +9,14 @@ from twisted.words.protocols.jabber.component import ConnectComponentAuthenticat
 from twisted.words.protocols import jabber
 from twisted.words.protocols.jabber import xmlstream
 
+class DummyTransport:
+    def __init__(self, list):
+        self.list = list
+
+    def write(self, bytes):
+        self.list.append(bytes)
+
+
 class ComponentAuthTest(unittest.TestCase):
     def authPassed(self, stream):
         self.authComplete = True
@@ -19,10 +27,10 @@ class ComponentAuthTest(unittest.TestCase):
 
         ca = ConnectComponentAuthenticator("cjid", "secret")
         xs = xmlstream.XmlStream(ca)
+        xs.transport = DummyTransport(outlist)
 
         xs.addObserver(xmlstream.STREAM_AUTHD_EVENT,
                        self.authPassed)
-        xs.send = outlist.append
 
         # Go...
         xs.connectionMade()
@@ -31,8 +39,7 @@ class ComponentAuthTest(unittest.TestCase):
         # Calculate what we expect the handshake value to be
         hv = sha.new("%s%s" % ("12345", "secret")).hexdigest()
 
-        self.assertEquals(outlist[1].toXml(),
-                          "<handshake>%s</handshake>" % (hv))
+        self.assertEquals(outlist[1], "<handshake>%s</handshake>" % (hv))
 
         xs.dataReceived("<handshake/>")
 
