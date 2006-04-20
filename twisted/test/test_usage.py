@@ -72,7 +72,7 @@ class OutputTest(unittest.TestCase):
         opt = WellBehaved()
         e = self.assertRaises(usage.UsageError,
                               opt.parseOptions, ['-Z'])
-        self.assertEquals(str(e), 'Option -Z not recognized')
+        self.assertEquals(str(e), 'option -Z not recognized')
 
 class InquisitionOptions(usage.Options):
     optFlags = [
