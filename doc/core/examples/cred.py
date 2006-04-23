@@ -5,10 +5,10 @@
 
 
 import sys
+from zope.interface import implements, Interface
 
 from twisted.protocols import basic
 from twisted.internet import protocol
-from twisted.python import components
 from twisted.python import log
 
 from twisted.cred import error
@@ -16,15 +16,15 @@ from twisted.cred import portal
 from twisted.cred import checkers
 from twisted.cred import credentials
 
-class IProtocolUser(components.Interface):
-    def getPrivileges(self):
+class IProtocolUser(Interface):
+    def getPrivileges():
         """Return a list of privileges this user has."""
 
-    def logout(self):
+    def logout():
         """Cleanup per-login resources allocated to this avatar"""
 
 class AnonymousUser:
-    __implements__ = (IProtocolUser,)
+    implements(IProtocolUser)
     
     def getPrivileges(self):
         return [1, 2, 3]
@@ -33,7 +33,7 @@ class AnonymousUser:
         print "Cleaning up anonymous user resources"
 
 class RegularUser:
-    __implements__ = (IProtocolUser,)
+    implements(IProtocolUser)
     
     def getPrivileges(self):
         return [1, 2, 3, 5, 6]
@@ -42,7 +42,7 @@ class RegularUser:
         print "Cleaning up regular user resources"
 
 class Administrator:
-    __implements__ = (IProtocolUser,)
+    implements(IProtocolUser)
     
     def getPrivileges(self):
         return range(50)
@@ -128,7 +128,7 @@ class ServerFactory(protocol.ServerFactory):
         return p
 
 class Realm:
-    __implements__ = portal.IRealm
+    implements(portal.IRealm)
 
     def requestAvatar(self, avatarId, mind, *interfaces):
         if IProtocolUser in interfaces:

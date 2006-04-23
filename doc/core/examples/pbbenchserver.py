@@ -1,8 +1,10 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2006 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
 """Server for PB benchmark."""
+
+from zope.interface import implements
 
 from twisted.spread import pb
 from twisted.internet import reactor
@@ -27,7 +29,7 @@ class PBBenchPerspective(pb.Avatar):
 
 
 class SimpleRealm:
-    __implements__ = IRealm
+    implements(IRealm)
 
     def requestAvatar(self, avatarId, mind, *interfaces):
         if pb.IPerspective in interfaces:

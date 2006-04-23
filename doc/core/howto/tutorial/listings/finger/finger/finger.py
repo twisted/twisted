@@ -1,5 +1,7 @@
 # finger.py module
 
+from zope.interface import Interface, implements
+
 from twisted.application import internet, service, strports
 from twisted.internet import protocol, reactor, defer
 from twisted.protocols import basic, irc
@@ -10,17 +12,17 @@ from twisted.spread import pb
 from OpenSSL import SSL
 import cgi
 
-class IFingerService(components.Interface):
+class IFingerService(Interface):
 
-    def getUser(self, user):
+    def getUser(user):
         """Return a deferred returning a string"""
 
-    def getUsers(self):
+    def getUsers():
         """Return a deferred returning a list of strings"""
 
-class IFingerSetterService(components.Interface):
+class IFingerSetterService(Interface):
 
-    def setUser(self, user, status):
+    def setUser(user, status):
         """Set the user's status to something"""
 
 def catchError(err):
@@ -37,17 +39,17 @@ class FingerProtocol(basic.LineReceiver):
         d.addCallback(writeValue)
 
 
-class IFingerFactory(components.Interface):
+class IFingerFactory(Interface):
 
-    def getUser(self, user):
+    def getUser(user):
         """Return a deferred returning a string"""
 
-    def buildProtocol(self, addr):
+    def buildProtocol(addr):
         """Return a protocol returning a string"""
 
 
 class FingerFactoryFromService(protocol.ServerFactory):
-    __implements__ = protocol.ServerFactory.__implements__, IFingerFactory
+    implements(IFingerFactory)
 
     protocol = FingerProtocol
 
@@ -74,18 +76,18 @@ class FingerSetterProtocol(basic.LineReceiver):
             self.factory.setUser(*self.lines)
 
 
-class IFingerSetterFactory(components.Interface):
+class IFingerSetterFactory(Interface):
 
-    def setUser(self, user, status):
+    def setUser(user, status):
         """Return a deferred returning a string"""
 
-    def buildProtocol(self, addr):
+    def buildProtocol(addr):
         """Return a protocol returning a string"""
 
 
 class FingerSetterFactoryFromService(protocol.ServerFactory):
 
-    __implements__ = protocol.ServerFactory.__implements__,IFingerSetterFactory
+    implements(IFingerSetterFactory)
 
     protocol = FingerSetterProtocol
 
@@ -115,22 +117,22 @@ class IRCReplyBot(irc.IRCClient):
             d.addCallback(lambda m: self.msg(user, m))
 
 
-class IIRCClientFactory(components.Interface):
+class IIRCClientFactory(Interface):
 
     """
     @ivar nickname
     """
 
-    def getUser(self, user):
+    def getUser(user):
         """Return a deferred returning a string"""
 
-    def buildProtocol(self, addr):
+    def buildProtocol(addr):
         """Return a protocol"""
 
 
 class IRCClientFactoryFromService(protocol.ClientFactory):
 
-    __implements__ = protocol.ClientFactory.__implements__, IIRCClientFactory
+    implements(IIRCClientFactory)
 
     protocol = IRCReplyBot
     nickname = None
@@ -206,17 +208,17 @@ class UserStatusXR(xmlrpc.XMLRPC):
         return self.service.getUsers()
 
 
-class IPerspectiveFinger(components.Interface):
+class IPerspectiveFinger(Interface):
 
-    def remote_getUser(self, username):
+    def remote_getUser(username):
         """return a user's status"""
 
-    def remote_getUsers(self):
+    def remote_getUsers():
         """return a user's status"""
 
 class PerspectiveFingerFromService(pb.Root):
 
-    __implements__ = pb.Root.__implements__, IPerspectiveFinger
+    implements(IPerspectiveFinger)
 
     def __init__(self, service):
         self.service = service
@@ -234,7 +236,7 @@ components.registerAdapter(PerspectiveFingerFromService,
 
 class FingerService(service.Service):
 
-    __implements__ = service.Service.__implements__, IFingerService
+    implements(IFingerService)
 
     def __init__(self, filename):
         self.filename = filename

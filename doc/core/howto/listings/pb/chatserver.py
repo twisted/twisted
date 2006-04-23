@@ -1,5 +1,7 @@
 #! /usr/bin/python
 
+from zope.interface import implements
+
 from twisted.cred import portal, checkers
 from twisted.spread import pb
 from twisted.internet import reactor
@@ -15,7 +17,7 @@ class ChatServer:
         return self.groups[groupname]
 
 class ChatRealm:
-    __implements__ = portal.IRealm
+    implements(portal.IRealm)
     def requestAvatar(self, avatarID, mind, *interfaces):
         assert pb.IPerspective in interfaces
         avatar = User(avatarID)

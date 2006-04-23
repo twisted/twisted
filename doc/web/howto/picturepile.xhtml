@@ -328,11 +328,14 @@ Session:</p>
 
 <pre class="python"
 title="From picturepile4.py."
->class IPreferences(components.Interface):
+>
+from zope.interface import Interface, implements
+
+class IPreferences(Interface):
     pass
 
-class Preferences(components.Adapter):
-    __implements__ = IPreferences
+class Preferences:
+    implements(IPreferences)
     
 components.registerAdapter(Preferences, server.Session, IPreferences)
 </pre>

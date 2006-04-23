@@ -1,5 +1,7 @@
 #! /usr/bin/python
 
+from zope.interface import implements
+
 from twisted.spread import pb
 from twisted.cred import checkers, portal
 from twisted.internet import reactor
@@ -11,7 +13,7 @@ class MyPerspective(pb.Avatar):
         print "I am", self.name, "perspective_foo(",arg,") called on", self
 
 class MyRealm:
-    __implements__ = portal.IRealm
+    implements(portal.IRealm)
     def requestAvatar(self, avatarId, mind, *interfaces):
         if pb.IPerspective not in interfaces:
             raise NotImplementedError

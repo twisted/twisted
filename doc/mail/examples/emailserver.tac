@@ -10,11 +10,13 @@
 A toy email server.
 """
 
+from zope.interface import implements
+
 from twisted.internet import defer
 from twisted.protocols import smtp
 
 class ConsoleMessageDelivery:
-    __implements__ = (smtp.IMessageDelivery,)
+    implements(smtp.IMessageDelivery)
     
     def receivedHeader(self, helo, origin, recipients):
         return "Received: ConsoleMessageDelivery"
@@ -30,7 +32,7 @@ class ConsoleMessageDelivery:
         raise smtp.SMTPBadRcpt(user)
 
 class ConsoleMessage:
-    __implements__ = (smtp.IMessage,)
+    implements(smtp.IMessage)
     
     def __init__(self):
         self.lines = []

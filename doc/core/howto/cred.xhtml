@@ -209,14 +209,16 @@ might look - note that USER and PASS are the protocol commands used to login, an
 the DELE command can only be used after you are logged in:</p>
 
 <pre class="python">
+from zope.interface import Interface
+
 from twisted.protocols import basic
-from twisted.python import log, components
+from twisted.python import log
 from twisted.cred import credentials, error
 from twisted.internet import defer
 
-class IMailbox(components.Interface):
+class IMailbox(Interface):
     """Interface specification for mailbox."""
-    def deleteMessage(self, index): pass
+    def deleteMessage(index): pass
 
 
 class POP3(basic.LineReceiver):
@@ -289,7 +291,7 @@ class SimplePerspective(pb.Avatar):
 
 
 class SimpleRealm:
-    __implements__ = IRealm
+    implements(IRealm)
 
     def requestAvatar(self, avatarId, mind, *interfaces):
         if pb.IPerspective in interfaces:

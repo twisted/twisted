@@ -1,6 +1,7 @@
 """Run this with twistd -y."""
 
 import os
+from zope.interface import implements, Interface
 from twisted.application import service, internet
 from twisted.web.woven import page, input
 from twisted.web import server, static, microdom, domhelpers
@@ -8,11 +9,11 @@ from twisted.python import components
 
 rootDirectory = os.path.expanduser("~/Pictures")
 
-class IPreferences(components.Interface):
+class IPreferences(Interface):
     pass
 
-class Preferences(components.Adapter):
-    __implements__ = IPreferences
+class Preferences:
+    implements(IPreferences)
     
 components.registerAdapter(Preferences, server.Session, IPreferences)
 

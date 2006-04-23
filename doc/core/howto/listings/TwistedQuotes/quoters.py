@@ -1,19 +1,19 @@
-from twisted.python import components
+from zope.interface import Interface, implements
 
 from random import choice
 
 
-class IQuoter(components.Interface):
+class IQuoter(Interface):
     """An object that returns quotes."""
     
-    def getQuote(self):
+    def getQuote():
         """Return a quote."""
 
 
 class StaticQuoter:
     """Return a static quote."""
     
-    __implements__ = IQuoter
+    implements(IQuoter)
     
     def __init__(self, quote):
         self.quote = quote
@@ -25,7 +25,7 @@ class StaticQuoter:
 class FortuneQuoter:
     """Load quotes from a fortune-format file."""
     
-    __implements__ = IQuoter
+    implements(IQuoter)
     
     def __init__(self, filenames):
         self.filenames = filenames

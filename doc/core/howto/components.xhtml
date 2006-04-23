@@ -154,10 +154,8 @@ now you have no hair dryer any more.
 <p>We are going to attempt to solve this problem by writing an Adapter for the
 <code>ForeignSocket</code> which converts the voltage for use with an American
 hair dryer. An Adapter is a class which is constructed with one and only one
-argument, the <q>adaptee</q> or <q>original</q> object. There is a simple
-implementation in <code class="API">twisted.python.components.Adapter</code>
-which defines the <code>__init__</code> shown below, so you can subclass it if
-you desire. In this example, we will show all code involved for clarity:</p>
+argument, the <q>adaptee</q> or <q>original</q> object. In this example, we
+will show all code involved for clarity:</p>
 
 <pre class="python">
 class AdaptToAmericanSocket:

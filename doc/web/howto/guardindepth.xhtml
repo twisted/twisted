@@ -17,6 +17,7 @@ guard. As always, when using this framework, start by writing a
 resources for logged-in and non-logged-in users:</p>
 
 <pre class="python">
+from zope.interface import implements
 from twisted.cred import portal, checkers
 from twisted.web import resource, static
 
@@ -24,7 +25,7 @@ def noLogout():
     pass
 
 class Realm:
-    __implements__ = portal.IRealm
+    implements(portal.IRealm)
     def requestAvatar(self, avatarId, mind, *interfaces):
         if resource.IResource not in interfaces:
             raise NotImplementedError
@@ -52,6 +53,7 @@ non-anonymous avatars get it is strongly recommended to link to
 users can log out.</p>
 
 <pre class="python">
+from zope.interface import implements
 from twisted.cred import portal, checkers
 from twisted.web import resource, static
 from twisted.web.woven import guard
@@ -63,7 +65,7 @@ def noLogout():
     pass
 
 class Realm:
-    __implements__ = portal.IRealm
+    implements(portal.IRealm)
     def requestAvatar(self, avatarId, mind, *interfaces):
         if resource.IResource not in interfaces:
             raise NotImplementedError

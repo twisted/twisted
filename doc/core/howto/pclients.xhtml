@@ -35,6 +35,8 @@ those two objectives.</p>
 caching mechanism:</p>
 
 <pre class="python">
+from zope.interface import implements
+
 class SimpleAvatar(pb.Avatar):
     greetings = 0
     def __init__(self, name): 
@@ -44,7 +46,7 @@ class SimpleAvatar(pb.Avatar):
         return "&lt;%d&gt;hello %s" % (self.greetings, self.name)
 
 class CachingRealm:
-    __implements__ = portal.IRealm,
+    implements(portal.IRealm)
 
     def __init__(self):
         self.avatars = {}
@@ -71,6 +73,8 @@ that it would be easier to generate a new avatar and cache something
 else. Here is an example of that:</p>
 
 <pre class="python">
+from zope.interface import implements
+
 class Greeter:
     greetings = 0
     def hello(self):
@@ -86,7 +90,7 @@ class SimpleAvatar(pb.Avatar):
         return self.greeter.hello()+' '+self.name
 
 class CachingRealm:
-    __implements__ = portal.IRealm,
+    implements(portal.IRealm)
 
     def __init__(self):
         self.greeters = {}
@@ -107,6 +111,8 @@ and it would be impossible to know when disconnections occur. Luckily,
 there is a better pattern:</p>
 
 <pre class="python">
+from zope.interface import implements
+
 class SimpleAvatar(pb.Avatar):
     greetings = 0
     connections = 0
@@ -121,7 +127,7 @@ class SimpleAvatar(pb.Avatar):
         return "&lt;%d&gt;hello %s" % (self.greetings, self.name)
 
 class CachingRealm:
-    __implements__ = portal.IRealm,
+    implements(portal.IRealm)
 
     def __init__(self):
         self.avatars = {}
@@ -140,6 +146,8 @@ class CachingRealm:
 the number of concurrent connections:</p>
 
 <pre class="python">
+from zope.interface import implements
+
 class SimpleAvatar(pb.Avatar):
     greetings = 0
     connections = 0
@@ -154,7 +162,7 @@ class SimpleAvatar(pb.Avatar):
         return "&lt;%d&gt;hello %s" % (self.greetings, self.name)
 
 class CachingRealm:
-    __implements__ = portal.IRealm,
+    implements(portal.IRealm)
 
     def __init__(self, max=1):
         self.avatars = {}
@@ -185,6 +193,8 @@ and authenticated.</p>
 of the <code>mind</code> argument:</p>
 
 <pre class="python">
+from zope.interface import implements
+
 class SimpleAvatar(pb.Avatar):
     def __init__(self, client):
         self.s = internet.TimerService(1, self.telltime)
@@ -200,7 +210,7 @@ class SimpleAvatar(pb.Avatar):
         self.s.stopService()
          
 class Realm:
-    __implements__ = portal.IRealm,
+    implements(portal.IRealm)
 
     def requestAvatar(self, avatarId, mind, *interfaces):
         if pb.IPerspective not in interfaces: raise NotImplementedError
