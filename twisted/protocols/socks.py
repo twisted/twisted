@@ -23,8 +23,8 @@ class SOCKSv4Outgoing(protocol.Protocol):
         self.socks=socks
 
     def connectionMade(self):
-        junk, host, port = self.transport.getPeer()
-        self.socks.makeReply(90, 0, port=port, ip=host)
+        peer = self.transport.getPeer()
+        self.socks.makeReply(90, 0, port=peer.port, ip=peer.host)
         self.socks.otherConn=self
 
     def connectionLost(self, reason):
@@ -121,13 +121,13 @@ class SOCKSv4(protocol.Protocol):
 
     def log(self,proto,data):
         if not self.logging: return
-        foo,ourhost,ourport=self.transport.getPeer()
-        foo,theirhost,theirport=self.otherConn.transport.getPeer()
+        peer = self.transport.getPeer()
+        their_peer = self.otherConn.transport.getPeer()
         f=open(self.logging,"a")
         f.write("%s\t%s:%d %s %s:%d\n"%(time.ctime(),
-                                        ourhost,ourport,
+                                        peer.host,peer.port,
                                         ((proto==self and '<') or '>'),
-                                        theirhost,theirport))
+                                        their_peer.host,their_peer.port))
         while data:
             p,data=data[:16],data[16:]
             f.write(string.join(map(lambda x:'%02X'%ord(x),p),' ')+' ')
