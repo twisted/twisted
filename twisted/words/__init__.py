@@ -6,4 +6,9 @@
 """Twisted Words: a Twisted Chat service.
 """
 
-__version__ = 'SVN-Trunk'
+from twisted.python import versions
+
+version = versions.Version(__name__, 0, 3, 0)
+__version__ = version.short()
+
+del versions

@@ -9,5 +9,10 @@ Twisted Web: a Twisted Web Server.
 
 """
 
-__version__ = 'SVN-Trunk'
+from twisted.python import versions
+
+version = versions.Version(__name__, 0, 5, 0)
+__version__ = version.short()
+
+del versions
 

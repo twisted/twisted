@@ -8,6 +8,10 @@
 Twisted Web2: a better Twisted Web Server.
 
 """
-__version__ = 'SVN-Trunk'
-version = __version__
 
+from twisted.python import versions
+
+version = versions.Version(__name__, 0, 1, 0)
+__version__ = version.short()
+
+del versions

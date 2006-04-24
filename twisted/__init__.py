@@ -19,11 +19,17 @@ try:
     from zope.interface import Interface
     del Interface
 except ImportError:
-    raise ImportError, "you need zope.interface installed (http://zope.org/Products/ZopeInterface/)"
+    raise ImportError("you need zope.interface installed "
+                      "(http://zope.org/Products/ZopeInterface/)")
 
 # Ensure compat gets imported
 from twisted.python import compat
 del compat
 
 # setup version
-__version__ = 'SVN-Trunk'
+from twisted.python import versions
+
+version = versions.Version(__name__, 2, 2, 0)
+__version__ = version.short()
+
+del versions

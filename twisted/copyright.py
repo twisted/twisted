@@ -7,9 +7,10 @@
 Copyright information for Twisted.
 """
 
+from twisted import __version__ as version, version as longversion
 
-version="SVN-Trunk"
-longversion="Twisted %s" % version
+longversion = str(longversion)
+
 copyright="""\
 Copyright (c) 2001-2006 Twisted Matrix Laboratories.
 See LICENSE for details."""

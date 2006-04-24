@@ -2,4 +2,10 @@
 # See LICENSE for details.
 
 """Resolving Internet Names"""
-__version__ = 'SVN-Trunk'
+
+from twisted.python import versions
+
+version = versions.Version(__name__, 0, 2, 0)
+__version__ = version.short()
+
+del versions

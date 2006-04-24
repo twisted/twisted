@@ -17,4 +17,9 @@ Maintainer: U{Andrew Bennetts<mailto:spiv@twistedmatrix.com>}
 # Numbered headers
 # Navigational aides
 
-__version__ = 'SVN-Trunk'
+from twisted.python import versions
+
+version = versions.Version(__name__, 0, 1, 0)
+__version__ = version.short()
+
+del versions

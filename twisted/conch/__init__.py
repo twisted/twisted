@@ -13,4 +13,11 @@ This module is unstable.
 
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """
-__version__ = 'SVN-Trunk'
+
+
+from twisted.python import versions
+
+version = versions.Version(__name__, 0, 6, 0)
+__version__ = version.short()
+
+del versions
