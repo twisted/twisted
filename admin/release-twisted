@@ -23,7 +23,7 @@ import time, glob
 packaged_projects = dist.twisted_subprojects[:]
 packaged_projects.remove('web2')
 
-core_blacklist = ['vfs']
+core_blacklist = ['vfs', 'pb', 'flow', 'pair']
 
 # FIXME:
 # 2. If we ever do a sumo release on the same day, the version will

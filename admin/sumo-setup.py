@@ -9,7 +9,7 @@ Distutils-launcher for Twisted projects.
 
 import sys, os, glob
 
-subprojects = ['core', 'conch', 'flow', 'lore', 'mail', 'names', 'pair',
+subprojects = ['core', 'conch', 'lore', 'mail', 'names',
                'runner', 'web', 'words', 'news']
 
 
