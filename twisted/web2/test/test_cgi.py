@@ -87,7 +87,7 @@ class CGI(unittest.TestCase):
         d = client.getPage("http://localhost:%d/cgi" % portnum)
         d.addCallback(self._testReadEmptyInput_1)
         return d
-    testReadEmptyInput.timeout = 5
+
     def _testReadEmptyInput_1(self, res):
         self.failUnlessEqual(res, "readinput ok%s" % os.linesep)
 
@@ -103,7 +103,7 @@ class CGI(unittest.TestCase):
                            postdata="Here is your stdin")
         d.addCallback(self._testReadInput_1)
         return d
-    testReadInput.timeout = 5
+
     def _testReadInput_1(self, res):
         self.failUnlessEqual(res, "readinput ok%s" % os.linesep)
 
@@ -120,7 +120,7 @@ class CGI(unittest.TestCase):
                            postdata="Here is your stdin")
         d.addCallback(self._testRealAllInput_1)
         return d
-    testRealAllInput.timeout = 5
+
     def _testRealAllInput_1(self, res):
         self.failUnlessEqual(res, "readallinput ok%s" % os.linesep)
 
@@ -212,4 +212,3 @@ class CGIDirectoryTest(unittest.TestCase):
         ).addBoth(_cleanup)
 
         return d
-    testScriptsExecute.timeout=10
