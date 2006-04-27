@@ -85,6 +85,13 @@ class SFTPAdapterTest(unittest.TestCase):
         self.sftp.removeFile('/file.txt')
         self._assertNodes('/', ['.', '..', 'ned'])
 
+    def test_removeFileMissing(self):
+        # Trying to remove a file that doesn't exist should fail with
+        # FX_NO_SUCH_FILE.
+        e = self.assertRaises(SFTPError,
+           self.sftp.removeFile, 'file-that-does-not-exist.txt')
+        self.assertEqual(FX_NO_SUCH_FILE, e.code)
+
     def test_renameFile(self):
         self.sftp.renameFile('/file.txt', '/radixiscool.txt')
         self._assertNodes('/', ['.', '..', 'ned', 'radixiscool.txt'])

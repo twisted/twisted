@@ -76,7 +76,9 @@ class AdaptFileSystemUserToISFTP:
             parentNode = self.filesystem.fetch('/'.join(dirname))
         except ivfs.NotFoundError, e:
             raise SFTPError(FX_NO_SUCH_FILE, e.args[0])
-        except KeyError, e: # XXX: awful exception to catch
+        except KeyError, e:
+            # XXX: backends shouldn't raise KeyError to mean NotFoundError
+            # error, but they do.
             raise SFTPError(FX_NO_SUCH_FILE, e.args[0])
         if createPlease:
             child = parentNode.createFile(basename, exclusive)
@@ -88,7 +90,14 @@ class AdaptFileSystemUserToISFTP:
         return AdaptFileSystemLeafToISFTPFile(child)
 
     def removeFile(self, filename):
-        self.filesystem.fetch(filename).remove()
+        try:
+            self.filesystem.fetch(filename).remove()
+        except ivfs.NotFoundError, e:
+            raise SFTPError(FX_NO_SUCH_FILE, e.args[0])
+        except KeyError, e:
+            # XXX: backends shouldn't raise KeyError to mean NotFoundError
+            # error, but they do.
+            raise SFTPError(FX_NO_SUCH_FILE, e.args[0])
 
     def renameFile(self, oldpath, newpath):
         try:
