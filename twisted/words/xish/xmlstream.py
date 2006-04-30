@@ -134,7 +134,7 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
         @type obj: L{domish.Element}, L{domish} or L{str}
 
         """
-        if isinstance(obj, domish.Element):
+        if domish.IElement.providedBy(obj):
             obj = obj.toXml()
             
         if isinstance(obj, unicode):
