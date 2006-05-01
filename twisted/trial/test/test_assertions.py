@@ -2,6 +2,7 @@ import StringIO
 
 from twisted.python import reflect
 from twisted.python.util import dsu
+from twisted.internet import defer
 from twisted.trial import unittest, runner, reporter
 
 
@@ -253,6 +254,43 @@ class TestAssertions(unittest.TestCase):
                               self.failIfSubstring, x, x)
         self.failUnlessRaises(self.failureException,
                               self.failIfSubstring, x, z)
+
+    def test_assertFailure(self):
+        d = defer.maybeDeferred(lambda: 1/0)
+        return self.assertFailure(d, ZeroDivisionError)
+
+    def test_assertFailure_wrongException(self):
+        d = defer.maybeDeferred(lambda: 1/0)
+        self.assertFailure(d, OverflowError)
+        d.addCallbacks(lambda x: self.fail('Should have failed'),
+                       lambda x: x.trap(self.failureException))
+        return d
+
+    def test_assertFailure_noException(self):
+        d = defer.succeed(None)
+        self.assertFailure(d, ZeroDivisionError)
+        d.addCallbacks(lambda x: self.fail('Should have failed'),
+                       lambda x: x.trap(self.failureException))
+        return d
+
+    def test_assertFailure_masked(self):
+        """A single wrong assertFailure should fail the whole test.
+        """
+        class ExampleFailure(Exception):
+            pass
+ 
+        class TC(unittest.TestCase):
+            failureException = ExampleFailure
+            def test_assertFailure(self):
+                d = defer.maybeDeferred(lambda: 1/0)
+                self.assertFailure(d, OverflowError)
+                self.assertFailure(d, ZeroDivisionError)
+                return d
+
+        test = TC('test_assertFailure')
+        result = reporter.TestResult()
+        test.run(result)
+        self.assertEqual(1, len(result.failures))
 
 
 class TestAssertionNames(unittest.TestCase):

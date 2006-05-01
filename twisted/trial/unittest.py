@@ -244,8 +244,11 @@ class _Assertions(pyunit.TestCase, object):
                 "did not catch an error, instead got %r" % (ignore,))
 
         def _eb(failure):
-            failure.trap(*expectedFailures)
-            return failure.value
+            if failure.check(*expectedFailures):
+                return failure.value
+            else:
+                raise self.failureException("%r not expected (%r)"
+                                            % (failure, expectedFailures))
         return deferred.addCallbacks(_cb, _eb)
     assertFailure = failUnlessFailure
 
