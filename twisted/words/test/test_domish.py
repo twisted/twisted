@@ -3,7 +3,7 @@
 
 
 from twisted.trial import unittest
-from twisted.words.xish import domish, xpath
+from twisted.words.xish import domish
 
 class DomishTestCase(unittest.TestCase):
     def testEscaping(self):
@@ -75,28 +75,31 @@ class DomishTestCase(unittest.TestCase):
 class DomishStreamTests:
     def setUp(self):
         self.doc_started = False
-        self.packet_count = 0
         self.doc_ended = False
+        self.root = None
+        self.elements = []
         self.stream = self.streamClass()
         self.stream.DocumentStartEvent = self._docStarted
-        self.stream.ElementEvent = self._elementMatched
+        self.stream.ElementEvent = self.elements.append
         self.stream.DocumentEndEvent = self._docEnded
 
     def _docStarted(self, root):
+        self.root = root
         self.doc_started = True
-        assert self.match_root.matches(root)
-
-    def _elementMatched(self, elem):
-        self.packet_count = self.packet_count + 1
-        assert self.match_elem.matches(elem)
 
     def _docEnded(self):
         self.doc_ended = True
 
     def doTest(self, xml):
         self.stream.parse(xml)
+
+    def testHarness(self):
+        xml = "<root><child/><child2/></root>"
+        self.stream.parse(xml)
         self.assertEquals(self.doc_started, True)
-        self.assertEquals(self.packet_count, 1)
+        self.assertEquals(self.root.name, 'root')
+        self.assertEquals(self.elements[0].name, 'child')
+        self.assertEquals(self.elements[1].name, 'child2')
         self.assertEquals(self.doc_ended, True)
 
     def testBasic(self):
@@ -106,52 +109,52 @@ class DomishStreamTests:
               "  </message>" + \
               "</stream:stream>"
 
-        self.match_root = xpath.internQuery("/stream[@xmlns='etherx']")
-        self.match_elem = xpath.internQuery("/message[@to='bar']/x[@xmlns='xdelay'][text()='some&data>']")
-
-        self.doTest(xml)
+        self.stream.parse(xml)
+        self.assertEquals(self.root.name, 'stream')
+        self.assertEquals(self.root.uri, 'etherx')
+        self.assertEquals(self.elements[0].name, 'message')
+        self.assertEquals(self.elements[0].uri, 'jabber')
+        self.assertEquals(self.elements[0]['to'], 'bar')
+        self.assertEquals(self.elements[0].x.uri, 'xdelay')
+        self.assertEquals(unicode(self.elements[0].x), 'some&data>')
 
     def testNoRootNS(self):
         xml = "<stream><error xmlns='etherx'/></stream>"
 
-        self.match_root = xpath.internQuery("/stream[@xmlns='']")    
-        self.match_elem = xpath.internQuery("/error[@xmlns='etherx']")
-        
-        self.doTest(xml)
+        self.stream.parse(xml)
+        self.assertEquals(self.root.uri, '')
+        self.assertEquals(self.elements[0].uri, 'etherx')
         
     def testNoDefaultNS(self):
         xml = "<stream:stream xmlns:stream='etherx'><error/></stream:stream>"""
-        self.match_root = xpath.internQuery("/stream[@xmlns='etherx']")    
-        self.match_elem = xpath.internQuery("/error[@xmlns='']")
-        
-        self.doTest(xml)
+
+        self.stream.parse(xml)
+        self.assertEquals(self.root.uri, 'etherx')
+        self.assertEquals(self.root.defaultUri, '')
+        self.assertEquals(self.elements[0].uri, '')
+        self.assertEquals(self.elements[0].defaultUri, '')
 
     def testChildDefaultNS(self):
         xml = "<root xmlns='testns'><child/></root>"
 
-        self.match_root = xpath.internQuery("/root[@xmlns='testns']")    
-        self.match_elem = xpath.internQuery("/child[@xmlns='testns']")
-        
-        self.doTest(xml)
+        self.stream.parse(xml)
+        self.assertEquals(self.root.uri, 'testns')
+        self.assertEquals(self.elements[0].uri, 'testns')
 
     def testEmptyChildNS(self):
         xml = "<root xmlns='testns'><child1><child2 xmlns=''/></child1></root>"
 
-        self.match_root = xpath.internQuery("/root[@xmlns='testns']")    
-        self.match_elem = xpath.internQuery("/child1/child2[@xmlns='']")
-        
-        self.doTest(xml)
+        self.stream.parse(xml)
+        self.assertEquals(self.elements[0].child2.uri, '')
 
     def testChildPrefix(self):
         xml = "<root xmlns='testns' xmlns:foo='testns2'><foo:child/></root>"
 
-        self.match_root = xpath.internQuery("/root[@xmlns='testns']")    
-        self.match_elem = xpath.internQuery("/child[@xmlns='testns2']")
-        
-        self.doTest(xml)
+        self.stream.parse(xml)
+        self.assertEquals(self.root.localPrefixes['foo'], 'testns2')
+        self.assertEquals(self.elements[0].uri, 'testns2')
 
     def testUnclosedElement(self):
-        self.match_root = xpath.internQuery("/root")    
         self.assertRaises(domish.ParserError, self.stream.parse, 
                                               "<root><error></root>")
 
@@ -245,7 +248,6 @@ class SerializerTests:
         child2.addElement(('testns', 'quux'))
         self.assertEquals(e.toXml(), "<foo><xn0:bar xmlns:xn0='testns' xmlns='testns2'><quux/></xn0:bar><xn1:baz xmlns:xn1='testns3' xmlns='testns4'><xn0:quux xmlns:xn0='testns'/></xn1:baz></foo>")
 
-
     def testXMLNamespace(self):
         e = domish.Element((None, "foo"),
                            attribs = {("http://www.w3.org/XML/1998/namespace",
@@ -281,6 +283,16 @@ class SerializerTests:
         self.assertEquals(e.toXml(prefixes={'testns': 'bar'},
                                   prefixesInScope=['bar']),
                           "<bar:foo/>")
+
+    def testLocalPrefixes(self):
+        e = domish.Element(('testns', 'foo'), localPrefixes={'bar': 'testns'})
+        self.assertEquals(e.toXml(), "<bar:foo xmlns:bar='testns'/>")
+
+    def testLocalPrefixesWithChild(self):
+        e = domish.Element(('testns', 'foo'), localPrefixes={'bar': 'testns'})
+        e.addElement('baz')
+        self.assertIdentical(e.baz.defaultUri, None)
+        self.assertEquals(e.toXml(), "<bar:foo xmlns:bar='testns'><baz/></bar:foo>")
 
     def testRawXMLSerialization(self):
         e = domish.Element((None, "foo"))

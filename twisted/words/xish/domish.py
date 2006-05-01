@@ -68,7 +68,9 @@ class _ListSerializer:
         uri = elem.uri
         defaultUri, currentDefaultUri = elem.defaultUri, defaultUri
 
-        self.prefixStack.append([])
+        for p, u in elem.localPrefixes.iteritems():
+            self.prefixes[u] = p
+        self.prefixStack.append(elem.localPrefixes.keys())
 
         # Inherit the default namespace
         if defaultUri is None:
@@ -97,6 +99,9 @@ class _ListSerializer:
         if defaultUri != currentDefaultUri and \
            (uri != defaultUri or not prefix or not inScope):
             write(" xmlns='%s'" % (defaultUri))
+
+        for p, u in elem.localPrefixes.iteritems():
+            write(" xmlns:%s='%s'" % (p, u))
 
         # Serialize attributes
         for k,v in elem.attributes.items():
@@ -213,6 +218,7 @@ class IElement(Interface):
     attributes = Attribute(""" Dictionary of element attributes """)
     children = Attribute(""" List of child nodes """)
     parent = Attribute(""" Reference to element's parent element """)
+    localPrefixes = Attribute(""" Dictionary of local prefixes """)
 
     def toXml(prefixes=None, closeElement=1, defaultUri='',
               prefixesInScope=None):
@@ -364,21 +370,34 @@ class Element(object):
     @type attributes: L{dict}
     @ivar attributes: Dictionary of attributes associated with this Element.
 
+    @type localPrefixes: L{dict}
+    @ivar localPrefixes: Dictionary of namespace declarations on this
+                         element. The key is the prefix to bind the
+                         namespace uri to.
     """
 
     implements(IElement)
 
     _idCounter = 0
 
-    def __init__(self, qname, defaultUri = None, attribs = None):
+    def __init__(self, qname, defaultUri=None, attribs=None,
+                       localPrefixes=None):
         """
         @param qname: Tuple of (uri, name)
         @param defaultUri: The default URI of the element; defaults to the URI
                            specified in L{qname}
         @param attribs: Dictionary of attributes
+        @param localPrefixes: Dictionary of namespace declarations on this
+                              element. The key is the prefix to bind the
+                              namespace uri to.
         """
+        self.localPrefixes = localPrefixes or {}
         self.uri, self.name = qname
-        self.defaultUri = defaultUri or self.uri
+        if defaultUri is None and \
+           self.uri not in self.localPrefixes.itervalues():
+            self.defaultUri = self.uri
+        else:
+            self.defaultUri = defaultUri
         self.attributes = attribs or {}
         self.children = []
         self.parent = None
@@ -466,7 +485,7 @@ class Element(object):
         else:
             if defaultUri is None:
                 defaultUri = self.defaultUri
-            self.children.append(Element((self.uri, name), defaultUri))
+            self.children.append(Element((defaultUri, name), defaultUri))
 
         result = self.children[-1]
         result.parent = self
@@ -600,7 +619,7 @@ else:
                     attribs[(self.findUri(p)), n] = unescapeFromXml(v)
 
             # Construct the actual Element object
-            e = Element((uri, name), defaultUri, attribs)
+            e = Element((uri, name), defaultUri, attribs, localPrefixes)
 
             # Save current default namespace
             self.defaultNsStack.append(defaultUri)
@@ -702,8 +721,9 @@ class ExpatElementStream:
         self.parser.StartNamespaceDeclHandler = self._onStartNamespace
         self.parser.EndNamespaceDeclHandler = self._onEndNamespace
         self.currElem = None
-        self.defaultNsStack = [None]
+        self.defaultNsStack = ['']
         self.documentStarted = 0        
+        self.localPrefixes = {}
 
     def parse(self, buffer):
         try:
@@ -725,7 +745,8 @@ class ExpatElementStream:
                 del attrs[k]
 
         # Construct the new element
-        e = Element(qname, self.defaultNsStack[-1], attrs)
+        e = Element(qname, self.defaultNsStack[-1], attrs, self.localPrefixes)
+        self.localPrefixes = {}
 
         # Document already started
         if self.documentStarted == 1:
@@ -764,6 +785,8 @@ class ExpatElementStream:
         # it on the stack
         if prefix is None:
             self.defaultNsStack.append(uri)
+        else:
+            self.localPrefixes[prefix] = uri
 
     def _onEndNamespace(self, prefix):
         # Remove last element on the stack
