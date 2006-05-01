@@ -25,11 +25,11 @@ G_PREFIXES = { "http://www.w3.org/XML/1998/namespace":"xml" }
 
 class _ListSerializer:
     """ Internal class which serializes an Element tree into a buffer """
-    def __init__(self, prefixes=None):
+    def __init__(self, prefixes=None, prefixesInScope=None):
         self.writelist = []
         self.prefixes = prefixes or {}
         self.prefixes.update(G_PREFIXES)
-        self.prefixStack = [G_PREFIXES.values()]
+        self.prefixStack = [G_PREFIXES.values()] + (prefixesInScope or []) 
         self.prefixCounter = 0
 
     def getValue(self):
@@ -214,7 +214,8 @@ class IElement(Interface):
     children = Attribute(""" List of child nodes """)
     parent = Attribute(""" Reference to element's parent element """)
 
-    def toXml(prefixes=None, closeElement=1, defaultUri=''):
+    def toXml(prefixes=None, closeElement=1, defaultUri='',
+              prefixesInScope=None):
         """ Serializes object to a (partial) XML document
         
         @param prefixes: dictionary that maps namespace URIs to suggested
@@ -232,6 +233,9 @@ class IElement(Interface):
                            serialized) declares a default namespace that should
                            be inherited.
         @type defaultUri: L{str}
+        @param prefixesInScope: list of prefixes that are assumed to be
+                                declared by ancestors.
+        @type prefixesInScope: L{list}
         @return: (partial) serialized XML
         @rtype: L{unicode}
         """
@@ -487,9 +491,10 @@ class Element(object):
         """ Iterate across all children of this Element that are Elements. """
         return generateOnlyInterface(self.children, IElement)
 
-    def toXml(self, prefixes=None, closeElement=1, defaultUri=''):
+    def toXml(self, prefixes=None, closeElement=1, defaultUri='',
+                    prefixesInScope=None):
         """ Serialize this Element and all children to a string. """
-        s = SerializerClass(prefixes)
+        s = SerializerClass(prefixes=prefixes, prefixesInScope=prefixesInScope)
         s.serialize(self, closeElement=closeElement, defaultUri=defaultUri)
         return s.getValue()
 

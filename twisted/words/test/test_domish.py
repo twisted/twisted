@@ -275,6 +275,13 @@ class SerializerTests:
 
         self.assertEquals(e.toXml(), "<foo xmlns:xn0='testns2' xn0:bar='baz'><xn0:qux xn0:bar='quux'><xn0:foo/></xn0:qux></foo>")
 
+    def testPrefixScope(self):
+        e = domish.Element(('testns', 'foo'))
+
+        self.assertEquals(e.toXml(prefixes={'testns': 'bar'},
+                                  prefixesInScope=['bar']),
+                          "<bar:foo/>")
+
     def testRawXMLSerialization(self):
         e = domish.Element((None, "foo"))
         e.addRawXml("<abc123>")

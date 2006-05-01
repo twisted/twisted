@@ -121,6 +121,7 @@ class XmlStream(xmlstream.XmlStream):
     features = {}           # Stream features dictionary {(uri, name): element}
     useTls = 2              # 0 = never, 1 = whenever possible, 2 = always
     tlsEstablished = False  # True if TLS has been succesfully negotiated
+    prefixes = {NS_STREAMS: 'stream'}
 
     def __init__(self, authenticator):
         xmlstream.XmlStream.__init__(self)
@@ -235,7 +236,9 @@ class XmlStream(xmlstream.XmlStream):
         """
 
         if domish.IElement.providedBy(obj):
-            obj = obj.toXml(defaultUri=self.namespace)
+            obj = obj.toXml(prefixes=self.prefixes,
+                            defaultUri=self.namespace,
+                            prefixesInScope=self.prefixes.values())
 
         xmlstream.XmlStream.send(self, obj)
 
