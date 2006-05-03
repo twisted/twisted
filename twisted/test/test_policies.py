@@ -130,11 +130,10 @@ class ThrottlingTestCase(unittest.TestCase):
         n = p.getHost().port
         
         def _connect123(results):
-            for c in c1, c2, c3:
-                p = reactor.connectTCP("127.0.0.1", n, SillyFactory(c))
-            deferreds = [c.dConnected for c in c1, c2, c3]
-            deferreds.append(c3.dDisconnected)
-            return defer.DeferredList(deferreds)
+            reactor.connectTCP("127.0.0.1", n, SillyFactory(c1))
+            c1.dConnected.addCallback(lambda r: reactor.connectTCP("127.0.0.1", n, SillyFactory(c2)))
+            c2.dConnected.addCallback(lambda r: reactor.connectTCP("127.0.0.1", n, SillyFactory(c3)))
+            return c3.dDisconnected
 
         def _check123(results):
             self.assertEquals([c.connected for c in c1, c2, c3], [1, 1, 1])
