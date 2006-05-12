@@ -534,9 +534,9 @@ class waitForDeferred:
 
     Maintainer: U{Christopher Armstrong<mailto:radix@twistedmatrix.com>}
 
-    waitForDeferred and deferredGenerator help you write Deferred-using code
-    that looks like it's blocking (but isn't really), with the help of
-    generators.
+    waitForDeferred and deferredGenerator help you write
+    Deferred-using code that looks like it's blocking (but isn't
+    really), with the help of generators.
 
     There are two important functions involved: waitForDeferred, and
     deferredGenerator.  They are used together, like this::
@@ -548,26 +548,24 @@ class waitForDeferred:
             print thing #the result! hoorj!
         thingummy = deferredGenerator(thingummy)
 
-    waitForDeferred returns something that you should immediately yield; when
-    your generator is resumed, calling thing.getResult() will either give you
-    the result of the Deferred if it was a success, or raise an exception if it
-    was a failure.  Calling C{getResult} is B{absolutely mandatory}.  If you do
-    not call it, I{your program will not work}.
+    waitForDeferred returns something that you should immediately yield;
+    when your generator is resumed, calling thing.getResult() will either
+    give you the result of the Deferred if it was a success, or raise an
+    exception if it was a failure.
 
-    deferredGenerator takes one of these waitForDeferred-using generator
-    functions and converts it into a function that returns a Deferred. The
-    result of the Deferred will be the last value that your generator yielded
-    unless the last value is a waitForDeferred instance, in which case the
-    result will be C{None}.  If the function raises an unhandled exception, the
-    Deferred will errback instead.  Remember that 'return result' won't work;
-    use 'yield result; return' in place of that.
+    deferredGenerator takes one of these waitForDeferred-using
+    generator functions and converts it into a function that returns a
+    Deferred. The result of the Deferred will be the last
+    value that your generator yielded (remember that 'return result' won't
+    work; use 'yield result; return' in place of that).
 
-    Note that not yielding anything from your generator will make the Deferred
-    result in None. Yielding a Deferred from your generator is also an error
-    condition; always yield waitForDeferred(d) instead.
+    Note that not yielding anything from your generator will make the
+    Deferred result in None. Yielding a Deferred from your generator
+    is also an error condition; always yield waitForDeferred(d)
+    instead.
 
-    The Deferred returned from your deferred generator may also errback if your
-    generator raised an exception.  For example::
+    The Deferred returned from your deferred generator may also
+    errback if your generator raised an exception.  For example::
 
         def thingummy():
             thing = waitForDeferred(makeSomeRequestResultingInDeferred())
@@ -582,30 +580,25 @@ class waitForDeferred:
                 raise Exception('DESTROY ALL LIFE')
         thingummy = deferredGenerator(thingummy)
 
-    Put succinctly, these functions connect deferred-using code with this 'fake
-    blocking' style in both directions: waitForDeferred converts from a
-    Deferred to the 'blocking' style, and deferredGenerator converts from the
-    'blocking' style to a Deferred.
+    Put succinctly, these functions connect deferred-using code with this
+    'fake blocking' style in both directions: waitForDeferred converts from
+    a Deferred to the 'blocking' style, and deferredGenerator converts from
+    the 'blocking' style to a Deferred.
     """
-
     def __init__(self, d):
         if not isinstance(d, Deferred):
             raise TypeError("You must give waitForDeferred a Deferred. You gave it %r." % (d,))
         self.d = d
 
-
     def getResult(self):
-        if isinstance(self.result, failure.Failure):
-            self.result.raiseException()
+        if hasattr(self, 'failure'):
+            self.failure.raiseException()
         return self.result
 
-
-
-def _deferGenerator(g, deferred=None):
+def _deferGenerator(g, deferred=None, result=None):
     """
     See L{waitForDeferred}.
     """
-    result = None
     while 1:
         if deferred is None:
             deferred = Deferred()
@@ -626,7 +619,7 @@ def _deferGenerator(g, deferred=None):
             return fail(TypeError("Yield waitForDeferred(d), not d!"))
 
         if isinstance(result, waitForDeferred):
-            waiting = [True, None]
+            waiting=[True, None]
             # Pass vars in so they don't get changed going around the loop
             def gotResult(r, waiting=waiting, result=result):
                 result.result = r
@@ -634,16 +627,22 @@ def _deferGenerator(g, deferred=None):
                     waiting[0] = False
                     waiting[1] = r
                 else:
-                    _deferGenerator(g, deferred)
-            result.d.addBoth(gotResult)
+                    _deferGenerator(g, deferred, r)
+            def gotError(f, waiting=waiting, result=result):
+                result.failure = f
+                if waiting[0]:
+                    waiting[0] = False
+                    waiting[1] = f
+                else:
+                    _deferGenerator(g, deferred, f)
+            result.d.addCallbacks(gotResult, gotError)
             if waiting[0]:
                 # Haven't called back yet, set flag so that we get reinvoked
                 # and return from the loop
                 waiting[0] = False
                 return deferred
-            result = None # waiting[1]
-
-
+            else:
+                result = waiting[1]
 
 def deferredGenerator(f):
     """
