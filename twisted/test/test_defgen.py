@@ -66,6 +66,51 @@ class DefGenTests(unittest.TestCase):
 
         return self.assertFailure(_genDeferred(), TypeError)
 
+
+    def testHandledTerminalFailure(self):
+        """
+        Create a Deferred Generator which yields a Deferred which fails and
+        handles the exception which results.  Assert that the Deferred
+        Generator does not errback its Deferred.
+        """
+        class TerminalException(Exception):
+            pass
+
+        def _genFailure():
+            x = waitForDeferred(defer.fail(TerminalException("Handled Terminal Failure")))
+            yield x
+            try:
+                x.getResult()
+            except TerminalException:
+                pass
+        _genFailure = deferredGenerator(_genFailure)
+        return _genFailure().addCallback(self.assertEqual, None)
+
+
+    def testHandledTerminalAsyncFailure(self):
+        """
+        Just like testHandledTerminalFailure, only with a Deferred which fires
+        asynchronously with an error.
+        """
+        class TerminalException(Exception):
+            pass
+
+
+        d = defer.Deferred()
+        def _genFailure():
+            x = waitForDeferred(d)
+            yield x
+            try:
+                x.getResult()
+            except TerminalException:
+                pass
+        _genFailure = deferredGenerator(_genFailure)
+        deferredGeneratorResultDeferred = _genFailure()
+        d.errback(TerminalException("Handled Terminal Failure"))
+        return deferredGeneratorResultDeferred.addCallback(
+            self.assertEqual, None)
+
+
     def testStackUsage(self):
         # Make sure we don't blow the stack when yielding immediately
         # available values

@@ -11,23 +11,6 @@ from twisted.web2.stream import generatorToStream, readAndDiscard
 from twisted.web2 import http_headers
 from cStringIO import StringIO
 
-# This functionality of allowing non-deferreds to be yielded
-# perhaps ought to be part of defgen
-def wait(d):
-    if isinstance(d, defer.Deferred):
-        return defer.waitForDeferred(d)
-    return _fakewait(d)
-
-class _fakewait(defer.waitForDeferred):
-    def __init__(self, val):
-        #print "_fakewait", val
-        self.d = self
-        self.result = val
-        
-    def addCallbacks(self, success, fail):
-        success(self.result)
-
-    
 ###################################
 #####  Multipart MIME Reader  #####
 ###################################
@@ -64,7 +47,10 @@ def _readHeaders(stream):
     # Now read headers
     while 1:
         line = stream.readline(maxLength=1024)
-        line = wait(line); yield line; line = line.getResult()
+        if isinstance(line, defer.Deferred):
+            line = defer.waitForDeferred(line)
+            yield line
+            line = line.getResult()
         #print "GOT", line
         if line == "":
             break # End of headers
@@ -180,7 +166,10 @@ class MultipartMimeStream(object):
     def _readFirstBoundary(self):
         #print "_readFirstBoundary"
         line = self.stream.readline(maxLength=1024)
-        line = wait(line); yield line; line = line.getResult()
+        if isinstance(line, defer.Deferred):
+            line = defer.waitForDeferred(line)
+            yield line
+            line = line.getResult()
         if line != self.boundary:
             raise MimeFormatError("Extra data before first boundary: %r"% line)
         
@@ -192,7 +181,10 @@ class MultipartMimeStream(object):
     def _readBoundaryLine(self):
         #print "_readBoundaryLine"
         line = self.stream.readline(maxLength=1024)
-        line = wait(line); yield line; line = line.getResult()
+        if isinstance(line, defer.Deferred):
+            line = defer.waitForDeferred(line)
+            yield line
+            line = line.getResult()
         
         if line == "--":
             # THE END!
@@ -252,7 +244,10 @@ def parseMultipartFormData(stream, boundary,
     
     while 1:
         datas = mms.read()
-        datas = wait(datas); yield datas; datas = datas.getResult()
+        if isinstance(datas, defer.Deferred):
+            datas = defer.waitForDeferred(datas)
+            yield datas
+            datas = datas.getResult()
         if datas is None:
             break
         
@@ -269,7 +264,11 @@ def parseMultipartFormData(stream, boundary,
         else:
             outfile = tempfile.NamedTemporaryFile()
             maxBuf = maxSize
-        x = wait(readIntoFile(stream, outfile, maxBuf)); yield x; x=x.getResult()
+        x = readIntoFile(stream, outfile, maxBuf)
+        if isinstance(x, defer.Deferred):
+            x = defer.waitForDeferred(x)
+            yield x
+            x = x.getResult()
         if filename is None:
             # Is a normal form field
             outfile.seek(0)
@@ -335,7 +334,10 @@ def parse_urlencoded(stream, maxMem=100*1024, maxFields=1024,
     
     while 1:
         datas = s.read()
-        datas = wait(datas); yield datas; datas = datas.getResult()
+        if isinstance(datas, defer.Deferred):
+            datas = defer.waitForDeferred(datas)
+            yield datas
+            datas = datas.getResult()
         if datas is None:
             break
         name, value = datas

@@ -332,8 +332,6 @@ class CheckersMixin:
                 r = wFD(chk.requestAvatarId(cred))
                 yield r
                 self.assertRaises(error.UnauthorizedLogin, r.getResult)
-        # Work around deferredGenerator bug
-        yield None
     testNegative = dG(testNegative)
 
 class HashlessFilePasswordDBMixin:
