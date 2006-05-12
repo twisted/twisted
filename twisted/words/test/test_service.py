@@ -59,10 +59,6 @@ class RealmTestCase(unittest.TestCase):
         d = wFD(get(u"another" + kind.lower()))
         yield d
         self.assertRaises(noSuchExc, d.getResult)
-
-        # XXX wfd hack to keep the test from failing even though the
-        # last "result" was a failure
-        yield None
     _entityCreationTest = dG(_entityCreationTest)
 
 
@@ -98,10 +94,6 @@ class RealmTestCase(unittest.TestCase):
         d = wFD(realm.lookupUser(u"nosuchuser"))
         yield d
         self.assertRaises(ewords.NoSuchUser, d.getResult)
-
-        # XXX wfd hack to keep the test from failing even though the
-        # last "result" was a failure
-        yield None
     testUserRetrieval = dG(testUserRetrieval)
 
 
@@ -145,7 +137,6 @@ class RealmTestCase(unittest.TestCase):
         d = wFD(realm.getGroup(u"nosuchgroup"))
         yield d
         self.assertRaises(ewords.NoSuchGroup, d.getResult)
-        yield None # XXX wfd hack
     testGroupRetrieval = dG(testGroupRetrieval)
 
 
