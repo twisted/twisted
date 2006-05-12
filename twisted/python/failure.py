@@ -62,6 +62,15 @@ def format_frames(frames, write, detail="default"):
 EXCEPTION_CAUGHT_HERE = "--- <exception caught here> ---" 
 
 
+
+class NoCurrentExceptionError(Exception):
+    """
+    Raised when trying to create a Failure from the current interpreter
+    exception state and there is no current exception state.
+    """
+
+
+
 class Failure:
     """A basic abstraction for an error that has occurred.
 
@@ -101,6 +110,8 @@ class Failure:
         stackOffset = 0
         if exc_value is None:
             self.type, self.value, tb = sys.exc_info()
+            if self.type is None:
+                raise NoCurrentExceptionError()
             stackOffset = 1
         elif exc_type is None:
             if isinstance(exc_value, Exception):
@@ -366,10 +377,7 @@ def _debuginit(self, exc_value=None, exc_type=None, exc_tb=None,
              Failure__init__=Failure.__init__.im_func):
     if (exc_value, exc_type, exc_tb) == (None, None, None):
         exc = sys.exc_info()
-        if exc == (None, None, None):
-            print "Failure created without exception, debugger will debug stack:"
-            import pdb; pdb.set_trace()
-        elif not exc[0] == self.__class__ and DO_POST_MORTEM:
+        if not exc[0] == self.__class__ and DO_POST_MORTEM:
             print "Jumping into debugger for post-mortem of exception '%s':" % exc[1]
             import pdb
             pdb.post_mortem(exc[2])

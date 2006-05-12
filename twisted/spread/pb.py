@@ -64,6 +64,7 @@ try:
 except ImportError:
     import StringIO
 
+import new
 import sys
 import types
 import warnings
@@ -479,8 +480,7 @@ class CopiedFailure(RemoteCopy, failure.Failure):
 setUnjellyableForClass(CopyableFailure, CopiedFailure)
 
 def failure2Copyable(fail, unsafeTracebacks=0):
-    f = CopyableFailure()
-    f.__dict__ = fail.__dict__
+    f = new.instance(CopyableFailure, fail.__dict__)
     f.unsafeTracebacks = unsafeTracebacks
     return f
 

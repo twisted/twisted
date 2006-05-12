@@ -33,7 +33,7 @@ class FailureTestCase(unittest.TestCase):
         error = f.trap(SystemExit, RuntimeError)
         self.assertEquals(error, RuntimeError)
         self.assertEquals(f.type, NotImplementedError)
-    
+
     def test_notTrapped(self):
         """Making sure trap doesn't trap what it shouldn't."""
         try:
@@ -117,3 +117,11 @@ class FailureTestCase(unittest.TestCase):
             f.getTraceback()
         except:
             self.fail("getTraceback() shouldn't raise an exception")
+
+    def testConstructionFails(self):
+        """
+        Creating a Failure with no arguments causes it to try to discover the
+        current interpreter exception state.  If no such state exists, creating
+        the Failure should raise a synchronous exception.
+        """
+        self.assertRaises(failure.NoCurrentExceptionError, failure.Failure)
