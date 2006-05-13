@@ -32,13 +32,12 @@ if __name__ == '__main__':
         scripts=dist.getScripts("conch"),
         # metadata
         name="Conch",
-        version="SVN-Trunk",
         description="Twisted SSHv2 implementation.",
         author="Twisted Matrix Laboratories",
         author_email="twisted-python@twistedmatrix.com",
         maintainer="Paul Swartz",
         maintainer_email="z3p@twistedmatrix.com",
-        url="http://twistedmatrix.com/projects/conch/",
+        url="http://twistedmatrix.com/trac/wiki/TwistedConch",
         license="MIT",
         long_description="""\
 Conch is an SSHv2 implementation using the Twisted framework.  It

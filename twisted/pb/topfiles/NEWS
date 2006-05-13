@@ -1,0 +1,8 @@
+Releases of pb2
+
+* Release 0.0.1 (29 Apr 2006)
+
+First release! All basic features are in place. The wire protocol will almost
+certainly change at some point, so compatibility with future versions is not
+guaranteed.
+

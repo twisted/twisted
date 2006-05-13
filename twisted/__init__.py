@@ -27,9 +27,6 @@ from twisted.python import compat
 del compat
 
 # setup version
-from twisted.python import versions
-
-version = versions.Version(__name__, 2, 2, 0)
+from twisted._version import version
 __version__ = version.short()
 
-del versions

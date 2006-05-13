@@ -13,17 +13,14 @@ higher. It can also work with ZopeX3 version 3.0.0c1 or higher.
 For information about the Twisted split that happened before 2.0, see
 http://twistedmatrix.com/products/splitfaq
 
-This release of Twisted Sumo, constructed on SUMO-Date, 
-contains the following:
-
-Twisted Core-SVN-Trunk
-Twisted Conch Conch-SVN-Trunk
-Twisted Flow Flow-SVN-Trunk
-Twisted Lore Lore-SVN-Trunk
-Twisted Mail Mail-SVN-Trunk
-Twisted Names Names-SVN-Trunk
-Twisted News News-SVN-Trunk
-Twisted Pair Pair-SVN-Trunk
-Twisted Runner Runner-SVN-Trunk
-Twisted Web Web-SVN-Trunk
-Twisted Words Words-SVN-Trunk
+Twisted 2.2.0
+Twisted Conch 0.6.0
+Twisted Flow 0.1.0
+Twisted Lore 0.1.0
+Twisted Mail 0.2.0
+Twisted Names 0.2.0
+Twisted News 0.1.0
+Twisted Pair 0.1.0
+Twisted Runner 0.1.0
+Twisted Web 0.5.0
+Twisted Words 0.3.0

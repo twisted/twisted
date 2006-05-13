@@ -6,9 +6,5 @@
 """Twisted Words: a Twisted Chat service.
 """
 
-from twisted.python import versions
-
-version = versions.Version(__name__, 0, 3, 0)
+from twisted.words._version import version
 __version__ = version.short()
-
-del versions

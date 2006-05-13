@@ -11,13 +11,12 @@ if __name__ == '__main__':
         twisted_subproject="news",
         # metadata
         name="Twisted News",
-        version="SVN-Trunk",
         description="Twisted News is an NNTP server and programming library.",
         author="Twisted Matrix Laboratories",
         author_email="twisted-python@twistedmatrix.com",
         maintainer="Jp Calderone",
         maintainer_email="exarkun@divmod.com",
-        url="http://twistedmatrix.com/projects/news/",
+        url="http://twistedmatrix.com/trac/wiki/TwistedNews",
         license="MIT",
         long_description="""\
 Twisted News is an NNTP protocol (Usenet) programming library. The

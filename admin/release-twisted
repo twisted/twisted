@@ -18,17 +18,10 @@ sys.path.insert(0, os.curdir)
 from twisted.python import usage, dist, reflect
 from twisted.python.release import runChdirSafe, sh, DirectoryExists, DirectoryDoesntExist
 
-import time, glob
+import glob
 
 packaged_projects = dist.twisted_subprojects[:]
 packaged_projects.remove('web2')
-
-core_blacklist = ['vfs', 'pb', 'flow', 'pair']
-
-# FIXME:
-# 2. If we ever do a sumo release on the same day, the version will
-#    conflict, since we just use %Y-%m-%d as the version...
-
 
 
 def makeCommands():
@@ -49,6 +42,7 @@ def makeCommands():
         'makeDocNames': makeMakeDoc('names'),
         'makeDocNews': makeMakeDoc('news'),
         'makeDocPair': makeMakeDoc('pair'),
+        'makeDocPb': makeMakeDoc('pb'),
         'makeDocRunner': makeMakeDoc('runner'),
         'makeDocWeb': makeMakeDoc('web'),
         'makeDocWeb2': makeMakeDoc('web2'),
@@ -61,6 +55,7 @@ def makeCommands():
         'makeBallNames': makeMakeBall('names'),
         'makeBallNews': makeMakeBall('news'),
         'makeBallPair': makeMakeBall('pair'),
+        'makeBallPb': makeMakeBall('pb'),
         'makeBallRunner': makeMakeBall('runner'),
         'makeBallWeb': makeMakeBall('web'),
         'makeBallWeb2': makeMakeBall('web2'),
@@ -141,12 +136,6 @@ def tar(tdir):
     sh('find %(tdir)s -name "*.pyc" | xargs rm -f' % locals())
     sh('tar cjhf %(tdir)s.tar.bz2 %(tdir)s' % locals())
 
-def getVersion(projdesc):
-    if projdesc == 'core':
-        return reflect.namedModule('twisted').__version__
-    else:
-        return reflect.namedModule('twisted.'+projdesc).__version__
-
 ##
 # The MEAT.
 ##
@@ -158,7 +147,7 @@ def exportTemp(opts):
 
 
 def makeDocCore(opts):
-    ver = getVersion('core')
+    ver = dist.getVersion('core')
     os.chdir('Twisted.exp')
 
     for docdir in ['howto', 'howto/tutorial', 'howto/policy', 'upgrades',
@@ -176,7 +165,7 @@ def makeMakeDoc(projname):
         for sub in ('howto', 'examples'):
             sub = os.path.join(base, sub)
             if os.path.exists(sub):
-                lore(getVersion(projname), sub)
+                lore(dist.getVersion(projname), sub)
     return makeDoc
 
 
@@ -194,7 +183,7 @@ def makeBallAll(opts):
 
 
 def makeBallCore(opts):
-    ver = getVersion('core')
+    ver = dist.getVersion('core')
     tdir = "TwistedCore-%s" % (ver,)
     if not os.path.exists('Twisted.exp'):
         raise DirectoryDoesntExist("MakeBalls: Twisted.exp doesn't exist")
@@ -203,7 +192,7 @@ def makeBallCore(opts):
     os.makedirs(os.path.join(tdir, 'bin'))
 
     twisted_subprojects = ','.join(dist.twisted_subprojects)
-    package_blacklist = ','.join(core_blacklist + dist.twisted_subprojects)
+    package_blacklist = ','.join(dist.twisted_subprojects)
 
     sh('''
     ln -s `pwd`/Twisted.exp/twisted/* %(tdir)s/twisted/
@@ -226,7 +215,7 @@ def makeBallSumo(opts):
     ver = opts['sumo-version']
     if not ver:
         raise Exception("Please provide a --sumo-version")
-    basever = getVersion('core')
+    basever = dist.getVersion('core')
     tdir = "Twisted-%s" % (ver,)
     if not os.path.exists('twistedballs'):
         raise Exception("Please create a 'twistedballs' directory and "
@@ -246,7 +235,7 @@ def makeBallSumo(opts):
     sh('''
     cp `pwd`/README %(tdir)s/
     cp `pwd`/LICENSE %(tdir)s/
-    cp `pwd`/admin/sumo-setup.py %(tdir)s/setup.py
+    cp `pwd`/setup.py %(tdir)s/setup.py
     ''' % locals())
     tar(tdir)
 
@@ -277,7 +266,7 @@ def createSubprojectDirectory(proj, version):
 
 def makeMakeBall(proj):
     def makeBall(opts):
-        projver = getVersion(proj)
+        projver = dist.getVersion(proj)
         projdir = 'Twisted%s-%s' % (proj.capitalize(), projver,)
         createSubprojectDirectory(proj, projver)
         tar(projdir)

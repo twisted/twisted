@@ -30,15 +30,22 @@ class Version(object):
 
     def short(self):
         """
-        Return a string in canonical short version format, <major>.<minor>.<micro>.
+        Return a string in canonical short version format, 
+        <major>.<minor>.<micro>[+rSVNVer].
         """
-        s = '%d.%d.%d' % (self.major,
-                          self.minor,
-                          self.micro)
+        s = self.base()
         svnver = self._getSVNVersion()
         if svnver:
             s += '+r'+svnver
         return s
+
+    def base(self):
+        """
+        Like L{short}, but without the +rSVNVer.
+        """
+        return '%d.%d.%d' % (self.major,
+                             self.minor,
+                             self.micro)
 
     def __repr__(self):
         svnver = self._formatSVNVersion()

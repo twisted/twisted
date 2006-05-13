@@ -16,4 +16,5 @@ Maintainer: U{Tommi Virtanen <mailto:tv@twistedmatrix.com>}
 
 """
 
-__version__ = 'SVN-Trunk'
+from twisted.pair._version import version
+__version__ = version.short()

@@ -13,13 +13,12 @@ if __name__ == '__main__':
         scripts=dist.getScripts("lore"),
         # metadata
         name="Twisted Lore",
-        version="SVN-Trunk",
         description="Twisted documentation system",
         author="Twisted Matrix Laboratories",
         author_email="twisted-python@twistedmatrix.com",
         maintainer="Andrew Bennetts",
         maintainer_email="spiv@twistedmatrix.com",
-        url="http://twistedmatrix.com/projects/lore/",
+        url="http://twistedmatrix.com/trac/wiki/TwistedLore",
         license="MIT",
         long_description="""\
 Twisted Lore is a documentation generator with HTML and LaTeX support,

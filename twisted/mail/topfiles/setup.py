@@ -28,13 +28,12 @@ if __name__ == '__main__':
         scripts=dist.getScripts("mail"),
         # metadata
         name="Twisted Mail",
-        version="SVN-Trunk",
         description="A Twisted Mail library, server and client.",
         author="Twisted Matrix Laboratories",
         author_email="twisted-python@twistedmatrix.com",
         maintainer="Jp Calderone",
         maintainer_email="exarkun@divmod.com",
-        url="http://twistedmatrix.com/projects/mail/",
+        url="http://twistedmatrix.com/trac/wiki/TwistedMail",
         license="MIT",
         long_description="""\
 An SMTP, IMAP and POP protocol implementation together with clients

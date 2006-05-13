@@ -26,13 +26,12 @@ if __name__ == '__main__':
         twisted_subproject="names",
         # metadata
         name="Twisted Names",
-        version="SVN-Trunk",
         description="A Twisted DNS implementation.",
         author="Twisted Matrix Laboratories",
         author_email="twisted-python@twistedmatrix.com",
         maintainer="Jp Calderone",
         maintainer_email="exarkun@divmod.com",
-        url="http://twistedmatrix.com/projects/names/",
+        url="http://twistedmatrix.com/trac/wiki/TwistedNames",
         license="MIT",
         long_description="""\
 Twisted Names is both a domain name server as well as a client

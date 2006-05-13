@@ -13,13 +13,12 @@ if __name__ == '__main__':
         scripts=dist.getScripts("web"),
         # metadata
         name="Twisted Web",
-        version="SVN-Trunk",
         description="Twisted web server, programmable in Python.",
         author="Twisted Matrix Laboratories",
         author_email="twisted-python@twistedmatrix.com",
         maintainer="James Knight",
         maintainer_email="foom@fuhm.net",
-        url="http://twistedmatrix.com/projects/web/",
+        url="http://twistedmatrix.com/trac/wiki/TwistedWeb",
         license="MIT",
         long_description="""\
 Twisted Web is a complete web server, aimed at hosting web

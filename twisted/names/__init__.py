@@ -3,9 +3,5 @@
 
 """Resolving Internet Names"""
 
-from twisted.python import versions
-
-version = versions.Version(__name__, 0, 2, 0)
+from twisted.names._version import version
 __version__ = version.short()
-
-del versions

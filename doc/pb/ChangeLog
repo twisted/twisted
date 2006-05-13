@@ -1,3 +1,18 @@
+2006-05-05  Brian Warner  <warner@lothar.com>
+
+	* release-twisted: add 'pb' subproject
+	* twisted/python/dist.py: same
+	* twisted/pb/__init__.py: set version to 0.0.1
+	* twisted/pb/topfiles/setup.py: fix subproject name, set version 0.0.1
+
+2006-04-29  Brian Warner  <warner@lothar.com>
+
+	* topfiles/README, topfiles/NEWS: prepare for 0.0.1 release
+	* setup.py: fix up description, project name
+	* test_ZZresolve.py: add some instrumentation to try and debug the
+	occasional all-connection-related-tests-fail problem, which I
+	suspect involves the threadpool being broken.
+
 2006-02-28  Brian Warner  <warner@lothar.com>
 
 	* sslverify.py: update to latest version (r5075) from Vertex SVN,

@@ -8,13 +8,13 @@
 
 2. svn up.
 
-3. Write release notes in proj/topfiles/NEWS, including a date and a
-   version number.
-
-4. Branch the repo to /branches/releases/<a.b>.x. That last 'x' is
+3. Branch the repo to /branches/releases/<a.b>.x. That last 'x' is
    literal.
 
-5. Switch to that branch.
+4. Switch to that branch.
+
+5. Write release notes in proj/topfiles/NEWS, including a date and a
+   version number.
 
 6. Run ./admin/change-versions. Specify the versions of whatever
    you're releasing. Core should be versioned as release.major.minor,
@@ -33,20 +33,24 @@
    svn cp -m 'Tagging for 0.2.0 release' $TREPO/branches/<a.b>.x \
              $TREPO/tags/releases/<a.b.c>.
 
-11. Distribute, announce, and so forth.
+11. Merge the branch to trunk.
+
+12. Distribute, announce, and so forth.
 
 
 = RELEASING TWISTED SUMO =
 
-1. From Twisted trunk WC, mkdir twistedballs
+1. From Twisted trunk WC, mkdir twistedballs.
 
 2. Put all current subproject tarballs into twistedballs
-   This step is REALLY tedious. Should figure out a better way to do this.
+   Just copy unchanged projects from the previous Twisted tarball.
 
-3. Put ZopeInterface-*.tgz in twistedballs
+3. Put ZopeInterface-*.tgz in twistedballs.
 
-4. ./admin/change-versions, and make sure all the versions are
-   appropriately specified for the tarballs you've included.
+4. ./admin/change-versions --sumo-only, and make sure all the versions
+   are appropriately specified for the tarballs you've
+   included. Eventually it shouldn't be necessary to change any
+   version but the Twisted one.
 
 5. './admin/release-twisted --commands=makeBallSumo --sumo-version=a.b.x.y'
    where 'a.b.x' is the version of Twisted Core contained in this
@@ -54,11 +58,15 @@
    and 'y' is simply a monotonically increasing nonnegative integer as
    long as 'a.b.x' is the same as the last release.
 
-6. Distribute, announce, etc.
+6. Commit the changed README file to trunk, 
+   author: release-twisted, reviewer: you.
+
+7. Distribute, announce, etc.
 
 = CREATING A NEW SUBPROJECT =
 
-1. Add project name to twisted/python/dist.py, 'subprojects' list.
+1. Add the project name to twisted/python/dist.py's list of subprojects and
+   setup.py's list of subprojects.
 
 2. mkdir twisted/<proj>/topfiles
 

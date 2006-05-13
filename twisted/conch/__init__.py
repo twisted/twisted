@@ -14,10 +14,5 @@ This module is unstable.
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """
 
-
-from twisted.python import versions
-
-version = versions.Version(__name__, 0, 6, 0)
+from twisted.conch._version import version
 __version__ = version.short()
-
-del versions

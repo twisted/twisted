@@ -9,10 +9,6 @@ Twisted Web: a Twisted Web Server.
 
 """
 
-from twisted.python import versions
-
-version = versions.Version(__name__, 0, 5, 0)
+from twisted.web._version import version
 __version__ = version.short()
-
-del versions
 

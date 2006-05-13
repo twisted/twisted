@@ -16,72 +16,19 @@ if string.find(os.path.abspath(sys.argv[0]), os.sep+'Twisted') != -1:
 sys.path.insert(0, os.curdir)
 ### end of preamble
 
-import re
 try:
     # For platforms where this isn't automatic
     import readline
 except:
     pass
 
-from twisted.python import dist, reflect, release
+from twisted.python import release
 from os.path import join as opj
-import time
-
-class Project:
-    newVersionStr = None
-    initfile = None
-    name = None
-    pkgname = None
-    currentVersionStr = None
-    dir = None
-    def __init__(self, **kw):
-        self.__dict__.update(kw)
 
 
-class Done(Exception):
-    pass
-
-
-verstringMatcher = re.compile("^([0-9]+)\.([0-9]+)\.([0-9]+)$")
-def inputNewVersion(project):
-    match = None
-    while match is None:
-        new_vers = raw_input("New version for %s? " % (project.name))
-        if not new_vers:
-            return None,None
-        if new_vers == 'done':
-            raise Done
-        match = verstringMatcher.match(new_vers)
-        if match is None:
-            print 'Invalid format. Use e.g. 2.0.0.'
-    major,minor,micro = match.groups()
-
-    major=int(major)
-    minor=int(minor)
-    micro=int(micro)
-    return new_vers, (major,minor,micro)
-
-
-def gatherCurrentInfo():
-    projects = [Project(name='twisted', pkgname='twisted',
-                        initfile='twisted/__init__.py',
-                        dir='twisted')]
-    for pname in dist.twisted_subprojects:
-        dir = opj('twisted', pname)
-        pkgname = 'twisted.'+pname
-        currentVersionStr = reflect.namedModule(pkgname).__version__
-        projects.append(
-            Project(name=pname,
-                    pkgname=pkgname,
-                    dir=dir,
-                    initfile=opj(dir, '__init__.py'),
-                    currentVersionStr=currentVersionStr
-                    )
-            )
-    return projects
 
 def main():
-    projects = gatherCurrentInfo()
+    projects = release.gatherCurrentInfo()
     print "== Current Versions =="
     for proj in projects:
         print "%s %s" % (proj.name.capitalize(), proj.currentVersionStr)
@@ -91,30 +38,36 @@ def main():
     print "type 'done' when done"
     for project in projects:
         try:
-            project.newVersionStr = inputNewVersion(project)[0]
-        except Done:
+            input = release.inputNewVersion(project)
+            if input is not None:
+                project.newVersion = input
+            
+        except release.Done:
             break
 
-## SVN-Trunk is always project-context-sensitive version number.
-## Places where it shows up:
+## We need to update README files and project _version.py files with
+## version numbers. The _version.py files are easy; we can just
+## rewrite them entirely, since they're only meant to contain the
+## version assignment.
 
-## README files, setup.py files, __init__.py files, twisted/copyright.py.
+## The README files need to be string-replaced on special tags, like
+## SVN-Trunk (for project-specific README files), Proj-SVN-Trunk (for
+## Sumo README file).
 
-## SUMO-Date is the date a sumo version was released. Proj-SVN-Trunk,
-## where Proj is a capitalized Twisted subproject name or 'Core'. These
-## only show up in the toplevel sumo README.
 
     print "Modifying files..."
-    fatRepl = {'SUMO-Date': time.strftime('%Y-%m-%d')}
+    fatRepl = {}
     for project in projects:
-        if project.name == 'twisted':
-            key = 'Core-SVN-Trunk'
-        else:
-            key = '%s-SVN-Trunk' % project.name.capitalize()
-        if project.newVersionStr:
-            val = project.newVersionStr
+        key = "%s %s" % (project.fullyQualifiedName(), 
+                         project.currentVersionStr)
+
+        if project.newVersion:
+            val = '.'.join(map(str, project.newVersion))
         else:
             val = project.currentVersionStr
+
+        val = "%s %s" % (project.fullyQualifiedName(), val)
+
         fatRepl[key] = val
     fatRepl = dict([(k, v) for k, v in fatRepl.items() if v != None])
 
@@ -125,16 +78,24 @@ def main():
         return
 
     for project in projects:
-        if not project.newVersionStr:
-            continue
         print "|| Modifying %s's files." % project.pkgname
-        for fn in filter(os.path.exists, [project.initfile,
-                                          opj(project.dir, 'topfiles/README'),
-                                          opj(project.dir, 'topfiles/setup.py'),
-                                          opj(project.dir, 'copyright.py'),
-                                          ]):
-            print "|| >> Modifying:", fn
-            release.replaceInFile(fn, {'SVN-Trunk': project.newVersionStr})
+        if project.newVersion:
+            release.replaceProjectVersion(project.versionfile,
+                                          project.newVersion)
+        readmefile = opj(project.dir, 'topfiles/README')
+        if os.path.exists(readmefile):
+            print "|| >> Modifying:", readmefile
+            if project.newVersion:
+                verstr = '.'.join(map(str, project.newVersion))
+            else:
+                verstr = project.currentVersionStr
+
+            key = "%s %s" % (project.fullyQualifiedName(), 
+                             project.currentVersionStr)
+
+            val = "%s %s" % (project.fullyQualifiedName(),
+                             verstr)
+            release.replaceInFile(readmefile, {key: val})
 
 if __name__=='__main__':
     main()

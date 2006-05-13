@@ -12,9 +12,5 @@ compatibility will be added.
 procmon:monitor and restart processes
 """
 
-from twisted.python import versions
-
-version = versions.Version(__name__, 0, 1, 0)
+from twisted.runner._version import version
 __version__ = version.short()
-
-del versions

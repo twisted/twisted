@@ -11,9 +11,5 @@ Maintainer: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 
 """
 
-from twisted.python import versions
-
-version = versions.Version(__name__, 0, 2, 0)
+from twisted.mail._version import version
 __version__ = version.short()
-
-del versions

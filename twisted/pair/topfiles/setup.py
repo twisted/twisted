@@ -12,13 +12,12 @@ if __name__ == '__main__':
         twisted_subproject="pair",
         # metadata
         name="Twisted Pair",
-        version="SVN-Trunk",
         description="Twisted Pair contains low-level networking support.",
         author="Twisted Matrix Laboratories",
         author_email="twisted-python@twistedmatrix.com",
         maintainer="Tommi Virtanen",
         maintainer_email="tv@twistedmatrix.com",
-        url="http://twistedmatrix.com/projects/pair/",
+        url="http://twistedmatrix.com/trac/wiki/TwistedPair",
         license="MIT",
         long_description="""
 Raw network packet parsing routines, including ethernet, IP and UDP

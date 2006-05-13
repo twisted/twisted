@@ -1,5 +1,9 @@
 """
 Distutils convenience functionality.
+
+API Stability: Unstable. Don't use it outside of Twisted.
+
+Maintainer: U{Christopher Armstrong<mailto:radix@twistedmatrix.com>}
 """
 
 import sys, os
@@ -10,7 +14,7 @@ from distutils import core
 
 twisted_subprojects = ["conch", "flow", "lore", "mail", "names",
                        "news", "pair", "runner", "web", "web2",
-                       "words"]
+                       "words", "pb", "vfs"]
 
 
 def setup(**kw):
@@ -21,8 +25,8 @@ def setup(**kw):
     Pass twisted_subproject=projname if you want package and data
     files to automatically be found for you.
 
-    Pass detectExtensions=detecterFunction if your project has
-    extension modules. detecterFunction will be called called with an
+    Pass detectExtensions=detectorFunction if your project has
+    extension modules. detectorFunction will be called with an
     instance of build_ext_twisted and should return a list of
     distutils Extensions.
     """
@@ -34,6 +38,7 @@ def setup(**kw):
         projdir = os.path.join('twisted', projname)
 
         kw['packages'] = getPackages(projdir, parent='twisted')
+        kw['version'] = getVersion(projname)
 
         plugin = "twisted/plugins/twisted_" + projname + ".py"
         if os.path.exists(plugin):
@@ -68,6 +73,25 @@ def setup(**kw):
         kw.setdefault('cmdclass', {})['build_ext'] = my_build_ext
     return core.setup(**kw)
 
+def getVersion(proj, base="twisted"):
+    """
+    Extract the version number for a given project.
+
+    @param proj: the name of the project. Examples are "core",
+    "conch", "words", "mail".
+
+    @rtype: str
+    @returns: The version number of the project, as a string like
+    "2.0.0".
+    """
+    if proj == 'core':
+        vfile = os.path.join(base, '_version.py')
+    else:
+        vfile = os.path.join(base, proj, '_version.py')
+    ns = {'__name__': 'Nothing to see here'}
+    execfile(vfile, ns)
+    return ns['version'].base()
+    
 
 # Names that are exluded from globbing results:
 EXCLUDE_NAMES = ["{arch}", "CVS", ".cvsignore", "_darcs",
