@@ -756,11 +756,9 @@ class UtilTestCase(unittest.TestCase):
     def testWhich(self):
         j = os.path.join
         paths = procutils.which("executable")
-        expectedPaths = [j("foo", "baz", "executable"),
-                         j("baz", "foo", "executable")]
-        if runtime.platform.isWindows():
-            expectedPaths.append(j("baz", "bar", "executable"))
-        self.assertEquals(paths, expectedPaths)
+        self.assertEquals(paths, [
+            j("foo", "baz", "executable"), j("baz", "foo", "executable")
+        ])
 
     def testWhichPathExt(self):
         j = os.path.join
@@ -773,12 +771,10 @@ class UtilTestCase(unittest.TestCase):
                 del os.environ['PATHEXT']
             else:
                 os.environ['PATHEXT'] = old
-        expectedPaths = [j("foo", "baz", "executable"),
-                         j("baz", "foo", "executable"),
-                         j("baz", "foo", "executable.bin")]
-        if runtime.platform.isWindows():
-            expectedPaths.append(j("baz", "bar", "executable"))
-        self.assertEquals(paths, expectedPaths)
+        self.assertEquals(paths, [
+            j("foo", "baz", "executable"), j("baz", "foo", "executable"),
+            j("baz", "foo", "executable.bin")
+        ])
 
 class ClosingPipesProcessProtocol(protocol.ProcessProtocol):
     output = ''
@@ -866,6 +862,9 @@ else:
 if (runtime.platform.getType() != 'win32') or (not interfaces.IReactorProcess(reactor, None)):
     Win32ProcessTestCase.skip = skipMessage
     TestTwoProcessesNonPosix.skip = skipMessage
+
+if runtime.platform.getType() == 'win32':
+    UtilTestCase.todo = "do not assume that platform retains 'executable' mode"
 
 if not interfaces.IReactorProcess(reactor, None):
     ProcessTestCase.skip = skipMessage
