@@ -1,41 +1,48 @@
 = RELEASING TWISTED CORE OR A SUBPROJECT =
 
-0. Fix all release-critical bugs in http://twistedmatrix.com/bugs/
+* Fix all release-critical bugs in http://twistedmatrix.com/bugs/
 
-1. Verify that buildbot ( http://twistedmatrix.com/buildbot/ ) is ALL
+* Verify that buildbot ( http://twistedmatrix.com/buildbot/ ) is ALL
    GREEN (for all platforms that it was green for on the last
    release).
 
-2. svn up.
+* svn up.
 
-3. Branch the repo to /branches/releases/<a.b>.x. That last 'x' is
-   literal.
+* Create a ticket for releasing your project at
+  http://twistedmatrix.com/bugs/.
 
-4. Switch to that branch.
+* Branch the repo to
+   /branches/releases/twisted-[projname]-<a.b>.x-[ticketnumber]. That
+   last 'x' is literal.
 
-5. Write release notes in proj/topfiles/NEWS, including a date and a
+* Switch to that branch.
+
+* Write release notes in proj/topfiles/NEWS, including a date and a
    version number.
 
-6. Run ./admin/change-versions. Specify the versions of whatever
+* Run ./admin/change-versions. Specify the versions of whatever
    you're releasing. Core should be versioned as release.major.minor,
    where minors are only bugfixes, majors are functionality
    increases, and releases are major milestones.
 
-7. Run the release script: 
+* Add a Quote of the Release to twisted/topfiles/README if you are
+  releasing Twisted Core.
+
+* Run the release script: 
    ./admin/release-twisted --commands=exportTemp,makeDocProj,makeBallProj
 
-8. Test the produced tarballs. Install them, run tests, etc.
+* Test the produced tarballs. Install them, run tests, etc.
 
-9. svn commit
+* svn commit
 
-10. Tag the release.
+* Tag the release.
 
    svn cp -m 'Tagging for 0.2.0 release' $TREPO/branches/<a.b>.x \
              $TREPO/tags/releases/<a.b.c>.
 
-11. Merge the branch to trunk.
+* Merge the branch to trunk.
 
-12. Distribute, announce, and so forth.
+* Distribute, announce, and so forth.
 
 
 = RELEASING TWISTED SUMO =

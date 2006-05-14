@@ -1,4 +1,4 @@
-x.x.x (yyyy-mm-dd)
+2.3.0 (2006-05-14)
 ==================
 
 Features
@@ -6,6 +6,48 @@ Features
  - twisted-dev-mode's F9 now uses trial's --testmodule feature, rather than
    trying to guess what tests to run.  This will break files using the "-x"
    test-case-name hack (just use a comma separated list instead).
+ - API Documentation improvements.
+ - A new Producer/Consumer guide (#53)
+ - Better-defined error behavior in IReactorMulticast (#1578)
+ - IOCP Multicast support (#1500)
+ - Improved STDIO support on Windows. (#1553)
+ - LoopingCall supports Deferreds such that it will wait until a
+   Deferred has fired before rescheduling the next call (#1487)
+ - Added twisted.python.versions.Version, a structured representation
+   of Version information, including support for SVN revision numbers
+   (#1663)
+
+Fixes
+-----
+
+ - Many trial fixes, as usual 
+ - All API documentation is now correctly formatted as epytext (#1545)
+ - twisted.python.filepath.FilePath.__repr__ is safer.
+ - Fix trial's "until-failure" mode. (#1453)
+ - deferredGenerator now no longer causes handled exceptions (or
+   results) to propagate to the resulting Deferred (#1709).
+ - Misc: #1483, #1495, #1503, #1532, #1539, #1559, #1509, #1538,
+   #1571, #1331, #1561, #737, #1562, #1573, #1594, #1607, #1407, #1615,
+   #1645, #1634, #1620, #1664, #1666, #1650, #1670, #1675, #1692, #1710,
+   #1668.
+
+Deprecations
+------------
+
+ - Removal of already-deprecated trial APIs: the assertions module,
+   util.deferredResult, util.deferredError, util.fireWhenDoneFunc,
+   util.spinUntil, util.spinWhile, util.extract_tb,
+   util.format_exception, util.suppress_warnings, unittest.wait,
+   util.wait
+ - The backwards compatibility layer of twisted.python.components
+   (e.g., backwardsCompatImplements, fixClassImplements, etc) has been
+   disabled. The functions still exist, but do nothing as to not break
+   user code outright (#1511)
+ - Deprecate the usage of the 'default' argument as a keyword argument
+   in Interface.__call__. Passing a second positional argument to
+   specify the default return value of the adaptation is still
+   supported.
+
 
 2.2.0 (2006-02-12)
 ==================
