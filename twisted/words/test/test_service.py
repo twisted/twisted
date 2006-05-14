@@ -155,6 +155,25 @@ class RealmTestCase(unittest.TestCase):
         self.assertIdentical(p, group)
     testGroupAddition = dG(testGroupAddition)
 
+    
+    def testGroupUsernameCollision(self):
+        """
+        Try creating a group with the same name as an existing user and
+        assert that it succeeds, since users and groups should not be in the
+        same namespace and collisions should be impossible.
+        """
+        realm = service.InMemoryWordsRealm("realmname")
+
+        d = wFD(realm.createUser(u"test"))
+        yield d
+        user = d.getResult()
+
+        d = wFD(realm.createGroup(u"test"))
+        yield d
+        group = d.getResult()
+    testGroupUsernameCollision = dG(testGroupUsernameCollision)
+
+
     def testEnumeration(self):
         realm = service.InMemoryWordsRealm("realmname")
         d = wFD(realm.createGroup(u"groupone"))

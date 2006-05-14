@@ -1054,7 +1054,7 @@ class WordsRealm(object):
     createGroupOnRequest = False
     createUserOnRequest = True
 
-    def lookupGroup(self, name):
+    def lookupUser(self, name):
         raise NotImplementedError
 
 
@@ -1162,7 +1162,7 @@ class InMemoryWordsRealm(WordsRealm):
 
 
     def addGroup(self, group):
-        if group.name in self.users:
+        if group.name in self.groups:
             return defer.fail(failure.Failure(ewords.DuplicateGroup()))
         self.groups[group.name] = group
         return defer.succeed(group)
