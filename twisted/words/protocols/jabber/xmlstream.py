@@ -1,11 +1,22 @@
 # -*- test-case-name: twisted.words.test.test_jabberxmlstream -*-
 #
-# Copyright (c) 2001-2005 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2006 Twisted Matrix Laboratories.
 # See LICENSE for details.
+
+""" XMPP XML Streams
+
+Building blocks for setting up XML Streams, including helping classes for
+doing authentication on either client or server side, and working with XML
+Stanzas.
+"""
 
 from OpenSSL import SSL
 
-from twisted.internet import ssl
+from zope.interface import Interface, Attribute, directlyProvides
+
+from twisted.internet import defer, ssl
+from twisted.python import failure
+from twisted.words.protocols.jabber import error
 from twisted.words.xish import domish, xmlstream
 from twisted.words.xish.xmlstream import STREAM_CONNECTED_EVENT
 from twisted.words.xish.xmlstream import STREAM_START_EVENT
@@ -142,7 +153,7 @@ class XmlStream(xmlstream.XmlStream):
         self._initializeStream()
 
     def streamError(self, errelem):
-        """ Called when a stream:error element has bene received.
+        """ Called when a stream:error element has been received.
 
         Dispatches a L{STREAM_ERROR_EVENT} event with the error element to
         allow for cleanup actions and drops the connection.
@@ -311,3 +322,97 @@ class XmlStreamFactory(xmlstream.XmlStreamFactory):
         xs.factory = self
         for event, fn in self.bootstraps: xs.addObserver(event, fn)
         return xs
+
+class IIQResponseTracker(Interface):
+    """ IQ response tracker interface.
+
+    The XMPP stanza C{iq} has a request-response nature that fits
+    naturally with deferreds. You send out a request and when the response
+    comes back a deferred is fired.
+    
+    The L{IQ} class implements a C{send} method that returns a deferred. This
+    deferred is put in a dictionary that is kept in an L{XmlStream} object,
+    keyed by the request stanzas C{id} attribute.
+
+    An object providing this interface (usually an instance of L{XmlStream}),
+    keeps the said dictionary and sets observers on the iq stanzas of type
+    C{result} and C{error} and lets the callback fire the associated deferred.
+    """
+
+    iqDeferreds = Attribute("Dictionary of deferreds waiting for an iq "
+                             "response")
+
+def upgradeWithIQResponseTracker(xmlstream):
+    """ Enhances an XmlStream for iq response tracking.
+
+    This makes an L{XmlStream} object provide L{IIQResponseTracker}. When a
+    response is an error iq stanza, the deferred has its errback invoked with a
+    failure that holds a L{StanzaException<error.StanzaException>} that is
+    easier to examine.
+    """
+
+    def callback(iq):
+        if getattr(iq, 'handled', False):
+            return
+
+        try:
+            d = xmlstream.iqDeferreds[iq["id"]]
+        except KeyError:
+            pass
+        else:
+            del iq["id"]
+            iq.handled = True
+            if iq['type'] == 'error':
+                d.errback(failure.Failure(error.exceptionFromStanza(iq)))
+            else:
+                d.callback(iq)
+
+    xmlstream.iqDeferreds = {}
+    xmlstream.addObserver('/iq[@type="result"]', callback)
+    xmlstream.addObserver('/iq[@type="error"]', callback)
+    directlyProvides(xmlstream, IIQResponseTracker)
+
+class IQ(domish.Element):
+    """ Wrapper for an iq stanza.
+   
+    Iq stanzas are used for communications with a request-response behaviour.
+    Each iq request is associated with an XML stream and has its own unique id
+    to be able to track the response.
+    """
+
+    def __init__(self, xmlstream, type = "set"):
+        """
+        @type xmlstream: L{xmlstream.XmlStream}
+        @param xmlstream: XmlStream to use for transmission of this IQ
+
+        @type type: L{str}
+        @param type: IQ type identifier ('get' or 'set')
+        """
+
+        domish.Element.__init__(self, (None, "iq"))
+        self.addUniqueId()
+        self["type"] = type
+        self._xmlstream = xmlstream
+
+    def send(self, to=None):
+        """ Send out this iq.
+
+        Returns a deferred that is fired when an iq response with the same id
+        is received. Result responses will be passed to the deferred callback.
+        Error responses will be transformed into a
+        L{StanzaError<error.StanzaError>} and result in the errback of the
+        deferred being invoked. 
+
+        @rtype: L{defer.Deferred}
+        """
+
+        if to is not None:
+            self["to"] = to
+
+        if not IIQResponseTracker.providedBy(self._xmlstream):
+            upgradeWithIQResponseTracker(self._xmlstream)
+
+        d = defer.Deferred()
+        self._xmlstream.iqDeferreds[self['id']] = d
+        self._xmlstream.send(self)
+        return d
