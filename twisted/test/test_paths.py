@@ -54,9 +54,6 @@ class FilePathTestCase(unittest.TestCase):
         newcontent = self.path.child('new').getContent()
         self.failUnlessEqual(content, newcontent)
 
-    if platform.getType() == 'win32':
-        testGetAndSet.todo = "os.rename in FilePath.setContent doesn't work too well on Windows"
-
     def testValidSubdir(self):
         sub1 = self.path.child('sub1')
         self.failUnless(sub1.exists(),

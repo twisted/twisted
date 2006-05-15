@@ -286,6 +286,8 @@ class FilePath:
     def setContent(self, content, ext='.new'):
         sib = self.siblingExtension(ext)
         sib.open('w').write(content)
+        if platform.isWindows() and exists(self.path):
+            os.unlink(self.path)
         os.rename(sib.path, self.path)
 
     def getContent(self):
