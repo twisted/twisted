@@ -21,7 +21,19 @@ class TestModuleTest(unittest.TestCase):
 
     def test_testmoduleOnModule(self):
         self.config.opt_testmodule(sibpath('moduletest.py'))
-        self.failUnlessEqual(['twisted.trial.test.test_test_visitor'],
+        self.failUnlessEqual(sets.Set(['twisted.trial.test.test_test_visitor']),
+                             self.config['tests'])
+
+    def test_testmoduleTwice(self):
+        self.config.opt_testmodule(sibpath('moduletest.py'))
+        self.config.opt_testmodule(sibpath('moduletest.py'))
+        self.failUnlessEqual(sets.Set(['twisted.trial.test.test_test_visitor']),
+                             self.config['tests'])
+        
+
+    def test_testmoduleOnSelfModule(self):
+        self.config.opt_testmodule(sibpath('moduleself.py'))
+        self.failUnlessEqual(sets.Set(['twisted.trial.test.moduleself']),
                              self.config['tests'])
 
     def test_testmoduleOnScript(self):
@@ -36,7 +48,7 @@ class TestModuleTest(unittest.TestCase):
         filename = 'test_thisbetternoteverexist.py'
         try:
             self.config.opt_testmodule(filename)
-            self.failUnlessEqual([], self.config['tests'])
+            self.failUnlessEqual(sets.Set([]), self.config['tests'])
             self.failUnlessEqual("File %r doesn't exist\n" % (filename,),
                                  buffy.getvalue())
         finally:
@@ -44,7 +56,7 @@ class TestModuleTest(unittest.TestCase):
 
     def test_testmoduleOnEmptyVars(self):
         self.config.opt_testmodule(sibpath('novars.py'))
-        self.failUnlessEqual([], self.config['tests'])
+        self.failUnlessEqual(sets.Set([]), self.config['tests'])
 
     def test_testmoduleOnModuleName(self):
         buffy = StringIO.StringIO()
@@ -52,7 +64,7 @@ class TestModuleTest(unittest.TestCase):
         moduleName = 'twisted.trial.test.test_script'
         try:
             self.config.opt_testmodule(moduleName)
-            self.failUnlessEqual([], self.config['tests'])
+            self.failUnlessEqual(sets.Set([]), self.config['tests'])
             self.failUnlessEqual("File %r doesn't exist\n" % (moduleName,),
                                  buffy.getvalue())
         finally:

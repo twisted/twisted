@@ -4,7 +4,7 @@
 # See LICENSE for details.
 
 
-import sys, os, shutil, random, gc, time
+import sys, os, shutil, random, gc, time, sets
 
 from twisted.internet import defer
 from twisted.application import app
@@ -127,7 +127,7 @@ class Options(usage.Options):
     tracer = None
 
     def __init__(self):
-        self['tests'] = []
+        self['tests'] = sets.Set()
         self._loadReporters()
 
         # Yes, I know I'm mutating a class variable.
@@ -221,9 +221,9 @@ class Options(usage.Options):
             return
         filename = os.path.abspath(filename)
         if isTestFile(filename):
-            self['tests'].append(filename)
+            self['tests'].add(filename)
         else:
-            self['tests'].extend(getTestModules(filename))
+            self['tests'].update(getTestModules(filename))
 
     def opt_spew(self):
         """Print an insanely verbose log of everything that happens.  Useful
@@ -298,9 +298,9 @@ class Options(usage.Options):
                 self['random'] = long(time.time() * 100)
 
     def parseArgs(self, *args):
-        self['tests'].extend(args)
+        self['tests'].update(args)
         if self.extra is not None:
-            self['tests'].extend(self.extra)
+            self['tests'].update(self.extra)
 
     def postOptions(self):
         if self['suppresswarnings']:
