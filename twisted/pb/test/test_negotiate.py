@@ -1,4 +1,6 @@
 
+import os
+
 from twisted.trial import unittest
 
 from twisted.internet import protocol, defer, reactor
@@ -531,7 +533,7 @@ class CrossfireReverse(CrossfireMixin, unittest.TestCase):
         return d
     test4.timeout = 10
 
-class CrossfireReverse(CrossfireReverse):
+class Crossfire(CrossfireReverse):
     tub1IsMaster = True
 
     def test5(self):
@@ -653,3 +655,18 @@ class Existing(CrossfireMixin, unittest.TestCase):
         d.addCallback(self.checkNumBrokers, 2, (r21,))
         return d
 
+# disable all tests unless NEWPB_TEST_NEGOTIATION is set in the environment.
+# The negotiation tests are sensitive to system load, and the intermittent
+# failures are really annoying. The 'right' solution to this involves
+# completely rearchitecting connection establishment, to provide debug/test
+# hooks to get control in between the various phases. It also requires
+# creating a loopback connection type (as a peer of TCP) which has
+# deterministic timing behavior.
+
+if not os.environ.get("NEWPB_TEST_NEGOTIATION"):
+    del Basic
+    del Versus
+    del Parallel
+    del CrossfireReverse
+    del Crossfire
+    del Existing

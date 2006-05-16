@@ -1,3 +1,17 @@
+2006-05-15  Brian Warner  <warner@lothar.com>
+
+	* test_zz_resolve.py: rename test file, I'd like to sit at the end
+	of the tests rather than at the beginning. This is to investigate
+	ticket #1390.
+
+	* test_negotiate.py (Crossfire): oops, a cut-and-paste error
+	resulted in two CrossfireReverse tests and zero Crossfire tests.
+	Fixed this to enable the possibly-never-run real CrossfireReverse
+	test case.
+	(top): disable all negotiation tests unless NEWPB_TEST_NEGOTIATION
+	is set in the environment, since they are sensitive to system load
+	and the intermittent buildbot failures are annoying.
+
 2006-05-05  Brian Warner  <warner@lothar.com>
 
 	* release-twisted: add 'pb' subproject
