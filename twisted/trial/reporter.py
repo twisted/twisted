@@ -10,13 +10,12 @@
 API Stability: Unstable
 """
 
-import sys, types, os
+import sys, os
 import time
 import warnings
 
 from twisted.python import reflect, failure, log
-from twisted.internet import defer
-from twisted.trial import itrial, util
+from twisted.trial import itrial
 import zope.interface as zi
 
 pyunit = __import__('unittest')

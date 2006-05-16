@@ -4,7 +4,7 @@
 # Maintainer: Jonathan Lange <jml@twistedmatrix.com>
 
 
-import time, re, StringIO
+import re, StringIO
 from twisted.trial import unittest, runner, reporter
 from twisted.trial.test import erroneous
 
@@ -67,7 +67,6 @@ class TestErrorReporting(unittest.TestCase):
         self.stringComparison(match, output)
 
     def testDoctestError(self):
-        import sys
         from twisted.trial.test import erroneous
         suite = self.loader.loadDoctests(erroneous)
         output = self.runTests(suite)

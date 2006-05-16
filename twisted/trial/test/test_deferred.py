@@ -1,4 +1,3 @@
-import StringIO
 from twisted.internet import defer
 from twisted.trial import unittest
 from twisted.trial import runner, reporter, util

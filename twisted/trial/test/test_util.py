@@ -1,10 +1,7 @@
-from twisted.python import log
-from twisted.internet import utils
-from twisted.internet import defer, reactor, threads, interfaces
 from twisted.trial import unittest, util
 from twisted.trial.test import packages
 
-import sys, os, time
+import sys, os
 
 
 class TestMktemp(unittest.TestCase):

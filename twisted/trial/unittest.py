@@ -4,10 +4,10 @@
 # See LICENSE for details.
 
 
-import os, errno, warnings, sys, time, tempfile, sets
+import os, warnings, sys, tempfile, sets
 
 from twisted.internet import defer, utils
-from twisted.python import failure, log, reflect
+from twisted.python import failure, log
 from twisted.trial import itrial, util
 
 pyunit = __import__('unittest')
@@ -552,7 +552,7 @@ class TestCase(_Assertions):
         """
         from twisted.internet import reactor
         if running:
-            raise WaitIsNotReentrantError, REENTRANT_WAIT_ERROR_MSG
+            raise RuntimeError("_wait is not reentrant")
     
         results = []
         def append(any):
@@ -613,7 +613,6 @@ class PyUnitResultAdapter(object):
         self.original = original
 
     def _exc_info(self, err):
-        from twisted.trial import reporter
         if isinstance(err, failure.Failure):
             # Unwrap the Failure into a exc_info tuple.
             # XXX: if err.tb is a real traceback and not stringified, we should

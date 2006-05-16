@@ -19,9 +19,9 @@ Maintainer: U{Jonathan Lange<mailto:jml@twistedmatrix.com>}
 
 from __future__ import generators
 
-import traceback, warnings, time, signal, gc, sys
-from twisted.python import failure, util, log, threadpool
-from twisted.internet import utils, defer, interfaces
+import traceback, gc, sys
+from twisted.python import log, threadpool
+from twisted.internet import interfaces
 
 # Methods in this list will be omitted from a failed test's traceback if
 # they are the final frame.
@@ -156,13 +156,6 @@ def suppress(action='ignore', **kwarg):
     level by specifying .suppress = []
     """
     return ((action,), kwarg)
-
-
-def testFunction(f):
-    containers = [f] + getPythonContainers(f)
-    suppress = acquireAttribute(containers, 'suppress', [])
-    timeout = acquireAttribute(containers, 'timeout', DEFAULT_TIMEOUT)
-    return utils.runWithWarningsSuppressed(suppress, timedRun, timeout, f)
 
 
 def profiled(f, outputFile):

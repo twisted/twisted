@@ -2,22 +2,11 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
+"""test twisted's doctest support
 """
-test twisted's doctest support
-"""
-import exceptions, sys, doctest
 
-from twisted import trial
 from twisted.trial import runner, unittest, reporter
-from twisted.trial import itrial
-from twisted.python import failure
-
 from twisted.trial.test import mockdoctest
-
-from pprint import pprint
-
-import zope.interface as zi
 
 
 class TestRunners(unittest.TestCase):

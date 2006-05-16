@@ -1,8 +1,7 @@
 from twisted.scripts import trial
-from twisted.trial import unittest, runner
+from twisted.trial import runner
 from twisted.trial.test import packages
-from twisted.python import util
-import os, re, sys, StringIO
+import os, sys, StringIO
 
 
 def runTrial(*args):

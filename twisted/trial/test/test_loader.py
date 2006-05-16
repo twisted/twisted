@@ -1,7 +1,6 @@
 import sys, os
 from twisted.python import util
 from twisted.trial.test import packages
-from twisted.trial import unittest
 from twisted.trial import runner, reporter
 
 

@@ -85,7 +85,7 @@ class TestSkipClasses(unittest.TestCase, ResultsTestMixin):
         def tearDownClass(self):
             self.__class__._tearDownClassRan = True
         def test_skip1(self):
-            raise SkipTest('skip1')
+            raise unittest.SkipTest('skip1')
         def test_skip2(self):
             raise RuntimeError("Ought to skip me")
         test_skip2.skip = 'skip2'
@@ -135,7 +135,7 @@ class TestSkipClassesRaised(unittest.TestCase, ResultsTestMixin):
         def tearDownClass(self):
             self.__class__._tearDownClassRan = True
         def test_skip1(self):
-            raise SkipTest('skip1')
+            raise unittest.SkipTest('skip1')
         def test_skip2(self):
             raise RuntimeError("Ought to skip me")
         test_skip2.skip = 'skip2'

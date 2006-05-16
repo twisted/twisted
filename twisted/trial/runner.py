@@ -159,7 +159,7 @@ class PyUnitTestCase(object):
 class TrialSuite(TestSuite):
 
     def _bail(self):
-        from twisted.internet import reactor, utils
+        from twisted.internet import reactor
         d = defer.Deferred()
         reactor.addSystemEventTrigger('after', 'shutdown',
                                       lambda: d.callback(None))
