@@ -546,14 +546,31 @@ def parseRetryAfter(header):
 
 # WWW-Authenticate and Authorization
 
-def parseWWWAuthenticate(header):
-    scheme, rest = split(header, Token(' '))
-    challenge = [parseKeyValue(arg) for arg in split(rest, Token(','))]
+def parseWWWAuthenticate(tokenized):
+    headers = []
+    last = []
+    scheme = None
 
-    return [scheme[0], dict(challenge)]
+    def _parseHeader(scheme, rest):
+        challenge = [parseKeyValue(arg) for arg in split(rest, Token(','))]
+        headers.append((scheme, dict(challenge)))
+
+    for token in tokenized:
+        if token == Token(' '):
+            if scheme and last[-2] == Token(','):
+                _parseHeader(scheme, last[:-2])
+                del last[:-1]
+                
+            scheme = last.pop()
+        else:
+            last.append(token)
+
+    _parseHeader(scheme, last)
+
+    return headers
 
 def parseAuthorization(header):
-    scheme, rest = header[0].split(' ', 1)
+    scheme, rest = header.split(' ', 1)
     # this header isn't tokenized because it may eat characters
     # in the unquoted base64 encoded credentials
     return scheme.lower(), rest
@@ -677,13 +694,17 @@ def generateIfRange(dateOrETag):
 
 # WWW-Authenticate and Authorization
 
-def generateWWWAuthenticate(seq):
-    scheme, challenge = seq[0], dict(seq[1])
-    l = []
-    for k,v in challenge.iteritems():
-        l.append("%s=%s" % (k, quoteString(v)))
+def generateWWWAuthenticate(headers):
+    _generated = []
+    for seq in headers:
+        scheme, challenge = seq[0], dict(seq[1])
+        l = []
+        for k,v in challenge.iteritems():
+            l.append("%s=%s" % (k, quoteString(v)))
 
-    return ["%s %s" % (scheme, ", ".join(l))]
+        _generated.append("%s %s" % (scheme, ", ".join(l)))
+
+    return _generated
 
 def generateAuthorization(seq):
     return [' '.join(seq)]
@@ -1301,7 +1322,7 @@ parser_request_headers = {
     'Accept-Charset': (tokenize, listParser(parseAcceptQvalue), dict, addDefaultCharset),
     'Accept-Encoding':(tokenize, listParser(parseAcceptQvalue), dict, addDefaultEncoding),
     'Accept-Language':(tokenize, listParser(parseAcceptQvalue), dict),
-    'Authorization': (parseAuthorization,),
+    'Authorization': (last, parseAuthorization),
     'Cookie':(parseCookie,),
     'Expect':(tokenize, listParser(parseExpect), dict),
     'From':(last,),
@@ -1353,7 +1374,7 @@ parser_response_headers = {
     'Set-Cookie':(parseSetCookie,),
     'Set-Cookie2':(tokenize, parseSetCookie2),
     'Vary':(tokenize, filterTokens),
-    'WWW-Authenticate': (tokenize, parseWWWAuthenticate)
+    'WWW-Authenticate': (tokenize, parseWWWAuthenticate,)
 }
 
 generator_response_headers = {

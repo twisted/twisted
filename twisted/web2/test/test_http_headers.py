@@ -163,18 +163,21 @@ class HeaderParsingTestBase(unittest.TestCase):
             parsed = parseHeader(headername, [rawHeaderInput,])
             self.assertEquals(parsed, parsedHeaderData)
 
-            # generator
-            regeneratedHeaderValue = generateHeader(headername, parsed)[0]
-            for reqEle in requiredGeneratedElements:
-                elementIndex = regeneratedHeaderValue.find(reqEle)
-                self.assertNotEqual(
-                    elementIndex, -1,
-                    "%r did not appear in generated HTTP header %r: %r" % (reqEle,
-                                                                           headername,
-                                                                           regeneratedHeaderValue))
+            regeneratedHeaderValue = generateHeader(headername, parsed)
+
+            if requiredGeneratedElements:
+                # generator
+                for regeneratedElement in regeneratedHeaderValue:
+                    reqEle = requiredGeneratedElements[regeneratedHeaderValue.index(regeneratedElement)]
+                    elementIndex = regeneratedElement.find(reqEle)
+                    self.assertNotEqual(
+                        elementIndex, -1,
+                        "%r did not appear in generated HTTP header %r: %r" % (reqEle,
+                                                                               headername,
+                                                                               regeneratedElement))
 
             # parser/generator
-            reparsed = parseHeader(headername, [regeneratedHeaderValue,])
+            reparsed = parseHeader(headername, regeneratedHeaderValue)
             self.assertEquals(parsed, reparsed)
 
 
@@ -534,12 +537,17 @@ class ResponseHeaderParsingTests(HeaderParsingTestBase):
         self.runRoundtripTest("Vary", table)
 
     def testWWWAuthenticate(self):
-        table = (
-            ('Digest realm="foo", nonce="bAr", qop="auth"',
-             ['digest', {'realm': 'foo', 'nonce': 'bAr', 'qop': 'auth'}],
-             ['digest', 'realm="foo"', 'nonce="bAr"', 'qop="auth"']),
-            ('Basic realm="foo"',
-             ['basic', {'realm': 'foo'}], ['basic', 'realm="foo"']))
+        digest = ('Digest realm="foo", nonce="bAr", qop="auth"',
+                  [('digest', {'realm': 'foo', 'nonce': 'bAr', 'qop': 'auth'})],
+                  ['digest', 'realm="foo"', 'nonce="bAr"', 'qop="auth"'])
+        basic = ('Basic realm="foo"',
+                 [('basic', {'realm': 'foo'})], ['basic', 'realm="foo"'])
+
+        table = (digest,
+                 basic,
+                 (digest[0]+', '+basic[0],
+                  digest[1] + basic[1],
+                  digest[2], basic[2]))
 
         self.runRoundtripTest("WWW-Authenticate", table)
 

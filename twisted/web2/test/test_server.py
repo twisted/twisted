@@ -142,6 +142,7 @@ class BaseCase(unittest.TestCase):
         """
         d = self.getResponseFor(*request_data)
         d.addCallback(self._cbGotResponse, expected_response, failure)
+        
         return d
 
     def _cbGotResponse(self, (code, headers, data, failed), expected_response, expectedfailure=False):

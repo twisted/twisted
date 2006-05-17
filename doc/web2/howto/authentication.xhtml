@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE XHTML PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+  <head>
+    <title>HTTP Authentication with Twisted.Web2</title>
+  </head>
+  <body>
+    <h1>HTTP Authentication with Twisted.Web2</h1>
+
+    <h2>Overview</h2>
+    
+    <p><code class="API">twisted.web2.auth</code> implements Digest
+    and Basic HTTP Authentication as specified
+    by <a href="http://www.faqs.org/rfcs/rfc2617.html">RFC 2617</a>.
+    This document attempts to describe:
+    <ul>
+      <li>How <code class="API">twisted.cred</code> is used to support
+      pluggable authentication for HTTP.</li>
+      <li>How the <code
+      class="API" base="twisted.web2.auth.interfaces">ICredentialFactory</code>
+      Interface is used to define authentication schemes.</li>
+      <li>How to
+      use <code
+      class="API" base="twisted.web2.auth.wrapper">HTTPAuthResource</code> to
+      protect a portion or all of your resource tree.</li>
+    </ul>
+    </p>
+     
+    <h2>Cred</h2>
+
+    <p><code class="API">twisted.cred</code> is a pluggable
+    authentication framework which allows application/protocol
+    developers to easily support multiple authentication types
+    regardless of the backend used.  This document assumes some
+    familiarity with cred and suggests you
+    read <a
+    href="http://twistedmatrix.com/projects/core/documentation/howto/cred.html">Cred:
+    Pluggable Authentication</a>
+    and the <code class="API">twisted.cred</code> API Reference for
+    further information.  However several of the application specific
+    implementations of objects required by <code class="API"
+    base="twisted">cred</code> are listed below.
+    </p>
+
+    <a class="py-listing" href="../examples/auth/credsetup.py">
+      Listing 1: Cred Setup</a>
+
+    <h2>Credential Factories</h2>
+
+    <p>Credential Factories as defined
+    by <code
+    class="twisted.web2.auth.interfaces">ICredentialFactory</code> are
+    the heart of HTTP Authentication.  Their functions are two-fold:
+    <ol>
+      <li>They provide the challenges and decode the responses from
+      the client, while maintaining state for stateful
+      authentication schemes such as Digest.</li>
+      <li>They are used to define and determine which authentication
+      schemes should be used during authentication</li>
+    </ol>
+    </p>
+
+    <p>
+    The <code class="API"
+    base="twisted.web2.auth.interfaces">ICredentialFactory</code>
+    interface defines the following:
+    <ul>
+      <li><code class="API"
+      base="twisted.web2.auth.interfaces.ICredentialFactory">scheme</code>
+        <p>an attribute containing the textual representation of the
+          scheme name, for HTTP this will be used in the www-authenticate
+          and authorization headers.</p></li>
+      <li><code class="API"
+      base="twisted.web2.auth.interfaces.ICredentialFactory">getChallenge</code>(peer)
+        <p>called whenever a new challenge is to be issued, the
+        argument peer may be used to calculate a unique challenge
+        based on the <code class="API"
+        base="twisted.internet.interfaces">IAddress</code> of the
+        client.</p></li>
+
+      <li><code class="API"
+      base="twisted.web2.auth.interfaces.ICredentialFactory">decode</code>(response,
+      method=None)
+        <p>called with a string response (such as the body of an
+        Authorization header) and (for HTTP based protocols) the
+        HTTP method by which the initial response was sent, such as
+        GET, POST, REGISTER, etc.  This will either return an
+        <code class="API"
+        base="twisted.cred.credentials">ICredential</code> or raise a
+        <code class="API" base="twisted.cred.error">LoginFailed</code>
+        Exception if it is unable to decode the response.</p></li>
+    </ul>
+    </p>
+
+    <h2>The HTTPAuthResource</h2>
+
+    <p>The purpose of <code class="API"
+    base="twisted.web2.auth.wrapper">HTTPAuthResource</code> is to
+    trap both <code class="API"
+    base="twisted.web2.iweb.IResource">locateChild</code> and
+    <code class="API"
+    base="twisted.web2.iweb.IResource">renderHTTP</code> and require
+    authentication before allowing requests to pass on to it's
+    wrappedResource.  It does this by returning an
+    <code class="API"
+    base="twisted.web2.auth.wrapper">UnauthorizedResource</code> if
+    the following conditions are not met:
+    <ul>
+      <li>No Authorization header was given</li>
+      <li>The Authorization header contained an unsupported
+      scheme.</li>
+      <li>The Authorization header response was not able to be decoded
+      by the <code class="API"
+      base="twisted.web2.auth.interfaces">ICredentialFactory</code>
+      for the specified scheme</li>
+      <li>The <code class="API"
+      base="twisted.cred.credentials.ICredentials">checkPassword</code>
+      for the <code class="API"
+      base="twisted.cred.credentials">ICredentials</code> returned by the
+      specified <code class="API"
+      base="twisted.web2.auth.interfaces">ICredentialFactory</code> failed.</li>
+    </ul>
+    </p>
+
+    <h3>Usage By Example</h3>
+
+    <a class="py-listing" href="../examples/auth/httpauth.tac">
+      Listing 2: Working HTTPAuthResource Example</a>
+
+    <p>This simple example consists of the following application
+    specific components.
+      <ol>
+        <li>A Resource we wish to protect from unauthorized access, in
+        this case it is our ProtectedResource</li>
+        <li>A portal using our realm from Listing 1, and having a
+        single <code class="API"
+        base="twisted.cred.checkers">ICredentialCheckers</code>.  In
+        this case a simple checker that stores usernames and
+        passwords in memory and should not be used for anything other
+        than as an example.</li>
+        <li>A single <code class="API"
+        base="twisted.web2.auth.interfaces">ICredentialFactory</code>,
+        in this case a <code class="API"
+        base="twisted.web2.auth.digest">DigestCredentialFactory</code>
+        using the md5 algorithm and with a realm of 
+        <code class="python">"My Realm"</code></li>
+        <li>A sequence of avatar interfaces consisting of our
+        IHTTPUser as defined in Listing 1</li>
+      </ol>
+    </p>
+
+    <h3>Things HTTPAuthResource doesn't do</h3>
+
+    <p><code class="API"
+    base="twisted.web2.auth.wrapper">HTTPAuthResource</code> is provided
+    largely as a lowest common denominator authentication solution. As a
+    result, it has a few limitations:</p>
+
+    <ul>
+      <li>Never gives up on the client
+
+        <p>There's no limit to the number of authentication attempts that a
+        client can make. <code class="API"
+        base="twisted.web2.auth.wrapper">HTTPAuthResource</code>will always
+        respond to a failed authentication with a 401 UNAUTHORIZED message, and
+        the client will always be issued a new challenge to which it is welcome
+        to respond again and again. A better solution, not yet implemented,
+        would be to issue a 403 FORBIDDEN response code for a particular client
+        at some point.</p></li>
+
+      <li>Doesn't propagate the Avatar 
+        <p>Currently nothing is done with the avatar returned by a successful
+        login. In a future version, this avatar may be attached to the request
+        so that resources below it benefit from the information.</p></li>
+      
+      <li>Method limiting
+        <p>Currently there is no provided means of limiting only a subset of
+        possible HTTP methods to require HTTP Authentication. The HTTP mmethods
+        GET, PUT, POST are all treated exactly the same, which permits only the
+        choices of a total lockdown of the resource or leaving it wide
+        open.</p></li>
+    </ul>
+
+    <p>As a result of these limitations <code class="API"
+    base="twisted.web2.auth.wrapper">HTTPAuthResource</code> is provided more
+    as an example of how you can work with <code
+    class="API">twisted.web2.auth</code> rather than as a definitive
+    solution.</p>
+  </body>
+</html>

@@ -428,43 +428,8 @@ class Request(object):
             
         d = stream.StreamProducer(response.stream).beginProducing(self.chanRequest)
         d.addCallback(self._finished).addErrback(self._error)
+
     
-#     def _authorize(self):
-#         # Authorization, (mostly) per the RFC
-#         try:
-#             authh = self.in_headers.getHeaderRaw("Authorization")
-#             if not authh:
-#                 self.user = self.password = ''
-#                 return
-                
-#             bas, upw = authh.split()
-#             if bas.lower() != "basic":
-#                 raise ValueError
-#             upw = base64.decodestring(upw)
-#             self.user, self.password = upw.split(':', 1)
-#         except (binascii.Error, ValueError):
-#             self.user = self.password = ""
-#         except:
-#             log.err()
-#             self.user = self.password = ""
-    
-#     def getUser(self):
-#         try:
-#             return self.user
-#         except:
-#             pass
-#         self._authorize()
-#         return self.user
-
-#     def getPassword(self):
-#         try:
-#             return self.password
-#         except:
-#             pass
-#         self._authorize()
-#         return self.password
-
-
 from twisted.web2 import compat
 components.registerAdapter(compat.makeOldRequestAdapter, iweb.IRequest, iweb.IOldRequest)
 components.registerAdapter(compat.OldNevowResourceAdapter, iweb.IOldNevowResource, iweb.IResource)
