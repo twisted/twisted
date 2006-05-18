@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_application -*-
+# -*- test-case-name: twisted.test.test_application,twisted.test.test_cooperator -*-
 
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
@@ -37,6 +37,7 @@ Maintainer: U{Moshe Zadka<mailto:moshez@twistedmatrix.com>}
 
 from twisted.python import log
 from twisted.application import service
+from twisted.internet import task
 
 
 class _VolatileDataService(service.Service):
@@ -159,13 +160,12 @@ class TimerService(_VolatileDataService):
 
     def startService(self):
         service.Service.startService(self)
-        from twisted.internet.task import LoopingCall
         callable, args, kwargs = self.call
         # we have to make a new LoopingCall each time we're started, because
         # an active LoopingCall remains active when serialized. If
         # LoopingCall were a _VolatileDataService, we wouldn't need to do
         # this.
-        self._loop = LoopingCall(callable, *args, **kwargs)
+        self._loop = task.LoopingCall(callable, *args, **kwargs)
         self._loop.start(self.step, now=True).addErrback(self._failed)
 
     def _failed(self, why):
@@ -181,7 +181,29 @@ class TimerService(_VolatileDataService):
         return service.Service.stopService(self)
 
 
-__all__ = (['TimerService']+
+
+class CooperatorService(service.Service):
+    """
+    Simple L{service.IService} which starts and stops a L{twisted.internet.task.Cooperator}.
+    """
+    def __init__(self):
+        self.coop = task.Cooperator(started=False)
+
+
+    def coiterate(self, iterator):
+        return self.coop.coiterate(iterator)
+
+
+    def startService(self):
+        self.coop.start()
+
+
+    def stopService(self):
+        self.coop.stop()
+
+
+
+__all__ = (['TimerService', 'CooperatorService'] +
            [tran+side
          for tran in 'Generic TCP UNIX SSL UDP UNIXDatagram Multicast'.split()
          for side in 'Server Client'.split()])

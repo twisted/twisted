@@ -12,18 +12,18 @@
 API Stability: Unstable
 """
 
-import time
 import string
-import operator
 import base64
 import binascii
 import md5
+import warnings
+
 from zope.interface import implements
 
 from twisted.mail import smtp
 from twisted.protocols import basic
 from twisted.protocols import policies
-from twisted.internet import protocol
+from twisted.internet import task
 from twisted.internet import defer
 from twisted.internet import interfaces
 from twisted.python import components
@@ -91,26 +91,191 @@ class _HeadersPlusNLines:
             return data
 
 
+
+class _POP3MessageDeleted(Exception):
+    """
+    Internal control-flow exception.  Indicates the file of a deleted message
+    was requested.
+    """
+
+
 class POP3Error(Exception):
     pass
 
 
-class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
+class _IteratorBuffer(object):
+    bufSize = 0
+
+    def __init__(self, write, iterable, memoryBufferSize=None):
+        """
+        Create a _IteratorBuffer.
+
+        @param write: A one-argument callable which will be invoked with a list
+        of strings which have been buffered.
+
+        @param iterable: The source of input strings as any iterable.
+
+        @param memoryBufferSize: The upper limit on buffered string length,
+        beyond which the buffer will be flushed to the writer.
+        """
+        self.lines = []
+        self.write = write
+        self.iterator = iter(iterable)
+        if memoryBufferSize is None:
+            memoryBufferSize = 2 ** 16
+        self.memoryBufferSize = memoryBufferSize
+
+
+    def __iter__(self):
+        return self
+
+
+    def next(self):
+        try:
+            v = self.iterator.next()
+        except StopIteration:
+            if self.lines:
+                self.write(self.lines)
+            # Drop some references, in case they're edges in a cycle.
+            del self.iterator, self.lines, self.write
+            raise
+        else:
+            if v is not None:
+                self.lines.append(v)
+                self.bufSize += len(v)
+                if self.bufSize > self.memoryBufferSize:
+                    self.write(self.lines)
+                    self.lines = []
+                    self.bufSize = 0
+
+
+
+def iterateLineGenerator(proto, gen):
+    """
+    Hook the given protocol instance up to the given iterator with an
+    _IteratorBuffer and schedule the result to be exhausted via the protocol.
+
+    @type proto: L{POP3}
+    @type gen: iterator
+    @rtype: L{twisted.internet.defer.Deferred}
+    """
+    coll = _IteratorBuffer(proto.transport.writeSequence, gen)
+    return proto.schedule(coll)
+
+
+
+def successResponse(response):
+    """
+    Format the given object as a positive response.
+    """
+    response = str(response)
+    return '+OK %s\r\n' % (response,)
+
+
+
+def formatStatResponse(msgs):
+    """
+    Format the list of message sizes appropriately for a STAT response.
+
+    Yields None until it finishes computing a result, then yields a str
+    instance that is suitable for use as a response to the STAT command.
+    Intended to be used with a L{twisted.internet.task.Cooperator}.
+    """
+    i = 0
+    bytes = 0
+    for size in msgs:
+        i += 1
+        bytes += size
+        yield None
+    yield successResponse('%d %d' % (i, bytes))
+
+
+
+def formatListLines(msgs):
+    """
+    Format a list of message sizes appropriately for the lines of a LIST
+    response.
+
+    Yields str instances formatted appropriately for use as lines in the
+    response to the LIST command.  Does not include the trailing '.'.
+    """
+    i = 0
+    for size in msgs:
+        i += 1
+        yield '%d %d\r\n' % (i, size)
+
+
+
+def formatListResponse(msgs):
+    """
+    Format a list of message sizes appropriately for a complete LIST response.
+
+    Yields str instances formatted appropriately for use as a LIST command
+    response.
+    """
+    yield successResponse(len(msgs))
+    for ele in formatListLines(msgs):
+        yield ele
+    yield '.\r\n'
+
+
+
+def formatUIDListLines(msgs, getUidl):
+    """
+    Format the list of message sizes appropriately for the lines of a UIDL
+    response.
+
+    Yields str instances formatted appropriately for use as lines in the
+    response to the UIDL command.  Does not include the trailing '.'.
+    """
+    for i, m in enumerate(msgs):
+        if m is not None:
+            uid = getUidl(i)
+            yield '%d %s\r\n' % (i + 1, uid)
+
+
+
+def formatUIDListResponse(msgs, getUidl):
+    """
+    Format a list of message sizes appropriately for a complete UIDL response.
+
+    Yields str instances formatted appropriately for use as a UIDL command
+    response.
+    """
+    yield successResponse('')
+    for ele in formatUIDListLines(msgs, getUidl):
+        yield ele
+    yield '.\r\n'
+
+
+
+class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
+    """
+    POP3 server protocol implementation.
+
+    @ivar portal: A reference to the L{twisted.cred.portal.Portal} instance we
+    will authenticate through.
+
+    @ivar factory: A L{twisted.mail.pop3.IServerFactory} which will be used to
+    determine some extended behavior of the server.
+
+    @ivar timeOut: An integer which defines the minimum amount of time which
+    may elapse without receiving any traffic after which the client will be
+    disconnected.
+
+    @ivar schedule: A one-argument callable which should behave like
+    L{twisted.internet.task.coiterate}.
+    """
     implements(interfaces.IProducer)
 
     magic = None
     _userIs = None
     _onLogout = None
-    highest = 0
 
     AUTH_CMDS = ['CAPA', 'USER', 'PASS', 'APOP', 'AUTH', 'RPOP', 'QUIT']
 
-    # A reference to the newcred Portal instance we will authenticate
-    # through.
     portal = None
-
-    # Who created us
     factory = None
 
     # The mailbox we're serving
@@ -126,6 +291,12 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
     # PIPELINE
     blocked = None
 
+    # Cooperate and suchlike.
+    schedule = staticmethod(task.coiterate)
+
+    # Message index of the highest retrieved message.
+    _highest = 0
+
     def connectionMade(self):
         if self.magic is None:
             self.magic = self.generateMagic()
@@ -134,17 +305,20 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         if getattr(self.factory, 'noisy', True):
             log.msg("New connection from " + str(self.transport.getPeer()))
 
+
     def connectionLost(self, reason):
         if self._onLogout is not None:
             self._onLogout()
             self._onLogout = None
         self.setTimeout(None)
 
+
     def generateMagic(self):
         return smtp.messageid()
 
+
     def successResponse(self, message=''):
-        self.sendLine('+OK ' + str(message))
+        self.transport.write(successResponse(message))
 
     def failResponse(self, message=''):
         self.sendLine('-ERR ' + str(message))
@@ -344,94 +518,220 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         d.addCallbacks(self._cbMailbox, self._ebMailbox, callbackArgs=(user,)
         ).addErrback(self._ebUnexpected)
 
+
+    def _longOperation(self, d):
+        # Turn off timeouts and block further processing until the Deferred
+        # fires, then reverse those changes.
+        timeOut = self.timeOut
+        self.setTimeout(None)
+        self.blocked = []
+        d.addCallback(self._unblock)
+        d.addCallback(lambda ign: self.setTimeout(timeOut))
+        return d
+
+
+    def _coiterate(self, gen):
+        return self.schedule(_IteratorBuffer(self.transport.writeSequence, gen))
+
+
     def do_STAT(self):
-        i = 0
-        sum = 0
-        msg = self.mbox.listMessages()
-        for e in msg:
-            i += 1
-            sum += e
-        self.successResponse('%d %d' % (i, sum))
+        d = defer.maybeDeferred(self.mbox.listMessages)
+        def cbMessages(msgs):
+            return self._coiterate(formatStatResponse(msgs))
+        def ebMessages(err):
+            self.failResponse(err.getErrorMessage())
+            log.msg("Unexpected do_STAT failure:")
+            log.err(err)
+        return self._longOperation(d.addCallbacks(cbMessages, ebMessages))
+
 
     def do_LIST(self, i=None):
         if i is None:
-            messages = self.mbox.listMessages()
-            lines = []
-            for msg in messages:
-                lines.append('%d %d%s' % (len(lines) + 1, msg, self.delimiter))
-            self.successResponse(len(lines))
-            self.transport.writeSequence(lines)
-            self.sendLine('.')
+            d = defer.maybeDeferred(self.mbox.listMessages)
+            def cbMessages(msgs):
+                return self._coiterate(formatListResponse(msgs))
+            def ebMessages(err):
+                self.failResponse(err.getErrorMessage())
+                log.msg("Unexpected do_LIST failure:")
+                log.err(err)
+            return self._longOperation(d.addCallbacks(cbMessages, ebMessages))
         else:
             try:
                 i = int(i)
+                if i < 1:
+                    raise ValueError()
             except ValueError:
                 self.failResponse("Invalid message-number: %r" % (i,))
             else:
-                msg = self.mbox.listMessages(i - 1)
-                self.successResponse('%d %d' % (i, msg))
+                d = defer.maybeDeferred(self.mbox.listMessages, i - 1)
+                def cbMessage(msg):
+                    self.successResponse('%d %d' % (i, msg))
+                def ebMessage(err):
+                    errcls = err.check(ValueError, IndexError)
+                    if errcls is not None:
+                        if errcls is IndexError:
+                            # IndexError was supported for a while, but really
+                            # shouldn't be.  One error condition, one exception
+                            # type.
+                            warnings.warn(
+                                """
+                                twisted.mail.pop3.IMailbox.listMessages may not
+                                raise IndexError for out-of-bounds message numbers:
+                                raise ValueError instead.
+                                """,
+                                PendingDeprecationWarning)
+                        self.failResponse("Invalid message-number: %r" % (i,))
+                    else:
+                        self.failResponse(err.getErrorMessage())
+                        log.msg("Unexpected do_LIST failure:")
+                        log.err(err)
+                return self._longOperation(d.addCallbacks(cbMessage, ebMessage))
+
 
     def do_UIDL(self, i=None):
         if i is None:
-            messages = self.mbox.listMessages()
-            self.successResponse()
-            i = 0
-            lines = []
-            for msg in messages:
-                if msg:
-                    uid = self.mbox.getUidl(i)
-                    lines.append('%d %s%s' % (i + 1, uid, self.delimiter))
-                i += 1
-            self.transport.writeSequence(lines)
-            self.sendLine('.')
+            d = defer.maybeDeferred(self.mbox.listMessages)
+            def cbMessages(msgs):
+                return self._coiterate(formatUIDListResponse(msgs, self.mbox.getUidl))
+            def ebMessages(err):
+                self.failResponse(err.getErrorMessage())
+                log.msg("Unexpected do_UIDL failure:")
+                log.err(err)
+            return self._longOperation(d.addCallbacks(cbMessages, ebMessages))
         else:
-            msg = self.mbox.getUidl(int(i) - 1)
-            self.successResponse(str(msg))
+            try:
+                i = int(i)
+                if i < 1:
+                    raise ValueError()
+            except ValueError:
+                self.failResponse("Bad message number argument")
+            else:
+                try:
+                    msg = self.mbox.getUidl(i - 1)
+                except IndexError:
+                    # XXX TODO See above comment regarding IndexError.
+                    warnings.warn(
+                        """
+                        twisted.mail.pop3.IMailbox.listMessages may not
+                        raise IndexError for out-of-bounds message numbers:
+                        raise ValueError instead.
+                        """,
+                        PendingDeprecationWarning)
+                    self.failResponse("Bad message number argument")
+                except ValueError:
+                    self.failResponse("Bad message number argument")
+                else:
+                    self.successResponse(str(msg))
 
-    def getMessageFile(self, i):
-        i = int(i) - 1
+
+    def _getMessageFile(self, i):
+        """
+        Retrieve the size and contents of a given message, as a two-tuple.
+
+        @param i: The number of the message to operate on.  This is a base-ten
+        string representation starting at 1.
+
+        @return: A Deferred which fires with a two-tuple of an integer and a
+        file-like object.
+        """
         try:
-            resp = self.mbox.listMessages(i)
-        except (IndexError, ValueError), e:
-            self.failResponse('index out of range')
-            return None, None
-        if not resp:
-            self.failResponse('message deleted')
-            return None, None
-        return resp, self.mbox.getMessage(i)
+            msg = int(i) - 1
+            if msg < 0:
+                raise ValueError()
+        except ValueError:
+            self.failResponse("Bad message number argument")
+            return defer.succeed(None)
+
+        sizeDeferred = defer.maybeDeferred(self.mbox.listMessages, msg)
+        def cbMessageSize(size):
+            if not size:
+                return defer.fail(_POP3MessageDeleted())
+            fileDeferred = defer.maybeDeferred(self.mbox.getMessage, msg)
+            fileDeferred.addCallback(lambda fObj: (size, fObj))
+            return fileDeferred
+
+        def ebMessageSomething(err):
+            errcls = err.check(_POP3MessageDeleted, ValueError, IndexError)
+            if errcls is _POP3MessageDeleted:
+                self.failResponse("message deleted")
+            elif errcls in (ValueError, IndexError):
+                if errcls is IndexError:
+                    # XXX TODO See above comment regarding IndexError.
+                    warnings.warn(
+                        """
+                        twisted.mail.pop3.IMailbox.listMessages may not
+                        raise IndexError for out-of-bounds message numbers:
+                        raise ValueError instead.
+                        """,
+                        PendingDeprecationWarning)
+                self.failResponse("Bad message number argument")
+            else:
+                log.msg("Unexpected _getMessageFile failure:")
+                log.err(err)
+            return None
+
+        sizeDeferred.addCallback(cbMessageSize)
+        sizeDeferred.addErrback(ebMessageSomething)
+        return sizeDeferred
+
+
+    def _sendMessageContent(self, i, fpWrapper, successResponse):
+        d = self._getMessageFile(i)
+        def cbMessageFile(info):
+            if info is None:
+                # Some error occurred - a failure response has been sent
+                # already, just give up.
+                return
+
+            self._highest = max(self._highest, int(i))
+            resp, fp = info
+            fp = fpWrapper(fp)
+            self.successResponse(successResponse(resp))
+            s = basic.FileSender()
+            d = s.beginFileTransfer(fp, self.transport, self.transformChunk)
+
+            def cbFileTransfer(lastsent):
+                if lastsent != '\n':
+                    line = '\r\n.'
+                else:
+                    line = '.'
+                self.sendLine(line)
+
+            def ebFileTransfer(err):
+                self.transport.loseConnection()
+                log.msg("Unexpected error in _sendMessageContent:")
+                log.err(err)
+
+            d.addCallback(cbFileTransfer)
+            d.addErrback(ebFileTransfer)
+            return d
+        return self._longOperation(d.addCallback(cbMessageFile))
+
 
     def do_TOP(self, i, size):
-        self.highest = max(self.highest, i)
-        resp, fp = self.getMessageFile(i)
-        if not fp:
-            return
-        size = int(size)
-        fp = _HeadersPlusNLines(fp, size)
-        self.successResponse("Top of message follows")
-        s = basic.FileSender()
-        self.blocked = []
-        s.beginFileTransfer(fp, self.transport, self.transformChunk
-            ).addCallback(self.finishedFileTransfer
-            ).addCallback(self._unblock
-            ).addErrback(log.err
-            )
+        try:
+            size = int(size)
+            if size < 0:
+                raise ValueError
+        except ValueError:
+            self.failResponse("Bad line count argument")
+        else:
+            return self._sendMessageContent(
+                i,
+                lambda fp: _HeadersPlusNLines(fp, size),
+                lambda size: "Top of message follows")
+
 
     def do_RETR(self, i):
-        self.highest = max(self.highest, i)
-        resp, fp = self.getMessageFile(i)
-        if not fp:
-            return
-        self.successResponse(resp)
-        s = basic.FileSender()
-        self.blocked = []
-        s.beginFileTransfer(fp, self.transport, self.transformChunk
-            ).addCallback(self.finishedFileTransfer
-            ).addCallback(self._unblock
-            ).addErrback(log.err
-            )
+        return self._sendMessageContent(
+            i,
+            lambda fp: fp,
+            lambda size: "%d" % (size,))
+
 
     def transformChunk(self, chunk):
         return chunk.replace('\n', '\r\n').replace('\r\n.', '\r\n..')
+
 
     def finishedFileTransfer(self, lastsent):
         if lastsent != '\n':
@@ -440,14 +740,17 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             line = '.'
         self.sendLine(line)
 
+
     def do_DELE(self, i):
         i = int(i)-1
         self.mbox.deleteMessage(i)
         self.successResponse()
 
+
     def do_NOOP(self):
         """Perform no operation.  Return a success code"""
         self.successResponse()
+
 
     def do_RSET(self):
         """Unset all deleted message flags"""
@@ -457,22 +760,27 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             log.err()
             self.failResponse()
         else:
-            self.highest = 1
+            self._highest = 0
             self.successResponse()
 
+
     def do_LAST(self):
-        """Respond with the highest message access thus far"""
-        # omg this is such a retarded protocol
-        self.successResponse(self.highest)
+        """
+        Return the index of the highest message yet downloaded.
+        """
+        self.successResponse(self._highest)
+
 
     def do_RPOP(self, user):
         self.failResponse('permission denied, sucker')
+
 
     def do_QUIT(self):
         if self.mbox:
             self.mbox.sync()
         self.successResponse()
         self.transport.loseConnection()
+
 
     def authenticateUserAPOP(self, user, digest):
         """Perform authentication of an APOP login.
@@ -575,10 +883,16 @@ class IMailbox(components.Interface):
         @param index: The number of the message for which to retrieve the
         size (starting at 0), or None to retrieve the size of all messages.
 
-        @rtype: C{int} or any iterable of C{int}
-        @return: The number of octets in the specified message, or an
-        iterable of integers representing the number of octets in all the
-        messages.
+        @rtype: C{int} or any iterable of C{int} or a L{Deferred} which fires
+        with one of these.
+
+        @return: The number of octets in the specified message, or an iterable
+        of integers representing the number of octets in all the messages.  Any
+        value which would have referred to a deleted message should be set to
+        0.
+
+        @raise ValueError: if C{index} is greater than the index of any message
+        in the mailbox.
         """
 
     def getMessage(self, index):
@@ -599,6 +913,9 @@ class IMailbox(components.Interface):
         @rtype: C{str}
         @return: A string of printable characters uniquely identifying for all
         time the specified message.
+
+        @raise ValueError: if C{index} is greater than the index of any message
+        in the mailbox.
         """
 
     def deleteMessage(self, index):
@@ -625,6 +942,8 @@ class IMailbox(components.Interface):
         This method will be called to indicate the mailbox should attempt to
         clean up any remaining deleted messages.
         """
+
+
 
 class Mailbox:
     implements(IMailbox)
@@ -660,10 +979,10 @@ class POP3Client(basic.LineOnlyReceiver):
 
     def __init__(self):
         import warnings
-        from twisted.python.reflect import qual
         warnings.warn("twisted.mail.pop3.POP3Client is deprecated, "
                       "please use twisted.mail.pop3.AdvancedPOP3Client "
-                      "instead.", DeprecationWarning)
+                      "instead.", DeprecationWarning,
+                      stacklevel=3)
 
     def sendShort(self, command, params=None):
         if params is not None:
@@ -735,7 +1054,7 @@ class POP3Client(basic.LineOnlyReceiver):
         self.sendShort('PASS', pass_)
     def quit(self):
         self.sendShort('QUIT')
- 
+
 from twisted.mail.pop3client import POP3Client as AdvancedPOP3Client
 from twisted.mail.pop3client import POP3ClientError
 from twisted.mail.pop3client import InsecureAuthenticationDisallowed
@@ -746,7 +1065,7 @@ __all__ = [
     # Interfaces
     'IMailbox', 'IServerFactory',
 
-    # Exceptions  
+    # Exceptions
     'POP3Error', 'POP3ClientError', 'InsecureAuthenticationDisallowed',
     'ServerErrorResponse', 'LineTooLong',
 
