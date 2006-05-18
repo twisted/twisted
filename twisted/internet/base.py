@@ -47,6 +47,19 @@ class DelayedCall(styles.Ephemeral):
     _str = None
 
     def __init__(self, time, func, args, kw, cancel, reset):
+        """
+        @param time: Seconds from the epoch at which to call C{func}.
+        @param func: The callable to call.
+        @param args: The positional arguments to pass to the callable.
+        @param kw: The keyword arguments to pass to the callable.
+        @param cancel: A callable which will be called with this
+            DelayedCall before cancellation.
+        @param reset: A callable which will be called with this
+            DelayedCall after changing this DelayedCall's scheduled
+            execution time. The callable should adjust any necessary
+            scheduling details to ensure this DelayedCall is invoked
+            at the new appropriate time.
+        """
         self.time, self.func, self.args, self.kw = time, func, args, kw
         self.resetter = reset
         self.canceller = cancel
