@@ -501,6 +501,10 @@ class TimeoutMixin:
 
     __timeoutCall = None
 
+    def callLater(self, period, func):
+        return reactor.callLater(period, func)
+
+
     def resetTimeout(self):
         """Reset the timeout count down"""
         if self.__timeoutCall is not None and self.timeOut is not None:
@@ -523,7 +527,7 @@ class TimeoutMixin:
             else:
                 self.__timeoutCall.reset(period)
         elif period is not None:
-            self.__timeoutCall = reactor.callLater(period, self.__timedOut)
+            self.__timeoutCall = self.callLater(period, self.__timedOut)
 
         return prev
 

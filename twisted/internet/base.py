@@ -46,7 +46,7 @@ class DelayedCall(styles.Ephemeral):
     debug = False
     _str = None
 
-    def __init__(self, time, func, args, kw, cancel, reset):
+    def __init__(self, time, func, args, kw, cancel, reset, seconds=None):
         """
         @param time: Seconds from the epoch at which to call C{func}.
         @param func: The callable to call.
@@ -59,10 +59,14 @@ class DelayedCall(styles.Ephemeral):
             execution time. The callable should adjust any necessary
             scheduling details to ensure this DelayedCall is invoked
             at the new appropriate time.
+        @param seconds: If provided, a no-argument callable which will be
+            used to determine the current time any time that information is
+            needed.
         """
         self.time, self.func, self.args, self.kw = time, func, args, kw
         self.resetter = reset
         self.canceller = cancel
+        self.seconds = seconds
         self.cancelled = self.called = 0
         self.delayed_time = 0
         if self.debug:
@@ -111,7 +115,10 @@ class DelayedCall(styles.Ephemeral):
         elif self.called:
             raise error.AlreadyCalled
         else:
-            new_time = seconds() + secondsFromNow
+            if self.seconds is None:
+                new_time = seconds() + secondsFromNow
+            else:
+                new_time = self.seconds() + secondsFromNow
             if new_time < self.time:
                 self.delayed_time = 0
                 self.time = new_time
@@ -168,8 +175,12 @@ class DelayedCall(styles.Ephemeral):
         else:
             func = None
 
+        if self.seconds is None:
+            now = seconds()
+        else:
+            now = self.seconds()
         L = ["<DelayedCall %s [%ss] called=%s cancelled=%s" % (
-                id(self), self.time - seconds(), self.called, self.cancelled)]
+                id(self), self.time - now, self.called, self.cancelled)]
         if func is not None:
             L.extend((" ", func, "("))
             if self.args:

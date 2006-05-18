@@ -4,7 +4,7 @@
 
 from twisted.trial import unittest
 from twisted.internet import reactor, protocol, error, app, abstract, defer
-from twisted.internet import interfaces
+from twisted.internet import interfaces, base
 
 from twisted.test.time_helpers import Clock
 
@@ -361,6 +361,20 @@ class InterfaceTestCase(unittest.TestCase):
         dc = reactor.callLater(0, d.callback, None)
         str(dc)
         return d
+
+
+    def testDelayedCallSecondsOverride(self):
+        """
+        Test that the C{seconds} argument to DelayedCall gets used instead of
+        the default timing function, if it is not None.
+        """
+        def seconds():
+            return 10
+        dc = base.DelayedCall(5, lambda: None, (), {}, lambda dc: None, lambda dc: None, seconds)
+        self.assertEquals(dc.getTime(), 5)
+        dc.reset(3)
+        self.assertEquals(dc.getTime(), 13)
+
 
     def testWakeUp(self):
         # Make sure other threads can wake up the reactor

@@ -402,6 +402,19 @@ class TestTimeout(unittest.TestCase):
     def tearDownClass(self):
         self.clock.uninstall()
 
+
+    def testOverriddenCallLater(self):
+        """
+        Test that setting callLater on a subclass of TimeoutMixin causes the
+        protocol to use that callable instead of C{reactor.callLater}.
+        """
+        calls = []
+        p = TimeoutTester()
+        p.callLater = lambda *a, **kw: calls.append((a, kw))
+        p.setTimeout(10)
+        self.assertEquals(len(calls), 1)
+
+
     def testTimeout(self):
         p = TimeoutTester()
         s = StringIOWithoutClosing()
