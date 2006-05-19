@@ -141,10 +141,10 @@ class ThrottlingProtocol(ProtocolWrapper):
 
 
     def throttleReads(self):
-        self.transport.stopReading()
+        self.transport.pauseProducing()
 
     def unthrottleReads(self):
-        self.transport.startReading()
+        self.transport.resumeProducing()
 
     def throttleWrites(self):
         if hasattr(self, "producer"):
