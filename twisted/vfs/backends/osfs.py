@@ -3,11 +3,8 @@
 
 """Filesystem backend for VFS."""
 
-import sys
 import os
 import os.path
-import stat
-import time
 import errno
 
 from twisted.vfs import ivfs
@@ -85,7 +82,7 @@ class OSFile(OSNode):
             fd = os.open(self.realPath, flags)
         except OSError, e:
             if e.errno == errno.EEXIST:
-                raise ivfs.VFSError("File %r already exists." % self.name)
+                raise ivfs.AlreadyExistsError(self.name)
 
             # Something unexpected happened.  Let it propagate.
             raise

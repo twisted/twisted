@@ -1,6 +1,8 @@
+# Copyright (c) 2001-2006 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 """In-memory VFS backend."""
 
-import time
 import cStringIO
 
 from zope.interface import implements
@@ -18,13 +20,13 @@ class _FakeNode:
         del self.parent._children[self.name]
 
     def rename(self, newName):
-        del self.parent._children[self.name]
         newParent = pathutils.fetch(pathutils.getRoot(self),
                                     pathutils.dirname(newName))
-##         newParent = self.filesystem.fetch(self.filesystem.dirname(newName))
         if newParent.exists(pathutils.basename(newName)):
             raise ivfs.VFSError(
                 "Cannot rename over the top of an existing directory")
+            
+        del self.parent._children[self.name]
         self.name = pathutils.basename(pathutils.basename(newName))
         newParent._children[self.name] = self
         self.parent = newParent
@@ -51,7 +53,10 @@ class FakeDirectory(_FakeNode):
         return implicit + others
 
     def child(self, childName):
-        return self._children[childName]
+        try:
+            return self._children[childName]
+        except KeyError:
+            raise ivfs.NotFoundError(childName)
 
     def getMetadata(self):
         return {
@@ -59,14 +64,14 @@ class FakeDirectory(_FakeNode):
 
     def createFile(self, childName, exclusive=False):
         if exclusive and self.exists(childName):
-            raise ivfs.VFSError("%r already exists" % (childName,))
+            raise ivfs.AlreadyExistsError(childName)
         child = FakeFile(childName, self)
         child.create()
         return child
 
     def createDirectory(self, childName):
         if self.exists(childName):
-            raise ivfs.VFSError("%r already exists" % (childName,))
+            raise ivfs.AlreadyExistsError(childName)
         child = FakeDirectory(childName, self)
         child.create()
         return child

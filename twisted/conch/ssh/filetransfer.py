@@ -875,6 +875,14 @@ FX_BAD_MESSAGE                 = 5
 FX_NO_CONNECTION               = 6
 FX_CONNECTION_LOST             = 7
 FX_OP_UNSUPPORTED              = 8
+# http://www.ietf.org/internet-drafts/draft-ietf-secsh-filexfer-12.txt defines
+# more useful error codes, but so far OpenSSH doesn't implement them.  We use
+# them internally for clarity, but for now define them all as FX_FAILURE to be
+# compatible with existing software.
+FX_FILE_ALREADY_EXISTS         = FX_FAILURE
+FX_NOT_A_DIRECTORY             = FX_FAILURE
+FX_FILE_IS_A_DIRECTORY         = FX_FAILURE
+
 
 # initialize FileTransferBase.packetTypes:
 g = globals()

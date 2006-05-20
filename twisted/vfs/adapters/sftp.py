@@ -4,30 +4,54 @@ import os, time
 
 import zope.interface
 
-from twisted.python import components, log
+from twisted.python import components, log, util
 from twisted.conch.avatar import ConchUser
 from twisted.conch.interfaces import ISession, ISFTPFile
 from twisted.conch.ssh.filetransfer import ISFTPServer, FileTransferServer
 from twisted.conch.ssh.filetransfer import FXF_READ, FXF_WRITE, FXF_APPEND, FXF_CREAT, FXF_TRUNC, FXF_EXCL
 from twisted.conch.ssh.filetransfer import SFTPError
 from twisted.conch.ssh.filetransfer import FX_PERMISSION_DENIED, FX_FAILURE
-from twisted.conch.ssh.filetransfer import FX_NO_SUCH_FILE
+from twisted.conch.ssh.filetransfer import FX_NO_SUCH_FILE, FX_OP_UNSUPPORTED
+from twisted.conch.ssh.filetransfer import FX_NOT_A_DIRECTORY
+from twisted.conch.ssh.filetransfer import FX_FILE_IS_A_DIRECTORY
+from twisted.conch.ssh.filetransfer import FX_FILE_ALREADY_EXISTS
 from twisted.conch.ssh import session
 from twisted.conch.ls import lsLine
 
 from twisted.vfs import ivfs, pathutils
 
 
+def translateErrors(function):
+    """Decorator that catches VFSErrors and re-raises them as the corresponding
+    SFTPErrors."""
+    
+    def f(*args, **kwargs):
+        try:
+            return function(*args, **kwargs)
+        except ivfs.PermissionError, e:
+            raise SFTPError(FX_PERMISSION_DENIED, str(e))
+        except ivfs.NotFoundError, e:
+            raise SFTPError(FX_NO_SUCH_FILE, e.args[0])
+        except ivfs.AlreadyExistsError, e:
+            raise SFTPError(FX_FILE_ALREADY_EXISTS, e.args[0])
+        except ivfs.VFSError, e:
+            raise SFTPError(FX_FAILURE, str(e))
+        except NotImplementedError, e:
+            raise SFTPError(FX_OP_UNSUPPORTED, str(e))
+
+    util.mergeFunctionMetadata(function, f)
+    return f
+
+
 class AdaptFileSystemUserToISFTP:
 
-    zope.interface.implements( ISFTPServer )
+    zope.interface.implements(ISFTPServer)
 
     def __init__(self, avatar):
         self.avatar = avatar
         self.openFiles = {}
         self.openDirs = {}
         self.filesystem = avatar.filesystem
-
 
     def _setAttrs(self, path, attrs):
         """
@@ -72,67 +96,57 @@ class AdaptFileSystemUserToISFTP:
 
         pathSegments = self.filesystem.splitPath(filename)
         dirname, basename = pathSegments[:-1], pathSegments[-1]
-        try:
-            parentNode = self.filesystem.fetch('/'.join(dirname))
-        except ivfs.NotFoundError, e:
-            raise SFTPError(FX_NO_SUCH_FILE, e.args[0])
-        except KeyError, e:
-            # XXX: backends shouldn't raise KeyError to mean NotFoundError
-            # error, but they do.
-            raise SFTPError(FX_NO_SUCH_FILE, e.args[0])
+        parentNode = self.filesystem.fetch('/'.join(dirname))
         if createPlease:
             child = parentNode.createFile(basename, exclusive)
         elif parentNode.exists(basename):
             child = parentNode.child(basename)
+            if not ivfs.IFileSystemLeaf.providedBy(child):
+                raise SFTPError(FX_FILE_IS_A_DIRECTORY, filename)
         else:
             raise SFTPError(FX_NO_SUCH_FILE, filename)
         child.open(openFlags)
         return AdaptFileSystemLeafToISFTPFile(child)
+    openFile = translateErrors(openFile)
 
     def removeFile(self, filename):
-        try:
-            self.filesystem.fetch(filename).remove()
-        except ivfs.NotFoundError, e:
-            raise SFTPError(FX_NO_SUCH_FILE, e.args[0])
-        except KeyError, e:
-            # XXX: backends shouldn't raise KeyError to mean NotFoundError
-            # error, but they do.
-            raise SFTPError(FX_NO_SUCH_FILE, e.args[0])
+        node = self.filesystem.fetch(filename)
+        if not ivfs.IFileSystemLeaf.providedBy(node):
+            raise SFTPError(FX_FILE_IS_A_DIRECTORY, filename)
+        node.remove()
+    removeFile = translateErrors(removeFile)
 
     def renameFile(self, oldpath, newpath):
         try:
             targetNode = self.filesystem.fetch(newpath)
-        except:
-            # XXX: bare excepts are evil!
+        except (ivfs.NotFoundError, KeyError):
+            # Something with the new name already exists.
             pass
         else:
             if ivfs.IFileSystemContainer(targetNode, None):
-                oldNode = self.filesystem.fetch(oldpath)
+                # The target node is a container.  We assume the caller means to
+                # move the source node into the container rather than replace
+                # it, and adjust newpath accordingly.
                 newpath = self.filesystem.joinPath(
                     newpath, self.filesystem.basename(oldpath))
-        try:
-            old = self.filesystem.fetch(oldpath)
-        except ivfs.NotFoundError, e:
-            raise SFTPError(FX_NO_SUCH_FILE, e.args[0])
-        else:
-            old.rename(newpath)
+        old = self.filesystem.fetch(oldpath)
+        old.rename(newpath)
+    renameFile = translateErrors(renameFile)
 
     def makeDirectory(self, path, attrs):
         dirname  = self.filesystem.dirname(path)
         basename = self.filesystem.basename(path)
-        try:
-            return self.filesystem.fetch(dirname).createDirectory(basename)
-        except ivfs.PermissionError, e:
-            raise SFTPError(FX_PERMISSION_DENIED, str(e))
-        except ivfs.NotFoundError, e:
-            raise SFTPError(FX_NO_SUCH_FILE, e.args[0])
-        except ivfs.VFSError, e:
-            raise SFTPError(FX_FAILURE, str(e))
+        return self.filesystem.fetch(dirname).createDirectory(basename)
+    makeDirectory = translateErrors(makeDirectory)
 
     def removeDirectory(self, path):
         self.filesystem.fetch(path).remove()
+    removeDirectory = translateErrors(removeDirectory)
 
     def openDirectory(self, path):
+        directory = self.filesystem.fetch(path)
+        if not ivfs.IFileSystemContainer.providedBy(directory):
+            raise SFTPError(FX_NOT_A_DIRECTORY, path)
         class DirList:
             def __init__(self, iter):
                 self.iter = iter
@@ -161,19 +175,15 @@ class AdaptFileSystemUserToISFTP:
         return DirList(
             iter([(name, _attrify(file))
                   for (name, file) in self.filesystem.fetch(path).children()]))
+    openDirectory = translateErrors(openDirectory)
 
     def getAttrs(self, path, followLinks):
-        try:
-            node = self.filesystem.fetch(path)
-        except ivfs.NotFoundError, e:
-            raise SFTPError(FX_NO_SUCH_FILE, e.args[0])
+        node = self.filesystem.fetch(path)
         return _attrify(node)
+    getAttrs = translateErrors(getAttrs)
 
     def setAttrs(self, path, attrs):
-        try:
-            node = self.filesystem.fetch(path)
-        except ivfs.NotFoundError, e:
-            raise SFTPError(FX_NO_SUCH_FILE, e.args[0])
+        node = self.filesystem.fetch(path)
         try:
             # XXX: setMetadata isn't yet part of the IFileSystemNode interface
             # (but it should be).  So we catch AttributeError, and translate it
@@ -181,6 +191,7 @@ class AdaptFileSystemUserToISFTP:
             node.setMetadata(attrs)
         except AttributeError:
             raise NotImplementedError("NO SETATTR")
+    setAttrs = translateErrors(setAttrs)
 
     def readLink(self, path):
         raise NotImplementedError("NO LINK")

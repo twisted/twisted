@@ -1,10 +1,16 @@
+"""Tests for the SFTP server VFS adapter."""
+
 import os
 import time
 
 from twisted.conch.ssh.filetransfer import FXF_READ, FXF_WRITE, FXF_CREAT
 from twisted.conch.ssh.filetransfer import FXF_APPEND, FXF_EXCL
 from twisted.conch.ssh.filetransfer import SFTPError
-from twisted.conch.ssh.filetransfer import FX_NO_SUCH_FILE
+from twisted.conch.ssh.filetransfer import FX_NO_SUCH_FILE, FX_FAILURE
+from twisted.conch.ssh.filetransfer import FX_PERMISSION_DENIED
+from twisted.conch.ssh.filetransfer import FX_OP_UNSUPPORTED, FX_NOT_A_DIRECTORY
+from twisted.conch.ssh.filetransfer import FX_FILE_IS_A_DIRECTORY
+from twisted.conch.ssh.filetransfer import FX_FILE_ALREADY_EXISTS
 from twisted.conch.interfaces import ISFTPFile
 from twisted.trial import unittest
 from twisted.internet import defer
@@ -15,6 +21,37 @@ from twisted.vfs.backends import inmem, osfs
 
 sftpAttrs = ['size', 'uid', 'gid', 'nlink', 'mtime', 'atime', 'permissions']
 sftpAttrs.sort()
+
+
+class SFTPErrorTranslationTests(unittest.TestCase):
+
+    def assertTranslation(self, error, code):
+        """Asserts that the translate_error decorator translates 'error' to an
+        SFTPError with a code of 'code'."""
+        message = 'test error message'
+        def f():
+            raise error(message)
+        f = sftp.translateErrors(f)
+        e = self.assertRaises(SFTPError, f)
+        self.assertEqual(code, e.code)
+        self.assertEqual(message, e.message)
+    
+    def testPermissionError(self):
+        # PermissionError is translated to FX_PERMISSION_DENIED
+        self.assertTranslation(ivfs.PermissionError, FX_PERMISSION_DENIED)
+
+    def testNotFoundError(self):
+        # NotFoundError is translated to FX_NO_SUCH_FILE
+        self.assertTranslation(ivfs.NotFoundError, FX_NO_SUCH_FILE)
+
+    def testVFSError(self):
+        # VFSErrors that aren't otherwise caught are translated to FX_FAILURE
+        self.assertTranslation(ivfs.VFSError, FX_FAILURE)
+
+    def testNotImplementedError(self):
+        # NotImplementedError is translated to FX_OP_UNSUPPORTED
+        self.assertTranslation(NotImplementedError, FX_OP_UNSUPPORTED)
+
 
 class SFTPAdapterTest(unittest.TestCase):
 
@@ -72,10 +109,13 @@ class SFTPAdapterTest(unittest.TestCase):
 
     def test_openNewFileExclusive(self):
         # Creating a file should fail if the FXF_EXCL flag is given and the file
-        # already exists.
+        # already exists.  This fails with FX_FILE_ALREADY_EXISTS (which is
+        # actually just FX_FAILURE for now, see the comment in
+        # twisted/conch/ssh/filetransfer.py).
         flags = FXF_WRITE|FXF_CREAT|FXF_EXCL
-        self.assertRaises(ivfs.VFSError,
-                       self.sftp.openFile, 'file.txt', flags, None)
+        e = self.assertRaises(SFTPError,
+                              self.sftp.openFile, 'file.txt', flags, None)
+        self.assertEqual(FX_FILE_ALREADY_EXISTS, e.code)
 
         # But if the file doesn't exist, then it should work.
         child = self.sftp.openFile('new file.txt', flags, None)
@@ -153,10 +193,13 @@ class SFTPAdapterTest(unittest.TestCase):
         for mtime in [86401, 200000, int(time.time())]:
             try:
                 self.sftp.setAttrs('/file.txt', {'mtime': mtime})
-            except NotImplementedError:
-                raise unittest.SkipTest(
-                    "The VFS backend %r doesn't support setAttrs" 
-                    % (self.root,))
+            except SFTPError, e:
+                if e.code == FX_OP_UNSUPPORTED:
+                    raise unittest.SkipTest(
+                        "The VFS backend %r doesn't support setAttrs" 
+                        % (self.root,))
+                else:
+                    raise
             else:
                 self.assertEqual(
                     mtime, self.sftp.getAttrs('/file.txt', False)['mtime'])
@@ -181,6 +224,41 @@ class SFTPAdapterTest(unittest.TestCase):
             keys = attrs.keys()
             keys.sort()
             self.failUnless(sftpAttrs, keys)
+
+    def test_openDirectoryAsFile(self):
+        # http://www.ietf.org/internet-drafts/draft-ietf-secsh-filexfer-12.txt
+        # 8.1.1.1 says: "If 'filename' is a directory file, the server MUST
+        # return an SSH_FX_FILE_IS_A_DIRECTORY error."
+        e = self.assertRaises(SFTPError, self.sftp.openFile, 'ned', 0, None)
+        self.assertEqual(FX_FILE_IS_A_DIRECTORY, e.code)
+
+    def test_openFileAsDirectory(self):
+        # 8.1.2: "If 'path' does not refer to a directory, the server MUST
+        # return SSH_FX_NOT_A_DIRECTORY."
+        e = self.assertRaises(SFTPError, self.sftp.openDirectory, 'file.txt')
+        self.assertEqual(FX_NOT_A_DIRECTORY, e.code)
+
+    def test_removeDirectoryAsFile(self):
+        # 8.3: "This request cannot be used to remove directories.  The server
+        # MUST return SSH_FX_FILE_IS_A_DIRECTORY in this case."
+        e = self.assertRaises(SFTPError, self.sftp.removeFile, 'ned')
+        self.assertEqual(FX_FILE_IS_A_DIRECTORY, e.code)
+
+    def test_removeDirectoryMissing(self):
+        # Trying to remove a directory that doesn't exist should give
+        # FX_NO_SUCH_FILE.
+        e = self.assertRaises(SFTPError, self.sftp.removeDirectory, 'missing')
+        self.assertEqual(FX_NO_SUCH_FILE, e.code)
+
+    def test_getAttrsMissing(self):
+        # getAttrs on a file that doesn't exist gives FX_NO_SUCH_FILE.
+        e = self.assertRaises(SFTPError, self.sftp.getAttrs, 'missing', None)
+        self.assertEqual(FX_NO_SUCH_FILE, e.code)
+
+    def test_setAttrsMissing(self):
+        # setAttrs on a file that doesn't exist gives FX_NO_SUCH_FILE.
+        e = self.assertRaises(SFTPError, self.sftp.setAttrs, 'missing', {})
+        self.assertEqual(FX_NO_SUCH_FILE, e.code)
 
 
 class SFTPAdapterOSFSTest(SFTPAdapterTest):

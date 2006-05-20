@@ -7,12 +7,8 @@
 #  * test more complex paths: such as subdirectories, /foo/../bar/.
 #  * generalise Mock*, and add to Twisted as reusable testing helpers.
 
-from zope.interface import implements
-
 from twisted.trial import unittest
 from twisted.protocols.ftp import FTP
-from twisted.cred import portal
-from twisted.python import failure
 from twisted.internet import defer
 
 from twisted.vfs.backends import inmem
@@ -130,7 +126,8 @@ class FTPAdapterTestCase(unittest.TestCase):
             self.assertNotIn('ned', self.root._children.keys())
             return self.ftp.ftp_RMD('ned')
         d.addCallback(gotRMD)
-        self.assertFailure(d, KeyError, 'RMD newdir twice should fail')
+        self.assertFailure(
+            d, ivfs.NotFoundError, 'RMD newdir twice should fail')
         d.addCallback(lambda r: self.ftp.ftp_RMD('file.txt'))
         self.assertFailure(d, IOError, "RMD Should not be able to remove files")
         return d
@@ -141,9 +138,11 @@ class FTPAdapterTestCase(unittest.TestCase):
             self.assertNotIn('file.txt', self.root._children.keys())
             return  self.ftp.ftp_DELE('file.txt')
         d.addCallback(gotDELE)
-        self.assertFailure(d, KeyError, "DELE newdir twice should cause a failure")
+        self.assertFailure(
+            d, ivfs.NotFoundError, "DELE newdir twice should cause a failure")
         d.addCallback(lambda r: self.ftp.ftp_DELE('ned'))
-        self.assertFailure(d, IOError, 'DELE should not be able to remove directories.')
+        self.assertFailure(
+            d, IOError, 'DELE should not be able to remove directories.')
         return d
 
     def testRename(self):
@@ -152,14 +151,20 @@ class FTPAdapterTestCase(unittest.TestCase):
         self.assertNotIn('file.txt', self.root._children.keys())
         self.assertIn('blah.txt', self.root._children.keys())
 
-        # renaming a missing file should fail
+        # Renaming a missing file should fail.
         self.ftp.ftp_RNFR('file.txt')
         d = self.ftp.ftp_RNTO('blah.txt')
-        self.assertFailure(d, KeyError, "renaming a missing file should cause a failure")
+        self.assertFailure(d, ivfs.NotFoundError)
+        def eb(failure):
+            # We need this errback because of
+            # http://twistedmatrix.com/trac/ticket/1675.
+            self.fail('ivfs.NotFoundError not raised')
+        d.addErrback(eb)
 
+        # Renaming a file into a dir should cause a failure.
         d.addCallback(lambda r: self.ftp.ftp_RNFR('blah.txt'))
         d.addCallback(lambda r: self.ftp.ftp_RNTO('ned'))
-        self.assertFailure(d, ivfs.VFSError, "renaming a file into a dir should cause a failure")
+        self.assertFailure(d, ivfs.VFSError) 
         return d
 
 

@@ -9,6 +9,10 @@ class PermissionError(VFSError):
 class NotFoundError(VFSError):
     """The file or directory does not exist."""
 
+class AlreadyExistsError(VFSError):
+    """The file or directory already exists."""
+
+
 class IFileSystemNode(Interface):
 
     parent = Attribute(
@@ -95,7 +99,9 @@ class IFileSystemContainer(IFileSystemNode):
 
     def child(childName):
         """
-        returns a node object for child childName
+        Returns a node object for child childName
+
+        @raises NotFoundError if no child with that name exists.
         """
 
     def createDirectory(childName):
@@ -108,8 +114,8 @@ class IFileSystemContainer(IFileSystemNode):
         """
         Creates a new file named childName under this folder.
 
-        If exclusive is True (the default), an error is raised if the file
-        already exists.
+        If exclusive is True (the default), an AlreadyExistsError is raised if
+        the file already exists.
         """
 
     def exists(childName):
