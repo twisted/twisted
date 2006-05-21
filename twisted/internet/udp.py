@@ -123,7 +123,10 @@ class Port(base.BasePort):
                     raise
             else:
                 read += len(data)
-                self.protocol.datagramReceived(data, addr)
+                try:
+                    self.protocol.datagramReceived(data, addr)
+                except:
+                    log.err()
 
 
     def write(self, datagram, addr=None):

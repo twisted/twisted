@@ -2,7 +2,7 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-# 
+#
 from twisted.trial import unittest, util
 
 from twisted.internet import protocol, reactor, error, defer, interfaces, address
@@ -18,7 +18,7 @@ class Mixin:
 
     def __init__(self):
         self.packets = []
-    
+
     def startProtocol(self):
         self.started = 1
         if self.startedDeferred is not None:
@@ -30,7 +30,7 @@ class Mixin:
 
 
 class Server(Mixin, protocol.DatagramProtocol):
-    
+
     packetReceived = None
     refused = 0
 
@@ -43,7 +43,7 @@ class Server(Mixin, protocol.DatagramProtocol):
 
 
 class Client(Mixin, protocol.ConnectedDatagramProtocol):
-    
+
     packetReceived = None
     refused = 0
 
@@ -67,12 +67,44 @@ class Client(Mixin, protocol.ConnectedDatagramProtocol):
 
 
 class GoodClient(Server):
-    
+
     def connectionRefused(self):
         if self.startedDeferred is not None:
             d, self.startedDeferred = self.startedDeferred, None
             d.errback(error.ConnectionRefusedError("yup"))
         self.refused = 1
+
+
+
+class BadClientError(Exception):
+    """
+    Raised by BadClient at the end of every datagramReceived call to try and
+    screw stuff up.
+    """
+
+
+
+class BadClient(protocol.DatagramProtocol):
+    """
+    A DatagramProtocol which always raises an exception from datagramReceived.
+    Used to test error handling behavior in the reactor for that method.
+    """
+    d = None
+
+    def setDeferred(self, d):
+        """
+        Set the Deferred which will be called back when datagramReceived is
+        called.
+        """
+        self.d = d
+
+
+    def datagramReceived(self, bytes, addr):
+        if self.d is not None:
+            d, self.d = self.d, None
+            d.callback(bytes)
+        raise BadClientError("Application code is very buggy!")
+
 
 
 class PortCleanerUpper(unittest.TestCase):
@@ -130,7 +162,7 @@ class OldConnectedUDPTestCase(PortCleanerUpper):
         def didNotConnect(ign):
             self.assertEquals(client.stopped, 0)
             self.assertEquals(client.started, 0)
-        
+
         d = self.assertFailure(d, error.DNSLookupError)
         d.addCallback(didNotConnect)
         return d
@@ -175,7 +207,7 @@ class OldConnectedUDPTestCase(PortCleanerUpper):
             self.assertEquals(server.packets,
                               [("world", ("127.0.0.1",
                                           client.transport.getHost().port))])
-            
+
             return defer.DeferredList([
                 defer.maybeDeferred(port1.stopListening),
                 defer.maybeDeferred(self.port2.stopListening)],
@@ -232,7 +264,7 @@ class UDPTestCase(unittest.TestCase):
         util.suppress(message='IPv4Address.__getitem__',
                       category=DeprecationWarning)]
 
-    
+
     def testStartStop(self):
         server = Server()
         d = server.startedDeferred = defer.Deferred()
@@ -261,7 +293,7 @@ class UDPTestCase(unittest.TestCase):
             return d.addCallback(cbStarted, p)
 
         return d.addCallback(cbStarted, p)
-    
+
 
     def testBindError(self):
         server = Server()
@@ -401,6 +433,106 @@ class UDPTestCase(unittest.TestCase):
         return port.stopListening()
 
 
+
+    def testDatagramReceivedError(self):
+        """
+        Test that when datagramReceived raises an exception it is logged but
+        the port is not disconnected.
+        """
+        finalDeferred = defer.Deferred()
+
+        def cbCompleted(ign):
+            """
+            Flush the exceptions which the reactor should have logged and make
+            sure they're actually there.
+            """
+            errs = log.flushErrors(BadClientError)
+            self.assertEquals(len(errs), 2, "Incorrectly found %d errors, expected 2" % (len(errs),))
+        finalDeferred.addCallback(cbCompleted)
+
+        client = BadClient()
+        port = reactor.listenUDP(0, client, interface='127.0.0.1')
+
+        def cbCleanup(result):
+            """
+            Disconnect the port we started and pass on whatever was given to us
+            in case it was a Failure.
+            """
+            return defer.maybeDeferred(port.stopListening).addBoth(lambda ign: result)
+        finalDeferred.addBoth(cbCleanup)
+
+        addr = port.getHost()
+
+        # UDP is not reliable.  Try to send as many as 60 packets before giving
+        # up.  Conceivably, all sixty could be lost, but they probably won't be
+        # unless all UDP traffic is being dropped, and then the rest of these
+        # UDP tests will likely fail as well.  Ideally, this test (and probably
+        # others) wouldn't even use actual UDP traffic: instead, they would
+        # stub out the socket with a fake one which could be made to behave in
+        # whatever way the test desires.  Unfortunately, this is hard because
+        # of differences in various reactor implementations.
+        attempts = range(60)
+        succeededAttempts = []
+
+        def makeAttempt():
+            """
+            Send one packet to the listening BadClient.  Set up a 0.1 second
+            timeout to do re-transmits in case the packet is dropped.  When two
+            packets have been received by the BadClient, stop sending and let
+            the finalDeferred's callbacks do some assertions.
+            """
+            if not attempts:
+                try:
+                    self.fail("Not enough packets received")
+                except:
+                    finalDeferred.errback()
+
+            self.failIfIdentical(client.transport, None, "UDP Protocol lost its transport")
+
+            packet = str(attempts.pop(0))
+            packetDeferred = defer.Deferred()
+            client.setDeferred(packetDeferred)
+            client.transport.write(packet, (addr.host, addr.port))
+
+            def cbPacketReceived(packet):
+                """
+                A packet arrived.  Cancel the timeout for it, record it, and
+                maybe finish the test.
+                """
+                timeoutCall.cancel()
+                succeededAttempts.append(packet)
+                if len(succeededAttempts) == 2:
+                    # The second error has not yet been logged, since the
+                    # exception which causes it hasn't even been raised yet.
+                    # Give the datagramReceived call a chance to finish, then
+                    # let the test finish asserting things.
+                    reactor.callLater(0, finalDeferred.callback, None)
+                else:
+                    makeAttempt()
+
+            def ebPacketTimeout(err):
+                """
+                The packet wasn't received quickly enough.  Try sending another
+                one.  It doesn't matter if the packet for which this was the
+                timeout eventually arrives: makeAttempt throws away the
+                Deferred on which this function is the errback, so when
+                datagramReceived callbacks, so it won't be on this Deferred, so
+                it won't raise an AlreadyCalledError.
+                """
+                makeAttempt()
+
+            packetDeferred.addCallbacks(cbPacketReceived, ebPacketTimeout)
+            packetDeferred.addErrback(finalDeferred.errback)
+
+            timeoutCall = reactor.callLater(
+                0.1, packetDeferred.errback,
+                error.TimeoutError(
+                    "Timed out in testDatagramReceivedError"))
+
+        makeAttempt()
+        return finalDeferred
+
+
     def testPortRepr(self):
         client = GoodClient()
         p = reactor.listenUDP(0, client)
@@ -418,11 +550,11 @@ class ReactorShutdownInteraction(unittest.TestCase):
     def testShutdownFromDatagramReceived(self):
 
         # udp.Port's doRead calls recvfrom() in a loop, as an optimization.
-        # It is important this loop terminate under various conditions. 
+        # It is important this loop terminate under various conditions.
         # Previously, if datagramReceived synchronously invoked
         # reactor.stop(), under certain reactors, the Port's socket would
         # synchronously disappear, causing an AttributeError inside that
-        # loop.  This was mishandled, causing the loop to spin forever. 
+        # loop.  This was mishandled, causing the loop to spin forever.
         # This test is primarily to ensure that the loop never spins
         # forever.
 
@@ -487,7 +619,7 @@ class MulticastTestCase(unittest.TestCase):
         del self.port2
         reactor.iterate()
         reactor.iterate()
-    
+
     def testTTL(self):
         for o in self.client, self.server:
             self.assertEquals(o.transport.getTTL(), 1)

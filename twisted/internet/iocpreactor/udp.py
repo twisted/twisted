@@ -110,7 +110,10 @@ class Port(log.Logger, styles.Ephemeral, object):
 
     def handle_listening_readDone(self, bytes, addr = None):
         if addr:
-            self.protocol.datagramReceived(self.readbuf[:bytes], addr)
+            try:
+                self.protocol.datagramReceived(self.readbuf[:bytes], addr)
+            except:
+                log.err()
         else:
             self.protocol.datagramReceived(self.readbuf[:bytes])
         if self.reading:
