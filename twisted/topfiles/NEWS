@@ -1,3 +1,16 @@
+2.4.0 (2006-05-21)
+==================
+
+Features
+--------
+ - twisted.internet.task.Cooperator (Added along with #1701).
+
+Fixes
+-----
+ - Errors in UDP protocols no longer unbind the UDP port (#1695).
+ - Misc: #1717, #1705, #1563, #1719, #1721, #1722, #1728.
+
+
 2.3.0 (2006-05-14)
 ==================
 
