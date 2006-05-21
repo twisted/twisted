@@ -1,7 +1,18 @@
-x.x.x:
- - IMAP client:
-   - Quote usernames and passwords with funny characters in them during
-     login.
+0.3.0 (2006-05-21)
+==================
+
+Features
+--------
+  - Support Deferred results from POP3's IMailbox.listMessages (#1701).
+
+Fixes
+-----
+  - Quote usernames and passwords automatically in the IMAP client (#1411).
+  - Improved parsing of literals in IMAP4 client and server (#1417).
+  - Recognize unsolicted FLAGS response in IMAP4 client (#1105).
+  - Parse and respond to requests with multiple BODY arguments in IMAP4
+    server (#1307).
+  - Misc: #1356, #1290, #1602
 
 0.2.0:
  - SMTP server:
