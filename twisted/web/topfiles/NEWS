@@ -1,4 +1,27 @@
-0.5.0:
+0.6.0 (2006-05-21)
+==================
+
+Features
+--------
+ - Basic auth support for the XMLRPC client (#1474).
+
+Fixes
+-----
+ - More correct datetime parsing.
+ - Efficiency improvements (#974)
+ - Handle popular non-RFC compliant formats for If-Modified-Since
+   headers (#976).
+ - Improve support for certain buggy CGI scripts.
+ - CONTENT_LENGTH is now available to CGI scripts.
+ - Support for even worse HTML in microdom (#1358).
+ - Trying to view a user's home page when the user doesn't have a
+   ~/public_html no longer displays a traceback (#551).
+ - Misc: #543, #1011, #1005, #1287, #1337, #1383, #1079, #1492, #1189,
+   #737, #872.
+
+
+0.5.0
+=====
  - Client properly reports timeouts as error
  - "Socially deprecate" woven
  - Fix memory leak in _c_urlarg library

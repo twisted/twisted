@@ -55,11 +55,11 @@ factory is required to return an object which implements the interface <code
 class="API" base="twisted.web.woven.interfaces">IController</code>.</p>
 
 <pre class="python">
-    class MyController(controller.Controller):
-        pass
+class MyController(controller.Controller):
+    pass
 
-    class MyPage(page.Page):
-      def wcfactory_foo(self, request, node, model):
+class MyPage(page.Page):
+    def wcfactory_foo(self, request, node, model):
         return MyController(model)
 </pre>
 
@@ -70,8 +70,8 @@ return value may be a Deferred if you wish to pause the rendering of the View
 until some data is ready, or it may be None</p>
 
 <pre class="python">
-    class MyController(controller.Controller):
-      def handle(self, request, node):
+class MyController(controller.Controller):
+    def handle(self, request, node):
         name = request.args.get("name", [None])[0]
         print "HOORJ! YOUR NAME IS %s" % name
 </pre>
@@ -146,17 +146,18 @@ override the following methods to decide what to do with data</p>
 InputHandler rather than subclassing and overriding:</p>
 
 <pre class="python">
-  class MyPage(page.Page):
+class MyPage(page.Page):
     def checkName(self, request, name):
-      if name is None: return None
-      # No fred allowed
-      if name == 'fred':
-        return False
-      return True
-    
+        if name is None: 
+            return None
+        # No fred allowed
+        if name == 'fred':
+            return False
+        return True
+
     def commitName(self, request, name=""):
-      ctx = getContext()
-      ctx.execute("insert into people (name) values %s", name)
+        ctx = getContext()
+        ctx.execute("insert into people (name) values %s", name)
 
     def wcfactory_addPerson(self, request, node, model):
         return input.InputHandler(
@@ -186,8 +187,8 @@ base="twisted.web.woven.input.Anything">initialize</code> (XXX: this should
 be setUp):</p>
 
 <pre class="python">
-  class MyEventHandler(input.Anything):
-    def initialize(self):
+class MyEventHandler(input.Anything):
+    def initialize(self): # haaa
         self.view.addEventHandler("onclick", self.onClick)
         self.view.addEventHandler("onmouseover", self.onMouseOver, "'HELLO'")
     
@@ -223,8 +224,8 @@ operating. This is useful for examining the current value of an
 <p>Here are some examples of useful Event handlers:</p>
 
 <pre class="python">
-  class Redirect(input.Anything):
-    def initialize(self):
+class Redirect(input.Anything):
+    def initialize(self): #heee
         self.view.addEventHandler(
             "onclick", 
             self.onClick, 
@@ -233,8 +234,8 @@ operating. This is useful for examining the current value of an
     def onClick(self, request, widget, arg):
         print "The window was redirected."
 
-  class OnChanger(input.Anything):
-    def initialize(self):
+class OnChanger(input.Anything):
+    def initialize(self): #hooo
         self.view.addEventHandler(
             "onchange",
             self.changed,
