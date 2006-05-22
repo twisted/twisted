@@ -1,5 +1,3 @@
-Twisted Conch 0.6.0
-
-Conch was recently split out of Twisted.
+Twisted Conch 0.7.0
 
 Conch depends on Python Crypto extensions.

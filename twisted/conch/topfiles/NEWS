@@ -1,3 +1,15 @@
+0.7.0 (2006-05-21)
+==================
+
+Features
+--------
+  - Timeout support for ExpectableBuffer.expect()
+
+Fixes
+-----
+  - ~5x speedup for bulk data transfer (#1325)
+  - Misc: #1428
+
 0.6.0:
 
  Bugfixes and improvements in SSH support and Insults:
