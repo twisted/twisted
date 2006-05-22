@@ -1,11 +1,4 @@
-Twisted Words 0.3.0
+Twisted Words 0.4.0
 
-Words was recently split out of Twisted.
-
-Twisted Words depends on Twisted.
-
-If you want MSN or the web interface to work, you need Twisted Web.
-
-Xish was recently merged into Twisted Words.  Previously Jabber support
-depended on the separate twisted.xish package, but now packages this as
-twisted.words.xish.
+Twisted Words depends on Twisted Core and Twisted Web.  The Twisted Web
+dependency is only necessary for MSN support.

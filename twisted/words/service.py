@@ -36,7 +36,6 @@ from twisted.words import iwords, ewords
 from twisted.python.components import registerAdapter
 from twisted.cred import portal, credentials, error as ecred
 from twisted.spread import pb
-from twisted.web import resource
 from twisted.words.protocols import irc
 from twisted.internet import defer, protocol
 from twisted.python import log, failure, reflect

@@ -1,7 +1,25 @@
-0.4.0:
+0.4.0 (2006-05-21)
+==================
+
+Features
+--------
  - Jabber:
    - Add support for stream and stanza level errors
    - Create new IQ stanza helper that works with deferreds
+   - Add TLS support for initiating entities to XmlStream
+   - Fix account registration
+ - Xish:
+   - Fix various namespace issues
+   - Add IElement
+   - Store namespace declarations in parsed XML for later serialization
+ - Fix user name/group collision in server service (#1655).
+ - Correctly recognize MSN capability messages (#861).
+
+Fixes
+-----
+ - Misc: #1283, #1296, #1302, #1424
+ - Fix unicode/str confusion in IRC server service.
+
 
 0.3.0:
  - Jabber:
