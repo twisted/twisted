@@ -1,3 +1,23 @@
-0.1.0:
+0.2.0 (2006-05-24)
+==================
+
+Features
+--------
+ - Docstring improvements.
+
+Fixes
+-----
+ - Embedded Dia support for Latex no longer requires the 'which'
+   command line tool.
+ - Misc: #1142.
+
+Deprecations
+------------
+ - The unused, undocumented, untested and severely crashy 'bookify'
+   functionality was removed.
+
+
+0.1.0
+=====
  - Use htmlizer mode that doesn't insert extra span tags, thus making
    it not mess up in Safari.
