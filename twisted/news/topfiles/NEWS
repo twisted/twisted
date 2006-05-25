@@ -1,0 +1,6 @@
+0.2.0 (2006-05-24)
+==================
+
+Fixes:
+ - Fixed a critical bug in moderation support.
+
