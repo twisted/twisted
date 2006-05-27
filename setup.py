@@ -9,7 +9,6 @@ Distutils-launcher for Twisted projects.
 
 import sys, os, glob
 
-# Projects to which `all' refers.
 sumoSubprojects = ['core', 'conch', 'lore', 'mail', 'names',
                    'runner', 'web', 'words', 'news']
 
@@ -30,8 +29,7 @@ def runInDir(dir, f, *args, **kw):
 
 
 def getSumoProjDir(proj):
-    globst = 'Twisted%s-*' % (proj != 'core'
-                              and proj.capitalize() or '')
+    globst = 'Twisted%s-*' % proj.capitalize()
     gl = glob.glob(globst)
     assert len(gl) == 1, 'Wrong number of %s found!?' % proj
     dir = gl[0]
@@ -71,9 +69,9 @@ def runSetup(project, args):
     # their source, whereas out of SVN they should be run from the
     # root directory of the entire tree.
     if sumoMode:
-        result = runInDir(dir, os.spawnv,
-                              os.P_WAIT, sys.executable,
-                              [sys.executable, 'setup.py'] + args)
+        result = runInDir(os.path.dirname(setupPy), os.spawnv,
+                          os.P_WAIT, sys.executable,
+                          [sys.executable, 'setup.py'] + args)
     else:
         result = os.spawnv(os.P_WAIT, sys.executable,
                            [sys.executable, setupPy] + args)
@@ -90,13 +88,9 @@ def main(args):
     if len(args) == 0 or args[0] in ('-h', '--help'):
         sys.stdout.write(
 """Twisted: The Framework Of Your Internet.
-Usage: setup.py <project> <distutils args...>
-       setup.py all <distutils args..>
-
-E.g. setup.py all install
-or   setup.py core --help
-
+Usage: setup.py <distutils args..>
 """)
+        runSetup('core', ['-h'])
         sys.exit(0)
 
     for project in sumoSubprojects:
