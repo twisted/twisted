@@ -121,7 +121,7 @@ def clearIgnores():
     global _ignoreErrors
     _ignoreErrors = []
 
-def err(_stuff=None,**kw):
+def err(_stuff=None, _why=None, **kw):
     """
     Write a failure to the log.
     """
@@ -142,11 +142,11 @@ def err(_stuff=None,**kw):
                     _keptErrors.append(_stuff)
             else:
                 _keptErrors.append(_stuff)
-        msg(failure=_stuff, isError=1, **kw)
+        msg(failure=_stuff, why=_why, isError=1, **kw)
     elif isinstance(_stuff, Exception):
-        msg(failure=failure.Failure(_stuff), isError=1, **kw)
+        msg(failure=failure.Failure(_stuff), why=_why, isError=1, **kw)
     else:
-        msg(repr(_stuff), isError=1, **kw)
+        msg(repr(_stuff), why=_why, isError=1, **kw)
 
 deferr = err
 
@@ -224,8 +224,8 @@ class LogPublisher:
                 raise
             except:
                 o = self.observers.pop(i)
-                msg("Log observer %s failed, removing from observer list." % (o,))
-                err()
+                err(failure.Failure(),
+                    "Log observer %s failed, removing from observer list." % (o,))
 
 
 try:
@@ -273,7 +273,8 @@ class FileLogObserver:
         edm = eventDict['message']
         if not edm:
             if eventDict['isError'] and eventDict.has_key('failure'):
-                text = eventDict['failure'].getTraceback()
+                text = ((eventDict.get('why') or 'Unhandled Error')
+                        + '\n' + eventDict['failure'].getTraceback())
             elif eventDict.has_key('format'):
                 text = self._safeFormat(eventDict['format'], eventDict)
             else:

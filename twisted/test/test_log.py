@@ -50,12 +50,23 @@ class LogTest(unittest.TestCase):
             self.assertEquals(i['isError'], 1)
             log.flushErrors(ig)
 
+    def testErrorsWithWhy(self):
+        for e, ig in [("hello world","hello world"),
+                      (KeyError(), KeyError),
+                      (failure.Failure(RuntimeError()), RuntimeError)]:
+            log.err(e, 'foobar')
+            i = self.catcher.pop()
+            self.assertEquals(i['isError'], 1)
+            self.assertEquals(i['why'], 'foobar')
+            log.flushErrors(ig)
+
+
     def testErroneousErrors(self):
         L1 = []
         L2 = []
-        log.addObserver(lambda events: events['isError'] or L1.append(events))
+        log.addObserver(lambda events: L1.append(events))
         log.addObserver(lambda events: 1/0)
-        log.addObserver(lambda events: events['isError'] or L2.append(events))
+        log.addObserver(lambda events: L2.append(events))
         log.msg("Howdy, y'all.")
 
         excs = [f.type for f in log.flushErrors(ZeroDivisionError)]
