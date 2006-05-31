@@ -9,12 +9,16 @@
 import urlparse
 from zope.interface import implements
 import urllib 
+import warnings
+
+from twisted.internet import address
+from twisted.python import log
 
 # Sibling Imports
-import resource
-import responsecode
-import iweb
-import http
+from twisted.web2 import resource
+from twisted.web2 import responsecode
+from twisted.web2 import iweb
+from twisted.web2 import http
 
 class NameVirtualHost(resource.Resource):
     """I am a resource which represents named virtual hosts. 
@@ -98,18 +102,34 @@ class AutoVHostURIRewrite(object):
     """
     implements(iweb.IResource)
 
-    def __init__(self, resource):
+    def __init__(self, resource, sendsRealHost=False):
         self.resource=resource
+        self.sendsRealHost = sendsRealHost
         
     def renderHTTP(self, req):
         return http.Response(responsecode.NOT_FOUND)
 
     def locateChild(self, req, segments):
         scheme = req.headers.getRawHeaders('x-app-scheme')
-        host = req.headers.getRawHeaders('x-forwarded-host')
+
+        if self.sendsRealHost:
+            host = req.headers.getRawHeaders('host')
+        else:
+            host = req.headers.getRawHeaders('x-forwarded-host')
+
         app_location = req.headers.getRawHeaders('x-app-location')
         remote_ip = req.headers.getRawHeaders('x-forwarded-for')
+
         if not (host and remote_ip):
+            if not host:
+                warnings.warn(
+                    ("No host was obtained either from Host or "
+                     "X-Forwarded-Host headers.  If your proxy does not "
+                     "send either of these headers use VHostURIRewrite. "
+                     "If your proxy sends the real host as the Host header "
+                     "use "
+                     "AutoVHostURIRewrite(resrc, sendsRealHost=True)"))
+
             # some header unspecified => Error
             raise http.HTTPError(responsecode.BAD_REQUEST)
         host = host[0]
@@ -125,7 +145,9 @@ class AutoVHostURIRewrite(object):
         
         req.host, req.port = http.splitHostPort(scheme, host)
         req.scheme = scheme
-        # FIXME: remote_ip ?
+        
+        req.remoteAddr = address.IPv4Address('TCP', remote_ip, 0)
+            
         req.prepath = app_location[1:].split('/')[:-1]
         req.path = '/'+('/'.join([urllib.quote(s, '') for s in (req.prepath + segments)]))
         

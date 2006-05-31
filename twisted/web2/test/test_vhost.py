@@ -126,6 +126,10 @@ def raw(d):
         headers.setRawHeaders(k, [v])
     return headers
 
+class RemoteAddrResource(resource.LeafResource):
+    def render(self, req):
+        return http.Response(200, stream=str(req.remoteAddr))
+
 class TestAutoVHostRewrite(BaseCase):
     def setUp(self):
         self.root = vhost.AutoVHostURIRewrite(PathResource())
@@ -137,6 +141,21 @@ class TestAutoVHostRewrite(BaseCase):
                                               'x-app-location':'/baz/',
                                               'x-app-scheme':'https'})),
             (200, {}, 'https://foo.bar/baz/quux'))
+
+    def testRemoteAddr(self):
+        self.assertResponse(
+            (vhost.AutoVHostURIRewrite(RemoteAddrResource()),
+             'http://localhost/', raw({'x-forwarded-host':'foo.bar',
+                                       'x-forwarded-for':'1.2.3.4'})),
+             (200, {}, "IPv4Address(TCP, '1.2.3.4', 0)"))
+
+    def testSendsRealHost(self):
+        self.assertResponse(
+            (vhost.AutoVHostURIRewrite(PathResource(), sendsRealHost=True),
+             'http://localhost/', raw({'host': 'foo.bar',
+                                       'x-forwarded-host': 'baz.bax',
+                                       'x-forwarded-for': '1.2.3.4'})),
+            (200, {}, 'http://foo.bar/'))
 
     def testLackingHeaders(self):
         self.assertResponse(
