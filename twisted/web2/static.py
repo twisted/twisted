@@ -75,12 +75,19 @@ class MetaDataMixin(object):
 
 class StaticRenderMixin(resource.RenderMixin, MetaDataMixin):
     def checkPreconditions(self, request):
-        http.checkPreconditions(
-            request,
-            entityExists = self.exists(),
-            etag         = self.etag(),
-            lastModified = self.lastModified(),
-        )
+        # This code replaces the code in resource.RenderMixin
+        if request.method not in ("GET", "HEAD"):
+            http.checkPreconditions(
+                request,
+                entityExists = self.exists(),
+                etag         = self.etag(),
+                lastModified = self.lastModified(),
+            )
+
+        # Check per-method preconditions
+        method = getattr(self, "preconditions_" + request.method, None)
+        if method:
+            method(request)
 
     def renderHTTP(self, request):
         """
