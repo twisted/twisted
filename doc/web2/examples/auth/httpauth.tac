@@ -20,8 +20,9 @@ checker = checkers.InMemoryUsernamePasswordDatabaseDontUse(guest='guest123')
 portal.registerChecker(checker)
 
 root = wrapper.HTTPAuthResource(ProtectedResource(),
-                                (digest.DigestCredentialFactory('md5', 
-                                                               'My Realm'),),
+                                (basic.BasicCredentialFactory('My Realm'),
+                                 digest.DigestCredentialFactory('md5', 
+                                                               'My Realm')),
                                 portal, (credsetup.IHTTPUser,))
 
 site = server.Site(root)

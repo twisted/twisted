@@ -1,4 +1,5 @@
 from zope.interface import Interface, implements
+from twisted.cred import portal
 
 class IHTTPUser(Interface):
     pass
