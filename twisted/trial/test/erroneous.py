@@ -43,6 +43,21 @@ class TestRegularFail(unittest.TestCase):
     def test_fail(self):
         self.fail("I fail")
 
+    def test_subfail(self):
+        self.subroutine()
+
+    def subroutine(self):
+        self.fail("I fail inside")
+
+class TestFailureInDeferredChain(unittest.TestCase):
+    def test_fail(self):
+        d = defer.Deferred()
+        d.addCallback(self._later)
+        reactor.callLater(0, d.callback, None)
+        return d
+    def _later(self, res):
+        self.fail("I fail later")
+
 
 class TestSkipTestCase(unittest.TestCase):
     pass
