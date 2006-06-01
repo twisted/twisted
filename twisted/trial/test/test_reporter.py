@@ -4,13 +4,14 @@
 # Maintainer: Jonathan Lange <jml@twistedmatrix.com>
 
 
-import os, re, StringIO
-from twisted.python import failure
+import re, StringIO
 from twisted.trial import unittest, runner, reporter
 from twisted.trial.test import erroneous
 
 
-class StringTest(unittest.TestCase):
+class TestErrorReporting(unittest.TestCase):
+    doubleSeparator = re.compile(r'^=+$')
+    
     def stringComparison(self, expect, output):
         output = filter(None, output)
         self.failUnless(len(expect) <= len(output),
@@ -29,10 +30,6 @@ class StringTest(unittest.TestCase):
                 raise TypeError("don't know what to do with object %r"
                                 % (exp,))
 
-
-class TestErrorReporting(StringTest):
-    doubleSeparator = re.compile(r'^=+$')
-    
     def setUp(self):
         self.loader = runner.TestLoader()
 
@@ -49,7 +46,6 @@ class TestErrorReporting(StringTest):
         match = [self.doubleSeparator,
                  ('[ERROR]: twisted.trial.test.erroneous.'
                   'TestFailureInSetUp.test_noop'),
-                 'Traceback (most recent call last):',
                  re.compile(r'^\s+File .*erroneous\.py., line \d+, in setUp$'),
                  re.compile(r'^\s+raise FoolishError, '
                             r'.I am a broken setUp method.$'),
@@ -64,7 +60,6 @@ class TestErrorReporting(StringTest):
             self.doubleSeparator,
             '[FAIL]: '
             'twisted.trial.test.erroneous.TestRegularFail.test_fail',
-            'Traceback (most recent call last):',
             re.compile(r'^\s+File .*erroneous\.py., line \d+, in test_fail$'),
             re.compile(r'^\s+self\.fail\("I fail"\)$'),
             'twisted.trial.unittest.FailTest: I fail'
@@ -92,88 +87,6 @@ class TestErrorReporting(StringTest):
         """
         output = self.runTests(erroneous.DemoTest('testHiddenException'))
         self.assertSubstring(erroneous.HIDDEN_EXCEPTION_MSG, output)
-
-
-class TracebackHandling(unittest.TestCase):
-    def getErrorFrames(self, test):
-        stream = StringIO.StringIO()
-        result = reporter.Reporter(stream)
-        test.run(result)
-        bads = result.failures + result.errors
-        assert len(bads) == 1
-        assert bads[0][0] == test
-        return result._trimFrames(bads[0][1].frames)
-
-    def checkFrames(self, observedFrames, expectedFrames):
-        for observed, expected in zip(observedFrames, expectedFrames):
-            self.assertEqual(observed[0], expected[0])
-            filename = os.path.splitext(observed[1])[0]
-            self.failUnless(filename.endswith(expected[1]),
-                            "%r isn't %r" % (filename, expected[1]))
-        self.assertEqual(len(observedFrames), len(expectedFrames))
-
-    def test_basic(self):
-        test = erroneous.TestRegularFail('test_fail')
-        frames = self.getErrorFrames(test)
-        self.checkFrames(frames,
-                         [('test_fail', 'twisted/trial/test/erroneous')])
-        
-    def test_subroutine(self):
-        test = erroneous.TestRegularFail('test_subfail')
-        frames = self.getErrorFrames(test)
-        self.checkFrames(frames,
-                         [('test_subfail', 'twisted/trial/test/erroneous'),
-                          ('subroutine', 'twisted/trial/test/erroneous')])
-
-    def test_deferred(self):
-        test = erroneous.TestFailureInDeferredChain('test_fail')
-        frames = self.getErrorFrames(test)
-        self.checkFrames(frames,
-                         [('_later', 'twisted/trial/test/erroneous')])
-
-
-class FormatFailures(StringTest):
-    def setUp(self):
-        try:
-            raise RuntimeError('foo')
-        except RuntimeError:
-            self.f = failure.Failure()
-        self.f.frames = [
-            ['foo', 'foo/bar.py', 5, [('x', 5)], [('y', 'orange')]],
-            ['qux', 'foo/bar.py', 10, [('a', 'two')], [('b', 'MCMXCIX')]]
-            ]
-        self.stream = StringIO.StringIO()
-        self.result = reporter.Reporter(self.stream)
-
-    def test_formatDefault(self):
-        tb = self.result._formatFailureTraceback(self.f)
-        self.stringComparison([
-            'Traceback (most recent call last):',
-            '  File "foo/bar.py", line 5, in foo',
-            re.compile(r'^\s*$'),
-            '  File "foo/bar.py", line 10, in qux',
-            re.compile(r'^\s*$'),
-            'RuntimeError: foo'], tb.splitlines())
-
-    def test_formatString(self):
-        tb = '''
-  File "twisted/trial/unittest.py", line 256, in failUnlessSubstring
-    return self.failUnlessIn(substring, astring, msg)
-exceptions.TypeError: iterable argument required
-
-'''
-        expected = '''
-  File "twisted/trial/unittest.py", line 256, in failUnlessSubstring
-    return self.failUnlessIn(substring, astring, msg)
-exceptions.TypeError: iterable argument required
-'''
-        formatted = self.result._formatFailureTraceback(tb)
-        self.assertEqual(expected, formatted)
-
-    def test_mutation(self):
-        frames = self.f.frames[:]
-        tb = self.result._formatFailureTraceback(self.f)
-        self.assertEqual(self.f.frames, frames)
 
 
 class PyunitTestNames(unittest.TestCase):
