@@ -548,24 +548,44 @@ def parseRetryAfter(header):
 
 def parseWWWAuthenticate(tokenized):
     headers = []
-    last = []
-    scheme = None
 
-    def _parseHeader(scheme, rest):
-        challenge = [parseKeyValue(arg) for arg in split(rest, Token(','))]
-        headers.append((scheme, dict(challenge)))
+    tokenList = list(tokenized)
 
-    for token in tokenized:
-        if token == Token(' '):
-            if scheme and last[-2] == Token(','):
-                _parseHeader(scheme, last[:-2])
-                del last[:-1]
+    while tokenList:
+        scheme = tokenList.pop(0)
+        challenge = {}
+        last = None
+        kvChallenge = False
+
+        while tokenList:
+            token = tokenList.pop(0)
+            if token == Token('='):
+                kvChallenge = True
+                challenge[last] = tokenList.pop(0)
+                last = None
                 
-            scheme = last.pop()
-        else:
-            last.append(token)
+            elif token == Token(','):
+                if kvChallenge:
+                    if len(tokenList) > 1 and tokenList[1] != Token('='):
+                        break
 
-    _parseHeader(scheme, last)
+                else:
+                    break
+
+            else:
+                last = token
+        
+        if last and scheme and not challenge and not kvChallenge:
+            challenge = last
+            last = None
+
+        headers.append((scheme, challenge))
+        
+    if last and last not in (Token('='), Token(',')):
+        if headers[-1] == (scheme, challenge):
+            scheme = last
+            challenge = {}
+            headers.append((scheme, challenge))
 
     return headers
 
@@ -697,12 +717,19 @@ def generateIfRange(dateOrETag):
 def generateWWWAuthenticate(headers):
     _generated = []
     for seq in headers:
-        scheme, challenge = seq[0], dict(seq[1])
-        l = []
-        for k,v in challenge.iteritems():
-            l.append("%s=%s" % (k, quoteString(v)))
+        scheme, challenge = seq[0], seq[1]
+        
+        # If we're going to parse out to something other than a dict
+        # we need to be able to generate from something other than a dict
 
-        _generated.append("%s %s" % (scheme, ", ".join(l)))
+        try:
+            l = []
+            for k,v in dict(challenge).iteritems():
+                l.append("%s=%s" % (k, quoteString(v)))
+
+            _generated.append("%s %s" % (scheme, ", ".join(l)))
+        except ValueError:
+            _generated.append("%s %s" % (scheme, challenge))
 
     return _generated
 
@@ -1374,7 +1401,8 @@ parser_response_headers = {
     'Set-Cookie':(parseSetCookie,),
     'Set-Cookie2':(tokenize, parseSetCookie2),
     'Vary':(tokenize, filterTokens),
-    'WWW-Authenticate': (tokenize, parseWWWAuthenticate,)
+    'WWW-Authenticate': (lambda h: tokenize(h, foldCase=False), 
+                         parseWWWAuthenticate,)
 }
 
 generator_response_headers = {

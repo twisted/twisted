@@ -537,19 +537,76 @@ class ResponseHeaderParsingTests(HeaderParsingTestBase):
         self.runRoundtripTest("Vary", table)
 
     def testWWWAuthenticate(self):
-        digest = ('Digest realm="foo", nonce="bAr", qop="auth"',
-                  [('digest', {'realm': 'foo', 'nonce': 'bAr', 'qop': 'auth'})],
-                  ['digest', 'realm="foo"', 'nonce="bAr"', 'qop="auth"'])
+        digest = ('Digest realm="digest realm", nonce="bAr", qop="auth"',
+                  [('Digest', {'realm': 'digest realm', 'nonce': 'bAr', 
+                               'qop': 'auth'})],
+                  ['Digest', 'realm="digest realm"', 
+                   'nonce="bAr"', 'qop="auth"'])
+
         basic = ('Basic realm="foo"',
-                 [('basic', {'realm': 'foo'})], ['basic', 'realm="foo"'])
+                 [('Basic', {'realm': 'foo'})], ['Basic', 'realm="foo"'])
+
+        ntlm = ('NTLM',
+                [('NTLM', {})], ['NTLM', ''])
+
+        negotiate = ('Negotiate SomeGssAPIData',
+                     [('Negotiate', 'SomeGssAPIData')], 
+                     ['Negotiate', 'SomeGssAPIData'])
 
         table = (digest,
                  basic,
                  (digest[0]+', '+basic[0],
                   digest[1] + basic[1],
-                  digest[2], basic[2]))
+                  [digest[2], basic[2]]),
+                 ntlm,
+                 negotiate,
+                 (ntlm[0]+', '+basic[0],
+                  ntlm[1] + basic[1],
+                  [ntlm[2], basic[2]]),
+                 (digest[0]+', '+negotiate[0],
+                  digest[1] + negotiate[1],
+                  [digest[2], negotiate[2]]),
+                 (negotiate[0]+', '+negotiate[0],
+                  negotiate[1] + negotiate[1],
+                  [negotiate[2] + negotiate[2]]),
+                 (ntlm[0]+', '+ntlm[0],
+                  ntlm[1] + ntlm[1],
+                  [ntlm[2], ntlm[2]]),
+                 (basic[0]+', '+ntlm[0],
+                  basic[1] + ntlm[1],
+                  [basic[2], ntlm[2]]),
+                 )
 
-        self.runRoundtripTest("WWW-Authenticate", table)
+        # runRoundtripTest doesn't work because we don't generate a single
+        # header
+
+        headername = 'WWW-Authenticate'
+
+        for row in table:
+            rawHeaderInput, parsedHeaderData, requiredGeneratedElements = row
+
+            parsed = parseHeader(headername, [rawHeaderInput,])
+            self.assertEquals(parsed, parsedHeaderData)
+
+            regeneratedHeaderValue = generateHeader(headername, parsed)
+
+            for regeneratedElement in regeneratedHeaderValue:
+                requiredElements = requiredGeneratedElements[
+                    regeneratedHeaderValue.index(
+                        regeneratedElement)]
+
+                for reqEle in requiredElements:
+                    elementIndex = regeneratedElement.find(reqEle)
+
+                    self.assertNotEqual(
+                        elementIndex, -1,
+                        "%r did not appear in generated HTTP header %r: %r" % (reqEle,
+                                                                               headername,
+                                                                               regeneratedElement))
+
+        # parser/generator
+        reparsed = parseHeader(headername, regeneratedHeaderValue)
+        self.assertEquals(parsed, reparsed)
 
 
 class EntityHeaderParsingTests(HeaderParsingTestBase):

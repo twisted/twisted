@@ -72,7 +72,7 @@ Response headers:
  - Set-Cookie: list of Cookie instances
  - Set-Cookie2: list of Cookie instances
  - Vary: list of string header names
- - WWW-Authenticate: list containing a scheme and dictionary containing challenge information
+ - WWW-Authenticate: list containing a scheme and dictionary or string containing challenge information
      e.g. ``['basic', {'realm': 'MyRealm'}]`` or ``['digest', {'realm': 'MyRealm', 'qop': 'auth', 'nonce': 'mynonce'}]``
 
 General headers:
