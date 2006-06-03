@@ -5,7 +5,7 @@ set PATH=%1;%PATH%
 set PATH
 set PATHEXT=%PATHEXT%;.py;.pyc;.pyo;.pyw
 echo -:- -:- -:- -:- -:--:- -:- -:- -:- -:--:- -:- -:- -:- -:-
-echo Commands available in twisted: twistd mktap manhole tapconvert ckeygen trial coil lore websetroot
+echo Commands available in twisted: twistd mktap manhole tapconvert ckeygen trial coil lore
 echo -:- -:- -:- -:- -:--:- -:- -:- -:- -:--:- -:- -:- -:- -:-
 
 rem  # The following scripts are not advertised for the following reasons
