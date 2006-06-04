@@ -566,6 +566,7 @@ generateFor = [
                ('ckeygen', 'twisted.conch.scripts.ckeygen', 'GeneralOptions'),
                ('lore', 'twisted.lore.scripts.lore', 'Options'),
                ('pyhtmlizer', 'twisted.scripts.htmlizer', 'Options'),
+               ('websetroot', 'twisted.web.scripts.websetroot', 'Options'),
                ('tap2deb', 'twisted.scripts.tap2deb', 'MyOptions'),
                ('tkmktap', 'twisted.scripts.tap2deb', 'MyOptions'),
                ('tkconch', 'twisted.conch.scripts.tkconch', 'GeneralOptions'),

@@ -1,0 +1,19 @@
+#compdef websetroot
+_arguments -s -A "-*" \
+'(--file --python --source -f -y -s --xml)-x[Read an application from a .tax file (Marmalade format).]:xml:_files -g "*.tax"' \
+'(--file --python --source -f -y -s -x)--xml=[Read an application from a .tax file (Marmalade format).]:xml:_files -g "*.tax"' \
+'(--file --python --xml -f -y -x --source)-s[Read an application from a .tas file (AOT format).]:source:_files -g "*.tas"' \
+'(--file --python --xml -f -y -x -s)--source=[Read an application from a .tas file (AOT format).]:source:_files -g "*.tas"' \
+'--version[version]' \
+'--help[Display this help and exit.]' \
+'(--python --xml --source -y -x -s --file)-f[read the given .tap file]:file:_files -g "*.tap"' \
+'(--python --xml --source -y -x -s -f)--file=[read the given .tap file]:file:_files -g "*.tap"' \
+'--script=[Set the root resource of the web server to the resource created ]:script:_files' \
+'(--file --xml --source -f -x -s --python)-y[read an application from within a Python file]:python:_files -g "*.py"' \
+'(--file --xml --source -f -x -s -y)--python=[read an application from within a Python file]:python:_files -g "*.py"' \
+'(--encrypted)-e[The specified tap/aos/xml file is encrypted.]' \
+'(-e)--encrypted[The specified tap/aos/xml file is encrypted.]' \
+'--pickle=[Set the root resource of the web server to the resource saved in ]:pickle:_files' \
+'(--port)-p[The port the web server is running on]:port:_files' \
+'(-p)--port=[The port the web server is running on]:port:_files' \
+&& return 0
