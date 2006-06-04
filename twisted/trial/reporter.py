@@ -141,26 +141,53 @@ class Reporter(TestResult):
                                   self._formatFailureTraceback(errs)),
                       BrokenTestCaseWarning)
 
-    def _trimFrame(self, fail):
-        if len(fail.frames) < 3:
-            return fail.frames
-        oldFrames = fail.frames[:]
-        fail.frames = fail.frames[2:]
-        f = fail.frames[-1]
-        if (f[0].startswith('fail')
-            and os.path.splitext(os.path.basename(f[1]))[0] == 'unittest'):
-            fail.frames = fail.frames[:-1]
-        return oldFrames
+    def _trimFrames(self, frames):
+        # when a method fails synchronously, the stack looks like this:
+        #  [0]: defer.maybeDeferred()
+        #  [1]: utils.runWithWarningsSuppressed()
+        #  [2:-2]: code in the test method which failed
+        #  [-1]: unittest.fail
+
+        # when a method fails inside a Deferred (i.e., when the test method
+        # returns a Deferred, and that Deferred's errback fires), the stack
+        # captured inside the resulting Failure looks like this:
+        #  [0]: defer.Deferred._runCallbacks
+        #  [1:-2]: code in the testmethod which failed
+        #  [-1]: unittest.fail
+
+        # as a result, we want to trim either [maybeDeferred,runWWS] or
+        # [Deferred._runCallbacks] from the front, and trim the
+        # [unittest.fail] from the end.
+
+        newFrames = list(frames)
+        
+        if len(frames) < 2:
+            return newFrames
+
+        first = newFrames[0]
+        second = newFrames[1]
+        if (first[0] == "maybeDeferred"
+            and os.path.splitext(os.path.basename(first[1]))[0] == 'defer'
+            and second[0] == "runWithWarningsSuppressed"
+            and os.path.splitext(os.path.basename(second[1]))[0] == 'utils'):
+            newFrames = newFrames[2:]
+        elif (first[0] == "_runCallbacks"
+              and os.path.splitext(os.path.basename(first[1]))[0] == 'defer'):
+            newFrames = newFrames[1:]
+
+        last = newFrames[-1]
+        if (last[0].startswith('fail')
+            and os.path.splitext(os.path.basename(last[1]))[0] == 'unittest'):
+            newFrames = newFrames[:-1]
+
+        return newFrames
 
     def _formatFailureTraceback(self, fail):
         if isinstance(fail, str):
             return fail.rstrip() + '\n'
-        oldFrames = self._trimFrame(fail)
+        fail.frames, frames = self._trimFrames(fail.frames), fail.frames
         result = fail.getTraceback(detail=self.tbformat, elideFrameworkCode=True)
-        if self.tbformat == 'default':
-            # Apparently trial's tests don't like the 'Traceback:' line.
-            result = '\n'.join(result.split('\n')[1:])
-        fail.frames = oldFrames
+        fail.frames = frames
         return result
 
     def _printResults(self, flavour, errors, formatter):
