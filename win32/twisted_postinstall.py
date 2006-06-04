@@ -29,7 +29,7 @@ def install(sitepackages, prefix):
     # bat files for pys so twisted command prompt works
     scripts = join(prefix, 'scripts')
     pyexe = join(prefix, 'python.exe')
-    for bat in """twistd.bat mktap.bat websetroot.bat lore.bat 
+    for bat in """twistd.bat mktap.bat lore.bat 
                manhole.bat tapconvert.bat trial.bat coil.bat""".split():
         f = join(scripts, bat)
         scriptpy = f.replace('.bat', '.py')
