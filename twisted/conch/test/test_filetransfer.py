@@ -2,6 +2,7 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE file for details.
 
+import os
 import sys
 
 from twisted.trial import unittest
@@ -18,18 +19,18 @@ except ImportError:
 
 from twisted.conch import avatar
 from twisted.conch.ssh import filetransfer, session
-from twisted.internet import defer, reactor, protocol, interfaces
+from twisted.internet import defer, reactor
 from twisted.protocols import loopback
-from twisted.python import components, log, failure
+from twisted.python import components, log
 
-import os
 
 class FileTransferTestAvatar(avatar.ConchUser):
 
-    def __init__(self):
+    def __init__(self, homeDir):
         avatar.ConchUser.__init__(self)
         self.channelLookup['session'] = session.SSHSession
         self.subsystemLookup['sftp'] = filetransfer.FileTransferServer
+        self.homeDir = homeDir
 
     def _runAsUser(self, f, *args, **kw):
         try:
@@ -44,7 +45,7 @@ class FileTransferTestAvatar(avatar.ConchUser):
         return r
 
     def getHomeDir(self):
-        return os.path.join(os.getcwd(), 'sftp_test')
+        return os.path.join(os.getcwd(), self.homeDir)
 
 class ConchSessionForTestAvatar:
 
@@ -78,40 +79,16 @@ if unix:
 class SFTPTestBase(unittest.TestCase):
 
     def setUp(self):
-        try:
-            os.mkdir('sftp_test')
-        except OSError, e:
-            if e.args[0] == 17:
-                pass
-        try:
-            os.mkdir('sftp_test/testDirectory')
-        except OSError, e:
-            if e.args[0] == 17:
-                pass
+        self.test_dir = self.mktemp()
+        os.makedirs(os.path.join(self.test_dir, 'testDirectory'))
 
-        f=file('sftp_test/testfile1','w')
+        f = file(os.path.join(self.test_dir, 'testfile1'),'w')
         f.write('a'*10+'b'*10)
         f.write(file('/dev/urandom').read(1024*64)) # random data
-        os.chmod('sftp_test/testfile1', 0644)
-        file('sftp_test/testRemoveFile', 'w').write('a')
-        file('sftp_test/testRenameFile', 'w').write('a')
-        file('sftp_test/.testHiddenFile', 'w').write('a')
-
-
-    def tearDown(self):
-        for f in ['testfile1', 'testRemoveFile', 'testRenameFile',
-                  'testRenamedFile', 'testLink', 'testfile2',
-                  '.testHiddenFile']:
-            try:
-                os.remove('sftp_test/' + f)
-            except OSError:
-                pass
-        for d in ['sftp_test/testDirectory', 'sftp_test/testMakeDirectory',
-                'sftp_test']:
-            try:
-                os.rmdir(d)
-            except:
-                pass
+        os.chmod(os.path.join(self.test_dir, 'testfile1'), 0644)
+        file(os.path.join(self.test_dir, 'testRemoveFile'), 'w').write('a')
+        file(os.path.join(self.test_dir, 'testRenameFile'), 'w').write('a')
+        file(os.path.join(self.test_dir, '.testHiddenFile'), 'w').write('a')
 
 
 class TestOurServerOurClient(SFTPTestBase):
@@ -120,7 +97,9 @@ class TestOurServerOurClient(SFTPTestBase):
         skip = "can't run on non-posix computers"
 
     def setUp(self):
-        self.avatar = FileTransferTestAvatar()
+        SFTPTestBase.setUp(self)
+
+        self.avatar = FileTransferTestAvatar(self.test_dir)
         self.server = filetransfer.FileTransferServer(avatar=self.avatar)
         clientTransport = loopback.LoopbackRelay(self.server)
 
@@ -139,8 +118,6 @@ class TestOurServerOurClient(SFTPTestBase):
         self.serverTransport = serverTransport
 
         self._emptyBuffers()
-
-        SFTPTestBase.setUp(self)
 
     def _emptyBuffers(self):
         while self.serverTransport.buffer or self.clientTransport.buffer:
@@ -372,13 +349,13 @@ class TestOurServerOurClient(SFTPTestBase):
             d = self.client.readLink('testLink')
             self._emptyBuffers()
             d.addCallback(self.failUnlessEqual,
-                          os.path.join(os.getcwd(), 'sftp_test', 'testfile1'))
+                          os.path.join(os.getcwd(), self.test_dir, 'testfile1'))
             return d
         def _realPath(_):
             d = self.client.realPath('testLink')
             self._emptyBuffers()
             d.addCallback(self.failUnlessEqual, 
-                          os.path.join(os.getcwd(), 'sftp_test', 'testfile1'))
+                          os.path.join(os.getcwd(), self.test_dir, 'testfile1'))
             return d
         d.addCallback(_readLink)
         d.addCallback(_realPath)
