@@ -67,6 +67,18 @@ class FilePathTestCase(unittest.TestCase):
         self.failUnlessEqual(sub1.listdir(),
                              ['file2'])
 
+    def testSymbolicLink(self):
+        s4 = self.path.child("sub4")
+        s3 = self.path.child("sub3")
+        os.symlink(s3.path, s4.path)
+        self.failUnless(s4.islink())
+        self.failIf(s3.islink())
+        self.failUnless(s4.isdir())
+        self.failUnless(s3.isdir())
+
+    if not hasattr(os, "symlink"):
+        testSymbolicLink.skip = "Your platform does not support symbolic links."
+
     def testMultiExt(self):
         f3 = self.path.child('sub3').child('file3')
         exts = '.foo','.bar', 'ext1','ext2','ext3'

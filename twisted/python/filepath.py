@@ -225,13 +225,11 @@ class FilePath:
         return S_ISREG(st[ST_MODE])
 
     def islink(self):
-        st = self.statinfo
-        if not st:
-            self.restat(False)
-            st = self.statinfo
-            if not st:
-                return False
-        return S_ISLNK(st[ST_MODE])
+        # We can't use cached stat results here, because that is the stat of
+        # the destination - (see #1773) which in *every case* but this one is
+        # the right thing to use.  We could call lstat here and use that, but
+        # it seems unlikely we'd actually save any work that way.  -glyph
+        return islink(self.path)
 
     def isabs(self):
         return isabs(self.path)
