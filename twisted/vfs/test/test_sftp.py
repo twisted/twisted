@@ -4,7 +4,7 @@ import os
 import time
 
 from twisted.conch.ssh.filetransfer import FXF_READ, FXF_WRITE, FXF_CREAT
-from twisted.conch.ssh.filetransfer import FXF_APPEND, FXF_EXCL
+from twisted.conch.ssh.filetransfer import FXF_APPEND, FXF_EXCL, FXF_TRUNC
 from twisted.conch.ssh.filetransfer import SFTPError
 from twisted.conch.ssh.filetransfer import FX_NO_SUCH_FILE, FX_FAILURE
 from twisted.conch.ssh.filetransfer import FX_PERMISSION_DENIED
@@ -86,28 +86,39 @@ class SFTPAdapterTest(unittest.TestCase):
         self.failUnless(ISFTPFile.providedBy(child))
 
     def test_openNewFile(self):
-        # Opening a new file should work if FXF_CREAT is passed
+        # Opening a new file with FXF_READ alone should fail with
+        # FX_NO_SUCH_FILE.
+        e = self.assertRaises(SFTPError,
+           self.sftp.openFile, 'new file.txt', FXF_READ, None)
+        self.assertEqual(FX_NO_SUCH_FILE, e.code)
+
+    def test_openNewFileCreate(self):
+        # Opening a new file should work if FXF_CREAT is passed.
         child = self.sftp.openFile('new file.txt', FXF_READ|FXF_CREAT, None)
         self.failUnless(ISFTPFile.providedBy(child))
 
-        # But opening with FXF_READ alone should fail with FX_NO_SUCH_FILE.
-        e = self.assertRaises(SFTPError,
-           self.sftp.openFile, 'new file 2.txt', FXF_READ, None)
-        self.assertEqual(FX_NO_SUCH_FILE, e.code)
-
+    def test_openNewFileWrite(self):
         # The FXF_WRITE flag alone can create a file.
-        child = self.sftp.openFile('new file 3.txt', FXF_WRITE, None)
+        child = self.sftp.openFile('new file.txt', FXF_WRITE, None)
         self.failUnless(ISFTPFile.providedBy(child))
 
-        # So, of course FXF_WRITE plus FXF_READ can too.
-        child = self.sftp.openFile('new file 4.txt', FXF_WRITE|FXF_READ, None)
+    def test_openNewFileReadWrite(self):
+        # So, of course FXF_WRITE plus FXF_READ can create a file too.
+        child = self.sftp.openFile('new file.txt', FXF_WRITE|FXF_READ, None)
         self.failUnless(ISFTPFile.providedBy(child))
 
+    def test_openNewFileAppend(self):
         # The FXF_APPEND flag alone can create a file.
-        child = self.sftp.openFile('new file 5.txt', FXF_APPEND, None)
+        child = self.sftp.openFile('new file.txt', FXF_APPEND, None)
         self.failUnless(ISFTPFile.providedBy(child))
 
     def test_openNewFileExclusive(self):
+        flags = FXF_WRITE|FXF_CREAT|FXF_EXCL
+        # But if the file doesn't exist, then it should work.
+        child = self.sftp.openFile('new file.txt', flags, None)
+        self.failUnless(ISFTPFile.providedBy(child))
+
+    def test_openExistingFileExclusive(self):
         # Creating a file should fail if the FXF_EXCL flag is given and the file
         # already exists.  This fails with FX_FILE_ALREADY_EXISTS (which is
         # actually just FX_FAILURE for now, see the comment in
@@ -117,9 +128,14 @@ class SFTPAdapterTest(unittest.TestCase):
                               self.sftp.openFile, 'file.txt', flags, None)
         self.assertEqual(FX_FILE_ALREADY_EXISTS, e.code)
 
-        # But if the file doesn't exist, then it should work.
-        child = self.sftp.openFile('new file.txt', flags, None)
+    def test_openFileTrunc(self):
+        # The FXF_TRUNC flag causes an existing file to be truncated.
+        child = self.sftp.openFile('file.txt', FXF_WRITE|FXF_TRUNC, None)
         self.failUnless(ISFTPFile.providedBy(child))
+        
+        # The file should have been truncated to 0 size.
+        attrs = child.getAttrs()
+        self.failUnlessEqual(0, attrs['size'])
 
     def test_removeFile(self):
         self.sftp.removeFile('/file.txt')
