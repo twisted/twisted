@@ -2848,7 +2848,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         return status
 
     def append(self, mailbox, message, flags = (), date = None):
-        """Add the given message to the currently selected mailbox
+        """Add the given message to the given mailbox.
 
         This command is allowed in the Authenticated and Selected states.
 
