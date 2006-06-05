@@ -34,8 +34,11 @@ import sys, os, os.path, time, tempfile
 
 class FileTransferTestRealm:
 
-    def requestAvatar(sefl, avatarID, mind, *interfaces):
-        a = FileTransferTestAvatar()
+    def __init__(self, testDir):
+        self.testDir = testDir
+
+    def requestAvatar(self, avatarID, mind, *interfaces):
+        a = FileTransferTestAvatar(self.testDir)
         return interfaces[0], a, lambda: None
 
 
@@ -72,7 +75,7 @@ class CFTPClientTestBase(SFTPTestBase):
         open('kh_test','w').write('127.0.0.1 '+test_ssh.publicRSA_openssh)
 
     def startServer(self):
-        realm = FileTransferTestRealm()
+        realm = FileTransferTestRealm(self.testDir)
         p = portal.Portal(realm)
         p.registerChecker(test_ssh.ConchTestPublicKeyChecker())
         fac = test_ssh.ConchTestServerFactory()
@@ -105,6 +108,9 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, CFTPClientTestBase):
            return
         test_process.SignalMixin.setUpClass(self)
         CFTPClientTestBase.setUpClass(self)
+
+    def setUp(self):
+        CFTPClientTestBase.setUp(self)
 
         self.startServer()
         cmds = ('-p %i -l testuser '
@@ -139,6 +145,8 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, CFTPClientTestBase):
             return
         test_process.SignalMixin.tearDownClass(self)
         CFTPClientTestBase.tearDownClass(self)
+
+    def tearDown(self):
         d = self.stopServer()
         d.addCallback(self._killProcess)
         return d
@@ -161,7 +169,7 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, CFTPClientTestBase):
         return self.processProtocol.buffer[:-6].strip()
 
     def testCdPwd(self):
-        homeDir = os.path.join(os.getcwd(), 'sftp_test')
+        homeDir = os.path.join(os.getcwd(), self.testDir)
         pwdRes = self._getCmdResult('pwd')
         lpwdRes = self._getCmdResult('lpwd')
         cdRes = self._getCmdResult('cd testDirectory')
@@ -186,7 +194,8 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, CFTPClientTestBase):
         lsRes = self._getCmdResult('ls').split('\n')
         self.failUnlessEqual(lsRes, ['testDirectory', 'testRemoveFile', \
                 'testRenameFile', 'testfile1'])
-        lsRes = self._getCmdResult('ls ../sftp_test').split('\n')
+        lsRes = self._getCmdResult(
+                'ls ../' + os.path.basename(self.testDir)).split('\n')
         self.failUnlessEqual(lsRes, ['testDirectory', 'testRemoveFile', \
                 'testRenameFile', 'testfile1'])
         lsRes = self._getCmdResult('ls *File').split('\n')
@@ -207,41 +216,48 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, CFTPClientTestBase):
         self.failUnlessEqual(f1, f2, msg)
 
     def testGet(self):
-        getRes = self._getCmdResult('get testfile1 "sftp_test/test file2"')
-        self._failUnlessFilesEqual('sftp_test/testfile1',
-                'sftp_test/test file2', "get failed")
-        self.failUnless(getRes.endswith("Transferred %s/sftp_test/testfile1 to sftp_test/test file2" % os.getcwd()))
+        getRes = self._getCmdResult(
+            'get testfile1 "%s/test file2"' % (self.testDir,))
+        self._failUnlessFilesEqual(
+            self.testDir + '/testfile1',
+            self.testDir + '/test file2', "get failed")
+        self.failUnless(
+            getRes.endswith("Transferred %s/%s/testfile1 to %s/test file2"
+                            % (os.getcwd(), self.testDir, self.testDir)))
         self.failIf(self._getCmdResult('rm "test file2"'))
-        self.failIf(os.path.exists('sftp_test/test file2'))
+        self.failIf(os.path.exists(self.testDir + '/test file2'))
 
     def testWildcardGet(self):
         getRes = self._getCmdResult('get testR*')
-        self._failUnlessFilesEqual('sftp_test/testRemoveFile',
-                'testRemoveFile', 'testRemoveFile get failed')
-        self._failUnlessFilesEqual('sftp_test/testRenameFile',
-                'testRenameFile', 'testRenameFile get failed')
-        os.remove('testRemoveFile')
-        os.remove('testRenameFile')
+        self._failUnlessFilesEqual(
+            self.testDir + '/testRemoveFile',
+            'testRemoveFile', 'testRemoveFile get failed')
+        self._failUnlessFilesEqual(
+            self.testDir + '/testRenameFile',
+            'testRenameFile', 'testRenameFile get failed')
 
     def testPut(self):
-        putRes = self._getCmdResult('put sftp_test/testfile1 "test\\"file2"')
-        f1 = file('sftp_test/testfile1').read()
-        f2 = file('sftp_test/test"file2').read()
+        putRes = self._getCmdResult(
+            'put %s/testfile1 "test\\"file2"' % (self.testDir,))
+        f1 = file(self.testDir + '/testfile1').read()
+        f2 = file(self.testDir + '/test"file2').read()
         self.failUnlessEqual(f1, f2, "put failed")
-        self.failUnless(putRes.endswith('Transferred sftp_test/testfile1 to %s/sftp_test/test"file2' % os.getcwd()))
+        self.failUnless(
+            putRes.endswith('Transferred %s/testfile1 to %s/%s/test"file2' 
+                            % (self.testDir, os.getcwd(), self.testDir)))
         self.failIf(self._getCmdResult('rm "test\\"file2"'))
-        self.failIf(os.path.exists('sftp_test/test"file2'))
+        self.failIf(os.path.exists(self.testDir + '/test"file2'))
 
     def testWildcardPut(self):
         self.failIf(self._getCmdResult('cd ..'))
-        getRes = self._getCmdResult('put sftp_test/testR*')
-        self._failUnlessFilesEqual('sftp_test/testRemoveFile',
-                'testRemoveFile', 'testRemoveFile get failed')
-        self._failUnlessFilesEqual('sftp_test/testRenameFile',
-                'testRenameFile', 'testRenameFile get failed')
-        self.failIf(self._getCmdResult('cd sftp_test'))
-        os.remove('testRemoveFile')
-        os.remove('testRenameFile')
+        getRes = self._getCmdResult('put %s/testR*' % (self.testDir,))
+        self._failUnlessFilesEqual(
+            self.testDir + '/testRemoveFile',
+            self.testDir + '/../testRemoveFile', 'testRemoveFile get failed')
+        self._failUnlessFilesEqual(
+            self.testDir + '/testRenameFile',
+            self.testDir + '/../testRenameFile', 'testRenameFile get failed')
+        self.failIf(self._getCmdResult('cd ' + os.path.basename(self.testDir)))
 
     def testLink(self):
         linkRes = self._getCmdResult('ln testLink testfile1')
@@ -256,7 +272,8 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, CFTPClientTestBase):
         lslRes = self._getCmdResult('ls -l testMakeDirector?')
         self.failUnless(lslRes.startswith('d'), lslRes)
         self.failIf(self._getCmdResult('rmdir testMakeDirectory'))
-        self.failIf(self._getCmdResult('lmkdir sftp_test/testLocalDirectory'))
+        self.failIf(self._getCmdResult(
+            'lmkdir %s/testLocalDirectory' % (self.testDir,)))
         self.failIf(self._getCmdResult('rmdir testLocalDirectory'))
 
     def testRename(self):
@@ -326,7 +343,7 @@ exit
 """
         res = self._getBatchOutput(cmds).split('\n')
         log.msg('RES %s' % str(res))
-        self.failUnless(res[1].find('sftp_test') != -1)
+        self.failUnless(res[1].find(self.testDir) != -1, repr(res))
         self.failUnlessEqual(res[3:-2], ['testDirectory', 'testRemoveFile', 'testRenameFile', 'testfile1'])
 
     def testError(self):
@@ -335,7 +352,7 @@ pwd
 exit
 """
         res = self._getBatchOutput(cmds)
-        self.failIf(res.find('sftp_test') != -1)
+        self.failIf(res.find(self.testDir) != -1)
 
     def testIgnoredError(self):
         cmds = """-chown 0 missingFile
@@ -343,7 +360,7 @@ pwd
 exit
 """
         res = self._getBatchOutput(cmds)
-        self.failIf(res.find('sftp_test') == -1)
+        self.failIf(res.find(self.testDir) == -1)
 
 class TestOurServerUnixClient(test_process.SignalMixin, CFTPClientTestBase):
 
@@ -352,6 +369,9 @@ class TestOurServerUnixClient(test_process.SignalMixin, CFTPClientTestBase):
             return
         test_process.SignalMixin.setUpClass(self)
         CFTPClientTestBase.setUpClass(self)
+
+    def setUp(self):
+        CFTPClientTestBase.setUp(self)
         self.startServer()
         cmd1 = ('-p %i -l testuser '
                 '--known-hosts kh_test '
@@ -376,6 +396,8 @@ class TestOurServerUnixClient(test_process.SignalMixin, CFTPClientTestBase):
     def tearDownClass(self):
         test_process.SignalMixin.tearDownClass(self)
         CFTPClientTestBase.tearDownClass(self)
+
+    def tearDown(self):
         d = defer.maybeDeferred(self.conn.transport.loseConnection)
         d.addCallback(lambda x : self.stopServer())
         return d
@@ -407,8 +429,8 @@ exit
 """
         d = self._getBatchOutput(cmds)
         d.addCallback(
-            lambda res : self.failIf(res.find('sftp_test') == -1,
-                                     "sftp_test not in %r" % (res,)))
+            lambda res : self.failIf(res.find(self.testDir) == -1,
+                                     "%s not in %r" % (self.testDir, res)))
         return d
 
 
