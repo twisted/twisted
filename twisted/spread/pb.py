@@ -64,16 +64,17 @@ try:
 except ImportError:
     import StringIO
 
+import md5
+import random
 import new
-import sys
 import types
 import warnings
 
 # Twisted Imports
-from twisted.python import log, failure, components, reflect
-from twisted.internet import reactor, defer, protocol, error
-from twisted.cred import authorizer, service, perspective, identity
+from twisted.python import log, failure
+from twisted.internet import defer, protocol
 from twisted.cred.portal import Portal
+from twisted.cred.credentials import ICredentials, IUsernameHashedPassword
 from twisted.persisted import styles
 from twisted.python.components import Interface, registerAdapter
 
@@ -81,25 +82,24 @@ from zope.interface import implements
 
 # Sibling Imports
 from twisted.spread.interfaces import IJellyable, IUnjellyable
-from jelly import jelly, unjelly, globalSecurity
-import banana
+from twisted.spread.jelly import jelly, unjelly, globalSecurity
+from twisted.spread import banana
 
-# Tightly coupled sibling import
-from flavors import Serializable
-from flavors import Referenceable, NoSuchMethod
-from flavors import Root, IPBRoot
-from flavors import ViewPoint
-from flavors import Viewable
-from flavors import Copyable
-from flavors import Jellyable
-from flavors import Cacheable
-from flavors import RemoteCopy
-from flavors import RemoteCache
-from flavors import RemoteCacheObserver
-from flavors import copyTags
-from flavors import setCopierForClass, setUnjellyableForClass
-from flavors import setFactoryForClass
-from flavors import setCopierForClassTree
+from twisted.spread.flavors import Serializable
+from twisted.spread.flavors import Referenceable, NoSuchMethod
+from twisted.spread.flavors import Root, IPBRoot
+from twisted.spread.flavors import ViewPoint
+from twisted.spread.flavors import Viewable
+from twisted.spread.flavors import Copyable
+from twisted.spread.flavors import Jellyable
+from twisted.spread.flavors import Cacheable
+from twisted.spread.flavors import RemoteCopy
+from twisted.spread.flavors import RemoteCache
+from twisted.spread.flavors import RemoteCacheObserver
+from twisted.spread.flavors import copyTags
+from twisted.spread.flavors import setCopierForClass, setUnjellyableForClass
+from twisted.spread.flavors import setFactoryForClass
+from twisted.spread.flavors import setCopierForClassTree
 
 MAX_BROKER_REFS = 1024
 
@@ -245,43 +245,6 @@ class Avatar:
             raise
         return broker.serialize(state, self, method, args, kw)
 
-class Perspective(perspective.Perspective, Avatar):
-    """
-    This class is DEPRECATED, because it relies on old cred
-    APIs. Please use L{Avatar}.
-    """
-
-    def brokerAttached(self, reference, identity, broker):
-        """An intermediary method to override.
-
-        Normally you will want to use 'attached', as described in
-        L{twisted.cred.perspective.Perspective}.attached; however, this method
-        serves the same purpose, and in some circumstances, you are sure that
-        the protocol that objects will be attaching to your Perspective with is
-        Perspective Broker, and in that case you may wish to get the Broker
-        object they are connecting with, for example, to determine what host
-        they are connecting from.  Bear in mind that when overriding this
-        method, other, non-PB protocols will not notify you of being attached
-        or detached.
-        """
-        warnings.warn("pb.Perspective is deprecated, please use pb.Avatar.", DeprecationWarning, 2)
-        return self.attached(reference, identity)
-
-    def brokerDetached(self, reference, identity, broker):
-        """See L{brokerAttached}.
-        """
-        return self.detached(reference, identity)
-
-
-class Service(service.Service):
-    """A service for Perspective Broker.
-
-    This class is DEPRECATED, because it relies on old cred APIs.
-
-    On this Service, the result of a perspective request must be a
-    L{pb.Perspective} rather than a L{twisted.cred.perspective.Perspective}.
-    """
-    perspectiveClass = Perspective
 
 
 class AsReferenceable(Referenceable):
@@ -292,6 +255,7 @@ class AsReferenceable(Referenceable):
         """Initialize me with an object.
         """
         self.remoteMessageReceived = getattr(object, messageType + "MessageReceived")
+
 
 
 class RemoteReference(Serializable, styles.Ephemeral):
@@ -1024,474 +988,6 @@ class Broker(banana.Banana):
         del self.locallyCachedObjects[objectID]
 
 
-class BrokerFactory(protocol.Factory, styles.Versioned):
-    """DEPRECATED, use PBServerFactory instead.
-
-    I am a server for object brokerage.
-    """
-
-    unsafeTracebacks = 0
-    persistenceVersion = 3
-
-    def __init__(self, objectToBroker):
-        warnings.warn("This is deprecated. Use PBServerFactory.", DeprecationWarning, 2)
-        self.objectToBroker = objectToBroker
-
-    def config_objectToBroker(self, newObject):
-        self.objectToBroker = newObject
-
-    def upgradeToVersion2(self):
-        app = self.app
-        del self.app
-        self.__init__(AuthRoot(app))
-
-    def buildProtocol(self, addr):
-        """Return a Broker attached to me (as the service provider).
-        """
-        proto = Broker(0)
-        proto.factory = self
-        proto.setNameForLocal("root",
-                              self.objectToBroker.rootObject(proto))
-        return proto
-
-    def clientConnectionMade(self, protocol):
-        pass
-
-
-### DEPRECATED AUTH STUFF
-
-class AuthRoot(Root):
-    """DEPRECATED.
-
-    I provide AuthServs as root objects to Brokers for a BrokerFactory.
-    """
-
-    def __init__(self, auth):
-        from twisted.internet.app import Application
-        if isinstance(auth, Application):
-            auth = auth.authorizer
-        self.auth = auth
-
-    def rootObject(self, broker):
-        return AuthServ(self.auth, broker)
-
-class _Detacher:
-    """DEPRECATED."""
-
-    def __init__(self, perspective, remoteRef, identity, broker):
-        self.perspective = perspective
-        self.remoteRef = remoteRef
-        self.identity = identity
-        self.broker = broker
-
-    def detach(self):
-        self.perspective.brokerDetached(self.remoteRef,
-                                        self.identity,
-                                        self.broker)
-
-class IdentityWrapper(Referenceable):
-    """DEPRECATED.
-
-    I delegate most functionality to a L{twisted.cred.identity.Identity}.
-    """
-
-    def __init__(self, broker, identity):
-        """Initialize, specifying an identity to wrap.
-        """
-        self.identity = identity
-        self.broker = broker
-
-    def remote_attach(self, serviceName, perspectiveName, remoteRef):
-        """Attach the remote reference to a requested perspective.
-        """
-        return self.identity.requestPerspectiveForKey(
-            serviceName, perspectiveName).addCallbacks(
-            self._attached, lambda x: x,
-            callbackArgs = [remoteRef])
-
-    def _attached(self, perspective, remoteRef):
-        perspective = perspective.brokerAttached(remoteRef,
-                                                 self.identity,
-                                                 self.broker)
-        # Make sure that when connectionLost happens, this perspective
-        # will be tracked in order that 'detached' will be called.
-        self.broker.notifyOnDisconnect(_Detacher(perspective,
-                                                 remoteRef,
-                                                 self.identity,
-                                                 self.broker).detach)
-        return AsReferenceable(perspective, "perspective")
-
-    # (Possibly?) TODO: Implement 'remote_detach' as well.
-
-
-class AuthChallenger(Referenceable):
-    """DEPRECATED.
-
-    See also: AuthServ
-    """
-
-    def __init__(self, ident, serv, challenge):
-        self.ident = ident
-        self.challenge = challenge
-        self.serv = serv
-
-    def remote_respond(self, response):
-        if self.ident:
-            d = defer.Deferred()
-            pwrq = self.ident.verifyPassword(self.challenge, response)
-            pwrq.addCallback(self._authOk, d)
-            pwrq.addErrback(self._authFail, d)
-            return d
-
-    def _authOk(self, result, d):
-        d.callback(IdentityWrapper(self.serv.broker, self.ident))
-
-    def _authFail(self, result, d):
-        d.callback(None)
-
-class AuthServ(Referenceable):
-    """DEPRECATED.
-
-    See also: L{AuthRoot}
-    """
-
-    def __init__(self, auth, broker):
-        self.auth = auth
-        self.broker = broker
-
-    def remote_username(self, username):
-        defr = self.auth.getIdentityRequest(username)
-        defr.addCallback(self.mkchallenge)
-        return defr
-
-    def mkchallenge(self, ident):
-        if type(ident) == types.StringType:
-            # it's an error, so we must fail.
-            challenge = identity.challenge()
-            return challenge, AuthChallenger(None, self, challenge)
-        else:
-            challenge = ident.challenge()
-            return challenge, AuthChallenger(ident, self, challenge)
-
-
-class _ObjectRetrieval:
-    """DEPRECATED.
-
-    (Internal) Does callbacks for L{getObjectAt}.
-    """
-
-    def __init__(self, broker, d):
-        warnings.warn("This is deprecated. Use PBClientFactory.", DeprecationWarning, 2)
-        self.deferred = d
-        self.term = 0
-        self.broker = broker
-        # XXX REFACTOR: this seems weird.
-        # I'm not inheriting because I have to delegate at least 2 of these
-        # things anyway.
-        broker.notifyOnFail(self.connectionFailed)
-        broker.notifyOnConnect(self.connectionMade)
-        broker.notifyOnDisconnect(self.connectionLost)
-
-    def connectionLost(self):
-        if not self.term:
-            self.term = 1
-            del self.broker
-            self.deferred.errback(error.ConnectionLost())
-            del self.deferred
-
-
-    def connectionMade(self):
-        assert not self.term, "How did this get called?"
-        x = self.broker.remoteForName("root")
-        del self.broker
-        self.term = 1
-        self.deferred.callback(x)
-        del self.deferred
-
-    def connectionFailed(self):
-        if not self.term:
-            self.term = 1
-            del self.broker
-            self.deferred.errback(error.ConnectError(string="Connection failed"))
-            del self.deferred
-
-
-class BrokerClientFactory(protocol.ClientFactory):
-    noisy = 0
-    unsafeTracebacks = 0
-
-    def __init__(self, protocol):
-        warnings.warn("This is deprecated. Use PBClientFactory.", DeprecationWarning, 2)
-        if not isinstance(protocol,Broker): raise TypeError, "protocol is not an instance of Broker"
-        self.protocol = protocol
-
-    def buildProtocol(self, addr):
-        return self.protocol
-
-    def clientConnectionFailed(self, connector, reason):
-        self.protocol.connectionFailed()
-
-    def clientConnectionMade(self, protocol):
-        pass
-
-
-def getObjectRetriever():
-    """DEPRECATED.
-
-    Get a factory which retreives a root object from its client
-
-    @returns: A pair: A ClientFactory and a Deferred which will be passed a
-              remote reference to the root object of a PB server.x
-    """
-    warnings.warn("This is deprecated. Use PBClientFactory.", DeprecationWarning, 2)
-    d = defer.Deferred()
-    b = Broker(1)
-    bf = BrokerClientFactory(b)
-    _ObjectRetrieval(b, d)
-    return bf, d
-
-
-def getObjectAt(host, port, timeout=None):
-    """DEPRECATED. Establishes a PB connection and returns with a L{RemoteReference}.
-
-    @param host: the host to connect to
-
-    @param port: the port number to connect to
-
-    @param timeout: a value in milliseconds to wait before failing by
-      default. (OPTIONAL)
-
-    @returns: A Deferred which will be passed a remote reference to the
-      root object of a PB server.x
-    """
-    warnings.warn("This is deprecated. Use PBClientFactory.", DeprecationWarning, 2)
-    bf = PBClientFactory()
-    if host == "unix":
-        # every time you use this, God kills a kitten
-        reactor.connectUNIX(port, bf, timeout)
-    else:
-        reactor.connectTCP(host, port, bf, timeout)
-    return bf.getRootObject()
-
-def getObjectAtSSL(host, port, timeout=None, contextFactory=None):
-    """DEPRECATED. Establishes a PB connection over SSL and returns with a RemoteReference.
-
-    @param host: the host to connect to
-
-    @param port: the port number to connect to
-
-    @param timeout: a value in milliseconds to wait before failing by
-      default. (OPTIONAL)
-
-    @param contextFactory: A factory object for producing SSL.Context
-      objects.  (OPTIONAL)
-
-    @returns: A Deferred which will be passed a remote reference to the
-      root object of a PB server.
-    """
-    warnings.warn("This is deprecated. Use PBClientFactory.", DeprecationWarning, 2)
-    bf = PBClientFactory()
-    if contextFactory is None:
-        from twisted.internet import ssl
-        contextFactory = ssl.ClientContextFactory()
-    reactor.connectSSL(host, port, bf, contextFactory, timeout)
-    return bf.getRootObject()
-
-def connect(host, port, username, password, serviceName,
-            perspectiveName=None, client=None, timeout=None):
-    """DEPRECATED. Connects and authenticates, then retrieves a PB service.
-
-    Required arguments:
-       - host -- the host the service is running on
-       - port -- the port on the host to connect to
-       - username -- the name you will be identified as to the authorizer
-       - password -- the password for this username
-       - serviceName -- name of the service to request
-
-    Optional (keyword) arguments:
-       - perspectiveName -- the name of the perspective to request, if
-            different than the username
-       - client -- XXX the \"reference\" argument to
-                  perspective.Perspective.attached
-       - timeout -- see twisted.internet.tcp.Client
-
-    @returns: A Deferred instance that gets a callback when the final
-              Perspective is connected, and an errback when an error
-              occurs at any stage of connecting.
-    """
-    warnings.warn("This is deprecated. Use PBClientFactory.", DeprecationWarning, 2)
-    if timeout == None:
-        timeout = 30
-    bf = PBClientFactory()
-    if host == "unix":
-        # every time you use this, God kills a kitten
-        reactor.connectUNIX(port, bf, timeout)
-    else:
-        reactor.connectTCP(host, port, bf, timeout)
-    return bf.getPerspective(username, password, serviceName, perspectiveName, client)
-
-def _connGotRoot(root, d, client, serviceName,
-                 username, password, perspectiveName):
-    warnings.warn("This is deprecated. Use PBClientFactory.", DeprecationWarning, 2)
-    logIn(root, client, serviceName, username, password, perspectiveName).chainDeferred(d)
-
-def authIdentity(authServRef, username, password):
-    """DEPRECATED. Return a Deferred which will do the challenge-response dance and
-    return a remote Identity reference.
-    """
-    warnings.warn("This is deprecated. Use PBClientFactory.", DeprecationWarning, 2)
-    d = defer.Deferred()
-    authServRef.callRemote('username', username).addCallbacks(
-        _cbRespondToChallenge, d.errback,
-        callbackArgs=(password,d))
-    return d
-
-def _cbRespondToChallenge((challenge, challenger), password, d):
-    warnings.warn("This is deprecated. Use PBClientFactory.", DeprecationWarning, 2)
-    challenger.callRemote("respond", identity.respond(challenge, password)).addCallbacks(
-        d.callback, d.errback)
-
-def logIn(authServRef, client, service, username, password, perspectiveName=None):
-    """DEPRECATED. I return a Deferred which will be called back with a Perspective.
-    """
-    warnings.warn("This is deprecated. Use PBClientFactory.", DeprecationWarning, 2)
-    d = defer.Deferred()
-    authServRef.callRemote('username', username).addCallbacks(
-        _cbLogInRespond, d.errback,
-        callbackArgs=(d, client, service, password,
-                      perspectiveName or username))
-    return d
-
-def _cbLogInRespond((challenge, challenger), d, client, service, password, perspectiveName):
-    warnings.warn("This is deprecated. Use PBClientFactory.", DeprecationWarning, 2)
-    challenger.callRemote('respond',
-        identity.respond(challenge, password)).addCallbacks(
-        _cbLogInResponded, d.errback,
-        callbackArgs=(d, client, service, perspectiveName))
-
-def _cbLogInResponded(identity, d, client, serviceName, perspectiveName):
-    warnings.warn("This is deprecated. Use PBClientFactory.", DeprecationWarning, 2)
-    if identity:
-        identity.callRemote("attach", serviceName, perspectiveName, client).chainDeferred(d)
-    else:
-        from twisted import cred
-        d.errback(cred.error.Unauthorized("invalid username or password"))
-
-class IdentityConnector:
-     """DEPRECATED.
-
-     I support connecting to multiple Perspective Broker services that are
-     in a service tree.
-     """
-     def __init__(self, host, port, identityName, password):
-         """
-         @type host:               C{string}
-         @param host:              The host to connect to or the PB server.
-                                   If this is C{"unix"}, then a UNIX socket
-                                   will be used rather than a TCP socket.
-         @type port:               C{integer}
-         @param port:              The port to connect to for the PB server.
-         @type identityName:       C{string}
-         @param identityName:      The name of the identity to use to
-                                   autheticate with the PB server.
-         @type password:           C{string}
-         @param password:          The password to use to autheticate with
-                                   the PB server.
-         """
-         warnings.warn("This is deprecated. Use PBClientFactory.", DeprecationWarning, 2)
-         self.host = host
-         self.port = port
-         self.identityName = identityName
-         self.password = password
-         self._identityWrapper = None
-         self._connectDeferreds = []
-         self._requested = 0
-
-     def _cbGotAuthRoot(self, authroot):
-         authIdentity(authroot, self.identityName,
-                      self.password).addCallbacks(
-             self._cbGotIdentity, self._ebGotIdentity)
-
-     def _cbGotIdentity(self, i):
-         self._identityWrapper = i
-         if i:
-             for d in self._connectDeferreds:
-                 d.callback(i)
-             self._connectDeferreds[:] = []
-         else:
-             from twisted import cred
-             e = cred.error.Unauthorized("invalid username or password")
-             self._ebGotIdentity(e)
-
-     def _ebGotIdentity(self, e):
-         self._requested = 0
-         for d in self._connectDeferreds:
-             d.errback(e)
-         self._connectDeferreds[:] = []
-
-     def requestLogin(self):
-         """
-         Attempt to authenticate about the PB server, but don't
-         request any services, yet.
-
-         @returns:                  L{IdentityWrapper}
-         @rtype:                    L{twisted.internet.defer.Deferred}
-         """
-         if not self._identityWrapper:
-             d = defer.Deferred()
-             self._connectDeferreds.append(d)
-             if not self._requested:
-                 self._requested = 1
-                 getObjectAt(self.host, self.port).addCallbacks(
-                     self._cbGotAuthRoot, self._ebGotIdentity)
-             return d
-         else:
-             return defer.succeed(self._identityWrapper)
-
-     def requestService(self, serviceName, perspectiveName=None,
-                        client=None):
-         """
-         Request a perspective on the specified service.  This will
-         authenticate against the server as well if L{requestLogin}
-         hasn't already been called.
-
-         @type serviceName:         C{string}
-         @param serviceName:        The name of the service to obtain
-                                    a perspective for.
-         @type perspectiveName:     C{string}
-         @param perspectiveName:    If specified, the name of the
-                                    perspective to obtain.  Otherwise,
-                                    default to the name of the identity.
-         @param client:             The client object to attach to
-                                    the perspective.
-
-         @rtype:                    L{twisted.internet.defer.Deferred}
-         @return:                   A deferred which will receive a callback
-                                    with the perspective.
-         """
-         return self.requestLogin().addCallback(
-             lambda i, self=self: i.callRemote("attach",
-                                               serviceName,
-                                               perspectiveName,
-                                               client))
-
-     def disconnect(self):
-         """Lose my connection to the server.
-
-         Useful to free up resources if you've completed requestLogin but
-         then change your mind.
-         """
-         if not self._identityWrapper:
-             return
-         else:
-             self._identityWrapper.broker.transport.loseConnection()
-
-
-# this is the new shiny API you should be using:
-
-import md5
-import random
-from twisted.cred.credentials import ICredentials, IUsernameHashedPassword
 
 def respond(challenge, password):
     """Respond to a challenge.
@@ -1572,34 +1068,6 @@ class PBClientFactory(protocol.ClientFactory):
         d = defer.Deferred()
         self.rootObjectRequests.append(d)
         return d
-
-    def getPerspective(self, username, password, serviceName,
-                       perspectiveName=None, client=None):
-        """Get perspective from remote PB server.
-
-        New systems should use login() instead.
-
-        @return: Deferred of RemoteReference to the perspective.
-        """
-        warnings.warn("Update your backend to use PBServerFactory, and then use login().",
-                      DeprecationWarning, 2)
-        if perspectiveName == None:
-            perspectiveName = username
-        d = self.getRootObject()
-        d.addCallback(self._cbAuthIdentity, username, password)
-        d.addCallback(self._cbGetPerspective, serviceName, perspectiveName, client)
-        return d
-
-    def _cbAuthIdentity(self, authServRef, username, password):
-        return authServRef.callRemote('username', username).addCallback(
-            self._cbRespondToChallenge, password)
-
-    def _cbRespondToChallenge(self, (challenge, challenger), password):
-        return challenger.callRemote("respond", respond(challenge, password))
-
-    def _cbGetPerspective(self, identityWrapper, serviceName, perspectiveName, client):
-        return identityWrapper.callRemote(
-            "attach", serviceName, perspectiveName, client)
 
     def disconnect(self):
         """If the factory is connected, close the connection.

@@ -3,7 +3,7 @@
 
 
 from twisted.trial import unittest
-from twisted.internet import reactor, protocol, error, app, abstract, defer
+from twisted.internet import reactor, protocol, error, abstract, defer
 from twisted.internet import interfaces, base
 
 from twisted.test.time_helpers import Clock
@@ -15,8 +15,8 @@ except ImportError:
 if ssl and not ssl.supported:
     ssl = None
 
-from twisted.internet.defer import SUCCESS, FAILURE, Deferred, succeed, fail, maybeDeferred
-from twisted.python import util, log
+from twisted.internet.defer import Deferred, maybeDeferred
+from twisted.python import util
 
 import os
 import sys

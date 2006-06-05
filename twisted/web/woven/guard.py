@@ -17,7 +17,6 @@ __version__ = "$Revision: 1.34 $"[11:-2]
 import random
 import time
 import md5
-import warnings
 import urllib
 
 # Twisted Imports
@@ -27,7 +26,7 @@ from twisted.web.resource import Resource, IResource
 from twisted.web.util import redirectTo, Redirect, DeferredResource
 from twisted.web.static import addSlash
 from twisted.internet import reactor
-from twisted.cred.error import Unauthorized, LoginFailed, UnauthorizedLogin
+from twisted.cred.error import LoginFailed, UnauthorizedLogin
 
 def _sessionCookie():
     return md5.new("%s_%s" % (str(random.random()) , str(time.time()))).hexdigest()
@@ -266,85 +265,6 @@ DESTROY_PERSPECTIVE = 'perspective-destroy'
 from twisted.python import formmethod as fm
 from twisted.web.woven import form
 
-loginSignature = fm.MethodSignature(
-    fm.String("identity", "",
-              "Identity", "The unique name of your account."),
-    fm.Password("password", "",
-                "Password", "The creative name of your password."),
-    fm.String("perspective", None, "Perspective",
-              "(Optional) The name of the role within your account "
-              "you wish to perform."))
-
-class PerspectiveWrapper(Resource):
-    """DEPRECATED.
-    
-    I am a wrapper that will restrict access to Resources based on a
-    C{twisted.cred.service.Service}'s 'authorizer' and perspective list.
-
-    Please note that I must be in turn wrapped by a SessionWrapper, since my
-    login functionality requires a session to be established.
-    """
-    
-    def __init__(self, service, noAuthResource, authResourceFactory, callback=None):
-        """Create a PerspectiveWrapper.
-        
-        @type service: C{twisted.cred.service.Service}
-
-        @type noAuthResource: C{Resource}
-
-        @type authResourceFactory: a callable object
-
-        @param authResourceFactory: This should be a function which takes as an
-        argument perspective from 'service' and returns a
-        C{Resource} instance.
-
-        @param noAuthResource: This parameter is the C{Resource} that is used
-        when the user is browsing this site anonymously.  Somewhere accessible
-        from this should be a link to 'perspective-init', which will display a
-        C{form.FormProcessor} that allows the user to log in.
-        """
-        warnings.warn("Please use UsernamePasswordWrapper instead", DeprecationWarning, 2)
-        Resource.__init__(self)
-        self.service = service
-        self.noAuthResource = noAuthResource
-        self.authResourceFactory = authResourceFactory
-        self.callback = callback
-
-    def getChild(self, path, request):
-        s = request.getSession()
-        if s is None:
-            return request.setupSession()
-
-        if path == INIT_PERSPECTIVE:
-            def loginMethod(identity, password, perspective=None):
-                idfr = self.service.authorizer.getIdentityRequest(identity)
-                idfr.addCallback(
-                    lambda ident:
-                    ident.verifyPlainPassword(password).
-                    addCallback(lambda ign:
-                                ident.requestPerspectiveForService(self.service.serviceName))
-                    .addCallback(lambda psp:
-                                 s.setClientForService(ident, psp,
-                                                       self.authResourceFactory(psp),
-                                                       self.service)))
-                def loginFailure(f):
-                    if f.trap(Unauthorized):
-                        raise fm.FormException(str(f.value))
-                    raise f
-                idfr.addErrback(loginFailure)
-                return idfr
-                
-            return form.FormProcessor(
-                loginSignature.method(loginMethod), 
-                callback=self.callback)
-        elif path == DESTROY_PERSPECTIVE:
-            s.setClientForService(None, None, None, self.service)
-            return Redirect(".")
-        else:
-            sc = s.clientForService(self.service)
-            if sc:
-                return getResource(sc, path, request)
-            return getResource(self.noAuthResource, path, request)
 
 newLoginSignature = fm.MethodSignature(
     fm.String("username", "",

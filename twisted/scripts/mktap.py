@@ -5,7 +5,7 @@ import sys, os
 
 from zope.interface import Interface, Attribute, implements
 
-from twisted.application import service, compat, app
+from twisted.application import service, app
 from twisted.persisted import sob
 from twisted.python import usage, util, plugin as oldplugin
 from twisted import plugin as newplugin
@@ -75,16 +75,6 @@ def loadPlugins(debug = None, progress = None):
         tapLookup[plug.tapname] = plug
 
     return tapLookup
-
-def makeService(mod, name, options):
-    if hasattr(mod, 'updateApplication'):
-        ser = service.MultiService()
-        oldapp = compat.IOldApplication(ser)
-        oldapp.name = name
-        mod.updateApplication(oldapp, options)
-    else:
-        ser = mod.makeService(options)
-    return ser
 
 def addToApplication(ser, name, append, procname, type, encrypted, uid, gid):
     if append and os.path.exists(append):
@@ -199,7 +189,7 @@ def run():
     plg = options.tapLookup[options.subCommand]
     if not IServiceMaker.providedBy(plg):
         plg = plg.load()
-    ser = makeService(plg, options.subCommand, options.subOptions)
+    ser = plg.makeService(options.subOptions)
     addToApplication(ser,
                      options.subCommand, options['append'], options['appname'],
                      options['type'], options['encrypted'],

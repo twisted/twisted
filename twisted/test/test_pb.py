@@ -19,17 +19,12 @@ from cStringIO import StringIO
 from zope.interface import implements
 
 from twisted.trial import unittest
-# module-level 'suppress' has special meaning to Trial, so import this under
-# a different name
-from twisted.trial.util import suppress as util_suppress
 
 from twisted.spread import pb, util
-from twisted.internet import protocol, main, error
-from twisted.internet.app import Application
-from twisted.internet.utils import suppressWarnings
+from twisted.internet import protocol, main
 from twisted.python import failure, log
-from twisted.cred import identity, authorizer
 from twisted.cred.error import UnauthorizedLogin
+from twisted.cred import portal, checkers, credentials
 from twisted.internet import reactor, defer
 
 class Dummy(pb.Viewable):
@@ -39,21 +34,23 @@ class Dummy(pb.Viewable):
         else:
             return 'goodbye, cruel world!'
 
-class DummyPerspective(pb.Perspective):
+
+
+class DummyPerspective(pb.Avatar):
     def perspective_getDummyViewPoint(self):
         return Dummy()
 
-class DummyService(pb.Service):
-    """A dummy PB service to test with.
-    """
-    def getPerspectiveNamed(self, user):
-        """
-        """
-        # Note: I don't need to go back and forth between identity and
-        # perspective here, so I _never_ need to specify identityName.
-        p = DummyPerspective(user)
-        p.setService(self)
-        return p
+
+
+class DummyRealm(object):
+    implements(portal.IRealm)
+
+    def requestAvatar(self, avatarId, mind, *interfaces):
+        for iface in interfaces:
+            if iface is pb.IPerspective:
+                return iface, DummyPerspective(), lambda: None
+
+
 
 class IOPump:
     """Utility to pump data between clients and servers for protocol testing.
@@ -99,71 +96,26 @@ class IOPump:
         else:
             return 0
 
-_appSuppress = util_suppress(
-    message="twisted.internet.app is deprecated, use twisted.application or the reactor instead.",
-    category=DeprecationWarning)
-
-_identitySuppress = util_suppress(
-    message="Identities are deprecated, switch to credentialcheckers etc.",
-    category=DeprecationWarning)
-
-_authorizerSuppress = util_suppress(
-    message="Authorizers are deprecated, switch to portals/realms/etc.",
-    category=DeprecationWarning)
-
-_credServiceSuppress = util_suppress(
-    message="Cred services are deprecated, use realms instead.",
-    category=DeprecationWarning)
-
-_perspectiveSuppress = util_suppress(
-    message="pb.Perspective is deprecated, please use pb.Avatar.",
-    category=DeprecationWarning)
-
-_loginBackendSuppress = util_suppress(
-    message="Update your backend to use PBServerFactory, and then use login().",
-    category=DeprecationWarning)
-
-_pbServerFactorySuppress = util_suppress(
-    message="This is deprecated. Use PBServerFactory.",
-    category=DeprecationWarning)
-
-_pbClientFactorySuppress = util_suppress(
-    message="This is deprecated. Use PBClientFactory.",
-    category=DeprecationWarning)
 
 
 def connectedServerAndClient():
     """Returns a 3-tuple: (client, server, pump)
     """
-    c = pb.Broker()
-    auth = authorizer.DefaultAuthorizer()
-    appl = Application("pb-test")
-    auth.setServiceCollection(appl)
-    ident = identity.Identity("guest", authorizer=auth)
-    ident.setPassword("guest")
-    svc = DummyService("test", appl, authorizer=auth)
-    ident.addKeyForPerspective(svc.getPerspectiveNamed("any"))
-    auth.addIdentity(ident)
-    svr = pb.BrokerFactory(pb.AuthRoot(auth))
-    s = svr.buildProtocol(('127.0.0.1',))
-    s.copyTags = {}
+    clientBroker = pb.Broker()
+    checker = checkers.InMemoryUsernamePasswordDatabaseDontUse(guest='guest')
+    factory = pb.PBServerFactory(portal.Portal(DummyRealm(), [checker]))
+    serverBroker = factory.buildProtocol(('127.0.0.1',))
 
-    cio = StringIO()
-    sio = StringIO()
-    c.makeConnection(protocol.FileWrapper(cio))
-    s.makeConnection(protocol.FileWrapper(sio))
-    pump = IOPump(c, s, cio, sio)
+    clientTransport = StringIO()
+    serverTransport = StringIO()
+    clientBroker.makeConnection(protocol.FileWrapper(clientTransport))
+    serverBroker.makeConnection(protocol.FileWrapper(serverTransport))
+    pump = IOPump(clientBroker, serverBroker, clientTransport, serverTransport)
     # Challenge-response authentication:
     pump.flush()
-    return c, s, pump
-connectedServerAndClient = suppressWarnings(
-    connectedServerAndClient,
-    _authorizerSuppress,
-    _appSuppress,
-    _identitySuppress,
-    _credServiceSuppress,
-    _pbServerFactorySuppress,
-    )
+    return clientBroker, serverBroker, pump
+
+
 
 class SimpleRemote(pb.Referenceable):
     def remote_thunk(self, arg):
@@ -631,28 +583,6 @@ class BrokerTestCase(unittest.TestCase):
         assert not c.locallyCachedObjects.has_key(baroqueLuid), "Client still had complex after GC"
         assert vcc.observer is None, "observer was not removed"
 
-    def whatTheHell(self, obj):
-        print '!?!?!?!?', repr(obj)
-
-    def testViewPoint(self):
-        c, s, pump = connectedServerAndClient()
-        pump.pump()
-        authRef = c.remoteForName("root")
-        accum = []
-        pb.logIn(authRef, None, "test", "guest", "guest", "any").addCallbacks(accum.append, self.whatTheHell)
-        # ident = c.remoteForName("identity")
-        # ident.attach("test", "any", None).addCallback(accum.append)
-        pump.flush()
-        pump.flush()
-        pump.flush()
-        
-        test = accum.pop() # okay, this should be our perspective...
-        test.callRemote('getDummyViewPoint').addCallback(accum.append)
-        pump.flush()
-        accum.pop().callRemote('doNothing').addCallback(accum.append)
-        pump.flush()
-        assert accum.pop() == 'hello world!', 'oops...'
-    testViewPoint.suppress = [_pbClientFactorySuppress, _perspectiveSuppress]
 
 
     def testPublishable(self):
@@ -697,7 +627,7 @@ class BrokerTestCase(unittest.TestCase):
         pump.pump()
         assert self.thunkResult == ID, "ID not correct on factory object %s" % self.thunkResult
 
-from twisted.spread.util import Pager, StringPager, FilePager, getAllPages
+from twisted.spread.util import StringPager, FilePager, getAllPages
 
 bigString = "helloworld" * 50
 
@@ -914,235 +844,10 @@ class SpreadUtilTestCase(unittest.TestCase):
         self.assertEquals(m(3), 4)
 
 
-class ReconnectOnce(pb.PBClientFactory):
-
-    reconnected = 0
-    
-    def clientConnectionLost(self, connector, reason):
-        pb.PBClientFactory.clientConnectionLost(self, connector, reason,
-                                                reconnecting=(not self.reconnected))
-        if not self.reconnected:
-            self.reconnected = 1
-            connector.connect()
-
-
-class ConnectionTestCase(unittest.TestCase):
-    def setUp(self):
-        self.refs = [] # these will be .broker.transport.loseConnection()'ed
-        c = pb.Broker()
-        auth = authorizer.DefaultAuthorizer()
-        appl = Application("pb-test")
-        auth.setServiceCollection(appl)
-        ident = identity.Identity("guest", authorizer=auth)
-        ident.setPassword("guest")
-        svc = DummyService("test", appl, authorizer=auth)
-        ident.addKeyForPerspective(svc.getPerspectiveNamed("any"))
-        auth.addIdentity(ident)
-        ident2 = identity.Identity("foo", authorizer=auth)
-        ident2.setPassword("foo")
-        ident2.addKeyForPerspective(svc.getPerspectiveNamed("foo"))
-        auth.addIdentity(ident2)
-        self.svr = pb.BrokerFactory(pb.AuthRoot(auth))
-        self.port = reactor.listenTCP(0, self.svr, interface="127.0.0.1")
-        self.portno = self.port.getHost().port
-    setUp = suppressWarnings(setUp,
-        _authorizerSuppress,
-        _appSuppress,
-        _identitySuppress,
-        _credServiceSuppress,
-        _loginBackendSuppress)
-
-
-    def tearDown(self):
-        for r in self.refs:
-            r.broker.transport.loseConnection()
-        return self.port.stopListening()
-
-    def addRef(self, ref):
-        self.refs.append(ref)
-        return ref
-
-    def _checkRootObject(self, root):
-        d = root.callRemote("username", "guest")
-        d.addCallback(self._checkRootObject_2)
-        return d
-    def _checkRootObject_2(self, challenge):
-        self.assertEquals(len(challenge), 2)
-        self.assert_(isinstance(challenge[1], pb.RemoteReference))
-
-    def _checkIsRemoteReference(self, r):
-        self.assert_(isinstance(r, pb.RemoteReference))
-        return r
-
-    # tests for *really* deprecated APIs:
-    def testGetObjectAt(self):
-        d = pb.getObjectAt("127.0.0.1", self.portno)
-        d.addCallback(self.addRef)
-        d.addCallback(self._checkRootObject)
-        return d
-    testGetObjectAt.suppress = [_pbClientFactorySuppress]
-
-                          
-    def testConnect(self):
-        d = pb.connect("127.0.0.1", self.portno, "guest", "guest", "test",
-                       perspectiveName="any")
-        d.addCallback(self.addRef)
-        d.addCallback(self._checkIsRemoteReference)
-        return d
-    testConnect.suppress = [_pbClientFactorySuppress,
-                            _pbServerFactorySuppress,
-                            _loginBackendSuppress,
-                            _perspectiveSuppress]
 
 
 
-    def testIdentityConnector(self):
-        dl = []
-        iConnector = pb.IdentityConnector("127.0.0.1", self.portno,
-                                          "guest", "guest")
-        d1 = iConnector.requestService("test", perspectiveName="any")
-        d1.addCallback(self._checkIsRemoteReference)
-        dl.append(d1)
-        d2 = iConnector.requestService("test", perspectiveName="any")
-        d2.addCallback(self._checkIsRemoteReference)
-        dl.append(d2)
-        d3 = defer.DeferredList(dl)
-        d3.addCallback(lambda res: iConnector.disconnect())
-        return d3
-    testIdentityConnector.suppress = [_pbServerFactorySuppress,
-                                      _pbClientFactorySuppress,
-                                      _perspectiveSuppress]
 
-
-    # tests for new, shiny API, although getPerspective stuff is also
-    # deprecated:
-    def testGoodGetObject(self):
-        # we test getting both before and after connection
-        factory = pb.PBClientFactory()
-        d = factory.getRootObject()
-        reactor.connectTCP("127.0.0.1", self.portno, factory)
-        d.addCallback(self.addRef)
-        d.addCallback(self._checkRootObject)
-        d.addCallback(self._testGoodGetObject_1, factory)
-        return d
-
-
-    def _testGoodGetObject_1(self, res, factory):
-        d = factory.getRootObject()
-        d.addCallback(self.addRef)
-        d.addCallback(self._checkRootObject)
-        return d
-
-
-    def testGoodPerspective(self):
-        # we test getting both before and after connection
-        factory = pb.PBClientFactory()
-        d = factory.getPerspective("guest", "guest", "test",
-                                   perspectiveName="any")
-        reactor.connectTCP("127.0.0.1", self.portno, factory)
-        d.addCallback(self.addRef)
-        d.addCallback(self._checkIsRemoteReference)
-        d.addCallback(self._testGoodPerspective_1, factory)
-        return d
-
-
-    def _testGoodPerspective_1(self, res, factory):
-        d = factory.getPerspective("guest", "guest", "test",
-                                   perspectiveName="any")
-        d.addCallback(self.addRef)
-        d.addCallback(self._checkIsRemoteReference)
-        return d
-    testGoodPerspective.suppress = [_perspectiveSuppress,
-                                    _loginBackendSuppress]
-
-
-    def testGoodFailedConnect(self):
-        factory = pb.PBClientFactory()
-        d = factory.getPerspective("guest", "guest", "test",
-                                   perspectiveName="any")
-        reactor.connectTCP("127.0.0.1", 69, factory)
-        return self.assertFailure(d, error.ConnectError)
-    testGoodFailedConnect.suppress = [_loginBackendSuppress]
-
-
-    def testDisconnect(self):
-        factory = pb.PBClientFactory()
-        d = factory.getPerspective("guest", "guest", "test",
-                                   perspectiveName="any")
-        reactor.connectTCP("127.0.0.1", self.portno, factory)
-        d.addCallback(self._testDisconnect_1, factory)
-        return d
-    def _testDisconnect_1(self, p, factory):
-        d = p.callRemote("getDummyViewPoint") # just to check it's working
-        d.addCallback(self._testDisconnect_2, p, factory)
-        return d
-    def _testDisconnect_2(self, res, p, factory):
-        factory.disconnect()
-        d = defer.Deferred()
-
-        # TODO: clunky, but it works
-        
-        # XXX no it doesn't, it's a race-condition.  This should be using
-        # notifyOnDisconnect to be *sure* it's gone.
-
-        reactor.callLater(0.1, d.callback, p)
-        #reactor.iterate(); reactor.iterate(); reactor.iterate()
-        d.addCallback(self._testDisconnect_3)
-        return d
-    def _testDisconnect_3(self, p):
-        self.assertRaises(pb.DeadReferenceError,
-                          p.callRemote, "getDummyViewPoint")
-    testDisconnect.suppress = [_perspectiveSuppress,
-                               _loginBackendSuppress]
-
-
-    def testEmptyPerspective(self):
-        factory = pb.PBClientFactory()
-        d = factory.getPerspective("foo", "foo", "test")
-        reactor.connectTCP("127.0.0.1", self.portno, factory)
-        d.addCallback(self._checkIsRemoteReference)
-        d.addCallback(self.addRef)
-        return d
-    testEmptyPerspective.suppress = [_perspectiveSuppress,
-                                     _loginBackendSuppress,
-                                     _pbServerFactorySuppress]
-
-    def testReconnect(self):
-        factory = ReconnectOnce()
-        l = []
-        d1 = defer.Deferred()
-
-        def disconnected(p):
-            d2 = factory.getPerspective("guest", "guest", "test",
-                                        perspectiveName="any")
-            d2.addCallback(d1.callback)
-
-        d = factory.getPerspective("guest", "guest", "test",
-                                   perspectiveName="any")
-        reactor.connectTCP("127.0.0.1", self.portno, factory)
-        d.addCallback(self._checkIsRemoteReference)
-        d.addCallback(lambda p: p.notifyOnDisconnect(disconnected))
-        d.addCallback(lambda res: factory.disconnect())
-        d1.addCallback(self._checkIsRemoteReference)
-        d1.addCallback(lambda res: factory.disconnect())
-        return d1
-    testReconnect.suppress = [_pbServerFactorySuppress,
-                              _loginBackendSuppress,
-                              _perspectiveSuppress]
-
-    def testImmediateClose(self):
-        cc = protocol.ClientCreator(reactor, protocol.Protocol)
-        d = cc.connectTCP("127.0.0.1", self.portno)
-        d.addCallback(lambda p: p.transport.loseConnection())
-        d = defer.Deferred()
-        # clunky, but it works
-        reactor.callLater(0.1, d.callback, None)
-        return d
-
-
-# yay new cred, everyone use this:
-
-from twisted.cred import portal, checkers, credentials
 
 class MyRealm:
     """A test realm."""
@@ -1191,7 +896,107 @@ class NewCredTestCase(unittest.TestCase):
 
     def tearDown(self):
         return self.port.stopListening()
-    
+
+
+    def getFactoryAndRootObject(self, clientFactory=pb.PBClientFactory):
+        factory = clientFactory()
+        rootObjDeferred = factory.getRootObject()
+        reactor.connectTCP('127.0.0.1', self.portno, factory)
+        return factory, rootObjDeferred
+
+    def testGetRootObject(self):
+        """
+        Assert only that L{PBClientFactory.getRootObject}'s Deferred fires with
+        a L{RemoteReference}.
+        """
+        factory, rootObjDeferred = self.getFactoryAndRootObject()
+
+        def gotRootObject(rootObj):
+            self.failUnless(isinstance(rootObj, pb.RemoteReference))
+            disconnectedDeferred = defer.Deferred()
+            rootObj.notifyOnDisconnect(disconnectedDeferred.callback)
+            factory.disconnect()
+            return disconnectedDeferred
+
+        return rootObjDeferred.addCallback(gotRootObject)
+
+
+    def testDeadReferenceError(self):
+        """
+        Test that when a connection is lost, calling a method on a
+        RemoteReference obtained from it raises DeadReferenceError.
+        """
+        factory, rootObjDeferred = self.getFactoryAndRootObject()
+
+        def gotRootObject(rootObj):
+            disconnectedDeferred = defer.Deferred()
+            rootObj.notifyOnDisconnect(disconnectedDeferred.callback)
+
+            def lostConnection(ign):
+                self.assertRaises(
+                    pb.DeadReferenceError,
+                    rootObj.callRemote, 'method')
+
+            disconnectedDeferred.addCallback(lostConnection)
+            factory.disconnect()
+            return disconnectedDeferred
+
+        return rootObjDeferred.addCallback(gotRootObject)
+
+
+    def testClientConnectionLost(self):
+        """
+        Test that if the L{reconnecting} flag is passed with a True value then
+        a remote call made from a disconnection notification callback gets a
+        result successfully.
+        """
+        class ReconnectOnce(pb.PBClientFactory):
+            reconnectedAlready = False
+            def clientConnectionLost(self, connector, reason):
+                reconnecting = not self.reconnectedAlready
+                self.reconnectedAlready = True
+                connector.connect()
+                return pb.PBClientFactory.clientConnectionLost(
+                    self, connector, reason, reconnecting)
+
+        factory, rootObjDeferred = self.getFactoryAndRootObject(ReconnectOnce)
+
+        def gotRootObject(rootObj):
+            self.failUnless(
+                isinstance(rootObj, pb.RemoteReference),
+                "%r is not a RemoteReference" % (rootObj,))
+
+            d = defer.Deferred()
+            rootObj.notifyOnDisconnect(d.callback)
+            factory.disconnect()
+
+            def disconnected(ign):
+                d = factory.getRootObject()
+
+                def gotAnotherRootObject(anotherRootObj):
+                    self.failUnless(
+                        isinstance(rootObj, pb.RemoteReference),
+                        "%r is not a RemoteReference" % (rootObj,))
+
+                    d = defer.Deferred()
+                    anotherRootObj.notifyOnDisconnect(d.callback)
+                    factory.disconnect()
+                    return d
+                return d.addCallback(gotAnotherRootObject)
+            return d.addCallback(disconnected)
+        return rootObjDeferred.addCallback(gotRootObject)
+
+
+    def testImmediateClose(self):
+        """
+        Test that if a Broker loses its connection without receiving any bytes,
+        it doesn't raise any exceptions or log any errors.
+        """
+        serverProto = self.factory.buildProtocol(('127.0.0.1', 12345))
+        serverProto.makeConnection(protocol.FileWrapper(StringIO()))
+        serverProto.connectionLost(failure.Failure(main.CONNECTION_DONE))
+
+
     def testLoginLogout(self):
         factory = pb.PBClientFactory()
         # NOTE: real code probably won't need anything where we have the

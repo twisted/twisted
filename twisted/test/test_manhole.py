@@ -5,7 +5,6 @@
 
 from twisted.trial import unittest
 from twisted.manhole import service
-from twisted.internet import app
 from twisted.spread.util import LocalAsRemote
 
 class Dummy:
@@ -40,9 +39,6 @@ class DummyManholeClient(LocalAsRemote):
     sync_receiveExplorer = receiveExplorer
     sync_setZero = setZero
     sync_getMessages = getMessages
-
-class DummyApp(app.Application):
-    name = 'None'
 
 class ManholeTest(unittest.TestCase):
     """Various tests for the manhole service.

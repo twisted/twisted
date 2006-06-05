@@ -330,25 +330,6 @@ Minimum Every Software Developer Absolutely, Positively Must Know
 About Unicode and Character Sets (No Excuses!)</a>.</li>
 </ul>
 
-<h2>Perspective Broker</h2>
-
-<h3>How can I get the reference to a client from a Perspective?</h3>
-
-<p>Firstly, the client must send a reference when it connects to the
-perspective broker. This can be done by passing the reference as a parameter to
-<code class="API" base="twisted.spread">pb.connect</code>.</p>
-
-<p>At the server end, you must override the <code base="twisted.spread.pb"
-class="API">Perspective.attach</code>, which is called when a client attaches
-to a perspective. The first argument of this method is a remote reference to
-the client object that was passed to <code class="API"
-base="twisted.spread">pb.connect</code>. </p>
-
-<p>Note that a single perspective can have many attached clients. For further
-information, see <a href="pclients.xhtml">Managing Clients of Perspectives</a>
-HOWTO and the <code class="API">twisted.spread.pb</code> API docs.</p>
-
-
 <h2>Requests and Contributing</h2>
 
 <h3>Twisted is cool, but I need to add more functionality.</h3>

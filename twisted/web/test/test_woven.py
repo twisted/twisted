@@ -500,47 +500,6 @@ class GuardTest(unittest.TestCase):
         for sz in swrap.sessions.values():
             sz.expire()
 
-    def testPerspectiveInit(self):
-        # TODO: this is an awful lot of crap to have to import / do in order to
-        # create a functional authentication system.  Cut down on it.
-        from twisted.internet.app import MultiService
-        ms = MultiService("hello")
-        from twisted.cred.authorizer import DefaultAuthorizer
-        auth = DefaultAuthorizer(ms)
-        from twisted.cred.service import Service
-        svc = Service("test_service", ms, auth)
-        myp = svc.createPerspective("test")
-        myp.makeIdentity("test")
-
-        sessWrapped = static.Data("you should never see this", "text/plain")
-        swChild = static.Data("NO", "text/plain")
-        sessWrapped.putChild("yyy",swChild)
-        da = static.Data("b","text/plain")
-        q = static.Data("you should never see this either", "text/plain")
-        q.putChild("yyy", static.Data("YES", "text/plain"))
-        authFactory = lambda p, q=q: q
-        pwrap = guard.PerspectiveWrapper(svc, sessWrapped, authFactory)
-        swrap = guard.SessionWrapper(pwrap)
-        da.putChild("xxx", swrap)
-        st = FakeSite(da)
-        chan = FakeHTTPChannel()
-        chan.site = st
-
-        req = chan.makeFakeRequest("/xxx/"+guard.INIT_SESSION+"/yyy")
-        req = chan.makeFakeRequest("/xxx/yyy")
-        self.assertEquals(req.written.getvalue(),"NO")
-        req = chan.makeFakeRequest("/xxx/"+guard.INIT_PERSPECTIVE+
-                                   "?identity=test&password=tenxt")
-        assert not req.session.services.values()
-        req = chan.makeFakeRequest("/xxx/"+guard.INIT_PERSPECTIVE+
-                                   "?identity=test&password=test")
-        self.assertEquals(req.session.services.values()[0][0], myp)
-        # print req.written.getvalue()
-        req = chan.makeFakeRequest("/xxx/yyy")
-        self.assertEquals(req.written.getvalue(), "YES")
-        # print req.session.services
-        for sz in swrap.sessions.values():
-            sz.expire()
 
 
 class _TestPage(page.Page):

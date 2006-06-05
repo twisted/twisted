@@ -301,9 +301,6 @@ def loadApplication(filename, kind, passphrase=None):
         application = sob.loadValueFromFile(filename, 'application', passphrase)
     else:
         application = sob.load(filename, kind, passphrase)
-    if IService(application, None) is None:
-        from twisted.application import compat
-        application = compat.convert(application)
     return application
 
 __all__ = ['IService', 'Service', 'IServiceCollection', 'MultiService',
