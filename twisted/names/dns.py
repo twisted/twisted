@@ -1085,7 +1085,19 @@ class DNSDatagramProtocol(protocol.DatagramProtocol):
 
     def datagramReceived(self, data, addr):
         m = Message()
-        m.fromStr(data)
+        try:
+            m.fromStr(data)
+        except EOFError:
+            log.msg("Truncated packet (%d bytes) from %s" % (len(data), addr))
+            return
+        except:
+            # Nothing should trigger this, but since we're potentially
+            # invoking a lot of different decoding methods, we might as well
+            # be extra cautious.  Anything that triggers this is itself
+            # buggy.
+            log.err(failure.Failure(), "Unexpected decoding error")
+            return
+
         if m.id in self.liveMessages:
             d, canceller = self.liveMessages[m.id]
             del self.liveMessages[m.id]
