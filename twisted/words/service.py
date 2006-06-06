@@ -627,7 +627,7 @@ class IRCUser(irc.IRC):
             # No group?  Fine, no names!
             self.names(
                 self.name,
-                '#' + group.name,
+                '#' + channel,
                 [])
 
         self.realm.lookupGroup(channel).addCallbacks(cbGroup, ebGroup)
@@ -688,7 +688,7 @@ class IRCUser(irc.IRC):
 
             def ebSet(err):
                 self.sendMessage(
-                    ERR_CHANOPRIVSNEEDED,
+                    irc.ERR_CHANOPRIVSNEEDED,
                     "#" + group.name,
                     ":You need to be a channel operator to do that.")
 
