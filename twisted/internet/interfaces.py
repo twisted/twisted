@@ -44,7 +44,7 @@ class IConnector(Interface):
     def getDestination(self):
         """Return destination this will try to connect to.
 
-        This will be an IAddress implementing object.
+        @return: An object which provides L{IAddress}.
         """
 
 
@@ -147,8 +147,11 @@ class IReactorArbitrary(Interface):
         """Start an instance of the given C{portType} listening.
 
         @type portType: type which implements L{IListeningPort}
-        @param portType: The object given by C{portType(*args, **kw)}
-        will be started listening.
+
+        @param portType: The object given by C{portType(*args, **kw)} will be
+                         started listening.
+
+        @return: an object which provides L{IListeningPort}.
         """
 
     def connectWith(self, connectorType, *args, **kw):
@@ -156,8 +159,11 @@ class IReactorArbitrary(Interface):
         Start an instance of the given C{connectorType} connecting.
 
         @type connectorType: type which implements L{IConnector}
+
         @param connectorType: The object given by C{connectorType(*args, **kw)}
-        will be started connecting.
+                              will be started connecting.
+
+        @return:  An object which provides L{IConnector}.
         """
 
 class IReactorTCP(Interface):
@@ -173,11 +179,12 @@ class IReactorTCP(Interface):
 
         @param interface: the hostname to bind to, defaults to '' (all)
 
-        @returns: an object that satisfies the L{IListeningPort} interface
+        @return: an object that provides L{IListeningPort}.
 
-        @raise CannotListenError: as defined here L{twisted.internet.error.CannotListenError}, if it
-           cannot listen on this port (e.g., it cannot bind to the required port
-           number)
+        @raise CannotListenError: as defined here
+                                  L{twisted.internet.error.CannotListenError},
+                                  if it cannot listen on this port (e.g., it
+                                  cannot bind to the required port number)
         """
 
     def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
@@ -195,9 +202,11 @@ class IReactorTCP(Interface):
         @param bindAddress: a (host, port) tuple of local address to bind
                             to, or None.
 
-        @returns:  An object implementing L{IConnector}. This connector will call
-           various callbacks on the factory when a connection is made,
-           failed, or lost - see L{ClientFactory<twisted.internet.protocol.ClientFactory>} docs for details.
+        @return: An object which provides L{IConnector}. This connector will
+                 call various callbacks on the factory when a connection is
+                 made, failed, or lost - see
+                 L{ClientFactory<twisted.internet.protocol.ClientFactory>}
+                 docs for details.
         """
 
 class IReactorSSL(Interface):
@@ -213,13 +222,13 @@ class IReactorSSL(Interface):
 
         @param contextFactory: a L{twisted.internet.ssl.ClientContextFactory} object.
 
-        @param timeout: number of seconds to wait before assuming the connection
-            has failed.
+        @param timeout: number of seconds to wait before assuming the
+                        connection has failed.
 
-        @param bindAddress: a (host, port) tuple of local address to bind to, or
-            C{None}.
+        @param bindAddress: a (host, port) tuple of local address to bind to,
+                            or C{None}.
 
-        @returns: an L{IConnector}.
+        @return: An object which provides L{IConnector}.
         """
 
     def listenSSL(self, port, factory, contextFactory, backlog=50, interface=''):
@@ -237,7 +246,6 @@ class IReactorSSL(Interface):
         @param backlog: size of the listen queue
 
         @param interface: the hostname to bind to, defaults to '' (all)
-
         """
 
 
@@ -257,7 +265,7 @@ class IReactorUNIX(Interface):
         @param checkPID: if True, check for a pid file to verify that a server
             is listening.
 
-        @returns: an L{IConnector}.
+        @return: An object which provides L{IConnector}.
         """
 
     def listenUNIX(self, address, factory, backlog=50, mode=0666, wantPID=0):
@@ -272,6 +280,8 @@ class IReactorUNIX(Interface):
         @param mode: mode to set on the unix socket.
 
         @param wantPID: if True, create a pidfile for the socket.
+
+        @return: An object which provides L{IListeningPort}.
         """
 
 
@@ -290,6 +300,8 @@ class IReactorUNIXDatagram(Interface):
         @param mode: mode to set on the unix socket.
 
         @param bindAddress: address to bind to
+
+        @return: An object which provides L{IConnector}.
         """
 
     def listenUNIXDatagram(self, address, protocol, maxPacketSize=8192, mode=0666):
@@ -303,7 +315,7 @@ class IReactorUNIXDatagram(Interface):
 
         @param mode: mode to set on the unix socket.
 
-        @returns: an L{IListeningPort}.
+        @return: An object which provides L{IListeningPort}.
         """
 
 
@@ -317,14 +329,15 @@ class IReactorUDP(Interface):
     def listenUDP(self, port, protocol, interface='', maxPacketSize=8192):
         """Connects a given DatagramProtocol to the given numeric UDP port.
 
-        @returns: object conforming to L{IListeningPort}.
+        @return: object which provides L{IListeningPort}.
         """
 
     def connectUDP(self, remotehost, remoteport, protocol, localport=0,
                   interface='', maxPacketSize=8192):
         """DEPRECATED.
 
-        Connects a L{twisted.internet.protocol.ConnectedDatagramProtocol} instance to a UDP port.
+        Connects a L{twisted.internet.protocol.ConnectedDatagramProtocol}
+        instance to a UDP port.
         """
 
 
@@ -335,17 +348,26 @@ class IReactorMulticast(Interface):
     without backwards compatability. Suggestions are welcome.
     """
 
-    def listenMulticast(self, port, protocol, interface='', maxPacketSize=8192, listenMultiple=False):
-        """Connects a given L{DatagramProtocol<twisted.internet.protocol.DatagramProtocol>} to the given numeric UDP port.
+    def listenMulticast(self,
+                        port, protocol, interface='', maxPacketSize=8192,
+                        listenMultiple=False):
+        """
+        Connects a given
+        L{DatagramProtocol<twisted.internet.protocol.DatagramProtocol>} to the
+        given numeric UDP port.
 
-        @param listenMultiple: boolean indicating whether multiple sockets can bind to same UDP port.
-        @returns: object conforming to L{IListeningPort}.
+        @param listenMultiple: boolean indicating whether multiple sockets can
+                               bind to same UDP port.
+
+        @returns: An object which provides L{IListeningPort}.
         """
 
 
 class IReactorProcess(Interface):
 
-    def spawnProcess(self, processProtocol, executable, args=(), env={}, path=None, uid=None, gid=None, usePTY=0):
+    def spawnProcess(self,
+                     processProtocol, executable, args=(), env={}, path=None,
+                     uid=None, gid=None, usePTY=0, childFDs=None):
         """Spawn a process, with a process protocol.
 
         @param processProtocol: a L{twisted.internet.protocol.ProcessProtocol} instance
@@ -374,12 +396,39 @@ class IReactorProcess(Interface):
                        in which case use those file descriptors.
                        (Not available on all systems.)
 
+        @param childFDs: A dictionary mapping file descriptors in the new child
+                         process to an integer or to the string 'r' or 'w'.
+
+                         If the value is an integer, it specifies a file
+                         descriptor in the parent process which will be mapped
+                         to a file descriptor (specified by the key) in the
+                         child process.  This is useful for things like inetd
+                         and shell-like file redirection.
+
+                         If it is the string 'r', a pipe will be created and
+                         attached to the child at that file descriptor: the
+                         child will be able to write to that file descriptor
+                         and the parent will receive read notification via the
+                         L{IProcessTransport.childDataReceived} callback.  This
+                         is useful for the child's stdout and stderr.
+
+                         If it is the string 'w', similar setup to the previous
+                         case will occur, with the pipe being readable by the
+                         child instead of writeable.  The parent process can
+                         write to that file descriptor using
+                         L{IProcessTransport.writeToChild}.  This is useful for
+                         the child's stdin.
+
+                         If childFDs is not passed, the default behaviour is to
+                         use a mapping that opens the usual stdin/stdout/stderr
+                         pipes.
+
         @see: L{twisted.internet.protocol.ProcessProtocol}
 
-        @returns: An L{IProcessTransport} object.
+        @return: An object which provides L{IProcessTransport}.
 
         @raise OSError: Raised with errno EAGAIN or ENOMEM if there are
-        insufficient system resources to create a new process.
+                        insufficient system resources to create a new process.
         """
 
 class IReactorTime(Interface):
@@ -398,10 +447,10 @@ class IReactorTime(Interface):
 
         @param kw: the keyword arguments to call it with.
 
-        @returns: An L{IDelayedCall} object that can be used to cancel
-                  the scheduled call, by calling its C{cancel()} method.
-                  It also may be rescheduled by calling its C{delay()}
-                  or C{reset()} methods.
+        @return: An object which provides L{IDelayedCall} and can be used to
+                 cancel the scheduled call, by calling its C{cancel()} method.
+                 It also may be rescheduled by calling its C{delay()} or
+                 C{reset()} methods.
         """
 
     def cancelCallLater(self, callID):
@@ -412,15 +461,15 @@ class IReactorTime(Interface):
         @param callID: this is an opaque identifier returned from C{callLater}
                        that will be used to cancel a specific call.
 
-            @raise ValueError: if the callID is not recognized.
+        @raise ValueError: if the callID is not recognized.
         """
 
     def getDelayedCalls(self):
-        """Retrieve a list of all delayed calls.
+        """Retrieve all currently scheduled delayed calls.
 
-        @returns: A tuple of all L{IDelayedCall} objects that are currently
-                  scheduled. This is everything that has been returned by
-                  C{callLater} but not yet called or canceled.
+        @return: A tuple of all L{IDelayedCall} providers representing all
+                 currently scheduled calls. This is everything that has been
+                 returned by C{callLater} but not yet called or canceled.
         """
 
 
@@ -434,7 +483,7 @@ class IDelayedCall(Interface):
     def getTime(self):
         """Get time when delayed call will happen.
 
-        @returns: time in seconds since epoch (a float).
+        @return: time in seconds since epoch (a float).
         """
 
     def cancel(self):
@@ -448,6 +497,7 @@ class IDelayedCall(Interface):
 
     def delay(self, secondsLater):
         """Delay the scheduled call.
+
         @param secondsLater: how many seconds from its current firing time to delay
 
         @raises twisted.internet.error.AlreadyCalled: if the call has already
@@ -458,6 +508,7 @@ class IDelayedCall(Interface):
 
     def reset(self, secondsFromNow):
         """Reset the scheduled call's timer.
+
         @param secondsFromNow: how many seconds from now it should fire,
             equivalent to C{self.cancel()} and then doing another
             C{reactor.callLater(secondsLater, ...)}
@@ -470,8 +521,8 @@ class IDelayedCall(Interface):
 
     def active(self):
         """
-        @returns: True if this call is still active, False if it has been
-            called or cancelled.
+        @return: True if this call is still active, False if it has been
+                 called or cancelled.
         """
 
 class IReactorThreads(Interface):
@@ -498,7 +549,9 @@ class IReactorThreads(Interface):
         """
 
     def suggestThreadPoolSize(self, size):
-        """Suggest the size of the thread pool.
+        """
+        Suggest the size of the internal threadpool used to dispatch functions
+        passed to L{callInThread}.
         """
 
 
@@ -581,8 +634,8 @@ class IReactorCore(Interface):
 
         @param kw: the keyword arguments to call it with.
 
-        @returns: an ID that can be used to remove this call with
-                  removeSystemEventTrigger.
+        @return: an ID that can be used to remove this call with
+                 removeSystemEventTrigger.
         """
 
     def removeSystemEventTrigger(self, triggerID):
@@ -604,8 +657,8 @@ class IReactorCore(Interface):
 
         @param kw: the keyword arguments to call it with.
 
-        @returns: None if the callable was invoked, otherwise a system
-        event id for the scheduled call.
+        @return: None if the callable was invoked, otherwise a system
+                 event id for the scheduled call.
         """
 
 
@@ -617,13 +670,15 @@ class IReactorPluggableResolver(Interface):
 
         @type resolver: An object implementing the L{IResolverSimple} interface
         @param resolver: The new resolver to use.
-        
+
         @return: The previously installed resolver.
         """
 
 
 class IReactorFDSet(Interface):
-    """Implement me to be able to use L{FileDescriptor<twisted.internet.abstract.FileDescriptor>} type resources.
+    """
+    Implement me to be able to use
+    L{FileDescriptor<twisted.internet.abstract.FileDescriptor>} type resources.
 
     This assumes that your main-loop uses UNIX-style numeric file descriptors
     (or at least similarly opaque IDs returned from a .fileno() method)
@@ -632,36 +687,42 @@ class IReactorFDSet(Interface):
     def addReader(self, reader):
         """I add reader to the set of file descriptors to get read events for.
 
-        @param reader: An L{IReadDescriptor} that will be checked for read events
-            until it is removed from the reactor with L{removeReader}.
-        @returns: C{None}.
+        @param reader: An L{IReadDescriptor} provider that will be checked for
+                       read events until it is removed from the reactor with
+                       L{removeReader}.
+
+        @return: C{None}.
         """
 
     def addWriter(self, writer):
         """I add writer to the set of file descriptors to get write events for.
 
-        @param writer: An L{IWriteDescriptor} that will be checked for read events
-            until it is removed from the reactor with L{removeWriter}.
-        @returns: C{None}.
+        @param writer: An L{IWriteDescriptor} provider that will be checked for
+                       read events until it is removed from the reactor with
+                       L{removeWriter}.
+
+        @return: C{None}.
         """
 
     def removeReader(self, reader):
-        """Removes an L{IReadDescriptor} added with L{addReader}.
+        """Removes an object previously added with L{addReader}.
 
-        @returns: C{None}.
+        @return: C{None}.
         """
 
     def removeWriter(self, writer):
-        """Removes an L{IWriteDescriptor} added with L{addWriter}.
+        """Removes an object previously added with L{addWriter}.
 
-        @returns: C{None}.
+        @return: C{None}.
         """
 
     def removeAll(self):
-        """Remove all readers and writers, and return the list of
-        L{IReadDescriptor}s and L{IWriteDescriptor}s removed.
-        
+        """Remove all readers and writers.
+
         Should not remove reactor internal reactor connections (like a waker).
+
+        @return: A list of L{IReadDescriptor} and L{IWriteDescriptor} providers
+                 which were removed.
         """
 
 
@@ -672,10 +733,9 @@ class IListeningPort(Interface):
     def startListening(self):
         """Start listening on this port.
 
-        @raise CannotListenError: as defined here L{twisted.internet.error.CannotListenError},
-                                  if it cannot listen on this port (e.g.,
-                                  it is a TCP port and it cannot bind to
-                                  the required port number)
+        @raise CannotListenError: If it cannot listen on this port (e.g., it is
+                                  a TCP port and it cannot bind to the required
+                                  port number).
         """
 
     def stopListening(self):
@@ -688,7 +748,7 @@ class IListeningPort(Interface):
     def getHost(self):
         """Get the host that this port is listening for.
 
-        @returns: a IAddress.
+        @return: An L{IAddress} provider.
         """
 
 
@@ -697,12 +757,11 @@ class IFileDescriptor(Interface):
     """
 
     def fileno(self):
-        """fileno() -> int
-
-        Returns: the platform-specified representation of a file-descriptor
-        number.
         """
-        
+        @return: The platform-specified representation of a file-descriptor
+                 number.
+        """
+
     def connectionLost(self, reason):
         """Called when the connection was lost.
 
@@ -713,13 +772,13 @@ class IFileDescriptor(Interface):
 
         See also L{IHalfCloseableDescriptor} if your descriptor wants to be
         notified separately of the two halves of the connection being closed.
-        
+
         @param reason: A failure instance indicating the reason why the
-         connection was lost.  L{twisted.internet.error.ConnectionLost} and
-         L{twisted.internet.error.ConnectionDone} are of special note, but
-         the failure may be of other classes as well.
+                       connection was lost.  L{error.ConnectionLost} and
+                       L{error.ConnectionDone} are of special note, but the
+                       failure may be of other classes as well.
         """
-    
+
 class IReadDescriptor(IFileDescriptor):
 
     def doRead(self):
@@ -770,11 +829,11 @@ class IConsumer(Interface):
     def registerProducer(self, producer, streaming):
         """Register to receive data from a producer.
 
-        This sets self to be a consumer for a producer.  When this object
-        runs out of data on a write() call, it will ask the producer
-        to resumeProducing(). A producer should implement the L{IProducer}
-        interface.   A push producer which is unable to pause or stop
-        need not register or unregister.
+        This sets self to be a consumer for a producer.  When this object runs
+        out of data on a write() call, it will ask the producer to
+        resumeProducing(). A producer should provide the L{IProducer}
+        interface.  A push producer which is unable to pause or stop need not
+        register or unregister.
         """
 
     def unregisterProducer(self):
@@ -795,8 +854,8 @@ class IFinishableConsumer(IConsumer):
 class IProducer(Interface):
     """A producer produces data for a consumer.
 
-    Typically producing is done by calling the write method of an
-    object implementing L{IConsumer}.
+    Typically producing is done by calling the write method of an class
+    implementing L{IConsumer}.
     """
 
     def stopProducing(self):
@@ -868,7 +927,7 @@ class IProtocol(Interface):
         """Called when the connection is shut down.
 
         Clear any circular references here, and any external references
-        to this Protocol.  The connection has been closed. The reason
+        to this Protocol.  The connection has been closed. The C{reason}
         Failure wraps a L{twisted.internet.error.ConnectionDone} or
         L{twisted.internet.error.ConnectionLost} instance (or a subclass
         of one of those).
@@ -920,7 +979,7 @@ class IHalfCloseableProtocol(Interface):
 
         This will never be called for TCP connections as TCP does not
         support notification of this type of half-close.
-        """    
+        """
 
 
 class IProtocolFactory(Interface):
@@ -933,11 +992,11 @@ class IProtocolFactory(Interface):
         If None is returned, the connection is assumed to have been refused,
         and the Port will close the connection.
 
-        @param addr: The address of the newly-established connection
         @type addr: (host, port)
-        @returns: None if the connection was refused, otherwise an object
-        implementing IProtocol.
-        @rtype: None or L{IProtocol}.
+        @param addr: The address of the newly-established connection
+
+        @return: None if the connection was refused, otherwise an object
+                 providing L{IProtocol}.
         """
 
     def doStart(self):
@@ -984,19 +1043,22 @@ class ITransport(Interface):
         """
 
     def getPeer(self):
-        '''Return an L{IAddress}.
+        """Get the remote address of this connection.
 
-        Treat this method with caution.  It is the unfortunate
-        result of the CGI and Jabber standards, but should not
-        be considered reliable for the usual host of reasons;
-        port forwarding, proxying, firewalls, IP masquerading,
-        etcetera.
-        '''
+        Treat this method with caution.  It is the unfortunate result of the
+        CGI and Jabber standards, but should not be considered reliable for
+        the usual host of reasons; port forwarding, proxying, firewalls, IP
+        masquerading, etc.
+
+        @return: An L{IAddress} provider.
+        """
 
     def getHost(self):
         """
         Similar to getPeer, but returns an address describing this side of the
         connection.
+
+        @return: An L{IAddress} provider.
         """
 
 
@@ -1005,14 +1067,14 @@ class ITCPTransport(ITransport):
 
     def loseWriteConnection(self):
         """Half-close the write side of a TCP connection.
-        
-        If the protocol this is attached to implements
-        IHalfCloseableProtocol, it will get notified when the
-        operation is done. When closing write connection, as with
-        loseConnection this will only happen when buffer has emptied
-        and there is no registered producer.
+
+        If the protocol instance this is attached to provides
+        IHalfCloseableProtocol, it will get notified when the operation is
+        done. When closing write connection, as with loseConnection this will
+        only happen when buffer has emptied and there is no registered
+        producer.
         """
-    
+
     def getTcpNoDelay(self):
         """Return if TCP_NODELAY is enabled."""
 
@@ -1033,10 +1095,10 @@ class ITCPTransport(ITransport):
         to allow detection of lost peers in a non-infinite amount of time."""
 
     def getHost(self):
-        """Returns IPv4Address."""
+        """Returns L{IPv4Address}."""
 
     def getPeer(self):
-        """Returns IPv4Address."""
+        """Returns L{IPv4Address}."""
 
 
 class ITLSTransport(ITCPTransport):
@@ -1077,6 +1139,22 @@ class IProcessTransport(ITransport):
         """
         Close a file descriptor which is connected to the child process, identified
         by its FD in the child process.
+        """
+
+    def writeToChild(self, childFD, data):
+        """
+        Similar to L{ITransport.write} but also allows the file descriptor in
+        the child process which will receive the bytes to be specified.
+
+        This is not available on all platforms.
+
+        @type childFD: C{int}
+        @param childFD: The file descriptor to which to write.
+
+        @type data: C{str}
+        @param data: The bytes to write.
+
+        @return: C{None}
         """
 
     def loseConnection(self):
@@ -1140,7 +1218,7 @@ class IUDPTransport(Interface):
         @param host: an IP address, not a domain name ('127.0.0.1', not 'localhost')
         @param port: port to connect to.
         """
-    
+
     def getHost(self):
         """Returns IPv4Address."""
 

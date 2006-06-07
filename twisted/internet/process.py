@@ -252,7 +252,8 @@ class Process(styles.Ephemeral):
     status = -1
     pid = None
 
-    def __init__(self, reactor, command, args, environment, path, proto,
+    def __init__(self,
+                 reactor, command, args, environment, path, proto,
                  uid=None, gid=None, childFDs=None):
         """Spawn an operating-system process.
 
@@ -264,37 +265,16 @@ class Process(styles.Ephemeral):
         specified.  (Implementation Note: this doesn't support all the arcane
         nuances of setXXuid on UNIX: it will assume that either your effective
         or real UID is 0.)
-
-        @param childFDs: a dictionary mapping fd_in_child to
-                         current_fd_in_parent/'r'/'w'.
-
-                         If the value is a number, it specifies one of the
-                         parent's fds that will be remapped to the child's
-                         fd. This is useful for things like inetd and
-                         shell-like file redirection.
-
-                         If it is the string 'r', a pipe will be created and
-                         attached to the child at that fd number, and the
-                         parent will be able to read from the pipe. This is
-                         useful for the child's stdout and stderr.
-
-                         If it is the string 'w', a pipe will be created and
-                         attached, and the parent will be able to write into
-                         that pipe. This is useful for the child's stdin.
-
-                         If childFDs is not passed, the default behaviour is to
-                         use a mapping that opens the usual stdin/stdout/stderr
-                         pipes.
         """
         if not proto:
             assert 'r' not in childFDs.values()
             assert 'w' not in childFDs.values()
         if not signal.getsignal(signal.SIGCHLD):
-            log.msg("spawnProcess called, but the SIGCHLD handler is not " +
-                    "installed. This probably means you have not yet " +
-                    "called reactor.run, or called " + 
-                    "reactor.run(installSignalHandler=0). You will probably " +
-                    "never see this process finish, and it may become a " +
+            log.msg("spawnProcess called, but the SIGCHLD handler is not "
+                    "installed. This probably means you have not yet "
+                    "called reactor.run, or called "
+                    "reactor.run(installSignalHandler=0). You will probably "
+                    "never see this process finish, and it may become a "
                     "zombie process.")
             # if you see this message during a unit test, look in
             # test-standard.xhtml or twisted.test.test_process.SignalMixin
