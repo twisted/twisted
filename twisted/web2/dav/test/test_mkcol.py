@@ -27,7 +27,7 @@ import os
 from twisted.web2 import responsecode
 from twisted.web2.iweb import IResponse
 from twisted.web2.dav.fileop import rmdir
-from twisted.web2.dav.test.util import SimpleRequest
+from twisted.web2.test.test_server import SimpleRequest
 import twisted.web2.dav.test.util
 
 class MKCOL(twisted.web2.dav.test.util.TestCase):

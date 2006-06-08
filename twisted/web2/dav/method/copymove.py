@@ -99,7 +99,7 @@ def prepareForCopy(self, request):
         return StatusResponse(responsecode.BAD_REQUEST, msg)
 
     try:
-        destination = self.locateSiblingResource(request, destination_uri)
+        destination = request.locateResource(destination_uri)
     except ValueError, e:
         return StatusResponse(responsecode.BAD_GATEWAY, str(e))
 

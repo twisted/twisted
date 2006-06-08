@@ -12,6 +12,9 @@ import cStringIO as StringIO
 
 import cgi, time, urlparse
 from urllib import unquote
+from urlparse import urlsplit
+
+import weakref
 
 from zope.interface import implements
 # Twisted Imports
@@ -266,7 +269,7 @@ class Request(http.Request):
         d.addCallback(self._cbFinishRender)
         d.addErrback(self._processingFailed)
         d.callback(None)
-        
+
     def preprocessRequest(self):
         """Do any request processing that doesn't follow the normal
         resource lookup procedure. "OPTIONS *" is handled here, for
@@ -297,6 +300,7 @@ class Request(http.Request):
 
     def _handleSegment(self, result, res, path):
         """Handle the result of a locateChild call done in _getChild."""
+
         newres, newpath = result
         # If the child resource is None then display a error page
         if newres is None:
@@ -312,6 +316,7 @@ class Request(http.Request):
         if newpath is StopTraversal:
             # We need to rethink how to do this.
             #if newres is res:
+                self._rememberURLForResource(path, res)
                 return res
             #else:
             #    raise ValueError("locateChild must not return StopTraversal with a resource other than self.")
@@ -321,11 +326,86 @@ class Request(http.Request):
             assert not newpath is path, "URL traversal cycle detected when attempting to locateChild %r from resource %r." % (path, res)
             assert len(newpath) < len(path), "Infinite loop impending..."
 
+        if path:
+            if newpath:
+                url = "/" + "/".join(path[:-len(newpath)])
+            else:
+                url = "/" + "/".join(path)
+        else:
+            url = "/"
+
         # We found a Resource... update the request.prepath and postpath
         for x in xrange(len(path) - len(newpath)):
             self.prepath.append(self.postpath.pop(0))
 
-        return self._getChild(None, newres, newpath)
+        child = self._getChild(None, newres, newpath)
+        self._rememberURLForResource(url, child)
+
+        return child
+
+    _resourcesByURL = weakref.WeakKeyDictionary()
+
+    def _rememberURLForResource(self, url, resource):
+        """
+        Remember the URL of visited resources.
+        """
+        self._resourcesByURL[resource] = url
+
+    def urlForResource(self, resource):
+        """
+        Looks up the URL of the given resource if this resource was found while
+        processing this request.  Specifically, this includes the requested
+        resource, and resources looked up via L{locateResource}.
+
+        Note that a resource may be found at multiple URIs; if the same resource
+        is visited at more than one location while processing this request,
+        this method will return one of those URLs, but which one is not defined,
+        nor whether the same URL is returned in subsequent calls.
+
+        @return: the URL of C{resource} if known, otherwise C{None}.
+        """
+        try:
+            return self._resourcesByURL[resource]
+        except KeyError:
+            return None
+
+    def locateResource(self, url):
+        """
+        Looks up the resource with the given URL.
+        @param uri: The URL of the desired resource.
+        @return: the L{IResource} at he given URL.
+        @raise ValueError: If C{url} is not a URL on the site that this request
+            is being applied to.
+        @raise ValueError: If C{url} contains a query or fragment.
+        """
+        if url is None: return None
+
+        #
+        # Parse the URL
+        #
+        (scheme, host, path, query, fragment) = urlsplit(url)
+    
+        if query or fragment:
+            raise ValueError("URL may not contain a query or fragment: %s" % (url,))
+
+        # The caller shouldn't be asking a request on one server to lookup a
+        # resource on some other server.
+        assert not ((scheme and scheme != self.scheme) or (host and host != self.headers.getHeader("host"))), (
+            "URL is not on this site (%s://%s/): %s" % (scheme, self.headers.getHeader("host"), url)
+        )
+    
+        segments = path.split("/")
+        assert segments[0] == "", "URL path didn't begin with '/': %s" % (path,)
+        segments = segments[1:]
+    
+        #
+        # Find the resource with the given path.
+        #
+        sibling = self.site.resource
+        while segments and segments is not StopTraversal:        
+            sibling, segments = sibling.locateChild(self, segments)
+        self._rememberURLForResource(path, sibling)
+        return sibling
 
     def _processingFailed(self, reason):
         if reason.check(http.HTTPError) is not None:

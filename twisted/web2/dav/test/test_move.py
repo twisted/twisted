@@ -30,7 +30,8 @@ import shutil
 from twisted.web2 import responsecode
 
 import twisted.web2.dav.test.util
-from twisted.web2.dav.test.util import SimpleRequest, serialize
+from twisted.web2.test.test_server import SimpleRequest
+from twisted.web2.dav.test.util import serialize
 
 class MOVE(twisted.web2.dav.test.util.TestCase):
     """

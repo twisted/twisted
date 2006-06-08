@@ -31,12 +31,8 @@ from random import randrange, choice
 
 from zope.interface import implements
 from twisted.python import log
-from twisted.python.filepath import FilePath
 from twisted.trial import unittest
 from twisted.internet.defer import maybeDeferred, Deferred
-from twisted.web2.iweb import IRequest
-from twisted.web2.http_headers import Headers
-from twisted.web2.stream import MemoryStream
 from twisted.web2.dav.fileop import rmdir
 from twisted.web2.dav.util import joinURL
 from twisted.web2.dav.static import DAVFile
@@ -139,21 +135,6 @@ class TestCase(unittest.TestCase):
             result.addExpectedFailure(self, f, unittest.makeTodo(f.getErrorMessage()))
         else:
             return unittest.TestCase._ebDeferTestMethod(self, f, result)
-
-class SimpleRequest:
-    implements(IRequest)
-
-    clientproto = (1,1)
-    chanRequest = None
-
-    def __init__(self, site, method, uri):
-        self.site = site
-        self.method = method
-        self.uri = uri
-        self.headers = Headers({"host": "localhost"})
-        self.stream = MemoryStream("")
-
-    def writeResponse(response): pass
 
 class Site:
     # FIXME: There is no ISite interface; there should be.

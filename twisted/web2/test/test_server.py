@@ -74,6 +74,23 @@ class TestChanRequest:
     def getRemoteHost(self):
         return self.remoteHost
     
+class SimpleRequest (server.Request):
+    clientproto = (1,1)
+
+    def __init__(self, site, method, uri):
+        super(SimpleRequest, self).__init__(
+            site          = site,
+            chanRequest   = None,
+            command       = method,
+            path          = uri,
+            version       = (1,1),
+            contentLength = 0,
+            headers       = http_headers.Headers({"host": "localhost"}),
+        )
+        self.stream = stream.MemoryStream("")
+
+    def writeResponse(*args): pass
+
 class BaseTestResource(resource.Resource):
     responseCode = 200
     responseText = 'This is a fake resource.'
@@ -319,3 +336,36 @@ class RedirectResourceTest(BaseCase):
                 (301, {"location": url2}, self.html(url2))
             ))
         return defer.DeferredList(ds)
+
+class RememberURIs(BaseCase):
+    def test_requestedResource(self):
+        class EmptyResource(resource.Resource):
+            def __init__(self, test):
+                self.test = test
+
+            def render(self, request):
+                self.test.assertEquals(request.urlForResource(self), self.expectedURI)
+                return 201
+
+        root = EmptyResource(self)
+        root.expectedURI = "/"
+
+        child = EmptyResource(self)
+        child.expectedURI = "/foo"
+
+        root.putChild("foo", child)
+
+        request = SimpleRequest(server.Site(root), "GET", "/foo")
+
+        self.getResponseFor(root, "/foo")
+
+    def test_locateResource(self):
+        root = resource.Resource()
+        child = resource.Resource()
+        root.putChild("foo", child)
+
+        request = SimpleRequest(server.Site(root), "GET", "/foo")
+
+        found = request.locateResource("/foo")
+
+        self.assertEquals("/foo", request.urlForResource(found))

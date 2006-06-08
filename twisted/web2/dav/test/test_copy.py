@@ -31,7 +31,8 @@ from twisted.web2 import responsecode
 from twisted.web2.iweb import IResponse
 
 import twisted.web2.dav.test.util
-from twisted.web2.dav.test.util import SimpleRequest, dircmp, serialize
+from twisted.web2.test.test_server import SimpleRequest
+from twisted.web2.dav.test.util import dircmp, serialize
 from twisted.web2.dav.fileop import rmdir
 from twisted.web2.dav.util import joinURL
 

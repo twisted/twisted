@@ -28,8 +28,6 @@ WebDAV-aware static resources.
 
 __all__ = ["DAVFile"]
 
-from urlparse import urlsplit
-
 from twisted.python import log
 from twisted.web2.static import File
 from twisted.web2.server import StopTraversal
@@ -173,43 +171,6 @@ class DAVFile (DAVResource, File):
         Does nothing; doesn't apply to this subclass.
         """
         pass
-
-    def locateSiblingResource(self, request, uri):
-        """
-        Look up a resource on the same server with the given URI.
-        """
-        if uri is None: return None
-
-        #
-        # Parse the URI
-        #
-    
-        (scheme, host, path, query, fragment) = urlsplit(uri)
-    
-        # Request hostname and destination hostname have to be the same.
-        if host and host != request.headers.getHeader("host"):
-            raise ValueError("URI is not on this site (%s): %s" % (request.headers.getHeader("host"), uri))
-    
-        segments = path.split("/")
-        if segments[0]:
-            raise AssertionError("URI path didn't begin with '/': %s" % (path,))
-        segments = segments[1:]
-    
-        #
-        # Find the resource with the given path.
-        #
-    
-        #
-        # FIXME: site isn't in the IRequest interface, and there needs to be an
-        # ISite interface.
-        #
-        # FIXME: How do I get query and fragment passed down to
-        # the new resource?  Insert them to segments?
-        #
-        sibling = request.site.resource
-        while segments and segments is not StopTraversal:        
-            sibling, segments = sibling.locateChild(request, segments)
-        return sibling
 
     def createSimilarFile(self, path):
         return self.__class__(path, defaultType=self.defaultType, indexNames=self.indexNames[:])

@@ -31,7 +31,7 @@ from twisted.web2.stream import MemoryStream
 from twisted.web2 import http_headers
 from twisted.web2.dav import davxml
 from twisted.web2.dav.util import davXMLFromStream
-from twisted.web2.dav.test.util import SimpleRequest
+from twisted.web2.test.test_server import SimpleRequest
 import twisted.web2.dav.test.util
 
 class PROP(twisted.web2.dav.test.util.TestCase):

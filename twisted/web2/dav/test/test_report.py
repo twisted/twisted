@@ -27,7 +27,7 @@ from twisted.web2.stream import MemoryStream
 from twisted.web2 import responsecode
 
 import twisted.web2.dav.test.util
-from twisted.web2.dav.test.util import SimpleRequest
+from twisted.web2.test.test_server import SimpleRequest
 from twisted.web2.dav import davxml
 
 class REPORT(twisted.web2.dav.test.util.TestCase):
