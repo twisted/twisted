@@ -37,20 +37,41 @@ class SFTPErrorTranslationTests(unittest.TestCase):
         self.assertEqual(message, e.message)
     
     def testPermissionError(self):
-        # PermissionError is translated to FX_PERMISSION_DENIED
+        """PermissionError is translated to FX_PERMISSION_DENIED."""
         self.assertTranslation(ivfs.PermissionError, FX_PERMISSION_DENIED)
 
     def testNotFoundError(self):
-        # NotFoundError is translated to FX_NO_SUCH_FILE
+        """NotFoundError is translated to FX_NO_SUCH_FILE."""
         self.assertTranslation(ivfs.NotFoundError, FX_NO_SUCH_FILE)
 
     def testVFSError(self):
-        # VFSErrors that aren't otherwise caught are translated to FX_FAILURE
+        """VFSErrors that aren't otherwise caught are translated to
+        FX_FAILURE."""
         self.assertTranslation(ivfs.VFSError, FX_FAILURE)
 
     def testNotImplementedError(self):
-        # NotImplementedError is translated to FX_OP_UNSUPPORTED
+        """NotImplementedError is translated to FX_OP_UNSUPPORTED."""
         self.assertTranslation(NotImplementedError, FX_OP_UNSUPPORTED)
+
+    def testTranslateDeferredError(self):
+        """If the decorated function returns a Deferred, the error should still
+        be translated."""
+        def f():
+            return defer.fail(ivfs.VFSError('error message'))
+        f = sftp.translateErrors(f)
+        d = f()
+        return self.assertFailure(d, SFTPError)
+
+    def testTranslateDeferredError2(self):
+        """If the decorated function returns a Deferred that hasn't fired
+        immediately, the error should still be translated."""
+        d = defer.Deferred()
+        def f():
+            return d
+        f = sftp.translateErrors(f)
+        d2 = f()
+        d.errback(ivfs.VFSError("foo"))
+        return self.assertFailure(d2, SFTPError)
 
 
 class SFTPAdapterTest(unittest.TestCase):

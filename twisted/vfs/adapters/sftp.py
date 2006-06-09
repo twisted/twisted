@@ -17,9 +17,9 @@ from twisted.conch.ssh.filetransfer import FX_FILE_IS_A_DIRECTORY
 from twisted.conch.ssh.filetransfer import FX_FILE_ALREADY_EXISTS
 from twisted.conch.ssh import session
 from twisted.conch.ls import lsLine
+from twisted.internet import defer
 
 from twisted.vfs import ivfs, pathutils
-
 
 def translateErrors(function):
     """Decorator that catches VFSErrors and re-raises them as the corresponding
@@ -27,7 +27,10 @@ def translateErrors(function):
     
     def f(*args, **kwargs):
         try:
-            return function(*args, **kwargs)
+            result = function(*args, **kwargs)
+            if isinstance(result, defer.Deferred):
+                result.addErrback(_ebtranslateErrors)
+            return result
         except ivfs.PermissionError, e:
             raise SFTPError(FX_PERMISSION_DENIED, str(e))
         except ivfs.NotFoundError, e:
@@ -41,6 +44,13 @@ def translateErrors(function):
 
     util.mergeFunctionMetadata(function, f)
     return f
+
+
+def _ebtranslateErrors(failure):
+    """This just re-raises the failure so that the translateErrors decorator
+    around this errback can intercept it if it wants to."""
+    failure.raiseException()
+_ebtranslateErrors = translateErrors(_ebtranslateErrors)
 
 
 class AdaptFileSystemUserToISFTP:
