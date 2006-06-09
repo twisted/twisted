@@ -46,8 +46,7 @@ class SCGIClientProtocol(basic.LineReceiver):
     def __init__(self, request, deferred):
         self.request = request
         self.deferred = deferred
-        self.stream = stream.ProducerStream()
-        self.response = http.Response(stream=self.stream)
+        self.response = http.Response(stream=stream.ProducerStream())
 
     def connectionMade(self):
         # Ooh, look someone did all the hard work for me :).
@@ -72,17 +71,13 @@ class SCGIClientProtocol(basic.LineReceiver):
     def lineReceived(self, line):
         # Look for end of headers
         if line == '':
+            
             # Switch into raw mode to recieve data and callback the deferred
             # with the response instance. The data will be streamed as it
-            # arrives.  Callback the deferred and set self.response to None,
-            # because there are no promises that the response will not be
-            # mutated by a resource higher in the tree, such as 
-            # log.LogWrapperResource
+            # arrives.
             self.setRawMode()
             self.deferred.callback(self.response)
-            self.response = None
             return
-
         # Split the header into name and value. The 'Status' header is handled
         # specially; all other headers are simply passed onto the response I'm
         # building.
@@ -95,12 +90,12 @@ class SCGIClientProtocol(basic.LineReceiver):
             self.response.headers.addRawHeader(name, value)
         
     def rawDataReceived(self, data):
-        self.stream.write(data)
+        self.response.stream.write(data)
         
     def connectionLost(self, reason):
         # The connection is closed and all data has been streamed via the
         # response. Tell the response stream it's over.
-        self.stream.finish()
+        self.response.stream.finish()
     
     
 class SCGIClientProtocolFactory(protocol.ClientFactory):

@@ -8,37 +8,6 @@ from twisted.web2 import resource, stream
 from twisted.trial import unittest, util
 from twisted.internet import defer, address, error as ti_error
 
-class SimpleRequest(server.Request):
-    """I can be used in cases where a Request object is necessary
-    but it is benificial to bypass the chanRequest
-    """
-
-    clientproto = (1,1)
-    
-    def __init__(self, site, method, uri, headers=None, content=None):
-        if not headers:
-            headers = http_headers.Headers(headers)
-            
-        super(SimpleRequest, self).__init__(
-            site=site,
-            chanRequest=None,
-            command=method,
-            path=uri,
-            version=self.clientproto,
-            contentLength=len(content or ''),
-            headers=headers)
-
-        self.stream = stream.MemoryStream(content or '')
-
-        self.remoteAddr = address.IPv4Address('TCP', '127.0.0.1', 0)
-        self._parseURL()
-        self.host = 'localhost'
-        self.port = 8080
-
-    def writeResponse(response):
-        pass
-
-
 class TestChanRequest:
     implements(iweb.IChanRequest)
 
@@ -105,6 +74,22 @@ class TestChanRequest:
     def getRemoteHost(self):
         return self.remoteHost
     
+class SimpleRequest (server.Request):
+    clientproto = (1,1)
+
+    def __init__(self, site, method, uri):
+        super(SimpleRequest, self).__init__(
+            site          = site,
+            chanRequest   = None,
+            command       = method,
+            path          = uri,
+            version       = (1,1),
+            contentLength = 0,
+            headers       = http_headers.Headers({"host": "localhost"}),
+        )
+        self.stream = stream.MemoryStream("")
+
+    def writeResponse(*args): pass
 
 class BaseTestResource(resource.Resource):
     responseCode = 200
