@@ -283,9 +283,8 @@ class Request(http.Request):
         # This is where CONNECT would go if we wanted it
         return None
     
-    def _getChild(self, _, res, path):
-        """Create a PageContext for res, call res.locateChild, and pass the
-        result on to _handleSegment."""
+    def _getChild(self, _, res, path, updatepaths=True):
+        """Call res.locateChild, and pass the result on to _handleSegment."""
 
         self.resources.append(res)
 
@@ -294,11 +293,11 @@ class Request(http.Request):
 
         result = res.locateChild(self, path)
         if isinstance(result, defer.Deferred):
-            return result.addCallback(self._handleSegment, res, path)
+            return result.addCallback(self._handleSegment, res, path, updatepaths)
         else:
-            return self._handleSegment(result, res, path)
+            return self._handleSegment(result, res, path, updatepaths)
 
-    def _handleSegment(self, result, res, path):
+    def _handleSegment(self, result, res, path, updatepaths):
         """Handle the result of a locateChild call done in _getChild."""
 
         newres, newpath = result
@@ -311,7 +310,8 @@ class Request(http.Request):
         if isinstance(newres, defer.Deferred):
             return newres.addCallback(
                 lambda actualRes: self._handleSegment(
-                    (actualRes, newpath), res, path))
+                    (actualRes, newpath), res, path, updatepaths)
+                )
 
         if newpath is StopTraversal:
             # We need to rethink how to do this.
@@ -334,9 +334,10 @@ class Request(http.Request):
         else:
             url = "/"
 
-        # We found a Resource... update the request.prepath and postpath
-        for x in xrange(len(path) - len(newpath)):
-            self.prepath.append(self.postpath.pop(0))
+        if updatepaths:
+            # We found a Resource... update the request.prepath and postpath
+            for x in xrange(len(path) - len(newpath)):
+                self.prepath.append(self.postpath.pop(0))
 
         child = self._getChild(None, newres, newpath)
         self._rememberURLForResource(url, child)
@@ -373,10 +374,14 @@ class Request(http.Request):
         """
         Looks up the resource with the given URL.
         @param uri: The URL of the desired resource.
-        @return: the L{IResource} at he given URL.
-        @raise ValueError: If C{url} is not a URL on the site that this request
-            is being applied to.
-        @raise ValueError: If C{url} contains a query or fragment.
+        @return: a L{Deferred} resulting in the L{IResource} at the
+            given URL or C{None} if no such resource can be located.
+        @raise HTTPError: If C{url} is not a URL on the site that this
+            request is being applied to.  The contained response will
+            have a status code of L{responsecode.BAD_GATEWAY}.
+        @raise HTTPError: If C{url} contains a query or fragment.
+            The contained response will have a status code of
+            L{responsecode.BAD_REQUEST}.
         """
         if url is None: return None
 
@@ -386,26 +391,30 @@ class Request(http.Request):
         (scheme, host, path, query, fragment) = urlsplit(url)
     
         if query or fragment:
-            raise ValueError("URL may not contain a query or fragment: %s" % (url,))
+            raise http.HTTPError(http.StatusResponse(
+                responsecode.BAD_REQUEST,
+                "URL may not contain a query or fragment: %s" % (url,)
+            ))
 
         # The caller shouldn't be asking a request on one server to lookup a
         # resource on some other server.
-        assert not ((scheme and scheme != self.scheme) or (host and host != self.headers.getHeader("host"))), (
-            "URL is not on this site (%s://%s/): %s" % (scheme, self.headers.getHeader("host"), url)
-        )
-    
+        if (scheme and scheme != self.scheme) or (host and host != self.headers.getHeader("host")):
+            raise http.HTTPError(http.StatusResponse(
+                responsecode.BAD_GATEWAY,
+                "URL is not on this site (%s://%s/): %s" % (scheme, self.headers.getHeader("host"), url)
+            ))
+
         segments = path.split("/")
         assert segments[0] == "", "URL path didn't begin with '/': %s" % (path,)
         segments = segments[1:]
-    
-        #
-        # Find the resource with the given path.
-        #
-        sibling = self.site.resource
-        while segments and segments is not StopTraversal:        
-            sibling, segments = sibling.locateChild(self, segments)
-        self._rememberURLForResource(path, sibling)
-        return sibling
+
+        def notFound(f):
+            f.trap(http.HTTPError)
+            if f.response.code != responsecode.NOT_FOUND:
+                raise f
+            return None
+
+        return defer.maybeDeferred(self._getChild, None, self.site.resource, segments, updatepaths=False)
 
     def _processingFailed(self, reason):
         if reason.check(http.HTTPError) is not None:

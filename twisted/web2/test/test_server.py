@@ -6,7 +6,7 @@ from zope.interface import implements
 from twisted.web2 import http, http_headers, iweb, server
 from twisted.web2 import resource, stream
 from twisted.trial import unittest, util
-from twisted.internet import defer, address, error as ti_error
+from twisted.internet import reactor, defer, address, error as ti_error
 
 class SimpleRequest(server.Request):
     """I can be used in cases where a Request object is necessary
@@ -287,14 +287,12 @@ class TestDeferredRendering(BaseCase):
         addSlash=True
         responseText = 'I should be wrapped in a Deferred.'
         def render(self, req):
-            from twisted.internet import reactor
             d = defer.Deferred()
             reactor.callLater(
                 0, d.callback, BaseTestResource.render(self, req))
             return d
 
         def child_deferred(self, req):
-            from twisted.internet import reactor
             d = defer.Deferred()
             reactor.callLater(0, d.callback, BaseTestResource())
             return d
@@ -381,6 +379,29 @@ class RememberURIs(BaseCase):
 
         request = SimpleRequest(server.Site(root), "GET", "/foo")
 
-        found = request.locateResource("/foo")
+        def _foundCb(found):
+            self.assertEquals("/foo", request.urlForResource(found))
 
-        self.assertEquals("/foo", request.urlForResource(found))
+        d = defer.maybeDeferred(request.locateResource, "/foo")
+        d.addCallback(_foundCb)
+
+    def test_deferredLocateChild(self):
+        class DeferredLocateChild(resource.Resource):
+            def locateChild(self, req, segments):
+                return defer.maybeDeferred(
+                    super(DeferredLocateChild, self).locateChild,
+                    req, segments
+                )
+
+        root = DeferredLocateChild()
+        child = resource.Resource()
+        root.putChild("foo", child)
+
+        request = SimpleRequest(server.Site(root), "GET", "/foo")
+
+        def _foundCb(found):
+            self.assertEquals("/foo", request.urlForResource(found))
+
+        d = request.locateResource("/foo")
+        d.addCallback(_foundCb)
+        

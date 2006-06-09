@@ -47,37 +47,41 @@ def http_COPY(self, request):
     """
     Respond to a COPY request. (RFC 2518, section 8.8)
     """
-    r = prepareForCopy(self, request)
-    if type(r) is int or isinstance(r, StatusResponse): return r
-    destination, destination_uri, depth = r
+    def do(r):
+        if type(r) is int or isinstance(r, StatusResponse): return r
+        destination, destination_uri, depth = r
 
-    return copy(self.fp, destination.fp, destination_uri, depth)
+        return copy(self.fp, destination.fp, destination_uri, depth)
+
+    return prepareForCopy(self, request).addCallback(do)
 
 def http_MOVE(self, request):
     """
     Respond to a MOVE request. (RFC 2518, section 8.9)
     """
-    r = prepareForCopy(self, request)
-    if type(r) is int or isinstance(r, StatusResponse): return r
-    destination, destination_uri, depth = r
+    def do(r):
+        if type(r) is int or isinstance(r, StatusResponse): return r
+        destination, destination_uri, depth = r
 
-    #
-    # RFC 2518, section 8.9 says that we must act as if the Depth header is set
-    # to infinity, and that the client must omit the Depth header or set it to
-    # infinity.
-    #
-    # This seems somewhat at odds with the notion that a bad request should be
-    # rejected outright; if the client sends a bad depth header, the client is
-    # broken, and section 8 suggests that a bad request should be rejected...
-    #
-    # Let's play it safe for now and ignore broken clients.
-    #
-    if self.fp.isdir() and depth != "infinity":
-        msg = "Client sent illegal depth header value for MOVE: %s" % (depth,)
-        log.err(msg)
-        return StatusResponse(responsecode.BAD_REQUEST, msg)
+        #
+        # RFC 2518, section 8.9 says that we must act as if the Depth header is set
+        # to infinity, and that the client must omit the Depth header or set it to
+        # infinity.
+        #
+        # This seems somewhat at odds with the notion that a bad request should be
+        # rejected outright; if the client sends a bad depth header, the client is
+        # broken, and section 8 suggests that a bad request should be rejected...
+        #
+        # Let's play it safe for now and ignore broken clients.
+        #
+        if self.fp.isdir() and depth != "infinity":
+            msg = "Client sent illegal depth header value for MOVE: %s" % (depth,)
+            log.err(msg)
+            return StatusResponse(responsecode.BAD_REQUEST, msg)
 
-    return move(self.fp, request.uri, destination.fp, destination_uri, depth)
+        return move(self.fp, request.uri, destination.fp, destination_uri, depth)
+
+    return prepareForCopy(self, request).addCallback(do)
 
 def prepareForCopy(self, request):
     if not self.fp.exists():
@@ -98,11 +102,12 @@ def prepareForCopy(self, request):
         log.err(msg)
         return StatusResponse(responsecode.BAD_REQUEST, msg)
 
-    try:
-        destination = request.locateResource(destination_uri)
-    except ValueError, e:
-        return StatusResponse(responsecode.BAD_GATEWAY, str(e))
+    d = request.locateResource(destination_uri)
+    d.addCallback(_prepareForCopy, destination_uri, request)
 
+    return d
+
+def _prepareForCopy(destination, destination_uri, request):
     # Destination must be a DAV resource
     try:
         destination = IDAVResource(destination)
