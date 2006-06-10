@@ -1,4 +1,6 @@
-#
+"""Interfaces for Trial.
+"""
+
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 # Maintainer: Jonathan Lange <jml@twistedmatrix.com>
@@ -7,6 +9,10 @@ import zope.interface as zi
 
 
 class ITestCase(zi.Interface):
+    """DEPRECATED in Twisted 2.5.  This interface will be removed in the next
+    release.  Implementing it has no impact.
+    """
+    
     def setUp():
         """I am run before each method is run"""
 

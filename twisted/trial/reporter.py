@@ -27,6 +27,9 @@ class BrokenTestCaseWarning(Warning):
 
 
 class TestResult(pyunit.TestResult, object):
+    """Accumulates the results of several L{twisted.trial.unittest.TestCase}s.
+    """
+    
     def __init__(self):
         super(TestResult, self).__init__()
         self.skips = []
@@ -46,45 +49,99 @@ class TestResult(pyunit.TestResult, object):
         return time.time()
 
     def startTest(self, test):
+        """This must be called before the given test is commenced.
+
+        @type test: L{pyunit.TestCase}
+        """
         super(TestResult, self).startTest(test)
         self._testStarted = self._getTime()
 
-    def stopTest(self, method):
-        super(TestResult, self).stopTest(method)
+    def stopTest(self, test):
+        """This must be called after the given test is completed.
+
+        @type test: L{pyunit.TestCase}
+        """
+        super(TestResult, self).stopTest(test)
         self._lastTime = self._getTime() - self._testStarted
 
     def addFailure(self, test, fail):
+        """Report a failed assertion for the given test.
+
+        @type test: L{pyunit.TestCase}
+        @type fail: L{failure.Failure} or L{tuple}
+        """
         if isinstance(fail, tuple):
             fail = failure.Failure(*fail)
         self.failures.append((test, fail))
 
     def addError(self, test, error):
+        """Report an error that occurred while running the given test.
+
+        @type test: L{pyunit.TestCase}
+        @type fail: L{failure.Failure} or L{tuple}
+        """
         if isinstance(error, tuple):
             error = failure.Failure(*error)
         self.errors.append((test, error))
 
     def addSkip(self, test, reason):
+        """Report that the given test was skipped.
+        
+        In Trial, tests can be 'skipped'. Tests are skipped mostly because there
+        is some platform or configuration issue that prevents them from being
+        run correctly.
+
+        @type test: L{pyunit.TestCase}
+        @type reason: L{str}
+        """
         self.skips.append((test, reason))
 
     def addUnexpectedSuccess(self, test, todo):
+        """Report that the given test succeeded against expectations.
+
+        In Trial, tests can be marked 'todo'. That is, they are expected to fail.
+        When a test that is expected to fail instead succeeds, it should call
+        this method to report the unexpected success.
+
+        @type test: L{pyunit.TestCase}
+        @type todo: L{unittest.Todo} 
+        """
+        # XXX - 'todo' should just be a string
         self.unexpectedSuccesses.append((test, todo))
 
     def addExpectedFailure(self, test, error, todo):
+        """Report that the given test succeeded against expectations.
+
+        In Trial, tests can be marked 'todo'. That is, they are expected to fail.
+
+        @type test: L{pyunit.TestCase}
+        @type error: L{failure.Failure}
+        @type todo: L{unittest.Todo}
+        """
+        # XXX - 'todo' should just be a string
         self.expectedFailures.append((test, error, todo))
 
     def addSuccess(self, test):
+        """Report that the given test succeeded.
+
+        @type test: L{pyunit.TestCase}
+        """
         self.successes.append((test,))
 
     def upDownError(self, method, error, warn, printStatus):
         pass
 
     def cleanupErrors(self, errs):
-        pass
+        """Report an error that occurred during the cleanup between tests.
+        """
+        # XXX - deprecate this method, we don't need it any more
     
     def startSuite(self, name):
+        # XXX - these should be removed, but not in this branch
         pass
 
     def endSuite(self, name):
+        # XXX - these should be removed, but not in this branch
         pass
 
 
@@ -208,6 +265,8 @@ class Reporter(TestResult):
         return ret
     
     def printErrors(self):
+        """Print all of the non-success results in full to the stream.
+        """
         self.write('\n')
         self._printResults('[SKIPPED]', self.skips, lambda x : '%s\n' % x)
         self._printResults('[TODO]', self.expectedFailures,
@@ -220,6 +279,8 @@ class Reporter(TestResult):
                            self._printUnexpectedSuccess)
 
     def printSummary(self):
+        """Print a line summarising the test results to the stream.
+        """
         summaries = []
         for stat in ("skips", "expectedFailures", "failures", "errors",
                      "unexpectedSuccesses", "successes"):
@@ -235,6 +296,10 @@ class Reporter(TestResult):
 
 
 class MinimalReporter(Reporter):
+    """A minimalist reporter that prints only a summary of the test result,
+    in the form of (timeTaken, #tests, #tests, #errors, #failures, #skips).
+    """
+
     _runStarted = None
     
     def startTest(self, test):
@@ -253,6 +318,10 @@ class MinimalReporter(Reporter):
 
 
 class TextReporter(Reporter):
+    """Simple reporter that prints a single character for each test as it runs,
+    along with the standard Trial summary text.
+    """
+    
     def addSuccess(self, test):
         super(TextReporter, self).addSuccess(test)
         self.write('.')
@@ -279,6 +348,12 @@ class TextReporter(Reporter):
 
 
 class VerboseTextReporter(Reporter):
+    """A verbose reporter that prints the name of each test as it is running.
+
+    Each line is printed with the name of the test, followed by the result of
+    that test.
+    """
+    
     # This is actually the bwverbose option
 
     def startTest(self, tm):
@@ -315,12 +390,22 @@ class VerboseTextReporter(Reporter):
 
 
 class TimingTextReporter(VerboseTextReporter):
+    """Prints out each test as it is running, followed by the time taken for each
+    test to run.
+    """
+    
     def stopTest(self, method):
         super(TimingTextReporter, self).stopTest(method)
         self.write("(%.03f secs)\n" % self._lastTime)
 
 
 class TreeReporter(Reporter):
+    """Print out the tests in the form a tree.
+
+    Tests are indented according to which class and module they belong.
+    Results are printed in ANSI color.
+    """
+
     currentLine = ''
     indent = '  '
     columns = 79
