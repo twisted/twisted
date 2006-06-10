@@ -170,6 +170,11 @@ def getCache(module):
                     entry = _generateCacheEntry(provider)
                     cache[moduleName] = entry
 
+        for moduleName in cache.keys():
+            if moduleName not in pys:
+                dirtyCache = True
+                del cache[moduleName]
+
         topcache.update(cache)
 
         if dirtyCache:

@@ -200,3 +200,31 @@ class PluginTestCase(unittest.TestCase):
 
     def testDetectFilesChanged(self):
         self._testWithCacheness(self._testDetectFilesChanged)
+
+    def _testDetectFilesRemoved(self):
+        writeFileName = sibpath(plugins.__file__, 'pluginextra.py')
+        try:
+            wf = file(writeFileName, 'w')
+        except IOError, ioe:
+            if ioe.errno == errno.EACCES:
+                raise unittest.SkipTest(
+                    "No permission to add things to twisted.plugins")
+            else:
+                raise
+        else:
+            try:
+                wf.write(begintest)
+                wf.close()
+
+                # Generate a cache with pluginextra in it.
+                list(plugin.getPlugins(plugin.ITestPlugin))
+
+            finally:
+                self._unimportPythonModule(
+                    sys.modules['twisted.plugins.pluginextra'],
+                    True)
+            plgs = list(plugin.getPlugins(plugin.ITestPlugin))
+            self.assertEquals(1, len(plgs))
+
+    def testDetectFilesRemoved(self):
+        self._testWithCacheness(self._testDetectFilesRemoved)
