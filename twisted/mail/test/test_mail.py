@@ -15,7 +15,7 @@ import rfc822
 from twisted.trial import unittest
 import tempfile
 
-from zope.interface import providedBy
+from zope.interface import implements, providedBy
 
 from twisted.trial import unittest
 from twisted.mail import smtp
@@ -409,6 +409,46 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
         creds = cred.credentials.UsernamePassword('user', 'password')
         self.assertEquals(database.requestAvatarId(creds), 'user')
 
+
+class StubAliasableDomain(object):
+    """
+    Minimal testable implementation of IAliasableDomain.
+    """
+    implements(mail.mail.IAliasableDomain)
+
+    def exists(self, user):
+        """
+        No test coverage for invocations of this method on domain objects,
+        so we just won't implement it.
+        """
+        raise NotImplementedError()
+
+
+    def addUser(self, user, password):
+        """
+        No test coverage for invocations of this method on domain objects,
+        so we just won't implement it.
+        """
+        raise NotImplementedError()
+
+
+    def getCredentialsCheckers(self):
+        """
+        This needs to succeed in order for other tests to complete
+        successfully, but we don't actually assert anything about its
+        behavior.  Return an empty list.  Sometime later we should return
+        something else and assert that a portal got set up properly.
+        """
+        return []
+
+
+    def setAliasGroup(self, aliases):
+        """
+        Just record the value so the test can check it later.
+        """
+        self.aliasGroup = aliases
+
+
 class ServiceDomainTestCase(unittest.TestCase):
     def setUp(self):
         self.S = mail.mail.MailService()
@@ -420,10 +460,23 @@ class ServiceDomainTestCase(unittest.TestCase):
         self.tmpdir = self.mktemp()
         domain = mail.maildir.MaildirDirdbmDomain(self.S, self.tmpdir)
         domain.addUser('user', 'password')
-        self.S.domains['test.domain'] = domain
+        self.S.addDomain('test.domain', domain)
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
+
+
+    def testAddAliasableDomain(self):
+        """
+        Test that adding an IAliasableDomain to a mail service properly sets
+        up alias group references and such.
+        """
+        aliases = object()
+        domain = StubAliasableDomain()
+        self.S.aliases = aliases
+        self.S.addDomain('example.com', domain)
+        self.assertIdentical(domain.aliasGroup, aliases)
+
 
     def testReceivedHeader(self):
          hdr = self.D.receivedHeader(
@@ -481,7 +534,7 @@ class VirtualPOP3TestCase(unittest.TestCase):
         self.S = mail.mail.MailService()
         self.D = mail.maildir.MaildirDirdbmDomain(self.S, self.tmpdir)
         self.D.addUser('user', 'password')
-        self.S.domains['test.domain'] = self.D
+        self.S.addDomain('test.domain', self.D)
 
         portal = cred.portal.Portal(self.D)
         map(portal.registerChecker, self.D.getCredentialsCheckers())
@@ -865,8 +918,7 @@ class LiveFireExercise(unittest.TestCase):
         service.smtpPortal.registerChecker(cred.checkers.AllowAnonymousAccess())
         domain = mail.maildir.MaildirDirdbmDomain(service, 'domainDir')
         domain.addUser('user', 'password')
-        service.domains['test.domain'] = domain
-        service.portals['test.domain'] = cred.portal.Portal(domain)
+        service.addDomain('test.domain', domain)
         service.portals[''] = service.portals['test.domain']
         map(service.portals[''].registerChecker, domain.getCredentialsCheckers())
 
@@ -912,8 +964,7 @@ class LiveFireExercise(unittest.TestCase):
         insServ = mail.mail.MailService()
         insServ.smtpPortal.registerChecker(cred.checkers.AllowAnonymousAccess())
         domain = mail.maildir.MaildirDirdbmDomain(insServ, 'insertionDomain')
-        insServ.domains['insertion.domain'] = domain
-        insServ.portals['insertion.domain'] = cred.portal.Portal(domain)
+        insServ.addDomain('insertion.domain', domain)
         os.mkdir('insertionQueue')
         insServ.setQueue(mail.relaymanager.Queue('insertionQueue'))
         insServ.domains.setDefaultDomain(mail.relay.DomainQueuer(insServ))
@@ -934,8 +985,7 @@ class LiveFireExercise(unittest.TestCase):
         destServ.smtpPortal.registerChecker(cred.checkers.AllowAnonymousAccess())
         domain = mail.maildir.MaildirDirdbmDomain(destServ, 'destinationDomain')
         domain.addUser('user', 'password')
-        destServ.domains['destination.domain'] = domain
-        destServ.portals['destination.domain'] = cred.portal.Portal(domain)
+        destServ.addDomain('destination.domain', domain)
         os.mkdir('destinationQueue')
         destServ.setQueue(mail.relaymanager.Queue('destinationQueue'))
         manager2 = mail.relaymanager.SmartHostSMTPRelayingManager(destServ.queue)

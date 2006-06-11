@@ -1,4 +1,4 @@
-
+# -*- test-case-name: twisted.mail.test.test_options -*-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -30,12 +30,12 @@ class Options(usage.Options):
         ["pop3s", "S", 0, "Port to start the POP3-over-SSL server on (0 to disable)."],
         ["smtp", "s", 8025, "Port to start the SMTP server on (0 to disable)."],
         ["certificate", "c", None, "Certificate file to use for SSL connections"],
-        ["relay", "R", None, 
+        ["relay", "R", None,
             "Relay messages according to their envelope 'To', using the given"
             "path as a queue directory."],
         ["hostname", "H", None, "The hostname by which to identify this server."],
     ]
-    
+
     optFlags = [
         ["esmtp", "E", "Use RFC 1425/1869 SMTP extensions"],
         ["disable-anonymous", None, "Disallow non-authenticated SMTP connections"],
@@ -70,7 +70,7 @@ class Options(usage.Options):
             name, path = domain.split('=')
         except ValueError:
             raise usage.UsageError("Argument to --maildirdbmdomain must be of the form 'name=path'")
-        
+
         self.last_domain = maildir.MaildirDirdbmDomain(self.service, os.path.abspath(path))
         self.service.addDomain(name, self.last_domain)
     opt_d = opt_maildirdbmdomain
@@ -93,11 +93,11 @@ class Options(usage.Options):
         """
         self.last_domain.postmaster = 1
     opt_b = opt_bounce_to_postmaster
-    
+
     def opt_aliases(self, filename):
         """Specify an aliases(5) file to use for this domain"""
-        if self.last_domain:
-            if components.implements(self.last_domain, mail.IAliasableDomain):
+        if self.last_domain is not None:
+            if mail.IAliasableDomain.providedBy(self.last_domain):
                 aliases = alias.loadAliasFile(self.service.domains, filename)
                 self.last_domain.setAliasGroup(aliases)
                 self.service.monitor.monitorFile(
@@ -113,7 +113,7 @@ class Options(usage.Options):
         else:
             raise usage.UsageError("Specify a domain before specifying aliases")
     opt_A = opt_aliases
-    
+
     def postOptions(self):
         for f in ('pop3', 'smtp', 'pop3s'):
             try:
@@ -134,10 +134,10 @@ class Options(usage.Options):
 
         if not self['disable-anonymous']:
             self.service.smtpPortal.registerChecker(checkers.AllowAnonymousAccess())
-        
+
         if not (self['pop3'] or self['smtp'] or self['pop3s']):
             raise usage.UsageError("You cannot disable all protocols")
-        
+
 class AliasUpdater:
     def __init__(self, domains, domain):
         self.domains = domains
@@ -160,12 +160,12 @@ def makeService(config):
 
         config.service.setQueue(relaymanager.Queue(dir))
         default = relay.DomainQueuer(config.service)
-        
+
         manager = rmType(config.service.queue)
         if config['esmtp']:
             manager.fArgs += (None, None)
         manager.fArgs += (config['hostname'],)
-        
+
         helper = relaymanager.RelayStateHelper(manager, 1)
         helper.setServiceParent(config.service)
         config.service.domains.setDefaultDomain(default)

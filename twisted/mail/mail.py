@@ -33,7 +33,7 @@ class DomainWithDefaultDict:
 
     def setDefaultDomain(self, domain):
         self.default = domain
-    
+
     def has_key(self, name):
         return 1
 
@@ -52,40 +52,40 @@ class DomainWithDefaultDict:
 
     def __setitem__(self, name, value):
         self.domains[name] = value
-    
+
     def __delitem__(self, name):
         del self.domains[name]
-    
+
     def __iter__(self):
         return iter(self.domains)
-    
+
     def __len__(self):
         return len(self.domains)
-    
+
     def __str__(self):
         return '<DomainWithDefaultsDict %s>' % (self.domains,)
-    
+
     def __repr__(self):
         return 'DomainWithDefaultsDict(%s)>' % (self.domains,)
-    
+
     def get(self, key, default=None):
         return self.domains.get(key, default)
-    
+
     def copy(self):
         return DomainWithDefaultsDict(self.domains.copy(), self.default)
-    
+
     def iteritems(self):
         return self.domains.iteritems()
-    
+
     def iterkeys(self):
         return self.domains.iterkeys()
-    
+
     def itervalues(self):
         return self.domains.itervalues()
-    
+
     def keys(self):
         return self.domains.keys()
-    
+
     def values(self):
         return self.domains.values()
 
@@ -94,13 +94,13 @@ class DomainWithDefaultDict:
 
     def popitem(self):
         return self.domains.popitem()
-    
+
     def update(self, other):
         return self.domains.update(other)
-    
+
     def clear(self):
         return self.domains.clear()
-    
+
     def setdefault(self, key, default):
         return self.domains.setdefault(key, default)
 
@@ -110,26 +110,26 @@ class IDomain(components.Interface):
     def exists(self, user):
         """
         Check whether or not the specified user exists in this domain.
-        
+
         @type user: C{twisted.protocols.smtp.User}
         @param user: The user to check
-        
+
         @rtype: No-argument callable
         @return: A C{Deferred} which becomes, or a callable which
         takes no arguments and returns an object implementing C{IMessage}.
         This will be called and the returned object used to deliver the
         message when it arrives.
-        
+
         @raise twisted.protocols.smtp.SMTPBadRcpt: Raised if the given
         user does not exist in this domain.
         """
 
     def addUser(self, user, password):
         """Add a username/password to this domain."""
-    
+
     def startMessage(self, user):
         """Create and return a new message to be delivered to the given user.
-        
+
         DEPRECATED.  Implement validateTo() correctly instead.
         """
 
@@ -140,61 +140,61 @@ class IDomain(components.Interface):
 class IAliasableDomain(IDomain):
     def setAliasGroup(self, aliases):
         """Set the group of defined aliases for this domain
-        
+
         @type aliases: C{dict}
         @param aliases: Mapping of domain names to objects implementing
         C{IAlias}
         """
-    
+
     def exists(self, user, memo=None):
         """
         Check whether or not the specified user exists in this domain.
-        
+
         @type user: C{twisted.protocols.smtp.User}
         @param user: The user to check
-        
+
         @type memo: C{dict}
         @param memo: A record of the addresses already considered while
         resolving aliases.  The default value should be used by all
         external code.
-        
+
         @rtype: No-argument callable
         @return: A C{Deferred} which becomes, or a callable which
         takes no arguments and returns an object implementing C{IMessage}.
         This will be called and the returned object used to deliver the
         message when it arrives.
-        
+
         @raise twisted.protocols.smtp.SMTPBadRcpt: Raised if the given
         user does not exist in this domain.
         """
 
 class BounceDomain:
-    """A domain in which no user exists. 
+    """A domain in which no user exists.
 
     This can be used to block off certain domains.
     """
 
     implements(IDomain)
-    
+
     def exists(self, user):
         raise smtp.SMTPBadRcpt(user)
-    
+
     def willRelay(self, user, protocol):
         return False
-    
+
     def addUser(self, user, password):
         pass
-    
+
     def startMessage(self, user):
         raise AssertionError, "No code should ever call this method for any reason"
-    
+
     def getCredentialsCheckers(self):
         return []
 
 
 class FileMessage:
     """A file we can write an email too."""
-    
+
     implements(smtp.IMessage)
 
     def __init__(self, fp, name, finalName):
@@ -242,13 +242,13 @@ class MailService(service.MultiService):
 
     def getESMTPFactory(self):
         return protocols.ESMTPFactory(self, self.smtpPortal)
-    
+
     def addDomain(self, name, domain):
         portal = cred.portal.Portal(domain)
         map(portal.registerChecker, domain.getCredentialsCheckers())
         self.domains[name] = domain
         self.portals[name] = portal
-        if self.aliases and components.implements(domain, IAliasableDomain):
+        if self.aliases and IAliasableDomain.providedBy(domain):
             domain.setAliasGroup(self.aliases)
 
     def setQueue(self, queue):
@@ -263,13 +263,13 @@ class MailService(service.MultiService):
 
     def lookupPortal(self, name):
         return self.portals[name]
-    
+
     def defaultPortal(self):
         return self.portals['']
 
 
 class FileMonitoringService(internet.TimerService):
-    
+
     def __init__(self):
         self.files = []
         self.intervals = iter(util.IntervalDifferential([], 60))
@@ -282,13 +282,13 @@ class FileMonitoringService(internet.TimerService):
         from twisted.internet import reactor
         t, self.index = self.intervals.next()
         self._call = reactor.callLater(t, self._monitor)
-    
+
     def stopService(self):
         service.Service.stopService(self)
         if self._call:
             self._call.cancel()
             self._call = None
-    
+
     def monitorFile(self, name, callback, interval=10):
         try:
             mtime = os.path.getmtime(name)
@@ -303,7 +303,7 @@ class FileMonitoringService(internet.TimerService):
                 self.intervals.removeInterval(self.files[i][0])
                 del self.files[i]
                 break
-     
+
     def _monitor(self):
         self._call = None
         if self.index is not None:
