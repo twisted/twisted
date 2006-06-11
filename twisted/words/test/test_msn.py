@@ -5,14 +5,28 @@
 Test cases for twisted.words.protocols.msn
 """
 
+# System imports
+import StringIO, sys
+
 # Twisted imports
-from twisted.words.protocols import msn
+
+# t.w.p.msn requires an HTTP client
+try:
+    # So try to get one - do it directly instead of catching an ImportError
+    # from t.w.p.msn so that other problems which cause that module to fail
+    # to import don't cause the tests to be skipped.
+    from twisted.web import client
+except ImportError:
+    # If there isn't one, we're going to skip all the tests.
+    msn = None
+else:
+    # Otherwise importing it should work, so do it.
+    from twisted.words.protocols import msn
+
+
 from twisted.protocols import loopback
 from twisted.internet.defer import Deferred
 from twisted.trial import unittest
-
-# System imports
-import StringIO, sys
 
 def printError(f):
     print f
@@ -82,63 +96,64 @@ class PassportTests(unittest.TestCase):
         self.failUnless(self.result[0] == (msn.LOGIN_REDIRECT, 'https://newlogin.host.com/', 'a'))
 
 
-class DummySwitchboardClient(msn.SwitchboardClient):
-    def userTyping(self, message):
-        self.state = 'TYPING'
+if msn is not None:
+    class DummySwitchboardClient(msn.SwitchboardClient):
+        def userTyping(self, message):
+            self.state = 'TYPING'
 
-    def gotSendRequest(self, fileName, fileSize, cookie, message):
-        if fileName == 'foobar.ext' and fileSize == 31337 and cookie == 1234: self.state = 'INVITATION'
+        def gotSendRequest(self, fileName, fileSize, cookie, message):
+            if fileName == 'foobar.ext' and fileSize == 31337 and cookie == 1234: self.state = 'INVITATION'
 
 
-class DummyNotificationClient(msn.NotificationClient):
-    def loggedIn(self, userHandle, screenName, verified):
-        if userHandle == 'foo@bar.com' and screenName == 'Test Screen Name' and verified:
-            self.state = 'LOGIN'
+    class DummyNotificationClient(msn.NotificationClient):
+        def loggedIn(self, userHandle, screenName, verified):
+            if userHandle == 'foo@bar.com' and screenName == 'Test Screen Name' and verified:
+                self.state = 'LOGIN'
 
-    def gotProfile(self, message):
-        self.state = 'PROFILE'
+        def gotProfile(self, message):
+            self.state = 'PROFILE'
 
-    def gotContactStatus(self, code, userHandle, screenName):
-        if code == msn.STATUS_AWAY and userHandle == "foo@bar.com" and screenName == "Test Screen Name":
-            self.state = 'INITSTATUS'
+        def gotContactStatus(self, code, userHandle, screenName):
+            if code == msn.STATUS_AWAY and userHandle == "foo@bar.com" and screenName == "Test Screen Name":
+                self.state = 'INITSTATUS'
 
-    def contactStatusChanged(self, code, userHandle, screenName):
-        if code == msn.STATUS_LUNCH and userHandle == "foo@bar.com" and screenName == "Test Name":
-            self.state = 'NEWSTATUS'
+        def contactStatusChanged(self, code, userHandle, screenName):
+            if code == msn.STATUS_LUNCH and userHandle == "foo@bar.com" and screenName == "Test Name":
+                self.state = 'NEWSTATUS'
 
-    def contactOffline(self, userHandle):
-        if userHandle == "foo@bar.com": self.state = 'OFFLINE'
+        def contactOffline(self, userHandle):
+            if userHandle == "foo@bar.com": self.state = 'OFFLINE'
 
-    def statusChanged(self, code):
-        if code == msn.STATUS_HIDDEN: self.state = 'MYSTATUS'
+        def statusChanged(self, code):
+            if code == msn.STATUS_HIDDEN: self.state = 'MYSTATUS'
 
-    def listSynchronized(self, *args):
-        self.state = 'GOTLIST'
+        def listSynchronized(self, *args):
+            self.state = 'GOTLIST'
 
-    def gotPhoneNumber(self, listVersion, userHandle, phoneType, number):
-        msn.NotificationClient.gotPhoneNumber(self, listVersion, userHandle, phoneType, number)
-        self.state = 'GOTPHONE'
+        def gotPhoneNumber(self, listVersion, userHandle, phoneType, number):
+            msn.NotificationClient.gotPhoneNumber(self, listVersion, userHandle, phoneType, number)
+            self.state = 'GOTPHONE'
 
-    def userRemovedMe(self, userHandle, listVersion):
-        msn.NotificationClient.userRemovedMe(self, userHandle, listVersion)
-        c = self.factory.contacts.getContact(userHandle)
-        if not c and self.factory.contacts.version == listVersion: self.state = 'USERREMOVEDME'
+        def userRemovedMe(self, userHandle, listVersion):
+            msn.NotificationClient.userRemovedMe(self, userHandle, listVersion)
+            c = self.factory.contacts.getContact(userHandle)
+            if not c and self.factory.contacts.version == listVersion: self.state = 'USERREMOVEDME'
 
-    def userAddedMe(self, userHandle, screenName, listVersion):
-        msn.NotificationClient.userAddedMe(self, userHandle, screenName, listVersion)
-        c = self.factory.contacts.getContact(userHandle)
-        if c and (c.lists | msn.REVERSE_LIST) and (self.factory.contacts.version == listVersion) and \
-           (screenName == 'Screen Name'):
-            self.state = 'USERADDEDME'
+        def userAddedMe(self, userHandle, screenName, listVersion):
+            msn.NotificationClient.userAddedMe(self, userHandle, screenName, listVersion)
+            c = self.factory.contacts.getContact(userHandle)
+            if c and (c.lists | msn.REVERSE_LIST) and (self.factory.contacts.version == listVersion) and \
+               (screenName == 'Screen Name'):
+                self.state = 'USERADDEDME'
 
-    def gotSwitchboardInvitation(self, sessionID, host, port, key, userHandle, screenName):
-        if sessionID == 1234 and \
-           host == '192.168.1.1' and \
-           port == 1863 and \
-           key == '123.456' and \
-           userHandle == 'foo@foo.com' and \
-           screenName == 'Screen Name':
-            self.state = 'SBINVITED'
+        def gotSwitchboardInvitation(self, sessionID, host, port, key, userHandle, screenName):
+            if sessionID == 1234 and \
+               host == '192.168.1.1' and \
+               port == 1863 and \
+               key == '123.456' and \
+               userHandle == 'foo@foo.com' and \
+               screenName == 'Screen Name':
+                self.state = 'SBINVITED'
 
 class NotificationTests(unittest.TestCase):
     """ testing the various events in NotificationClient """
@@ -336,3 +351,11 @@ class FileTransferTestCase(unittest.TestCase):
         loopback.loopback(sender, client)
         self.failUnless((client.completed and sender.completed), msg="send failed to complete")
         self.failUnless((self.input.getvalue() == self.output.getvalue()), msg="saved file does not match original")
+
+
+if msn is None:
+    for testClass in [PassportTests, NotificationTests,
+                      MessageHandlingTests, FileTransferTestCase]:
+        testClass.skip = (
+            "MSN requires an HTTP client but none is available, "
+            "skipping tests.")
