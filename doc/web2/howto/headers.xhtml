@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE XHTML PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+  <head>
+    <title>Twisted.Web2 Headers</title>
+  </head>
+  <body>
+    <h1>Twisted.Web2 Headers</h1>
+    
+    <h2>Known headers</h2>
+
+    <p>These headers are defined
+      in <a href="http://www.faqs.org/rfcs/rfc2616.html">RFC 2616</a>,
+      and, for their official definitions, refer to that
+      document. This document descibes how they appear after being
+      parsed by web2.</p>
+
+    <h3>Entity headers:</h3>
+
+    <ul>
+      <li>Allow: list of case-sensitive method strings - 
+        e.g. <code class="python">['GET', 'HEAD', 'POST']</code></li>
+      <li>Content-Encoding: list of string content-encodings - 
+        e.g. <code class="python">['gzip']</code></li>
+      <li>Content-Language: list of string content languages - 
+        e.g. <code class="python">['en', 'mi']</code></li>
+      <li>Content-Location: url string - 
+        e.g. <code
+                class="python">&quot;http://foo.bar.com/&quot;</code>
+      </li>
+      <li>Content-MD5: (decoded base64) string, should be 16 bytes -
+        e.g. <code
+                class="python">'8Al:\x1d\x9aO\xf2m\x91\xa0X\xbe\xe3{\xc8'</code>
+      </li>
+      <li>Content-Range: tuple of (rangetype, start, end, realLength)
+        - e.g. <code class="python">('bytes', 0, 499, 1234)</code></li>
+      <li>Content-Type: MimeType -
+        e.g. <code class="python">MimeType('text', 'html',
+          [('charset','iso-8859-4')])</code></li>
+      <li>Expires: seconds since Epoch - 
+        e.g. <code class="python">1000000000</code>
+      </li>
+      <li>
+        Last-Modified: seconds since Epoch - 
+        e.g. <code class="python">1000000000</code></li>
+    </ul>
+    
+    <h3>Request headers (client to server):</h3>
+
+    <ul>
+      <li>
+        Accept: dictionary of MimeType -&gt; float 0.0 to 1.0 - 
+        e.g. <code class="python">{MimeType('text', 'html'): 1.0,
+          MimeType('image', 'jpg'): 0.4}</code>
+      </li>
+      <li>
+        Accept-Charset: dict of string charset -&gt; float 0.0 to 1.0 - 
+        e.g. <code class="python">{'utf-8': 1.0, 'iso-8859-1': 0.9, '*': 0.7}</code>
+      </li>
+      <li>
+        Accept-Encoding: dict of string encoding -&gt; float 0.0 to 1.0 - 
+        e.g. <code class="python">{'deflate': 1.0, 'gzip': 1.0, identity: 0.0001}</code>
+      </li>
+      <li>
+        Accept-Language: dict of string language -&gt; float 0.0 to 1.0 - 
+        e.g. <code class="python">{'en-us': 1.0, 'en': 0.5}</code>
+      </li>
+      <li>
+        Authorization: a list containing the scheme and a scheme dependent part - 
+        e.g. <code class="python">['basic', 'base64 encoded
+          username:password']</code> or <code class="python">['digest',
+          {'realm': 'MyRealm', 'username': 'MyUserName'}]</code>
+      </li>
+      <li>
+        From: string. Useless, and unused, header. - 
+        e.g. <code class="python">&quot;email&#64;a.b.c&quot;</code>.
+      </li>
+      <li>
+        Host: string. Use request.host instead of accessing this header 
+        directly. - 
+      e.g. <code class="python">&quot;twistedmatrix.com&quot;</code>.
+      </li>
+      <li>
+        If-Match: list of ('*' or ETag instance) - 
+        e.g. <code class="python">['*']</code>
+        or <code class="python">[ETag(&quot;foo&quot;, weak=True), 
+          ETag(&quot;bar&quot;)]</code>
+      </li>
+      <li>If-Modified-Since: seconds since Epoch.
+      </li>
+      <li>If-None-Match: list of ('*' or ETag instance)
+      </li>
+      <li>
+        If-Range: Etag instance or seconds since Epoch - 
+        e.g. <code class="python">1000000000</code> or 
+        <code class="python">ETag(&quot;foo&quot;)</code>
+      </li>
+      <li>
+        If-Unmodified-Since: seconds since Epoch - 
+        e.g. <code class="python">1000000000</code>
+      </li>
+      <li>Max-Forwards: integer
+      </li>
+      <li>Proxy-Authorization: TODO
+      </li>
+      <li>
+        Range: tuple (rangetype, [(int start or None, int end or None)*]) - 
+        e.g. <code class="python">('bytes', [(0, 1), (5, None)])</code>
+      </li>
+      <li>
+        Referer: string - 
+        e.g. 
+        <code class="python">&quot;http://twistedmatrix.com/bugs/&quot;</code>
+      </li>
+      <li>
+        User-Agent: string - 
+        e.g. <code class="python">&quot;MyBrowser/5500.2 (Amiga; U; PPC) Awesomeness/2300.1&quot;</code>
+      </li>
+    </ul>
+
+    <h3>Response headers:</h3>
+    <ul>
+      <li>
+        Accept-Ranges: list of range type strings - e.g. ['bytes']
+      </li>
+      <li>
+        Age: seconds - e.g. 500
+      </li>
+      <li>
+        ETag: ETag instance - e.g. ETag(&quot;asdf&quot;)
+      </li>
+      <li>
+        Location: url string - e.g. &quot;http://twistedmatrix.com/&quot;
+      </li>
+      <li>Proxy-Authenticate: TODO
+      </li>
+      <li>Retry-After: integer seconds since Epoch
+      </li>
+      <li>Server: string
+      </li>
+      <li>Set-Cookie: list of Cookie instances
+      </li>
+      <li>Set-Cookie2: list of Cookie instances
+      </li>
+      <li>Vary: list of string header names
+      </li>
+      <li>
+        WWW-Authenticate: list containing a scheme and dictionary
+        containing challenge information - 
+        e.g. <code class="python">['basic', {'realm':
+        'MyRealm'}]</code> or 
+        <code class="python">['digest', {'realm': 'MyRealm', 'qop':
+        'auth', 'nonce': 'mynonce'}]</code>
+      </li>
+    </ul>
+    
+    <h3>General headers:</h3>
+
+    <ul>
+      <li>
+        Cache-Control: dictionary of cache control directives - 
+        e.g. { 'no-cache': ['PROXY-AUTHENTICATE'], 'no-store': None,
+        &quot;max-age&quot;: 5 }
+      </li>
+      <li>
+        Date: seconds since Epoch - 
+        e.g. <code class="python">1112321588</code>,
+        from <code class="python">time.time()</code>
+      </li>
+      <li>Pragma: TODO
+      </li>
+      <li>Via: TODO
+      </li>
+      <li>Warning: TODO
+      </li>
+    </ul>
+
+    <h3>>Lower level HTTP headers, used only by framework:</h3>
+    <ul>
+      <li>Connection: TODO
+      </li>
+      <li>Content-Length: integer length
+      </li>
+      <li>
+        Expect: dictionary of expect feature-&gt;tuple (value, (param, 
+        paramvalue)*). - 
+        e.g. {'100-continue': (None)}
+      </li>
+      <li>Transfer-Encoding: list of string transfer-encodings
+      </li>
+      <li>TE: dictionary of string TE-&gt;int qvalue
+      </li>
+      <li>Trailer: TODO
+      </li>
+      <li>Upgrade: TODO
+      </li>
+    </ul>
+  </body>
+</html>

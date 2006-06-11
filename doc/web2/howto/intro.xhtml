@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" 
+          "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+  <head>
+    <title>Twisted.Web2 Introduction</title>
+  </head>
+  <body>
+    <h1>Twisted.Web2 Introduction</h1>
+
+    <h2>What is twisted.web2</h2>
+
+    <p>Twisted.web2 is an asynchronous HTTP 1.1 server written for
+      the <a href="http://twistedmatrix.com/">Twisted</a> 
+      internet framework. It provides
+      a <a href="http://www.faqs.org/rfcs/rfc2616.html">RFC 2616</a> 
+      compliant HTTP 1.1 protocol implementation, with pipelined and 
+      persistent request support, in a non-blocking threadless
+      manner.</p>
+
+    <p>It also includes a simple web framework with request and
+      response objects, static file support, error handling, form
+      upload support, HTTP range support, pre-built parsers for all
+      standard headers, and a bunch of other goodies.</p>
+
+    <p>It is deployable as a standalone HTTP or HTTPS server, as a
+      HTTP[S] server proxied behind another server, or as a SCGI, FastCGI, or
+      CGI script.</p>
+
+    <p>In addition to running native twisted.web2 applications, it can
+      also run any WSGI or CGI application, or, via compatibility
+      wrappers, most applications written for the older twisted.web
+      API.</p>
+
+    <p>Currently, twisted.web2 does not include a HTTP client or
+      proxy, but will at a future date.</p>
+
+    <p>Finally, it includes a DAV server library.</p>
+
+    <h2>What twisted.web2 is not</h2>
+    
+    <p>Twisted.web2 is not a templating framework. It provides
+      mechanisms for locating and running code associated with a URL,
+      but does not provide any means for separating code and data or
+      to ease the task of generating HTML.</p>
+
+    <p>Twisted.web2 is in general fairly speedy. However, keep in mind
+      that it is a python program, and, while it is empirically
+      &quot;fast enough&quot;, it cannot match Apache in static file 
+      serving speed. &lt;insert actual measurements here&gt;</p>
+
+    <h2>Introduction</h2>
+    <p>This tutorial should be readable by people who do not have much
+      Twisted experience yet, but, you should know Python, and HTML,
+      before starting. While it is hopefully redundant to say this,
+      you also ought to have installed twisted, and twisted.web2.</p>
+
+    <p>When you have finished this tutorial, you should be able to
+      write some simple resources and publish them with twisted.web2.</p>
+
+    <h2>Simple application</h2>
+    
+    <a class="py-listing" href="../examples/intro/simple.py">
+      Listing 1: A simple application</a>
+
+    <p>You may run this program via 
+      <code class="shell">twistd -ny simple.py</code>. 
+      <code class="shell">twistd</code> is the Twisted runner; it
+      knows how to execute applications by looking for the 
+      <code class="python">application</code> variable declared at
+      top-level. You can also run your server in the background
+      (daemonized), via <code class="shell">twistd -y
+      simple.py</code>. You can access your server via the url &quot;
+      <a
+         href="http://localhost:8080/">http://localhost:8080/</a>&quot;. 
+      For more deployment options, see
+         the <a href="deployment.html">deployment</a> chapter.</p>
+
+    <h3>What this is doing</h3>
+
+    <p>A resource is responsible for handling one segment of the
+      URL. Here, we have created a resource to handle the top level of
+      the url hierarchy. The <code class="python">addSlash =
+      True</code> setting tells twisted.web2 that this is a
+      directory-like resource. This means that it will add a
+      &quot;/&quot; to the end of the URL automatically, if needed,
+      and respond under that name. Root resources should always have 
+      <code class="python">addSlash = True</code>.</p>
+
+    <p>The defined class has just a single method: 
+      <code class="python">render</code>. This method takes a single
+      argument: <code class="python">request</code>, which contains all the
+      state related to the current rendering operation. This
+      particular render method always returns the same data, so we
+      won't use <code class="python">request</code>. We'll get back to
+      it later.</p>
+
+    <p>Here, the <code class="python">render</code> method simply
+      returns a <code class="API"
+      base="twisted.web2">http.Response</code> 
+      object containing the output.</p>
+
+    <p>After defining this class, next we need to tell twisted.web2 to
+      serve it up. This is accomplished by creating the
+      <code class="API" base="twisted.web2">server.Site</code> object,
+      with an instance of your top-level resource as its argument, and
+      then some standard boilerplate to tell Twisted what services to
+      start and what port to serve them on.</p>
+
+    <h3>Child resources</h3>
+
+    <p>Of course, what good is a webserver that can only serve up a
+      single page? So, you can also add child resources to your
+      top-level resource,
+      via <code class="python">child_&lt;name&gt;</code> 
+      attributes.</p>
+
+    <a class="py-listing" href="../examples/intro/children.py">
+      Listing 2: Child Resources</a>
+
+    <p>Here a few new concepts have been introduced:</p>
+
+    <ul>
+      <li>Adding child resources. Any resource can have children, by
+        adding child_name attributes. The child_foo attributes can
+        also be methods, and, if even that is not powerful enough for
+        you, it is possible to override the method lookup machinery at
+        an even lower
+        level. See <a class="object-traversal.html">Object
+        Traversal</a> for more details.
+      </li>
+      <li><code class="API">twisted.web2.static.File</code> lets you serve
+        a file off the disk. With this, you get a lot of functionality:
+        automatic Content-Type setting from the file extension,
+        last-modified and etag calculation, and the ability to hook in
+        custom processors for certain file types. It will also generate
+        directory listings if you point it at a directory instead of a
+        file.
+      </li>
+      <li><code class="API">twisted.web2.http.Response</code> takes three
+        arguments: the response code, the output headers, and the output
+        stream. For more information,
+        see <a href="resource-apis.html">Resource APIs</a>.
+      </li>
+    </ul>
+    
+    <p>As an aside for those who know a bit about HTTP, note that just
+      by setting the Last-Modified and ETag response headers, you
+      enable automatic precondition checks which support the
+      If-Modified-Since, If-Unmodified-Since, If-Match, and
+      If-None-Match input headers. This allows the client to request
+      that the resource only be sent if it has changed since the last
+      time the client downloaded it, saving bandwidth. Also, the Range
+      and If-Range headers are supported on every resource, allowing
+      partial downloads, and default values for the &quot;Server&quot; 
+      and &quot;Date&quot; headers are added to the output for you 
+      automatically.</p>
+  </body>
+</html>

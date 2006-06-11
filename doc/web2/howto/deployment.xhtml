@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE XHTML PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+  <head>
+    <title>Twisted.web2 Deployment</title>
+  </head>
+  <body>
+    <h1 class="title">Twisted.web2 Deployment</h1>
+
+    <p>There are a number of possibilities for deploying twisted.web2:
+      as standalone HTTP[S] server, HTTP proxied behind another server,
+      SCGI, FastCGI, or CGI.</p>
+
+
+    <p>Deploying as a standalone HTTP/HTTPS server is by far the
+      simplest. Unless you have a reason not to, it is recommended that
+      you choose this option. However, many people already run web
+      servers on their computer and are not willing or able to
+      completely blow it away and replace it with twisted.web2. The next
+      best option is to run twisted.web2 as a server proxied behind your
+      existing webserver, using either HTTP or SCGI.</p>
+
+    <h2>Standalone HTTP</h2>
+
+    <p>For completeness, here is a simple standalone HTTP server again.</p>
+    
+    <a class="py-listing" href="../examples/deployment/standalone.tac">
+      Listing 1: A standalone HTTP server</a>
+
+
+    <h2>HTTP behind Apache2</h2>
+
+    <p>If you use HTTP proxying, you must inform twisted.web2 of the
+      real URL it is being accessed by, or else any URLs it generates
+      will be incorrect. You can do this via the AutoVHostURIRewrite
+      resource when using apache2 as the main server.</p>
+
+    <p>On the apache side, configure as follows. Apache automatically
+      sends the original host in the X-Forwarded-Host header, and the
+      original remote IP address in the X-Forwarded-For header. You must
+      additionally send along the original path, and the original
+      scheme.</p>
+
+    <p>For proxying a subdirectory:</p>
+
+    <pre>
+&lt;Location /whatever/&gt;
+ProxyPass http://localhost:8538/
+RequestHeader set X-App-Location /whatever/
+RequestHeader set X-App-Scheme http
+
+&lt;/Location&gt;
+    </pre>
+
+    <p>Or, for serving an entire HTTPS virtual host:</p>
+
+    <pre>
+&lt;VirtualHost myip:443&gt;
+ServerName example.com
+ProxyPass / http://localhost:8538/
+RequestHeader set X-App-Location /
+RequestHeader set X-App-Scheme https
+&lt;/VirtualHost&gt;
+    </pre>
+
+    <p>Now, on the twisted.web2 side</p>
+
+    <a class="py-listing" href="../examples/deployment/apache2.tac">
+      Listing 2: Behind Apache 2</a>
+
+
+    <h2>HTTP behind Apache1</h2>
+
+    <p>Apache 1 doesn't provide the X-Forwarded-Host or
+      X-Forwarded-For headers, or the ability to set custom headers in
+      the outgoing proxy request. Therefore, you must provide that
+      information to twisted.web2 directly. This is accomplished by the
+      VHostURIRewrite resource.</p>
+    
+    <p>Setup apache as follows:</p>
+
+    <pre>
+&lt;VirtualHost myip&gt;
+ServerName example.com
+ProxyPass /foo/ http://localhost:8538/
+&lt;/VirtualHost&gt;
+    </pre>
+
+    <p>And twisted like so</p>
+
+    <a class="py-listing" href="../examples/deployment/apache1.tac">
+      Listing 3: Behind Apache 1</a>
+
+    <p>Because vhost.VHostURIRewrite can exist anywhere in the
+      resource tree, you can have multiple applications running on a
+      single twisted port by making them siblings of a root resource and
+      referencing their full path in the ProxyPass directive.</p>
+
+    <p>Setup apache as follows:</p>
+
+    <pre>
+&lt;VirtualHost foo.myhostname.com&gt;
+ProxyPass / http://localhost:8538/foo/
+ServerName example.com
+&lt;/VirtualHost&gt;
+
+&lt;VirtualHost bar.myhostname.com&gt;
+ProxyPass / http://localhost:8538/bar/
+ServerName example.com
+&lt;/VirtualHost&gt;
+    </pre>
+
+    <p>And twisted like so</p>
+    
+    <a class="py-listing"
+       href="../examples/deployment/apache1_twohosts.tac">
+      Listing 4: Multiple hosts behind Apache 1</a>
+
+    <h2>SCGI</h2>
+
+    <p>SCGI is an alternative to HTTP proxying. SCGI should work
+      instead of HTTP proxying from servers which support
+      it. Additionally, if all you have access to from the web server is
+      CGI, but are able to run long-running processes, you can use
+      the <a
+             href="http://www.mems-exchange.org/software/scgi/scgi-1.2.tar.gz/scgi-1.2/cgi2scgi.c">cgi2scgi</a>
+      C program to channel CGI requests to your twisted.web2 SCGI
+      port. This won't be as efficient as mod_scgi or http proxying, but
+      it will be much better than using twisted directly as a CGI.</p>
+
+    <p>FIXME:Someone who has installed mod_scgi in apache should write
+      a bit on it.</p>
+
+    <p>Configure Twisted as follows</p>
+    
+    <a class="py-listing" href="../examples/deployment/scgi.tac">
+      Listing 5: An SCGI Server</a>
+
+    <h2>FastCGI</h2>
+
+    <p>FastCGI is another popular way to run a web application. Blah blah.</p>
+
+    <h2>CGI</h2>
+
+    <p>CGI is the worst possible deployment environment, yet in some
+      cases it may be all that is possible. It allows only a single
+      request to be served from a process, so any kind of in-memory
+      storage is impossible. Also, the overhead of starting up a new
+      python interpreter for every request can get quite high. You
+      should only consider using it if your hosting provider does not
+      allow you to keep a process running.</p>
+
+    <p>However, if it's your only choice, you can deploy a
+      twisted.web2 app using it. Unlike the other examples, where we
+      create a .tac file for running with twistd, in this case, a
+      standalone python script is necessary</p>
+
+    <pre class="python">
+  #!/usr/bin/env python
+  from twisted.web2 import channel, server, static
+  toplevel = static.File(&quot;/tmp&quot;)
+  site = server.Site(toplevel)
+  channel.startCGI(site)
+    </pre>
+  </body>
+</html>

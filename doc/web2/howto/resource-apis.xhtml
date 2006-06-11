@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE XHTML PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+  <head>
+    <title>Resource, Request, and Response</title>
+  </head>
+  <body>
+    <h1>Resource, Request, and Response</h1>
+    
+    <p>The three main APIs you will have to be concerned about, as a
+      normal user of the framework are the Resource, Request, and
+      Response objects.</p>
+    
+    <h2>Resources</h2>
+
+    <p>The core resource API is described
+      by <code class="API">twisted.web2.iweb.IResource</code></p>
+    
+    <p>A resource
+      (<code class="API">twisted.web2.resource.Resource</code>) 
+      will generally be the superclass of the classes you define. As
+      you saw in the intro document, it supports two operations:
+      rendering and locating a child resource. This is described in
+      more detail in <a href="object-traversal.xhtml">object
+        traversal</a></p>
+    
+    <h2>Response</h2>
+    <p>The response object
+      (<code class="API">twisted.web2.http.Response</code>)
+      contains the state which will be sent back to the client. You
+      construct 
+      one as follows:</p>
+    
+    <pre class="python">
+      Response(code=None, headers=None, stream=None)
+    </pre>
+    
+    <p>The arguments, in detail are:</p>
+
+    <ol>
+      <li>Response code. This should be one of the standard HTTP
+        response codes, either as defined in the <code class="API">
+          twisted.web2.responsecode</code> module, or, equivilently,
+        just an 
+        integer. If left unspecified, the default is responsecode.OK,
+        or 200.
+      </li>
+      <li>Headers. The headers, as stored in the response object are
+        an instance of <code
+                          class="API">twisted.web2.http_headers.Headers</code>. For 
+        convenience, you may also simply pass a dictionary of name to
+        value which will automatiaclly be turned into the 
+        <code class="python">Headers</code> instance for you. Please
+        note that the values used here are not the direct string
+        representations that will be sent to the client, but rather,
+        an already-parsed representation. This is to centralize the
+        tricky business of parsing HTTP headers correctly, and to
+        ensure that issues like quoting are taken care of
+        automatically. See <a href="headers.xhtml">Headers</a> for
+        details about the parsed representation for each header. If
+        left unspecified, only the default headers added by the core
+        are output.
+      </li>
+      <li>The output stream. At the simplest level, you can simply
+        pass a string for this argument, and the string will be
+        output. However, underlying this is a much more powerful
+        system which allows for the efficient streaming output of
+        arbitrarily large data from a file or other sources, such as a
+        CGI process or an outgoing HTTP request to another
+        server. This is accomplished by providing an implementor of
+        <code class="API">twisted.web2.stream.IByteStream</code>. For
+        more detail on streams, see
+        the <code class="API">twisted.web2.stream</code> module.
+      </li>
+    </ol>
+
+    <h2>Request</h2>
+    
+    <p>The request object holds all the data regarding this particular
+      incoming connection from the client.  There are two requst
+      objects in web2: the core http request
+      in <code class="API">twisted.web2.http.Request</code>, and the
+      application server subclass of that
+      in <code class="API">twisted.web2.server.Request</code>. The
+      second is the one you will be using, and that is described
+      here. The first is a subset thereof that is only interesting to
+      someone wanting to replace the application server portion of
+      <code class="API">twisted.web2</code>.</p>
+    
+    <ol>
+      <li><code class="python">method</code> - Request method. This is
+        the HTTP method, e.g. &quot;GET&quot; or &quot;HEAD&quot; or
+        &quot;POST&quot;.
+      </li>
+      <li><code class="python">headers</code> -
+        A <code class="API">twisted.web2.http_headers.Headers</code>
+        instance.
+      </li>
+      <li><code class="python">stream</code> - The incoming data
+        stream, an implementor
+        of <code class="API">twisted.web2.stream.IByteStream</code>
+      </li>
+      <li><code class="python">remoteAddr</code> - The address of the
+        remote host,
+        a <code
+             class="API">twisted.internet.interfaces.IAddress</code>.
+    </li>
+  </ol>
+  
+  <p>Then there's the attributes that make up a url. Note that all of
+    these, including scheme, host, and port, may be specified by the
+    client:</p>
+  
+  <ol>
+    <li><code class="python">scheme</code> - the request scheme the
+      user used, e.g. &quot;http&quot; or &quot;https&quot;.</li>
+    <li><code class="python">host</code> - the hostname the client
+      sent the request to, e.g. &quot;localhost&quot;</li>
+    <li><code class="python">port</code> - the port the client sent
+      the request to, e.g. &quot;80&quot;</li>
+    <li><code class="python">path</code> - the complete path, as a
+      string</li>
+    <li><code class="python">params</code> - The url
+      &quot;parameters&quot;. This is an obscure part of the url spec
+      that you're unlikely to ever have a use for.</li>
+    <li><code class="python">querystring</code> - The query
+    objarguments as a string.</li>
+    <li><code class="python">args</code> - The parsed form arguments,
+      as a dictionary, including POST arguments if applicable. This is
+      in the form of a dictionary of lists. The string
+      &quot;?a=1&amp;c=1&amp;c=2&quot; will get turned into {'a':['1'],
+      'c':['1', '2']}.</li>
+  </ol>
+
+  <p>Then, the pieces of the parsed url as its being traversed:</p>
+  
+  <ol>
+    <li><code class="python">prepath</code> - A list of url segments
+      that have already been processed by a locateChild method.</li>
+
+    <li><code class="python">postpath</code> - A list of url segments
+      yet to be processed.</li>
+  </ol>
+</body>
+</html>
