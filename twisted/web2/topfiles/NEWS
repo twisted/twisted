@@ -1,0 +1,36 @@
+0.2.0 (June 9, 2006):
+
+Features
+--------
+ - WebDAV Level 1 support.
+ - HTTP-AUTH Basic and Digest Authentication.
+ - Low-Level HTTP Client implementation.
+ - A mktap plugin for a quick start at setting up a Web2 Server.
+ - XML-RPC Server-side support.
+
+Bugfixes
+--------
+ - AutoVHostURIRewrite improvements
+   - Proxy Compatibility - #1700
+   - Now exposes the client IP - #1699
+ - Proper WWW-Authenticate header parsing - #1723
+ - Fixed exception when using SCGIClientResource with logging. - #1755
+
+
+0.1.0 (June 16, 2005): 
+Initial Release
+
+Major Features
+--------------
+
+ - Streaming upload data
+ - Support for multiple headers of the same name
+ - Separation of low level HTTP and high level request handling which allows
+it to run under other transports such as SCGI and CGI
+ - IResource API improvements from Nevow
+ - More versatile outgoing data streaming API
+ - Correct header parsing
+ - Full HTTP/1.1 support
+ - Output filters (HTTP range support in a generic fashion, and gzip support)
+ - Significantly better URI Rewriting when used behind a reverse proxy such as 
+Apache's mod_proxy
