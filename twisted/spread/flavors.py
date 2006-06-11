@@ -35,7 +35,7 @@ from twisted.python import log, reflect, components
 
 # sibling imports
 from jelly import setUnjellyableForClass, setUnjellyableForClassTree, setUnjellyableFactoryForClass, unjellyableRegistry
-from jelly import Jellyable, Unjellyable, _Dummy
+from jelly import Jellyable, Unjellyable, _Dummy, _DummyNewStyle
 from jelly import setInstanceState, getInstanceState
 
 # compatibility
@@ -444,7 +444,10 @@ class RemoteCache(RemoteCopy, Serializable):
             return setInstanceState(self, unjellier, jellyList)
         self.broker = unjellier.invoker
         self.luid = jellyList[1]
-        cProxy = _Dummy()
+        if isinstance(self.__class__, type): #new-style class
+            cProxy = _DummyNewStyle()
+        else:
+            cProxy = _Dummy()
         cProxy.__class__ = self.__class__
         cProxy.__dict__ = self.__dict__
         # XXX questionable whether this was a good design idea...

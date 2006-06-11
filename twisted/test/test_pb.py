@@ -315,9 +315,21 @@ class NewStyleCopy2(pb.Copyable, pb.RemoteCopy, object):
 
 pb.setUnjellyableForClass(NewStyleCopy2, NewStyleCopy2)
 
+
+class NewStyleCacheCopy(pb.Cacheable, pb.RemoteCache, object):
+    def getStateToCacheAndObserveFor(self, perspective, observer):
+        return self.__dict__
+pb.setCopierForClass(NewStyleCacheCopy, NewStyleCacheCopy)
+
 class Echoer(pb.Root):
     def remote_echo(self, st):
         return st
+
+class CachedReturner(pb.Root):
+    def __init__(self, cache):
+        self.cache = cache
+    def remote_giveMeCache(self, st):
+        return self.cache
 
 class NewStyleTestCase(unittest.TestCase):
     ref = None
@@ -367,6 +379,34 @@ class NewStyleTestCase(unittest.TestCase):
         self.failUnlessEqual(res.value, 2)
         self.failUnlessEqual(NewStyleCopy2.allocated, 3)
         self.failUnlessEqual(NewStyleCopy2.initialized, 1)
+        self.failIf(res is orig) # no cheating :)
+
+
+class NewStyleCachedTestCase(unittest.TestCase):
+    ref = None
+    
+    def tearDown(self):
+        if self.ref:
+            self.ref.broker.transport.loseConnection()
+        return self.server.stopListening()
+
+    def testNewStyleCache(self):
+        orig = NewStyleCacheCopy()
+        orig.s = "value"
+        self.server = reactor.listenTCP(0, pb.PBServerFactory(CachedReturner(orig)))
+        f = pb.PBClientFactory()
+        reactor.connectTCP("localhost", self.server.getHost().port, f)
+        d = f.getRootObject()
+        d.addCallback(self._testNewStyleCache_1, orig)
+        return d
+    def _testNewStyleCache_1(self, ref, orig):
+        self.ref = ref
+        d = ref.callRemote("giveMeCache", orig)
+        d.addCallback(self._testNewStyleCache_2, orig)
+        return d
+    def _testNewStyleCache_2(self, res, orig):
+        self.failUnless(isinstance(res, NewStyleCacheCopy))
+        self.failUnlessEqual(res.s, "value")
         self.failIf(res is orig) # no cheating :)
 
 

@@ -738,6 +738,10 @@ class _Dummy:
     """(Internal)
     Dummy class, used for unserializing instances.
     """
+class _DummyNewStyle(object):
+    """(Internal)
+    Dummy class, used for unserializing instances of new-style classes.
+    """
 
 
 
