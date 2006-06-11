@@ -2,6 +2,8 @@
 # Copyright (c) 2001-2004 Divmod Inc.
 # See LICENSE for details.
 
+from zope.interface import directlyProvides
+
 from twisted.mail.pop3 import AdvancedPOP3Client as POP3Client
 from twisted.mail.pop3 import InsecureAuthenticationDisallowed
 from twisted.mail.pop3 import ServerErrorResponse
@@ -142,11 +144,31 @@ class POP3ClientLoginTestCase(unittest.TestCase):
 
     def testInsecureLoginRaisesException(self):
         p, t = setUp(greet=False)
-        p.dataReceived("+OK Howdy")
+        p.dataReceived("+OK Howdy\r\n")
         d = p.login("username", "password")
         self.failIf(t.value())
         return self.assertFailure(
             d, InsecureAuthenticationDisallowed)
+
+
+    def testSSLTransportConsideredSecure(self):
+        """
+        If a server doesn't offer APOP but the transport is secured using
+        SSL or TLS, a plaintext login should be allowed, not rejected with
+        an InsecureAuthenticationDisallowed exception.
+        """
+        p, t = setUp(greet=False)
+        directlyProvides(t, interfaces.ISSLTransport)
+        p.dataReceived("+OK Howdy\r\n")
+        d = p.login("username", "password")
+        self.assertEquals(t.value(), "USER username\r\n")
+        t.clear()
+        p.dataReceived("+OK\r\n")
+        self.assertEquals(t.value(), "PASS password\r\n")
+        p.dataReceived("+OK\r\n")
+        return d
+
+
 
 class ListConsumer:
     def __init__(self):

@@ -462,7 +462,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             d.addCallback(self._loginTLS, username, password)
             return d
 
-        elif self.startedTLS or self.allowInsecureLogin:
+        elif self.startedTLS or not nontlsTransport or self.allowInsecureLogin:
             return self._plaintext(username, password)
         else:
             return defer.fail(InsecureAuthenticationDisallowed())
