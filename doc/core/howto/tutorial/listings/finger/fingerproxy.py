@@ -64,7 +64,7 @@ class FingerClient(protocol.Protocol):
     def dataReceived(self, data):
         self.buf.append(data)
 
-    def connectionLost(self):
+    def connectionLost(self, reason):
         self.factory.gotData(''.join(self.buf))
 
 class FingerClientFactory(protocol.ClientFactory):
