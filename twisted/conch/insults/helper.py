@@ -353,6 +353,10 @@ class ExpectableBuffer(TerminalBuffer):
         TerminalBuffer.write(self, bytes)
         self._checkExpected()
 
+    def cursorHome(self):
+        TerminalBuffer.cursorHome(self)
+        self._mark = 0
+
     def _timeoutExpected(self, d):
         d.errback(ExpectationTimeout())
         self._checkExpected()

@@ -174,6 +174,13 @@ class RecvLine(insults.TerminalProtocol):
         self.mode = 'typeover'
         self.terminal.resetModes([insults.modes.IRM])
 
+    def drawInputLine(self):
+        """
+        Write a line containing the current input prompt and the current line
+        buffer at the current cursor position.
+        """
+        self.terminal.write(self.ps[self.pn] + ''.join(self.lineBuffer))
+
     def terminalSize(self, width, height):
         # XXX - Clear the previous input line, redraw it at the new
         # cursor position
@@ -181,7 +188,7 @@ class RecvLine(insults.TerminalProtocol):
         self.terminal.cursorHome()
         self.width = width
         self.height = height
-        self.terminal.write(self.ps[self.pn] + ''.join(self.lineBuffer))
+        self.drawInputLine()
 
     def unhandledControlSequence(self, seq):
         pass

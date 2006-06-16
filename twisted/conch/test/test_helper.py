@@ -3,7 +3,6 @@
 # See LICENSE for details.
 
 from twisted.conch.insults import helper
-from twisted.conch.insults.insults import ServerProtocol, ClientProtocol
 from twisted.conch.insults.insults import G0, G1, G2, G3
 from twisted.conch.insults.insults import modes
 from twisted.conch.insults.insults import NORMAL, BOLD, UNDERLINE, BLINK, REVERSE_VIDEO

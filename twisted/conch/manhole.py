@@ -20,7 +20,6 @@ from twisted.conch import recvline
 
 from twisted.internet import defer
 from twisted.python.htmlizer import TokenPrinter
-from twisted.python import log
 
 class FileWrapper:
     """Minimal write-file-like object.
@@ -136,6 +135,7 @@ class ManholeInterpreter(code.InteractiveInterpreter):
 CTRL_C = '\x03'
 CTRL_D = '\x04'
 CTRL_BACKSLASH = '\x1c'
+CTRL_L = '\x0c'
 
 class Manhole(recvline.HistoricRecvLine):
     """Mediator between a fancy line source and an interactive interpreter.
@@ -159,7 +159,9 @@ class Manhole(recvline.HistoricRecvLine):
         self.interpreter = ManholeInterpreter(self, self.namespace)
         self.keyHandlers[CTRL_C] = self.handle_INT
         self.keyHandlers[CTRL_D] = self.handle_EOF
+        self.keyHandlers[CTRL_L] = self.handle_FF
         self.keyHandlers[CTRL_BACKSLASH] = self.handle_QUIT
+
 
     def handle_INT(self):
         self.terminal.nextLine()
@@ -169,14 +171,27 @@ class Manhole(recvline.HistoricRecvLine):
         self.lineBuffer = []
         self.lineBufferIndex = 0
 
+
     def handle_EOF(self):
         if self.lineBuffer:
             self.terminal.write('\a')
         else:
             self.handle_QUIT()
 
+
+    def handle_FF(self):
+        """
+        Handle a 'form feed' byte - generally used to request a screen
+        refresh/redraw.
+        """
+        self.terminal.eraseDisplay()
+        self.terminal.cursorHome()
+        self.drawInputLine()
+
+
     def handle_QUIT(self):
         self.terminal.loseConnection()
+
 
     def _needsNewline(self):
         w = self.terminal.lastWrite

@@ -4,12 +4,40 @@
 
 from __future__ import generators
 
-import time
-
 from twisted.trial import unittest
 from twisted.internet import error, defer
 from twisted.conch.test.test_recvline import _TelnetMixin, _SSHMixin, _StdioMixin, stdio, ssh
 from twisted.conch import manhole
+
+
+class WriterTestCase(unittest.TestCase):
+    def testInteger(self):
+        manhole.lastColorizedLine("1")
+
+
+    def testDoubleQuoteString(self):
+        manhole.lastColorizedLine('"1"')
+
+
+    def testSingleQuoteString(self):
+        manhole.lastColorizedLine("'1'")
+
+
+    def testTripleSingleQuotedString(self):
+        manhole.lastColorizedLine("'''1'''")
+
+
+    def testTripleDoubleQuotedString(self):
+        manhole.lastColorizedLine('"""1"""')
+
+
+    def testFunctionDefinition(self):
+        manhole.lastColorizedLine("def foo():")
+
+
+    def testClassDefinition(self):
+        manhole.lastColorizedLine("class foo:")
+
 
 class ManholeLoopbackMixin:
     serverProtocol = manhole.ColoredManhole
@@ -164,6 +192,30 @@ class ManholeLoopbackMixin:
         yield disconnected
         disconnected.getResult()
     testControlD = defer.deferredGenerator(testControlD)
+
+
+    def testControlL(self):
+        """
+        CTRL+L is generally used as a redraw-screen command in terminal
+        applications.  Manhole doesn't currently respect this usage of it,
+        but it should at least do something reasonable in response to this
+        event (rather than, say, eating your face).
+        """
+        # Start off with a newline so that when we clear the display we can
+        # tell by looking for the missing first empty prompt line.
+        self._testwrite("\n1 + 1")
+        helloWorld = self.wfd(self.recvlineClient.expect(r"\+ 1"))
+        yield helloWorld
+        helloWorld.getResult()
+        self._assertBuffer([">>> ", ">>> 1 + 1"])
+
+        self._testwrite(manhole.CTRL_L + " + 1")
+        redrew = self.wfd(self.recvlineClient.expect(r"1 \+ 1 \+ 1"))
+        yield redrew
+        redrew.getResult()
+        self._assertBuffer([">>> 1 + 1 + 1"])
+    testControlL = defer.deferredGenerator(testControlL)
+
 
     def testDeferred(self):
         self._testwrite(
