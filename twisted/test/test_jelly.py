@@ -30,6 +30,23 @@ class JellyTestCase(test_newjelly.JellyTestCase):
         def testDateTime(self):
             test_newjelly.JellyTestCase.testDateTime(self)
 
+    def testUnjellyable(self):
+        """
+        Test that if Unjellyable is used to deserialize a jellied object,
+        state comes out right.
+        """
+        class JellyableTestClass(jelly.Jellyable):
+            pass
+        jelly.setUnjellyableForClass(JellyableTestClass, jelly.Unjellyable)
+        input = JellyableTestClass()
+        input.attribute = 'value'
+        output = jelly.unjelly(jelly.jelly(input))
+        self.assertEquals(output.attribute, 'value')
+        self.failUnless(
+            isinstance(output, jelly.Unjellyable),
+            "Got instance of %r, not Unjellyable" % (output.__class__,))
+
+
     def testPersistentStorage(self):
         perst = [{}, 1]
         def persistentStore(obj, jel, perst = perst):
@@ -80,6 +97,3 @@ class JellyTestCase(test_newjelly.JellyTestCase):
 
 class CircularReferenceTestCase(test_newjelly.CircularReferenceTestCase):
     jc = jelly
-
-
-testCases = [JellyTestCase, CircularReferenceTestCase]

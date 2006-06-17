@@ -273,13 +273,15 @@ class Jellyable:
     Inherit from me to Jelly yourself directly with the `getStateFor'
     convenience method.
     """
-
     implements(IJellyable)
-    
+
     def getStateFor(self, jellier):
         return self.__dict__
 
     def jellyFor(self, jellier):
+        """
+        @see L{twisted.spread.interfaces.IJellyable.jellyFor}
+        """
         sxp = jellier.prepare(self)
         sxp.extend([
             qual(self.__class__),
@@ -287,20 +289,27 @@ class Jellyable:
         return jellier.preserve(self, sxp)
 
 
+
 class Unjellyable:
     """
     Inherit from me to Unjelly yourself directly with the
     `setStateFor' convenience method.
     """
-
     implements(IUnjellyable)
-    
+
     def setStateFor(self, unjellier, state):
         self.__dict__ = state
 
     def unjellyFor(self, unjellier, jellyList):
+        """
+        Perform the inverse operation of L{Jellyable.jellyFor}.
+
+        @see L{twisted.spread.interfaces.IUnjellyable.unjellyFor}
+        """
         state = unjellier.unjelly(jellyList[1])
         self.setStateFor(unjellier, state)
+        return self
+
 
 
 class _Jellier:
