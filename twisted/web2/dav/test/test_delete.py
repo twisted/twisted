@@ -69,6 +69,6 @@ class DELETE(twisted.web2.dav.test.util.TestCase):
                 if depth is not None:
                     request.headers.setHeader("depth", depth)
 
-                yield (request, do_test, path)
+                yield (request, do_test)
 
         return serialize(self.send, work())

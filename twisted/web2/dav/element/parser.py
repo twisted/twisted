@@ -219,3 +219,8 @@ class WebDAVDocument (object):
         document = xml.dom.minidom.Document()
         self.root_element.addToDOM(document, None)
         PrintXML(document, stream=output)
+
+    def toxml(self):
+        output = StringIO.StringIO()
+        self.writeXML(output)
+        return output.getvalue()

@@ -115,20 +115,18 @@ class TestCase(unittest.TestCase):
 
         return (path, uri)
 
-    def send(self, request, callback, path=None):
-        if path is None: path = self.docroot
+    def send(self, request, callback):
+        log.msg("Sending %s request for URI %s" % (request.method, request.uri))
 
-        log.msg("Sending %s request for path %s" % (request.method, path))
-
-        resource = self.resource_class(path)
-        response = maybeDeferred(resource.renderHTTP, request)
+        d = request.locateResource(request.uri)
+        d.addCallback(lambda resource: resource.renderHTTP(request))
 
         if type(callback) is tuple:
-            response.addCallbacks(*callback)
+            d.addCallbacks(*callback)
         else:
-            response.addCallback(callback)
+            d.addCallback(callback)
 
-        return response
+        return d
 
     def _ebDeferTestMethod(self, f, result):
         if f.check(TodoTest):

@@ -45,8 +45,7 @@ class PUT(twisted.web2.dav.test.util.TestCase):
         PUT request
         """
         dst_path = os.path.join(self.docroot, "dst")
-
-        dst_uri = "/put_simple"
+        dst_uri = "/dst"
 
         def checkResult(response, path):
             response = IResponse(response)
@@ -57,8 +56,11 @@ class PUT(twisted.web2.dav.test.util.TestCase):
             ):
                 self.fail("PUT failed: %s" % (response.code,))
 
+            if not os.path.isfile(dst_path):
+                self.fail("PUT failed to create file %s." % (dst_path,))
+
             if not filecmp.cmp(path, dst_path):
-                self.fail("PUT failed to preserve data for file %s." % (path,))
+                self.fail("PUT failed to preserve data for file %s in file %s." % (path, dst_path))
 
             etag = response.headers.getHeader("etag")
             if not etag:
@@ -78,10 +80,10 @@ class PUT(twisted.web2.dav.test.util.TestCase):
     
                 def do_test(response): checkResult(response, path)
     
-                request = SimpleRequest(self.site, "PUT", uri)
+                request = SimpleRequest(self.site, "PUT", dst_uri)
                 request.stream = FileStream(file(path, "rb"))
     
-                yield (request, do_test, dst_path)
+                yield (request, do_test)
 
         return serialize(self.send, work())
 
@@ -90,7 +92,7 @@ class PUT(twisted.web2.dav.test.util.TestCase):
         PUT on existing resource with If-None-Match header
         """
         dst_path = os.path.join(self.docroot, "dst")
-        dst_uri = "/put_again"
+        dst_uri = "/dst"
 
         def work():
             for code in (
@@ -122,7 +124,7 @@ class PUT(twisted.web2.dav.test.util.TestCase):
                 elif code == responsecode.PRECONDITION_FAILED:
                     request.headers.setHeader("if-none-match", ("*",))
     
-                yield (request, (checkResult, onError), dst_path)
+                yield (request, (checkResult, onError))
 
         return serialize(self.send, work())
 
@@ -130,7 +132,6 @@ class PUT(twisted.web2.dav.test.util.TestCase):
         """
         PUT with no parent
         """
-        dst_path = os.path.join(self.docroot, "put", "no", "parent")
         dst_uri = "/put/no/parent"
 
         def checkResult(response):
@@ -143,4 +144,4 @@ class PUT(twisted.web2.dav.test.util.TestCase):
         request = SimpleRequest(self.site, "PUT", dst_uri)
         request.stream = FileStream(file(__file__, "rb"))
 
-        return self.send(request, checkResult, dst_path)
+        return self.send(request, checkResult)

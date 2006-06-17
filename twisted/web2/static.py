@@ -80,14 +80,14 @@ class StaticRenderMixin(resource.RenderMixin, MetaDataMixin):
             http.checkPreconditions(
                 request,
                 entityExists = self.exists(),
-                etag         = self.etag(),
+                etag = self.etag(),
                 lastModified = self.lastModified(),
             )
 
         # Check per-method preconditions
         method = getattr(self, "preconditions_" + request.method, None)
         if method:
-            method(request)
+            return method(request)
 
     def renderHTTP(self, request):
         """

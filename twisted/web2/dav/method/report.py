@@ -32,8 +32,9 @@ __all__ = ["http_REPORT"]
 import string
 
 from twisted.python import log
+from twisted.internet.defer import deferredGenerator, waitForDeferred
 from twisted.web2 import responsecode
-from twisted.web2.http import StatusResponse
+from twisted.web2.http import HTTPError, StatusResponse
 from twisted.web2.dav import davxml
 from twisted.web2.dav.http import ErrorResponse
 from twisted.web2.dav.util import davXMLFromStream
@@ -44,66 +45,60 @@ def http_REPORT(self, request):
     """
     if not self.fp.exists():
         log.err("File not found: %s" % (self.fp.path,))
-        return responsecode.NOT_FOUND
+        raise HTTPError(responsecode.NOT_FOUND)
 
     #
     # Read request body
     #
-    d = davXMLFromStream(request.stream)
-
-    def gotXML(doc):
-        if doc is None:
-            return StatusResponse(
-                responsecode.BAD_REQUEST,
-                "REPORT request body may not be empty"
-            )
-
-        #
-        # Parse request
-        #
-        namespace = doc.root_element.namespace
-        name      = doc.root_element.name
-
-        def to_method(s):
-            ok = string.ascii_letters + string.digits + "_"
-            out = []
-            for c in s:
-                if c in ok:
-                    out.append(c)
-                else:
-                    out.append("_")
-            return "report_" + "".join(out)
-    
-        if namespace:
-            method_name = to_method(namespace + "_" + name)
-        else:
-            method_name = to_method(name)
-
-        try:
-            method = getattr(self, method_name)
-        except AttributeError:
-            #
-            # Requested report is not supported.
-            #
-            log.err("Unsupported REPORT {%s}%s for resource %s (no method %s)"
-                    % (namespace, name, self, method_name))
-        
-            return ErrorResponse(
-                responsecode.FORBIDDEN,
-                davxml.SupportedReport()
-            )
-
-        return method(request, doc.root_element)
-
-    def gotError(f):
+    try:
+        doc = waitForDeferred(davXMLFromStream(request.stream))
+        yield doc
+        doc = doc.getResult()
+    except ValueError, e:
         log.err("Error while handling REPORT body: %s" % (f,))
+        raise HTTPError(StatusResponse(responsecode.BAD_REQUEST, str(e)))
 
-        # ValueError is raised on a bad request.  Re-raise others.
-        f.trap(ValueError)
+    if doc is None:
+        raise HTTPError(StatusResponse(
+            responsecode.BAD_REQUEST,
+            "REPORT request body may not be empty"
+        ))
 
-        return StatusResponse(responsecode.BAD_REQUEST, str(f))
+    #
+    # Parse request
+    #
+    namespace = doc.root_element.namespace
+    name = doc.root_element.name
 
-    d.addCallback(gotXML)
-    d.addErrback(gotError)
+    def to_method(s):
+        ok = string.ascii_letters + string.digits + "_"
+        out = []
+        for c in s:
+            if c in ok:
+                out.append(c)
+            else:
+                out.append("_")
+        return "report_" + "".join(out)
 
-    return d
+    if namespace:
+        method_name = to_method(namespace + "_" + name)
+    else:
+        method_name = to_method(name)
+
+    try:
+        method = getattr(self, method_name)
+    except AttributeError:
+        #
+        # Requested report is not supported.
+        #
+        log.err("Unsupported REPORT {%s}%s for resource %s (no method %s)"
+                % (namespace, name, self, method_name))
+
+        raise HTTPError(ErrorResponse(
+            responsecode.FORBIDDEN,
+            davxml.SupportedReport()
+        ))
+
+    yield method(request, doc.root_element)
+
+http_REPORT = deferredGenerator(http_REPORT)

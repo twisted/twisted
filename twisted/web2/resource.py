@@ -31,6 +31,7 @@ class RenderMixin(object):
         against it.
         @param request: the request to process.
         @raise http.HTTPError: if any precondition fails.
+        @return: C{None} or a deferred whose callback value is C{request}.
         """
         #
         # http.checkPreconditions() gets called by the server after every
@@ -48,7 +49,7 @@ class RenderMixin(object):
         # Check per-method preconditions
         method = getattr(self, "preconditions_" + request.method, None)
         if method:
-            method(request)
+            return method(request)
 
     def renderHTTP(self, request):
         """
@@ -80,9 +81,11 @@ class RenderMixin(object):
             response.headers.setHeader("allow", self.allowedMethods())
             return response
 
-        self.checkPreconditions(request)
-
-        return method(request)
+        d = self.checkPreconditions(request)
+        if d is None:
+            return method(request)
+        else:
+            return d.addCallback(method)
 
     def http_OPTIONS(self, request):
         """
@@ -257,9 +260,9 @@ class WrapperResource(object):
         """
         Override this method in order to do something before passing control on
         to the wrapped resource's C{renderHTTP} and C{locateChild} methods.
-        @return: None or a L{Deferred}.  If a deferred object is return, it's
-            value is ignored, but C{renderHTTP} and C{locateChild} are chain
-            onto the deferred as callbacks.
+        @return: None or a L{Deferred}.  If a deferred object is
+            returned, it's value is ignored, but C{renderHTTP} and
+            C{locateChild} are chained onto the deferred as callbacks.
         """
         raise NotImplementedError()
     
