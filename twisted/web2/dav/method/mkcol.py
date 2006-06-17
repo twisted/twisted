@@ -34,54 +34,46 @@ import os
 from twisted.python import log
 from twisted.python.filepath import FilePath
 from twisted.python.failure import Failure
-from twisted.internet.defer import deferredGenerator, waitForDeferred
 from twisted.web2 import responsecode
-from twisted.web2.http import HTTPError, StatusResponse
-from twisted.web2.dav import davxml
+from twisted.web2.http import StatusResponse
 from twisted.web2.dav.fileop import mkcollection
 from twisted.web2.dav.http import statusForFailure
-from twisted.web2.dav.util import noDataFromStream, parentForURL
+from twisted.web2.dav.util import noDataFromStream
 
 def http_MKCOL(self, request):
     """
     Respond to a MKCOL request. (RFC 2518, section 8.3)
     """
-    parent = waitForDeferred(request.locateResource(parentForURL(request.uri)))
-    yield parent
-    parent = parent.getResult()
-
     if self.fp.exists():
         log.err("Attempt to create collection where file exists: %s"
                 % (self.fp.path,))
-        raise HTTPError(responsecode.NOT_ALLOWED)
-
-    if not parent.isCollection():
-        log.err("Attempt to create collection with non-collection parent: %s"
-                % (self.fp.path,))
-        raise HTTPError(StatusResponse(
-            responsecode.CONFLICT,
-            "Parent resource is not a collection."
-        ))
+        return responsecode.NOT_ALLOWED
 
     if not self.fp.parent().isdir():
-        log.err("Attempt to create collection with no parent directory: %s"
+        log.err("Attempt to create collection with no parent: %s"
                 % (self.fp.path,))
-        raise HTTPError(StatusResponse(
-            responsecode.INTERNAL_SERVER_ERROR,
-            "The requested resource is not backed by a parent directory."
-        ))
+        return StatusResponse(responsecode.CONFLICT, "No parent collection")
 
     #
     # Read request body
     #
-    x = waitForDeferred(noDataFromStream(request.stream))
-    yield x
-    try:
-        x.getResult()
-    except ValueError:
+    d = noDataFromStream(request.stream)
+
+    #
+    # Create directory
+    #
+    def gotNoData(_):
+        return mkcollection(self.fp)
+
+    def gotError(f):
         log.err("Error while handling MKCOL body: %s" % (f,))
-        raise HTTPError(responsecode.UNSUPPORTED_MEDIA_TYPE)
 
-    yield mkcollection(self.fp)
+        # ValueError is raised on a bad request.  Re-raise others.
+        f.trap(ValueError)
 
-http_MKCOL = deferredGenerator(http_MKCOL)
+        return responsecode.UNSUPPORTED_MEDIA_TYPE
+
+    d.addCallback(gotNoData)
+    d.addErrback(gotError)
+
+    return d

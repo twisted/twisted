@@ -33,15 +33,12 @@ import os
 
 from twisted.python import log
 from twisted.python.filepath import FilePath
-from twisted.internet.defer import deferredGenerator, waitForDeferred
+from twisted.internet.defer import maybeDeferred
 from twisted.web2 import responsecode
-from twisted.web2.http import HTTPError, StatusResponse
+from twisted.web2.http import StatusResponse
 from twisted.web2.server import StopTraversal
-from twisted.web2.dav import davxml
 from twisted.web2.dav.idav import IDAVResource
 from twisted.web2.dav.fileop import copy, delete, move
-from twisted.web2.dav.http import ErrorResponse
-from twisted.web2.dav.util import parentForURL
 
 # FIXME: This is circular
 import twisted.web2.dav.static
@@ -50,19 +47,20 @@ def http_COPY(self, request):
     """
     Respond to a COPY request. (RFC 2518, section 8.8)
     """
-    def doCopy(r):
+    def do(r):
+        if type(r) is int or isinstance(r, StatusResponse): return r
         destination, destination_uri, depth = r
+
         return copy(self.fp, destination.fp, destination_uri, depth)
 
-    d = prepareForCopy(self, request)
-    d.addCallback(doCopy)
-    return d
+    return prepareForCopy(self, request).addCallback(do)
 
 def http_MOVE(self, request):
     """
     Respond to a MOVE request. (RFC 2518, section 8.9)
     """
-    def doMove(r):
+    def do(r):
+        if type(r) is int or isinstance(r, StatusResponse): return r
         destination, destination_uri, depth = r
 
         #
@@ -79,15 +77,82 @@ def http_MOVE(self, request):
         if self.fp.isdir() and depth != "infinity":
             msg = "Client sent illegal depth header value for MOVE: %s" % (depth,)
             log.err(msg)
-            raise HTTPError(StatusResponse(responsecode.BAD_REQUEST, msg))
+            return StatusResponse(responsecode.BAD_REQUEST, msg)
 
         return move(self.fp, request.uri, destination.fp, destination_uri, depth)
 
-    d = prepareForCopy(self, request)
-    d.addCallback(doMove)
-    return d
+    return prepareForCopy(self, request).addCallback(do)
 
 def prepareForCopy(self, request):
+    if not self.fp.exists():
+        log.err("File not found: %s" % (self.fp.path,))
+        return StatusResponse(
+            responsecode.NOT_FOUND,
+            "Source resource %s not found." % (request.uri,)
+        )
+
+    #
+    # Find the destination resource
+    #
+
+    destination_uri = request.headers.getHeader("destination")
+
+    if not destination_uri:
+        msg = "No destination header in %s request." % (request.method,)
+        log.err(msg)
+        return StatusResponse(responsecode.BAD_REQUEST, msg)
+
+    d = request.locateResource(destination_uri)
+    d.addCallback(_prepareForCopy, destination_uri, request)
+
+    return d
+
+def _prepareForCopy(destination, destination_uri, request):
+    # Destination must be a DAV resource
+    try:
+        destination = IDAVResource(destination)
+    except TypeError:
+        log.err("Attempt to %s to a non-DAV resource: (%s) %s"
+                % (request.method, destination.__class__, destination_uri))
+        return StatusResponse(
+            responsecode.FORBIDDEN,
+            "Destination %s is not a WebDAV resource." % (destination_uri,)
+        )
+
+    # FIXME: Right, now we don't know how to copy into a non-DAVFile collection.
+    # We may need some more API in IDAVResource.
+    # So far, we need: .exists(), .locateParent()?
+
+    if not isinstance(destination, twisted.web2.dav.static.DAVFile):
+        log.err("DAV copy between non-DAVFile DAV resources isn't implemented")
+        return StatusResponse(
+            responsecode.NOT_IMPLEMENTED,
+            "Destination %s is not a DAVFile resource." % (destination_uri,)
+        )
+
+    #
+    # Check for existing destination resource
+    #
+
+    overwrite = request.headers.getHeader("overwrite", True)
+
+    if destination.exists() and not overwrite:
+        log.err("Attempt to %s onto existing file without overwrite  flag enabled: %s"
+                % (request.method, destination.fp.path))
+        return StatusResponse(
+            responsecode.PRECONDITION_FAILED,
+            "Destination %s already exists." % (destination_uri,)
+        )
+
+    #
+    # Make sure destination's parent exists
+    #
+
+    if not destination.fp.parent().isdir():
+        log.err("Attempt to %s to a resource with no parent: %s"
+                % (request.method, destination.fp.path))
+        return StatusResponse(responsecode.CONFLICT, "No parent collection.")
+
     #
     # Get the depth
     #
@@ -97,84 +162,6 @@ def prepareForCopy(self, request):
     if depth not in ("0", "infinity"):
         msg = ("Client sent illegal depth header value: %s" % (depth,))
         log.err(msg)
-        raise HTTPError(StatusResponse(responsecode.BAD_REQUEST, msg))
-
-    #
-    # Verify this resource exists
-    #
-
-    if not self.exists():
-        log.err("File not found: %s" % (self.fp.path,))
-        raise HTTPError(StatusResponse(
-            responsecode.NOT_FOUND,
-            "Source resource %s not found." % (request.uri,)
-        ))
-
-    #
-    # Get the destination
-    #
-
-    destination_uri = request.headers.getHeader("destination")
-
-    if not destination_uri:
-        msg = "No destination header in %s request." % (request.method,)
-        log.err(msg)
-        raise HTTPError(StatusResponse(responsecode.BAD_REQUEST, msg))
-
-    d = request.locateResource(destination_uri)
-    d.addCallback(_prepareForCopy, destination_uri, request, depth)
-
-    return d
-
-def _prepareForCopy(destination, destination_uri, request, depth):
-    #
-    # Destination must be a DAV resource
-    #
-
-    try:
-        destination = IDAVResource(destination)
-    except TypeError:
-        log.err("Attempt to %s to a non-DAV resource: (%s) %s"
-                % (request.method, destination.__class__, destination_uri))
-        raise HTTPError(StatusResponse(
-            responsecode.FORBIDDEN,
-            "Destination %s is not a WebDAV resource." % (destination_uri,)
-        ))
-
-    #
-    # FIXME: Right now we don't know how to copy to a non-DAVFile resource.
-    # We may need some more API in IDAVResource.
-    # So far, we need: .exists(), .fp.parent()
-    #
-
-    if not isinstance(destination, twisted.web2.dav.static.DAVFile):
-        log.err("DAV copy between non-DAVFile DAV resources isn't implemented")
-        raise HTTPError(StatusResponse(
-            responsecode.NOT_IMPLEMENTED,
-            "Destination %s is not a DAVFile resource." % (destination_uri,)
-        ))
-
-    #
-    # Check for existing destination resource
-    #
-
-    overwrite = request.headers.getHeader("overwrite", True)
-
-    if destination.exists() and not overwrite:
-        log.err("Attempt to %s onto existing file without overwrite flag enabled: %s"
-                % (request.method, destination.fp.path))
-        raise HTTPError(StatusResponse(
-            responsecode.PRECONDITION_FAILED,
-            "Destination %s already exists." % (destination_uri,)
-        ))
-
-    #
-    # Make sure destination's parent exists
-    #
-
-    if not destination.fp.parent().isdir():
-        log.err("Attempt to %s to a resource with no parent: %s"
-                % (request.method, destination.fp.path))
-        raise HTTPError(StatusResponse(responsecode.CONFLICT, "No parent collection."))
+        return StatusResponse(responsecode.BAD_REQUEST, msg)
 
     return destination, destination_uri, depth

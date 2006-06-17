@@ -108,7 +108,7 @@ class WebDAVElement (object):
 
             for allowed, (min, max) in allowed_children.items():
                 if type(allowed) == type and isinstance(child, allowed):
-                    qname = allowed
+                    qname = allowed.qname()
                 elif child.qname() == allowed:
                     qname = allowed
                 else:
@@ -132,7 +132,7 @@ class WebDAVElement (object):
                 raise ValueError("Not enough children of type {%s}%s for %s"
                                  % (qname[0], qname[1], self.sname()))
 
-        self.children = tuple(my_children)
+        self.children = my_children
 
         #
         # Validate that attributes have known names
@@ -223,14 +223,9 @@ class WebDAVElement (object):
 
     def childrenOfType(self, child_type):
         """
-        Returns a list of children with the same qname as the given type.
+        Returns a list of children of the given type.
         """
-        if type(child_type) is tuple:
-            qname = child_type
-        else:
-            qname = child_type.qname()
-
-        return [ c for c in self.children if c.qname() == qname ]
+        return [ c for c in self.children if isinstance(c, child_type) ]
 
     def childOfType(self, child_type):
         """
@@ -303,7 +298,7 @@ class PCDATAElement (object):
 
 class WebDAVOneShotElement (WebDAVElement):
     """
-    Element with exactly one WebDAVEmptyElement child and no attributes.
+    Element with exactly one WebDAVEmptyElement child.
     """
     __singletons = {}
 

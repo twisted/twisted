@@ -31,7 +31,6 @@ __all__ = ["http_PROPPATCH"]
 
 from twisted.python import log
 from twisted.python.failure import Failure
-from twisted.internet.defer import deferredGenerator, waitForDeferred, succeed
 from twisted.web2 import responsecode
 from twisted.web2.http import HTTPError, StatusResponse
 from twisted.web2.dav import davxml
@@ -44,142 +43,122 @@ def http_PROPPATCH(self, request):
     """
     if not self.fp.exists():
         log.err("File not found: %s" % (self.fp.path,))
-        raise HTTPError(responsecode.NOT_FOUND)
+        return responsecode.NOT_FOUND
 
     #
     # Read request body
     #
-    try:
-        doc = waitForDeferred(davXMLFromStream(request.stream))
-        yield doc
-        doc = doc.getResult()
-    except ValueError, e:
-        log.err("Error while handling PROPPATCH body: %s" % (e,))
-        raise HTTPError(StatusResponse(responsecode.BAD_REQUEST, str(e)))
-
-    if doc is None:
-        error = "Request XML body is required."
-        log.err(error)
-        raise HTTPError(StatusResponse(responsecode.BAD_REQUEST, error))
+    d = davXMLFromStream(request.stream)
 
     #
-    # Parse request
+    # Set properties
     #
-    update = doc.root_element
-    if not isinstance(update, davxml.PropertyUpdate):
-        error = ("Request XML body must be a propertyupdate element."
-                 % (davxml.PropertyUpdate.sname(),))
-        log.err(error)
-        raise HTTPError(StatusResponse(responsecode.BAD_REQUEST, error))
+    def gotXML(doc):
+        if doc is None:
+            error = "Request XML body is required."
+            log.err(error)
+            return StatusResponse(responsecode.BAD_REQUEST, error)
 
-    responses = PropertyStatusResponseQueue("PROPPATCH", request.uri, responsecode.NO_CONTENT)
-    undoActions = []
-    gotError = False
-
-    try:
         #
-        # Update properties
+        # Parse request
         #
-        for setOrRemove in update.children:
-            assert len(setOrRemove.children) == 1
+        update = doc.root_element
+        if not isinstance(update, davxml.PropertyUpdate):
+            error = ("Request XML body must be a propertyupdate element."
+                     % (davxml.PropertyUpdate.sname(),))
+            log.err(error)
+            return StatusResponse(responsecode.BAD_REQUEST, error)
 
-            container = setOrRemove.children[0]
+        responses = PropertyStatusResponseQueue("PROPPATCH", request.uri, responsecode.NO_CONTENT)
+        undoActions = []
 
-            assert isinstance(container, davxml.PropertyContainer)
+        gotError = False
 
-            properties = container.children
+        try:
+            #
+            # Update properties
+            #
+            for setOrRemove in update.children:
+                assert len(setOrRemove.children) == 1
 
-            def do(action, property):
-                """
-                Perform action(property, request) while maintaining an
-                undo queue.
-                """
-                has = waitForDeferred(self.hasProperty(property, request))
-                yield has
-                has = has.getResult()
+                container = setOrRemove.children[0]
 
-                if has:
-                    oldProperty = waitForDeferred(self.readProperty(property, request))
-                    yield oldProperty
-                    oldProperty.getResult()
+                assert isinstance(container, davxml.PropertyContainer)
 
-                    def undo():
-                        return self.writeProperty(oldProperty, request)
+                properties = container.children
+
+                def do(action, property):
+                    #
+                    # Perform action(property, request) while maintaining an
+                    # undo queue.
+                    #
+                    if self.hasProperty(property, request):
+                        oldProperty = self.readProperty(property, request)
+                        def undo(): self.writeProperty(oldProperty, request)
+                    else:
+                        def undo(): self.removeProperty(property, request)
+
+                    try:
+                        action(property, request)
+                    except ValueError, e:
+                        # Convert ValueError exception into HTTPError
+                        responses.add(
+                            Failure(exc_value=HTTPError(StatusResponse(responsecode.FORBIDDEN, str(e)))),
+                            property
+                        )
+                        return False
+                    except:
+                        responses.add(Failure(), property)
+                        return False
+                    else:
+                        responses.add(responsecode.OK, property)
+
+                        # Only add undo action for those that succeed because those that fail will not have changed               
+                        undoActions.append(undo)
+
+                        return True
+
+                if isinstance(setOrRemove, davxml.Set):
+                    for property in properties:
+                        if not do(self.writeProperty, property):
+                            gotError = True
+                elif isinstance(setOrRemove, davxml.Remove):
+                    for property in properties:
+                        if not do(self.removeProperty, property):
+                            gotError = True
                 else:
-                    def undo():
-                        return self.removeProperty(property, request)
+                    raise AssertionError("Unknown child of PropertyUpdate: %s" % (setOrRemove,))
+        except:
+            #
+            # If there is an error, we have to back out whatever we have
+            # operations we have done because PROPPATCH is an
+            # all-or-nothing request.
+            #
+            for action in undoActions:
+                action()
+            raise
 
-                try:
-                    x = waitForDeferred(action(property, request))
-                    yield x
-                    x.getResult()
-                except ValueError, e:
-                    # Convert ValueError exception into HTTPError
-                    responses.add(
-                        Failure(exc_value=HTTPError(StatusResponse(responsecode.FORBIDDEN, str(e)))),
-                        property
-                    )
-                    yield False
-                    return
-                except:
-                    responses.add(Failure(), property)
-                    yield False
-                    return
-                else:
-                    responses.add(responsecode.OK, property)
+        # If we had an error we need to undo any changes that did succeed and change status of
+        # those to 424 Failed Dependency.
+        if gotError:
+            for action in undoActions:
+                action()
+            responses.error()
 
-                    # Only add undo action for those that succeed because those that fail will not have changed               
-                    undoActions.append(undo)
-
-                    yield True
-                    return
-
-            do = deferredGenerator(do)
-
-            if isinstance(setOrRemove, davxml.Set):
-                for property in properties:
-                    ok = waitForDeferred(do(self.writeProperty, property))
-                    yield ok
-                    ok = ok.getResult()
-                    if not ok:
-                        gotError = True
-            elif isinstance(setOrRemove, davxml.Remove):
-                for property in properties:
-                    ok = waitForDeferred(do(self.removeProperty, property))
-                    yield ok
-                    ok = ok.getResult()
-                    if not ok:
-                        gotError = True
-            else:
-                raise AssertionError("Unknown child of PropertyUpdate: %s" % (setOrRemove,))
-    except:
         #
-        # If there is an error, we have to back out whatever we have
-        # operations we have done because PROPPATCH is an
-        # all-or-nothing request.
-        # We handle the first one here, and then re-raise to handle the
-        # rest in the containing scope.
+        # Return response
         #
-        for action in undoActions:
-            x = waitForDeferred(action())
-            yield x
-            x.getResult()
-        raise
+        return MultiStatusResponse([responses.response()])
 
-    #
-    # If we had an error we need to undo any changes that did succeed and change status of
-    # those to 424 Failed Dependency.
-    #
-    if gotError:
-        for action in undoActions:
-            x = waitForDeferred(action())
-            yield x
-            x.getResult()
-        responses.error()
+    def gotError(f):
+        log.err("Error while handling PROPPATCH body: %s" % (f,))
 
-    #
-    # Return response
-    #
-    yield MultiStatusResponse([responses.response()])
+        # ValueError is raised on a bad request.  Re-raise others.
+        f.trap(ValueError)
 
-http_PROPPATCH = deferredGenerator(http_PROPPATCH)
+        return StatusResponse(responsecode.BAD_REQUEST, str(f))
+
+    d.addCallback(gotXML)
+    d.addErrback(gotError)
+
+    return d

@@ -46,7 +46,6 @@ import posixpath # Careful; this module is not documented as public API
 
 from twisted.python import log
 from twisted.python.failure import Failure
-from twisted.internet.defer import succeed
 from twisted.web2.stream import readStream
 
 from twisted.web2.dav import davxml
@@ -71,9 +70,6 @@ def davXMLFromStream(stream):
     #   This reads the request body into a string and then parses it.
     #   A better solution would parse directly and incrementally from the
     #   request stream.
-    if stream is None:
-        return succeed(None)
-
     def parse(xml):
         try:
             return davxml.WebDAVDocument.fromString(xml)
@@ -175,7 +171,7 @@ def unimplemented(obj):
     caller = inspect.getouterframes(inspect.currentframe())[1][3]
     raise NotImplementedError("Method %s is unimplemented in subclass %s" % (caller, obj.__class__))
 
-def bindMethods(module, clazz, prefixes=("preconditions_", "http_", "report_")):
+def bindMethods(module, clazz, prefixes=("http_", "report_")):
     """
     Binds all functions in the given module (as defined by that module's
     C{__all__} attribute) which start with any of the given prefixes as methods

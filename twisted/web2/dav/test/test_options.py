@@ -61,6 +61,6 @@ class OPTIONS(twisted.web2.dav.test.util.TestCase):
         def work():
             for path, uri in self.list():
                 request = SimpleRequest(self.site, "OPTIONS", uri)
-                yield(request, doTest)
+                yield(request, doTest, path)
             
         return serialize(self.send, work())

@@ -339,7 +339,7 @@ class Request(http.Request):
             for x in xrange(len(path) - len(newpath)):
                 self.prepath.append(self.postpath.pop(0))
 
-        child = self._getChild(None, newres, newpath, updatepaths=updatepaths)
+        child = self._getChild(None, newres, newpath)
         self._rememberURLForResource(url, child)
 
         return child

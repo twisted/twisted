@@ -39,24 +39,17 @@ class NonePropertyStore (object):
     DAV property store which contains no properties and does not allow
     properties to be set.
     """
-    __singleton = None
-
-    def __new__(clazz, resource):
-        if NonePropertyStore.__singleton is None:
-            NonePropertyStore.__singleton = object.__new__(clazz)
-        return NonePropertyStore.__singleton
-
     def __init__(self, resource):
-        pass
+        self.resource = resource
 
     def get(self, qname):
-        raise HTTPError(StatusResponse(responsecode.NOT_FOUND, "No such property: {%s}%s" % qname))
+        raise HTTPError(responsecode.NOT_FOUND, StatusResponse("No such property: {%s}%s" % qname))
 
     def set(self, property):
-        raise HTTPError(StatusResponse(responsecode.FORBIDDEN, "Permission denied for setting property: %s" % (property,)))
+        raise HTTPError(responsecode.NOT_FOUND, StatusResponse("Permission denied for setting property: %s" % (property,)))
 
     def delete(self, qname):
-        raise HTTPError(StatusResponse(responsecode.NOT_FOUND, "No such property: {%s}%s" % qname))
+        raise HTTPError(responsecode.NOT_FOUND, StatusResponse("No such property: {%s}%s" % qname))
 
     def contains(self, qname):
         return False

@@ -30,12 +30,9 @@ WebDAV DELETE method
 __all__ = ["http_DELETE"]
 
 from twisted.python import log
-from twisted.internet.defer import deferredGenerator, waitForDeferred
 from twisted.web2 import responsecode
-from twisted.web2.http import HTTPError
-from twisted.web2.dav import davxml
+
 from twisted.web2.dav.fileop import delete
-from twisted.web2.dav.util import parentForURL
 
 def http_DELETE(self, request):
     """

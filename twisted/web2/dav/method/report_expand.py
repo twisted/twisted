@@ -29,8 +29,8 @@ WebDAV expand-property report
 
 __all__ = ["report_DAV__expand_property"]
 
-from twisted.internet.defer import deferredGenerator, waitForDeferred
 from twisted.web2 import responsecode
+
 from twisted.web2.dav import davxml
 from twisted.web2.dav.http import statusForFailure
 from twisted.web2.dav.davxml import dav_namespace
@@ -57,11 +57,7 @@ def report_DAV__expand_property(self, request, expand_property):
         if not namespace: namespace = dav_namespace
 
         if (namespace, name) == (dav_namespace, "allprop"):
-            all_properties = waitForDeferred(self.listAllProp(request))
-            yield all_properties
-            all_properties = all_properties.getResult()
-
-            for all_property in all_properties:
+            for all_property in self.listAllProp(request):
                 properties[all_property.qname()] = property
         else:
             properties[(namespace, name)] = property
@@ -75,16 +71,9 @@ def report_DAV__expand_property(self, request, expand_property):
     }
 
     for property in properties:
-        my_properties = waitForDeferred(self.listProperties(request))
-        yield my_properties
-        my_properties = my_properties.getResult()
-
-        if property in my_properties:
+        if property in self.listProperties(request):
             try:
-                value = waitForDeferred(self.readProperty(property, request))
-                yield value
-                value = value.getResult()
-
+                value = self.readProperty(property, request)
                 if isinstance(value, davxml.HRef):
                     raise NotImplementedError()
                 else:
@@ -109,5 +98,3 @@ def report_DAV__expand_property(self, request, expand_property):
             properties_by_status[responsecode.NOT_FOUND].append(property)
 
     raise NotImplementedError()
-
-report_DAV__expand_property = deferredGenerator(report_DAV__expand_property)

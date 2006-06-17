@@ -22,17 +22,17 @@
 # DRI: Wilfredo Sanchez, wsanchez@apple.com
 ##
 
-from twisted.trial import unittest
+import os
+
 from twisted.web2.dav.util import *
 
-class Utilities(unittest.TestCase):
+import twisted.web2.dav.test.util
+
+class Utilities(twisted.web2.dav.test.util.TestCase):
     """
     Utilities.
     """
     def test_normalizeURL(self):
-        """
-        normalizeURL()
-        """
         self.assertEquals(normalizeURL("http://server//foo"), "http://server/foo")
         self.assertEquals(normalizeURL("http://server/foo/.."), "http://server/")
         self.assertEquals(normalizeURL("/foo/bar/..//"), "/foo")
@@ -43,9 +43,6 @@ class Utilities(unittest.TestCase):
         self.assertEquals(normalizeURL("/.."), "/")
 
     def test_joinURL(self):
-        """
-        joinURL()
-        """
         self.assertEquals(joinURL("http://server/foo/"), "http://server/foo/")
         self.assertEquals(joinURL("http://server/foo", "/bar"), "http://server/foo/bar")
         self.assertEquals(joinURL("http://server/foo", "bar"), "http://server/foo/bar")
@@ -68,9 +65,6 @@ class Utilities(unittest.TestCase):
         self.assertEquals(joinURL("/foo", "/./"), "/foo/")
 
     def test_parentForURL(self):
-        """
-        parentForURL()
-        """
         self.assertEquals(parentForURL("http://server/"), None)
         self.assertEquals(parentForURL("http://server//"), None)
         self.assertEquals(parentForURL("http://server/foo/.."), None)

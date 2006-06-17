@@ -187,8 +187,7 @@ def copy(source_filepath, destination_filepath, destination_uri, depth):
             # Delete the destination
             #
             response = delete(destination_uri, destination_filepath)
-            if response != responsecode.NO_CONTENT: 
-                return response
+            if response != responsecode.NO_CONTENT: return response
     
             success_code = responsecode.NO_CONTENT
         else:
@@ -217,8 +216,7 @@ def copy(source_filepath, destination_filepath, destination_uri, depth):
                 except:
                     return statusForFailure(Failure(), "creating directory %s" % (destination_basename,))
 
-                if depth == "0": 
-                    return success_code
+                if depth == "0": return responsecode.CREATED
         else:
             return StatusResponse(
                 responsecode.CONFLICT,

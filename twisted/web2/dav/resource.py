@@ -33,95 +33,49 @@ __all__ = [
 ]
 
 import urllib
-import itertools
 
 from zope.interface import implements
 from twisted.python import log
-from twisted.internet.defer import maybeDeferred, succeed, deferredGenerator, waitForDeferred
+from twisted.internet.defer import maybeDeferred
 from twisted.web2 import responsecode
-from twisted.web2.dav import davxml
-from twisted.web2.dav.davxml import dav_namespace, lookupElement
-from twisted.web2.dav.element import parser
-from twisted.web2.dav.idav import IDAVResource, IDAVPrincipalResource
-from twisted.web2.dav.noneprops import NonePropertyStore
-from twisted.web2.dav.util import joinURL
-from twisted.web2.dav.util import parentForURL, unimplemented
 from twisted.web2.http import HTTPError, RedirectResponse, StatusResponse
 from twisted.web2.http_headers import generateContentType
 from twisted.web2.iweb import IResponse
 from twisted.web2.resource import LeafResource
 from twisted.web2.static import MetaDataMixin, StaticRenderMixin
+from twisted.web2.dav import davxml
+from twisted.web2.dav.davxml import dav_namespace, lookupElement
+from twisted.web2.dav.idav import IDAVResource
+from twisted.web2.dav.util import unimplemented
 
 twisted_dav_namespace = "http://twistedmatrix.com/xml_namespace/dav/"
-twisted_private_namespace = "http://twistedmatrix.com/xml_namespace/dav/private/"
 
 class DAVPropertyMixIn (MetaDataMixin):
     """
     Mix-in class which implements the DAV property access API in
     L{IDAVResource}.
-
-    There are three categories of DAV properties, for the purposes of how this
-    class manages them.  A X{property} is either a X{live property} or a
-    X{dead property}, and live properties are split into two categories:
-    
-    1. Dead properties.  There are properties that the server simply stores as
-       opaque data.  These are store in the X{dead property store}, which is
-       provided by subclasses via the L{deadProperties} method.
-
-    2. Live properties which are always computed.  These properties aren't
-       stored anywhere (by this class) but instead are derived from the resource
-       state or from data that is persisted elsewhere.  These are listed in the
-       L{liveProperties} attribute and are handled explicitly by the
-       L{readProperty} method.
-
-    3. Live properties may be acted on specially and are stored in the X{dead
-       property store}.  These are not listed in the L{liveProperties} attribute,
-       but may be handled specially by the property access methods.  For
-       example, L{writeProperty} might validate the data and refuse to write
-       data it deems inappropriate for a given property.
-
-    There are two sets of property access methods.  The first group
-    (L{hasProperty}, etc.) provides access to all properties.  They
-    automatically figure out which category a property falls into and act
-    accordingly.
-    
-    The second group (L{hasDeadProperty}, etc.) accesses the dead property store
-    directly and bypasses any live property logic that exists in the first group
-    of methods.  These methods are used by the first group of methods, and there
-    are cases where they may be needed by other methods.  I{Accessing dead
-    properties directly should be done with caution.}  Bypassing the live
-    property logic means that values may not be the correct ones for use in
-    DAV requests such as PROPFIND, and may be bypassing security checks.  In
-    general, one should never bypass the live property logic as part of a client
-    request for property data.
-
-    Properties in the L{twisted_private_namespace} namespace are internal to the
-    server and should not be exposed to clients.  They can only be accessed via
-    the dead property store.
     """
-    # Note:
-    #  The DAV:owner and DAV:group live properties are only meaningful if you
-    # are using ACL semantics (ie. Unix-like) which use them.  This (generic)
-    # class does not.
-
+    #
+    # Live properties which are always present and computed (not kept in the
+    # dead property store).
+    # Live properties which are not always defined don't belong in this list
+    # (such as properties which are verified by the server, but kept in the
+    # dead property store).
+    # This list is used by hasProperty() and listProperties() to make sure that
+    # they are included.
+    #
     liveProperties = (
-        (dav_namespace, "resourcetype"              ),
-        (dav_namespace, "getetag"                   ),
-        (dav_namespace, "getcontenttype"            ),
-        (dav_namespace, "getcontentlength"          ),
-        (dav_namespace, "getlastmodified"           ),
-        (dav_namespace, "creationdate"              ),
-        (dav_namespace, "displayname"               ),
-        (dav_namespace, "supportedlock"             ),
-       #(dav_namespace, "supported-report-set"      ), # RFC 3253, section 3.1.5
-       #(dav_namespace, "owner"                     ), # RFC 3744, section 5.1
-       #(dav_namespace, "group"                     ), # RFC 3744, section 5.2
-       #(dav_namespace, "supported-privilege-set"   ), # RFC 3744, section 5.3
-       #(dav_namespace, "current-user-privilege-set"), # RFC 3744, section 5.4
-       #(dav_namespace, "acl"                       ), # RFC 3744, section 5.5
-        (dav_namespace, "acl-restrictions"          ), # RFC 3744, section 5.6
-       #(dav_namespace, "inherited-acl-set"         ), # RFC 3744, section 5.7
-       #(dav_namespace, "principal-collection-set"  ), # RFC 3744, section 5.8
+        (dav_namespace, "resourcetype"            ),
+        (dav_namespace, "getetag"                 ),
+        (dav_namespace, "getcontenttype"          ),
+        (dav_namespace, "getcontentlength"        ),
+        (dav_namespace, "getlastmodified"         ),
+        (dav_namespace, "creationdate"            ),
+        (dav_namespace, "displayname"             ),
+        (dav_namespace, "supportedlock"           ),
+        (dav_namespace, "supported-privilege-set" ),
+        (dav_namespace, "acl"                     ),
+        (dav_namespace, "principal-collection-set"),
 
         (twisted_dav_namespace, "resource-class"),
     )
@@ -133,18 +87,14 @@ class DAVPropertyMixIn (MetaDataMixin):
         accessors in the L{IDAVResource} API instead.  However, a subclass must
         override this method to provide it's own dead property store.
 
-        This implementation returns an instance of L{NonePropertyStore}, which
-        cannot store dead properties.  Subclasses must override this method if
-        they wish to store dead properties.
+        This implementation raises L{NotImplementedError}.
 
         @return: a dict-like object from which one can read and to which one can
             write dead properties.  Keys are qname tuples (ie. C{(namespace, name)})
             as returned by L{davxml.WebDAVElement.qname()} and values are
             L{davxml.WebDAVElement} instances.
         """
-        if not hasattr(self, "_dead_properties"):
-            self._dead_properties = NonePropertyStore(self)
-        return self._dead_properties
+        unimplemented(self)
 
     def hasProperty(self, property, request):
         """
@@ -155,80 +105,74 @@ class DAVPropertyMixIn (MetaDataMixin):
         else:
             qname = property.qname()
 
-        if qname[0] == twisted_private_namespace:
-            return succeed(False)
-
-        return succeed(qname in self.liveProperties or self.deadProperties().contains(qname))
+        return qname in self.liveProperties or self.deadProperties().contains(qname)
 
     def readProperty(self, property, request):
         """
         See L{IDAVResource.readProperty}.
         """
-        def defer():
-            if type(property) is tuple:
-                qname = property
-                sname = "{%s}%s" % property
-            else:
-                qname = property.qname()
-                sname = property.sname()
+        if type(property) is tuple:
+            qname = property
+            sname = "{%s}%s" % property
+        else:
+            qname = property.qname()
+            sname = property.sname()
 
-            namespace, name = qname
+        namespace, name = qname
 
-            if namespace == dav_namespace:
-                if name == "resourcetype":
-                    # Allow live property to be overriden by dead property
-                    if self.deadProperties().contains(qname):
-                        return self.deadProperties().get(qname)
-                    if self.isCollection():
-                        return davxml.ResourceType.collection
-                    return davxml.ResourceType.empty
+        if namespace == dav_namespace:
+            if name == "resourcetype":
+                # Allow live property to be overriden by dead property
+                if self.deadProperties().contains(qname):
+                    return self.deadProperties().get(qname)
+                if self.isCollection():
+                    return davxml.ResourceType.collection
+                return davxml.ResourceType.empty
+    
+            if name == "getetag":
+                return davxml.GETETag(self.etag().generate())
+    
+            if name == "getcontenttype":
+                mimeType = self.contentType()
+                mimeType.params = None # WebDAV getcontenttype property does not include parameters
+                return davxml.GETContentType(generateContentType(mimeType))
+        
+            if name == "getcontentlength":
+                return davxml.GETContentLength(str(self.contentLength()))
 
-                if name == "getetag":
-                    return davxml.GETETag(self.etag().generate())
+            if name == "getlastmodified":
+                return davxml.GETLastModified.fromDate(self.lastModified())
 
-                if name == "getcontenttype":
-                    mimeType = self.contentType()
-                    mimeType.params = None # WebDAV getcontenttype property does not include parameters
-                    return davxml.GETContentType(generateContentType(mimeType))
+            if name == "creationdate":
+                return davxml.CreationDate.fromDate(self.creationDate())
 
-                if name == "getcontentlength":
-                    return davxml.GETContentLength(str(self.contentLength()))
+            if name == "displayname":
+                return davxml.DisplayName(self.displayName())
 
-                if name == "getlastmodified":
-                    return davxml.GETLastModified.fromDate(self.lastModified())
+            if name == "supportedlock":
+                return davxml.SupportedLock(
+                    davxml.LockEntry(davxml.LockScope.exclusive, davxml.LockType.write),
+                    davxml.LockEntry(davxml.LockScope.shared   , davxml.LockType.write),
+                )
 
-                if name == "creationdate":
-                    return davxml.CreationDate.fromDate(self.creationDate())
+            if name == "supported-privilege-set":
+                return self.supportedPrivileges()
 
-                if name == "displayname":
-                    return davxml.DisplayName(self.displayName())
+            if name == "acl":
+                return self.accessControlList()
 
-                if name == "supportedlock":
-                    return davxml.SupportedLock(
-                        davxml.LockEntry(davxml.LockScope.exclusive, davxml.LockType.write),
-                        davxml.LockEntry(davxml.LockScope.shared   , davxml.LockType.write),
-                    )
+            if name == "principal-collection-set":
+                return davxml.PrincipalCollectionSet(*[davxml.HRef(u) for u in self.principalCollections()])
 
-                if name == "acl-restrictions":
-                    return davxml.ACLRestrictions()
+        if namespace == twisted_dav_namespace:
+            if name == "resource-class":
+                class ResourceClass (davxml.WebDAVTextElement):
+                    namespace = twisted_dav_namespace
+                    name = "resource-class"
+                    hidden = False
+                return ResourceClass(self.__class__.__name__)
 
-            if namespace == twisted_dav_namespace:
-                if name == "resource-class":
-                    class ResourceClass (davxml.WebDAVTextElement):
-                        namespace = twisted_dav_namespace
-                        name = "resource-class"
-                        hidden = False
-                    return ResourceClass(self.__class__.__name__)
-
-            if namespace == twisted_private_namespace:
-                raise HTTPError(StatusResponse(
-                    responsecode.FORBIDDEN,
-                    "Properties in the %s namespace are private to the server." % (sname,)
-                ))
-
-            return self.deadProperties().get(qname)
-
-        return maybeDeferred(defer)
+        return self.deadProperties().get(qname)
 
     def writeProperty(self, property, request):
         """
@@ -236,63 +180,38 @@ class DAVPropertyMixIn (MetaDataMixin):
         """
         assert isinstance(property, davxml.WebDAVElement)
 
-        def defer():
-            if property.protected:
-                raise HTTPError(StatusResponse(
-                    responsecode.FORBIDDEN,
-                    "Protected property %s may not be set." % (property.sname(),)
-                ))
+        if property.protected:
+            raise HTTPError(StatusResponse(responsecode.FORBIDDEN, "Protected property %s may not be set." % (property.sname(),)))
 
-            if property.namespace == twisted_private_namespace:
-                raise HTTPError(StatusResponse(
-                    responsecode.FORBIDDEN,
-                    "Properties in the %s namespace are private to the server." % (property.sname(),)
-                ))
-
-            return self.deadProperties().set(property)
-
-        return maybeDeferred(defer)
+        self.deadProperties().set(property)
 
     def removeProperty(self, property, request):
         """
         See L{IDAVResource.removeProperty}.
         """
-        def defer():
-            if type(property) is tuple:
-                qname = property
-                sname = "{%s}%s" % property
-            else:
-                qname = property.qname()
-                sname = property.sname()
+        if type(property) is tuple:
+            qname = property
+        else:
+            qname = property.qname()
 
-            if qname in self.liveProperties:
-                raise HTTPError(StatusResponse(
-                    responsecode.FORBIDDEN,
-                    "Live property %s cannot be deleted." % (sname,)
-                ))
+        if qname in self.liveProperties:
+            raise HTTPError(StatusResponse(responsecode.FORBIDDEN, "Live property %s cannot be deleted." % (property.sname(),)))
 
-            if qname[0] == twisted_private_namespace:
-                raise HTTPError(StatusResponse(
-                    responsecode.FORBIDDEN,
-                    "Properties in the %s namespace are private to the server." % (sname,)
-                ))
-
-            return self.deadProperties().delete(qname)
-
-        return maybeDeferred(defer)
+        self.deadProperties().delete(qname)
 
     def listProperties(self, request):
         """
         See L{IDAVResource.listProperties}.
         """
         # FIXME: A set would be better here, that that's a python 2.4+ feature.
+
         qnames = list(self.liveProperties)
 
         for qname in self.deadProperties().list():
-            if (qname not in qnames) and (qname[0] != twisted_private_namespace):
+            if qname not in qnames:
                 qnames.append(qname)
 
-        return succeed(qnames)
+        return qnames
 
     def listAllprop(self, request):
         """
@@ -303,22 +222,17 @@ class DAVPropertyMixIn (MetaDataMixin):
         @return: a list of qnames of properties which are defined and are
             appropriate for use in response to a C{DAV:allprop} query.   
         """
-        def doList(allnames):
-            qnames = []
+        qnames = []
 
-            for qname in allnames:
-                try:
-                    if not lookupElement(qname).hidden:
-                        qnames.append(qname)
-                except KeyError:
-                    # Unknown element
+        for qname in self.listProperties(request):
+            try:
+                if not lookupElement(qname).hidden:
                     qnames.append(qname)
+            except KeyError:
+                # Unknown element
+                qnames.append(qname)
 
-            return qnames
-
-        d = self.listProperties(request)
-        d.addCallback(doList)
-        return d
+        return qnames
 
     def hasDeadProperty(self, property):
         """
@@ -356,19 +270,6 @@ class DAVPropertyMixIn (MetaDataMixin):
         property with L{readProperty}.
         """
         self.deadProperties().set(property)
-
-    def removeDeadProperty(self, property):
-        """
-        Same as L{removeProperty}, but bypasses the live property store and acts
-        directly on the dead property store.
-        """
-        if self.hasDeadProperty(property):
-            if type(property) is tuple:
-                qname = property
-            else:
-                qname = property.qname()
-
-            self.deadProperties().delete(qname)
 
     #
     # Overrides some methods in MetaDataMixin in order to allow DAV properties

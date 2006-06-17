@@ -166,7 +166,7 @@ class PrincipalURL (WebDAVElement):
 
 class GroupMemberSet (WebDAVElement):
     """
-    Property which identifies the principals that are direct members of a group
+    Property which indentifies the principals that are direct members of a group
     principal.
     (RFC 3744, section 4.3)
     """
@@ -177,7 +177,7 @@ class GroupMemberSet (WebDAVElement):
 
 class GroupMembership (WebDAVElement):
     """
-    Property which identifies the group principals in which a principal is
+    Property which indentifies the group principals in which a principal is
     directly a member. (RFC 3744, section 4.4)
     """
     name = "group-membership"
@@ -194,7 +194,7 @@ class GroupMembership (WebDAVElement):
 
 class Group (WebDAVElement):
     """
-    Property which identifies a particular principal as being the group
+    Property which indentifies a particular principal as being the group
     principal of a resource. (RFC 3744, section 5.2)
     """
     name = "group"
@@ -205,7 +205,7 @@ class Group (WebDAVElement):
 
 class SupportedPrivilegeSet (WebDAVElement):
     """
-    Property which identifies the privileges defined for a resource. (RFC 3744,
+    Property which indentifies the privileges defined for a resource. (RFC 3744,
     section 5.3)
     """
     name = "supported-privilege-set"

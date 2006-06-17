@@ -25,10 +25,10 @@
 import os
 import urllib
 import shutil
-import md5
 
 from twisted.internet.defer import Deferred
 from twisted.web2 import responsecode
+from twisted.web2.iweb import IResponse
 
 import twisted.web2.dav.test.util
 from twisted.web2.test.test_server import SimpleRequest
@@ -42,14 +42,24 @@ class COPY(twisted.web2.dav.test.util.TestCase):
     """
     # FIXME:
     # Check that properties are being copied
-    def test_COPY_create(self):
+    # Check overwrite header
+    # Try in nonexistant parent collection.
+    def test_COPY(self):
         """
-        COPY to new resource.
+        COPY request
         """
-        def test(response, path, isfile, sum, uri, depth, dst_path):
+        dst = os.path.join(self.docroot, "dst")
+        os.mkdir(dst)
+
+        def check_result(response, path, uri, depth, dst_path):
+            response = IResponse(response)
+
             if response.code != responsecode.CREATED:
-                self.fail("Incorrect response code for COPY %s (depth=%r): %s != %s"
-                          % (uri, depth, response.code, responsecode.CREATED))
+                self.fail("Incorrect response code for COPY %s (depth=%r): %s" % (uri, depth, response.code))
+
+            # FIXME: I can't figure out how these files are getting here;
+            # the next line shouldn't be necessary, but somehow is.
+            if path.startswith(dst): return
 
             if os.path.isfile(path):
                 if not os.path.isfile(dst_path):
@@ -78,110 +88,70 @@ class COPY(twisted.web2.dav.test.util.TestCase):
                 self.fail("Source %s is neither a file nor a directory"
                           % (path,))
 
-        return serialize(self.send, work(self, test))
+        #
+        # We need to serialize these request & test iterations because they can
+        # interfere with each other.
+        #
+        def work():
+            for path, uri in self.list():
+                # Avoid infinite loop
+                if path.startswith(dst): continue
+    
+                basename = os.path.basename(path)
+                dst_path = os.path.join(dst, basename)
+                dst_uri  = urllib.quote("/dst/" + basename)
+    
+                for depth in ("0", "infinity", None):
+                    def do_test(response, path=path, uri=uri, depth=depth, dst_path=dst_path):
+                        check_result(response, path, uri, depth, dst_path)
 
-    def test_COPY_exists(self):
+                    request = SimpleRequest(self.site, "COPY", uri)
+                    request.headers.setHeader("destination", dst_uri)
+                    if depth is not None:
+                        request.headers.setHeader("depth", depth)
+
+                    yield (request, do_test, path)
+
+        return serialize(self.send, work())
+
+    def test_COPY_resource(self):
         """
-        COPY to existing resource.
+        Copy a non-collection resource
         """
-        def test(response, path, isfile, sum, uri, depth, dst_path):
-            if response.code != responsecode.PRECONDITION_FAILED:
-                self.fail("Incorrect response code for COPY without overwrite %s: %s != %s"
-                          % (uri, response.code, responsecode.PRECONDITION_FAILED))
-            else:
-                # FIXME: Check XML error code (2518bis)
-                pass
+        base_dir, base_uri = self.mkdtemp("copy_resource")
+        src_path = os.path.join(base_dir, "src")
+        dst_path = os.path.join(base_dir, "dst")
+        src_uri = joinURL(base_uri, "src")
+        dst_uri = joinURL(base_uri, "dst")
 
-        return serialize(self.send, work(self, test, overwrite=False))
+        shutil.copy(__file__, src_path)
 
-    def test_COPY_overwrite(self):
-        """
-        COPY to existing resource with overwrite header.
-        """
-        def test(response, path, isfile, sum, uri, depth, dst_path):
-            if response.code != responsecode.NO_CONTENT:
-                self.fail("Incorrect response code for COPY with overwrite %s: %s != %s"
-                          % (uri, response.code, responsecode.NO_CONTENT))
-            else:
-                # FIXME: Check XML error code (2518bis)
-                pass
+        request = SimpleRequest(self.site, "COPY", src_uri)
+        request.headers.setHeader("destination", dst_uri)
 
-        return serialize(self.send, work(self, test, overwrite=True))
+        def work():
+            def do_test(response, code):
+                if not cmp(src_path, dst_path):
+                    self.fail("COPY produced different file")
 
-    def test_COPY_no_parent(self):
-        """
-        COPY to resource with no parent.
-        """
-        def test(response, path, isfile, sum, uri, depth, dst_path):
-            if response.code != responsecode.CONFLICT:
-                self.fail("Incorrect response code for COPY with no parent %s: %s != %s"
-                          % (uri, response.code, responsecode.CONFLICT))
-            else:
-                # FIXME: Check XML error code (2518bis)
-                pass
+                response = IResponse(response)
 
-        return serialize(self.send, work(self, test, dst=os.path.join(self.docroot, "elvislives!")))
+                if response.code != code:
+                    self.fail("COPY response %s != %s" % (response.code, code))
 
-def work(self, test, overwrite=None, dst=None, depths=("0", "infinity", None)):
-    if dst is None:
-        dst = os.path.join(self.docroot, "dst")
-        os.mkdir(dst)
+            def do_test_create(response):
+                return do_test(response, responsecode.CREATED)
 
-    for basename in os.listdir(self.docroot):
-        if basename == "dst": continue
+            def do_test_replace(response):
+                return do_test(response, responsecode.NO_CONTENT)
 
-        path = os.path.join(self.docroot, basename)
-        uri = "/" + basename
-        isfile = os.path.isfile(path)
-        sum = sumFile(path)
-        basename = os.path.basename(path)
-        dst_path = os.path.join(dst, basename)
-        dst_uri = urllib.quote("/dst/" + basename)
+            return iter((
+                (self.send, request, do_test_create, src_path),
+                (self.send, request, do_test_replace, src_path),
+            ))
 
-        if not isfile:
-            uri     += "/"
-            dst_uri += "/"
+        def dispatch(*args):
+            f = args[0]
+            return f(*args[1:])
 
-        if overwrite is not None:
-            # Create a file at dst_path to create a conflict
-            file(dst_path, "w").close()
-
-        for depth in depths:
-            def do_test(response, path=path, isfile=isfile, sum=sum, uri=uri, depth=depth, dst_path=dst_path):
-                test(response, path, isfile, sum, uri, depth, dst_path)
-
-            request = SimpleRequest(self.site, self.__class__.__name__, uri)
-            request.headers.setHeader("destination", dst_uri)
-            if depth is not None:
-                request.headers.setHeader("depth", depth)
-            if overwrite is not None:
-                request.headers.setHeader("overwrite", overwrite)
-
-            yield (request, do_test)
-
-def sumFile(path):
-    m = md5.new()
-
-    if os.path.isfile(path):
-        f = file(path)
-        try:
-            m.update(f.read())
-        finally:
-            f.close()
-
-    elif os.path.isdir(path):
-        for dir, subdirs, files in os.walk(path):
-            for filename in files:
-                m.update(filename)
-                f = file(os.path.join(dir, filename))
-                try:
-                    m.update(f.read())
-                finally:
-                    f.close()
-            for dirname in subdirs:
-                m.update(dirname + "/")
-
-    else:
-        raise AssertionError()
-
-    return m.digest()
+        return serialize(dispatch, work())
