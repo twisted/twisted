@@ -213,7 +213,17 @@ class Deferred:
         """Chain another Deferred to this Deferred.
 
         This method adds callbacks to this Deferred to call d's callback or
-        errback, as appropriate."""
+        errback, as appropriate. It is merely a shorthand way of performing
+        the following::
+
+            self.addCallbacks(d.callback, d.errback)
+
+        When you chain a deferred d2 to another deferred d1 with
+        d1.chainDeferred(d2), you are making d2 participate in the callback
+        chain of d1. Thus any event that fires d1 will also fire d2.
+        However, the converse is B{not} true; if d2 is fired d1 will not be
+        affected.
+        """
         return self.addCallbacks(d.callback, d.errback)
 
     def callback(self, result):
