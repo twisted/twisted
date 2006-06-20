@@ -27,17 +27,19 @@
 WebDAV PUT method
 """
 
-__all__ = ["http_PUT_preconditions", "http_PUT"]
+__all__ = ["preconditions_PUT", "http_PUT"]
 
 import os
 
 from twisted.python import log
+from twisted.internet.defer import deferredGenerator, waitForDeferred
 from twisted.web2 import responsecode
 from twisted.web2.http import HTTPError, StatusResponse
-from twisted.web2.stream import readIntoFile
+from twisted.web2.dav import davxml
 from twisted.web2.dav.fileop import put
+from twisted.web2.dav.util import parentForURL
 
-def http_PUT_preconditions(self, request):
+def preconditions_PUT(self, request):
     if self.fp.exists():
         if not self.fp.isfile():
             log.err("Unable to PUT to non-file: %s" % (self.fp.path,))
@@ -82,11 +84,6 @@ def http_PUT(self, request):
     """
     Respond to a PUT request. (RFC 2518, section 8.7)
     """
-    try:
-        self.http_PUT_preconditions(request)
-    except HTTPError, e:
-        return e.response
-
     log.msg("Writing request stream to %s" % (self.fp.path,))
 
     #

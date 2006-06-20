@@ -41,7 +41,8 @@ if getattr(xattr, 'xattr', None) is None:
 
 
 from twisted.python import log
-
+from twisted.web2 import responsecode
+from twisted.web2.http import HTTPError, StatusResponse
 from twisted.web2.dav import davxml
 
 class xattrPropertyStore (object):
@@ -91,14 +92,21 @@ class xattrPropertyStore (object):
         self.attrs = xattr.xattr(self.resource.fp.path)
 
     def get(self, qname):
-        value = self.attrs[self._encode(qname)]
+        try:
+            value = self.attrs[self._encode(qname)]
+        except KeyError:
+            raise HTTPError(StatusResponse(
+                responsecode.NOT_FOUND,
+                "No such property: {%s}%s" % qname
+            ))
+
         doc = davxml.WebDAVDocument.fromString(value)
 
         return doc.root_element
 
     def set(self, property):
-        log.msg("Writing property %s on file %s"
-                % (property.sname(), self.resource.fp.path))
+        #log.msg("Writing property %s on file %s"
+        #        % (property.sname(), self.resource.fp.path))
 
         self.attrs[self._encode(property.qname())] = property.toxml()
 
@@ -106,8 +114,8 @@ class xattrPropertyStore (object):
         self.resource.fp.restat()
 
     def delete(self, qname):
-        log.msg("Deleting property {%s}%s on file %s"
-                % (qname[0], qname[1], self.resource.fp.path))
+        #log.msg("Deleting property {%s}%s on file %s"
+        #        % (qname[0], qname[1], self.resource.fp.path))
 
         del(self.attrs[self._encode(qname)])
 

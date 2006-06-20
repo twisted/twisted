@@ -47,7 +47,7 @@ class IDAVResource(IResource):
         Because resources do not know their request URIs, chidren are returned
         as tuples C{(resource, uri)}, where C{resource} is the child resource
         and C{uri} is a URL path relative to this resource.
-        @param depth: the search depth (one of "0", "1", or "infinity")
+        @param depth: the search depth (one of C{"0"}, C{"1"}, or C{"infinity"})
         @return: an iterable of tuples C{(resource, uri)}.
         """
 
@@ -56,17 +56,19 @@ class IDAVResource(IResource):
         Checks whether the given property is defined on this resource.
         @param property: an empty L{davxml.WebDAVElement} instance or a qname
             tuple.
-        @return: C{True} if the given property is set on this resource, C{False}
-            otherwise.
+        @param request: the request being processed.
+        @return: a deferred value of C{True} if the given property is set on
+            this resource, or C{False} otherwise.
         """
 
     def readProperty(property, request):
         """
         Reads the given property on this resource.
-        @param property: an empty L{davxml.WebDAVElement} instance or a qname
-            tuple.
-        @return: a matching L{davxml.WebDAVElement} instance containing the
-            value of the given property.
+        @param property: an empty L{davxml.WebDAVElement} class or instance, or
+            a qname tuple.
+        @param request: the request being processed.
+        @return: a deferred L{davxml.WebDAVElement} instance
+            containing the value of the given property.
         @raise HTTPError: (containing a response with a status code of
             L{responsecode.CONFLICT}) if C{property} is not set on this
             resource.
@@ -76,6 +78,8 @@ class IDAVResource(IResource):
         """
         Writes the given property on this resource.
         @param property: a L{davxml.WebDAVElement} instance.
+        @param request: the request being processed.
+        @return: an empty deferred which fires when the operation is completed.
         @raise HTTPError: (containing a response with a status code of
             L{responsecode.CONFLICT}) if C{property} is a read-only property.
         """
@@ -84,6 +88,8 @@ class IDAVResource(IResource):
         """
         Removes the given property from this resource.
         @param property: a L{davxml.WebDAVElement} instance or a qname tuple.
+        @param request: the request being processed.
+        @return: an empty deferred which fires when the operation is completed.
         @raise HTTPError: (containing a response with a status code of
             L{responsecode.CONFLICT}) if C{property} is a read-only property or
             if the property does not exist.
@@ -91,8 +97,9 @@ class IDAVResource(IResource):
 
     def listProperties(request):
         """
-        @return: an iterable of qnames for all properties defined for this
-            resource.
+        @param request: the request being processed.
+        @return: a deferred iterable of qnames for all properties defined for
+            this resource.
         """
 
     def principalCollections():

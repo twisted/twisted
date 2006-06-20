@@ -23,15 +23,13 @@
 ##
 
 import os
-import urllib
-import md5
-import shutil
 
 from twisted.web2 import responsecode
 
 import twisted.web2.dav.test.util
-from twisted.web2.test.test_server import SimpleRequest
+import twisted.web2.dav.test.test_copy
 from twisted.web2.dav.test.util import serialize
+from twisted.web2.dav.test.test_copy import sumFile
 
 class MOVE(twisted.web2.dav.test.util.TestCase):
     """
@@ -40,9 +38,13 @@ class MOVE(twisted.web2.dav.test.util.TestCase):
     # FIXME:
     # Check that properties are being moved
     def test_MOVE_create(self):
-        def test(response, path, isfile, sum, uri, dst_path):
+        """
+        MOVE to new resource.
+        """
+        def test(response, path, isfile, sum, uri, depth, dst_path):
             if response.code != responsecode.CREATED:
-                self.fail("Incorrect response code for MOVE %s: %s" % (uri, response.code))
+                self.fail("Incorrect response code for MOVE %s: %s != %s"
+                          % (uri, response.code, responsecode.CREATED))
 
             if isfile:
                 if not os.path.isfile(dst_path):
@@ -55,93 +57,49 @@ class MOVE(twisted.web2.dav.test.util.TestCase):
                 if sum != sumFile(dst_path):
                     self.fail("isdir %s produced different directory" % (uri,))
 
-        return serialize(self.send, self.work(test))
+        return serialize(self.send, work(self, test))
 
     def test_MOVE_exists(self):
-        def test(response, path, isfile, sum, uri, dst_path):
+        """
+        MOVE to existing resource.
+        """
+        def test(response, path, isfile, sum, uri, depth, dst_path):
             if response.code != responsecode.PRECONDITION_FAILED:
-                self.fail("Incorrect response code for MOVE without overwrite %s: %s" % (uri, response.code))
+                self.fail("Incorrect response code for MOVE without overwrite %s: %s != %s"
+                          % (uri, response.code, responsecode.PRECONDITION_FAILED))
             else:
                 # FIXME: Check XML error code (2518bis)
                 pass
 
-        return serialize(self.send, self.work(test, overwrite=False))
+        return serialize(self.send, work(self, test, overwrite=False))
 
     def test_MOVE_overwrite(self):
-        def test(response, path, isfile, sum, uri, dst_path):
+        """
+        MOVE to existing resource with overwrite header.
+        """
+        def test(response, path, isfile, sum, uri, depth, dst_path):
             if response.code != responsecode.NO_CONTENT:
-                self.fail("Incorrect response code for MOVE with overwrite %s: %s" % (uri, response.code))
+                self.fail("Incorrect response code for MOVE with overwrite %s: %s != %s"
+                          % (uri, response.code, responsecode.NO_CONTENT))
             else:
                 # FIXME: Check XML error code (2518bis)
                 pass
 
-        return serialize(self.send, self.work(test, overwrite=True))
+        return serialize(self.send, work(self, test, overwrite=True))
 
     def test_MOVE_no_parent(self):
-        def test(response, path, isfile, sum, uri, dst_path):
+        """
+        MOVE to resource with no parent.
+        """
+        def test(response, path, isfile, sum, uri, depth, dst_path):
             if response.code != responsecode.CONFLICT:
-                self.fail("Incorrect response code for MOVE with no parent %s: %s" % (uri, response.code))
+                self.fail("Incorrect response code for MOVE with no parent %s: %s != %s"
+                          % (uri, response.code, responsecode.CONFLICT))
             else:
                 # FIXME: Check XML error code (2518bis)
                 pass
 
-        return serialize(self.send, self.work(test, dst=os.path.join(self.docroot, "elvislives!")))
+        return serialize(self.send, work(self, test, dst=os.path.join(self.docroot, "elvislives!")))
 
-    def work(self, test, overwrite=None, dst=None):
-        if dst is None:
-            dst = os.path.join(self.docroot, "dst")
-            os.mkdir(dst)
-
-        for basename in os.listdir(self.docroot):
-            if basename == "dst": continue
-
-            path     = os.path.join(self.docroot, basename)
-            isfile   = os.path.isfile(path)
-            sum      = sumFile(path)
-            uri      = "/" + basename
-            dst_path = os.path.join(dst, basename)
-            dst_uri  = urllib.quote("/" + os.path.basename(dst) + "/" + basename)
-
-            if not isfile: uri     += "/"
-            if not isfile: dst_uri += "/"
-
-            if overwrite is not None:
-                # Create a file at dst_path to create a conflict
-                file(dst_path, "w").close()
-
-            def do_test(response, path=path, isfile=isfile, sum=sum, uri=uri, dst_path=dst_path):
-                test(response, path, isfile, sum, uri, dst_path)
-
-            request = SimpleRequest(self.site, "MOVE", uri)
-            request.headers.setHeader("destination", dst_uri)
-            if overwrite is not None:
-                request.headers.setHeader("overwrite", overwrite)
-
-            yield (request, do_test, path)
-
-def sumFile(path):
-    m = md5.new()
-
-    if os.path.isfile(path):
-        f = file(path)
-        try:
-            m.update(f.read())
-        finally:
-            f.close()
-
-    elif os.path.isdir(path):
-        for dir, subdirs, files in os.walk(path):
-            for filename in files:
-                m.update(filename)
-                f = file(os.path.join(dir, filename))
-                try:
-                    m.update(f.read())
-                finally:
-                    f.close()
-            for dirname in subdirs:
-                m.update(dirname + "/")
-
-    else:
-        raise AssertionError()
-
-    return m.digest()
+def work(self, test, overwrite=None, dst=None):
+    return twisted.web2.dav.test.test_copy.work(self, test, overwrite, dst, depths=(None,))
