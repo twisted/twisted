@@ -135,9 +135,15 @@ class _EverythingEphemeral(styles.Ephemeral):
 
     initRun = 0
 
+    def __init__(self, mainMod):
+        """
+        @param mainMod: The '__main__' module that this class will proxy.
+        """
+        self.mainMod = mainMod
+
     def __getattr__(self, key):
         try:
-            return getattr(mainMod, key)
+            return getattr(self.mainMod, key)
         except AttributeError:
             if self.initRun:
                 raise
@@ -157,22 +163,25 @@ def load(filename, style, passphrase=None):
     """
     mode = 'r'
     if style=='source':
-        from twisted.persisted.aot import unjellyFromSource as load
+        from twisted.persisted.aot import unjellyFromSource as _load
     elif style=='xml':
-        from twisted.persisted.marmalade import unjellyFromXML as load
+        from twisted.persisted.marmalade import unjellyFromXML as _load
     else:
-        load, mode = pickle.load, 'rb'
+        _load, mode = pickle.load, 'rb'
     if passphrase:
         fp = StringIO.StringIO(_decrypt(passphrase,
                                         open(filename, 'rb').read()))
     else:
         fp = open(filename, mode)
-    mainMod = sys.modules['__main__']
-    ee = _EverythingEphemeral()
+    ee = _EverythingEphemeral(sys.modules['__main__'])
     sys.modules['__main__'] = ee
     ee.initRun = 1
-    value = load(fp)
-    sys.modules['__main__'] = mainMod
+    try:
+        value = _load(fp)
+    finally:
+        # restore __main__ if an exception is raised.
+        sys.modules['__main__'] = ee.mainMod
+
     styles.doUpgrade()
     ee.initRun = 0
     persistable = IPersistable(value, None)

@@ -7,6 +7,7 @@
 from twisted.trial import unittest
 from twisted.persisted import sob
 from twisted.python import components
+import sys, os
 
 try:
     from twisted.web import microdom
@@ -27,6 +28,9 @@ objects = [
 [1, "hello"],
 {1:"hello"},
 ]
+
+class FakeModule(object):
+    pass
 
 class PersistTestCase(unittest.TestCase):
     def testStyles(self):
@@ -113,3 +117,72 @@ class PersistTestCase(unittest.TestCase):
         if gotMicrodom:
             self.assertEqual('xml', sob.guessType("file.tax"))
             self.assertEqual('xml', sob.guessType("file.etax"))
+
+    def testEverythingEphemeralGetattr(self):
+        """
+        Verify that _EverythingEphermal.__getattr__ works.
+        """
+        self.fakeMain.testMainModGetattr = 1
+
+        dirname = self.mktemp()
+        os.mkdir(dirname)
+
+        filename = os.path.join(dirname, 'persisttest.ee_getattr')
+
+        f = file(filename, 'w')
+        f.write('import __main__\n')
+        f.write('if __main__.testMainModGetattr != 1: raise AssertionError\n')
+        f.write('app = None\n')
+        f.close()
+
+        sob.load(filename, 'source')
+
+    def testEverythingEphemeralSetattr(self):
+        """
+        Verify that _EverythingEphemeral.__setattr__ won't affect __main__.
+        """
+        self.fakeMain.testMainModSetattr = 1
+
+        dirname = self.mktemp()
+        os.mkdir(dirname)
+
+        filename = os.path.join(dirname, 'persisttest.ee_setattr')
+        f = file(filename, 'w')
+        f.write('import __main__\n')
+        f.write('__main__.testMainModSetattr = 2\n')
+        f.write('app = None\n')
+        f.close()
+
+        sob.load(filename, 'source')
+
+        self.assertEqual(self.fakeMain.testMainModSetattr, 1)
+
+    def testEverythingEphemeralException(self):
+        """
+        Test that an exception during load() won't cause _EE to mask __main__
+        """
+        dirname = self.mktemp()
+        os.mkdir(dirname)
+        filename = os.path.join(dirname, 'persisttest.ee_exception')
+
+        f = file(filename, 'w')
+        f.write('raise ValueError\n')
+        f.close()
+
+        self.assertRaises(ValueError, sob.load, filename, 'source')
+        self.assertEqual(type(sys.modules['__main__']), FakeModule)
+
+    def setUp(self):
+        """
+        Replace the __main__ module with a fake one, so that it can be mutated
+        in tests
+        """
+        self.realMain = sys.modules['__main__']
+        self.fakeMain = sys.modules['__main__'] = FakeModule()
+
+    def tearDown(self):
+        """
+        Restore __main__ to its original value
+        """
+        sys.modules['__main__'] = self.realMain
+
