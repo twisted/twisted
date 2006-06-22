@@ -37,19 +37,35 @@
     a two step process:</p>
 
     <ol>
-      <li>Define an interface which plugins will be required to
-      implement.  This is done using the <code
-      class="API">zope.interface</code> package in the same way one
-      would define an interface for any other purpose.</li>
+      <li>
+        <p>
+        Define an interface which plugins will be required to implement. 
+        This is done using the <code class="API">zope.interface</code>
+        package in the same way one would define an interface for any other
+        purpose.
+        </p>
 
-      <li>At one or more places in your program, invoke <code
-      class="API">twisted.plugin.getPlugins</code> and iterate over
-      its result.</li>
+        <p>
+        A convention for defining interfaces is do so in a file named like
+        <em>ProjectName/projectname/iprojectname.py</em>.  The rest of this
+        document will follow that convention: consider the following
+        interface definition be in <code>Matsim/matsim/imatsim.py</code>, an
+        interface definition module for a hypothetical material simulation
+        package.
+        </p>
+      </li>
 
+      <li>
+      At one or more places in your program, invoke <code
+      class="API">twisted.plugin.getPlugins</code> and iterate over its
+      result.
+      </li>
     </ol>
 
-    <p>As an example of the first step, consider the following
-    interface definition for a physical modelling system.</p>
+    <p>
+    As an example of the first step, consider the following interface
+    definition for a physical modelling system.
+    </p>
 
     <pre class="python">
 from zope.interface import Interface, Attribute
@@ -125,7 +141,7 @@ class SimpleMaterial(object):
         self.dielectricConstant = dielectricConstant
 
     def yieldStress(self, temperature):
-        return self._yieldStressFactory * temperature
+        return self._yieldStressFactor * temperature
 
 steelPlate = SimpleMaterial(2.06842719e11, 2.7 + 0.2j)
 brassPlate = SimpleMaterial(1.03421359e11, 1.4 + 0.5j)
@@ -213,6 +229,14 @@ list(getPlugin(IPlugin))
 
     <p>As mentioned, it is normal for exceptions to be raised
     <strong>once</strong> here if plugins have been removed.</p>
+
+    <h2>Further Reading</h2>
+
+    <ul>
+
+      <li><a href="components.xhtml">Components: Interfaces and Adapters</a></li>
+
+    </ul>
 
   </body>
 </html>
