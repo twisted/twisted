@@ -37,7 +37,7 @@ import itertools
 
 from zope.interface import implements
 from twisted.python import log
-from twisted.internet.defer import maybeDeferred, succeed
+from twisted.internet.defer import maybeDeferred, succeed, deferredGenerator, waitForDeferred
 from twisted.web2 import responsecode
 from twisted.web2.dav import davxml
 from twisted.web2.dav.davxml import dav_namespace, lookupElement

@@ -44,9 +44,9 @@ from urlparse import urlsplit
 from twisted.python import log
 from twisted.python.filepath import FilePath
 from twisted.python.failure import Failure
-from twisted.internet.defer import DeferredList, succeed, deferredGenerator, waitForDeferred
+from twisted.internet.defer import DeferredList
 from twisted.web2 import responsecode
-from twisted.web2.http import StatusResponse, HTTPError
+from twisted.web2.http import StatusResponse
 from twisted.web2.stream import FileStream, readIntoFile
 from twisted.web2.dav.http import ResponseQueue, statusForFailure
 
@@ -57,13 +57,10 @@ def delete(uri, filepath, depth="infinity"):
     @param filepath: the L{FilePath} to delete.
     @param depth: the recursion X{Depth} for the X{DELETE} operation, which must
         be "infinity".
-    @raise HTTPError: (containing a response with a status code of
-        L{responsecode.BAD_REQUEST}) if C{depth} is not "infinity".
-    @raise HTTPError: (containing an approprite response) if the
-        delete operation fails.  If C{filepath} is a directory, the response
-        will be a L{MultiStatusResponse}.
-    @return: a deferred response with a status code of L{responsecode.NO_CONTENT}
-        if the X{DELETE} operation succeeds.
+    @return: a response or response code.
+        If C{depth} is not "infinity", L{responsecode.BAD_REQUEST} is returned.
+        If the operation succeeds, the return value will be
+        L{responsecode.NO_CONTENT}.
     """
     #
     # Remove the file(s)
@@ -87,7 +84,7 @@ def delete(uri, filepath, depth="infinity"):
         if depth != "infinity":
             msg = ("Client sent illegal depth header value for DELETE: %s" % (depth,))
             log.err(msg)
-            raise HTTPError(StatusResponse(responsecode.BAD_REQUEST, msg))
+            return StatusResponse(responsecode.BAD_REQUEST, msg)
 
         #
         # Recursive delete
@@ -103,8 +100,7 @@ def delete(uri, filepath, depth="infinity"):
         #
 
         uri_path = urllib.unquote(urlsplit(uri)[2])
-        if uri_path[-1] == "/":
-            uri_path = uri_path[:-1]
+        if uri_path[-1] == "/": uri_path = uri_path[:-1]
 
         log.msg("Deleting directory %s" % (filepath.path,))
 
@@ -118,31 +114,21 @@ def delete(uri, filepath, depth="infinity"):
         for dir, subdirs, files in os.walk(filepath.path, topdown=False):
             for filename in files:
                 path = os.path.join(dir, filename)
-                try:
-                    os.remove(path)
-                except:
-                    errors.add(path, Failure())
+                try: os.remove(path)
+                except: errors.add(path, Failure())
 
             for subdir in subdirs:
                 path = os.path.join(dir, subdir)
                 if os.path.islink(path):
-                    try:
-                        os.remove(path)
-                    except:
-                        errors.add(path, Failure())
+                    try: os.remove(path)
+                    except: errors.add(path, Failure())
                 else:
-                    try:
-                        os.rmdir(path)
-                    except:
-                        errors.add(path, Failure())
+                    try: os.rmdir(path)
+                    except: errors.add(path, Failure())
 
-        try:
-            os.rmdir(filepath.path)
+        try: os.rmdir(filepath.path)
         except:
-            raise HTTPError(statusForFailure(
-                Failure(),
-                "deleting directory: %s" % (filepath.path,)
-            ))
+            return statusForFailure(Failure(), "deleting directory: %s" % (filepath.path,))
 
         response = errors.response()
 
@@ -154,17 +140,14 @@ def delete(uri, filepath, depth="infinity"):
         try:
             os.remove(filepath.path)
         except:
-            raise HTTPError(statusForFailure(
-                Failure(),
-                "deleting file: %s" % (filepath.path,)
-            ))
+            return statusForFailure(Failure(), "deleting file: %s" % (filepath.path,))
 
         response = responsecode.NO_CONTENT
 
     # Restat filepath since we deleted the backing file
     filepath.restat(False)
 
-    return succeed(response)
+    return response
 
 def copy(source_filepath, destination_filepath, destination_uri, depth):
     """
@@ -177,14 +160,13 @@ def copy(source_filepath, destination_filepath, destination_uri, depth):
     @param destination_uri: the URI of the destination resource.
     @param depth: the recursion X{Depth} for the X{COPY} operation, which must
         be one of "0", "1", or "infinity".
-    @raise HTTPError: (containing a response with a status code of
-        L{responsecode.BAD_REQUEST}) if C{depth} is not "0", "1" or "infinity".
-    @raise HTTPError: (containing an approprite response) if the operation
-        fails.  If C{source_filepath} is a directory, the response will be a
-        L{MultiStatusResponse}.
-    @return: a deferred response with a status code of L{responsecode.CREATED}
-        if the destination already exists, or L{responsecode.NO_CONTENT} if the
-        destination was created by the X{COPY} operation.
+    @return: a response or response code.
+        If C{depth} is not "0", "1" or "infinity", L{responsecode.BAD_REQUEST}
+        is returned.
+        If the operation succeeds, the return value will be
+        L{responsecode.CREATED} if the destination already exists or
+        L{responsecode.NO_CONTENT} if the destination was created by the
+        X{COPY}.
     """
     if source_filepath.isfile():
         #
@@ -195,26 +177,19 @@ def copy(source_filepath, destination_filepath, destination_uri, depth):
         try:
             source_file = source_filepath.open()
         except:
-            raise HTTPError(statusForFailure(
-                Failure(),
-                "opening file for reading: %s" % (source_filepath.path,)
-            ))
+            return statusForFailure(Failure(), "opening file for reading: %s" % (source_filepath.path,))
     
-        response = waitForDeferred(put(FileStream(source_file), destination_filepath, destination_uri))
-        yield response
-        response = response.getResult()
-        checkResponse(response, "put", responsecode.NO_CONTENT, responsecode.CREATED)
-        yield response
-        return
+        return put(FileStream(source_file), destination_filepath, destination_uri)
 
     elif source_filepath.isdir():
         if destination_filepath.exists():
             #
             # Delete the destination
             #
-            response = waitForDeferred(delete(destination_uri, destination_filepath))
-            yield response
-            checkResponse(response.getResult(), "delete", responsecode.NO_CONTENT)
+            response = delete(destination_uri, destination_filepath)
+            if response != responsecode.NO_CONTENT: 
+                return response
+    
             success_code = responsecode.NO_CONTENT
         else:
             success_code = responsecode.CREATED
@@ -240,19 +215,15 @@ def copy(source_filepath, destination_filepath, destination_uri, depth):
                 try:
                     os.mkdir(destination_basename)
                 except:
-                    raise HTTPError(statusForFailure(
-                        Failure(),
-                        "creating directory %s" % (destination_basename,)
-                    ))
+                    return statusForFailure(Failure(), "creating directory %s" % (destination_basename,))
 
                 if depth == "0": 
-                    yield success_code
-                    return
+                    return success_code
         else:
-            raise HTTPError(StatusResponse(
+            return StatusResponse(
                 responsecode.CONFLICT,
                 "Parent collection for destination %s does not exist" % (destination_uri,)
-            ))
+            )
 
         #
         # Recursive copy
@@ -260,7 +231,7 @@ def copy(source_filepath, destination_filepath, destination_uri, depth):
         # FIXME: When we report errors, do we report them on the source URI
         # or on the destination URI?  We're using the source URI here.
         #
-        # FIXME: defer the walk?
+        # FIXME: defer the walk
 
         source_basename_len = len(source_basename)
 
@@ -272,15 +243,16 @@ def copy(source_filepath, destination_filepath, destination_uri, depth):
             destination_path = os.path.join(destination_basename, source_path[source_basename_len+1:])
             return source_path, destination_path
 
+        ds = []
+
         for dir, subdirs, files in os.walk(source_filepath.path, topdown=True):
             for filename in files:
                 source_path, destination_path = paths(dir, filename)
                 if not os.path.isdir(os.path.dirname(destination_path)):
                     errors.add(source_path, responsecode.NOT_FOUND)
                 else:
-                    response = waitForDeferred(copy(FilePath(source_path), FilePath(destination_path), destination_uri, depth))
-                    yield response
-                    checkResponse(response.getResult(), "copy", responsecode.NO_CONTENT)
+                    d = copy(FilePath(source_path), FilePath(destination_path), destination_uri, depth)
+                    ds.append(d)
 
             for subdir in subdirs:
                 source_path, destination_path = paths(dir, subdir)
@@ -298,23 +270,21 @@ def copy(source_filepath, destination_filepath, destination_uri, depth):
                         except:
                             errors.add(source_path, Failure())
                     else:
-                        try:
-                            os.mkdir(destination_path)
-                        except:
-                            errors.add(source_path, Failure())
+                        try: os.mkdir(destination_path)
+                        except: errors.add(source_path, Failure())
 
-        yield errors.response()
-        return
+        def respond(_): return errors.response()
+        dl = DeferredList(ds)
+        dl.addCallback(respond)
+
+        return dl
+
     else:
         log.err("Unable to COPY to non-file: %s" % (source_filepath.path,))
-        raise HTTPError(StatusResponse(
+        return StatusResponse(
             responsecode.FORBIDDEN,
             "The requested resource exists but is not backed by a regular file."
-        ))
-
-    raise AssertionError("We shouldn't be here.")
-
-copy = deferredGenerator(copy)
+        )
 
 def move(source_filepath, source_uri, destination_filepath, destination_uri, depth):
     """
@@ -330,14 +300,12 @@ def move(source_filepath, source_uri, destination_filepath, destination_uri, dep
     @param destination_uri: the URI of the destination resource.
     @param depth: the recursion X{Depth} for the X{MOVE} operation, which must
         be "infinity".
-    @raise HTTPError: (containing a response with a status code of
-        L{responsecode.BAD_REQUEST}) if C{depth} is not "infinity".
-    @raise HTTPError: (containing an approprite response) if the operation
-        fails.  If C{source_filepath} is a directory, the response will be a
-        L{MultiStatusResponse}.
-    @return: a deferred response with a status code of L{responsecode.CREATED}
-        if the destination already exists, or L{responsecode.NO_CONTENT} if the
-        destination was created by the X{MOVE} operation.
+    @return: a response or response code.
+        If C{depth} is not "infinity", L{responsecode.BAD_REQUEST} is returned.
+        If the operation succeeds, the return value will be
+        L{responsecode.CREATED} if the destination already exists or
+        L{responsecode.NO_CONTENT} if the destination was created by the
+        X{MOVE}.
     """
     log.msg("Moving %s to %s" % (source_filepath.path, destination_filepath.path))
 
@@ -348,9 +316,8 @@ def move(source_filepath, source_uri, destination_filepath, destination_uri, dep
         #
         # Delete the destination
         #
-        response = waitForDeferred(delete(destination_uri, destination_filepath))
-        yield response
-        checkResponse(response.getResult(), "delete", responsecode.NO_CONTENT)
+        response = delete(destination_uri, destination_filepath)
+        if response != responsecode.NO_CONTENT: return response
 
         success_code = responsecode.NO_CONTENT
     else:
@@ -361,29 +328,30 @@ def move(source_filepath, source_uri, destination_filepath, destination_uri, dep
     #
     try:
         os.rename(source_filepath.path, destination_filepath.path)
-    except OSError:
-        pass
+    except OSError: pass
     else:
         # Restat source filepath since we moved it
         source_filepath.restat(False)
-        yield success_code
-        return
+        return success_code
 
     #
     # Do a copy, then delete the source
     #
 
-    response = waitForDeferred(copy(source_filepath, destination_filepath, destination_uri, depth))
-    yield response
-    checkResponse(response.getResult(), "copy", responsecode.CREATED, responsecode.NO_CONTENT)
+    def do_delete(copy_response):
+        # If copy failed, return the error response
+        if copy_response not in (responsecode.CREATED, responsecode.NO_CONTENT):
+            return copy_response
 
-    response = waitForDeferred(delete(source_uri, source_filepath))
-    yield response
-    checkResponse(response.getResult(), "delete", responsecode.NO_CONTENT)
+        delete_response = delete(source_uri, source_filepath)
+        if delete_response != responsecode.NO_CONTENT:
+            return delete_response
+        else:
+            return success_code
 
-    yield success_code
-
-move = deferredGenerator(move)
+    d = maybeDeferred(copy, source_filepath, destination_filepath, destination_uri, depth)
+    d.addCallback(do_delete)
+    return d
 
 def put(stream, filepath, uri=None):
     """
@@ -401,30 +369,22 @@ def put(stream, filepath, uri=None):
         circumstances, whereas X{PUT} isn't required to do so.  Therefore,
         if the caller expects X{DELETE} semantics, it must provide a valid
         C{uri}.
-    @raise HTTPError: (containing an approprite response) if the operation
-        fails.
-    @return: a deferred response with a status code of L{responsecode.CREATED}
-        if the destination already exists, or L{responsecode.NO_CONTENT} if the
-        destination was created by the X{PUT} operation.
+    @return: a response or response code.
+        If the operation succeeds, the return value will be
+        L{responsecode.CREATED} if the destination already exists or
+        L{responsecode.NO_CONTENT} if the destination was created by the
+        X{PUT}.
     """
-    log.msg("Writing to file %s" % (filepath.path,))
-
     if filepath.exists():
         if uri is None:
             try:
-                if filepath.isdir():
-                    rmdir(filepath.path)
-                else:
-                    os.remove(filepath.path)
+                if filepath.isdir(): rmdir(filepath.path)
+                else: os.remove(filepath.path)
             except:
-                raise HTTPError(statusForFailure(
-                    Failure(),
-                    "writing to file: %s" % (filepath.path,)
-                ))
+                return statusForFailure(Failure(), "writing to file: %s" % (filepath.path,))
         else:
-            response = waitForDeferred(delete(uri, filepath))
-            yield response
-            checkResponse(response.getResult(), "delete", responsecode.NO_CONTENT)
+            response = delete(uri, filepath)
+            if response != responsecode.NO_CONTENT: return response
 
         success_code = responsecode.NO_CONTENT
     else:
@@ -434,52 +394,44 @@ def put(stream, filepath, uri=None):
     # Write the contents of the request stream to resource's file
     #
 
+    def done(_):
+        # Restat filepath since we modified the backing file
+        filepath.restat(False)
+        return success_code
+
+    def oops(f):
+        return statusForFailure(f, "writing to file: %s" % (filepath.path,))
+
     try:
         resource_file = filepath.open("w")
     except:
-        raise HTTPError(statusForFailure(
-            Failure(),
-            "opening file for writing: %s" % (filepath.path,)
-        ))
+        return statusForFailure(Failure(), "opening file for writing: %s" % (filepath.path,))
 
-    try:
-        x = waitForDeferred(readIntoFile(stream, resource_file))
-        yield x
-        x.getResult()
-    except:
-        raise HTTPError(statusForFailure(
-            Failure(),
-            "writing to file: %s" % (filepath.path,)
-        ))
+    d = readIntoFile(stream, resource_file)
 
-    # Restat filepath since we modified the backing file
-    filepath.restat(False)
-    assert filepath.exists(), "File %s dissappeared (!?!?)" % (filepath.path,)
-    yield success_code
+    d.addCallback(done)
+    d.addErrback (oops)
 
-put = deferredGenerator(put)
+    return d
 
 def mkcollection(filepath):
     """
     Perform a X{MKCOL} on the given filepath.
     @param filepath: the L{FilePath} of the collection resource to create.
-    @raise HTTPError: (containing an approprite response) if the operation
-        fails.
-    @return: a deferred response with a status code of L{responsecode.CREATED}
-        if the destination already exists, or L{responsecode.NO_CONTENT} if the
-        destination was created by the X{MKCOL} operation.
+    @return: a response or response code.
+        If the operation succeeds, the return value will be
+        L{responsecode.CREATED} if the destination already exists or
+        L{responsecode.NO_CONTENT} if the destination was created by the
+        X{MKCOL}.
     """
     try:
         os.mkdir(filepath.path)
         # Restat filepath because we modified it
         filepath.restat(False)
     except:
-        raise HTTPError(statusForFailure(
-            Failure(),
-            "creating directory in MKCOL: %s" % (filepath.path,)
-        ))
+        return statusForFailure(Failure(), "creating directory in MKCOL: %s" % (filepath.path,))
 
-    return succeed(responsecode.CREATED)
+    return responsecode.CREATED
 
 def rmdir(dirname):
     """
@@ -497,9 +449,3 @@ def rmdir(dirname):
                 os.rmdir(path)
 
     os.rmdir(dirname)
-
-def checkResponse(response, method, *codes):
-    assert (
-        response in codes,
-        "%s() should have raised, but returned one of %r instead" % (method, codes)
-    )
