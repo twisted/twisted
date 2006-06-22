@@ -43,7 +43,6 @@ except ImportError:
                 return struct.unpack('H', r(2))[0]
             break
     else:
-        import warnings
         warnings.warn(
             "PyCrypto not available - proceeding with non-cryptographically "
             "secure random source",
@@ -67,44 +66,70 @@ from twisted.python import components
 
 PORT = 53
 
-QUERY_TYPES = {
-    1:  'A',     2:  'NS',    3:  'MD',   4:   'MF',
-    5:  'CNAME', 6:  'SOA',   7:  'MB',   8:   'MG',
-    9:  'MR',    10: 'NULL',  11: 'WKS',  12:  'PTR',
-    13: 'HINFO', 14: 'MINFO', 15: 'MX',   16:  'TXT',
+(A, NS, MD, MF, CNAME, SOA, MB, MG, MR, NULL, WKS, PTR, HINFO, MINFO, MX, TXT,
+ RP, AFSDB) = range(1, 19)
+AAAA = 28
+SRV = 33
+A6 = 38
+DNAME = 39
 
-    17: 'RP',    18: 'AFSDB',
+QUERY_TYPES = {
+    A: 'A',
+    NS: 'NS',
+    MD: 'MD',
+    MF: 'MF',
+    CNAME: 'CNAME',
+    SOA: 'SOA',
+    MB: 'MB',
+    MG: 'MG',
+    MR: 'MR',
+    NULL: 'NULL',
+    WKS: 'WKS',
+    PTR: 'PTR',
+    HINFO: 'HINFO',
+    MINFO: 'MINFO',
+    MX: 'MX',
+    TXT: 'TXT',
+    RP: 'RP',
+    AFSDB: 'AFSDB',
+
     # 19 through 27?  Eh, I'll get to 'em.
 
-    28: 'AAAA',
+    AAAA: 'AAAA',
+    SRV: 'SRV',
 
-    33: 'SRV',
-
-    38: 'A6', 39: 'DNAME'
+    A6: 'A6',
+    DNAME: 'DNAME'
 }
+
+IXFR, AXFR, MAILB, MAILA, ALL_RECORDS = range(251, 256)
 
 # "Extended" queries (Hey, half of these are deprecated, good job)
 EXT_QUERIES = {
-    251: 'IXFR',  252: 'AXFR',       253: 'MAILB',
-    254: 'MAILA', 255: 'ALL_RECORDS'
+    IXFR: 'IXFR',
+    AXFR: 'AXFR',
+    MAILB: 'MAILB',
+    MAILA: 'MAILA',
+    ALL_RECORDS: 'ALL_RECORDS'
 }
+
 REV_TYPES = dict([
     (v, k) for (k, v) in QUERY_TYPES.items() + EXT_QUERIES.items()
 ])
-for (k, v) in REV_TYPES.items():
-    exec "%s = %d" % (k, v)
-del k, v
 
+IN, CS, CH, HS = range(1, 5)
+ANY = 255
 
 QUERY_CLASSES = {
-    1: 'IN',  2: 'CS',  3: 'CH',  4: 'HS',  255: 'ANY'
+    IN: 'IN',
+    CS: 'CS',
+    CH: 'CH',
+    HS: 'HS',
+    ANY: 'ANY'
 }
 REV_CLASSES = dict([
     (v, k) for (k, v) in QUERY_CLASSES.items()
 ])
-for (k, v) in REV_CLASSES.items():
-    exec "%s = %d" % (k, v)
-del k, v
 
 
 # Opcodes
