@@ -106,6 +106,8 @@ class COPY(twisted.web2.dav.test.util.TestCase):
                 # FIXME: Check XML error code (2518bis)
                 pass
 
+            self.failUnless(os.path.exists(dst_path), "COPY didn't produce file: %s" % (dst_path,))
+
         return serialize(self.send, work(self, test, overwrite=True))
 
     def test_COPY_no_parent(self):

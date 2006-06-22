@@ -82,6 +82,8 @@ def http_MKCOL(self, request):
         log.err("Error while handling MKCOL body: %s" % (f,))
         raise HTTPError(responsecode.UNSUPPORTED_MEDIA_TYPE)
 
-    yield mkcollection(self.fp)
+    response = waitForDeferred(mkcollection(self.fp))
+    yield response
+    yield response.getResult()
 
 http_MKCOL = deferredGenerator(http_MKCOL)
