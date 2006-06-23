@@ -30,7 +30,6 @@ __all__ = ["DAVFile"]
 
 from twisted.python import log
 from twisted.web2.static import File
-from twisted.web2.server import StopTraversal
 from twisted.web2.dav import davxml
 from twisted.web2.dav.idav import IDAVResource
 from twisted.web2.dav.resource import DAVResource

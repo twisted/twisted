@@ -29,17 +29,11 @@ WebDAV MKCOL method
 
 __all__ = ["http_MKCOL"]
 
-import os
-
 from twisted.python import log
-from twisted.python.filepath import FilePath
-from twisted.python.failure import Failure
 from twisted.internet.defer import deferredGenerator, waitForDeferred
 from twisted.web2 import responsecode
 from twisted.web2.http import HTTPError, StatusResponse
-from twisted.web2.dav import davxml
 from twisted.web2.dav.fileop import mkcollection
-from twisted.web2.dav.http import statusForFailure
 from twisted.web2.dav.util import noDataFromStream, parentForURL
 
 def http_MKCOL(self, request):
@@ -78,10 +72,12 @@ def http_MKCOL(self, request):
     yield x
     try:
         x.getResult()
-    except ValueError:
-        log.err("Error while handling MKCOL body: %s" % (f,))
+    except ValueError, e:
+        log.err("Error while handling MKCOL body: %s" % (e,))
         raise HTTPError(responsecode.UNSUPPORTED_MEDIA_TYPE)
 
-    yield mkcollection(self.fp)
+    response = waitForDeferred(mkcollection(self.fp))
+    yield response
+    yield response.getResult()
 
 http_MKCOL = deferredGenerator(http_MKCOL)

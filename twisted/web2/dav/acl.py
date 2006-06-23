@@ -33,7 +33,7 @@ from twisted.internet.defer import maybeDeferred
 from twisted.web2.dav import davxml
 from twisted.web2.dav.davxml import dav_namespace
 from twisted.web2.dav.idav import IDAVPrincipalResource
-from twisted.web2.dav.resource import DAVResource, DAVLeafResource
+from twisted.web2.dav.resource import DAVLeafResource
 from twisted.web2.dav.util import unimplemented
 
 class DAVPrincipalResource (DAVLeafResource):

@@ -24,17 +24,13 @@
 
 import os
 import urllib
-import shutil
 import md5
 
-from twisted.internet.defer import Deferred
-from twisted.web2 import responsecode
-
 import twisted.web2.dav.test.util
+from twisted.web2 import responsecode
 from twisted.web2.test.test_server import SimpleRequest
 from twisted.web2.dav.test.util import dircmp, serialize
 from twisted.web2.dav.fileop import rmdir
-from twisted.web2.dav.util import joinURL
 
 class COPY(twisted.web2.dav.test.util.TestCase):
     """
@@ -105,6 +101,8 @@ class COPY(twisted.web2.dav.test.util.TestCase):
             else:
                 # FIXME: Check XML error code (2518bis)
                 pass
+
+            self.failUnless(os.path.exists(dst_path), "COPY didn't produce file: %s" % (dst_path,))
 
         return serialize(self.send, work(self, test, overwrite=True))
 

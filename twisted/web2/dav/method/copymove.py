@@ -29,19 +29,11 @@ WebDAV COPY and MOVE methods.
 
 __all__ = ["http_COPY", "http_MOVE"]
 
-import os
-
 from twisted.python import log
-from twisted.python.filepath import FilePath
-from twisted.internet.defer import deferredGenerator, waitForDeferred
 from twisted.web2 import responsecode
 from twisted.web2.http import HTTPError, StatusResponse
-from twisted.web2.server import StopTraversal
-from twisted.web2.dav import davxml
 from twisted.web2.dav.idav import IDAVResource
-from twisted.web2.dav.fileop import copy, delete, move
-from twisted.web2.dav.http import ErrorResponse
-from twisted.web2.dav.util import parentForURL
+from twisted.web2.dav.fileop import copy, move
 
 # FIXME: This is circular
 import twisted.web2.dav.static

@@ -24,15 +24,14 @@
 
 import os
 from urllib import quote as url_quote
-from filecmp import cmp, dircmp as DirCompare
+from filecmp import dircmp as DirCompare
 from tempfile import mkdtemp
 from shutil import copy
 from random import randrange, choice
 
-from zope.interface import implements
 from twisted.python import log
 from twisted.trial import unittest
-from twisted.internet.defer import maybeDeferred, Deferred
+from twisted.internet.defer import Deferred
 from twisted.web2.dav.fileop import rmdir
 from twisted.web2.dav.util import joinURL
 from twisted.web2.dav.static import DAVFile

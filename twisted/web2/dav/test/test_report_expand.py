@@ -23,13 +23,8 @@
 ##
 
 from twisted.trial.unittest import SkipTest
-from twisted.web2.iweb import IResponse
-from twisted.web2.stream import MemoryStream
-from twisted.web2 import responsecode
 
 import twisted.web2.dav.test.util
-from twisted.web2.test.test_server import SimpleRequest
-from twisted.web2.dav import davxml
 
 class REPORT_expand(twisted.web2.dav.test.util.TestCase):
     """

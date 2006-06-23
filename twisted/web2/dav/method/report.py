@@ -55,7 +55,7 @@ def http_REPORT(self, request):
         yield doc
         doc = doc.getResult()
     except ValueError, e:
-        log.err("Error while handling REPORT body: %s" % (f,))
+        log.err("Error while handling REPORT body: %s" % (e,))
         raise HTTPError(StatusResponse(responsecode.BAD_REQUEST, str(e)))
 
     if doc is None:

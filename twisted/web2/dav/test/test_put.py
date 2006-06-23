@@ -24,9 +24,7 @@
 
 import os
 import filecmp
-from urllib import quote as url_quote
 
-from twisted.internet.defer import Deferred
 from twisted.web2 import responsecode
 from twisted.web2.iweb import IResponse
 from twisted.web2.stream import FileStream
@@ -35,7 +33,6 @@ from twisted.web2.http import HTTPError
 import twisted.web2.dav.test.util
 from twisted.web2.test.test_server import SimpleRequest
 from twisted.web2.dav.test.util import serialize
-from twisted.web2.dav.fileop import rmdir
 
 class PUT(twisted.web2.dav.test.util.TestCase):
     """

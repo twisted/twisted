@@ -22,13 +22,10 @@
 # DRI: Wilfredo Sanchez, wsanchez@apple.com
 ##
 
-import os
-
 from twisted.web2.iweb import IResponse
 
 import twisted.web2.dav.test.util
 from twisted.web2.test.test_server import SimpleRequest
-from twisted.web2.dav.test.util import serialize
 
 class OPTIONS(twisted.web2.dav.test.util.TestCase):
     """

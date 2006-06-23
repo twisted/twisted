@@ -33,19 +33,16 @@ __all__ = [
 ]
 
 import urllib
-import itertools
 
 from zope.interface import implements
 from twisted.python import log
-from twisted.internet.defer import maybeDeferred, succeed, deferredGenerator, waitForDeferred
+from twisted.internet.defer import maybeDeferred, succeed
 from twisted.web2 import responsecode
 from twisted.web2.dav import davxml
 from twisted.web2.dav.davxml import dav_namespace, lookupElement
-from twisted.web2.dav.element import parser
-from twisted.web2.dav.idav import IDAVResource, IDAVPrincipalResource
+from twisted.web2.dav.idav import IDAVResource
 from twisted.web2.dav.noneprops import NonePropertyStore
-from twisted.web2.dav.util import joinURL
-from twisted.web2.dav.util import parentForURL, unimplemented
+from twisted.web2.dav.util import unimplemented
 from twisted.web2.http import HTTPError, RedirectResponse, StatusResponse
 from twisted.web2.http_headers import generateContentType
 from twisted.web2.iweb import IResponse

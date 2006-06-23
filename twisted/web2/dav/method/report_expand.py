@@ -29,6 +29,8 @@ WebDAV expand-property report
 
 __all__ = ["report_DAV__expand_property"]
 
+from twisted.python import log
+from twisted.python.failure import Failure
 from twisted.internet.defer import deferredGenerator, waitForDeferred
 from twisted.web2 import responsecode
 from twisted.web2.dav import davxml

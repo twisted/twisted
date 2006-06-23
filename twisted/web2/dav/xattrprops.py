@@ -35,10 +35,8 @@ import urllib
 
 import xattr
 
-
 if getattr(xattr, 'xattr', None) is None:
-    raise ImportError("wrong xattr package installed")
-
+    raise ImportError("wrong xattr package imported")
 
 from twisted.python import log
 from twisted.web2 import responsecode

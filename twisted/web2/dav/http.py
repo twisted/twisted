@@ -42,7 +42,6 @@ from twisted.web2 import responsecode
 from twisted.web2.iweb import IResponse
 from twisted.web2.http import Response, HTTPError, StatusResponse
 from twisted.web2.http_headers import MimeType
-from twisted.web2.stream import MemoryStream
 from twisted.web2.dav import davxml
 
 ##
