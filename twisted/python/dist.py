@@ -204,21 +204,23 @@ def getPackages(dname, pkgname=None, results=None, ignore=None, parent=None):
 
 
 
-def getScripts(projname):
+def getScripts(projname, basedir=''):
     """
     Returns a list of scripts for a Twisted subproject; this works in
-    any of an SVN checkout, a project-specific tarball, or the Sumo
-    tarball.
+    any of an SVN checkout, a project-specific tarball.
     """
-    scriptdir = os.path.join('bin', projname)
+    scriptdir = os.path.join(basedir, 'bin', projname)
     if not os.path.isdir(scriptdir):
         # Probably a project-specific tarball, in which case only this
         # project's bins are included in 'bin'
-        scriptdir = 'bin'
+        scriptdir = os.path.join(basedir, 'bin')
+        if not os.path.isdir(scriptdir):
+            return []
     thingies = os.listdir(scriptdir)
     if '.svn' in thingies:
         thingies.remove('.svn')
-    return [os.path.join(scriptdir, x) for x in thingies]
+    return filter(os.path.isfile, 
+                  [os.path.join(scriptdir, x) for x in thingies])
 
 
 ## Helpers and distutil tweaks
