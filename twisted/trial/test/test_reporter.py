@@ -4,7 +4,7 @@
 # Maintainer: Jonathan Lange <jml@twistedmatrix.com>
 
 
-import os, re, StringIO
+import sys, os, re, StringIO
 from twisted.python import failure
 from twisted.trial import unittest, runner, reporter
 from twisted.trial.test import erroneous
@@ -28,6 +28,31 @@ class StringTest(unittest.TestCase):
             else:
                 raise TypeError("don't know what to do with object %r"
                                 % (exp,))
+
+
+class TestTestResult(unittest.TestCase):
+    def setUp(self):
+        self.result = reporter.TestResult()
+
+    def test_pyunitAddError(self):
+        # pyunit passes an exc_info tuple directly to addError
+        try:
+            raise RuntimeError('foo')
+        except RuntimeError, excValue:
+            self.result.addError(self, sys.exc_info())
+        failure = self.result.errors[0][1]
+        self.assertEqual(excValue, failure.value)
+        self.assertEqual(RuntimeError, failure.type)
+
+    def test_pyunitAddFailure(self):
+        # pyunit passes an exc_info tuple directly to addFailure
+        try:
+            raise self.failureException('foo')
+        except self.failureException, excValue:
+            self.result.addFailure(self, sys.exc_info())
+        failure = self.result.failures[0][1]
+        self.assertEqual(excValue, failure.value)
+        self.assertEqual(self.failureException, failure.type)
 
 
 class TestErrorReporting(StringTest):

@@ -71,7 +71,7 @@ class TestResult(pyunit.TestResult, object):
         @type fail: L{failure.Failure} or L{tuple}
         """
         if isinstance(fail, tuple):
-            fail = failure.Failure(*fail)
+            fail = failure.Failure(fail[1], fail[0], fail[2])
         self.failures.append((test, fail))
 
     def addError(self, test, error):
@@ -81,7 +81,7 @@ class TestResult(pyunit.TestResult, object):
         @type fail: L{failure.Failure} or L{tuple}
         """
         if isinstance(error, tuple):
-            error = failure.Failure(*error)
+            error = failure.Failure(error[1], error[0], error[2])
         self.errors.append((test, error))
 
     def addSkip(self, test, reason):
