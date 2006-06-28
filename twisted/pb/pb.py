@@ -207,7 +207,7 @@ class PBService(service.MultiService):
                                "what happens")
         if encrypted:
             if certData:
-                cert = crypto.sslverify.PrivateCertificate.loadPEM(certData)
+                cert = crypto.PrivateCertificate.loadPEM(certData)
             else:
                 cert = self.createCertificate()
             self.myCertificate = cert

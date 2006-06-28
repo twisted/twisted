@@ -75,6 +75,25 @@ class UtilTestCase(unittest.TestCase):
         self.assertIdentical(baz2(1, 2, (3, 4), quux=10), p)
 
 
+    def testNameToLabel(self):
+        """
+        Test the various kinds of inputs L{nameToLabel} supports.
+        """
+        nameData = [
+            ('f', 'F'),
+            ('fo', 'Fo'),
+            ('foo', 'Foo'),
+            ('fooBar', 'Foo Bar'),
+            ('fooBarBaz', 'Foo Bar Baz'),
+            ]
+        for inp, out in nameData:
+            got = util.nameToLabel(inp)
+            self.assertEquals(
+                got, out,
+                "nameToLabel(%r) == %r != %r" % (inp, got, out))
+
+
+
 class OrderedDictTest(unittest.TestCase):
     def testOrderedDict(self):
         d = util.OrderedDict()

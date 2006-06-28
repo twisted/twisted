@@ -1,9 +1,10 @@
+# -*- test-case-name: twisted.test.test_sslverify -*-
 # Copyright 2005 Divmod, Inc.  See LICENSE file for details
 
 import itertools, md5
 from OpenSSL import SSL, crypto
 
-from twisted.python import reflect
+from twisted.python import reflect, util
 from twisted.internet.defer import Deferred
 
 # Private - shared between all ServerContextFactories, counts up to
@@ -24,100 +25,182 @@ class PeerVerifyError(VerifyError):
 
 class OpenSSLVerifyError(VerifyError):
 
-    _errorCodes = {0: ('X509_V_OK', 'ok', 'the operation was successful. >'),
+    _errorCodes = {0: ('X509_V_OK',
+                       'ok',
+                       'the operation was successful. >'),
+
                    2: ('X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT',
                        'unable to get issuer certificate',
-                       "the issuer certificate could not be found', 'this occurs if the issuer certificate of an untrusted certificate cannot be found."),
+                       "The issuer certificate could not be found.  This "
+                       "occurs if the issuer certificate of an untrusted "
+                       "certificate cannot be found."),
+
                    3: ('X509_V_ERR_UNABLE_TO_GET_CRL',
-                       ' unable to get certificate CRL',
-                       'the CRL of a certificate could not be found. Unused.'),
+                       'unable to get certificate CRL',
+                       "The CRL of a certificate could not be found. "
+                       "Unused."),
+
                    4: ('X509_V_ERR_UNABLE_TO_DECRYPT_CERT_SIGNATURE',
                        "unable to decrypt certificate's signature",
-                       'the certificate signature could not be decrypted. This means that the actual signature value could not be determined rather than it not match- ing the expected value, this is only meaningful for RSA keys.'),
+                       "The certificate signature could not be decrypted.  "
+                       "This means that the actual signature value could not "
+                       "be determined rather than it not matching the "
+                       "expected value, this is only meaningful for RSA "
+                       "keys."),
+
                    5: ('X509_V_ERR_UNABLE_TO_DECRYPT_CRL_SIGNATURE',
                        "unable to decrypt CRL's signature",
-                       "the CRL signature could not be decrypted', 'this means that the actual signature value could not be determined rather than it not matching the expected value. Unused."),
+                       "The CRL signature could not be decrypted.  This "
+                       "means that the actual signature value could not be "
+                       "determined rather than it not matching the expected "
+                       "value. Unused."),
+
                    6: ('X509_V_ERR_UNABLE_TO_DECODE_ISSUER_PUBLIC_KEY',
                        'unable to decode issuer',
-                       'public key the public key in the certificate SubjectPublicKeyInfo could not be read.'),
+                       "Public key the public key in the certificate "
+                       "SubjectPublicKeyInfo could not be read."),
+
                    7: ('X509_V_ERR_CERT_SIGNATURE_FAILURE',
                        'certificate signature failure',
-                       'the signature of the certificate is invalid.'),
+                       'The signature of the certificate is invalid.'),
+
                    8: ('X509_V_ERR_CRL_SIGNATURE_FAILURE',
                        'CRL signature failure',
-                       'the signature of the certificate is invalid. Unused.'),
+                       'The signature of the certificate is invalid. Unused.'),
+
                    9: ('X509_V_ERR_CERT_NOT_YET_VALID',
                        'certificate is not yet valid',
-                       "the certificate is not yet valid', 'the notBefore date is after the cur- rent time."),
+                       "The certificate is not yet valid.  The notBefore "
+                       "date is after the current time."),
+
                    10: ('X509_V_ERR_CERT_HAS_EXPIRED',
                         'certificate has expired',
-                        "the certificate has expired', 'that is the notAfter date is before the current time."),
+                        "The certificate has expired.  The notAfter date "
+                        "is before the current time."),
+
                    11: ('X509_V_ERR_CRL_NOT_YET_VALID',
                         'CRL is not yet valid',
-                        'the CRL is not yet valid. Unused.'),
+                        'The CRL is not yet valid. Unused.'),
+
                    12: ('X509_V_ERR_CRL_HAS_EXPIRED',
                         'CRL has expired',
-                        'the CRL has expired. Unused.'),
+                        'The CRL has expired. Unused.'),
+
                    13: ('X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD',
-                        "format error in certificate's",
-                        'notBefore field the certificate notBefore field contains an invalid time.'),
+                        "format error in certificate's notBefore field",
+                        "The certificate's notBefore field contains an "
+                        "invalid time."),
+
                    14: ('X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD',
-                        "format error in certificate's",
-                        'notAfter field the certificate notAfter field contains an invalid time.'),
+                        "format error in certificate's notAfter field.",
+                        "The certificate's notAfter field contains an "
+                        "invalid time."),
+
                    15: ('X509_V_ERR_ERROR_IN_CRL_LAST_UPDATE_FIELD',
                         "format error in CRL's lastUpdate field",
-                        'the CRL lastUpdate field contains an invalid time. Unused.'),
+                        "The CRL lastUpdate field contains an invalid "
+                        "time. Unused."),
+
                    16: ('X509_V_ERR_ERROR_IN_CRL_NEXT_UPDATE_FIELD',
                         "format error in CRL's nextUpdate field",
-                        'the CRL nextUpdate field contains an invalid time. Unused.'),
+                        "The CRL nextUpdate field contains an invalid "
+                        "time. Unused."),
+
                    17: ('X509_V_ERR_OUT_OF_MEM',
                         'out of memory',
-                        'an error occurred trying to allocate memory. This should never happen.'),
+                        'An error occurred trying to allocate memory. '
+                        'This should never happen.'),
+
                    18: ('X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT',
                         'self signed certificate',
-                        'the passed certificate is self signed and the same certificate cannot be found in the list of trusted certificates.'),
+                        'The passed certificate is self signed and the same '
+                        'certificate cannot be found in the list of trusted '
+                        'certificates.'),
+
                    19: ('X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN',
                         'self signed certificate in certificate chain',
-                        'the certificate chain could be built up using the untrusted certificates but the root could not be found locally.'),
+                        'The certificate chain could be built up using the '
+                        'untrusted certificates but the root could not be '
+                        'found locally.'),
+
                    20: ('X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY',
-                        'unable to get local issuer',
-                        'certificate the issuer certificate of a locally looked up certificate could not be found. This normally means the list of trusted certificates is not com- plete.'),
+                        'unable to get local issuer certificate',
+                        'The issuer certificate of a locally looked up '
+                        'certificate could not be found. This normally '
+                        'means the list of trusted certificates is not '
+                        'complete.'),
+
                    21: ('X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE',
-                        'unable to verify the first',
-                        'certificate no signatures could be verified because the chain contains only one cer- tificate and it is not self signed.'),
+                        'unable to verify the first certificate',
+                        'No signatures could be verified because the chain '
+                        'contains only one certificate and it is not self '
+                        'signed.'),
+
                    22: ('X509_V_ERR_CERT_CHAIN_TOO_LONG',
                         'certificate chain too long',
-                        'the certificate chain length is greater than the supplied maximum depth. Unused.'),
+                        'The certificate chain length is greater than the '
+                        'supplied maximum depth. Unused.'),
+
                    23: ('X509_V_ERR_CERT_REVOKED',
                         'certificate revoked',
-                        'the certificate has been revoked. Unused.'),
+                        'The certificate has been revoked. Unused.'),
+
                    24: ('X509_V_ERR_INVALID_CA',
                         'invalid CA certificate',
-                        'a CA certificate is invalid. Either it is not a CA or its extensions are not consistent with the supplied purpose.'),
+                        'A CA certificate is invalid. Either it is not a CA '
+                        'or its extensions are not consistent with the '
+                        'supplied purpose.'),
+
                    25: ('X509_V_ERR_PATH_LENGTH_EXCEEDED',
                         'path length constraint exceeded',
-                        'the basicConstraints pathlength parameter has been exceeded.'),
+                        'The basicConstraints pathlength parameter has been '
+                        'exceeded.'),
+
                    26: ('X509_V_ERR_INVALID_PURPOSE',
                         'unsupported certificate purpose',
-                        'the supplied certificate cannot be used for the specified purpose.'),
+                        'The supplied certificate cannot be used for the '
+                        'specified purpose.'),
+
                    27: ('X509_V_ERR_CERT_UNTRUSTED',
                         'certificate not trusted',
-                        'the root CA is not marked as trusted for the specified purpose.'),
+                        'The root CA is not marked as trusted for the '
+                        'specified purpose.'),
+
                    28: ('X509_V_ERR_CERT_REJECTED',
                         'certificate rejected',
-                        'the root CA is marked to reject the specified purpose.'),
+                        'The root CA is marked to reject the specified '
+                        'purpose.'),
+
                    29: ('X509_V_ERR_SUBJECT_ISSUER_MISMATCH',
                         'subject issuer mismatch',
-                        'the current candidate issuer certificate was rejected because its sub- ject name did not match the issuer name of the current certificate. Only displayed when the -issuer_checks option is set.'),
+                        'The current candidate issuer certificate was '
+                        'rejected because its subject name did not match '
+                        'the issuer name of the current certificate. Only '
+                        'displayed when the issuer_checks option is set.'),
+
                    30: ('X509_V_ERR_AKID_SKID_MISMATCH',
                         'authority and subject key identifier mismatch',
-                        'the current candidate issuer certificate was rejected because its sub- ject key identifier was present and did not match the authority key identifier current certificate. Only displayed when the -issuer_checks option is set.'),
+                        'The current candidate issuer certificate was '
+                        'rejected because its subject key identifier was '
+                        'present and did not match the authority key '
+                        'identifier current certificate. Only displayed '
+                        'when the issuer_checks option is set.'),
+
                    31: ('X509_V_ERR_AKID_ISSUER_SERIAL_MISMATCH',
                         'authority and issuer serial number mismatch',
-                        'the current candidate issuer certificate was rejected because its issuer name and serial number was present and did not match the authority key identifier of the current certificate. Only displayed when the -issuer_checks option is set.'),
+                        'The current candidate issuer certificate was '
+                        'rejected because its issuer name and serial '
+                        'number was present and did not match the '
+                        'authority key identifier of the current '
+                        'certificate. Only displayed when the issuer_checks '
+                        'option is set.'),
+
                    32: ('X509_V_ERR_KEYUSAGE_NO_CERTSIGN',
                         'key usage does not include certificate',
-                        'signing the current candidate issuer certificate was rejected because its keyUsage extension does not permit certificate signing.'),
+                        'Signing the current candidate issuer certificate was '
+                        'rejected because its keyUsage extension does not '
+                        'permit certificate signing.'),
+
                    50: ('X509_V_ERR_APPLICATION_VERIFICATION',
                         'application verification failure',
                         'an application specific error. Unused.')}
@@ -139,27 +222,51 @@ class OpenSSLVerifyError(VerifyError):
 
     __str__ = __repr__
 
-_x509namecrap = [
-    ['CN', 'commonName'],
-    ['O',  'organizationName'],
-    ['OU', 'organizationalUnitName'],
-    ['L',  'localityName'],
-    ['ST', 'stateOrProvinceName'],
-    ['C',  'countryName'],
-    [      'emailAddress']]
 
-_x509names = {}
+_x509names = {
+    'CN': 'commonName',
+    'commonName': 'commonName',
 
+    'O': 'organizationName',
+    'organizationName': 'organizationName',
 
-for abbrevs in _x509namecrap:
-    for abbrev in abbrevs:
-        _x509names[abbrev] = abbrevs[0]
+    'OU': 'organizationalUnitName',
+    'organizationalUnitName': 'organizationalUnitName',
+
+    'L': 'localityName',
+    'localityName': 'localityName',
+
+    'ST': 'stateOrProvinceName',
+    'stateOrProvinceName': 'stateOrProvinceName',
+
+    'C': 'countryName',
+    'countryName': 'countryName',
+
+    'emailAddress': 'emailAddress'}
+
 
 class DistinguishedName(dict):
+    """
+    Identify and describe an entity.
+
+    Distinguished names are used to provide a minimal amount of identifying
+    information about a certificate issuer or subject.  They are commonly
+    created with one or more of the following fields::
+
+        commonName (CN)
+        organizationName (O)
+        organizationalUnitName (OU)
+        localityName (L)
+        stateOrProvinceName (ST)
+        countryName (C)
+        emailAddress
+    """
     __slots__ = ()
+
     def __init__(self, **kw):
         for k, v in kw.iteritems():
             setattr(self, k, v)
+
 
     def _copyFrom(self, x509name):
         d = {}
@@ -168,15 +275,22 @@ class DistinguishedName(dict):
             if value is not None:
                 setattr(self, name, value)
 
+
     def _copyInto(self, x509name):
         for k, v in self.iteritems():
             setattr(x509name, k, v)
 
+
     def __repr__(self):
         return '<DN %s>' % (dict.__repr__(self)[1:-1])
 
+
     def __getattr__(self, attr):
-        return self[_x509names[attr]]
+        try:
+            return self[_x509names[attr]]
+        except KeyError:
+            raise AttributeError(attr)
+
 
     def __setattr__(self, attr, value):
         assert type(attr) is str
@@ -187,21 +301,28 @@ class DistinguishedName(dict):
         assert type(value) is str
         self[realAttr] = value
 
+
     def inspect(self):
+        """
+        Return a multi-line, human-readable representation of this DN.
+        """
         l = []
-        from formless.annotate import nameToLabel
         lablen = 0
-        for kp in _x509namecrap:
-            k = kp[-1]
-            label = nameToLabel(k)
+        def uniqueValues(mapping):
+            return dict.fromkeys(mapping.itervalues()).keys()
+        for k in uniqueValues(_x509names):
+            label = util.nameToLabel(k)
             lablen = max(len(label), lablen)
-            l.append((label, getattr(self, k)))
+            v = getattr(self, k, None)
+            if v is not None:
+                l.append((label, v))
         lablen += 2
         for n, (label, attr) in enumerate(l):
             l[n] = (label.rjust(lablen)+': '+ attr)
         return '\n'.join(l)
 
 DN = DistinguishedName
+
 
 class CertBase:
     def __init__(self, original):
@@ -213,16 +334,31 @@ class CertBase:
         return dn
 
     def getSubject(self):
+        """
+        Retrieve the subject of this certificate.
+
+        @rtype: L{DistinguishedName}
+        @return: A copy of the subject of this certificate.
+        """
         return self._copyName('subject')
 
 
 
 def problemsFromTransport(tpt):
-    """Return a list of L{OpenSSLVerifyError}s given a Twisted transport object.
+    """
+    Retrieve the SSL errors associated with the given transport.
+
+    @type tpt: L{ISystemHandle} provider wrapper around an SSL connection.
+    @rtype: C{list} of L{OpenSSLVerifyError}.
     """
     return tpt.getHandle().get_context().get_app_data().problems
 
+
+
 class Certificate(CertBase):
+    """
+    An x509 certificate.
+    """
     def __repr__(self):
         return '<%s Subject=%s Issuer=%s>' % (self.__class__.__name__,
                                               self.getSubject().commonName,
@@ -233,46 +369,95 @@ class Certificate(CertBase):
             return self.dump() == other.dump()
         return False
 
+
     def __ne__(self, other):
         return not self.__eq__(other)
 
+
     def load(Class, requestData, format=crypto.FILETYPE_ASN1, args=()):
+        """
+        Load a certificate from an ASN.1- or PEM-format string.
+
+        @rtype: C{Class}
+        """
         return Class(crypto.load_certificate(format, requestData), *args)
     load = classmethod(load)
     _load = load
 
+
     def dumpPEM(self):
-        """Dump both public and private parts of a private certificate to PEM-format
-        data
+        """
+        Dump this certificate to a PEM-format data string.
+
+        @rtype: C{str}
         """
         return self.dump(crypto.FILETYPE_PEM)
 
+
     def loadPEM(Class, data):
-        """Load both private and public parts of a private certificate from a chunk of
-        PEM-format data.
+        """
+        Load a certificate from a PEM-format data string.
+
+        @rtype: C{Class}
         """
         return Class.load(data, crypto.FILETYPE_PEM)
     loadPEM = classmethod(loadPEM)
 
+
     def peerFromTransport(Class, transport):
+        """
+        Get the certificate for the other end of the given transport.
+
+        @type: L{ISystemHandle}
+        @rtype: C{Class}
+        """
         return Class(transport.getHandle().get_peer_certificate())
     peerFromTransport = classmethod(peerFromTransport)
 
+
     def hostFromTransport(Class, transport):
+        """
+        Get the certificate for this end of the given transport.
+
+        @type: L{ISystemHandle}
+        @rtype: C{Class}
+        """
         return Class(transport.getHandle().get_host_certificate())
     hostFromTransport = classmethod(hostFromTransport)
 
+
     def getPublicKey(self):
+        """
+        Get the public key for this certificate.
+
+        @rtype: L{PublicKey}
+        """
         return PublicKey(self.original.get_pubkey())
+
 
     def dump(self, format=crypto.FILETYPE_ASN1):
         return crypto.dump_certificate(format, self.original)
 
+
     def serialNumber(self):
+        """
+        Retrieve the serial number of this certificate.
+
+        @rtype: C{int}
+        """
         return self.original.get_serial_number()
 
+
     def digest(self, method='md5'):
+        """
+        Return a digest hash of this certificate using the specified hash
+        algorithm.
+
+        @param method: One of C{'md5'} or C{'sha'}.
+        @rtype: C{str}
+        """
         return self.original.digest(method)
+
 
     def _inspect(self):
         return '\n'.join(['Certificate For Subject:',
@@ -282,16 +467,33 @@ class Certificate(CertBase):
                           '\nSerial Number: %d' % self.serialNumber(),
                           'Digest: %s' % self.digest()])
 
+
     def inspect(self):
         return '\n'.join(self._inspect(), self.getPublicKey().inspect())
 
+
     def getIssuer(self):
+        """
+        Retrieve the issuer of this certificate.
+
+        @rtype: L{DistinguishedName}
+        @return: A copy of the issuer of this certificate.
+        """
         return self._copyName('issuer')
+
 
     def options(self, *authorities):
         raise NotImplementedError('Possible, but doubtful we need this yet')
 
+
+
 class CertificateRequest(CertBase):
+    """
+    An x509 certificate request.
+
+    Certificate requests are given to certificate authorities to be signed and
+    returned resulting in an actual certificate.
+    """
     def load(Class, requestData, requestFormat=crypto.FILETYPE_ASN1):
         req = crypto.load_certificate_request(requestFormat, requestData)
         dn = DistinguishedName()
@@ -301,12 +503,19 @@ class CertificateRequest(CertBase):
         return Class(req)
     load = classmethod(load)
 
+
     def dump(self, format=crypto.FILETYPE_ASN1):
         return crypto.dump_certificate_request(format, self.original)
 
+
+
 class PrivateCertificate(Certificate):
+    """
+    An x509 certificate and private key.
+    """
     def __repr__(self):
         return Certificate.__repr__(self) + ' with ' + repr(self.privateKey)
+
 
     def _setPrivateKey(self, privateKey):
         if not privateKey.matches(self.getPublicKey()):
@@ -315,36 +524,48 @@ class PrivateCertificate(Certificate):
         self.privateKey = privateKey
         return self
 
+
     def newCertificate(self, newCertData, format=crypto.FILETYPE_ASN1):
+        """
+        Create a new L{PrivateCertificate} from the given certificate data and
+        this instance's private key.
+        """
         return self.load(newCertData, self.privateKey, format)
+
 
     def load(Class, data, privateKey, format=crypto.FILETYPE_ASN1):
         return Class._load(data, format)._setPrivateKey(privateKey)
     load = classmethod(load)
 
+
     def inspect(self):
         return '\n'.join([Certificate._inspect(self),
                           self.privateKey.inspect()])
 
+
     def dumpPEM(self):
-        """Dump both public and private parts of a private certificate to PEM-format
-        data
+        """
+        Dump both public and private parts of a private certificate to
+        PEM-format data.
         """
         return self.dump(crypto.FILETYPE_PEM) + self.privateKey.dump(crypto.FILETYPE_PEM)
 
+
     def loadPEM(Class, data):
-        """Load both private and public parts of a private certificate from a chunk of
-        PEM-format data.
+        """
+        Load both private and public parts of a private certificate from a
+        chunk of PEM-format data.
         """
         return Class.load(data, KeyPair.load(data, crypto.FILETYPE_PEM),
                           crypto.FILETYPE_PEM)
-
     loadPEM = classmethod(loadPEM)
+
 
     def fromCertificateAndKeyPair(Class, certificateInstance, privateKey):
         privcert = Class(certificateInstance.original)
         return privcert._setPrivateKey(privateKey)
     fromCertificateAndKeyPair = classmethod(fromCertificateAndKeyPair)
+
 
     def options(self, *authorities):
         options = dict(privateKey=self.privateKey.original,
@@ -355,12 +576,14 @@ class PrivateCertificate(Certificate):
                                 caCerts=[auth.original for auth in authorities]))
         return OpenSSLCertificateOptions(**options)
 
+
     def certificateRequest(self, format=crypto.FILETYPE_ASN1,
                            digestAlgorithm='md5'):
         return self.privateKey.certificateRequest(
             self.getSubject(),
             format,
             digestAlgorithm)
+
 
     def signCertificateRequest(self,
                                requestData,
@@ -387,6 +610,8 @@ class PrivateCertificate(Certificate):
                                                  secondsToExpiry,
                                                  digestAlgorithm)
 
+
+
 class PublicKey:
     def __init__(self, osslpkey):
         self.original = osslpkey
@@ -394,13 +619,17 @@ class PublicKey:
         req1.set_pubkey(osslpkey)
         self._emptyReq = crypto.dump_certificate_request(crypto.FILETYPE_ASN1, req1)
 
+
     def matches(self, otherKey):
         return self._emptyReq == otherKey._emptyReq
 
-# O OG OMG OMFG PYOPENSSL SUCKS SO BAD
+
+    # XXX This could be a useful method, but sometimes it triggers a segfault,
+    # so we'll steer clear for now.
 #     def verifyCertificate(self, certificate):
-#         """returns None, or raises a VerifyError exception if the certificate could not
-#         be verified.
+#         """
+#         returns None, or raises a VerifyError exception if the certificate
+#         could not be verified.
 #         """
 #         if not certificate.original.verify(self.original):
 #             raise VerifyError("We didn't sign that certificate.")
@@ -408,13 +637,18 @@ class PublicKey:
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, self.keyHash())
 
+
     def keyHash(self):
-        """MD5 hex digest of signature on an empty certificate request with this key.
+        """
+        MD5 hex digest of signature on an empty certificate request with this
+        key.
         """
         return md5.md5(self._emptyReq).hexdigest()
 
+
     def inspect(self):
         return 'Public Key with Hash: %s' % (self.keyHash(),)
+
 
 
 class KeyPair(PublicKey):
@@ -423,14 +657,18 @@ class KeyPair(PublicKey):
         return Class(crypto.load_privatekey(format, data))
     load = classmethod(load)
 
+
     def dump(self, format=crypto.FILETYPE_ASN1):
         return crypto.dump_privatekey(format, self.original)
+
 
     def __getstate__(self):
         return self.dump()
 
+
     def __setstate__(self, state):
         self.__init__(crypto.load_privatekey(crypto.FILETYPE_ASN1, state))
+
 
     def inspect(self):
         t = self.original.type()
@@ -443,15 +681,17 @@ class KeyPair(PublicKey):
         L = (self.original.bits(), ts, self.keyHash())
         return '%s-bit %s Key Pair with Hash: %s' % L
 
+
     def generate(Class, kind=crypto.TYPE_RSA, size=1024):
         pkey = crypto.PKey()
         pkey.generate_key(kind, size)
         return Class(pkey)
 
+
     def newCertificate(self, newCertData, format=crypto.FILETYPE_ASN1):
         return PrivateCertificate.load(newCertData, self, format)
-
     generate = classmethod(generate)
+
 
     def requestObject(self, distinguishedName, digestAlgorithm='md5'):
         req = crypto.X509Req()
@@ -459,6 +699,7 @@ class KeyPair(PublicKey):
         distinguishedName._copyInto(req.get_subject())
         req.sign(self.original, digestAlgorithm)
         return CertificateRequest(req)
+
 
     def certificateRequest(self, distinguishedName,
                            format=crypto.FILETYPE_ASN1,
@@ -470,7 +711,6 @@ class KeyPair(PublicKey):
         return self.requestObject(distinguishedName, digestAlgorithm).dump(format)
 
 
-
     def signCertificateRequest(self,
                                issuerDistinguishedName,
                                requestData,
@@ -480,7 +720,8 @@ class KeyPair(PublicKey):
                                certificateFormat=crypto.FILETYPE_ASN1,
                                secondsToExpiry=60 * 60 * 24 * 365, # One year
                                digestAlgorithm='md5'):
-        """Given a blob of certificate request data and a certificate authority's
+        """
+        Given a blob of certificate request data and a certificate authority's
         DistinguishedName, return a blob of signed certificate data.
 
         If verifyDNCallback returns a Deferred, I will return a Deferred which
@@ -524,11 +765,13 @@ class KeyPair(PublicKey):
         cert.sign(self.original, digestAlgorithm)
         return Certificate(cert)
 
+
     def selfSignedCert(self, serialNumber, **kw):
         dn = DN(**kw)
         return PrivateCertificate.fromCertificateAndKeyPair(
             self.signRequestObject(dn, self.requestObject(dn), serialNumber),
             self)
+
 
 
 class OpenSSLCertificateOptions(object):
@@ -613,6 +856,7 @@ class OpenSSLCertificateOptions(object):
         self.enableSessions = enableSessions
         self.fixBrokenPeers = fixBrokenPeers
 
+
     def __getstate__(self):
         d = super(OpenSSLCertificateOptions, self).__getstate__()
         try:
@@ -621,12 +865,14 @@ class OpenSSLCertificateOptions(object):
             pass
         return d
 
+
     def getContext(self):
         """Return a SSL.Context object.
         """
         if self._context is None:
             self._context = self._makeContext()
         return self._context
+
 
     def _makeContext(self):
         ctx = SSL.Context(self.method)

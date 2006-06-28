@@ -190,8 +190,19 @@ class Connector(base.BaseConnector):
 
     def getDestination(self):
         return address.IPv4Address('TCP', self.host, self.port, 'SSL')
- 
 
-__all__ = ["ContextFactory", "DefaultOpenSSLContextFactory", "ClientContextFactory"]
+from twisted.internet._sslverify import DistinguishedName, DN, Certificate
+from twisted.internet._sslverify import CertificateRequest, PrivateCertificate
+from twisted.internet._sslverify import KeyPair
+from twisted.internet._sslverify import OpenSSLCertificateOptions as CertificateOptions
+
+__all__ = [
+    "ContextFactory", "DefaultOpenSSLContextFactory", "ClientContextFactory",
+
+    'DistinguishedName', 'DN',
+    'Certificate', 'CertificateRequest', 'PrivateCertificate',
+    'KeyPair',
+    'CertificateOptions',
+    ]
 
 supported = True

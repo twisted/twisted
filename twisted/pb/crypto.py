@@ -3,14 +3,18 @@
 available = False # hack to deal with half-broken imports in python <2.4
 
 from OpenSSL import SSL
-import sslverify
-from sslverify import DistinguishedName, KeyPair
-peerFromTransport = sslverify.Certificate.peerFromTransport
+
+from twisted.internet.ssl import DistinguishedName, KeyPair
+from twisted.internet.ssl import Certificate, PrivateCertificate
+from twisted.internet.ssl import CertificateOptions
+
 from twisted.pb import base32
 
-class MyOptions(sslverify.OpenSSLCertificateOptions):
+peerFromTransport = Certificate.peerFromTransport
+
+class MyOptions(CertificateOptions):
     def _makeContext(self):
-        ctx = sslverify.OpenSSLCertificateOptions._makeContext(self)
+        ctx = CertificateOptions._makeContext(self)
         def alwaysValidate(conn, cert, errno, depth, preverify_ok):
             # This function is called to validate the certificate received by
             # the other end. OpenSSL calls it multiple times, each time it
@@ -23,7 +27,7 @@ class MyOptions(sslverify.OpenSSLCertificateOptions):
             # certificates. We need to protect against forged signatures, but
             # not the usual SSL concerns about invalid CAs or revoked
             # certificates.
-            
+
             # these constants are from openssl-0.9.7g/crypto/x509/x509_vfy.h
             # and do not appear to be exposed by pyopenssl. Ick. TODO. We
             # could just always return '1' here (ignoring all errors), but I
