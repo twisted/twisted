@@ -350,16 +350,24 @@ class RedirectResourceTest(BaseCase):
             ))
         return defer.DeferredList(ds)
 
+
+class EmptyResource(resource.Resource):
+    def __init__(self, test):
+        self.test = test
+
+    def render(self, request):
+        self.test.assertEquals(request.urlForResource(self), self.expectedURI)
+        return 201
+
+
 class RememberURIs(BaseCase):
+    """
+    Tests for URI memory and lookup mechanism in server.Request.
+    """
     def test_requestedResource(self):
-        class EmptyResource(resource.Resource):
-            def __init__(self, test):
-                self.test = test
-
-            def render(self, request):
-                self.test.assertEquals(request.urlForResource(self), self.expectedURI)
-                return 201
-
+        """
+        Test urlForResource() on resource looked up via request processing.
+        """
         root = EmptyResource(self)
         root.expectedURI = "/"
 
@@ -370,9 +378,42 @@ class RememberURIs(BaseCase):
 
         request = SimpleRequest(server.Site(root), "GET", "/foo")
 
-        self.getResponseFor(root, "/foo")
+        def gotResource(resource):
+            self.assertEquals(resource.expectedURI, request.urlForResource(resource))
+
+        return request.locateResource('/foo').addCallback(gotResource)
+
+    def test_deepResource(self):
+        """
+        Test urlForResource() on deeply nested resource looked up via
+        request processing.
+        """
+        root = EmptyResource(self)
+        root.expectedURI = "/"
+
+        foo = EmptyResource(self)
+        foo.expectedURI = "/foo"
+        root.putChild('foo', foo)
+
+        bar = EmptyResource(self)
+        bar.expectedURI = "/foo/bar"
+        foo.putChild('bar', bar)
+
+        baz = EmptyResource(self)
+        baz.expectedURI = "/foo/bar/baz"
+        bar.putChild('baz', baz)
+
+        request = SimpleRequest(server.Site(root), "GET", "/foo/bar/baz")
+
+        def gotResource(resource):
+            self.assertEquals(resource.expectedURI, request.urlForResource(resource))
+
+        return request.locateResource('/foo/bar/baz').addCallback(gotResource)
 
     def test_locateResource(self):
+        """
+        Test urlForResource() on resource looked up via a locateResource() call.
+        """
         root = resource.Resource()
         child = resource.Resource()
         root.putChild("foo", child)
@@ -386,6 +427,9 @@ class RememberURIs(BaseCase):
         d.addCallback(_foundCb)
 
     def test_deferredLocateChild(self):
+        """
+        Test deferred value from locateChild()
+        """
         class DeferredLocateChild(resource.Resource):
             def locateChild(self, req, segments):
                 return defer.maybeDeferred(

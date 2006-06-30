@@ -327,10 +327,7 @@ class Request(http.Request):
             assert len(newpath) < len(path), "Infinite loop impending..."
 
         if path:
-            if newpath:
-                url = "/" + "/".join(path[:-len(newpath)])
-            else:
-                url = "/" + "/".join(path)
+            url = "/" + "/".join(path)
         else:
             url = "/"
 
