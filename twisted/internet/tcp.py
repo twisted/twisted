@@ -64,7 +64,7 @@ else:
 # Twisted Imports
 from twisted.internet import protocol, defer, base, address
 from twisted.persisted import styles
-from twisted.python import log, failure, reflect, components
+from twisted.python import log, failure, reflect
 from twisted.python.util import unsignedID
 from twisted.internet.error import CannotListenError
 

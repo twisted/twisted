@@ -15,7 +15,7 @@ import rfc822
 from twisted.trial import unittest
 import tempfile
 
-from zope.interface import implements, providedBy
+from zope.interface import providedBy, Interface, implements
 
 from twisted.trial import unittest
 from twisted.mail import smtp
@@ -28,7 +28,6 @@ from twisted.internet import reactor
 from twisted.internet import interfaces
 from twisted.internet.error import DNSLookupError, CannotListenError
 from twisted.internet import address
-from twisted.python import components
 from twisted.python import failure
 from twisted.python import util
 
@@ -380,7 +379,7 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
         self.failUnless(cred.credentials.IUsernamePassword in creds[0].credentialInterfaces)
 
     def testRequestAvatar(self):
-        class ISomething(components.Interface):
+        class ISomething(Interface):
             pass
 
         self.D.addUser('user', 'password')

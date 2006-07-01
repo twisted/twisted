@@ -5,7 +5,7 @@
 from twisted.trial import unittest
 
 from twisted.internet import protocol, reactor, error
-from twisted.python import failure, components
+from twisted.python import failure
 from twisted.pair import rawudp
 
 class MyProtocol(protocol.DatagramProtocol):
@@ -277,9 +277,6 @@ class RawUDPTestCase(unittest.TestCase):
         e = rawudp.RawUDPProtocol()
         try:
             e.addProto(42, "silliness")
-        # TODO
-        #except components.CannotAdapt:
-        #    pass
         except TypeError, e:
             if e.args == ('Added protocol must be an instance of DatagramProtocol',):
                 pass

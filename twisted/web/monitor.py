@@ -6,7 +6,6 @@ from twisted.web import client
 from twisted.internet import reactor
 import md5
 from zope.interface import implements
-from twisted.python import components
 
 class IChangeNotified:
     pass

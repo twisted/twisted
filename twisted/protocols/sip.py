@@ -16,12 +16,11 @@ import random
 import time
 import md5
 import sys
-from zope.interface import implements
+from zope.interface import implements, Interface
 
 # twisted imports
-from twisted.python import log, util, components
+from twisted.python import log, util
 from twisted.internet import protocol, defer, reactor
-from twisted.python.components import Interface
 
 from twisted import cred
 import twisted.cred.credentials
@@ -729,19 +728,19 @@ class Registration:
 class IRegistry(Interface):
     """Allows registration of logical->physical URL mapping."""
 
-    def registerAddress(self, domainURL, logicalURL, physicalURL):
+    def registerAddress(domainURL, logicalURL, physicalURL):
         """Register the physical address of a logical URL.
 
         @return: Deferred of C{Registration} or failure with RegistrationError.
         """
 
-    def unregisterAddress(self, domainURL, logicalURL, physicalURL):
+    def unregisterAddress(domainURL, logicalURL, physicalURL):
         """Unregister the physical address of a logical URL.
 
         @return: Deferred of C{Registration} or failure with RegistrationError.
         """
 
-    def getRegistrationInfo(self, logicalURL):
+    def getRegistrationInfo(logicalURL):
         """Get registration info for logical URL.
 
         @return: Deferred of C{Registration} object or failure of LookupError.
@@ -751,7 +750,7 @@ class IRegistry(Interface):
 class ILocator(Interface):
     """Allow looking up physical address for logical URL."""
 
-    def getAddress(self, logicalURL):
+    def getAddress(logicalURL):
         """Return physical URL of server for logical URL of user.
 
         @param logicalURL: a logical C{URL}.
@@ -871,7 +870,7 @@ class Proxy(Base):
         pass
 
 class IAuthorizer(Interface):
-    def getChallenge(self, peer):
+    def getChallenge(peer):
         """Generate a challenge the client may respond to.
         
         @type peer: C{tuple}
@@ -881,7 +880,7 @@ class IAuthorizer(Interface):
         @return: The challenge string
         """
     
-    def decode(self, response):
+    def decode(response):
         """Create a credentials object from the given response.
         
         @type response: C{str}

@@ -12,7 +12,6 @@ import operator
 
 from zope.interface import implements
 
-from twisted.python import components
 from twisted.internet import interfaces
 
 

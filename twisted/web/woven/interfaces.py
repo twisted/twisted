@@ -2,9 +2,9 @@
 
 __version__ = "$Revision: 1.13 $"[11:-2]
 
-from twisted.python import components
+from zope.interface import Interface
 
-class IModel(components.Interface):
+class IModel(Interface):
     """A MVC Model."""
     def addView(view):
         """Add a view for the model to keep track of.
@@ -23,19 +23,19 @@ class IModel(components.Interface):
         in.
         """
 
-    def getData(self):
+    def getData():
         """Return the raw data contained by this Model object, if it is a
         wrapper. If not, return self.
         """
 
-    def setData(self, request, data):
+    def setData(request, data):
         """Set the raw data referenced by this Model object, if it is a
         wrapper. This is done by telling our Parent model to setSubmodel
         the new data. If this object is not a wrapper, keep the data
         around and return it for subsequent getData calls.
         """
 
-    def lookupSubmodel(self, request, submodelPath):
+    def lookupSubmodel(request, submodelPath):
         """Return an IModel implementor for the given submodel path
         string. This path may be any number of elements separated
         by /. The default implementation splits on "/" and calls
@@ -43,21 +43,21 @@ class IModel(components.Interface):
         need to override this behavior.
         """
 
-    def getSubmodel(self, request, submodelName):
+    def getSubmodel(request, submodelName):
         """Return an IModel implementor for the submodel named
         "submodelName". If this object contains simple data types,
         they can be adapted to IModel using
         model.adaptToIModel(m, parent, name) before returning.
         """
 
-    def setSubmodel(self, request, submodelName, data):
+    def setSubmodel(request, submodelName, data):
         """Set the given data as a submodel of this model. The data
         need not implement IModel, since getSubmodel should adapt
         the data to IModel before returning it.
         """
 
 
-class IView(components.Interface):
+class IView(Interface):
     """A MVC View"""
     def __init__(model, controller=None):
         """A view must be told what its model is, and may be told what its
@@ -98,7 +98,7 @@ class IView(components.Interface):
         the given name.
         """
 
-    def setSubviewFactory(self, name, factory, setup=None):
+    def setSubviewFactory(name, factory, setup=None):
         """Set the callable "factory", which takes a model and should
         return a Widget, to be called by the default implementation of
         getSubview when the viewName "name" is present in the template.
@@ -132,7 +132,7 @@ class IView(components.Interface):
         return default
 
 
-class IController(components.Interface):
+class IController(Interface):
     """A MVC Controller"""
     def setView(view):
         """Set the view that this controller is related to.
@@ -156,7 +156,7 @@ class IController(components.Interface):
         for the given name.
         """
 
-    def setSubcontrollerFactory(self, name, factory):
+    def setSubcontrollerFactory(name, factory):
         """Set the callable "factory", which takes a model and should
         return an InputHandler, to be called by the default implementation of
         getSubview when the controllerName "name" is present in the template.
@@ -181,7 +181,7 @@ class IController(components.Interface):
         return default
 
 
-class IWovenLivePage(components.Interface):
+class IWovenLivePage(Interface):
     def getCurrentPage():
         """Return the current page object contained in this session.
         """

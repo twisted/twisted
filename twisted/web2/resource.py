@@ -7,7 +7,6 @@ I hold the lowest-level L{Resource} class and related mix-in classes.
 """
 
 # System Imports
-from twisted.python import components
 from zope.interface import implements
 
 from twisted.web2 import iweb, http, server, responsecode

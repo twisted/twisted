@@ -36,7 +36,7 @@ class IResource(Interface):
   I am a web resource.
   """
 
-  def locateChild(self, request, segments):
+  def locateChild(request, segments):
     """Locate another object which can be adapted to IResource.
 
     &#64;return: A 2-tuple of (resource, remaining-path-segments),
@@ -53,7 +53,7 @@ class IResource(Interface):
                  handle.
     """
 
-  def renderHTTP(self, request):
+  def renderHTTP(request):
     """Return an IResponse or a deferred which will fire an
     IResponse. This response will be written to the web browser
     which initiated the request.

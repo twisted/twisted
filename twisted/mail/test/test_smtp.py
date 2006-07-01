@@ -16,7 +16,6 @@ from twisted.protocols import loopback
 from twisted.mail import smtp
 from twisted.internet import defer, protocol, reactor, interfaces, address
 from twisted.test.test_protocols import StringIOWithoutClosing
-from twisted.python import components
 
 from twisted import cred
 import twisted.cred.error

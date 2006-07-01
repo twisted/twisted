@@ -8,7 +8,7 @@ import time
 from zope.interface import implements
 
 from twisted.names import dns
-from twisted.python import failure, log, components
+from twisted.python import failure, log
 from twisted.internet import interfaces, defer
 
 import common

@@ -7,7 +7,6 @@
 """Utility classes for spread."""
 
 from twisted.internet import defer
-from twisted.python import components
 from twisted.python.failure import Failure
 from zope.interface import implements
 

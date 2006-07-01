@@ -22,7 +22,7 @@ if not hasattr(socket, 'AF_UNIX'):
 # Twisted imports
 from twisted.internet import base, tcp, udp, error, interfaces, protocol, address, defer
 from twisted.internet.error import CannotListenError
-from twisted.python import lockfile, log, reflect, failure, components
+from twisted.python import lockfile, log, reflect, failure
 
 
 class Server(tcp.Server):

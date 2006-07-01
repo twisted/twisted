@@ -22,12 +22,11 @@ from twisted.mail import smtp
 from twisted.internet import defer
 from twisted.enterprise import adbapi
 from twisted.persisted import dirdbm
-from twisted.python import components
 
 import getpass, pickle, time, socket, md5
 import os
 import StringIO
-from zope.interface import implements
+from zope.interface import implements, Interface
 
 
 ERR_NOGROUP, ERR_NOARTICLE = range(2, 4)  # XXX - put NNTP values here (I guess?)
@@ -98,26 +97,26 @@ class NewsServerError(Exception):
     pass
 
     
-class INewsStorage(components.Interface):
+class INewsStorage(Interface):
     """
     An interface for storing and requesting news articles
     """
     
-    def listRequest(self):
+    def listRequest():
         """
         Returns a deferred whose callback will be passed a list of 4-tuples
         containing (name, max index, min index, flags) for each news group
         """
 
 
-    def subscriptionRequest(self):
+    def subscriptionRequest():
         """
         Returns a deferred whose callback will be passed the list of
         recommended subscription groups for new server users
         """
     
     
-    def postRequest(self, message):
+    def postRequest(message):
         """
         Returns a deferred whose callback will be invoked if 'message'
         is successfully posted to one or more specified groups and
@@ -125,14 +124,14 @@ class INewsStorage(components.Interface):
         """
     
     
-    def overviewRequest(self):
+    def overviewRequest():
         """
         Returns a deferred whose callback will be passed the a list of
         headers describing this server's overview format.
         """
 
 
-    def xoverRequest(self, group, low, high):
+    def xoverRequest(group, low, high):
         """
         Returns a deferred whose callback will be passed a list of xover
         headers for the given group over the given range.  If low is None,
@@ -141,7 +140,7 @@ class INewsStorage(components.Interface):
         """
 
 
-    def xhdrRequest(self, group, low, high, header):
+    def xhdrRequest(group, low, high, header):
         """
         Returns a deferred whose callback will be passed a list of XHDR data
         for the given group over the given range.  If low is None,
@@ -150,21 +149,21 @@ class INewsStorage(components.Interface):
         """
 
     
-    def listGroupRequest(self, group):
+    def listGroupRequest(group):
         """
         Returns a deferred whose callback will be passed a two-tuple of
         (group name, [article indices])
         """
     
     
-    def groupRequest(self, group):
+    def groupRequest(group):
         """
         Returns a deferred whose callback will be passed a five-tuple of
         (group name, article count, highest index, lowest index, group flags)
         """
 
     
-    def articleExistsRequest(self, id):
+    def articleExistsRequest(id):
         """
         Returns a deferred whose callback will be passed with a true value
         if a message with the specified Message-ID exists in the database
@@ -172,7 +171,7 @@ class INewsStorage(components.Interface):
         """
 
 
-    def articleRequest(self, group, index, id = None):
+    def articleRequest(group, index, id = None):
         """ 
         Returns a deferred whose callback will be passed a file-like object
         containing the full article text (headers and body) for the article
@@ -184,7 +183,7 @@ class INewsStorage(components.Interface):
         """
 
     
-    def headRequest(self, group, index):
+    def headRequest(group, index):
         """
         Returns a deferred whose callback will be passed the header for
         the article of the specified index in the specified group, and
@@ -193,7 +192,7 @@ class INewsStorage(components.Interface):
         """
 
     
-    def bodyRequest(self, group, index):
+    def bodyRequest(group, index):
         """
         Returns a deferred whose callback will be passed the body for
         the article of the specified index in the specified group, and

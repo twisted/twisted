@@ -7,7 +7,6 @@
 """
 
 # Twisted imports
-from twisted.python import components
 from twisted.internet import defer
 from twisted.application import service, internet
 from twisted.python import util
@@ -21,7 +20,7 @@ from twisted.mail import protocols, smtp
 
 # System imports
 import os
-from zope.interface import implements
+from zope.interface import implements, Interface
 
 
 class DomainWithDefaultDict:
@@ -104,10 +103,10 @@ class DomainWithDefaultDict:
     def setdefault(self, key, default):
         return self.domains.setdefault(key, default)
 
-class IDomain(components.Interface):
+class IDomain(Interface):
     """An email domain."""
 
-    def exists(self, user):
+    def exists(user):
         """
         Check whether or not the specified user exists in this domain.
 
@@ -124,21 +123,21 @@ class IDomain(components.Interface):
         user does not exist in this domain.
         """
 
-    def addUser(self, user, password):
+    def addUser(user, password):
         """Add a username/password to this domain."""
 
-    def startMessage(self, user):
+    def startMessage(user):
         """Create and return a new message to be delivered to the given user.
 
         DEPRECATED.  Implement validateTo() correctly instead.
         """
 
-    def getCredentialsCheckers(self):
+    def getCredentialsCheckers():
         """Return a list of ICredentialsChecker implementors for this domain.
         """
 
 class IAliasableDomain(IDomain):
-    def setAliasGroup(self, aliases):
+    def setAliasGroup(aliases):
         """Set the group of defined aliases for this domain
 
         @type aliases: C{dict}
@@ -146,7 +145,7 @@ class IAliasableDomain(IDomain):
         C{IAlias}
         """
 
-    def exists(self, user, memo=None):
+    def exists(user, memo=None):
         """
         Check whether or not the specified user exists in this domain.
 

@@ -1,4 +1,3 @@
-#from twisted.python.components import Interface
 from zope.interface import Interface
 
 class IConchUser(Interface):

@@ -23,10 +23,9 @@ from twisted.mail import smtp
 from twisted.internet import protocol
 from twisted.internet import defer
 from twisted.internet import error
-from twisted.python import components
 from twisted.python import failure
 from twisted.python import log
-from zope.interface import implements
+from zope.interface import implements, Interface
 
 
 def handle(result, line, filename, lineNo):
@@ -92,8 +91,8 @@ def loadAliasFile(domains, filename=None, fp=None):
         result[u] = AliasGroup(a, domains, u)
     return result
 
-class IAlias(components.Interface):
-    def createMessageReceiver(self):
+class IAlias(Interface):
+    def createMessageReceiver():
         pass
 
 class AliasBase:

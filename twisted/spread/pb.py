@@ -76,9 +76,9 @@ from twisted.internet import defer, protocol
 from twisted.cred.portal import Portal
 from twisted.cred.credentials import ICredentials, IUsernameHashedPassword
 from twisted.persisted import styles
-from twisted.python.components import Interface, registerAdapter
+from twisted.python.components import registerAdapter
 
-from zope.interface import implements
+from zope.interface import implements, Interface
 
 # Sibling Imports
 from twisted.spread.interfaces import IJellyable, IUnjellyable
@@ -179,7 +179,7 @@ class IPerspective(Interface):
     needed.
     """
 
-    def perspectiveMessageReceived(self, broker, message, args, kwargs):
+    def perspectiveMessageReceived(broker, message, args, kwargs):
         """
         This method is called when a network message is received.
 
@@ -1143,7 +1143,7 @@ class IUsernameMD5Password(ICredentials):
     @ivar username: The username associated with these credentials.
     """
 
-    def checkPassword(self, password):
+    def checkPassword(password):
         """Validate these credentials against the correct password.
 
         @param password: The correct, plaintext password against which to
@@ -1153,7 +1153,7 @@ class IUsernameMD5Password(ICredentials):
             password matches.
         """
 
-    def checkMD5Password(self, password):
+    def checkMD5Password(password):
         """Validate these credentials against the correct MD5 digest of password.
 
         @param password: The correct, plaintext password against which to

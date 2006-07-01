@@ -28,10 +28,10 @@ __version__ = "$Revision: 1.32 $"[11:-2]
 
 # system imports
 import sys
-from zope.interface import implements
+from zope.interface import implements, Interface
 
 # twisted imports
-from twisted.python import log, reflect, components
+from twisted.python import log, reflect
 
 # sibling imports
 from jelly import setUnjellyableForClass, setUnjellyableForClassTree, setUnjellyableFactoryForClass, unjellyableRegistry
@@ -54,10 +54,10 @@ class NoSuchMethod(AttributeError):
     """Raised if there is no such remote method"""
 
 
-class IPBRoot(components.Interface):
+class IPBRoot(Interface):
     """Factory for root Referenceable objects for PB servers."""
 
-    def rootObject(self, broker):
+    def rootObject(broker):
         """Return root Referenceable for broker."""
 
 

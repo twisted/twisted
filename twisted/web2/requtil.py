@@ -10,12 +10,12 @@ raise ImportError("FIXME: this file probably doesn't work.")
 
 # System Imports
 import time
-import urllib 
+import urllib
 
 # Twisted Imports
 from twisted.internet import reactor, defer
 from twisted.python import log, components
-from zope.interface import implements
+from zope.interface import implements, Interface
 
 from twisted.web2 import iweb
 
@@ -38,7 +38,7 @@ def childLink(req, name):
     else:
         return name
 
-class IAppRoot(components.Interface):
+class IAppRoot(Interface):
     """attribute: root"""
 
 class AppRoot:
@@ -49,7 +49,7 @@ class AppRoot:
 
 components.registerAdapter(AppRoot, iweb.IRequest, IAppRoot)
 
-class ISession(components.Interface):
+class ISession(Interface):
     pass
 
 def getSession(request):

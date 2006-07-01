@@ -25,7 +25,7 @@ from twisted.internet.interfaces import IHalfCloseableDescriptor
 from twisted.internet import error
 from twisted.internet import tcp, udp
 
-from twisted.python import log, threadable, failure, components, util
+from twisted.python import log, threadable, failure, util
 from twisted.persisted import styles
 from twisted.python.runtime import platformType, platform
 

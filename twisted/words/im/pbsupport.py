@@ -8,7 +8,7 @@ from __future__ import nested_scopes
 
 from twisted.internet import defer
 from twisted.internet import error
-from twisted.python import log, components
+from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.spread import pb
 

@@ -16,7 +16,6 @@ from twisted.mail import relaymanager
 from twisted.mail import alias
 
 from twisted.python import usage
-from twisted.python import components
 
 from twisted.cred import checkers
 from twisted.application import internet

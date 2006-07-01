@@ -4,7 +4,7 @@
 # See LICENSE for details.
 
 
-from zope.interface import implements
+from zope.interface import implements, Interface
 
 from twisted.words.xish import domish, xpath, utility
 from twisted.words.protocols.jabber import jstrports, xmlstream
@@ -62,18 +62,17 @@ class ListenComponentAuthenticator(xmlstream.Authenticator):
 
 
 from twisted.application import service
-from twisted.python import components
 
-class IService(components.Interface):
-    def componentConnected(self, xmlstream):
+class IService(Interface):
+    def componentConnected(xmlstream):
         """ Parent component has established a connection
         """
 
-    def componentDisconnected(self):
+    def componentDisconnected():
         """ Parent component has lost a connection to the Jabber system
         """
 
-    def transportConnected(self, xmlstream):
+    def transportConnected(xmlstream):
         """ Parent component has established a connection over the underlying transport
         """
 

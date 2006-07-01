@@ -25,7 +25,7 @@ from win32event import QS_ALLEVENTS
 # Zope & Twisted imports
 from zope.interface import implements
 from twisted.internet import error
-from twisted.python import failure, components
+from twisted.python import failure
 from twisted.internet.interfaces import IProcessTransport
 
 # sibling imports

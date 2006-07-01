@@ -19,9 +19,9 @@ try:
     import cStringIO as StringIO
 except ImportError:
     import StringIO
-from twisted.python import components, log, runtime
+from twisted.python import log, runtime
 from twisted.persisted import styles
-from zope.interface import implements
+from zope.interface import implements, Interface
 
 # Note:
 # These encrypt/decrypt functions only work for data formats
@@ -39,17 +39,17 @@ def _decrypt(passphrase, data):
     return AES.new(md5.new(passphrase).digest()[:16]).decrypt(data)
 
 
-class IPersistable(components.Interface):
+class IPersistable(Interface):
 
     """An object which can be saved in several formats to a file"""
 
-    def setStyle(self, style):
+    def setStyle(style):
         """Set desired format.
 
         @type style: string (one of 'pickle', 'source' or 'xml')
         """
 
-    def save(self, tag=None, filename=None, passphrase=None):
+    def save(tag=None, filename=None, passphrase=None):
         """Save object to file.
 
         @type tag: string

@@ -12,11 +12,10 @@ import struct
 
 from twisted.internet import protocol
 from twisted.pair import raw
-from twisted.python import components
-from zope.interface import implements
+from zope.interface import implements, Interface
 
 
-class IEthernetProtocol(components.Interface):
+class IEthernetProtocol(Interface):
     """An interface for protocols that handle Ethernet frames"""
     def addProto():
         """Add an IRawPacketProtocol protocol"""

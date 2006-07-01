@@ -5,7 +5,6 @@
     and IResource.  I am based heavily on ideas from nevow.inevow
 """
 
-from twisted.python import components
 from zope.interface import Attribute, Interface, interface
 
 # server.py interfaces
@@ -55,18 +54,18 @@ class SpecialAdaptInterfaceClass(interface.InterfaceClass):
             return IResource(result)
 IResource.__class__ = SpecialAdaptInterfaceClass
 
-class IOldNevowResource(components.Interface):
+class IOldNevowResource(Interface):
     # Shared interface with inevow.IResource
     """
         I am a web resource.
     """
 
-    def locateChild(self, ctx, segments):
+    def locateChild(ctx, segments):
         """Locate another object which can be adapted to IResource
         Return a tuple of resource, path segments
         """
 
-    def renderHTTP(self, ctx):
+    def renderHTTP(ctx):
         """Return a string or a deferred which will fire a string. This string
         will be written to the web browser which initiated this request.
 
@@ -75,13 +74,13 @@ class IOldNevowResource(components.Interface):
         string instead of a response object.
         """
 
-class ICanHandleException(components.Interface):
+class ICanHandleException(Interface):
     # Shared interface with inevow.ICanHandleException
-    def renderHTTP_exception(self, request, failure):
+    def renderHTTP_exception(request, failure):
         """Render an exception to the given request object.
         """
 
-    def renderInlineException(self, request, reason):
+    def renderInlineException(request, reason):
         """Return stan representing the exception, to be printed in the page,
         not replacing the page."""
 
@@ -109,7 +108,7 @@ class IRequest(Interface):
         
     chanRequest = Attribute("The ChannelRequest. I wonder if this is public really?")
 
-class IOldRequest(components.Interface):
+class IOldRequest(Interface):
     # Shared interface with inevow.ICurrentSegments
     """An old HTTP request.
 
@@ -126,26 +125,26 @@ class IOldRequest(components.Interface):
     @ivar received_headers: All received headers
     """
     # Methods for received request
-    def getHeader(self, key):
+    def getHeader(key):
         """Get a header that was sent from the network.
         """
         
-    def getCookie(self, key):
+    def getCookie(key):
         """Get a cookie that was sent from the network.
         """    
 
 
-    def getAllHeaders(self):
+    def getAllHeaders():
         """Return dictionary of all headers the request received."""
 
-    def getRequestHostname(self):
+    def getRequestHostname():
         """Get the hostname that the user passed in to the request.
 
         This will either use the Host: header (if it is available) or the
         host we are listening on if the header is unavailable.
         """
 
-    def getHost(self):
+    def getHost():
         """Get my originally requesting transport's host.
 
         Don't rely on the 'transport' attribute, since Request objects may be
@@ -153,48 +152,48 @@ class IOldRequest(components.Interface):
         twisted.internet.tcp.Port.
         """
         
-    def getClientIP(self):
+    def getClientIP():
         pass
-    def getClient(self):
+    def getClient():
         pass
-    def getUser(self):
+    def getUser():
         pass
-    def getPassword(self):
+    def getPassword():
         pass
-    def isSecure(self):
+    def isSecure():
         pass
 
-    def getSession(self, sessionInterface = None):
+    def getSession(sessionInterface = None):
         pass
     
-    def URLPath(self):
+    def URLPath():
         pass
 
-    def prePathURL(self):
+    def prePathURL():
         pass
 
-    def rememberRootURL(self):
+    def rememberRootURL():
         """
         Remember the currently-processed part of the URL for later
         recalling.
         """
         
-    def getRootURL(self):
+    def getRootURL():
         """
         Get a previously-remembered URL.
         """
         
     # Methods for outgoing request
-    def finish(self):
+    def finish():
         """We are finished writing data."""
 
-    def write(self, data):
+    def write(data):
         """
         Write some data as a result of an HTTP request.  The first
         time this is called, it writes out response data.
         """
 
-    def addCookie(self, k, v, expires=None, domain=None, path=None, max_age=None, comment=None, secure=None):
+    def addCookie(k, v, expires=None, domain=None, path=None, max_age=None, comment=None, secure=None):
         """Set an outgoing HTTP cookie.
 
         In general, you should consider using sessions instead of cookies, see
@@ -202,21 +201,21 @@ class IOldRequest(components.Interface):
         twisted.web.server.Session class for details.
         """
 
-    def setResponseCode(self, code, message=None):
+    def setResponseCode(code, message=None):
         """Set the HTTP response code.
         """
 
-    def setHeader(self, k, v):
+    def setHeader(k, v):
         """Set an outgoing HTTP header.
         """
 
-    def redirect(self, url):
+    def redirect(url):
         """Utility function that does a redirect.
 
         The request should have finish() called after this.
         """
 
-    def setLastModified(self, when):
+    def setLastModified(when):
         """Set the X{Last-Modified} time for the response to this request.
 
         If I am called more than once, I ignore attempts to set
@@ -235,7 +234,7 @@ class IOldRequest(components.Interface):
             body.  Otherwise, I return a false value.
         """
 
-    def setETag(self, etag):
+    def setETag(etag):
         """Set an X{entity tag} for the outgoing response.
 
         That's \"entity tag\" as in the HTTP/1.1 X{ETag} header, \"used
@@ -254,7 +253,7 @@ class IOldRequest(components.Interface):
             no body.  Otherwise, I return a false value.
         """
 
-    def setHost(self, host, port, ssl=0):
+    def setHost(host, port, ssl=0):
         """Change the host and port the request thinks it's using.
 
         This method is useful for working with reverse HTTP proxies (e.g.

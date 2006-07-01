@@ -8,8 +8,6 @@ from twisted.python import reflect
 from twisted.web import resource
 from twisted.web.woven import model, view, controller, interfaces, template
 
-from twisted.python import components
-
 class Page(model.MethodModel, controller.Controller, view.View):
     """
     @cvar appRoot: Set this to True if you want me to call

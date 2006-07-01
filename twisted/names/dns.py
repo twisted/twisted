@@ -55,14 +55,13 @@ except ImportError:
 else:
     def randomSource(r = randpool.RandomPool().get_bytes):
         return struct.unpack('H', r(2))[0]
-from zope.interface import implements
+from zope.interface import implements, Interface
 
 
 # Twisted imports
 from twisted.internet import protocol, defer
 from twisted.python import log, failure
 from twisted.python import util as tputil
-from twisted.python import components
 
 PORT = 53
 
@@ -138,7 +137,7 @@ OP_QUERY, OP_INVERSE, OP_STATUS, OP_NOTIFY = range(4)
 # Response Codes
 OK, EFORMAT, ESERVER, ENAME, ENOTIMP, EREFUSED = range(6)
 
-class IRecord(components.Interface):
+class IRecord(Interface):
     """An single entry in a zone of authority.
 
     @cvar TYPE: An indicator of what kind of record this is.
@@ -179,12 +178,12 @@ def readPrecisely(file, l):
     return buff
 
 
-class IEncodable(components.Interface):
+class IEncodable(Interface):
     """
     Interface for something which can be encoded to and decoded
     from a file object.
     """
-    def encode(self, strio, compDict = None):
+    def encode(strio, compDict = None):
         """
         Write a representation of this object to the given
         file object.
@@ -198,7 +197,7 @@ class IEncodable(components.Interface):
         compression.
         """
 
-    def decode(self, strio, length = None):
+    def decode(strio, length = None):
         """
         Reconstruct an object from data read from the given
         file object.

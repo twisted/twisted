@@ -12,7 +12,6 @@ from zope.interface import implements
 
 # twisted import
 from twisted.internet import protocol, interfaces
-from twisted.python import components
 
 
 class Echo(protocol.Protocol):

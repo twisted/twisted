@@ -30,8 +30,6 @@ from twisted.python import reflect
 from twisted.persisted import styles
 
 # system imports
-import sys
-import types
 import warnings
 
 # zope3 imports
@@ -39,7 +37,7 @@ from zope.interface import interface, declarations
 from zope.interface.adapter import AdapterRegistry
 
 class ComponentsDeprecationWarning(DeprecationWarning):
-    """So you can filter new-components related deprecations easier."""
+    """Nothing emits this warning anymore."""
     pass
 
 # Twisted's global adapter registry
@@ -96,6 +94,8 @@ def _hook(iface, ob, lookup=globalRegistry.lookup1):
         return factory(ob)
 interface.adapter_hooks.append(_hook)
 
+## backwardsCompatImplements and fixClassImplements should probably stick around for another
+## release cycle. No harm doing so in any case.
 
 def backwardsCompatImplements(klass):
     """DEPRECATED.
@@ -115,90 +115,14 @@ def fixClassImplements(klass):
     warnings.warn("components.fixClassImplements doesn't do anything in Twisted 2.3, stop calling it.", ComponentsDeprecationWarning, stacklevel=2)
 
 
-def getAdapterClass(klass, interfaceClass, default):
-    """DEPRECATEED.
-    
-    Use getAdapterFactory instead.
-    """
-    warnings.warn("components.getAdapterClass is deprecated in Twisted 2.3. Use components.getAdapterFactory instead.", ComponentsDeprecationWarning, stacklevel=2)    
-    return getAdapterFactory(klass, interfaceClass, default)
-
-def getAdapterClassWithInheritance(klass, interfaceClass, default):
-    """DEPRECATEED.
-    
-    Use getAdapterFactory instead.
-    """
-    warnings.warn("components.getAdapterClassWithInheritance is deprecated in Twisted 2.3. Use components.getAdapterFactory instead.", ComponentsDeprecationWarning, stacklevel=2)    
-    return getAdapterFactory(klass, interfaceClass, default)
-
-
-def getRegistry(r=None):
+def getRegistry():
     """Returns the Twisted global
     C{zope.interface.adapter.AdapterRegistry} instance.
     """
-    if r is not None:
-        warnings.warn("components.getRegistry's argument is deprecated in Twisted 2.3 and has been ignored since 2.0.", ComponentsDeprecationWarning, stacklevel=2)
     return globalRegistry
 
 # FIXME: deprecate attribute somehow?
 CannotAdapt = TypeError
-
-
-class _Nothing:
-    """Default value for functions which raise if default not passed.
-    """
-
-class MetaInterface(interface.InterfaceClass):
-    def __init__(self, name, bases=(), attrs=None, __doc__=None,
-                 __module__=None):
-        if attrs is not None:
-            if __module__ == None and attrs.has_key('__module__'):
-                __module__ = attrs['__module__']
-                del attrs['__module__']
-            if __doc__ == None and attrs.has_key('__doc__'):
-                __doc__ = attrs['__doc__']
-                del attrs['__doc__']
-
-            for k, v in attrs.items():
-                if isinstance(v, types.FunctionType):
-                    # Look here: the following line is the only useful thing
-                    # this function is actually doing. z.i interfaces don't
-                    # specify self as the first argument, but t.p.c interfaces
-                    # do, so we need to use the imlevel=1 argument.
-                    attrs[k] = interface.fromFunction(v, name, name=k, imlevel=1)
-                elif not isinstance(v, interface.Attribute):
-                    raise interface.InvalidInterface("Concrete attribute, %s" % k)
-
-        # BEHOLD A GREAT EVIL SHALL COME UPON THEE
-        if __module__ == None:
-            __module__ = sys._getframe(1).f_globals['__name__']
-            
-        if not __module__.startswith("twisted."):
-            # Don't warn for use within twisted, because twisted classes must
-            # not be switched to z.i.Interface yet, b/c we forgot to deprecate
-            # the "default" kwarg to __call__. Also when t.p.c.Interface is
-            # removed, the rest of twisted can be updated simultaneously. But
-            # everyone else should just use z.i.Interface directly now.
-            warnings.warn("twisted.python.components.Interface is deprecated in Twisted 2.3. Use zope.interface.Interface instead. (also note that you should not use 'self' as the first arg on function decls in z.i.Interfaces).", ComponentsDeprecationWarning, stacklevel=2)
-
-        return interface.InterfaceClass.__init__(self, name, bases, attrs, __doc__, __module__)
-
-    def __call__(self, adaptable, alternate=_Nothing, default=_Nothing):
-        if default is not _Nothing:
-            warnings.warn("The 'default=' keyword to Interface.__call__ is deprecated in Twisted 2.3. Use a 2nd positional argument instead.", ComponentsDeprecationWarning, stacklevel=2)
-
-            if alternate is not _Nothing:
-                raise RuntimeError("Cannot specify both default and alternate to Interface.__call__.")
-            alternate = default
-        
-        if alternate is _Nothing:
-            return interface.InterfaceClass.__call__(self, adaptable)
-        else:
-            return interface.InterfaceClass.__call__(self, adaptable, alternate)
-
-
-Interface = MetaInterface("Interface", __module__="twisted.python.components")
-
 
 class Adapter:
     """I am the default implementation of an Adapter for some interface.
@@ -314,11 +238,6 @@ class Componentized(styles.Versioned):
 
         @return: a list of the interfaces that were removed.
         """
-        if (isinstance(component, types.ClassType) or
-            isinstance(component, types.TypeType)):
-            warnings.warn("passing interface to removeComponent, you probably want unsetComponent", DeprecationWarning, 1)
-            self.unsetComponent(component)
-            return [component]
         l = []
         for k, v in self._adapterCache.items():
             if v is component:
@@ -347,7 +266,7 @@ class Componentized(styles.Versioned):
             return self._adapterCache[k]
         else:
             adapter = interface.__adapt__(self)
-            if adapter is not None and adapter is not _Nothing and not (
+            if adapter is not None and not (
                 hasattr(adapter, "temporaryAdapter") and
                 adapter.temporaryAdapter):
                 self._adapterCache[k] = adapter
@@ -376,8 +295,8 @@ __all__ = [
     "ComponentsDeprecationWarning", 
     "registerAdapter", "getAdapterFactory",
     "Adapter", "Componentized", "ReprableComponentized", "getRegistry",
-
+    
     # Deprecated:
-    "Interface", "getAdapterClass", "backwardsCompatImplements",
+    "backwardsCompatImplements",
     "fixClassImplements",
 ]

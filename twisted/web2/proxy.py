@@ -24,8 +24,7 @@ ReverseProxy is used on the server end.
 from twisted.web2 import http
 from twisted.internet import reactor, protocol
 from twisted.web2 import resource, server
-from twisted.python import components
-from zope.interface import implements
+from zope.interface import implements, Interface
 
 # system imports
 import urlparse
@@ -157,9 +156,9 @@ class ReverseProxy(http.HTTPChannel):
 
     requestFactory = ReverseProxyRequest
 
-class IConnector(components.Interface):
+class IConnector(Interface):
     """attribute name"""
-    def connect(self, factory):
+    def connect(factory):
         """connect ClientFactory"""
 
 class TCPConnector:

@@ -42,7 +42,7 @@ if hasattr(gobject, "threads_init"):
     gobject.threads_init()
 
 # Twisted Imports
-from twisted.python import log, threadable, runtime, failure, components
+from twisted.python import log, threadable, runtime, failure
 from twisted.internet.interfaces import IReactorFDSet
 
 # Sibling Imports

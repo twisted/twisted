@@ -15,7 +15,6 @@ the query, or someway to specify (authority|ttl|cache behavior|more?)
 
 from twisted.internet import defer, interfaces
 from twisted.names import dns
-from twisted.python import components
 from zope.interface import implements
 import common
 

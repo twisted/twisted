@@ -16,7 +16,7 @@ import sys, operator
 from twisted.internet.protocol import ServerFactory, Protocol, ClientFactory
 from twisted.internet.interfaces import ITransport
 from twisted.internet import reactor, error
-from twisted.python import log, components
+from twisted.python import log
 from zope.interface import implements, providedBy, directlyProvides
 
 class ProtocolWrapper(Protocol):

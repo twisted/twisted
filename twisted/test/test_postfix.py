@@ -14,7 +14,6 @@ from twisted.protocols import loopback
 from twisted.protocols import postfix
 from twisted.internet import defer, protocol
 from twisted.test.test_protocols import StringIOWithoutClosing
-from twisted.python import components
 
 class PostfixTCPMapQuoteTestCase(unittest.TestCase):
     data = [

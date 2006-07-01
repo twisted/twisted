@@ -19,7 +19,6 @@ from twisted.internet import error
 from twisted.internet import reactor
 from twisted.internet.interfaces import ITLSTransport
 from twisted.python import log
-from twisted.python import components
 from twisted.python import util
 from twisted.python import reflect
 from twisted.python import failure
@@ -35,7 +34,7 @@ import MimeWriter, tempfile, rfc822
 import warnings
 import binascii
 import sys
-from zope.interface import implements
+from zope.interface import implements, Interface
 
 try:
     from email.base64MIME import encode as encode_base64
@@ -59,8 +58,8 @@ else:
 # Used for fast success code lookup
 SUCCESS = dict(map(None, range(200, 300), []))
 
-class IMessageDelivery(components.Interface):
-    def receivedHeader(self, helo, origin, recipients):
+class IMessageDelivery(Interface):
+    def receivedHeader(helo, origin, recipients):
         """
         Generate the Received header for a message
 
@@ -79,7 +78,7 @@ class IMessageDelivery(components.Interface):
         @return: The full \"Received\" header string.
         """
 
-    def validateTo(self, user):
+    def validateTo(user):
         """
         Validate the address for which the message is destined.
 
@@ -96,7 +95,7 @@ class IMessageDelivery(components.Interface):
         not to be accepted.
         """
 
-    def validateFrom(self, helo, origin):
+    def validateFrom(helo, origin):
         """
         Validate the address from which the message originates.
 
@@ -115,7 +114,7 @@ class IMessageDelivery(components.Interface):
         not to be accepted.
         """
 
-class IMessageDeliveryFactory(components.Interface):
+class IMessageDeliveryFactory(Interface):
     """An alternate interface to implement for handling message delivery.
 
     It is useful to implement this interface instead of L{IMessageDelivery}
@@ -125,7 +124,7 @@ class IMessageDeliveryFactory(components.Interface):
     something which cannot be done by L{IMessageDelivery} implementors
     due to their lack of information.
     """
-    def getMessageDelivery(self):
+    def getMessageDelivery():
         """Return an L{IMessageDelivery} object.
 
         This will be called once per message.
@@ -487,20 +486,20 @@ class User:
     def __str__(self):
         return str(self.dest)
 
-class IMessage(components.Interface):
+class IMessage(Interface):
     """Interface definition for messages that can be sent via SMTP."""
 
-    def lineReceived(self, line):
+    def lineReceived(line):
         """handle another line"""
 
-    def eomReceived(self):
+    def eomReceived():
         """handle end of message
 
         return a deferred. The deferred should be called with either:
         callback(string) or errback(error)
         """
 
-    def connectionLost(self):
+    def connectionLost():
         """handle message truncated
 
         semantics should be to discard the message
@@ -1619,14 +1618,14 @@ class SMTPSenderFactory(protocol.ClientFactory):
         return p
 
 
-class IClientAuthentication(components.Interface):
-    def getName(self):
+class IClientAuthentication(Interface):
+    def getName():
         """Return an identifier associated with this authentication scheme.
 
         @rtype: C{str}
         """
 
-    def challengeResponse(self, secret, challenge):
+    def challengeResponse(secret, challenge):
         """Generate a challenge response string"""
 
 

@@ -18,7 +18,6 @@ you need to use twisted.web.woven.guard directly.
 from twisted.cred import portal, checkers as checkerslib
 from twisted.web import resource, util
 from twisted.web.woven import guard
-from twisted.python import components
 from zope.interface import implements
 
 

@@ -68,7 +68,7 @@ from zope.interface import implements
 from twisted.internet.interfaces import IReactorFDSet
 from twisted.internet import error
 from twisted.internet import posixbase
-from twisted.python import log, components, failure, threadable
+from twisted.python import log, failure, threadable
 from twisted.persisted import styles
 from twisted.python.runtime import platformType
 

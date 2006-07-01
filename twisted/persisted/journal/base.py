@@ -19,9 +19,7 @@ except ImportError:
     import pickle
 
 # twisted imports
-from twisted.python.components import Interface
-from twisted.python import components
-from zope.interface import implements
+from zope.interface import implements, Interface
 
 
 class Journal:
@@ -103,23 +101,23 @@ class MemoryJournal(Journal):
 class ICommand(Interface):
     """A serializable command which interacts with a journaled service."""
 
-    def execute(self, journaledService, runTime):
+    def execute(journaledService, runTime):
         """Run the command and return result."""
 
 
 class ICommandLog(Interface):
     """Interface for command log."""
 
-    def logCommand(self, command, runTime):
+    def logCommand(command, runTime):
         """Add a command and its run time to the log.
 
         @return: Deferred of command index.
         """
 
-    def getCurrentIndex(self):
+    def getCurrentIndex():
         """Return index of last command that was logged."""
 
-    def getCommandsSince(self, index):
+    def getCommandsSince(index):
         """Return commands who's index >= the given one.
 
         @return: list of (time, command) tuples, sorted with ascending times.

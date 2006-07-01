@@ -4,14 +4,13 @@
 # See LICENSE for details.
 
 
-from twisted.python import components
-from zope import interface
+from zope.interface import implements, Interface
 
 import hmac
 import time
 import random
 
-class ICredentials(components.Interface):
+class ICredentials(Interface):
     """I check credentials.
 
     Implementors _must_ specify which sub-interfaces of ICredentials
@@ -32,7 +31,7 @@ class IUsernameHashedPassword(ICredentials):
     @ivar username: The username associated with these credentials.
     """
 
-    def checkPassword(self, password):
+    def checkPassword(password):
         """Validate these credentials against the correct password.
 
         @param password: The correct, plaintext password against which to
@@ -59,7 +58,7 @@ class IUsernamePassword(ICredentials):
     @ivar password: The password associated with these credentials.
     """
 
-    def checkPassword(self, password):
+    def checkPassword(password):
         """Validate these credentials against the correct password.
 
         @param password: The correct, plaintext password against which to
@@ -76,7 +75,7 @@ class IAnonymous(ICredentials):
 
 
 class CramMD5Credentials:
-    interface.implements(IUsernameHashedPassword)
+    implements(IUsernameHashedPassword)
 
     challenge = ''
     response = ''
@@ -110,7 +109,7 @@ class CramMD5Credentials:
 
 
 class UsernameHashedPassword:
-    interface.implements(IUsernameHashedPassword)
+    implements(IUsernameHashedPassword)
 
     def __init__(self, username, hashed):
         self.username = username
@@ -121,7 +120,7 @@ class UsernameHashedPassword:
 
 
 class UsernamePassword:
-    interface.implements(IUsernamePassword)
+    implements(IUsernamePassword)
 
     def __init__(self, username, password):
         self.username = username
@@ -132,7 +131,7 @@ class UsernamePassword:
 
 
 class Anonymous:
-    interface.implements(IAnonymous)
+    implements(IAnonymous)
 
 
 class ISSHPrivateKey(ICredentials):
@@ -152,7 +151,7 @@ class ISSHPrivateKey(ICredentials):
 
     """
 class SSHPrivateKey:
-    interface.implements(ISSHPrivateKey)
+    implements(ISSHPrivateKey)
     def __init__(self, username, algName, blob, sigData, signature):
         self.username = username
         self.algName = algName
@@ -177,7 +176,7 @@ class IPluggableAuthenticationModules(ICredentials):
     """
 
 class PluggableAuthenticationModules:
-    interface.implements(IPluggableAuthenticationModules)
+    implements(IPluggableAuthenticationModules)
     
     def __init__(self, username, pamConversion):
         self.username = username

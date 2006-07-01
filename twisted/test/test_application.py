@@ -5,7 +5,6 @@
 from twisted.trial import unittest, util
 from twisted.application import service, internet, app
 from twisted.persisted import sob
-from twisted.python import components
 from twisted.python import log
 from twisted.python.runtime import platformType
 from twisted.internet import utils, interfaces, defer

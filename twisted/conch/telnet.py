@@ -154,15 +154,15 @@ LINEMODE_SUSP = chr(237)
 LINEMODE_ABORT = chr(238)
 
 class ITelnetProtocol(iinternet.IProtocol):
-    def unhandledCommand(self, command, argument):
+    def unhandledCommand(command, argument):
         """A command was received but not understood.
         """
 
-    def unhandledSubnegotiation(self, bytes):
+    def unhandledSubnegotiation(bytes):
         """A subnegotiation command was received but not understood.
         """
 
-    def enableLocal(self, option):
+    def enableLocal(option):
         """Enable the given option locally.
 
         This should enable the given option on this side of the
@@ -171,26 +171,26 @@ class ITelnetProtocol(iinternet.IProtocol):
         will be notified.
         """
 
-    def enableRemote(self, option):
+    def enableRemote(option):
         """Indicate whether the peer should be allowed to enable this option.
 
         Returns True if the peer should be allowed to enable this option,
         False otherwise.
         """
 
-    def disableLocal(self, option):
+    def disableLocal(option):
         """Disable the given option locally.
 
         Unlike enableLocal, this method cannot fail.  The option must be
         disabled.
         """
 
-    def disableRemote(self, option):
+    def disableRemote(option):
         """Indicate that the peer has disabled this option.
         """
 
 class ITelnetTransport(iinternet.ITransport):
-    def do(self, option):
+    def do(option):
         """Indicate a desire for the peer to begin performing the given option.
 
         Returns a Deferred that fires with True when the peer begins performing
@@ -204,7 +204,7 @@ class ITelnetTransport(iinternet.ITransport):
         already be enabled.
         """
 
-    def dont(self, option):
+    def dont(option):
         """Indicate a desire for the peer to cease performing the given option.
 
         Returns a Deferred that fires with True when the peer ceases performing
@@ -218,7 +218,7 @@ class ITelnetTransport(iinternet.ITransport):
         already be disabled.
         """
 
-    def will(self, option):
+    def will(option):
         """Indicate our willingness to begin performing this option locally.
 
         Returns a Deferred that fires with True when the peer agrees to allow
@@ -233,7 +233,7 @@ class ITelnetTransport(iinternet.ITransport):
         already be enabled.
         """
 
-    def wont(self, option):
+    def wont(option):
         """Indicate that we will stop performing the given option.
 
         Returns a Deferred that fires with True when the peer acknowledges
@@ -247,7 +247,7 @@ class ITelnetTransport(iinternet.ITransport):
         already be disabled.
         """
 
-    def requestNegotiation(self, about, bytes):
+    def requestNegotiation(about, bytes):
         """Send a subnegotiation request.
 
         @param about: A byte indicating the feature being negotiated.

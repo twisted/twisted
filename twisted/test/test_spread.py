@@ -7,17 +7,16 @@
 Test cases for twisted.spread package
 """
 
-from zope.interface import implements
+from zope.interface import implements, Interface
 from twisted.trial import unittest
 
 from twisted.spread.util import LocalAsyncForwarder
 from twisted.internet import defer
-from twisted.python.components import Interface
 
 class IForwarded(Interface):
-    def forwardMe(self):
+    def forwardMe():
         pass
-    def forwardDeferred(self):
+    def forwardDeferred():
         pass
 
 class Forwarded:
@@ -43,7 +42,7 @@ class SpreadUtilTest(unittest.TestCase):
         assert f.forwarded
         lf.callRemote("dontForwardMe")
         assert not f.unforwarded
-        rr = lf.callRemote("forwardDeferred")        
+        rr = lf.callRemote("forwardDeferred")
         l = []
         rr.addCallback(l.append)
         self.assertEqual(l[0], 1)

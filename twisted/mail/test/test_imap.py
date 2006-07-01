@@ -30,7 +30,6 @@ from twisted.internet import reactor
 from twisted.internet import interfaces
 from twisted.trial import unittest
 from twisted.python import util
-from twisted.python import components
 from twisted.python.util import sibpath
 from twisted.python import failure
 

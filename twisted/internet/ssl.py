@@ -52,7 +52,7 @@ from zope.interface import implements, implementsOnly, implementedBy
 import tcp, interfaces
 
 # Twisted imports
-from twisted.python import log, components
+from twisted.python import log
 from twisted.internet import base, address
 
 

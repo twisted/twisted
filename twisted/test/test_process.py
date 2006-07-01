@@ -26,7 +26,7 @@ except ImportError:
 
 # Twisted Imports
 from twisted.internet import reactor, protocol, error, interfaces, defer
-from twisted.python import util, runtime, components
+from twisted.python import util, runtime
 from twisted.python import procutils
 
 class TrivialProcessProtocol(protocol.ProcessProtocol):

@@ -5,8 +5,8 @@ import sys, re
 from twisted.python import log
 #log.startLogging(sys.stderr)
 
-from zope.interface import implements, implementsOnly, implementedBy
-from twisted.python import components, failure, reflect
+from zope.interface import implements, implementsOnly, implementedBy, Interface
+from twisted.python import failure, reflect
 from twisted.internet import reactor, defer
 from twisted.trial import unittest
 from twisted.internet.main import CONNECTION_LOST
@@ -222,7 +222,7 @@ class BrokenTarget(pb.Referenceable):
     def remote_add(self, a, b):
         return "error"
 
-class IFoo(components.Interface):
+class IFoo(Interface):
     # non-remote Interface
     pass
 

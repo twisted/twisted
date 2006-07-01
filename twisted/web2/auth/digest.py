@@ -6,7 +6,6 @@ Implementation of RFC2617: HTTP Digest Authentication
 http://www.faqs.org/rfcs/rfc2617.html
 """
 
-from twisted.python import components
 from twisted.cred import credentials, error
 from zope.interface import implements
 

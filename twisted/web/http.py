@@ -35,7 +35,7 @@ from zope.interface import implements
 # twisted imports
 from twisted.internet import interfaces, reactor, protocol, address, task
 from twisted.protocols import policies, basic
-from twisted.python import log, components
+from twisted.python import log
 try: # try importing the fast, C version
     from twisted.protocols._c_urlarg import unquote
 except ImportError:

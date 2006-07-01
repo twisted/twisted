@@ -15,7 +15,7 @@ from zope.interface import implements
 # Twisted Imports
 from twisted.protocols import policies
 from twisted.internet import interfaces, protocol, main, defer
-from twisted.python import failure, components
+from twisted.python import failure
 
 class LoopbackRelay:
 

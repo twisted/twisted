@@ -26,7 +26,7 @@ from twisted.protocols import policies
 from twisted.internet import defer
 from twisted.internet import error
 from twisted.internet.defer import maybeDeferred
-from twisted.python import log, components, util, failure, text
+from twisted.python import log, util, failure, text
 from twisted.internet import interfaces
 
 from twisted import cred
@@ -45,7 +45,7 @@ import time
 import random
 import types
 import sys
-from zope.interface import implements
+from zope.interface import implements, Interface
 
 import email.Utils
 
@@ -421,10 +421,10 @@ class IllegalOperation(IMAP4Exception): pass
 
 class IllegalMailboxEncoding(IMAP4Exception): pass
 
-class IMailboxListener(components.Interface):
+class IMailboxListener(Interface):
     """Interface for objects interested in mailbox events"""
 
-    def modeChanged(self, writeable):
+    def modeChanged(writeable):
         """Indicates that the write status of a mailbox has changed.
 
         @type writeable: C{bool}
@@ -432,7 +432,7 @@ class IMailboxListener(components.Interface):
         otherwise.
         """
 
-    def flagsChanged(self, newFlags):
+    def flagsChanged(newFlags):
         """Indicates that the flags of one or more messages have changed.
 
         @type newFlags: C{dict}
@@ -440,7 +440,7 @@ class IMailboxListener(components.Interface):
         now set on that message.
         """
 
-    def newMessages(self, exists, recent):
+    def newMessages(exists, recent):
         """Indicates that the number of messages in a mailbox has changed.
 
         @type exists: C{int} or C{None}
@@ -3984,14 +3984,14 @@ def collapseNestedLists(items):
     return ''.join(pieces[1:])
 
 
-class IClientAuthentication(components.Interface):
-    def getName(self):
+class IClientAuthentication(Interface):
+    def getName():
         """Return an identifier associated with this authentication scheme.
 
         @rtype: C{str}
         """
 
-    def challengeResponse(self, secret, challenge):
+    def challengeResponse(secret, challenge):
         """Generate a challenge response string"""
 
 class CramMD5ClientAuthenticator:
@@ -4054,14 +4054,14 @@ class ReadOnlyMailbox(MailboxException):
         return 'Mailbox open in read-only state'
 
 
-class IAccount(components.Interface):
+class IAccount(Interface):
     """Interface for Account classes
 
     Implementors of this interface should consider implementing
     C{INamespacePresenter}.
     """
 
-    def addMailbox(self, name, mbox = None):
+    def addMailbox(name, mbox = None):
         """Add a new mailbox to this account
 
         @type name: C{str}
@@ -4081,7 +4081,7 @@ class IAccount(components.Interface):
         is returned.
         """
 
-    def create(self, pathspec):
+    def create(pathspec):
         """Create a new mailbox from the given hierarchical name.
 
         @type pathspec: C{str}
@@ -4098,7 +4098,7 @@ class IAccount(components.Interface):
         returned.
         """
 
-    def select(self, name, rw=True):
+    def select(name, rw=True):
         """Acquire a mailbox, given its name.
 
         @type name: C{str}
@@ -4114,7 +4114,7 @@ class IAccount(components.Interface):
         specified mailbox may not be selected for any reason.
         """
 
-    def delete(self, name):
+    def delete(name):
         """Delete the mailbox with the specified name.
 
         @type name: C{str}
@@ -4129,7 +4129,7 @@ class IAccount(components.Interface):
         This may also be raised asynchronously, if a C{Deferred} is returned.
         """
 
-    def rename(self, oldname, newname):
+    def rename(oldname, newname):
         """Rename a mailbox
 
         @type oldname: C{str}
@@ -4148,7 +4148,7 @@ class IAccount(components.Interface):
         is returned.
         """
 
-    def isSubscribed(self, name):
+    def isSubscribed(name):
         """Check the subscription status of a mailbox
 
         @type name: C{str}
@@ -4160,7 +4160,7 @@ class IAccount(components.Interface):
         whose callback will be invoked with one of these values.
         """
 
-    def subscribe(self, name):
+    def subscribe(name):
         """Subscribe to a mailbox
 
         @type name: C{str}
@@ -4176,7 +4176,7 @@ class IAccount(components.Interface):
         C{Deferred} is returned.
         """
 
-    def unsubscribe(self, name):
+    def unsubscribe(name):
         """Unsubscribe from a mailbox
 
         @type name: C{str}
@@ -4192,7 +4192,7 @@ class IAccount(components.Interface):
         C{Deferred} is returned.
         """
 
-    def listMailboxes(self, ref, wildcard):
+    def listMailboxes(ref, wildcard):
         """List all the mailboxes that meet a certain criteria
 
         @type ref: C{str}
@@ -4209,8 +4209,8 @@ class IAccount(components.Interface):
         C{IMailboxInfo} or C{IMailbox}.  A Deferred may also be returned. 
         """
 
-class INamespacePresenter(components.Interface):
-    def getPersonalNamespaces(self):
+class INamespacePresenter(Interface):
+    def getPersonalNamespaces():
         """Report the available personal namespaces.
 
         Typically there should be only one personal namespace.  A common
@@ -4222,7 +4222,7 @@ class INamespacePresenter(components.Interface):
         If no namespaces of this type exist, None should be returned.
         """
 
-    def getSharedNamespaces(self):
+    def getSharedNamespaces():
         """Report the available shared namespaces.
 
         Shared namespaces do not belong to any individual user but are
@@ -4234,7 +4234,7 @@ class INamespacePresenter(components.Interface):
         If no namespaces of this type exist, None should be returned.
         """
 
-    def getUserNamespaces(self):
+    def getUserNamespaces():
         """Report the available user namespaces.
 
         These are namespaces that contain folders belonging to other users
@@ -4513,8 +4513,8 @@ def getBodyStructure(msg, extended=False):
 
     return result
 
-class IMessagePart(components.Interface):
-    def getHeaders(self, negate, *names):
+class IMessagePart(Interface):
+    def getHeaders(negate, *names):
         """Retrieve a group of message headers.
 
         @type names: C{tuple} of C{str}
@@ -4528,23 +4528,23 @@ class IMessagePart(components.Interface):
         @return: A mapping of header field names to header field values
         """
 
-    def getBodyFile(self):
+    def getBodyFile():
         """Retrieve a file object containing only the body of this message.
         """
 
-    def getSize(self):
+    def getSize():
         """Retrieve the total size, in octets, of this message.
 
         @rtype: C{int}
         """
 
-    def isMultipart(self):
+    def isMultipart():
         """Indicate whether this message has subparts.
 
         @rtype: C{bool}
         """
 
-    def getSubPart(self, part):
+    def getSubPart(part):
         """Retrieve a MIME sub-message
 
         @type part: C{int}
@@ -4558,39 +4558,39 @@ class IMessagePart(components.Interface):
         """
 
 class IMessage(IMessagePart):
-    def getUID(self):
+    def getUID():
         """Retrieve the unique identifier associated with this message.
         """
 
-    def getFlags(self):
+    def getFlags():
         """Retrieve the flags associated with this message.
 
         @rtype: C{iterable}
         @return: The flags, represented as strings.
         """
 
-    def getInternalDate(self):
+    def getInternalDate():
         """Retrieve the date internally associated with this message.
 
         @rtype: C{str}
         @return: An RFC822-formatted date string.
         """
 
-class IMessageFile(components.Interface):
+class IMessageFile(Interface):
     """Optional message interface for representing messages as files.
     
     If provided by message objects, this interface will be used instead
     the more complex MIME-based interface.
     """
-    def open(self):
+    def open():
         """Return an file-like object opened for reading.
 
         Reading from the returned file will return all the bytes
         of which this message consists.
         """
 
-class ISearchableMailbox(components.Interface):
-    def search(self, query, uid):
+class ISearchableMailbox(Interface):
+    def search(query, uid):
         """Search for messages that meet the given query criteria.
 
         If this interface is not implemented by the mailbox, L{IMailbox.fetch}
@@ -4612,8 +4612,8 @@ class ISearchableMailbox(components.Interface):
         invoked with such a list.
         """
 
-class IMessageCopier(components.Interface):
-    def copy(self, messageObject):
+class IMessageCopier(Interface):
+    def copy(messageObject):
         """Copy the given message object into this mailbox.
 
         The message object will be one which was previously returned by
@@ -4630,7 +4630,7 @@ class IMessageCopier(components.Interface):
         with the UID when the copy finishes.
         """
 
-class IMailboxInfo(components.Interface):
+class IMailboxInfo(Interface):
     """Interface specifying only the methods required for C{listMailboxes}.
 
     Implementations can return objects implementing only these methods for
@@ -4638,7 +4638,7 @@ class IMailboxInfo(components.Interface):
     efficiently.
     """
 
-    def getFlags(self):
+    def getFlags():
         """Return the flags defined in this mailbox
 
         Flags with the \\ prefix are reserved for use as system flags.
@@ -4647,26 +4647,26 @@ class IMailboxInfo(components.Interface):
         @return: A list of the flags that can be set on messages in this mailbox.
         """
 
-    def getHierarchicalDelimiter(self):
+    def getHierarchicalDelimiter():
         """Get the character which delimits namespaces for in this mailbox.
 
         @rtype: C{str}
         """
 
 class IMailbox(IMailboxInfo):
-    def getUIDValidity(self):
+    def getUIDValidity():
         """Return the unique validity identifier for this mailbox.
 
         @rtype: C{int}
         """
 
-    def getUIDNext(self):
+    def getUIDNext():
         """Return the likely UID for the next message added to this mailbox.
 
         @rtype: C{int}
         """
 
-    def getUID(self, message):
+    def getUID(message):
         """Return the UID of a message in the mailbox
 
         @type message: C{int}
@@ -4676,32 +4676,32 @@ class IMailbox(IMailboxInfo):
         @return: The UID of the message.
         """
 
-    def getMessageCount(self):
+    def getMessageCount():
         """Return the number of messages in this mailbox.
 
         @rtype: C{int}
         """
 
-    def getRecentCount(self):
+    def getRecentCount():
         """Return the number of messages with the 'Recent' flag.
 
         @rtype: C{int}
         """
 
-    def getUnseenCount(self):
+    def getUnseenCount():
         """Return the number of messages with the 'Unseen' flag.
 
         @rtype: C{int}
         """
 
-    def isWriteable(self):
+    def isWriteable():
         """Get the read/write status of the mailbox.
 
         @rtype: C{int}
         @return: A true value if write permission is allowed, a false value otherwise.
         """
 
-    def destroy(self):
+    def destroy():
         """Called before this mailbox is deleted, permanently.
 
         If necessary, all resources held by this mailbox should be cleaned
@@ -4709,7 +4709,7 @@ class IMailbox(IMailboxInfo):
         mailbox.
         """
 
-    def requestStatus(self, names):
+    def requestStatus(names):
         """Return status information about this mailbox.
 
         Mailboxes which do not intend to do any special processing to
@@ -4729,7 +4729,7 @@ class IMailbox(IMailboxInfo):
         eventually be passed this dictionary is returned instead.
         """
 
-    def addListener(self, listener):
+    def addListener(listener):
         """Add a mailbox change listener
 
         @type listener: Any object which implements C{IMailboxListener}
@@ -4737,7 +4737,7 @@ class IMailbox(IMailboxInfo):
         be notified when the contents of this mailbox change.
         """
 
-    def removeListener(self, listener):
+    def removeListener(listener):
         """Remove a mailbox change listener
 
         @type listener: Any object previously added to and not removed from
@@ -4748,7 +4748,7 @@ class IMailbox(IMailboxInfo):
         this mailbox.
         """
 
-    def addMessage(self, message, flags = (), date = None):
+    def addMessage(message, flags = (), date = None):
         """Add the given message to this mailbox.
 
         @type message: A file-like object
@@ -4770,7 +4770,7 @@ class IMailbox(IMailboxInfo):
         read-write.
         """
 
-    def expunge(self):
+    def expunge():
         """Remove all messages flagged \\Deleted.
 
         @rtype: C{list} or C{Deferred}
@@ -4781,7 +4781,7 @@ class IMailbox(IMailboxInfo):
         read-write.
         """
 
-    def fetch(self, messages, uid):
+    def fetch(messages, uid):
         """Retrieve one or more messages.
 
         @type messages: C{MessageSet}
@@ -4796,7 +4796,7 @@ class IMailbox(IMailboxInfo):
         implementors of C{IMessage}.
         """
 
-    def store(self, messages, flags, mode, uid):
+    def store(messages, flags, mode, uid):
         """Set the flags of one or more messages.
 
         @type messages: A MessageSet object with the list of messages requested
@@ -4825,13 +4825,13 @@ class IMailbox(IMailboxInfo):
         read-write.
         """
 
-class ICloseableMailbox(components.Interface):
+class ICloseableMailbox(Interface):
     """A supplementary interface for mailboxes which require cleanup on close.
 
     Implementing this interface is optional.  If it is implemented, the protocol
     code will call the close method defined whenever a mailbox is closed.
     """
-    def close(self):
+    def close():
         """Close this mailbox.
 
         @return: A C{Deferred} which fires when this mailbox

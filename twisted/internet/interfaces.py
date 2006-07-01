@@ -10,7 +10,7 @@ IReactorMulticast (unstable).
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
-from twisted.python.components import Interface
+from zope.interface import Interface
 
 
 class IAddress(Interface):
@@ -28,20 +28,20 @@ class IConnector(Interface):
     Each IConnector manages one connection.
     """
 
-    def stopConnecting(self):
+    def stopConnecting():
         """Stop attempting to connect."""
 
-    def disconnect(self):
+    def disconnect():
         """Disconnect regardless of the connection state.
 
         If we are connected, disconnect, if we are trying to connect,
         stop trying.
         """
 
-    def connect(self):
+    def connect():
         """Try to connect to remote address."""
 
-    def getDestination(self):
+    def getDestination():
         """Return destination this will try to connect to.
 
         @return: An object which provides L{IAddress}.
@@ -49,7 +49,7 @@ class IConnector(Interface):
 
 
 class IResolverSimple(Interface):
-    def getHostByName(self, name, timeout = (1, 3, 11, 45)):
+    def getHostByName(name, timeout = (1, 3, 11, 45)):
         """Resolve the domain name C{name} into an IP address.
 
         @type name: C{str}
@@ -68,82 +68,82 @@ class IResolverSimple(Interface):
         """
 
 class IResolver(IResolverSimple):
-    def lookupRecord(self, name, cls, type, timeout = 10):
+    def lookupRecord(name, cls, type, timeout = 10):
         """Lookup the records associated with the given name
            that are of the given type and in the given class.
         """
 
-    def query(self, query, timeout = 10):
+    def query(query, timeout = 10):
         """Interpret and dispatch a query object to the appropriate
         lookup* method.
         """
 
-    def lookupAddress(self, name, timeout = 10):
+    def lookupAddress(name, timeout = 10):
         """Lookup the A records associated with C{name}."""
 
-    def lookupAddress6(self, name, timeout = 10):
+    def lookupAddress6(name, timeout = 10):
         """Lookup all the A6 records associated with C{name}."""
 
-    def lookupIPV6Address(self, name, timeout = 10):
+    def lookupIPV6Address(name, timeout = 10):
         """Lookup all the AAAA records associated with C{name}."""
 
-    def lookupMailExchange(self, name, timeout = 10):
+    def lookupMailExchange(name, timeout = 10):
         """Lookup the MX records associated with C{name}."""
 
-    def lookupNameservers(self, name, timeout = 10):
+    def lookupNameservers(name, timeout = 10):
         """Lookup the the NS records associated with C{name}."""
 
-    def lookupCanonicalName(self, name, timeout = 10):
+    def lookupCanonicalName(name, timeout = 10):
         """Lookup the CNAME records associated with C{name}."""
 
-    def lookupMailBox(self, name, timeout = 10):
+    def lookupMailBox(name, timeout = 10):
         """Lookup the MB records associated with C{name}."""
 
-    def lookupMailGroup(self, name, timeout = 10):
+    def lookupMailGroup(name, timeout = 10):
         """Lookup the MG records associated with C{name}."""
 
-    def lookupMailRename(self, name, timeout = 10):
+    def lookupMailRename(name, timeout = 10):
         """Lookup the MR records associated with C{name}."""
 
-    def lookupPointer(self, name, timeout = 10):
+    def lookupPointer(name, timeout = 10):
         """Lookup the PTR records associated with C{name}."""
 
-    def lookupAuthority(self, name, timeout = 10):
+    def lookupAuthority(name, timeout = 10):
         """Lookup the SOA records associated with C{name}."""
 
-    def lookupNull(self, name, timeout = 10):
+    def lookupNull(name, timeout = 10):
         """Lookup the NULL records associated with C{name}."""
 
-    def lookupWellKnownServices(self, name, timeout = 10):
+    def lookupWellKnownServices(name, timeout = 10):
         """Lookup the WKS records associated with C{name}."""
 
-    def lookupHostInfo(self, name, timeout = 10):
+    def lookupHostInfo(name, timeout = 10):
         """Lookup the HINFO records associated with C{name}."""
 
-    def lookupMailboxInfo(self, name, timeout = 10):
+    def lookupMailboxInfo(name, timeout = 10):
         """Lookup the MINFO records associated with C{name}."""
 
-    def lookupText(self, name, timeout = 10):
+    def lookupText(name, timeout = 10):
         """Lookup the TXT records associated with C{name}."""
 
-    def lookupResponsibility(self, name, timeout = 10):
+    def lookupResponsibility(name, timeout = 10):
         """Lookup the RP records associated with C{name}."""
 
-    def lookupAFSDatabase(self, name, timeout = 10):
+    def lookupAFSDatabase(name, timeout = 10):
         """Lookup the AFSDB records associated with C{name}."""
 
-    def lookupService(self, name, timeout = 10):
+    def lookupService(name, timeout = 10):
         """Lookup the SRV records associated with C{name}."""
 
-    def lookupAllRecords(self, name, timeout = 10):
+    def lookupAllRecords(name, timeout = 10):
         """Lookup all records associated with C{name}."""
 
-    def lookupZone(self, name, timeout = 10):
+    def lookupZone(name, timeout = 10):
         """Perform a zone transfer for the given C{name}."""
 
 
 class IReactorArbitrary(Interface):
-    def listenWith(self, portType, *args, **kw):
+    def listenWith(portType, *args, **kw):
         """Start an instance of the given C{portType} listening.
 
         @type portType: type which implements L{IListeningPort}
@@ -154,7 +154,7 @@ class IReactorArbitrary(Interface):
         @return: an object which provides L{IListeningPort}.
         """
 
-    def connectWith(self, connectorType, *args, **kw):
+    def connectWith(connectorType, *args, **kw):
         """
         Start an instance of the given C{connectorType} connecting.
 
@@ -168,7 +168,7 @@ class IReactorArbitrary(Interface):
 
 class IReactorTCP(Interface):
 
-    def listenTCP(self, port, factory, backlog=50, interface=''):
+    def listenTCP(port, factory, backlog=50, interface=''):
         """Connects a given protocol factory to the given numeric TCP/IP port.
 
         @param port: a port number on which to listen
@@ -187,7 +187,7 @@ class IReactorTCP(Interface):
                                   cannot bind to the required port number)
         """
 
-    def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
+    def connectTCP(host, port, factory, timeout=30, bindAddress=None):
         """Connect a TCP client.
 
         @param host: a host name
@@ -211,7 +211,7 @@ class IReactorTCP(Interface):
 
 class IReactorSSL(Interface):
 
-    def connectSSL(self, host, port, factory, contextFactory, timeout=30, bindAddress=None):
+    def connectSSL(host, port, factory, contextFactory, timeout=30, bindAddress=None):
         """Connect a client Protocol to a remote SSL socket.
 
         @param host: a host name
@@ -231,7 +231,7 @@ class IReactorSSL(Interface):
         @return: An object which provides L{IConnector}.
         """
 
-    def listenSSL(self, port, factory, contextFactory, backlog=50, interface=''):
+    def listenSSL(port, factory, contextFactory, backlog=50, interface=''):
         """
         Connects a given protocol factory to the given numeric TCP/IP port.
         The connection is a SSL one, using contexts created by the context
@@ -252,7 +252,7 @@ class IReactorSSL(Interface):
 class IReactorUNIX(Interface):
     """UNIX socket methods."""
 
-    def connectUNIX(self, address, factory, timeout=30, checkPID=0):
+    def connectUNIX(address, factory, timeout=30, checkPID=0):
         """Connect a client protocol to a UNIX socket.
 
         @param address: a path to a unix socket on the filesystem.
@@ -268,7 +268,7 @@ class IReactorUNIX(Interface):
         @return: An object which provides L{IConnector}.
         """
 
-    def listenUNIX(self, address, factory, backlog=50, mode=0666, wantPID=0):
+    def listenUNIX(address, factory, backlog=50, mode=0666, wantPID=0):
         """Listen on a UNIX socket.
 
         @param address: a path to a unix socket on the filesystem.
@@ -288,7 +288,7 @@ class IReactorUNIX(Interface):
 class IReactorUNIXDatagram(Interface):
     """datagram UNIX socket methods."""
 
-    def connectUNIXDatagram(self, address, protocol, maxPacketSize=8192, mode=0666, bindAddress=None):
+    def connectUNIXDatagram(address, protocol, maxPacketSize=8192, mode=0666, bindAddress=None):
         """Connect a client protocol to a datagram UNIX socket.
 
         @param address: a path to a unix socket on the filesystem.
@@ -304,7 +304,7 @@ class IReactorUNIXDatagram(Interface):
         @return: An object which provides L{IConnector}.
         """
 
-    def listenUNIXDatagram(self, address, protocol, maxPacketSize=8192, mode=0666):
+    def listenUNIXDatagram(address, protocol, maxPacketSize=8192, mode=0666):
         """Listen on a datagram UNIX socket.
 
         @param address: a path to a unix socket on the filesystem.
@@ -326,13 +326,13 @@ class IReactorUDP(Interface):
     without backwards compatability. Suggestions are welcome.
     """
 
-    def listenUDP(self, port, protocol, interface='', maxPacketSize=8192):
+    def listenUDP(port, protocol, interface='', maxPacketSize=8192):
         """Connects a given DatagramProtocol to the given numeric UDP port.
 
         @return: object which provides L{IListeningPort}.
         """
 
-    def connectUDP(self, remotehost, remoteport, protocol, localport=0,
+    def connectUDP(remotehost, remoteport, protocol, localport=0,
                   interface='', maxPacketSize=8192):
         """DEPRECATED.
 
@@ -348,8 +348,7 @@ class IReactorMulticast(Interface):
     without backwards compatability. Suggestions are welcome.
     """
 
-    def listenMulticast(self,
-                        port, protocol, interface='', maxPacketSize=8192,
+    def listenMulticast(port, protocol, interface='', maxPacketSize=8192,
                         listenMultiple=False):
         """
         Connects a given
@@ -365,8 +364,7 @@ class IReactorMulticast(Interface):
 
 class IReactorProcess(Interface):
 
-    def spawnProcess(self,
-                     processProtocol, executable, args=(), env={}, path=None,
+    def spawnProcess(processProtocol, executable, args=(), env={}, path=None,
                      uid=None, gid=None, usePTY=0, childFDs=None):
         """Spawn a process, with a process protocol.
 
@@ -435,7 +433,7 @@ class IReactorTime(Interface):
     """Time methods that a Reactor should implement.
     """
 
-    def callLater(self, delay, callable, *args, **kw):
+    def callLater(delay, callable, *args, **kw):
         """Call a function later.
 
         @type delay:  C{float}
@@ -453,7 +451,7 @@ class IReactorTime(Interface):
                  C{reset()} methods.
         """
 
-    def cancelCallLater(self, callID):
+    def cancelCallLater(callID):
         """This method is deprecated.
 
         Cancel a call that would happen later.
@@ -464,7 +462,7 @@ class IReactorTime(Interface):
         @raise ValueError: if the callID is not recognized.
         """
 
-    def getDelayedCalls(self):
+    def getDelayedCalls():
         """Retrieve all currently scheduled delayed calls.
 
         @return: A tuple of all L{IDelayedCall} providers representing all
@@ -480,13 +478,13 @@ class IDelayedCall(Interface):
     suggestions are welcome.
     """
 
-    def getTime(self):
+    def getTime():
         """Get time when delayed call will happen.
 
         @return: time in seconds since epoch (a float).
         """
 
-    def cancel(self):
+    def cancel():
         """Cancel the scheduled call.
 
         @raises twisted.internet.error.AlreadyCalled: if the call has already
@@ -495,7 +493,7 @@ class IDelayedCall(Interface):
             been cancelled.
         """
 
-    def delay(self, secondsLater):
+    def delay(secondsLater):
         """Delay the scheduled call.
 
         @param secondsLater: how many seconds from its current firing time to delay
@@ -506,11 +504,11 @@ class IDelayedCall(Interface):
             been cancelled.
         """
 
-    def reset(self, secondsFromNow):
+    def reset(secondsFromNow):
         """Reset the scheduled call's timer.
 
         @param secondsFromNow: how many seconds from now it should fire,
-            equivalent to C{self.cancel()} and then doing another
+            equivalent to C{.cancel()} and then doing another
             C{reactor.callLater(secondsLater, ...)}
 
         @raises twisted.internet.error.AlreadyCalled: if the call has already
@@ -519,7 +517,7 @@ class IDelayedCall(Interface):
             been cancelled.
         """
 
-    def active(self):
+    def active():
         """
         @return: True if this call is still active, False if it has been
                  called or cancelled.
@@ -531,11 +529,11 @@ class IReactorThreads(Interface):
     Internally, this should use a thread pool and dispatch methods to them.
     """
 
-    def callInThread(self, callable, *args, **kwargs):
+    def callInThread(callable, *args, **kwargs):
         """Run the callable object in a separate thread.
         """
 
-    def callFromThread(self, callable, *args, **kw):
+    def callFromThread(callable, *args, **kw):
         """Call a function from within another (i.e. non-reactor) thread.
 
         Use this method when you want to run a function in the reactor's thread
@@ -548,7 +546,7 @@ class IReactorThreads(Interface):
         use callLater with a delay of 0.)
         """
 
-    def suggestThreadPoolSize(self, size):
+    def suggestThreadPoolSize(size):
         """
         Suggest the size of the internal threadpool used to dispatch functions
         passed to L{callInThread}.
@@ -559,22 +557,22 @@ class IReactorCore(Interface):
     """Core methods that a Reactor must implement.
     """
 
-    def resolve(self, name, timeout=10):
+    def resolve(name, timeout=10):
         """Return a L{twisted.internet.defer.Deferred} that will resolve a hostname.
         """
 
 
-    def run(self):
+    def run():
         """Fire 'startup' System Events, move the reactor to the 'running'
         state, then run the main loop until it is stopped with stop() or
         crash().
         """
 
-    def stop(self):
+    def stop():
         """Fire 'shutdown' System Events, which will move the reactor to the
         'stopped' state and cause reactor.run() to exit. """
 
-    def crash(self):
+    def crash():
         """Stop the main loop *immediately*, without firing any system events.
 
         This is named as it is because this is an extremely "rude" thing to do;
@@ -583,7 +581,7 @@ class IReactorCore(Interface):
         can become wedged in a pre-shutdown call.
         """
 
-    def iterate(self, delay=0):
+    def iterate(delay=0):
         """Run the main loop's I/O polling function for a period of time.
 
         This is most useful in applications where the UI is being drawn "as
@@ -597,14 +595,14 @@ class IReactorCore(Interface):
         particular, you must not call it while the reactor is running.
         """
 
-    def fireSystemEvent(self, eventType):
+    def fireSystemEvent(eventType):
         """Fire a system-wide event.
 
         System-wide events are things like 'startup', 'shutdown', and
         'persist'.
         """
 
-    def addSystemEventTrigger(self, phase, eventType, callable, *args, **kw):
+    def addSystemEventTrigger(phase, eventType, callable, *args, **kw):
         """Add a function to be called when a system event occurs.
 
         Each "system event" in Twisted, such as 'startup', 'shutdown', and
@@ -638,13 +636,13 @@ class IReactorCore(Interface):
                  removeSystemEventTrigger.
         """
 
-    def removeSystemEventTrigger(self, triggerID):
+    def removeSystemEventTrigger(triggerID):
         """Removes a trigger added with addSystemEventTrigger.
 
         @param triggerID: a value returned from addSystemEventTrigger.
         """
 
-    def callWhenRunning(self, callable, *args, **kw):
+    def callWhenRunning(callable, *args, **kw):
         """Call a function when the reactor is running.
 
         If the reactor has not started, the callable will be scheduled
@@ -665,7 +663,7 @@ class IReactorCore(Interface):
 class IReactorPluggableResolver(Interface):
     """A reactor with a pluggable name resolver interface.
     """
-    def installResolver(self, resolver):
+    def installResolver(resolver):
         """Set the internal resolver to use to for name lookups.
 
         @type resolver: An object implementing the L{IResolverSimple} interface
@@ -684,7 +682,7 @@ class IReactorFDSet(Interface):
     (or at least similarly opaque IDs returned from a .fileno() method)
     """
 
-    def addReader(self, reader):
+    def addReader(reader):
         """I add reader to the set of file descriptors to get read events for.
 
         @param reader: An L{IReadDescriptor} provider that will be checked for
@@ -694,7 +692,7 @@ class IReactorFDSet(Interface):
         @return: C{None}.
         """
 
-    def addWriter(self, writer):
+    def addWriter(writer):
         """I add writer to the set of file descriptors to get write events for.
 
         @param writer: An L{IWriteDescriptor} provider that will be checked for
@@ -704,19 +702,19 @@ class IReactorFDSet(Interface):
         @return: C{None}.
         """
 
-    def removeReader(self, reader):
+    def removeReader(reader):
         """Removes an object previously added with L{addReader}.
 
         @return: C{None}.
         """
 
-    def removeWriter(self, writer):
+    def removeWriter(writer):
         """Removes an object previously added with L{addWriter}.
 
         @return: C{None}.
         """
 
-    def removeAll(self):
+    def removeAll():
         """Remove all readers and writers.
 
         Should not remove reactor internal reactor connections (like a waker).
@@ -730,7 +728,7 @@ class IListeningPort(Interface):
     """A listening port.
     """
 
-    def startListening(self):
+    def startListening():
         """Start listening on this port.
 
         @raise CannotListenError: If it cannot listen on this port (e.g., it is
@@ -738,14 +736,14 @@ class IListeningPort(Interface):
                                   port number).
         """
 
-    def stopListening(self):
+    def stopListening():
         """Stop listening on this port.
 
         If it does not complete immediately, will return Deferred that fires
         upon completion.
         """
 
-    def getHost(self):
+    def getHost():
         """Get the host that this port is listening for.
 
         @return: An L{IAddress} provider.
@@ -756,13 +754,13 @@ class IFileDescriptor(Interface):
     """A file descriptor.
     """
 
-    def fileno(self):
+    def fileno():
         """
         @return: The platform-specified representation of a file-descriptor
                  number.
         """
 
-    def connectionLost(self, reason):
+    def connectionLost(reason):
         """Called when the connection was lost.
 
         This is called when the connection on a selectable object has been
@@ -781,14 +779,14 @@ class IFileDescriptor(Interface):
 
 class IReadDescriptor(IFileDescriptor):
 
-    def doRead(self):
+    def doRead():
         """Some data is available for reading on your descriptor.
         """
 
 
 class IWriteDescriptor(IFileDescriptor):
 
-    def doWrite(self):
+    def doWrite():
         """Some data is available for reading on your descriptor.
         """
 
@@ -811,7 +809,7 @@ class IHalfCloseableDescriptor(Interface):
 class ISystemHandle(Interface):
     """An object that wraps a networking OS-specific handle."""
 
-    def getHandle(self):
+    def getHandle():
         """Return a system- and reactor-specific handle.
 
         This might be a socket.socket() object, or some other type of
@@ -826,7 +824,7 @@ class ISystemHandle(Interface):
 class IConsumer(Interface):
     """A consumer consumes data from a producer."""
 
-    def registerProducer(self, producer, streaming):
+    def registerProducer(producer, streaming):
         """Register to receive data from a producer.
 
         This sets self to be a consumer for a producer.  When this object runs
@@ -836,11 +834,11 @@ class IConsumer(Interface):
         register or unregister.
         """
 
-    def unregisterProducer(self):
+    def unregisterProducer():
         """Stop consuming data from a producer, without disconnecting.
         """
 
-    def write(self, data):
+    def write(data):
         """The producer will write data by calling this method."""
 
 class IFinishableConsumer(IConsumer):
@@ -848,7 +846,7 @@ class IFinishableConsumer(IConsumer):
 
     This interface is semi-stable.
     """
-    def finish(self):
+    def finish():
         """The producer has finished producing."""
 
 class IProducer(Interface):
@@ -858,7 +856,7 @@ class IProducer(Interface):
     implementing L{IConsumer}.
     """
 
-    def stopProducing(self):
+    def stopProducing():
         """Stop producing data.
 
         This tells a producer that its consumer has died, so it must stop
@@ -877,13 +875,13 @@ class IPushProducer(IProducer):
     This interface is semi-stable.
     """
 
-    def pauseProducing(self):
+    def pauseProducing():
         """Pause producing data.
 
         Tells a producer that it has produced too much data to process for
         the time being, and to stop until resumeProducing() is called.
         """
-    def resumeProducing(self):
+    def resumeProducing():
         """Resume producing data.
 
         This tells a producer to re-add itself to the main loop and produce
@@ -898,7 +896,7 @@ class IPullProducer(IProducer):
     This interface is semi-stable.
     """
 
-    def resumeProducing(self):
+    def resumeProducing():
         """Produce data for the consumer a single time.
 
         This tells a producer to produce data for the consumer once
@@ -909,7 +907,7 @@ class IPullProducer(IProducer):
 
 class IProtocol(Interface):
 
-    def dataReceived(self, data):
+    def dataReceived(data):
         """Called whenever data is received.
 
         Use this method to translate to a higher-level message.  Usually, some
@@ -923,7 +921,7 @@ class IProtocol(Interface):
             differing chunk sizes, down to one byte at a time.
         """
 
-    def connectionLost(self, reason):
+    def connectionLost(reason):
         """Called when the connection is shut down.
 
         Clear any circular references here, and any external references
@@ -935,11 +933,11 @@ class IProtocol(Interface):
         @type reason: L{twisted.python.failure.Failure}
         """
 
-    def makeConnection(self, transport):
+    def makeConnection(transport):
         """Make a connection to a transport and a server.
         """
 
-    def connectionMade(self):
+    def connectionMade():
         """Called when a connection is made.
 
         This may be considered the initializer of the protocol, because
@@ -986,7 +984,7 @@ class IProtocolFactory(Interface):
     """Interface for protocol factories.
     """
 
-    def buildProtocol(self, addr):
+    def buildProtocol(addr):
         """Called when a connection has been established to addr.
 
         If None is returned, the connection is assumed to have been refused,
@@ -999,10 +997,10 @@ class IProtocolFactory(Interface):
                  providing L{IProtocol}.
         """
 
-    def doStart(self):
+    def doStart():
         """Called every time this is connected to a Port or Connector."""
 
-    def doStop(self):
+    def doStop():
         """Called every time this is unconnected from a Port or Connector."""
 
 
@@ -1018,7 +1016,7 @@ class ITransport(Interface):
     indeterminate time.
     """
 
-    def write(self, data):
+    def write(data):
         """Write some data to the physical connection, in sequence, in a
         non-blocking fashion.
 
@@ -1027,7 +1025,7 @@ class ITransport(Interface):
         before it all gets through.
         """
 
-    def writeSequence(self, data):
+    def writeSequence(data):
         """Write a list of strings to the physical connection.
 
         If possible, make sure that all of the data is written to
@@ -1035,14 +1033,14 @@ class ITransport(Interface):
         single string.
         """
 
-    def loseConnection(self):
+    def loseConnection():
         """Close my connection, after writing all pending data.
 
         Note that if there is a registered producer on a transport it
         will not be closed until the producer has been unregistered.
         """
 
-    def getPeer(self):
+    def getPeer():
         """Get the remote address of this connection.
 
         Treat this method with caution.  It is the unfortunate result of the
@@ -1053,7 +1051,7 @@ class ITransport(Interface):
         @return: An L{IAddress} provider.
         """
 
-    def getHost(self):
+    def getHost():
         """
         Similar to getPeer, but returns an address describing this side of the
         connection.
@@ -1065,7 +1063,7 @@ class ITransport(Interface):
 class ITCPTransport(ITransport):
     """A TCP based transport."""
 
-    def loseWriteConnection(self):
+    def loseWriteConnection():
         """Half-close the write side of a TCP connection.
 
         If the protocol instance this is attached to provides
@@ -1075,29 +1073,29 @@ class ITCPTransport(ITransport):
         producer.
         """
 
-    def getTcpNoDelay(self):
+    def getTcpNoDelay():
         """Return if TCP_NODELAY is enabled."""
 
-    def setTcpNoDelay(self, enabled):
+    def setTcpNoDelay(enabled):
         """Enable/disable TCP_NODELAY.
 
         Enabling TCP_NODELAY turns off Nagle's algorithm. Small packets are
         sent sooner, possibly at the expense of overall throughput."""
 
-    def getTcpKeepAlive(self):
+    def getTcpKeepAlive():
         """Return if SO_KEEPALIVE enabled."""
 
-    def setTcpKeepAlive(self, enabled):
+    def setTcpKeepAlive(enabled):
         """Enable/disable SO_KEEPALIVE.
 
         Enabling SO_KEEPALIVE sends packets periodically when the connection
         is otherwise idle, usually once every two hours. They are intended
         to allow detection of lost peers in a non-infinite amount of time."""
 
-    def getHost(self):
+    def getHost():
         """Returns L{IPv4Address}."""
 
-    def getPeer(self):
+    def getPeer():
         """Returns L{IPv4Address}."""
 
 
@@ -1107,7 +1105,7 @@ class ITLSTransport(ITCPTransport):
     Once TLS mode is started the transport will implement L{ISSLTransport}.
     """
 
-    def startTLS(self, contextFactory):
+    def startTLS(contextFactory):
         """Initiate TLS negotiation.
 
         @param contextFactory: A context factory (see L{ssl.py<twisted.internet.ssl>})
@@ -1116,7 +1114,7 @@ class ITLSTransport(ITCPTransport):
 class ISSLTransport(ITCPTransport):
     """A SSL/TLS based transport."""
 
-    def getPeerCertificate(self):
+    def getPeerCertificate():
         """Return an object with the peer's certificate info."""
 
 
@@ -1126,22 +1124,22 @@ class IProcessTransport(ITransport):
     @ivar pid: The Process-ID of this process.
     """
 
-    def closeStdin(self):
+    def closeStdin():
         """Close stdin after all data has been written out."""
 
-    def closeStdout(self):
+    def closeStdout():
         """Close stdout."""
 
-    def closeStderr(self):
+    def closeStderr():
         """Close stderr."""
 
-    def closeChildFD(self, descriptor):
+    def closeChildFD(descriptor):
         """
         Close a file descriptor which is connected to the child process, identified
         by its FD in the child process.
         """
 
-    def writeToChild(self, childFD, data):
+    def writeToChild(childFD, data):
         """
         Similar to L{ITransport.write} but also allows the file descriptor in
         the child process which will receive the bytes to be specified.
@@ -1157,10 +1155,10 @@ class IProcessTransport(ITransport):
         @return: C{None}
         """
 
-    def loseConnection(self):
+    def loseConnection():
         """Close stdin, stderr and stdout."""
 
-    def signalProcess(self, signalID):
+    def signalProcess(signalID):
         """Send a signal to the process.
 
         @param signalID: can be
@@ -1179,24 +1177,24 @@ class IProcessTransport(ITransport):
 class IServiceCollection(Interface):
     """An object which provides access to a collection of services."""
 
-    def getServiceNamed(self, serviceName):
+    def getServiceNamed(serviceName):
         """Retrieve the named service from this application.
 
         Raise a KeyError if there is no such service name.
         """
 
-    def addService(self, service):
+    def addService(service):
         """Add a service to this collection.
         """
 
-    def removeService(self, service):
+    def removeService(service):
         """Remove a service from this collection."""
 
 
 class IUDPTransport(Interface):
     """Transport for UDP DatagramProtocols."""
 
-    def write(self, packet, addr=None):
+    def write(packet, addr=None):
         """Write packet to given address.
 
         @param addr: a tuple of (ip, port). For connected transports must
@@ -1207,7 +1205,7 @@ class IUDPTransport(Interface):
         long.
         """
 
-    def connect(self, host, port):
+    def connect(host, port):
         """Connect the transport to an address.
 
         This changes it to connected mode. Datagrams can only be sent to
@@ -1219,10 +1217,10 @@ class IUDPTransport(Interface):
         @param port: port to connect to.
         """
 
-    def getHost(self):
+    def getHost():
         """Returns IPv4Address."""
 
-    def stopListening(self):
+    def stopListening():
         """Stop listening on this port.
 
         If it does not complete immediately, will return Deferred that fires
@@ -1233,66 +1231,66 @@ class IUDPTransport(Interface):
 class IUDPConnectedTransport(Interface):
     """DEPRECATED. Transport for UDP ConnectedPacketProtocols."""
 
-    def write(self, packet):
+    def write(packet):
         """Write packet to address we are connected to."""
 
-    def getHost(self):
+    def getHost():
         """Returns UNIXAddress."""
 
 
 class IUNIXDatagramTransport(Interface):
     """Transport for UDP PacketProtocols."""
 
-    def write(self, packet, address):
+    def write(packet, address):
         """Write packet to given address."""
 
-    def getHost(self):
+    def getHost():
         """Returns UNIXAddress."""
 
 
 class IUNIXDatagramConnectedTransport(Interface):
     """Transport for UDP ConnectedPacketProtocols."""
 
-    def write(self, packet):
+    def write(packet):
         """Write packet to address we are connected to."""
 
-    def getHost(self):
+    def getHost():
         """Returns UNIXAddress."""
 
-    def getPeer(self):
+    def getPeer():
         """Returns UNIXAddress."""
 
 
 class IMulticastTransport(Interface):
     """Additional functionality for multicast UDP."""
 
-    def getOutgoingInterface(self):
+    def getOutgoingInterface():
         """Return interface of outgoing multicast packets."""
 
-    def setOutgoingInterface(self, addr):
+    def setOutgoingInterface(addr):
         """Set interface for outgoing multicast packets.
 
         Returns Deferred of success.
         """
 
-    def getLoopbackMode(self):
+    def getLoopbackMode():
         """Return if loopback mode is enabled."""
 
-    def setLoopbackMode(self, mode):
+    def setLoopbackMode(mode):
         """Set if loopback mode is enabled."""
 
-    def getTTL(self):
+    def getTTL():
         """Get time to live for multicast packets."""
 
-    def setTTL(self, ttl):
+    def setTTL(ttl):
         """Set time to live on multicast packets."""
 
-    def joinGroup(self, addr, interface=""):
+    def joinGroup(addr, interface=""):
         """Join a multicast group. Returns Deferred of success or failure.
 
         If an error occurs, the returned Deferred will fail with
         L{error.MulticastJoinError}.
         """
 
-    def leaveGroup(self, addr, interface=""):
+    def leaveGroup(addr, interface=""):
         """Leave multicast group, return Deferred of success."""

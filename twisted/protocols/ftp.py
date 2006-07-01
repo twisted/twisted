@@ -33,7 +33,7 @@ from twisted import copyright
 from twisted.internet import reactor, interfaces, protocol, error, defer
 from twisted.protocols import basic, policies
 
-from twisted.python import log, components, failure, filepath
+from twisted.python import log, failure, filepath
 
 from twisted.cred import error as cred_error, portal, credentials, checkers
 
@@ -317,21 +317,6 @@ def debugDeferred(self, *_):
 
 # -- DTP Protocol --
 
-class IDTPFactory(components.Interface):
-    """An interface for protocol.Factories
-
-    @ivar peerCheck: perform checks to make sure the ftp-pi's peer is the same
-        as the dtp's
-    @ivar pi: a reference to this factory's protocol interpreter
-    """
-    def __init__(self, pi, peerHost=None):
-        """Constructor
-        @param pi: this factory's protocol interpreter
-        @param peerHost: if peerCheck is True, this is the tuple that the
-            generated instance will use to perform security checks
-        """
-        pass
-
 
 _months = [
     None,
@@ -456,13 +441,24 @@ class DTP(object, protocol.Protocol):
         self.transport.stopProducing()
 
 class DTPFactory(protocol.ClientFactory):
-    implements(IDTPFactory)
+    """
+    DTP protocol factory.
+    
+    @ivar peerCheck: perform checks to make sure the ftp-pi's peer is the same
+        as the dtp's
+    @ivar pi: a reference to this factory's protocol interpreter
+    """
 
     # -- configuration variables --
     peerCheck = False
 
     # -- class variables --
     def __init__(self, pi, peerHost=None):
+        """Constructor
+        @param pi: this factory's protocol interpreter
+        @param peerHost: if peerCheck is True, this is the tuple that the
+            generated instance will use to perform security checks
+        """
         self.pi = pi                        # the protocol interpreter that is using this factory
         self.peerHost = peerHost            # the from FTP.transport.peerHost()
         self.deferred = defer.Deferred()    # deferred will fire when instance is connected

@@ -6,7 +6,7 @@
 import stat, os, sys
 
 from twisted.internet import interfaces, reactor, protocol, error, address, defer, utils
-from twisted.python import components, lockfile, failure
+from twisted.python import lockfile, failure
 from twisted.protocols import loopback
 from twisted.trial import unittest
 

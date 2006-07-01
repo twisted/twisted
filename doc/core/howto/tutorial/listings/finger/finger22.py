@@ -11,15 +11,15 @@ import cgi
 
 class IFingerService(Interface):
 
-    def getUser(self, user):
+    def getUser(user):
         """Return a deferred returning a string"""
 
-    def getUsers(self):
+    def getUsers():
         """Return a deferred returning a list of strings"""
 
 class IFingerSetterService(Interface):
 
-    def setUser(self, user, status):
+    def setUser(user, status):
         """Set the user's status to something"""
 
 def catchError(err):
@@ -38,10 +38,10 @@ class FingerProtocol(basic.LineReceiver):
 
 class IFingerFactory(Interface):
 
-    def getUser(self, user):
+    def getUser(user):
         """Return a deferred returning a string"""
 
-    def buildProtocol(self, addr):
+    def buildProtocol(addr):
         """Return a protocol returning a string"""
 
 
@@ -76,10 +76,10 @@ class FingerSetterProtocol(basic.LineReceiver):
 
 class IFingerSetterFactory(Interface):
 
-    def setUser(self, user, status):
+    def setUser(user, status):
         """Return a deferred returning a string"""
 
-    def buildProtocol(self, addr):
+    def buildProtocol(addr):
         """Return a protocol returning a string"""
 
 
@@ -121,10 +121,10 @@ class IIRCClientFactory(Interface):
     @ivar nickname
     """
 
-    def getUser(self, user):
+    def getUser(user):
         """Return a deferred returning a string"""
 
-    def buildProtocol(self, addr):
+    def buildProtocol(addr):
         """Return a protocol"""
 
 
@@ -216,10 +216,10 @@ class UserStatusXR(xmlrpc.XMLRPC):
 
 class IPerspectiveFinger(Interface):
 
-    def remote_getUser(self, username):
+    def remote_getUser(username):
         """return a user's status"""
 
-    def remote_getUsers(self):
+    def remote_getUsers():
         """return a user's status"""
 
 class PerspectiveFingerFromService(pb.Root):

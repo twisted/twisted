@@ -6,7 +6,6 @@ from twisted.trial import unittest
 from twisted.web import server, static, client, error, util, resource
 from twisted.internet import reactor, defer, interfaces
 from twisted.python.util import sibpath
-from twisted.python import components
 
 try:
     from twisted.internet import ssl

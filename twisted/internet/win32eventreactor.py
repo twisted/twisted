@@ -60,7 +60,7 @@ import win32gui
 
 # Twisted imports
 from twisted.internet import abstract, posixbase, main, error
-from twisted.python import log, threadable, failure, components
+from twisted.python import log, threadable, failure
 from twisted.internet.interfaces import IReactorFDSet, IReactorProcess, IProcessTransport
 
 from twisted.internet._dumbwin32proc import Process

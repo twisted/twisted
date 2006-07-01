@@ -15,7 +15,7 @@ from twisted.application import service, strports
 from twisted.conch.ssh import session
 from twisted.conch import interfaces as iconch
 from twisted.cred import portal, checkers
-from twisted.python import components, usage
+from twisted.python import usage
 
 from twisted.conch.insults import insults
 from twisted.conch import manhole, manhole_ssh, telnet

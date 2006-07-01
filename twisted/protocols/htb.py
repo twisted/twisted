@@ -20,13 +20,12 @@ from __future__ import nested_scopes
 
 __version__ = '$Revision: 1.5 $'[11:-2]
 
-from twisted.python.components import Interface
 
 # TODO: Investigate whether we should be using os.times()[-1] instead of
 # time.time.  time.time, it has been pointed out, can go backwards.  Is
 # the same true of os.times?
 from time import time
-from zope.interface import implements
+from zope.interface import implements, Interface
 
 from twisted.protocols import pcp
 
@@ -98,7 +97,7 @@ class Bucket:
 
 
 class IBucketFilter(Interface):
-    def getBucketFor(self, *somethings, **some_kw):
+    def getBucketFor(*somethings, **some_kw):
         """I'll give you a bucket for something.
 
         @returntype: L{Bucket}

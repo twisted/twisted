@@ -73,7 +73,7 @@ from twisted.internet import defer
 from twisted.python import failure
 from twisted.internet import reactor, defer
 from twisted.python import log
-from zope.interface import implements
+from zope.interface import implements, Interface
 
 from twisted.web.server import NOT_DONE_YET
 STOP_RENDERING = 1
@@ -81,11 +81,11 @@ RESTART_RENDERING = 2
 
 
 
-class INodeMutator(components.Interface):
+class INodeMutator(Interface):
     """A component that implements NodeMutator knows how to mutate
     DOM based on the instructions in the object it wraps.
     """
-    def generate(self, request, node):
+    def generate(request, node):
         """The generate method should do the work of mutating the DOM
         based on the object this adapter wraps.
         """

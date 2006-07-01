@@ -10,7 +10,6 @@ from twisted.words.protocols import irc
 from twisted.words.im.locals import ONLINE
 from twisted.internet import defer, reactor, protocol
 from twisted.internet.defer import succeed
-from twisted.python import components
 from twisted.words.im import basesupport, interfaces, locals
 from zope.interface import implements
 

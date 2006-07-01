@@ -6,7 +6,6 @@
 
 import warnings, os
 from zope.interface import implements
-from twisted.python import components
 from twisted.internet.interfaces import IAddress
 
 

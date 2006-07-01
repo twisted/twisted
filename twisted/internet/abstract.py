@@ -14,7 +14,7 @@ import types, string
 from zope.interface import implements
 
 # Twisted Imports
-from twisted.python import log, reflect, components, failure
+from twisted.python import log, reflect, failure
 from twisted.persisted import styles
 
 # Sibling Imports

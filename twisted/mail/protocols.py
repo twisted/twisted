@@ -11,7 +11,7 @@ from twisted.mail import smtp
 from twisted.internet import protocol
 from twisted.internet import defer
 from twisted.copyright import longversion
-from twisted.python import log, components
+from twisted.python import log
 
 from twisted import cred
 import twisted.cred.error

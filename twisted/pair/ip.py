@@ -12,7 +12,6 @@ import socket
 
 from twisted.internet import protocol
 from twisted.pair import raw
-from twisted.python import components
 from zope.interface import implements
 
 

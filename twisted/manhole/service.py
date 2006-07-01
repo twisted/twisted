@@ -9,10 +9,10 @@
 # twisted imports
 from twisted import copyright
 from twisted.spread import pb
-from twisted.python import log, components, failure
+from twisted.python import log, failure
 from twisted.cred import portal
 from twisted.application import service
-from zope.interface import implements
+from zope.interface import implements, Interface
 
 # sibling imports
 import explorer
@@ -67,8 +67,8 @@ class FakeStdIO:
                 block_begin = i
 
 
-class IManholeClient(components.Interface):
-    def console(self, list_of_messages):
+class IManholeClient(Interface):
+    def console(list_of_messages):
         """Takes a list of (type, message) pairs to display.
 
         Types include:
@@ -82,11 +82,11 @@ class IManholeClient(components.Interface):
             - \"exception\" -- a L{failure.Failure}
         """
 
-    def receiveExplorer(self, xplorer):
+    def receiveExplorer(xplorer):
         """Receives an explorer.Explorer
         """
 
-    def listCapabilities(self):
+    def listCapabilities():
         """List what manholey things I am capable of doing.
 
         i.e. C{\"Explorer\"}, C{\"Failure\"}

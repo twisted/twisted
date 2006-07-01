@@ -6,10 +6,10 @@ from __future__ import generators
 
 import os
 
-from zope import interface
+from zope.interface import implements, Interface
 
 from twisted.internet import defer
-from twisted.python import components, failure, log
+from twisted.python import failure, log
 from twisted.cred import error, credentials
 
 try:
@@ -17,14 +17,14 @@ try:
 except ImportError: # PyPAM is missing
     pamauth = None
 
-class ICredentialsChecker(components.Interface):
+class ICredentialsChecker(Interface):
     """I check sub-interfaces of ICredentials.
 
     @cvar credentialInterfaces: A list of sub-interfaces of ICredentials which
     specifies which I may check.
     """
 
-    def requestAvatarId(self, credentials):
+    def requestAvatarId(credentials):
         """
         @param credentials: something which implements one of the interfaces in
         self.credentialInterfaces.
@@ -49,7 +49,7 @@ ANONYMOUS = ()
 
 
 class AllowAnonymousAccess:
-    interface.implements(ICredentialsChecker)
+    implements(ICredentialsChecker)
     credentialInterfaces = credentials.IAnonymous,
 
     def requestAvatarId(self, credentials):
@@ -67,7 +67,7 @@ class InMemoryUsernamePasswordDatabaseDontUse:
     see L{FilePasswordDB}.
     """
 
-    interface.implements(ICredentialsChecker)
+    implements(ICredentialsChecker)
 
     credentialInterfaces = (credentials.IUsernamePassword,
         credentials.IUsernameHashedPassword)
@@ -107,7 +107,7 @@ class FilePasswordDB:
     IUsernameHashedPassword credentials will be checkable as well.
     """
 
-    interface.implements(ICredentialsChecker)
+    implements(ICredentialsChecker)
 
     cache = False
     _credCache = None
@@ -242,7 +242,7 @@ class FilePasswordDB:
                     ).addCallback(self._cbPasswordMatch, u)
 
 class PluggableAuthenticationModulesChecker:
-    interface.implements(ICredentialsChecker)
+    implements(ICredentialsChecker)
     credentialInterfaces = credentials.IPluggableAuthenticationModules,
     service = 'Twisted'
     

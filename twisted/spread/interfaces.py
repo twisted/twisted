@@ -5,16 +5,16 @@ This module is unused so far. It's also undecided whether this module
 will remain monolithic.
 """
 
-from twisted.python.components import Interface
+from zope.interface import Interface
 
 class IJellyable(Interface):
-    def jellyFor(self, jellier):
+    def jellyFor(jellier):
         """
         Jelly myself for jellier.
         """
 
 class IUnjellyable(Interface):
-    def unjellyFor(self, jellier, jellyList):
+    def unjellyFor(jellier, jellyList):
         """
         Unjelly myself for the jellier.
 

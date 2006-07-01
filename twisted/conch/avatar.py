@@ -2,7 +2,7 @@
 from interfaces import IConchUser
 from error import ConchError
 from ssh.connection import OPEN_UNKNOWN_CHANNEL_TYPE
-from twisted.python import components, log
+from twisted.python import log
 from zope import interface
 
 class ConchUser:

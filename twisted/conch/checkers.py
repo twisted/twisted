@@ -23,7 +23,7 @@ from twisted.cred.checkers import ICredentialsChecker
 from twisted.cred.credentials import IUsernamePassword, ISSHPrivateKey, IPluggableAuthenticationModules
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.internet import defer
-from twisted.python import components, failure, reflect, log
+from twisted.python import failure, reflect, log
 from zope import interface
 
 def verifyCryptedPassword(crypted, pw):

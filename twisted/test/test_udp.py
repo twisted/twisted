@@ -6,7 +6,7 @@
 from twisted.trial import unittest, util
 
 from twisted.internet import protocol, reactor, error, defer, interfaces, address
-from twisted.python import log, failure, components, runtime
+from twisted.python import log, failure, runtime
 
 
 class Mixin:

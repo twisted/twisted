@@ -17,7 +17,7 @@ import struct
 
 # Twisted imports
 from twisted.internet import protocol, defer, interfaces, error
-from twisted.python import log, components
+from twisted.python import log
 from zope.interface import implements
 
 LENGTH, DATA, COMMA = range(3)

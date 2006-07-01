@@ -9,17 +9,17 @@
 
 # System Imports
 from twisted.internet import defer
-from twisted.python import roots, components, reflect
-from zope.interface import Attribute, implements
+from twisted.python import roots, reflect
+from zope.interface import Attribute, implements, Interface
 
-class IResource(components.Interface):
+class IResource(Interface):
     """A web resource."""
 
     isLeaf = Attribute(\
 """Signal if this IResource implementor is a "leaf node" or not. If True,
 getChildWithDefault will not be called on this Resource.""")
 
-    def getChildWithDefault(self, name, request):
+    def getChildWithDefault(name, request):
         """Return a child with the given name for the given request.
         This is the external interface used by the Resource publishing
         machinery. If implementing IResource without subclassing
@@ -27,11 +27,11 @@ getChildWithDefault will not be called on this Resource.""")
         getChild overridden instead.
         """
 
-    def putChild(self, path, child):
+    def putChild(path, child):
         """Put a child IResource implementor at the given path.
         """
 
-    def render(self, request):
+    def render(request):
         """Render a request. This is called on the leaf resource for
         a request. Render must return either a string, which will
         be sent to the browser as the HTML for the request, or

@@ -35,7 +35,7 @@ else:
 # Twisted Imports
 from twisted.internet import protocol, base, defer, address
 from twisted.persisted import styles
-from twisted.python import log, reflect, components, failure
+from twisted.python import log, reflect, failure
 
 # Sibling Imports
 import abstract, error, interfaces

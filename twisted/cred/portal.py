@@ -10,17 +10,17 @@ The point of integration of application and authentication.
 
 from twisted.internet import defer
 from twisted.internet.defer import maybeDeferred
-from twisted.python import failure, reflect, components
+from twisted.python import failure, reflect
 from twisted.cred import error
-from zope import interface
+from zope.interface import providedBy, Interface
 
 
-class IRealm(components.Interface):
+class IRealm(Interface):
     """
     The realm connects application-specific objects to the
     authentication system.
     """
-    def requestAvatar(self, avatarId, mind, *interfaces):
+    def requestAvatar(avatarId, mind, *interfaces):
         """Return avatar implementing one of the given interfaces.
 
         @param avatarId: a string that identifies an avatar, as returned by
@@ -102,7 +102,7 @@ class Portal:
         this will not be in connectionLost (such as in a web-based session), it
         will always be at the end of a user's interactive session.
         """
-        ifac = interface.providedBy(credentials)
+        ifac = providedBy(credentials)
         for i in ifac:
             c = self.checkers.get(i)
             if c is not None:

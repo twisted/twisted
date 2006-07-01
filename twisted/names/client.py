@@ -22,7 +22,7 @@ import errno
 # Twisted imports
 from twisted.python.runtime import platform
 from twisted.internet import error, defer, protocol, interfaces
-from twisted.python import log, failure, components
+from twisted.python import log, failure
 from twisted.names import dns
 from zope.interface import implements
 import common

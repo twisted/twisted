@@ -27,7 +27,6 @@ from twisted.web.server import NOT_DONE_YET
 from twisted.web import util
 
 from twisted.python.reflect import qual
-from twisted.python import components
 
 # Sibling Imports
 from twisted.web.woven.view import View

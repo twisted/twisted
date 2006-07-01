@@ -18,7 +18,7 @@ import binascii
 import md5
 import warnings
 
-from zope.interface import implements
+from zope.interface import implements, Interface
 
 from twisted.mail import smtp
 from twisted.protocols import basic
@@ -26,7 +26,6 @@ from twisted.protocols import policies
 from twisted.internet import task
 from twisted.internet import defer
 from twisted.internet import interfaces
-from twisted.python import components
 from twisted.python import log
 
 from twisted import cred
@@ -831,7 +830,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         raise cred.error.UnauthorizedLogin()
 
 
-class IServerFactory(components.Interface):
+class IServerFactory(Interface):
     """Interface for querying additional parameters of this POP3 server.
 
     Any cap_* method may raise NotImplementedError if the particular
@@ -844,28 +843,28 @@ class IServerFactory(components.Interface):
     implementing C{IUsernameHashedPassword}.
     """
 
-    def cap_IMPLEMENTATION(self):
+    def cap_IMPLEMENTATION():
         """Return a string describing this POP3 server implementation."""
 
-    def cap_EXPIRE(self):
+    def cap_EXPIRE():
         """Return the minimum number of days messages are retained."""
 
-    def perUserExpiration(self):
+    def perUserExpiration():
         """Indicate whether message expiration is per-user.
 
         @return: True if it is, false otherwise.
         """
 
-    def cap_LOGIN_DELAY(self):
+    def cap_LOGIN_DELAY():
         """Return the minimum number of seconds between client logins."""
 
-    def perUserLoginDelay(self):
+    def perUserLoginDelay():
         """Indicate whether the login delay period is per-user.
 
         @return: True if it is, false otherwise.
         """
 
-class IMailbox(components.Interface):
+class IMailbox(Interface):
     """
     @type loginDelay: C{int}
     @ivar loginDelay: The number of seconds between allowed logins for the
@@ -876,7 +875,7 @@ class IMailbox(components.Interface):
     remain on the server before being deleted.
     """
 
-    def listMessages(self, index=None):
+    def listMessages(index=None):
         """Retrieve the size of one or more messages.
 
         @type index: C{int} or C{None}
@@ -895,7 +894,7 @@ class IMailbox(components.Interface):
         in the mailbox.
         """
 
-    def getMessage(self, index):
+    def getMessage(index):
         """Retrieve a file-like object for a particular message.
 
         @type index: C{int}
@@ -904,7 +903,7 @@ class IMailbox(components.Interface):
         @rtype: A file-like object
         """
 
-    def getUidl(self, index):
+    def getUidl(index):
         """Get a unique identifier for a particular message.
 
         @type index: C{int}
@@ -918,7 +917,7 @@ class IMailbox(components.Interface):
         in the mailbox.
         """
 
-    def deleteMessage(self, index):
+    def deleteMessage(index):
         """Delete a particular message.
 
         This must not change the number of messages in this mailbox.  Further
@@ -929,14 +928,14 @@ class IMailbox(components.Interface):
         @param index: The number of the message to delete.
         """
 
-    def undeleteMessages(self):
+    def undeleteMessages():
         """Undelete any messages possible.
 
         If a message can be deleted it, it should return it its original
         position in the message sequence and retain the same UIDL.
         """
 
-    def sync(self):
+    def sync():
         """Perform checkpointing.
 
         This method will be called to indicate the mailbox should attempt to

@@ -1,7 +1,7 @@
 
 class IFingerSetterService(Interface):
 
-    def setUser(self, user, status):
+    def setUser(user, status):
         """Set the user's status to something"""
 
 # Advantages of latest version

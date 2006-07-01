@@ -13,10 +13,10 @@ from twisted.python.util import sibpath
 from twisted.python import reflect
 
 from twisted.manhole.ui import gtk2manhole
-from twisted.python.components import Adapter, Interface, registerAdapter
-from twisted.python import log, components
+from twisted.python.components import Adapter, registerAdapter
+from twisted.python import log
 from twisted.protocols import policies
-from zope.interface import implements
+from zope.interface import implements, Interface
 
 # the glade file uses stock icons, which requires gnome to be installed
 import gnome

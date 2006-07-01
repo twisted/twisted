@@ -15,13 +15,13 @@ API Stability: unstable
 Maintainer: U{Moshe Zadka<mailto:moshez@twistedmatrix.com>}
 """
 
-from zope.interface import implements
+from zope.interface import implements, Interface
 
 from twisted.python import components
 from twisted.internet import defer
 from twisted.persisted import sob
 
-class IService(components.Interface):
+class IService(Interface):
 
     """
     A service.
@@ -34,14 +34,14 @@ class IService(components.Interface):
     @ivar running:         Whether the service is running.
     """
 
-    def setName(self, name):
+    def setName(name):
         """Set the name of the service.
 
         @type name: C{str}
         @raise L{RuntimeError}: Raised if the service already has a parent.
         """
 
-    def setServiceParent(self, parent):
+    def setServiceParent(parent):
         """Set the parent of the service.
 
         @type name: C{IServiceCollection}
@@ -50,7 +50,7 @@ class IService(components.Interface):
         by that name.
         """
 
-    def disownServiceParent(self):
+    def disownServiceParent():
         """Remove the parent of the service.
 
         @rtype: C{Deferred}
@@ -59,10 +59,10 @@ class IService(components.Interface):
         a value can be returned (usually, None).
         """
 
-    def startService(self):
+    def startService():
         """Start the service."""
 
-    def stopService(self):
+    def stopService():
         """Stop the service.
 
         @rtype: C{Deferred}
@@ -71,7 +71,7 @@ class IService(components.Interface):
         a value can be returned (usually, None).
         """
 
-    def privilegedStartService(self):
+    def privilegedStartService():
         """Do preparation work for starting the service.
 
         Here things which should be done before changing directory,
@@ -127,7 +127,7 @@ class Service:
         self.running = 0
 
 
-class IServiceCollection(components.Interface):
+class IServiceCollection(Interface):
 
     """Collection of services.
 
@@ -136,7 +136,7 @@ class IServiceCollection(components.Interface):
     is always possible to iterate over them.
     """
 
-    def getServiceNamed(self, name):
+    def getServiceNamed(name):
         """Get the child service with a given name.
 
         @type name: C{str}
@@ -145,10 +145,10 @@ class IServiceCollection(components.Interface):
         given name.
         """
 
-    def __iter__(self):
+    def __iter__():
         """Get an iterator over all child services"""
 
-    def addService(self, service):
+    def addService(service):
          """Add a child service.
 
         @type service: C{IService}
@@ -156,7 +156,7 @@ class IServiceCollection(components.Interface):
         the given name.
         """
 
-    def removeService(self, service):
+    def removeService(service):
         """Remove a child service.
 
         @type service: C{IService}
@@ -234,7 +234,7 @@ class MultiService(Service):
             return None
 
 
-class IProcess(components.Interface):
+class IProcess(Interface):
 
     """Process running parameters
 

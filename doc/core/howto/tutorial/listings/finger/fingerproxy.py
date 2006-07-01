@@ -11,19 +11,19 @@ def catchError(err):
 
 class IFingerService(Interface):
 
-    def getUser(self, user):
+    def getUser(user):
         """Return a deferred returning a string"""
 
-    def getUsers(self):
+    def getUsers():
         """Return a deferred returning a list of strings"""
 
 
 class IFingerFactory(Interface):
 
-    def getUser(self, user):
+    def getUser(user):
         """Return a deferred returning a string"""
 
-    def buildProtocol(self, addr):
+    def buildProtocol(addr):
         """Return a protocol returning a string"""
 
 class FingerProtocol(basic.LineReceiver):

@@ -8,7 +8,7 @@ Now with 30% more starch.
 from __future__ import generators
 
 import hmac
-from zope import interface
+from zope.interface import implements, Interface
 
 from twisted.trial import unittest
 from twisted.cred import portal, checkers, credentials, error
@@ -29,7 +29,7 @@ except ImportError:
 else:
     from twisted.cred import pamauth
 
-class ITestable(components.Interface):
+class ITestable(Interface):
     pass
 
 class TestAvatar:
@@ -46,14 +46,14 @@ class TestAvatar:
         self.loggedOut = True
 
 class Testable(components.Adapter):
-    interface.implements(ITestable)
+    implements(ITestable)
 
 # components.Interface(TestAvatar).adaptWith(Testable, ITestable)
 
 components.registerAdapter(Testable, TestAvatar, ITestable)
 
 class TestRealm:
-    interface.implements(portal.IRealm)
+    implements(portal.IRealm)
     def __init__(self):
         self.avatars = {}
 
