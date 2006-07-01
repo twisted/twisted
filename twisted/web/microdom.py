@@ -23,23 +23,16 @@ Microdom mainly focuses on working with HTML and XHTML.
 from __future__ import nested_scopes
 
 # System Imports
-import copy, re
+import re
 from cStringIO import StringIO
 
 # Twisted Imports
 from twisted.web.sux import XMLParser, ParseError
-from twisted.python import reflect
 from twisted.python.util import InsensitiveDict
 
 # create NodeList class
 from types import ListType as NodeList
 from types import StringTypes, UnicodeType
-import sys
-dictsAreNotSequences=0
-try:
-    'x' in {}
-except TypeError:
-    dictsAreNotSequences = 1
 
 def getElementsByTagName(iNode, name):
     matches = []
@@ -105,9 +98,6 @@ class Node(object):
     def __init__(self, parentNode=None):
         self.parentNode = parentNode
         self.childNodes = []
-
-    def __hash__(self):
-        return id(self)
 
     def isEqualToNode(self, n):
         for a, b in zip(self.childNodes, n.childNodes):
@@ -424,19 +414,8 @@ class Element(Node):
         if name in self.attributes:
             del self.attributes[name]
 
-    def removeAttribute_has_key(self, name):
-        if self.attributes.has_key(name):
-            del self.attributes[name]
-
     def hasAttribute(self, name):
         return name in self.attributes
-
-    def hasAttribute_has_key(self, name):
-        return self.attributes.has_key(name)
-
-    if dictsAreNotSequences:
-        hasAttribute = hasAttribute_has_key
-        removeAttribute = removeAttribute_has_key
 
     def writexml(self, stream, indent='', addindent='', newl='', strip=0, nsprefixes={}, namespace=''):
         # write beginning

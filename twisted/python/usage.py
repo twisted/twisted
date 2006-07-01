@@ -129,9 +129,12 @@ class Options(dict):
             self.__dispatch.update(dispatch)
 
     def __hash__(self):
-        # This is required because dicts aren't hashable by default
-        # (They define __cmp__ but no __hash__)
-        return id(self)
+        """
+        Define a custom hash function so that Options instances can be used
+        as dictionary keys.  This is an internal feature used to implement
+        the parser.  Do not rely on it in application code.
+        """
+        return int(id(self) % sys.maxint)
 
     def opt_help(self):
         """Display this help and exit."""

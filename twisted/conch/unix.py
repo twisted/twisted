@@ -4,12 +4,11 @@
 #
 
 from twisted.cred import portal
-from twisted.python import components, log, util
+from twisted.python import components, log
 from twisted.internet.process import ProcessExitedAlready
 from zope import interface
 from ssh import session, forwarding, filetransfer
 from ssh.filetransfer import FXF_READ, FXF_WRITE, FXF_APPEND, FXF_CREAT, FXF_TRUNC, FXF_EXCL
-from ssh.connection import OPEN_UNKNOWN_CHANNEL_TYPE
 from twisted.conch.ls import lsLine
 
 from avatar import ConchUser
@@ -21,7 +20,6 @@ import fcntl, tty
 import pwd, grp
 import pty
 import ttymodes
-import os
 
 try:
     import utmp
@@ -320,8 +318,8 @@ class SFTPServerForUnixConchUser:
             "uid" : s.st_uid,
             "gid" : s.st_gid,
             "permissions" : s.st_mode,
-            "atime" : s.st_atime,
-            "mtime" : s.st_mtime
+            "atime" : int(s.st_atime),
+            "mtime" : int(s.st_mtime)
         }
 
     def _absPath(self, path):

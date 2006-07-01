@@ -4,22 +4,36 @@
 
 from twisted.trial import unittest
 
-from twisted.spread import pb, flavors, jelly
+from twisted.spread import pb, flavors
 from twisted.internet import reactor, defer
 from twisted.python import log, failure
 
 ##
 # test exceptions
 ##
-class PoopError(Exception): pass
-class FailError(Exception): pass
-class DieError(Exception): pass
-class TimeoutError(Exception): pass
+class PoopError(Exception):
+    pass
+
+
+class FailError(Exception):
+    pass
+
+
+class DieError(Exception):
+    pass
+
+
+class TimeoutError(Exception):
+    pass
 
 
 #class JellyError(flavors.Jellyable, pb.Error): pass
-class JellyError(flavors.Jellyable, pb.Error, pb.RemoteCopy): pass
-class SecurityError(pb.Error, pb.RemoteCopy): pass
+class JellyError(flavors.Jellyable, pb.Error, pb.RemoteCopy):
+    pass
+
+
+class SecurityError(pb.Error, pb.RemoteCopy):
+    pass
 
 pb.setUnjellyableForClass(JellyError, JellyError)
 pb.setUnjellyableForClass(SecurityError, SecurityError)
@@ -98,11 +112,92 @@ class PBConnTestCase(unittest.TestCase):
 class PBFailureTest(PBConnTestCase):
     compare = unittest.TestCase.assertEquals
 
-    def testPBFailures(self):
-        d = self.clientFactory.getRootObject()
-        d.addCallback(self.connected)
-        d.addCallback(self.cleanupLoggedErrors)
-        return d
+
+    def _addFailingCallbacks(self, remoteCall, expectedResult, eb):
+        remoteCall.addCallbacks(self.success, eb,
+                                callbackArgs=(expectedResult,))
+        return remoteCall
+
+
+    def _testImpl(self, method, expected, eb, exc=None):
+        rootDeferred = self.clientFactory.getRootObject()
+        def gotRootObj(obj):
+            failureDeferred = self._addFailingCallbacks(obj.callRemote(method), expected, eb)
+            if exc is not None:
+                def gotFailure(err):
+                    self.assertEquals(len(log.flushErrors(exc)), 1)
+                    return err
+                failureDeferred.addBoth(gotFailure)
+            return failureDeferred
+        rootDeferred.addCallback(gotRootObj)
+        return rootDeferred
+
+
+    def testPoopError(self):
+        """
+        Test that a Deferred returned by a remote method which already has a
+        Failure correctly has that error passed back to the calling side.
+        """
+        return self._testImpl('poop', 42, self.failurePoop, PoopError)
+
+
+    def testFailureFailure(self):
+        """
+        Test that a remote method which synchronously raises an exception
+        has that exception passed back to the calling side.
+        """
+        return self._testImpl('fail', 420, self.failureFail, FailError)
+
+
+    def testDieFailure(self):
+        """
+        The same as testFailureFailure (it is not clear to me why this
+        exists, but I am not deleting it as part of this refactoring.
+        -exarkun).
+        """
+        return self._testImpl('die', 4200, self.failureDie, DieError)
+
+
+    def testNoSuchFailure(self):
+        """
+        Test that attempting to call a method which is not defined correctly
+        results in an AttributeError on the calling side.
+        """
+        return self._testImpl('nosuch', 42000, self.failureNoSuch, AttributeError)
+
+
+    def testJellyFailure(self):
+        """
+        Test that an exception which is a subclass of L{pb.Error} has more
+        information passed across the network to the calling side.
+        """
+        return self._testImpl('jelly', 43, self.failureJelly)
+
+
+    def testSecurityFailure(self):
+        """
+        Test that even if an exception is not explicitly jellyable (by being
+        a L{pb.Jellyable} subclass), as long as it is an L{pb.Error}
+        subclass it receives the same special treatment.
+        """
+        return self._testImpl('security', 430, self.failureSecurity)
+
+
+    def testDeferredJellyFailure(self):
+        """
+        Test that a Deferred which fails with a L{pb.Error} is treated in
+        the same way as a synchronously raised L{pb.Error}.
+        """
+        return self._testImpl('deferredJelly', 4300, self.failureDeferredJelly, JellyError)
+
+
+    def testDeferredSecurity(self):
+        """
+        Test that a Deferred which fails with a L{pb.Error} which is not
+        also a L{pb.Jellyable} is treated in the same way as a synchronously
+        raised exception of the same type.
+        """
+        return self._testImpl('deferredSecurity', 43000, self.failureDeferredSecurity, SecurityError)
 
 
     def testCopiedFailureLogging(self):
@@ -120,12 +215,6 @@ class PBFailureTest(PBConnTestCase):
 
         return d
 
-
-    def addFailingCallbacks(self, remoteCall, expectedResult, eb):
-        remoteCall.addCallbacks(self.success, eb,
-                                callbackArgs=(expectedResult,))
-        return remoteCall
-
     ##
     # callbacks
     ##
@@ -135,19 +224,6 @@ class PBFailureTest(PBConnTestCase):
                                  AttributeError, JellyError, SecurityError)
         self.assertEquals(len(errors), 6)
         return ignored
-
-    def connected(self, persp):
-        methods = (('poop', 42, self.failurePoop),
-                   ('fail', 420, self.failureFail),
-                   ('die', 4200, self.failureDie),
-                   ('nosuch', 42000, self.failureNoSuch),
-                   ('jelly', 43, self.failureJelly),
-                   ('security', 430, self.failureSecurity),
-                   ('deferredJelly', 4300, self.failureDeferredJelly),
-                   ('deferredSecurity', 43000, self.failureDeferredSecurity))
-        return defer.gatherResults([
-            self.addFailingCallbacks(persp.callRemote(meth), result, eb)
-            for (meth, result, eb) in methods])
 
     def success(self, result, expectedResult):
         self.assertEquals(result, expectedResult)

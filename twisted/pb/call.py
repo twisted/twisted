@@ -4,12 +4,11 @@ try:
 except ImportError:
     import StringIO
 
-from twisted.python import failure, log
-from twisted.python.components import registerAdapter
+from twisted.python import failure, log, reflect
 from twisted.internet import defer
 
-from twisted.pb import remoteinterface, copyable, slicer, schema, tokens
-from tokens import BananaError, Violation, ISlicer
+from twisted.pb import copyable, slicer, schema, tokens
+from tokens import BananaError, Violation
 
 
 class PendingRequest(object):
@@ -473,7 +472,7 @@ class FailureSlicer(slicer.BaseSlicer):
             #state['value'] = failure2Copyable(obj.value, banana.unsafeTracebacks)
         else:
             state['value'] = str(obj.value) # Exception instance
-        state['type'] = str(obj.type) # Exception class
+        state['type'] = reflect.qual(obj.type) # Exception class
         if broker.unsafeTracebacks:
             io = StringIO.StringIO()
             obj.printTraceback(io)

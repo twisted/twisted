@@ -12,7 +12,7 @@ import sys
 import StringIO
 import traceback
 
-from twisted.trial import unittest
+from twisted.trial import unittest, util
 
 
 from twisted.python import failure
@@ -105,6 +105,8 @@ class FailureTestCase(unittest.TestCase):
             self.assertEquals(sys.exc_info()[0], "bugger off")
         else:
             raise AssertionError("Should have raised")
+    testStringExceptions.suppress = [
+        util.suppress(message='raising a string exception is deprecated')]
 
     def testBrokenStr(self):
         x = BrokenStr()

@@ -74,7 +74,7 @@ def debug(*stuff,**otherstuff):
 
 def showwarning(message, category, filename, lineno, file=None):
     if file is None:
-        msg(warning=message, category=category, filename=filename, lineno=lineno,
+        msg(warning=message, category=reflect.qual(category), filename=filename, lineno=lineno,
             format="%(filename)s:%(lineno)s: %(category)s: %(warning)s")
     else:
         _oldshowwarning(message, category, filename, lineno, file)

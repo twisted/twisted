@@ -58,7 +58,6 @@ __version__ = "$Revision: 1.48 $"[11:-2]
 # System Imports
 import string
 import pickle
-import sys
 import types
 from types import StringType
 try:
@@ -68,7 +67,6 @@ except ImportError:
 from types import IntType
 from types import TupleType
 from types import ListType
-from types import DictType
 from types import LongType
 from types import FloatType
 from types import FunctionType
@@ -88,9 +86,9 @@ from new import instancemethod
 from zope.interface import implements
 
 # Twisted Imports
-from twisted.python.reflect import namedObject, namedModule, qual
+from twisted.python.reflect import namedObject, qual
 from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod, _DictKeyAndValue, _Dereference
-from twisted.python import runtime, components
+from twisted.python import runtime
 
 from twisted.spread.interfaces import IJellyable, IUnjellyable
 
@@ -416,8 +414,7 @@ class _Jellier:
                 return preRef
             return obj.jellyFor(self)
         objType = type(obj)
-        if self.taster.isTypeAllowed(
-            string.replace(objType.__name__, ' ', '_')):
+        if self.taster.isTypeAllowed(qual(objType)):
             # "Immutable" Types
             if ((objType is StringType) or
                 (objType is IntType) or
@@ -455,7 +452,7 @@ class _Jellier:
                 return ['date', '%s %s %s' % (obj.year, obj.month, obj.day)]
             elif objType is datetime.timedelta:
                 return ['timedelta', '%s %s %s' % (obj.days, obj.seconds, obj.microseconds)]
-            elif objType is ClassType or issubclass(type, objType):
+            elif objType is ClassType or issubclass(objType, type):
                 return ['class', qual(obj)]
             else:
                 preRef = self._checkMutable(obj)
@@ -475,7 +472,7 @@ class _Jellier:
                     sxp.append(dictionary_atom)
                     for key, val in obj.items():
                         sxp.append([self.jelly(key), self.jelly(val)])
-                elif objType is InstanceType:
+                else:
                     className = qual(obj.__class__)
                     persistent = None
                     if self.persistentStore:
@@ -494,11 +491,9 @@ class _Jellier:
                         self.unpersistable(
                             "instance of class %s deemed insecure" %
                             qual(obj.__class__), sxp)
-                else:
-                    raise NotImplementedError("Don't know the type: %s" % objType)
                 return self.preserve(obj, sxp)
         else:
-            if objType is types.InstanceType:
+            if objType is InstanceType:
                 raise InsecureJelly("Class not allowed for instance: %s %s" %
                                     (obj.__class__, obj))
             raise InsecureJelly("Type not allowed for object: %s %s" %
@@ -682,7 +677,7 @@ class _Unjellier:
             raise InsecureJelly("module %s not allowed" % modName)
         klaus = namedObject(rest[0])
         if type(klaus) is not types.ClassType:
-            raise InsecureJelly("class %s unjellied to something that isn't a class: %s" % (repr(name), repr(klaus)))
+            raise InsecureJelly("class %s unjellied to something that isn't a class: %s" % (repr(rest[0]), repr(klaus)))
         if not self.taster.isClassAllowed(klaus):
             raise InsecureJelly("class not allowed: %s" % qual(klaus))
         return klaus
@@ -833,7 +828,9 @@ class SecurityOptions:
         """SecurityOptions.allowTypes(typeString): Allow a particular type, by its name.
         """
         for typ in types:
-            self.allowedTypes[string.replace(typ, ' ', '_')]=1
+            if not isinstance(typ, str):
+                typ = qual(typ)
+            self.allowedTypes[typ] = 1
 
     def allowInstancesOf(self, *classes):
         """SecurityOptions.allowInstances(klass, klass, ...): allow instances

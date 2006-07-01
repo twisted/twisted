@@ -27,7 +27,7 @@ __version__ = "$Revision: 1.32 $"[11:-2]
 # mechanisms (like XMLRPC)
 
 # system imports
-import types
+import sys
 from zope.interface import implements
 
 # twisted imports
@@ -480,7 +480,7 @@ class RemoteCache(RemoteCopy, Serializable):
     def __hash__(self):
         """Hash me.
         """
-        return id(self.__dict__)
+        return int(id(self.__dict__) % sys.maxint)
 
     broker = None
     luid = None

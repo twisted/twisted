@@ -62,7 +62,7 @@ class SimpleJellyTest:
     def __init__(self, x, y):
         self.x = x
         self.y = y
-        
+
     def isTheSameAs(self, other):
         return self.__dict__ == other.__dict__
 
@@ -95,7 +95,6 @@ class JellyTestCase(unittest.TestCase):
         m = jelly.unjelly(c)
         self.failUnless(isinstance(m, NewStyle))
         self.assertIdentical(m.n2, m.n3)
-    testNewStyle.todo = "jelly does not support new-style classes yet"
 
 
     def testDateTime(self):

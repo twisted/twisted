@@ -14,6 +14,7 @@ See L{Failure}.
 import sys
 import linecache
 import string
+import inspect
 from cStringIO import StringIO
 import types
 
@@ -201,7 +202,7 @@ class Failure:
                 globalz.items(),
                 ])
             tb = tb.tb_next
-        if isinstance(self.type, types.ClassType):
+        if inspect.isclass(self.type) and issubclass(self.type, Exception):
             parentCs = reflect.allYourBase(self.type)
             self.parents = map(reflect.qual, parentCs)
             self.parents.append(reflect.qual(self.type))
@@ -244,7 +245,7 @@ class Failure:
         """
         for error in errorTypes:
             err = error
-            if isinstance(error, types.ClassType) and issubclass(error, Exception):
+            if inspect.isclass(error) and issubclass(error, Exception):
                 err = reflect.qual(error)
             if err in self.parents:
                 return error
@@ -349,7 +350,7 @@ class Failure:
 
         # postamble, if any
         if not detail == 'brief':
-            w("%s: %s\n" % (reflect.safe_str(self.type),
+            w("%s: %s\n" % (reflect.qual(self.type),
                             reflect.safe_str(self.value)))
         # chaining
         if isinstance(self.value, Failure):
