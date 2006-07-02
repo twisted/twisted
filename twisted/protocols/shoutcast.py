@@ -4,7 +4,7 @@
 
 """Chop up shoutcast stream into MP3s and metadata, if available."""
 
-from twisted.protocols import http
+from twisted.web import http
 from twisted import copyright
 
 

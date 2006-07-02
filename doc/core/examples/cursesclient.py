@@ -21,7 +21,7 @@ import curses.wrapper
 # Twisted imports
 from twisted.internet import reactor
 from twisted.internet.protocol import ClientFactory
-from twisted.protocols.irc import IRCClient
+from twisted.words.protocols.irc import IRCClient
 from twisted.python import log
 
 class TextTooLongError(Exception):

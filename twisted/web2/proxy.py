@@ -126,7 +126,7 @@ class Proxy(http.HTTPChannel):
     Since it inherits from twisted.protocols.http.HTTPChannel, to use it you
     should do something like this::
 
-        from twisted.protocols import http
+        from twisted.web2 import http
         f = http.HTTPFactory()
         f.protocol = Proxy
 

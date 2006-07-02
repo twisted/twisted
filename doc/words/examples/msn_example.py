@@ -8,7 +8,7 @@
 # Twisted Imports
 from twisted.internet import reactor
 from twisted.internet.protocol import ClientFactory
-from twisted.protocols import msn
+from twisted.words.protocols import msn
 from twisted.python import log
 
 # System Imports

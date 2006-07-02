@@ -14,7 +14,7 @@ from twisted.internet import qtreactor, protocol
 app = QApplication([])
 qtreactor.install(app)
 
-from twisted.protocols import http
+from twisted.web import http
 
 
 class TwistzillaClient(http.HTTPClient):

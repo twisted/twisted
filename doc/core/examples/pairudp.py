@@ -1,5 +1,5 @@
 from twisted.internet import reactor, protocol
-from twisted.protocols import ethernet, ip, rawudp
+from twisted.pair import ethernet, rawudp, ip
 from twisted.pair import tuntap
 
 class MyProto(protocol.DatagramProtocol):

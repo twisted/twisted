@@ -15,7 +15,7 @@ from twisted.internet import protocol
 from twisted.internet import ssl
 from twisted.internet import defer
 from twisted.internet import stdio
-from twisted.protocols import imap4
+from twisted.mail import imap4
 from twisted.protocols import basic
 from twisted.python import util
 from twisted.python import log

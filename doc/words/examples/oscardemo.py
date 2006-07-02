@@ -1,7 +1,5 @@
 #!/usr/bin/python
-from twisted.internet import default
-default.install()
-from twisted.protocols import oscar
+from twisted.words.protocols import oscar
 from twisted.internet import protocol, reactor
 import getpass
 

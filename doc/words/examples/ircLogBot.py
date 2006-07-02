@@ -23,7 +23,7 @@ will log channel #test to the file 'test.log'.
 
 
 # twisted imports
-from twisted.protocols import irc
+from twisted.words.protocols import irc
 from twisted.internet import reactor, protocol
 from twisted.python import log
 

@@ -13,7 +13,7 @@ A toy email server.
 from zope.interface import implements
 
 from twisted.internet import defer
-from twisted.protocols import smtp
+from twisted.mail import smtp
 
 class ConsoleMessageDelivery:
     implements(smtp.IMessageDelivery)

@@ -6,9 +6,9 @@
 
 """AIM echo bot."""
 
-from twisted.protocols import toc
+from twisted.words.protocols import toc
 from twisted.internet import reactor, protocol
-import twisted.im.tocsupport as ts
+import twisted.words.im.tocsupport as ts
 
 # account info
 screenname = 'username'

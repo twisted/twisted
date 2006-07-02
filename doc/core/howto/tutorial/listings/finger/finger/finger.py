@@ -4,7 +4,8 @@ from zope.interface import Interface, implements
 
 from twisted.application import internet, service, strports
 from twisted.internet import protocol, reactor, defer
-from twisted.protocols import basic, irc
+from twisted.words.protocols import irc
+from twisted.protocols import basic
 from twisted.python import components
 from twisted.web import resource, server, static, xmlrpc, microdom
 from twisted.web.woven import page, model, interfaces

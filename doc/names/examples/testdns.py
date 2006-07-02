@@ -3,7 +3,7 @@
 import sys
 from twisted.names import client
 from twisted.internet import reactor
-from twisted.protocols import dns
+from twisted.names import dns
 
 r = client.Resolver('/etc/resolv.conf')
 

@@ -21,7 +21,7 @@ from cStringIO import StringIO
 # Twisted Imports
 from twisted.python import failure, log, rebuild, reflect, util
 from twisted.internet import defer
-from twisted.protocols import http
+from twisted.web import http
 
 # Sibling Imports
 import html, resource, error

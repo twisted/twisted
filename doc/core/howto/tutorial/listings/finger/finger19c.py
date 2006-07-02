@@ -1,7 +1,8 @@
 # Do everything properly, and componentize
 from twisted.application import internet, service
 from twisted.internet import protocol, reactor, defer, utils
-from twisted.protocols import basic, irc
+from twisted.words.protocols import irc
+from twisted.protocols import basic
 from twisted.python import components
 from twisted.web import resource, server, static, xmlrpc
 from zope.interface import Interface, implements
