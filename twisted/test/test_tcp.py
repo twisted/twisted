@@ -1071,32 +1071,36 @@ class HalfClose2TestCase(unittest.TestCase):
         self.client.transport.loseConnection()
         return self.p.stopListening()
 
-    def _delayDeferred(self, time, arg=None):
-        from twisted.internet import reactor
-        d = defer.Deferred()
-        reactor.callLater(time, d.callback, arg)
-        return d
-        
     def testNoNotification(self):
-        client = self.client
-        f = self.f
-        client.transport.write("hello")
-        w = client.transport.write
-        client.transport.loseWriteConnection()
-        d = self._delayDeferred(0.2, f.protocol)
-        d.addCallback(lambda x : self.assertEqual(f.protocol.data, 'hello'))
-        d.addCallback(lambda x : self.assertEqual(f.protocol.closed, True))
-        return d
+        """
+        TCP protocols support half-close connections, but not all of them
+        support being notified of write closes.  In this case, test that
+        half-closing the connection causes the peer's connection to be 
+        closed.
+        """
+        self.client.transport.write("hello")
+        self.client.transport.loseWriteConnection()
+        self.f.protocol.closedDeferred = d = defer.Deferred()
+        self.client.closedDeferred = d2 = defer.Deferred()
+        d.addCallback(lambda x:
+                      self.assertEqual(self.f.protocol.data, 'hello'))
+        d.addCallback(lambda x: self.assertEqual(self.f.protocol.closed, True))
+        return defer.gatherResults([d, d2])
 
     def testShutdownException(self):
-        client = self.client
-        f = self.f
-        f.protocol.transport.loseConnection()
-        client.transport.write("X")
-        client.transport.loseWriteConnection()
-        d = self._delayDeferred(0.2, f.protocol)
-        d.addCallback(lambda x : self.failUnlessEqual(x.closed, True))
-        return d
+        """
+        If the other side has already closed its connection, 
+        loseWriteConnection should pass silently.
+        """
+        self.f.protocol.transport.loseConnection()
+        self.client.transport.write("X")
+        self.client.transport.loseWriteConnection()
+        self.f.protocol.closedDeferred = d = defer.Deferred()
+        self.client.closedDeferred = d2 = defer.Deferred()
+        d.addCallback(lambda x:
+                      self.failUnlessEqual(self.f.protocol.closed, True))
+        return defer.gatherResults([d, d2])
+
 
 class HalfClose3TestCase(PortCleanerUpper):
     """Test half-closing connections where notification code has bugs."""
