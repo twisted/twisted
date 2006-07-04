@@ -101,7 +101,7 @@ class TestImportErrors(packages.PackageTest):
         self.failUnlessIn(d, '[ERROR]')
         self.failUnlessIn(d, 'package.test_bad_module')
         self.failIfIn(d, 'IOError')
-        self.failIfIn(d, '<module')
+        self.failIfIn(d, '<module ')
         return d
 
     def test_badimport(self):
@@ -109,7 +109,7 @@ class TestImportErrors(packages.PackageTest):
         self.failUnlessIn(d, '[ERROR]')
         self.failUnlessIn(d, 'package.test_import_module')
         self.failIfIn(d, 'IOError')
-        self.failIfIn(d, '<module')
+        self.failIfIn(d, '<module ')
         return d
 
     def test_recurseImport(self):
@@ -117,7 +117,7 @@ class TestImportErrors(packages.PackageTest):
         self.failUnlessIn(d, '[ERROR]')
         self.failUnlessIn(d, 'test_bad_module')
         self.failUnlessIn(d, 'test_import_module')
-        self.failIfIn(d, '<module')
+        self.failIfIn(d, '<module ')
         self.failIfIn(d, 'IOError')
         return d
 
@@ -127,7 +127,7 @@ class TestImportErrors(packages.PackageTest):
         self.failUnlessIn(d, 'package2')
         self.failUnlessIn(d, 'test_module')
         self.failUnlessIn(d, "No module named frotz")
-        self.failIfIn(d, '<module')
+        self.failIfIn(d, '<module ')
         self.failIfIn(d, 'IOError')
         return d
 
@@ -135,7 +135,7 @@ class TestImportErrors(packages.PackageTest):
         d = self.runTrial('-N', 'package2')
         self.failUnlessIn(d, '[ERROR]')
         self.failUnlessIn(d, "No module named frotz")
-        self.failIfIn(d, '<module')
+        self.failIfIn(d, '<module ')
         return d
 
     def test_regularRun(self):

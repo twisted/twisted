@@ -4,10 +4,23 @@
 
 from __future__ import generators
 
+import traceback
+
 from twisted.trial import unittest
 from twisted.internet import error, defer
 from twisted.conch.test.test_recvline import _TelnetMixin, _SSHMixin, _StdioMixin, stdio, ssh
 from twisted.conch import manhole
+
+def determineDefaultFunctionName():
+    """
+    Return the string used by Python as the name for code objects which are
+    compiled from interactive input or at the top-level of modules.
+    """
+    try:
+        1 / 0
+    except:
+        return traceback.extract_stack()[0][2]
+defaultFunctionName = determineDefaultFunctionName()
 
 
 class WriterTestCase(unittest.TestCase):
@@ -129,7 +142,7 @@ class ManholeLoopbackMixin:
             self._assertBuffer(
                 [">>> 1 / 0",
                  "Traceback (most recent call last):",
-                 '  File "<console>", line 1, in ?',
+                 '  File "<console>", line 1, in ' + defaultFunctionName,
                  "ZeroDivisionError: integer division or modulo by zero",
                  ">>> done"])
 
