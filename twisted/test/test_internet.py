@@ -376,20 +376,6 @@ class InterfaceTestCase(unittest.TestCase):
         self.assertEquals(dc.getTime(), 13)
 
 
-    def testWakeUp(self):
-        # Make sure other threads can wake up the reactor
-        d = Deferred()
-        def wake():
-            time.sleep(0.1)
-            # callFromThread will call wakeUp for us
-            reactor.callFromThread(d.callback, None)
-        reactor.callInThread(wake)
-        return d
-
-    if interfaces.IReactorThreads(reactor, None) is None:
-        testWakeUp.skip = "Nothing to wake up for without thread support"
-
-
 class ReactorCoreTestCase(unittest.TestCase):
     def setUp(self):
         self.triggers = []
@@ -675,7 +661,7 @@ class Order:
         self.stage = 3
 
 
-class callFromThreadTestCase(unittest.TestCase):
+class CallFromThreadTestCase(unittest.TestCase):
     """Task scheduling from threads tests."""
 
     if interfaces.IReactorThreads(reactor, None) is None:
@@ -710,6 +696,42 @@ class callFromThreadTestCase(unittest.TestCase):
         self.assertEquals(c.index, 0)
         reactor.iterate()
         self.assertEquals(c.index, 1)
+
+    def testWakeUp(self):
+        # Make sure other threads can wake up the reactor
+        d = Deferred()
+        def wake():
+            time.sleep(0.1)
+            # callFromThread will call wakeUp for us
+            reactor.callFromThread(d.callback, None)
+        reactor.callInThread(wake)
+        return d
+
+    def _stopCallFromThreadCallback(self):
+        self.stopped = True
+        
+    def _callFromThreadCallback(self, d):
+        reactor.callFromThread(self._callFromThreadCallback2, d)
+        reactor.callLater(0, self._stopCallFromThreadCallback)
+        
+    def _callFromThreadCallback2(self, d):
+        try:
+            self.assert_(self.stopped)
+        except:
+            # Send the error to the deferred
+            d.errback()
+        else:
+            d.callback(None)
+        
+    def testCallFromThreadStops(self):
+        """Ensure that callFromThread from inside a callFromThread
+        callback doesn't sit in an infinite loop and lets other
+        things happen too."""
+        
+        self.stopped = False
+        d = defer.Deferred()
+        reactor.callFromThread(self._callFromThreadCallback, d)
+        return d
 
 
 class MyProtocol(protocol.Protocol):

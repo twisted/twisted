@@ -527,13 +527,20 @@ class ReactorBase(object):
             # making them, in case another call is added to the queue
             # while we're in this loop.
             count = 0
+            total = len(self.threadCallQueue)
             for (f, a, kw) in self.threadCallQueue:
                 try:
                     f(*a, **kw)
                 except:
                     log.err()
                 count += 1
+                if count == total:
+                    break
             del self.threadCallQueue[:count]
+            if self.threadCallQueue:
+                if self.waker:
+                    self.waker.wakeUp()
+
 
         # insert new delayed calls now
         self._insertNewDelayedCalls()
