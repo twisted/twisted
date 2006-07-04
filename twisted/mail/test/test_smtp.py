@@ -14,8 +14,9 @@ from twisted import protocols
 from twisted import internet
 from twisted.protocols import loopback
 from twisted.mail import smtp
-from twisted.internet import defer, protocol, reactor, interfaces, address
+from twisted.internet import defer, protocol, reactor, interfaces, address, error
 from twisted.test.test_protocols import StringIOWithoutClosing
+from twisted.test.proto_helpers import StringTransport
 
 from twisted import cred
 import twisted.cred.error
@@ -520,3 +521,54 @@ class TimeoutTestCase(unittest.TestCase, LoopbackMixin):
             StringIO("Message body"), onDone,
             retries=0, timeout=0.5)
         return self._timeoutTest(onDone, clientFactory)
+
+
+class SMTPServerTestCase(unittest.TestCase):
+    """
+    Test various behaviors of L{twisted.mail.smtp.SMTP} and
+    L{twisted.mail.smtp.ESMTP}.
+    """
+    def testSMTPGreetingHost(self, serverClass=smtp.SMTP):
+        """
+        Test that the specified hostname shows up in the SMTP server's
+        greeting.
+        """
+        s = serverClass()
+        s.host = "example.com"
+        t = StringTransport()
+        s.makeConnection(t)
+        s.connectionLost(error.ConnectionDone())
+        self.assertIn("example.com", t.value())
+
+
+    def testSMTPGreetingNotExtended(self):
+        """
+        Test that the string "ESMTP" does not appear in the SMTP server's
+        greeting since that string strongly suggests the presence of support
+        for various SMTP extensions which are not supported by L{smtp.SMTP}.
+        """
+        s = smtp.SMTP()
+        t = StringTransport()
+        s.makeConnection(t)
+        s.connectionLost(error.ConnectionDone())
+        self.assertNotIn("ESMTP", t.value())
+
+
+    def testESMTPGreetingHost(self):
+        """
+        Similar to testSMTPGreetingHost, but for the L{smtp.ESMTP} class.
+        """
+        self.testSMTPGreetingHost(smtp.ESMTP)
+
+
+    def testESMTPGreetingExtended(self):
+        """
+        Test that the string "ESMTP" does appear in the ESMTP server's
+        greeting since L{smtp.ESMTP} does support the SMTP extensions which
+        that advertises to the client.
+        """
+        s = smtp.ESMTP()
+        t = StringTransport()
+        s.makeConnection(t)
+        s.connectionLost(error.ConnectionDone())
+        self.assertIn("ESMTP", t.value())

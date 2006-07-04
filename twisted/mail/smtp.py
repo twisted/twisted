@@ -546,7 +546,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         self.transport.loseConnection()
 
     def greeting(self):
-        return '%s NO UCE NO UBE NO RELAY PROBES ESMTP' % (self.host,)
+        return '%s NO UCE NO UBE NO RELAY PROBES' % (self.host,)
 
     def connectionMade(self):
         # Ensure user-code always gets something sane for _helo
@@ -935,7 +935,9 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
             heloStr = " helo=%s" % (helo[0],)
         domain = self.transport.getHost().host
         from_ = "from %s ([%s]%s)" % (helo[0], helo[1], heloStr)
-        by = "by %s with ESMTP (%s)" % (domain, longversion)
+        by = "by %s with %s (%s)" % (domain,
+                                     self.__class__.__name__,
+                                     longversion)
         for_ = "for %s; %s" % (' '.join(map(str, recipients)),
                                rfc822date())
         return "Received: %s\n\t%s\n\t%s" % (from_, by, for_)
@@ -1209,8 +1211,10 @@ class ESMTPClient(SMTPClient):
         self.context = contextFactory
         self.tlsMode = False
 
+
     def esmtpEHLORequired(self, code=-1, resp=None):
         self.sendError(EHLORequiredError(502, "Server does not support ESMTP Authentication", self.log.str()))
+
 
     def esmtpAUTHRequired(self, code=-1, resp=None):
         tmp = []
@@ -1222,6 +1226,7 @@ class ESMTPClient(SMTPClient):
 
         self.sendError(AUTHRequiredError(502, "Server does not support Client Authentication schemes %s" % auth,
                                          self.log.str()))
+
 
     def esmtpTLSRequired(self, code=-1, resp=None):
         self.sendError(TLSRequiredError(502, "Server does not support secure communication via TLS / SSL",
@@ -1397,6 +1402,11 @@ class ESMTP(SMTP):
         SMTP.connectionMade(self)
         self.canStartTLS = ITLSTransport.providedBy(self.transport)
         self.canStartTLS = self.canStartTLS and (self.ctx is not None)
+
+
+    def greeting(self):
+        return SMTP.greeting(self) + ' ESMTP'
+
 
     def extensions(self):
         ext = {'AUTH': self.challengers.keys()}
