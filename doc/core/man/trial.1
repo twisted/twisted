@@ -1,74 +1,107 @@
-.TH TRIAL "1" "January 2003" "" ""
+.TH TRIAL "1" "July 2006" "" ""
 .SH NAME
 trial \- run unit tests
 .SH SYNOPSIS
-.B trial
-[-b] [-v|-o|-j] [--coverage \fIcoverdir\fR] [-r \fIreactor\fR] [-l \fIlogfile\fR] [-m \fImodule\fR [-m \fImodule\fR ... ]] [-p \fIpackage\fR [-p \fIpackage\fR ... ]] \fIfile\fR|\fImodule\fR|\fIpackage\fR|\fITestCase\fR|\fItestMethod ...
+.B trial [options] [[file|package|module|TestCase|testmethod]...]
 .PP
 .B trial --help
 .SH DESCRIPTION
 .PP
-trial loads and executes a suite of unit tests, obtained from modules and
-packages listed on the command line.
-The \fB\--help\fR option prints out a usage message to standard output.
-.TP
-\fB-s\fR, \fB--summary\fR
-Print out just a machine-parseable summary of the results.
-.TP
-\fB-v\fR, \fB--verbose\fR
-Be more verbose. Without this option, trial prints out a single character
-for each test. (e.g. An 'F' for a failure, a '.' for a success, a 'S' for
-skipped test, a 'T' for a todo and '!' for unexpected success). With this
-option, trial prints a single line for each test. This is especially useful
-for gauging how long each test takes.
-.TP
-\fB-o\fR, \fB--bwverbose\fR
-Be verbose, but do not attempt to use colors (more log-file friendly)
-.TP
-\fB-j\fR, \fB--jelly\fR
-Report results in a machine-readable jelly stream.
-.TP
-\fB--timing\fR
-Report results with timing information for each test.
-.TP
-\fB--tbformat\fR <format>
-Format to display tracebacks with. Valid values are 'plain' and 'emacs',
-default being 'plain'.
-.TP
-\fB-m\fR, \fB--module\fR <module>
-Module containing test cases.
-.TP
-\fB--testmodule\fR <module>
-Find the test case for a named file
-.TP
-\fB-p\fR, \fB--package\fR <package>
-Package containing modules that contain test cases.
-trial loads modules named 'test_' within the given package.
-.TP
-\fB-l\fR, \fB--logfile\fR <logfile>
-Log exceptions (and other things) to the given logfile.
-.TP
-\fB-r\fR, \fB--reactor\fR <reactor>
-Use this reactor for running the tests. The reactor names are the same as
-those accepted by twistd: c, qt, gtk2, and so on.
-.TP
-\fB--coverage\fR <coverdir>
-Generate coverage information in the given directory (relative to 
-_trial_temp). Requires Python 2.3.3.
+trial loads and executes a suite of unit tests, obtained from modules,
+packages and files listed on the command line.
+.PP
+trial will take either filenames or fully qualified Python names as
+arguments.  Thus 'trial myproject/foo.py', 'trial myproject.foo' and
+ 'trial myproject.foo.SomeTestCase.test_method' are all valid ways to
+invoke trial.
 .TP
 \fB-b\fR, \fB--debug\fR
 Run the tests in the Python debugger. Also does post-mortem
 debugging on exceptions.
 .TP
-\fB-R\fR, \fB--recurse\fR
-Recursively search the specified packages for test modules.
-
+\fB-B\fR, \fB--debug-stacktraces\fR
+Report Deferred creation and callback stack traces
+.TP
+\fB--coverage\fR
+Generate coverage information in the given directory (relative to 
+_trial_temp). Requires Python 2.3 or higher.
+.TP
+\fB--disablegc\fR
+Disable the garbage collector.  I don't know why this is in trial.
+.TP
+\fB-e\fR, \fB--rterrors\fR
+Print tracebacks to standard output as soon as they occur
+.TP
+\fB-h\fR, \fB--help\fR
+Print a usage message to standard output, then exit.
+.TP
+\fB--help-reporters\fR
+Print a list of valid reporters to standard output, then exit.
+.TP
+\fB-l\fR, \fB--logfile\fR <logfile>
+Direct the log to a different file. The default file is 'test.log'.
+<logfile> is relative to _trial_temp.
+.TP
+\fB-n\fR, \fB--dry-run\fR
+Go through all the tests and make them pass without running.
+.TP
+\fB-N\fR, \fB--no-recurse\fR
+By default, trial recurses through packages to find every module inside
+every subpackage.  Unless, that is, you specify this option.
+.TP
+\fB--nopm\fR
+Don't automatically jump into debugger for post-mortem analysis of
+exceptions.  Only usable in conjunction with --debug.
+.TP
+\fB--profile\fR
+I don't know what this option does.
+.TP
+\fB-r\fR, \fB--reactor\fR <reactor>
+Use this reactor for running the tests. The reactor names are the same as
+those accepted by twistd: kqueue, poll, qt, default, win, cfreactor, gtk,
+cf, glade, win32, gtk2, iocp, glib2, threadedselect, wx.
+.TP
+\fB--recursionlimit\fR
+Set Python's recursion limit.  I don't know why this is in trial.
+.TP
+\fB--reporter\fR
+Select the reporter to use for Trial's output.  Use the --help-reporters
+option to see a list of valid reporters.
+.TP
+\fB--spew\fR
+Print an insanely verbose log of everything that happens. Useful when
+debugging freezes or locks in complex code.
+.TP
+\fB--tbformat\fR <format>
+Format to display tracebacks with. Acceptable values are 'default', 'brief'
+and 'verbose'. 'brief' produces tracebacks that play nicely with Emacs' GUD.
+.TP
+\fB--temp-directory <directory>\fR
+WARNING: Do not use this options unless you know what you are doing. 
+By default, trial creates a directory called _trial_temp under the current
+working directory.  When trial runs, it first \fIdeletes\fR this directory,
+then creates it, then changes into the directory to run the tests. The log
+file and any coverage files are stored here. Use this option if you wish to
+have trial run in a directory other than _trial_temp. Be warned, trial
+will \fIdelete\fR the directory before re-creating it.
+.TP
+\fB--testmodule <filename>\fR
+Ask trial to look into <filename> and run any tests specified using the
+Emacs-style buffer variable 'test-case-name'.
+.TP
+\fB-u\fR, \fB--until-failure\fR
+Keep looping the tests until one of them raises an error or a failure.
+This is particularly useful for reproducing intermittent failures.
+.TP
+\fB-z\fR, \fB--random [<seed>]\fR
+Run the tests in random order using the specified seed.
+.PP
 .SH AUTHOR
 Written by Jonathan M. Lange
 .SH "REPORTING BUGS"
 To report a bug, visit \fIhttp://twistedmatrix.com/bugs/\fR
 .SH COPYRIGHT
-Copyright \(co 2003 Matthew W. Lefkowitz
+Copyright \(co 2003-2006 Twisted Matrix Laboratories
 .br
 This is free software; see the source for copying conditions.  There is NO
 warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
