@@ -262,6 +262,12 @@ class TrialTestNames(unittest.TestCase):
         output = output.splitlines()[-1].strip()
         self.failUnlessEqual(output, result.getDescription(self.test) + ' ...')
 
+    def test_treeReporterWithDocstrings(self):
+        """A docstring"""
+        result = reporter.TreeReporter(self.stream)
+        self.assertEqual(result.getDescription(self),
+                         'test_treeReporterWithDocstrings')
+
     def test_getDescription(self):
         result = reporter.TreeReporter(self.stream)
         output = result.getDescription(self.test)

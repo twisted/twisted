@@ -424,7 +424,12 @@ class TreeReporter(Reporter):
         self._lastTest = []
 
     def getDescription(self, test):
-        return test.shortDescription() or test.id().split('.')[-1]
+        """Return the name of the method which 'test' represents.  This is
+        what gets displayed in the leaves of the tree.
+        
+        e.g. getDescription(TestCase('test_foo')) ==> test_foo
+        """
+        return test.id().split('.')[-1]
 
     def addSuccess(self, test):
         super(TreeReporter, self).addSuccess(test)
