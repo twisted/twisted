@@ -236,8 +236,9 @@ class _Assertions(pyunit.TestCase, object):
     assertApproximates = failUnlessApproximates
 
     def failUnlessFailure(self, deferred, *expectedFailures):
-        """assert that deferred will errback a failure of type in expectedFailures
-        this is analagous to an async assertRaises 
+        """Assert that C{deferred} will errback with one of
+        C{expectedFailures}.  Returns the original Deferred with callbacks
+        added. You will need to return this Deferred from your test case.
         """
         def _cb(ignore):
             raise self.failureException(
@@ -247,8 +248,9 @@ class _Assertions(pyunit.TestCase, object):
             if failure.check(*expectedFailures):
                 return failure.value
             else:
-                raise self.failureException("%r not expected (%r)"
-                                            % (failure, expectedFailures))
+                output = ('\nExpected: %r\nGot:\n%s'
+                          % (expectedFailures, str(failure)))
+                raise self.failureException(output)
         return deferred.addCallbacks(_cb, _eb)
     assertFailure = failUnlessFailure
 
@@ -313,13 +315,14 @@ class TestCase(_Assertions):
                 % (self, methodName, timeout))
             f = failure.Failure(e)
             # try to errback the deferred that the test returns (for no gorram
-            # reason) (see issue1005 and test_errorPropagation in test_deferred)
+            # reason) (see issue1005 and test_errorPropagation in
+            # test_deferred)
             try:
                 d.errback(f)
             except defer.AlreadyCalledError:
-                # if the deferred has been called already but the *back chain is
-                # still unfinished, crash the reactor and report timeout error
-                # ourself.
+                # if the deferred has been called already but the *back chain
+                # is still unfinished, crash the reactor and report timeout
+                # error ourself.
                 reactor.crash()
                 self._timedOut = True # see self._wait
                 todo = self.getTodo()
@@ -568,8 +571,8 @@ class TestCase(_Assertions):
         try:
             d.addBoth(append)
             if results:
-                # d might have already been fired, in which case append is called 
-                # synchronously. Avoid any reactor stuff.
+                # d might have already been fired, in which case append is
+                # called synchronously. Avoid any reactor stuff.
                 return
             d.addBoth(crash)
             reactor.stop = stop

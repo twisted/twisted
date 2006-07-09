@@ -1,6 +1,6 @@
 import StringIO
 
-from twisted.python import reflect
+from twisted.python import reflect, failure
 from twisted.python.util import dsu
 from twisted.internet import defer
 from twisted.trial import unittest, runner, reporter
@@ -272,6 +272,25 @@ class TestAssertions(unittest.TestCase):
         d.addCallbacks(lambda x: self.fail('Should have failed'),
                        lambda x: x.trap(self.failureException))
         return d
+
+    def test_assertFailure_moreInfo(self):
+        """In the case of assertFailure failing, check that we get lots of
+        information about the exception that was raised.
+        """
+        try:
+            1/0
+        except ZeroDivisionError:
+            f = failure.Failure()
+            d = defer.fail(f)
+        d = self.assertFailure(d, RuntimeError)
+        d.addErrback(self._checkInfo, f)
+        return d
+
+    def _checkInfo(self, assertionFailure, f):
+        assert assertionFailure.check(self.failureException)
+        output = assertionFailure.getErrorMessage()
+        self.assertIn(f.getErrorMessage(), output)
+        self.assertIn(f.getBriefTraceback(), output)
 
     def test_assertFailure_masked(self):
         """A single wrong assertFailure should fail the whole test.
