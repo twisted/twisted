@@ -1,5 +1,5 @@
 import StringIO, sys, sets
-from twisted.trial import unittest
+from twisted.trial import unittest, runner
 from twisted.scripts import trial
 from twisted.python import util
 
@@ -7,6 +7,20 @@ from twisted.python import util
 def sibpath(filename):
     """For finding files in twisted/trial/test"""
     return util.sibpath(__file__, filename)
+
+# XXX - duplicated in test_loader
+class CollectNames(unittest.TestVisitor):
+    def __init__(self):
+        self.tests = []
+        
+    def visitCase(self, test):
+        self.tests.append(test.id())
+
+
+def testNames(test):
+    collector = CollectNames()
+    test.visit(collector)
+    return collector.tests
 
 
 class TestModuleTest(unittest.TestCase):
@@ -16,55 +30,108 @@ class TestModuleTest(unittest.TestCase):
     def tearDown(self):
         self.config = None
 
+    def test_testNames(self):
+        """
+        Check that the testNames helper method accurately collects the
+        names of tests in suite.
+        """
+        self.assertEqual(testNames(self), [self.id()])
+
+    def assertSuitesEqual(self, test1, names):
+        loader = runner.TestLoader()
+        names1 = testNames(test1)
+        names2 = testNames(runner.TestSuite(map(loader.loadByName, names)))
+        names1.sort()
+        names2.sort()
+        self.assertEqual(names1, names2)
+
     def test_baseState(self):
         self.failUnlessEqual(0, len(self.config['tests']))
 
     def test_testmoduleOnModule(self):
+        """
+        Check that --testmodule loads a suite which contains the tests
+        referred to in test-case-name inside its parameter.
+        """
         self.config.opt_testmodule(sibpath('moduletest.py'))
-        self.failUnlessEqual(sets.Set(['twisted.trial.test.test_test_visitor']),
-                             self.config['tests'])
+        self.assertSuitesEqual(trial._getSuite(self.config),
+                               ['twisted.trial.test.test_test_visitor'])
 
     def test_testmoduleTwice(self):
+        """
+        When the same module is specified with two --testmodule flags, it
+        should only appear once in the suite.
+        """
         self.config.opt_testmodule(sibpath('moduletest.py'))
         self.config.opt_testmodule(sibpath('moduletest.py'))
-        self.failUnlessEqual(sets.Set(['twisted.trial.test.test_test_visitor']),
-                             self.config['tests'])
-        
+        self.assertSuitesEqual(trial._getSuite(self.config),
+                               ['twisted.trial.test.test_test_visitor'])
+
+    def test_testmoduleOnSourceAndTarget(self):
+        """
+        If --testmodule is specified twice, once for module A and once for
+        a module which refers to module A, then make sure module A is only
+        added once.
+        """
+        self.config.opt_testmodule(sibpath('moduletest.py'))
+        self.config.opt_testmodule(sibpath('test_test_visitor.py'))
+        self.assertSuitesEqual(trial._getSuite(self.config),
+                               ['twisted.trial.test.test_test_visitor'])
 
     def test_testmoduleOnSelfModule(self):
+        """
+        When given a module that refers to *itself* in the test-case-name
+        variable, check that --testmodule only adds the tests once.
+        """
         self.config.opt_testmodule(sibpath('moduleself.py'))
-        self.failUnlessEqual(sets.Set(['twisted.trial.test.moduleself']),
-                             self.config['tests'])
+        self.assertSuitesEqual(trial._getSuite(self.config),
+                               ['twisted.trial.test.moduleself'])
 
     def test_testmoduleOnScript(self):
+        """
+        Check that --testmodule loads tests referred to in test-case-name
+        buffer variables.
+        """
         self.config.opt_testmodule(sibpath('scripttest.py'))
-        self.failUnlessEqual(sets.Set(['twisted.trial.test.test_test_visitor',
-                                       'twisted.trial.test.test_class']),
-                             sets.Set(self.config['tests']))
+        self.assertSuitesEqual(trial._getSuite(self.config),
+                               ['twisted.trial.test.test_test_visitor',
+                                'twisted.trial.test.test_class'])
 
     def test_testmoduleOnNonexistentFile(self):
+        """
+        Check that --testmodule displays a meaningful error message when
+        passed a non-existent filename.
+        """
         buffy = StringIO.StringIO()
         stderr, sys.stderr = sys.stderr, buffy
         filename = 'test_thisbetternoteverexist.py'
         try:
             self.config.opt_testmodule(filename)
-            self.failUnlessEqual(sets.Set([]), self.config['tests'])
+            self.failUnlessEqual(0, len(self.config['tests']))
             self.failUnlessEqual("File %r doesn't exist\n" % (filename,),
                                  buffy.getvalue())
         finally:
             sys.stderr = stderr
 
     def test_testmoduleOnEmptyVars(self):
+        """
+        Check that --testmodule adds no tests to the suite for modules
+        which lack test-case-name buffer variables.
+        """
         self.config.opt_testmodule(sibpath('novars.py'))
-        self.failUnlessEqual(sets.Set([]), self.config['tests'])
+        self.failUnlessEqual(0, len(self.config['tests']))
 
     def test_testmoduleOnModuleName(self):
+        """
+        Check that --testmodule does *not* support module names as arguments
+        and that it displays a meaningful error message.
+        """
         buffy = StringIO.StringIO()
         stderr, sys.stderr = sys.stderr, buffy
         moduleName = 'twisted.trial.test.test_script'
         try:
             self.config.opt_testmodule(moduleName)
-            self.failUnlessEqual(sets.Set([]), self.config['tests'])
+            self.failUnlessEqual(0, len(self.config['tests']))
             self.failUnlessEqual("File %r doesn't exist\n" % (moduleName,),
                                  buffy.getvalue())
         finally:

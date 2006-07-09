@@ -4,11 +4,11 @@
 # See LICENSE for details.
 
 
-import sys, os, shutil, random, gc, time, sets
+import sys, os, random, gc, time, sets
 
 from twisted.internet import defer
 from twisted.application import app
-from twisted.python import usage, reflect, failure, log
+from twisted.python import usage, reflect, failure
 from twisted import plugin
 from twisted.python.util import spewer
 from twisted.trial import runner, itrial, reporter
@@ -101,8 +101,6 @@ class Options(usage.Options):
                 ["profile", None, "Run tests under the Python profiler"],
                 ["until-failure", "u", "Repeat test until it fails"],
                 ["no-recurse", "N", "Don't recurse into packages"],
-                ['suppresswarnings', None,
-                 'Only print warnings to log, not stdout. DEPRECATED.'],
                 ['help-reporters', None,
                  "Help on available output plugins (reporters)"]
                 ]
@@ -303,9 +301,6 @@ class Options(usage.Options):
             self['tests'].update(self.extra)
 
     def postOptions(self):
-        if self['suppresswarnings']:
-            warnings.warn('--suppresswarnings deprecated. Is a no-op',
-                          category=DeprecationWarning)
         if not self.has_key('tbformat'):
             self['tbformat'] = 'default'
         if self['nopm']:
@@ -325,15 +320,9 @@ def _initialDebugSetup(config):
 
 def _getSuite(config):
     loader = _getLoader(config)
-    suite = runner.TestSuite()
     recurse = not config['no-recurse']
-    for test in config['tests']:
-        if isinstance(test, str):
-            suite.addTest(loader.loadByName(test, recurse))
-        else:
-            suite.addTest(loader.loadAnything(test, recurse))
-    return suite
-    
+    return loader.loadByNames(config['tests'], recurse)
+
 
 def _getLoader(config):
     loader = runner.TestLoader()

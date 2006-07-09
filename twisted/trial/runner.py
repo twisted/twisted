@@ -7,7 +7,7 @@
 # Maintainer: Jonathan Lange <jml@twistedmatrix.com>
 
 from __future__ import generators
-import pdb, shutil
+import pdb, shutil, sets
 import os, glob, types, warnings, sys, inspect, imp
 import fnmatch, random, doctest, time
 from os.path import join as opj
@@ -346,11 +346,23 @@ class TestLoader(object):
         return self.loadAnything(thing, recurse)
     loadTestsFromName = loadByName
 
-    def loadTestsFromNames(self, names, module=None):
-        suites = []
+    def loadByNames(self, names, recurse=False):
+        """Construct a TestSuite containing all the tests found in 'names',
+        where names is a list of fully qualified python names and/or
+        filenames. The suite returned will have no duplicate tests, even
+        if the same object is named twice.
+        """
+        things = []
+        errors = []
         for name in names:
-            suites.append(self.loadTestsFromName(name, module))
-        return self.suiteClass(suites)
+            try:
+                things.append(self.findByName(name))
+            except:
+                errors.append(ErrorHolder(name, failure.Failure()))
+        suites = [self.loadAnything(thing, recurse)
+                  for thing in sets.Set(things)]
+        suites.extend(errors)
+        return self.suiteFactory(suites)
 
 
 class DryRunVisitor(unittest.TestVisitor):

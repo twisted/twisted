@@ -1,7 +1,22 @@
 import sys, os
 from twisted.python import util
 from twisted.trial.test import packages
-from twisted.trial import runner, reporter
+from twisted.trial import runner, reporter, unittest
+
+
+# XXX - duplicated in test_script
+class CollectNames(unittest.TestVisitor):
+    def __init__(self):
+        self.tests = []
+        
+    def visitCase(self, test):
+        self.tests.append(test.id())
+
+
+def testNames(test):
+    collector = CollectNames()
+    test.visit(collector)
+    return collector.tests
 
 
 class FinderTest(packages.PackageTest):
@@ -270,3 +285,31 @@ class LoaderTest(packages.PackageTest):
         errors.sort()
         self.failUnlessEqual(errors, ['package.test_bad_module',
                                       'package.test_import_module'])
+
+    # XXX - duplicated and modified from test_script
+    def assertSuitesEqual(self, test1, test2):
+        loader = runner.TestLoader()
+        names1 = testNames(test1)
+        names2 = testNames(test2)
+        names1.sort()
+        names2.sort()
+        self.assertEqual(names1, names2)
+
+    def test_loadByNamesDuplicate(self):
+        """
+        Check that loadByNames ignores duplicate names
+        """
+        module = 'twisted.trial.test.test_test_visitor'
+        suite1 = self.loader.loadByNames([module, module], True)
+        suite2 = self.loader.loadByName(module, True)
+        self.assertSuitesEqual(suite1, suite2)
+
+    def test_loadDifferentNames(self):
+        """
+        Check that loadByNames loads all the names that it is given
+        """
+        modules = ['goodpackage', 'package.test_module']
+        suite1 = self.loader.loadByNames(modules)
+        suite2 = runner.TestSuite(map(self.loader.loadByName, modules))
+        self.assertSuitesEqual(suite1, suite2)
+
