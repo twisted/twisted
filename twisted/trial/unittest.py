@@ -268,7 +268,7 @@ class TestCase(_Assertions):
     zi.implements(itrial.ITestCase)
     failureException = FailTest
 
-    def __init__(self, methodName=None):
+    def __init__(self, methodName):
         super(TestCase, self).__init__(methodName)
         self._testMethodName = methodName
         testMethod = getattr(self, methodName)
