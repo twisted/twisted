@@ -376,6 +376,7 @@ class InterfaceTestCase(unittest.TestCase):
         self.assertEquals(dc.getTime(), 13)
 
 
+class CallFromThreadTests(unittest.TestCase):
     def testWakeUp(self):
         # Make sure other threads can wake up the reactor
         d = Deferred()
@@ -389,6 +390,33 @@ class InterfaceTestCase(unittest.TestCase):
     if interfaces.IReactorThreads(reactor, None) is None:
         testWakeUp.skip = "Nothing to wake up for without thread support"
 
+    def _stopCallFromThreadCallback(self):
+        self.stopped = True
+        
+    def _callFromThreadCallback(self, d):
+        reactor.callFromThread(self._callFromThreadCallback2, d)
+        reactor.callLater(0, self._stopCallFromThreadCallback)
+        
+    def _callFromThreadCallback2(self, d):
+        try:
+            self.assert_(self.stopped)
+        except:
+            # Send the error to the deferred
+            d.errback()
+        else:
+            d.callback(None)
+        
+    def testCallFromThreadStops(self):
+        """
+        Ensure that callFromThread from inside a callFromThread
+        callback doesn't sit in an infinite loop and lets other
+        things happen too.
+        """
+        self.stopped = False
+        d = defer.Deferred()
+        reactor.callFromThread(self._callFromThreadCallback, d)
+        return d
+    
 
 class ReactorCoreTestCase(unittest.TestCase):
     def setUp(self):
