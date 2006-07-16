@@ -11,6 +11,20 @@ from twisted.web2 import responsecode
 from twisted.web2 import http
 from twisted.web2 import iweb
 
+class UnauthorizedResponse(http.StatusResponse):
+    def __init__(self, factories, remoteAddr=None):
+        super(UnauthorizedResponse, self).__init__(
+            responsecode.UNAUTHORIZED,
+            "You are not authorized to access this resource.")
+        
+        authHeaders = []
+        for factory in factories.itervalues():
+            authHeaders.append((factory.scheme,
+                                factory.getChallenge(remoteAddr)))
+
+        self.headers.setHeader('www-authenticate', authHeaders)
+
+
 class UnauthorizedResource(resource.LeafResource):
     """Returned by locateChild or render to generate an http Unauthorized
        response.
@@ -24,17 +38,7 @@ class UnauthorizedResource(resource.LeafResource):
         self.factories = factories
         
     def render(self, req):
-        resp = http.Response(responsecode.UNAUTHORIZED)
-
-        authHeaders = []
-        for factory in self.factories.itervalues():
-            authHeaders.append((factory.scheme, 
-                                factory.getChallenge(req.remoteAddr)))
-
-
-        resp.headers.setHeader('www-authenticate', authHeaders)
-        
-        return resp
+        return UnauthorizedResponse(self.factories, req.remoteAddr)
 
 
 class HTTPAuthResource(object):
