@@ -20,12 +20,14 @@ from zope.interface import implements
 from twisted.internet.interfaces import IReactorFDSet
 from twisted.internet import error
 from twisted.internet import posixbase
-from twisted.python import log
+from twisted.python import log, components, failure
 from twisted.persisted import styles
 from twisted.python.runtime import platformType
 
 import select
 from errno import EINTR, EBADF
+if platformType == "win32":
+    from errno import WSAENOBUFS
 
 # global state for selector
 reads = {}
@@ -62,9 +64,16 @@ class SelectReactor(posixbase.PosixReactorBase):
     """A select() based reactor - runs on all POSIX platforms and on Win32.
     """
     implements(IReactorFDSet)
+    
+    #start unreasonably high, decrease at runtime if needed
+    limit = 64000
+
+    #no clue what a good number here is
+    overload_delay = 0.1
 
     def _preenDescriptors(self):
         log.msg("Malformed file descriptor found.  Preening lists.")
+        found = False
         readers = reads.keys()
         writers = writes.keys()
         reads.clear()
@@ -75,9 +84,35 @@ class SelectReactor(posixbase.PosixReactorBase):
                     select.select([selectable], [selectable], [selectable], 0)
                 except:
                     log.msg("bad descriptor %s" % selectable)
+                    found = True
                 else:
                     selDict[selectable] = 1
+        return found
 
+    def _hitLimit(self):
+        x = max(len(reads), len(writes))
+        self.limit = min(self.limit, x - 1)
+        readers = reads.keys()
+        writers = writes.keys()
+
+        readers.sort()
+        writers.sort()
+        
+        extra_readers = readers[self.limit:]
+        extra_writers = writers[self.limit:]
+        for reader in extra_readers:
+            self.callLater(self.overload_delay, self.addReader, reader)
+        for writer in extra_writers:
+            self.callLater(self.overload_delay, self.addWriter, writer)
+
+        readers = readers[:self.limit]
+        writers = writers[:self.limit]
+        
+        reads.clear()
+        writes.clear()        
+        for selDict, selList in ((reads, readers), (writes, writers)):
+            for selectable in selList:
+                selDict[selectable] = 1                
 
     def doSelect(self, timeout,
                  # Since this loop should really be as fast as possible,
@@ -97,9 +132,14 @@ class SelectReactor(posixbase.PosixReactorBase):
                                         [], timeout)
                 break
             except ValueError, ve:
-                # Possibly a file descriptor has gone negative?
-                log.err()
-                self._preenDescriptors()
+                if platformType == "win32":
+                    #preen just incase
+                    if not self._preenDescriptors():
+                        self._hitLimit()
+                else:
+                    # Possibly a file descriptor has gone negative?
+                    log.err()
+                    self._preenDescriptors()
             except TypeError, te:
                 # Something *totally* invalid (object w/o fileno, non-integral
                 # result) was passed
@@ -117,6 +157,8 @@ class SelectReactor(posixbase.PosixReactorBase):
                     return
                 elif se.args[0] == EBADF:
                     self._preenDescriptors()
+                elif (platformType == "win32") and (se.args[0] == WSAENOBUFS):                    
+                    self._hitLimit()
                 else:
                     # OK, I really don't know what's going on.  Blow up.
                     raise
@@ -151,12 +193,19 @@ class SelectReactor(posixbase.PosixReactorBase):
     def addReader(self, reader):
         """Add a FileDescriptor for notification of data available to read.
         """
-        reads[reader] = 1
+        if len(reads) < self.limit:
+            reads[reader] = 1
+        else:
+            self.callLater(self.overload_delay, self.addReader, reader)
 
     def addWriter(self, writer):
         """Add a FileDescriptor for notification of data available to write.
         """
-        writes[writer] = 1
+        if len(writes) < self.limit:
+            writes[writer] = 1
+        else:
+            self.callLater(self.overload_delay, self.addWriter, writer)
+        
 
     def removeReader(self, reader):
         """Remove a Selectable for notification of data available to read.
@@ -182,3 +231,4 @@ def install():
     installReactor(reactor)
 
 __all__ = ['install']
+
