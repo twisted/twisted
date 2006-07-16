@@ -57,15 +57,25 @@ def parseVersion(strversion):
         raise ValueError("negative number")
     return (proto.lower(), major, minor)
 
+
 class HTTPError(Exception):
     def __init__(self, codeOrResponse):
+        """An Exception for propagating HTTP Error Responses.
+
+        @param codeOrResponse: The numeric HTTP code or a complete http.Response
+            object.
+        @type codeOrResponse: C{int} or L{http.Response}
+        """
         Exception.__init__(self)
         self.response = iweb.IResponse(codeOrResponse)
 
     def __repr__(self):
         return "<%s %s>" % (self.__class__.__name__, self.response)
 
+
 class Response(object):
+    """An object representing an HTTP Response to be sent to the client.
+    """
     implements(iweb.IResponse)
     
     code = responsecode.OK
@@ -73,6 +83,18 @@ class Response(object):
     stream = None
     
     def __init__(self, code=None, headers=None, stream=None):
+        """
+        @param code: The HTTP status code for this Response
+        @type code: C{int}
+        
+        @param headers: Headers to be sent to the client.
+        @type headers: C{dict}, L{twisted.web2.http_headers.Headers}, or 
+            C{None}
+        
+        @param stream: Content body to send to the HTTP client
+        @type stream: L{twisted.web2.stream.IByteStream}
+        """
+
         if code is not None:
             self.code = int(code)
 
@@ -93,6 +115,7 @@ class Response(object):
             streamlen = self.stream.length
 
         return "<%s.%s code=%d, streamlen=%s>" % (self.__module__, self.__class__.__name__, self.code, streamlen)
+
 
 class StatusResponse (Response):
     """
@@ -136,6 +159,7 @@ class StatusResponse (Response):
     def __repr__(self):
         return "<%s %s %s>" % (self.__class__.__name__, self.code, self.description)
 
+
 class RedirectResponse (StatusResponse):
     """
     A L{Response} object that contains a redirect to another network location.
@@ -150,6 +174,7 @@ class RedirectResponse (StatusResponse):
         )
 
         self.headers.setHeader("location", location)
+
         
 def NotModifiedResponse(oldResponse=None):
     if oldResponse is not None:
@@ -285,6 +310,7 @@ def checkIfRange(request, response):
     else:
         return ifrange == response.headers.getHeader("last-modified")
 
+
 class _NotifyingProducerStream(stream.ProducerStream):
     doStartReading = None
 
@@ -307,6 +333,7 @@ class _NotifyingProducerStream(stream.ProducerStream):
     def finish(self):
         self.doStartReading = None
         stream.ProducerStream.finish(self)
+
 
 # response codes that must have empty bodies
 NO_BODY_CODES = (responsecode.NO_CONTENT, responsecode.NOT_MODIFIED)

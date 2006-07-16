@@ -40,6 +40,7 @@ class _LogByteCounter(object):
             done=self.done; self.done=None
             done(False, self.len)
         self.stream.close()
+
     
 class ILogInfo(Interface):
     """Auxilliary information about the response useful for logging."""
@@ -48,6 +49,7 @@ class ILogInfo(Interface):
     responseCompleted=Attribute("Whether or not the response was completed.")
     secondsTaken=Attribute("Number of seconds taken to serve the request.")
     startTime=Attribute("Time at which the request started")
+
     
 class LogInfo(object):
     implements(ILogInfo)
@@ -56,6 +58,7 @@ class LogInfo(object):
     secondsTaken=None
     bytesSent=None
     startTime=None
+
     
 def logFilter(request, response, startTime=None):
     if startTime is None:
@@ -81,6 +84,7 @@ def logFilter(request, response, startTime=None):
 
 logFilter.handleErrors = True
 
+
 class LogWrapperResource(resource.WrapperResource):
     def hook(self, request):
         # Insert logger
@@ -88,6 +92,7 @@ class LogWrapperResource(resource.WrapperResource):
 
 monthname = [None, 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
 
 class BaseCommonAccessLoggingObserver(object):
     """An abstract Twisted-based logger for creating access logs.
@@ -100,7 +105,6 @@ class BaseCommonAccessLoggingObserver(object):
     logFormat = '%s - %s [%s] "%s" %s %d "%s" "%s"'
     def logMessage(self, message):
         raise NotImplemented, 'You must provide an implementation.'
-    
 
     def computeTimezoneForLog(self, tz):
         if tz > 0:
@@ -117,7 +121,6 @@ class BaseCommonAccessLoggingObserver(object):
 
     tzForLog = None
     tzForLogAlt = None
-
 
     def logDateString(self, when):
         logtime = time.localtime(when)
@@ -136,7 +139,6 @@ class BaseCommonAccessLoggingObserver(object):
 
         return '%02d/%s/%02d:%02d:%02d:%02d %s' % (
             D, monthname[M], Y, h, m, s, tz)
-
 
     def emit(self, eventDict):
         if eventDict.get('interface') is not iweb.IRequest:
@@ -173,6 +175,7 @@ class BaseCommonAccessLoggingObserver(object):
         """Stop observing log events."""
         tlog.removeObserver(self.emit)
 
+
 class FileAccessLoggingObserver(BaseCommonAccessLoggingObserver):
     """I log requests to a single logfile
     """
@@ -190,6 +193,7 @@ class FileAccessLoggingObserver(BaseCommonAccessLoggingObserver):
     def stop(self):
         super(FileAccessLoggingObserver, self).stop()
         self.f.close()
+
                 
 class DefaultCommonAccessLoggingObserver(BaseCommonAccessLoggingObserver):
     """Log requests to default twisted logfile."""

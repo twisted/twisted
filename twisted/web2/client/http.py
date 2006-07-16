@@ -1,8 +1,11 @@
+from zope.interface import implements
+
 from twisted.internet import defer, protocol
 from twisted.protocols import basic, policies
 from twisted.web2 import stream as stream_mod, http, http_headers, responsecode
 from twisted.web2.channel import http as httpchan
 from twisted.web2.channel.http import PERSIST_NO_PIPELINE, PERSIST_PIPELINE
+from twisted.web2.client import interfaces
 
 #from twisted.python.util import tracer
 
@@ -10,7 +13,30 @@ class ProtocolError(Exception):
     pass
 
 class ClientRequest(object):
+    """A class for describing an HTTP request to be sent to the server.
+    """
+
     def __init__(self, method, uri, headers, stream):
+        """
+        @param method: The HTTP method to for this request, ex: 'GET', 'HEAD',
+            'POST', etc.
+        @type method: C{str}
+        
+        @param uri: The URI of the resource to request, this may be absolute or
+            relative, however the interpretation of this URI is left up to the 
+            remote server.
+        @type uri: C{str}
+
+        @param headers: Headers to be sent to the server.  It is important to 
+            note that this object does not create any implicit headers.  So it 
+            is up to the HTTP Client to add required headers such as 'Host'.
+        @type headers: C{dict}, L{twisted.web2.http_headers.Headers}, or 
+            C{None}
+    
+        @param stream: Content body to send to the remote HTTP server.
+        @type stream: L{twisted.web2.stream.IByteStream}
+        """
+
         self.method = method
         self.uri = uri
         if isinstance(headers, http_headers.Headers):
@@ -22,6 +48,7 @@ class ClientRequest(object):
             self.stream = stream_mod.IByteStream(stream)
         else:
             self.stream = None
+
 
 class HTTPClientChannelRequest(httpchan.HTTPParser):
     parseCloseAsEnd = True
@@ -153,7 +180,14 @@ class HTTPClientChannelRequest(httpchan.HTTPParser):
     def handleContentComplete(self):
         self.stream.finish()
 
+
 class EmptyHTTPClientManager(object):
+    """A dummy HTTPClientManager.  It doesn't do any client management, and is 
+    meant to be used only when creating an HTTPClientProtocol directly.
+    """
+
+    implements(interfaces.IHTTPClientManager)
+
     def clientBusy(self, proto):
         pass
     
@@ -181,6 +215,11 @@ class HTTPClientProtocol(basic.LineReceiver, policies.TimeoutMixin, object):
     inputTimeOut = 60 * 4
 
     def __init__(self, manager=None):
+        """
+        @param manager: The object this client reports it state to.
+        @type manager: L{interfaces.IHTTPClientManager}
+        """
+
         self.outRequest = None
         self.inRequests = []
         if manager is None:
@@ -217,6 +256,18 @@ class HTTPClientProtocol(basic.LineReceiver, policies.TimeoutMixin, object):
         self.inRequests[0].rawDataReceived(data)
         
     def submitRequest(self, request, closeAfter=True):
+        """
+        @param request: The request to send to a remote server.
+        @type request: L{ClientRequest}
+
+        @param closeAfter: If True the 'Connection: close' header will be sent,
+            otherwise 'Connection: keep-alive'
+        @type closeAfter: C{bool}
+
+        @return: L{twisted.internet.defer.Deferred} 
+        @callback: L{twisted.web2.http.Response} from the server.
+        """
+
         # Assert we're in a valid state to submit more
         assert self.outRequest is None
         assert ((self.readPersistent is PERSIST_NO_PIPELINE and not self.inRequests)

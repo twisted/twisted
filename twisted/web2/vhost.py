@@ -21,14 +21,21 @@ from twisted.web2 import iweb
 from twisted.web2 import http
 
 class NameVirtualHost(resource.Resource):
-    """I am a resource which represents named virtual hosts. 
-       And these are my obligatory comments
+    """Resource in charge of dispatching requests to other resources based on
+    the value of the HTTP 'Host' header.
+       
+    @param supportNested: If True domain segments will be chopped off until the 
+        TLD is reached or a matching virtual host is found. (In which case the 
+        child resource can do its own more specific virtual host lookup.)
     """
     
     supportNested = True
 
     def __init__(self, default=None):
-        """Initialize. - Do you really need me to tell you that?
+        """
+        @param default: The default resource to be served when encountering an
+            unknown hostname.
+        @type default: L{twisted.web2.iweb.IResource} or C{None}
         """
         resource.Resource.__init__(self)
         self.hosts = {}
@@ -45,11 +52,20 @@ class NameVirtualHost(resource.Resource):
             nvh.addHost('twistedmatrix.com', twistedMatrixDirectory)
 
         I told you that was fun.
+
+        @param name: The FQDN to be matched to the 'Host' header.
+        @type name: C{str}
+
+        @param resrc: The L{twisted.web2.iweb.IResource} to be served as the
+            given hostname.
+        @type resource: L{twisted.web2.iweb.IResource}
         """
         self.hosts[name] = resrc
 
     def removeHost(self, name):
-        """Remove a host. :(
+        """Remove the given host.
+        @param name: The FQDN to remove.
+        @type name: C{str}
         """
         del self.hosts[name]
 
@@ -62,11 +78,6 @@ class NameVirtualHost(resource.Resource):
         host = req.host.lower()
         
         if self.supportNested:
-            """ If supportNested is True domain prefixes (the stuff up to the first '.')
-            will be chopped off until it's reduced to the tld or a valid domain is 
-            found.
-            """
-            
             while not self.hosts.has_key(host) and len(host.split('.')) > 1:
                 host = '.'.join(host.split('.')[1:])
 
@@ -103,6 +114,15 @@ class AutoVHostURIRewrite(object):
     implements(iweb.IResource)
 
     def __init__(self, resource, sendsRealHost=False):
+        """
+        @param resource: The resource to serve after mutating the request.
+        @type resource: L{twisted.web2.iweb.IResource}
+        
+        @param sendsRealHost: If True then the proxy will be expected to send the
+            HTTP 'Host' header that was sent by the requesting client.
+        @type sendsRealHost: C{bool}
+        """
+
         self.resource=resource
         self.sendsRealHost = sendsRealHost
         
@@ -182,6 +202,15 @@ class VHostURIRewrite(object):
     implements(iweb.IResource)
 
     def __init__(self, uri, resource):
+        """
+        @param uri: The URI to be used for mutating the request.  This MUST 
+            include scheme://hostname/path.
+        @type uri: C{str}
+        
+        @param resource: The resource to serve after mutating the request.
+        @type resource: L{twisted.web2.iweb.IResource}
+        """
+
         self.resource = resource
         
         (self.scheme, self.host, self.path,

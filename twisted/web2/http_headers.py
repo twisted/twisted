@@ -30,17 +30,40 @@ def casemappingify(d):
 def lowerify(d):
     return dict([(key.lower(),value) for key,value in d.items()])
 
+
 class HeaderHandler(object):
+    """HeaderHandler manages header generating and parsing functions.
+    """
     HTTPParsers = {}
     HTTPGenerators = {}
 
     def __init__(self, parsers=None, generators=None):
+        """
+        @param parsers: A map of header names to parsing functions.
+        @type parsers: L{dict}
+
+        @param generators: A map of header names to generating functions.
+        @type generators: L{dict}
+        """
+
         if parsers:
             self.HTTPParsers.update(parsers)
         if generators:
             self.HTTPGenerators.update(generators)
 
     def parse(self, name, header):
+        """
+        Parse the given header based on its given name.
+
+        @param name: The header name to parse.
+        @type name: C{str}
+        
+        @param header: A list of unparsed headers.
+        @type header: C{list} of C{str}
+
+        @return: The return value is the parsed header representation,
+            it is dependent on the header.  See the HTTP Headers document.
+        """
         parser = self.HTTPParsers.get(name, None)
         if parser is None:
             raise ValueError("No header parser for header '%s', either add one or use getHeaderRaw." % (name,))
@@ -58,6 +81,17 @@ class HeaderHandler(object):
         return header
 
     def generate(self, name, header):
+        """
+        Generate the given header based on its given name.
+
+        @param name: The header name to generate.
+        @type name: C{str}
+        
+        @param header: A parsed header, such as the output of 
+            L{HeaderHandler}.parse.
+
+        @return: C{list} of C{str} each representing a generated HTTP header.
+        """
         generator = self.HTTPGenerators.get(name, None)
 
         if generator is None:
@@ -71,20 +105,48 @@ class HeaderHandler(object):
         return header
 
     def updateParsers(self, parsers):
+        """Update en masse the parser maps.
+
+        @param parsers: Map of header names to parser chains.
+        @type parsers: C{dict}
+        """
         casemappingify(parsers)
         self.HTTPParsers.update(lowerify(parsers))
 
     def addParser(self, name, value):
+        """Add an individual parser chain for the given header.
+        
+        @param name: Name of the header to add
+        @type name: C{str}
+
+        @param value: The parser chain
+        @type value: C{str}
+        """
         self.updateParsers({name: value})
 
     def updateGenerators(self, generators):
+        """Update en masse the generator maps.
+
+        @param parsers: Map of header names to generator chains.
+        @type parsers: C{dict}
+        """
         casemappingify(generators)
         self.HTTPGenerators.update(lowerify(generators))
 
     def addGenerators(self, name, value):
+        """Add an individual generator chain for the given header.
+
+        @param name: Name of the header to add
+        @type name: C{str}
+
+        @param value: The generator chain
+        @type value: C{str}
+        """
         self.updateGenerators({name: value})
 
     def update(self, parsers, generators):
+        """Conveniently update parsers and generators all at once.
+        """
         self.updateParsers(parsers)
         self.updateGenerators(generators)
 
@@ -142,6 +204,7 @@ def parseDateTime(dateString):
     year = int(year)
     hour, min, sec = map(int, time.split(':'))
     return int(timegm((year, month, day, hour, min, sec)))
+
 
 ##### HTTP tokenizer
 class Token(str):
@@ -345,11 +408,24 @@ def generateKeyValues(kvs):
 
 class MimeType(object):
     def fromString(klass, mimeTypeString):
+        """Generate a MimeType object from the given string.
+
+        @param mimeTypeString: The mimetype to parse
+
+        @return: L{MimeType}
+        """
         return DefaultHTTPHandler.parse('content-type', [mimeTypeString])
 
     fromString = classmethod(fromString)
 
     def __init__(self, mediaType, mediaSubtype, params={}, **kwargs):
+        """
+        @type mediaType: C{str}
+
+        @type mediaSubtype: C{str}
+
+        @type params: C{dict}
+        """
         self.mediaType = mediaType
         self.mediaSubtype = mediaSubtype
         self.params = dict(params)
