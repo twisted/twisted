@@ -27,9 +27,11 @@ name/values can be split between two packets. (Yes, this means
 """
 
 from twisted.internet import protocol
-from twisted.python import log
 from twisted.web2 import responsecode
 from twisted.web2.channel import cgi
+
+class FastCGIError(Exception):
+    pass
 
 # Values for type component of FCGI_Header
 
@@ -116,6 +118,13 @@ class Record(object):
             self.version, self.type, typeNames.get(self.type), self.reqId, self.content)
     
 def parseNameValues(s):
+    '''
+    @param s: String containing valid name/value data, of the form:
+              'namelength + valuelength + name + value' repeated 0 or more
+              times. See C{fastcgi.writeNameValue} for how to create this
+              string.
+    @return: Generator of tuples of the form (name, value)
+    '''
     off = 0
     while off < len(s):
         nameLen = ord(s[off])
@@ -126,7 +135,7 @@ def parseNameValues(s):
         valueLen=ord(s[off])
         off += 1
         if valueLen&0x80:
-            valueLen=(nameLen&0x7F)<<24 | ord(s[off])<<16 | ord(s[off+1])<<8 | ord(s[off+2])
+            valueLen=(valueLen&0x7F)<<24 | ord(s[off])<<16 | ord(s[off+1])<<8 | ord(s[off+2])
             off += 3
         yield (s[off:off+nameLen], s[off+nameLen:off+nameLen+valueLen])
         off += nameLen + valueLen
@@ -150,13 +159,17 @@ class FastCGIChannelRequest(cgi.BaseCGIChannelRequest):
     
     ## High level protocol
     def packetReceived(self, packet):
-        #print "Got packet", packet
+        '''
+        @param packet: instance of C{fastcgi.Record}.
+        @raise: FastCGIError on invalid version or where the type does not exist
+                in funName
+        '''
         if packet.version != 1:
-            protocolError("FastCGI packet received with version != 1")
+            raise FastCGIError("FastCGI packet received with version != 1")
         
         funName = typeNames.get(packet.type)
         if funName is None:
-            protocolError("Unknown FastCGI packet type: %d" % packet.type)
+            raise FastCGIError("Unknown FastCGI packet type: %d" % packet.type)
         getattr(self, funName)(packet)
 
     def fcgi_get_values(self, packet):
