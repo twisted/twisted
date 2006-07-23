@@ -151,7 +151,7 @@ def getPrivateKeyObject(filename = None, data = '', passphrase = ''):
     """
     Return a C{Crypto.PublicKey.pubkey.pubkey} object corresponding to the
     private key file/data.  If the private key is encrypted, passphrase B{must}
-    be specified, other wise a C{BadKeyError} will be raised.
+    be specified, other wise a L{BadKeyError} will be raised.
 
     @type filename:     C{str}
     @type data:         C{str}

@@ -133,7 +133,7 @@ class SSHSession(channel.SSHChannel):
 
 class _ProtocolWrapper(protocol.ProcessProtocol):
     """
-    This class wraps a Protocol instance in a ProcessProtocol instance.
+    This class wraps a L{Protocol} instance in a L{ProcessProtocol} instance.
     """
     def __init__(self, proto):
         self.proto = proto

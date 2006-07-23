@@ -55,7 +55,7 @@ class SSHChannel(log.Logger):
         Called when the the open failed for some reason.
         reason.desc is a string descrption, reason.code the the SSH error code.
 
-        @type reason: C{error.ConchError}
+        @type reason: L{error.ConchError}
         """
         log.msg('other side refused open\nreason: %s'% reason)
 
@@ -64,7 +64,7 @@ class SSHChannel(log.Logger):
         Called when bytes are added to the remote window.  By default it clears
         the data buffers.
 
-        @type bytes:    C{in:t}
+        @type bytes:    C{int}
         """
         self.remoteWindowLeft = self.remoteWindowLeft+bytes
         if not self.areWriting and not self.closing:

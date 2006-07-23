@@ -106,9 +106,9 @@ class SSHFactory(protocol.Factory):
         """
         Return a class to use as a service for the given transport.
 
-        @type transport:    C{transport.SSHServerTransport}
+        @type transport:    L{transport.SSHServerTransport}
         @type service:      C{stR}
-        @rtype:             subclass of {service.SSHService}
+        @rtype:             subclass of L{service.SSHService}
         """
         if transport.isAuthorized or service == 'ssh-userauth':
             return self.services[service]

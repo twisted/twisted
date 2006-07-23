@@ -19,34 +19,34 @@ world\" with red foreground and all other attributes set to their
 defaults, assuming the name twisted.conch.insults.text.attributes has
 been imported and bound to the name \"A\" (with the statement C{from
 twisted.conch.insults.text import attributes as A}, for example) one
-uses this expression:
+uses this expression::
 
-| A.fg.red[\"Hello world\"]
+ | A.fg.red[\"Hello world\"]
 
 Other foreground colors are set by substituting their name for
 \"red\".  To set both a foreground and a background color, this
-expression is used:
+expression is used::
 
-| A.fg.red[A.bg.green[\"Hello world\"]]
+ | A.fg.red[A.bg.green[\"Hello world\"]]
 
 Note that either A.bg.green can be nested within A.fg.red or vice
 versa.  Also note that multiple items can be nested within a single
-index operation by separating them with commas:
+index operation by separating them with commas::
 
-| A.bg.green[A.fg.red[\"Hello\"], " ", A.fg.blue[\"world\"]]
+ | A.bg.green[A.fg.red[\"Hello\"], " ", A.fg.blue[\"world\"]]
 
 Other character attributes are set in a similar fashion.  To specify a
-blinking version of the previous expression:
+blinking version of the previous expression::
 
-| A.blink[A.bg.green[A.fg.red[\"Hello\"], " ", A.fg.blue[\"world\"]]]
+ | A.blink[A.bg.green[A.fg.red[\"Hello\"], " ", A.fg.blue[\"world\"]]]
 
 C{A.reverseVideo}, C{A.underline}, and C{A.bold} are also valid.
 
 A third operation is actually supported: unary negation.  This turns
 off an attribute when an enclosing expression would otherwise have
-caused it to be on.  For example:
+caused it to be on.  For example::
 
-| A.underline[A.fg.red[\"Hello\", -A.underline[\" world\"]]]
+ | A.underline[A.fg.red[\"Hello\", -A.underline[\" world\"]]]
 
 API Stability: Unstable
 
@@ -161,14 +161,14 @@ def flatten(output, attrs):
     specified in the input.
 
     For example, if your terminal is VT102 compatible, you might run
-    this for a colorful variation on the \"hello world\" theme:
+    this for a colorful variation on the \"hello world\" theme::
 
-    | from twisted.conch.insults.text import flatten, attributes as A
-    | from twisted.conch.insults.helper import CharacterAttribute
-    | print flatten(
-    |     A.normal[A.bold[A.fg.red['He'], A.fg.green['ll'], A.fg.magenta['o'], ' ',
-    |                     A.fg.yellow['Wo'], A.fg.blue['rl'], A.fg.cyan['d!']]],
-    |     CharacterAttribute())
+     | from twisted.conch.insults.text import flatten, attributes as A
+     | from twisted.conch.insults.helper import CharacterAttribute
+     | print flatten(
+     |     A.normal[A.bold[A.fg.red['He'], A.fg.green['ll'], A.fg.magenta['o'], ' ',
+     |                     A.fg.yellow['Wo'], A.fg.blue['rl'], A.fg.cyan['d!']]],
+     |     CharacterAttribute())
 
     @param output: Object returned by accessing attributes of the
     module-level attributes object.

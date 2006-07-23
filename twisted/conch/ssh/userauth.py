@@ -387,28 +387,28 @@ class SSHUserAuthClient(service.SSHService):
 
     def getPrivateKey(self):
         """
-        Return a C{Deferred} that will be called back with the private key
+        Return a L{Deferred} that will be called back with the private key
         corresponding to the last public key from getPublicKey().
         If the private key is not available, errback on the Deferred.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         """
         return defer.fail(NotImplementedError())
 
     def getPassword(self, prompt = None):
         """
-        Return a C{Deferred} that will be called back with a password.
+        Return a L{Deferred} that will be called back with a password.
         prompt is a string to display for the password, or None for a generic
         'user@hostname's password: '.
 
         @type prompt: C{str}/C{None}
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         """
         return defer.fail(NotImplementedError())
 
     def getGenericAnswers(self, name, instruction, prompts):
         """
-        Returns a C{Deferred} with the responses to the promopts.
+        Returns a L{Deferred} with the responses to the promopts.
 
         @param name: The name of the authentication currently in progress.
         @param instruction: Describes what the authentication wants. 

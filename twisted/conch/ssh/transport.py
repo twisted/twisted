@@ -600,7 +600,7 @@ class SSHClientTransport(SSHTransportBase):
         """
         Request that a service be run over this transport.
 
-        @type instance: subclass of C{twisted.conch.ssh.service.SSHService}
+        @type instance: subclass of L{twisted.conch.ssh.service.SSHService}
         """
         self.sendPacket(MSG_SERVICE_REQUEST, NS(instance.name))
         self.instance = instance
@@ -612,7 +612,7 @@ class SSHClientTransport(SSHTransportBase):
 
         @type hostKey:      C{str}
         @type fingerprint:  C{str}
-        @rtype:             C{Deferred}
+        @rtype:             L{Deferred}
         """
         # return  if it's good
         return defer.fail(NotImplementedError)
@@ -734,7 +734,7 @@ class _Counter:
 
         @type blockSize: C{int}
         @param blockSize: The length of the output buffer, as well as the
-        number of bytes at the beginning of L{initialVector} to consider.
+        number of bytes at the beginning of C{initialVector} to consider.
         """
         initialVector = initialVector[:blockSize]
         self.count = getMP('\xff\xff\xff\xff' + initialVector)[0]

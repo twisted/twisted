@@ -196,8 +196,8 @@ class ITelnetTransport(iinternet.ITransport):
         Returns a Deferred that fires with True when the peer begins performing
         the option, or False when the peer refuses to perform it.  If the peer
         is already performing the given option, the Deferred will fail with
-        C{AlreadyEnabled}.  If a negotiation regarding this option is already
-        in progress, the Deferred will fail with C{AlreadyNegotiating}.
+        L{AlreadyEnabled}.  If a negotiation regarding this option is already
+        in progress, the Deferred will fail with L{AlreadyNegotiating}.
 
         Note: It is currently possible that this Deferred will never fire,
         if the peer never responds, or if the peer believes the option to
@@ -209,9 +209,9 @@ class ITelnetTransport(iinternet.ITransport):
 
         Returns a Deferred that fires with True when the peer ceases performing
         the option.  If the peer is not performing the given option, the
-        Deferred will fail with C{AlreadyDisabled}.  If negotiation regarding
+        Deferred will fail with L{AlreadyDisabled}.  If negotiation regarding
         this option is already in progress, the Deferred will fail with
-        C{AlreadyNegotiating}.
+        L{AlreadyNegotiating}.
 
         Note: It is currently possible that this Deferred will never fire,
         if the peer never responds, or if the peer believes the option to
@@ -224,9 +224,9 @@ class ITelnetTransport(iinternet.ITransport):
         Returns a Deferred that fires with True when the peer agrees to allow
         us to begin performing this option, or False if the peer refuses to
         allow us to begin performing it.  If the option is already enabled
-        locally, the Deferred will fail with C{AlreadyEnabled}.  If negotiation
+        locally, the Deferred will fail with L{AlreadyEnabled}.  If negotiation
         regarding this option is already in progress, the Deferred will fail with
-        C{AlreadyNegotiating}.
+        L{AlreadyNegotiating}.
 
         Note: It is currently possible that this Deferred will never fire,
         if the peer never responds, or if the peer believes the option to
@@ -238,9 +238,9 @@ class ITelnetTransport(iinternet.ITransport):
 
         Returns a Deferred that fires with True when the peer acknowledges
         we have stopped performing this option.  If the option is already
-        disabled locally, the Deferred will fail with C{AlreadyDisabled}.
+        disabled locally, the Deferred will fail with L{AlreadyDisabled}.
         If negotiation regarding this option is already in progress,
-        the Deferred will fail with C{AlreadyNegotiation}.
+        the Deferred will fail with L{AlreadyNegotiating}.
 
         Note: It is currently possible that this Deferred will never fire,
         if the peer never responds, or if the peer believes the option to
@@ -696,7 +696,7 @@ class TelnetTransport(Telnet, ProtocolTransportMixin):
     established and after it is lost.
 
     @ivar protocolFactory: A callable which returns protocol instances
-    which provide ITelnetProtocol.  This will be invoked when a
+    which provide L{ITelnetProtocol}.  This will be invoked when a
     connection is established.  It is passed *protocolArgs and
     **protocolKwArgs.
 
@@ -880,7 +880,7 @@ class AuthenticatingTelnetProtocol(StatefulTelnetProtocol):
 
     Username and password prompts are given (the password is obscured).  When the
     information is collected, it is passed to a portal and an avatar implementing
-    ITelnetProtocol is requested.  If an avatar is returned, it connected to this
+    L{ITelnetProtocol} is requested.  If an avatar is returned, it connected to this
     protocol's transport, and this protocol's transport is connected to it.
     Otherwise, the user is re-prompted for credentials.
     """

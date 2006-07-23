@@ -38,14 +38,14 @@ class IService(Interface):
         """Set the name of the service.
 
         @type name: C{str}
-        @raise L{RuntimeError}: Raised if the service already has a parent.
+        @raise RuntimeError: Raised if the service already has a parent.
         """
 
     def setServiceParent(parent):
         """Set the parent of the service.
 
-        @type name: C{IServiceCollection}
-        @raise L{RuntimeError}: Raised if the service already has a parent
+        @type name: L{IServiceCollection}
+        @raise RuntimeError: Raised if the service already has a parent
         or if the service has a name and the parent already has a child
         by that name.
         """
@@ -53,7 +53,7 @@ class IService(Interface):
     def disownServiceParent():
         """Remove the parent of the service.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: a deferred which is triggered when the service has
         finished shutting down. If shutting down is immediate,
         a value can be returned (usually, None).
@@ -65,7 +65,7 @@ class IService(Interface):
     def stopService():
         """Stop the service.
 
-        @rtype: C{Deferred}
+        @rtype: L{Deferred}
         @return: a deferred which is triggered when the service has
         finished shutting down. If shutting down is immediate,
         a value can be returned (usually, None).
@@ -140,8 +140,8 @@ class IServiceCollection(Interface):
         """Get the child service with a given name.
 
         @type name: C{str}
-        @rtype: C{IService}
-        @raise L{KeyError}: Raised if the service has no child with the
+        @rtype: L{IService}
+        @raise KeyError: Raised if the service has no child with the
         given name.
         """
 
@@ -151,17 +151,17 @@ class IServiceCollection(Interface):
     def addService(service):
          """Add a child service.
 
-        @type service: C{IService}
-        @raise L{RuntimeError}: Raised if the service has a child with
+        @type service: L{IService}
+        @raise RuntimeError: Raised if the service has a child with
         the given name.
         """
 
     def removeService(service):
         """Remove a child service.
 
-        @type service: C{IService}
-        @raise L{ValueError}: Raised if the given service is not a child.
-        @rtype: C{Deferred}
+        @type service: L{IService}
+        @raise ValueError: Raised if the given service is not a child.
+        @rtype: L{Deferred}
         @return: a deferred which is triggered when the service has
         finished shutting down. If shutting down is immediate,
         a value can be returned (usually, None).
@@ -274,8 +274,8 @@ class Process:
 def Application(name, uid=None, gid=None):
     """Return a compound class.
 
-    Return an object supporting the C{IService}, C{IServiceCollection},
-    C{IProcess} and C{sob.IPersistable} interfaces, with the given
+    Return an object supporting the L{IService}, L{IServiceCollection},
+    L{IProcess} and L{sob.IPersistable} interfaces, with the given
     parameters. Always access the return value by explicit casting to
     one of the interfaces.
     """
@@ -286,16 +286,16 @@ def Application(name, uid=None, gid=None):
     return ret
 
 def loadApplication(filename, kind, passphrase=None):
-    """Load Application from file
+    """Load Application from a given file.
+
+    The serialization format it was saved in should be given as
+    C{kind}, and is one of 'pickle', 'source', 'xml' or 'python'. If
+    C{passphrase} is given, the application was encrypted with the
+    given passphrase.
 
     @type filename: C{str}
     @type kind: C{str}
     @type passphrase: C{str}
-
-    Load application from a given file. The serialization format it
-    was saved in should be given as C{kind}, and is one of 'pickle', 'source',
-    'xml' or 'python'. If C{passphrase} is given, the application was encrypted
-    with the given passphrase.
     """
     if kind == 'python':
         application = sob.loadValueFromFile(filename, 'application', passphrase)

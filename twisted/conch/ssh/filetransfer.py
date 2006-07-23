@@ -451,7 +451,7 @@ class FileTransferClient(FileTransferBase):
 
     def __init__(self, extData = {}):
         """
-        extData is a dict of extended_name : extended_data items
+        @param extData: a dict of extended_name : extended_data items
         to be sent to the server.
         """
         FileTransferBase.__init__(self)
@@ -484,12 +484,15 @@ class FileTransferClient(FileTransferBase):
         """
         Open a file.
 
-        filename is a string representing the file to open.
+        This method returns a L{Deferred} that is called back with an object
+        that provides the L{ISFTPFile} interface.
 
-        flags is a integer of the flags to open the file with, ORed together.
+        @param filename: a string representing the file to open.
+
+        @param flags: a integer of the flags to open the file with, ORed together.
         The flags and their values are listed at the bottom of this file.
 
-        attrs is a list of attributes to open the file with.  It is a
+        @param attrs: a list of attributes to open the file with.  It is a
         dictionary, consisting of 0 or more keys.  The possible keys are::
 
             size: the size of the file in bytes
@@ -504,9 +507,6 @@ class FileTransferClient(FileTransferBase):
 
         NOTE: there is no way to indicate text or binary files.  it is up
         to the SFTP client to deal with this.
-
-        This method returns an Deferred that is called back with an object
-        that meets the ISFTPFile interface.
         """
         data = NS(filename) + struct.pack('!L', flags) + self._packAttributes(attrs)
         d = self._sendRequest(FXP_OPEN, data)
@@ -517,9 +517,9 @@ class FileTransferClient(FileTransferBase):
         """
         Remove the given file.
 
-        filename is the name of the file as a string.
-
         This method returns a Deferred that is called back when it succeeds.
+
+        @param filename: the name of the file as a string.
         """
         return self._sendRequest(FXP_REMOVE, NS(filename))
 
@@ -527,10 +527,10 @@ class FileTransferClient(FileTransferBase):
         """
         Rename the given file.
 
-        oldpath is the current location of the file.
-        newpath is the new file name.
-
         This method returns a Deferred that is called back when it succeeds.
+
+        @param oldpath: the current location of the file.
+        @param newpath: the new file name.
         """
         return self._sendRequest(FXP_RENAME, NS(oldpath)+NS(newpath))
 
@@ -538,12 +538,13 @@ class FileTransferClient(FileTransferBase):
         """
         Make a directory.
 
-        path is the name of the directory to create as a string.
-        attrs is a dictionary of attributes to create the directory with.
-        It's meaning is the same as the attrs in the openFile method.
-
         This method returns a Deferred that is called back when it is 
         created.
+
+        @param path: the name of the directory to create as a string.
+
+        @param attrs: a dictionary of attributes to create the directory
+        with.  Its meaning is the same as the attrs in the openFile method.
         """
         return self._sendRequest(FXP_MKDIR, NS(path)+self._packAttributes(attrs))
 
@@ -551,12 +552,12 @@ class FileTransferClient(FileTransferBase):
         """
         Remove a directory (non-recursively)
 
-        path is the directory to remove.
-
         It is an error to remove a directory that has files or directories in
         it.
 
         This method returns a Deferred that is called back when it is removed.
+
+        @param path: the directory to remove.
         """
         return self._sendRequest(FXP_RMDIR, NS(path))
 
@@ -564,10 +565,8 @@ class FileTransferClient(FileTransferBase):
         """
         Open a directory for scanning.
 
-        path is the directory to open.
-
         This method returns a Deferred that is called back with an iterable 
-        object that has a close() method,
+        object that has a close() method.
 
         The close() method is called when the client is finished reading
         from the directory.  At this point, the iterable will no longer
@@ -588,6 +587,8 @@ class FileTransferClient(FileTransferBase):
         size in bytes, modification time.
 
         attrs is a dictionary in the format of the attrs argument to openFile.
+
+        @param path: the directory to open.
         """
         d = self._sendRequest(FXP_OPENDIR, NS(path))
         self.wasAFile[d] = (0, path)
@@ -597,13 +598,13 @@ class FileTransferClient(FileTransferBase):
         """
         Return the attributes for the given path.
 
-        path is the path to return attributes for as a string.
-        followLinks is a boolean.  if it is True, follow symbolic links
-        and return attributes for the real path at the base.  if it is False,
-        return attributes for the specified path.
-
         This method returns a dictionary in the same format as the attrs
         argument to openFile or a Deferred that is called back with same.
+
+        @param path: the path to return attributes for as a string.
+        @param followLinks: a boolean.  if it is True, follow symbolic links
+        and return attributes for the real path at the base.  if it is False,
+        return attributes for the specified path.
         """
         if followLinks: m = FXP_STAT
         else: m = FXP_LSTAT
@@ -613,12 +614,12 @@ class FileTransferClient(FileTransferBase):
         """
         Set the attributes for the path.
 
-        path is the path to set attributes for as a string.
-        attrs is a idctionary in the same format as the attrs argument to
-        openFile.
-
         This method returns when the attributes are set or a Deferred that is
         called back when they are.
+
+        @param path: the path to set attributes for as a string.
+        @param attrs: a dictionary in the same format as the attrs argument to
+        openFile.
         """
         data = NS(path) + self._packAttributes(attrs)
         return self._sendRequest(FXP_SETSTAT, data)
@@ -627,10 +628,10 @@ class FileTransferClient(FileTransferBase):
         """
         Find the root of a set of symbolic links.
 
-        path is the path of the symlink to read.
-
         This method returns the target of the link, or a Deferred that
         returns the same.
+
+        @param path: the path of the symlink to read.
         """
         d = self._sendRequest(FXP_READLINK, NS(path))
         return d.addCallback(self._cbRealPath)
@@ -639,11 +640,11 @@ class FileTransferClient(FileTransferBase):
         """
         Create a symbolic link.
 
-        linkPath is is the pathname of the symlink as a string
-        targetPath is the path of the target of the link as a string.
-
         This method returns when the link is made, or a Deferred that
         returns the same.
+
+        @param linkPath: the pathname of the symlink as a string
+        @param targetPath: the path of the target of the link as a string.
         """
         return self._sendRequest(FXP_SYMLINK, NS(linkPath)+NS(targetPath))
 
@@ -651,10 +652,10 @@ class FileTransferClient(FileTransferBase):
         """
         Convert any path to an absolute path.
 
-        path is the path to convert as a string.
-
         This method returns the absolute path as a string, or a Deferred
         that returns the same.
+
+        @param path: the path to convert as a string.
         """
         d = self._sendRequest(FXP_REALPATH, NS(path))
         return d.addCallback(self._cbRealPath)
@@ -666,11 +667,12 @@ class FileTransferClient(FileTransferBase):
     def extendedRequest(self, request, data):
         """
         Make an extended request of the server.
-        request is the name of the extended request to make.
-        data is any other data that goes along with the request.
 
         The method returns a Deferred that is called back with
         the result of the extended request.
+
+        @param request: the name of the extended request to make.
+        @param data: any other data that goes along with the request.
         """
         return self._sendRequest(FXP_EXTENDED, NS(request) + data)
 
@@ -738,9 +740,9 @@ class FileTransferClient(FileTransferBase):
         """
         Called when the client sends their version info.
 
-        otherVersion is an integer representing the version of the SFTP
+        @param otherVersion: an integer representing the version of the SFTP
         protocol they are claiming.
-        extData is a dictionary of extended_name : extended_data items.
+        @param extData: a dictionary of extended_name : extended_data items.
         These items are sent by the client to indicate additional features.
         """
 

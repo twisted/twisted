@@ -27,7 +27,7 @@ them straight on to their respective reactor.listenXXX or
 reactor.connectXXX calls.
 
 For example, the following service starts a web server on port 8080:
-TCPServer(8080, server.Site(r)).  See the documentation for the
+C{TCPServer(8080, server.Site(r))}.  See the documentation for the
 reactor.listen/connect* methods for more information.
 
 API Stability: unstable

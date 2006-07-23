@@ -271,7 +271,7 @@ class SSHConnection(service.SSHService):
         Tell the other side that we will receive more data.  This should not
         normally need to be called as it is managed automatically.
 
-        @type channel:      subclass of C{SSHChannel}
+        @type channel:      subclass of L{SSHChannel}
         @type bytesToAdd:   C{int}
         """
         if channel.localClosed:
@@ -287,7 +287,7 @@ class SSHConnection(service.SSHService):
         Send data to a channel.  This should not normally be used: instead use
         channel.write(data) as it manages the window automatically.
 
-        @type channel:  subclass of C{SSHChannel}
+        @type channel:  subclass of L{SSHChannel}
         @type data:     C{str}
         """
         if channel.localClosed:
@@ -302,7 +302,7 @@ class SSHConnection(service.SSHService):
         instead use channel.writeExtendedData(data, dataType) as it manages
         the window automatically.
 
-        @type channel:  subclass of C{SSHChannel}
+        @type channel:  subclass of L{SSHChannel}
         @type dataType: C{int}
         @type data:     C{str}
         """
@@ -316,7 +316,7 @@ class SSHConnection(service.SSHService):
         """
         Send an EOF (End of File) for a channel.
 
-        @type channel:  subclass of C{SSHChannel}
+        @type channel:  subclass of L{SSHChannel}
         """
         if channel.localClosed:
             return # we're already closed
@@ -328,7 +328,7 @@ class SSHConnection(service.SSHService):
         """
         Close a channel.
 
-        @type channel:  subclass of C{SSHChannel}
+        @type channel:  subclass of L{SSHChannel}
         """
         if channel.localClosed:
             return # we're already closed
@@ -348,7 +348,7 @@ class SSHConnection(service.SSHService):
         maxPacket is the largest packet we should send,
         data is any other packet data (often nothing).
 
-        We return a subclass of SSHChannel
+        We return a subclass of L{SSHChannel}.
 
         By default, this dispatches to a method 'channel_channelType' with any
         non-alphanumerics in the channelType replace with _'s.  If it cannot 
@@ -359,7 +359,7 @@ class SSHConnection(service.SSHService):
         @type windowSize:   C{int}
         @type maxPacket:    C{int}
         @type data:         C{str}
-        @rtype:             subclass of C{SSHChannel}/C{tuple}
+        @rtype:             subclass of L{SSHChannel}/C{tuple}
         """
         log.msg('got channel %s request' % channelType)
         if hasattr(self.transport, "avatar"): # this is a server!
@@ -380,7 +380,7 @@ class SSHConnection(service.SSHService):
         """
         We got a global request.  pretty much, this is just used by the client
         to request that we forward a port from the server to the client.
-        returns either:
+        Returns either:
             - 1: request accepted
             - 1, <data>: request accepted with request specific data
             - 0: request denied
@@ -409,7 +409,7 @@ class SSHConnection(service.SSHService):
         Called when a channel is closed.
         It clears the local state related to the channel, and calls 
         channel.closed().
-        MAKE SURE CALL THIS METHOD, even if you subclass SSHConnection.
+        MAKE SURE YOU CALL THIS METHOD, even if you subclass L{SSHConnection}.
         If you don't, things will break mysteriously.
         """
         channel.localClosed = channel.remoteClosed = 1

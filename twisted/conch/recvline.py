@@ -45,8 +45,8 @@ class Logging(object):
         return getattr(original, name)
 
 class TransportSequence(object):
-    """An ITerminalTransport implementation which forwards calls to
-    one or more other ITerminalTransports.
+    """An L{ITerminalTransport} implementation which forwards calls to
+    one or more other L{ITerminalTransport}s.
 
     This is a cheap way for servers to keep track of the state they
     expect the client to see, since all terminal manipulations can be
@@ -79,10 +79,10 @@ def %s(self, *a, **kw):
 class LocalTerminalBufferMixin(object):
     """A mixin for RecvLine subclasses which records the state of the terminal.
 
-    This is accomplished by performing all ITerminalTransport operations on both
+    This is accomplished by performing all L{ITerminalTransport} operations on both
     the transport passed to makeConnection and an instance of helper.TerminalBuffer.
 
-    @ivar terminalCopy: A helper.TerminalBuffer instance which efforts
+    @ivar terminalCopy: A L{helper.TerminalBuffer} instance which efforts
     will be made to keep up to date with the actual terminal
     associated with this protocol instance.
     """
@@ -97,7 +97,7 @@ class LocalTerminalBufferMixin(object):
         return str(self.terminalCopy)
 
 class RecvLine(insults.TerminalProtocol):
-    """TerminalProtocol which adds line editing features.
+    """L{TerminalProtocol} which adds line editing features.
 
     Clients will be prompted for lines of input with all the usual
     features: character echoing, left and right arrow support for
@@ -267,9 +267,9 @@ class RecvLine(insults.TerminalProtocol):
         pass
 
 class HistoricRecvLine(RecvLine):
-    """TerminalProtocol which adds both basic line-editing features and input history.
+    """L{TerminalProtocol} which adds both basic line-editing features and input history.
 
-    Everything supported by RecvLine is also supported by this class.  In addition, the
+    Everything supported by L{RecvLine} is also supported by this class.  In addition, the
     up and down arrows traverse the input history.  Each received line is automatically
     added to the end of the input history.
     """

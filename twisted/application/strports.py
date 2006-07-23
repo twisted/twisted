@@ -95,46 +95,44 @@ def _parse(description):
     return args, kw 
 
 def parse(description, factory, default=None):
-    """Parse a description of a reliable virtual circuit server
-
-    @type description: C{str}
-    @type factory: C{twisted.internet.interfaces.IProtocolFactory}
-    @type default: C{str} or C{None}
-    @rtype: C{tuple}
-    @return: a tuple of string, tuple and dictionary. The string
-    is the name of the method (sans C{'listen'}) to call, and
-    the tuple and dictionary are the arguments and keyword arguments
-    to the method.
-    @raises: C{ValueError} if the string is formatted incorrectly,
-    C{KeyError} if the type is other than unix, ssl or tcp.
-
-    Parse the description of a reliable virtual circuit server (that is,
-    a TCP port, a UNIX domain socket or an SSL port) and return the
-    data necessary to call the reactor methods to listen on the given
-    socket with the given factory.
+    """
+    Parse the description of a reliable virtual circuit server (that is, a
+    TCP port, a UNIX domain socket or an SSL port) and return the data
+    necessary to call the reactor methods to listen on the given socket with
+    the given factory.
 
     An argument with no colons means a default port. Usually the default
-    type is C{tcp}, but passing a non-C{None} value as C{default} will
-    set that as the default. Otherwise, it is a colon-separated string.
-    The first part means the type -- currently,
-    it can only be ssl, unix or tcp. After that, comes a list of
-    arguments. Arguments can be positional or keyword, and can be mixed.
-    Keyword arguments are indicated by C{'name=value'}. If a value is supposed
-    to contain a C{':'}, a C{'='} or a C{'\\'}, escape it with a C{'\\'}.
+    type is C{tcp}, but passing a non-C{None} value as C{default} will set
+    that as the default. Otherwise, it is a colon-separated string.  The
+    first part means the type -- currently, it can only be ssl, unix or tcp.
+    After that, comes a list of arguments. Arguments can be positional or
+    keyword, and can be mixed.  Keyword arguments are indicated by
+    C{'name=value'}. If a value is supposed to contain a C{':'}, a C{'='} or
+    a C{'\\'}, escape it with a C{'\\'}.
 
     For TCP, the arguments are the port (port number) and, optionally the
-    interface (interface on which to listen) and backlog (how many clients to
-    keep in the backlog).
+    interface (interface on which to listen) and backlog (how many clients
+    to keep in the backlog).
 
     For UNIX domain sockets, the arguments are address (the file name of the
     socket) and optionally the mode (the mode bits of the file, as an octal
     number) and the backlog (how many clients to keep in the backlog).
 
-    For SSL sockets, the arguments are the port (port number) and, optionally,
-    the privateKey (file in which the private key is in), certKey (file in
-    which the certification is in), sslmethod (the name of the SSL method
-    to allow), the interface (interface on which to listen) and the
-    backlog (how many clients to keep in the backlog).
+    For SSL sockets, the arguments are the port (port number) and,
+    optionally, the privateKey (file in which the private key is in),
+    certKey (file in which the certification is in), sslmethod (the name of
+    the SSL method to allow), the interface (interface on which to listen)
+    and the backlog (how many clients to keep in the backlog).
+
+    @type description: C{str}
+    @type factory: L{twisted.internet.interfaces.IProtocolFactory}
+    @type default: C{str} or C{None}
+    @rtype: C{tuple}
+    @return: a tuple of string, tuple and dictionary. The string is the name
+    of the method (sans C{'listen'}) to call, and the tuple and dictionary
+    are the arguments and keyword arguments to the method.
+    @raises ValueError: if the string is formatted incorrectly.
+    @raises KeyError: if the type is other than unix, ssl or tcp.
     """
     args, kw = _parse(description)
     if not args or (len(args)==1 and not kw):
@@ -145,7 +143,7 @@ def service(description, factory, default=None):
     """Return the service corresponding to a description
 
     @type description: C{str}
-    @type factory: C{twisted.internet.interfaces.IProtocolFactory}
+    @type factory: L{twisted.internet.interfaces.IProtocolFactory}
     @type default: C{str} or C{None}
     @rtype: C{twisted.application.service.IService}
     @return: the service corresponding to a description of a reliable
@@ -162,7 +160,7 @@ def listen(description, factory, default=None):
     """Listen on a port corresponding to a description
 
     @type description: C{str}
-    @type factory: C{twisted.internet.interfaces.IProtocolFactory}
+    @type factory: L{twisted.internet.interfaces.IProtocolFactory}
     @type default: C{str} or C{None}
     @rtype: C{twisted.internet.interfaces.IListeningPort}
     @return: the port corresponding to a description of a reliable

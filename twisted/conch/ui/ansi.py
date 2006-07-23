@@ -4,7 +4,7 @@
 #
 """Module to parse ANSI escape sequences
 
-Maintainer: U(Jean-Paul Calderone <exarkun@twistedmatrix.com>
+Maintainer: U{Jean-Paul Calderone <exarkun@twistedmatrix.com>}
 """
 
 import string
@@ -96,7 +96,7 @@ class AnsiParser:
 
     def parseString(self, str):
         """
-        Turn a string input into a list of ColorText elements.
+        Turn a string input into a list of L{ColorText} elements.
         """
 
         if self.prepend:

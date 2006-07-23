@@ -15,16 +15,16 @@ class IConchUser(Interface):
         maxPacket is the largest packet we should send,
         data is any other packet data (often nothing).
 
-        We return a subclass of SSHChannel.  If an appropriate
-        channel can not be found, an exception will be raised.
-        If a ConchError is raised, the .value will be the message,
-        and the .data will be the error code.
+        We return a subclass of L{SSHChannel<ssh.channel.SSHChannel>}.  If
+        an appropriate channel can not be found, an exception will be
+        raised.  If a L{ConchError<error.ConchError>} is raised, the .value
+        will be the message, and the .data will be the error code.
 
         @type channelType:  C{str}
         @type windowSize:   C{int}
         @type maxPacket:    C{int}
         @type data:         C{str}
-        @rtype:             subclass of C{SSHChannel}/C{tuple}
+        @rtype:             subclass of L{SSHChannel}/C{tuple}
         """
 
     def lookupSubsystem(subsystem, data):
@@ -33,7 +33,7 @@ class IConchUser(Interface):
         subsystem is the name of the subsystem being requested.
         data is any other packet data (often nothing).
         
-        We return a Protocol.
+        We return a L{Protocol}.
         """
 
     def gotGlobalRequest(requestType, data):
@@ -60,14 +60,14 @@ class ISession(Interface):
         """
         Open a shell and connect it to proto.
 
-        proto should be a ProcessProtocol instance.
+        @param proto: a L{ProcessProtocol} instance.
         """
 
     def execCommand(proto, command):
         """
         Execute a command.
 
-        proto should be a ProcessProtocol instance.
+        @param proto: a L{ProcessProtocol} instance.
         """
 
     def windowChanged(newWindowSize):
@@ -113,12 +113,12 @@ class ISFTPServer(Interface):
         """
         Called when the clients asks to open a file.
 
-        filename is a string representing the file to open.
+        @param filename: a string representing the file to open.
 
-        flags is a integer of the flags to open the file with, ORed together.
+        @param flags: an integer of the flags to open the file with, ORed together.
         The flags and their values are listed at the bottom of this file.
 
-        attrs is a list of attributes to open the file with.  It is a
+        @param attrs: a list of attributes to open the file with.  It is a
         dictionary, consisting of 0 or more keys.  The possible keys are::
 
             size: the size of the file in bytes
@@ -135,7 +135,7 @@ class ISFTPServer(Interface):
         to the SFTP client to deal with this.
 
         This method returns an object that meets the ISFTPFile interface.
-        Alternatively, it can return a Deferred that will be called back
+        Alternatively, it can return a L{Deferred} that will be called back
         with the object.
         """
 
@@ -143,53 +143,51 @@ class ISFTPServer(Interface):
         """
         Remove the given file.
 
-        filename is the name of the file as a string.
-
         This method returns when the remove succeeds, or a Deferred that is
         called back when it succeeds.
+
+        @param filename: the name of the file as a string.
         """
 
     def renameFile(oldpath, newpath):
         """
         Rename the given file.
 
-        oldpath is the current location of the file.
-        newpath is the new file name.
-
-        This method returns when the rename succeeds, or a Deferred that is
+        This method returns when the rename succeeds, or a L{Deferred} that is
         called back when it succeeds.
+
+        @param oldpath: the current location of the file.
+        @param newpath: the new file name.
         """
 
     def makeDirectory(path, attrs):
         """
         Make a directory.
 
-        path is the name of the directory to create as a string.
-        attrs is a dictionary of attributes to create the directory with.
-        It's meaning is the same as the attrs in the openFile method.
-
         This method returns when the directory is created, or a Deferred that
         is called back when it is created.
+
+        @param path: the name of the directory to create as a string.
+        @param attrs: a dictionary of attributes to create the directory with.
+        Its meaning is the same as the attrs in the L{openFile} method.
         """
 
     def removeDirectory(path):
         """
         Remove a directory (non-recursively)
 
-        path is the directory to remove.
-
         It is an error to remove a directory that has files or directories in
         it.
 
         This method returns when the directory is removed, or a Deferred that
         is called back when it is removed.
+
+        @param path: the directory to remove.
         """
 
     def openDirectory(path):
         """
         Open a directory for scanning.
-
-        path is the directory to open.
 
         This method returns an iterable object that has a close() method,
         or a Deferred that is called back with same.
@@ -214,62 +212,64 @@ class ISFTPServer(Interface):
         size in bytes, modification time.
 
         attrs is a dictionary in the format of the attrs argument to openFile.
+
+        @param path: the directory to open.
         """
 
     def getAttrs(path, followLinks):
         """
         Return the attributes for the given path.
 
-        path is the path to return attributes for as a string.
-        followLinks is a boolean.  if it is True, follow symbolic links
-        and return attributes for the real path at the base.  if it is False,
-        return attributes for the specified path.
-
         This method returns a dictionary in the same format as the attrs
         argument to openFile or a Deferred that is called back with same.
+
+        @param path: the path to return attributes for as a string.
+        @param followLinks: a boolean.  If it is True, follow symbolic links
+        and return attributes for the real path at the base.  If it is False,
+        return attributes for the specified path.
         """
 
     def setAttrs(path, attrs):
         """
         Set the attributes for the path.
 
-        path is the path to set attributes for as a string.
-        attrs is a idctionary in the same format as the attrs argument to
-        openFile.
-
         This method returns when the attributes are set or a Deferred that is
         called back when they are.
+
+        @param path: the path to set attributes for as a string.
+        @param attrs: a dictionary in the same format as the attrs argument to
+        L{openFile}.
         """
 
     def readLink(path):
         """
         Find the root of a set of symbolic links.
 
-        path is the path of the symlink to read.
-
         This method returns the target of the link, or a Deferred that
         returns the same.
+
+        @param path: the path of the symlink to read.
         """
 
     def makeLink(linkPath, targetPath):
         """
         Create a symbolic link.
 
-        linkPath is is the pathname of the symlink as a string
-        targetPath is the path of the target of the link as a string.
-
         This method returns when the link is made, or a Deferred that
         returns the same.
+
+        @param linkPath: the pathname of the symlink as a string.
+        @param targetPath: the path of the target of the link as a string.
         """
 
     def realPath(path):
         """
         Convert any path to an absolute path.
 
-        path is the path to convert as a string.
-
         This method returns the absolute path as a string, or a Deferred
         that returns the same.
+
+        @param path: the path to convert as a string.
         """
 
     def extendedRequest(extendedName, extendedData):
@@ -277,28 +277,28 @@ class ISFTPServer(Interface):
         This is the extension mechanism for SFTP.  The other side can send us
         arbitrary requests.
 
-        extendedName is the name of the request as a string.
-        extendedData is the data the other side sent with the request,
-        as a string.
-
         If we don't implement the request given by extendedName, raise
         NotImplementedError.
 
         The return value is a string, or a Deferred that will be called
         back with a string.
+
+        @param extendedName: the name of the request as a string.
+        @param extendedData: the data the other side sent with the request,
+        as a string.
         """
 
 class ISFTPFile(Interface):
     """
     This represents an open file on the server.  An object adhering to this
-    interface should be returned from openFile().
+    interface should be returned from L{openFile}().
     """
 
     def close():
         """
         Close the file.
 
-        This method returns nothing if the close succeeds immediatly, or a
+        This method returns nothing if the close succeeds immediately, or a
         Deferred that is called back when the close succeeds.
         """
 
@@ -306,26 +306,26 @@ class ISFTPFile(Interface):
         """
         Read from the file.
 
-        offset is an integer that is the index to start from in the file.
-        length is the maximum length of data to return.  The actual amount
-        returned may less than this.  For normal disk files, however,
-        this should read the requested number (up to the end of the file).
-
         If EOF is reached before any data is read, raise EOFError.
 
         This method returns the data as a string, or a Deferred that is
         called back with same.
+
+        @param offset: an integer that is the index to start from in the file.
+        @param length: the maximum length of data to return.  The actual amount
+        returned may less than this.  For normal disk files, however,
+        this should read the requested number (up to the end of the file).
         """
 
     def writeChunk(offset, data):
         """
         Write to the file.
 
-        offset is an integer that is the index to start from in the file.
-        data is a string that is the data to write.
-
         This method returns when the write completes, or a Deferred that is
         called when it completes.
+
+        @param offset: an integer that is the index to start from in the file.
+        @param data: a string that is the data to write.
         """
 
     def getAttrs():
@@ -333,18 +333,18 @@ class ISFTPFile(Interface):
         Return the attributes for the file.
 
         This method returns a dictionary in the same format as the attrs
-        argument to openFile or a Deferred that is called back with same.
+        argument to L{openFile} or a L{Deferred} that is called back with same.
         """
 
     def setAttrs(attrs):
         """
         Set the attributes for the file.
 
-        attrs is a dictionary in the same format as the attrs argument to
-        openFile.
-
         This method returns when the attributes are set or a Deferred that is
         called back when they are.
+
+        @param attrs: a dictionary in the same format as the attrs argument to
+        L{openFile}.
         """
 
 

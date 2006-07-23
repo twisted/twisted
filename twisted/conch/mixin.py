@@ -33,7 +33,7 @@ class BufferingMixin:
 
         Every call to this function delays the real write by C{self.DELAY}
         seconds.  When the delay expires, all collected bytes are written
-        to the underlying transport using C{ITransport.writeSequence}.
+        to the underlying transport using L{ITransport.writeSequence}.
         """
         if self._delayedWriteCall is None:
             self.bytes = []

@@ -17,7 +17,7 @@ from twisted.internet import protocol, defer, interfaces as iinternet
 
 class ITerminalProtocol(Interface):
     def makeConnection(transport):
-        """Called with an ITerminalTransport when a connection is established.
+        """Called with an L{ITerminalTransport} when a connection is established.
         """
 
     def keystrokeReceived(keyID, modifier):
@@ -27,7 +27,7 @@ class ITerminalProtocol(Interface):
         keyID is a string identifier for that key.  Printable characters
         are represented by themselves.  Control keys, such as arrows and
         function keys, are represented with symbolic constants on
-        C{ServerProtocol}.
+        L{ServerProtocol}.
         """
 
     def terminalSize(width, height):
