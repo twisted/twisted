@@ -18,16 +18,31 @@ def runTrial(*args):
     return output.getvalue()
 
 
-class TestImportErrors(packages.SysPathManglingTest):
+class TestImportErrors(packages.PackageTest):
     """Actually run trial as if on the command line and check that the output
     is what we expect.
     """
 
     debug = False
     parent = "_testImportErrors"
-    def runTrial(self, *args):
-        return runTrial('--temp-directory', self.mktemp(), *args)
 
+    def setUp(self):
+        packages.PackageTest.setUp(self, self.parent)
+
+    def tearDown(self):
+        packages.PackageTest.tearDown(self, self.parent)
+
+    def runTrial(self, *args):
+        oldPath = sys.path[:]
+        sys.path.append(self.parent)
+        try:
+            return self.runTrialPure(*args)
+        finally:
+            sys.path = oldPath
+
+    def runTrialPure(self, *args):
+        return runTrial('--temp-directory', self.mktemp(), *args)
+ 
     def _print(self, stuff):
         print stuff
         return stuff
@@ -130,11 +145,10 @@ class TestImportErrors(packages.SysPathManglingTest):
         self.failUnlessIn(d, 'OK')
         self.failUnlessIn(d, 'PASSED (successes=1)')
         return d
-
+    
     def test_filename(self):
-        self.mangleSysPath(self.oldPath)
-        d = self.runTrial(
-            os.path.join(self.parent, 'package', 'test_module.py'))
+        d = self.runTrialPure(os.path.join(self.parent,
+                                           'package', 'test_module.py'))
         self.failIfIn(d, '[ERROR]')
         self.failIfIn(d, 'IOError')
         self.failUnlessIn(d, 'OK')
@@ -143,10 +157,8 @@ class TestImportErrors(packages.SysPathManglingTest):
 
     def test_dosFile(self):
         ## XXX -- not really an output test, more of a script test
-        self.mangleSysPath(self.oldPath)
-        d = self.runTrial(
-            os.path.join(self.parent,
-                         'package', 'test_dos_module.py'))
+        d = self.runTrialPure(os.path.join(self.parent,
+                                           'package', 'test_dos_module.py'))
         self.failIfIn(d, '[ERROR]')
         self.failIfIn(d, 'IOError')
         self.failUnlessIn(d, 'OK')

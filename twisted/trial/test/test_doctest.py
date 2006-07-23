@@ -10,17 +10,6 @@ from twisted.trial.test import mockdoctest
 
 
 class TestRunners(unittest.TestCase):
-    def test_id(self):
-        """Check that the id() of the doctests' case object contains the FQPN
-        of the actual tests.  We need this because id() has weird behaviour w/
-        doctest in Python 2.3.
-        """
-        loader = runner.TestLoader()
-        suite = loader.loadDoctests(mockdoctest)
-        idPrefix = 'twisted.trial.test.mockdoctest.Counter'
-        for test in suite._tests:
-            self.assertIn(idPrefix, test.id())
-    
     def test_correctCount(self):
         suite = runner.DocTestSuite(mockdoctest)
         self.assertEqual(7, suite.countTestCases())

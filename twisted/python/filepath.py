@@ -2,10 +2,13 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import generators
+
 from twisted.python.runtime import platform
 
 import os
 import errno
+import base64
 import random
 import sha
 
@@ -14,10 +17,11 @@ from os.path import basename, dirname
 from os.path import join as joinpath
 from os import sep as slash
 from os import listdir, utime, stat
+from os import remove
 
 from stat import ST_MODE, ST_MTIME, ST_ATIME, ST_CTIME, ST_SIZE
 
-from stat import S_ISREG, S_ISDIR
+from stat import S_ISREG, S_ISDIR, S_ISLNK
 
 try:
     from os.path import islink
@@ -47,64 +51,7 @@ def _secureEnoughString():
     """
     return armor(sha.new(randomBytes(64)).digest())[:16]
 
-class _PathHelper:
-    """
-    Abstract helper class also used by ZipPath; implements certain utility methods.
-    """
-
-    def getContent(self):
-        return self.open().read()
-
-    def children(self):
-        return map(self.child, self.listdir())
-
-    def walk(self):
-        """
-        Yield myself, then each of my children, and each of those children's
-        children in turn.
-
-        @return: a generator yielding FilePath-like objects.
-        """
-        yield self
-        if self.isdir():
-            for c in self.children():
-                for subc in c.walk():
-                    yield subc
-
-    def sibling(self, path):
-        return self.parent().child(path)
-
-    def segmentsFrom(self, ancestor):
-        """
-        Return a list of segments between a child and its ancestor.
-
-        For example, in the case of a path X representing /a/b/c/d and a path Y
-        representing /a/b, C{Y.segmentsFrom(X)} will return C{['c',
-        'd']}.
-
-        @param ancestor: an instance of the same class as self, ostensibly an
-        ancestor of self.
-
-        @raise: ValueError if the 'ancestor' parameter is not actually an
-        ancestor, i.e. a path for /x/y/z is passed as an ancestor for /a/b/c/d.
-
-        @return: a list of strs
-        """
-        # this might be an unnecessarily inefficient implementation but it will
-        # work on win32 and for zipfiles; later I will deterimine if the
-        # obvious fast implemenation does the right thing too
-        f = self
-        p = f.parent()
-        segments = []
-        while f != ancestor and p != f:
-            segments[0:0] = [f.basename()]
-            f = p
-            p = p.parent()
-        if f == ancestor and segments:
-            return segments
-        raise ValueError("%r not parent of %r" % (ancestor, self))
-
-class FilePath(_PathHelper):
+class FilePath:
     """I am a path on the filesystem that only permits 'downwards' access.
 
     Instantiate me with a pathname (for example,
@@ -341,6 +288,9 @@ class FilePath(_PathHelper):
             os.unlink(self.path)
         os.rename(sib.path, self.path)
 
+    def getContent(self):
+        return self.open().read()
+
     # new in 2.2.0
 
     def __cmp__(self, other):
@@ -367,6 +317,9 @@ class FilePath(_PathHelper):
 
         return os.fdopen(fdint, 'w+b')
 
+    def sibling(self, path):
+        return self.parent().child(path)
+
     def temporarySibling(self):
         """
         Create a path naming a temporary sibling of this path in a secure fashion.
@@ -374,6 +327,16 @@ class FilePath(_PathHelper):
         sib = self.sibling(_secureEnoughString() + self.basename())
         sib.requireCreate()
         return sib
+
+    def children(self):
+        return map(self.child, self.listdir())
+
+    def walk(self):
+        yield self
+        if self.isdir():
+            for c in self.children():
+                for subc in c.walk():
+                    yield subc
 
     _chunkSize = 2 ** 2 ** 2 ** 2
 

@@ -25,7 +25,7 @@ class TestMktemp(unittest.TestCase):
         path = os.path.abspath(self.mktemp())
         self.failUnless(path.startswith(os.getcwd()))
 
-
+ 
 class TestIntrospection(unittest.TestCase):
     def test_containers(self):
         import suppression
@@ -35,9 +35,18 @@ class TestIntrospection(unittest.TestCase):
                      suppression ]
         for a, b in zip(parents, expected):
             self.failUnlessEqual(a, b)
+                     
 
+class TestFindObject(packages.PackageTest):
+    def setUp(self):
+        packages.PackageTest.setUp(self, '_TestFindObject')
+        self.oldPath = sys.path[:]
+        sys.path.append('_TestFindObject')
 
-class TestFindObject(packages.SysPathManglingTest):
+    def tearDown(self):
+        sys.path = self.oldPath
+        packages.PackageTest.tearDown(self, '_TestFindObject')
+
     def test_importPackage(self):
         package1 = util.findObject('package')
         import package as package2
@@ -72,4 +81,4 @@ class TestFindObject(packages.SysPathManglingTest):
         alpha1 = util.findObject('goodpackage.test_sample.AlphabetTest')
         from goodpackage import test_sample
         self.failUnlessEqual(alpha1, (True, test_sample.AlphabetTest))
-
+        

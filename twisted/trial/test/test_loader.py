@@ -1,18 +1,14 @@
-
-import md5
-import os
-
+import sys, os
 from twisted.python import util
 from twisted.trial.test import packages
 from twisted.trial import runner, reporter, unittest
 
-from twisted.python.modules import getModule
 
 # XXX - duplicated in test_script
 class CollectNames(unittest.TestVisitor):
     def __init__(self):
         self.tests = []
-
+        
     def visitCase(self, test):
         self.tests.append(test.id())
 
@@ -35,7 +31,7 @@ class FinderTest(packages.PackageTest):
         sample1 = self.loader.findByName('twisted')
         import twisted as sample2
         self.failUnlessEqual(sample1, sample2)
-
+    
     def test_findModule(self):
         sample1 = self.loader.findByName('twisted.trial.test.sample')
         import sample as sample2
@@ -65,8 +61,20 @@ class FinderTest(packages.PackageTest):
     def test_findNonFile(self):
         path = util.sibpath(__file__, 'nonexistent.py')
         self.failUnlessRaises(ValueError, self.loader.findByName, path)
+        
+        
+class FileTest(packages.PackageTest):
+    parent = '_test_loader_FileTest'
+    
+    def setUp(self):
+        self.oldPath = sys.path[:]
+        sys.path.append(self.parent)
+        packages.PackageTest.setUp(self, self.parent)
 
-class FileTest(packages.SysPathManglingTest):
+    def tearDown(self):
+        packages.PackageTest.tearDown(self, self.parent)
+        sys.path = self.oldPath
+
     def test_notFile(self):
         self.failUnlessRaises(ValueError,
                               runner.filenameToModule, 'doesntexist')
@@ -77,11 +85,11 @@ class FileTest(packages.SysPathManglingTest):
         self.failUnlessEqual(sample2, sample1)
 
     def test_moduleNotInPath(self):
-        self.mangleSysPath(self.oldPath)
+        sys.path, newPath = self.oldPath, sys.path
         sample1 = runner.filenameToModule(os.path.join(self.parent,
                                                        'goodpackage',
                                                        'test_sample.py'))
-        self.mangleSysPath(self.newPath)
+        sys.path = newPath
         from goodpackage import test_sample as sample2
         self.failUnlessEqual(os.path.splitext(sample2.__file__)[0],
                              os.path.splitext(sample1.__file__)[0])
@@ -93,10 +101,10 @@ class FileTest(packages.SysPathManglingTest):
         self.failUnlessEqual(goodpackage, package1)
 
     def test_packageNotInPath(self):
-        self.mangleSysPath(self.oldPath)
+        sys.path, newPath = self.oldPath, sys.path
         package1 = runner.filenameToModule(os.path.join(self.parent,
                                                         'goodpackage'))
-        self.mangleSysPath(self.newPath)
+        sys.path = newPath
         import goodpackage
         self.failUnlessEqual(os.path.splitext(goodpackage.__file__)[0],
                              os.path.splitext(package1.__file__)[0])
@@ -121,10 +129,18 @@ class FileTest(packages.SysPathManglingTest):
             os.remove(filename)
 
 
-class LoaderTest(packages.SysPathManglingTest):
+class LoaderTest(packages.PackageTest):
+    parent = '_test_loader'
+    
     def setUp(self):
         self.loader = runner.TestLoader()
-        packages.SysPathManglingTest.setUp(self)
+        self.oldPath = sys.path[:]
+        sys.path.append(self.parent)
+        packages.PackageTest.setUp(self, self.parent)
+
+    def tearDown(self):
+        sys.path = self.oldPath
+        packages.PackageTest.tearDown(self, self.parent)
 
     def test_sortCases(self):
         import sample
@@ -218,7 +234,7 @@ class LoaderTest(packages.SysPathManglingTest):
         import sample
         ## XXX -- should this instead raise a ValueError? -- jml
         self.failUnlessRaises(TypeError, self.loader.loadPackage, sample)
-
+        
     def test_loadPackageRecursive(self):
         import goodpackage
         suite = self.loader.loadPackage(goodpackage, recurse=True)
@@ -296,104 +312,4 @@ class LoaderTest(packages.SysPathManglingTest):
         suite1 = self.loader.loadByNames(modules)
         suite2 = runner.TestSuite(map(self.loader.loadByName, modules))
         self.assertSuitesEqual(suite1, suite2)
-
-
-class ZipLoadingTest(LoaderTest):
-    def setUp(self):
-        from twisted.test.test_paths import zipit
-        LoaderTest.setUp(self)
-        zipit(self.parent, self.parent+'.zip')
-        self.parent += '.zip'
-        self.mangleSysPath(self.oldPath+[self.parent])
-
-
-class PackageOrderingTest(packages.SysPathManglingTest):
-    def setUp(self):
-        self.resultingTests = []
-        self.loader = runner.TestLoader()
-        self.topDir = self.mktemp()
-        parent = os.path.join(self.topDir, "uberpackage")
-        os.makedirs(parent)
-        file(os.path.join(parent, "__init__.py"), "wb").close()
-        packages.SysPathManglingTest.setUp(self, parent)
-        self.mangleSysPath(self.oldPath + [self.topDir])
-
-    def visitCase(self, case):
-        self.resultingTests.append(case)
-
-    def _trialSortAlgorithm(self, sorter):
-        """
-        Right now, halfway by accident, trial sorts like this:
-
-            1. all modules are grouped together in one list and sorted.
-
-            2. within each module, the classes are grouped together in one list
-               and sorted.
-
-            3. finally within each class, each test method is grouped together
-               in a list and sorted.
-
-        This attempts to return a sorted list of testable thingies following
-        those rules, so that we can compare the behavior of loadPackage.
-
-        The things that show as 'cases' are errors from modules which failed to
-        import, and test methods.  Let's gather all those together.
-        """
-        pkg = getModule('uberpackage')
-        testModules = []
-        for testModule in pkg.walkModules():
-            if testModule.name.split(".")[-1].startswith("test_"):
-                testModules.append(testModule)
-        sortedModules = util.dsu(testModules, sorter) # ONE
-        for modinfo in sortedModules:
-            # Now let's find all the classes.
-            module = modinfo.load(None)
-            if module is None:
-                yield modinfo
-            else:
-                testClasses = []
-                for attrib in modinfo.iterAttributes():
-                    if runner.isTestCase(attrib.load()):
-                        testClasses.append(attrib)
-                sortedClasses = util.dsu(testClasses, sorter) # TWO
-                for clsinfo in sortedClasses:
-                    testMethods = []
-                    for attr in clsinfo.iterAttributes():
-                        if attr.name.split(".")[-1].startswith('test'):
-                            testMethods.append(attr)
-                    sortedMethods = util.dsu(testMethods, sorter) # THREE
-                    for methinfo in sortedMethods:
-                        yield methinfo
-
-    def loadSortedPackages(self, sorter=runner.name):
-        """
-        Verify that packages are loaded in the correct order.
-        """
-        import uberpackage
-        self.loader.sorter = sorter
-        suite = self.loader.loadPackage(uberpackage, recurse=True)
-        suite.visit(self)
-        manifest = list(self._trialSortAlgorithm(sorter))
-        for number, (manifestTest, actualTest) in enumerate(
-            zip(manifest, self.resultingTests)):
-            self.assertEqual(
-                 manifestTest.name, actualTest.id(),
-                 "#%d: %s != %s" %
-                 (number, manifestTest.name, actualTest.id()))
-        self.assertEqual(len(manifest), len(self.resultingTests))
-
-    def test_sortPackagesDefaultOrder(self):
-        self.loadSortedPackages()
-
-    def test_sortPackagesSillyOrder(self):
-        def sillySorter(s):
-            # This has to work on fully-qualified class names and class
-            # objects, which is silly, but it's the "spec", such as it is.
-#             if isinstance(s, type) or isinstance(s, types.ClassType):
-#                 return s.__module__+'.'+s.__name__
-            n = runner.name(s)
-            d = md5.new(n).hexdigest()
-            return d
-        self.loadSortedPackages(sillySorter)
-
 
