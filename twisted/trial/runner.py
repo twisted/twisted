@@ -8,13 +8,13 @@
 
 from __future__ import generators
 import pdb, shutil, sets
-import os, glob, types, warnings, sys, inspect, imp
-import fnmatch, random, doctest, time
-from os.path import join as opj
+import os, types, warnings, sys, inspect, imp
+import random, doctest, time
+
+from twisted.python import reflect, log, failure, modules
+from twisted.python.util import dsu
 
 from twisted.internet import defer, interfaces
-from twisted.python import reflect, log, failure
-from twisted.python.util import dsu
 from twisted.trial import util, unittest
 from twisted.trial.itrial import ITestCase
 
@@ -86,24 +86,28 @@ def _resolveDirectory(fn):
     return fn
 
 
-def visit_suite(suite, visitor):
+def suiteVisit(suite, visitor):
+    """
+    Cause the given visitor to visit the given suite.
+
+    @param visitor: an object with a 'visitCase' method, taking a single
+    argument, the TestCase instance to visit.
+    """
     for case in suite._tests:
         visit = getattr(case, 'visit', None)
         if visit is not None:
+            visit(visitor)
+        elif isinstance(case, pyunit.TestCase):
+            case = PyUnitTestCase(case)
             case.visit(visitor)
+        elif isinstance(case, pyunit.TestSuite):
+            suiteVisit(case, visitor)
         else:
-            if isinstance(case, pyunit.TestCase):
-                case = PyUnitTestCase(case)
-                case.visit(visitor)
-            elif isinstance(case, pyunit.TestSuite):
-                visit_suite(case, visitor)
-            else:
-                # assert kindly
-                case.visit(visitor)
+            case.visit(visitor)
 
 
 class TestSuite(pyunit.TestSuite):
-    visit = visit_suite
+    visit = suiteVisit
 
     def __call__(self, result):
         return self.run(result)
@@ -115,25 +119,30 @@ class TestSuite(pyunit.TestSuite):
             if result.shouldStop:
                 break
             test(result)
-        return result        
+        return result
 
 
 class DocTestSuite(TestSuite):
+    """Behaves like doctest.DocTestSuite, but decorates individual TestCases
+    so they support visit and so that id() behaviour is meaningful and
+    consistent between Python versions.
+    """
     def __init__(self, testModule):
         TestSuite.__init__(self)
         suite = doctest.DocTestSuite(testModule)
         for test in suite._tests: #yay encapsulation
-            self.addTest(PyUnitTestCase(test))
+            self.addTest(DocTestCase(test))
 
 
 class PyUnitTestCase(object):
-    """
-    This class decorates the pyunit.TestCase class, mainly to work around the
-    differences between unittest in Python 2.3 and unittest in Python 2.4 These
+    """ This class decorates the pyunit.TestCase class, mainly to work around the
+    differences between unittest in Python 2.3, 2.4, and 2.5.  These
     differences are::
 
         - The way doctest unittests describe themselves
         - Where the implementation of TestCase.run is (used to be in __call__)
+        - Where the test method name is kept (mangled-private or non-mangled
+          private variable)
 
     It also implements visit, which we like.
     """
@@ -143,7 +152,16 @@ class PyUnitTestCase(object):
         test.id = self.id
 
     def id(self):
-        return self._test.shortDescription()
+        cls = self._test.__class__
+        tmn = getattr(self._test, '_TestCase__testMethodName', None)
+        if tmn is None:
+            # python2.5's 'unittest' module is more sensible; but different.
+            tmn = self._test._testMethodName
+        return (cls.__module__ + '.' + cls.__name__ + '.' +
+                tmn)
+
+    def __repr__(self):
+        return 'PyUnitTestCase<%r>'%(self.id(),)
 
     def __call__(self, results):
         return self._test(results)
@@ -154,6 +172,17 @@ class PyUnitTestCase(object):
 
     def __getattr__(self, name):
         return getattr(self._test, name)
+
+
+class DocTestCase(PyUnitTestCase):
+    def id(self):
+        """In Python 2.4, doctests have correct id() behaviour.  In Python 2.3,
+        id() returns 'runit'.
+
+        Here we override id() so that at least it will always contain the fully
+        qualified Python name of the doctest.
+        """
+        return self._test.shortDescription()
 
 
 class TrialSuite(TestSuite):
@@ -182,11 +211,22 @@ class TrialSuite(TestSuite):
 
 
 def name(thing):
-    if isinstance(thing, str):
-        return thing
-    if hasattr(thing, '__name__'):
-        return thing.__name__
-    return thing.id()
+    """
+    @param thing: an object from modules (instance of PythonModule,
+    PythonAttribute), a TestCase subclass, or an instance of a TestCase.
+    """
+    if isTestCase(thing):
+        # TestCase subclass
+        theName = reflect.qual(thing)
+    else:
+        # thing from trial, or thing from modules.
+        # this monstrosity exists so that modules' objects do not have to
+        # implement id(). -jml
+        try:
+            theName = thing.id()
+        except AttributeError:
+            theName = thing.name
+    return theName
 
 
 def isTestCase(obj):
@@ -225,10 +265,14 @@ class ErrorHolder(object):
     def countTestCases(self):
         return 0
 
+    def visit(self, visitor):
+        # This needs tests.
+        visitor.visitCase(self)
+
 
 class TestLoader(object):
     methodPrefix = 'test'
-    moduleGlob = 'test_*.py'
+    modulePrefix = 'test_'
 
     def __init__(self):
         self.suiteFactory = TestSuite
@@ -283,35 +327,27 @@ class TestLoader(object):
             raise TypeError("%r not a method" % (method,))
         return method.im_class(method.__name__)
 
-    def _findTestModules(self, package):
-        modGlob = os.path.join(os.path.dirname(package.__file__),
-                               self.moduleGlob)
-        return [ reflect.filenameToModuleName(filename)
-                 for filename in glob.glob(modGlob) ]
-        
     def loadPackage(self, package, recurse=False):
         if not isPackage(package):
             raise TypeError("%r is not a package" % (package,))
+        pkgobj = modules.getModule(package.__name__)
         if recurse:
-            return self.loadPackageRecursive(package)
+            discovery = pkgobj.walkModules()
+        else:
+            discovery = pkgobj.iterModules()
+        discovered = []
+        for disco in discovery:
+            if disco.name.split(".")[-1].startswith(self.modulePrefix):
+                discovered.append(disco)
         suite = self.suiteFactory()
-        for moduleName in self.sort(self._findTestModules(package)):
-            suite.addTest(self.loadByName(moduleName))
-        return suite
-
-    def _packageRecurse(self, suite, dirname, names):
-        if not isPackageDirectory(dirname):
-            names[:] = []
-            return
-        moduleNames = [reflect.filenameToModuleName(opj(dirname, filename))
-                       for filename in fnmatch.filter(names, self.moduleGlob)]
-        for moduleName in self.sort(moduleNames):
-            suite.addTest(self.loadByName(moduleName))
-
-    def loadPackageRecursive(self, package):
-        packageDir = os.path.dirname(package.__file__)
-        suite = self.suiteFactory()
-        os.path.walk(packageDir, self._packageRecurse, suite)
+        for modinfo in self.sort(discovered):
+            try:
+                module = modinfo.load()
+            except:
+                thingToAdd = ErrorHolder(modinfo.name, failure.Failure())
+            else:
+                thingToAdd = self.loadModule(module)
+            suite.addTest(thingToAdd)
         return suite
 
     def loadDoctests(self, module):

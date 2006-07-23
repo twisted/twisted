@@ -1,11 +1,11 @@
 
-import os, time, pickle, errno
+import os, time, pickle, errno, zipfile
 
 from twisted.python import filepath
 from twisted.python.runtime import platform
 from twisted.trial import unittest
 
-class FilePathTestCase(unittest.TestCase):
+class AbstractFilePathTestCase(unittest.TestCase):
 
     f1content = "file 1"
     f2content = "file 2"
@@ -39,22 +39,34 @@ class FilePathTestCase(unittest.TestCase):
 
         self.path = filepath.FilePath(cmn)
 
-    def testWalk(self):
+    def test_segmentsFromPositive(self):
+        """
+        Verify that the segments between two paths are correctly identified.
+        """
+        self.assertEquals(
+            self.path.child("a").child("b").child("c").segmentsFrom(self.path),
+            ["a", "b", "c"])
+
+    def test_segmentsFromNegative(self):
+        """Verify that segmentsFrom notices when the ancestor isn't an ancestor.
+        """
+        self.assertRaises(
+            ValueError,
+            self.path.child("a").child("b").child("c").segmentsFrom,
+                self.path.child("d").child("c").child("e"))
+
+    def test_walk(self):
+        """Verify that walking the path gives the same result as the known file
+        hierarchy.
+        """
         x = [foo.path for foo in self.path.walk()]
         x.sort()
         self.assertEquals(x, self.all)
 
-    def testGetAndSet(self):
-        content = 'newcontent'
-        self.path.child('new').setContent(content)
-        newcontent = self.path.child('new').getContent()
-        self.failUnlessEqual(content, newcontent)
-        content = 'content'
-        self.path.child('new').setContent(content, '.tmp')
-        newcontent = self.path.child('new').getContent()
-        self.failUnlessEqual(content, newcontent)
-
-    def testValidSubdir(self):
+    def test_validSubdir(self):
+        """Verify that a valid subdirectory will show up as a directory, but not as a
+        file, not as a symlink, and be listable.
+        """
         sub1 = self.path.child('sub1')
         self.failUnless(sub1.exists(),
                         "This directory does exist.")
@@ -66,6 +78,62 @@ class FilePathTestCase(unittest.TestCase):
                         "It's a directory.")
         self.failUnlessEqual(sub1.listdir(),
                              ['file2'])
+
+
+    def test_invalidSubdir(self):
+        """
+        Verify that a subdirectory that doesn't exist is reported as such.
+        """
+        sub2 = self.path.child('sub2')
+        self.failIf(sub2.exists(),
+                    "This directory does not exist.")
+
+    def test_validFiles(self):
+        """
+        Make sure that we can read existent non-empty files.
+        """
+        f1 = self.path.child('file1')
+        self.failUnlessEqual(f1.open().read(), self.f1content)
+        f2 = self.path.child('sub1').child('file2')
+        self.failUnlessEqual(f2.open().read(), self.f2content)
+
+
+def zipit(dirname, zfname):
+    """
+    create a zipfile on zfname, containing the contents of dirname'
+    """
+    zf = zipfile.ZipFile(zfname, "w")
+    basedir = os.path.basename(dirname)
+    for root, dirs, files, in os.walk(dirname):
+        for fname in files:
+            fspath = os.path.join(root, fname)
+            arcpath = os.path.join(root, fname)[len(dirname)+1:]
+            # print fspath, '=>', arcpath
+            zf.write(fspath, arcpath)
+    zf.close()
+
+from twisted.python.zippath import ZipArchive
+
+class ZipFilePathTestCase(AbstractFilePathTestCase):
+
+    def setUp(self):
+        AbstractFilePathTestCase.setUp(self)
+        zipit(self.cmn, self.cmn+'.zip')
+        self.path = ZipArchive(self.cmn+'.zip')
+        self.all = [x.replace(self.cmn, self.cmn+'.zip') for x in self.all]
+
+
+class FilePathTestCase(AbstractFilePathTestCase):
+
+    def test_getAndSet(self):
+        content = 'newcontent'
+        self.path.child('new').setContent(content)
+        newcontent = self.path.child('new').getContent()
+        self.failUnlessEqual(content, newcontent)
+        content = 'content'
+        self.path.child('new').setContent(content, '.tmp')
+        newcontent = self.path.child('new').getContent()
+        self.failUnlessEqual(content, newcontent)
 
     def testSymbolicLink(self):
         s4 = self.path.child("sub4")
@@ -89,17 +157,6 @@ class FilePathTestCase(unittest.TestCase):
         self.failIf(not f3.siblingExtensionSearch('*').exists())
         f3e.remove()
         self.failIf(f3.siblingExtensionSearch(*exts))
-
-    def testInvalidSubdir(self):
-        sub2 = self.path.child('sub2')
-        self.failIf(sub2.exists(),
-                    "This directory does not exist.")
-
-    def testValidFiles(self):
-        f1 = self.path.child('file1')
-        self.failUnlessEqual(f1.open().read(), self.f1content)
-        f2 = self.path.child('sub1').child('file2')
-        self.failUnlessEqual(f2.open().read(), self.f2content)
 
     def testPreauthChild(self):
         fp = filepath.FilePath('.')
