@@ -134,7 +134,21 @@ class BananaTestCase(unittest.TestCase):
         self.enc.dataReceived(self.io.getvalue())
         assert self.result == -2147483648, "should be -2147483648, got %s" % self.result
 
-            
+    def _roundtrip(self, value):
+        self.io.seek(0)
+        self.io.truncate()
+        self.enc.sendEncoded(value)
+        self.enc.dataReceived(self.io.getvalue())
+        return self.result
+
+    def testSizedIntegerTypes(self):
+        # use int to decode int, long to decode long.
+        self.assertEquals(type(self._roundtrip(2l)), int)
+        # this should always come back as a 'long' even on 64-bit platforms,
+        # because it was encoded that way.  Kind of a lame test, but at least
+        # it makes sure that <64bit numbers won't be encoded as INT...
+        self.assertEquals(type(self._roundtrip(2**35)), long)
+
 testCases = [MathTestCase, BananaTestCase]
 
 try:
