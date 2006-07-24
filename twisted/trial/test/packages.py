@@ -1,4 +1,4 @@
-import sys, os, shutil
+import sys, os
 from twisted.trial import unittest
 
 testModule = """
@@ -106,20 +106,29 @@ class PackageTest(unittest.TestCase):
         if not os.path.exists(directory):
             os.makedirs(directory)
 
-    def setUp(self, parentDir='.'):
+    def setUp(self, parentDir=None):
+        if parentDir is None:
+            parentDir = self.mktemp()
+        self.parent = parentDir
         self.createFiles(self.files, parentDir)
 
-    def removeFiles(self, files, parentDir):
-        directories = {}
-        for filename, _ in self.files:
-            dirName = os.path.dirname(os.path.join(parentDir, filename))
-            directories[dirName] = True
-        dirs = directories.keys()
-        dirs.sort()
-        dirs.reverse()
-        for directory in dirs:
-            shutil.rmtree(directory)
-
-    def tearDown(self, parentDir='.'):
+    def tearDown(self):
         self.cleanUpModules()
-        self.removeFiles(self.files, parentDir)
+
+class SysPathManglingTest(PackageTest):
+    def setUp(self, parent=None):
+        self.oldPath = sys.path[:]
+        self.newPath = sys.path[:]
+        if parent is None:
+            parent = self.mktemp()
+        PackageTest.setUp(self, parent)
+        self.newPath.append(self.parent)
+        self.mangleSysPath(self.newPath)
+
+    def tearDown(self):
+        PackageTest.tearDown(self)
+        self.mangleSysPath(self.oldPath)
+
+    def mangleSysPath(self, pathVar):
+        sys.path[:] = pathVar
+
