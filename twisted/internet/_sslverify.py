@@ -6,6 +6,7 @@ from OpenSSL import SSL, crypto
 
 from twisted.python import reflect, util
 from twisted.internet.defer import Deferred
+from twisted.internet.error import VerifyError
 
 # Private - shared between all ServerContextFactories, counts up to
 # provide a unique session id for each context
@@ -14,14 +15,6 @@ _sessionCounter = itertools.count().next
 class _SSLApplicationData(object):
     def __init__(self):
         self.problems = []
-
-class VerifyError(Exception):
-    """Could not verify something that was supposed to be signed.
-    """
-
-class PeerVerifyError(VerifyError):
-    """The peer rejected our verify error.
-    """
 
 class OpenSSLVerifyError(VerifyError):
 
@@ -219,6 +212,7 @@ class OpenSSLVerifyError(VerifyError):
             return 'Peer Certificate Verification Failed: %s (error code: %d)' % (
                 long, self.errno
                 )
+        return "Peer Certificate Verification Failed for Unknown Reason"
 
     __str__ = __repr__
 
@@ -609,7 +603,6 @@ class PrivateCertificate(Certificate):
                                                  serialNumber,
                                                  secondsToExpiry,
                                                  digestAlgorithm)
-
 
 
 class PublicKey:

@@ -9,7 +9,7 @@ API Stability: semi-stable
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
-import socket, types
+import socket
 
 
 class BindError(Exception):
@@ -130,6 +130,14 @@ class TimeoutError(UserError):
 
 class SSLError(ConnectError):
     """An SSL error occurred"""
+
+class VerifyError(Exception):
+    """Could not verify something that was supposed to be signed.
+    """
+
+class PeerVerifyError(VerifyError):
+    """The peer rejected our verify error.
+    """
 
 try:
     import errno

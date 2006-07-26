@@ -45,14 +45,12 @@ supported = False
 
 # System imports
 from OpenSSL import SSL
-import socket
 from zope.interface import implements, implementsOnly, implementedBy
 
 # sibling imports
 import tcp, interfaces
 
 # Twisted imports
-from twisted.python import log
 from twisted.internet import base, address
 
 
