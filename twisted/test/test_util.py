@@ -7,11 +7,6 @@ from twisted.trial import unittest
 
 from twisted.python import util
 from twisted.python.runtime import platformType
-from twisted.internet import reactor
-from twisted.internet.protocol import ProcessProtocol
-from twisted.internet.defer import Deferred
-from twisted.internet.error import ProcessDone
-
 import os.path, sys
 import shutil, errno
 
@@ -157,48 +152,62 @@ class InsensitiveDictTest(unittest.TestCase):
 
 
 
-class PasswordTestingProcessProtocol(ProcessProtocol):
-    """
-    Write the string C{"secret\n"} to a subprocess and then collect all of
-    its output and fire a Deferred with it when the process ends.
-    """
-    def connectionMade(self):
-        self.output = []
-        self.transport.write('secret\n')
+def reversePassword():
+    password = util.getPassword()
+    return reverseString(password)
 
-    def childDataReceived(self, fd, output):
-        self.output.append((fd, output))
-
-    def processEnded(self, reason):
-        self.finished.callback((reason, self.output))
-
+def reverseString(s):
+    s = list(s)
+    s.reverse()
+    s = ''.join(s)
+    return s
 
 class GetPasswordTest(unittest.TestCase):
-    if platformType != "posix":
-        skip = "unix only"
-
-    def test_stdin(self):
+    def testStdIn(self):
         """Making sure getPassword accepts a password from standard input.
         """
-        p = PasswordTestingProcessProtocol()
-        p.finished = Deferred()
-        reactor.spawnProcess(
-            p,
-            sys.executable,
-            [sys.executable,
-             '-c',
-             ('import sys\n'
-             'from twisted.python.util import getPassword\n'
-              'sys.stdout.write(getPassword() + "\\n")\n'
-              'sys.stdout.flush()\n')],
-            env={'PYTHONPATH': os.pathsep.join(sys.path)})
+        from os import path
+        import twisted
+        # Fun path games because for my sub-process, 'import twisted'
+        # doesn't always point to the package containing this test
+        # module.
+        script = """\
+import sys
+sys.path.insert(0, \"%(dir)s\")
+from twisted.test import test_util
+print test_util.util.__version__
+print test_util.reversePassword()
+""" % {'dir': path.dirname(path.dirname(twisted.__file__))}
+        cmd_in, cmd_out, cmd_err = os.popen3("%(python)s -c '%(script)s'" %
+                                             {'python': sys.executable,
+                                              'script': script})
+        cmd_in.write("secret\n")
+        cmd_in.close()
+        try:
+            errors = cmd_err.read()
+        except IOError, e:
+            # XXX: Improper kludge to appease buildbot!  I'm not really sure
+            # why this happens, and without that knowledge, I SHOULDN'T be
+            # just catching and discarding this error.
+            import errno
+            if e.errno == errno.EINTR:
+                errors = ''
+            else:
+                raise
+        self.failIf(errors, errors)
+        uversion = cmd_out.readline()[:-1]
+        self.failUnlessEqual(uversion, util.__version__,
+                             "I want to test module version %r, "
+                             "but the subprocess is using version %r." %
+                             (util.__version__, uversion))
+        # stripping print's trailing newline.
+        secret = cmd_out.read()[:-1]
+        # The reversing trick it so make sure that there's not some weird echo
+        # thing just sending back what we type in.
+        self.failUnlessEqual(reverseString(secret), "secret")
 
-        def processFinished((reason, output)):
-            reason.trap(ProcessDone)
-            self.assertEquals(output, [(1, 'secret\n')])
-
-        return p.finished.addCallback(processFinished)
-
+    if platformType != "posix":
+        testStdIn.skip = "unix only"
 
 
 class SearchUpwardsTest(unittest.TestCase):
