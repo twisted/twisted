@@ -1751,7 +1751,7 @@ def _stringsToObjects(strings, arglist, proto):
 
 def _objectsToStrings(objects, arglist, strings, proto):
     """
-    Convert an to a dictionary of python objects AmpBox, converting through a
+    Convert a dictionary of python objects to an AmpBox, converting through a
     given arglist.
 
     @param objects: a dict mapping names to python objects
