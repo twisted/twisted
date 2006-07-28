@@ -149,7 +149,11 @@ class Data(resource.Resource):
         return self.type
 
     def render(self, req):
-        return http.Response(responsecode.OK, stream=self.data)
+        return http.Response(
+            responsecode.OK,
+            http_headers.Headers({'content-type': self.contentType()}),
+            stream=self.data)
+
 
 class File(StaticRenderMixin):
     """

@@ -7,19 +7,46 @@ from twisted.web2 import stream
 from twisted.web2 import iweb
 
 class TestData(BaseCase):
-    def test_data(self):
-        text = "Hello, World\n"
-        data = static.Data(text, "text/plain")
+    def setUp(self):
+        self.text = "Hello, World\n"
+        self.data = static.Data(self.text, "text/plain")
 
-        self.assertEquals(data.data, text)
-        self.assertEquals(data.type, http_headers.MimeType("text", "plain"))
-        self.assertEquals(data.contentType(), http_headers.MimeType("text", "plain"))
-        self.failUnless(data.etag())
 
+    def test_dataState(self):
+        """
+        Test the internal state of the Data object
+        """
+        self.assert_(hasattr(self.data, "created_time"))
+        self.assertEquals(self.data.data, self.text)
+        self.assertEquals(self.data.type, http_headers.MimeType("text", "plain"))
+        self.assertEquals(self.data.contentType(), http_headers.MimeType("text", "plain"))
+
+
+    def test_etag(self):
+        """
+        Test that we can get an ETag
+        """
+        self.failUnless(self.data.etag())
+
+
+    def test_render(self):
+        """
+        Test that the result from Data.render is acceptable, including the
+        response code, the content-type header, and the actual response body
+        itself.
+        """
+        response = iweb.IResponse(self.data.render(None))
+        self.assertEqual(response.code, 200)
+        self.assert_(response.headers.hasHeader("content-type"))
+        self.assertEqual(response.headers.getHeader("content-type"),
+                         http_headers.MimeType("text", "plain"))
         def checkStream(data):
-            self.assertEquals(str(data), text)
+            self.assertEquals(str(data), self.text)
 
-        return stream.readStream(iweb.IResponse(data.render(None)).stream, checkStream)
+        return stream.readStream(iweb.IResponse(self.data.render(None)).stream,
+                                 checkStream)
+
+
 
 class TestFileSaver(BaseCase):
     def setUpClass(self):
