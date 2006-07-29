@@ -534,7 +534,7 @@ class IReactorThreads(Interface):
         """
 
     def callFromThread(callable, *args, **kw):
-        """Call a function from within another (i.e. non-reactor) thread.
+        """Cause a function to be executed by the reactor thread.
 
         Use this method when you want to run a function in the reactor's thread
         from another thread.  Calling callFromThread should wake up the main

@@ -1,5 +1,6 @@
 1. Wait for an official release of some kind
-2. Download the Sumo Tarball of that release.
+2. Download the Sumo Tarball of that release.  (Now just the "Twisted"
+   tarball.)
 3. Unpack this tarball.
 4. In the unpacked sumo directory,
     svn co svn+ssh://svn.twistedmatrix.com/svn/Twisted/trunk/win32
@@ -10,16 +11,8 @@
 9. Run mktap, twistd with no args. Observe no errors.
 10. Repeat steps 7, 8, 9 for dist/Twisted*2.4*.exe
 11. Rename twisted.pth_ -> twisted.pth
-12. Bug someone to give you g+w to /twisted/Releases/Twisted/2.x
-13. Upload dist/*.exe to twistedmatrix.com:/twisted/Releases/Twisted/2.2 or so
+12. Bug someone to give you g+w to /twisted/Releases/Twisted/2.?
+13. Upload dist/*.exe to twistedmatrix.com:/twisted/Releases/Twisted/2.?
 14. Make sure uploaded files are mode 664, group cvs-twisted
-15. Check out up-to-date WebSite from 
-    svn+ssh://svn.twistedmatrix.com/svn/WebSite/trunk
-16. In WebSite, make edits to:
-    twistedmatrix.com/projects/data/core.proj (core .exe and sumo .exe)
-    You need to update:
-    a) Versions (2 places in each exe)
-    b) md5sums (1 place each exe)
-    c) Release dates (1 place each exe)
-18. Commit WebSite
-19. Repeat at step 1.
+15. Update the Wiki front page and the TwistedProject page with the new urls.
+16. Repeat at step 1.
