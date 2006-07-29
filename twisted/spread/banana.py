@@ -255,21 +255,20 @@ class Pynana(protocol.Protocol, styles.Ephemeral):
             write(LIST)
             for elem in obj:
                 self._encode(elem, write)
-        elif isinstance(obj, (types.IntType, types.LongType)):
-            aobj = abs(obj)
-            if aobj < (2**32): # this is lame, but it's what the protocol
-                               # spec says.
-                if obj >= 0:
-                    typebyte = INT
-                else:
-                    typebyte = NEG
+        elif isinstance(obj, types.IntType):
+            if obj >= 0:
+                int2b128(obj, write)
+                write(INT)
             else:
-                if obj >= 0:
-                    typebyte = LONGINT
-                else:
-                    typebyte = LONGNEG
-            int2b128(aobj, write)
-            write(typebyte)
+                int2b128(-obj, write)
+                write(NEG)
+        elif isinstance(obj, types.LongType):
+            if obj >= 0l:
+                int2b128(obj, write)
+                write(LONGINT)
+            else:
+                int2b128(-obj, write)
+                write(LONGNEG)
         elif isinstance(obj, types.FloatType):
             write(FLOAT)
             write(struct.pack("!d", obj))
