@@ -163,11 +163,13 @@ class Reporter(TestResult):
     def addFailure(self, test, fail):
         super(Reporter, self).addFailure(test, fail)
         if self.realtime:
+            fail = self.failures[-1][1] # guarantee it's a Failure
             self.write(self._formatFailureTraceback(fail))
 
     def addError(self, test, error):
         super(Reporter, self).addError(test, error)
         if self.realtime:
+            error = self.errors[-1][1] # guarantee it's a Failure
             self.write(self._formatFailureTraceback(error))
 
     def write(self, format, *args):

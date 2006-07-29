@@ -55,6 +55,12 @@ class TestTestResult(unittest.TestCase):
         self.assertEqual(self.failureException, failure.type)
 
 
+class TestReporterRealtime(TestTestResult):
+    def setUp(self):
+        output = StringIO.StringIO()
+        self.result = reporter.Reporter(output, realtime=True)
+
+
 class TestErrorReporting(StringTest):
     doubleSeparator = re.compile(r'^=+$')
     
