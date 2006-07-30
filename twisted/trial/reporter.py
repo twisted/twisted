@@ -401,93 +401,6 @@ class TimingTextReporter(VerboseTextReporter):
         self.write("(%.03f secs)\n" % self._lastTime)
 
 
-class _AnsiColorizer(object):
-    _colors = dict(black=30, red=31, green=32, yellow=33,
-                   blue=34, magenta=35, cyan=36, white=37)
-
-    def __init__(self, stream):
-        self.stream = stream
-
-    def supported(self):
-        # assuming stderr
-        import sys, os
-        # isatty() returns False when SSHd into Win32 machine
-        if 'CYGWIN' in os.environ:
-            return True
-        if not sys.stderr.isatty():
-            return False # auto color only on TTYs
-        try:
-            import curses
-            curses.setupterm()
-            return curses.tigetnum("colors") > 2
-        except:
-            # guess false in case of error
-            return False
-    supported = classmethod(supported)
-
-    def write(self, text, color):
-        color = self._colors[color]
-        self.stream.write('%s%s;1m%s%s0m' % ('\x1b[', color, text, '\x1b['))
-
-
-class _Win32Colorizer(object):
-    def __init__(self, stream):
-        from win32console import GetStdHandle, STD_OUTPUT_HANDLE, \
-             FOREGROUND_RED, FOREGROUND_BLUE, FOREGROUND_GREEN, \
-             FOREGROUND_INTENSITY
-        red, green, blue, bold = (FOREGROUND_RED, FOREGROUND_GREEN,
-                                  FOREGROUND_BLUE, FOREGROUND_INTENSITY)
-        self.stream = stream
-        self.screenBuffer = GetStdHandle(STD_OUTPUT_HANDLE)
-        self._colors = {
-            'normal': red | green | blue,
-            'red': red | bold,
-            'green': green | bold,
-            'blue': blue | bold,
-            'yellow': red | green | bold,
-            'magenta': red | blue | bold,
-            'cyan': green | blue | bold,
-            'white': red | green | blue | bold
-            }
-
-    def supported(self):
-        try:
-            import win32console
-            screenBuffer = win32console.GetStdHandle(
-                win32console.STD_OUTPUT_HANDLE)
-        except ImportError:
-            return False
-        import pywintypes
-        try:
-            screenBuffer.SetConsoleTextAttribute(
-                win32console.FOREGROUND_RED |
-                win32console.FOREGROUND_GREEN |
-                win32console.FOREGROUND_BLUE)
-        except pywintypes.error:
-            return False
-        else:
-            return True
-    supported = classmethod(supported)
-
-    def write(self, text, color):
-        color = self._colors[color]
-        self.screenBuffer.SetConsoleTextAttribute(color)
-        self.stream.write(text)
-        self.screenBuffer.SetConsoleTextAttribute(self._colors['normal'])
-
-
-class _NullColorizer(object):
-    def __init__(self, stream):
-        self.stream = stream
-
-    def supported(self):
-        return True
-    supported = classmethod(supported)
-
-    def write(self, text, color):
-        self.stream.write(text)
-
-
 class TreeReporter(Reporter):
     """Print out the tests in the form a tree.
 
@@ -499,20 +412,18 @@ class TreeReporter(Reporter):
     indent = '  '
     columns = 79
 
-    FAILURE = 'red'
-    ERROR = 'red'
-    TODO = 'blue'
-    SKIP = 'blue'
-    TODONE = 'red'
-    SUCCESS = 'green'
+    BLACK = 30
+    RED = 31
+    GREEN = 32
+    YELLOW = 33
+    BLUE = 34
+    MAGENTA = 35
+    CYAN = 36
+    WHITE = 37
 
     def __init__(self, stream=sys.stdout, tbformat='default', realtime=False):
         super(TreeReporter, self).__init__(stream, tbformat, realtime)
         self._lastTest = []
-        for colorizer in [_Win32Colorizer, _AnsiColorizer, _NullColorizer]:
-            if colorizer.supported():
-                self._colorizer = colorizer(stream)
-                break
 
     def getDescription(self, test):
         """Return the name of the method which 'test' represents.  This is
@@ -524,27 +435,27 @@ class TreeReporter(Reporter):
 
     def addSuccess(self, test):
         super(TreeReporter, self).addSuccess(test)
-        self.endLine('[OK]', self.SUCCESS)
+        self.endLine('[OK]', self.GREEN)
 
     def addError(self, *args):
         super(TreeReporter, self).addError(*args)
-        self.endLine('[ERROR]', self.ERROR)
+        self.endLine('[ERROR]', self.RED)
 
     def addFailure(self, *args):
         super(TreeReporter, self).addFailure(*args)
-        self.endLine('[FAIL]', self.FAILURE)
+        self.endLine('[FAIL]', self.RED)
 
     def addSkip(self, *args):
         super(TreeReporter, self).addSkip(*args)
-        self.endLine('[SKIPPED]', self.SKIP)
+        self.endLine('[SKIPPED]', self.BLUE)
 
     def addExpectedFailure(self, *args):
         super(TreeReporter, self).addExpectedFailure(*args)
-        self.endLine('[TODO]', self.TODO)
+        self.endLine('[TODO]', self.BLUE)
 
     def addUnexpectedSuccess(self, *args):
         super(TreeReporter, self).addUnexpectedSuccess(*args)
-        self.endLine('[SUCCESS!?!]', self.TODONE)
+        self.endLine('[SUCCESS!?!]', self.RED)
 
     def write(self, format, *args):
         if args:
@@ -565,14 +476,14 @@ class TreeReporter(Reporter):
         self._lastTest = segments
 
     def cleanupErrors(self, errs):
-        self._colorizer('    cleanup errors', self.ERROR)
-        self.endLine('[ERROR]', self.ERROR)
+        self.write(self.color('    cleanup errors', self.RED))
+        self.endLine('[ERROR]', self.RED)
         super(TreeReporter, self).cleanupErrors(errs)
 
     def upDownError(self, method, error, warn, printStatus):
-        self.write(self.color("  %s" % method, self.ERROR))
+        self.write(self.color("  %s" % method, self.RED))
         if printStatus:
-            self.endLine('[ERROR]', self.ERROR)
+            self.endLine('[ERROR]', self.RED)
         super(TreeReporter, self).upDownError(method, error, warn, printStatus)
         
     def startTest(self, method):
@@ -581,8 +492,10 @@ class TreeReporter(Reporter):
                                   self.getDescription(method)))
         super(TreeReporter, self).startTest(method)
 
+    def color(self, text, color):
+        return '%s%s;1m%s%s0m' % ('\x1b[', color, text, '\x1b[')
+
     def endLine(self, message, color):
         spaces = ' ' * (self.columns - len(self.currentLine) - len(message))
         super(TreeReporter, self).write(spaces)
-        self._colorizer.write(message, color)
-        super(TreeReporter, self).write("\n")
+        super(TreeReporter, self).write("%s\n" % (self.color(message, color),))
