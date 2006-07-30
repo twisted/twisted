@@ -92,9 +92,10 @@ class XMLRPC(resource.Resource):
     isLeaf = 1
     separator = '.'
 
-    def __init__(self):
+    def __init__(self, allowNone=False):
         resource.Resource.__init__(self)
         self.subHandlers = {}
+        self.allowNone = allowNone
 
     def putSubHandler(self, prefix, handler):
         self.subHandlers[prefix] = handler
@@ -127,10 +128,10 @@ class XMLRPC(resource.Resource):
         if not isinstance(result, Fault):
             result = (result,)
         try:
-            s = xmlrpclib.dumps(result, methodresponse=1)
+            s = xmlrpclib.dumps(result, methodresponse=True, allow_none=self.allowNone)
         except:
             f = Fault(self.FAILURE, "can't serialize output")
-            s = xmlrpclib.dumps(f, methodresponse=1)
+            s = xmlrpclib.dumps(f, methodresponse=True, allow_none=self.allowNone)
         request.setHeader("content-length", str(len(s)))
         request.write(s)
         request.finish()
@@ -270,15 +271,15 @@ payloadTemplate = """<?xml version="1.0"?>
 """
 
 
-class QueryFactory(protocol.ClientFactory):
+class _QueryFactory(protocol.ClientFactory):
 
     deferred = None
     protocol = QueryProtocol
 
-    def __init__(self, path, host, method, user=None, password=None, *args):
+    def __init__(self, path, host, method, user=None, password=None, allowNone=False, args=()):
         self.path, self.host = path, host
         self.user, self.password = user, password
-        self.payload = payloadTemplate % (method, xmlrpclib.dumps(args))
+        self.payload = payloadTemplate % (method, xmlrpclib.dumps(args, allow_none=allowNone))
         self.deferred = defer.Deferred()
 
     def parseResponse(self, contents):
@@ -315,7 +316,7 @@ class Proxy:
 
     """
 
-    def __init__(self, url, user=None, password=None):
+    def __init__(self, url, user=None, password=None, allowNone=False):
         """
         @type url: C{str}
         @param url: The URL to which to post method calls.  Calls will be made
@@ -334,6 +335,10 @@ class Proxy:
         server when making calls.  If specified, overrides any password
         information embedded in C{url}.  If not specified, a value may be taken
         from C{url} if present.
+
+        @type allowNone: C{bool} or None
+        @param allowNone: allow the use of None values in parameters. It's
+        passed to the underlying xmlrpclib implementation. Default to False.
         """
         scheme, netloc, path, params, query, fragment = urlparse.urlparse(url)
         netlocParts = netloc.split('@')
@@ -360,10 +365,12 @@ class Proxy:
             self.user = user
         if password is not None:
             self.password = password
+        self.allowNone = allowNone
 
     def callRemote(self, method, *args):
-        factory = QueryFactory(self.path, self.host, method, self.user,
-            self.password, *args)
+        factory = _QueryFactory(
+            self.path, self.host, method, self.user,
+            self.password, self.allowNone, args)
         if self.secure:
             from twisted.internet import ssl
             reactor.connectSSL(self.host, self.port or 443,

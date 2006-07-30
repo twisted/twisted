@@ -150,6 +150,52 @@ class XMLRPCTestCase2(XMLRPCTestCase):
         return xmlrpc.Proxy("http://127.0.0.1:%d" % self.port)
 
 
+
+class XMLRPCAllowNoneTestCase(unittest.TestCase):
+    """
+    Test with allowNone set to True.
+
+    These are not meant to be exhaustive serialization tests, since
+    L{xmlrpclib} does all of the actual serialization work.  They are just
+    meant to exercise a few codepaths to make sure we are calling into
+    xmlrpclib correctly.
+    """
+
+    def setUp(self):
+        self.p = reactor.listenTCP(
+            0, server.Site(Test(allowNone=True)), interface="127.0.0.1")
+        self.port = self.p.getHost().port
+
+
+    def tearDown(self):
+        return self.p.stopListening()
+
+
+    def proxy(self):
+        return xmlrpc.Proxy("http://127.0.0.1:%d" % (self.port,), allowNone=True)
+
+
+    def test_deferredNone(self):
+        """
+        Test that passing a C{None} as an argument to a remote method and
+        returning a L{Deferred} which fires with C{None} properly passes
+        </nil> over the network if allowNone is set to True.
+        """
+        d = self.proxy().callRemote('defer', None)
+        d.addCallback(self.assertEquals, None)
+        return d
+
+
+    def test_dictWithNoneValue(self):
+        """
+        Test that return a C{dict} with C{None} as a value works properly.
+        """
+        d = self.proxy().callRemote('defer', {'a': None})
+        d.addCallback(self.assertEquals, {'a': None})
+        return d
+
+
+
 class XMLRPCTestAuthenticated(XMLRPCTestCase):
     """
     Test with authenticated proxy. We run this with the same inout/ouput as
