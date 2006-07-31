@@ -679,11 +679,11 @@ class KeyPair(PublicKey):
         pkey = crypto.PKey()
         pkey.generate_key(kind, size)
         return Class(pkey)
+    generate = classmethod(generate)
 
 
     def newCertificate(self, newCertData, format=crypto.FILETYPE_ASN1):
         return PrivateCertificate.load(newCertData, self, format)
-    generate = classmethod(generate)
 
 
     def requestObject(self, distinguishedName, digestAlgorithm='md5'):
