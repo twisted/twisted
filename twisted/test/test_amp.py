@@ -951,6 +951,14 @@ class TLSTest(unittest.TestCase):
         # reasonable.
         self.assertFailure(d, PeerVerifyError)
 
+def _loseAndPass(result, proto):
+    # be specific, pass on the error to the client.
+    err.trap(error.ConnectionLost,
+             error.ConnectionDone)
+    print proto, result
+    del proto.connectionLost
+    proto.connectionLost(result)
+    return result
 
 class LiveFireBase:
     """
@@ -964,6 +972,7 @@ class LiveFireBase:
         self.clientFactory = protocol.ClientFactory()
         self.clientFactory.protocol = self.clientProto
         self.clientFactory.onMade = defer.Deferred()
+        self.serverFactory.onMade = defer.Deferred()
         self.serverPort = reactor.listenTCP(0, self.serverFactory)
         self.clientConn = reactor.connectTCP(
             '127.0.0.1', self.serverPort.getHost().port,
@@ -971,23 +980,24 @@ class LiveFireBase:
         def getProtos(rlst):
             self.cli = self.clientFactory.theProto
             self.svr = self.serverFactory.theProto
-        return self.clientFactory.onMade.addCallback(getProtos)
+        dl = defer.DeferredList([self.clientFactory.onMade,
+                                 self.serverFactory.onMade])
+        return dl.addCallback(getProtos)
 
     def tearDown(self):
         L = []
         for conn in self.cli, self.svr:
             if conn.transport is not None:
                 # depend on amp's function connection-dropping behavior
-                ccl = conn.connectionLost
-                d = defer.Deferred().addBoth(ccl)
-                conn.connectionLost = d.callback
+                d = defer.Deferred().addErrback(_loseAndPass, conn)
+                conn.connectionLost = d.errback
                 conn.transport.loseConnection()
                 L.append(d)
         if self.serverPort is not None:
-            L.append(self.serverPort.stopListening())
+            L.append(defer.maybeDeferred(self.serverPort.stopListening))
         if self.clientConn is not None:
             self.clientConn.disconnect()
-        return defer.DeferredList(L, consumeErrors=True)
+        return defer.DeferredList(L)
 
 def show(x):
     import sys
