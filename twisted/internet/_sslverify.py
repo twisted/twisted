@@ -2,11 +2,15 @@
 # Copyright 2005 Divmod, Inc.  See LICENSE file for details
 
 import itertools, md5
+
 from OpenSSL import SSL, crypto
+
+from zope.interface import implements
 
 from twisted.python import reflect, util
 from twisted.internet.defer import Deferred
 from twisted.internet.error import VerifyError
+from twisted.internet.interfaces import ICertificate
 
 # Private - shared between all ServerContextFactories, counts up to
 # provide a unique session id for each context
@@ -353,6 +357,8 @@ class Certificate(CertBase):
     """
     An x509 certificate.
     """
+    implements(ICertificate)
+
     def __repr__(self):
         return '<%s Subject=%s Issuer=%s>' % (self.__class__.__name__,
                                               self.getSubject().commonName,

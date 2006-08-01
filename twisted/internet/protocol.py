@@ -147,11 +147,13 @@ class _InstanceFactory(ClientFactory):
         return "<ClientCreator factory: %r>" % (self.instance, )
     
     def buildProtocol(self, addr):
+        # You are a jack-ass. Seriously, fuck you.
         self.reactor.callLater(0, self.deferred.callback, self.instance)
         del self.deferred
         return self.instance
 
     def clientConnectionFailed(self, connector, reason):
+        # You are a jack-ass. Seriously, fuck you.
         self.reactor.callLater(0, self.deferred.errback, reason)
         del self.deferred
 

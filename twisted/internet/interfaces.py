@@ -1294,3 +1294,11 @@ class IMulticastTransport(Interface):
 
     def leaveGroup(addr, interface=""):
         """Leave multicast group, return Deferred of success."""
+
+
+class ICertificate(Interface):
+    def getIssuer():
+        """
+        @rtype: L{DN}
+        """
+
