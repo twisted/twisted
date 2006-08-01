@@ -133,29 +133,13 @@ class Options(usage.Options):
         usage.Options.__init__(self)
 
     def _loadReporters(self):
-        if self._supportsColor():
-            default = 'verbose'
-        else:
-            default = 'bwverbose'
+        default = 'verbose'
         self.optToQual = {}
         for p in plugin.getPlugins(itrial.IReporter):
             qual = "%s.%s" % (p.module, p.klass)
             self.optToQual[p.longOpt] = qual
             if p.longOpt == default:
                 self['reporter'] = reflect.namedAny(qual)
-
-    def _supportsColor(self):
-        # assuming stderr
-        import sys
-        if not sys.stderr.isatty():
-            return False # auto color only on TTYs
-        try:
-            import curses
-            curses.setupterm()
-            return curses.tigetnum("colors") > 2
-        except:
-            # guess false in case of error
-            return False
 
     def opt_reactor(self, reactorName):
         # this must happen before parseArgs does lots of imports

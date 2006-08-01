@@ -5,8 +5,9 @@
 
 
 import sys, os, re, StringIO
+from twisted.internet.utils import suppressWarnings
 from twisted.python import failure
-from twisted.trial import unittest, runner, reporter
+from twisted.trial import unittest, runner, reporter, util
 from twisted.trial.test import erroneous
 
 
@@ -324,6 +325,56 @@ class SkipTest(unittest.TestCase):
         self.result.printErrors()
         output = '\n'.join(self.stream.getvalue().splitlines()[3:]).strip()
         self.failUnlessEqual(output, str(e))
+
+
+
+class MockColorizer:
+    """
+    Used by TestTreeReporter to make sure that output is colored correctly.
+    """
+    def __init__(self, stream):
+        self.log = []
+
+    def supported(self):
+        return True
+    supported = classmethod(supported)
+
+    def write(self, text, color):
+        self.log.append((color, text))
+
+
+class TestTreeReporter(unittest.TestCase):
+    def setUp(self):
+        from twisted.trial.test import sample
+        self.test = sample.FooTest('test_foo')
+        self.stream = StringIO.StringIO()
+        self.result = reporter.TreeReporter(self.stream)
+        self.result._colorizer = MockColorizer(self.stream)
+        self.log = self.result._colorizer.log
+
+    def makeError(self):
+        try:
+            1/0
+        except ZeroDivisionError:
+            f = failure.Failure()
+        return f
+
+    def test_cleanupError(self):
+        """
+        Run cleanupErrors and check that the output is correct, and colored
+        correctly.
+        """
+        f = self.makeError()
+        self.result.cleanupErrors(f)
+        color, text = self.log[0]
+        self.assertEqual(color.strip(), self.result.ERROR)
+        self.assertEqual(text.strip(), 'cleanup errors')
+        color, text = self.log[1]
+        self.assertEqual(color.strip(), self.result.ERROR)
+        self.assertEqual(text.strip(), '[ERROR]')
+    test_cleanupError = suppressWarnings(
+        test_cleanupError,
+        util.suppress(category=reporter.BrokenTestCaseWarning))
 
 
 class TestReporter(unittest.TestCase):
