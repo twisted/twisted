@@ -13,9 +13,11 @@ __metaclass__ = type
 
 from zope.interface import implements, Interface, Attribute
 
+from twisted.python.failure import Failure
+
 from twisted.internet import reactor
-from twisted.internet.defer import Deferred, succeed
-from twisted.internet.protocol import ClientCreator
+from twisted.internet.defer import Deferred, succeed, AlreadyCalledError
+from twisted.internet.protocol import ClientFactory
 from twisted.internet.ssl import Certificate
 from twisted.internet.interfaces import ICertificate
 
@@ -41,54 +43,119 @@ class CertificateChecker:
 
 
 
+class _CachedProtocolFactory(ClientFactory):
+    """
+    A factory for use with ConnectionCache. Don't use it.
+    """
+    def __init__(self, cache, host, port, protocolClass):
+        self.cache = cache
+        self.protocolClass = protocolClass
+        self.host = host
+        self.port = port
+        self.ckey = self.host, self.port, self.protocolClass
+        self.connectionEvent = _PendingEvent()
+        self.cache._connections[self.ckey] = self
+
+
+    def buildProtocol(self, addr):
+        protocol = self.protocolClass()
+        self.connectionEvent.callback(protocol)
+        return protocol
+
+
+    def clientConnectionLost(self, connector, reason):
+        del self.cache._connections[self.ckey]
+
+
+    def clientConnectionFailed(self, connector, reason):
+        self.clientConnectionLost(connector, reason)
+        self.connectionEvent.errback(reason)
+
+
+
 class ConnectionCache(object):
     """
     CACHING THING
     """
 
     def __init__(self, reactor):
-        self._connections = {}
-        self._inprogress = {} # {cachekey: connector}
+        self._connections = {}  # map (host, port, protocolClass) to _CachedProtocolFactory
         self.reactor = reactor
 
-
-    def _getConnectionFromCache(self, host, port, protocolClass):
-        return self._connections.get((host, port, protocolClass))
-
-
-    def _addConnectionToCache(self, host, port, protocolClass, connection):
-        self._connections[host, port, protocolClass] = connection
-
-
-    def _connectServer(self, host, port, protocolClass):
-        cc = ClientCreator(self.reactor, protocolClass)
-        return cc.connectTCP(host, port)
-
-
-    def _broadcast(self, proto, deferred):
-        deferred.callback(proto)
-        return proto
-
-
-    def _relocate(self, proto, host, port, protocolClass):
-        del self._inprogress[host, port]
-        self._addConnectionToCache(host, port, protocolClass, proto)
-        return proto
-
-
     def getConnection(self, host, port, protocolClass):
-        connection = self._getConnectionFromCache(host, port, protocolClass)
-        if connection is not None:
-            return succeed(connection)
-        if (host, port) in self._inprogress:
-            d = Deferred()
-            self._inprogress[host, port].addCallback(self._broadcast, d)
-            return d
-        d = self._connectServer(host, port, protocolClass)
-        d.addCallback(self._relocate, host, port, protocolClass)
-        self._inprogress[host, port] = d
+        ckey = (host, port, protocolClass)
+        fac = self._connections.get(ckey)
+        if fac is None:
+            fac = _CachedProtocolFactory(self, host, port, protocolClass)
+            self.reactor.connectTCP(host, port, fac)
+        return fac.connectionEvent.deferred()
+
+
+class _PendingEvent(object):
+    """
+    A utility for generating aDeferreds which will all be fired or
+    errbacked with the same result or failure.
+    """
+    _result = object()
+
+    def __init__(self):
+        """
+        Create a pending event.
+        """
+        self.listeners = []
+
+    def deferred(self):
+        """
+        Generate and track a new Deferred which represents my
+        resolution and return it.
+
+        @return: a Deferred.
+        """
+        d = Deferred()
+        if self._result is not _PendingEvent._result:
+            return succeed(self._result)
+        self.listeners.append(d)
         return d
 
+    def callback(self, result):
+        """ 
+        Fire each of the deferreds generated with my L{deferred}
+        method.
+
+        @param result: Anything.
+
+        @raise: AlreadyCalledError if I have already been callbacked
+        or errbacked.
+        """
+        l = self.listeners
+        if l is None:
+            raise AlreadyCalledError()
+        self.listeners = None
+        self._result = result
+        for d in l:
+            d.callback(result)
+
+    def errback(self, result=None):
+        """ 
+        Errback each of the deferreds generated with my L{deferred}
+        method.
+
+        @param result: An optional failure object; if unspecified (or
+        None), generate a failure from the current exception
+        information and use it.
+
+        @raise: AlreadyCalledError if I have already been callbacked
+        or errbacked.
+        """
+        if result is None:
+            result = Failure()
+        l = self.listeners
+        if l is None:
+            raise AlreadyCalledError()
+        self.listeners = None
+        self._result = result
+        for d in l:
+            d.errback(result)
 
 
 class ProxyUser:
