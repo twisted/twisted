@@ -424,14 +424,6 @@ class _DefaultMapImpl:
     def mapPath(self, fsPathString):
         return FilePath(fsPathString)
 _theDefaultMapper = _DefaultMapImpl()
-def _DefaultPathImportMapper(nothing):
-    return _theDefaultMapper
-
-registerAdapter(_DefaultPathImportMapper, type(None), IPathImportMapper)
-
-# for python2.5
-registerAdapter(_DefaultPathImportMapper, bool, IPathImportMapper)
-
 
 class _ZipMapImpl:
     """ IPathImportMapper implementation for zipimport.ZipImporter.  """
@@ -535,15 +527,11 @@ class PythonPath:
         return rval
 
     def _smartPath(self, pathName):
-        """ Given a path entry from sys.path which may refer to an importer, return the
-        appropriate FilePath-like instance.
+        """
+        Given a path entry from sys.path which may refer to an importer,
+        return the appropriate FilePath-like instance.
 
         @param pathName: a str describing the path.
-
-        @raise CannotAdapt: Raised if we encounter an importer that we don't
-        know about.  This should eventually be removed by adding EggPath, or
-        something like it, to use the setuptools pkg_resources system for a
-        filesystem abstraction on importers that we don't know about.
 
         @return: a FilePath-like object.
         """
@@ -556,7 +544,7 @@ class PythonPath:
                     pass
             if importr is _nothing: # still
                 importr = None
-        return IPathImportMapper(importr).mapPath(pathName)
+        return IPathImportMapper(importr, _theDefaultMapper).mapPath(pathName)
 
     def iterEntries(self):
         """ Iterate the entries on my sysPath.

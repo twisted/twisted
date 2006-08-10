@@ -191,3 +191,30 @@ class ZipPathModificationTest(PathModificationTest):
         PathModificationTest._setupSysPath(self)
 
 
+class PythonPathTestCase(TestCase):
+    """
+    Tests for the class which provides the implementation for all of the
+    public API of L{twisted.python.modules}.
+    """
+    def test_unhandledImporter(self):
+        """
+        Make sure that the behavior when encountering an unknown importer
+        type is not catastrophic failure.
+        """
+        class SecretImporter(object):
+            pass
+
+        def hook(name):
+            return SecretImporter()
+
+        syspath = ['example/path']
+        sysmodules = {}
+        syshooks = [hook]
+        syscache = {}
+        def sysloader(name):
+            return None
+        space = modules.PythonPath(
+            syspath, sysmodules, syshooks, syscache, sysloader)
+        entries = list(space.iterEntries())
+        self.assertEquals(len(entries), 1)
+        self.assertRaises(KeyError, lambda: entries[0]['module'])
