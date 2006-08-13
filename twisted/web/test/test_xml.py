@@ -42,6 +42,49 @@ class SUXTest(TestCase):
 
 class MicroDOMTest(TestCase):
 
+    def test_leadingTextDropping(self):
+        """
+        Make sure that if there's no top-level node lenient-mode won't
+        drop leading text that's outside of any elements.
+        """
+        s = "Hi orders! <br>Well. <br>"
+        d = microdom.parseString(s, beExtremelyLenient=True)
+        self.assertEquals(d.firstChild().toxml(),
+                          '<html>Hi orders! <br />Well. <br /></html>')
+
+    def test_trailingTextDropping(self):
+        """
+        Ensure that no *trailing* text in a mal-formed
+        no-top-level-element document(s) will not be dropped.
+        """
+        s = "<br>Hi orders!"
+        d = microdom.parseString(s, beExtremelyLenient=True)
+        self.assertEquals(d.firstChild().toxml(),
+                          '<html><br />Hi orders!</html>')
+
+
+    def test_noTags(self):
+        """
+        A string with nothing that looks like a tag at all should just
+        be parsed as body text.
+        """
+        s = "Hi orders!"
+        d = microdom.parseString(s, beExtremelyLenient=True)
+        self.assertEquals(d.firstChild().toxml(),
+                          "<html>Hi orders!</html>")
+
+
+    def test_surroundingCrap(self):
+        """
+        If a document is surrounded by non-xml text, the text should
+        be remain in the XML.
+        """
+        s = "Hi<br> orders!"
+        d = microdom.parseString(s, beExtremelyLenient=True)
+        self.assertEquals(d.firstChild().toxml(),
+                          "<html>Hi<br /> orders!</html>")
+
+
     def testCaseSensitiveSoonCloser(self):
         s = """
               <HTML><BODY>
@@ -379,7 +422,7 @@ alert("I hate you");
             d = microdom.parseString("%s<pre>%s</pre>" % (prefix, i), beExtremelyLenient=1)
             self.assertEquals(d.documentElement.toxml(), "<pre>%s</pre>" % o)
         # non-space preserving
-        d = microdom.parseString("%s<t>hello & there</t>", beExtremelyLenient=1)
+        d = microdom.parseString("<t>hello & there</t>", beExtremelyLenient=1)
         self.assertEquals(d.documentElement.toxml(), "<t>hello &amp; there</t>")
     
     def testInsensitiveLenient(self):

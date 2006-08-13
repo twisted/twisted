@@ -25,6 +25,12 @@ from twisted.internet.protocol import Protocol, FileWrapper
 from twisted.python.reflect import prefixedMethodNames
 
 
+
+# Elements of the three-tuples in the state table.
+BEGIN_HANDLER = 0
+DO_HANDLER = 1
+END_HANDLER = 2
+
 identChars = '.-_:'
 lenientIdentChars = identChars + ';+#/%~' 
 
@@ -76,6 +82,11 @@ class XMLParser(Protocol):
     beExtremelyLenient = 0
     _prepend = None
 
+    # _leadingBodyData will sometimes be set before switching to the
+    # 'bodydata' state, when we "accidentally" read a byte of bodydata
+    # in a different state.
+    _leadingBodyData = None
+
     def connectionMade(self):
         self.lineno = 1
         self.colno = 0
@@ -97,7 +108,9 @@ class XMLParser(Protocol):
         # more than once per class.
         stateTable = getattr(self.__class__, '__stateTable', None)
         if stateTable is None:
-            stateTable = self.__class__.__stateTable = zipfndict(*[prefixedMethodObjDict(self, prefix) for prefix in ('begin_', 'do_', 'end_')])
+            stateTable = self.__class__.__stateTable = zipfndict(
+                *[prefixedMethodObjDict(self, prefix) 
+                  for prefix in ('begin_', 'do_', 'end_')])
         return stateTable
         
     def _decode(self, data):
@@ -178,6 +191,15 @@ class XMLParser(Protocol):
         # state doesn't make sense if there's an exception..
         self.state = curState
 
+
+    def connectionLost(self, reason):
+        """
+        End the last state we were in.
+        """
+        stateTable = self._buildStateTable()
+        stateTable[self.state][END_HANDLER]()
+
+
     # state methods
 
     def do_begin(self, byte):
@@ -185,6 +207,7 @@ class XMLParser(Protocol):
             return
         if byte != '<':
             if self.beExtremelyLenient:
+                self._leadingBodyData = byte
                 return 'bodydata'
             self._parseError("First char of document [%r] wasn't <" % (byte,))
         return 'tagstart'
@@ -462,7 +485,11 @@ class XMLParser(Protocol):
         return 'bodydata' 
 
     def begin_bodydata(self, byte):
-        self.bodydata = ''
+        if self._leadingBodyData:
+            self.bodydata = self._leadingBodyData
+            del self._leadingBodyData
+        else:
+            self.bodydata = ''
 
     def do_bodydata(self, byte):
         if byte == '<':

@@ -756,6 +756,7 @@ class MicroDOMParser(XMLParser):
             self._fixScriptElement(el)
     
     def connectionLost(self, reason):
+        XMLParser.connectionLost(self, reason) # This can cause more events!
         if self.elementstack:
             if self.beExtremelyLenient:
                 self.documents.append(self.elementstack[0])
@@ -788,17 +789,13 @@ def parse(readable, *args, **kwargs):
     if mdp.beExtremelyLenient:
         if len(mdp.documents) == 1:
             d = mdp.documents[0]
+            if not isinstance(d, Element):
+                el = Element("html")
+                el.childNodes[:] = [d]
+                d = el
         else:
-            d = None
-            for el in mdp.documents:
-                if isinstance(el, Element):
-                    if d is not None:
-                        d = None
-                        break
-                    d = el
-            if d is None:
-                d = Element("html")
-                d.childNodes[:] = mdp.documents
+            d = Element("html")
+            d.childNodes[:] = mdp.documents
     else:
         d = mdp.documents[0]
     doc = Document(d)
