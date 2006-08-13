@@ -86,6 +86,26 @@ class SiteTest(unittest.TestCase):
         assert site.getResourceFor(DummyRequest([''])) is sres2, "Got the wrong resource."
 
 
+
+class SessionTest(unittest.TestCase):
+
+    def setUp(self):
+        self.site = server.Site(SimpleResource())
+
+    def test_delayedCallCleanup(self):
+        """Checking to make sure Sessions do not leave extra DelayedCalls.
+        """
+        from twisted.internet import reactor
+        delayedCallsBeforeSession = repr(reactor.getDelayedCalls())
+
+        session = self.site.makeSession()
+        session.touch()
+        session.expire()
+
+        self.failUnlessEqual(delayedCallsBeforeSession,
+                             repr(reactor.getDelayedCalls()))
+
+
 # Conditional requests:
 # If-None-Match, If-Modified-Since
 

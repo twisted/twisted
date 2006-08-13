@@ -35,7 +35,7 @@ NOT_DONE_YET = 1
 
 # Twisted Imports
 from twisted.spread import pb
-from twisted.internet import reactor, protocol, defer, address
+from twisted.internet import reactor, protocol, defer, address, task
 from twisted.web import http
 from twisted.python import log, reflect, roots, failure, components
 from twisted import copyright
@@ -399,6 +399,7 @@ class Session(components.Componentized):
         self.site = site
         self.uid = uid
         self.expireCallbacks = []
+        self.checkExpiredLoop = task.LoopingCall(self.checkExpired)
         self.touch()
         self.sessionNamespaces = {}
 
@@ -415,21 +416,25 @@ class Session(components.Componentized):
         for c in self.expireCallbacks:
             c()
         self.expireCallbacks = []
+        self.checkExpiredLoop.stop()
+        # Break reference cycle.
+        self.checkExpiredLoop = None
 
     def touch(self):
         self.lastModified = time.time()
 
     def checkExpired(self):
+        """Is it time for me to expire?
+
+        If I haven't been touched in fifteen minutes, I will call my
+        expire method.
+        """
         # If I haven't been touched in 15 minutes:
         if time.time() - self.lastModified > 900:
             if self.site.sessions.has_key(self.uid):
                 self.expire()
-            else:
-                pass
-                #log.msg("no session to expire: %s" % self.uid)
-        else:
-            #log.msg("session given the will to live for 30 more minutes")
-            reactor.callLater(1800, self.checkExpired)
+
+
 
 version = "TwistedWeb/%s" % copyright.version
 
@@ -467,9 +472,8 @@ class Site(http.HTTPFactory):
         """Generate a new Session instance, and store it for future reference.
         """
         uid = self._mkuid()
-        s = Session(self, uid)
-        session = self.sessions[uid] = s
-        reactor.callLater(1800, s.checkExpired)
+        session = self.sessions[uid] = Session(self, uid)
+        session.checkExpiredLoop.start(1800)
         return session
 
     def getSession(self, uid):
