@@ -315,6 +315,33 @@ class POP3ClientMessageTestCase(unittest.TestCase):
             lambda exc: self.assertEquals(exc.args[0], "Fatal doom server exploded"))
 
 
+    def test_concurrentRetrieves(self):
+        """
+        Issue three retrieve calls immediately without waiting for any to
+        succeed and make sure they all do succeed eventually.
+        """
+        p, t = setUp()
+        messages = [
+            p.retrieve(i).addCallback(
+                self.assertEquals,
+                ["First line of %d." % (i + 1,),
+                 "Second line of %d." % (i + 1,)])
+            for i
+            in range(3)]
+
+        for i in range(1, 4):
+            self.assertEquals(t.value(), "RETR %d\r\n" % (i,))
+            t.clear()
+            p.dataReceived("+OK 2 lines on the way\r\n")
+            p.dataReceived("First line of %d.\r\n" % (i,))
+            p.dataReceived("Second line of %d.\r\n" % (i,))
+            self.assertEquals(t.value(), "")
+            p.dataReceived(".\r\n")
+
+        return defer.DeferredList(messages, fireOnOneErrback=True)
+
+
+
 class POP3ClientMiscTestCase(unittest.TestCase):
     def testCapability(self):
         p, t = setUp()

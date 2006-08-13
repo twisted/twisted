@@ -179,12 +179,18 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         if self._blockedQueue == []:
             self._blockedQueue = None
         elif self._blockedQueue is not None:
-            d, f, a = self._blockedQueue.pop(0)
-            if not self._blockedQueue:
-                self._blockedQueue = None
+            _blockedQueue = self._blockedQueue
+            self._blockedQueue = None
 
+            d, f, a = _blockedQueue.pop(0)
             d2 = f(*a)
             d2.chainDeferred(d)
+            # f is a function which uses _blocked (otherwise it wouldn't
+            # have gotten into the blocked queue), which means it will have
+            # re-set _blockedQueue to an empty list, so we can put the rest
+            # of the blocked queue back into it now.
+            self._blockedQueue.extend(_blockedQueue)
+
 
     def sendShort(self, cmd, args):
         # Internal helper.  Send a command to which a short response
