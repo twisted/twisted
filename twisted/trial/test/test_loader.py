@@ -270,6 +270,15 @@ class LoaderTest(packages.SysPathManglingTest):
         self.failUnlessEqual(errors, ['package.test_bad_module',
                                       'package.test_import_module'])
 
+    def test_loadModuleWithCustom(self):
+        """Check that test_suite is used when present
+        and other TestCases are not included.
+        """
+        from twisted.trial.test import mockcustomsuite
+        suite = self.loader.loadModule(mockcustomsuite)
+        self.failUnlessEqual(0, suite.countTestCases())
+        self.failUnlessEqual("MyCustomSuite", suite.name)
+
     # XXX - duplicated and modified from test_script
     def assertSuitesEqual(self, test1, test2):
         loader = runner.TestLoader()

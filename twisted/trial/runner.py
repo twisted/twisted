@@ -282,7 +282,7 @@ class TestLoader(object):
     def sort(self, xs):
         return dsu(xs, self.sorter)
 
-    def _findTestClasses(self, module):
+    def findTestClasses(self, module):
         """Given a module, return all trial Test classes"""
         classes = []
         for name, val in inspect.getmembers(module):
@@ -296,10 +296,24 @@ class TestLoader(object):
         return reflect.namedAny(name)
 
     def loadModule(self, module):
+        """Return a test suite with all the tests from a module.
+
+        Included are TestCase subclasses and doctests listed in the
+        module's __doctests__ module.  If that's not good for you, put
+        a function named C{test_suite} in your module that returns a
+        TestSuite, and I'll use the results of that instead.
+        """
+        ## XXX - should I add an optional parameter to disable the check for
+        ## a custom suite.
+        ## OR, should I add another method
         if not isinstance(module, types.ModuleType):
             raise TypeError("%r is not a module" % (module,))
+        try:
+            return module.test_suite()
+        except AttributeError:
+            pass
         suite = self.suiteFactory()
-        for testClass in self._findTestClasses(module):
+        for testClass in self.findTestClasses(module):
             suite.addTest(self.loadClass(testClass))
         if not hasattr(module, '__doctests__'):
             return suite
