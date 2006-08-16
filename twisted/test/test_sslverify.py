@@ -12,6 +12,8 @@ from twisted.python import log
 
 from twisted.internet import _sslverify as sslverify
 
+from twisted.internet.error import CertificateError
+
 counter = itertools.count().next
 def makeCertificate(**kw):
     keypair = PKey()
@@ -298,3 +300,128 @@ class OpenSSLOptions(unittest.TestCase):
                       onData=onData)
 
         return onData.addCallback(lambda result: self.assertEquals(result, WritingProtocol.byte))
+
+
+class _NotSSLTransport:
+    def getHandle(self):
+        return self
+
+class _MaybeSSLTransport:
+    def getHandle(self):
+        return self
+
+    def get_peer_certificate(self):
+        return None
+
+    def get_host_certificate(self):
+        return None
+
+class _ActualSSLTransport:
+    def getHandle(self):
+        return self
+
+    def get_host_certificate(self):
+        return sslverify.Certificate.loadPEM("""
+-----BEGIN CERTIFICATE-----
+        MIIC2jCCAkMCAjA5MA0GCSqGSIb3DQEBBAUAMIG0MQswCQYDVQQGEwJVUzEiMCAG
+        A1UEAxMZZXhhbXBsZS50d2lzdGVkbWF0cml4LmNvbTEPMA0GA1UEBxMGQm9zdG9u
+        MRwwGgYDVQQKExNUd2lzdGVkIE1hdHJpeCBMYWJzMRYwFAYDVQQIEw1NYXNzYWNo
+        dXNldHRzMScwJQYJKoZIhvcNAQkBFhhub2JvZHlAdHdpc3RlZG1hdHJpeC5jb20x
+        ETAPBgNVBAsTCFNlY3VyaXR5MB4XDTA2MDgxNjAxMDEwOFoXDTA3MDgxNjAxMDEw
+        OFowgbQxCzAJBgNVBAYTAlVTMSIwIAYDVQQDExlleGFtcGxlLnR3aXN0ZWRtYXRy
+        aXguY29tMQ8wDQYDVQQHEwZCb3N0b24xHDAaBgNVBAoTE1R3aXN0ZWQgTWF0cml4
+        IExhYnMxFjAUBgNVBAgTDU1hc3NhY2h1c2V0dHMxJzAlBgkqhkiG9w0BCQEWGG5v
+        Ym9keUB0d2lzdGVkbWF0cml4LmNvbTERMA8GA1UECxMIU2VjdXJpdHkwgZ8wDQYJ
+        KoZIhvcNAQEBBQADgY0AMIGJAoGBAMzH8CDF/U91y/bdbdbJKnLgnyvQ9Ig9ZNZp
+        8hpsu4huil60zF03+Lexg2l1FIfURScjBuaJMR6HiMYTMjhzLuByRZ17KW4wYkGi
+        KXstz03VIKy4Tjc+v4aXFI4XdRw10gGMGQlGGscXF/RSoN84VoDKBfOMWdXeConJ
+        VyC4w3iJAgMBAAEwDQYJKoZIhvcNAQEEBQADgYEAviMT4lBoxOgQy32LIgZ4lVCj
+        JNOiZYg8GMQ6y0ugp86X80UjOvkGtNf/R7YgED/giKRN/q/XJiLJDEhzknkocwmO
+        S+4b2XpiaZYxRyKWwL221O7CGmtWYyZl2+92YYmmCiNzWQPfP6BOMlfax0AGLHls
+        fXzCWdG0O/3Lk2SRM0I=
+-----END CERTIFICATE-----
+        """).original
+
+    def get_peer_certificate(self):
+        return sslverify.Certificate.loadPEM("""
+-----BEGIN CERTIFICATE-----
+        MIIC3jCCAkcCAjA6MA0GCSqGSIb3DQEBBAUAMIG2MQswCQYDVQQGEwJVUzEiMCAG
+        A1UEAxMZZXhhbXBsZS50d2lzdGVkbWF0cml4LmNvbTEPMA0GA1UEBxMGQm9zdG9u
+        MRwwGgYDVQQKExNUd2lzdGVkIE1hdHJpeCBMYWJzMRYwFAYDVQQIEw1NYXNzYWNo
+        dXNldHRzMSkwJwYJKoZIhvcNAQkBFhpzb21lYm9keUB0d2lzdGVkbWF0cml4LmNv
+        bTERMA8GA1UECxMIU2VjdXJpdHkwHhcNMDYwODE2MDEwMTU2WhcNMDcwODE2MDEw
+        MTU2WjCBtjELMAkGA1UEBhMCVVMxIjAgBgNVBAMTGWV4YW1wbGUudHdpc3RlZG1h
+        dHJpeC5jb20xDzANBgNVBAcTBkJvc3RvbjEcMBoGA1UEChMTVHdpc3RlZCBNYXRy
+        aXggTGFiczEWMBQGA1UECBMNTWFzc2FjaHVzZXR0czEpMCcGCSqGSIb3DQEJARYa
+        c29tZWJvZHlAdHdpc3RlZG1hdHJpeC5jb20xETAPBgNVBAsTCFNlY3VyaXR5MIGf
+        MA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCnm+WBlgFNbMlHehib9ePGGDXF+Nz4
+        CjGuUmVBaXCRCiVjg3kSDecwqfb0fqTksBZ+oQ1UBjMcSh7OcvFXJZnUesBikGWE
+        JE4V8Bjh+RmbJ1ZAlUPZ40bAkww0OpyIRAGMvKG+4yLFTO4WDxKmfDcrOb6ID8WJ
+        e1u+i3XGkIf/5QIDAQABMA0GCSqGSIb3DQEBBAUAA4GBAD4Oukm3YYkhedUepBEA
+        vvXIQhVDqL7mk6OqYdXmNj6R7ZMC8WWvGZxrzDI1bZuB+4aIxxd1FXC3UOHiR/xg
+        i9cDl1y8P/qRp4aEBNF6rI0D4AxTbfnHQx4ERDAOShJdYZs/2zifPJ6va6YvrEyr
+        yqDtGhklsWW3ZwBzEh5VEOUp
+-----END CERTIFICATE-----
+        """).original
+
+class Constructors(unittest.TestCase):
+    def test_peerFromNonSSLTransport(self):
+        """
+        Verify that peerFromTransport raises an exception if the transport
+        passed is not actually an SSL transport.
+        """
+        x = self.assertRaises(CertificateError,
+                              sslverify.Certificate.peerFromTransport,
+                              _NotSSLTransport())
+        self.failUnless(str(x).startswith("non-TLS"))
+
+    def test_peerFromBlankSSLTransport(self):
+        """
+        Verify that peerFromTransport raises an exception if the transport
+        passed is an SSL transport, but doesn't have a peer certificate.
+        """
+        x = self.assertRaises(CertificateError,
+                              sslverify.Certificate.peerFromTransport,
+                              _MaybeSSLTransport())
+        self.failUnless(str(x).startswith("TLS"))
+
+    def test_hostFromNonSSLTransport(self):
+        """
+        Verify that hostFromTransport raises an exception if the transport
+        passed is not actually an SSL transport.
+        """
+        x = self.assertRaises(CertificateError,
+                              sslverify.Certificate.hostFromTransport,
+                              _NotSSLTransport())
+        self.failUnless(str(x).startswith("non-TLS"))
+
+    def test_hostFromBlankSSLTransport(self):
+        """
+        Verify that hostFromTransport raises an exception if the transport
+        passed is an SSL transport, but doesn't have a host certificate.
+        """
+        x = self.assertRaises(CertificateError,
+                              sslverify.Certificate.hostFromTransport,
+                              _MaybeSSLTransport())
+        self.failUnless(str(x).startswith("TLS"))
+
+
+    def test_hostFromSSLTransport(self):
+        """
+        Verify that hostFromTransport successfully creates the correct certificate
+        if passed a valid SSL transport.
+        """
+        self.assertEqual(
+            sslverify.Certificate.hostFromTransport(
+                _ActualSSLTransport()).serialNumber(),
+            12345)
+
+    def test_peerFromSSLTransport(self):
+        """
+        Verify that peerFromTransport successfully creates the correct certificate
+        if passed a valid SSL transport.
+        """
+        self.assertEqual(
+            sslverify.Certificate.peerFromTransport(
+                _ActualSSLTransport()).serialNumber(),
+            12346)

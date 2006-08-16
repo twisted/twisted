@@ -6,7 +6,7 @@ from OpenSSL import SSL, crypto
 
 from twisted.python import reflect, util
 from twisted.internet.defer import Deferred
-from twisted.internet.error import VerifyError
+from twisted.internet.error import VerifyError, CertificateError
 
 # Private - shared between all ServerContextFactories, counts up to
 # provide a unique session id for each context
@@ -348,6 +348,24 @@ def problemsFromTransport(tpt):
     return tpt.getHandle().get_context().get_app_data().problems
 
 
+def _handleattrhelper(Class, transport, methodName):
+    """
+    (private) Helper for L{Certificate.peerFromTransport} and
+    L{Certificate.hostFromTransport} which checks for incompatible handle types
+    and null certificates and raises the appropriate exception or returns the
+    appropriate certificate object.
+    """
+    method = getattr(transport.getHandle(),
+                     "get_%s_certificate" % (methodName,), None)
+    if method is None:
+        raise CertificateError(
+            "non-TLS transport %r did not have %s certificate" % (transport, methodName))
+    cert = method()
+    if cert is None:
+        raise CertificateError(
+            "TLS transport %r did not have %s certificate" % (transport, methodName))
+    return Class(cert)
+
 
 class Certificate(CertBase):
     """
@@ -400,23 +418,30 @@ class Certificate(CertBase):
 
     def peerFromTransport(Class, transport):
         """
-        Get the certificate for the other end of the given transport.
+        Get the certificate for the remote end of the given transport.
 
         @type: L{ISystemHandle}
         @rtype: C{Class}
+
+        @raise: L{CertificateError}, if the given transport does not have a peer
+        certificate.
         """
-        return Class(transport.getHandle().get_peer_certificate())
+        return _handleattrhelper(Class, transport, 'peer')
     peerFromTransport = classmethod(peerFromTransport)
 
 
     def hostFromTransport(Class, transport):
         """
-        Get the certificate for this end of the given transport.
+        Get the certificate for the local end of the given transport.
 
-        @type: L{ISystemHandle}
+        @param transport: an L{ISystemHandle} provider; the transport we will 
+
         @rtype: C{Class}
+
+        @raise: L{CertificateError}, if the given transport does not have a host
+        certificate.
         """
-        return Class(transport.getHandle().get_host_certificate())
+        return _handleattrhelper(Class, transport, 'host')
     hostFromTransport = classmethod(hostFromTransport)
 
 

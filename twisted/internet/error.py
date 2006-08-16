@@ -139,6 +139,11 @@ class PeerVerifyError(VerifyError):
     """The peer rejected our verify error.
     """
 
+class CertificateError(Exception):
+    """
+    We did not find a certificate where we expected to find one.
+    """
+
 try:
     import errno
     errnoMapping = {
