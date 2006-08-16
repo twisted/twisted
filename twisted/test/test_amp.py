@@ -69,7 +69,10 @@ class Hello(amp.Command):
     arguments = [('hello', amp.String()),
                  ('optional', amp.Boolean(optional=True)),
                  ('print', amp.Unicode(optional=True)),
-                 ('from', TransportPeer(optional=True))]
+                 ('from', TransportPeer(optional=True)),
+                 ('mixedCase', amp.String(optional=True)),
+                 ('dash-arg', amp.String(optional=True)),
+                 ('underscore_arg', amp.String(optional=True))]
 
     response = [('hello', amp.String()),
                 ('print', amp.Unicode(optional=True))]
@@ -191,7 +194,8 @@ class SimpleSymmetricCommandProtocol(FactoryNotifier):
 
     greeted = False
 
-    def cmdHello(self, hello, From, optional=None, Print=None):
+    def cmdHello(self, hello, From, optional=None, Print=None,
+                 mixedCase=None, dash_arg=None, underscore_arg=None):
         assert From == self.transport.getPeer()
         if hello == THING_I_DONT_UNDERSTAND:
             raise ThingIDontUnderstandError()
@@ -352,10 +356,24 @@ SWITCH_CLIENT_DATA = 'Success!'
 SWITCH_SERVER_DATA = 'No, really.  Success.'
 
 class AMPTest(unittest.TestCase):
+
     def test_helloWorld(self):
         """
         Verify that a simple command can be sent and its response received with
         the simple low-level string-based API.
+        """
+        c, s, p = connectedServerAndClient()
+        L = []
+        HELLO = 'world'
+        c.sendHello(HELLO).addCallback(L.append)
+        p.flush()
+        self.assertEquals(L[0]['hello'], HELLO)
+
+
+    def test_wireFormatRoundTrip(self):
+        """
+        Verify that mixed-case, underscored and dashed arguments are mapped to
+        their python names properly.
         """
         c, s, p = connectedServerAndClient()
         L = []
@@ -658,7 +676,7 @@ class AMPTest(unittest.TestCase):
         Verify that if we pass an invalid argument list (omitting an argument), an
         exception will be raised.
         """
-        okayCommand = Hello(Hello="What?")
+        okayCommand = Hello(hello="What?")
         self.assertRaises(amp.InvalidSignature, Hello)
 
 
@@ -771,6 +789,63 @@ class AMPTest(unittest.TestCase):
         self.assertEquals(L.pop()['goodbye'], GOODBYE)
         c.sendHello(HELLO).addErrback(L.append)
         L.pop().trap(error.ConnectionDone)
+
+
+
+    def test_basicLiteralEmit(self):
+        """
+        Verify that the command dictionaries for a callRemoteN look correct
+        after being serialized and parsed.
+        """
+        c, s, p = connectedServerAndClient()
+        L = []
+        s.ampBoxReceived = L.append
+        c.callRemote(Hello, hello='hello test', mixedCase='mixed case arg test',
+                     dash_arg='x', underscore_arg='y')
+        p.flush()
+        self.assertEquals(len(L), 1)
+        for k, v in [('_command', Hello.commandName),
+                     ('hello', 'hello test'),
+                     ('mixedCase', 'mixed case arg test'),
+                     ('dash-arg', 'x'),
+                     ('underscore_arg', 'y')]:
+            self.assertEquals(L[-1].pop(k), v)
+        L[-1].pop('_ask')
+        self.assertEquals(L[-1], {})
+
+
+    def test_basicStructuredEmit(self):
+        """
+        Verify that a call similar to basicLiteralEmit's is handled properly with
+        high-level quoting and passing to Python methods, and that argument
+        names are correctly handled.
+        """
+        L = []
+        class StructuredHello(amp.AMP):
+            def h(self, *a, **k):
+                L.append((a, k))
+                return dict(hello='aaa')
+            Hello.responder(h)
+        c, s, p = connectedServerAndClient(ServerClass=StructuredHello)
+        c.callRemote(Hello, hello='hello test', mixedCase='mixed case arg test',
+                     dash_arg='x', underscore_arg='y').addCallback(L.append)
+        p.flush()
+        self.assertEquals(len(L), 2)
+        self.assertEquals(L[0],
+                          ((), dict(
+                    hello='hello test',
+                    mixedCase='mixed case arg test',
+                    dash_arg='x',
+                    underscore_arg='y',
+
+                    # XXX - should optional arguments just not be passed?
+                    # passing None seems a little odd, looking at the way it
+                    # turns out here... -glyph
+                    From=('file', 'file'),
+                    Print=None,
+                    optional=None,
+                    )))
+        self.assertEquals(L[1], dict(Print=None, hello='aaa'))
 
 class PretendRemoteCertificateAuthority:
     def checkIsPretendRemote(self):
@@ -951,14 +1026,11 @@ class TLSTest(unittest.TestCase):
         # reasonable.
         self.assertFailure(d, PeerVerifyError)
 
-def _loseAndPass(result, proto):
+def _loseAndPass(err, proto):
     # be specific, pass on the error to the client.
-    err.trap(error.ConnectionLost,
-             error.ConnectionDone)
-    print proto, result
+    err.trap(error.ConnectionLost, error.ConnectionDone)
     del proto.connectionLost
-    proto.connectionLost(result)
-    return result
+    proto.connectionLost(err)
 
 class LiveFireBase:
     """

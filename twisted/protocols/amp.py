@@ -490,7 +490,7 @@ class _DispatchMixin:
 
         # Fall back to simplistic command dispatching - this uses only strings,
         # not encoded/decoded values.
-        fName = self.baseDispatchPrefix + (normalizeKey(name).upper())
+        fName = self.baseDispatchPrefix + (name.upper())
         return getattr(self, fName, None)
 
 
@@ -521,17 +521,30 @@ PYTHON_KEYWORDS = [
     'if', 'or', 'while', 'continue', 'exec', 'import', 'pass', 'yield',
     'def', 'finally', 'in', 'print']
 
-def normalizeKey(key):
+def _wireNameToPythonIdentifier(key):
     """
-    Normalize an argument name from the wire for use with Python code.  If the
-    return value is going to be a python keyword it will be capitalized.
+    (Private) Normalize an argument name from the wire for use with Python
+    code.  If the return value is going to be a python keyword it will be
+    capitalized.  If it contains any dashes they will be replaced with
+    underscores.
+
+    The rationale behind this method is that AMP should be an inherently
+    multi-language protocol, so message keys may contain all manner of bizarre
+    bytes.  This is not a complete solution; there are still forms of arguments
+    that this implementation will be unable to parse.  However, Python
+    identifiers share a huge raft of properties with identifiers from many
+    other languages, so this is a 'good enough' effort for now.  We deal
+    explicitly with dashes because that is the most likely departure: Lisps
+    commonly use dashes to separate method names, so protocols initially
+    implemented in a lisp amp dialect may use dashes in argument or command
+    names.
 
     @param key: a str, looking something like 'foo-bar-baz' or 'from'
 
     @return: a str which is a valid python identifier, looking something like
     'foo_bar_baz' or 'From'.
     """
-    lkey = key.lower().replace('-', '_')
+    lkey = key.replace("-", "_")
     if lkey in PYTHON_KEYWORDS:
         return lkey.title()
     return lkey
@@ -802,7 +815,7 @@ class Argument:
         @param proto: an AMP instance.
         """
         st = self.retrieve(strings, name, proto)
-        nk = normalizeKey(name)
+        nk = _wireNameToPythonIdentifier(name)
         if self.optional and st is None:
             objects[nk] = None
         else:
@@ -829,7 +842,7 @@ class Argument:
         @param proto: the protocol we are converting for.
         @type proto: AMP
         """
-        obj = self.retrieve(objects, normalizeKey(name), proto)
+        obj = self.retrieve(objects, _wireNameToPythonIdentifier(name), proto)
         if self.optional and obj is None:
             # strings[name] = None
             pass
@@ -1048,7 +1061,7 @@ class Command:
             re = attrs['reverseErrors'] = {}
             er = attrs['allErrors'] = {}
             if 'commandName' not in attrs:
-                attrs['commandName'] = normalizeKey(name)
+                attrs['commandName'] = name
             for v, k in attrs.get('errors',{}).iteritems():
                 re[k] = v
                 er[v] = k
@@ -1080,11 +1093,12 @@ class Command:
         @raise InvalidSignature: if you forgot any required arguments.
         """
         self.structured = kw
-        givenArgs = [normalizeKey(k) for k in kw.keys()]
+        givenArgs = kw.keys()
         forgotten = []
         for name, arg in self.arguments:
-            if normalizeKey(name) not in givenArgs and not arg.optional:
-                forgotten.append(normalizeKey(name))
+            pythonName = _wireNameToPythonIdentifier(name)
+            if pythonName not in givenArgs and not arg.optional:
+                forgotten.append(pythonName)
         if forgotten:
             raise InvalidSignature("forgot %s for %s" % (
                     ', '.join(forgotten), self.commandName))
@@ -1766,7 +1780,7 @@ def _objectsToStrings(objects, arglist, strings, proto):
     """
     myObjects = {}
     for (k, v) in objects.items():
-        myObjects[normalizeKey(k)] = v
+        myObjects[k] = v
 
     for argname, argparser in arglist:
         argparser.toBox(argname, strings, myObjects, proto)
