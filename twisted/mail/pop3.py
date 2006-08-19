@@ -573,11 +573,9 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
                             # shouldn't be.  One error condition, one exception
                             # type.
                             warnings.warn(
-                                """
-                                twisted.mail.pop3.IMailbox.listMessages may not
-                                raise IndexError for out-of-bounds message numbers:
-                                raise ValueError instead.
-                                """,
+                                "twisted.mail.pop3.IMailbox.listMessages may not "
+                                "raise IndexError for out-of-bounds message numbers: "
+                                "raise ValueError instead.",
                                 PendingDeprecationWarning)
                         self.failResponse("Invalid message-number: %r" % (i,))
                     else:
@@ -610,11 +608,9 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
                 except IndexError:
                     # XXX TODO See above comment regarding IndexError.
                     warnings.warn(
-                        """
-                        twisted.mail.pop3.IMailbox.listMessages may not
-                        raise IndexError for out-of-bounds message numbers:
-                        raise ValueError instead.
-                        """,
+                        "twisted.mail.pop3.IMailbox.getUidl may not "
+                        "raise IndexError for out-of-bounds message numbers: "
+                        "raise ValueError instead.",
                         PendingDeprecationWarning)
                     self.failResponse("Bad message number argument")
                 except ValueError:
@@ -657,11 +653,9 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
                 if errcls is IndexError:
                     # XXX TODO See above comment regarding IndexError.
                     warnings.warn(
-                        """
-                        twisted.mail.pop3.IMailbox.listMessages may not
-                        raise IndexError for out-of-bounds message numbers:
-                        raise ValueError instead.
-                        """,
+                        "twisted.mail.pop3.IMailbox.listMessages may not "
+                        "raise IndexError for out-of-bounds message numbers: "
+                        "raise ValueError instead.",
                         PendingDeprecationWarning)
                 self.failResponse("Bad message number argument")
             else:

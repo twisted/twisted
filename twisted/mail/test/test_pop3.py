@@ -268,7 +268,9 @@ class DummyPOP3(pop3.POP3):
     magic = '<moshez>'
 
     def authenticateUserAPOP(self, user, password):
-        return pop3.IMailbox, DummyMailbox(), lambda: None
+        return pop3.IMailbox, DummyMailbox(ValueError), lambda: None
+
+
 
 class DummyMailbox(pop3.Mailbox):
 
@@ -280,12 +282,15 @@ To: moshe
 How are you, friend?
 ''']
 
-    def __init__(self):
+    def __init__(self, exceptionType):
         self.messages = DummyMailbox.messages[:]
+        self.exceptionType = exceptionType
 
     def listMessages(self, i=None):
         if i is None:
             return map(len, self.messages)
+        if i >= len(self.messages):
+            raise self.exceptionType()
         return len(self.messages[i])
 
     def getMessage(self, i):
@@ -293,7 +298,7 @@ How are you, friend?
 
     def getUidl(self, i):
         if i >= len(self.messages):
-            raise ValueError()
+            raise self.exceptionType()
         return str(i)
 
     def deleteMessage(self, i):
@@ -493,7 +498,7 @@ class GlobalCapabilitiesTestCase(unittest.TestCase):
 class TestRealm:
     def requestAvatar(self, avatarId, mind, *interfaces):
         if avatarId == 'testuser':
-            return pop3.IMailbox, DummyMailbox(), lambda: None
+            return pop3.IMailbox, DummyMailbox(ValueError), lambda: None
         assert False
 
 
@@ -527,7 +532,7 @@ class SASLTestCase(unittest.TestCase):
 
 
 
-class CommandTestCase(unittest.TestCase):
+class CommandMixin:
     """
     Tests for all the commands a POP3 server is allowed to receive.
     """
@@ -546,7 +551,7 @@ More message text for you.
         a transport that buffers output to a StringIO.
         """
         p = pop3.POP3()
-        p.mbox = DummyMailbox()
+        p.mbox = self.mailboxType(self.exceptionType)
         p.schedule = list
         self.pop3Server = p
 
@@ -876,6 +881,63 @@ More message text for you.
 
 
 
+_listMessageDeprecation = (
+    "twisted.mail.pop3.IMailbox.listMessages may not "
+    "raise IndexError for out-of-bounds message numbers: "
+    "raise ValueError instead.")
+_listMessageSuppression = util.suppress(
+    message=_listMessageSuppression,
+    category=PendingDeprecationWarning)
+
+_getUidlDeprecation = (
+    "twisted.mail.pop3.IMailbox.getUidl may not "
+    "raise IndexError for out-of-bounds message numbers: "
+    "raise ValueError instead.")
+_getUidlSuppression = util.suppress(
+    message=_getUidlSuppression,
+    category=PendingDeprecationWarning)
+
+class IndexErrorCommandTestCase(CommandMixin, unittest.TestCase):
+    """
+    Run all of the command tests against a mailbox which raises IndexError
+    when an out of bounds request is made.  This behavior will be deprecated
+    shortly and then removed.
+    """
+    exceptionType = IndexError
+    mailboxType = DummyMailbox
+
+    def testLISTWithBadArgument(self):
+        return CommandMixin.testLISTWithBadArgument(self)
+    testLISTWithBadArgument.suppress = [_listMessageSuppression]
+
+
+    def testUIDLWithBadArgument(self):
+        return CommandMixin.testUIDLWithBadArgument(self)
+    testUIDLWithBadArgument.suppress = [_getUidlSuppression]
+
+
+    def testTOPWithBadArgument(self):
+        return CommandMixin.testTOPWithBadArgument(self)
+    testTOPWithBadArgument.suppress = [_listMessageSuppression]
+
+
+    def testRETRWithBadArgument(self):
+        return CommandMixin.testRETRWithBadArgument(self)
+    testRETRWithBadArgument.suppress = [_listMessageSuppression]
+
+
+
+class ValueErrorCommandTestCase(CommandMixin, unittest.TestCase):
+    """
+    Run all of the command tests against a mailbox which raises ValueError
+    when an out of bounds request is made.  This is the correct behavior and
+    after support for mailboxes which raise IndexError is removed, this will
+    become just C{CommandTestCase}.
+    """
+    exceptionType = ValueError
+    mailboxType = DummyMailbox
+
+
 
 class SyncDeferredMailbox(DummyMailbox):
     """
@@ -887,14 +949,21 @@ class SyncDeferredMailbox(DummyMailbox):
 
 
 
-class SyncDeferredCommandTestCase(CommandTestCase):
+class IndexErrorSyncDeferredCommandTestCase(IndexErrorCommandTestCase):
     """
-    Run all of the L{CommandTestCase} tests with a synchronous-Deferred
-    returning IMailbox implementation.
+    Run all of the L{IndexErrorCommandTestCase} tests with a
+    synchronous-Deferred returning IMailbox implementation.
     """
-    def setUp(self):
-        CommandTestCase.setUp(self)
-        self.pop3Server.mbox = SyncDeferredMailbox()
+    mailboxType = SyncDeferredMailbox
+
+
+
+class ValueErrorSyncDeferredCommandTestCase(ValueErrorCommandTestCase):
+    """
+    Run all of the L{ValueErrorCommandTestCase} tests with a
+    synchronous-Deferred returning IMailbox implementation.
+    """
+    mailboxType = SyncDeferredMailbox
 
 
 
@@ -903,9 +972,9 @@ class AsyncDeferredMailbox(DummyMailbox):
     Mailbox which has a listMessages implementation which returns a Deferred
     which has not yet fired.
     """
-    def __init__(self):
+    def __init__(self, *a, **kw):
         self.waiting = []
-        DummyMailbox.__init__(self)
+        DummyMailbox.__init__(self, *a, **kw)
 
 
     def listMessages(self, n=None):
@@ -916,15 +985,12 @@ class AsyncDeferredMailbox(DummyMailbox):
 
 
 
-class AsyncDeferredCommandTestCase(CommandTestCase):
+class IndexErrorAsyncDeferredCommandTestCase(IndexErrorCommandTestCase):
     """
-    Run all of the L{CommandTestCase} tests with an asynchronous-Deferred
+    Run all of the L{IndexErrorCommandTestCase} tests with an asynchronous-Deferred
     returning IMailbox implementation.
     """
-    def setUp(self):
-        CommandTestCase.setUp(self)
-        self.pop3Server.mbox = AsyncDeferredMailbox()
-
+    mailboxType = AsyncDeferredMailbox
 
     def _flush(self):
         """
@@ -933,4 +999,22 @@ class AsyncDeferredCommandTestCase(CommandTestCase):
         while self.pop3Server.mbox.waiting:
             d, a = self.pop3Server.mbox.waiting.pop()
             d.callback(a)
-        CommandTestCase._flush(self)
+        IndexErrorCommandTestCase._flush(self)
+
+
+
+class ValueErrorAsyncDeferredCommandTestCase(ValueErrorCommandTestCase):
+    """
+    Run all of the L{IndexErrorCommandTestCase} tests with an asynchronous-Deferred
+    returning IMailbox implementation.
+    """
+    mailboxType = AsyncDeferredMailbox
+
+    def _flush(self):
+        """
+        Fire whatever Deferreds we've built up in our mailbox.
+        """
+        while self.pop3Server.mbox.waiting:
+            d, a = self.pop3Server.mbox.waiting.pop()
+            d.callback(a)
+        ValueErrorCommandTestCase._flush(self)
