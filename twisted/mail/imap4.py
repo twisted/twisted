@@ -1727,7 +1727,13 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if _w is None:
             _w = self.transport.write
         for p in part.part:
-            msg = msg.getSubPart(p)
+            if msg.isMultipart():
+                msg = msg.getSubPart(p)
+            elif p > 0:
+                # Non-multipart messages have an implicit first part but no
+                # other parts - reject any request for any other part.
+                raise TypeError("Requested subpart of non-multipart message")
+
         if part.header:
             hdrs = msg.getHeaders(part.header.negate, *part.header.fields)
             hdrs = _formatHeaders(hdrs)

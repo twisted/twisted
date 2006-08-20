@@ -2228,7 +2228,44 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
         d = loopback.loopbackTCP(self.server, self.client, noisy=False)
         d.addCallback(lambda ign: self.assertEquals(self.result, self.expected))
         return d
- 
+
+
+    def test_fetchBodyPartOfNonMultipart(self):
+        """
+        Single-part messages have an implicit first part which clients
+        should be able to retrieve explicitly.  Test that a client
+        requesting part 1 of a text/plain message receives the body of the
+        text/plain part.
+        """
+        self.function = self.client.fetchBodyParts
+        self.messages = '1'
+        parts = [1]
+        outerBody = 'DA body'
+        headers = util.OrderedDict()
+        headers['from'] = 'sender@host'
+        headers['to'] = 'recipient@domain'
+        headers['subject'] = 'booga booga boo'
+        headers['content-type'] = 'text/plain'
+        self.msgObjs = [FakeyMessage(
+            headers, (), None, outerBody, 123, None)]
+
+        self.expected = {
+            0: {'1': outerBody},
+        }
+
+        def result(R):
+            self.result = R
+
+        self.connected.addCallback(lambda _: self.function(self.messages, parts))
+        self.connected.addCallback(result)
+        self.connected.addCallback(self._cbStopClient)
+        self.connected.addErrback(self._ebGeneral)
+
+        d = loopback.loopbackTCP(self.server, self.client, noisy=False)
+        d.addCallback(lambda ign: self.assertEquals(self.result, self.expected))
+        return d
+
+
     def testFetchSize(self, uid=0):
         self.function = self.client.fetchSize
         self.messages = '1:100,2:*'
