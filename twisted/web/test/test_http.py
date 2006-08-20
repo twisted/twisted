@@ -193,9 +193,15 @@ class HTTPLoopbackTestCase(unittest.TestCase):
         client.handleHeader = self._handleHeader
         client.handleEndHeaders = self._handleEndHeaders
         client.handleStatus = self._handleStatus
-        loopback.loopback(server, client)
+        d = loopback.loopbackAsync(server, client)
+        d.addCallback(self._cbTestLoopback)
+        return d
+
+    def _cbTestLoopback(self, ignored):
         if not (self.gotStatus and self.gotResponse and self.gotEndHeaders):
-            raise RuntimeError, "didn't got all callbacks %s" % [self.gotStatus, self.gotResponse, self.gotEndHeaders]
+            raise RuntimeError(
+                "didn't got all callbacks %s"
+                % [self.gotStatus, self.gotResponse, self.gotEndHeaders])
         del self.gotEndHeaders
         del self.gotResponse
         del self.gotStatus

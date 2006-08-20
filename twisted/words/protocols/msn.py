@@ -2254,9 +2254,11 @@ class FileSend(LineReceiver):
         self.connected = 1
 
     def connectionLost(self, reason):
-        if self._pendingSend:
+        if self._pendingSend.active():
             self._pendingSend.cancel()
             self._pendingSend = None
+        if self.bytesSent == self.fileSize:
+            self.completed = 1
         self.connected = 0
         self.file.close()
 
@@ -2318,8 +2320,8 @@ class FileSend(LineReceiver):
         if data:
             dataSize = len(data)
             header = self.makeHeader(dataSize)
-            self.transport.write(header + data)
             self.bytesSent += dataSize
+            self.transport.write(header + data)
             self._pendingSend = reactor.callLater(0, self.sendPart)
         else:
             self._pendingSend = None

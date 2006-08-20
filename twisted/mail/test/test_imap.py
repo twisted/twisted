@@ -886,7 +886,7 @@ class IMAP4HelperMixin:
         raise failure.value
 
     def loopback(self):
-        loopback.loopback(self.server, self.client)
+        return loopback.loopbackAsync(self.server, self.client)
 
 class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
     def testCapability(self):
@@ -896,10 +896,10 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
                 caps.update(c)
                 self.server.transport.loseConnection()
             return self.client.getCapabilities().addCallback(gotCaps)
-        self.connected.addCallback(strip(getCaps)).addErrback(self._ebGeneral)
-        self.loopback()
-
-        self.assertEquals({'IMAP4rev1': None, 'NAMESPACE': None, 'IDLE': None}, caps)
+        d1 = self.connected.addCallback(strip(getCaps)).addErrback(self._ebGeneral)
+        d = defer.gatherResults([self.loopback(), d1])
+        expected = {'IMAP4rev1': None, 'NAMESPACE': None, 'IDLE': None}
+        return d.addCallback(lambda _: self.assertEquals(expected, caps))
 
     def testCapabilityWithAuth(self):
         caps = {}
@@ -909,11 +909,13 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
                 caps.update(c)
                 self.server.transport.loseConnection()
             return self.client.getCapabilities().addCallback(gotCaps)
-        self.connected.addCallback(strip(getCaps)).addErrback(self._ebGeneral)
-        self.loopback()
+        d1 = self.connected.addCallback(strip(getCaps)).addErrback(self._ebGeneral)
+        d = defer.gatherResults([self.loopback(), d1])
 
-        expCap = {'IMAP4rev1': None, 'NAMESPACE': None, 'IDLE': None, 'AUTH': ['CRAM-MD5']}
-        self.assertEquals(expCap, caps)
+        expCap = {'IMAP4rev1': None, 'NAMESPACE': None,
+                  'IDLE': None, 'AUTH': ['CRAM-MD5']}
+
+        return d.addCallback(lambda _: self.assertEquals(expCap, caps))
 
     def testLogout(self):
         self.loggedOut = 0
@@ -922,9 +924,8 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
                 self.loggedOut = 1
             self.client.logout().addCallback(strip(setLoggedOut))
         self.connected.addCallback(strip(logout)).addErrback(self._ebGeneral)
-        self.loopback()
-
-        self.assertEquals(self.loggedOut, 1)
+        d = self.loopback()
+        return d.addCallback(lambda _: self.assertEquals(self.loggedOut, 1))
 
     def testNoop(self):
         self.responses = None
@@ -934,17 +935,18 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
                 self.server.transport.loseConnection()
             self.client.noop().addCallback(setResponses)
         self.connected.addCallback(strip(noop)).addErrback(self._ebGeneral)
-        self.loopback()
-
-        self.assertEquals(self.responses, [])
+        d = self.loopback()
+        return d.addCallback(lambda _: self.assertEquals(self.responses, []))
 
     def testLogin(self):
         def login():
             d = self.client.login('testuser', 'password-test')
             d.addCallback(self._cbStopClient)
-        self.connected.addCallback(strip(login)).addErrback(self._ebGeneral)
-        self.loopback()
+        d1 = self.connected.addCallback(strip(login)).addErrback(self._ebGeneral)
+        d = defer.gatherResults([d1, self.loopback()])
+        return d.addCallback(self._cbTestLogin)
 
+    def _cbTestLogin(self, ignored):
         self.assertEquals(self.server.account, SimpleServer.theAccount)
         self.assertEquals(self.server.state, 'auth')
 
@@ -953,9 +955,12 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
             d = self.client.login('testuser', 'wrong-password')
             d.addBoth(self._cbStopClient)
 
-        self.connected.addCallback(strip(login)).addErrback(self._ebGeneral)
-        self.loopback()
+        d1 = self.connected.addCallback(strip(login)).addErrback(self._ebGeneral)
+        d2 = self.loopback()
+        d = defer.gatherResults([d1, d2])
+        return d.addCallback(self._cbTestFailedLogin)
 
+    def _cbTestFailedLogin(self, ignored):
         self.assertEquals(self.server.account, None)
         self.assertEquals(self.server.state, 'unauth')
 
@@ -968,9 +973,11 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
             d = self.client.login('{test}user', '{test}password')
             d.addBoth(self._cbStopClient)
 
-        self.connected.addCallback(strip(login)).addErrback(self._ebGeneral)
-        self.loopback()
+        d1 = self.connected.addCallback(strip(login)).addErrback(self._ebGeneral)
+        d = defer.gatherResults([self.loopback(), d1])
+        return d.addCallback(self._cbTestLoginRequiringQuoting)
 
+    def _cbTestLoginRequiringQuoting(self, ignored):
         self.assertEquals(self.server.account, SimpleServer.theAccount)
         self.assertEquals(self.server.state, 'auth')
 
@@ -985,12 +992,14 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
                 self._cbStopClient(None)
             return self.client.namespace().addCallback(gotNamespace)
 
-        d = self.connected.addCallback(strip(login))
-        d.addCallback(strip(namespace))
-        d.addErrback(self._ebGeneral)
-        self.loopback()
-
-        self.assertEquals(self.namespaceArgs, [[['', '/']], [], []])
+        d1 = self.connected.addCallback(strip(login))
+        d1.addCallback(strip(namespace))
+        d1.addErrback(self._ebGeneral)
+        d2 = self.loopback()
+        d = defer.gatherResults([d1, d2])
+        d.addCallback(lambda _: self.assertEquals(self.namespaceArgs,
+                                                  [[['', '/']], [], []]))
+        return d
 
     def testSelect(self):
         SimpleServer.theAccount.addMailbox('test-mailbox')
@@ -1005,11 +1014,13 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
             d.addCallback(selected)
             return d
 
-        d = self.connected.addCallback(strip(login))
-        d.addCallback(strip(select))
-        d.addErrback(self._ebGeneral)
-        self.loopback()
+        d1 = self.connected.addCallback(strip(login))
+        d1.addCallback(strip(select))
+        d1.addErrback(self._ebGeneral)
+        d2 = self.loopback()
+        return defer.gatherResults([d1, d2]).addCallback(self._cbTestSelect)
 
+    def _cbTestSelect(self, ignored):
         mbox = SimpleServer.theAccount.mailboxes['TEST-MAILBOX']
         self.assertEquals(self.server.mbox, mbox)
         self.assertEquals(self.selectedArgs, {
@@ -1031,11 +1042,14 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
             d.addCallback(examined)
             return d
 
-        d = self.connected.addCallback(strip(login))
-        d.addCallback(strip(examine))
-        d.addErrback(self._ebGeneral)
-        self.loopback()
+        d1 = self.connected.addCallback(strip(login))
+        d1.addCallback(strip(examine))
+        d1.addErrback(self._ebGeneral)
+        d2 = self.loopback()
+        d = defer.gatherResults([d1, d2])
+        return d.addCallback(self._cbTestExamine)
 
+    def _cbTestExamine(self, ignored):
         mbox = SimpleServer.theAccount.mailboxes['TEST-MAILBOX']
         self.assertEquals(self.server.mbox, mbox)
         self.assertEquals(self.examinedArgs, {
@@ -1060,9 +1074,12 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
             d.addCallbacks(self._cbStopClient, self._ebGeneral)
 
         self.result = []
-        d = self.connected.addCallback(strip(login)).addCallback(strip(create))
-        self.loopback()
+        d1 = self.connected.addCallback(strip(login)).addCallback(strip(create))
+        d2 = self.loopback()
+        d = defer.gatherResults([d1, d2])
+        return d.addCallback(self._cbTestCreate, succeed, fail)
 
+    def _cbTestCreate(self, ignored, succeed, fail):
         self.assertEquals(self.result, [1] * len(succeed) + [0] * len(fail))
         mbox = SimpleServer.theAccount.mailboxes.keys()
         answers = ['inbox', 'testbox', 'test/box', 'test', 'test/box/box']
@@ -1077,12 +1094,14 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
             return self.client.login('testuser', 'password-test')
         def delete():
             return self.client.delete('delete/me')
-        d = self.connected.addCallback(strip(login))
-        d.addCallbacks(strip(delete), self._ebGeneral)
-        d.addCallbacks(self._cbStopClient, self._ebGeneral)
-        self.loopback()
-
-        self.assertEquals(SimpleServer.theAccount.mailboxes.keys(), [])
+        d1 = self.connected.addCallback(strip(login))
+        d1.addCallbacks(strip(delete), self._ebGeneral)
+        d1.addCallbacks(self._cbStopClient, self._ebGeneral)
+        d2 = self.loopback()
+        d = defer.gatherResults([d1, d2])
+        d.addCallback(lambda _:
+                      self.assertEquals(SimpleServer.theAccount.mailboxes.keys(), []))
+        return d
 
     def testIllegalInboxDelete(self):
         self.stashed = None
@@ -1093,13 +1112,15 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         def stash(result):
             self.stashed = result
 
-        d = self.connected.addCallback(strip(login))
-        d.addCallbacks(strip(delete), self._ebGeneral)
-        d.addBoth(stash)
-        d.addCallbacks(self._cbStopClient, self._ebGeneral)
-        self.loopback()
-
-        self.failUnless(isinstance(self.stashed, failure.Failure))
+        d1 = self.connected.addCallback(strip(login))
+        d1.addCallbacks(strip(delete), self._ebGeneral)
+        d1.addBoth(stash)
+        d1.addCallbacks(self._cbStopClient, self._ebGeneral)
+        d2 = self.loopback()
+        d = defer.gatherResults([d1, d2])
+        d.addCallback(lambda _: self.failUnless(isinstance(self.stashed,
+                                                           failure.Failure)))
+        return d
 
 
     def testNonExistentDelete(self):
@@ -1111,12 +1132,15 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
             self.failure = failure
 
         self.failure = None
-        d = self.connected.addCallback(strip(login))
-        d.addCallback(strip(delete)).addErrback(deleteFailed)
-        d.addCallbacks(self._cbStopClient, self._ebGeneral)
-        self.loopback()
-
-        self.assertEquals(str(self.failure.value), 'No such mailbox')
+        d1 = self.connected.addCallback(strip(login))
+        d1.addCallback(strip(delete)).addErrback(deleteFailed)
+        d1.addCallbacks(self._cbStopClient, self._ebGeneral)
+        d2 = self.loopback()
+        d = defer.gatherResults([d1, d2])
+        d.addCallback(lambda _: self.assertEquals(str(self.failure.value),
+                                                  'No such mailbox'))
+        return d
+    
 
     def testIllegalDelete(self):
         m = SimpleMailbox()
@@ -1132,12 +1156,15 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
             self.failure = failure
 
         self.failure = None
-        d = self.connected.addCallback(strip(login))
-        d.addCallback(strip(delete)).addErrback(deleteFailed)
-        d.addCallbacks(self._cbStopClient, self._ebGeneral)
-        self.loopback()
-
-        self.assertEquals(str(self.failure.value), "Hierarchically inferior mailboxes exist and \\Noselect is set")
+        d1 = self.connected.addCallback(strip(login))
+        d1.addCallback(strip(delete)).addErrback(deleteFailed)
+        d1.addCallbacks(self._cbStopClient, self._ebGeneral)
+        d2 = self.loopback()
+        d = defer.gatherResults([d1, d2])
+        expected = "Hierarchically inferior mailboxes exist and \\Noselect is set"
+        d.addCallback(lambda _:
+                      self.assertEquals(str(self.failure.value), expected))
+        return d
 
     def testRename(self):
         SimpleServer.theAccount.addMailbox('oldmbox')
@@ -1146,12 +1173,15 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         def rename():
             return self.client.rename('oldmbox', 'newname')
 
-        d = self.connected.addCallback(strip(login))
-        d.addCallbacks(strip(rename), self._ebGeneral)
-        d.addCallbacks(self._cbStopClient, self._ebGeneral)
-        self.loopback()
-
-        self.assertEquals(SimpleServer.theAccount.mailboxes.keys(), ['NEWNAME'])
+        d1 = self.connected.addCallback(strip(login))
+        d1.addCallbacks(strip(rename), self._ebGeneral)
+        d1.addCallbacks(self._cbStopClient, self._ebGeneral)
+        d2 = self.loopback()
+        d = defer.gatherResults([d1, d2])
+        d.addCallback(lambda _:
+                      self.assertEquals(SimpleServer.theAccount.mailboxes.keys(),
+                                        ['NEWNAME']))
+        return d
 
     def testIllegalInboxRename(self):
         self.stashed = None
@@ -1162,13 +1192,15 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         def stash(stuff):
             self.stashed = stuff
 
-        d = self.connected.addCallback(strip(login))
-        d.addCallbacks(strip(rename), self._ebGeneral)
-        d.addBoth(stash)
-        d.addCallbacks(self._cbStopClient, self._ebGeneral)
-        self.loopback()
-
-        self.failUnless(isinstance(self.stashed, failure.Failure))
+        d1 = self.connected.addCallback(strip(login))
+        d1.addCallbacks(strip(rename), self._ebGeneral)
+        d1.addBoth(stash)
+        d1.addCallbacks(self._cbStopClient, self._ebGeneral)
+        d2 = self.loopback()
+        d = defer.gatherResults([d1, d2])
+        d.addCallback(lambda _:
+                      self.failUnless(isinstance(self.stashed, failure.Failure)))
+        return d
 
     def testHierarchicalRename(self):
         SimpleServer.theAccount.create('oldmbox/m1')
@@ -1178,11 +1210,14 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         def rename():
             return self.client.rename('oldmbox', 'newname')
 
-        d = self.connected.addCallback(strip(login))
-        d.addCallbacks(strip(rename), self._ebGeneral)
-        d.addCallbacks(self._cbStopClient, self._ebGeneral)
-        self.loopback()
+        d1 = self.connected.addCallback(strip(login))
+        d1.addCallbacks(strip(rename), self._ebGeneral)
+        d1.addCallbacks(self._cbStopClient, self._ebGeneral)
+        d2 = self.loopback()
+        d = defer.gatherResults([d1, d2])
+        return d.addCallback(self._cbTestHierarchicalRename)
 
+    def _cbTestHierarchicalRename(self, ignored):
         mboxes = SimpleServer.theAccount.mailboxes.keys()
         expected = ['newname', 'newname/m1', 'newname/m2']
         mboxes.sort()
@@ -1194,12 +1229,15 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         def subscribe():
             return self.client.subscribe('this/mbox')
 
-        d = self.connected.addCallback(strip(login))
-        d.addCallbacks(strip(subscribe), self._ebGeneral)
-        d.addCallbacks(self._cbStopClient, self._ebGeneral)
-        self.loopback()
-
-        self.assertEquals(SimpleServer.theAccount.subscriptions, ['THIS/MBOX'])
+        d1 = self.connected.addCallback(strip(login))
+        d1.addCallbacks(strip(subscribe), self._ebGeneral)
+        d1.addCallbacks(self._cbStopClient, self._ebGeneral)
+        d2 = self.loopback()
+        d = defer.gatherResults([d1, d2])
+        d.addCallback(lambda _:
+                      self.assertEquals(SimpleServer.theAccount.subscriptions,
+                                        ['THIS/MBOX']))
+        return d
 
     def testUnsubscribe(self):
         SimpleServer.theAccount.subscriptions = ['THIS/MBOX', 'THAT/MBOX']
@@ -1208,12 +1246,15 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         def unsubscribe():
             return self.client.unsubscribe('this/mbox')
 
-        d = self.connected.addCallback(strip(login))
-        d.addCallbacks(strip(unsubscribe), self._ebGeneral)
-        d.addCallbacks(self._cbStopClient, self._ebGeneral)
-        self.loopback()
-
-        self.assertEquals(SimpleServer.theAccount.subscriptions, ['THAT/MBOX'])
+        d1 = self.connected.addCallback(strip(login))
+        d1.addCallbacks(strip(unsubscribe), self._ebGeneral)
+        d1.addCallbacks(self._cbStopClient, self._ebGeneral)
+        d2 = self.loopback()
+        d = defer.gatherResults([d1, d2])
+        d.addCallback(lambda _:
+                      self.assertEquals(SimpleServer.theAccount.subscriptions,
+                                        ['THAT/MBOX']))
+        return d
 
     def _listSetup(self, f):
         SimpleServer.theAccount.addMailbox('root/subthing')
@@ -1226,32 +1267,34 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
             self.listed = answers
 
         self.listed = None
-        d = self.connected.addCallback(strip(login))
-        d.addCallbacks(strip(f), self._ebGeneral)
-        d.addCallbacks(listed, self._ebGeneral)
-        d.addCallbacks(self._cbStopClient, self._ebGeneral)
-        self.loopback()
-
-        return self.listed
+        d1 = self.connected.addCallback(strip(login))
+        d1.addCallbacks(strip(f), self._ebGeneral)
+        d1.addCallbacks(listed, self._ebGeneral)
+        d1.addCallbacks(self._cbStopClient, self._ebGeneral)
+        d2 = self.loopback()
+        return defer.gatherResults([d1, d2]).addCallback(lambda _: self.listed)
 
     def testList(self):
         def list():
             return self.client.list('root', '%')
-        listed = self._listSetup(list)
-        self.assertEquals(
+        d = self._listSetup(list)
+        d.addCallback(lambda listed: self.assertEquals(
             sortNest(listed),
             sortNest([
                 (SimpleMailbox.flags, "/", "ROOT/SUBTHING"),
                 (SimpleMailbox.flags, "/", "ROOT/ANOTHER-THING")
             ])
-        )
+        ))
+        return d
 
     def testLSub(self):
         SimpleServer.theAccount.subscribe('ROOT/SUBTHING')
         def lsub():
             return self.client.lsub('root', '%')
-        listed = self._listSetup(lsub)
-        self.assertEquals(listed, [(SimpleMailbox.flags, "/", "ROOT/SUBTHING")])
+        d = self._listSetup(lsub)
+        d.addCallback(self.assertEquals,
+                      [(SimpleMailbox.flags, "/", "ROOT/SUBTHING")])
+        return d
 
     def testStatus(self):
         SimpleServer.theAccount.addMailbox('root/subthing')
@@ -1263,16 +1306,17 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
             self.statused = result
 
         self.statused = None
-        d = self.connected.addCallback(strip(login))
-        d.addCallbacks(strip(status), self._ebGeneral)
-        d.addCallbacks(statused, self._ebGeneral)
-        d.addCallbacks(self._cbStopClient, self._ebGeneral)
-        self.loopback()
-
-        self.assertEquals(
+        d1 = self.connected.addCallback(strip(login))
+        d1.addCallbacks(strip(status), self._ebGeneral)
+        d1.addCallbacks(statused, self._ebGeneral)
+        d1.addCallbacks(self._cbStopClient, self._ebGeneral)
+        d2 = self.loopback()
+        d = defer.gatherResults([d1, d2])
+        d.addCallback(lambda _: self.assertEquals(
             self.statused,
             {'MESSAGES': 9, 'UIDNEXT': '10', 'UNSEEN': 4}
-        )
+        ))
+        return d
 
     def testFailedStatus(self):
         def login():
@@ -1285,12 +1329,14 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
             self.failure = failure
 
         self.statused = self.failure = None
-        d = self.connected.addCallback(strip(login))
-        d.addCallbacks(strip(status), self._ebGeneral)
-        d.addCallbacks(statused, failed)
-        d.addCallbacks(self._cbStopClient, self._ebGeneral)
-        self.loopback()
+        d1 = self.connected.addCallback(strip(login))
+        d1.addCallbacks(strip(status), self._ebGeneral)
+        d1.addCallbacks(statused, failed)
+        d1.addCallbacks(self._cbStopClient, self._ebGeneral)
+        d2 = self.loopback()
+        return defer.gatherResults([d1, d2]).addCallback(self._cbTestFailedStatus)
 
+    def _cbTestFailedStatus(self, ignored):
         self.assertEquals(
             self.statused, None
         )
@@ -1313,11 +1359,14 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
                 'Tue, 17 Jun 2003 11:22:16 -0600 (MDT)',
             )
 
-        d = self.connected.addCallback(strip(login))
-        d.addCallbacks(strip(append), self._ebGeneral)
-        d.addCallbacks(self._cbStopClient, self._ebGeneral)
-        self.loopback()
+        d1 = self.connected.addCallback(strip(login))
+        d1.addCallbacks(strip(append), self._ebGeneral)
+        d1.addCallbacks(self._cbStopClient, self._ebGeneral)
+        d2 = self.loopback()
+        d = defer.gatherResults([d1, d2])
+        return d.addCallback(self._cbTestFullAppend, infile)
 
+    def _cbTestFullAppend(self, ignored, infile):
         mb = SimpleServer.theAccount.mailboxes['ROOT/SUBTHING']
         self.assertEquals(1, len(mb.messages))
         self.assertEquals(
@@ -1341,12 +1390,15 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
                     (), self.client._IMAP4Client__cbContinueAppend, message
                 )
             )
-        d = self.connected.addCallback(strip(login))
-        d.addCallbacks(strip(append), self._ebGeneral)
-        d.addCallbacks(self._cbStopClient, self._ebGeneral)
-        d.setTimeout(5)
-        self.loopback()
+        d1 = self.connected.addCallback(strip(login))
+        d1.addCallbacks(strip(append), self._ebGeneral)
+        d1.addCallbacks(self._cbStopClient, self._ebGeneral)
+        d1.setTimeout(5)
+        d2 = self.loopback()
+        d = defer.gatherResults([d1, d2])
+        return d.addCallback(self._cbTestPartialAppend, infile)
 
+    def _cbTestPartialAppend(self, ignored, infile):
         mb = SimpleServer.theAccount.mailboxes['PARTIAL/SUBTHING']
         self.assertEquals(1, len(mb.messages))
         self.assertEquals(
@@ -1368,7 +1420,7 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         d.addCallbacks(strip(select), self._ebGeneral)
         d.addCallbacks(strip(check), self._ebGeneral)
         d.addCallbacks(self._cbStopClient, self._ebGeneral)
-        self.loopback()
+        return self.loopback()
 
         # Okay, that was fun
 
@@ -1391,8 +1443,10 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         d.addCallbacks(strip(select), self._ebGeneral)
         d.addCallbacks(strip(close), self._ebGeneral)
         d.addCallbacks(self._cbStopClient, self._ebGeneral)
-        self.loopback()
+        d2 = self.loopback()
+        return defer.gatherResults([d, d2]).addCallback(self._cbTestClose, m)
 
+    def _cbTestClose(self, ignored, m):
         self.assertEquals(len(m.messages), 1)
         self.assertEquals(m.messages[0], ('Message 2', ('AnotherFlag',), None, 1))
         self.failUnless(m.closed)
@@ -1416,13 +1470,16 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
             self.results = results
 
         self.results = None
-        d = self.connected.addCallback(strip(login))
-        d.addCallbacks(strip(select), self._ebGeneral)
-        d.addCallbacks(strip(expunge), self._ebGeneral)
-        d.addCallbacks(expunged, self._ebGeneral)
-        d.addCallbacks(self._cbStopClient, self._ebGeneral)
-        self.loopback()
+        d1 = self.connected.addCallback(strip(login))
+        d1.addCallbacks(strip(select), self._ebGeneral)
+        d1.addCallbacks(strip(expunge), self._ebGeneral)
+        d1.addCallbacks(expunged, self._ebGeneral)
+        d1.addCallbacks(self._cbStopClient, self._ebGeneral)
+        d2 = self.loopback()
+        d = defer.gatherResults([d1, d2])
+        return d.addCallback(self._cbTestExpunge, m)
 
+    def _cbTestExpunge(self, ignored, m):
         self.assertEquals(len(m.messages), 1)
         self.assertEquals(m.messages[0], ('Message 2', ('AnotherFlag',), None, 1))
 
@@ -1475,11 +1532,14 @@ class AuthenticatorTestCase(IMAP4HelperMixin, unittest.TestCase):
         def authed():
             self.authenticated = 1
 
-        d = self.connected.addCallback(strip(auth))
-        d.addCallbacks(strip(authed), self._ebGeneral)
-        d.addCallbacks(self._cbStopClient, self._ebGeneral)
-        self.loopback()
+        d1 = self.connected.addCallback(strip(auth))
+        d1.addCallbacks(strip(authed), self._ebGeneral)
+        d1.addCallbacks(self._cbStopClient, self._ebGeneral)
+        d2 = self.loopback()
+        d = defer.gatherResults([d1, d2])
+        return d.addCallback(self._cbTestCramMD5)
 
+    def _cbTestCramMD5(self, ignored):
         self.assertEquals(self.authenticated, 1)
         self.assertEquals(self.server.account, self.account)
 
@@ -1495,11 +1555,13 @@ class AuthenticatorTestCase(IMAP4HelperMixin, unittest.TestCase):
         def misauthed():
             self.authenticated = -1
 
-        d = self.connected.addCallback(strip(misauth))
-        d.addCallbacks(strip(authed), strip(misauthed))
-        d.addCallbacks(self._cbStopClient, self._ebGeneral)
-        self.loopback()
+        d1 = self.connected.addCallback(strip(misauth))
+        d1.addCallbacks(strip(authed), strip(misauthed))
+        d1.addCallbacks(self._cbStopClient, self._ebGeneral)
+        d = defer.gatherResults([self.loopback(), d1])
+        return d.addCallback(self._cbTestFailedCramMD5)
 
+    def _cbTestFailedCramMD5(self, ignored):
         self.assertEquals(self.authenticated, -1)
         self.assertEquals(self.server.account, None)
 
@@ -1513,11 +1575,13 @@ class AuthenticatorTestCase(IMAP4HelperMixin, unittest.TestCase):
         def authed():
             self.authenticated = 1
 
-        d = self.connected.addCallback(strip(auth))
-        d.addCallbacks(strip(authed), self._ebGeneral)
-        d.addCallbacks(self._cbStopClient, self._ebGeneral)
-        self.loopback()
+        d1 = self.connected.addCallback(strip(auth))
+        d1.addCallbacks(strip(authed), self._ebGeneral)
+        d1.addCallbacks(self._cbStopClient, self._ebGeneral)
+        d = defer.gatherResults([self.loopback(), d1])
+        return d.addCallback(self._cbTestLOGIN)
 
+    def _cbTestLOGIN(self, ignored):
         self.assertEquals(self.authenticated, 1)
         self.assertEquals(self.server.account, self.account)
 
@@ -1533,11 +1597,13 @@ class AuthenticatorTestCase(IMAP4HelperMixin, unittest.TestCase):
         def misauthed():
             self.authenticated = -1
 
-        d = self.connected.addCallback(strip(misauth))
-        d.addCallbacks(strip(authed), strip(misauthed))
-        d.addCallbacks(self._cbStopClient, self._ebGeneral)
-        self.loopback()
+        d1 = self.connected.addCallback(strip(misauth))
+        d1.addCallbacks(strip(authed), strip(misauthed))
+        d1.addCallbacks(self._cbStopClient, self._ebGeneral)
+        d = defer.gatherResults([self.loopback(), d1])
+        return d.addCallback(self._cbTestFailedLOGIN)
 
+    def _cbTestFailedLOGIN(self, ignored):
         self.assertEquals(self.authenticated, -1)
         self.assertEquals(self.server.account, None)
 
@@ -1551,11 +1617,13 @@ class AuthenticatorTestCase(IMAP4HelperMixin, unittest.TestCase):
         def authed():
             self.authenticated = 1
 
-        d = self.connected.addCallback(strip(auth))
-        d.addCallbacks(strip(authed), self._ebGeneral)
-        d.addCallbacks(self._cbStopClient, self._ebGeneral)
-        self.loopback()
+        d1 = self.connected.addCallback(strip(auth))
+        d1.addCallbacks(strip(authed), self._ebGeneral)
+        d1.addCallbacks(self._cbStopClient, self._ebGeneral)
+        d = defer.gatherResults([self.loopback(), d1])
+        return d.addCallback(self._cbTestPLAIN)
 
+    def _cbTestPLAIN(self, ignored):
         self.assertEquals(self.authenticated, 1)
         self.assertEquals(self.server.account, self.account)
 
@@ -1571,11 +1639,13 @@ class AuthenticatorTestCase(IMAP4HelperMixin, unittest.TestCase):
         def misauthed():
             self.authenticated = -1
 
-        d = self.connected.addCallback(strip(misauth))
-        d.addCallbacks(strip(authed), strip(misauthed))
-        d.addCallbacks(self._cbStopClient, self._ebGeneral)
-        self.loopback()
+        d1 = self.connected.addCallback(strip(misauth))
+        d1.addCallbacks(strip(authed), strip(misauthed))
+        d1.addCallbacks(self._cbStopClient, self._ebGeneral)
+        d = defer.gatherResults([self.loopback(), d1])
+        return d.addCallback(self._cbTestFailedPLAIN)
 
+    def _cbTestFailedPLAIN(self, ignored):
         self.assertEquals(self.authenticated, -1)
         self.assertEquals(self.server.account, None)
 
@@ -1587,10 +1657,12 @@ class UnsolicitedResponseTestCase(IMAP4HelperMixin, unittest.TestCase):
         def loggedIn():
             self.server.modeChanged(1)
 
-        d = self.connected.addCallback(strip(login))
-        d.addCallback(strip(loggedIn)).addErrback(self._ebGeneral)
-        self.loopback()
+        d1 = self.connected.addCallback(strip(login))
+        d1.addCallback(strip(loggedIn)).addErrback(self._ebGeneral)
+        d = defer.gatherResults([self.loopback(), d1])
+        return d.addCallback(self._cbTestReadWrite)
 
+    def _cbTestReadWrite(self, ignored):
         E = self.client.events
         self.assertEquals(E, [['modeChanged', 1]])
 
@@ -1600,10 +1672,12 @@ class UnsolicitedResponseTestCase(IMAP4HelperMixin, unittest.TestCase):
         def loggedIn():
             self.server.modeChanged(0)
 
-        d = self.connected.addCallback(strip(login))
-        d.addCallback(strip(loggedIn)).addErrback(self._ebGeneral)
-        self.loopback()
+        d1 = self.connected.addCallback(strip(login))
+        d1.addCallback(strip(loggedIn)).addErrback(self._ebGeneral)
+        d = defer.gatherResults([self.loopback(), d1])
+        return d.addCallback(self._cbTestReadOnly)
 
+    def _cbTestReadOnly(self, ignored):
         E = self.client.events
         self.assertEquals(E, [['modeChanged', 0]])
 
@@ -1618,10 +1692,12 @@ class UnsolicitedResponseTestCase(IMAP4HelperMixin, unittest.TestCase):
         def loggedIn():
             self.server.flagsChanged(flags)
 
-        d = self.connected.addCallback(strip(login))
-        d.addCallback(strip(loggedIn)).addErrback(self._ebGeneral)
-        self.loopback()
+        d1 = self.connected.addCallback(strip(login))
+        d1.addCallback(strip(loggedIn)).addErrback(self._ebGeneral)
+        d = defer.gatherResults([self.loopback(), d1])
+        return d.addCallback(self._cbTestFlagChange, flags)
 
+    def _cbTestFlagChange(self, ignored, flags):
         E = self.client.events
         expect = [['flagsChanged', {x[0]: x[1]}] for x in flags.items()]
         E.sort()
@@ -1634,10 +1710,12 @@ class UnsolicitedResponseTestCase(IMAP4HelperMixin, unittest.TestCase):
         def loggedIn():
             self.server.newMessages(10, None)
 
-        d = self.connected.addCallback(strip(login))
-        d.addCallback(strip(loggedIn)).addErrback(self._ebGeneral)
-        self.loopback()
+        d1 = self.connected.addCallback(strip(login))
+        d1.addCallback(strip(loggedIn)).addErrback(self._ebGeneral)
+        d = defer.gatherResults([self.loopback(), d1])
+        return d.addCallback(self._cbTestNewMessages)
 
+    def _cbTestNewMessages(self, ignored):
         E = self.client.events
         self.assertEquals(E, [['newMessages', 10, None]])
 
@@ -1647,10 +1725,12 @@ class UnsolicitedResponseTestCase(IMAP4HelperMixin, unittest.TestCase):
         def loggedIn():
             self.server.newMessages(None, 10)
 
-        d = self.connected.addCallback(strip(login))
-        d.addCallback(strip(loggedIn)).addErrback(self._ebGeneral)
-        self.loopback()
+        d1 = self.connected.addCallback(strip(login))
+        d1.addCallback(strip(loggedIn)).addErrback(self._ebGeneral)
+        d = defer.gatherResults([self.loopback(), d1])
+        return d.addCallback(self._cbTestNewRecentMessages)
 
+    def _cbTestNewRecentMessages(self, ignored):
         E = self.client.events
         self.assertEquals(E, [['newMessages', None, 10]])
 
@@ -1660,10 +1740,12 @@ class UnsolicitedResponseTestCase(IMAP4HelperMixin, unittest.TestCase):
         def loggedIn():
             self.server.newMessages(20, 10)
 
-        d = self.connected.addCallback(strip(login))
-        d.addCallback(strip(loggedIn)).addErrback(self._ebGeneral)
-        self.loopback()
+        d1 = self.connected.addCallback(strip(login))
+        d1.addCallback(strip(loggedIn)).addErrback(self._ebGeneral)
+        d = defer.gatherResults([self.loopback(), d1])
+        return d.addCallback(self._cbTestNewMessagesAndRecent)
 
+    def _cbTestNewMessagesAndRecent(self, ignored):
         E = self.client.events
         self.assertEquals(E, [['newMessages', 20, None], ['newMessages', None, 10]])
 
@@ -2556,7 +2638,7 @@ class Timeout(IMAP4HelperMixin, unittest.TestCase):
 
         d = self.connected.addCallback(strip(login))
         d.addErrback(self._ebGeneral)
-        self.loopback()
+        return defer.gatherResults([d, self.loopback()])
 
     def testLongFetchDoesntTimeout(self):
         SimpleServer.theAccount.mailboxFactory = SlowMailbox
@@ -2572,17 +2654,16 @@ class Timeout(IMAP4HelperMixin, unittest.TestCase):
         def fetch():
             return self.client.fetchUID('1:*')
         def stillConnected():
-            self.stillConnected = not self.server.transport.shouldLose
+            self.stillConnected = not self.server.transport.disconnecting
 
-        d = self.connected.addCallback(strip(login))
-        d.addCallback(strip(select))
-        d.addCallback(strip(fetch))
-        d.addCallback(strip(stillConnected))
-        d.addCallback(self._cbStopClient)
-        d.addErrback(self._ebGeneral)
-        self.loopback()
-
-        self.failUnless(self.stillConnected)
+        d1 = self.connected.addCallback(strip(login))
+        d1.addCallback(strip(select))
+        d1.addCallback(strip(fetch))
+        d1.addCallback(strip(stillConnected))
+        d1.addCallback(self._cbStopClient)
+        d1.addErrback(self._ebGeneral)
+        d = defer.gatherResults([d1, self.loopback()])
+        return d.addCallback(lambda _: self.failUnless(self.stillConnected))
 
     def testIdleClientDoesDisconnect(self):
         from twisted.test.time_helpers import Clock

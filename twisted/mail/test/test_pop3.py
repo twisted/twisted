@@ -256,9 +256,12 @@ Someone set up us the bomb!\015
         protocol =  MyVirtualPOP3()
         protocol.service = self.factory
         clientProtocol = MyPOP3Downloader()
-        loopback.loopback(protocol, clientProtocol)
-        self.failUnlessEqual(clientProtocol.message, self.message)
-        protocol.connectionLost(failure.Failure(Exception("Test harness disconnect")))
+        def check(ignored):
+            self.failUnlessEqual(clientProtocol.message, self.message)
+            protocol.connectionLost(
+                failure.Failure(Exception("Test harness disconnect")))
+        d = loopback.loopbackAsync(protocol, clientProtocol)
+        return d.addCallback(check)
     testLoopback.suppress = [util.suppress(message="twisted.mail.pop3.POP3Client is deprecated")]
 
 
@@ -307,7 +310,7 @@ How are you, friend?
 
 class AnotherPOP3TestCase(unittest.TestCase):
 
-    def runTest(self, lines, expected):
+    def runTest(self, lines):
         dummy = DummyPOP3()
         client = LineSendingProtocol([
             "APOP moshez dummy",
@@ -319,10 +322,36 @@ class AnotherPOP3TestCase(unittest.TestCase):
             "RETR 1",
             "QUIT",
         ])
-        expected_output = '+OK <moshez>\r\n+OK Authentication succeeded\r\n+OK 1\r\n1 44\r\n.\r\n+OK \r\n1 0\r\n.\r\n+OK 44\r\nFrom: moshe\r\nTo: moshe\r\n\r\nHow are you, friend?\r\n.\r\n-ERR Bad message number argument\r\n+OK \r\n-ERR message deleted\r\n+OK \r\n'
-        loopback.loopback(dummy, client)
-        self.failUnlessEqual(expected_output, '\r\n'.join(client.response) + '\r\n')
+        d = loopback.loopbackAsync(dummy, client)
+        return d.addCallback(self._cbRunTest, client, dummy)
+
+    def _cbRunTest(self, ignored, client, dummy):
+        expected_output = [
+            '+OK <moshez>',
+            '+OK Authentication succeeded',
+            '+OK 1',
+            '1 44',
+            '.',
+            '+OK ',
+            '1 0',
+            '.',
+            '+OK 44',
+            'From: moshe',
+            'To: moshe',
+            '',
+            'How are you, friend?',
+            '',
+            '.',
+            '-ERR Bad message number argument',
+            '+OK ',
+            '-ERR message deleted',
+            '+OK ',
+            ''
+            ]
+        self.failUnlessEqual('\r\n'.join(expected_output),
+                             '\r\n'.join(client.response) + '\r\n')
         dummy.connectionLost(failure.Failure(Exception("Test harness disconnect")))
+        return ignored
 
 
     def testBuffer(self):
@@ -335,13 +364,11 @@ RETR 2
 DELE 1
 RETR 1
 QUIT''', '\n')
-        expected_output = '+OK <moshez>\r\n+OK Authentication succeeded\r\n+OK 1\r\n1 44\r\n.\r\n+OK \r\n1 0\r\n.\r\n+OK 44\r\nFrom: moshe\r\nTo: moshe\r\n\r\nHow are you, friend?\r\n.\r\n-ERR Bad message number argument\r\n+OK \r\n-ERR message deleted\r\n+OK \r\n'
-        self.runTest(lines, expected_output)
+        return self.runTest(lines)
 
     def testNoop(self):
         lines = ['APOP spiv dummy', 'NOOP', 'QUIT']
-        expected_output = '+OK <moshez>\r\n+OK Authentication succeeded\r\n+OK \r\n+OK \r\n'
-        self.runTest(lines, expected_output)
+        return self.runTest(lines)
 
     def testAuthListing(self):
         p = DummyPOP3()
@@ -352,9 +379,13 @@ QUIT''', '\n')
             "QUIT",
         ])
 
-        loopback.loopback(p, client)
+        d = loopback.loopbackAsync(p, client)
+        return d.addCallback(self._cbTestAuthListing, client)
+
+    def _cbTestAuthListing(self, ignored, client):
         self.failUnless(client.response[1].startswith('+OK'))
-        self.assertEquals(client.response[2:6], ["AUTH1", "SECONDAUTH", "AUTHLAST", "."])
+        self.assertEquals(client.response[2:6],
+                          ["AUTH1", "SECONDAUTH", "AUTHLAST", "."])
 
     def testIllegalPASS(self):
         dummy = DummyPOP3()
@@ -362,8 +393,11 @@ QUIT''', '\n')
             "PASS fooz",
             "QUIT"
         ])
+        d = loopback.loopbackAsync(dummy, client)
+        return d.addCallback(self._cbTestIllegalPASS, client, dummy)
+
+    def _cbTestIllegalPASS(self, ignored, client, dummy):
         expected_output = '+OK <moshez>\r\n-ERR USER required before PASS\r\n+OK \r\n'
-        loopback.loopback(dummy, client)
         self.failUnlessEqual(expected_output, '\r\n'.join(client.response) + '\r\n')
         dummy.connectionLost(failure.Failure(Exception("Test harness disconnect")))
 
@@ -373,8 +407,11 @@ QUIT''', '\n')
             "PASS ",
             "QUIT"
         ])
+        d = loopback.loopbackAsync(dummy, client)
+        return d.addCallback(self._cbTestEmptyPASS, client, dummy)
+
+    def _cbTestEmptyPASS(self, ignored, client, dummy):
         expected_output = '+OK <moshez>\r\n-ERR USER required before PASS\r\n+OK \r\n'
-        loopback.loopback(dummy, client)
         self.failUnlessEqual(expected_output, '\r\n'.join(client.response) + '\r\n')
         dummy.connectionLost(failure.Failure(Exception("Test harness disconnect")))
 

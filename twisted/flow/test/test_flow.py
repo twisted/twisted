@@ -404,9 +404,9 @@ class FlowTest(unittest.TestCase):
         client = flow.makeProtocol(echoClient)()
         client.factory = protocol.ClientFactory()
         client.factory.d = defer.Deferred()
-        loopback.loopback(server, client)
+        d2 = loopback.loopbackAsync(server, client)
         client.factory.d.addCallback(self.assertEquals, 'testing')
-        return client.factory.d
+        return defer.gatherResults([client.factory.d, d2])
 
 
 class ThreadedFlowTest(unittest.TestCase):

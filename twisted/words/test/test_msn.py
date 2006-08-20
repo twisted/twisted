@@ -348,9 +348,14 @@ class FileTransferTestCase(unittest.TestCase):
         sender.fileSize = 7000
         client = msn.FileReceive(auth, "foo@bar.com", self.output)
         client.fileSize = 7000
-        loopback.loopback(sender, client)
-        self.failUnless((client.completed and sender.completed), msg="send failed to complete")
-        self.failUnless((self.input.getvalue() == self.output.getvalue()), msg="saved file does not match original")
+        def check(ignored):
+            self.failUnless((client.completed and sender.completed),
+                            msg="send failed to complete")
+            self.failUnless((self.input.getvalue() == self.output.getvalue()),
+                            msg="saved file does not match original")
+        d = loopback.loopbackAsync(sender, client)
+        d.addCallback(check)
+        return d
 
 
 if msn is None:

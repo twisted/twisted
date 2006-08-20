@@ -112,7 +112,7 @@ class NNTPTestCase(unittest.TestCase):
         self.client = TestNNTPClient()
 
     def testLoopback(self):
-        loopback.loopback(self.server, self.client)
+        return loopback.loopbackAsync(self.server, self.client)
 
         # XXX This test is woefully incomplete.  It tests the single
         # most common code path and nothing else.  Expand it and the
