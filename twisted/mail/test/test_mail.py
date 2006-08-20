@@ -24,6 +24,7 @@ from twisted.names import dns
 from twisted.protocols import basic
 from twisted.internet import protocol
 from twisted.internet import defer
+from twisted.internet.defer import Deferred
 from twisted.internet import reactor
 from twisted.internet import interfaces
 from twisted.internet.error import DNSLookupError, CannotListenError
@@ -939,24 +940,21 @@ class LiveFireExercise(unittest.TestCase):
             'QUIT'
         ])
 
-        done = []
+        done = Deferred()
         f = protocol.ClientFactory()
         f.protocol = lambda: client
-        f.clientConnectionLost = lambda *args: done.append(None)
+        f.clientConnectionLost = lambda *args: done.callback(None)
         reactor.connectTCP('127.0.0.1', self.smtpServer.getHost().port, f)
 
-        i = 0
-        while len(done) == 0 and i < 1000:
-            reactor.iterate(0.01)
-            i += 1
+        def finished(ign):
+            mbox = domain.requestAvatar('user', None, pop3.IMailbox)[1]
+            msg = mbox.getMessage(0).read()
+            self.failIfEqual(msg.find('This is the message'), -1)
 
-        self.failUnless(done)
+            return self.smtpServer.stopListening()
+        done.addCallback(finished)
+        return done
 
-        mbox = domain.requestAvatar('user', None, pop3.IMailbox)[1]
-        msg = mbox.getMessage(0).read()
-        self.failIfEqual(msg.find('This is the message'), -1)
-
-        self.smtpServer.stopListening()
 
     def testRelayDelivery(self):
         # Here is the service we will connect to and send mail from
@@ -1008,33 +1006,29 @@ class LiveFireExercise(unittest.TestCase):
             'QUIT'
         ])
 
-        done = []
+        done = Deferred()
         f = protocol.ClientFactory()
         f.protocol = lambda: client
-        f.clientConnectionLost = lambda *args: done.append(None)
+        f.clientConnectionLost = lambda *args: done.callback(None)
         reactor.connectTCP('127.0.0.1', self.insServer.getHost().port, f)
 
-        i = 0
-        while len(done) == 0 and i < 1000:
-            reactor.iterate(0.01)
-            i += 1
+        def finished(ign):
+            # First part of the delivery is done.  Poke the queue manually now
+            # so we don't have to wait for the queue to be flushed.
+            delivery = manager.checkState()
+            def delivered(ign):
+                mbox = domain.requestAvatar('user', None, pop3.IMailbox)[1]
+                msg = mbox.getMessage(0).read()
+                self.failIfEqual(msg.find('This is the message'), -1)
 
-        self.failUnless(done)
+                self.insServer.stopListening()
+                self.destServer.stopListening()
+                helper.stopService()
+            delivery.addCallback(delivered)
+            return delivery
+        done.addCallback(finished)
+        return done
 
-        # First part of the delivery is done.  Poke the queue manually now
-        # so we don't have to wait for the queue to be flushed.
-        manager.checkState()
-
-        for i in range(1000):
-            reactor.iterate(0.01)
-
-        mbox = domain.requestAvatar('user', None, pop3.IMailbox)[1]
-        msg = mbox.getMessage(0).read()
-        self.failIfEqual(msg.find('This is the message'), -1)
-
-        self.insServer.stopListening()
-        self.destServer.stopListening()
-        helper.stopService()
 
 aliasFile = StringIO.StringIO("""\
 # Here's a comment

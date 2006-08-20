@@ -24,6 +24,7 @@ from twisted.python import util
 from twisted.mail import relay
 from twisted.mail import bounce
 from twisted.internet import protocol
+from twisted.internet.defer import Deferred, DeferredList
 from twisted.mail import smtp
 from twisted.application import internet
 
@@ -219,6 +220,98 @@ class Queue:
         return headerFile,FileMessage(messageFile, tempFilename, finalFilename)
 
 
+class _AttemptManager(object):
+    """
+    Manage the state of a single attempt to flush the relay queue.
+    """
+    def __init__(self, manager):
+        self.manager = manager
+        self._completionDeferreds = []
+
+
+    def getCompletionDeferred(self):
+        self._completionDeferreds.append(Deferred())
+        return self._completionDeferreds[-1]
+
+
+    def _finish(self, relay, message):
+        self.manager.managed[relay].remove(os.path.basename(message))
+        self.manager.queue.done(message)
+
+
+    def notifySuccess(self, relay, message):
+        """a relay sent a message successfully
+
+        Mark it as sent in our lists
+        """
+        if self.manager.queue.noisy:
+            log.msg("success sending %s, removing from queue" % message)
+        self._finish(relay, message)
+
+
+    def notifyFailure(self, relay, message):
+        """Relaying the message has failed."""
+        if self.manager.queue.noisy:
+            log.msg("could not relay "+message)
+        # Moshe - Bounce E-mail here
+        # Be careful: if it's a bounced bounce, silently
+        # discard it
+        message = os.path.basename(message)
+        fp = self.manager.queue.getEnvelopeFile(message)
+        from_, to = pickle.load(fp)
+        fp.close()
+        from_, to, bounceMessage = bounce.generateBounce(open(self.manager.queue.getPath(message)+'-D'), from_, to)
+        fp, outgoingMessage = self.manager.queue.createNewMessage()
+        pickle.dump([from_, to], fp)
+        fp.close()
+        for line in bounceMessage.splitlines():
+             outgoingMessage.lineReceived(line)
+        outgoingMessage.eomReceived()
+        self._finish(relay, self.manager.queue.getPath(message))
+
+
+    def notifyDone(self, relay):
+        """A relaying SMTP client is disconnected.
+
+        unmark all pending messages under this relay's responsibility
+        as being relayed, and remove the relay.
+        """
+        for message in self.manager.managed.get(relay, ()):
+            if self.manager.queue.noisy:
+                log.msg("Setting " + message + " waiting")
+            self.manager.queue.setWaiting(message)
+        try:
+            del self.manager.managed[relay]
+        except KeyError:
+            pass
+        notifications = self._completionDeferreds
+        self._completionDeferreds = None
+        for d in notifications:
+            d.callback(None)
+
+
+    def notifyNoConnection(self, relay):
+        """Relaying SMTP client couldn't connect.
+
+        Useful because it tells us our upstream server is unavailable.
+        """
+        # Back off a bit
+        try:
+            msgs = self.manager.managed[relay]
+        except KeyError:
+            log.msg("notifyNoConnection passed unknown relay!")
+            return
+
+        if self.manager.queue.noisy:
+            log.msg("Backing off on delivery of " + str(msgs))
+        def setWaiting(queue, messages):
+            map(queue.setWaiting, messages)
+        from twisted.internet import reactor
+        reactor.callLater(30, setWaiting, self.manager.queue, msgs)
+        del self.manager.managed[relay]
+
+
+
 class SmartHostSMTPRelayingManager:
     """Manage SMTP Relayers
 
@@ -267,74 +360,6 @@ class SmartHostSMTPRelayingManager:
         self.fArgs = ()
         self.fKwArgs = {}
 
-    def _finish(self, relay, message):
-        self.managed[relay].remove(os.path.basename(message))
-        self.queue.done(message)
-
-    def notifySuccess(self, relay, message):
-        """a relay sent a message successfully
-
-        Mark it as sent in our lists
-        """
-        if self.queue.noisy:
-            log.msg("success sending %s, removing from queue" % message)
-        self._finish(relay, message)
-
-    def notifyFailure(self, relay, message):
-        """Relaying the message has failed."""
-        if self.queue.noisy:
-            log.msg("could not relay "+message)
-        # Moshe - Bounce E-mail here
-        # Be careful: if it's a bounced bounce, silently
-        # discard it
-        message = os.path.basename(message)
-        fp = self.queue.getEnvelopeFile(message)
-        from_, to = pickle.load(fp)
-        fp.close()
-        from_, to, bounceMessage = bounce.generateBounce(open(self.queue.getPath(message)+'-D'), from_, to)
-        fp, outgoingMessage = self.queue.createNewMessage()
-        pickle.dump([from_, to], fp)
-        fp.close()
-        for line in bounceMessage.splitlines():
-             outgoingMessage.lineReceived(line)
-        outgoingMessage.eomReceived()
-        self._finish(relay, self.queue.getPath(message))
-
-    def notifyDone(self, relay):
-        """A relaying SMTP client is disconnected.
-
-        unmark all pending messages under this relay's responsibility
-        as being relayed, and remove the relay.
-        """
-        for message in self.managed.get(relay, ()):
-            if self.queue.noisy:
-                log.msg("Setting " + message + " waiting")
-            self.queue.setWaiting(message)
-        try:
-            del self.managed[relay]
-        except KeyError:
-            pass
-
-    def notifyNoConnection(self, relay):
-        """Relaying SMTP client couldn't connect.
-
-        Useful because it tells us our upstream server is unavailable.
-        """
-        # Back off a bit
-        try:
-            msgs = self.managed[relay]
-        except KeyError:
-            log.msg("notifyNoConnection passed unknown relay!")
-            return
-
-        if self.queue.noisy:
-            log.msg("Backing off on delivery of " + str(msgs))
-        def setWaiting(queue, messages):
-            map(queue.setWaiting, messages)
-        from twisted.internet import reactor
-        reactor.callLater(30, setWaiting, self.queue, msgs)
-        del self.managed[relay]
-
     def __getstate__(self):
         """(internal) delete volatile state"""
         dct = self.__dict__.copy()
@@ -347,10 +372,14 @@ class SmartHostSMTPRelayingManager:
         self.managed = {}
 
     def checkState(self):
-        """call me periodically to check I am still up to date
+        """
+        Synchronize with the state of the world, and maybe launch a new
+        relay.
 
-        synchronize with the state of the world, and maybe launch
-        a new relay
+        Call me periodically to check I am still up to date.
+
+        @return: None or a Deferred which fires when all of the SMTP clients
+        started by this call have disconnected.
         """
         self.queue.readDirectory() 
         if (len(self.managed) >= self.maxConnections):
@@ -358,7 +387,7 @@ class SmartHostSMTPRelayingManager:
         if  not self.queue.hasWaiting():
             return
 
-        self._checkStateMX()
+        return self._checkStateMX()
     
     def _checkStateMX(self):
         nextMessages = self.queue.getWaiting()
@@ -382,14 +411,20 @@ class SmartHostSMTPRelayingManager:
         if self.mxcalc is None:
             self.mxcalc = MXCalculator()
         
+        relays = []
         for (domain, msgs) in exchanges.iteritems():
-            factory = self.factory(msgs, self, *self.fArgs, **self.fKwArgs)
+            manager = _AttemptManager(self)
+            factory = self.factory(msgs, manager, *self.fArgs, **self.fKwArgs)
             self.managed[factory] = map(os.path.basename, msgs)
-            self.mxcalc.getMX(domain
-            ).addCallback(lambda mx: str(mx.name),
-            ).addCallback(self._cbExchange, self.PORT, factory
-            ).addErrback(self._ebExchange, factory, domain
-            )
+            relayAttemptDeferred = manager.getCompletionDeferred()
+            connectSetupDeferred = self.mxcalc.getMX(domain)
+            connectSetupDeferred.addCallback(lambda mx: str(mx.name))
+            connectSetupDeferred.addCallback(self._cbExchange, self.PORT, factory)
+            connectSetupDeferred.addErrback(lambda err: (relayAttemptDeferred.errback(err), err)[1])
+            connectSetupDeferred.addErrback(self._ebExchange, factory, domain)
+            relays.append(relayAttemptDeferred)
+        return DeferredList(relays)
+
 
     def _cbExchange(self, address, port, factory):
         from twisted.internet import reactor
