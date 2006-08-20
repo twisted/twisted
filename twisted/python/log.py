@@ -2,14 +2,16 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """Logging and metrics infrastructure.
 """
+
+from __future__ import division
 
 # System Imports
 import sys
 import time
 import warnings
+import datetime
 
 # Sibling Imports
 from twisted.python import util, context, reflect
@@ -238,11 +240,13 @@ except NameError:
 
 
 class FileLogObserver:
-    """Log observer that writes to a file-like object.
-
-    @ivar timeFormat: Format string passed to strftime()
     """
-    timeFormat = "%Y/%m/%d %H:%M %Z"
+    Log observer that writes to a file-like object.
+
+    @type timeFormat: C{str} or C{NoneType}
+    @ivar timeFormat: If not C{None}, the format string passed to strftime().
+    """
+    timeFormat = None
 
     def __init__(self, f):
         self.write = f.write
@@ -269,6 +273,45 @@ class FileLogObserver:
                     text = 'PATHOLOGICAL ERROR IN BOTH FORMAT STRING AND MESSAGE DETAILS, MESSAGE LOST'
         return text
 
+
+    def getTimezoneOffset(self):
+        """
+        Return the current local timezone offset from UTC.
+
+        @rtype: C{int}
+        @return: The number of seconds offset from UTC.  West is positive,
+        east is negative.
+        """
+        if time.daylight:
+            return time.altzone
+        return time.timezone
+
+
+    def formatTime(self, when):
+        """
+        Return the given UTC value formatted as a human-readable string
+        representing that time in the local timezone.
+
+        @type when: C{int}
+        @param when: POSIX timestamp to convert to a human-readable string.
+
+        @rtype: C{str}
+        """
+        if self.timeFormat is not None:
+            return time.strftime(self.timeFormat, time.localtime(when))
+
+        tzOffset = -self.getTimezoneOffset()
+        when = datetime.datetime.utcfromtimestamp(when)
+        localOffset = datetime.timedelta(seconds=tzOffset)
+        when = when + localOffset
+        tzHour = int(tzOffset / 60 / 60)
+        tzMin = int(tzOffset / 60 % 60)
+        return '%d/%02d/%02d %02d:%02d %+03d%02d' % (
+            when.year, when.month, when.day,
+            when.hour, when.minute,
+            tzHour, tzMin)
+
+
     def emit(self, eventDict):
         edm = eventDict['message']
         if not edm:
@@ -283,7 +326,7 @@ class FileLogObserver:
         else:
             text = ' '.join(map(reflect.safe_str, edm))
 
-        timeStr = time.strftime(self.timeFormat, time.localtime(eventDict['time']))
+        timeStr = self.formatTime(eventDict['time'])
         fmtDict = {'system': eventDict['system'], 'text': text.replace("\n", "\n\t")}
         msgStr = self._safeFormat("[%(system)s] %(text)s\n", fmtDict)
 
