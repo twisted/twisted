@@ -195,36 +195,88 @@ class SystemEventTestCase(unittest.TestCase):
 
 
 class InterfaceTestCase(unittest.TestCase):
+    """
+    Tests for a random pile of crap in twisted.internet, I suppose.
+    """
 
-    _called = 0
+    def test_callLater(self):
+        """
+        Test that a DelayedCall really calls the function it is supposed to call.
+        """
+        d = Deferred()
+        reactor.callLater(0, d.callback, None)
+        d.addCallback(self.assertEqual, None)
+        return d
 
-    def _callback(self, deferred, x, **d):
-        """Callback for testCallLater"""
-        self.assertEquals(x, 1)
-        self.assertEquals(d, {'a': 1})
-        self._called = 1
-        self._calledTime = time.time()
-        deferred.callback(None)
 
-    def testCallLater(self):
-        # add and remove a callback
-        def bad():
-            raise RuntimeError, "this shouldn't have been called"
-        i = reactor.callLater(0.1, bad)
-        i.cancel()
+    def test_cancelDelayedCall(self):
+        """
+        Test that when a DelayedCall is cancelled it does not run.
+        """
+        called = []
+        def function():
+            called.append(None)
+        call = reactor.callLater(0, function)
+        call.cancel()
 
-        self.assertRaises(error.AlreadyCancelled, i.cancel)
+        # Schedule a call in two "iterations" to check to make sure that the
+        # above call never ran.
+        d = Deferred()
+        def check():
+            try:
+                self.assertEqual(called, [])
+            except:
+                d.errback()
+            else:
+                d.callback(None)
+        reactor.callLater(0, reactor.callLater, 0, check)
+        return d
 
-        d = defer.Deferred()
-        i = reactor.callLater(0.5, self._callback, d, 1, a=1)
-        start = time.time()
 
-        def check(ignored):
-            self.assertApproximates(self._calledTime, start + 0.5, 0.2 )
-            self.assertRaises(error.AlreadyCalled, i.cancel)
-            del self._called
-            del self._calledTime
-        d.addCallback(check)
+    def test_cancelCancelledDelayedCall(self):
+        """
+        Test that cancelling a DelayedCall which has already been cancelled
+        raises the appropriate exception.
+        """
+        call = reactor.callLater(0, lambda: None)
+        call.cancel()
+        self.assertRaises(error.AlreadyCancelled, call.cancel)
+
+
+    def test_cancelCalledDelayedCallSynchronous(self):
+        """
+        Test that cancelling a DelayedCall in the DelayedCall's function as
+        that function is being invoked by the DelayedCall raises the
+        appropriate exception.
+        """
+        d = Deferred()
+        def later():
+            try:
+                self.assertRaises(error.AlreadyCalled, call.cancel)
+            except:
+                d.errback()
+            else:
+                d.callback(None)
+        call = reactor.callLater(0, later)
+        return d
+
+
+    def test_cancelCalledDelayedCallAsynchronous(self):
+        """
+        Test that cancelling a DelayedCall after it has run its function
+        raises the appropriate exception.
+        """
+        d = Deferred()
+        def check():
+            try:
+                self.assertRaises(error.AlreadyCalled, call.cancel)
+            except:
+                d.errback()
+            else:
+                d.callback(None)
+        def later():
+            reactor.callLater(0, check)
+        call = reactor.callLater(0, later)
         return d
 
 
