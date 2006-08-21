@@ -3,7 +3,7 @@
 
 #
 
-import sys, time
+import sys
 
 from twisted.trial import unittest
 
@@ -126,13 +126,11 @@ class LogPublisherTestCaseMixin:
         sys.setdefaultencoding(self._origEncoding)
         del sys.setdefaultencoding
 
-
-
 class LogPublisherTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
+
     def testSingleString(self):
         self.lp.msg("Hello, world.")
         self.assertEquals(len(self.out), 1)
-
 
     def testMultipleString(self):
         # Test some stupid behavior that will be deprecated real soon.
@@ -141,53 +139,13 @@ class LogPublisherTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
         self.lp.msg("Hello, ", "world.")
         self.assertEquals(len(self.out), 1)
 
-
     def testSingleUnicode(self):
         self.lp.msg(u"Hello, \N{VULGAR FRACTION ONE HALF} world.")
         self.assertEquals(len(self.out), 1)
         self.assertIn('with str error Traceback', self.out[0])
         self.assertIn('UnicodeEncodeError', self.out[0])
 
-
-
 class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
-    def test_timeFormatting(self):
-        """
-        Test the method of L{FileLogObserver} which turns a timestamp into a
-        human-readable string.
-        """
-        # There is no function in the time module which converts a UTC time
-        # tuple to a timestamp.
-        when = time.mktime((2001, 2, 3, 4, 5, 6, 7, 8, 0)) - time.timezone
-
-        # Pretend to be in US/Eastern for a moment
-        self.flo.getTimezoneOffset = lambda: 18000
-        self.assertEquals(self.flo.formatTime(when), '2001/02/02 23:05 -0500')
-
-        # Okay now we're in Eastern Europe somewhere
-        self.flo.getTimezoneOffset = lambda: -3600
-        self.assertEquals(self.flo.formatTime(when), '2001/02/03 05:05 +0100')
-
-        # And off in the Pacific or someplace like that
-        self.flo.getTimezoneOffset = lambda: -39600
-        self.assertEquals(self.flo.formatTime(when), '2001/02/03 15:05 +1100')
-
-        # One of those weird places with a half-hour offset timezone
-        self.flo.getTimezoneOffset = lambda: 5400
-        self.assertEquals(self.flo.formatTime(when), '2001/02/03 02:35 -0130')
-
-        # Half-hour offset in the other direction
-        self.flo.getTimezoneOffset = lambda: -5400
-        self.assertEquals(self.flo.formatTime(when), '2001/02/03 05:35 +0130')
-
-        # If a strftime-format string is present on the logger, it should
-        # use that instead.  Note we don't assert anything about day, hour
-        # or minute because we cannot easily control what time.strftime()
-        # thinks the local timezone is.
-        self.flo.timeFormat = '%Y %m'
-        self.assertEquals(self.flo.formatTime(when), '2001 02')
-
-
     def testLoggingAnObjectWithBroken__str__(self):
         #HELLO, MCFLY
         self.lp.msg(EvilStr())
@@ -195,42 +153,35 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
         # Logging system shouldn't need to crap itself for this trivial case
         self.assertNotIn('UNFORMATTABLE', self.out[0])
 
-
     def testFormattingAnObjectWithBroken__str__(self):
         self.lp.msg(format='%(blat)s', blat=EvilStr())
         self.assertEquals(len(self.out), 1)
         self.assertIn('Invalid format string or unformattable object', self.out[0])
-
 
     def testBrokenSystem__str__(self):
         self.lp.msg('huh', system=EvilStr())
         self.assertEquals(len(self.out), 1)
         self.assertIn('Invalid format string or unformattable object', self.out[0])
 
-
     def testFormattingAnObjectWithBroken__repr__Indirect(self):
         self.lp.msg(format='%(blat)s', blat=[EvilRepr()])
         self.assertEquals(len(self.out), 1)
         self.assertIn('UNFORMATTABLE OBJECT', self.out[0])
-
 
     def testSystemWithBroker__repr__Indirect(self):
         self.lp.msg('huh', system=[EvilRepr()])
         self.assertEquals(len(self.out), 1)
         self.assertIn('UNFORMATTABLE OBJECT', self.out[0])
 
-
     def testSimpleBrokenFormat(self):
         self.lp.msg(format='hooj %s %s', blat=1)
         self.assertEquals(len(self.out), 1)
         self.assertIn('Invalid format string or unformattable object', self.out[0])
 
-
     def testRidiculousFormat(self):
         self.lp.msg(format=42, blat=1)
         self.assertEquals(len(self.out), 1)
         self.assertIn('Invalid format string or unformattable object', self.out[0])
-
 
     def testEvilFormat__repr__And__str__(self):
         self.lp.msg(format=EvilReprStr(), blat=1)
