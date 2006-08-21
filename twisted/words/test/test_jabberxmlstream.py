@@ -1,5 +1,6 @@
 from twisted.trial import unittest
 
+from twisted.internet.error import ConnectionLost
 from twisted.words.protocols.jabber import error, xmlstream
 
 class IQTest(unittest.TestCase):
@@ -45,4 +46,44 @@ class IQTest(unittest.TestCase):
 
         xs = self.xmlstream
         xs.dataReceived("<iq type='error' id='%s'/>" % self.iq['id'])
+        return d
+
+    def testCleanup(self):
+        """
+        Test if the deferred associated with an iq request is removed
+        from the list kept in the L{XmlStream} object after it has
+        been fired.
+        """
+
+        d = self.iq.send()
+        xs = self.xmlstream
+        xs.dataReceived("<iq type='result' id='%s'/>" % self.iq['id'])
+        self.assertNotIn(self.iq['id'], xs.iqDeferreds)
+        return d
+
+    def testDisconnectCleanup(self):
+        """
+        Test if deferreds for iq's that haven't yet received a response
+        have their errback called on stream disconnect.
+        """
+
+        d = self.iq.send()
+        xs = self.xmlstream
+        xs.connectionLost("Closed by peer")
+        self.assertFailure(d, ConnectionLost)
+        return d
+
+    def testNoModifyingDict(self):
+        """
+        Test to make sure the errbacks cannot cause the iteration of the
+        iqDeferreds to blow up in our face.
+        """
+
+        def eb(failure):
+            d = xmlstream.IQ(self.xmlstream).send()
+            d.addErrback(eb)
+
+        d = self.iq.send()
+        d.addErrback(eb)
+        self.xmlstream.connectionLost("Closed by peer")
         return d

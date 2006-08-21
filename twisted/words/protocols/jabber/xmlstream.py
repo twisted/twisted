@@ -15,6 +15,7 @@ from OpenSSL import SSL
 from zope.interface import Interface, Attribute, directlyProvides
 
 from twisted.internet import defer, ssl
+from twisted.internet.error import ConnectionLost
 from twisted.python import failure
 from twisted.words.protocols.jabber import error
 from twisted.words.xish import domish, xmlstream
@@ -342,7 +343,7 @@ class IIQResponseTracker(Interface):
     iqDeferreds = Attribute("Dictionary of deferreds waiting for an iq "
                              "response")
 
-def upgradeWithIQResponseTracker(xmlstream):
+def upgradeWithIQResponseTracker(xs):
     """ Enhances an XmlStream for iq response tracking.
 
     This makes an L{XmlStream} object provide L{IIQResponseTracker}. When a
@@ -352,25 +353,43 @@ def upgradeWithIQResponseTracker(xmlstream):
     """
 
     def callback(iq):
+        """
+        Handle iq response by firing associated deferred.
+        """
+
         if getattr(iq, 'handled', False):
             return
 
         try:
-            d = xmlstream.iqDeferreds[iq["id"]]
+            d = xs.iqDeferreds[iq["id"]]
         except KeyError:
             pass
         else:
-            del iq["id"]
+            del xs.iqDeferreds[iq["id"]]
             iq.handled = True
             if iq['type'] == 'error':
                 d.errback(failure.Failure(error.exceptionFromStanza(iq)))
             else:
                 d.callback(iq)
 
-    xmlstream.iqDeferreds = {}
-    xmlstream.addObserver('/iq[@type="result"]', callback)
-    xmlstream.addObserver('/iq[@type="error"]', callback)
-    directlyProvides(xmlstream, IIQResponseTracker)
+    def disconnected(_):
+        """
+        Make sure deferreds do not linger on after disconnect.
+
+        This errbacks all deferreds of iq's for which no response has been
+        received with a L{ConnectionLost} failure. Otherwise, the deferreds
+        will never be fired.
+        """
+        iqDeferreds = xs.iqDeferreds
+        xs.iqDeferreds = {}
+        for d in iqDeferreds.itervalues():
+            d.errback(ConnectionLost())
+
+    xs.iqDeferreds = {}
+    xs.addObserver(xmlstream.STREAM_END_EVENT, disconnected)
+    xs.addObserver('/iq[@type="result"]', callback)
+    xs.addObserver('/iq[@type="error"]', callback)
+    directlyProvides(xs, IIQResponseTracker)
 
 class IQ(domish.Element):
     """ Wrapper for an iq stanza.
