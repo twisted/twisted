@@ -2728,6 +2728,7 @@ class Timeout(IMAP4HelperMixin, unittest.TestCase):
             c.uninstall()
 
 
+
 class Disconnection(unittest.TestCase):
     def testClientDisconnectFailsDeferreds(self):
         c = imap4.IMAP4Client()
@@ -2736,6 +2737,105 @@ class Disconnection(unittest.TestCase):
         d = self.assertFailure(c.login('testuser', 'example.com'), error.ConnectionDone)
         c.connectionLost(error.ConnectionDone("Connection closed"))
         return d
+
+
+
+class SynchronousMailbox(object):
+    """
+    Trivial, in-memory mailbox implementation which can produce a message
+    synchronously.
+    """
+    def __init__(self, messages):
+        self.messages = messages
+
+
+    def fetch(self, msgset, uid):
+        assert not uid, "Cannot handle uid requests."
+        for msg in msgset:
+            yield msg, self.messages[msg - 1]
+
+
+
+class StringTransportConsumer(StringTransport):
+    producer = None
+    streaming = None
+
+    def registerProducer(self, producer, streaming):
+        self.producer = producer
+        self.streaming = streaming
+
+
+
+class Pipelining(unittest.TestCase):
+    """
+    Tests for various aspects of the IMAP4 server's pipelining support.
+    """
+    messages = [
+        FakeyMessage({}, [], '', '0', None, None),
+        FakeyMessage({}, [], '', '1', None, None),
+        FakeyMessage({}, [], '', '2', None, None),
+        ]
+
+    def setUp(self):
+        self.iterators = []
+
+        self.transport = StringTransportConsumer()
+        self.server = imap4.IMAP4Server(None, None, self.iterateInReactor)
+        self.server.makeConnection(self.transport)
+
+
+    def iterateInReactor(self, iterator):
+        d = defer.Deferred()
+        self.iterators.append((iterator, d))
+        return d
+
+
+    def tearDown(self):
+        self.server.connectionLost(failure.Failure(error.ConnectionDone()))
+
+
+    def test_synchronousFetch(self):
+        """
+        Test that pipelined FETCH commands which can be responded to
+        synchronously are responded to correctly.
+        """
+        mailbox = SynchronousMailbox(self.messages)
+
+        # Skip over authentication and folder selection
+        self.server.state = 'select'
+        self.server.mbox = mailbox
+
+        # Get rid of any greeting junk
+        self.transport.clear()
+
+        # Here's some pipelined stuff
+        self.server.dataReceived(
+            '01 FETCH 1 BODY[]\r\n'
+            '02 FETCH 2 BODY[]\r\n'
+            '03 FETCH 3 BODY[]\r\n')
+
+        # Flush anything the server has scheduled to run
+        while self.iterators:
+            for e in self.iterators[0][0]:
+                break
+            else:
+                self.iterators.pop(0)[1].callback(None)
+
+        # The bodies are empty because we aren't simulating a transport
+        # exactly correctly (we have StringTransportConsumer but we never
+        # call resumeProducing on its producer).  It doesn't matter: just
+        # make sure the surrounding structure is okay, and that no
+        # exceptions occurred.
+        self.assertEquals(
+            self.transport.value(),
+            '* 1 FETCH (BODY[] )\r\n'
+            '01 OK FETCH completed\r\n'
+            '* 2 FETCH (BODY[] )\r\n'
+            '02 OK FETCH completed\r\n'
+            '* 3 FETCH (BODY[] )\r\n'
+            '03 OK FETCH completed\r\n')
+
+
 
 if ClientTLSContext is None:
     for case in (TLSTestCase,):

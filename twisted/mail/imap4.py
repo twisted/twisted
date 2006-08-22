@@ -509,11 +509,14 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     parseState = 'command'
 
-    def __init__(self, chal = None, contextFactory = None):
+    def __init__(self, chal = None, contextFactory = None, scheduler = None):
         if chal is None:
             chal = {}
         self.challengers = chal
         self.ctx = contextFactory
+        if scheduler is None:
+            scheduler = iterateInReactor
+        self._scheduler = scheduler
         self._queuedAsync = []
 
     def capabilities(self):
@@ -1633,10 +1636,18 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         try:
             id, msg = results.next()
         except StopIteration:
+            # All results have been processed, deliver completion notification.
             self.sendPositiveResponse(tag, 'FETCH completed')
-            self._unblock()
+
+            # The idle timeout was suspended while we delivered results,
+            # restore it now.
             self.setTimeout(self._oldTimeout)
             del self._oldTimeout
+
+            # Instance state is now consistent again (ie, it is as though
+            # the fetch command never ran), so allow any pending blocked
+            # commands to execute.
+            self._unblock()
         else:
             self.spewMessage(id, msg, query, uid
                 ).addCallback(lambda _: self.__cbFetch(results, tag, query, uid)
@@ -1711,7 +1722,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             return FileProducer(mf.open()
                 ).beginProducing(self.transport
                 )
-        return MessageProducer(msg
+        return MessageProducer(msg, None, self._scheduler
             ).beginProducing(self.transport
             )
 
@@ -1758,7 +1769,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 mf = IMessageFile(msg, None)
                 if mf is not None:
                     return FileProducer(mf.open()).beginProducing(self.transport)
-                return MessageProducer(msg).beginProducing(self.transport)
+                return MessageProducer(msg, None, self._scheduler).beginProducing(self.transport)
             
         else:
             _w('BODY ' + collapseNestedLists([getBodyStructure(msg)]))
@@ -1792,7 +1803,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 yield self.spew_uid(id, msg, write, flush)
             finish()
             flush()
-        return iterateInReactor(spew())
+        return self._scheduler(spew())
 
     def __ebFetch(self, failure, tag):
         log.err(failure)
@@ -1877,7 +1888,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                     f.seek(0)
                     return f
                 buffer = tempfile.TemporaryFile()
-                d = MessageProducer(msg, buffer
+                d = MessageProducer(msg, buffer, self._scheduler
                     ).beginProducing(None
                     ).addCallback(lambda _, b=buffer, f=flags, d=date: mbox.addMessage(rewind(b), f, d)
                     )
@@ -4891,7 +4902,7 @@ def iterateInReactor(i):
 class MessageProducer:
     CHUNK_SIZE = 2 ** 2 ** 2 ** 2
 
-    def __init__(self, msg, buffer = None):
+    def __init__(self, msg, buffer = None, scheduler = None):
         """Produce this message.
 
         @param msg: The message I am to produce.
@@ -4905,11 +4916,14 @@ class MessageProducer:
         if buffer is None:
             buffer = tempfile.TemporaryFile()
         self.buffer = buffer
+        if scheduler is None:
+            scheduler = iterateInReactor
+        self.scheduler = scheduler
         self.write = self.buffer.write
 
     def beginProducing(self, consumer):
         self.consumer = consumer
-        return iterateInReactor(self._produce())
+        return self.scheduler(self._produce())
 
     def _produce(self):
         headers = self.msg.getHeaders(True)
@@ -4932,7 +4946,7 @@ class MessageProducer:
         if self.msg.isMultipart():
             for p in subparts(self.msg):
                 self.write('\r\n--%s\r\n' % (boundary,))
-                yield MessageProducer(p, self.buffer
+                yield MessageProducer(p, self.buffer, self.scheduler
                     ).beginProducing(None
                     )
             self.write('\r\n--%s--\r\n' % (boundary,))
