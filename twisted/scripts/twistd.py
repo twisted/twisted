@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_twistd -*-
+
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -51,27 +51,10 @@ class ServerOptions(app.ServerOptions):
         print copyright.copyright
         sys.exit()
 
-
     def postOptions(self):
         app.ServerOptions.postOptions(self)
         if self['pidfile']:
             self['pidfile'] = os.path.abspath(self['pidfile'])
-        if self.subCommand:
-            # If we're loading a plugin to run this application, don't
-            # save a shutdown .tap.
-            self['no_save'] = True
-
-
-    def subCommands(self):
-        from twisted import plugin
-        from twisted.scripts.mktap import IServiceMaker
-        plugins = plugin.getPlugins(IServiceMaker)
-        self.loadedPlugins = {}
-        for plug in plugins:
-            self.loadedPlugins[plug.tapname] = plug
-            yield (plug.tapname, None, lambda: plug.options(), plug.description)
-    subCommands = property(subCommands)
-
 
 
 def checkPID(pidfile):
@@ -199,35 +182,9 @@ def startApplication(config, application):
     app.startApplication(application, not config['no_save'])
 
 
-
-def getApplication(config):
-    """
-    Create or load an Application based on the parameters found in the
-    given L{ServerOptions} instance.
-
-    If a subcommand was used, the L{IServiceMaker} that it represents
-    will be used to construct a service to be added to a newly-created
-    Application.
-
-    Otherwise, an application will be loaded based on parameters in
-    the config.
-    """
-    if config.subCommand:
-        # If a subcommand was given, it's our responsibility to create
-        # the application, instead of load it from a file.
-        plg = config.loadedPlugins[config.subCommand]
-        ser = plg.makeService(config.subOptions)
-        application = service.Application(plg.tapname)
-        ser.setServiceParent(application)
-    else:
-        passphrase = app.getPassphrase(config['encrypted'])
-        application = app.getApplication(config, passphrase)
-    return application
-
-
-
 def runApp(config):
     checkPID(config['pidfile'])
+    passphrase = app.getPassphrase(config['encrypted'])
     app.installReactor(config['reactor'])
     config['nodaemon'] = config['nodaemon'] or config['debug']
     oldstdout = sys.stdout
@@ -235,7 +192,7 @@ def runApp(config):
     startLogging(config['logfile'], config['syslog'], config['prefix'],
                  config['nodaemon'])
     app.initialLog()
-    application = getApplication(config)
+    application = app.getApplication(config, passphrase)
     startApplication(config, application)
     app.runReactorWithLogging(config, oldstdout, oldstderr)
     removePID(config['pidfile'])
