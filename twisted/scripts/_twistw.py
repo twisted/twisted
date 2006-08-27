@@ -29,23 +29,34 @@ def startLogging(logfilename):
     log.startLogging(logFile)
     sys.stdout.flush()
 
-def runApp(config):
-    passphrase = app.getPassphrase(config['encrypted'])
-    app.installReactor(config['reactor'])
-    application = app.getApplication(config, passphrase)
-    oldstdout = sys.stdout
-    oldstderr = sys.stderr
-    startLogging(config['logfile'])
-    app.initialLog()
-    os.chdir(config['rundir'])
-    service.IService(application).privilegedStartService()
-    app.startApplication(application, not config['no_save'])
-    app.startApplication(internet.TimerService(0.1, lambda:None), 0)
-    app.runReactorWithLogging(config, oldstdout, oldstderr)
-    app.reportProfile(config['report-profile'],
-                      service.IProcess(application).processName)
-    log.msg("Server Shut Down.")
 
 
-def run():
-    app.run(runApp, ServerOptions)
+class WindowsApplicationRunner(app.ApplicationRunner):
+    """
+    An ApplicationRunner which avoids unix-specific things. No
+    forking, no PID files, no privileges.
+    """
+    def preApplication(self):
+        """
+        Do pre-application-creation setup.
+        """
+        app.installReactor(self.config['reactor'])
+        self.oldstdout = sys.stdout
+        self.oldstderr = sys.stderr
+        startLogging(self.config['logfile'])
+        app.initialLog()
+        os.chdir(self.config['rundir'])
+
+
+    def postApplication(self):
+        """
+        Start the application and run the reactor.
+        """
+        service.IService(self.application).privilegedStartService()
+        app.startApplication(self.application, not self.config['no_save'])
+        app.startApplication(internet.TimerService(0.1, lambda:None), 0)
+        app.runReactorWithLogging(self.config, self.oldstdout, self.oldstderr)
+        app.reportProfile(self.config['report-profile'],
+                          service.IProcess(self.application).processName)
+        log.msg("Server Shut Down.")
+

@@ -144,11 +144,88 @@ def getPassphrase(needed):
     else:
         return None
 
+
+
 def getSavePassphrase(needed):
     if needed:
         passphrase = util.getPassword("Encryption passphrase: ")
     else:
         return None
+
+
+
+class ApplicationRunner(object):
+    """
+    An object which helps running an application based on a config object.
+
+    Subclass me and implement preApplication and postApplication
+    methods. postApplication generally will want to run the reactor
+    after starting the application.
+
+    @ivar config: The config object, which provides a dict-like interface.
+    @ivar application: Available in postApplication, but not
+    preApplication. This is the application object.
+    """
+    def __init__(self, config):
+        self.config = config
+
+    def run(self):
+        """Run the application."""
+        self.preApplication()
+        self.application = self.createOrGetApplication()
+        self.postApplication()
+
+
+    def preApplication(self):
+        """
+        Override in subclass.
+
+        This should set up any state necessary before loading and
+        running the Application.
+        """
+        raise NotImplementedError
+
+
+    def postApplication(self):
+        """
+        Override in subclass.
+
+        This will be called after the application has been loaded (so
+        the C{application} attribute will be set). Generally this
+        should start the application and run the reactor.
+        """
+        raise NotImplementedError
+
+
+    def createOrGetApplication(self):
+        """
+        Create or load an Application based on the parameters found in the
+        given L{ServerOptions} instance.
+
+        If a subcommand was used, the L{IServiceMaker} that it represents
+        will be used to construct a service to be added to a newly-created
+        Application.
+
+        Otherwise, an application will be loaded based on parameters in
+        the config.
+        """
+        if self.config.subCommand:
+            # If a subcommand was given, it's our responsibility to create
+            # the application, instead of load it from a file.
+
+            # loadedPlugins is set up by the ServerOptions.subCommands
+            # property, which is iterated somewhere in the bowels of
+            # usage.Options.
+            plg = self.config.loadedPlugins[self.config.subCommand]
+            ser = plg.makeService(self.config.subOptions)
+            application = service.Application(plg.tapname)
+            ser.setServiceParent(application)
+        else:
+            passphrase = getPassphrase(self.config['encrypted'])
+            application = getApplication(self.config, passphrase)
+        return application
+
+
 
 def getApplication(config, passphrase):
     s = [(config[t], t)
@@ -264,9 +341,21 @@ class ServerOptions(usage.Options):
         usage.Options.parseOptions(self, options)
 
     def postOptions(self):
-        if self['python']:
+        if self.subCommand or self['python']:
             self['no_save'] = True
-        
+
+    def subCommands(self):
+        from twisted import plugin
+        from twisted.scripts.mktap import IServiceMaker
+        plugins = plugin.getPlugins(IServiceMaker)
+        self.loadedPlugins = {}
+        for plug in plugins:
+            self.loadedPlugins[plug.tapname] = plug
+            yield (plug.tapname, None, lambda: plug.options(), plug.description)
+    subCommands = property(subCommands)
+
+
+
 def run(runApp, ServerOptions):
     config = ServerOptions()
     try:
@@ -276,6 +365,7 @@ def run(runApp, ServerOptions):
         print "%s: %s" % (sys.argv[0], ue)
     else:
         runApp(config)
+
 
 def initialLog():
     from twisted.internet import reactor
