@@ -258,6 +258,19 @@ class NotificationTests(unittest.TestCase):
         self.client.lineReceived("RNG 1234 192.168.1.1:1863 CKI 123.456 foo@foo.com Screen%20Name")
         self.failUnless(self.client.state == "SBINVITED")
 
+    def testCommandFailed(self):
+        """
+        Ensures that error responses from the server fires an errback with
+        MSNCommandFailed.
+        """
+        id, d = self.client._createIDMapping()
+        self.client.lineReceived("201 %s" % id)
+        d = self.assertFailure(d, msn.MSNCommandFailed)
+        def assertErrorCode(exception):
+            self.assertEqual(201, exception.errorCode)
+        return d.addCallback(assertErrorCode)
+
+
 class MessageHandlingTests(unittest.TestCase):
     """ testing various message handling methods from SwichboardClient """
 

@@ -288,6 +288,7 @@ class PassportLogin(HTTPClient):
     def login_redir(self, info):
         self.deferred.callback((LOGIN_REDIRECT, self.headers['location'], self.authData))
 
+
 class MSNProtocolError(Exception):
     """
     This Exception is basically used for debugging
@@ -299,8 +300,21 @@ class MSNProtocolError(Exception):
     """
     pass
 
-class MSNMessage:
 
+class MSNCommandFailed(Exception):
+    """
+    The server said that the command failed.
+    """
+
+    def __init__(self, errorCode):
+        self.errorCode = errorCode
+
+    def __str__(self):
+        return ("Command failed: %s (error code %d)"
+                % (errorCodes[self.errorCode], self.errorCode))
+
+
+class MSNMessage:
     """
     I am the class used to represent an 'instant' message.
 
@@ -626,12 +640,14 @@ class MSNEventBase(LineReceiver):
         if len(cmd) != 3:
             raise MSNProtocolError, "Invalid Command, %s" % repr(cmd)
         if cmd.isdigit():
-            if self.ids.has_key(params.split()[0]):
-                self.ids[id].errback(int(cmd))
+            errorCode = int(cmd)
+            id = int(params.split()[0])
+            if id in self.ids:
+                self.ids[id][0].errback(MSNCommandFailed(errorCode))
                 del self.ids[id]
                 return
             else:       # we received an error which doesn't map to a sent command
-                self.gotError(int(cmd))
+                self.gotError(errorCode)
                 return
 
         handler = getattr(self, "handle_%s" % cmd.upper(), None)
