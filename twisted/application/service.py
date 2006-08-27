@@ -15,11 +15,46 @@ API Stability: unstable
 Maintainer: U{Moshe Zadka<mailto:moshez@twistedmatrix.com>}
 """
 
-from zope.interface import implements, Interface
+from zope.interface import implements, Interface, Attribute
 
 from twisted.python import components
 from twisted.internet import defer
 from twisted.persisted import sob
+
+
+class IServiceMaker(Interface):
+    """
+    An object which can be used to construct services in a flexible
+    way.
+
+    This interface should most often be implemented along with
+    twisted.plugin.IPlugin, and will most often be used by the
+    'twistd' command.
+    """
+    tapname = Attribute(
+        "A short string naming this Twisted plugin, for example 'web' or "
+        "'pencil'. This name will be used as the subcommand of 'twistd'.")
+
+    description = Attribute(
+        "A brief summary of the features provided by this "
+        "Twisted application plugin.")
+
+    options = Attribute(
+        "A C{twisted.python.usage.Options} subclass defining the"
+        "configuration options for this application.")
+
+
+    def makeService(options):
+        """
+        Create and return an object providing 
+        L{twisted.application.service.IService}.
+
+        @param options: A mapping (typically a C{dict} or
+        C{twisted.python.usage.Options} instance) of configuration
+        options to desired configuration values.
+        """
+
+
 
 class IService(Interface):
 
@@ -127,6 +162,7 @@ class Service:
         self.running = 0
 
 
+
 class IServiceCollection(Interface):
 
     """Collection of services.
@@ -166,6 +202,7 @@ class IServiceCollection(Interface):
         finished shutting down. If shutting down is immediate,
         a value can be returned (usually, None).
         """
+
 
 
 class MultiService(Service):
@@ -234,6 +271,7 @@ class MultiService(Service):
             return None
 
 
+
 class IProcess(Interface):
 
     """Process running parameters
@@ -285,6 +323,8 @@ def Application(name, uid=None, gid=None):
     IService(ret).setName(name)
     return ret
 
+
+
 def loadApplication(filename, kind, passphrase=None):
     """Load Application from a given file.
 
@@ -303,5 +343,7 @@ def loadApplication(filename, kind, passphrase=None):
         application = sob.load(filename, kind, passphrase)
     return application
 
-__all__ = ['IService', 'Service', 'IServiceCollection', 'MultiService',
+
+__all__ = ['IServiceMaker', 'IService', 'Service', 
+           'IServiceCollection', 'MultiService',
            'IProcess', 'Process', 'Application', 'loadApplication']

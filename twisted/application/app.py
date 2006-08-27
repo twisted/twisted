@@ -202,9 +202,9 @@ class ApplicationRunner(object):
         Create or load an Application based on the parameters found in the
         given L{ServerOptions} instance.
 
-        If a subcommand was used, the L{IServiceMaker} that it represents
-        will be used to construct a service to be added to a newly-created
-        Application.
+        If a subcommand was used, the L{service.IServiceMaker} that it
+        represents will be used to construct a service to be added to
+        a newly-created Application.
 
         Otherwise, an application will be loaded based on parameters in
         the config.
@@ -346,8 +346,7 @@ class ServerOptions(usage.Options):
 
     def subCommands(self):
         from twisted import plugin
-        from twisted.scripts.mktap import IServiceMaker
-        plugins = plugin.getPlugins(IServiceMaker)
+        plugins = plugin.getPlugins(service.IServiceMaker)
         self.loadedPlugins = {}
         for plug in plugins:
             self.loadedPlugins[plug.tapname] = plug

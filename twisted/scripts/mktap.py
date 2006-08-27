@@ -3,37 +3,25 @@
 
 import sys, os
 
-from zope.interface import Interface, Attribute, implements
+from zope.interface import implements
 
 from twisted.application import service, app
 from twisted.persisted import sob
 from twisted.python import usage, util, plugin as oldplugin
 from twisted import plugin as newplugin
 
-class IServiceMaker(Interface):
-    name = Attribute(
-        "A brief string naming this TAP plugin, for example \"Mega Crusher 2000\".")
+# API COMPATIBILITY
+IServiceMaker = service.IServiceMaker
 
-    tapname = Attribute(
-        "A short string naming this TAP plugin, for example \"web\" or "
-        "\"pencil\".")
 
-    description = Attribute(
-        "A brief summary of the features provided by this TAP plugin.")
+import warnings
 
-    options = Attribute(
-        "A C{twisted.python.usage.Options} subclass defining the"
-        "configuration options for this application.")
-
-    def makeService(options):
-        """Create an object implementing C{twisted.application.service.IService}
-
-        Configure the object according to the specified options.
-
-        @param options: A mapping (typically a C{dict} or
-        C{twisted.python.usage.Options} instance) of configuration
-        options to desired configuration values.
-        """
+warnings.warn(
+    "mktap is obsolete as of Twisted 2.5, and will be officially deprecated "
+    "in Twisted 2.6. Use Twisted Application Plugins with the "
+    "'twistd' command  directly, as described in "
+    "'Writing a Twisted Application Plugin for twistd' chapter of the "
+    "Developer Guide.", PendingDeprecationWarning)
 
 try:
     import pwd, grp

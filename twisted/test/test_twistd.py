@@ -9,7 +9,7 @@ from twisted.scripts import twistd
 
 class MockServiceMaker(object):
     """
-    A non-implementation of L{twisted.scripts.mktap.IServiceMaker}.
+    A non-implementation of L{twisted.application.service.IServiceMaker}.
     """
     tapname = 'ueoa'
     def makeService(self, options):
