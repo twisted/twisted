@@ -4,6 +4,7 @@
 
 
 import stat, os, sys
+import socket
 
 from twisted.internet import interfaces, reactor, protocol, error, address, defer, utils
 from twisted.python import lockfile, failure
@@ -40,16 +41,22 @@ class TestClientFactory(protocol.ClientFactory):
 class Factory(protocol.Factory):
     protocol = stopped = None
 
-    def __init__(self, testcase, name):
+    def __init__(self, testcase, name, peername=''):
         self.testcase = testcase
         self.name = name
+        self.peername = peername
         self.deferred = defer.Deferred()
 
     def stopFactory(self):
         self.stopped = True
 
     def buildProtocol(self, addr):
-        self.testcase.assertEquals(None, addr)
+        # os.path.samefile fails on ('', '')
+        if self.peername or addr.name:
+            self.testcase.assertEquals(address.UNIXAddress(self.peername), addr,
+                                       '%r != %r' % (self.peername, addr.name))
+        else:
+            self.testcase.assertEquals(self.peername, addr.name)
         self.protocol = p = MyProtocol()
         self.protocol.deferred = self.deferred
         return p
@@ -83,6 +90,25 @@ class PortCleanerUpper(unittest.TestCase):
 
 class UnixSocketTestCase(PortCleanerUpper):
     """Test unix sockets."""
+
+    def testPeerBind(self):
+        """assert the remote endpoint (getPeer) on the receiving end matches
+           the local endpoint (bind) on the connecting end, for unix sockets"""
+        filename = self.mktemp()
+        peername = self.mktemp()
+        f = Factory(self, filename, peername=peername)
+        l = reactor.listenUNIX(filename, f)
+        self._sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self._sock.bind(peername)
+        self._sock.connect(filename)            
+        d = f.deferred
+        def done(x):
+            self._addPorts(l)
+            self._sock.close()
+            del self._sock
+            return x
+        d.addBoth(done)
+        return d
 
     def testDumber(self):
         filename = self.mktemp()

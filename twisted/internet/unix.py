@@ -55,8 +55,7 @@ class Port(tcp.Port):
             return '<%s (not listening)>' % (self.factory.__class__,)
 
     def _buildAddr(self, name):
-        assert not name
-        return None
+        return address.UNIXAddress(name)
 
     def startListening(self):
         """Create and bind my socket, and begin listening on it.
