@@ -20,7 +20,6 @@ class EchoClient(LineReceiver):
 
     def connectionLost(self, reason):
         print 'connection lost (protocol)'
-        reactor.stop()
 
     def lineReceived(self, line):
         print "receive:", line
