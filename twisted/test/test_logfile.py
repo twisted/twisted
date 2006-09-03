@@ -132,31 +132,34 @@ class LogFileTestCase(unittest.TestCase):
         log.write("abc")
 
         # change permissions so rotation would fail
-        os.chmod(self.dir, 444)
+        os.chmod(self.dir, 0444)
 
-        # if this succeeds, chmod doesn't restrict us, so we can't
-        # do the test
         try:
-            f = open(os.path.join(self.dir,"xxx"), "w")
-        except (OSError, IOError):
-            pass
-        else:
-            f.close()
-            return
-        
-        log.rotate() # this should not fail
+            # if this succeeds, chmod doesn't restrict us, so we can't
+            # do the test
+            try:
+                f = open(os.path.join(self.dir,"xxx"), "w")
+            except (OSError, IOError):
+                pass
+            else:
+                f.close()
+                return
+            
+            log.rotate() # this should not fail
 
-        log.write("def")
-        log.flush()
+            log.write("def")
+            log.flush()
 
-        f = log._file
-        self.assertEquals(f.tell(), 6)
-        f.seek(0, 0)
-        self.assertEquals(f.read(), "abcdef")
-        log.close()
+            f = log._file
+            self.assertEquals(f.tell(), 6)
+            f.seek(0, 0)
+            self.assertEquals(f.read(), "abcdef")
+            log.close()
 
-        # reset permission so tearDown won't fail
-        os.chmod(self.dir, 0777)
+        finally:
+            # reset permission so tearDown won't fail, regardless of if an
+            # assertion was raised.
+            os.chmod(self.dir, 0777)
 
         
 class RiggedDailyLogFile(logfile.DailyLogFile):
