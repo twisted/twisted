@@ -161,26 +161,26 @@ sentence is lying. So there.</em>
   </tr>
 
 </table>
-  
+
 
 <pre>
 
 """
 
 RemoteReference objects should all be tagged with interfaces that they
-implement, which point to representations of the method schemas.  When a remote
-method is called, PB should look up the appropriate method and serialize the
-argument list accordingly.
+implement, which point to representations of the method schemas.  When a
+remote method is called, PB should look up the appropriate method and
+serialize the argument list accordingly.
 
-We plan to eliminate positional arguments, so local RemoteReferences use their
-schema to convert callRemote calls with positional arguments to all-keyword
-arguments before serialization.
+We plan to eliminate positional arguments, so local RemoteReferences use
+their schema to convert callRemote calls with positional arguments to
+all-keyword arguments before serialization.
 
 Conversion to the appropriate version interface should be handled at the
-application level.  Eventually, with careful use of twisted.python.context, we
-might be able to provide automated tools for helping application authors
-automatically convert interface calls and isolate version-conversion code, but
-that is probably pretty hard.
+application level.  Eventually, with careful use of twisted.python.context,
+we might be able to provide automated tools for helping application authors
+automatically convert interface calls and isolate version-conversion code,
+but that is probably pretty hard.
 
 """
 
@@ -192,9 +192,12 @@ class Attributes:
 X = Attributes(
     ('hello', str),
     ('goodbye', int),
-    ('next', Shared(Narf)),             # allow the possibility of multiple or circular references
-                                        # the default is to make multiple copies
-                                        # to avoid making the serializer do extra work
+
+    # Allow the possibility of multiple or circular references.  The default
+    # is to make multiple copies to avoid making the serializer do extra
+    # work.
+    ('next', Shared(Narf)),
+
     ('asdf', ListOf(Narf, maxLength=30)),
     ('fdsa', (Narf, String(maxLength=5), int)),
     ('qqqq', DictOf(str, Narf, maxKeys=30)),
@@ -250,7 +253,7 @@ class Narf(Remoteable):
     class remote_schema(schema):
         dontUse = 'hello', 'goodbye'
 
-            
+
     def remote_add(self, x, y):
         return x + y
 
@@ -258,19 +261,19 @@ class Narf(Remoteable):
         return Reference(deadPlayer.bringToLife())
 
     # "Remoteable" is a new concept - objects which may be method-published
-    # remotely _or_ copied remotely.  The schema objects support both method /
-    # interface definitions and state definitions, so which one gets used can
-    # be defined by the sending side as to whether it sends a
+    # remotely _or_ copied remotely.  The schema objects support both method
+    # / interface definitions and state definitions, so which one gets used
+    # can be defined by the sending side as to whether it sends a
     # Copy(theRemoteable) or Reference(theRemoteable)
 
-    # (also, with methods that are explicitly published by a schema there is no
-    # longer technically any security need for the remote_ prefix, which, based
-    # on past experience can be kind of annoying if you want to provide the
-    # same methods locally and remotely)
+    # (also, with methods that are explicitly published by a schema there is
+    # no longer technically any security need for the remote_ prefix, which,
+    # based on past experience can be kind of annoying if you want to
+    # provide the same methods locally and remotely)
 
-    # outstanding design choice - Referenceable and Copyable are subclasses of
-    # Remoteable, but should they restrict the possibility of sending it the
-    # other way or 
+    # outstanding design choice - Referenceable and Copyable are subclasses
+    # of Remoteable, but should they restrict the possibility of sending it
+    # the other way or
 
     def getPlayerInfo(self, playerID):
         return CopyOf(self.players[playerID])
@@ -288,13 +291,27 @@ class RemoteNarf(Remoted):
         class movementUpdate:
             posX = int
             posY = int
-            __return__ = None           # No return value
-            __wait__ = False            # Don't wait for the answer
-            __reliable__ = False        # Feel free to send this over UDP
-            __ordered__ = True          # but send in order!
-            __priority__ = 3            # use priority queue / stream 3
-            __failure__ = FullFailure   # allow full serialization of failures
-            __failure__ = ErrorMessage  # default: trivial failures, or str or int
+
+            # No return value
+            __return__ = None
+
+            # Don't wait for the answer
+            __wait__ = False
+
+            # Feel free to send this over UDP
+            __reliable__ = False
+
+            # but send in order!
+            __ordered__ = True
+
+            # use priority queue / stream 3
+            __priority__ = 3
+
+            # allow full serialization of failures
+            __failure__ = FullFailure
+
+            # default: trivial failures, or str or int
+            __failure__ = ErrorMessage
 
             # These options may imply different method names - e.g. '__wait__ =
             # False' might imply that you can't use callRemote, you have to
@@ -316,12 +333,15 @@ A reference to a remote object.
 
 
 A call to a remote method:
-('fastcall', request-id, reference-id, method-name, 'arg-name', arg1, 'arg-name', arg2)
+('fastcall', request-id, reference-id,
+ method-name, 'arg-name', arg1, 'arg-name', arg2)
 
 A call to a remote method with extra spicy metadata:
-('call', request-id, reference-id, interface, version, method-name, 'arg-name', arg1, 'arg-name', arg2)
+('call', request-id, reference-id, interface,
+ version, method-name, 'arg-name', arg1, 'arg-name', arg2)
 
-Special hack: request-id of 0 means 'do not answer this call, do not acknowledge', etc.
+Special hack: request-id of 0 means 'do not answer this call, do not
+acknowledge', etc.
 
 Answer to a method call:
 ('answer', request-id, response)

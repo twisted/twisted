@@ -159,19 +159,21 @@ the index file will be placed in <code>doc/howto/index.html</code>.</p>
 </pre>
 
 <p>To run hlint over a single Lore document, such as
-<code>doc/howto/policy/svn-dev.xhtml</code>, do the following. This is useful
-because the HTML conversion may bail without a useful explanation if it sees
-mismatched tags.</p>
+<code>doc/development/policy/svn-dev.xhtml</code>, do the following. This is
+useful because the HTML conversion may bail without a useful explanation if
+it sees mismatched tags.</p>
 
-<pre class="shell">./bin/lore/lore -n --output lint doc/howto/policy/svn-dev.xhtml</pre>
+<pre class="shell">
+./bin/lore/lore -n --output lint doc/development/policy/svn-dev.xhtml
+</pre>
 
 <p>To convert it to HTML (including markup, interpolation of examples,
 footnote processing, etc), do the following. The results will be placed in
-<code>doc/howto/policy/svn-dev.html</code>:</p>
+<code>doc/development/policy/svn-dev.html</code>:</p>
 
 <pre class="shell">
 ./bin/lore/lore -p --config template=doc/howto/template.tpl \
-   doc/howto/policy/svn-dev.xhtml
+   doc/development/policy/svn-dev.xhtml
 </pre>
 
 <p>Note that hyperlinks to other documents may not be quite right unless you

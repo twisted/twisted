@@ -11,9 +11,7 @@ set -e
 
 templ=doc/core/howto/template.tpl
 
-if sh -c 'which python2.2 > /dev/null'; then PYTHON=2.2; fi
-if sh -c 'which python2.3 > /dev/null'; then PYTHON=2.3; fi
-LORE="python$PYTHON ./bin/lore/lore --config baseurl=http://twistedmatrix.com/documents/current/api/%s.html"
+LORE="./bin/lore/lore --config baseurl=http://twistedmatrix.com/documents/current/api/%s.html"
 
 echo "Processing manual pages"
 for man in doc/*/man; do
@@ -21,7 +19,7 @@ for man in doc/*/man; do
 	$LORE -p --input man --output lore --config ext=-man.xhtml $man/*.1
 done
 
-for doc in doc/core doc/core/{man,examples,howto,howto/tutorial,howto/policy,specifications,vision,upgrades,upgrades/2.0} doc/{conch,flow,lore,mail,names,pair,web,words}/{examples,howto} doc/mail/tutorial/smtpclient; do
+for doc in doc/core doc/core/{man,examples,howto,howto/tutorial,howto/policy,specifications,upgrades,upgrades/2.0} doc/{conch,flow,lore,mail,names,pair,web,words}/{examples,howto} doc/mail/tutorial/smtpclient doc/development doc/development/{policy,pb} ; do
 	if [ -e "$doc" ]; then
 		echo "Processing $doc"
 		echo $'\t'"Lint"

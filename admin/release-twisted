@@ -22,6 +22,7 @@ import glob
 
 packaged_projects = dist.twisted_subprojects[:]
 packaged_projects.remove('web2')
+packaged_projects.remove('vfs')
 
 
 def makeCommands():
@@ -150,11 +151,14 @@ def makeDocCore(opts):
     ver = dist.getVersion('core')
     os.chdir('Twisted.exp')
 
-    for docdir in ['howto', 'howto/tutorial', 'howto/policy', 'upgrades',
+    for docdir in ['howto', 'howto/tutorial', 'upgrades',
                    'examples',
                    'upgrades/2.0', # ugh
-                   'specifications', 'vision', '']:
+                   'specifications', '']:
         lore(ver, os.path.join('doc/core', docdir))
+    # development docs go in core, for lack of anywhere better
+    for docdir in ['legal', 'pb', 'policy', '']:
+        lore(ver, os.path.join('doc/development', docdir))
 
     #shwack the crap
 
@@ -203,6 +207,7 @@ def makeBallCore(opts):
     mkdir %(tdir)s/doc
     ln -s `pwd`/Twisted.exp/doc/core/* %(tdir)s/doc/
     ln -s `pwd`/Twisted.exp/doc/fun %(tdir)s/doc/fun
+    ln -s `pwd`/Twisted.exp/doc/development %(tdir)s/doc/development
     ln -s `pwd`/Twisted.exp/bin/* %(tdir)s/bin
     rm -f %(tdir)s/bin/{%(twisted_subprojects)s}
 

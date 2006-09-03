@@ -21,7 +21,7 @@ An example, in oldpb lingo:
 
   # server
   class IBusiness(pb.IPerspective):
-    def perspective_foo(bar):
+    def perspective_foo(self, bar):
       "Does something"
 
   class Business(pb.Avatar):
