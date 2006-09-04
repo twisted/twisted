@@ -3,7 +3,8 @@
 # Copyright (c) 2001-2006 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-""" XMPP Error support
+"""
+XMPP Error support.
 """
 
 from twisted.words.xish import domish
@@ -11,7 +12,7 @@ from twisted.words.xish import domish
 NS_XML = "http://www.w3.org/XML/1998/namespace"
 NS_XMPP_STANZAS = "urn:ietf:params:xml:ns:xmpp-stanzas"
 
-stanza_conditions = {
+STANZA_CONDITIONS = {
     'bad-request':              {'code': '400', 'type': 'modify'},
     'conflict':                 {'code': '409', 'type': 'cancel'},
     'feature-not-implemented':  {'code': '501', 'type': 'cancel'},
@@ -36,8 +37,30 @@ stanza_conditions = {
     'unexpected-request':       {'code': '400', 'type': 'wait'},
 }
 
+CODES_TO_CONDITIONS = {
+    '302': ('gone', 'modify'),
+    '400': ('bad-request', 'modify'),
+    '401': ('not-authorized', 'auth'),
+    '402': ('payment-required', 'auth'),
+    '403': ('forbidden', 'auth'),
+    '404': ('item-not-found', 'cancel'),
+    '405': ('not-allowed', 'cancel'),
+    '406': ('not-acceptable', 'modify'),
+    '407': ('registration-required', 'auth'),
+    '408': ('remote-server-timeout', 'wait'),
+    '409': ('conflict', 'cancel'),
+    '500': ('internal-server-error', 'wait'),
+    '501': ('feature-not-implemented', 'cancel'),
+    '502': ('service-unavailable', 'wait'),
+    '503': ('service-unavailable', 'cancel'),
+    '504': ('remote-server-timeout', 'wait'),
+    '510': ('service-unavailable', 'cancel'),
+}
+
 class Error(Exception):
-    """ Generic XMPP error exception """
+    """
+    Generic XMPP error exception.
+    """
 
     def __init__(self, condition, text=None, textLang=None, appCondition=None):
         Exception.__init__(self)
@@ -45,6 +68,7 @@ class Error(Exception):
         self.text = text
         self.textLang = textLang
         self.appCondition = appCondition
+
 
     def __str__(self):
         message = "%s with condition %r" % (self.__class__.__name__,
@@ -55,15 +79,16 @@ class Error(Exception):
 
         return message
 
+
     def getElement(self):
-        """ Get XML representation from self
-        
+        """
+        Get XML representation from self.
+
         The method creates an L{domish} representation of the
         error data contained in this exception.
-        
+
         @rtype: L{domish.Element}
         """
-
         error = domish.Element((None, 'error'))
         error.addElement((NS_XMPP_STANZAS, self.condition))
         if self.text:
@@ -75,26 +100,34 @@ class Error(Exception):
             error.addChild(self.appCondition)
         return error
 
+
+
 class StreamError(Error):
-    """ Stream Error exception """
+    """
+    Stream Error exception.
+    """
 
     def getElement(self):
-        """ Get XML representation from self
-        
+        """
+        Get XML representation from self.
+
         Overrides the base L{Error.getElement} to make sure the returned
         element is in the XML Stream namespace.
 
         @rtype: L{domish.Element}
         """
-
         from twisted.words.protocols.jabber.xmlstream import NS_STREAMS
 
         error = Error.getElement(self)
         error.uri = NS_STREAMS
         return error
 
+
+
 class StanzaError(Error):
-    """ Stanza Error exception """
+    """
+    Stanza Error exception.
+    """
 
     def __init__(self, condition, type=None, text=None, textLang=None,
                        appCondition=None):
@@ -102,37 +135,40 @@ class StanzaError(Error):
 
         if type is None:
             try:
-                type = stanza_conditions[condition]['type']
+                type = STANZA_CONDITIONS[condition]['type']
             except KeyError:
                 pass
         self.type = type
 
         try:
-            self.code = stanza_conditions[condition]['code']
+            self.code = STANZA_CONDITIONS[condition]['code']
         except KeyError:
             self.code = None
 
         self.children = []
         self.iq = None
 
+
     def getElement(self):
-        """ Get XML representation from self
-        
+        """
+        Get XML representation from self.
+
         Overrides the base L{Error.getElement} to make sure the returned
         element has a C{type} attribute and optionally a legacy C{code}
         attribute.
 
         @rtype: L{domish.Element}
         """
-
         error = Error.getElement(self)
         error['type'] = self.type
         if self.code:
             error['code'] = self.code
         return error
 
+
     def toResponse(self, stanza):
-        """ Construct error response stanza.
+        """
+        Construct error response stanza.
 
         The C{stanza} is transformed into an error response stanza by
         swapping the C{to} and C{from} addresses and inserting an error
@@ -141,11 +177,13 @@ class StanzaError(Error):
         @param stanza: the stanza to respond to
         @type stanza: L{domish.Element}
         """
-
-        stanza.swapAttributeValues('to', 'from')
+        if stanza.getAttribute('to'):
+            stanza.swapAttributeValues('to', 'from')
         stanza['type'] = 'error'
         stanza.addChild(self.getElement())
         return stanza
+
+
 
 def _getText(element):
     for child in element.children:
@@ -154,9 +192,12 @@ def _getText(element):
 
     return None
 
+
+
 def _parseError(error):
-    """ Parses an error element
-    
+    """
+    Parses an error element.
+
     @param error: the error element to be parsed
     @type error: L{domish.Element}
     @return: dictionary with extracted error information. If present, keys
@@ -186,15 +227,17 @@ def _parseError(error):
         'appCondition': appCondition,
     }
 
+
+
 def exceptionFromStreamError(element):
-    """ Build an exception object from a stream error
+    """
+    Build an exception object from a stream error.
 
     @param element: the stream error
     @type element: L{domish.Element}
     @return: the generated exception object
     @rtype: L{StreamError}
     """
-
     error = _parseError(element)
 
     exception = StreamError(error['condition'],
@@ -204,36 +247,43 @@ def exceptionFromStreamError(element):
 
     return exception
 
+
+
 def exceptionFromStanza(stanza):
-    """ Build an exception object from an error stanza
+    """
+    Build an exception object from an error stanza.
 
     @param stanza: the error stanza
     @type stanza: L{domish.Element}
     @return: the generated exception object
     @rtype: L{StanzaError}
     """
-
     children = []
-    error = None
+    condition = text = textLang = appCondition = type = code = None
+
     for element in stanza.elements():
         if element.name == 'error' and element.uri == stanza.uri:
             code = element.getAttribute('code')
             type = element.getAttribute('type')
             error = _parseError(element)
+            condition = error['condition']
+            text = error['text']
+            textLang = error['textLang']
+            appCondition = error['appCondition']
+
+            if not condition and code:
+               condition, type = CODES_TO_CONDITIONS[code]
+               text = _getText(stanza.error)
         else:
             children.append(element)
 
-    if error is None:
+    if condition is None:
         # TODO: raise exception instead?
-        return StanzaError(None) 
+        return StanzaError(None)
 
-    exception = StanzaError(error['condition'],
-                            type,
-                            error['text'],
-                            error['textLang'],
-                            error['appCondition'])
+    exception = StanzaError(condition, type, text, textLang, appCondition)
 
     exception.children = children
-    exception.stanza = stanza 
+    exception.stanza = stanza
 
     return exception

@@ -3,18 +3,17 @@
 # Copyright (c) 2001-2006 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-""" XMPP XML Streams
+"""
+XMPP XML Streams
 
 Building blocks for setting up XML Streams, including helping classes for
 doing authentication on either client or server side, and working with XML
 Stanzas.
 """
 
-from OpenSSL import SSL
+from zope.interface import Interface, Attribute, directlyProvides, implements
 
-from zope.interface import Interface, Attribute, directlyProvides
-
-from twisted.internet import defer, ssl
+from twisted.internet import defer
 from twisted.internet.error import ConnectionLost
 from twisted.python import failure
 from twisted.words.protocols.jabber import error
@@ -24,34 +23,49 @@ from twisted.words.xish.xmlstream import STREAM_START_EVENT
 from twisted.words.xish.xmlstream import STREAM_END_EVENT
 from twisted.words.xish.xmlstream import STREAM_ERROR_EVENT
 
+try:
+    from twisted.internet import ssl
+except ImportError:
+    ssl = None
+if ssl and not ssl.supported:
+    ssl = None
+
 STREAM_AUTHD_EVENT = intern("//event/stream/authd")
-TLS_FAILED_EVENT = intern("//event/tls/failed")
+INIT_FAILED_EVENT = intern("//event/xmpp/initfailed")
 
 NS_STREAMS = 'http://etherx.jabber.org/streams'
 NS_XMPP_TLS = 'urn:ietf:params:xml:ns:xmpp-tls'
 
+Reset = object()
+
 def hashPassword(sid, password):
-    """Create a SHA1-digest string of a session identifier and password """
+    """
+    Create a SHA1-digest string of a session identifier and password.
+    """
     import sha
     return sha.new("%s%s" % (sid, password)).hexdigest()
 
 class Authenticator:
-    """ Base class for business logic of authenticating an XmlStream
+    """
+    Base class for business logic of initializing an XmlStream
 
-    Subclass this object to enable an XmlStream to authenticate to different
-    types of stream hosts (such as clients, components, etc.).
+    Subclass this object to enable an XmlStream to initialize and authenticate
+    to different types of stream hosts (such as clients, components, etc.).
 
     Rules:
       1. The Authenticator MUST dispatch a L{STREAM_AUTHD_EVENT} when the
-         stream has been completely authenticated.
+         stream has been completely initialized.
       2. The Authenticator SHOULD reset all state information when
          L{associateWithStream} is called.
       3. The Authenticator SHOULD override L{streamStarted}, and start
-         authentication there.
-
+         initialization there.
 
     @type xmlstream: L{XmlStream}
     @ivar xmlstream: The XmlStream that needs authentication
+
+    @note: the term authenticator is historical. Authenticators perform
+           all steps required to prepare the stream for the exchange
+           of XML stanzas.
     """
 
     def __init__(self):
@@ -60,9 +74,11 @@ class Authenticator:
     def connectionMade(self):
         """
         Called by the XmlStream when the underlying socket connection is
-        in place. This allows the Authenticator to send an initial root
-        element, if it's connecting, or wait for an inbound root from
-        the peer if it's accepting the connection
+        in place.
+
+        This allows the Authenticator to send an initial root element, if it's
+        connecting, or wait for an inbound root from the peer if it's accepting
+        the connection.
 
         Subclasses can use self.xmlstream.send() to send any initial data to
         the peer.
@@ -88,11 +104,15 @@ class Authenticator:
         @type xmlstream: L{XmlStream}
         @param xmlstream: The XmlStream that will be passing events to this
                           Authenticator.
-        
+
         """
         self.xmlstream = xmlstream
 
 class ConnectAuthenticator(Authenticator):
+    """
+    Authenticator for initiating entities.
+    """
+
     namespace = None
 
     def __init__(self, otherHost):
@@ -103,48 +123,280 @@ class ConnectAuthenticator(Authenticator):
         self.xmlstream.otherHost = self.otherHost
         self.xmlstream.sendHeader()
 
-class XmlStream(xmlstream.XmlStream):
-    """ XMPP XML Stream protocol handler.
+    def initializeStream(self):
+        """
+        Perform stream initialization procedures.
 
-    The use of TLS is controlled by the C{useTls} attribute. It can have
-    three values:
+        An L{XmlStream} holds a list of initializer objects in its
+        C{initializers} attribute. This method calls these initializers in
+        order and dispatches the C{STREAM_AUTHD_EVENT} event when the list has
+        been successfully processed. Otherwise it dispatches the
+        C{INIT_FAILED_EVENT} event with the failure.
 
-     - 0: never initiate TLS
-     - 1: initiate TLS when available
-     - 2: always initiate TLS or dispatch L{TLS_FAILED_EVENT} if not
-          available
+        Initializers may return the special L{Reset} object to halt the
+        initialization processing. It signals that the current initializer was
+        successfully processed, but that the XML Stream has been reset. An
+        example is the TLSInitiatingInitializer.
+        """
 
-    L{TLS_FAILED_EVENT} is also fired when TLS negotiation failed.
+        def remove_first(result):
+            self.xmlstream.initializers.pop(0)
 
-    The C{tlsEstablished} attribute is set to True whenever TLS was negotiated
-    succesfully.
+            return result
 
-    The C{features} attribute is a L{dict} mapping (uri, name) tuples to
-    their respective received feature elements.
+        def do_next(result):
+            """
+            Take the first initializer and process it.
+
+            On success, the initializer is removed from the list and
+            then next initializer will be tried.
+            """
+
+            if result is Reset:
+                return None
+
+            try:
+                init = self.xmlstream.initializers[0]
+            except IndexError:
+                self.xmlstream.dispatch(self.xmlstream, STREAM_AUTHD_EVENT)
+                return None
+            else:
+                d = defer.maybeDeferred(init.initialize)
+                d.addCallback(remove_first)
+                d.addCallback(do_next)
+                return d
+
+        d = defer.succeed(None)
+        d.addCallback(do_next)
+        d.addErrback(self.xmlstream.dispatch, INIT_FAILED_EVENT)
+
+    def streamStarted(self):
+        self.initializeStream()
+
+class IInitializer(Interface):
+    """
+    Interface for XML stream initializers.
+
+    Initializers perform a step in getting the XML stream ready to be
+    used for the exchange of XML stanzas.
     """
 
-    version = (1, 0)        # Stream version; pair of integers: (major, minor)
-    namespace = 'invalid'   # Default namespace for stream (in ASCII)
-    thisHost = None         # Hostname of this entity
-    otherHost = None        # Hostname of the entity we connect to
-    sid = None              # Session identifier (in ASCII)
-    initiating = True       # True if this is the initiating stream
-    _headerSent = False     # True if the stream header has been sent
-    features = {}           # Stream features dictionary {(uri, name): element}
-    useTls = 2              # 0 = never, 1 = whenever possible, 2 = always
-    tlsEstablished = False  # True if TLS has been succesfully negotiated
+class IInitiatingInitializer(IInitializer):
+    """
+    Interface for XML stream initializers for the initiating entity.
+    """
+
+    xmlstream = Attribute("""The associated XML stream""")
+
+    def initialize():
+        """
+        Initiate the initialization step.
+
+        May return a deferred when the initialization is done asynchronously.
+        """
+
+class FeatureNotAdvertized(Exception):
+    """
+    Exception indicating a stream feature was not advertized, while required by
+    the initiating entity.
+    """
+
+class BaseFeatureInitiatingInitializer(object):
+    """
+    Base class for initializers with a stream feature.
+
+    This assumes the associated XmlStream represents the initiating entity
+    of the connection.
+
+    @cvar feature: tuple of (uri, name) of the stream feature root element.
+    @type feature: tuple of (L{str}, L{str})
+    @ivar required: whether the stream feature is required to be advertized
+                    by the receiving entity.
+    @type required: L{bool}
+    """
+
+    implements(IInitiatingInitializer)
+
+    feature = None
+    required = False
+
+    def __init__(self, xs):
+        self.xmlstream = xs
+
+    def initialize(self):
+        """
+        Initiate the initialization.
+
+        Checks if the receiving entity advertizes the stream feature. If it
+        does, the initialization is started. If it is not advertized, and the
+        C{required} instance variable is L{True}, it raises
+        L{FeatureNotAdvertized}. Otherwise, the initialization silently
+        succeeds.
+        """
+
+        if self.feature in self.xmlstream.features:
+            return self.start()
+        elif self.required:
+            raise FeatureNotAdvertized
+        else:
+            return None
+
+    def start(self):
+        """
+        Start the actual initialization.
+
+        May return a deferred for asynchronous initialization.
+        """
+
+class TLSError(Exception):
+    """
+    TLS base exception.
+    """
+
+class TLSFailed(TLSError):
+    """
+    Exception indicating failed TLS negotiation
+    """
+
+class TLSRequired(TLSError):
+    """
+    Exception indicating required TLS negotiation.
+
+    This exception is raised when the receiving entity requires TLS
+    negotiation and the initiating does not desire to negotiate TLS.
+    """
+
+class TLSNotSupported(TLSError):
+    """
+    Exception indicating missing TLS support.
+
+    This exception is raised when the initiating entity wants and requires to
+    negotiate TLS when the OpenSSL library is not available.
+    """
+
+class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
+    """
+    TLS stream initializer for the initiating entity.
+
+    It is strongly required to include this initializer in the list of
+    initializers for an XMPP stream. By default it will try to negotiate TLS.
+    An XMPP server may indicate that TLS is required. If TLS is not desired,
+    set the C{wanted} attribute to False instead of removing it from the list
+    of initializers, so a proper exception L{TLSRequired} can be raised.
+
+    @cvar wanted: indicates if TLS negotiation is wanted.
+    @type wanted: L{bool}
+    """
+
+    feature = (NS_XMPP_TLS, 'starttls')
+    wanted = True
+    _deferred = None
+
+    def onProceed(self, obj):
+        """
+        Proceed with TLS negotiation and reset the XML stream.
+        """
+
+        self.xmlstream.removeObserver('/failure', self.onFailure)
+        from OpenSSL import SSL
+        ctx = ssl.CertificateOptions(method=SSL.TLSv1_METHOD)
+        self.xmlstream.transport.startTLS(ctx)
+        self.xmlstream.reset()
+        self.xmlstream.sendHeader()
+        self._deferred.callback(Reset)
+
+    def onFailure(self, obj):
+        self.xmlstream.removeObserver('/proceed', self.onProceed)
+        self._deferred.errback(TLSFailed())
+
+    def start(self):
+        """
+        Start TLS negotiation.
+
+        This checks if the receiving entity requires TLS, the SSL library is
+        available and uses the C{required} and C{wanted} instance variables to
+        determine what to do in the various different cases.
+
+        For example, if the SSL library is not available, and wanted and
+        required by the user, it raises an exception. However if it is not
+        required by both parties, initialization silently succeeds, moving
+        on to the next step.
+        """
+        if self.wanted:
+            if not ssl.supported:
+                if self.required:
+                    return defer.fail(TLSNotSupported())
+                else:
+                    return defer.succeed(None)
+            else:
+                pass
+        elif self.xmlstream.features[self.feature].required:
+            return defer.fail(TLSRequired())
+        else:
+            return defer.succeed(None)
+
+        self._deferred = defer.Deferred()
+        self.xmlstream.addOnetimeObserver("/proceed", self.onProceed)
+        self.xmlstream.addOnetimeObserver("/failure", self.onFailure)
+        self.xmlstream.send(domish.Element((NS_XMPP_TLS, "starttls")))
+        return self._deferred
+
+
+
+class XmlStream(xmlstream.XmlStream):
+    """
+    XMPP XML Stream protocol handler.
+
+    @ivar version: XML stream version as a tuple (major, minor). Initially,
+                   this is set to the minimally supported version. Upon
+                   receiving the stream header of the peer, it is set to the
+                   minimum of that value and the version on the received
+                   header.
+    @type version: (L{int}, L{int})
+    @ivar namespace: default namespace URI for stream
+    @type namespace: L{str}
+    @ivar thisHost: hostname of this entity
+    @ivar otherHost: hostname of the peer entity
+    @ivar sid: session identifier
+    @type sid: L{str}
+    @ivar initiating: True if this is the initiating stream
+    @type initiating: L{bool}
+    @ivar features: map of (uri, name) to stream features element received from
+                    the receiving entity.
+    @type features: L{dict} of (L{str}, L{str}) to L{domish.Element}.
+    @ivar prefixes: map of URI to prefixes that are to appear on stream
+                    header.
+    @type prefixes: L{dict} of L{str} to L{str}
+    @ivar initializers: list of stream initializer objects
+    @type initializers: L{list} of objects that provide L{IInitializer}
+    @ivar authenticator: associated authenticator that uses C{initializers} to
+                         initialize the XML stream.
+    """
+
+    version = (1, 0)
+    namespace = 'invalid'
+    thisHost = None
+    otherHost = None
+    sid = None
+    initiating = True
     prefixes = {NS_STREAMS: 'stream'}
+
+    _headerSent = False     # True if the stream header has been sent
 
     def __init__(self, authenticator):
         xmlstream.XmlStream.__init__(self)
 
         self.authenticator = authenticator
+        self.initializers = []
+        self.features = {}
 
         # Reset the authenticator
         authenticator.associateWithStream(self)
 
+
     def reset(self):
-        """ Reset XML Stream.
+        """
+        Reset XML Stream.
 
         Resets the XML Parser for incoming data. This is to be used after
         successfully negotiating a new layer, e.g. TLS and SASL. Note that
@@ -153,8 +405,10 @@ class XmlStream(xmlstream.XmlStream):
         self._headerSent = False
         self._initializeStream()
 
-    def streamError(self, errelem):
-        """ Called when a stream:error element has been received.
+
+    def onStreamError(self, errelem):
+        """
+        Called when a stream:error element has been received.
 
         Dispatches a L{STREAM_ERROR_EVENT} event with the error element to
         allow for cleanup actions and drops the connection.
@@ -162,30 +416,15 @@ class XmlStream(xmlstream.XmlStream):
         @param errelem: The received error element.
         @type errelem: L{domish.Element}
         """
-        self.dispatch(errelem, STREAM_ERROR_EVENT)
+        self.dispatch(failure.Failure(error.exceptionFromStreamError(errelem)),
+                      STREAM_ERROR_EVENT)
         self.transport.loseConnection()
 
-    def startTLS(self):
-        def proceed(obj):
-            print "proceed"
-            ctx = ssl.ClientContextFactory()
-            ctx.method = SSL.TLSv1_METHOD   # We only do TLS, no SSL
-            self.transport.startTLS(ctx)
-            self.reset()
-            self.tlsEstablished = 1
-            self.sendHeader()
-
-        def failure(obj):
-            self.factory.stopTrying()
-            self.dispatch(obj, TLS_FAILED_EVENT)
-
-        self.addOnetimeObserver("/proceed", proceed)
-        self.addOnetimeObserver("/failure", failure)
-        self.send("<starttls xmlns='%s'/>" % NS_XMPP_TLS)
 
     def onFeatures(self, features):
-        """ Called when a stream:features element has been received.
-    
+        """
+        Called when a stream:features element has been received.
+
         Stores the received features in the C{features} attribute, checks the
         need for initiating TLS and notifies the authenticator of the start of
         the stream.
@@ -196,57 +435,72 @@ class XmlStream(xmlstream.XmlStream):
         self.features = {}
         for feature in features.elements():
             self.features[(feature.uri, feature.name)] = feature
-        
-        starttls = (NS_XMPP_TLS, 'starttls') in self.features
-        
-        if self.tlsEstablished or self.useTls == 0 or \
-           (self.useTls == 1 and not starttls):
-            self.authenticator.streamStarted()
-        elif not self.tlsEstablished and self.useTls in (1, 2) and starttls:
-            self.startTLS()
-        else:
-            self.factory.stopTrying()
-            self.dispatch(None, TLS_FAILED_EVENT)
-            self.transport.loseConnection()
-            
-    def hasFeature(self, uri, name):
-        """ Report if a certain feature is supported.
-        
-        @param uri: Feature namespace URI.
-        @type uri: L{str}
-        @param name: Feature name.
-        @type name: L{str}
-        """
-        return (uri, name) in self.features
+        self.authenticator.streamStarted()
+
 
     def sendHeader(self):
-        """ Send stream header. """
-        sh = "<stream:stream xmlns:stream='http://etherx.jabber.org/streams'"
-        sh += " xmlns='%s'" % self.namespace
+        """
+        Send stream header.
+        """
+        rootElem = domish.Element((NS_STREAMS, 'stream'), self.namespace)
 
         if self.initiating and self.otherHost:
-            sh += " to='%s'" % self.otherHost.encode('utf-8')
+            rootElem['to'] = self.otherHost
         elif not self.initiating:
             if self.thisHost:
-                sh += " from='%s'" % self.thisHost.encode('utf-8')
+                rootElem['from'] = self.thisHost
             if self.sid:
-                sh += " id='%s'" % self.sid
+                rootElem['id'] = self.sid
 
         if self.version >= (1, 0):
-            sh += " version='%d.%d'" % (self.version[0], self.version[1])
+            rootElem['version'] = "%d.%d" % (self.version[0], self.version[1])
 
-        sh += '>'
-        self.send(sh)
+        self.rootElem = rootElem
+
+        self.send(rootElem.toXml(prefixes=self.prefixes, closeElement=0))
+        self._headerSent = True
+
+
+    def sendFooter(self):
+        """
+        Send stream footer.
+        """
+        self.send('</stream:stream>')
+
+
+    def sendStreamError(self, streamError):
+        """
+        Send stream level error.
+
+        If we are the receiving entity, and haven't sent the header yet,
+        we sent one first.
+
+        If the given C{failure} is a L{error.StreamError}, it is rendered
+        to its XML representation, otherwise a generic C{internal-error}
+        stream error is generated.
+
+        After sending the stream error, the stream is closed and the transport
+        connection dropped.
+        """
+        if not self._headerSent and not self.initiating:
+            self.sendHeader()
+
+        if self._headerSent:
+            self.send(streamError.getElement())
+            self.sendFooter()
+
+        self.transport.loseConnection()
+
 
     def send(self, obj):
-        """ Send data over the stream.
+        """
+        Send data over the stream.
 
         This overrides L{xmlstream.Xmlstream.send} to use the default namespace
         of the stream header when serializing L{domish.IElement}s. It is
         assumed that if you pass an object that provides L{domish.IElement},
         it represents a direct child of the stream's root element.
         """
-
         if domish.IElement.providedBy(obj):
             obj = obj.toXml(prefixes=self.prefixes,
                             defaultUri=self.namespace,
@@ -254,16 +508,20 @@ class XmlStream(xmlstream.XmlStream):
 
         xmlstream.XmlStream.send(self, obj)
 
+
     def connectionMade(self):
-        """ Called when a connection is made.
+        """
+        Called when a connection is made.
 
         Notifies the authenticator when a connection has been made.
         """
         xmlstream.XmlStream.connectionMade(self)
         self.authenticator.connectionMade()
 
+
     def onDocumentStart(self, rootelem):
-        """ Called when the stream header has been received.
+        """
+        Called when the stream header has been received.
 
         Extracts the header's C{id} and C{version} attributes from the root
         element. The C{id} attribute is stored in our C{sid} attribute and the
@@ -288,7 +546,7 @@ class XmlStream(xmlstream.XmlStream):
         if rootelem.hasAttribute("id"):
             self.sid = rootelem["id"]
 
-        # Extract stream version and take minimum with the version sent 
+        # Extract stream version and take minimum with the version sent
         if rootelem.hasAttribute("version"):
             version = rootelem["version"].split(".")
             try:
@@ -302,8 +560,8 @@ class XmlStream(xmlstream.XmlStream):
 
         # Setup observer for stream errors
         self.addOnetimeObserver("/error[@xmlns='%s']" % NS_STREAMS,
-                                self.streamError)
-        
+                                self.onStreamError)
+
         # Setup observer for stream features, if applicable
         if self.initiating and self.version >= (1, 0):
             self.addOnetimeObserver('/features[@xmlns="%s"]' % NS_STREAMS,
@@ -311,11 +569,14 @@ class XmlStream(xmlstream.XmlStream):
         else:
             self.authenticator.streamStarted()
 
+
+
 class XmlStreamFactory(xmlstream.XmlStreamFactory):
     def __init__(self, authenticator):
         xmlstream.XmlStreamFactory.__init__(self)
         self.authenticator = authenticator
-    
+
+
     def buildProtocol(self, _):
         self.resetDelay()
         # Create the stream and register all the bootstrap observers
@@ -324,13 +585,16 @@ class XmlStreamFactory(xmlstream.XmlStreamFactory):
         for event, fn in self.bootstraps: xs.addObserver(event, fn)
         return xs
 
+
+
 class IIQResponseTracker(Interface):
-    """ IQ response tracker interface.
+    """
+    IQ response tracker interface.
 
     The XMPP stanza C{iq} has a request-response nature that fits
     naturally with deferreds. You send out a request and when the response
     comes back a deferred is fired.
-    
+
     The L{IQ} class implements a C{send} method that returns a deferred. This
     deferred is put in a dictionary that is kept in an L{XmlStream} object,
     keyed by the request stanzas C{id} attribute.
@@ -339,24 +603,24 @@ class IIQResponseTracker(Interface):
     keeps the said dictionary and sets observers on the iq stanzas of type
     C{result} and C{error} and lets the callback fire the associated deferred.
     """
-
     iqDeferreds = Attribute("Dictionary of deferreds waiting for an iq "
                              "response")
 
+
+
 def upgradeWithIQResponseTracker(xs):
-    """ Enhances an XmlStream for iq response tracking.
+    """
+    Enhances an XmlStream for iq response tracking.
 
     This makes an L{XmlStream} object provide L{IIQResponseTracker}. When a
     response is an error iq stanza, the deferred has its errback invoked with a
     failure that holds a L{StanzaException<error.StanzaException>} that is
     easier to examine.
     """
-
     def callback(iq):
         """
         Handle iq response by firing associated deferred.
         """
-
         if getattr(iq, 'handled', False):
             return
 
@@ -368,9 +632,10 @@ def upgradeWithIQResponseTracker(xs):
             del xs.iqDeferreds[iq["id"]]
             iq.handled = True
             if iq['type'] == 'error':
-                d.errback(failure.Failure(error.exceptionFromStanza(iq)))
+                d.errback(error.exceptionFromStanza(iq))
             else:
                 d.callback(iq)
+
 
     def disconnected(_):
         """
@@ -391,9 +656,12 @@ def upgradeWithIQResponseTracker(xs):
     xs.addObserver('/iq[@type="error"]', callback)
     directlyProvides(xs, IIQResponseTracker)
 
+
+
 class IQ(domish.Element):
-    """ Wrapper for an iq stanza.
-   
+    """
+    Wrapper for an iq stanza.
+
     Iq stanzas are used for communications with a request-response behaviour.
     Each iq request is associated with an XML stream and has its own unique id
     to be able to track the response.
@@ -407,24 +675,24 @@ class IQ(domish.Element):
         @type type: L{str}
         @param type: IQ type identifier ('get' or 'set')
         """
-
         domish.Element.__init__(self, (None, "iq"))
         self.addUniqueId()
         self["type"] = type
         self._xmlstream = xmlstream
 
+
     def send(self, to=None):
-        """ Send out this iq.
+        """
+        Send out this iq.
 
         Returns a deferred that is fired when an iq response with the same id
         is received. Result responses will be passed to the deferred callback.
         Error responses will be transformed into a
         L{StanzaError<error.StanzaError>} and result in the errback of the
-        deferred being invoked. 
+        deferred being invoked.
 
         @rtype: L{defer.Deferred}
         """
-
         if to is not None:
             self["to"] = to
 

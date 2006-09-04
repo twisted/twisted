@@ -1,3 +1,21 @@
+x.x.x (YYYY-MM-DD)
+==================
+
+ - Jabber:
+   - Rework ConnectAuthenticator to work with initializer objects that
+     provide a stream initialization step.
+   - Reimplement iq:auth as an initializer.
+   - Reimplement TLS negotiation as an initializer.
+   - Implement SASL authentication, resource binding and session establishment.
+   - Add XMPPAuthenticator as a XMPP 1.0 client authenticator (only), along
+     with XMPPClientFactory.
+   - Add support for working with pre-XMPP-1.0 error stanzas.
+   - Add full tests for protocols/jabber/xmlstream.py
+   - Properly import SSL libraries, and only fail TLS when really needed.
+   - Remove hasFeature() from XmlStream as you can test (uri, name) in
+	 xs.features.
+   - Add sendFooter() and sendStreamError() to XmlStream
+
 0.4.0 (2006-05-21)
 ==================
 

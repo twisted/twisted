@@ -14,7 +14,8 @@ def componentFactory(componentid, password):
     return xmlstream.XmlStreamFactory(a)
 
 class ConnectComponentAuthenticator(xmlstream.ConnectAuthenticator):
-    """ Authenticator to permit an XmlStream to authenticate against a Jabber
+    """
+    Authenticator to permit an XmlStream to authenticate against a Jabber
     Server as a Component (where the Authenticator is initiating the stream).
 
     This implements the basic component authentication. Unfortunately this
@@ -47,7 +48,6 @@ class ConnectComponentAuthenticator(xmlstream.ConnectAuthenticator):
 
     def associateWithStream(self, xs):
         xs.version = (0, 0)
-        xs.useTls = 0
         xmlstream.ConnectAuthenticator.associateWithStream(self, xs)
 
     def _handshakeEvent(self, elem):
@@ -57,23 +57,27 @@ class ConnectComponentAuthenticator(xmlstream.ConnectAuthenticator):
         self.xmlstream.dispatch(self.xmlstream, xmlstream.STREAM_AUTHD_EVENT)
 
 class ListenComponentAuthenticator(xmlstream.Authenticator):
-    """ Placeholder for listening components """
-    pass
-
+    """
+    Placeholder for listening components.
+    """
 
 from twisted.application import service
 
 class IService(Interface):
     def componentConnected(xmlstream):
-        """ Parent component has established a connection
+        """
+        Parent component has established a connection.
         """
 
     def componentDisconnected():
-        """ Parent component has lost a connection to the Jabber system
+        """
+        Parent component has lost a connection to the Jabber system.
         """
 
     def transportConnected(xmlstream):
-        """ Parent component has established a connection over the underlying transport
+        """
+        Parent component has established a connection over the underlying
+        transport.
         """
 
 class Service(service.Service):
@@ -92,13 +96,16 @@ class Service(service.Service):
         self.parent.send(obj)
 
 class ServiceManager(service.MultiService):
-    """ Business logic representing a managed component connection to a Jabber router
+    """
+    Business logic representing a managed component connection to a Jabber
+    router.
 
     This Service maintains a single connection to a Jabber router and
     provides facilities for packet routing and transmission. Business
-    logic modules can 
+    logic modules can
     subclasses, and added as sub-service.
     """
+
     def __init__(self, jid, password):
         service.MultiService.__init__(self)
 
@@ -163,9 +170,11 @@ class ServiceManager(service.MultiService):
 
 
 def buildServiceManager(jid, password, strport):
-    """ Constructs a pre-built L{ServiceManager}, using the specified strport
-        string.    
     """
+    Constructs a pre-built L{ServiceManager}, using the specified strport
+    string.
+    """
+
     svc = ServiceManager(jid, password)
     client_svc = jstrports.client(strport, svc.getFactory())
     client_svc.setServiceParent(svc)

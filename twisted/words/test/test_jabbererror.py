@@ -134,9 +134,9 @@ class ExceptionFromStanzaTest(unittest.TestCase):
         Test basic operations of exceptionFromStanza.
 
         Given a realistic stanza, check if a sane exception is returned.
-        
+
         Using this stanza::
-        
+
           <iq type='error'
               from='pubsub.shakespeare.lit'
               to='francisco@denmark.lit/barracks'
@@ -168,4 +168,32 @@ class ExceptionFromStanzaTest(unittest.TestCase):
         self.assertEquals('feature-not-implemented', result.condition)
         self.assertEquals('cancel', result.type)
         self.assertEquals(uc, result.appCondition)
+        self.assertEquals([p], result.children)
+
+    def testLegacy(self):
+        """
+        Test legacy operations of exceptionFromStanza.
+
+        Given a realistic stanza with only legacy (pre-XMPP) error information,
+        check if a sane exception is returned.
+
+        Using this stanza::
+
+          <message type='error'
+                   to='piers@pipetree.com/Home'
+                   from='qmacro@jaber.org'>
+            <body>Are you there?</body>
+            <error code='502'>Unable to resolve hostname.</error>
+          </message>
+        """
+        stanza = domish.Element((None, 'stanza'))
+        p = stanza.addElement('body', content='Are you there?')
+        e = stanza.addElement('error', content='Unable to resolve hostname.')
+        e['code'] = '502'
+
+        result = error.exceptionFromStanza(stanza)
+        self.assert_(isinstance(result, error.StanzaError))
+        self.assertEquals('service-unavailable', result.condition)
+        self.assertEquals('wait', result.type)
+        self.assertEquals('Unable to resolve hostname.', result.text)
         self.assertEquals([p], result.children)
