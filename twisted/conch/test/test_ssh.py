@@ -249,10 +249,10 @@ if Crypto: # stuff that needs PyCrypto to even import
         def testCounter(self):
             c = transport._Counter('\x00\x00', 2)
             for i in xrange(256 * 256):
-                self.assertEquals(c(), struct.pack('!H', i + 1))
+                self.assertEquals(c(), struct.pack('!H', (i + 1) % (2 ** 16)))
             # It should wrap around, too.
             for i in xrange(256 * 256):
-                self.assertEquals(c(), struct.pack('!H', i + 1))
+                self.assertEquals(c(), struct.pack('!H', (i + 1) % (2 ** 16)))
 
 
     class ConchTestPublicKeyChecker(checkers.SSHPublicKeyDatabase):
