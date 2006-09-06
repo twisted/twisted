@@ -150,9 +150,6 @@ try:
         errno.ENETUNREACH: NoRouteError,
         errno.ECONNREFUSED: ConnectionRefusedError,
         errno.ETIMEDOUT: TCPTimedOutError,
-        # for FreeBSD - might make other unices in certain cases
-        # return wrong exception, alas
-        errno.EINVAL: ConnectionRefusedError,
     }
     if hasattr(errno, "WSAECONNREFUSED"):
         errnoMapping[errno.WSAECONNREFUSED] = ConnectionRefusedError

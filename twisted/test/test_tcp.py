@@ -7,7 +7,8 @@ from __future__ import nested_scopes
 
 """Generic TCP tests."""
 
-import socket, time
+import socket, random
+
 from zope.interface import implements
 from twisted.trial import unittest
 from twisted.python import log
@@ -18,6 +19,7 @@ from twisted.internet.address import IPv4Address
 from twisted.internet.interfaces import IHalfCloseableProtocol
 from twisted.protocols import policies
 
+import errno
 
 def loopUntil(predicate, interval=0):
     from twisted.internet import task
@@ -255,11 +257,76 @@ class LoopbackTestCase(PortCleanerUpper):
         clientF = MyClientFactory()
         # XXX we assume no one is listening on TCP port 69
         reactor.connectTCP("127.0.0.1", 69, clientF, timeout=5)
-        start = time.time()
         def check(ignored):
             clientF.reason.trap(error.ConnectionRefusedError)
         return clientF.failDeferred.addCallback(check)
-        #self.assert_(time.time() - start < 0.1)
+
+
+    def test_connectionRefusedErrorNumber(self):
+        """
+        Assert that the error number of the ConnectionRefusedError is
+        ECONNREFUSED, and not some other socket related error.
+        """
+
+        # Bind a number of ports in the operating system.  We will attempt
+        # to connect to these in turn immediately after closing them, in the
+        # hopes that no one else has bound them in the mean time.  Any
+        # connection which succeeds is ignored and causes us to move on to
+        # the next port.  As soon as a connection attempt fails, we move on
+        # to making an assertion about how it failed.  If they all succeed,
+        # the test will fail.
+
+        # It would be nice to have a simpler, reliable way to cause a
+        # connection failure from the platform.
+        #
+        # On Linux (2.6.15), connecting to port 0 always fails.  FreeBSD
+        # (5.4) rejects the connection attempt with EADDRNOTAVAIL.
+        #
+        # On FreeBSD (5.4), listening on a port and then repeatedly
+        # connecting to it without ever accepting any connections eventually
+        # leads to an ECONNREFUSED.  On Linux (2.6.15), a seemingly
+        # unbounded number of connections succeed.
+
+        serverSockets = []
+        for i in xrange(10):
+            serverSocket = socket.socket()
+            serverSocket.bind(('127.0.0.1', 0))
+            serverSocket.listen(1)
+            serverSockets.append(serverSocket)
+        random.shuffle(serverSockets)
+
+        clientCreator = protocol.ClientCreator(reactor, protocol.Protocol)
+
+        def tryConnectFailure():
+            def connected(proto):
+                """
+                Darn.  Kill it and try again, if there are any tries left.
+                """
+                proto.transport.loseConnection()
+                if serverSockets:
+                    return tryConnectFailure()
+                self.fail("Could not fail to connect - could not test errno for that case.")
+
+            serverSocket = serverSockets.pop()
+            serverHost, serverPort = serverSocket.getsockname()
+            serverSocket.close()
+
+            connectDeferred = clientCreator.connectTCP(serverHost, serverPort)
+            connectDeferred.addCallback(connected)
+            return connectDeferred
+
+        refusedDeferred = tryConnectFailure()
+        self.assertFailure(refusedDeferred, error.ConnectionRefusedError)
+        def connRefused(exc):
+            self.assertEqual(exc.osError, errno.ECONNREFUSED)
+        refusedDeferred.addCallback(connRefused)
+        def cleanup(passthrough):
+            while serverSockets:
+                serverSockets.pop().close()
+            return passthrough
+        refusedDeferred.addBoth(cleanup)
+        return refusedDeferred
+
 
     def testConnectByServiceFail(self):
         try:

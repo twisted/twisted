@@ -504,15 +504,19 @@ class BaseClient(Connection):
             # was scheduled via a callLater in self._finishInit
             return
 
-        # on windows failed connects are reported on exception
-        # list, not write or read list.
-        if platformType == "win32" or sys.platform == "cygwin":
-            r, w, e = select.select([], [], [self.fileno()], 0.0)
-            if e:
-                err = self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
-                self.failIfNotConnected(error.getConnectError((err, os.strerror(err))))
-                return
+        err = self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
+        if err:
+            self.failIfNotConnected(error.getConnectError((err, os.strerror(err))))
+            return
 
+
+        # doConnect gets called twice.  The first time we actually need to
+        # start the connection attempt.  The second time we don't really
+        # want to (SO_ERROR above will have taken care of any errors, and if
+        # it reported none, the mere fact that doConnect was called again is
+        # sufficient to indicate that the connection has succeeded), but it
+        # is not /particularly/ detrimental to do so.  This should get
+        # cleaned up some day, though.
         try:
             connectResult = self.socket.connect_ex(self.realAddress)
         except socket.error, se:
