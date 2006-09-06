@@ -3,7 +3,7 @@
 
 
 from __future__ import nested_scopes
-from twisted.trial import unittest
+from twisted.trial import unittest, util as trial_util
 from twisted.internet import protocol, reactor, interfaces, defer
 from twisted.protocols import basic
 from twisted.python import util, log, runtime
@@ -301,14 +301,28 @@ class TLSTestCase(unittest.TestCase):
         )
 
 
-class SpammyTLSTestCase(TLSTestCase):
-    fillBuffer = 1
-    def testTLS(self):
-        TLSTestCase.testTLS(self)
-    def testBackwardsTLS(self):
-        TLSTestCase.testBackwardsTLS(self)
 
+_bufferedSuppression = trial_util.suppress(
+    message="startTLS with unwritten buffered data currently doesn't work "
+            "right. See issue #686. Closing connection.",
+    category=RuntimeWarning)
+
+
+class SpammyTLSTestCase(TLSTestCase):
+    """
+    Test TLS features with bytes sitting in the out buffer.
+    """
+    fillBuffer = 1
+
+    def testTLS(self):
+        return TLSTestCase.testTLS(self)
+    testTLS.suppress = [_bufferedSuppression]
     testTLS.todo = "startTLS doesn't empty buffer before starting TLS. :("
+
+
+    def testBackwardsTLS(self):
+        return TLSTestCase.testBackwardsTLS(self)
+    testBackwardsTLS.suppress = [_bufferedSuppression]
     testBackwardsTLS.todo = "startTLS doesn't empty buffer before starting TLS. :("
 
 
