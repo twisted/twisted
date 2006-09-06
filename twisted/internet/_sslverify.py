@@ -876,12 +876,16 @@ class OpenSSLCertificateOptions(object):
 
 
     def __getstate__(self):
-        d = super(OpenSSLCertificateOptions, self).__getstate__()
+        d = self.__dict__.copy()
         try:
-            del d['context']
+            del d['_context']
         except KeyError:
             pass
         return d
+
+
+    def __setstate__(self, state):
+        self.__dict__ = state
 
 
     def getContext(self):

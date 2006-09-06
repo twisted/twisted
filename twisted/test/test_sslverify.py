@@ -9,6 +9,7 @@ from OpenSSL.crypto import TYPE_RSA
 from twisted.trial import unittest
 from twisted.internet import protocol, defer, reactor
 from twisted.python import log
+from twisted.python.reflect import objgrep, isSame
 
 from twisted.internet import _sslverify as sslverify
 
@@ -173,6 +174,43 @@ class OpenSSLOptions(unittest.TestCase):
         self.assertIn('locality name', s)
         self.assertIn('Locality Name', s)
 
+
+    def test_certificateOptionsSerialization(self):
+        """
+        Test that __setstate__(__getstate__()) round-trips properly.
+        """
+        firstOpts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+            method=SSL.SSLv3_METHOD,
+            verify=True,
+            caCerts=[self.sCert],
+            verifyDepth=2,
+            requireCertificate=False,
+            verifyOnce=False,
+            enableSingleUseKeys=False,
+            enableSessions=False,
+            fixBrokenPeers=True)
+        context = firstOpts.getContext()
+        state = firstOpts.__getstate__()
+        
+        # The context shouldn't be in the state to serialize
+        self.failIf(objgrep(state, context, isSame), objgrep(state, context, isSame))
+
+        opts = sslverify.OpenSSLCertificateOptions()
+        opts.__setstate__(state)
+        self.assertEqual(opts.privateKey, self.sKey)
+        self.assertEqual(opts.certificate, self.sCert)
+        self.assertEqual(opts.method, SSL.SSLv3_METHOD)
+        self.assertEqual(opts.verify, True)
+        self.assertEqual(opts.caCerts, [self.sCert])
+        self.assertEqual(opts.verifyDepth, 2)
+        self.assertEqual(opts.requireCertificate, False)
+        self.assertEqual(opts.verifyOnce, False)
+        self.assertEqual(opts.enableSingleUseKeys, False)
+        self.assertEqual(opts.enableSessions, False)
+        self.assertEqual(opts.fixBrokenPeers, True)
+        
 
     def testAllowedAnonymousClientConnection(self):
         onData = defer.Deferred()
