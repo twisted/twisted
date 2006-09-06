@@ -474,17 +474,25 @@ class ReactorCoreTestCase(unittest.TestCase):
     def setUp(self):
         self.triggers = []
         self.timers = []
+
+
     def addTrigger(self, event, phase, func):
         t = reactor.addSystemEventTrigger(event, phase, func)
         self.triggers.append(t)
         return t
+
+
     def removeTrigger(self, trigger):
         reactor.removeSystemEventTrigger(trigger)
         self.triggers.remove(trigger)
+
+
     def addTimer(self, when, func):
         t = reactor.callLater(when, func)
         self.timers.append(t)
         return t
+
+
     def removeTimer(self, timer):
         try:
             timer.cancel()
@@ -492,31 +500,33 @@ class ReactorCoreTestCase(unittest.TestCase):
             pass
         self.timers.remove(timer)
 
+
     def tearDown(self):
         for t in self.triggers:
             try:
                 reactor.removeSystemEventTrigger(t)
             except:
                 pass
-    def crash(self):
-        reactor.crash()
-    def stop(self):
-        reactor.stop()
+
 
     def testRun(self):
-        """Test that reactor.crash terminates reactor.run"""
-        reactor.callLater(0.1, self.crash)
-        reactor.run() # returns once .crash is called
-        reactor.callLater(0.1, self.crash)
-        reactor.run() # returns once .crash is called
+        """
+        Test that reactor.crash terminates reactor.run
+        """
+        for i in xrange(3):
+            reactor.callLater(0.01, reactor.crash)
+            reactor.run()
+
 
     def testIterate(self):
-        """Test that reactor.iterate(0) doesn't block"""
+        """
+        Test that reactor.iterate(0) doesn't block
+        """
         start = time.time()
         # twisted timers are distinct from the underlying event loop's
         # timers, so this fail-safe probably won't keep a failure from
         # hanging the test
-        t = reactor.callLater(10, self.crash)
+        t = reactor.callLater(10, reactor.crash)
         reactor.iterate(0) # shouldn't block
         stop = time.time()
         elapsed = stop - start
@@ -524,47 +534,28 @@ class ReactorCoreTestCase(unittest.TestCase):
         self.failUnless(elapsed < 8)
         t.cancel()
 
-    def timeout(self):
-        print "test timed out"
-        self.problem = 1
-        self.fail("test timed out")
-    def count(self):
-        self.counter += 1
 
-# XXX calling reactor.stop() in test suite causes problems with other tests
-#     def testStop(self):
-#         """reactor.stop should fire shutdown triggers"""
-#         # make sure shutdown triggers are run when the reactor is stopped
-#         self.counter = 0
-#         self.problem = 0
-#         self.addTrigger("before", "shutdown", self.count)
-#         self.addTimer(0.1, self.stop)
-#         t = self.addTimer(5, self.timeout)
-#         reactor.run()
-#         self.failUnless(self.counter == 1,
-#                         "reactor.stop didn't invoke shutdown triggers")
-#         self.failIf(self.problem, "the test timed out")
-#         self.removeTimer(t)
+    def test_crash(self):
+        """
+        reactor.crash should NOT fire shutdown triggers
+        """
+        events = []
+        self.addTrigger(
+            "before", "shutdown",
+            lambda: events.append(("before", "shutdown")))
 
-    def testCrash(self):
-        """reactor.crash should NOT fire shutdown triggers"""
-        self.counter = 0
-        self.problem = 0
-        self.addTrigger("before", "shutdown", self.count)
         # reactor.crash called from an "after-startup" trigger is too early
         # for the gtkreactor: gtk_mainloop is not yet running. Same is true
         # when called with reactor.callLater(0). Must be >0 seconds in the
         # future to let gtk_mainloop start first.
-        self.addTimer(0.1, self.crash)
-        t = self.addTimer(5, self.timeout)
+        reactor.callWhenRunning(
+            reactor.callLater, 0, reactor.crash)
         reactor.run()
-        # this will fire reactor.crash, which ought to exit .run without
-        # running the event triggers
-        self.failUnless(self.counter == 0,
-                        "reactor.crash invoked shutdown triggers, "
-                        "but it isn't supposed to")
-        self.failIf(self.problem, "the test timed out")
-        self.removeTimer(t)
+        self.failIf(events, "reactor.crash invoked shutdown triggers, but it "
+                            "isn't supposed to.")
+
+    # XXX Test that reactor.stop() invokes shutdown triggers
+
 
 
 class DelayedTestCase(unittest.TestCase):
