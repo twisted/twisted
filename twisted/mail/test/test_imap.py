@@ -1393,7 +1393,6 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         d1 = self.connected.addCallback(strip(login))
         d1.addCallbacks(strip(append), self._ebGeneral)
         d1.addCallbacks(self._cbStopClient, self._ebGeneral)
-        d1.setTimeout(5)
         d2 = self.loopback()
         d = defer.gatherResults([d1, d2])
         return d.addCallback(self._cbTestPartialAppend, infile)
