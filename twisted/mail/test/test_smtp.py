@@ -234,8 +234,6 @@ class DummySMTPMessage:
             recipients.append(str(user))
         self.protocol.message[tuple(recipients)] = (helo, origin, recipients, message)
         return defer.succeed("saved")
-        deferred.callback("saved")
-        return deferred
 
 class DummyProto:
     def connectionMade(self):
@@ -572,3 +570,133 @@ class SMTPServerTestCase(unittest.TestCase):
         s.makeConnection(t)
         s.connectionLost(error.ConnectionDone())
         self.assertIn("ESMTP", t.value())
+
+
+class ESMTPAuthenticationTestCase(unittest.TestCase):
+    def assertServerResponse(self, bytes, response):
+        """
+        Assert that when the given bytes are delivered to the ESMTP server
+        instance, it responds with the indicated lines.
+
+        @type bytes: str
+        @type response: list of str
+        """
+        self.transport.clear()
+        self.server.dataReceived(bytes)
+        self.assertEqual(
+            response,
+            self.transport.value().splitlines())
+
+
+    def assertServerAuthenticated(self, loginArgs):
+        """
+        Assert that a login attempt has been made, that the credentials and
+        interfaces passed to it are correct, and that when the login request
+        is satisfied, a successful response is sent by the ESMTP server
+        instance.
+
+        @param loginArgs: A C{list} previously passed to L{portalFactory}.
+        """
+        d, credentials, mind, interfaces = loginArgs.pop()
+        self.assertEqual(loginArgs, [])
+        self.failUnless(twisted.cred.credentials.IUsernamePassword.providedBy(credentials))
+        self.assertEqual(credentials.username, 'username')
+        self.failUnless(credentials.checkPassword('password'))
+        self.assertIn(smtp.IMessageDeliveryFactory, interfaces)
+        self.assertIn(smtp.IMessageDelivery, interfaces)
+        d.callback((smtp.IMessageDeliveryFactory, None, lambda: None))
+
+        self.assertEqual(
+            ["235 Authentication successful."],
+            self.transport.value().splitlines())
+
+
+    def setUp(self):
+        """
+        Create an ESMTP instance attached to a StringTransport.
+        """
+        self.server = smtp.ESMTP({
+                'LOGIN': imap4.LOGINCredentials})
+        self.server.host = 'localhost'
+        self.transport = StringTransport(
+            peerAddress=address.IPv4Address('TCP', '127.0.0.1', 12345))
+        self.server.makeConnection(self.transport)
+
+
+    def tearDown(self):
+        """
+        Disconnect the ESMTP instance to clean up its timeout DelayedCall.
+        """
+        self.server.connectionLost(error.ConnectionDone())
+
+
+    def portalFactory(self, loginList):
+        class DummyPortal:
+            def login(self, credentials, mind, *interfaces):
+                d = defer.Deferred()
+                loginList.append((d, credentials, mind, interfaces))
+                return d
+        return DummyPortal()
+
+
+    def test_authenticationCapabilityAdvertised(self):
+        """
+        Test that AUTH is advertised to clients which issue an EHLO command.
+        """
+        self.transport.clear()
+        self.server.dataReceived('EHLO\r\n')
+        responseLines = self.transport.value().splitlines()
+        self.assertEqual(
+            responseLines[0],
+            "250-localhost Hello 127.0.0.1, nice to meet you")
+        self.assertEqual(
+            responseLines[1],
+            "250 AUTH LOGIN")
+        self.assertEqual(len(responseLines), 2)
+
+
+    def test_plainAuthentication(self):
+        """
+        Test that the LOGIN authentication mechanism can be used
+        """
+        loginArgs = []
+        self.server.portal = self.portalFactory(loginArgs)
+
+        self.server.dataReceived('EHLO\r\n')
+        self.transport.clear()
+
+        self.assertServerResponse(
+            'AUTH LOGIN\r\n',
+            ["334 " + "User Name\0".encode('base64').strip()])
+
+        self.assertServerResponse(
+            'username'.encode('base64') + '\r\n',
+            ["334 " + "Password\0".encode('base64').strip()])
+
+        self.assertServerResponse(
+            'password'.encode('base64').strip() + '\r\n',
+            [])
+
+        self.assertServerAuthenticated(loginArgs)
+
+
+    def test_plainAuthenticationInitialResponse(self):
+        """
+        The response to the first challenge may be included on the AUTH command
+        line.  Test that this is also supported.
+        """
+        loginArgs = []
+        self.server.portal = self.portalFactory(loginArgs)
+
+        self.server.dataReceived('EHLO\r\n')
+        self.transport.clear()
+
+        self.assertServerResponse(
+            'AUTH LOGIN ' + "username".encode('base64').strip() + '\r\n',
+            ["334 " + "Password\0".encode('base64').strip()])
+
+        self.assertServerResponse(
+            'password'.encode('base64').strip() + '\r\n',
+            [])
+
+        self.assertServerAuthenticated(loginArgs)

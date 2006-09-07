@@ -44,8 +44,15 @@ class FakeDatagramTransport:
 class StringTransport:
     disconnecting = 0
 
-    def __init__(self):
+    hostAddr = None
+    peerAddr = None
+
+    def __init__(self, hostAddress=None, peerAddress=None):
         self.clear()
+        if hostAddress is not None:
+            self.hostAddr = hostAddress
+        if peerAddress is not None:
+            self.peerAddr = peerAddress
 
     def clear(self):
         self.io = StringIO()
@@ -63,10 +70,14 @@ class StringTransport:
         pass
 
     def getPeer(self):
-        return ('StringIO', repr(self.io))
+        if self.peerAddr is None:
+            return ('StringIO', repr(self.io))
+        return self.peerAddr
 
     def getHost(self):
-        return ('StringIO', repr(self.io))
+        if self.hostAddr is None:
+            return ('StringIO', repr(self.io))
+        return self.hostAddr
 
 
 class StringTransportWithDisconnection(StringTransport):

@@ -1463,10 +1463,14 @@ class ESMTP(SMTP):
         if not chal:
             self.sendCode(504, 'Unrecognized authentication type')
             return
-        self.authenticate(chal)
+        self.authenticate(chal, *parts[1:])
 
-    def authenticate(self, challenger):
+    def authenticate(self, challenger, initialResponse=None):
         if self.portal:
+            if initialResponse is not None:
+                challenger.getChallenge() # Discard it, apparently the client
+                                          # does not care about it.
+                challenger.setResponse(initialResponse.decode('base64'))
             challenge = challenger.getChallenge()
             coded = base64.encodestring(challenge)[:-1]
             self.sendCode(334, coded)
