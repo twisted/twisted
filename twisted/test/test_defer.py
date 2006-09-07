@@ -15,7 +15,19 @@ from twisted.internet import reactor, defer
 from twisted.python import failure, log
 
 
-class GenericError(Exception): pass
+class GenericError(Exception):
+    pass
+
+
+_setTimeoutSuppression = util.suppress(
+    message="Deferred.setTimeout is deprecated.  Look for timeout "
+            "support specific to the API you are using instead.",
+    category=DeprecationWarning)
+
+_firstErrorSuppression = util.suppress(
+    message="FirstError.__getitem__ is deprecated.  Use attributes instead.",
+    category=DeprecationWarning)
+
 
 class DeferredTestCase(unittest.TestCase):
 
@@ -142,10 +154,7 @@ class DeferredTestCase(unittest.TestCase):
             'failure.type is %r' % (failure.type,)
         )
 
-        # FirstErrors act like tuples for backwards compatibility :(
         firstError = failure.value
-        self.failUnlessEqual(firstError[0], firstError.subFailure)
-        self.failUnlessEqual(firstError[1], firstError.index)
 
         # check that the GenericError("2") from the deferred at index 1
         # (defr2) is intact inside failure.value
@@ -153,7 +162,20 @@ class DeferredTestCase(unittest.TestCase):
         self.failUnlessEqual(firstError.subFailure.value.args, ("from def2",))
         self.failUnlessEqual(firstError.index, 1)
 
-        
+
+    def test_indexingFirstError(self):
+        """
+        L{FirstError} behaves a little like a tuple, for backwards
+        compatibility.  Test that it can actually be indexed to retrieve
+        information about the failure.
+        """
+        subFailure = object()
+        index = object()
+        firstError = defer.FirstError(subFailure, index)
+        self.assertIdentical(firstError[0], firstError.subFailure)
+        self.assertIdentical(firstError[1], firstError.index)
+    test_indexingFirstError.suppress = [_firstErrorSuppression]
+
 
     def testDeferredListDontConsumeErrors(self):
         d1 = defer.Deferred()
@@ -217,17 +239,20 @@ class DeferredTestCase(unittest.TestCase):
         d1.addErrback(lambda e: None)  # Swallow error
 
     def testTimeOut(self):
+        """
+        Test that a Deferred which has setTimeout called on it and never has
+        C{callback} or C{errback} called on it eventually fails with a
+        L{error.TimeoutError}.
+        """
+        L = []
         d = defer.Deferred()
-        d.setTimeout(1.0)
-        l = []
-        d.addErrback(l.append)
-        # Make sure the reactor is shutdown
-        d.addBoth(lambda x, r=reactor: r.crash())
+        d.setTimeout(0.01)
+        self.assertFailure(d, defer.TimeoutError)
+        d.addCallback(L.append)
+        self.failIf(L, "Deferred failed too soon.")
+        return d
+    testTimeOut.suppress = [_setTimeoutSuppression]
 
-        self.assertEquals(l, [])
-        reactor.run()
-        self.assertEquals(len(l), 1)
-        self.assertEquals(l[0].type, defer.TimeoutError)
 
     def testImmediateSuccess(self):
         l = []
@@ -235,12 +260,19 @@ class DeferredTestCase(unittest.TestCase):
         d.addCallback(l.append)
         self.assertEquals(l, ["success"])
 
-    def testImmediateSuccess2(self):
+
+    def test_immediateSuccessBeforeTimeout(self):
+        """
+        Test that a synchronously successful Deferred is not affected by a
+        C{setTimeout} call.
+        """
         l = []
         d = defer.succeed("success")
         d.setTimeout(1.0)
         d.addCallback(l.append)
         self.assertEquals(l, ["success"])
+    test_immediateSuccessBeforeTimeout.suppress = [_setTimeoutSuppression]
+
 
     def testImmediateFailure(self):
         l = []
