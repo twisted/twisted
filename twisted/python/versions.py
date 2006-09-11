@@ -80,13 +80,25 @@ class Version(object):
                     other.micro))
 
     def _getSVNVersion(self):
+        """
+        Figure out the SVN revision number based on the existance of
+        twisted/.svn/entries, and its contents. This requires parsing the
+        entries file and reading the first XML tag in the xml document that has
+        a revision="" attribute.
+
+        @return: None or string containing SVN Revision number.
+        """
         mod = sys.modules.get(self.package)
         if mod:
             ent = os.path.join(os.path.dirname(mod.__file__),
                                '.svn',
                                'entries')
             if os.path.exists(ent):
-                from xml.dom.minidom import parse
+                try:
+                    from xml.dom.minidom import parse
+                except ImportError:
+                    # On a platform without xml.dom.minidom
+                    return
                 doc = parse(file(ent)).documentElement
                 for node in doc.childNodes:
                     if hasattr(node, 'getAttribute'):
