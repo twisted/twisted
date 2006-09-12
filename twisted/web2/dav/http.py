@@ -262,9 +262,9 @@ def statusForFailure(failure, what=None):
         if what is not None:
             log.msg("%s while %s" % (err, what))
 
-    if failure.check(IOError):
+    if failure.check(IOError, OSError):
         e = failure.value[0]
-        if e == errno.EACCES:
+        if e == errno.EACCES or e == errno.EPERM:
             msg("Permission denied")
             return responsecode.FORBIDDEN
         elif e == errno.ENOSPC:
