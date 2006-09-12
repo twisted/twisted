@@ -309,6 +309,12 @@ class PROP(twisted.web2.dav.test.util.TestCase):
                 "Not a %s in PROPPATCH property status: %s" % (prop.sname(), propstat.toxml())
             )
 
+            if not have_dead_properties:
+                raise SkipTest(
+                    "No dead property store available for DAVFile.  "
+                    "Install xattr (http://undefined.org/python/#xattr) to enable use of dead properties."
+                )
+
             self.failUnless(
                 propstat.childOfType(davxml.Status).code == expected_code,
                 "Incorrect status code for PROPPATCH %s: %s != %s"
