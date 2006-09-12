@@ -94,11 +94,7 @@ class Version(object):
                                '.svn',
                                'entries')
             if os.path.exists(ent):
-                try:
-                    from xml.dom.minidom import parse
-                except ImportError:
-                    # On a platform without xml.dom.minidom
-                    return
+                from xml.dom.minidom import parse
                 doc = parse(file(ent)).documentElement
                 for node in doc.childNodes:
                     if hasattr(node, 'getAttribute'):
