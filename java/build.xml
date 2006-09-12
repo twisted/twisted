@@ -1,0 +1,29 @@
+
+<project>
+  <!-- junit tests -->
+
+  <target name="test" depends="compile">
+    <java
+       classname="junit.textui.TestRunner"
+       taskname="junit"
+       fork="true"
+       failonerror="true">
+      <arg value="-Djava.compiler=NONE"/>
+      <arg value="com.twistedmatrix.AllJUnitTests"/>
+      <classpath>
+        <pathelement location="build/classes" />
+        <pathelement path="${java.class.path}" />
+      </classpath>
+    </java>
+  </target>
+
+  <target name="compile">
+    <javac debug="on"
+           srcdir="src"
+           destdir="build/classes"
+           source="1.5">
+      <compilerarg value="-Xlint:unchecked" />
+    </javac>
+  </target>
+
+</project>
