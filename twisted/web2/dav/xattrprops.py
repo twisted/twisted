@@ -115,7 +115,12 @@ class xattrPropertyStore (object):
         #log.msg("Deleting property {%s}%s on file %s"
         #        % (qname[0], qname[1], self.resource.fp.path))
 
-        del(self.attrs[self._encode(qname)])
+        try:
+            del(self.attrs[self._encode(qname)])
+        except KeyError:
+            # RFC 2518 Section 12.13.1 says that removal of
+            # non-existing property is not an error.
+            pass
 
     def contains(self, qname):
         try:

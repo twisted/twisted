@@ -271,11 +271,26 @@ class PROP(twisted.web2.dav.test.util.TestCase):
         """
         PROPPATCH on a live property
         """
+        prop = davxml.GETETag.fromString("some-etag-string")
+        patch = davxml.PropertyUpdate(davxml.Set(davxml.PropertyContainer(prop)))
+
+        return self._simple_PROPPATCH(patch, prop, responsecode.FORBIDDEN, "edit of live property")
+
+    def test_PROPPATCH_exists_not(self):
+        """
+        PROPPATCH remove a non-existant property
+        """
+        prop = davxml.Timeout() # Timeout isn't a valid property, so it won't exist.
+        patch = davxml.PropertyUpdate(davxml.Remove(davxml.PropertyContainer(prop)))
+
+        return self._simple_PROPPATCH(patch, prop, responsecode.OK, "remove of non-existant property")
+
+    def _simple_PROPPATCH(self, patch, prop, expected_code, what):
         def check_result(response):
             response = IResponse(response)
 
             if response.code != responsecode.MULTI_STATUS:
-                self.fail("Incorrect response code for PROPFIND (%s != %s)"
+                self.fail("Incorrect response code for PROPPATCH (%s != %s)"
                           % (response.code, responsecode.MULTI_STATUS))
 
             return davXMLFromStream(response.stream).addCallback(check_xml)
@@ -290,23 +305,15 @@ class PROP(twisted.web2.dav.test.util.TestCase):
             )
 
             self.failIf(
-                propstat.childOfType(davxml.PropertyContainer).childOfType(davxml.GETETag) is None,
-                "Not a DAV:etag in PROPPATCH property status: %s" % (propstat.toxml())
+                propstat.childOfType(davxml.PropertyContainer).childOfType(prop) is None,
+                "Not a %s in PROPPATCH property status: %s" % (prop.sname(), propstat.toxml())
             )
 
             self.failUnless(
-                propstat.childOfType(davxml.Status).code == responsecode.FORBIDDEN,
-                "Incorrect status code for PROPPATCH of live property: %s != %s"
-                % (propstat.childOfType(davxml.Status).code, responsecode.FORBIDDEN)
+                propstat.childOfType(davxml.Status).code == expected_code,
+                "Incorrect status code for PROPPATCH %s: %s != %s"
+                % (what, propstat.childOfType(davxml.Status).code, expected_code)
             )
-
-        patch = davxml.PropertyUpdate(
-            davxml.Set(
-                davxml.PropertyContainer(
-                    davxml.GETETag.fromString("some-etag-string")
-                )
-            )
-        )
 
         request = SimpleRequest(self.site, "PROPPATCH", "/")
         request.stream = MemoryStream(patch.toxml())
