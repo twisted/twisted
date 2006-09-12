@@ -32,6 +32,7 @@ change.
 __all__ = ["xattrPropertyStore"]
 
 import urllib
+import sys
 
 import xattr
 
@@ -58,6 +59,12 @@ class xattrPropertyStore (object):
     # avoid conflicts with other attributes, prefix dead property names.
     #
     deadPropertyXattrPrefix = "WebDAV:"
+ 
+    # Linux seems to require that attribute names use a "user." prefix.
+    # FIXME: Is is a system-wide thing, or a per-filesystem thing?
+    #   If the latter, how to we detect the file system?
+    if sys.platform == "linux2":
+        deadPropertyXattrPrefix = "user."
 
     def _encode(clazz, name):
         #
