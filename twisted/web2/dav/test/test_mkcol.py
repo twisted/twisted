@@ -26,6 +26,7 @@ import os
 
 from twisted.web2 import responsecode
 from twisted.web2.iweb import IResponse
+from twisted.web2.stream import MemoryStream
 from twisted.web2.dav.fileop import rmdir
 from twisted.web2.test.test_server import SimpleRequest
 import twisted.web2.dav.test.util
@@ -56,5 +57,29 @@ class MKCOL(twisted.web2.dav.test.util.TestCase):
                 self.fail("MKCOL did not create directory %s" % (path,))
 
         request = SimpleRequest(self.site, "MKCOL", uri)
+
+        return self.send(request, check_result)
+
+    def test_MKCOL_invalid_body(self):
+        """
+        MKCOL request with invalid request body
+        (Any body at all is invalid in our implementation; there is no
+        such thing as a valid body.)
+        """
+        path, uri = self.mkdtemp("collection")
+
+        rmdir(path)
+
+        def check_result(response):
+            response = IResponse(response)
+
+            if response.code != responsecode.UNSUPPORTED_MEDIA_TYPE:
+                self.fail("MKCOL response %s != %s" % (response.code, responsecode.UNSUPPORTED_MEDIA_TYPE))
+
+            if os.path.isdir(path):
+                self.fail("MKCOL incorrectly created directory %s" % (path,))
+
+        request = SimpleRequest(self.site, "MKCOL", uri)
+        request.stream = MemoryStream("This is not a valid MKCOL request body.")
 
         return self.send(request, check_result)
