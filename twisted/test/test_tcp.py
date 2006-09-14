@@ -7,10 +7,9 @@ from __future__ import nested_scopes
 
 """Generic TCP tests."""
 
-import socket, random, time, errno
+import socket, random
 
 from zope.interface import implements
-
 from twisted.trial import unittest
 from twisted.python import log
 
@@ -747,8 +746,6 @@ class ConnectionLosingProtocol(protocol.Protocol):
         self.master._connectionMade()
         self.master.ports.append(self.transport)
 
-
-
 class NoopProtocol(protocol.Protocol):
     def connectionMade(self):
         self.d = defer.Deferred()
@@ -757,133 +754,54 @@ class NoopProtocol(protocol.Protocol):
     def connectionLost(self, reason):
         self.d.callback(True)
 
+class ProperlyCloseFilesTestCase(PortCleanerUpper):
 
+    numberRounds = 2048
+    timeLimit = 200
 
-class ConnectionLostNotifyingProtocol(protocol.Protocol):
-    """
-    Protocol which fires a Deferred which was previously passed to
-    its initializer when the connection is lost.
-    """
-    def __init__(self, onConnectionLost):
-        self.onConnectionLost = onConnectionLost
+    def setUp(self):
+        PortCleanerUpper.setUp(self)
+        self.serverConns = []
+        f = protocol.ServerFactory()
+        f.protocol = NoopProtocol
+        f.protocol.master = self
 
+        self.listener = reactor.listenTCP(0, f, interface="127.0.0.1")
+        self.ports.append(self.listener)
+        
+        self.clientF = f = protocol.ClientFactory()
+        f.protocol = ConnectionLosingProtocol
+        f.protocol.master = self
+        
+        def connector():
+            p = self.listener.getHost().port
+            return reactor.connectTCP('127.0.0.1', p, f)
+        self.connector = connector
 
-    def connectionLost(self, reason):
-        self.onConnectionLost.callback(self)
+        self.totalConnections = 0
 
+    def tearDown(self):
+        # Wait until all the protocols on the server-side of this test have
+        # been disconnected, to avoid leaving junk in the reactor.
+        d = defer.gatherResults(self.serverConns)
+        d.addBoth(lambda x : PortCleanerUpper.tearDown(self))
+        return d
+    
+    def testProperlyCloseFiles(self):
+        self.deferred = defer.Deferred()
+        self.connector()
+        self.deferred.addCallback(
+            lambda x : self.failUnlessEqual(self.totalConnections,
+                                            self.numberRounds))
+        return self.deferred
 
+    def _connectionMade(self):
+        self.totalConnections += 1
+        if self.totalConnections<self.numberRounds:
+            self.connector()
+        else:
+            self.deferred.callback(None)
 
-class HandleSavingProtocol(ConnectionLostNotifyingProtocol):
-    """
-    Protocol which grabs the platform-specific socket handle and
-    saves it as an attribute on itself when the connection is
-    established.
-    """
-    def makeConnection(self, transport):
-        """
-        Save the platform-specific socket handle for future
-        introspection.
-        """
-        self.handle = transport.getHandle()
-        return protocol.Protocol.makeConnection(self, transport)
-
-
-
-class ProperlyCloseFilesMixin:
-    """
-    Tests for platform resources properly being cleaned up.
-    """
-    def createServer(self, address, portNumber, factory):
-        """
-        Bind a server port to which connections will be made.  The server
-        should use the given protocol factory.
-
-        @return: The L{IListeningPort} for the server created.
-        """
-        raise NotImplementedError()
-
-
-    def connectClient(self, address, portNumber, clientCreator):
-        """
-        Establish a connection to the given address using the given
-        L{ClientCreator} instance.
-
-        @return: A Deferred which will fire with the connected protocol instance.
-        """
-        raise NotImplementedError()
-
-
-    def getHandleExceptionType(self):
-        """
-        Return the exception class which will be raised when an operation is
-        attempted on a closed platform handle.
-        """
-        raise NotImplementedError()
-
-
-    def test_properlyCloseFiles(self):
-        """
-        Test that lost connections properly have their underlying socket
-        resources cleaned up.
-        """
-        onServerConnectionLost = defer.Deferred()
-        serverFactory = protocol.ServerFactory()
-        serverFactory.protocol = lambda: ConnectionLostNotifyingProtocol(
-            onServerConnectionLost)
-        serverPort = self.createServer('127.0.0.1', 0, serverFactory)
-
-        onClientConnectionLost = defer.Deferred()
-        serverAddr = serverPort.getHost()
-        clientCreator = protocol.ClientCreator(
-            reactor, lambda: HandleSavingProtocol(onClientConnectionLost))
-        clientDeferred = self.connectClient(
-            serverAddr.host, serverAddr.port, clientCreator)
-
-        def clientConnected(client):
-            """
-            Disconnect the client.  Return a Deferred which fires when both
-            the client and the server have received disconnect notification.
-            """
-            client.transport.loseConnection()
-            return defer.gatherResults([
-                onClientConnectionLost, onServerConnectionLost])
-        clientDeferred.addCallback(clientConnected)
-
-        def clientDisconnected((client, server)):
-            """
-            Verify that the underlying platform socket handle has been
-            cleaned up.
-            """
-            err = self.assertRaises(
-                self.getHandleExceptionType(), client.handle.send, 'bytes')
-            self.assertEquals(err.args[0], errno.EBADF)
-        clientDeferred.addCallback(clientDisconnected)
-
-        def cleanup(passthrough):
-            """
-            Shut down the server port.  Return a Deferred which fires when
-            this has completed.
-            """
-            result = defer.maybeDeferred(serverPort.stopListening)
-            result.addCallback(lambda ign: passthrough)
-            return result
-        clientDeferred.addBoth(cleanup)
-
-        return clientDeferred
-
-
-
-class ProperlyCloseFilesTestCase(unittest.TestCase, ProperlyCloseFilesMixin):
-    def createServer(self, address, portNumber, factory):
-        return reactor.listenTCP(portNumber, factory, interface=address)
-
-
-    def connectClient(self, address, portNumber, clientCreator):
-        return clientCreator.connectTCP(address, portNumber)
-
-
-    def getHandleExceptionType(self):
-        return socket.error
 
 
 class AProtocol(protocol.Protocol):

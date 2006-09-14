@@ -7,7 +7,7 @@ from twisted.trial import unittest, util as trial_util
 from twisted.internet import protocol, reactor, interfaces, defer
 from twisted.protocols import basic
 from twisted.python import util, log, runtime
-from twisted.test.test_tcp import WriteDataTestCase, ProperlyCloseFilesMixin
+from twisted.test import test_tcp
 
 import os
 
@@ -176,24 +176,29 @@ if SSL is not None:
             ssl.DefaultOpenSSLContextFactory.__init__(self, *args, **kw)
 
 
-class StolenTCPTestCase(ProperlyCloseFilesMixin, WriteDataTestCase):
-    """
-    For SSL transports, test many of the same things which are tested for
-    TCP transports.
-    """
-    def createServer(self, address, portNumber, factory):
-        contextFactory = ssl.CertificateOptions()
-        return reactor.listenSSL(
-            portNumber, factory, contextFactory, interface=address)
+class StolenTCPTestCase(test_tcp.ProperlyCloseFilesTestCase, test_tcp.WriteDataTestCase):
+    def setUp(self):
+        test_tcp.PortCleanerUpper.setUp(self)
+        self.serverConns = []
+        f = protocol.ServerFactory()
+        f.protocol = protocol.Protocol
+        self.listener = reactor.listenSSL(
+            0, f, ssl.DefaultOpenSSLContextFactory(certPath, certPath), interface="127.0.0.1",
+        )
+        self.ports.append(self.listener)
+        f = protocol.ClientFactory()
+        f.protocol = test_tcp.ConnectionLosingProtocol
 
+        f.protocol.master = self
 
-    def connectClient(self, address, portNumber, clientCreator):
-        contextFactory = ssl.CertificateOptions()
-        return clientCreator.connectSSL(address, portNumber, contextFactory)
+        L = []
+        def connector():
+            p = self.listener.getHost().port
+            ctx = ssl.ClientContextFactory()
+            return reactor.connectSSL('127.0.0.1', p, f, ctx)
+        self.connector = connector
 
-
-    def getHandleExceptionType(self):
-        return SSL.SysCallError
+        self.totalConnections = 0
 
 
 class TLSTestCase(unittest.TestCase):
