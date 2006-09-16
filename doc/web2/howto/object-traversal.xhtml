@@ -332,10 +332,30 @@ class FasterLinker(Linker):
 
     <pre class="literal-block">
 class DotChildren(resource.Resource):
-    return '<html><head><script type="text/javascript" src="scripts.js" /></head></html>'
+    def render(self, request):
+        return http.Response(200, stream="""
+<html>
+  <head>
+    <script type="text/javascript" src="scripts.js" />
+  </head>
+</html>""")
+    </pre>
+    
+    <p>If you only wish to add a child to specific instance of
+      DotChildren then you should use the putChild method.
+    </p>
 
+    <pre class="literal-block">
+rsrc = DotChildren()
+rsrc.putChild('child_scripts.js', static.File('/Users/dp/scripts.js'))
+    </pre>
+
+    <p>However if you wish to add a class attribute you can use
+      setattr like so.
+    </p>
+
+    <pre class="literal-block">
 setattr(DotChildren, 'child_scripts.js', static.File('/Users/dp/scripts.js'))
-
     </pre>
 
     <p>The same technique could be used to install a child method with
