@@ -32,6 +32,11 @@ Disable the garbage collector.  I don't know why this is in trial.
 \fB-e\fR, \fB--rterrors\fR
 Print tracebacks to standard output as soon as they occur
 .TP
+\fB--force-gc\fR
+Run gc.collect() before and after each test case. This can be used to
+isolate errors that occur when objects get collected.  This option would be
+the default, except it makes tests run about ten times slower.
+.TP
 \fB-h\fR, \fB--help\fR
 Print a usage message to standard output, then exit.
 .TP

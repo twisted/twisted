@@ -1,8 +1,9 @@
-import StringIO, sys
+import gc, StringIO, sys
 
+from twisted.python import log
 from twisted.trial import unittest, runner, reporter, util
 from twisted.trial.test import erroneous, suppression
-    
+
 
 class ResultsTestMixin:
     def loadSuite(self, suite):
@@ -462,3 +463,117 @@ class SuppressionTest(unittest.TestCase):
         self.assertSubstring(suppression.METHOD_WARNING_MSG, self.getIO())
 
 
+class GCMixin:
+    """I provide a few mock tests that log setUp, tearDown, test execution and
+    garbage collection.  I'm used to test whether gc.collect gets called.
+    """
+    
+    class BasicTest(unittest.TestCase):
+        def setUp(self):
+            self._log('setUp')
+        def test_foo(self):
+            self._log('test')
+        def tearDown(self):
+            self._log('tearDown')
+
+    class ClassTest(unittest.TestCase):
+        def test_1(self):
+            self._log('test1')
+        def test_2(self):
+            self._log('test2')
+        def tearDownClass(self):
+            self._log('tearDownClass')
+
+    def _log(self, msg):
+        self._collectCalled.append(msg)
+
+    def collect(self):
+        """Fake gc.collect"""
+        self._log('collect')
+    
+    def setUp(self):
+        self._collectCalled = []
+        self.BasicTest._log = self.ClassTest._log = self._log
+        self._oldCollect = gc.collect
+        gc.collect = self.collect
+
+    def tearDown(self):
+        gc.collect = self._oldCollect
+
+
+class TestGarbageCollectionDefault(GCMixin, unittest.TestCase):
+    def test_collectNotDefault(self):
+        """
+        By default, tests should not force garbage collection.
+        """
+        test = self.BasicTest('test_foo')
+        result = reporter.TestResult()
+        test.run(result)
+        self.failUnlessEqual(self._collectCalled, ['setUp', 'test', 'tearDown'])
+
+
+class TestGarbageCollection(GCMixin, unittest.TestCase):
+    def test_collectCalled(self):
+        """test gc.collect is called before and after each test
+        """
+        test = TestGarbageCollection.BasicTest('test_foo')
+        test.forceGarbageCollection = True
+        result = reporter.TestResult()
+        test.run(result)
+        self.failUnlessEqual(
+            self._collectCalled,
+            ['collect', 'setUp', 'test', 'tearDown', 'collect'])
+
+    def test_collectCalledWhenTearDownClass(self):
+        """test gc.collect is called after tearDownClasss"""
+        tests = [TestGarbageCollection.ClassTest('test_1'),
+                 TestGarbageCollection.ClassTest('test_2')]
+        for t in tests:
+            t.forceGarbageCollection = True
+        test = runner.TestSuite(tests)
+        result = reporter.TestResult()
+        test.run(result)
+        # check that collect gets called after individual tests, and
+        # after tearDownClass
+        self.failUnlessEqual(
+            self._collectCalled,
+            ['collect', 'test1', 'collect',
+             'collect', 'test2', 'tearDownClass', 'collect'])
+
+
+class TestUnhandledDeferred(unittest.TestCase):
+    def setUp(self):
+        from twisted.trial.test import weird
+        # test_unhandledDeferred creates a cycle. we need explicit control of gc
+        gc.disable()
+        self.test1 = weird.TestBleeding('test_unhandledDeferred')
+        self.test1.forceGarbageCollection = True
+
+    def test_isReported(self):
+        """
+        Forcing garbage collection should cause unhandled Deferreds to be
+        reported as errors.
+        """
+        result = reporter.TestResult()
+        self.test1(result)
+        self.assertEqual(len(result.errors), 1,
+                         'Unhandled deferred passed without notice')
+
+    def test_doesntBleed(self):
+        """
+        Forcing garbage collection in the test should mean that there are
+        no unreachable cycles immediately after the test completes.
+        """
+        result = reporter.TestResult()
+        self.test1(result)
+        # test1 created unreachable cycle.
+        # it & all others should have been collected by now.
+        n = gc.collect()
+        self.assertEqual(n, 0, 'unreachable cycle still existed')
+        x = log.flushErrors()
+        self.assertEqual(len(x), 0, 'Errors logged after gc.collect')
+
+    def tearDown(self):
+        gc.collect()
+        gc.enable()
+        log.flushErrors()

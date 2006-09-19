@@ -1,13 +1,14 @@
 # -*- test-case-name: twisted.pb.test.test_pb -*-
 
+import gc
 from zope.interface import implements
 from twisted.internet import defer, reactor
 from twisted.pb import pb, schema, broker
 from twisted.pb.negotiate import eventually, flushEventualQueue
 from twisted.pb.remoteinterface import getRemoteInterface
 
-from twisted.python import failure
-from twisted.internet.main import CONNECTION_DONE, CONNECTION_LOST
+from twisted.python import failure, log
+from twisted.internet.main import CONNECTION_DONE
 
 def getRemoteInterfaceName(obj):
     i = getRemoteInterface(obj)
@@ -129,8 +130,15 @@ class TargetMixin:
     def tearDown(self):
         # returns a Deferred which fires when the Loopbacks are drained
         dl = [l.flush() for l in self.loopbacks]
-        dl.append(flushEventualQueue())
-        return defer.DeferredList(dl)
+        d = defer.DeferredList(dl)
+        # when the loopbacks are flushed, and their connections are closed,
+        # they might cause some Referenceables to be released, which triggers
+        # more eventual sends. Make sure these objects are released *before*
+        # we flush the eventual-send queue, otherwise trial will see leftover
+        # eventual-send timers lying around.
+        d.addCallback(lambda res: gc.collect())
+        d.addCallback(lambda res: flushEventualQueue())
+        return d
 
     def setupTarget(self, target, txInterfaces=False):
         # txInterfaces controls what interfaces the sender uses

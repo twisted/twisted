@@ -4,7 +4,7 @@
 # See LICENSE for details.
 
 
-import os, warnings, sys, tempfile, sets
+import os, warnings, sys, tempfile, sets, gc
 
 from twisted.internet import defer, utils
 from twisted.python import failure, log
@@ -267,6 +267,21 @@ _wait_is_running = []
 
 
 class TestCase(_Assertions):
+    """
+    An instance of TestCase represents a single test.
+
+    This class extends C{unittest.TestCase} from the standard library. The
+    main feature is the ability to return C{Deferred}s from tests and fixture
+    methods and to have the suite wait for those C{Deferred}s to fire.
+
+    NOTE: This docstring is incomplete. Currently, the best documentation is
+    the source code.
+
+    @ivar forceGarbageCollection: If set to True, C{gc.collect()} will be
+    called before and after the test. Otherwise, garbage collection will
+    happen in whatever way Python sees fit.    
+    """
+    
     zi.implements(itrial.ITestCase)
     failureException = FailTest
 
@@ -284,6 +299,7 @@ class TestCase(_Assertions):
                 self._initInstances()
             self.__class__._instances.add(self)
         self._passed = False
+        self.forceGarbageCollection = False
 
     def _initInstances(cls):
         cls._instances = sets.Set()
@@ -444,6 +460,8 @@ class TestCase(_Assertions):
 
     def _cleanUp(self, result):
         try:
+            if self.forceGarbageCollection:
+                gc.collect()
             util._Janitor().postCaseCleanup()
         except util.FailureError, e:
             result.addError(self, e.original)
@@ -480,6 +498,8 @@ class TestCase(_Assertions):
         if self._shared:
             first = self._isFirst()
             self.__class__._instancesRun.add(self)
+        if self.forceGarbageCollection:
+            gc.collect()
         if first:
             d = self.deferSetUpClass(result)
         else:

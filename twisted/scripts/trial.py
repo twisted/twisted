@@ -98,6 +98,8 @@ class Options(usage.Options):
                 ["nopm", None, "don't automatically jump into debugger for "
                  "postmorteming of exceptions"],
                 ["dry-run", 'n', "do everything but run the tests"],
+                ["force-gc", None, "Have Trial run gc.collect() before and "
+                 "after each test case."],
                 ["profile", None, "Run tests under the Python profiler"],
                 ["until-failure", "u", "Repeat test until it fails"],
                 ["no-recurse", "N", "Don't recurse into packages"],
@@ -233,7 +235,7 @@ class Options(usage.Options):
             print '   ', p.longOpt, '\t', p.description
         print
         sys.exit(0)
-        
+
     def opt_disablegc(self):
         """Disable the garbage collector"""
         gc.disable()
@@ -315,6 +317,8 @@ def _getLoader(config):
         randomer.seed(config['random'])
         loader.sorter = lambda x : randomer.random()
         print 'Running tests shuffled with seed %d\n' % config['random']
+    if config['force-gc']:
+        loader.forceGarbageCollection = True
     return loader
 
 

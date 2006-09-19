@@ -271,6 +271,23 @@ class ErrorHolder(object):
 
 
 class TestLoader(object):
+    """
+    I find tests inside function, modules, files -- whatever -- then return
+    them wrapped inside a Test (either a TestSuite or a TestCase).
+
+    @ivar methodPrefix: A string prefix. TestLoader will assume that all the
+    methods in a class that begin with C{methodPrefix} are test cases.
+
+    @ivar modulePrefix: A string prefix. Every module in a package that begins
+    with C{modulePrefix} is considered a module full of tests.
+
+    @ivar forceGarbageCollection: A flag applied to each TestCase loaded.
+    See L{unittest.TestCase} for more information.
+
+    @ivar suiteFactory: A callable which is passed a list of tests (which
+    themselves may be suites of tests). Must return a test suite.
+    """
+    
     methodPrefix = 'test'
     modulePrefix = 'test_'
 
@@ -278,6 +295,7 @@ class TestLoader(object):
         self.suiteFactory = TestSuite
         self.sorter = name
         self._importErrors = []
+        self.forceGarbageCollection = False
 
     def sort(self, xs):
         return dsu(xs, self.sorter)
@@ -329,7 +347,8 @@ class TestLoader(object):
         if not isTestCase(klass):
             raise ValueError("%r is not a test case" % (klass,))
         names = self.getTestCaseNames(klass)
-        tests = self.sort([ klass(self.methodPrefix+name) for name in names ])
+        tests = self.sort([self._makeCase(klass, self.methodPrefix+name)
+                           for name in names])
         return self.suiteFactory(tests)
     loadTestsFromTestCase = loadClass
 
@@ -339,7 +358,12 @@ class TestLoader(object):
     def loadMethod(self, method):
         if not isinstance(method, types.MethodType):
             raise TypeError("%r not a method" % (method,))
-        return method.im_class(method.__name__)
+        return self._makeCase(method.im_class, method.__name__)
+
+    def _makeCase(self, klass, methodName):
+        test = klass(methodName)
+        test.forceGarbageCollection = self.forceGarbageCollection
+        return test
 
     def loadPackage(self, package, recurse=False):
         """ Load tests from a module object representing a package, and return a

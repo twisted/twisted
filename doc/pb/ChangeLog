@@ -27,6 +27,14 @@
 	occasional all-connection-related-tests-fail problem, which I
 	suspect involves the threadpool being broken.
 
+2006-04-22  Brian Warner  <warner@lothar.com>
+
+	* common.py (TargetMixin.tearDown): do a gc.collect after flushing
+	the loopbacks but before flushing the eventual-send queue. This
+	makes sure that any finalization-triggered eventual-sends are
+	flushed too, rather than leaving them around for trial to discover
+	and complain about them.
+
 2006-02-28  Brian Warner  <warner@lothar.com>
 
 	* sslverify.py: update to latest version (r5075) from Vertex SVN,

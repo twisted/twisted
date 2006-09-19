@@ -23,6 +23,28 @@ def testNames(test):
     return collector.tests
 
 
+class TestGarbageCollect(unittest.TestCase):
+    def setUp(self):
+        self.config = trial.Options()
+
+    def test_forcedGc(self):
+        """
+        Passing the '--force-gc' option to the trial script should set the
+        appropriate flag in the test loader.
+        """
+        self.config['force-gc'] = True
+        loader = trial._getLoader(self.config)
+        self.assertEqual(True, loader.forceGarbageCollection)
+
+    def test_unforcedGc(self):
+        """
+        The test loader should only enable forced garbage collection if the
+        option is passed to the trial script.
+        """
+        loader = trial._getLoader(self.config)
+        self.assertEqual(False, loader.forceGarbageCollection)
+
+
 class TestModuleTest(unittest.TestCase):
     def setUp(self):
         self.config = trial.Options()

@@ -170,6 +170,53 @@ class LoaderTest(packages.SysPathManglingTest):
         self.failUnlessEqual(['test_bar', 'test_foo'],
                              [test._testMethodName for test in suite._tests])
 
+
+    def test_loadWithoutForcedGarbageCollection(self):
+        """
+        Tests loaded by default should not be set to force garbage collection.
+        This test checks 'loadMethod'.
+        """
+        import sample
+        test = self.loader.loadMethod(sample.FooTest.test_foo)
+        self.assertEqual(test.forceGarbageCollection, False)
+
+    def test_loadWithForcedGarbageCollection(self):
+        """
+        If the loader is set to force garbage collection, any tests it loads
+        should also be set to force garbage collection. This test checks
+        'loadMethod'.
+        """
+        import sample
+        self.loader.forceGarbageCollection = True
+        test = self.loader.loadMethod(sample.FooTest.test_foo)
+        self.assertEqual(test.forceGarbageCollection, True)
+
+    def test_loadWithoutForcedGarbageCollectionClass(self):
+        """
+        Tests loaded by default should not be set to force garbage collection.
+        This test checks 'loadClass'.
+        """
+        import sample
+        suite = self.loader.loadClass(sample.FooTest)
+        class Visitor(unittest.TestVisitor):
+            def visitCase(s, case):
+                self.assertEqual(case.forceGarbageCollection, False)
+        suite.visit(Visitor())
+
+    def test_loadWithForcedGarbageCollectionClass(self):
+        """
+        If the loader is set to force garbage collection, any tests it loads
+        should also be set to force garbage collection. This test checks
+        'loadClass'.
+        """
+        import sample
+        self.loader.forceGarbageCollection = True
+        suite = self.loader.loadClass(sample.FooTest)
+        class Visitor(unittest.TestVisitor):
+            def visitCase(s, case):
+                self.assertEqual(case.forceGarbageCollection, True)
+        suite.visit(Visitor())
+
     def test_loadNonClass(self):
         import sample
         self.failUnlessRaises(TypeError, self.loader.loadClass, sample)
