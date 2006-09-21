@@ -6,10 +6,11 @@ from __future__ import nested_scopes
 from twisted.trial import unittest, util as trial_util
 from twisted.internet import protocol, reactor, interfaces, defer
 from twisted.protocols import basic
-from twisted.python import util, log, runtime
-from twisted.test import test_tcp
+from twisted.python import util, log
+from twisted.python.runtime import platform
+from twisted.test.test_tcp import WriteDataTestCase, ProperlyCloseFilesMixin
 
-import os
+import os, errno
 
 try:
     from OpenSSL import SSL, crypto
@@ -176,29 +177,32 @@ if SSL is not None:
             ssl.DefaultOpenSSLContextFactory.__init__(self, *args, **kw)
 
 
-class StolenTCPTestCase(test_tcp.ProperlyCloseFilesTestCase, test_tcp.WriteDataTestCase):
-    def setUp(self):
-        test_tcp.PortCleanerUpper.setUp(self)
-        self.serverConns = []
-        f = protocol.ServerFactory()
-        f.protocol = protocol.Protocol
-        self.listener = reactor.listenSSL(
-            0, f, ssl.DefaultOpenSSLContextFactory(certPath, certPath), interface="127.0.0.1",
-        )
-        self.ports.append(self.listener)
-        f = protocol.ClientFactory()
-        f.protocol = test_tcp.ConnectionLosingProtocol
+class StolenTCPTestCase(ProperlyCloseFilesMixin, WriteDataTestCase):
+    """
+    For SSL transports, test many of the same things which are tested for
+    TCP transports.
+    """
+    def createServer(self, address, portNumber, factory):
+        contextFactory = ssl.CertificateOptions()
+        return reactor.listenSSL(
+            portNumber, factory, contextFactory, interface=address)
 
-        f.protocol.master = self
 
-        L = []
-        def connector():
-            p = self.listener.getHost().port
-            ctx = ssl.ClientContextFactory()
-            return reactor.connectSSL('127.0.0.1', p, f, ctx)
-        self.connector = connector
+    def connectClient(self, address, portNumber, clientCreator):
+        contextFactory = ssl.CertificateOptions()
+        return clientCreator.connectSSL(address, portNumber, contextFactory)
 
-        self.totalConnections = 0
+
+    def getHandleExceptionType(self):
+        return SSL.SysCallError
+
+
+    def getHandleErrorCode(self):
+        # Windows 2000 SP 4 and Windows XP SP 2 give back WSAENOTSOCK for
+        # SSL.Connection.write for some reason.
+        if platform.getType() == 'win32':
+            return errno.WSAENOTSOCK
+        return ProperlyCloseFilesMixin.getHandleErrorCode(self)
 
 
 class TLSTestCase(unittest.TestCase):
@@ -434,7 +438,7 @@ class ConnectionLostTestCase(unittest.TestCase, ContextGeneratingMixin):
         # we're not going to allow this to report errors incorrectly on any
         # other platforms.
 
-        if runtime.platform.isWindows():
+        if platform.isWindows():
             from twisted.internet.error import ConnectionLost
             acceptableErrors.append(ConnectionLost)
 
