@@ -76,7 +76,7 @@ class Options(usage.Options):
 
 
     _desc = """
-Things appropriate for --command are:
+Things appropriate for --commands are:
 
 %s
 
