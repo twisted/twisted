@@ -79,6 +79,25 @@ class Version(object):
                     other.minor,
                     other.micro))
 
+
+    def _parseSVNEntries(self, entriesFile):
+        """
+        Given a readable file object which represents a .svn/entries
+        file, return the revision as a string. If the file cannot be
+        parsed, return the string "Unknown".
+        """
+        try:
+            from xml.dom.minidom import parse
+            doc = parse(entriesFile).documentElement
+            for node in doc.childNodes:
+                if hasattr(node, 'getAttribute'):
+                    rev = node.getAttribute('revision')
+                    if rev is not None:
+                        return rev.encode('ascii')
+        except:
+            return "Unknown"
+        
+
     def _getSVNVersion(self):
         """
         Figure out the SVN revision number based on the existance of
@@ -94,13 +113,8 @@ class Version(object):
                                '.svn',
                                'entries')
             if os.path.exists(ent):
-                from xml.dom.minidom import parse
-                doc = parse(file(ent)).documentElement
-                for node in doc.childNodes:
-                    if hasattr(node, 'getAttribute'):
-                        rev = node.getAttribute('revision')
-                        if rev is not None:
-                            return rev.encode('ascii')
+                return self._parseSVNEntries(open(ent))
+
 
     def _formatSVNVersion(self):
         ver = self._getSVNVersion()
