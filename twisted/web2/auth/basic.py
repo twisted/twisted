@@ -20,7 +20,7 @@ class BasicCredentialFactory(object):
     def getChallenge(self, peer):
         return {'realm': self.realm}
 
-    def decode(self, response, method=None):
+    def decode(self, response, request):
         try:
             creds = (response + '===').decode('base64')
         except:

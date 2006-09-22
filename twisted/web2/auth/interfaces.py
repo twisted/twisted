@@ -13,15 +13,15 @@ class ICredentialFactory(Interface):
         @return: dictionary of challenge arguments
         """
 
-    def decode(response, method=None):
+    def decode(response, request):
         """Create a credentials object from the given response.
         May raise twisted.cred.error.LoginFailed if the response is invalid.
     
         @type response: C{str}
         @param response: scheme specific response string
 
-        @type method: C{str}
-        @param method: the method by which this response was sent
+        @type request: L{twisted.web2.server.Request}
+        @param request: the request being processed
 
         @return: ICredentials
         """

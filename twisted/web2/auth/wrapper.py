@@ -12,6 +12,10 @@ from twisted.web2 import http
 from twisted.web2 import iweb
 
 class UnauthorizedResponse(http.StatusResponse):
+    """A specialized response class for generating www-authenticate headers
+    from the given L{CredentialFactory} instances
+    """
+
     def __init__(self, factories, remoteAddr=None):
         super(UnauthorizedResponse, self).__init__(
             responsecode.UNAUTHORIZED,
@@ -83,7 +87,7 @@ class HTTPAuthResource(object):
             return UnauthorizedResource(self.credentialFactories)
 
         try:
-            creds = factory.decode(response, req.method)
+            creds = factory.decode(response, req)
         except error.LoginFailed:
             return UnauthorizedResource(self.credentialFactories)
 

@@ -154,7 +154,7 @@ class DigestCredentialFactory:
                 'algorithm': self.algorithm,
                 'realm': self.realm}
 
-    def decode(self, response, method='GET'):
+    def decode(self, response, request):
         def unq(s):
             if s[0] == s[-1] == '"':
                 return s[1:-1]
@@ -172,4 +172,4 @@ class DigestCredentialFactory:
 
         del self.outstanding[auth['opaque']]
             
-        return DigestedCredentials(username, method, self.realm, auth)
+        return DigestedCredentials(username, request.method, self.realm, auth)
