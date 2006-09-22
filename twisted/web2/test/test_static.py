@@ -11,7 +11,6 @@ class TestData(BaseCase):
         self.text = "Hello, World\n"
         self.data = static.Data(self.text, "text/plain")
 
-
     def test_dataState(self):
         """
         Test the internal state of the Data object
@@ -42,7 +41,6 @@ class TestData(BaseCase):
                          http_headers.MimeType("text", "plain"))
         def checkStream(data):
             self.assertEquals(str(data), self.text)
-
         return stream.readStream(iweb.IResponse(self.data.render(None)).stream,
                                  checkStream)
 
@@ -58,7 +56,8 @@ class TestFileSaver(BaseCase):
                               maxBytes=16)
         self.root.addSlash = True
 
-    def uploadFile(self, fieldname, filename, mimetype, content, resrc=None, host='foo', path='/'):
+    def uploadFile(self, fieldname, filename, mimetype, content, resrc=None,
+                   host='foo', path='/'):
         if not resrc:
             resrc = self.root
             
@@ -102,32 +101,33 @@ Content-Type: %s\r
         return d
 
     def test_enforcesMaxBytes(self):
-        return self.assertInResponse(self.uploadFile('FileNameOne', 'myfilename',
-                                         'text/html', 'X'*32),
-                              (200, {}, 'exceeds maximum length'))
+        return self.assertInResponse(
+            self.uploadFile('FileNameOne', 'myfilename', 'text/html', 'X'*32),
+            (200, {}, 'exceeds maximum length'))
 
     def test_enforcesMimeType(self):
-        return self.assertInResponse(self.uploadFile('FileNameOne', 'myfilename',
-                                              'application/x-python', 'X'),
-                              (200, {}, 'type not allowed'))
+        return self.assertInResponse(
+            self.uploadFile('FileNameOne', 'myfilename',
+                            'application/x-python', 'X'),
+            (200, {}, 'type not allowed'))
 
     def test_invalidField(self):
-        return self.assertInResponse(self.uploadFile('NotARealField', 'myfilename',
-                                              'text/html', 'X'),
-                              (200, {}, 'not a valid field'))
+        return self.assertInResponse(
+            self.uploadFile('NotARealField', 'myfilename', 'text/html', 'X'),
+            (200, {}, 'not a valid field'))
 
     def test_reportFileSave(self):
-        return self.assertInResponse(self.uploadFile('FileNameOne', 'myfilename',
-                                              'text/plain',
-                                              'X'),
-                              (200, {}, 'Saved file'))
+        return self.assertInResponse(
+            self.uploadFile('FileNameOne', 'myfilename', 'text/plain', 'X'),
+            (200, {}, 'Saved file'))
 
     def test_compareFileContents(self):
         def gotFname(fname):
             contents = file(fname, 'r').read()
             self.assertEquals(contents, 'Test contents')
-        
-        return self.uploadFile('FileNameOne', 'myfilename', 'text/plain',
-                               'Test contents').addCallback(
-            self.fileNameFromResponse
-            ).addCallback(gotFname)
+
+        d = self.uploadFile('FileNameOne', 'myfilename', 'text/plain',
+                            'Test contents')
+        d.addCallback(self.fileNameFromResponse)
+        d.addCallback(gotFname)
+        return d

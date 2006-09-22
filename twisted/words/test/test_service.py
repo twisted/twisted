@@ -875,21 +875,26 @@ class PBProtocolTestCase(unittest.TestCase):
         self.portal = portal.Portal(
             self.realm, [self.checker])
         self.serverFactory = pb.PBServerFactory(self.portal)
+        self.serverFactory.protocol = self._protocolFactory
         self.serverFactory.unsafeTracebacks = True
         self.clientFactory = pb.PBClientFactory()
         self.clientFactory.unsafeTracebacks = True
-
         self.serverPort = reactor.listenTCP(0, self.serverFactory)
         self.clientConn = reactor.connectTCP(
             '127.0.0.1',
             self.serverPort.getHost().port,
             self.clientFactory)
 
+    def _protocolFactory(self, *args, **kw):
+        self._serverProtocol = pb.Broker(0)
+        return self._serverProtocol
 
     def tearDown(self):
+        d3 = Deferred()
+        self._serverProtocol.notifyOnDisconnect(lambda: d3.callback(None))
         return DeferredList([
             maybeDeferred(self.serverPort.stopListening),
-            maybeDeferred(self.clientConn.disconnect)])
+            maybeDeferred(self.clientConn.disconnect), d3])
 
     def _loggedInAvatar(self, name, password, mind):
         creds = credentials.UsernamePassword(name, password)

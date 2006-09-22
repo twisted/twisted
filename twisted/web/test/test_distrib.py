@@ -15,16 +15,26 @@ class MySite(server.Site):
                 self.logFile.close()
             del self.logFile
 
+
+class PBServerFactory(pb.PBServerFactory):
+    def buildProtocol(self, addr):
+        self.proto = pb.PBServerFactory.buildProtocol(self, addr)
+        return self.proto
+
+
 class DistribTest(unittest.TestCase):
     port1 = None
     port2 = None
     sub = None
 
     def tearDown(self):
+        dl = [defer.Deferred(), defer.Deferred()]
+        self.f1.proto.notifyOnDisconnect(lambda: dl[0].callback(None))
         if self.sub is not None:
+            self.sub.publisher.broker.notifyOnDisconnect(
+                lambda: dl[1].callback(None))
             self.sub.publisher.broker.transport.loseConnection()
         http._logDateTimeStop()
-        dl = []
         if self.port1 is not None:
             dl.append(self.port1.stopListening())
         if self.port2 is not None:
@@ -36,8 +46,8 @@ class DistribTest(unittest.TestCase):
         r1 = resource.Resource()
         r1.putChild("there", static.Data("root", "text/plain"))
         site1 = server.Site(r1)
-        f1 = pb.PBServerFactory(distrib.ResourcePublisher(site1))
-        self.port1 = reactor.listenTCP(0, f1)
+        self.f1 = PBServerFactory(distrib.ResourcePublisher(site1))
+        self.port1 = reactor.listenTCP(0, self.f1)
         self.sub = distrib.ResourceSubscription("127.0.0.1",
                                                 self.port1.getHost().port)
         r2 = resource.Resource()
