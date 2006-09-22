@@ -195,15 +195,15 @@ class AbstractAccount(styles.Versioned):
         if (not self._isConnecting) and (not self._isOnline):
             self._isConnecting = 1
             d = self._startLogOn(chatui)
-            d.addErrback(self._loginFailed)
             d.addCallback(self._cb_logOn)
             # if chatui is not None:
             # (I don't particularly like having to pass chatUI to this function,
             # but we haven't factored it out yet.)
             d.addCallback(chatui.registerAccountClient)
+            d.addErrback(self._loginFailed)
             return d
         else:
-            raise error.ConnectionError("Connection in progress")
+            raise error.ConnectError("Connection in progress")
 
     def getGroup(self, name):
         """Group factory.
