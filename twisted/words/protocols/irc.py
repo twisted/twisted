@@ -423,7 +423,7 @@ class IRC(protocol.Protocol):
             self.hostname, RPL_WHOISSERVER, user, nick, server, serverInfo))
         if oper:
             self.sendLine(":%s %s %s %s :is an IRC operator" % (
-                self.hostname, RPL_WHOISOPER, user, nick))
+                self.hostname, RPL_WHOISOPERATOR, user, nick))
         self.sendLine(":%s %s %s %s %d %d :seconds idle, signon time" % (
             self.hostname, RPL_WHOISIDLE, user, nick, idle, signOn))
         self.sendLine(":%s %s %s %s :%s" % (
