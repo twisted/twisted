@@ -105,6 +105,7 @@ class TestCase(unittest.TestCase):
 
         d = request.locateResource(request.uri)
         d.addCallback(lambda resource: resource.renderHTTP(request))
+        d.addCallback(request._cbFinishRender)
 
         if type(callback) is tuple:
             d.addCallbacks(*callback)

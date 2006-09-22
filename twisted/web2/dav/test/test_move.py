@@ -46,6 +46,10 @@ class MOVE(twisted.web2.dav.test.util.TestCase):
                 self.fail("Incorrect response code for MOVE %s: %s != %s"
                           % (uri, response.code, responsecode.CREATED))
 
+            if response.headers.getHeader("location") is None:
+                self.fail("Reponse to MOVE %s with CREATE status is missing location: header."
+                          % (uri,))
+
             if isfile:
                 if not os.path.isfile(dst_path):
                     self.fail("MOVE %s produced no output file" % (uri,))

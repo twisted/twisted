@@ -32,6 +32,7 @@ __all__ = ["http_COPY", "http_MOVE"]
 from twisted.python import log
 from twisted.web2 import responsecode
 from twisted.web2.http import HTTPError, StatusResponse
+from twisted.web2.filter.location import addLocation
 from twisted.web2.dav.idav import IDAVResource
 from twisted.web2.dav.fileop import copy, move
 
@@ -44,6 +45,10 @@ def http_COPY(self, request):
     """
     def doCopy(r):
         destination, destination_uri, depth = r
+
+        # May need to add a location header
+        addLocation(request, destination_uri)
+
         return copy(self.fp, destination.fp, destination_uri, depth)
 
     d = prepareForCopy(self, request)
@@ -72,6 +77,9 @@ def http_MOVE(self, request):
             msg = "Client sent illegal depth header value for MOVE: %s" % (depth,)
             log.err(msg)
             raise HTTPError(StatusResponse(responsecode.BAD_REQUEST, msg))
+
+        # May need to add a location header
+        addLocation(request, destination_uri)
 
         return move(self.fp, request.uri, destination.fp, destination_uri, depth)
 

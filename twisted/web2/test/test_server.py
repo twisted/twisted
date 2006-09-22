@@ -35,8 +35,8 @@ class SimpleRequest(server.Request):
         self.host = 'localhost'
         self.port = 8080
 
-    def writeResponse(response):
-        pass
+    def writeResponse(self, response):
+        return response
 
 
 class TestChanRequest:

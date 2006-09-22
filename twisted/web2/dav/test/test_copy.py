@@ -47,6 +47,10 @@ class COPY(twisted.web2.dav.test.util.TestCase):
                 self.fail("Incorrect response code for COPY %s (depth=%r): %s != %s"
                           % (uri, depth, response.code, responsecode.CREATED))
 
+            if response.headers.getHeader("location") is None:
+                self.fail("Reponse to COPY %s (depth=%r) with CREATE status is missing location: header."
+                          % (uri, depth))
+
             if os.path.isfile(path):
                 if not os.path.isfile(dst_path):
                     self.fail("COPY %s (depth=%r) produced no output file" % (uri, depth))
