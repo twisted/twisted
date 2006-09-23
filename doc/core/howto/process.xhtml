@@ -254,7 +254,7 @@ pipe.</p>
 
   <li><code>self.transport.loseConnection</code>: Close all three pipes.</li>
 
-  <li><code>os.kill(self.transport.pid, signal.SIGKILL)</code>: Kill the child
+  <li><code>self.transport.signalProcess('KILL')</code>: Kill the child
   process. This will eventually result in <code>processEnded</code> being
   called.</li>
   
@@ -437,11 +437,6 @@ influence the child process:</p>
   child's pipes. Closing an input pipe is a common way to indicate EOF to
   the child process. Closing an output pipe is neither very friendly nor
   very useful.</li>
-
-  <li><code>os.kill(self.transport.pid, signal.SIGKILL)</code>: Kill the child
-  process. This will eventually result in <code>processEnded</code> being
-  called.</li>
-  
 </ul>
 
 <h3>Examples</h3>
