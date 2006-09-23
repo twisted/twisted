@@ -363,6 +363,7 @@ class HTTPDownloader(HTTPClientFactory):
 
 
 def _parse(url, defaultPort=None):
+    url = url.strip()
     parsed = urlparse.urlparse(url)
     scheme = parsed[0]
     path = urlparse.urlunparse(('','')+parsed[2:])
@@ -375,6 +376,8 @@ def _parse(url, defaultPort=None):
     if ':' in host:
         host, port = host.split(':')
         port = int(port)
+    if path == "":
+        path = "/"
     return scheme, host, port, path
 
 
