@@ -567,7 +567,6 @@ generateFor = [
                ('lore', 'twisted.lore.scripts.lore', 'Options'),
                ('pyhtmlizer', 'twisted.scripts.htmlizer', 'Options'),
                ('tap2deb', 'twisted.scripts.tap2deb', 'MyOptions'),
-               ('tkmktap', 'twisted.scripts.tap2deb', 'MyOptions'),
                ('tkconch', 'twisted.conch.scripts.tkconch', 'GeneralOptions'),
                ('manhole', 'twisted.scripts.manhole', 'MyOptions'),
                ('tap2rpm', 'twisted.scripts.tap2rpm', 'MyOptions'),

@@ -16,8 +16,7 @@
 <h3>Creating a non-authoritative server</h3>
 The first two of these are easy, and you can create a server that performs
 them with the command <code class="shell">mktap dns --recursive
---cache</code>, or launch <code class="shell">tkmktap</code> and configure a
-dns server with it.  The result should be a file named <code>dns.tap</code>. 
+--cache</code>.  The result should be a file named <code>dns.tap</code>. 
 Now switch to a superuser account (if required by your platform to bind to
 port 53) and run <code class="shell">twistd -f dns.tap</code>.  The
 Application will run and bind to port 53.  Try performing a lookup with it,

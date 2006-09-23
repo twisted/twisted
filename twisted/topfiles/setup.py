@@ -98,7 +98,7 @@ netnews, IRC, RDBMSs, desktop environments, and your toaster.
     scripts= [
         'bin/manhole', 'bin/mktap', 'bin/twistd',
         'bin/tap2deb', 'bin/tap2rpm', 'bin/tapconvert',
-        'bin/tkmktap', 'bin/trial',
+        'bin/trial',
     ],
 )
 
