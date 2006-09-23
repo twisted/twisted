@@ -22,6 +22,7 @@ import sys
 import select
 import operator
 import warnings
+
 try:
     import fcntl
 except ImportError:
@@ -35,9 +36,10 @@ except ImportError:
 
 from twisted.python.runtime import platform, platformType
 
+
 if platformType == 'win32':
-     # no such thing as WSAEPERM or error code 10001 according to winsock.h or MSDN
-    EPERM=object()
+    # no such thing as WSAEPERM or error code 10001 according to winsock.h or MSDN
+    EPERM = object()
     from errno import WSAEINVAL as EINVAL
     from errno import WSAEWOULDBLOCK as EWOULDBLOCK
     from errno import WSAEINPROGRESS as EINPROGRESS
@@ -47,7 +49,13 @@ if platformType == 'win32':
     from errno import WSAENOTCONN as ENOTCONN
     from errno import WSAEINTR as EINTR
     from errno import WSAENOBUFS as ENOBUFS
-    EAGAIN=EWOULDBLOCK
+    from errno import WSAEMFILE as EMFILE
+    # No such thing as WSAENFILE, either.
+    ENFILE = object()
+    # Nor ENOMEM
+    ENOMEM = object()
+    EAGAIN = EWOULDBLOCK
+    from errno import WSAECONNRESET as ECONNABORTED
 else:
     from errno import EPERM
     from errno import EINVAL
@@ -59,7 +67,13 @@ else:
     from errno import ENOTCONN
     from errno import EINTR
     from errno import ENOBUFS
+    from errno import EMFILE
+    from errno import ENFILE
+    from errno import ENOMEM
     from errno import EAGAIN
+    from errno import ECONNABORTED
+
+from errno import errorcode
 
 # Twisted Imports
 from twisted.internet import protocol, defer, base, address
@@ -759,7 +773,29 @@ class Port(base.BasePort, _SocketCloser):
                         self.numberAccepts = i
                         break
                     elif e.args[0] == EPERM:
+                        # Netfilter on Linux may have rejected the
+                        # connection, but we get told to try to accept()
+                        # anyway.
                         continue
+                    elif e.args[0] in (EMFILE, ENOBUFS, ENFILE, ENOMEM, ECONNABORTED):
+
+                        # Linux gives EMFILE when a process is not allowed
+                        # to allocate any more file descriptors.  *BSD and
+                        # Win32 give (WSA)ENOBUFS.  Linux can also give
+                        # ENFILE if the system is out of inodes, or ENOMEM
+                        # if there is insufficient memory to allocate a new
+                        # dentry.  ECONNABORTED is documented as possible on
+                        # both Linux and Windows, but it is not clear
+                        # whether there are actually any circumstances under
+                        # which it can happen (one might expect it to be
+                        # possible if a client sends a FIN or RST after the
+                        # server sends a SYN|ACK but before application code
+                        # calls accept(2), however at least on Linux this
+                        # _seems_ to be short-circuited by syncookies.
+
+                        log.msg("Could not accept new connection (%s)" % (
+                            errorcode[e.args[0]],))
+                        break
                     raise
 
                 protocol = self.factory.buildProtocol(self._buildAddr(addr))
