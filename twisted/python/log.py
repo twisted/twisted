@@ -16,13 +16,6 @@ import datetime
 # Sibling Imports
 from twisted.python import util, context, reflect
 
-# Backwards compat
-try:
-    UnicodeEncodeError # Introduced sometime after Python 2.2.3
-except NameError:
-    UnicodeEncodeError = UnicodeError
-
-
 class ILogContext:
     """Actually, this interface is just a synoym for the dictionary interface,
     but it serves as a key for the default information in a log.
@@ -57,22 +50,6 @@ def callWithLogger(logger, func, *args, **kw):
         raise
     except:
         err(system=lp)
-
-def write(stuff):
-    """Write some data to the log.
-    DEPRECATED. Use L{msg} instead."""
-    warnings.warn("Use log.msg, not log.write.", DeprecationWarning, stacklevel=2)
-    msg(str(stuff))
-
-def debug(*stuff,**otherstuff):
-    """
-    Write some debug data to the log. It passes debug=1 in the log
-    dict.
-
-    DEPRECATED (Since Twisted 2.1): Pass debug=1 to msg() yourself.
-    """
-    warnings.warn("Use log.msg(..., debug=True), not log.debug().", DeprecationWarning, stacklevel=2)
-    msg(debug=1, *stuff, **otherstuff)
 
 def showwarning(message, category, filename, lineno, file=None):
     if file is None:
@@ -163,18 +140,6 @@ class Logger:
         be called more times than the number of output lines.
         """
         return '-'
-
-
-class EscapeFromTheMeaninglessConfinesOfCapital:
-    def own(self, owner):
-        warnings.warn("Foolish capitalist!  Your opulent toilet will be your undoing!!",
-                      DeprecationWarning, stacklevel=2)
-    def disown(self, owner):
-        warnings.warn("The proletariat is victorious.",
-                      DeprecationWarning, stacklevel=2)
-
-logOwner = EscapeFromTheMeaninglessConfinesOfCapital()
-
 
 class LogPublisher:
     """Class for singleton log message publishing."""
