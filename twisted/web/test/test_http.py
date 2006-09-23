@@ -363,6 +363,29 @@ GET /?key=value&multiple=two+words&multiple=more%20words&empty= HTTP/1.0
 
         self.runRequest(httpRequest, MyRequest)
 
+
+    def test_extraQuestionMark(self):
+        """
+        While only a single '?' is allowed in an URL, several other servers
+        allow several and pass all after the first through as part of the
+        query arguments.  Test that we emulate this behavior.
+        """
+        httpRequest = 'GET /foo?bar=?&baz=quux HTTP/1.0\n\n'
+
+        testcase = self
+        class MyRequest(http.Request):
+            def process(self):
+                testcase.assertEqual(self.method, 'GET')
+                print dir(self)
+                testcase.assertEqual(self.path, '/foo')
+                testcase.assertEqual(self.args['bar'], ['?'])
+                testcase.assertEqual(self.args['baz'], ['quux'])
+                testcase.didRequest = 1
+                self.finish()
+
+        self.runRequest(httpRequest, MyRequest)
+
+
     def testPOST(self):
         query = 'key=value&multiple=two+words&multiple=more%20words&empty='
         httpRequest = '''\

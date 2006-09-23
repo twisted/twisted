@@ -559,15 +559,12 @@ class Request:
 
         self.method, self.uri = command, path
         self.clientproto = version
-        x = self.uri.split('?')
+        x = self.uri.split('?', 1)
 
         if len(x) == 1:
             self.path = self.uri
         else:
-            if len(x) != 2:
-                log.msg("May ignore parts of this invalid URI: %s"
-                        % repr(self.uri))
-            self.path, argstring = x[0], x[1]
+            self.path, argstring = x
             self.args = parse_qs(argstring, 1)
 
         # cache the client and server information, we'll need this later to be
