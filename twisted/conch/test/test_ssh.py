@@ -290,6 +290,10 @@ if Crypto: # stuff that needs PyCrypto to even import
             proto = ConchTestServer()
             proto.supportedPublicKeys = self.privateKeys.keys()
             proto.factory = self
+
+            if hasattr(self, 'expectedLoseConnection'):
+                proto.expectedLoseConnection = self.expectedLoseConnection
+
             self.proto = proto
             return proto
 

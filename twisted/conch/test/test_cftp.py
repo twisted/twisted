@@ -321,46 +321,67 @@ class TestOurServerBatchFile(test_process.SignalMixin, CFTPClientTestBase):
         log.msg('running %s %s' % (sys.executable, cmds))
         env = os.environ.copy()
         env['PYTHONPATH'] = os.pathsep.join(sys.path)
+
+        self.server.factory.expectedLoseConnection = 1
+
         d = getProcessOutputAndValue(sys.executable, cmds, env=env)
-        d.setTimeout(10)
-        d.addBoth(l.append)
-        while not l:
-            if hasattr(self.server.factory, 'proto'):
-                self.server.factory.proto.expectedLoseConnection = 1
-            reactor.iterate(0.1)
-        os.remove(fn)
-        result = l[0]
-        if isinstance(result, failure.Failure):
-            raise result.value
-        else:
-            log.msg(result[1])
-            return result[0]
+
+        def _cleanup(res):
+            os.remove(fn)
+            return res
+
+        d.addCallback(lambda res: res[0])
+        d.addBoth(_cleanup)
+
+        return d
 
     def testBatchFile(self):
+        """Test whether batch file function of cftp ('cftp -b batchfile').
+        This works by treating the file as a list of commands to be run.
+        """
         cmds = """pwd
 ls
 exit
 """
-        res = self._getBatchOutput(cmds).split('\n')
-        log.msg('RES %s' % str(res))
-        self.failUnless(res[1].find(self.testDir) != -1, repr(res))
-        self.failUnlessEqual(res[3:-2], ['testDirectory', 'testRemoveFile', 'testRenameFile', 'testfile1'])
+        def _cbCheckResult(res):
+            res = res.split('\n')
+            log.msg('RES %s' % str(res))
+            self.failUnless(res[1].find(self.testDir) != -1, repr(res))
+            self.failUnlessEqual(res[3:-2], ['testDirectory', 'testRemoveFile',
+                                             'testRenameFile', 'testfile1'])
+
+        d = self._getBatchOutput(cmds)
+        d.addCallback(_cbCheckResult)
+        return d
 
     def testError(self):
+        """Test that an error in the batch file stops running the batch.
+        """
         cmds = """chown 0 missingFile
 pwd
 exit
 """
-        res = self._getBatchOutput(cmds)
-        self.failIf(res.find(self.testDir) != -1)
+        def _cbCheckResult(res):
+            self.failIf(res.find(self.testDir) != -1)
+
+        d = self._getBatchOutput(cmds)
+        d.addCallback(_cbCheckResult)
+        return d
 
     def testIgnoredError(self):
+        """Test that a minus sign '-' at the front of a line ignores
+        any errors.
+        """
         cmds = """-chown 0 missingFile
 pwd
 exit
 """
-        res = self._getBatchOutput(cmds)
-        self.failIf(res.find(self.testDir) == -1)
+        def _cbCheckResult(res):
+            self.failIf(res.find(self.testDir) == -1)
+
+        d = self._getBatchOutput(cmds)
+        d.addCallback(_cbCheckResult)
+        return d
 
 class TestOurServerUnixClient(test_process.SignalMixin, CFTPClientTestBase):
 
@@ -414,16 +435,23 @@ class TestOurServerUnixClient(test_process.SignalMixin, CFTPClientTestBase):
         log.msg('running %s %s' % (sys.executable, cmds))
         env = os.environ.copy()
         env['PYTHONPATH'] = os.pathsep.join(sys.path)
-        if hasattr(self.server.factory, 'proto'):
-            self.server.factory.proto.expectedLoseConnection = 1
+
+        self.server.factory.expectedLoseConnection = 1
+
         d = getProcessOutputAndValue(sys.executable, cmds, env=env)
-        def cleanup(res):
+        
+        def _cleanup(res):
             os.remove(fn)
-            return res[0]
-        d.addBoth(cleanup)
+            return res
+        
+        d.addCallback(lambda res: res[0])
+        d.addBoth(_cleanup)
+
         return d
 
     def testBatchFile(self):
+        """Test that the client works even over a UNIX connection.
+        """
         cmds = """pwd
 exit
 """
