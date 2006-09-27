@@ -71,6 +71,7 @@ class DigestMD5(object):
     def __init__(self, serv_type, host, serv_name, username, password):
         self.username = username
         self.password = password
+        self.defaultRealm = host
 
         self.digest_uri = '%s/%s' % (serv_type, host)
         if serv_name is not None:
@@ -89,10 +90,14 @@ class DigestMD5(object):
         if directives.has_key('rspauth'):
             return ''
 
-        return self._gen_response(directives['charset'],
-                                  directives['realm'],
-                                  directives['nonce'])
+        try:
+            realm = directives['realm']
+        except KeyError:
+            realm = self.defaultRealm
 
+        return self._gen_response(directives['charset'],
+                                  realm,
+                                  directives['nonce'])
 
     def _parse(self, challenge):
         """
