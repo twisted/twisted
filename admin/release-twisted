@@ -43,7 +43,6 @@ def makeCommands():
         'makeDocNames': makeMakeDoc('names'),
         'makeDocNews': makeMakeDoc('news'),
         'makeDocPair': makeMakeDoc('pair'),
-        'makeDocPb': makeMakeDoc('pb'),
         'makeDocRunner': makeMakeDoc('runner'),
         'makeDocWeb': makeMakeDoc('web'),
         'makeDocWeb2': makeMakeDoc('web2'),
@@ -56,7 +55,6 @@ def makeCommands():
         'makeBallNames': makeMakeBall('names'),
         'makeBallNews': makeMakeBall('news'),
         'makeBallPair': makeMakeBall('pair'),
-        'makeBallPb': makeMakeBall('pb'),
         'makeBallRunner': makeMakeBall('runner'),
         'makeBallWeb': makeMakeBall('web'),
         'makeBallWeb2': makeMakeBall('web2'),
@@ -157,7 +155,7 @@ def makeDocCore(opts):
                    'specifications', '']:
         lore(ver, os.path.join('doc/core', docdir))
     # development docs go in core, for lack of anywhere better
-    for docdir in ['legal', 'pb', 'policy', '']:
+    for docdir in ['legal', 'policy', '']:
         lore(ver, os.path.join('doc/development', docdir))
 
     #shwack the crap
