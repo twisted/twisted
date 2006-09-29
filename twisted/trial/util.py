@@ -21,7 +21,7 @@ from __future__ import generators
 
 import traceback, gc, sys
 from twisted.python import log, threadpool
-from twisted.internet import interfaces
+from twisted.internet import interfaces, utils
 
 # Methods in this list will be omitted from a failed test's traceback if
 # they are the final frame.
@@ -97,7 +97,12 @@ class _Janitor(object):
                 else:
                     print "WEIRNESS! pending timed call not active+!"
             raise PendingTimedCallsError(s)
+    do_cleanPending = utils.suppressWarnings(
+        do_cleanPending, (('ignore',), {'category': DeprecationWarning,
+                                        'message':
+                                        r'reactor\.iterate cannot be used.*'}))
     do_cleanPending = classmethod(do_cleanPending)
+
 
     def do_cleanThreads(cls):
         from twisted.internet import reactor

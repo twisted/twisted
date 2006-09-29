@@ -433,6 +433,8 @@ class TestCase(_Assertions):
                     result.addExpectedFailure(self, f, todo)
                 else:
                     result.addError(self, f)
+        onTimeout = utils.suppressWarnings(
+            onTimeout, util.suppress(category=DeprecationWarning))
         if self._shared:
             test = self.__class__._testCaseInstance
         else:
@@ -567,6 +569,44 @@ class TestCase(_Assertions):
         except:
             result.cleanupErrors(failure.Failure())
 
+    def _makeReactorMethod(self, name):
+        """
+        Create a method which wraps the reactor method C{name}. The new
+        method issues a deprecation warning and calls the original.
+        """
+        def _(*a, **kw):
+            warnings.warn("reactor.%s cannot be used inside unit tests. By "
+                          "Twisted 2.7, using %s will fail the test and may "
+                          "crash or hang the test run."
+                          % (name, name),
+                          stacklevel=2, category=DeprecationWarning)
+            return self._reactorMethods[name](*a, **kw)
+        return _
+
+    def _deprecateReactor(self, reactor):
+        """
+        Deprecate C{iterate}, C{crash} and C{stop} on C{reactor}. That is,
+        each method is wrapped in a function that issues a deprecation
+        warning, then calls the original.
+
+        @param reactor: The Twisted reactor.
+        """
+        self._reactorMethods = {}
+        for name in ['crash', 'iterate', 'stop']:
+            self._reactorMethods[name] = getattr(reactor, name)
+            setattr(reactor, name, self._makeReactorMethod(name))
+
+    def _undeprecateReactor(self, reactor):
+        """
+        Restore the deprecated reactor methods. Undoes what
+        L{_deprecateReactor} did.
+
+        @param reactor: The Twisted reactor.
+        """
+        for name, method in self._reactorMethods.iteritems():
+            setattr(reactor, name, method)
+        self._reactorMethods = {}
+
     def run(self, result):
         """
         Run the test case, storing the results in C{result}.
@@ -578,6 +618,7 @@ class TestCase(_Assertions):
         @param result: A L{TestResult} object.
         """
         log.msg("--> %s <--" % (self.id()))
+        from twisted.internet import reactor
         from twisted.trial import reporter
         if not isinstance(result, reporter.TestResult):
             result = PyUnitResultAdapter(result)
@@ -594,22 +635,26 @@ class TestCase(_Assertions):
         if self._shared:
             first = self._isFirst()
             self.__class__._instancesRun.add(self)
-        if self.forceGarbageCollection:
-            gc.collect()
-        if first:
-            d = self.deferSetUpClass(result)
-        else:
-            d = self.deferSetUp(None, result)
+        self._deprecateReactor(reactor)
         try:
-            self._wait(d)
+            if self.forceGarbageCollection:
+                gc.collect()
+            if first:
+                d = self.deferSetUpClass(result)
+            else:
+                d = self.deferSetUp(None, result)
+            try:
+                self._wait(d)
+            finally:
+                self._cleanUp(result)
+                result.stopTest(self)            
+                if self._shared and self._isLast():
+                    self._initInstances()
+                    self._classCleanUp(result)
+                if not self._shared:
+                    self._classCleanUp(result)
         finally:
-            self._cleanUp(result)
-            result.stopTest(self)            
-            if self._shared and self._isLast():
-                self._initInstances()
-                self._classCleanUp(result)
-            if not self._shared:
-                self._classCleanUp(result)
+            self._undeprecateReactor(reactor)
 
     def _getReason(self, f):
         if len(f.value.args) > 0:
@@ -709,8 +754,14 @@ class TestCase(_Assertions):
         def crash(ign):
             if results is not None:
                 reactor.crash()
+        crash = utils.suppressWarnings(
+            crash, util.suppress(message=r'reactor\.crash cannot be used.*',
+                                 category=DeprecationWarning)) 
         def stop():
             reactor.crash()
+        stop = utils.suppressWarnings(
+            stop, util.suppress(message=r'reactor\.crash cannot be used.*',
+                                category=DeprecationWarning)) 
     
         running.append(None)
         try:

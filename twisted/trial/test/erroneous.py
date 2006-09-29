@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.trial.test.test_tests -*-
-from twisted.trial import unittest
+from twisted.trial import unittest, util
 from twisted.internet import reactor, protocol, defer
 
 
@@ -73,25 +73,32 @@ class TestSkipTestCase2(unittest.TestCase):
     def test_thisTestWillBeSkipped(self):
         pass
 
-HIDDEN_EXCEPTION_MSG = "something blew up"
 
-class DemoTest(unittest.TestCase):
-    def setUp(self):
-        super(DemoTest, self).setUp()
-        self.finished = False
-
+class DelayedCall(unittest.TestCase):
+    hiddenExceptionMsg = "something blew up"
+    
     def go(self):
-        if True:
-            raise RuntimeError, HIDDEN_EXCEPTION_MSG
-        self.finished = True
+        raise RuntimeError(self.hiddenExceptionMsg)
 
     def testHiddenException(self):
-        import time
-        cl = reactor.callLater(0, self.go)
-        timeout = time.time() + 2
-        while not (self.finished or time.time() > timeout):
-            reactor.iterate(0.1)
-        self.failUnless(self.finished)
+        """
+        What happens if an error is raised in a DelayedCall and an error is
+        also raised in the test?
+
+        L{test_reporter.TestErrorReporting.testHiddenException} checks that
+        both errors get reported.
+
+        Note that this behaviour is deprecated. A B{real} test would return a
+        Deferred that got triggered by the callLater. This would guarantee the
+        delayed call error gets reported.
+        """
+        reactor.callLater(0, self.go)
+        reactor.iterate(0.01)
+        self.fail("Deliberate failure to mask the hidden exception")
+    testHiddenException.suppress = [util.suppress(
+        message=r'reactor\.iterate cannot be used.*',
+        category=DeprecationWarning)]
+
 
 class ReactorCleanupTests(unittest.TestCase):
     def test_leftoverPendingCalls(self):

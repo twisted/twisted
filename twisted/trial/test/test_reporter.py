@@ -67,17 +67,21 @@ class TestErrorReporting(StringTest):
     
     def setUp(self):
         self.loader = runner.TestLoader()
+        self.output = StringIO.StringIO()
+        self.result = reporter.Reporter(self.output)
 
-    def runTests(self, suite):
-        output = StringIO.StringIO()
-        result = reporter.Reporter(output)
-        suite.run(result)
+    def getOutput(self, suite):
+        result = self.getResult(suite)
         result.printErrors()
-        return output.getvalue()
+        return self.output.getvalue()
+
+    def getResult(self, suite):
+        suite.run(self.result)
+        return self.result
     
     def testFormatErroredMethod(self):
         suite = self.loader.loadClass(erroneous.TestFailureInSetUp)
-        output = self.runTests(suite).splitlines()
+        output = self.getOutput(suite).splitlines()
         match = [self.doubleSeparator,
                  ('[ERROR]: twisted.trial.test.erroneous.'
                   'TestFailureInSetUp.test_noop'),
@@ -91,7 +95,7 @@ class TestErrorReporting(StringTest):
 
     def testFormatFailedMethod(self):
         suite = self.loader.loadMethod(erroneous.TestRegularFail.test_fail)
-        output = self.runTests(suite).splitlines()
+        output = self.getOutput(suite).splitlines()
         match = [
             self.doubleSeparator,
             '[FAIL]: '
@@ -106,7 +110,7 @@ class TestErrorReporting(StringTest):
     def testDoctestError(self):
         from twisted.trial.test import erroneous
         suite = self.loader.loadDoctests(erroneous)
-        output = self.runTests(suite)
+        output = self.getOutput(suite)
         path = 'twisted.trial.test.erroneous.unexpectedException'
         for substring in ['1/0', 'ZeroDivisionError',
                           'Exception raised:', path]:
@@ -120,10 +124,20 @@ class TestErrorReporting(StringTest):
         self.stringComparison(expect, output.splitlines())
 
     def testHiddenException(self):
-        """errors in DelayedCalls fail the test
         """
-        output = self.runTests(erroneous.DemoTest('testHiddenException'))
-        self.assertSubstring(erroneous.HIDDEN_EXCEPTION_MSG, output)
+        Check that errors in C{DelayedCall}s get reported, even if the
+        test already has a failure.
+
+        Only really necessary for testing the deprecated style of tests that
+        use iterate() directly. See
+        L{erroneous.DelayedCall.testHiddenException} for more details.
+        """
+        test = erroneous.DelayedCall('testHiddenException')
+        result = self.getResult(test)
+        self.assertEqual(len(result.errors), 1)
+        self.assertEqual(len(result.failures), 1)
+        self.assertEqual(result.errors[0][1].getErrorMessage(),
+                         test.hiddenExceptionMsg)
 
 
 class TracebackHandling(unittest.TestCase):
