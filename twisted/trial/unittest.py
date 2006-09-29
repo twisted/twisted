@@ -3,6 +3,12 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+Things likely to be used by writers of unit tests.
+
+Maintainer: Jonathan Lange <jml@twistedmatrix.com>
+"""
+
 
 import os, warnings, sys, tempfile, sets, gc
 
@@ -30,7 +36,23 @@ class FailTest(AssertionError):
 
 
 class Todo(object):
+    """
+    Internal object used to mark a L{TestCase} as 'todo'. Tests marked 'todo'
+    are reported differently in Trial L{TestResult}s. If todo'd tests fail,
+    they do not fail the suite and the errors are reported in a separate
+    category. If todo'd tests succeed, Trial L{TestResult}s will report an
+    unexpected success.
+    """
+    
     def __init__(self, reason, errors=None):
+        """
+        @param reason: A string explaining why the test is marked 'todo'
+        
+        @param errors: An iterable of exception types that the test is
+        expected to raise. If one of these errors is raised by the test, it
+        will be trapped. Raising any other kind of error will fail the test.
+        If C{None} is passed, then all errors will be trapped.
+        """
         self.reason = reason
         self.errors = errors
 
@@ -38,6 +60,11 @@ class Todo(object):
         return "<Todo reason=%r errors=%r>" % (self.reason, self.errors)
 
     def expected(self, failure):
+        """
+        @param failure: A L{twisted.python.failure.Failure}.
+
+        @return: C{True} if C{failure} is expected, C{False} otherwise.
+        """
         if self.errors is None:
             return True
         for error in self.errors:
@@ -47,6 +74,18 @@ class Todo(object):
 
 
 def makeTodo(value):
+    """
+    Return a L{Todo} object built from C{value}.
+
+    If C{value} is a string, return a Todo that expects any exception with
+    C{value} as a reason. If C{value} is a tuple, the second element is used
+    as the reason and the first element as the excepted error(s).
+
+    @param value: A string or a tuple of C{(errors, reason)}, where C{errors}
+    is either a single exception class or an iterable of exception classes.
+
+    @return: A L{Todo} object.
+    """
     if isinstance(value, str):
         return Todo(reason=value)
     if isinstance(value, tuple):
@@ -59,6 +98,15 @@ def makeTodo(value):
 
 
 class _Assertions(pyunit.TestCase, object):
+    """
+    Replaces many of the built-in TestCase assertions. In general, these
+    assertions provide better error messages and are easier to use in
+    callbacks. Also provides new assertions such as L{failUnlessFailure}.
+
+    Although the tests are defined as 'failIf*' and 'failUnless*', they can
+    also be called as 'assertNot*' and 'assert*'.
+    """
+    
     def fail(self, msg=None):
         """absolutely fails the test, do not pass go, do not collect $200
 
@@ -268,24 +316,63 @@ _wait_is_running = []
 
 class TestCase(_Assertions):
     """
-    An instance of TestCase represents a single test.
+    A unit test. The atom of the unit testing universe.
 
     This class extends C{unittest.TestCase} from the standard library. The
     main feature is the ability to return C{Deferred}s from tests and fixture
     methods and to have the suite wait for those C{Deferred}s to fire.
 
-    NOTE: This docstring is incomplete. Currently, the best documentation is
-    the source code.
+    To write a unit test, subclass C{TestCase} and define a method (say,
+    'test_foo') on the subclass. To run the test, instantiate your subclass
+    with the name of the method, and call L{run} on the instance, passing a
+    L{TestResult} object.
+
+    The C{trial} script will automatically find any C{TestCase} subclasses
+    defined in modules beginning with 'test_' and construct test cases for all
+    methods beginning with 'test'.
+
+    If an error is logged during the test run, the test will fail with an
+    error. See L{log.err}.
+
+    @ivar failureException: An exception class, defaulting to C{FailTest}. If
+    the test method raises this exception, it will be reported as a failure,
+    rather than an exception. All of the assertion methods raise this if the
+    assertion fails.
 
     @ivar forceGarbageCollection: If set to True, C{gc.collect()} will be
     called before and after the test. Otherwise, garbage collection will
     happen in whatever way Python sees fit.    
+
+    @ivar skip: C{None} or a string explaining why this test is to be
+    skipped. If defined, the test will not be run. Instead, it will be
+    reported to the result object as 'skipped' (if the C{TestResult} supports
+    skipping).
+
+    @ivar suppress: C{None} or a list of tuples of C{(args, kwargs)} to be
+    passed to C{warnings.filterwarnings}. Use these to suppress warnings
+    raised in a test. Useful for testing deprecated code. See also
+    L{util.suppress}.
+
+    @ivar timeout: C{None} or a real number of seconds. If set, the test will
+    raise an error if it takes longer than C{timeout} seconds.
+
+    @ivar todo: C{None}, a string or a tuple of C{(errors, reason)} where
+    C{errors} is either an exception class or an iterable of exception
+    classes, and C{reason} is a string. See L{Todo} or L{makeTodo} for more
+    information.
     """
     
     zi.implements(itrial.ITestCase)
     failureException = FailTest
 
     def __init__(self, methodName):
+        """
+        Construct an asynchronous test case for C{methodName}.
+
+        @param methodName: The name of a method on C{self}. This method should
+        be a unit test. That is, it should be a short method that calls some of
+        the assert* methods.
+        """
         super(TestCase, self).__init__(methodName)
         self._testMethodName = methodName
         testMethod = getattr(self, methodName)
@@ -481,6 +568,15 @@ class TestCase(_Assertions):
             result.cleanupErrors(failure.Failure())
 
     def run(self, result):
+        """
+        Run the test case, storing the results in C{result}.
+
+        First runs C{setUp} on self, then runs the test method (defined in the
+        constructor), then runs C{tearDown}. Any of these may return
+        L{Deferred}s. After they complete, does some reactor cleanup.
+
+        @param result: A L{TestResult} object.
+        """
         log.msg("--> %s <--" % (self.id()))
         from twisted.trial import reporter
         if not isinstance(result, reporter.TestResult):
@@ -526,15 +622,36 @@ class TestCase(_Assertions):
         return reason
 
     def getSkip(self):
+        """
+        Return the skip reason set on this test, if any is set. Checks on the
+        instance first, then the class, then the module, then packages. As
+        soon as it finds something with a C{skip} attribute, returns that.
+        Returns C{None} if it cannot find anything. See L{TestCase} docstring
+        for more details.
+        """
         return util.acquireAttribute(self._parents, 'skip', None)
 
     def getTodo(self):
+        """
+        Return a L{Todo} object if the test is marked todo. Checks on the
+        instance first, then the class, then the module, then packages. As
+        soon as it finds something with a C{todo} attribute, returns that.
+        Returns C{None} if it cannot find anything. See L{TestCase} docstring
+        for more details.
+        """
         todo = util.acquireAttribute(self._parents, 'todo', None)
         if todo is None:
             return None
         return makeTodo(todo)
 
     def getTimeout(self):
+        """
+        Returns the timeout value set on this test. Checks on the instance
+        first, then the class, then the module, then packages. As soon as it
+        finds something with a C{timeout} attribute, returns that. Returns
+        L{util.DEFAULT_TIMEOUT_DURATION} if it cannot find anything. See
+        L{TestCase} docstring for more details.
+        """
         timeout =  util.acquireAttribute(self._parents, 'timeout',
                                          util.DEFAULT_TIMEOUT_DURATION)
         try:
@@ -549,6 +666,13 @@ class TestCase(_Assertions):
             return util.DEFAULT_TIMEOUT_DURATION
 
     def getSuppress(self):
+        """
+        Returns any warning suppressions set for this test. Checks on the
+        instance first, then the class, then the module, then packages. As
+        soon as it finds something with a C{suppress} attribute, returns that.
+        Returns any empty list (i.e. suppress no warnings) if it cannot find
+        anything. See L{TestCase} docstring for more details.
+        """
         return util.acquireAttribute(self._parents, 'suppress', [])
     
     def visit(self, visitor):
@@ -556,8 +680,9 @@ class TestCase(_Assertions):
         visitor.visitCase(self)
 
     def mktemp(self):
-        """will return a unique name that may be used as either a temporary
-        directory or filename
+        """Returns a unique name that may be used as either a temporary
+        directory or filename.
+        
         @note: you must call os.mkdir on the value returned from this
                method if you wish to use it as a directory!
         """
@@ -632,7 +757,17 @@ class UnsupportedTrialFeature(Exception):
 
 
 class PyUnitResultAdapter(object):
+    """
+    Wrap a C{TestResult} from the standard library's C{unittest} so that it
+    supports the extended result types from Trial, and also supports
+    L{twisted.python.failure.Failure}s being passed to L{addError} and
+    L{addFailure}.
+    """
+    
     def __init__(self, original):
+        """
+        @param original: A C{TestResult} instance from C{unittest}.
+        """
         self.original = original
 
     def _exc_info(self, err):
@@ -663,12 +798,21 @@ class PyUnitResultAdapter(object):
              None))
 
     def addSkip(self, test, reason):
+        """
+        Report the skip as a failure.
+        """
         self._unsupported(test, 'skip', reason)
 
     def addUnexpectedSuccess(self, test, todo):
+        """
+        Report the unexpected success as a failure.
+        """
         self._unsupported(test, 'unexpected success', todo)
         
     def addExpectedFailure(self, test, error):
+        """
+        Report the expected failure (i.e. todo) as a failure.
+        """
         self._unsupported(test, 'expected failure', error)
 
     def addSuccess(self, test):
@@ -709,6 +853,9 @@ class _SubTestCase(TestCase):
 _inst = _SubTestCase()
 
 def deprecate(name):
+    """
+    Internal method used to deprecate top-level assertions. Do not use this.
+    """
     def _(*args, **kwargs):
         warnings.warn("unittest.%s is deprecated.  Instead use the %r "
                       "method on unittest.TestCase" % (name, name),

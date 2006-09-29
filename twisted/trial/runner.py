@@ -4,7 +4,12 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-# Maintainer: Jonathan Lange <jml@twistedmatrix.com>
+"""
+A miscellany of code used to run Trial tests.
+
+Maintainer: Jonathan Lange <jml@twistedmatrix.com>
+"""
+
 
 from __future__ import generators
 import pdb, shutil, sets
@@ -41,10 +46,24 @@ def isPackageDirectory(dirname):
 
 
 def samefile(filename1, filename2):
-    # hacky implementation of os.path.samefile
+    """
+    A hacky implementation of C{os.path.samefile}. Used by L{filenameToModule}
+    when the platform doesn't provide C{os.path.samefile}. Do not use this.
+    """
     return os.path.abspath(filename1) == os.path.abspath(filename2)
 
 def filenameToModule(fn):
+    """
+    Given a filename, do whatever possible to return a module object matching
+    that file.
+
+    If the file in question is a module in Python path, properly import and
+    return that module. Otherwise, load the source manually. 
+
+    @param fn: A filename.
+    @return: A module object.
+    @raise ValueError: If C{fn} does not exist.
+    """
     if not os.path.exists(fn):
         raise ValueError("%r doesn't exist" % (fn,))
     try:
@@ -107,12 +126,20 @@ def suiteVisit(suite, visitor):
 
 
 class TestSuite(pyunit.TestSuite):
+    """
+    Extend the standard library's C{TestSuite} with support for the visitor
+    pattern and a consistently overrideable C{run} method.
+    """
+    
     visit = suiteVisit
 
     def __call__(self, result):
         return self.run(result)
 
     def run(self, result):
+        """
+        Call C{run} on every member of the suite.
+        """
         # we implement this because Python 2.3 unittest defines this code
         # in __call__, whereas 2.4 defines the code in run.
         for test in self._tests:
@@ -123,10 +150,12 @@ class TestSuite(pyunit.TestSuite):
 
 
 class DocTestSuite(TestSuite):
-    """Behaves like doctest.DocTestSuite, but decorates individual TestCases
-    so they support visit and so that id() behaviour is meaningful and
-    consistent between Python versions.
     """
+    Behaves like doctest.DocTestSuite, but decorates individual TestCases so
+    they support visit and so that id() behaviour is meaningful and consistent
+    between Python versions.
+    """
+    
     def __init__(self, testModule):
         TestSuite.__init__(self)
         suite = doctest.DocTestSuite(testModule)
@@ -135,8 +164,9 @@ class DocTestSuite(TestSuite):
 
 
 class PyUnitTestCase(object):
-    """ This class decorates the pyunit.TestCase class, mainly to work around the
-    differences between unittest in Python 2.3, 2.4, and 2.5.  These
+    """
+    This class decorates the pyunit.TestCase class, mainly to work around the
+    differences between unittest in Python 2.3, 2.4, and 2.5. These
     differences are::
 
         - The way doctest unittests describe themselves
@@ -176,16 +206,22 @@ class PyUnitTestCase(object):
 
 class DocTestCase(PyUnitTestCase):
     def id(self):
-        """In Python 2.4, doctests have correct id() behaviour.  In Python 2.3,
+        """
+        In Python 2.4, doctests have correct id() behaviour. In Python 2.3,
         id() returns 'runit'.
 
-        Here we override id() so that at least it will always contain the fully
-        qualified Python name of the doctest.
+        Here we override id() so that at least it will always contain the
+        fully qualified Python name of the doctest.
         """
         return self._test.shortDescription()
 
 
 class TrialSuite(TestSuite):
+    """
+    Suite to wrap around every single test in a C{trial} run. Used internally
+    by Trial to set up things necessary for Trial tests to work, regardless of
+    what context they are run in.
+    """
 
     def _bail(self):
         from twisted.internet import reactor
@@ -230,6 +266,10 @@ def name(thing):
 
 
 def isTestCase(obj):
+    """
+    Returns C{True} if C{obj} is a class that contains test cases, C{False}
+    otherwise. Used to find all the tests in a module.
+    """
     try:
         return ITestCase.implementedBy(obj)
     except TypeError:
@@ -242,7 +282,21 @@ def isTestCase(obj):
 
 
 class ErrorHolder(object):
+    """
+    Used to insert arbitrary errors into a test suite run. Provides enough
+    methods to like a C{TestCase}, however, when it is run, it simply adds an
+    error to the C{TestResult}. The most common use-case is for when a module
+    fails to import.
+    """
+    
     def __init__(self, description, error):
+        """
+        @param description: A string used by C{TestResult}s to identify this
+        error. Generally, this is the name of a module that failed to import.
+
+        @param error: The error to be added to the result. Can be an exc_info
+        tuple or a L{twisted.python.failure.Failure}.
+        """
         self.description = description
         self.error = error
 
@@ -273,16 +327,19 @@ class ErrorHolder(object):
 class TestLoader(object):
     """
     I find tests inside function, modules, files -- whatever -- then return
-    them wrapped inside a Test (either a TestSuite or a TestCase).
+    them wrapped inside a Test (either a L{TestSuite} or a L{TestCase}).
 
-    @ivar methodPrefix: A string prefix. TestLoader will assume that all the
+    @ivar methodPrefix: A string prefix. C{TestLoader} will assume that all the
     methods in a class that begin with C{methodPrefix} are test cases.
 
     @ivar modulePrefix: A string prefix. Every module in a package that begins
     with C{modulePrefix} is considered a module full of tests.
 
-    @ivar forceGarbageCollection: A flag applied to each TestCase loaded.
+    @ivar forceGarbageCollection: A flag applied to each C{TestCase} loaded.
     See L{unittest.TestCase} for more information.
+
+    @ivar sorter: A key function used to sort C{TestCase}s, test classes,
+    modules and packages.
 
     @ivar suiteFactory: A callable which is passed a list of tests (which
     themselves may be suites of tests). Must return a test suite.
@@ -298,10 +355,15 @@ class TestLoader(object):
         self.forceGarbageCollection = False
 
     def sort(self, xs):
+        """
+        Sort the given things using L{sorter}.
+
+        @param xs: A list of test cases, class or modules.
+        """
         return dsu(xs, self.sorter)
 
     def findTestClasses(self, module):
-        """Given a module, return all trial Test classes"""
+        """Given a module, return all Trial test classes"""
         classes = []
         for name, val in inspect.getmembers(module):
             if isTestCase(val):
@@ -309,17 +371,27 @@ class TestLoader(object):
         return self.sort(classes)
 
     def findByName(self, name):
+        """
+        Return a Python object given a string describing it.
+        
+        @param name: a string which may be either a filename or a
+        fully-qualified Python name.
+
+        @return: If C{name} is a filename, return the module. If C{name} is a
+        fully-qualified Python name, return the object it refers to.
+        """
         if os.path.exists(name):
             return filenameToModule(name)
         return reflect.namedAny(name)
 
     def loadModule(self, module):
-        """Return a test suite with all the tests from a module.
+        """
+        Return a test suite with all the tests from a module.
 
-        Included are TestCase subclasses and doctests listed in the
-        module's __doctests__ module.  If that's not good for you, put
-        a function named C{test_suite} in your module that returns a
-        TestSuite, and I'll use the results of that instead.
+        Included are TestCase subclasses and doctests listed in the module's
+        __doctests__ module. If that's not good for you, put a function named
+        C{test_suite} in your module that returns a TestSuite, and I'll use
+        the results of that instead.
         """
         ## XXX - should I add an optional parameter to disable the check for
         ## a custom suite.
@@ -342,6 +414,10 @@ class TestLoader(object):
     loadTestsFromModule = loadModule
 
     def loadClass(self, klass):
+        """
+        Given a class which contains test cases, return a sorted list of
+        C{TestCase} instances.
+        """
         if not (isinstance(klass, type) or isinstance(klass, types.ClassType)):
             raise TypeError("%r is not a class" % (klass,))
         if not isTestCase(klass):
@@ -353,9 +429,17 @@ class TestLoader(object):
     loadTestsFromTestCase = loadClass
 
     def getTestCaseNames(self, klass):
+        """
+        Given a class that contains C{TestCase}s, return a list of names of
+        methods that probably contain tests.
+        """
         return reflect.prefixedMethodNames(klass, self.methodPrefix)
 
     def loadMethod(self, method):
+        """
+        Given a method of a C{TestCase} that represents a test, return a
+        C{TestCase} instance for that test.
+        """
         if not isinstance(method, types.MethodType):
             raise TypeError("%r not a method" % (method,))
         return self._makeCase(method.im_class, method.__name__)
@@ -366,10 +450,12 @@ class TestLoader(object):
         return test
 
     def loadPackage(self, package, recurse=False):
-        """ Load tests from a module object representing a package, and return a
+        """
+        Load tests from a module object representing a package, and return a
         TestSuite containing those tests.
 
-        Tests are only loaded from modules whose name begins with 'test_'.
+        Tests are only loaded from modules whose name begins with 'test_'
+        (or whatever C{modulePrefix} is set to).
 
         @param package: a types.ModuleType object (or reasonable facsimilie
         obtained by importing) which may contain tests.
@@ -406,6 +492,11 @@ class TestLoader(object):
         return suite
 
     def loadDoctests(self, module):
+        """
+        Return a suite of tests for all the doctests defined in C{module}.
+
+        @param module: A module object or a module name.
+        """
         if isinstance(module, str):
             try:
                 module = reflect.namedAny(module)
@@ -417,6 +508,16 @@ class TestLoader(object):
         return DocTestSuite(module)
 
     def loadAnything(self, thing, recurse=False):
+        """
+        Given a Python object, return whatever tests that are in it. Whatever
+        'in' might mean.
+        
+        @param thing: A Python object. A module, method, class or package.
+        @param recurse: Whether or not to look in subpackages of packages.
+        Defaults to False.
+
+        @return: A C{TestCase} or C{TestSuite}.
+        """
         if isinstance(thing, types.ModuleType):
             if isPackage(thing):
                 return self.loadPackage(thing, recurse)
@@ -430,6 +531,16 @@ class TestLoader(object):
         raise TypeError("No loader for %r. Unrecognized type" % (thing,))
 
     def loadByName(self, name, recurse=False):
+        """
+        Given a string representing a Python object, return whatever tests
+        are in that object.
+
+        If C{name} is somehow inaccessible (e.g. the module can't be imported,
+        there is no Python object with that name etc) then return an
+        L{ErrorHolder}.
+
+        @param name: The fully-qualified name of a Python object.
+        """
         try:
             thing = self.findByName(name)
         except:
@@ -438,10 +549,11 @@ class TestLoader(object):
     loadTestsFromName = loadByName
 
     def loadByNames(self, names, recurse=False):
-        """Construct a TestSuite containing all the tests found in 'names',
-        where names is a list of fully qualified python names and/or
-        filenames. The suite returned will have no duplicate tests, even
-        if the same object is named twice.
+        """
+        Construct a TestSuite containing all the tests found in 'names', where
+        names is a list of fully qualified python names and/or filenames. The
+        suite returned will have no duplicate tests, even if the same object
+        is named twice.
         """
         things = []
         errors = []
@@ -457,24 +569,38 @@ class TestLoader(object):
 
 
 class DryRunVisitor(unittest.TestVisitor):
+    """
+    A visitor that makes a reporter think that every test visited has run
+    successfully.
+    """
 
     def __init__(self, reporter):
+        """
+        @param reporter: A C{TestResult} object.
+        """
         self.reporter = reporter
         
     def visitSuite(self, testSuite):
+        # XXX - this shouldn't be here
         self.reporter.startSuite(testSuite.name())
 
     def visitSuiteAfter(self, testSuite):
+        # XXX - this shouldn't be here
         self.reporter.endSuite(testSuite.name())
 
     def visitCase(self, testCase):
+        """
+        Convince the reporter that this test has been run successfully.
+        """
         self.reporter.startTest(testCase)
         self.reporter.addSuccess(testCase)
         self.reporter.stopTest(testCase)
 
 
 class TrialRunner(object):
-    """A specialised runner that the trial front end uses."""
+    """
+    A specialised runner that the trial front end uses.
+    """
 
     DEBUG = 'debug'
     DRY_RUN = 'dry-run'
@@ -576,7 +702,9 @@ class TrialRunner(object):
         self._logWarnings = True
 
     def run(self, test):
-        """Run the test or suite and return a result object."""
+        """
+        Run the test or suite and return a result object.
+        """
         result = self._makeResult()
         # decorate the suite with reactor cleanup and log starting
         # This should move out of the runner and be presumed to be 
@@ -612,6 +740,9 @@ class TrialRunner(object):
         return result
 
     def runUntilFailure(self, test):
+        """
+        Repeatedly run C{test} until it fails.
+        """
         count = 0
         while True:
             count += 1

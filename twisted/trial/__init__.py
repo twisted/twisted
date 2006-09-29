@@ -3,4 +3,10 @@
 #
 # Maintainer: Jonathan Lange <jml@twistedmatrix.com>
 
-"""Unit testing framework."""
+"""Asynchronous unit testing framework.
+
+Trial extends Python's builtin C{unittest} to provide support for asynchronous
+tests.
+
+Maintainer: Jonathan Lange <jml@twistedmatrix.com>
+"""
