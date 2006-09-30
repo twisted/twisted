@@ -1,0 +1,614 @@
+2006-05-15  Brian Warner  <warner@lothar.com>
+
+	* test_zz_resolve.py: rename test file, I'd like to sit at the end
+	of the tests rather than at the beginning. This is to investigate
+	ticket #1390.
+
+	* test_negotiate.py (Crossfire): oops, a cut-and-paste error
+	resulted in two CrossfireReverse tests and zero Crossfire tests.
+	Fixed this to enable the possibly-never-run real CrossfireReverse
+	test case.
+	(top): disable all negotiation tests unless NEWPB_TEST_NEGOTIATION
+	is set in the environment, since they are sensitive to system load
+	and the intermittent buildbot failures are annoying.
+
+2006-05-05  Brian Warner  <warner@lothar.com>
+
+	* release-twisted: add 'pb' subproject
+	* twisted/python/dist.py: same
+	* twisted/pb/__init__.py: set version to 0.0.1
+	* twisted/pb/topfiles/setup.py: fix subproject name, set version 0.0.1
+
+2006-04-29  Brian Warner  <warner@lothar.com>
+
+	* topfiles/README, topfiles/NEWS: prepare for 0.0.1 release
+	* setup.py: fix up description, project name
+	* test_ZZresolve.py: add some instrumentation to try and debug the
+	occasional all-connection-related-tests-fail problem, which I
+	suspect involves the threadpool being broken.
+
+2006-04-22  Brian Warner  <warner@lothar.com>
+
+	* common.py (TargetMixin.tearDown): do a gc.collect after flushing
+	the loopbacks but before flushing the eventual-send queue. This
+	makes sure that any finalization-triggered eventual-sends are
+	flushed too, rather than leaving them around for trial to discover
+	and complain about them.
+
+2006-02-28  Brian Warner  <warner@lothar.com>
+
+	* sslverify.py: update to latest version (r5075) from Vertex SVN,
+	to fix a problem reported on OS-X with python2.4 . Removed the
+	test-case-name tag to prevent troubles with buildbot on systems
+	that don't also have vertex installed. I need to find a better
+	solution for this in the long run: I don't want newpb to depend
+	upon Vertex, but I also don't want to duplicate code.
+
+2006-02-27  Brian Warner  <warner@lothar.com>
+
+	* debug.py (encodeTokens): return a Deferred rather than use
+	deferredResult
+
+2006-02-02  Brian Warner  <warner@lothar.com>
+
+	* test_negotiate.py: skip pb-vs-web tests when we don't have
+	twisted.web, thanks to <marienz> for the patch.
+
+2006-01-26  Brian Warner  <warner@lothar.com>
+
+	* test/test_banana.py (ErrorfulSlicer.next): don't use callLater()
+	with non-zero timeout
+	* test/test_promise.py (TestPromise.test2): same
+	* test/common.py (HelperTarget.remote_defer): same
+
+2006-01-25  Brian Warner  <warner@lothar.com>
+
+	* copyable.py: refactor ICopyable and IRemoteCopy to make it
+	possible to register adapters for third-party classes.
+	(RemoteCopy): allow RemoteCopy to auto-register with the
+	fully-qualified classname. This is only useful if you inherit from
+	both pb.Copyable and pb.RemoteCopy at the same time, otherwise the
+	sender and receiver will be using different names so they won't
+	match up.
+
+	* broker.py (PBRootUnslicer.open): now that registerRemoteCopy is
+	done purely in terms of Unslicers, remove all the special-case code
+	that handled IRemoteCopy
+	(PBRootSlicer.slicerForObject): since zope.interface won't do
+	transitive adaptation, manually handle the
+	ThirdPartyClass -> ICopyable -> ISlicer case
+
+	* test/test_copyable.py: clean up, improve comments
+	(MyRemoteCopy3Unslicer): update to match new RemoteCopyUnslicer
+	behavior. This needs to be documented and made easier. Also switch
+	from pb.registerRemoteCopy to registerRemoteCopyUnslicerFactory,
+	which is a mouthful.
+	(Registration): split this out, update to match new debug tables
+	in copyable.py
+	(Adaptation): test ICopyable adapters
+
+2006-01-23  Brian Warner  <warner@lothar.com>
+
+	* common.py: remove missing test_gift from the test-case-name tag,
+	not sure how that got in there
+
+	* test/test_copyable.py: split Copyable tests out of test_pb.py
+	* test/common.py: factor out some more common test utility pieces
+	* copyable.py: add suitable test-case-name tag
+
+	* base32.py: rename Base32.py to base32.py, to match Twisted
+	naming conventions
+	* crypto.py: same
+	* pb.py: same
+
+2006-01-02  Brian Warner  <warner@lothar.com>
+
+	* negotiate.py (eventually): add glyph's eventual-send operator,
+	based upon a queue cranked by callLater(0).
+	(flushEventualQueue): provide a way to flush that queue, so tests
+	know when to finish.
+	* test/test_pb.py: switch to negotiate.eventually
+	* test/__init__.py: add test-case-name tag
+
+2005-12-31  Brian Warner  <warner@lothar.com>
+
+	* test_gift.py (TestOrderedGifts.testGift): verify that the
+	presence of a gift (a third-party reference) in the arguments of a
+	method does not cause that method to be run out-of-order. Marked
+	TODO because at the moment they *are* run out-of-order.
+	* common.py (RIHelper.append): new method
+
+	* referenceable.py (TheirReferenceUnslicer.ackGift): ignore errors
+	that involve losing the connection, since if these happen, the
+	giver will decref the gift reference anyway. This removes some
+	spurious log.errs and makes the unit tests happier.
+
+2005-12-30  Brian Warner  <warner@lothar.com>
+
+	* test_negotiate.py (Versus.testVersusHTTPServerEncrypted): stall
+	for a second after the test completes, to give the HTTP server a
+	moment to tear down its socket. Otherwise trial flunks the test
+	because of the lingering socket. I don't care for the arbitrary
+	1.0-second delay, but twisted.web doesn't give me any convenient
+	way to wait for it to shut down. (this test was only failing under
+	the gtk2 reactor, but I think this was an unlucky timing thing).
+	(Versus.testVersusHTTPServerUnencrypted): same
+
+	* negotiate.py (eventually): add an eventual-send operator
+	(Negotiation.negotiationFailed): fire connector.negotiationFailed
+	through eventually(), to give us a chance to loseConnection
+	beforehand. This helps the unit tests clean up better.
+
+	* negotiation.py (eventually): change the eventual-send operator
+	to (ab)use reactor.callFromThread instead of callLater(0). exarkun
+	warned me, but I didn't listen: callLater(0) does not guarantee
+	relative ordering of sequentially-scheduled calls, and the windows
+	reactors in fact execute them in random order. Obviously I'd like
+	the reactor to provide a clearly-defined method for this purpose.
+	* test_pb.py (eventually): same
+	(Loopback.write): same. It was the reordering of these _write
+	calls that was breaking the unit tests on windows so badly.
+	(Loopback.loseConnection): same
+
+
+2005-12-29  Brian Warner  <warner@lothar.com>
+
+	* test_pb.py (Loopback): fix plan-coordination bug by deferring
+	all write() and loseConnection() calls until the next reactor
+	turn, using reactor.callLater(0) as an 'eventual send' operator.
+	This avoids an infinite-mutual-recursion hang that confuses
+	certain test failures. Tests which use this Loopback must call
+	flush() and wait on the returned Deferred before finishing.
+	(TargetMixin): do proper setup/teardown of Loopback
+	(TestCall.testDisconnect2): use proper CONNECTION_LOST exception
+	(TestCall.testDisconnect3): same
+	(TestReferenceable.testArgs1): rename some tests
+	(TestReferenceable.testArgs2): test sending shared objects in
+	multiple arguments of a single method call
+	(TestReferenceable.testAnswer1): test shared objects in the return
+	value of a method call
+	(TestReferenceable.testAnswer2): another test for return values
+
+	* call.py (CallUnslicer): inherit from ScopedUnslicer, so
+	arguments that reference shared objects will accurately reproduce
+	the object graph
+	(AnswerUnslicer): same, for answers that have shared objects
+	(ErrorUnslicer): same, just in case serialized Failures do too
+	* slicer.py (ImmutableSetSlicer): set trackReferences=False, since
+	immutable objects are never shared, so don't require reference
+	tracking
+
+	* banana.py (Banana.sendError): do loseConnection() in sendError
+	rather than inside dataReceived.
+
+2005-12-26  Brian Warner  <warner@lothar.com>
+
+	* slicer.py (ScopedSlicer.registerReference): track references
+	with a (obj,refid) pair instead of just refid. This insures that
+	the object being tracked stays alive until the scope is retired,
+	preventing some ugly bugs that result from dead object id() values
+	being reused. These bugs would only happen if the object graph
+	changes during serialization (which you aren't supposed to do),
+	but this is a cheap fix that limits the damage that could happen.
+	In particular, it should fix a test failure on the OS-X buildslave
+	that results from a unit test that is violating this object-graph
+	-shouldn't-change prohibition.
+
+	* banana.py (StorageBanana): refactor storage-related things,
+	moving them from banana.py and slicer.py into the new storage.py .
+	This includes UnsafeRootSlicer, StorageRootSlicer,
+	UnsafeRootUnslicer, and StorageRootUnslicer. Also provide a simple
+	serialize()/unserialize() pair in twisted.pb.storage, which will
+	be the primary interface for simple pickle.dumps()-like
+	serialization.
+
+2005-12-24  Brian Warner  <warner@lothar.com>
+
+	* slicer.py: remove #!, add test-case-name
+	(SetSlicer): define this unconditionally, now that python2.2 is no
+	longer supported.
+	(BuiltinSetSlicer): just like SetSlicer, used when there is a builtin
+	'set' type (python2.4 and higher)
+	(ImmutableSetSlicer): define this unconditionally
+	(SetUnslicer): same
+	(ImmutableSetUnslicer): same
+
+	* test_banana.py (TestBananaMixin.looptest): make it easier to
+	test roundtrip encode/decode pairs that don't *quite* re-create
+	the original object
+	(TestBananaMixin.loop): clear the token stream for each test
+	(ThereAndBackAgain.test_set): verify that python2.4's builtin
+	'set' type is serialized as a sets.Set
+
+	* all: drop python2.2 compatibility, now that Twisted no longer
+	supports it
+
+2005-12-22  Brian Warner  <warner@lothar.com>
+
+	* pb.py (Listener.getPortnum): more python2.2 fixes, str in str
+	(PBService.__init__): same, bool issues
+	* test/test_banana.py: same, use failUnlessSubstring
+	* test/test_negotiate.py: same
+	* test/test_pb.py: same
+	* negotiate.py: same, str in str stuff
+
+	* broker.py: don't import itertools, for python2.2 compatibility
+	* sslverify.py: same
+
+2005-12-20  Brian Warner  <warner@lothar.com>
+
+	* test/test_banana.py: remove all remaining uses of
+	deferredResult/deferredError
+	* test/test_pb.py: same
+
+2005-12-09  Brian Warner  <warner@lothar.com>
+
+	* pb.py (PBService.__init__): switch to SHA-1 for TubID digests
+	* negotiate.py (Negotiation.evaluateHello): same
+	* crypto.py (digest32): same
+
+2005-12-08  Brian Warner  <warner@lothar.com>
+
+	* pb.py (PBService): allow all Tubs to share the same RandomPool
+
+2005-10-10  Brian Warner  <warner@lothar.com>
+
+	* lots: overhaul negotiation, add lots of new tests. Implement
+	shared Listeners, correct handling of both encrypted and
+	non-encrypted Tubs, follow multiple locationHints correctly. More
+	docs, update encrypted-tub examples to match new usage.
+
+2005-09-15  Brian Warner  <warner@lothar.com>
+
+	* test_pb.py: remove some uses of deferredResult/deferredError
+
+2005-09-14  Brian Warner  <warner@lothar.com>
+
+	* pb.py (PBService.generateSwissnumber): use PyCrypto RNG if
+	available, otherwise use the stdlib 'random' module. Create a
+	160-bit swissnumber by default, this can be changed by the
+	NAMEBITS class attribute.
+	(PBService.__init__): use a random 32-bit number as a TubID when
+	we aren't using crypto and an SSL certificate
+	* Base32.py: copy module from the waterken.org Web-Calculus
+	python implementation
+	* test/test_crypto.py (TestService.getRef): let it register a
+	random swissnumber instead of a well-known name
+
+
+	* crypto.py: Implement encrypted PB connections, so PB-URLs are
+	closer to being secure capabilities. This file contains utility
+	functions.
+	* sslverify.py: some pyOpenSSL wrappers, copied from Divmod's
+	Vertex/vertex/sslverify.py
+
+	* test/test_crypto.py: test case for encrypted connections
+
+	* pb.py (PBServerFactory.buildProtocol): accomodate missing tubID,
+	this needs to be re-thought when I do the "what if we aren't using
+	crypto" pass.
+	(PBServerFactory.clientConnectionMade): get the remote_tubid from
+	a .theirTubID attribute, not the negotiated connection parameters,
+	which won't include tub IDs anyway)
+	(PBClientFactory.buildProtocol): if we're using crypto, tell the
+	other side we want an encrypted connection
+	(PBService.__init__): add useCrypto= parameter, currently defaults
+	to False. This should switch to =True soon.
+	(PBService.createCertificate): if useCrypto=True, create an SSL
+	certificate for the Tub.
+
+	* ipb.py (DeadReferenceError): actually define it somewhere
+
+	* broker.py (Broker.handleNegotiation_v1): cleanup, make the
+	different negotiation-parameter dictionaries distinct, track the
+	['my-tub-id'] field of each end more carefully. Start a TLS
+	session when both ends want it.
+	(Broker.startTLS): method to actually start the TLS session. This
+	is called on both sides (client and server), the t.i.ssl
+	subclasses figure out which is which and inform SSL appropriately.
+	(Broker.acceptNegotiation): Make a PB-specific form. Start TLS if
+	the server tells us to. When the second (encrypted) negotiation
+	block arrives, verify that the TubID we're looking for matches
+	both what they claim and what their SSL certificate contains.
+	(Broker.freeYourReference): ignore DeadReferenceErrors too
+
+	* banana.py (Banana.__init__): each instance must have its own
+	copy of self.negotiationOffer, rather than setting it at the class
+	level
+	(Banana.negotiationDataReceived): let both handleNegotiation() and
+	acceptNegotiation() return a 'done' flag, if False then the
+	negotiation is re-started
+	(Banana.handleNegotiation): make handleNegotiation_v1 responsible
+	for setting self.negotiationResults
+	(Banana.handleNegotiation_v1): same
+	(Banana.acceptNegotiation): same
+
+2005-09-09  Brian Warner  <warner@lothar.com>
+
+	* broker.py: big sanity-cleanup of RemoteInterface usage. Only
+	allow a single RemoteInterface on any given pb.Referenceable.
+	Tub.getReference() now only takes a string-form method name, so
+	the rr.callRemote(RIFoo['bar'], *args) form is gone, and the one
+	RemoteInterface associated with the RemoteReference (is available)
+	will be checked. Tub.getReference() no longer takes an interface
+	name: you request an object, and then later find out what it
+	implements (rather than specifying your expectations ahead of
+	time). Gifts (i.e. 'their-reference' sequences) no longer have an
+	interfacename.. that is left up to the actual owner of the
+	reference, who will provide it in the 'my-reference' sequence.
+	* call.py, pb.py, referenceable.py, remoteinterface.py: same
+	* test/test_pb.py: update to match, still needs some cleanup
+
+2005-09-08  Brian Warner  <warner@lothar.com>
+
+	* setup.py, twisted/pb/topfiles: add "PB" sub-project
+
+	* banana.py (Banana.sendFailed): oops, loseConnection() doesn't
+	take an argument
+
+	* copyable.py (RemoteCopyClass): make it possible to disable
+	auto-registration of RemoteCopy classes
+	* test/test_pb.py (TestCopyable.testRegistration): test it
+
+	* referenceable.py (CallableSlicer): make it possible to publish
+	callables (bound methods in particular) as secure capabilities.
+	They are handled very much like pb.Referenceable, but with a
+	negative CLID number and a slightly different callRemote()
+	codepath.
+	* broker.py (Broker.getTrackerForMyCall): same
+	(Broker.getTrackerForYourReference): same, use a
+	RemoteMethodReferenceTracker for negative CLID values
+	(Broker.doCall): callables are distinguished by having a
+	methodname of 'None', and are dispatched differently
+	* call.py (CallUnslicer.checkToken): accept INT/NEG for the object
+	ID (the CLID), but not string (leftover from old scheme)
+	(CallUnslicer.receiveChild): handle negative CLIDs specially
+	* test/test_pb.py (TestCallable): tests for it all
+	(TestService.getRef): refactor
+	(TestService.testStatic): verify that we can register static data
+	too, at least stuff that can be hashed. We need to decide whether
+	it would be useful to publish non-hashable static data too.
+
+2005-09-05  Brian Warner  <warner@lothar.com>
+
+	* pb.py (PBService): move to using tubIDs as the primary identity
+	key for a Tub, replacing the baseURL with a .location attribute.
+	Look up references by name instead of by URL, and start using
+	SturdyRefs locally instead of URLs whenever possible.
+	(PBService.getReference): accept either a SturdyRef or a URL
+	(RemoteTub.__init__): take a list of locationHints instead of a
+	single location. The try-all-of-them code is not yet written, nor
+	is the optional redirect-following.
+	(RemoteTub.getReference): change the inter-Tub protocol to pass a
+	name over the wire instead of a full URL. The Broker is already
+	connected to a specific Tub (multiple Tubs sharing the same port
+	will require separate Brokers), and by this point the location
+	hints have already served their purpose, so the name is the only
+	appropriate thing left to send.
+
+	* broker.py (RIBroker.getReferenceByName): match that change to
+	the inter-Tub protocol: pass name over the wire, not URL
+	(Broker.getYourReferenceByName): same
+	(Broker.remote_getReferenceByName): same
+
+	* referenceable.py (RemoteReferenceOnly): replace getURL with
+	getSturdyRef, since the SturdyRef can be stringified into a URL if
+	necessary
+	(SturdyRef): new class. When these are sent over the wire, they
+	appear at the far end as an identical SturdyRef; if you want them
+	to appear as a live reference, send sr.asLiveRef() instead.
+
+	* test/test_pb.py (TestService.testRegister): match changes
+	(Test3Way.setUp): same
+	(HelperTarget.__init__): add some debugging annotations
+	* test/test_sturdyref.py: new test
+
+	* doc/pb/using-pb.xhtml: update to match new usage, explain PB
+	URLs and secure identifiers
+	* doc/pb/listings/pb1server.py: same
+	* doc/pb/listings/pb1client.py: same
+	* doc/pb/listings/pb2calculator.py: same
+	* doc/pb/listings/pb2user.py: same
+
+2005-05-12  Brian Warner  <warner@lothar.com>
+
+	* doc/pb/using-pb.xhtml: document RemoteInterface, Constraints,
+	most of Copyable (still need examples), Introductions (third-party
+	references).
+	* doc/pb/listings/pb2calculator.py, pb2user.py: demostrate
+	bidirectional references, using service.Application
+
+2005-05-10  Brian Warner  <warner@lothar.com>
+
+	* broker.py (Broker.freeYourReference): also ignore ConnectionLost
+	errors
+	* doc/pb/listings/pb1client.py, pb1server.py: use reactor.run()
+	* doc/pb/using-pb.xhtml: add shell output for examples
+
+	* doc/pb/using-pb.xhtml: started writing usage docs
+
+	* banana.py (Banana.dataReceived): add .connectionAbandoned, don't
+	accept inbound data if it has been set. I don't trust
+	.loseConnection to work right away, and sending multiple
+	negotiation error messages is bad.
+	(Banana.negotiationDataReceived): split out negotiation stuff to a
+	separate method. Improve failure-reporting code to make sure we
+	either report a problem with a negotation block, or with an ERROR
+	token, not both, and not with multiple ERROR tokens. Catch errors
+	in the upper-level bananaVersionNegotiated() call. Make sure we
+	only send a response if we're the server. Report negotiation errors
+	with NegotiationError, not BananaError.
+	(Banana.reportReceiveError): rearrange a bit, accept a Failure
+	object. Don't do transport.loseConnection here, do it in whatever
+	calls reportReceiveError
+	* debug.py (TokenBanana.reportReceiveError): match signature change
+	(TokenStorageBanana.reportReceiveError): same
+	* test/test_banana.py: match changes
+	* tokens.py (NegotiationError): new exception
+
+	* broker.py (Broker.handleNegotiation_v1): use the negotiation
+	block to exchange TubIDs.
+	(Broker.connectionFailed): tell the factory if negotiation failed
+	(Broker.freeYourReference): ignore lost-connection errors, call
+	freeYourReferenceTracker even if the connection was lost, since
+	in that case the reference has gone away anyway.
+	(Broker.freeYourReferenceTracker): don't explode if the keys were
+	already deleted, since .connectionLost will clear everything
+	before the decref-ack mechanism gets a chance to delete them.
+	* referenceable.py (RemoteReferenceTracker.__repr__): stringify
+	these with more useful information.
+	* pb.py (PBServerFactory.buildProtocol): copy .debugBanana flag
+	into the new Broker (both .debugSend and .debugReceive)
+	(PBServerFactory.clientConnectionMade): survive a missing TubID
+	(PBClientFactory.negotiationFailed): notify all onConnect watchers
+
+2005-05-08  Brian Warner  <warner@lothar.com>
+
+	* test_pb.py (TestService): test the use of PBService without
+	RemoteInterfaces too
+
+2005-05-04  Brian Warner  <warner@lothar.com>
+
+	* broker.py (Broker): add tables to track gifts (third-party
+	references)
+	(PBOpenRegistry): add their-reference entry
+	(RIBroker.decgift): new method to release pending gifts
+	* call.py (PendingRequest): add some debugging hints
+	(CallUnslicer): accept deferred arguments, don't invoke the method
+	until all arguments are available
+	* pb.py (PBService.listenOn): return the Service, for testing
+	(PBService.generateUnguessableName): at least make them unique,
+	if not actually unguessable
+	(top): remove old URL code, all is now PBService
+	* referenceable.py (RemoteReferenceOnly.__repr__): include the
+	URL, if available
+	(RemoteReference.callRemote): set .methodName on the
+	PendingRequest, to make debugging easier
+	(YourReferenceSlicer.slice): handle third-party references
+	(TheirReferenceUnslicer): accept third-party references
+	* schema.py (Nothing): a constraint which only accepts None
+	* test/test_pb.py (Test3Way): validate third-party reference gifts
+
+2005-04-28  Brian Warner  <warner@lothar.com>
+
+	* tokens.py (IReferenceable): move to flavors.py
+	* flavors.py (IReferenceable): add it, mark Referenceable as
+	implementing it.
+	* pb.py (PBServerFactory): make root= optional
+	(PBService): new class. In the future, all PB uses will go through
+	this service, rather than using factories and connectTCPs directly.
+	The service uses urlparse to map PB URLs to target hosts.
+	* test_pb.py (TestService): start adding tests for PBService
+
+2005-04-26  Brian Warner  <warner@lothar.com>
+
+	* banana.py: add preliminary newpb connection negotiation
+	* test_banana.py: start on tests for negotiation, at least verify
+	that newpb-newpb works, and that newpb-http and http-newpb fail.
+
+2005-04-16  Brian Warner  <warner@lothar.com>
+
+	* banana.py (Banana.handleData): handle -2**31 properly
+	* test_banana.py (ThereAndBackAgain.test_bigint): test it properly
+
+	* flavors.py: python2.2 compatibility: __future__.generators
+	* pb.py: same
+	* schema.py (TupleConstraint.maxSize): don't use sum()
+	(AttributeDictConstraint.maxSize): same
+	(makeConstraint): in 2.2, 'bool' is a function, not a type, and
+	there is no types.BooleanType
+	* slicer.py: __future__.generators, and the 'sets' module might not
+	be available
+	(SetSlicer): only define it if 'sets' is available
+	(SetUnslicer): same
+	* test_banana.py: __future__.generators, 'sets' might not exist,
+	(EncodeFailureTest.failUnlessIn): 2.2 can't do 'str in str', only
+	'char in str', so use str.find() instead
+	(InboundByteStream2.testConstrainedBool): skip bool constraints
+	unless we have a real BooleanType
+	(ThereAndBackAgain.test_set): skip sets unless they're supported
+	* test_schema.py (ConformTest.testBool): skip on 2.2
+	(CreateTest.testMakeConstraint): same
+	* test_pb.py: __future__.generators, use str.find()
+
+	* test_banana.py (DecodeTest.test_ref2): accomodate python2.4,
+	which doesn't try to be quite as clever as python2.3 when
+	comparing complex object graphs with ==
+	(DecodeTest.test_ref5): same. Do the comparison by hand.
+	(DecodeTest.test_ref6): same, big gnarly validation phase
+
+	* test_pb.py (TestReferenceUnslicer.testNoInterfaces): update to
+	new signature for receiveClose()
+	(TestReferenceUnslicer.testInterfaces): same
+	(TestCall.testFail1): deferredError doesn't seem to like
+	CopiedFailure all that much. Use retrial's return-a-deferred
+	support instead.
+	(MyRemoteCopy3Unslicer.receiveClose): same
+	(TestCall.testFail2): same
+	(TestCall.testFail3): same
+	(TestFactory): clean up both server and client sockets, to avoid
+	the "unclean reactor" warning from trial
+	(Test3Way.tearDown): clean up client sockets
+
+	* tokens.py (receiveClose): fix documentation
+
+	* pb.py (CopiedFailure): make CopiedFailure old-style, since you
+	can't raise new-style instances as exceptions, and CopiedFailure
+	may have its .trap() method invoked, which does 'raise self'.
+	(CopiedFailure.__str__): make it clear that this is a
+	CopiedFailure, not a normal Failure.
+	(callRemoteURL_TCP): Add a _gotReferenceCallback argument, to
+	allow test cases to clean up their client connections.
+
+	* flavors.py (RemoteCopyOldStyle): add an old-style base class, so
+	CopiedFailure can be old-style. Make RemoteCopy a new-style
+	derivative.
+
+	* test_banana.py (DecodeTest.test_instance): fix the
+	manually-constructed class names to reflect their new location in
+	the tree (test_banana to twisted.pb.test.test_banana)
+	(EncodeFailureTest.test_instance_unsafe): same
+
+	* twisted/pb/*: move newpb from Sandbox/warner into the 'newpb'
+	branch, distributed out in twisted/pb/ and doc/pb/
+	* twisted/pb: add __init__.py files to make it a real module
+	* twisted/pb/test/test_*.py: fix up import statements
+
+2005-03-22  Brian Warner  <warner@twistedmatrix.com>
+
+	* flavors.py: implement new signature
+	* pb.py: same
+	* test_pb.py: same
+
+	* test_banana.py (BrokenDictUnslicer.receiveClose): new signature
+	(ErrorfulUnslicer.receiveChild): same
+	(ErrorfulUnslicer.receiveClose): same
+	(FailingUnslicer.receiveChild): same
+
+	* slicer.py: implement new receiveChild/receiveClose signature.
+	Require that ready_deferred == None for now.
+	(ListUnslicer.receiveChild): put "placeholder" in the list instead
+	of the Deferred
+	(TupleUnslicer.start): change the way we keep track of
+	not-yet-constructable tuples, using a counter of unreferenceable
+	children instead of counting the Deferred placeholders in the list
+	(TupleUnslicer.receiveChild): put "placeholder" in the list
+	instead of the Deferred
+
+	* banana.py (Banana.reportReceiveError): when debugging, log the
+	exception in a way that doesn't cause trial to think the test
+	failed.
+	(Banana.handleToken): implement new receiveChild signature
+	(Banana.handleClose): same
+	* debug.py (LoggingBananaMixin.handleToken): same
+
+	* tokens.py (IUnslicer.receiveChild): new signature for
+	receiveClose and receiveChild, they now pass a pair of (obj,
+	ready_deferred), where obj is still object-or-deferred, but
+	ready_deferred is non-None when the object will not be ready to
+	use until some other event takes place (like a "slow" global
+	reference is established).
+
+# Local Variables:
+# add-log-time-format: add-log-iso8601-time-string
+# End:

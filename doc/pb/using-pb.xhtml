@@ -1,0 +1,919 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Introduction to Perspective Broker</title>
+<style src="stylesheet-unprocessed.css"></style>
+</head>
+
+<body>
+<h1>Introduction to Perspective Broker</h1>
+
+<h2>Introduction</h2>
+
+<p>Suppose you find yourself in control of both ends of the wire: you have
+two programs that need to talk to each other, and you get to use any protocol
+you want. If you can think of your problem in terms of objects that need to
+make method calls on each other, then chances are good that you can use
+twisted's Perspective Broker protocol rather than trying to shoehorn your
+needs into something like HTTP, or implementing yet another RPC
+mechanism.</p>
+
+<p>The Perspective Broker system (abbreviated <q>PB</q>, spawning numerous
+sandwich-related puns) is based upon a few central concepts:</p>
+
+<ul>
+
+  <li><em>serialization</em>: taking fairly arbitrary objects and types,
+  turning them into a chunk of bytes, sending them over a wire, then
+  reconstituting them on the other end. By keeping careful track of object
+  ids, the serialized objects can contain references to other objects and the
+  remote copy will still be useful. </li>
+  
+  <li><em>remote method calls</em>: doing something to a local proxy and
+  causing a method to get run on a distant object. The local proxy is called
+  a <code class="API" base="twisted.spread.pb">RemoteReference</code>, and
+  you <q>do something</q> by running its <code>.callRemote</code> method. The
+  distant object is called a <code class="API"
+  base="twisted.spread.pb">Referenceable</code>, and it has methods like
+  <code>remote_foo</code> that will be invoked.</li>
+
+</ul>
+
+<h2>Getting Started</h2>
+
+<p>Any PB application has at least two sides: one which hosts a
+remotely-callable object, and another which calls (remotely) the methods of
+that object. We'll start with a simple example that demostrates both ends.
+Later, we'll add more features like RemoteInterface declarations, and
+transferring object references.</p>
+
+<p>The most common way to make an object with remotely-callable methods is to
+subclass <code class="API" base="twisted.pb">pb.Referenceable</code>. Let's
+create a simple server which does basic arithmetic. You might use such a
+service to perform difficult mathematical operations, like addition, on a
+remote machine which is faster and more capable than your own<span
+class="footnote">although really, if your client machine is too slow to
+perform this kind of math, it is probably too slow to run python or use a
+network, so you should seriously consider a hardware upgrade</span>.</p>
+
+<pre class="python">
+from twisted.pb import pb
+
+class MathServer(pb.Referenceable):
+    def remote_add(self, a, b):
+        return a+b
+    def remote_subtract(self, a, b):
+        return a-b
+    def remote_sum(self, args):
+        total = 0
+        for a in args: total += a
+        return total
+
+myserver = MathServer()
+</pre>
+
+<p>On the other end of the wire (which you might call the <q>client</q>
+side), the code will have a <code class="API"
+base="twisted.pb.referenceable">RemoteReference</code> to this object. The
+<code>RemoteReference</code> has a method named <code class="API"
+base="twisted.pb.referenceable.RemoteReference">callRemote</code> which you
+will use to invoke the method. It always returns a Deferred, which will fire
+with the result of the method. Assuming you've already acquired the
+<code>RemoteReference</code>, you would invoke the method like this:</p>
+
+<pre class="python">
+def gotAnswer(result):
+    print "result is", result
+def gotError(err):
+    print "error:", err
+d = remote.callRemote("add", a=1, b=2)
+d.addCallbacks(gotAnswer, gotError)
+</pre>
+
+<p>Ok, now how do you acquire that <code>RemoteReference</code>? How do you
+make the <code>Referenceable</code> available to the outside world? For this,
+we'll need to discuss the <q>Tub</q>, and the concept of a <q>PB URL</q>.</p>
+
+<h2>Tubs: The PBService</h2>
+
+<p>The <code class="API" base="twisted.pb.pb">PBService</code> is the
+container that you use to publish <code>Referenceable</code>s, and is the
+middle-man you use to access <code>Referenceable</code>s on other systems. It
+is also known as the <q>Tub</q>, since it provides similar naming and
+identification properties as the <a href="http://www.erights.org/">E
+language</a>'s <q>Vat</q><span class="footnote">but they do not provide quite
+the same insulation against other objects as E's Vats do. In this sense, Tubs
+are leaky Vats.</span>. If you want to make a <code>Referenceable</code>
+available to the world, you create a Tub, tell it to listen on a TCP port,
+and then register the <code>Referenceable</code> with it under a name of your
+choosing. If you want to access a remote <code>Referenceable</code>, you
+create a Tub and ask it to acquire a <code>RemoteReference</code> using that
+same name.</p>
+
+<p>The <code>PBService</code> is a Twisted <code class="API"
+base="twisted.application.service">Service</code> subclass, so you use it in
+the same way: once you've created one, you attach it to a parent Service or
+Application object. Once the top-level Application object has been started,
+the Tub will start listening on any network ports you've requested. When the
+Tub is shut down, it will stop listening and drop any connections it had
+established since last startup.</p>
+
+<h3>Making your Tub remotely accessible</h3>
+
+<p>To make any of your <code>Referenceable</code>s available, you must make
+your Tub available. There are three parts: give it an identity, have it
+listen on a port, and tell it the protocol/hostname/portnumber at which that
+port is accessibly to the outside world.</p>
+
+<p>In general, the Tub will generate its own identity, the <em>TubID</em>, by
+creating an SSL private key certificate and hashing it into a suitably-long
+random-looking string. This is the primary identifier of the Tub: everything
+else is just a <em>location hint</em> that suggests how the Tub might be
+reached. The fact that the TubID is tied to the private key allows PB URLs to
+be <q>secure</q> references (meaning that no third party can cause you to
+connect to the wrong reference). You can also create a Tub with a
+pre-existing certificate, which is how Tubs can retain a persistent identity
+over multiple executions.</p>
+
+<p>You can also create an unencrypted Tub, which has an empty TubID. Hosting
+and connecting to unencrypted Tubs do not require the pyOpenSSL or PyCrypto
+libraries, but do not provide privacy, authentication, connection
+redirection, or shared listening ports. The PB-URLs that point to unencrypted
+Tubs have a distinct form (starting with <code>pbu:</code> instead of
+<code>pb:</code>) to make sure they are not mistaken for encrypted Tubs. PB
+uses encrypted Tubs by default.</p>
+
+<p>Having the Tub listen on a TCP port is as simple as calling <code
+class="API" base="twisted.pb.pb.PBService">listenOn</code> with a <code
+class="API" base="twisted.application">strports</code>-formatted port
+specification string. The simplest such string would be <q>tcp:12345</q>, to
+listen on port 12345 on all interfaces. Using
+<q>tcp:12345:interface=127.0.0.1</q> would cause it to only listen on the
+localhost interface, making it available only to other processes on the same
+host. The <code>strports</code> module provides many other possibilities.</p>
+
+<p>The Tub needs to be told how it can be reached, so it knows what host and
+port to put into the URLs it creates. This location is simply a string in the
+format <q>host:port</q>, using the host name by which that TCP port you've
+just opened can be reached. PB cannot, in general, guess what this name is,
+especially if there are NAT boxes or port-forwarding devices in the way. If
+your machine is reachable directly over the internet as
+<q>myhost.example.com</q>, then you could use something like this:</p>
+
+<pre class="python">
+from twisted.pb import pb
+
+tub = pb.PBService()
+tub.listenOn("tcp:12345")  # start listening on TCP port 12345
+tub.setLocation("myhost.example.com:12345")
+</pre>
+
+<h3>Registering the Referenceable</h3>
+
+<p>Once the Tub has a Listener and a location, you can publish your
+<code>Referenceable</code> to the entire world by picking a name and
+registering it:</p>
+
+<pre class="python">
+url = tub.registerReference(myserver, "math-service")
+</pre>
+
+<p>This returns the <q>PB URL</q> for your <code>Referenceable</code>. Remote
+systems will use this URL to access your newly-published object. The
+registration just maps a per-Tub name to the <code>Referenceable</code>:
+technically the same <code>Referenceable</code> could be published multiple
+times, under different names, or even be published by multiple Tubs in the
+same application. But in general, each program will have exactly one Tub, and
+each object will be registered under only one name.</p>
+
+<p>In this example (if we pretend the generated TubID was <q>ABCD</q>), the
+URL returned by <code>registerReference</code> would be
+<code>"pb://ABCD@myhost.example.com:12345/math-service"</code>.</p>
+
+<p>If you do not provide a name, a random (and unguessable) name will be
+generated for you. This is useful when you want to give access to your
+<code>Referenceable</code> to someone specific, but do not want to make it
+possible for someone else to acquire it by guessing the name.</p>
+
+<p>To use an unencrypted Tub instead, you would do the following:</p>
+<pre class="python">
+from twisted.pb import pb
+
+tub = pb.PBService(encrypted=False)
+tub.listenOn("tcp:12345")  # start listening on TCP port 12345
+tub.setLocation("myhost.example.com:12345")
+url = tub.registerReference(myserver, "math-service")
+</pre>
+
+<p>In this case, the URL would be
+<code>"pbu://myhost.example.com:12345/math-service"</code>. The deterministic
+nature of this form makes it slightly easier to throw together
+quick-and-dirty PB applications, since you only need to hard-code the target
+host and port into the client side program. However any serious application
+should just used the default encrypted form and use a full URL as their
+starting point. Note that the URL can come from anywhere: typed in by the
+user, retrieved from a web page, or hardcoded into the application.</p>
+
+<h3>Retrieving a RemoteReference</h3>
+
+<p>On the <q>client</q> side, you also need to create a Tub, although you
+don't need to perform the (<code>listenOn</code>, <code>setLocation</code>,
+<code>registerReference</code>) sequence unless you are also publishing
+<code>Referenceable</code>s to the world. To acquire a reference to somebody
+else's object, just use <code class="API"
+base="twisted.pb.pb.PBService">getReference</code>:</p>
+
+<pre class="python">
+from twisted.pb import pb
+
+tub = pb.PBService()
+d = tub.getReference("pb://ABCD@myhost.example.com:12345/math-service")
+def gotReference(remote):
+    print "Got the RemoteReference:", remote
+def gotError(err):
+    print "error:", err
+d.addCallbacks(gotReference, gotError)
+</pre>
+
+<p><code>getReference</code> returns a Deferred which will fire with a
+<code>RemoteReference</code> that is connected to the remote
+<code>Referenceable</code> named by the URL. It will use an existing
+connection, if one is available, and it will return an existing
+<code>RemoteReference</code>, it one has already been acquired.</p>
+
+<h3>Complete example</h3>
+
+<p>Here are two programs, one implementing the server side of our
+remote-addition protocol, the other behaving as a client. This first example
+uses an unencrypted Tub so you don't have to manually copy a URL from the
+server to the client. Both of these are standalone programs (you just run
+them), but normally you would create an <code class="API"
+base="twisted.application.service">Application</code> object and pass the
+file to <code>twistd -noy</code>. An example of that usage will be provided
+later.</p>
+
+<a href="listings/pb1server.py" class="py-listing"
+skipLines="2">pb1server.py</a>
+
+<a href="listings/pb1client.py" class="py-listing"
+skipLines="2">pb1client.py</a>
+
+<pre class="shell">
+% doc/pb/listings/pb1server.py 
+the object is available at: pbu://localhost:12345/math-service
+</pre>
+
+<pre class="shell">
+% doc/pb/listings/pb1client.py 
+got a RemoteReference
+asking it to add 1+2
+the answer is 3
+%
+</pre>
+
+<p>The second example uses encrypted Tubs. When running this example, you
+must copy the URL printed by the server and provide it as an argument to the
+client.</p>
+
+<a href="listings/pb2server.py" class="py-listing"
+skipLines="2">pb2server.py</a>
+
+<a href="listings/pb2client.py" class="py-listing"
+skipLines="2">pb2client.py</a>
+
+<pre class="shell">
+% doc/pb/listings/pb2server.py 
+the object is available at: pb://abcd123@localhost:12345/math-service
+</pre>
+
+<pre class="shell">
+% doc/pb/listings/pb2client.py pb://abcd123@localhost:12345/math-service
+got a RemoteReference
+asking it to add 1+2
+the answer is 3
+%
+</pre>
+
+
+<h3>PB URLs</h3>
+
+<p>In PB, each world-accessible Referenceable has one or more URLs which are
+<q>secure</q>, where we use the capability-security definition of the term,
+meaning those URLs have the following properties:</p>
+
+<ul>
+  <li>The only way to acquire the URL is either to get it from someone else
+  who already has it, or to be the person who published it in the first
+  place.</li>
+
+  <li>Only that original creator of the URL gets to determine which
+  Referenceable it will connect to. If your
+  <code>tub.getReference(url)</code> call succeeds, the Referenceable you
+  will be connected to will be the right one.</li>
+</ul>
+
+<p>To accomplish the first goal, PB URLs must be unguessable. You can
+register the reference with a human-readable name if your intention is to
+make it available to the world, but in general you will let
+<code>tub.registerReference</code> generate a random name for you, preserving
+the unguessability property.</p>
+
+<p>To accomplish the second goal, the cryptographically-secure TubID is used
+as the primary identifier, and the <q>location hints</q> are just that:
+hints. If DNS has been subverted to point the hostname at a different
+machine, or if a man-in-the-middle attack causes you to connect to the wrong
+box, the TubID will not match the remote end, and the connection will be
+dropped. These attacks can cause a denial-of-service, but they cannot cause
+you to mistakenly connect to the wrong target.</p>
+
+<p>Obviously this second property only holds if you use SSL. If you choose to
+use unencrypted Tubs, all security properties are lost.</p>
+
+<p>The format of a PB URL, like
+<code>pb://abcd123@example.com:5901,backup.example.com:8800/math-server</code>,
+is as follows<span class="footnote">note that the PB URL uses the same format
+as an <a href="http://www.waterken.com/dev/YURL/httpsy/">HTTPSY</a>
+URL</span>:</p>
+
+<ol>
+  <li>The literal string <code>pb://</code></li>
+  <li>The TubID (as a base32-encoded hash of the SSL certificate)</li>
+  <li>A literal <code>@</code> sign</li>
+
+  <li>A comma-separated list of <q>location hints</q>. Each is one of the
+  following:
+  <ul>
+    <li>TCP over IPv4 via DNS: <code>HOSTNAME:PORTNUM</code></li>
+    <li>TCP over IPv4 without DNS: <code>A.B.C.D:PORTNUM</code></li>
+    <li>TCP over IPv6: (TODO, maybe <code>tcp6:HOSTNAME:PORTNUM</code> ?</li>
+    <li>TCP over IPv6 w/o DNS: (TODO,
+        maybe <code>tcp6:[X:Y::Z]:PORTNUM</code></li>
+    <li>Unix-domain socket: (TODO)</li>
+  </ul>
+
+  Each location hint is attempted in turn. Servers can return a
+  <q>redirect</q>, which will cause the client to insert the provided
+  redirect targets into the hint list and start trying them before continuing
+  with the original list.</li>
+
+  <li>A literal <code>/</code> character</li>
+  <li>The reference's name</li>
+</ol>
+
+<p>(Unix-domain sockets are represented with only a single location hint, in
+the format <code>pb://ABCD@unix/path/to/socket/NAME</code>, but this needs
+some work)</p>
+
+<p>PB URLs for unencrypted Tubs, like
+<code>pbu://example.com:8700/math-server</code>, are formatted as
+follows:</p>
+
+<ol>
+  <li>The literal string <code>pbu://</code></li>
+  <li>A single location hint</li>
+  <li>A literal <code>/</code> character</li>
+  <li>The reference's name</li>
+</ol>
+
+<h2>Clients vs Servers, Names and Capabilities</h2>
+
+<p>It is worthwhile to point out that PB is a symmetric protocol.
+<code>Referenceable</code> instances can live on either side of a wire, and
+the only difference between <q>client</q> and <q>server</q> is who publishes
+the object and who initiates the network connection.</p>
+
+<p>In any PB-using system, the very first object exchanged must be acquired
+with a <code>tub.getReference(url)</code> call<span class="footnote">in fact,
+the very <em>very</em> first object exchanged is a special implicit
+RemoteReference to the remote Tub itself, which implements an internal
+protocol that includes a method named <code>remote_getReference</code>. The
+<code>tub.getReference(url)</code> call is turned into one step that connects
+to the remote Tub, and a second step which invokes
+remotetub.callRemote("getReference", refname) on the result</span>, which
+means it must have been published with a call to
+<code>tub.registerReference(ref, name)</code>. After that, other objects can
+be passed as an argument to (or a return value from) a remotely-invoked
+method of that first object. Any suitable <code>Referenceable</code> object
+that is passed over the wire will appear on the other side as a corresponding
+<code>RemoteReference</code>. It is not necessary to
+<code>registerReference</code> something to let it pass over the wire.</p>
+
+<p>The converse of this property is thus: if you do <em>not</em>
+<code>registerReference</code> a particular <code>Referenceable</code>, and
+you do <em>not</em> give it to anyone else (by passing it in an argument to
+somebody's remote method, or return it from one of your own), then nobody
+else will be able to get access to that <code>Referenceable</code>. This
+property means the <code>Referenceable</code> is a <q>capability</q>, as
+holding a corresponding <code>RemoteReference</code> gives someone a power
+that they cannot acquire in any other way<span class="footnote">of course,
+the PB connections must be secured with SSL (otherwise an eavesdropper or
+man-in-the-middle could get access), and the registered name must be
+unguessable (or someone else could acquire a reference), but both of these
+are the default.</span></p>
+
+<p>In the following example, the first program creates an RPN-style
+<code>Calculator</code> object which responds to <q>push</q>, <q>pop</q>,
+<q>add</q>, and <q>subtract</q> messages from the user. The user can also
+register an <code>Observer</code>, to which the Calculator sends an
+<code>event</code> message each time something happens to the calculator's
+state. When you consider the <code>Calculator</code> object, the first
+program is the server and the second program is the client. When you think
+about the <code>Observer</code> object, the first program is a client and the
+second program is the server. It also happens that the first program is
+listening on a socket, while the second program initiated a network
+connection to the first. It <em>also</em> happens that the first program
+published an object under some well-known name, while the second program has
+not published any objects. These are all independent properties.</p>
+
+<p>Also note that the Calculator side of the example is implemented using a
+<code class="API" base="twisted.application.service">Application</code>
+object, which is the way you'd normally build a real-world application. You
+therefore use <code>twistd</code> to launch the program. The User side is
+written with the same <code>reactor.run()</code> style as the earlier
+example.</p>
+
+
+<a href="listings/pb3calculator.py" class="py-listing"
+skipLines="2">pb3calculator.py</a>
+
+<a href="listings/pb3user.py" class="py-listing"
+skipLines="2">pb3user.py</a>
+
+<pre class="shell">
+% twistd -noy doc/pb/listings/pb3calculator.py 
+00:10 CDT [-] Log opened.
+00:10 CDT [-] twistd SVN-Trunk (/usr/bin/python2.3 2.3.5) starting up
+00:10 CDT [-] reactor class: twisted.internet.selectreactor.SelectReactor
+00:10 CDT [-] Loading doc/pb/listings/pb3calculator.py...
+00:10 CDT [-] the object is available at: pb://localhost:12345/calculator
+00:10 CDT [-] Loaded.
+00:10 CDT [-] twisted.pb.pb.PBServerFactory starting on 12345
+00:10 CDT [-] Starting factory &lt;twisted.pb.pb.PBServerFactory instance at
+              0xb7a7318c&gt;
+</pre>
+
+<pre class="shell">
+% doc/pb/listings/pb3user.py 
+event: push(2)
+event: push(3)
+event: add
+event: pop
+the result is 5
+%
+</pre>
+
+
+<h2>Invoking Methods, Method Arguments</h2>
+
+<p>As you've probably already guessed, all the methods with names that begin
+with <code>remote_</code> will be available to anyone who manages to acquire
+a corresponding <code>RemoteReference</code>. <code>remote_foo</code> matches
+a <code>ref.callRemote("foo")</code>, etc. This name lookup can be changed by
+overriding <code>Referenceable</code> (or, perhaps more usefully,
+implementing an <code class="API"
+base="twisted.pb.ipb">IRemotelyCallable</code> adapter).</p>
+
+<p>In general, the arguments of a remote method must be passed as keyword
+args (<code>foo(a=1,b=2)</code>), instead of positional ones
+(<code>foo(1,2)</code>). This is enforced to minimize unexpected behavior, in
+case the argument list gets changed. It also makes it easier to reliably
+interoperate with other languages. If you want to use positional parameters,
+use a <code>RemoteInterface</code> (described <a
+href="#constraints">below</a>).</p>
+
+<p>You can pass all sorts of normal objects to a remote method: strings,
+numbers, tuples, lists, and dictionaries. The serialization of these objects
+is handled by <a href="specifications/banana.xhtml">Banana</a>, which knows
+how to convey arbitrary object graphs over the wire. Things like containers
+which contain multiple references to the same object, and recursive
+references (cycles in the object graph) are all handled correctly<span
+class="footnote">you may not want to accept shared objects in your method
+arguments, as it could lead to surprising behavior depending upon how you
+have written your method. The <code class="API"
+base="twisted.pb.schema">Shared</code> constraint will let you express this,
+and is described in the <a href="#constraints">Constraints</a> section of
+this document</span>.</p>
+
+<p>Passing instances is handled specially. PB will not send anything over the
+wire that it does not know how to serialize, and (unlike the standard
+<code>pickle</code> module) it will not make assumptions about how to handle
+classes that that have not been explicitly marked as serializable. This is
+for security, both for the sender (making you you don't pass anything over
+the wire that you didn't intend to let out of your security perimeter), and
+for the recipient (making sure outsiders aren't allowed to create arbitrary
+instances inside your memory space, and therefore letting them run somewhat
+arbitrary code inside <em>your</em> perimeter).</p>
+
+<p>Sending <code>Referenceable</code>s is straightforward: they always appear
+as a corresponding <code>RemoteReference</code> on the other side. You can
+send the same <code>Referenceable</code> as many times as you like, and it
+will always show up as the same <code>RemoteReference</code> instance. A
+distributed reference count is maintained, so as long as the remote side
+hasn't forgotten about the <code>RemoteReference</code>, the original
+<code>Referenceable</code> will be kept alive.</p>
+
+<p>Sending <code>RemoteReference</code>s fall into two categories. If you are
+sending a <code>RemoteReference</code> back to the Tub that you got it from,
+they will see their original <code>Referenceable</code>. If you send it to
+some other Tub, they will (eventually) see a <code>RemoteReference</code> of
+their own. This last feature is called an <q>introduction</q>, and has a few
+additional requirements: see the <a href="#introductions">Introductions</a>
+section of this document for details.</p>
+
+<p>Sending instances of other classes requires that you tell Banana how they
+should be serialized. <code>Referenceable</code> is good for
+copy-by-reference semantics<span class="footnote">In fact, if all you want is
+referenceability (and not callability), you can use <code class="API"
+base="twisted.pb">pb.OnlyReferenceable</code>. Strictly speaking,
+<code>pb.Referenceable</code> is both <q>Referenceable</q> (meaning it is
+sent over the wire using pass-by-reference semantics, and it survives a round
+trip) and <q>Callable</q> (meaning you can invoke remote methods on it).
+<code>pb.Referenceable</code> should really be named
+<code>pb.Callable</code>, but the existing name has a lot of historical
+weight behind it.</span>. For copy-by-value semantics, the easiest route is
+to subclass <code class="API" base="twisted.pb">pb.Copyable</code>. See the
+<a href="#copyable">Copyable</a> section for details. Note that you can also
+register an <code class="API" base="twisted.pb.copyable">ICopyable</code>
+adapter on third-party classes to avoid subclassing. You will need to
+register the <code>Copyable</code>'s name on the receiving end too, otherwise
+Banana will not know how to unserialize the incoming data stream.</p>
+
+<p>When returning a value from a remote method, you can do all these things,
+plus two more. If you raise an exception, the caller's Deferred will have the
+errback fired instead of the callback, with a <code class="API"
+base="twisted.pb.call">CopiedFailure</code> instance that describes what went
+wrong. The <code>CopiedFailure</code> is not quite as useful as a local <code
+class="API" base="twisted.python.failure">Failure</code> object would be: to
+send it over the wire, some contents are replaced with strings, and the
+actual Exception object (<code>f.value</code>) is replaced with its string
+representation. But you can still use it to find out what went wrong. The
+<code>CopiedFailure</code> may reveal more information about the internals of
+your program than you want: you can set the <code>unsafeTracebacks</code>
+flag on the Tub to limit outgoing <code>CopiedFailure</code>s to contain only
+the exception type (and none of the stack trace information that would reveal
+lines of your source code to the remote end).</p>
+
+<p>The other alternative is for your method to return a <code class="API"
+base="twisted.internet.defer">Deferred</code>. If this happens, the caller
+will not actually get a response until you fire that Deferred. This is useful
+when the remote operation being requested cannot complete right away. The
+caller's Deferred with fire with whatever value you eventually fire your own
+Deferred with. If your Deferred is errbacked, their Deferred will be
+errbacked with a <code>CopiedFailure</code>.</p>
+
+
+<h2>Constraints and RemoteInterfaces</h2><a name="constraints" />
+
+<p>One major feature introduced by newpb is the serialization <code
+class="API" base="twisted.pb.schema">Constraint</code>. This lets you place
+limits on what kind of data you are willing to accept, which enables safer
+distributed programming. Typically python uses <q>duck typing</q>, wherein
+you usually just throw some arguments at the method and see what happens.
+When you are less sure of the origin of those arguments, you may want to be
+more circumspect. Enforcing type checking at the boundary between your code
+and the outside world may make it safer to use duck typing inside those
+boundaries. The type specifications also form a convenient remote API
+reference you can publish for prospective clients of your remotely-invokable
+service.</p>
+
+<p>In addition, these Constraints are enforced on each token as it arrives
+over the wire. This means that you can calculate a (small) upper bound on how
+much received data your program will store before it decides to hang up on
+the violator, minimizing your exposure to DoS attacks that involve sending
+random junk at you.</p>
+
+<p>There are three pieces you need to know about: Tokens, Constraints, and
+RemoteInterfaces.</p>
+
+<h3>Tokens</h3>
+
+<p>The fundamental unit of serialization is the Banana Token. These are
+thoroughly documented in the <a href="specifications/banana.xhtml">Banana
+Specification</a>, but what you need to know here is that each piece of
+non-container data, like a string or a number, is represented by a single
+token. Containers (like lists and dictionaries) are represented by a special
+OPEN token, followed by tokens for everything that is in the container,
+followed by the CLOSE token. Everything Banana does is in terms of these
+nested OPEN/stuff/stuff/CLOSE sequences of tokens.</p>
+
+<p>Each token consists of a header, a type byte, and an optional body. The
+header is always a base-128 number with a maximum of 64 digits, and the type
+byte is always a single byte. The body (if present) has a length dictated by
+the magnitude of the header.</p>
+
+<p>The length-first token format means that the receiving system never has to
+accept more than 65 bytes before it knows the type and size of the token, at
+which point it can make a decision about accepting or rejecting the rest of
+it.</p>
+
+<h3>Constraints</h3>
+
+<p>The schema <code>twisted.pb.schema</code> module has a variety of <code
+class="API" base="twisted.pb.schema">Constraint</code> classes that can be
+applied to incoming data. Most of them correspond to typical Python types,
+e.g. <code class="API" base="twisted.pb.schema">ListOf</code> matches a list,
+with a certain maximum length, and a child <code>Constraint</code> that gets
+applied to the contents of the list. You can nest <code>Constraint</code>s in
+this way to describe the <q>shape</q> of the object graph that you are
+willing to accept.</p>
+
+<p>At any given time, the receiving Banana protocol has single
+<code>Constraint</code> object that it enforces against the inbound data
+stream<span class="footnote">to be precise, each <code>Unslicer</code> on the
+receive stack has a <code>Constraint</code>, and the idea is that all of them
+get to pass judgement on the inbound token. A useful syntax to describe this
+sort of thing is still being worked out.</span>.</p>
+
+<h3>RemoteInterfaces</h3>
+
+<p>The <code class="API"
+base="twisted.pb.remoteinterface">RemoteInterface</code> is how you describe
+your constraints. You can provide a constraint for each argument of each
+method, as well as one for the return value. You can also specify addtional
+flags on the methods. The convention (which is actually enforced by the code)
+is to name <code>RemoteInterface</code> objects with an <q>RI</q> prefix,
+like <code>RIFoo</code>.</p>
+
+<p><code>RemoteInterfaces</code> are created and used a lot like the usual
+<code>zope.interface</code>-style <code>Interface</code>. They look like
+class definitions, inheriting from <code>pb.RemoteInterface</code>. For each
+method, the default value of each argument is used to create a
+<code>Constraint</code> for that argument. Basic types (<code>int</code>,
+<code>str</code>, <code>bool</code>) are converted into a
+<code>Constraint</code> subclass (<code class="API"
+base="twisted.pb.schema">IntegerConstraint</code>, <code class="API"
+base="twisted.pb.schema">StringConstraint</code>, <code class="API"
+base="twisted.pb.schema">BooleanConstraint</code>). You can also use
+instances of other <code>Constraint</code> subclasses, like <code class="API"
+base="twisted.pb.schema">ListOf</code> and <code class="API"
+base="twisted.pb.schema">DictOf</code>. This <code>Constraint</code> will be
+enforced against the value for the given argument. Unless you specify
+otherwise, remote callers must match all the <code>Constraint</code>s you
+specify, all arguments listed in the RemoteInterface must be present, and no
+arguments outside that list will be accepted.</p>
+
+<p>Note that, like zope.interface, these methods should <b>not</b> include
+<q><code>self</code></q> in their argument list. This is because you are
+documenting how <em>other</em> people invoke your methods. <code>self</code>
+is an implementation detail. <code>RemoteInterface</code> will complain if
+you forget.</p>
+
+<p>The <q>methods</q> in a <code>RemoteInterface</code> should return a
+single value with the same format as the default arguments: either a basic
+type (<code>int</code>, <code>str</code>, etc) or a <code>Constraint</code>
+subclass. This <code>Constraint</code> is enforced on the return value of the
+method. If you are calling a method in somebody else's process, the argument
+constraints will be applied as a courtesy (<q>be conservative in what you
+send</q>), and the return value constraint will be applied to prevent the
+server from doing evil things to you. If you are running a method on behalf
+of a remote client, the argument constraints will be enforced to protect
+<em>you</em>, while the return value constraint will be applied as a
+courtesy.</p>
+
+<p>Attempting to send a value that does not satisfy the Constraint will
+result in a <code class="API" base="twisted.pb">pb.Violation</code> exception
+being raised.</p>
+
+<p>You can also specify methods by defining attributes of the same name in
+the <code>RemoteInterface</code> object. Each attribute value should be an
+instance of <code class="API"
+base="twisted.pb.schema">RemoteMethodSchema</code><span
+class="footnote">although technically it can be any object which implements
+the <code class="API" base="twisted.pb.schema">IRemoteMethodConstraint</code>
+interface</span>. This approach is more flexible: there are some constraints
+that are not easy to express with the default-argument syntax, and this is
+the only way to set per-method flags. Note that all such method-defining
+attributes must be set in the <code>RemoteInterface</code> body itself,
+rather than being set on it after the fact (i.e. <code>RIFoo.doBar =
+stuff</code>). This is required because the <code>RemoteInterface</code>
+metaclass magic processes all of these attributes only once, immediately
+after the <code>RemoteInterface</code> body has been evaluated.</p>
+
+<p>The <code>RemoteInterface</code> <q>class</q> has a name. Normally this is
+the fully-qualified classname<span
+class="footnote"><code>RIFoo.__class__.__name__</code>, if
+<code>RemoteInterface</code>s were actually classes, which they're
+not</span>, like <code>package.module.RIFoo</code>. You can override this
+name by setting a special <code>__remote_name__</code> attribute on the
+<code>RemoteInterface</code> (again, in the body). This name is important
+because it is externally visible: all <code>RemoteReference</code>s that
+point at your <code>Referenceable</code>s will remember the name of the
+<code>RemoteInterface</code>s it implements. This is what enables the
+type-checking to be performed on both ends of the wire.</p>
+
+<p>Here's an example:</p>
+
+<pre class="python">
+from twisted.pb import pb, schema
+
+class RIMath(pb.RemoteInterface):
+    def add(a=int, b=int):
+        return int
+    # declare it with an attribute instead of a function definition
+    subtract = schema.RemoteMethodSchema(a=int, b=int, _response=int)
+    def sum(args=schema.ListOf(int)):
+        return int
+</pre>
+
+
+<h3>Using RemoteInterface</h3>
+
+<p>To declare that your <code>Referenceable</code> responds to a particular
+<code>RemoteInterface</code>, use the normal <code>implements()</code>
+annotation:</p>
+
+<pre class="python">
+class MathServer(pb.Referenceable):
+    implements(RIMath)
+
+    def remote_add(self, a, b):
+        return a+b
+    def remote_subtract(self, a, b):
+        return a-b
+    def remote_sum(self, args):
+        total = 0
+        for a in args: total += a
+        return total
+</pre>
+
+<p>To enforce constraints everywhere, both sides will need to know about the
+<code>RemoteInterface</code>, and both must know it by the same name. It is a
+good idea to put the <code>RemoteInterface</code> in a common file that is
+imported into the programs running on both sides. It is up to you to make
+sure that both sides agree on the interface. Future versions of PB may
+implement some sort of checksum-verification or Interface-serialization as a
+failsafe, but fundamentally the <code>RemoteInterface</code> that
+<em>you</em> are using defines what <em>your</em> program is prepared to
+handle. There is no difference between an old client accidentaly using a
+different version of the RemoteInterface by mistake, and a malicious attacker
+actively trying to confuse your code. The only promise that PB can make is
+that the constraints you provide in the RemoteInterface will be faithfully
+applied to the incoming data stream, so that you don't need to do the type
+checking yourself.</p>
+
+<p>When making a remote method call, you use the <code>RemoteInterface</code>
+to identify the method instead of a string. This scopes the method name to
+the RemoteInterface:</p>
+
+<pre class="python">
+d = remote.callRemote(RIMath["add"], a=1, b=2)
+</pre>
+
+<p>Another benefit of using the <code>RemoteInterface</code> to specify the
+method is that you can use positional parameters again (the
+<code>RemoteInterface</code> provides enough information to safely figure out
+which parameter is which).</p>
+
+<pre class="python">
+d = remote.callRemote(RIMath["add"], 1, 2)
+</pre>
+
+
+<h2>Copyable</h2><a name="copyable" />
+
+<p>Subclasses of <code class="API" base="twisted.pb">pb.Copyable</code> are
+serialized using copy-by-value semantics. Each such object is serialized as a
+(type, state) pair of values. To use it, you can override <code class="API"
+base="twisted.pb.copyable.ICopyable">getTypeToCopy</code> and <code
+class="API" base="twisted.pb.copyable.ICopyable">getStateToCopy</code> to
+provide this pair. The default implementations return the object's
+fully-qualified class name, and <code>self.__dict__</code>, respectively. You
+will want to override <code>getStateToCopy</code> in particular if there is
+any portion of the object's state that should <b>not</b> be sent over the
+wire: references to objects that can not or should not be serialized, or
+things that are private to the application. It is common practice to create
+an empty dictionary in this method and then copy items into it.</p>
+
+<p>If you want to avoid subclassing (or wish to serialize instances of
+third-party classes that are out of your control), you can also register an
+<code class="API" base="twisted.pb.copyable">ICopyable</code> adapter to
+provide these methods for those instances.</p>
+
+<p>The receiving end needs a way to convert this (type, state) pair back into
+an instance of some sort. The normal way of doing this is to create a <code
+class="API" base="twisted.pb">pb.RemoteCopy</code> subclass. On your
+subclass, you will need to set the <code>copytype</code> attribute to the
+string returned by <code>getTypeToCopy</code>, and you will override the
+<code class="API" base="twisted.pb.pb.RemoteCopy">setCopyableState</code>
+method to accept and use the state dictionary returned by
+<code>getStateToCopy</code>. There is a registry that maps the <q>type</q>
+values into the matching <code>RemoteCopy</code> subclass: defining a
+<code>pb.RemoteCopy</code> subclass uses metaclass magic to auto-register
+your new class for you. You can also register the mapping separately, by
+calling <code class="API" base="twisted.pb">pb.registerRemoteCopy</code>.</p>
+
+<p>Copyable instances are copy-by-value instead of copy-by-reference, which
+means that their remote representation does not retain any reference to the
+original object. Sending the same Copyable twice will result in two
+independent copies. Sending a RemoteCopy back to the broker it came from will
+generally fail, unless your RemoteCopy subclass also inherits from
+<code>Copyable</code>. If you want an object which is copied by value the
+first time it traverses the wire, and then copied by reference all later
+times, you will need to write a Slicer/Unslicer pair to implement this
+functionality. Likewise the oldpb <code>Cacheable</code> class would need to
+be implemented with a custom Slicer/Unslicer pair.</p>
+
+<p>TODO: example</p>
+
+
+<h2>Third-party References</h2><a name="introductions" />
+
+<p>Another new feature of newpb is the ability to send
+<code>RemoteReference</code>s to third parties. The classic scenario for this
+is illustrated by the <a
+href="http://www.erights.org/elib/capability/overview.html">three-party
+Granovetter diagram</a>. One party (Alice) has RemoteReferences to two other
+objects named Bob and Carol. She wants to share her reference to Carol with
+Bob, by including it in a message she sends to Bob (i.e. by using it as an
+argument when she invokes one of Bob's remote methods). The PB code for doing
+this would look like:</p>
+
+<pre class="python">
+bobref.callRemote("foo", intro=carolref)
+</pre>
+
+<p>When Bob receives this message (i.e. when his <code>remote_foo</code>
+method is invoked), he will discover that he's holding a fully-functional
+<code>RemoteReference</code> to the object named Carol<span
+class="footnote">PB does not yet guarantee, in the cryptographic sense, that
+Bob winds up with a reference to the same object that Alice intended. We need
+to add public key hashes to the PB URLs, and transport-layer authentication,
+before we can make this guarantee. Without them, a compromised DNS server or
+man-in-the-middle attack could cause Bob to end up speaking to the wrong
+object</span>. He can start using this RemoteReference right away:</p>
+
+<pre class="python">
+class Bob(pb.Referenceable):
+    def remote_foo(self, intro):
+        self.carol = intro
+        carol.callRemote("howdy", msg="Pleased to meet you", you=intro)
+        return carol
+</pre>
+
+<p>If Bob sends this <code>RemoteReference</code> back to Alice, her method
+will see the same <code>RemoteReference</code> that she sent to Bob. In this
+example, Bob sends the reference by returning it from the original
+<code>remote_foo</code> method call, but he could almost as easily send it in
+a separate method call.</p>
+
+<pre class="python">
+class Alice(pb.Referenceable):
+    def start(self, carol):
+        self.carol = carol
+        d = self.bob.callRemote("foo", intro=carol)
+        d.addCallback(self.didFoo)
+    def didFoo(self, result):
+        assert result is self.carol  # this will be true
+</pre>
+
+<p>Moreover, if Bob sends it back to <em>Carol</em> (completing the
+three-party round trip), Carol will see it as her original
+<code>Referenceable</code>.</p>
+
+<pre class="python">
+class Carol(pb.Referenceable):
+    def remote_howdy(self, msg, you):
+        assert you is self  # this will be true
+</pre>
+
+<p>In addition to this, in the four-party introduction sequence as used by
+the <a
+href="http://www.erights.org/elib/equality/grant-matcher/index.html">Grant
+Matcher Puzzle</a>, when a Referenceable is sent to the same destination
+through multiple paths, the recipient will receive the same
+<code>RemoteReference</code> object from both sides<span
+class="footnote">Although the same enhancements need to be made before PB can
+formally guarantee that the references do indeed point to the same
+object</span>.</p>
+
+<p>For a <code>RemoteReference</code> to be transferrable to third-parties in
+this fashion, the original <code>Referenceable</code> must live in a Tub
+which has a working listening port, and an established base URL. It is not
+necessary for the Referenceable to have been published with
+<code>registerReference</code> first: if it is sent over the wire before a
+name has been associated with it, it will be registered under a new random
+and unguessable name. The <code>RemoteReference</code> will contain the
+resulting URL, enabling it to be sent to third parties.</p>
+
+<p>When this introduction is made, the receiving system must establish a
+connection with the Tub that holds the original Referenceable, and acquire
+its own RemoteReference. These steps must take place before the remote method
+can be invoked, and other method calls might arrive before they do. For this
+reason, the target system may observe methods being invoked <q>out of
+order</q>, relative to the temporal sequence of <code>callRemote</code> calls
+on the other end of the wire. This situation is unusual, and a future version
+of PB will provide a flag to let you disable this sort of thing altogether,
+or to mark certain methods as <q>barriers</q> of some sort around which
+methods may not be invoked out-of-order. There might also be a flag to
+indicate that all method calls should be queued until the RemoteReference has
+been resolved. If you are depending upon some method to be completed on the
+far end of the wire before performing some other action, you should
+explicitly wait for an ack from that method before proceeding.</p>
+
+<p>Also note that enabling this capability means any of your communication
+peers can make you create TCP connections to hosts and port numbers of their
+choosing. The fact that those connections can only speak the PB protocol may
+reduce the security risk presented, but it still lets other people be
+annoying.</p>
+
+
+</body></html>
