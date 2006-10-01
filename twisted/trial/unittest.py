@@ -311,6 +311,86 @@ class _Assertions(pyunit.TestCase, object):
     assertNotSubstring = failIfSubstring
 
 
+class _LogObserver(object):
+    """
+    Observes the Twisted logs and catches any errors.
+    """
+
+    def __init__(self):
+        self._errors = []
+        self._added = 0
+        self._ignored = []
+
+    def _add(self):
+        if self._added == 0:
+            log.addObserver(self.gotEvent)
+            self._oldFE, log._flushErrors = (log._flushErrors, self.flushErrors)
+            self._oldIE, log._ignore = (log._ignore, self._ignoreErrors)
+            self._oldCI, log._clearIgnores = (log._clearIgnores,
+                                              self._clearIgnores)
+        self._added += 1
+
+    def _remove(self):
+        self._added -= 1
+        if self._added == 0:
+            log.removeObserver(self.gotEvent)
+            log._flushErrors = self._oldFE
+            log._ignore = self._oldIE
+            log._clearIgnores = self._oldCI
+
+    def _ignoreErrors(self, *errorTypes):
+        """
+        Do not store any errors with any of the given types.
+        """
+        self._ignored.extend(errorTypes)
+
+    def _clearIgnores(self):
+        """
+        Stop ignoring any errors we might currently be ignoring.
+        """
+        self._ignored = []
+
+    def flushErrors(self, *errorTypes):
+        """
+        Flush errors from the list of caught errors. If no arguments are
+        specified, remove all errors. If arguments are specified, only remove
+        errors of those types from the stored list.
+        """
+        if errorTypes:
+            flushed = []
+            remainder = []
+            for f in self._errors:
+                if f.check(*errorTypes):
+                    flushed.append(f)
+                else:
+                    remainder.append(f)
+            self._errors = remainder
+        else:
+            flushed = self._errors
+            self._errors = []
+        return flushed
+
+    def getErrors(self):
+        """
+        Return a list of errors caught by this observer.
+        """
+        return self._errors
+
+    def gotEvent(self, event):
+        """
+        The actual observer method. Called whenever a message is logged.
+
+        @param event: A dictionary containing the log message. Actual
+        structure undocumented (see source for L{twisted.python.log}).
+        """
+        if event.get('isError', False) and 'failure' in event:
+            f = event['failure']
+            if len(self._ignored) == 0 or not f.check(*self._ignored):
+                self._errors.append(f)
+
+
+_logObserver = _LogObserver()
+
 _wait_is_running = []
 
 
@@ -558,6 +638,11 @@ class TestCase(_Assertions):
         except:
             result.cleanupErrors(failure.Failure())
             self._passed = False
+        for error in self._observer.getErrors():
+            result.addError(self, error)
+            self._passed = False
+        self.flushLoggedErrors()
+        self._removeObserver()
         if self._passed:
             result.addSuccess(self)
 
@@ -607,6 +692,27 @@ class TestCase(_Assertions):
             setattr(reactor, name, method)
         self._reactorMethods = {}
 
+    def _installObserver(self):
+        self._observer = _logObserver
+        self._observer._add()
+
+    def _removeObserver(self):
+        self._observer._remove()
+
+    def flushLoggedErrors(self, *errorTypes):
+        """
+        Remove stored errors received from the log.
+
+        C{TestCase} stores each error logged during the run of the test and
+        reports them as errors during the cleanup phase (after C{tearDown}).
+
+        @param *errorTypes: If unspecifed, flush all errors. Otherwise, only
+        flush errors that match the given types.
+
+        @return: A list of failures that have been removed.
+        """
+        return self._observer.flushErrors(*errorTypes)
+
     def run(self, result):
         """
         Run the test case, storing the results in C{result}.
@@ -630,6 +736,7 @@ class TestCase(_Assertions):
             result.addSkip(self, self.getSkip())
             result.stopTest(self)
             return
+        self._installObserver()
         self._passed = False
         first = False
         if self._shared:

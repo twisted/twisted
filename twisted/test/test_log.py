@@ -69,7 +69,9 @@ class LogTest(unittest.TestCase):
         log.addObserver(lambda events: L2.append(events))
         log.msg("Howdy, y'all.")
 
-        excs = [f.type for f in log.flushErrors(ZeroDivisionError)]
+        # XXX - use private _flushErrors so we don't also catch
+        # the deprecation warnings
+        excs = [f.type for f in log._flushErrors(ZeroDivisionError)]
         self.assertEquals([ZeroDivisionError], excs)
 
         self.assertEquals(len(L1), 2)

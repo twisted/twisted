@@ -63,22 +63,41 @@ _keptErrors = []
 _ignoreErrors = []
 
 def startKeepingErrors():
-    """Support function for testing frameworks.
+    """
+    DEPRECATED in Twisted 2.5.
+    
+    Support function for testing frameworks.
 
     Start keeping errors in a buffer which can be retrieved (and emptied) with
     flushErrors.
     """
+    warnings.warn("log.startKeepingErrors is deprecated since Twisted 2.5",
+                  category=DeprecationWarning, stacklevel=2)
     global _keepErrors
     _keepErrors = 1
 
 
 def flushErrors(*errorTypes):
-    """Support function for testing frameworks.
+    """
+    DEPRECATED in Twisted 2.5.  See L{TestCase.flushLoggedErrors}.
+
+    Support function for testing frameworks.
 
     Return a list of errors that occurred since the last call to flushErrors().
     (This will return None unless startKeepingErrors has been called.)
     """
 
+    warnings.warn("log.flushErrors is deprecated since Twisted 2.5. "
+                  "If you need to flush errors from within a unittest, "
+                  "use TestCase.flushLoggedErrors instead.",
+                  category=DeprecationWarning, stacklevel=2)
+    return _flushErrors(*errorTypes)
+
+
+def _flushErrors(*errorTypes):
+    """
+    PRIVATE. DEPRECATED. DON'T USE.
+    """
     global _keptErrors
     k = _keptErrors
     _keptErrors = []
@@ -93,12 +112,31 @@ def flushErrors(*errorTypes):
     return k
 
 def ignoreErrors(*types):
+    """DEPRECATED"""
+    warnings.warn("log.ignoreErrors is deprecated since Twisted 2.5",
+                  category=DeprecationWarning, stacklevel=2)
+    _ignore(*types)
+
+def _ignore(*types):
+    """
+    PRIVATE. DEPRECATED. DON'T USE.
+    """
     for type in types:
         _ignoreErrors.append(type)
 
 def clearIgnores():
+    """DEPRECATED"""
+    warnings.warn("log.clearIgnores is deprecated since Twisted 2.5",
+                  category=DeprecationWarning, stacklevel=2)
+    _clearIgnores()
+
+def _clearIgnores():
+    """
+    PRIVATE. DEPRECATED. DON'T USE.
+    """
     global _ignoreErrors
     _ignoreErrors = []
+
 
 def err(_stuff=None, _why=None, **kw):
     """

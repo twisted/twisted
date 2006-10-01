@@ -61,23 +61,15 @@ class _Janitor(object):
     cleanPending = cleanThreads = cleanReactor = True
 
     def postCaseCleanup(self):
-        return self._dispatch('logErrCheck', 'cleanPending')
+        return self._dispatch('cleanPending')
 
     def postClassCleanup(self):
-        return self._dispatch('logErrCheck', 'cleanReactor',
+        return self._dispatch('cleanReactor',
                               'cleanPending', 'cleanThreads')
 
     def _dispatch(self, *attrs):
         for attr in attrs:
             getattr(self, "do_%s" % attr)()
-
-    def do_logErrCheck(cls):
-        try:
-            if len(log._keptErrors) > 0:
-                raise FailureError(log._keptErrors[0])
-        finally:
-            log.flushErrors()
-    do_logErrCheck = classmethod(do_logErrCheck)
 
     def do_cleanPending(cls):
         # don't import reactor when module is loaded

@@ -134,6 +134,7 @@ class TestErrorReporting(StringTest):
         """
         test = erroneous.DelayedCall('testHiddenException')
         result = self.getResult(test)
+        self.flushLoggedErrors(RuntimeError)
         self.assertEqual(len(result.errors), 1)
         self.assertEqual(len(result.failures), 1)
         self.assertEqual(result.errors[0][1].getErrorMessage(),

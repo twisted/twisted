@@ -566,14 +566,16 @@ class TestUnhandledDeferred(unittest.TestCase):
         """
         result = reporter.TestResult()
         self.test1(result)
+        self.flushLoggedErrors() # test1 logs errors that get caught be us.
         # test1 created unreachable cycle.
         # it & all others should have been collected by now.
         n = gc.collect()
         self.assertEqual(n, 0, 'unreachable cycle still existed')
-        x = log.flushErrors()
+        # check that last gc.collect didn't log more errors
+        x = self.flushLoggedErrors()
         self.assertEqual(len(x), 0, 'Errors logged after gc.collect')
 
     def tearDown(self):
         gc.collect()
         gc.enable()
-        log.flushErrors()
+        self.flushLoggedErrors()
