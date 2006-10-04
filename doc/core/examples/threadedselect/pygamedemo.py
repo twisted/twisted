@@ -1,8 +1,8 @@
 from __future__ import generators
 
 # import Twisted and install
-from twisted.internet.threadedselectreactor import install
-install()
+from twisted.internet import _threadedselect
+_threadedselect.install()
 from twisted.internet import reactor
 
 import os

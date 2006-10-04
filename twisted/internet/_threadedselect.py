@@ -21,8 +21,8 @@ There are three things you'll need to do to use this reactor.
 Install the reactor at the beginning of your program, before importing
 the rest of Twisted::
 
-    | from twisted.internet import threadedselectreactor
-    | threadedselectreactor.install()
+    | from twisted.internet import _threadedselect
+    | _threadedselect.install()
 
 Interleave this reactor with your foreign event loop, at some point after
 your event loop is initialized::

@@ -2,8 +2,9 @@
 # See LICENSE for details.
 
 
-from twisted.internet import threadedselectreactor
-threadedselectreactor.install()
+from twisted.internet import _threadedselect
+_threadedselect.install()
+
 from twisted.internet.defer import Deferred
 from twisted.python.failure import Failure
 from twisted.internet import reactor

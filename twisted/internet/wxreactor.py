@@ -32,7 +32,7 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 import time
 from twisted.python.runtime import seconds
 from twisted.python import log
-from twisted.internet import threadedselectreactor
+from twisted.internet import _threadedselect
 
 from wxPython.wx import wxApp, wxCallAfter, wxEventLoop, wxFrame, NULL
 
@@ -43,7 +43,7 @@ class DummyApp(wxApp):
         return True
 
 
-class WxReactor(threadedselectreactor.ThreadedSelectReactor):
+class WxReactor(_threadedselect.ThreadedSelectReactor):
     """wxPython reactor.
 
     wx drives the event loop, and calls Twisted every millisecond, and
@@ -57,7 +57,7 @@ class WxReactor(threadedselectreactor.ThreadedSelectReactor):
         self.wxapp = wxapp                    
 
     def crash(self):
-        threadedselectreactor.ThreadedSelectReactor.crash(self)
+        _threadedselect.ThreadedSelectReactor.crash(self)
         if hasattr(self, "wxapp"):
             self.wxapp.ExitMainLoop()
 
@@ -74,7 +74,7 @@ class WxReactor(threadedselectreactor.ThreadedSelectReactor):
         if self.stopping:
             return
         self.stopping = True
-        threadedselectreactor.ThreadedSelectReactor.stop(self)
+        _threadedselect.ThreadedSelectReactor.stop(self)
     
     def run(self, installSignalHandlers=1):
         if not hasattr(self, "wxapp"):

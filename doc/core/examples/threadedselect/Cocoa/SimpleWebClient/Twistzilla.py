@@ -9,10 +9,10 @@ from AppKit import *
 # import Nib loading functionality from AppKit
 from PyObjCTools import NibClassBuilder, AppHelper
 
-from twisted.internet.threadedselectreactor import install
-reactor = install()
+from twisted.internet import _threadedselect
+_threadedselect.install()
 
-from twisted.internet import protocol
+from twisted.internet import reactor, protocol
 from twisted.web import http
 from twisted.python import log
 import sys, urlparse
