@@ -330,9 +330,12 @@ baz: 1 2 3
         self.runRequest(httpRequest, MyRequest)
 
     def testCookies(self):
+        """
+        Test cookies parsing and reading.
+        """
         httpRequest = '''\
 GET / HTTP/1.0
-Cookie: rabbit="eat carrot"; ninja=secret
+Cookie: rabbit="eat carrot"; ninja=secret; spam="hey 1=1!"
 
 '''
         testcase = self
@@ -341,6 +344,7 @@ Cookie: rabbit="eat carrot"; ninja=secret
             def process(self):
                 testcase.assertEquals(self.getCookie('rabbit'), '"eat carrot"')
                 testcase.assertEquals(self.getCookie('ninja'), 'secret')
+                testcase.assertEquals(self.getCookie('spam'), '"hey 1=1!"')
                 testcase.didRequest = 1
                 self.finish()
 
@@ -376,7 +380,6 @@ GET /?key=value&multiple=two+words&multiple=more%20words&empty= HTTP/1.0
         class MyRequest(http.Request):
             def process(self):
                 testcase.assertEqual(self.method, 'GET')
-                print dir(self)
                 testcase.assertEqual(self.path, '/foo')
                 testcase.assertEqual(self.args['bar'], ['?'])
                 testcase.assertEqual(self.args['baz'], ['quux'])

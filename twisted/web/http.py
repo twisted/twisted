@@ -536,7 +536,7 @@ class Request:
             for cook in cookietxt.split(';'):
                 cook = cook.lstrip()
                 try:
-                    k, v = cook.split('=')
+                    k, v = cook.split('=', 1)
                     self.received_cookies[k] = v
                 except ValueError:
                     pass
