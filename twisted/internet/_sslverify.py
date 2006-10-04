@@ -488,7 +488,12 @@ class Certificate(CertBase):
 
 
     def inspect(self):
-        return '\n'.join(self._inspect(), self.getPublicKey().inspect())
+        """
+        Return a multi-line, human-readable representation of this
+        Certificate, including information about the subject, issuer, and
+        public key.
+        """
+        return '\n'.join((self._inspect(), self.getPublicKey().inspect()))
 
 
     def getIssuer(self):
