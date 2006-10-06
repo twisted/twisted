@@ -5518,3 +5518,12 @@ How do I use it?
 %
 <radix> isn't the answer to *any* question about javascript simply "haha"?
 %
+(regarding threadedselectreactor)
+<SamB_XP> is it chernobl-safe?
+<dreid> not nearly as safe
+<SamB_XP> thats pretty bad!
+<dreid> chernobyl probably didn't have unittests either though
+<SamB_XP> actually, I think that was what they were trying when they
+          blew it up!
+<glyph> nothing says [FAILED] quite like an entire uninhabitable province
+%
