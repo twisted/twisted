@@ -152,8 +152,10 @@ class ServerDNSTestCase(unittest.TestCase):
         self.resolver = client.Resolver(servers=[('127.0.0.1', port)])
 
     def tearDown(self):
-        self.listenerTCP.loseConnection()
-        d = defer.maybeDeferred(self.listenerUDP.stopListening)
+        """Asynchronously disconnect listenerTCP, listenerUDP and resolver"""
+        d1 = self.listenerTCP.loseConnection()
+        d2 = defer.maybeDeferred(self.listenerUDP.stopListening)
+        d = defer.gatherResults([d1, d2])
         def disconnectTransport(ignored):
             if getattr(self.resolver.protocol, 'transport', None) is not None:
                 return self.resolver.protocol.transport.stopListening()
