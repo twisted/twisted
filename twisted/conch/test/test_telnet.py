@@ -446,7 +446,7 @@ class TelnetTransportTestCase(unittest.TestCase):
 
         d.addCallback(self.assertEquals, True)
         d.addCallback(lambda _:  self._enabledHelper(h, eR=['\x42']))
-        return d        
+        return d
 
     def testRefusedEnableRequest(self):
         # Try to enable an option through the user-level API.  This
@@ -500,7 +500,7 @@ class TelnetTransportTestCase(unittest.TestCase):
 
         def _final(x):
             self.p.dataReceived(telnet.IAC + telnet.WONT + '\x24')
-            # an assertion that only passes if d2 has fired 
+            # an assertion that only passes if d2 has fired
             self._enabledHelper(self.p.protocol, dR=['\x24'])
             # Make sure we allow this
             self.p.protocol.remoteEnableable = ('\x24',)

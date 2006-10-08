@@ -2,14 +2,12 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from StringIO import StringIO
-
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
 
 from twisted.conch.insults.insults import ServerProtocol, ClientProtocol
 from twisted.conch.insults.insults import CS_UK, CS_US, CS_DRAWING, CS_ALTERNATE, CS_ALTERNATE_SPECIAL
-from twisted.conch.insults.insults import G0, G1, G2, G3
+from twisted.conch.insults.insults import G0, G1
 from twisted.conch.insults.insults import modes
 
 def _getattr(mock, name):

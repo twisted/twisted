@@ -13,7 +13,7 @@ except ImportError:
     try:
         del sys.modules['twisted.conch.unix'] # remove the bad import
     except KeyError:
-        # In Python 2.4, the bad import has already been cleaned up for us. 
+        # In Python 2.4, the bad import has already been cleaned up for us.
         # Hooray.
         pass
 
@@ -135,7 +135,7 @@ class TestOurServerOurClient(SFTPTestBase):
         self.failUnlessEqual(self._extData, {'conchTest' : 'ext data'})
 
     def testOpenFileIO(self):
-        d = self.client.openFile("testfile1", filetransfer.FXF_READ | 
+        d = self.client.openFile("testfile1", filetransfer.FXF_READ |
                                  filetransfer.FXF_WRITE, {})
         self._emptyBuffers()
 
@@ -144,7 +144,7 @@ class TestOurServerOurClient(SFTPTestBase):
             d = _readChunk(openFile)
             d.addCallback(_writeChunk, openFile)
             return d
-            
+
         def _readChunk(openFile):
             d = openFile.readChunk(0, 20)
             self._emptyBuffers()
@@ -167,7 +167,7 @@ class TestOurServerOurClient(SFTPTestBase):
         return d
 
     def testClosedFileGetAttrs(self):
-        d = self.client.openFile("testfile1", filetransfer.FXF_READ | 
+        d = self.client.openFile("testfile1", filetransfer.FXF_READ |
                                  filetransfer.FXF_WRITE, {})
         self._emptyBuffers()
 
@@ -191,7 +191,7 @@ class TestOurServerOurClient(SFTPTestBase):
         return d
 
     def testOpenFileAttributes(self):
-        d = self.client.openFile("testfile1", filetransfer.FXF_READ | 
+        d = self.client.openFile("testfile1", filetransfer.FXF_READ |
                                  filetransfer.FXF_WRITE, {})
         self._emptyBuffers()
 
@@ -213,7 +213,7 @@ class TestOurServerOurClient(SFTPTestBase):
     def testOpenFileSetAttrs(self):
         # XXX test setAttrs
         # Ok, how about this for a start?  It caught a bug :)  -- spiv.
-        d = self.client.openFile("testfile1", filetransfer.FXF_READ | 
+        d = self.client.openFile("testfile1", filetransfer.FXF_READ |
                                  filetransfer.FXF_WRITE, {})
         self._emptyBuffers()
 
@@ -357,7 +357,7 @@ class TestOurServerOurClient(SFTPTestBase):
         def _realPath(_):
             d = self.client.realPath('testLink')
             self._emptyBuffers()
-            d.addCallback(self.failUnlessEqual, 
+            d.addCallback(self.failUnlessEqual,
                           os.path.join(os.getcwd(), self.testDir, 'testfile1'))
             return d
         d.addCallback(_readLink)

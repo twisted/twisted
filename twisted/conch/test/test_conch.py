@@ -2,12 +2,10 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import os, struct, sys, signal
-from twisted.conch import avatar
-from twisted.cred.credentials import IUsernamePassword
+import os, sys
 from twisted.cred import portal
 from twisted.internet import reactor, defer, protocol, error
-from twisted.python import log, failure, runtime
+from twisted.python import log, runtime
 from twisted.trial import unittest
 try:
     import Crypto
@@ -87,7 +85,7 @@ class ConchTestForwardingProcess(protocol.ProcessProtocol):
     def processEnded(self, reason):
         log.msg('FORWARDING PROCESS CLOSED')
         self.deferred.callback(None)
-        
+
 
 class ConchTestForwardingPort(protocol.Protocol):
 
@@ -126,9 +124,8 @@ from test_keys import publicDSA_openssh, privateDSA_openssh
 if Crypto:
     from twisted.conch.client import options, default, connect
     from twisted.conch.error import ConchError
-    from twisted.conch.ssh import keys, transport, factory, forwarding
-    from twisted.conch.ssh import connection, common, session, channel
-    from Crypto.PublicKey import RSA, DSA
+    from twisted.conch.ssh import forwarding
+    from twisted.conch.ssh import connection
 
     from test_ssh import ConchTestServerFactory, ConchTestPublicKeyChecker
 
@@ -288,7 +285,7 @@ class CmdLineClientTestBase(SignalMixin, _LogTimeFormatMixin):
         p = ConchTestForwardingProcess(d, lport, self.fac)
         return self.execute('', p,
                             preargs='-N -R %i:127.0.0.1:%i' % (lport, port))
-    
+
 
 class OpenSSHClientTestCase(CmdLineClientTestBase, unittest.TestCase):
 

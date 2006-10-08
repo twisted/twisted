@@ -4,7 +4,6 @@
 
 import sys
 
-from twisted.trial import unittest
 try:
     from twisted.conch import unix
     from twisted.conch.scripts import cftp
@@ -25,12 +24,12 @@ except ImportError:
 from twisted.cred import portal
 from twisted.internet import reactor, protocol, interfaces, defer, error
 from twisted.internet.utils import getProcessOutputAndValue
-from twisted.python import log, failure
+from twisted.python import log
 from twisted.test import test_process
 
 import test_ssh, test_conch
 from test_filetransfer import SFTPTestBase, FileTransferTestAvatar
-import sys, os, os.path, time, tempfile
+import sys, os, time, tempfile
 
 class FileTransferTestRealm:
 
@@ -243,7 +242,7 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, CFTPClientTestBase):
         f2 = file(self.testDir + '/test"file2').read()
         self.failUnlessEqual(f1, f2, "put failed")
         self.failUnless(
-            putRes.endswith('Transferred %s/testfile1 to %s/%s/test"file2' 
+            putRes.endswith('Transferred %s/testfile1 to %s/%s/test"file2'
                             % (self.testDir, os.getcwd(), self.testDir)))
         self.failIf(self._getCmdResult('rm "test\\"file2"'))
         self.failIf(os.path.exists(self.testDir + '/test"file2'))
@@ -439,11 +438,11 @@ class TestOurServerUnixClient(test_process.SignalMixin, CFTPClientTestBase):
         self.server.factory.expectedLoseConnection = 1
 
         d = getProcessOutputAndValue(sys.executable, cmds, env=env)
-        
+
         def _cleanup(res):
             os.remove(fn)
             return res
-        
+
         d.addCallback(lambda res: res[0])
         d.addBoth(_cleanup)
 

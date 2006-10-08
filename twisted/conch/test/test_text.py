@@ -4,7 +4,7 @@
 
 from twisted.trial import unittest
 
-from twisted.conch.insults import helper, text, insults
+from twisted.conch.insults import helper, text
 
 A = text.attributes
 

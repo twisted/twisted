@@ -12,7 +12,6 @@ from twisted.conch import avatar, error
 from twisted.cred import portal
 from twisted.internet import defer, protocol, reactor
 from twisted.internet.error import ProcessTerminated
-from twisted.protocols import loopback
 from twisted.python import failure, log
 from twisted.trial import unittest
 
