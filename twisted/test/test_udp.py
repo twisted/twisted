@@ -546,8 +546,19 @@ class UDPTestCase(unittest.TestCase):
 
 
 class ReactorShutdownInteraction(unittest.TestCase):
+    """Test reactor shutdown interaction"""
+
+    def setUp(self):
+        """Start a UDP port"""
+        self.server = Server()
+        self.port = reactor.listenUDP(0, self.server, interface='127.0.0.1')
+
+    def tearDown(self):
+        """Stop the UDP port"""
+        return self.port.stopListening()
 
     def testShutdownFromDatagramReceived(self):
+        """Test reactor shutdown while in a recvfrom() loop"""
 
         # udp.Port's doRead calls recvfrom() in a loop, as an optimization.
         # It is important this loop terminate under various conditions.
@@ -558,14 +569,12 @@ class ReactorShutdownInteraction(unittest.TestCase):
         # This test is primarily to ensure that the loop never spins
         # forever.
 
-        server = Server()
         finished = defer.Deferred()
-        p = reactor.listenUDP(0, server, interface='127.0.0.1')
-        pr = server.packetReceived = defer.Deferred()
+        pr = self.server.packetReceived = defer.Deferred()
 
         def pktRece(ignored):
             # Simulate reactor.stop() behavior :(
-            server.transport.connectionLost()
+            self.server.transport.connectionLost()
             # Then delay this Deferred chain until the protocol has been
             # disconnected, as the reactor should do in an error condition
             # such as we are inducing.  This is very much a whitebox test.
@@ -579,8 +588,8 @@ class ReactorShutdownInteraction(unittest.TestCase):
             # another, stricter test.)
             log.flushErrors()
         finished.addCallback(flushErrors)
-        server.transport.write('\0' * 64, ('127.0.0.1',
-                                           server.transport.getHost().port))
+        self.server.transport.write('\0' * 64, ('127.0.0.1',
+                                    self.server.transport.getHost().port))
         return finished
 
 
