@@ -284,7 +284,7 @@ class LatexSpitter(BaseLatexSpitter):
 
     def visitNode_span_index(self, node):
         self.writer('\\index{%s}\n' % node.getAttribute('value'))
-        spitter.visitNodeDefault(node)
+        self.visitNodeDefault(node)
 
     visitNode_h2 = visitNode_h3 = visitNode_h4 = visitNodeHeader
 

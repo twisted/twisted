@@ -35,17 +35,20 @@
 # __ put all of our test files someplace neat and tidy
 # 
 
+import os, shutil
+from StringIO import StringIO
+
 from twisted.trial import unittest
 
-from twisted.lore.default import *
 from twisted.lore import tree, process, indexer, numberer, htmlbook, default
+from twisted.lore.default import factory
+from twisted.lore.latex import LatexSpitter
 
 from twisted.python.util import sibpath
-from twisted.python import usage
 
 from twisted.lore.scripts import lore
 
-import os, shutil
+from twisted.web import microdom
 
 def sp(originalFileName):
     return sibpath(__file__, originalFileName)
@@ -281,3 +284,20 @@ class TestFactory(unittest.TestCase):
         #                       VVV change to new, numbered files  
         self.assertEqualFiles("lore_numbering_test_out.html", "lore_numbering_test.tns")
         self.assertEqualFiles("lore_numbering_test_out2.html", "lore_numbering_test2.tns")
+
+
+
+class LatexSpitterTestCase(unittest.TestCase):
+    """
+    Tests for the Latex output plugin.
+    """
+    def test_indexedSpan(self):
+        """
+        Test processing of a span tag with an index class results in a latex
+        \\index directive the correct value.
+        """
+        dom = microdom.parseString('<span class="index" value="name" />').documentElement
+        out = StringIO()
+        spitter = LatexSpitter(out.write)
+        spitter.visitNode(dom)
+        self.assertEqual(out.getvalue(), u'\\index{name}\n')
