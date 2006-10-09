@@ -24,6 +24,11 @@ import twisted.cred.portal
 import twisted.cred.checkers
 import twisted.cred.credentials
 
+from twisted.cred.portal import IRealm, Portal
+from twisted.cred.checkers import ICredentialsChecker, AllowAnonymousAccess
+from twisted.cred.credentials import IAnonymous
+from twisted.cred.error import UnauthorizedLogin
+
 from twisted.mail import imap4
 
 
@@ -521,6 +526,45 @@ class TimeoutTestCase(unittest.TestCase, LoopbackMixin):
         return self._timeoutTest(onDone, clientFactory)
 
 
+
+class SingletonRealm(object):
+    """
+    Trivial realm implementation which is constructed with an interface and an
+    avatar and returns that avatar when asked for that interface.
+    """
+    implements(IRealm)
+
+    def __init__(self, interface, avatar):
+        self.interface = interface
+        self.avatar = avatar
+
+
+    def requestAvatar(self, avatarId, mind, *interfaces):
+        for iface in interfaces:
+            if iface is self.interface:
+                return iface, self.avatar, lambda: None
+
+
+
+class NotImplementedDelivery(object):
+    """
+    Non-implementation of L{smtp.IMessageDelivery} which only has methods which
+    raise L{NotImplementedError}.  Subclassed by various tests to provide the
+    particular behavior being tested.
+    """
+    def validateFrom(self, helo, origin):
+        raise NotImplementedError("This oughtn't be called in the course of this test.")
+
+
+    def validateTo(self, user):
+        raise NotImplementedError("This oughtn't be called in the course of this test.")
+
+
+    def receivedHeader(self, helo, origin, recipients):
+        raise NotImplementedError("This oughtn't be called in the course of this test.")
+
+
+
 class SMTPServerTestCase(unittest.TestCase):
     """
     Test various behaviors of L{twisted.mail.smtp.SMTP} and
@@ -570,6 +614,154 @@ class SMTPServerTestCase(unittest.TestCase):
         s.makeConnection(t)
         s.connectionLost(error.ConnectionDone())
         self.assertIn("ESMTP", t.value())
+
+
+    def test_acceptSenderAddress(self):
+        """
+        Test that a C{MAIL FROM} command with an acceptable address is
+        responded to with the correct success code.
+        """
+        class AcceptanceDelivery(NotImplementedDelivery):
+            """
+            Delivery object which accepts all senders as valid.
+            """
+            def validateFrom(self, helo, origin):
+                return origin
+
+        realm = SingletonRealm(smtp.IMessageDelivery, AcceptanceDelivery())
+        portal = Portal(realm, [AllowAnonymousAccess()])
+        proto = smtp.SMTP()
+        proto.portal = portal
+        trans = StringTransport()
+        proto.makeConnection(trans)
+
+        # Deal with the necessary preliminaries
+        proto.dataReceived('HELO example.com\r\n')
+        trans.clear()
+
+        # Try to specify our sender address
+        proto.dataReceived('MAIL FROM:<alice@example.com>\r\n')
+
+        # Clean up the protocol before doing anything that might raise an
+        # exception.
+        proto.connectionLost(error.ConnectionLost())
+
+        # Make sure that we received exactly the correct response
+        self.assertEqual(
+            trans.value(),
+            '250 Sender address accepted\r\n')
+
+
+    def test_deliveryRejectedSenderAddress(self):
+        """
+        Test that a C{MAIL FROM} command with an address rejected by a
+        L{smtp.IMessageDelivery} instance is responded to with the correct
+        error code.
+        """
+        class RejectionDelivery(NotImplementedDelivery):
+            """
+            Delivery object which rejects all senders as invalid.
+            """
+            def validateFrom(self, helo, origin):
+                raise smtp.SMTPBadSender(origin)
+
+        realm = SingletonRealm(smtp.IMessageDelivery, RejectionDelivery())
+        portal = Portal(realm, [AllowAnonymousAccess()])
+        proto = smtp.SMTP()
+        proto.portal = portal
+        trans = StringTransport()
+        proto.makeConnection(trans)
+
+        # Deal with the necessary preliminaries
+        proto.dataReceived('HELO example.com\r\n')
+        trans.clear()
+
+        # Try to specify our sender address
+        proto.dataReceived('MAIL FROM:<alice@example.com>\r\n')
+
+        # Clean up the protocol before doing anything that might raise an
+        # exception.
+        proto.connectionLost(error.ConnectionLost())
+
+        # Make sure that we received exactly the correct response
+        self.assertEqual(
+            trans.value(),
+            '550 Cannot receive from specified address '
+            '<alice@example.com>: Sender not acceptable\r\n')
+
+
+    def test_portalRejectedSenderAddress(self):
+        """
+        Test that a C{MAIL FROM} command with an address rejected by an
+        L{smtp.SMTP} instance's portal is responded to with the correct error
+        code.
+        """
+        class DisallowAnonymousAccess(object):
+            """
+            Checker for L{IAnonymous} which rejects authentication attempts.
+            """
+            implements(ICredentialsChecker)
+
+            credentialInterfaces = (IAnonymous,)
+
+            def requestAvatarId(self, credentials):
+                return defer.fail(UnauthorizedLogin())
+
+        realm = SingletonRealm(smtp.IMessageDelivery, NotImplementedDelivery())
+        portal = Portal(realm, [DisallowAnonymousAccess()])
+        proto = smtp.SMTP()
+        proto.portal = portal
+        trans = StringTransport()
+        proto.makeConnection(trans)
+
+        # Deal with the necessary preliminaries
+        proto.dataReceived('HELO example.com\r\n')
+        trans.clear()
+
+        # Try to specify our sender address
+        proto.dataReceived('MAIL FROM:<alice@example.com>\r\n')
+
+        # Clean up the protocol before doing anything that might raise an
+        # exception.
+        proto.connectionLost(error.ConnectionLost())
+
+        # Make sure that we received exactly the correct response
+        self.assertEqual(
+            trans.value(),
+            '550 Cannot receive from specified address '
+            '<alice@example.com>: Sender not acceptable\r\n')
+
+
+    def test_portalRejectedAnonymousSender(self):
+        """
+        Test that a C{MAIL FROM} command issued without first authenticating
+        when a portal has been configured to disallow anonymous logins is
+        responded to with the correct error code.
+        """
+        realm = SingletonRealm(smtp.IMessageDelivery, NotImplementedDelivery())
+        portal = Portal(realm, [])
+        proto = smtp.SMTP()
+        proto.portal = portal
+        trans = StringTransport()
+        proto.makeConnection(trans)
+
+        # Deal with the necessary preliminaries
+        proto.dataReceived('HELO example.com\r\n')
+        trans.clear()
+
+        # Try to specify our sender address
+        proto.dataReceived('MAIL FROM:<alice@example.com>\r\n')
+
+        # Clean up the protocol before doing anything that might raise an
+        # exception.
+        proto.connectionLost(error.ConnectionLost())
+
+        # Make sure that we received exactly the correct response
+        self.assertEqual(
+            trans.value(),
+            '550 Cannot receive from specified address '
+            '<alice@example.com>: Unauthenticated senders not allowed\r\n')
+
 
 
 class ESMTPAuthenticationTestCase(unittest.TestCase):
@@ -700,3 +892,52 @@ class ESMTPAuthenticationTestCase(unittest.TestCase):
             [])
 
         self.assertServerAuthenticated(loginArgs)
+
+
+    def test_abortAuthentication(self):
+        """
+        Test that a challenge/response sequence can be aborted by the client.
+        """
+        loginArgs = []
+        self.server.portal = self.portalFactory(loginArgs)
+
+        self.server.dataReceived('EHLO\r\n')
+        self.server.dataReceived('AUTH LOGIN\r\n')
+
+        self.assertServerResponse(
+            '*\r\n',
+            ['501 Authentication aborted'])
+
+
+    def test_invalidBase64EncodedResponse(self):
+        """
+        Test that a response which is not properly Base64 encoded results in
+        the appropriate error code.
+        """
+        loginArgs = []
+        self.server.portal = self.portalFactory(loginArgs)
+
+        self.server.dataReceived('EHLO\r\n')
+        self.server.dataReceived('AUTH LOGIN\r\n')
+
+        self.assertServerResponse(
+            'x\r\n',
+            ['501 Syntax error in parameters or arguments'])
+
+        self.assertEqual(loginArgs, [])
+
+
+    def test_invalidBase64EncodedInitialResponse(self):
+        """
+        Like L{test_invalidBase64EncodedResponse} but for the case of an
+        initial response included with the C{AUTH} command.
+        """
+        loginArgs = []
+        self.server.portal = self.portalFactory(loginArgs)
+
+        self.server.dataReceived('EHLO\r\n')
+        self.assertServerResponse(
+            'AUTH LOGIN x\r\n',
+            ['501 Syntax error in parameters or arguments'])
+
+        self.assertEqual(loginArgs, [])

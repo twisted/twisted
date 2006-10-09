@@ -20,7 +20,6 @@ from twisted.internet import reactor
 from twisted.internet.interfaces import ITLSTransport
 from twisted.python import log
 from twisted.python import util
-from twisted.python import reflect
 from twisted.python import failure
 
 from twisted import cred
@@ -29,11 +28,11 @@ import twisted.cred.credentials
 from twisted.python.runtime import platform
 
 # System imports
-import time, string, re, base64, types, socket, os, random, hmac
+import time, re, base64, types, socket, os, random, hmac
 import MimeWriter, tempfile, rfc822
 import warnings
 import binascii
-import sys
+
 from zope.interface import implements, Interface
 
 try:
@@ -651,27 +650,27 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
             self.sendCode(553, str(e))
             return
 
-        defer.maybeDeferred(self.validateFrom, self._helo, addr
-            ).addCallbacks(self._cbFromValidate, self._ebFromValidate
-            )
+        validated = defer.maybeDeferred(self.validateFrom, self._helo, addr)
+        validated.addCallbacks(self._cbFromValidate, self._ebFromValidate)
+
 
     def _cbFromValidate(self, from_, code=250, msg='Sender address accepted'):
         self._from = from_
         self.sendCode(code, msg)
 
+
     def _ebFromValidate(self, failure):
         if failure.check(SMTPBadSender):
             self.sendCode(failure.value.code,
-                          'Cannot receive for specified address %s: %s'
+                          'Cannot receive from specified address %s: %s'
                           % (quoteaddr(failure.value.addr), failure.value.resp))
         elif failure.check(SMTPServerError):
             self.sendCode(failure.value.code, failure.value.resp)
         else:
-            log.err(failure)
+            log.err(failure, "SMTP sender validation failure")
             self.sendCode(
                 451,
-                'Requested action aborted: local error in processing'
-            )
+                'Requested action aborted: local error in processing')
 
 
     def do_RCPT(self, rest):
@@ -845,7 +844,11 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         else:
             self.sendCode(250, 'Delivery in progress')
 
-    def _cbAuthenticated(self, (iface, avatar, logout)):
+
+    def _cbAnonymousAuthentication(self, (iface, avatar, logout)):
+        """
+        Save the state resulting from a successful anonymous cred login.
+        """
         if issubclass(iface, IMessageDeliveryFactory):
             self.deliveryFactory = avatar
             self.delivery = None
@@ -855,18 +858,8 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         else:
             raise RuntimeError("%s is not a supported interface" % (iface.__name__,))
         self._onLogout = logout
-        self.authenticated = 1
         self.challenger = None
 
-    def _ebAuthenticated(self, reason):
-        self.challenge = None
-        if reason.check(cred.error.UnauthorizedLogin):
-            self.sendCode(535, 'Authentication failed')
-        elif reason.check(SMTPAddressError):
-            self.sendCode(reason.value.code, reason.value.resp)
-        else:
-            self.sendCode(451, 'Requested action aborted: local error in processing')
-            log.err(reason)
 
     # overridable methods:
     def validateFrom(self, helo, origin):
@@ -898,13 +891,41 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         # provided: try to perform an anonymous login and then invoke this
         # method again.
         if self.portal:
-            return self.portal.login(cred.credentials.Anonymous(), None,
-                    IMessageDeliveryFactory, IMessageDelivery
-                ).addCallback(self._cbAuthenticated
-                ).addCallback(lambda _: self.validateFrom(helo, origin)
-                ).addErrback(self._ebAuthenticated
-                )
+
+            result = self.portal.login(
+                cred.credentials.Anonymous(),
+                None,
+                IMessageDeliveryFactory, IMessageDelivery)
+
+            def ebAuthentication(err):
+                """
+                Translate cred exceptions into SMTP exceptions so that the
+                protocol code which invokes C{validateFrom} can properly report
+                the failure.
+                """
+                if err.check(cred.error.UnauthorizedLogin):
+                    exc = SMTPBadSender(origin)
+                elif err.check(cred.error.UnhandledCredentials):
+                    exc = SMTPBadSender(
+                        origin, resp="Unauthenticated senders not allowed")
+                else:
+                    return err
+                return defer.fail(exc)
+
+            result.addCallbacks(
+                self._cbAnonymousAuthentication, ebAuthentication)
+
+            def continueValidation(ignored):
+                """
+                Re-attempt from address validation.
+                """
+                return self.validateFrom(helo, origin)
+
+            result.addCallback(continueValidation)
+            return result
+
         raise SMTPBadSender(origin)
+
 
     def validateTo(self, user):
         """
@@ -1463,46 +1484,90 @@ class ESMTP(SMTP):
         if not chal:
             self.sendCode(504, 'Unrecognized authentication type')
             return
-        self.authenticate(chal, *parts[1:])
 
-    def authenticate(self, challenger, initialResponse=None):
-        if self.portal:
-            if initialResponse is not None:
-                challenger.getChallenge() # Discard it, apparently the client
-                                          # does not care about it.
-                challenger.setResponse(initialResponse.decode('base64'))
-            challenge = challenger.getChallenge()
-            coded = base64.encodestring(challenge)[:-1]
-            self.sendCode(334, coded)
-            self.mode = AUTH
-            self.challenger = challenger
+        self.mode = AUTH
+        self.challenger = chal
+
+        if len(parts) > 1:
+            chal.getChallenge() # Discard it, apparently the client does not
+                                # care about it.
+            rest = parts[1]
         else:
+            rest = ''
+        self.state_AUTH(rest)
+
+
+    def _cbAuthenticated(self, loginInfo):
+        """
+        Save the state resulting from a successful cred login and mark this
+        connection as authenticated.
+        """
+        result = SMTP._cbAnonymousAuthentication(self, loginInfo)
+        self.authenticated = True
+        return result
+
+
+    def _ebAuthenticated(self, reason):
+        """
+        Handle cred login errors by translating them to the SMTP authenticate
+        failed.  Translate all other errors into a generic SMTP error code and
+        log the failure for inspection.  Stop all errors from propagating.
+        """
+        self.challenge = None
+        if reason.check(cred.error.UnauthorizedLogin):
+            self.sendCode(535, 'Authentication failed')
+        else:
+            log.err(failure, "SMTP authentication failure")
+            self.sendCode(
+                451,
+                'Requested action aborted: local error in processing')
+
+
+    def state_AUTH(self, response):
+        """
+        Handle one step of challenge/response authentication.
+        """
+        if self.portal is None:
             self.sendCode(454, 'Temporary authentication failure')
+            self.mode = COMMAND
+            return
 
-    def state_AUTH(self, rest):
-        self.mode = COMMAND
+        if response == '':
+            challenge = self.challenger.getChallenge()
+            encoded = challenge.encode('base64')
+            self.sendCode(334, encoded)
+            return
 
-        if rest == '*':
+        if response == '*':
             self.sendCode(501, 'Authentication aborted')
-            self.challenger.abort()
             self.challenger = None
+            self.mode = COMMAND
             return
 
         try:
-            uncoded = base64.decodestring(rest)
-        except binascii.Error, e:
-            self._ebAuthenticated(failure.Failure(e))
-        else:
-            self.challenger.setResponse(uncoded)
-            if self.challenger.moreChallenges():
-                self.authenticate(self.challenger)
-            else:
-                self.portal.login(self.challenger, None,
-                        IMessageDeliveryFactory, IMessageDelivery
-                    ).addCallback(self._cbAuthenticated
-                    ).addCallback(lambda _: self.sendCode(235, 'Authentication successful.')
-                    ).addErrback(self._ebAuthenticated
-                    )
+            uncoded = response.decode('base64')
+        except binascii.Error:
+            self.sendCode(501, 'Syntax error in parameters or arguments')
+            self.challenger = None
+            self.mode = COMMAND
+            return
+
+        self.challenger.setResponse(uncoded)
+        if self.challenger.moreChallenges():
+            challenge = self.challenger.getChallenge()
+            coded = challenge.encode('base64')[:-1]
+            self.sendCode(334, coded)
+            return
+
+        self.mode = COMMAND
+        result = self.portal.login(
+            self.challenger, None,
+            IMessageDeliveryFactory, IMessageDelivery)
+        result.addCallback(self._cbAuthenticated)
+        result.addCallback(lambda ign: self.sendCode(235, 'Authentication successful.'))
+        result.addErrback(self._ebAuthenticated)
+
+
 
 class SenderMixin:
     """Utility class for sending emails easily.
