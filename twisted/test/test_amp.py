@@ -889,11 +889,7 @@ class DroppyCert(IOSimCert):
 
 class SecurableProto(FactoryNotifier):
 
-    serverStarted = 0
     factory = None
-
-    def sfunc(self):
-        self.serverStarted += 1
 
     def verifyFactory(self):
         return [PretendRemoteCertificateAuthority()]
@@ -901,11 +897,9 @@ class SecurableProto(FactoryNotifier):
     def getTLSVars(self):
         cert = self.certFactory()
         verify = self.verifyFactory()
-        started = self.sfunc
         return dict(
             tls_localCertificate=cert,
-            tls_verifyAuthorities=verify,
-            tls_started=started)
+            tls_verifyAuthorities=verify)
     amp.StartTLS.responder(getTLSVars)
 
 
@@ -923,21 +917,16 @@ class TLSTest(unittest.TestCase):
         okc = OKCert()
         svr.certFactory = lambda : okc
 
-        # print c, c.transport
-        cli.callRemote(amp.StartTLS,
-                       tls_localCertificate=okc,
-                       tls_verifyAuthorities=[PretendRemoteCertificateAuthority()])
+        cli.callRemote(
+            amp.StartTLS, tls_localCertificate=okc,
+            tls_verifyAuthorities=[PretendRemoteCertificateAuthority()])
 
         # let's buffer something to be delivered securely
         L = []
         d = cli.callRemote(SecuredPing).addCallback(L.append)
         p.flush()
-        self.assertEquals(okc.verifyCount, 2) # once for client once for server
-        self.assertEquals(svr.serverStarted, 1)
-        # this is the server start func, make sure that it hasn't received a
-        # duplicate notification.
-        self.assertEquals(cli.serverStarted, 0)
-        # or for some insane reason been called in the wrong place
+        # once for client once for server
+        self.assertEquals(okc.verifyCount, 2) 
         L = []
         d = cli.callRemote(SecuredPing).addCallback(L.append)
         p.flush()
@@ -985,14 +974,8 @@ class TLSTest(unittest.TestCase):
                        tls_localCertificate=badCert)
 
         p.flush()
-        self.assertEquals(badCert.verifyCount, 2) # once for client once for server - but both fail
-        self.assertEquals(svr.serverStarted, 1)   # this gets called, because
-                                                  # it's right after we TRY to
-                                                  # initiate SSL...
-        # this is the server start func, make sure that it hasn't received a
-        # duplicate notification.
-        self.assertEquals(cli.serverStarted, 0)
-        # or for some insane reason been called in the wrong place
+        # once for client once for server - but both fail
+        self.assertEquals(badCert.verifyCount, 2)
         d = cli.callRemote(SecuredPing)
         p.flush()
         self.assertFailure(d, iosim.OpenSSLVerifyError)
@@ -1015,9 +998,6 @@ class TLSTest(unittest.TestCase):
         p.flush()
 
         self.assertEquals(droppyCert.verifyCount, 2)
-        self.assertEquals(svr.serverStarted, 1)
-
-        self.assertEquals(cli.serverStarted, 0)
 
         d = cli.callRemote(SecuredPing)
         p.flush()

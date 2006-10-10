@@ -1256,7 +1256,6 @@ class _TLSBox(AmpBox):
     # These properties are described in startTLS
     certificate = _keyprop('tls_localCertificate', _NoCertificate(False))
     verify = _keyprop('tls_verifyAuthorities', None)
-    tlsstarted = _keyprop('tls_started', None)
 
     def _sendTo(self, proto):
         """
@@ -1264,13 +1263,10 @@ class _TLSBox(AmpBox):
         """
         ab = AmpBox(self)
         for k in ['tls_localCertificate',
-                  'tls_verifyAuthorities',
-                  'tls_started']:
+                  'tls_verifyAuthorities']:
             ab.pop(k, None)
         ab._sendTo(proto)
         proto._startTLS(self.certificate, self.verify)
-        if self.tlsstarted is not None:
-            self.tlsstarted()
 
 
 
@@ -1301,11 +1297,6 @@ class StartTLS(Command):
         twisted.internet.ssl.Certificate objects that will be used as the
         certificate authorities to verify our peer's certificate.
 
-        - tls_started: only available on the response side, you may pass a
-        0-arg callable which is called when the TLS connection is actually
-        initiated.  On the calling side, you get this notification as the
-        regular callRemote callback.
-
     Each of those special parameters may also be present as a key in the
     response dictionary.
     """
@@ -1314,8 +1305,7 @@ class StartTLS(Command):
                  ("tls_verifyAuthorities", _LocalArgument(optional=True))]
 
     response = [("tls_localCertificate", _LocalArgument(optional=True)),
-                ("tls_verifyAuthorities", _LocalArgument(optional=True)),
-                ("tls_started", _LocalArgument(optional=True))]
+                ("tls_verifyAuthorities", _LocalArgument(optional=True))]
 
     responseType = _TLSBox
 
