@@ -22,6 +22,7 @@ import new
 import traceback
 import weakref
 import re
+import warnings
 
 RegexType = type(re.compile(""))
 
@@ -251,6 +252,10 @@ def funcinfo(function):
     """
     this is more documentation for myself than useful code.
     """
+    warnings.warn(
+        "[v2.5] Use inspect.getargspec instead of twisted.python.reflect.funcinfo",
+        DeprecationWarning,
+        stacklevel=2)
     code=function.func_code
     name=function.func_name
     argc=code.co_argcount
