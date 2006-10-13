@@ -44,14 +44,15 @@ class IResource(Interface):
 class SpecialAdaptInterfaceClass(interface.InterfaceClass):
     # A special adapter for IResource to handle the extra step of adapting
     # from IOldNevowResource-providing resources.
-    def __adapt__(self, other):
-        result = interface.InterfaceClass.__adapt__(self, other)
-        if result is not None:
+    def __call__(self, other, alternate=None):
+        result = super(SpecialAdaptInterfaceClass, self).__call__(other, alternate)
+        if result is not alternate:
             return result
         
-        result = IOldNevowResource(other, None)
-        if result is not None:
+        result = IOldNevowResource(other, alternate)
+        if result is not alternate:
             return IResource(result)
+        return alternate
 IResource.__class__ = SpecialAdaptInterfaceClass
 
 class IOldNevowResource(Interface):

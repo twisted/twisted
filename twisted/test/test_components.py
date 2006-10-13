@@ -111,48 +111,18 @@ class ComponentizedTestCase(unittest.TestCase):
         assert co4 == None
         assert co1 is co3
 
+
+
 class AdapterTestCase(unittest.TestCase):
     """Test adapters."""
 
-    def testGetAdapterClass(self):
-        mklass = components.getAdapterFactory(AComp, ITest, None)
-        self.assertEquals(mklass, Test)
-
-    def testBadRegister(self):
-        # should fail because we already registered an ITest adapter for AComp
-        self.assertRaises(ValueError, components.registerAdapter, Test, AComp, ITest)
-    
-    def testAllowDuplicates(self):
-        components.ALLOW_DUPLICATES = 1
-        try: 
-            components.registerAdapter(Test, AComp, ITest)
-        except ValueError:
-            self.fail("Should have allowed re-registration")
-            
-        # should fail because we already registered an ITest adapter
-        # for AComp
-        components.ALLOW_DUPLICATES = 0
-        self.assertRaises(ValueError, components.registerAdapter,
-                          Test, AComp, ITest)
-    
     def testAdapterGetComponent(self):
         o = object()
         a = Adept(o)
         self.assertRaises(components.CannotAdapt, ITest, a)
         self.assertEquals(ITest(a, None), None)
 
-    def testMultipleInterfaceRegistration(self):
-        class IMIFoo(Interface):
-            pass
-        class IMIBar(Interface):
-            pass
-        class MIFooer(components.Adapter):
-            implements(IMIFoo, IMIBar)
-        class Blegh:
-            pass
-        components.registerAdapter(MIFooer, Blegh, IMIFoo, IMIBar)
-        self.assert_(isinstance(IMIFoo(Blegh()), MIFooer))
-        self.assert_(isinstance(IMIBar(Blegh()), MIFooer))
+
 
 class IMeta(Interface):
     pass
@@ -243,3 +213,191 @@ class TestMetaInterface(unittest.TestCase):
         xx = IAttrXX(Xcellent())
         self.assertEqual(('x!', 'x!'), xx.xx())
 
+
+class RegistrationTestCase(unittest.TestCase):
+    """
+    Tests for adapter registration.
+    """
+    def _registerAdapterForClassOrInterface(self, original):
+        adapter = lambda o: None
+        class TheInterface(Interface):
+            pass
+        components.registerAdapter(adapter, original, TheInterface)
+        self.assertIdentical(
+            components.getAdapterFactory(original, TheInterface, None),
+            adapter)
+
+
+    def test_registerAdapterForClass(self):
+        """
+        Test that an adapter from a class can be registered and then looked
+        up.
+        """
+        class TheOriginal(object):
+            pass
+        return self._registerAdapterForClassOrInterface(TheOriginal)
+
+
+    def test_registerAdapterForInterface(self):
+        """
+        Test that an adapter from an interface can be registered and then
+        looked up.
+        """
+        class TheOriginal(Interface):
+            pass
+        return self._registerAdapterForClassOrInterface(TheOriginal)
+
+
+    def _duplicateAdapterForClassOrInterface(self, original):
+        firstAdapter = lambda o: False
+        secondAdapter = lambda o: True
+        class TheInterface(Interface):
+            pass
+        components.registerAdapter(firstAdapter, original, TheInterface)
+        self.assertRaises(
+            ValueError,
+            components.registerAdapter,
+            secondAdapter, original, TheInterface)
+        # Make sure that the original adapter is still around as well
+        self.assertIdentical(
+            components.getAdapterFactory(original, TheInterface, None),
+            firstAdapter)
+
+
+    def test_duplicateAdapterForClass(self):
+        """
+        Test that attempting to register a second adapter from a class
+        raises the appropriate exception.
+        """
+        class TheOriginal(object):
+            pass
+        return self._duplicateAdapterForClassOrInterface(TheOriginal)
+
+
+    def test_duplicateAdapterForInterface(self):
+        """
+        Test that attempting to register a second adapter from an interface
+        raises the appropriate exception.
+        """
+        class TheOriginal(Interface):
+            pass
+        return self._duplicateAdapterForClassOrInterface(TheOriginal)
+
+
+    def _duplicateAdapterForClassOrInterfaceAllowed(self, original):
+        firstAdapter = lambda o: False
+        secondAdapter = lambda o: True
+        class TheInterface(Interface):
+            pass
+        components.registerAdapter(firstAdapter, original, TheInterface)
+        components.ALLOW_DUPLICATES = True
+        try:
+            components.registerAdapter(secondAdapter, original, TheInterface)
+            self.assertIdentical(
+                components.getAdapterFactory(original, TheInterface, None),
+                secondAdapter)
+        finally:
+            components.ALLOW_DUPLICATES = False
+
+        # It should be rejected again at this point
+        self.assertRaises(
+            ValueError,
+            components.registerAdapter,
+            firstAdapter, original, TheInterface)
+
+        self.assertIdentical(
+            components.getAdapterFactory(original, TheInterface, None),
+            secondAdapter)
+
+    def test_duplicateAdapterForClassAllowed(self):
+        """
+        Test that when L{components.ALLOW_DUPLICATES} is set to a true
+        value, duplicate registrations from classes are allowed to override
+        the original registration.
+        """
+        class TheOriginal(object):
+            pass
+        return self._duplicateAdapterForClassOrInterfaceAllowed(TheOriginal)
+
+
+    def test_duplicateAdapterForInterfaceAllowed(self):
+        """
+        Test that when L{components.ALLOW_DUPLICATES} is set to a true
+        value, duplicate registrations from interfaces are allowed to
+        override the original registration.
+        """
+        class TheOriginal(Interface):
+            pass
+        return self._duplicateAdapterForClassOrInterfaceAllowed(TheOriginal)
+
+
+    def _multipleInterfacesForClassOrInterface(self, original):
+        adapter = lambda o: None
+        class FirstInterface(Interface):
+            pass
+        class SecondInterface(Interface):
+            pass
+        components.registerAdapter(adapter, original, FirstInterface, SecondInterface)
+        self.assertIdentical(
+            components.getAdapterFactory(original, FirstInterface, None),
+            adapter)
+        self.assertIdentical(
+            components.getAdapterFactory(original, SecondInterface, None),
+            adapter)
+
+
+    def test_multipleInterfacesForClass(self):
+        """
+        Test the registration of an adapter from a class to several
+        interfaces at once.
+        """
+        class TheOriginal(object):
+            pass
+        return self._multipleInterfacesForClassOrInterface(TheOriginal)
+
+
+    def test_multipleInterfacesForInterface(self):
+        """
+        Test the registration of an adapter from an interface to several
+        interfaces at once.
+        """
+        class TheOriginal(Interface):
+            pass
+        return self._multipleInterfacesForClassOrInterface(TheOriginal)
+
+
+    def _subclassAdapterRegistrationForClassOrInterface(self, original):
+        firstAdapter = lambda o: True
+        secondAdapter = lambda o: False
+        class TheSubclass(original):
+            pass
+        class TheInterface(Interface):
+            pass
+        components.registerAdapter(firstAdapter, original, TheInterface)
+        components.registerAdapter(secondAdapter, TheSubclass, TheInterface)
+        self.assertIdentical(
+            components.getAdapterFactory(original, TheInterface, None),
+            firstAdapter)
+        self.assertIdentical(
+            components.getAdapterFactory(TheSubclass, TheInterface, None),
+            secondAdapter)
+
+
+    def test_subclassAdapterRegistrationForClass(self):
+        """
+        Test that an adapter to a particular interface can be registered
+        from both a class and its subclass.
+        """
+        class TheOriginal(object):
+            pass
+        return self._subclassAdapterRegistrationForClassOrInterface(TheOriginal)
+
+
+    def test_subclassAdapterRegistrationForInterface(self):
+        """
+        Test that an adapter to a particular interface can be registered
+        from both an interface and its subclass.
+        """
+        class TheOriginal(Interface):
+            pass
+        return self._subclassAdapterRegistrationForClassOrInterface(TheOriginal)

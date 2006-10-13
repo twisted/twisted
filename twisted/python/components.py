@@ -46,6 +46,25 @@ globalRegistry = AdapterRegistry()
 # Attribute that registerAdapter looks at. Is this supposed to be public?
 ALLOW_DUPLICATES = 0
 
+# Define a function to find the registered adapter factory, using either a
+# version of Zope Interface which has the `registered' method or an older
+# version which does not.
+if getattr(AdapterRegistry, 'registered', None) is None:
+    def _registered(registry, required, provided):
+        """
+        Return the adapter factory for the given parameters in the given
+        registry, or None if there is not one.
+        """
+        return registry.get(required).selfImplied.get(provided, {}).get('')
+else:
+    def _registered(registry, required, provided):
+        """
+        Return the adapter factory for the given parameters in the given
+        registry, or None if there is not one.
+        """
+        return registry.registered([required], provided)
+
+
 def registerAdapter(adapterFactory, origInterface, *interfaceClasses):
     """Register an adapter class.
 
@@ -63,8 +82,8 @@ def registerAdapter(adapterFactory, origInterface, *interfaceClasses):
         origInterface = declarations.implementedBy(origInterface)
 
     for interfaceClass in interfaceClasses:
-        factory = self.get(origInterface).selfImplied.get(interfaceClass, {}).get('')
-        if (factory and not ALLOW_DUPLICATES):
+        factory = _registered(self, origInterface, interfaceClass)
+        if factory is not None and not ALLOW_DUPLICATES:
             raise ValueError("an adapter (%s) was already registered." % (factory, ))
     for interfaceClass in interfaceClasses:
         self.register([origInterface], interfaceClass, '', adapterFactory)
@@ -80,7 +99,7 @@ def getAdapterFactory(fromInterface, toInterface, default):
     if not isinstance(fromInterface, interface.InterfaceClass):
         fromInterface = declarations.implementedBy(fromInterface)
     factory = self.lookup1(fromInterface, toInterface)
-    if factory == None:
+    if factory is None:
         factory = default
     return factory
 
