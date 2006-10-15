@@ -994,24 +994,44 @@ class BufferedStream(object):
             data = self.data
             if size is not None and len(data) >= size:
                 pre,post = data[:size], data[size:]
-                self.data=post
+                self.data = post
                 return pre
         return self._readUntil(gotdata)
     
         
-    def readline(self, delimiter='\r\n', maxLength=None):
-        """Read a line of data from the string, bounded by delimiter"""
-        def gotdata():
-            data = self.data.split(delimiter, 1)
-            if len(data) == 2:
-                self.data=data[1]
-                if maxLength and len(data[0]) > maxLength:
-                    raise LineTooLongException(data[0])
-                return data[0]
-            if maxLength and len(self.data) > maxLength:
-                raise LineTooLongException(self.data)
-        return self._readUntil(gotdata)
+    def readline(self, delimiter='\r\n', size=None):
+        """
+        Read a line of data from the string, bounded by
+        delimiter. The delimiter is included in the return value.
 
+        If size is specified, read and return at most that many bytes,
+        even if the delimiter has not yet been reached. If the size
+        limit falls within a delimiter, the rest of the delimiter, and
+        the next line will be returned together.
+        """
+        if size is not None and size < 0:
+            raise ValueError("readline: size cannot be negative: %s" % (size, ))
+
+        def gotdata():
+            data = self.data
+            if size is not None:
+                splitpoint = data.find(delimiter, 0, size)
+                if splitpoint == -1:
+                    if len(data) >= size:
+                        splitpoint = size
+                else:
+                    splitpoint += len(delimiter)
+            else:
+                splitpoint = data.find(delimiter)
+                if splitpoint != -1:
+                    splitpoint += len(delimiter)
+            
+            if splitpoint != -1:
+                pre = data[:splitpoint]
+                self.data = data[splitpoint:]
+                return pre
+        return self._readUntil(gotdata)
+    
     def pushback(self, pushed):
         """Push data back into the buffer."""
         

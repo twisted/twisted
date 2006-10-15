@@ -1,5 +1,5 @@
 """
-A non-blocking container resource for WSGI web applications.
+An implementation of PEP 333: Python Web Server Gateway Interface (WSGI).
 """
 
 import os, threading
@@ -23,6 +23,13 @@ class AlreadyStartedResponse(Exception):
 # any method-specific actions at all. All that stuff is totally up to
 # the contained wsgi application
 class WSGIResource(object):
+    """
+    A web2 Resource which wraps the given WSGI application callable.
+
+    The WSGI application will be called in a separate thread (using
+    the reactor threadpool) whenever a request for this resource or
+    any lower part of the url hierarchy is received.
+    """
     implements(iweb.IResource)
     
     def __init__(self, application):
@@ -55,26 +62,79 @@ def __callFromThread(queue, f, a, kw):
     result.addBoth(queue.put)
 
 class InputStream(object):
+    """
+    This class implements the 'wsgi.input' object. The methods are
+    expected to have the same behavior as the same-named methods for
+    python's builtin file object.
+    """
+    
     def __init__(self, newstream):
         # Called in IO thread
         self.stream = stream.BufferedStream(newstream)
         
     def read(self, size=None):
+        """
+        Read at most size bytes from the input, or less if EOF is
+        encountered. If size is ommitted or negative, read until EOF.
+        """
         # Called in application thread
         if size < 0:
             size = None
         return callInReactor(self.stream.readExactly, size)
 
-    def readline(self):
+    def readline(self, size=None):
+        """
+        Read a line, delimited by a newline. If the stream reaches EOF
+        or size bytes have been read before reaching a newline (if
+        size is given), the partial line is returned.
+
+        COMPATIBILITY NOTE: the size argument is excluded from the
+        WSGI specification, but is provided here anyhow, because
+        useful libraries such as python stdlib's cgi.py assume their
+        input file-like-object supports readline with a size
+        argument. If you use it, be aware your application may not be
+        portable to other conformant WSGI servers.
+        """
         # Called in application thread
-        return callInReactor(self.stream.readline, '\n')+'\n'
+        if size < 0:
+            # E.g. -1, which is the default readline size for *some*
+            # other file-like-objects...
+            size = None
+
+        return callInReactor(self.stream.readline, '\n', size = size)
     
     def readlines(self, hint=None):
+        """
+        Read until EOF, collecting all lines in a list, and returns
+        that list. The hint argument is ignored (as is allowed in the
+        API specification)
+        """
         # Called in application thread
         data = self.read()
-        return [s+'\n' for s in data.split('\n')]
+        lines = data.split('\n')
+        last = lines.pop()
+        lines = [s+'\n' for s in lines]
+        if last != '':
+            lines.append(last)
+        return lines
 
+    def __iter__(self):
+        """
+        Returns an iterator, each iteration of which returns the
+        result of readline(), and stops when readline() returns an
+        empty string.
+        """
+        while 1:
+            line = self.readline()
+            if not line:
+                return
+            yield line
+                
+    
 class ErrorStream(object):
+    """
+    This class implements the 'wsgi.error' object.
+    """
     def flush(self):
         # Called in application thread
         return
@@ -262,7 +322,10 @@ class WSGIHandler(object):
         self.stopped = True
         
 class FileWrapper(object):
-    """Wrapper to convert file-like objects to iterables"""
+    """
+    Wrapper to convert file-like objects to iterables, to implement
+    the optional 'wsgi.file_wrapper' object.
+    """
 
     def __init__(self, filelike, blksize=8192):
         self.filelike = filelike

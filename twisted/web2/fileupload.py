@@ -46,12 +46,19 @@ def _readHeaders(stream):
     
     # Now read headers
     while 1:
-        line = stream.readline(maxLength=1024)
+        line = stream.readline(size=1024)
         if isinstance(line, defer.Deferred):
             line = defer.waitForDeferred(line)
             yield line
             line = line.getResult()
         #print "GOT", line
+        if not line.endswith('\r\n'):
+            if line == "":
+                raise MimeFormatError("Unexpected end of stream.")
+            else:
+                raise MimeFormatError("Header line too long")
+
+        line = line[:-2] # strip \r\n
         if line == "":
             break # End of headers
         
@@ -165,13 +172,13 @@ class MultipartMimeStream(object):
 
     def _readFirstBoundary(self):
         #print "_readFirstBoundary"
-        line = self.stream.readline(maxLength=1024)
+        line = self.stream.readline(size=1024)
         if isinstance(line, defer.Deferred):
             line = defer.waitForDeferred(line)
             yield line
             line = line.getResult()
-        if line != self.boundary:
-            raise MimeFormatError("Extra data before first boundary: %r"% line)
+        if line != self.boundary + '\r\n':
+            raise MimeFormatError("Extra data before first boundary: %r looking for: %r" % (line, self.boundary + '\r\n'))
         
         self.boundary = "\r\n"+self.boundary
         yield True
@@ -180,18 +187,18 @@ class MultipartMimeStream(object):
 
     def _readBoundaryLine(self):
         #print "_readBoundaryLine"
-        line = self.stream.readline(maxLength=1024)
+        line = self.stream.readline(size=1024)
         if isinstance(line, defer.Deferred):
             line = defer.waitForDeferred(line)
             yield line
             line = line.getResult()
         
-        if line == "--":
+        if line == "--\r\n":
             # THE END!
             yield False
             return
-        elif line != "":
-            raise MimeFormatError("Unexpected data on same line as boundary.")
+        elif line != "\r\n":
+            raise MimeFormatError("Unexpected data on same line as boundary: %r" % (line,))
         yield True
         return
     _readBoundaryLine = defer.deferredGenerator(_readBoundaryLine)

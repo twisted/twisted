@@ -128,8 +128,7 @@ class MemoryStreamTest(SimpleStreamTests, unittest.TestCase):
         self.assertRaises(ValueError, self.makeStream, 0, 20)
 
 
-class TestSubstream(unittest.TestCase):
-    data = """I was angry with my friend:
+testdata = """I was angry with my friend:
 I told my wrath, my wrath did end.
 I was angry with my foe:
 I told it not, my wrath did grow.
@@ -148,8 +147,11 @@ And into my garden stole
 When the night had veil'd the pole:
 In the morning glad I see
 My foe outstretch'd beneath the tree"""
+
+class TestSubstream(unittest.TestCase):
     
     def setUp(self):
+        self.data = testdata
         self.s = stream.MemoryStream(self.data)
 
     def suckTheMarrow(self, s):
@@ -178,7 +180,93 @@ My foe outstretch'd beneath the tree"""
     def testPastEnd(self):
         size = len(self.data)
         self.assertRaises(ValueError, stream.substream, self.s, size-4, size+8)
+
+
+class TestBufferedStream(unittest.TestCase):
+
+    def setUp(self):
+        self.data = testdata.replace('\n', '\r\n')
+        s = stream.MemoryStream(self.data)
+        self.s = stream.BufferedStream(s)
+
+    def _cbGotData(self, data, expected):
+        self.assertEqual(data, expected)
+
+    def test_readline(self):
+        """Test that readline reads a line."""
+        d = self.s.readline()
+        d.addCallback(self._cbGotData, 'I was angry with my friend:\r\n')
+        return d
+
+    def test_readlineWithSize(self):
+        """Test the size argument to readline"""
+        d = self.s.readline(size = 5)
+        d.addCallback(self._cbGotData, 'I was')
+        return d
+
+    def test_readlineWithBigSize(self):
+        """Test the size argument when it's bigger than the length of the line."""
+        d = self.s.readline(size = 40)
+        d.addCallback(self._cbGotData, 'I was angry with my friend:\r\n')
+        return d
+
+    def test_readlineWithZero(self):
+        """Test readline with size = 0."""
+        d = self.s.readline(size = 0)
+        d.addCallback(self._cbGotData, '')
+        return d
+
+    def test_readlineFinished(self):
+        """Test readline on a finished stream."""
+        nolines = len(self.data.split('\r\n'))
+        for i in range(nolines):
+            self.s.readline()
+        d = self.s.readline()
+        d.addCallback(self._cbGotData, '')
+        return d
+
+    def test_readlineNegSize(self):
+        """Ensure that readline with a negative size raises an exception."""
+        self.assertRaises(ValueError, self.s.readline, size = -1)
+
+    def test_readlineSizeInDelimiter(self):
+        """
+        Test behavior of readline when size falls inside the
+        delimiter.
+        """
+        d = self.s.readline(size=28)
+        d.addCallback(self._cbGotData, "I was angry with my friend:\r")
+        d.addCallback(lambda _: self.s.readline())
+        d.addCallback(self._cbGotData, "\nI told my wrath, my wrath did end.\r\n")
         
+    def test_readExactly(self):
+        """Make sure readExactly with no arg reads all the data."""
+        d = self.s.readExactly()
+        d.addCallback(self._cbGotData, self.data)
+        return d
+
+    def test_readExactly(self):
+        """Test readExactly with a number."""
+        d = self.s.readExactly(10)
+        d.addCallback(self._cbGotData, self.data[:10])
+        return d
+
+    def test_readExactlyBig(self):
+        """
+        Test readExactly with a number larger than the size of the
+        datastream.
+        """
+        d = self.s.readExactly(100000)
+        d.addCallback(self._cbGotData, self.data)
+        return d
+
+    def test_read(self):
+        """
+        Make sure read() also functions. (note that this test uses
+        an implementation detail of this particular stream. s.read()
+        isn't guaranteed to return self.data on all streams.)
+        """
+        self.assertEqual(str(self.s.read()), self.data)
 
 class TestStreamer:
     implements(stream.IStream, stream.IByteStream)
