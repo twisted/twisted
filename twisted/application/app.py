@@ -21,6 +21,7 @@ reactorTypes = {
     'win32': 'twisted.internet.win32eventreactor',
     'win': 'twisted.internet.win32eventreactor',
     'poll': 'twisted.internet.pollreactor',
+    'epoll': 'twisted.internet.epollreactor',
     'cf' : 'twisted.internet.cfreactor',
     'kqueue': 'twisted.internet.kqreactor',
     'iocp': 'twisted.internet.iocpreactor',
