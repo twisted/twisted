@@ -59,11 +59,6 @@ def detectExtensions(builder):
                                 libraries=["ws2_32", "mswsock"],
                                 define_macros=builder.define_macros))
 
-    if builder._check_header("sys/epoll.h"):
-        exts.append( Extension("twisted.python._epoll",
-                                ["twisted/python/_epoll.c"],
-                                define_macros=builder.define_macros))
-
     return exts
 
 
