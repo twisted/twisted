@@ -5,7 +5,7 @@
 import sys, os, sha
 from twisted.trial import unittest
 
-from twisted.words.protocols.jabber.component import ConnectComponentAuthenticator
+from twisted.words.protocols.jabber.component import ConnectComponentAuthenticator, ComponentInitiatingInitializer
 from twisted.words.protocols import jabber
 from twisted.words.protocols.jabber import xmlstream
 
@@ -16,6 +16,43 @@ class DummyTransport:
     def write(self, bytes):
         self.list.append(bytes)
 
+class ComponentInitiatingInitializerTest(unittest.TestCase):
+    def setUp(self):
+        self.output = []
+
+        self.authenticator = xmlstream.Authenticator()
+        self.authenticator.password = 'secret'
+        self.xmlstream = xmlstream.XmlStream(self.authenticator)
+        self.xmlstream.namespace = 'test:component'
+        self.xmlstream.send = self.output.append
+        self.xmlstream.connectionMade()
+        self.xmlstream.dataReceived(
+                "<stream:stream xmlns='test:component' "
+                "xmlns:stream='http://etherx.jabber.org/streams' "
+                "from='example.com' id='12345' version='1.0'>")
+        self.init = ComponentInitiatingInitializer(self.xmlstream)
+
+    def testHandshake(self):
+        """
+        Test basic operations of component handshake.
+        """
+
+        d = self.init.initialize()
+
+        # the initializer should have sent the handshake request
+
+        handshake = self.output[0]
+        self.assertEquals('handshake', handshake.name)
+        self.assertEquals('test:component', handshake.uri)
+        self.assertEquals(sha.new("%s%s" % ('12345', 'secret')).hexdigest(),
+                          unicode(handshake))
+
+        # successful authentication
+
+        handshake.children = []
+        self.xmlstream.dataReceived(handshake.toXml())
+
+        return d
 
 class ComponentAuthTest(unittest.TestCase):
     def authPassed(self, stream):
