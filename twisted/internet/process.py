@@ -266,6 +266,23 @@ class Process(styles.Ephemeral):
         nuances of setXXuid on UNIX: it will assume that either your effective
         or real UID is 0.)
         """
+        # Common check function
+        def argChecker(arg):
+            return isinstance(arg, (str, unicode)) and '\0' not in arg
+
+        # Make a few tests to check input validity
+        if not isinstance(args, (tuple, list)):
+            raise TypeError("Arguments must be a tuple or list")
+        for arg in args:
+            if not argChecker(arg):
+               raise TypeError("Arguments contain a non-string value")
+        if environment is not None:
+            for key, val in environment.iteritems():
+                if not argChecker(key):
+                    raise TypeError("Environment contains a non-string key")
+                if not argChecker(val):
+                    raise TypeError("Environment contains a non-string value")
+
         if not proto:
             assert 'r' not in childFDs.values()
             assert 'w' not in childFDs.values()
