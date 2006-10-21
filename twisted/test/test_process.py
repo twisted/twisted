@@ -289,37 +289,6 @@ class ProcessTestCase(SignalMixin, unittest.TestCase):
         return d.addCallback(processEnded)
 
 
-    def test_wrongArguments(self):
-        """
-        Test invalid arguments to spawnProcess: arguments and environment
-        must only contains string or unicode, and not null bytes.
-        """
-        exe = sys.executable
-        p = protocol.ProcessProtocol()
-
-        badEnvs = (
-            {"foo": 2},
-            {"foo": "egg\0a"},
-            {3: "bar"},
-            {"bar\0foo": "bar"})
-
-        for env in badEnvs:
-            self.assertRaises(
-                TypeError,
-                reactor.spawnProcess, p, exe, [exe, "-c", ""], env=env)
-
-        badArgs = (
-            [exe, 2],
-            "spam",
-            [exe, "foo\0bar"])
-
-        for args in badArgs:
-            self.assertRaises(
-                TypeError,
-                reactor.spawnProcess, p, exe, args, env=None)
-
-
-
 class TwoProcessProtocol(protocol.ProcessProtocol):
     num = -1
     finished = 0
