@@ -8,8 +8,8 @@ from twisted.python import reflect, util
 from twisted.internet.defer import Deferred
 from twisted.internet.error import VerifyError, CertificateError
 
-# Private - shared between all ServerContextFactories, counts up to
-# provide a unique session id for each context
+# Private - shared between all OpenSSLCertificateOptions, counts up to provide
+# a unique session id for each context
 _sessionCounter = itertools.count().next
 
 class _SSLApplicationData(object):
@@ -798,7 +798,8 @@ class KeyPair(PublicKey):
 
 
 class OpenSSLCertificateOptions(object):
-    """A factory for SSL context objects, for server SSL connections.
+    """
+    A factory for SSL context objects for both SSL servers and clients.
     """
 
     _context = None
