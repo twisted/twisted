@@ -298,8 +298,7 @@ class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
         """
 
         self.xmlstream.removeObserver('/failure', self.onFailure)
-        from OpenSSL import SSL
-        ctx = ssl.CertificateOptions(method=SSL.TLSv1_METHOD)
+        ctx = ssl.CertificateOptions()
         self.xmlstream.transport.startTLS(ctx)
         self.xmlstream.reset()
         self.xmlstream.sendHeader()
@@ -323,7 +322,7 @@ class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
         on to the next step.
         """
         if self.wanted:
-            if not ssl.supported:
+            if ssl is None:
                 if self.required:
                     return defer.fail(TLSNotSupported())
                 else:

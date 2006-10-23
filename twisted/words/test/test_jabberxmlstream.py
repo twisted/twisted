@@ -405,7 +405,7 @@ class TLSInitiatingInitializerTest(unittest.TestCase):
         self.output = []
         self.done = []
 
-        self.savedSupported = xmlstream.ssl.supported
+        self.savedSSL = xmlstream.ssl
 
         self.authenticator = xmlstream.Authenticator()
         self.xmlstream = xmlstream.XmlStream(self.authenticator)
@@ -418,14 +418,13 @@ class TLSInitiatingInitializerTest(unittest.TestCase):
 
 
     def tearDown(self):
-        xmlstream.ssl.supported = self.savedSupported
+        xmlstream.ssl = self.savedSSL
 
 
     def testWantedSupported(self):
         """
         Test start when TLS is wanted and the SSL library available.
         """
-        xmlstream.ssl.supported = True
         self.xmlstream.transport = proto_helpers.StringTransport()
         self.xmlstream.transport.startTLS = lambda ctx: self.done.append('TLS')
         self.xmlstream.reset = lambda: self.done.append('reset')
@@ -441,12 +440,14 @@ class TLSInitiatingInitializerTest(unittest.TestCase):
 
         return d
 
+    if not xmlstream.ssl:
+        testWantedSupported.skip = "SSL not available"
 
     def testWantedNotSupportedNotRequired(self):
         """
         Test start when TLS is wanted and the SSL library available.
         """
-        xmlstream.ssl.supported = False
+        xmlstream.ssl = None
 
         d = self.init.start()
         d.addCallback(self.assertEquals, None)
@@ -459,7 +460,7 @@ class TLSInitiatingInitializerTest(unittest.TestCase):
         """
         Test start when TLS is wanted and the SSL library available.
         """
-        xmlstream.ssl.supported = False
+        xmlstream.ssl = None
         self.init.required = True
 
         d = self.init.start()
@@ -503,6 +504,11 @@ class TLSInitiatingInitializerTest(unittest.TestCase):
         """
         Test failed TLS negotiation.
         """
+        # Pretend that ssl is supported, it isn't actually used when the
+        # server starts out with a failure in response to our initial
+        # C{starttls} stanza.
+        xmlstream.ssl = 1
+
         d = self.init.start()
         self.assertFailure(d, xmlstream.TLSFailed)
         self.xmlstream.dataReceived("<failure xmlns='%s'/>" % NS_XMPP_TLS)
