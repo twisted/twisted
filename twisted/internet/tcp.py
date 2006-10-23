@@ -467,23 +467,28 @@ class BaseClient(Connection):
         self.failIfNotConnected(error.UserError())
 
     def failIfNotConnected(self, err):
+        """
+        Generic method called when the attemps to connect failed. It basically
+        cleans everything it can: call connectionFailed, stop read and write,
+        delete socket related members.
+        """
         if (self.connected or self.disconnected or 
             not hasattr(self, "connector")):
             return
         
-        try:
-            self._closeSocket()
-        except AttributeError:
-            pass
-        else:
-            del self.socket, self.fileno
-
         self.connector.connectionFailed(failure.Failure(err))
         if hasattr(self, "reactor"):
             # this doesn't happen if we failed in __init__
             self.stopReading()
             self.stopWriting()
             del self.connector
+
+        try:
+            self._closeSocket()
+        except AttributeError:
+            pass
+        else:
+            del self.socket, self.fileno
 
     def createInternetSocket(self):
         """(internal) Create a non-blocking socket using
@@ -495,7 +500,6 @@ class BaseClient(Connection):
             old = fcntl.fcntl(s.fileno(), fcntl.F_GETFD)
             fcntl.fcntl(s.fileno(), fcntl.F_SETFD, old | fcntl.FD_CLOEXEC)
         return s
-
 
     def resolveAddress(self):
         if abstract.isIPAddress(self.addr[0]):
