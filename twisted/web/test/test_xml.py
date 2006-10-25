@@ -628,12 +628,3 @@ alert("I hate you");
                           "base")
         self.assertEquals(d2.documentElement.getElementsByTagName("y")[1].getAttributeNS('base','q'),
                           '1')
-
-    def testNamespaceDelete(self):
-        """
-        Test that C{toxml} can support xml structures that remove namespaces.
-        """
-        s1 = ('<?xml version="1.0"?><html xmlns="http://www.w3.org/TR/REC-html40">'
-              '<body xmlns=""></body></html>')
-        s2 = microdom.parseString(s1).toxml()
-        self.assertEquals(s1, s2)
