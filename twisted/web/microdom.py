@@ -89,7 +89,9 @@ class MismatchedTags(Exception):
         self.endCol) = filename, expect, got, begLine, begCol, endLine, endCol
 
     def __str__(self):
-        return "expected </%s>, got </%s> line: %s col: %s, began line: %s col: %s" % (self.expect, self.got, self.endLine, self.endCol, self.begLine, self.begCol)
+        return ("expected </%s>, got </%s> line: %s col: %s, began line: %s col: %s"
+                % (self.expect, self.got, self.endLine, self.endCol, self.begLine,
+                   self.begCol))
 
 
 class Node(object):
@@ -105,10 +107,12 @@ class Node(object):
                 return 0
         return 1
 
-    def writexml(self, stream, indent='', addindent='', newl='', strip=0, nsprefixes={}, namespace=''):
+    def writexml(self, stream, indent='', addindent='', newl='', strip=0,
+                 nsprefixes={}, namespace=''):
         raise NotImplementedError()
 
-    def toxml(self, indent='', addindent='', newl='', strip=0, nsprefixes={}, namespace=''):
+    def toxml(self, indent='', addindent='', newl='', strip=0, nsprefixes={},
+              namespace=''):
         s = StringIO()
         self.writexml(s, indent, addindent, newl, strip, nsprefixes, namespace)
         rv = s.getvalue()
@@ -150,7 +154,9 @@ class Node(object):
         assert isinstance(newChild, Node)
         #if newChild.parentNode:
         #    newChild.parentNode.removeChild(newChild)
-        assert oldChild.parentNode is self, 'oldChild (%s): oldChild.parentNode (%s) != self (%s)' % (oldChild, oldChild.parentNode, self)
+        assert (oldChild.parentNode is self, 
+                ('oldChild (%s): oldChild.parentNode (%s) != self (%s)'
+                 % (oldChild, oldChild.parentNode, self)))
         self.childNodes[self.childNodes.index(oldChild)] = newChild
         oldChild.parentNode = None
         newChild.parentNode = self
@@ -205,11 +211,13 @@ class Document(Node):
         assert not self.childNodes, "Only one element per document."
         Node.appendChild(self, c)
 
-    def writexml(self, stream, indent='', addindent='', newl='', strip=0, nsprefixes={}, namespace=''):
+    def writexml(self, stream, indent='', addindent='', newl='', strip=0,
+                 nsprefixes={}, namespace=''):
         stream.write('<?xml version="1.0"?>' + newl)
         if self.doctype:
             stream.write("<!DOCTYPE "+self.doctype+">" + newl)
-        self.documentElement.writexml(stream, indent, addindent, newl, strip, nsprefixes, namespace)
+        self.documentElement.writexml(stream, indent, addindent, newl, strip,
+                                      nsprefixes, namespace)
 
     # of dubious utility (?)
     def createElement(self, name, **kw):
@@ -248,7 +256,8 @@ class EntityReference(Node):
             return 0
         return (self.eref == n.eref) and (self.nodeValue == n.nodeValue)
 
-    def writexml(self, stream, indent='', addindent='', newl='', strip=0, nsprefixes={}, namespace=''):
+    def writexml(self, stream, indent='', addindent='', newl='', strip=0,
+                 nsprefixes={}, namespace=''):
         stream.write(self.nodeValue)
 
     def cloneNode(self, deep=0, parent=None):
@@ -268,7 +277,8 @@ class CharacterData(Node):
 class Comment(CharacterData):
     """A comment node."""
 
-    def writexml(self, stream, indent='', addindent='', newl='', strip=0, nsprefixes={}, namespace=''):
+    def writexml(self, stream, indent='', addindent='', newl='', strip=0,
+                 nsprefixes={}, namespace=''):
         val=self.data
         if isinstance(val, UnicodeType):
             val=val.encode('utf8')
@@ -287,7 +297,8 @@ class Text(CharacterData):
     def cloneNode(self, deep=0, parent=None):
         return Text(self.nodeValue, parent, self.raw)
 
-    def writexml(self, stream, indent='', addindent='', newl='', strip=0, nsprefixes={}, namespace=''):
+    def writexml(self, stream, indent='', addindent='', newl='', strip=0,
+                 nsprefixes={}, namespace=''):
         if self.raw:
             val = self.nodeValue
             if not isinstance(val, StringTypes):
@@ -311,7 +322,8 @@ class CDATASection(CharacterData):
     def cloneNode(self, deep=0, parent=None):
         return CDATASection(self.nodeValue, parent)
 
-    def writexml(self, stream, indent='', addindent='', newl='', strip=0, nsprefixes={}, namespace=''):
+    def writexml(self, stream, indent='', addindent='', newl='', strip=0,
+                 nsprefixes={}, namespace=''):
         stream.write("<![CDATA[")
         stream.write(self.nodeValue)
         stream.write("]]>")
@@ -331,12 +343,11 @@ class Element(Node):
     preserveCase = 0
     caseInsensitive = 1
     nsprefixes = None
-    namespace = ''
 
     def __init__(self, tagName, attributes=None, parentNode=None,
-                        filename=None, markpos=None,
-                        caseInsensitive=1, preserveCase=0,
-                 namespace=''):
+                 filename=None, markpos=None,
+                 caseInsensitive=1, preserveCase=0,
+                 namespace=None):
         Node.__init__(self, parentNode)
         self.preserveCase = preserveCase or not caseInsensitive
         self.caseInsensitive = caseInsensitive
@@ -371,7 +382,8 @@ class Element(Node):
 
     def isEqualToElement(self, n):
         if self.caseInsensitive:
-            return (self.attributes == n.attributes) and (self.nodeName.lower() == n.nodeName.lower())
+            return ((self.attributes == n.attributes)
+                    and (self.nodeName.lower() == n.nodeName.lower()))
         return (self.attributes == n.attributes) and (self.nodeName == n.nodeName)
 
     def cloneNode(self, deep=0, parent=None):
@@ -417,7 +429,8 @@ class Element(Node):
     def hasAttribute(self, name):
         return name in self.attributes
 
-    def writexml(self, stream, indent='', addindent='', newl='', strip=0, nsprefixes={}, namespace=''):
+    def writexml(self, stream, indent='', addindent='', newl='', strip=0,
+                 nsprefixes={}, namespace=''):
         # write beginning
         ALLOWSINGLETON = ('img', 'br', 'hr', 'base', 'meta', 'link', 'param',
                           'area', 'input', 'col', 'basefont', 'isindex',
@@ -437,7 +450,8 @@ class Element(Node):
         if self.nsprefixes:
             newprefixes = self.nsprefixes.copy()
             for ns in nsprefixes.keys():
-                del newprefixes[ns]
+                if ns in newprefixes:
+                    del newprefixes[ns]
         else:
              newprefixes = {}
 
@@ -446,7 +460,7 @@ class Element(Node):
             begin = [newl, indent] + begin
         bext = begin.extend
         writeattr = lambda _atr, _val: bext((' ', _atr, '="', escape(_val), '"'))
-        if namespace != self.namespace and self.namespace:
+        if namespace != self.namespace and self.namespace is not None:
             if nsprefixes.has_key(self.namespace):
                 prefix = nsprefixes[self.namespace]
                 bext(prefix+':'+self.tagName)
@@ -485,7 +499,8 @@ class Element(Node):
                 if self.tagName in BLOCKELEMENTS and \
                    self.tagName in FORMATNICELY:
                     w(j((newl, newindent)))
-                child.writexml(stream, newindent, addindent, newl, strip, downprefixes, self.namespace)
+                child.writexml(stream, newindent, addindent, newl, strip,
+                               downprefixes, self.namespace)
             if self.tagName in BLOCKELEMENTS:
                 w(j((newl, indent)))
             w(j(("</", self.endTagName, '>')))
@@ -560,9 +575,10 @@ class MicroDOMParser(XMLParser):
                     }
 
 
-    def __init__(self, beExtremelyLenient=0, caseInsensitive=1, preserveCase=0, soonClosers=soonClosers, laterClosers=laterClosers):
+    def __init__(self, beExtremelyLenient=0, caseInsensitive=1, preserveCase=0,
+                 soonClosers=soonClosers, laterClosers=laterClosers):
         self.elementstack = []
-        d = {'xmlns': 'xmlns', '':''}
+        d = {'xmlns': 'xmlns', '': None}
         dr = _reverseDict(d)
         self.nsstack = [(d,None,dr)]
         self.documents = []

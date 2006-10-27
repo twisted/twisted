@@ -169,20 +169,24 @@ alert("I hate you");
         d = microdom.parseString(s, beExtremelyLenient=1)
         self.assertEquals(d.firstChild().firstChild().firstChild().data,
                           "(foo < bar) and (bar > foo)")
-        self.assertEquals(d.firstChild().getElementsByTagName("script")[1].firstChild().data,
-                          "foo </scrip bar ")
+        self.assertEquals(
+            d.firstChild().getElementsByTagName("script")[1].firstChild().data,
+            "foo </scrip bar ")
 
     def testScriptLeniencyIntelligence(self):
         # if there is comment or CDATA in script, the autoquoting in bEL mode
         # should not happen
         s = """<script><!-- lalal --></script>"""
-        self.assertEquals(microdom.parseString(s, beExtremelyLenient=1).firstChild().toxml(), s)
+        self.assertEquals(
+            microdom.parseString(s, beExtremelyLenient=1).firstChild().toxml(), s)
         s = """<script><![CDATA[lalal]]></script>"""
-        self.assertEquals(microdom.parseString(s, beExtremelyLenient=1).firstChild().toxml(), s)
+        self.assertEquals(
+            microdom.parseString(s, beExtremelyLenient=1).firstChild().toxml(), s)
         s = """<script> // <![CDATA[
         lalal
         //]]></script>"""
-        self.assertEquals(microdom.parseString(s, beExtremelyLenient=1).firstChild().toxml(), s)
+        self.assertEquals(
+            microdom.parseString(s, beExtremelyLenient=1).firstChild().toxml(), s)
         
     def testPreserveCase(self):
         s = '<eNcApSuLaTe><sUxor></sUxor><bOrk><w00T>TeXt</W00t></BoRk></EnCaPsUlAtE>'
@@ -360,7 +364,8 @@ alert("I hate you");
         s2 = '<foo/>'
         d = microdom.parseString(s)
         d2 = microdom.parseString(s2)
-        self.assertEquals(d.doctype, 'foo PUBLIC "baz" "http://www.example.com/example.dtd"')
+        self.assertEquals(d.doctype,
+                          'foo PUBLIC "baz" "http://www.example.com/example.dtd"')
         self.assertEquals(d.toxml(), s)
         self.failIf(d.isEqualToDocument(d2))
         self.failUnless(d.documentElement.isEqualToNode(d2.documentElement))
@@ -368,7 +373,8 @@ alert("I hate you");
     samples = [("<img/>", "<img />"),
                ("<foo A='b'>x</foo>", '<foo A="b">x</foo>'),
                ("<foo><BAR /></foo>", "<foo><BAR></BAR></foo>"),
-               ("<foo>hello there &amp; yoyoy</foo>", "<foo>hello there &amp; yoyoy</foo>"),
+               ("<foo>hello there &amp; yoyoy</foo>",
+                "<foo>hello there &amp; yoyoy</foo>"),
                ]
 
     def testOutput(self):
@@ -419,7 +425,8 @@ alert("I hate you");
                      ("& ", "&amp; "),
                      ("&amp;", "&amp;"),
                      ("&hello monkey", "&amp;hello monkey")]:
-            d = microdom.parseString("%s<pre>%s</pre>" % (prefix, i), beExtremelyLenient=1)
+            d = microdom.parseString("%s<pre>%s</pre>"
+                                     % (prefix, i), beExtremelyLenient=1)
             self.assertEquals(d.documentElement.toxml(), "<pre>%s</pre>" % o)
         # non-space preserving
         d = microdom.parseString("<t>hello & there</t>", beExtremelyLenient=1)
@@ -427,7 +434,9 @@ alert("I hate you");
     
     def testInsensitiveLenient(self):
         # testing issue #537
-        d = microdom.parseString("<?xml version='1.0'?><bar><xA><y>c</Xa> <foo></bar>", beExtremelyLenient=1)
+        d = microdom.parseString(
+            "<?xml version='1.0'?><bar><xA><y>c</Xa> <foo></bar>",
+            beExtremelyLenient=1)
         self.assertEquals(d.documentElement.firstChild().toxml(), "<xa><y>c</y></xa>")
 
     def testSpacing(self):
@@ -563,9 +572,9 @@ alert("I hate you");
         self.assertEquals(node.namespace, clone.namespace)
 
     def testCloneDocument(self):
-        # sorry bout the >80 cols, but whitespace is a sensitive thing
-        s = '''<?xml version="1.0"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><foo></foo>'''
+        s = ('<?xml version="1.0"?>'
+             '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"'
+             '"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><foo></foo>')
 
         node = microdom.parseString(s)
         clone = node.cloneNode(deep=1)
@@ -618,13 +627,36 @@ alert("I hate you");
                           "base")
         self.assertEquals(d.documentElement.getElementsByTagName("y")[0].namespace,
                           "base")
-        self.assertEquals(d.documentElement.getElementsByTagName("y")[1].getAttributeNS('base','q'),
-                          '1')
+        self.assertEquals(
+            d.documentElement.getElementsByTagName("y")[1].getAttributeNS('base','q'),
+            '1')
         
         d2 = microdom.parseString(s2)
         self.assertEquals(d2.documentElement.namespace,
                           "base")
         self.assertEquals(d2.documentElement.getElementsByTagName("y")[0].namespace,
                           "base")
-        self.assertEquals(d2.documentElement.getElementsByTagName("y")[1].getAttributeNS('base','q'),
-                          '1')
+        self.assertEquals(
+            d2.documentElement.getElementsByTagName("y")[1].getAttributeNS('base','q'),
+            '1')
+
+    def testNamespaceDelete(self):
+        """
+        Test that C{toxml} can support xml structures that remove namespaces.
+        """
+        s1 = ('<?xml version="1.0"?><html xmlns="http://www.w3.org/TR/REC-html40">'
+              '<body xmlns=""></body></html>')
+        s2 = microdom.parseString(s1).toxml()
+        self.assertEquals(s1, s2)
+
+    def testNamespaceInheritance(self):
+        """
+        Check that unspecified namespace is a thing separate from undefined
+        namespace. This test added after discovering some weirdness in Lore.
+        """
+        # will only work if childNodes is mutated. not sure why.
+        child = microdom.Element('ol')
+        parent = microdom.Element('div', namespace='http://www.w3.org/1999/xhtml')
+        parent.childNodes = [child]
+        self.assertEquals(parent.toxml(),
+                          '<div xmlns="http://www.w3.org/1999/xhtml"><ol></ol></div>')
