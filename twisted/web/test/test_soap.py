@@ -1,12 +1,9 @@
 #
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
-# 
+#
 
 """Test SOAP support."""
-
-import time
 
 try:
     import SOAPpy
@@ -18,9 +15,8 @@ else:
     SOAPPublisher = soap.SOAPPublisher
 
 from twisted.trial import unittest
-from twisted.web import server
+from twisted.web import server, error
 from twisted.internet import reactor, defer
-from twisted.python import log
 
 
 class Test(SOAPPublisher):
@@ -31,13 +27,13 @@ class Test(SOAPPublisher):
     def soap_kwargs(self, a=1, b=2):
         return a + b
     soap_kwargs.useKeywords=True
-    
+
     def soap_triple(self, string, num):
         return [string, num, None]
 
     def soap_struct(self):
         return SOAPpy.structType({"a": "c"})
-    
+
     def soap_defer(self, x):
         return defer.succeed(x)
 
@@ -60,7 +56,8 @@ class Test(SOAPPublisher):
 class SOAPTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.p = reactor.listenTCP(0, server.Site(Test()),
+        self.publisher = Test()
+        self.p = reactor.listenTCP(0, server.Site(self.publisher),
                                    interface="127.0.0.1")
         self.port = self.p.getHost().port
 
@@ -92,5 +89,26 @@ class SOAPTestCase(unittest.TestCase):
         # We now return to our regularly scheduled program, already in progress.
         return defer.DeferredList(dl, fireOnOneErrback=True)
 
+    def testMethodNotFound(self):
+        """
+        Check that a non existing method return error 500.
+        """
+        d = self.proxy().callRemote('doesntexist')
+        self.assertFailure(d, error.Error)
+        def cb(err):
+            self.assertEquals(int(err.status), 500)
+        d.addCallback(cb)
+        return d
+
+    def testLookupFunction(self):
+        """
+        Test lookupFunction method on publisher, to see available remote
+        methods.
+        """
+        self.assertTrue(self.publisher.lookupFunction("add"))
+        self.assertTrue(self.publisher.lookupFunction("fail"))
+        self.assertFalse(self.publisher.lookupFunction("foobar"))
+
 if not SOAPpy:
     SOAPTestCase.skip = "SOAPpy not installed"
+
