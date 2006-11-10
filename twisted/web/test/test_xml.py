@@ -3,7 +3,6 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
 
 """Some fairly inadequate testcases for Twisted XML support."""
 
@@ -106,7 +105,7 @@ class MicroDOMTest(TestCase):
     def testUnEntities(self):
         s = """
                 <HTML>
-                    This HTML goes between Stupid <=CrAzY!=> Dumb. 
+                    This HTML goes between Stupid <=CrAzY!=> Dumb.
                 </HTML>
             """
         d = microdom.parseString(s, beExtremelyLenient=1)
@@ -187,7 +186,7 @@ alert("I hate you");
         //]]></script>"""
         self.assertEquals(
             microdom.parseString(s, beExtremelyLenient=1).firstChild().toxml(), s)
-        
+
     def testPreserveCase(self):
         s = '<eNcApSuLaTe><sUxor></sUxor><bOrk><w00T>TeXt</W00t></BoRk></EnCaPsUlAtE>'
         s2 = s.lower().replace('text', 'TeXt')
@@ -431,7 +430,7 @@ alert("I hate you");
         # non-space preserving
         d = microdom.parseString("<t>hello & there</t>", beExtremelyLenient=1)
         self.assertEquals(d.documentElement.toxml(), "<t>hello &amp; there</t>")
-    
+
     def testInsensitiveLenient(self):
         # testing issue #537
         d = microdom.parseString(
@@ -477,9 +476,8 @@ alert("I hate you");
         d = microdom.parseString(s, beExtremelyLenient=1)
         actual = d.documentElement.toxml()
         self.assertEquals(expected, actual)
-        
     testLaterCloserTable.todo = "Table parsing needs to be fixed."
-    
+
     def testLaterCloserDL(self):
         s = ("<dl>"
              "<dt>word<dd>definition"
@@ -507,7 +505,7 @@ alert("I hate you");
         self.assertEquals(expected, actual)
 
     testLaterCloserDL2.todo = "unclosed <p> messes it up."
-    
+
     def testUnicodeTolerance(self):
         import struct
         s = '<foo><bar><baz /></bar></foo>'
@@ -630,7 +628,7 @@ alert("I hate you");
         self.assertEquals(
             d.documentElement.getElementsByTagName("y")[1].getAttributeNS('base','q'),
             '1')
-        
+
         d2 = microdom.parseString(s2)
         self.assertEquals(d2.documentElement.namespace,
                           "base")
@@ -660,3 +658,79 @@ alert("I hate you");
         parent.childNodes = [child]
         self.assertEquals(parent.toxml(),
                           '<div xmlns="http://www.w3.org/1999/xhtml"><ol></ol></div>')
+
+
+class TestBrokenHTML(TestCase):
+    """
+    Tests for when microdom encounters very bad HTML and C{beExtremelyLenient}
+    is enabled. These tests are inspired by some HTML generated in by a mailer,
+    which breaks up very long lines by splitting them with '!\n '. The expected
+    behaviour is loosely modelled on the way Firefox treats very bad HTML.
+    """
+
+    def checkParsed(self, input, expected, beExtremelyLenient=1):
+        """
+        Check that C{input}, when parsed, produces a DOM where the XML
+        of the document element is equal to C{expected}.
+        """
+        output = microdom.parseString(input,
+                                      beExtremelyLenient=beExtremelyLenient)
+        self.assertEquals(output.documentElement.toxml(), expected)
+
+
+    def test_brokenAttributeName(self):
+        """
+        Check that microdom does its best to handle broken attribute names.
+        The important thing is that it doesn't raise an exception.
+        """
+        input = '<body><h1><div al!\n ign="center">Foo</div></h1></body>'
+        expected = ('<body><h1><div ign="center" al="True">'
+                    'Foo</div></h1></body>')
+        self.checkParsed(input, expected)
+
+
+    def test_brokenAttributeValue(self):
+        """
+        Check that microdom encompasses broken attribute values.
+        """
+        input = '<body><h1><div align="cen!\n ter">Foo</div></h1></body>'
+        expected = '<body><h1><div align="cen!\n ter">Foo</div></h1></body>'
+        self.checkParsed(input, expected)
+
+
+    def test_brokenOpeningTag(self):
+        """
+        Check that microdom does its best to handle broken opening tags.
+        The important thing is that it doesn't raise an exception.
+        """
+        input = '<body><h1><sp!\n an>Hello World!</span></h1></body>'
+        expected = '<body><h1><sp an="True">Hello World!</sp></h1></body>'
+        self.checkParsed(input, expected)
+
+
+    def test_brokenSelfClosingTag(self):
+        """
+        Check that microdom does its best to handle broken self-closing tags
+        The important thing is that it doesn't raise an exception.
+        """
+        self.checkParsed('<body><span /!\n></body>',
+                         '<body><span></span></body>')
+        self.checkParsed('<span!\n />', '<span></span>')
+
+
+    def test_brokenClosingTag(self):
+        """
+        Check that microdom does its best to handle broken closing tags.
+        The important thing is that it doesn't raise an exception.
+        """
+        input = '<body><h1><span>Hello World!</sp!\nan></h1></body>'
+        expected = '<body><h1><span>Hello World!</span></h1></body>'
+        self.checkParsed(input, expected)
+        input = '<body><h1><span>Hello World!</!\nspan></h1></body>'
+        self.checkParsed(input, expected)
+        input = '<body><h1><span>Hello World!</span!\n></h1></body>'
+        self.checkParsed(input, expected)
+        input = '<body><h1><span>Hello World!<!\n/span></h1></body>'
+        expected = '<body><h1><span>Hello World!<!></!></span></h1></body>'
+        self.checkParsed(input, expected)
+

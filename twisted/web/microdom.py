@@ -154,7 +154,7 @@ class Node(object):
         assert isinstance(newChild, Node)
         #if newChild.parentNode:
         #    newChild.parentNode.removeChild(newChild)
-        assert (oldChild.parentNode is self, 
+        assert (oldChild.parentNode is self,
                 ('oldChild (%s): oldChild.parentNode (%s) != self (%s)'
                  % (oldChild, oldChild.parentNode, self)))
         self.childNodes[self.childNodes.index(oldChild)] = newChild
@@ -361,7 +361,7 @@ class Element(Node):
                 self.attributes[k] = unescape(v)
 
         if caseInsensitive:
-            self.attributes = InsensitiveDict(self.attributes, 
+            self.attributes = InsensitiveDict(self.attributes,
                                               preserve=preserveCase)
 
         self.endTagName = self.nodeName = self.tagName = tagName
@@ -504,7 +504,7 @@ class Element(Node):
             if self.tagName in BLOCKELEMENTS:
                 w(j((newl, indent)))
             w(j(("</", self.endTagName, '>')))
-            
+
         elif self.tagName.lower() not in ALLOWSINGLETON:
             w(j(('></', self.endTagName, '>')))
         else:
@@ -604,7 +604,7 @@ class MicroDOMParser(XMLParser):
             return None
 
     COMMENT = re.compile(r"\s*/[/*]\s*")
-    
+
     def _fixScriptElement(self, el):
         # this deals with case where there is comment or CDATA inside
         # <script> tag and we want to do the right thing with it
@@ -623,7 +623,7 @@ class MicroDOMParser(XMLParser):
             if match:
                 prefix = match.group()
                 oldvalue = oldvalue[len(prefix):]
-            
+
             # now see if contents are actual node and comment or CDATA
             try:
                 e = parseString("<a>%s</a>" % oldvalue).childNodes[0]
@@ -637,7 +637,7 @@ class MicroDOMParser(XMLParser):
                 if prefix:
                     el.childNodes.append(Text(prefix))
                 el.childNodes.append(e)
-    
+
     def gotDoctype(self, doctype):
         self._mddoctype = doctype
 
@@ -682,7 +682,7 @@ class MicroDOMParser(XMLParser):
                      namespace=namespaces.get(''))
         revspaces = _reverseDict(newspaces)
         el.addPrefixes(revspaces)
-        
+
         if newspaces:
             rscopy = self.nsstack[-1][2].copy()
             rscopy.update(revspaces)
@@ -770,7 +770,7 @@ class MicroDOMParser(XMLParser):
             self.documents.append(el)
         if self.beExtremelyLenient and el.tagName == "script":
             self._fixScriptElement(el)
-    
+
     def connectionLost(self, reason):
         XMLParser.connectionLost(self, reason) # This can cause more events!
         if self.elementstack:

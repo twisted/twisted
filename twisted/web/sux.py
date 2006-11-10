@@ -3,7 +3,6 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-# 
 
 """
 *S*mall, *U*ncomplicated *X*ML.
@@ -32,7 +31,7 @@ DO_HANDLER = 1
 END_HANDLER = 2
 
 identChars = '.-_:'
-lenientIdentChars = identChars + ';+#/%~' 
+lenientIdentChars = identChars + ';+#/%~'
 
 def nop(*args, **kw):
     "Do nothing."
@@ -40,12 +39,12 @@ def nop(*args, **kw):
 
 def unionlist(*args):
     l = []
-    for x in args: 
+    for x in args:
         l.extend(x)
     d = dict([(x, 1) for x in l])
     return d.keys()
-    
-    
+
+
 def zipfndict(*args, **kw):
     default = kw.get('default', nop)
     d = {}
@@ -53,7 +52,7 @@ def zipfndict(*args, **kw):
         d[key] = tuple([x.get(key, default) for x in args])
     return d
 
-        
+
 def prefixedMethodClassDict(clazz, prefix):
     return dict([(name, getattr(clazz, prefix + name)) for name in prefixedMethodNames(clazz, prefix)])
 
@@ -61,7 +60,7 @@ def prefixedMethodClassDict(clazz, prefix):
 def prefixedMethodObjDict(obj, prefix):
     return dict([(name, getattr(obj, prefix + name)) for name in prefixedMethodNames(obj.__class__, prefix)])
 
-    
+
 class ParseError(Exception):
 
     def __init__(self, filename, line, col, message):
@@ -102,17 +101,16 @@ class XMLParser(Protocol):
 
     def _buildStateTable(self):
         '''Return a dictionary of begin, do, end state function tuples'''
-        # _buildStateTable leaves something to be desired
-        # but it does what it does.. probably slowly, 
-        # so I'm doing some evil caching so it doesn't get called
-        # more than once per class.
+        # _buildStateTable leaves something to be desired but it does what it
+        # does.. probably slowly, so I'm doing some evil caching so it doesn't
+        # get called more than once per class.
         stateTable = getattr(self.__class__, '__stateTable', None)
         if stateTable is None:
             stateTable = self.__class__.__stateTable = zipfndict(
-                *[prefixedMethodObjDict(self, prefix) 
+                *[prefixedMethodObjDict(self, prefix)
                   for prefix in ('begin_', 'do_', 'end_')])
         return stateTable
-        
+
     def _decode(self, data):
         if 'UTF-16' in self.encodings or 'UCS-2' in self.encodings:
             assert not len(data) & 1, 'UTF-16 must come in pairs for now'
@@ -143,7 +141,7 @@ class XMLParser(Protocol):
             return 'waitforendscript'
         return 'bodydata'
 
-        
+
 
     def dataReceived(self, data):
         stateTable = self._buildStateTable()
@@ -160,7 +158,7 @@ class XMLParser(Protocol):
             self.state = 'begin'
         if self.encodings:
             data = self._decode(data)
-        # bring state, lineno, colno into local scope 
+        # bring state, lineno, colno into local scope
         lineno, colno = self.lineno, self.colno
         curState = self.state
         # replace saveMark with a nested scope function
@@ -255,7 +253,8 @@ class XMLParser(Protocol):
                 self.endtag = 1
         elif byte in '!?':
             if self.tagName:
-                self._parseError("Invalid character in tag-name")
+                if not self.beExtremelyLenient:
+                    self._parseError("Invalid character in tag-name")
             else:
                 self.tagName += byte
                 self.termtag = 1
@@ -381,6 +380,9 @@ class XMLParser(Protocol):
                     self.gotTagEnd(self.tagName)
                     return 'bodydata'
                 return self.maybeBodyData()
+            # something is really broken. let's leave this attribute where it
+            # is and move on to the next thing
+            return
         self._parseError("Invalid attribute name: %r %r" % (self.attrname, byte))
 
     def do_beforeattrval(self, byte):
@@ -476,13 +478,16 @@ class XMLParser(Protocol):
         if self._after_slash_closed:
             self._parseError("Mal-formed")#XXX When does this happen??
         if byte != '>':
-            self._parseError("No data allowed after '/'")
+            if self.beExtremelyLenient:
+                return
+            else:
+                self._parseError("No data allowed after '/'")
         self._after_slash_closed = 1
         self.gotTagStart(self.tagName, self.tagAttributes)
         self.gotTagEnd(self.tagName)
         # don't need maybeBodyData here because there better not be
         # any javascript code after a <script/>... we'll see :(
-        return 'bodydata' 
+        return 'bodydata'
 
     def begin_bodydata(self, byte):
         if self._leadingBodyData:
@@ -555,7 +560,7 @@ class XMLParser(Protocol):
     def begin_entityref(self, byte):
         self.erefbuf = ''
         self.erefextra = '' # extra bit for lenient mode
-    
+
     def do_entityref(self, byte):
         if byte.isspace() or byte == "<":
             if self.beExtremelyLenient:
@@ -584,9 +589,9 @@ class XMLParser(Protocol):
         self.erefextra = None
     do_spacebodydata = do_bodydata
     end_spacebodydata = end_bodydata
-    
+
     # Sorta SAX-ish API
-    
+
     def gotTagStart(self, name, attributes):
         '''Encountered an opening tag.
 
@@ -634,7 +639,7 @@ class XMLParser(Protocol):
 if __name__ == '__main__':
     from cStringIO import StringIO
     testDocument = '''
-    
+
     <!DOCTYPE ignore all this shit, hah its malformed!!!!@$>
     <?xml version="suck it"?>
     <foo>
