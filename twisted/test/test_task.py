@@ -3,7 +3,7 @@
 
 from twisted.trial import unittest
 
-from twisted.internet import interfaces, task, reactor, defer
+from twisted.internet import interfaces, task, reactor, defer, error
 
 # Be compatible with any jerks who used our private stuff
 Clock = task.Clock
@@ -68,6 +68,22 @@ class ClockTestCase(unittest.TestCase):
         self.assertEquals(events, [])
         c.advance(1)
         self.assertEquals(events, [None])
+        self.failIf(call.active())
+
+
+    def testAdvanceCancel(self):
+        """
+        Test attemping to cancel the call in a callback.
+
+        AlreadyCalled should be raised, not for example a ValueError from
+        removing the call from Clock.calls. This requires call.called to be
+        set before the callback is called.
+        """
+        c = task.Clock()
+        def cb():
+            self.assertRaises(error.AlreadyCalled, call.cancel)
+        call = c.callLater(1, cb)
+        c.advance(1)
 
 
     def testCallLaterDelayed(self):

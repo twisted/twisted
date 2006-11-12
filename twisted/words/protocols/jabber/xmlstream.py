@@ -392,6 +392,9 @@ class XmlStream(xmlstream.XmlStream):
         # Reset the authenticator
         authenticator.associateWithStream(self)
 
+    def _callLater(self, *args, **kwargs):
+        from twisted.internet import reactor
+        return reactor.callLater(*args, **kwargs)
 
     def reset(self):
         """
@@ -586,6 +589,14 @@ class XmlStreamFactory(xmlstream.XmlStreamFactory):
 
 
 
+class TimeoutError(Exception):
+    """
+    Exception raised when no IQ response has been received before the
+    configured timeout.
+    """
+
+
+
 class IIQResponseTracker(Interface):
     """
     IQ response tracker interface.
@@ -650,6 +661,7 @@ def upgradeWithIQResponseTracker(xs):
             d.errback(ConnectionLost())
 
     xs.iqDeferreds = {}
+    xs.iqDefaultTimeout = getattr(xs, 'iqDefaultTimeout', None)
     xs.addObserver(xmlstream.STREAM_END_EVENT, disconnected)
     xs.addObserver('/iq[@type="result"]', callback)
     xs.addObserver('/iq[@type="error"]', callback)
@@ -664,7 +676,14 @@ class IQ(domish.Element):
     Iq stanzas are used for communications with a request-response behaviour.
     Each iq request is associated with an XML stream and has its own unique id
     to be able to track the response.
+
+    @ivar timeout: if set, a timeout period after which the deferred returned
+                   by C{send} will have its errback called with a
+                   L{TimeoutError} failure.
+    @type timeout: C{float}
     """
+
+    timeout = None
 
     def __init__(self, xmlstream, type = "set"):
         """
@@ -678,7 +697,6 @@ class IQ(domish.Element):
         self.addUniqueId()
         self["type"] = type
         self._xmlstream = xmlstream
-
 
     def send(self, to=None):
         """
@@ -700,5 +718,22 @@ class IQ(domish.Element):
 
         d = defer.Deferred()
         self._xmlstream.iqDeferreds[self['id']] = d
+
+        timeout = self.timeout or self._xmlstream.iqDefaultTimeout
+        if timeout is not None:
+            def onTimeout():
+                del self._xmlstream.iqDeferreds[self['id']]
+                d.errback(TimeoutError("IQ timed out"))
+
+            call = self._xmlstream._callLater(timeout, onTimeout)
+
+            def cancelTimeout(result):
+                if call.active():
+                    call.cancel()
+
+                return result
+
+            d.addBoth(cancelTimeout)
+
         self._xmlstream.send(self)
         return d

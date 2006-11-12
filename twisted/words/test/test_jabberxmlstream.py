@@ -1,6 +1,6 @@
 from twisted.trial import unittest
 
-from twisted.internet import defer
+from twisted.internet import defer, task
 from twisted.internet.error import ConnectionLost
 from twisted.test import proto_helpers
 from twisted.words.xish import domish
@@ -17,6 +17,8 @@ class IQTest(unittest.TestCase):
         authenticator = xmlstream.ConnectAuthenticator('otherhost')
         authenticator.namespace = 'testns'
         self.xmlstream = xmlstream.XmlStream(authenticator)
+        self.clock = task.Clock()
+        self.xmlstream._callLater = self.clock.callLater
         self.xmlstream.makeConnection(proto_helpers.StringTransport())
         self.xmlstream.dataReceived(
            "<stream:stream xmlns:stream='http://etherx.jabber.org/streams' "
@@ -51,6 +53,30 @@ class IQTest(unittest.TestCase):
         xs = self.xmlstream
         xs.dataReceived("<iq type='error' id='%s'/>" % self.iq['id'])
         return d
+
+    def testNonTrackedResponse(self):
+        """
+        Test that untracked iq responses don't trigger any action.
+
+        Untracked means that the id of the incoming response iq is not
+        in the stream's C{iqDeferreds} dictionary.
+        """
+        xs = self.xmlstream
+        xmlstream.upgradeWithIQResponseTracker(xs)
+
+        # Make sure we aren't tracking any iq's.
+        self.failIf(xs.iqDeferreds)
+
+        # Set up a fallback handler that checks the stanza's handled attribute.
+        # If that is set to True, the iq tracker claims to have handled the
+        # response.
+        def cb(iq):
+            self.failIf(getattr(iq, 'handled', False))
+
+        xs.addObserver("/iq", cb, -1)
+
+        # Receive an untracked iq response
+        xs.dataReceived("<iq type='result' id='test'/>")
 
     def testCleanup(self):
         """
@@ -90,6 +116,47 @@ class IQTest(unittest.TestCase):
         d = self.iq.send()
         d.addErrback(eb)
         self.xmlstream.connectionLost("Closed by peer")
+        return d
+
+    def testRequestTimingOut(self):
+        """
+        Test that an iq request with a defined timeout times out.
+        """
+        self.iq.timeout = 60
+        d = self.iq.send()
+        self.assertFailure(d, xmlstream.TimeoutError)
+
+        self.clock.pump([1, 60])
+        self.failIf(self.clock.calls)
+        self.failIf(self.xmlstream.iqDeferreds)
+        return d
+
+    def testRequestNotTimingOut(self):
+        """
+        Test that an iq request with a defined timeout does not time out
+        when a response was received before the timeout period elapsed.
+        """
+        self.iq.timeout = 60
+        d = self.iq.send()
+        self.clock.callLater(1, self.xmlstream.dataReceived,
+                             "<iq type='result' id='%s'/>" % self.iq['id'])
+        self.clock.pump([1, 1])
+        self.failIf(self.clock.calls)
+        return d
+
+    def testDisconnectTimeoutCancellation(self):
+        """
+        Test if timeouts for iq's that haven't yet received a response
+        are cancelled on stream disconnect.
+        """
+
+        self.iq.timeout = 60
+        d = self.iq.send()
+        
+        xs = self.xmlstream
+        xs.connectionLost("Closed by peer")
+        self.assertFailure(d, ConnectionLost)
+        self.failIf(self.clock.calls)
         return d
 
 class XmlStreamTest(unittest.TestCase):
