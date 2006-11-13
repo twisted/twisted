@@ -11,7 +11,6 @@
 ;;
 ;; Now, you will be able to do various things at the push of a button:
 ;;
-;;   f6: rebuild api docs for current module in doc/api/
 ;;   f7: build all howtos
 ;;   f8: run pyflakes over the current code
 ;;   f9: run unit tests specific to current code
@@ -168,11 +167,6 @@
   (interactive)
   (twisted-dev-runtests t))
 
-(defun twisted-dev-genapidoc ()
-  (interactive)
-  (with-cd twisted-dev-directory
-    (compile (format "admin/epyrun -o doc/api/ --modules %s" buffer-file-name))))
-
 (defun twisted-dev-gendoc ()
   (interactive)
   (with-cd (format "%s/doc/howto" twisted-dev-directory)
@@ -201,7 +195,6 @@ Null prefix argument turns off the mode."
  " Twisted"
  ;; The minor mode bindings.
  '(
-   ([f6] . twisted-dev-genapidoc)
    ([f7] . twisted-dev-gendoc)
    ([f8] . twisted-dev-pyflakes-thisfile)
    ([f9] . twisted-dev-runtests)
