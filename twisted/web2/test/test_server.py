@@ -3,10 +3,135 @@ A test harness for the twisted.web2 server.
 """
 
 from zope.interface import implements
+
+from twisted.python import components
 from twisted.web2 import http, http_headers, iweb, server
-from twisted.web2 import resource, stream
+from twisted.web2 import resource, stream, compat
 from twisted.trial import unittest, util
 from twisted.internet import reactor, defer, address, error as ti_error
+
+
+class NotResource(object):
+    """
+    Class which does not implement IResource.
+
+    Used as an adaptee by L{AdaptionTestCase.test_registered} to test that
+    if an object which does not provide IResource is adapted to IResource
+    and there is an adapter to IResource registered, that adapter is used.
+    """
+
+
+
+class ResourceAdapter(object):
+    """
+    Adapter to IResource.
+
+    Registered as an adapter from NotResource to IResource so that
+    L{AdaptionTestCase.test_registered} can test that such an adapter will
+    be used.
+    """
+    implements(iweb.IResource)
+
+    def __init__(self, original):
+        pass
+
+components.registerAdapter(ResourceAdapter, NotResource, iweb.IResource)
+
+
+
+class NotOldResource(object):
+    """
+    Class which does not implement IOldNevowResource or IResource.
+
+    Used as an adaptee by L{AdaptionTestCase.test_transitive} to test that
+    if an object which does not provide IResource or IOldNevowResource is
+    adapted to IResource and there is an adapter to IOldNevowResource
+    registered, first that adapter is used, then the included adapter from
+    IOldNevowResource to IResource is used.
+    """
+
+
+
+class OldResourceAdapter(object):
+    """
+    Adapter to IOldNevowResource.
+
+    Registered as an adapter from NotOldResource to IOldNevowResource so
+    that L{AdaptionTestCase.test_transitive} can test that such an adapter
+    will be used to allow the initial input to be adapted to IResource.
+    """
+    implements(iweb.IOldNevowResource)
+
+    def __init__(self, original):
+        pass
+
+components.registerAdapter(OldResourceAdapter, NotOldResource, iweb.IOldNevowResource)
+
+
+
+class AdaptionTestCase(unittest.TestCase):
+    """
+    Test the adaption of various objects to IResource.
+
+    Necessary due to the special implementation of __call__ on IResource
+    which extends the behavior provided by the base Interface.__call__.
+    """
+    def test_unadaptable(self):
+        """
+        Test that attempting to adapt to IResource an object not adaptable
+        to IResource raises an exception or returns the specified alternate
+        object.
+        """
+        class Unadaptable(object):
+            pass
+        self.assertRaises(TypeError, iweb.IResource, Unadaptable())
+        alternate = object()
+        self.assertIdentical(iweb.IResource(Unadaptable(), alternate), alternate)
+
+
+    def test_redundant(self):
+        """
+        Test that the adaption to IResource of an object which provides
+        IResource returns the same object.
+        """
+        class Resource(object):
+            implements(iweb.IResource)
+        resource = Resource()
+        self.assertIdentical(iweb.IResource(resource), resource)
+
+
+    def test_registered(self):
+        """
+        Test that if an adapter exists which can provide IResource for an
+        object which does not provide it, that adapter is used.
+        """
+        notResource = NotResource()
+        self.failUnless(isinstance(iweb.IResource(notResource), ResourceAdapter))
+
+
+    def test_oldResources(self):
+        """
+        Test that providers of L{IOldNevowResource} can be adapted to
+        IResource automatically.
+        """
+        class OldResource(object):
+            implements(iweb.IOldNevowResource)
+        oldResource = OldResource()
+        resource = iweb.IResource(oldResource)
+        self.failUnless(isinstance(resource, compat.OldNevowResourceAdapter))
+
+
+    def test_transitive(self):
+        """
+        Test that a special-case transitive adaption from something to
+        IOldNevowResource to IResource is possible.
+        """
+        notResource = NotOldResource()
+        resource = iweb.IResource(notResource)
+        self.failUnless(isinstance(resource, compat.OldNevowResourceAdapter))
+
+
+
 
 class SimpleRequest(server.Request):
     """I can be used in cases where a Request object is necessary

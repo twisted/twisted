@@ -41,18 +41,22 @@ class IResource(Interface):
         """
 
 # Is there a better way to do this than this funky extra class?
+_default = object()
 class SpecialAdaptInterfaceClass(interface.InterfaceClass):
     # A special adapter for IResource to handle the extra step of adapting
     # from IOldNevowResource-providing resources.
-    def __call__(self, other, alternate=None):
+    def __call__(self, other, alternate=_default):
         result = super(SpecialAdaptInterfaceClass, self).__call__(other, alternate)
         if result is not alternate:
             return result
         
         result = IOldNevowResource(other, alternate)
         if result is not alternate:
-            return IResource(result)
-        return alternate
+            result = IResource(result)
+            return result
+        if alternate is not _default:
+            return alternate
+        raise TypeError('Could not adapt', other, self)
 IResource.__class__ = SpecialAdaptInterfaceClass
 
 class IOldNevowResource(Interface):
