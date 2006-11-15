@@ -84,7 +84,7 @@ def isTestFile(filename):
             and os.path.splitext(basename)[1] == ('.py'))
 
 
-class Options(usage.Options):
+class Options(usage.Options, app.ReactorSelectionMixin):
     synopsis = """%s [options] [[file|package|module|TestCase|testmethod]...]
     """ % (os.path.basename(sys.argv[0]),)
 
@@ -107,17 +107,17 @@ class Options(usage.Options):
                  "Help on available output plugins (reporters)"]
                 ]
 
-    optParameters = [["reactor", "r", None,
-                      "Which reactor to use out of: " + \
-                      ", ".join(app.reactorTypes.keys()) + "."],
-                     ["logfile", "l", "test.log", "log file name"],
-                     ["random", "z", None,
-                      "Run tests in random order using the specified seed"],
-                     ['temp-directory', None, '_trial_temp',
-                      'Path to use as working directory for tests.']]
+    optParameters = [
+        ["logfile", "l", "test.log", "log file name"],
+        ["random", "z", None,
+         "Run tests in random order using the specified seed"],
+        ['temp-directory', None, '_trial_temp',
+         'Path to use as working directory for tests.'],
+        ['reporter', None, 'verbose',
+         'The reporter to use for this test run.  See --help-reporters for '
+         'more info.']]
 
-    zsh_actions = {"reactor":"(%s)" % " ".join(app.reactorTypes.keys()),
-                   "tbformat":"(plain emacs cgitb)"}
+    zsh_actions = {"tbformat":"(plain emacs cgitb)"}
     zsh_actionDescr = {"logfile":"log file name",
                        "random":"random seed"}
     zsh_extras = ["*:file|module|package|TestCase|testMethod:_files -g '*.py'"]
@@ -128,25 +128,7 @@ class Options(usage.Options):
 
     def __init__(self):
         self['tests'] = sets.Set()
-        self._loadReporters()
-
-        # Yes, I know I'm mutating a class variable.
-        self.zsh_actions["reporter"] = "(%s)" % " ".join(self.optToQual.keys())
         usage.Options.__init__(self)
-
-    def _loadReporters(self):
-        default = 'verbose'
-        self.optToQual = {}
-        for p in plugin.getPlugins(itrial.IReporter):
-            qual = "%s.%s" % (p.module, p.klass)
-            self.optToQual[p.longOpt] = qual
-            if p.longOpt == default:
-                self['reporter'] = reflect.namedAny(qual)
-
-    def opt_reactor(self, reactorName):
-        # this must happen before parseArgs does lots of imports
-        app.installReactor(reactorName)
-        print "Using %s reactor" % app.reactorTypes[reactorName]
 
     def opt_coverage(self):
         """
@@ -214,17 +196,6 @@ class Options(usage.Options):
         when debugging freezes or locks in complex code."""
         sys.settrace(spewer)
         
-    def opt_reporter(self, opt):
-        """The reporter to use for this test run.  See --help-reporters
-        for more info.
-        """
-        if opt in self.optToQual:
-            opt = self.optToQual[opt]
-        else:
-            raise usage.UsageError("Only pass names of Reporter plugins to "
-                                   "--reporter. See --help-reporters for "
-                                   "more info.")
-        self['reporter'] = reflect.namedAny(opt)
 
     def opt_help_reporters(self):
         synopsis = ("Trial's output can be customized using plugins called "
@@ -286,7 +257,23 @@ class Options(usage.Options):
         if self.extra is not None:
             self['tests'].update(self.extra)
 
+    def _loadReporterByName(self, name):
+        for p in plugin.getPlugins(itrial.IReporter):
+            qual = "%s.%s" % (p.module, p.klass)
+            if p.longOpt == name:
+                return reflect.namedAny(qual)
+        raise usage.UsageError("Only pass names of Reporter plugins to "
+                               "--reporter. See --help-reporters for "
+                               "more info.")
+
+
     def postOptions(self):
+
+        # Only load reporters now, as opposed to any earlier, to avoid letting
+        # application-defined plugins muck up reactor selecting by importing
+        # t.i.reactor and causing the default to be installed.
+        self['reporter'] = self._loadReporterByName(self['reporter'])
+
         if not self.has_key('tbformat'):
             self['tbformat'] = 'default'
         if self['nopm']:
@@ -295,7 +282,7 @@ class Options(usage.Options):
                                        "--nopm ")
             failure.DO_POST_MORTEM = False
 
-    
+
 def _initialDebugSetup(config):
     # do this part of debug setup first for easy debugging of import failures
     if config['debug']:

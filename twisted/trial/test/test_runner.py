@@ -12,7 +12,8 @@ from twisted.trial.itrial import IReporter
 from twisted.trial import unittest, runner, reporter
 from twisted.python import reflect
 from twisted.scripts import trial
-
+from twisted.plugins import twisted_trial
+from twisted import plugin
 
 class CapturingDebugger(object):
 
@@ -140,7 +141,27 @@ class TestRunner(unittest.TestCase):
         self.config = trial.Options()
         # whitebox hack a reporter in, because plugins are CACHED and will
         # only reload if the FILE gets changed.
-        self.config.optToQual['capturing'] = reflect.qual(CapturingReporter)
+
+        package, klass = reflect.qual(CapturingReporter).rsplit('.', 1)
+        plugins = [twisted_trial._Reporter(
+            "Test Helper Reporter",
+            package,
+            description="Utility for unit testing.",
+            longOpt="capturing",
+            shortOpt=None,
+            klass=klass)]
+
+
+        # XXX There should really be a general way to hook the plugin system
+        # for tests.
+        def getPlugins(iface, *a, **kw):
+            self.assertEqual(iface, IReporter)
+            return plugins + list(self.original(iface, *a, **kw))
+
+        self.original = plugin.getPlugins
+        plugin.getPlugins = getPlugins
+
+
         self.standardReport = [
             'startTest',
             'addSuccess',
@@ -192,6 +213,8 @@ class TestRunner(unittest.TestCase):
         for x in self.runners:
             x._tearDownLogFile()
         self.runners = []
+        plugin.getPlugins = self.original
+
 
     def parseOptions(self, args):
         self.config.parseOptions(args)
