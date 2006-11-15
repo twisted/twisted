@@ -22,6 +22,8 @@ except ImportError:
 
 from twisted.python.components import getAdapterFactory
 from twisted.python.reflect import namedAny
+from twisted.python.win32 import ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND
+from twisted.python.win32 import ERROR_INVALID_NAME, WindowsError
 from twisted.python import log
 
 try:
@@ -107,20 +109,6 @@ except AttributeError:
         return d
 
 _exts = fromkeys(['.py', '.so', '.pyd', '.dll'])
-
-try:
-    WindowsError
-except NameError:
-    class WindowsError:
-        """
-        Stand-in for sometimes-builtin exception on platforms for which it
-        is missing.
-        """
-
-# http://msdn.microsoft.com/library/default.asp?url=/library/en-us/debug/base/system_error_codes.asp
-ERROR_FILE_NOT_FOUND = 2
-ERROR_PATH_NOT_FOUND = 3
-ERROR_INVALID_NAME = 123
 
 def getCache(module):
     topcache = {}

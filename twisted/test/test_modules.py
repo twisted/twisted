@@ -6,6 +6,7 @@ objects.
 
 """
 
+import os
 import sys
 import itertools
 import zipfile
@@ -32,6 +33,58 @@ class PySpaceTestCase(TestCase):
 
 
 class BasicTests(PySpaceTestCase):
+    def test_nonexistentPaths(self):
+        """
+        Verify that L{modules.walkModules} ignores entries in sys.path which
+        do not exist in the filesystem.
+        """
+        existentPath = FilePath(self.mktemp())
+        os.makedirs(existentPath.child("test_package").path)
+        existentPath.child("test_package").child("__init__.py").setContent("")
+
+        nonexistentPath = FilePath(self.mktemp())
+        self.failIf(nonexistentPath.exists())
+
+        originalSearchPaths = sys.path[:]
+        sys.path[:] = [existentPath.path]
+        try:
+            expected = [modules.getModule("test_package")]
+
+            beforeModules = list(modules.walkModules())
+            sys.path.append(nonexistentPath.path)
+            afterModules = list(modules.walkModules())
+        finally:
+            sys.path[:] = originalSearchPaths
+
+        self.assertEqual(beforeModules, expected)
+        self.assertEqual(afterModules, expected)
+
+
+    def test_nonDirectoryPaths(self):
+        """
+        Verify that L{modules.walkModules} ignores entries in sys.path which
+        refer to regular files in the filesystem.
+        """
+        existentPath = FilePath(self.mktemp())
+        os.makedirs(existentPath.child("test_package").path)
+        existentPath.child("test_package").child("__init__.py").setContent("")
+
+        nonDirectoryPath = FilePath(self.mktemp())
+        self.failIf(nonDirectoryPath.exists())
+        nonDirectoryPath.setContent("zip file or whatever\n")
+
+        originalSearchPaths = sys.path[:]
+        sys.path[:] = [existentPath.path]
+        try:
+            beforeModules = list(modules.walkModules())
+            sys.path.append(nonDirectoryPath.path)
+            afterModules = list(modules.walkModules())
+        finally:
+            sys.path[:] = originalSearchPaths
+
+        self.assertEqual(beforeModules, afterModules)
+
+
     def test_twistedShowsUp(self):
         """ Scrounge around in the top-level module namespace and make sure that
         Twisted shows up, and that the module thusly obtained is the same as

@@ -7,12 +7,30 @@
 See also twisted.python.shortcut.
 """
 
-# system imports
-import win32api, win32con, re
+import re
 
-# sibling import
-from runtime import platform
+try:
+    import win32api
+    import win32con
+except ImportError:
+    win32api = win32con = None
 
+from twisted.python.runtime import platform
+
+# http://msdn.microsoft.com/library/default.asp?url=/library/en-us/debug/base/system_error_codes.asp
+ERROR_FILE_NOT_FOUND = 2
+ERROR_PATH_NOT_FOUND = 3
+ERROR_INVALID_NAME = 123
+ERROR_DIRECTORY = 267
+
+try:
+    WindowsError = WindowsError
+except NameError:
+    class WindowsError:
+        """
+        Stand-in for sometimes-builtin exception on platforms for which it
+        is missing.
+        """
 
 # XXX fix this to use python's builtin _winreg?
 

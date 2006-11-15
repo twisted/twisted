@@ -58,6 +58,7 @@ from os.path import dirname, split as splitpath
 import sys
 import zipimport
 import inspect
+from errno import ENOTDIR
 
 from zope.interface import Interface, implements
 
@@ -65,6 +66,8 @@ from twisted.python.components import registerAdapter
 from twisted.python.filepath import FilePath
 from twisted.python.zippath import ZipArchive
 from twisted.python.reflect import namedAny
+from twisted.python.win32 import WindowsError
+from twisted.python.win32 import ERROR_DIRECTORY
 
 _nothing = object()
 
@@ -86,6 +89,8 @@ def _isPythonIdentifier(string):
             '.' not in string and
             '-' not in string)
 
+
+
 def _isPackagePath(fpath):
     # Determine if a FilePath-like object is a Python package.  TODO: deal with
     # __init__module.(so|dll|pyd)?
@@ -93,13 +98,16 @@ def _isPackagePath(fpath):
     basend = splitpath(extless)[1]
     return basend == "__init__"
 
+
+
 class _ModuleIteratorHelper:
     """ This mixin provides common behavior between python module and path entries,
     since the mechanism for searching sys.path and __path__ attributes is
     remarkably similar.  """
 
     def iterModules(self):
-        """ Loop over the modules present below this entry or package on PYTHONPATH.
+        """
+        Loop over the modules present below this entry or package on PYTHONPATH.
 
         For modules which are not packages, this will yield nothing.
 
@@ -115,7 +123,21 @@ class _ModuleIteratorHelper:
             return
 
         for placeToLook in self._packagePaths():
-            for potentialTopLevel in placeToLook.children():
+            try:
+                children = placeToLook.children()
+            except WindowsError, e:
+                errno = getattr(e, 'winerror', e.errno)
+                if errno == ERROR_DIRECTORY:
+                    # It is a non-directory, skip it.
+                    continue
+                raise
+            except OSError, e:
+                if e.errno in (ENOTDIR,):
+                    # It is a non-directory, skip it.
+                    continue
+                raise
+
+            for potentialTopLevel in children:
                 name, ext = potentialTopLevel.splitext()
                 if ext in PYTHON_EXTENSIONS:
                     # TODO: this should be a little choosier about which path entry
