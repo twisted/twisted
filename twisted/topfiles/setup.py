@@ -97,7 +97,7 @@ netnews, IRC, RDBMSs, desktop environments, and your toaster.
     packages=dist.getPackages('twisted', ignore=dist.twisted_subprojects + ['plugins']),
     plugins=['__init__', 'notestplugin', 'testplugin', 'twisted_ftp', 'twisted_inet',
              'twisted_manhole', 'twisted_portforward', 'twisted_socks', 'twisted_telnet',
-             'twisted_trial', 'twisted_reactors'],
+             'twisted_trial'],
     data_files=dist.getDataFiles('twisted', ignore=dist.twisted_subprojects),
     detectExtensions=detectExtensions,
     scripts= [

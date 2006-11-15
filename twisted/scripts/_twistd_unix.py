@@ -195,6 +195,7 @@ class UnixApplicationRunner(app.ApplicationRunner):
         Do pre-application-creation setup.
         """
         checkPID(self.config['pidfile'])
+        app.installReactor(self.config['reactor'])
         self.config['nodaemon'] = (self.config['nodaemon'] 
                                    or self.config['debug'])
         self.oldstdout = sys.stdout

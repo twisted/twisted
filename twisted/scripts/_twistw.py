@@ -40,6 +40,7 @@ class WindowsApplicationRunner(app.ApplicationRunner):
         """
         Do pre-application-creation setup.
         """
+        app.installReactor(self.config['reactor'])
         self.oldstdout = sys.stdout
         self.oldstderr = sys.stderr
         startLogging(self.config['logfile'])

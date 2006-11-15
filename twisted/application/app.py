@@ -7,13 +7,30 @@ import sys, os, pdb, getpass, traceback, signal
 
 from twisted.python import runtime, log, usage, reflect, failure, util, logfile
 from twisted.persisted import sob
-from twisted.application import service, reactors
+from twisted.application import service
 from twisted.internet import defer
 from twisted import copyright
 
-# Expose the new implementation of installReactor at the old location.
-from twisted.application.reactors import installReactor
+reactorTypes = {
+    'wx': 'twisted.internet.wxreactor',
+    'gtk': 'twisted.internet.gtkreactor',
+    'gtk2': 'twisted.internet.gtk2reactor',
+    'glib2': 'twisted.internet.glib2reactor',
+    'glade': 'twisted.manhole.gladereactor',
+    'default': 'twisted.internet.selectreactor',
+    'win32': 'twisted.internet.win32eventreactor',
+    'win': 'twisted.internet.win32eventreactor',
+    'poll': 'twisted.internet.pollreactor',
+    'epoll': 'twisted.internet.epollreactor',
+    'cf' : 'twisted.internet.cfreactor',
+    'kqueue': 'twisted.internet.kqreactor',
+    'iocp': 'twisted.internet.iocpreactor',
+    'cfreactor': 'twisted.internet.cfreactor',
+    }
 
+def installReactor(reactor):
+    if reactor:
+        reflect.namedModule(reactorTypes[reactor]).install()
 
 def runWithProfiler(reactor, config):
     """Run reactor under standard profiler."""
@@ -246,36 +263,7 @@ def reportProfile(report_profile, name):
         log.err("--report-profile specified but application has no "
                 "name (--appname unspecified)")
 
-
-class ReactorSelectionMixin:
-    """
-    Provides options for selecting a reactor to install.
-    """
-    def opt_help_reactors(self):
-        """
-        Display a list of possibly available reactor names.
-        """
-        for r in reactors.getReactorTypes():
-            print '    ', r.shortName, '\t', r.description
-        raise SystemExit(0)
-
-
-    def opt_reactor(self, shortName):
-        """
-        Which reactor to use (see --help-reactors for a list of possibilities)
-        """
-        # Actually actually actually install the reactor right at this very
-        # moment, before any other code (for example, a sub-command plugin)
-        # runs and accidentally imports and installs the default reactor.
-        #
-        # This could probably be improved somehow.
-        installReactor(shortName)
-    opt_r = opt_reactor
-
-
-
-
-class ServerOptions(usage.Options, ReactorSelectionMixin):
+class ServerOptions(usage.Options):
 
     optFlags = [['savestats', None,
                  "save the Stats object rather than the text output of "
@@ -301,6 +289,9 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
                       "Read an application from a .tas file (AOT format)."],
                      ['rundir','d','.',
                       'Change to a supplied directory before running'],
+                     ['reactor', 'r', None,
+                      'Which reactor to use out of: %s.' %
+                      ', '.join(reactorTypes.keys())],
                      ['report-profile', None, None,
                       'E-mail address to use when reporting dynamic execution '
                       'profiler stats.  This should not be combined with '
@@ -312,10 +303,11 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
     #zsh_multiUse = ["foo", "bar"]
     zsh_mutuallyExclusive = [("file", "python", "xml", "source")]
     zsh_actions = {"file":'_files -g "*.tap"',
-                   "python":'_files -g "*.(tac|py)"',
-                   "xml":'_files -g "*.tax"',
+                   "python":'_files -g "*.(tac|py)"', 
+                   "xml":'_files -g "*.tax"', 
                    "source":'_files -g "*.tas"',
-                   "rundir":"_dirs"}
+                   "rundir":"_dirs",
+                   "reactor":"(%s)" % " ".join(reactorTypes.keys()),}
     #zsh_actionDescr = {"logfile":"log file name", "random":"random seed"}
 
     def __init__(self, *a, **kw):
@@ -332,7 +324,6 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
         self['debug'] = True
     opt_b = opt_debug
 
-
     def opt_spew(self):
         """Print an insanely verbose log of everything that happens.
         Useful when debugging freezes or locks in complex code."""
@@ -342,7 +333,6 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
         except ImportError:
             return
         threading.settrace(util.spewer)
-
 
     def parseOptions(self, options=None):
         if options is None:

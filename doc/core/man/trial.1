@@ -43,9 +43,6 @@ Print a usage message to standard output, then exit.
 \fB--help-reporters\fR
 Print a list of valid reporters to standard output, then exit.
 .TP
-\fB--help-reactors\fR
-List the names of possibly available reactors.
-.TP
 \fB-l\fR, \fB--logfile\fR <logfile>
 Direct the log to a different file. The default file is 'test.log'.
 <logfile> is relative to _trial_temp.
@@ -64,8 +61,10 @@ exceptions.  Only usable in conjunction with --debug.
 \fB--profile\fR
 I don't know what this option does.
 .TP
-\fB\-r\fR, \fB\--reactor\fR \fI<reactor>\fR
-Choose which reactor to use.  See --help-reactors for a list.
+\fB-r\fR, \fB--reactor\fR <reactor>
+Use this reactor for running the tests. The reactor names are the same as
+those accepted by twistd: kqueue, poll, qt, default, win, cfreactor, gtk,
+cf, glade, win32, gtk2, iocp, glib2, threadedselect, wx, epoll.
 .TP
 \fB--recursionlimit\fR
 Set Python's recursion limit.  I don't know why this is in trial.
