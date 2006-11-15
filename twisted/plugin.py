@@ -118,6 +118,7 @@ except NameError:
         """
 
 # http://msdn.microsoft.com/library/default.asp?url=/library/en-us/debug/base/system_error_codes.asp
+ERROR_FILE_NOT_FOUND = 2
 ERROR_PATH_NOT_FOUND = 3
 ERROR_INVALID_NAME = 123
 
@@ -136,9 +137,32 @@ def getCache(module):
         try:
             dropinNames = os.listdir(p)
         except WindowsError, e:
-            if e.errno == ERROR_PATH_NOT_FOUND:
+            # WindowsError is an OSError subclass, so if not for this clause
+            # the OSError clause below would be handling these.  Windows
+            # error codes aren't the same as POSIX error codes, so we need
+            # to handle them differently.
+
+            # Under Python 2.5 on Windows, WindowsError has a winerror
+            # attribute and an errno attribute.  The winerror attribute is
+            # bound to the Windows error code while the errno attribute is
+            # bound to a translation of that code to a perhaps equivalent
+            # POSIX error number.
+
+            # Under Python 2.4 on Windows, WindowsError only has an errno
+            # attribute.  It is bound to the Windows error code.
+
+            # For simplicity of code and to keep the number of paths through
+            # this suite minimal, we grab the Windows error code under
+            # either version.
+
+            # Furthermore, attempting to use os.listdir on a non-existent
+            # path in Python 2.4 will result in a Windows error code of
+            # ERROR_PATH_NOT_FOUND.  However, in Python 2.5,
+            # ERROR_FILE_NOT_FOUND results instead. -exarkun
+            err = getattr(e, 'winerror', e.errno)
+            if err in (ERROR_PATH_NOT_FOUND, ERROR_FILE_NOT_FOUND):
                 continue
-            elif e.errno == ERROR_INVALID_NAME:
+            elif err == ERROR_INVALID_NAME:
                 log.msg("Invalid path %r in search path for %s" % (p, module.__name__))
                 continue
             else:

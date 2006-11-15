@@ -5,6 +5,7 @@ import sys, errno, os, time
 
 from twisted.trial import unittest
 from twisted.python.util import sibpath
+from twisted.python.filepath import FilePath
 
 from twisted import plugin, plugins
 
@@ -228,3 +229,43 @@ class PluginTestCase(unittest.TestCase):
 
     def testDetectFilesRemoved(self):
         self._testWithCacheness(self._testDetectFilesRemoved)
+
+
+    def _testNonExistentPathEntry(self):
+        path = self.mktemp()
+        self.failIf(os.path.exists(path))
+        plugins.__path__.append(path)
+        try:
+            plgs = list(plugin.getPlugins(plugin.ITestPlugin))
+            self.assertEqual(len(plgs), 1)
+        finally:
+            plugins.__path__.remove(path)
+
+
+    def test_nonexistentPathEntry(self):
+        """
+        Test that getCache skips over any entries in a plugin package's
+        C{__path__} which do not exist.
+        """
+        return self._testWithCacheness(self._testNonExistentPathEntry)
+
+
+    def _testNonDirectoryChildEntry(self):
+        path = FilePath(self.mktemp())
+        self.failIf(path.exists())
+        path.touch()
+        child = path.child("test_package").path
+        plugins.__path__.append(child)
+        try:
+            plgs = list(plugin.getPlugins(plugin.ITestPlugin))
+            self.assertEqual(len(plgs), 1)
+        finally:
+            plugins.__path__.remove(child)
+
+
+    def test_nonDirectoryChildEntry(self):
+        """
+        Test that getCache skips over any entries in a plugin package's
+        C{__path__} which refer to children of paths which are not directories.
+        """
+        return self._testWithCacheness(self._testNonDirectoryChildEntry)
