@@ -17,10 +17,12 @@ class CollectNames(unittest.TestVisitor):
         self.tests.append(test.id())
 
 
+
 def testNames(test):
     collector = CollectNames()
     test.visit(collector)
     return collector.tests
+
 
 
 class FinderTest(packages.PackageTest):
@@ -66,6 +68,8 @@ class FinderTest(packages.PackageTest):
         path = util.sibpath(__file__, 'nonexistent.py')
         self.failUnlessRaises(ValueError, self.loader.findByName, path)
 
+
+
 class FileTest(packages.SysPathManglingTest):
     def test_notFile(self):
         self.failUnlessRaises(ValueError,
@@ -110,7 +114,7 @@ class FileTest(packages.SysPathManglingTest):
                               util.sibpath(__file__, 'notpython.py'))
 
     def test_filenameMatchesPackage(self):
-        filename = os.path.join(self.parent, 'goodpackage.py') 
+        filename = os.path.join(self.parent, 'goodpackage.py')
         fd = open(filename, 'w')
         fd.write(packages.testModule)
         fd.close()
@@ -119,6 +123,7 @@ class FileTest(packages.SysPathManglingTest):
             self.failUnlessEqual(filename, module.__file__)
         finally:
             os.remove(filename)
+
 
 
 class LoaderTest(packages.SysPathManglingTest):
@@ -230,7 +235,7 @@ class LoaderTest(packages.SysPathManglingTest):
         import sample
         self.failUnlessRaises(ValueError, self.loader.loadClass,
                               sample.NotATest)
-        
+
     def test_loadModule(self):
         import sample
         suite = self.loader.loadModule(sample)
@@ -281,7 +286,7 @@ class LoaderTest(packages.SysPathManglingTest):
         import sample
         suite = self.loader.loadAnything(sample.FooTest)
         self.failUnlessEqual(2, suite.countTestCases())
-        
+
     def test_loadAnythingOnMethod(self):
         import sample
         suite = self.loader.loadAnything(sample.FooTest.test_foo)
@@ -292,13 +297,13 @@ class LoaderTest(packages.SysPathManglingTest):
         suite = self.loader.loadAnything(goodpackage)
         self.failUnless(isinstance(suite, self.loader.suiteFactory))
         self.failUnlessEqual(7, suite.countTestCases())
-        
+
     def test_loadAnythingOnPackageRecursive(self):
         import goodpackage
         suite = self.loader.loadAnything(goodpackage, recurse=True)
         self.failUnless(isinstance(suite, self.loader.suiteFactory))
         self.failUnlessEqual(14, suite.countTestCases())
-        
+
     def test_loadAnythingOnString(self):
         # the important thing about this test is not the string-iness
         # but the non-handledness.
@@ -317,14 +322,55 @@ class LoaderTest(packages.SysPathManglingTest):
         self.failUnlessEqual(errors, ['package.test_bad_module',
                                       'package.test_import_module'])
 
-    def test_loadModuleWithCustom(self):
-        """Check that test_suite is used when present
-        and other TestCases are not included.
+
+    def test_loadModuleWith_test_suite(self):
+        """
+        Check that C{test_suite} is used when present and other L{TestCase}s are
+        not included.
         """
         from twisted.trial.test import mockcustomsuite
         suite = self.loader.loadModule(mockcustomsuite)
         self.failUnlessEqual(0, suite.countTestCases())
-        self.failUnlessEqual("MyCustomSuite", suite.name)
+        self.failUnlessEqual("MyCustomSuite", getattr(suite, 'name', None))
+
+
+    def test_loadModuleWith_testSuite(self):
+        """
+        Check that C{testSuite} is used when present and other L{TestCase}s are
+        not included.
+        """
+        from twisted.trial.test import mockcustomsuite2
+        suite = self.loader.loadModule(mockcustomsuite2)
+        self.assertEqual(0, suite.countTestCases())
+        self.assertEqual("MyCustomSuite", getattr(suite, 'name', None))
+
+
+    def test_loadModuleWithBothCustom(self):
+        """
+        Check that if C{testSuite} and C{test_suite} are both present in a
+        module then C{testSuite} gets priority.
+        """
+        from twisted.trial.test import mockcustomsuite3
+        suite = self.loader.loadModule(mockcustomsuite3)
+        self.assertEqual('testSuite', getattr(suite, 'name', None))
+
+
+    def test_customLoadRaisesAttributeError(self):
+        """
+        Make sure that any C{AttributeError}s raised by C{testSuite} are not
+        swallowed by L{TestLoader}.
+        """
+        def testSuite():
+            raise AttributeError('should be reraised')
+        from twisted.trial.test import mockcustomsuite2
+        mockcustomsuite2.testSuite, original = (testSuite,
+                                                mockcustomsuite2.testSuite)
+        try:
+            self.assertRaises(AttributeError, self.loader.loadModule,
+                              mockcustomsuite2)
+        finally:
+            mockcustomsuite2.testSuite = original
+
 
     # XXX - duplicated and modified from test_script
     def assertSuitesEqual(self, test1, test2):
@@ -354,6 +400,7 @@ class LoaderTest(packages.SysPathManglingTest):
         self.assertSuitesEqual(suite1, suite2)
 
 
+
 class ZipLoadingTest(LoaderTest):
     def setUp(self):
         from twisted.test.test_paths import zipit
@@ -361,6 +408,7 @@ class ZipLoadingTest(LoaderTest):
         zipit(self.parent, self.parent+'.zip')
         self.parent += '.zip'
         self.mangleSysPath(self.oldPath+[self.parent])
+
 
 
 class PackageOrderingTest(packages.SysPathManglingTest):

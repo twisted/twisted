@@ -33,7 +33,7 @@ def isPackage(module):
     basename = os.path.splitext(os.path.basename(module.__file__))[0]
     return basename == '__init__'
 
-    
+
 def isPackageDirectory(dirname):
     """Is the directory at path 'dirname' a Python package directory?
     Returns the name of the __init__ file (it may have a weird extension)
@@ -58,7 +58,7 @@ def filenameToModule(fn):
     that file.
 
     If the file in question is a module in Python path, properly import and
-    return that module. Otherwise, load the source manually. 
+    return that module. Otherwise, load the source manually.
 
     @param fn: A filename.
     @return: A module object.
@@ -130,7 +130,7 @@ class TestSuite(pyunit.TestSuite):
     Extend the standard library's C{TestSuite} with support for the visitor
     pattern and a consistently overrideable C{run} method.
     """
-    
+
     visit = suiteVisit
 
     def __call__(self, result):
@@ -155,7 +155,7 @@ class DocTestSuite(TestSuite):
     they support visit and so that id() behaviour is meaningful and consistent
     between Python versions.
     """
-    
+
     def __init__(self, testModule):
         TestSuite.__init__(self)
         suite = doctest.DocTestSuite(testModule)
@@ -232,7 +232,7 @@ class TrialSuite(TestSuite):
         treactor = interfaces.IReactorThreads(reactor, None)
         if treactor is not None:
             treactor.suggestThreadPoolSize(0)
-        # As long as TestCase does crap stuff with the reactor we need to 
+        # As long as TestCase does crap stuff with the reactor we need to
         # manually shutdown the reactor here, and that requires util.wait
         # :(
         # so that the shutdown event completes
@@ -288,7 +288,7 @@ class ErrorHolder(object):
     error to the C{TestResult}. The most common use-case is for when a module
     fails to import.
     """
-    
+
     def __init__(self, description, error):
         """
         @param description: A string used by C{TestResult}s to identify this
@@ -344,7 +344,7 @@ class TestLoader(object):
     @ivar suiteFactory: A callable which is passed a list of tests (which
     themselves may be suites of tests). Must return a test suite.
     """
-    
+
     methodPrefix = 'test'
     modulePrefix = 'test_'
 
@@ -373,7 +373,7 @@ class TestLoader(object):
     def findByName(self, name):
         """
         Return a Python object given a string describing it.
-        
+
         @param name: a string which may be either a filename or a
         fully-qualified Python name.
 
@@ -390,18 +390,21 @@ class TestLoader(object):
 
         Included are TestCase subclasses and doctests listed in the module's
         __doctests__ module. If that's not good for you, put a function named
-        C{test_suite} in your module that returns a TestSuite, and I'll use
-        the results of that instead.
+        either C{testSuite} or C{test_suite} in your module that returns a
+        TestSuite, and I'll use the results of that instead.
+
+        If C{testSuite} and C{test_suite} are both present, then I'll use
+        C{testSuite}.
         """
         ## XXX - should I add an optional parameter to disable the check for
         ## a custom suite.
         ## OR, should I add another method
         if not isinstance(module, types.ModuleType):
             raise TypeError("%r is not a module" % (module,))
-        try:
+        if hasattr(module, 'testSuite'):
+            return module.testSuite()
+        elif hasattr(module, 'test_suite'):
             return module.test_suite()
-        except AttributeError:
-            pass
         suite = self.suiteFactory()
         for testClass in self.findTestClasses(module):
             suite.addTest(self.loadClass(testClass))
@@ -511,7 +514,7 @@ class TestLoader(object):
         """
         Given a Python object, return whatever tests that are in it. Whatever
         'in' might mean.
-        
+
         @param thing: A Python object. A module, method, class or package.
         @param recurse: Whether or not to look in subpackages of packages.
         Defaults to False.
@@ -579,7 +582,7 @@ class DryRunVisitor(unittest.TestVisitor):
         @param reporter: A C{TestResult} object.
         """
         self.reporter = reporter
-        
+
     def visitSuite(self, testSuite):
         # XXX - this shouldn't be here
         self.reporter.startSuite(testSuite.name())
@@ -621,7 +624,7 @@ class TrialRunner(object):
                 else:
                     dbg.rcLines.extend(rcFile.readlines())
         return dbg
-    
+
     def _setUpTestdir(self):
         self._tearDownLogFile()
         currentDir = os.getcwd()
@@ -646,7 +649,7 @@ class TrialRunner(object):
 
     def _makeResult(self):
         return self.reporterFactory(self.stream, self.tbformat, self.rterrors)
-        
+
     def __init__(self, reporterFactory,
                  mode=None,
                  logfile='test.log',
@@ -707,7 +710,7 @@ class TrialRunner(object):
         """
         result = self._makeResult()
         # decorate the suite with reactor cleanup and log starting
-        # This should move out of the runner and be presumed to be 
+        # This should move out of the runner and be presumed to be
         # present
         suite = TrialSuite([test])
         startTime = time.time()
@@ -753,4 +756,3 @@ class TrialRunner(object):
             if not result.wasSuccessful():
                 break
         return result
-    

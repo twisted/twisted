@@ -340,5 +340,4 @@ class TOCPrivacyTestCase(unittest.TestCase):
                     raise AssertionError("PrivacyTest Before Failed!\nactual:%s\nshould be:%s"%(flaps[i],expect[i]))
             raise AssertionError("PrivacyTest Before Failed with incorrect length!\nactual:%s\nshould be:%s"%(flaps,expect))         
 testCases=[TOCGeneralTestCase,TOCMultiPacketTestCase,TOCSavedValuesTestCase,TOCPrivacyTestCase]
-def testSuite():return unittest.TestSuite(map(lambda x:x(),testCases))
- 
+

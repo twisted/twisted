@@ -1,10 +1,10 @@
 # Copyright (c) 2006 Twisted Matrix Laboratories. See LICENSE for details
 
 """
-Mock test module that contains a C{test_suite} method. L{runner.TestLoader}
-should load the tests from the C{test_suite}, not from the C{Foo} C{TestCase}.
+Mock test module that contains a C{testSuite} method. L{runner.TestLoader}
+should load the tests from the C{testSuite}, not from the C{Foo} C{TestCase}.
 
-See {twisted.trial.test.test_loader.LoaderTest.test_loadModuleWith_test_suite}.
+See L{twisted.trial.test.test_loader.LoaderTest.test_loadModuleWith_testSuite}.
 """
 
 
@@ -15,7 +15,7 @@ class Foo(unittest.TestCase):
         pass
 
 
-def test_suite():
+def testSuite():
     ts = runner.TestSuite()
     ts.name = "MyCustomSuite"
     return ts
