@@ -15,6 +15,7 @@ import time
 import warnings
 
 from twisted.python import reflect, failure, log
+from twisted.python.util import untilConcludes
 from twisted.trial import itrial
 import zope.interface as zi
 
@@ -26,10 +27,26 @@ class BrokenTestCaseWarning(Warning):
     setUp, tearDown, setUpClass, or tearDownClass"""
 
 
+class SafeStream(object):
+    """
+    Wraps a stream object so that all C{write} calls are wrapped in
+    L{untilConcludes}.
+    """
+
+    def __init__(self, original):
+        self.original = original
+
+    def __getattr__(self, name):
+        return getattr(self.original, name)
+
+    def write(self, *a, **kw):
+        return untilConcludes(self.original.write, *a, **kw)
+
+
 class TestResult(pyunit.TestResult, object):
     """Accumulates the results of several L{twisted.trial.unittest.TestCase}s.
     """
-    
+
     def __init__(self):
         super(TestResult, self).__init__()
         self.skips = []
@@ -85,8 +102,9 @@ class TestResult(pyunit.TestResult, object):
         self.errors.append((test, error))
 
     def addSkip(self, test, reason):
-        """Report that the given test was skipped.
-        
+        """
+        Report that the given test was skipped.
+
         In Trial, tests can be 'skipped'. Tests are skipped mostly because there
         is some platform or configuration issue that prevents them from being
         run correctly.
@@ -104,7 +122,7 @@ class TestResult(pyunit.TestResult, object):
         this method to report the unexpected success.
 
         @type test: L{pyunit.TestCase}
-        @type todo: L{unittest.Todo} 
+        @type todo: L{unittest.Todo}
         """
         # XXX - 'todo' should just be a string
         self.unexpectedSuccesses.append((test, todo))
@@ -135,7 +153,7 @@ class TestResult(pyunit.TestResult, object):
         """Report an error that occurred during the cleanup between tests.
         """
         # XXX - deprecate this method, we don't need it any more
-    
+
     def startSuite(self, name):
         # XXX - these should be removed, but not in this branch
         pass
@@ -153,7 +171,7 @@ class Reporter(TestResult):
 
     def __init__(self, stream=sys.stdout, tbformat='default', realtime=False):
         super(Reporter, self).__init__()
-        self.stream = stream
+        self.stream = SafeStream(stream)
         self.tbformat = tbformat
         self.realtime = realtime
 
@@ -179,7 +197,7 @@ class Reporter(TestResult):
             self.stream.write(s % args)
         else:
             self.stream.write(s)
-        self.stream.flush()
+        untilConcludes(self.stream.flush)
 
     def writeln(self, format, *args):
         self.write(format, *args)
@@ -219,7 +237,7 @@ class Reporter(TestResult):
         # [unittest.fail] from the end.
 
         newFrames = list(frames)
-        
+
         if len(frames) < 2:
             return newFrames
 
@@ -265,7 +283,7 @@ class Reporter(TestResult):
         if todo.errors:
             ret += 'Expected errors: %s\n' % (', '.join(todo.errors),)
         return ret
-    
+
     def printErrors(self):
         """Print all of the non-success results in full to the stream.
         """
@@ -303,12 +321,12 @@ class MinimalReporter(Reporter):
     """
 
     _runStarted = None
-    
+
     def startTest(self, test):
         super(MinimalReporter, self).startTest(test)
         if self._runStarted is None:
             self._runStarted = self._getTime()
-    
+
     def printErrors(self):
         pass
 
@@ -316,14 +334,15 @@ class MinimalReporter(Reporter):
         numTests = self.testsRun
         t = (self._runStarted - self._getTime(), numTests, numTests,
              len(self.errors), len(self.failures), len(self.skips))
-        self.stream.write(' '.join(map(str,t))+'\n')
+        self.writeln(' '.join(map(str, t)))
 
 
 class TextReporter(Reporter):
-    """Simple reporter that prints a single character for each test as it runs,
+    """
+    Simple reporter that prints a single character for each test as it runs,
     along with the standard Trial summary text.
     """
-    
+
     def addSuccess(self, test):
         super(TextReporter, self).addSuccess(test)
         self.write('.')
@@ -350,18 +369,19 @@ class TextReporter(Reporter):
 
 
 class VerboseTextReporter(Reporter):
-    """A verbose reporter that prints the name of each test as it is running.
+    """
+    A verbose reporter that prints the name of each test as it is running.
 
     Each line is printed with the name of the test, followed by the result of
     that test.
     """
-    
+
     # This is actually the bwverbose option
 
     def startTest(self, tm):
         self.write('%s ... ', tm.id())
         super(VerboseTextReporter, self).startTest(tm)
-        
+
     def addSuccess(self, test):
         super(VerboseTextReporter, self).addSuccess(test)
         self.write('[OK]')
@@ -395,7 +415,7 @@ class TimingTextReporter(VerboseTextReporter):
     """Prints out each test as it is running, followed by the time taken for each
     test to run.
     """
-    
+
     def stopTest(self, method):
         super(TimingTextReporter, self).stopTest(method)
         self.write("(%.03f secs)\n" % self._lastTime)
@@ -537,9 +557,10 @@ class TreeReporter(Reporter):
                 break
 
     def getDescription(self, test):
-        """Return the name of the method which 'test' represents.  This is
+        """
+        Return the name of the method which 'test' represents.  This is
         what gets displayed in the leaves of the tree.
-        
+
         e.g. getDescription(TestCase('test_foo')) ==> test_foo
         """
         return test.id().split('.')[-1]
@@ -596,7 +617,7 @@ class TreeReporter(Reporter):
         if printStatus:
             self.endLine('[ERROR]', self.ERROR)
         super(TreeReporter, self).upDownError(method, error, warn, printStatus)
-        
+
     def startTest(self, method):
         self._testPrelude(method)
         self.write('%s%s ... ' % (self.indent * (len(self._lastTest)),

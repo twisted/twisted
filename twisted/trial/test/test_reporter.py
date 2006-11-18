@@ -4,11 +4,35 @@
 # Maintainer: Jonathan Lange <jml@twistedmatrix.com>
 
 
-import sys, os, re, StringIO
+import errno, sys, os, re, StringIO
 from twisted.internet.utils import suppressWarnings
 from twisted.python import failure
 from twisted.trial import unittest, runner, reporter, util
 from twisted.trial.test import erroneous
+
+
+class BrokenStream(object):
+    """
+    Stream-ish object that raises a signal interrupt error. We use this to make
+    sure that Trial still manages to write what it needs to write.
+    """
+    written = False
+    flushed = False
+
+    def __init__(self, fObj):
+        self.fObj = fObj
+
+    def write(self, s):
+        if self.written:
+            return self.fObj.write(s)
+        self.written = True
+        raise IOError(errno.EINTR, "Interrupted write")
+
+    def flush(self):
+        if self.flushed:
+            return self.fObj.flush()
+        self.flushed = True
+        raise IOError(errno.EINTR, "Interrupted flush")
 
 
 class StringTest(unittest.TestCase):
@@ -64,7 +88,7 @@ class TestReporterRealtime(TestTestResult):
 
 class TestErrorReporting(StringTest):
     doubleSeparator = re.compile(r'^=+$')
-    
+
     def setUp(self):
         self.loader = runner.TestLoader()
         self.output = StringIO.StringIO()
@@ -78,7 +102,7 @@ class TestErrorReporting(StringTest):
     def getResult(self, suite):
         suite.run(self.result)
         return self.result
-    
+
     def testFormatErroredMethod(self):
         suite = self.loader.loadClass(erroneous.TestFailureInSetUp)
         output = self.getOutput(suite).splitlines()
@@ -165,7 +189,7 @@ class TracebackHandling(unittest.TestCase):
         frames = self.getErrorFrames(test)
         self.checkFrames(frames,
                          [('test_fail', 'twisted/trial/test/erroneous')])
-        
+
     def test_subroutine(self):
         test = erroneous.TestRegularFail('test_subfail')
         frames = self.getErrorFrames(test)
@@ -237,7 +261,7 @@ class PyunitTestNames(unittest.TestCase):
         from twisted.trial.test import sample
         self.stream = StringIO.StringIO()
         self.test = sample.PyunitTest('test_foo')
-    
+
     def test_verboseReporter(self):
         result = reporter.VerboseTextReporter(self.stream)
         result.startTest(self.test)
@@ -270,7 +294,7 @@ class TrialTestNames(unittest.TestCase):
         from twisted.trial.test import sample
         self.stream = StringIO.StringIO()
         self.test = sample.FooTest('test_foo')
-    
+
     def test_verboseReporter(self):
         result = reporter.VerboseTextReporter(self.stream)
         result.startTest(self.test)
@@ -394,7 +418,7 @@ class TestTreeReporter(unittest.TestCase):
 
 class TestReporter(unittest.TestCase):
     resultFactory = reporter.Reporter
-    
+
     def setUp(self):
         from twisted.trial.test import sample
         self.test = sample.FooTest('test_foo')
@@ -406,13 +430,38 @@ class TestReporter(unittest.TestCase):
     def _getTime(self):
         self._timer += 1
         return self._timer
-    
+
     def test_startStop(self):
         self.result.startTest(self.test)
         self.result.stopTest(self.test)
         self.assertTrue(self.result._lastTime > 0)
         self.assertEqual(self.result.testsRun, 1)
         self.assertEqual(self.result.wasSuccessful(), True)
+
+
+    def test_brokenStream(self):
+        """
+        Test that the reporter safely writes to its stream.
+        """
+        result = self.resultFactory(stream=BrokenStream(self.stream))
+        result.writeln("Hello")
+        self.assertEqual(self.stream.getvalue(), 'Hello\n')
+        self.stream.truncate(0)
+        result.writeln("Hello %s!", 'World')
+        self.assertEqual(self.stream.getvalue(), 'Hello World!\n')
+
+
+class TestSafeStream(unittest.TestCase):
+    def test_safe(self):
+        """
+        Test that L{reporter.SafeStream} successfully write to its original
+        stream even if an interrupt happens during the write.
+        """
+        stream = StringIO.StringIO()
+        broken = BrokenStream(stream)
+        safe = reporter.SafeStream(broken)
+        safe.write("Hello")
+        self.assertEqual(stream.getvalue(), "Hello")
 
 
 class TestTimingReporter(TestReporter):
