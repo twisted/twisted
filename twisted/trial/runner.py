@@ -149,6 +149,37 @@ class TestSuite(pyunit.TestSuite):
         return result
 
 
+
+# When an error occurs outside of any test, the user will see this string
+# in place of a test's name.
+NOT_IN_TEST = "<not in test>"
+
+
+
+class LoggedSuite(TestSuite):
+    """
+    Any errors logged in this suite will be reported to the L{TestResult}
+    object.
+    """
+
+    def run(self, result):
+        """
+        Run the suite, storing all errors in C{result}. If an error is logged
+        while no tests are running, then it will be added as an error to
+        C{result}.
+
+        @param result: A L{TestResult} object.
+        """
+        observer = unittest._logObserver
+        observer._add()
+        super(LoggedSuite, self).run(result)
+        observer._remove()
+        for error in observer.getErrors():
+            result.addError(TestHolder(NOT_IN_TEST), error)
+        observer.flushErrors()
+
+
+
 class DocTestSuite(TestSuite):
     """
     Behaves like doctest.DocTestSuite, but decorates individual TestCases so
@@ -223,6 +254,11 @@ class TrialSuite(TestSuite):
     what context they are run in.
     """
 
+    def __init__(self, tests=()):
+        suite = LoggedSuite(tests)
+        super(TrialSuite, self).__init__([suite])
+
+
     def _bail(self):
         from twisted.internet import reactor
         d = defer.Deferred()
@@ -240,7 +276,6 @@ class TrialSuite(TestSuite):
 
     def run(self, result):
         try:
-            log.startKeepingErrors()
             TestSuite.run(self, result)
         finally:
             self._bail()
@@ -281,12 +316,35 @@ def isTestCase(obj):
         return False
 
 
-class ErrorHolder(object):
+
+class TestHolder(object):
+    """
+    Placeholder for a L{TestCase} inside a reporter. As far as a L{TestResult}
+    is concerned, this looks exactly like a unit test.
+    """
+
+    def __init__(self, description):
+        """
+        @param description: A string to be displayed L{TestResult}.
+        """
+        self.description = description
+
+
+    def id(self):
+        return self.description
+
+
+    def shortDescription(self):
+        return self.description
+
+
+
+class ErrorHolder(TestHolder):
     """
     Used to insert arbitrary errors into a test suite run. Provides enough
-    methods to like a C{TestCase}, however, when it is run, it simply adds an
-    error to the C{TestResult}. The most common use-case is for when a module
-    fails to import.
+    methods to look like a C{TestCase}, however, when it is run, it simply adds
+    an error to the C{TestResult}. The most common use-case is for when a
+    module fails to import.
     """
 
     def __init__(self, description, error):
@@ -297,14 +355,8 @@ class ErrorHolder(object):
         @param error: The error to be added to the result. Can be an exc_info
         tuple or a L{twisted.python.failure.Failure}.
         """
-        self.description = description
+        super(ErrorHolder, self).__init__(description)
         self.error = error
-
-    def id(self):
-        return self.description
-
-    def shortDescription(self):
-        return self.description
 
     def __repr__(self):
         return "<ErrorHolder description=%r error=%r>" % (self.description,
@@ -322,6 +374,7 @@ class ErrorHolder(object):
     def visit(self, visitor):
         # This needs tests.
         visitor.visitCase(self)
+
 
 
 class TestLoader(object):
