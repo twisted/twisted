@@ -43,11 +43,11 @@ class Todo(object):
     category. If todo'd tests succeed, Trial L{TestResult}s will report an
     unexpected success.
     """
-
+    
     def __init__(self, reason, errors=None):
         """
         @param reason: A string explaining why the test is marked 'todo'
-
+        
         @param errors: An iterable of exception types that the test is
         expected to raise. If one of these errors is raised by the test, it
         will be trapped. Raising any other kind of error will fail the test.
@@ -106,7 +106,7 @@ class _Assertions(pyunit.TestCase, object):
     Although the tests are defined as 'failIf*' and 'failUnless*', they can
     also be called as 'assertNot*' and 'assert*'.
     """
-
+    
     def fail(self, msg=None):
         """absolutely fails the test, do not pass go, do not collect $200
 
@@ -127,7 +127,7 @@ class _Assertions(pyunit.TestCase, object):
 
     def failUnless(self, condition, msg=None):
         """fails the test if C{condition} evaluates to True
-
+        
         @param condition: any object that defines __nonzero__
         """
         if not condition:
@@ -139,10 +139,10 @@ class _Assertions(pyunit.TestCase, object):
         """fails the test unless calling the function C{f} with the given C{args}
         and C{kwargs} does not raise C{exception}. The failure will report the
         traceback and call stack of the unexpected exception.
-
+        
         @param exception: exception type that is to be expected
         @param f: the function to call
-
+    
         @return: The raised exception instance, if it is of the given type.
         @raise self.failureException: Raised if the function call does not raise an exception
         or if it raises an exception of a different type.
@@ -174,7 +174,7 @@ class _Assertions(pyunit.TestCase, object):
     def failUnlessIdentical(self, first, second, msg=None):
         """fail the test if C{first} is not C{second}. This is an
         obect-identity-equality test, not an object equality (i.e. C{__eq__}) test
-
+        
         @param msg: if msg is None, then the failure message will be
         '%r is not %r' % (first, second)
         """
@@ -186,7 +186,7 @@ class _Assertions(pyunit.TestCase, object):
     def failIfIdentical(self, first, second, msg=None):
         """fail the test if C{first} is C{second}. This is an
         obect-identity-equality test, not an object equality (i.e. C{__eq__}) test
-
+        
         @param msg: if msg is None, then the failure message will be
         '%r is %r' % (first, second)
         """
@@ -197,7 +197,7 @@ class _Assertions(pyunit.TestCase, object):
 
     def failIfEqual(self, first, second, msg=None):
         """fail the test if C{first} == C{second}
-
+        
         @param msg: if msg is None, then the failure message will be
         '%r == %r' % (first, second)
         """
@@ -253,7 +253,7 @@ class _Assertions(pyunit.TestCase, object):
         return first
     assertNotAlmostEqual = assertNotAlmostEquals = failIfAlmostEqual
     failIfAlmostEquals = failIfAlmostEqual
-
+    
     def failUnlessAlmostEqual(self, first, second, places=7, msg=None):
         """Fail if the two objects are unequal as determined by their
         difference rounded to the given number of decimal places
@@ -421,7 +421,7 @@ class TestCase(_Assertions):
 
     @ivar forceGarbageCollection: If set to True, C{gc.collect()} will be
     called before and after the test. Otherwise, garbage collection will
-    happen in whatever way Python sees fit.
+    happen in whatever way Python sees fit.    
 
     @ivar skip: C{None} or a string explaining why this test is to be
     skipped. If defined, the test will not be run. Instead, it will be
@@ -441,7 +441,7 @@ class TestCase(_Assertions):
     classes, and C{reason} is a string. See L{Todo} or L{makeTodo} for more
     information.
     """
-
+    
     zi.implements(itrial.ITestCase)
     failureException = FailTest
 
@@ -488,7 +488,7 @@ class TestCase(_Assertions):
         if not hasattr(self.__class__, '_testCaseInstance'):
             self.__class__._testCaseInstance = self
         if self.__class__._testCaseInstance.__class__ != self.__class__:
-            self.__class__._testCaseInstance = self
+            self.__class__._testCaseInstance = self            
 
     def _run(self, methodName, result):
         from twisted.internet import reactor
@@ -754,7 +754,7 @@ class TestCase(_Assertions):
                 self._wait(d)
             finally:
                 self._cleanUp(result)
-                result.stopTest(self)
+                result.stopTest(self)            
                 if self._shared and self._isLast():
                     self._initInstances()
                     self._classCleanUp(result)
@@ -826,7 +826,7 @@ class TestCase(_Assertions):
         anything. See L{TestCase} docstring for more details.
         """
         return util.acquireAttribute(self._parents, 'suppress', [])
-
+    
     def visit(self, visitor):
         """Call visitor.visitCase(self)."""
         visitor.visitCase(self)
@@ -834,7 +834,7 @@ class TestCase(_Assertions):
     def mktemp(self):
         """Returns a unique name that may be used as either a temporary
         directory or filename.
-
+        
         @note: you must call os.mkdir on the value returned from this
                method if you wish to use it as a directory!
         """
@@ -846,14 +846,14 @@ class TestCase(_Assertions):
             os.makedirs(base)
         dirname = tempfile.mkdtemp('', '', base)
         return os.path.join(dirname, 'temp')
-
+    
     def _wait(self, d, running=_wait_is_running):
         """Take a Deferred that only ever callbacks. Block until it happens.
         """
         from twisted.internet import reactor
         if running:
             raise RuntimeError("_wait is not reentrant")
-
+    
         results = []
         def append(any):
             if results is not None:
@@ -863,13 +863,13 @@ class TestCase(_Assertions):
                 reactor.crash()
         crash = utils.suppressWarnings(
             crash, util.suppress(message=r'reactor\.crash cannot be used.*',
-                                 category=DeprecationWarning))
+                                 category=DeprecationWarning)) 
         def stop():
             reactor.crash()
         stop = utils.suppressWarnings(
             stop, util.suppress(message=r'reactor\.crash cannot be used.*',
-                                category=DeprecationWarning))
-
+                                category=DeprecationWarning)) 
+    
         running.append(None)
         try:
             d.addBoth(append)
@@ -883,7 +883,7 @@ class TestCase(_Assertions):
                 reactor.run()
             finally:
                 del reactor.stop
-
+    
             # If the reactor was crashed elsewhere due to a timeout, hopefully
             # that crasher also reported an error. Just return.
             # _timedOut is most likely to be set when d has fired but hasn't
@@ -894,7 +894,7 @@ class TestCase(_Assertions):
             # If the timeout didn't happen, and we didn't get a result or
             # a failure, then the user probably aborted the test, so let's
             # just raise KeyboardInterrupt.
-
+    
             # FIXME: imagine this:
             # web/test/test_webclient.py:
             # exc = self.assertRaises(error.Error, wait, method(url))
@@ -921,7 +921,7 @@ class PyUnitResultAdapter(object):
     L{twisted.python.failure.Failure}s being passed to L{addError} and
     L{addFailure}.
     """
-
+    
     def __init__(self, original):
         """
         @param original: A C{TestResult} instance from C{unittest}.
@@ -950,9 +950,9 @@ class PyUnitResultAdapter(object):
 
     def _unsupported(self, test, feature, info):
         self.original.addFailure(
-            test,
-            (UnsupportedTrialFeature,
-             UnsupportedTrialFeature(feature, info),
+            test, 
+            (UnsupportedTrialFeature, 
+             UnsupportedTrialFeature(feature, info), 
              None))
 
     def addSkip(self, test, reason):
@@ -966,7 +966,7 @@ class PyUnitResultAdapter(object):
         Report the unexpected success as a failure.
         """
         self._unsupported(test, 'unexpected success', todo)
-
+        
     def addExpectedFailure(self, test, error):
         """
         Report the expected failure (i.e. todo) as a failure.
@@ -981,13 +981,13 @@ class PyUnitResultAdapter(object):
 
     def cleanupErrors(self, errs):
         pass
-
+    
     def startSuite(self, name):
         pass
 
 
 class TestVisitor(object):
-
+    
     def visitCase(self, testCase):
         """Visit the testCase testCase."""
 
@@ -1007,7 +1007,7 @@ class TestVisitor(object):
 class _SubTestCase(TestCase):
     def __init__(self):
         TestCase.__init__(self, 'run')
-
+    
 _inst = _SubTestCase()
 
 def deprecate(name):
