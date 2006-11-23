@@ -10,19 +10,6 @@
   <body>
     <h1>Using Threads in Twisted</h1>
 
-    <h2>Introduction</h2>
-
-    <p>Before you start using threads, make sure you do at the
-    start of your program:</p>
-<pre class="python">
-from twisted.python import threadable
-threadable.init()
-</pre>
-
-    <p>This will make certain parts of Twisted thread-safe so you
-    can use them safely. However, note that most parts of Twisted
-    are <em>not</em> thread-safe.</p>
-
     <h2>Running code in a thread-safe manner</h2>
 
     <p>Most code in Twisted is not thread-safe. For example,
@@ -32,8 +19,6 @@ threadable.init()
     class="API">twisted.internet.interfaces.IReactorThreads.callFromThread</code>:</p>
 <pre class="python">
 from twisted.internet import reactor
-from twisted.python import threadable
-threadable.init(1)
 
 def notThreadSafe(x):
      """do something that isn't thread-safe"""
