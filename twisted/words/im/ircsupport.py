@@ -255,7 +255,7 @@ class IRCAccount(basesupport.AbstractAccount):
                  channels=''):
         basesupport.AbstractAccount.__init__(self, accountName, autoLogin,
                                              username, password, host, port)
-        self.channels = map(string.strip,string.split(channels,','))
+        self.channels = [c[1:] for c in channels.split(',')]
         if self.channels == ['']:
             self.channels = []
 
