@@ -11,12 +11,12 @@ doing authentication on either client or server side, and working with XML
 Stanzas.
 """
 
-from zope.interface import Interface, Attribute, directlyProvides, implements
+from zope.interface import directlyProvides, implements
 
 from twisted.internet import defer
 from twisted.internet.error import ConnectionLost
 from twisted.python import failure
-from twisted.words.protocols.jabber import error
+from twisted.words.protocols.jabber import error, ijabber
 from twisted.words.xish import domish, xmlstream
 from twisted.words.xish.xmlstream import STREAM_CONNECTED_EVENT
 from twisted.words.xish.xmlstream import STREAM_START_EVENT
@@ -173,28 +173,6 @@ class ConnectAuthenticator(Authenticator):
     def streamStarted(self):
         self.initializeStream()
 
-class IInitializer(Interface):
-    """
-    Interface for XML stream initializers.
-
-    Initializers perform a step in getting the XML stream ready to be
-    used for the exchange of XML stanzas.
-    """
-
-class IInitiatingInitializer(IInitializer):
-    """
-    Interface for XML stream initializers for the initiating entity.
-    """
-
-    xmlstream = Attribute("""The associated XML stream""")
-
-    def initialize():
-        """
-        Initiate the initialization step.
-
-        May return a deferred when the initialization is done asynchronously.
-        """
-
 class FeatureNotAdvertized(Exception):
     """
     Exception indicating a stream feature was not advertized, while required by
@@ -215,7 +193,7 @@ class BaseFeatureInitiatingInitializer(object):
     @type required: L{bool}
     """
 
-    implements(IInitiatingInitializer)
+    implements(ijabber.IInitiatingInitializer)
 
     feature = None
     required = False
@@ -597,27 +575,6 @@ class TimeoutError(Exception):
 
 
 
-class IIQResponseTracker(Interface):
-    """
-    IQ response tracker interface.
-
-    The XMPP stanza C{iq} has a request-response nature that fits
-    naturally with deferreds. You send out a request and when the response
-    comes back a deferred is fired.
-
-    The L{IQ} class implements a C{send} method that returns a deferred. This
-    deferred is put in a dictionary that is kept in an L{XmlStream} object,
-    keyed by the request stanzas C{id} attribute.
-
-    An object providing this interface (usually an instance of L{XmlStream}),
-    keeps the said dictionary and sets observers on the iq stanzas of type
-    C{result} and C{error} and lets the callback fire the associated deferred.
-    """
-    iqDeferreds = Attribute("Dictionary of deferreds waiting for an iq "
-                             "response")
-
-
-
 def upgradeWithIQResponseTracker(xs):
     """
     Enhances an XmlStream for iq response tracking.
@@ -665,7 +622,7 @@ def upgradeWithIQResponseTracker(xs):
     xs.addObserver(xmlstream.STREAM_END_EVENT, disconnected)
     xs.addObserver('/iq[@type="result"]', callback)
     xs.addObserver('/iq[@type="error"]', callback)
-    directlyProvides(xs, IIQResponseTracker)
+    directlyProvides(xs, ijabber.IIQResponseTracker)
 
 
 
@@ -713,7 +670,7 @@ class IQ(domish.Element):
         if to is not None:
             self["to"] = to
 
-        if not IIQResponseTracker.providedBy(self._xmlstream):
+        if not ijabber.IIQResponseTracker.providedBy(self._xmlstream):
             upgradeWithIQResponseTracker(self._xmlstream)
 
         d = defer.Deferred()

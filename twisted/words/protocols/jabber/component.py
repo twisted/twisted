@@ -13,17 +13,17 @@ components' are connected to the Jabber server using the Jabber Component
 Protocol as defined in U{JEP-0114<http://www.jabber.org/jeps/jep-0114.html>}.
 
 This module allows for writing external server-side component by assigning one
-or more services implementing L{IService} up to L{ServiceManager}. The
+or more services implementing L{ijabber.IService} up to L{ServiceManager}. The
 ServiceManager connects to the Jabber server and is responsible for the
 corresponding XML stream.
 """
 
-from zope.interface import implements, Interface
+from zope.interface import implements
 
 from twisted.application import service
 from twisted.internet import defer
 from twisted.words.xish import domish
-from twisted.words.protocols.jabber import jstrports, xmlstream
+from twisted.words.protocols.jabber import ijabber, jstrports, xmlstream
 
 def componentFactory(componentid, password):
     """
@@ -99,51 +99,12 @@ class ListenComponentAuthenticator(xmlstream.Authenticator):
     Placeholder for listening components.
     """
 
-class IService(Interface):
-    """
-    External server-side component service interface.
-
-    Services that provide this interface can be added to L{ServiceManager} to
-    implement (part of) the functionality of the server-side component.
-    """
-
-    def componentConnected(xs):
-        """
-        Parent component has established a connection.
-
-        At this point, authentication was succesful, and XML stanzas
-        can be exchanged over the XML stream L{xs}. This method can be used
-        to setup observers for incoming stanzas.
-
-        @param xs: XML Stream that represents the established connection.
-        @type xs: L{xmlstream.XmlStream}
-        """
-
-    def componentDisconnected():
-        """
-        Parent component has lost the connection to the Jabber server.
-
-        Subsequent use of C{self.parent.send} will result in data being
-        queued until a new connection has been established.
-        """
-
-    def transportConnected(xs):
-        """
-        Parent component has established a connection over the underlying
-        transport.
-
-        At this point, no traffic has been exchanged over the XML stream. This
-        method can be used to change properties of the XML Stream (in L{xs}),
-        the service manager or it's authenticator prior to stream
-        initialization (including authentication).
-        """
-
 class Service(service.Service):
     """
     External server-side component service.
     """
 
-    implements(IService)
+    implements(ijabber.IService)
 
     def componentConnected(self, xs):
         pass
@@ -179,7 +140,7 @@ class ServiceManager(service.MultiService):
 
     This service maintains a single connection to a Jabber router and provides
     facilities for packet routing and transmission. Business logic modules are
-    services implementing L{IService} (like subclasses of L{Service}), and
+    services implementing L{ijabber.IService} (like subclasses of L{Service}), and
     added as sub-service.
     """
 
@@ -216,7 +177,7 @@ class ServiceManager(service.MultiService):
     def _connected(self, xs):
         self.xmlstream = xs
         for c in self:
-            if IService.providedBy(c):
+            if ijabber.IService.providedBy(c):
                 c.transportConnected(xs)
 
     def _authd(self, xs):
@@ -227,7 +188,7 @@ class ServiceManager(service.MultiService):
 
         # Notify all child services which implement the IService interface
         for c in self:
-            if IService.providedBy(c):
+            if ijabber.IService.providedBy(c):
                 c.componentConnected(xs)
 
     def _disconnected(self, _):
@@ -236,7 +197,7 @@ class ServiceManager(service.MultiService):
         # Notify all child services which implement
         # the IService interface
         for c in self:
-            if IService.providedBy(c):
+            if ijabber.IService.providedBy(c):
                 c.componentDisconnected()
 
     def send(self, obj):
