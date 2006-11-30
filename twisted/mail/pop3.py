@@ -895,6 +895,8 @@ class IMailbox(Interface):
         @param index: The number of the message to retrieve
 
         @rtype: A file-like object
+        @return: A file containing the message data with lines delimited by
+        C{\n}.
         """
 
     def getUidl(index):
@@ -923,10 +925,13 @@ class IMailbox(Interface):
         """
 
     def undeleteMessages():
-        """Undelete any messages possible.
+        """
+        Undelete any messages which have been marked for deletion since the
+        most recent L{sync} call.
 
-        If a message can be deleted it, it should return it its original
-        position in the message sequence and retain the same UIDL.
+        Any message which can be undeleted should be returned to its
+        original position in the message sequence and retain its original
+        UID.
         """
 
     def sync():
