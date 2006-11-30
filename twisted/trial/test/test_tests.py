@@ -16,11 +16,57 @@ class ResultsTestMixin:
         self.failUnlessEqual(self.reporter.errors, [])
         self.failUnlessEqual(self.reporter.failures, [])
         self.failUnlessEqual(self.reporter.skips, [])
-        
+
     def assertCount(self, numTests):
         self.failUnlessEqual(self.suite.countTestCases(), numTests)
         self.suite(self.reporter)
         self.failUnlessEqual(self.reporter.testsRun, numTests)
+
+
+
+class TestSuccess(unittest.TestCase):
+    """
+    Test that successful tests are reported as such.
+    """
+
+    def setUp(self):
+        self.result = reporter.TestResult()
+
+
+    def test_successful(self):
+        """
+        A successful test, used by other tests.
+        """
+
+
+    def assertSuccessful(self, test, result):
+        self.assertEqual(result.successes,  [(test,)])
+        self.assertEqual(result.failures, [])
+        self.assertEqual(result.errors, [])
+        self.assertEqual(result.expectedFailures, [])
+        self.assertEqual(result.unexpectedSuccesses, [])
+        self.assertEqual(result.skips, [])
+
+
+    def test_successfulIsReported(self):
+        """
+        Test that when a successful test is run, it is reported as a success,
+        and not as any other kind of result.
+        """
+        test = TestSuccess('test_successful')
+        test.run(self.result)
+        self.assertSuccessful(test, self.result)
+
+
+    def test_defaultIsSuccessful(self):
+        """
+        Test that L{unittest.TestCase} itself can be instantiated, run, and
+        reported as being successful.
+        """
+        test = unittest.TestCase()
+        test.run(self.result)
+        self.assertSuccessful(test, self.result)
+
 
 
 class TestSkipMethods(unittest.TestCase, ResultsTestMixin):
@@ -70,7 +116,7 @@ class TestSkipMethods(unittest.TestCase, ResultsTestMixin):
     def test_reasons(self):
         self.suite(self.reporter)
         prefix = 'test_'
-        # whiteboxing reporter 
+        # whiteboxing reporter
         for test, reason in self.reporter.skips:
             self.failUnlessEqual(test.shortDescription()[len(prefix):],
                                  str(reason))
@@ -94,7 +140,7 @@ class TestSkipClasses(unittest.TestCase, ResultsTestMixin):
             pass
         def test_skip4(self):
             raise RuntimeError("Skip me too")
-        
+
     def setUp(self):
         self.loadSuite(TestSkipClasses.SkippedClass)
         TestSkipClasses.SkippedClass._setUpRan = False
@@ -144,7 +190,7 @@ class TestSkipClassesRaised(unittest.TestCase, ResultsTestMixin):
             pass
         def test_skip4(self):
             raise RuntimeError("Skip me too")
-        
+
     def setUp(self):
         if hasattr(TestSkipClassesRaised.SkippedClass, 'skip'):
             delattr(TestSkipClassesRaised.SkippedClass, 'skip')
@@ -196,7 +242,7 @@ class TestTodo(unittest.TestCase, ResultsTestMixin):
 
     def setUp(self):
         self.loadSuite(TestTodo.TodoTests)
-    
+
     def test_counting(self):
         self.assertCount(3)
 
@@ -208,14 +254,14 @@ class TestTodo(unittest.TestCase, ResultsTestMixin):
         self.failUnlessEqual(self.reporter.skips, [])
         self.failUnlessEqual(len(self.reporter.expectedFailures), 2)
         self.failUnlessEqual(len(self.reporter.unexpectedSuccesses), 1)
-    
+
     def test_expectedFailures(self):
         self.suite(self.reporter)
         expectedReasons = ['todo1', 'todo2']
         reasonsGiven = [ r.reason
                          for t, e, r in self.reporter.expectedFailures ]
         self.failUnlessEqual(expectedReasons, reasonsGiven)
-            
+
     def test_unexpectedSuccesses(self):
         self.suite(self.reporter)
         expectedReasons = ['todo3']
@@ -235,7 +281,7 @@ class TestTodoClass(unittest.TestCase, ResultsTestMixin):
             self.fail("Deliberate Failure")
         test_todo3.todo = "method"
         def test_todo4(self):
-            self.fail("Deliberate Failure")        
+            self.fail("Deliberate Failure")
     TodoClass.todo = "class"
 
     def setUp(self):
@@ -252,14 +298,14 @@ class TestTodoClass(unittest.TestCase, ResultsTestMixin):
         self.failUnlessEqual(self.reporter.skips, [])
         self.failUnlessEqual(len(self.reporter.expectedFailures), 2)
         self.failUnlessEqual(len(self.reporter.unexpectedSuccesses), 2)
-    
+
     def test_expectedFailures(self):
         self.suite(self.reporter)
         expectedReasons = ['method', 'class']
         reasonsGiven = [ r.reason
                          for t, e, r in self.reporter.expectedFailures ]
         self.failUnlessEqual(expectedReasons, reasonsGiven)
-            
+
     def test_unexpectedSuccesses(self):
         self.suite(self.reporter)
         expectedReasons = ['method', 'class']
@@ -273,19 +319,19 @@ class TestStrictTodo(unittest.TestCase, ResultsTestMixin):
         def test_todo1(self):
             raise RuntimeError, "expected failure"
         test_todo1.todo = (RuntimeError, "todo1")
-        
+
         def test_todo2(self):
             raise RuntimeError, "expected failure"
         test_todo2.todo = ((RuntimeError, OSError), "todo2")
-        
+
         def test_todo3(self):
             raise RuntimeError, "we had no idea!"
         test_todo3.todo = (OSError, "todo3")
-        
+
         def test_todo4(self):
             raise RuntimeError, "we had no idea!"
         test_todo4.todo = ((OSError, SyntaxError), "todo4")
-        
+
         def test_todo5(self):
             self.fail("deliberate failure")
         test_todo5.todo = (unittest.FailTest, "todo5")
@@ -416,12 +462,12 @@ class FixtureMetaTest(unittest.TestCase):
         result2 = reporter.TestResult()
         test(result2)
         self.failUnless(result2.wasSuccessful())
-        
+
 
 class SuppressionTest(unittest.TestCase):
     def runTests(self, suite):
         suite.run(reporter.TestResult())
-    
+
     def setUp(self):
         self.stream = StringIO.StringIO()
         self._stdout, sys.stdout = sys.stdout, self.stream
@@ -430,7 +476,7 @@ class SuppressionTest(unittest.TestCase):
     def tearDown(self):
         sys.stdout = self._stdout
         self.stream = None
-    
+
     def getIO(self):
         return self.stream.getvalue()
 
@@ -467,7 +513,7 @@ class GCMixin:
     """I provide a few mock tests that log setUp, tearDown, test execution and
     garbage collection.  I'm used to test whether gc.collect gets called.
     """
-    
+
     class BasicTest(unittest.TestCase):
         def setUp(self):
             self._log('setUp')
@@ -490,7 +536,7 @@ class GCMixin:
     def collect(self):
         """Fake gc.collect"""
         self._log('collect')
-    
+
     def setUp(self):
         self._collectCalled = []
         self.BasicTest._log = self.ClassTest._log = self._log

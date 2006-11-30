@@ -445,13 +445,14 @@ class TestCase(_Assertions):
     zi.implements(itrial.ITestCase)
     failureException = FailTest
 
-    def __init__(self, methodName):
+    def __init__(self, methodName='runTest'):
         """
         Construct an asynchronous test case for C{methodName}.
 
         @param methodName: The name of a method on C{self}. This method should
         be a unit test. That is, it should be a short method that calls some of
-        the assert* methods.
+        the assert* methods. If C{methodName} is unspecified, L{runTest} will
+        be used as the test method. This is mostly useful for testing Trial.
         """
         super(TestCase, self).__init__(methodName)
         self._testMethodName = methodName
@@ -712,6 +713,14 @@ class TestCase(_Assertions):
         @return: A list of failures that have been removed.
         """
         return self._observer.flushErrors(*errorTypes)
+
+
+    def runTest(self):
+        """
+        If no C{methodName} argument is passed to the constructor, L{run} will
+        treat this method as the thing with the actual test inside.
+        """
+
 
     def run(self, result):
         """
