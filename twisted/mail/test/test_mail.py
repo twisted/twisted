@@ -1151,11 +1151,11 @@ class ProcessAliasTestCase(test_process.SignalMixin, unittest.TestCase):
         'Last line'
     ]
 
-    def setUpClass(self):
+    def setUp(self):
         self.DNSNAME = smtp.DNSNAME
         smtp.DNSNAME = ''
 
-    def tearDownClass(self):
+    def tearDown(self):
         smtp.DNSNAME = self.DNSNAME
 
     def testProcessAlias(self):
@@ -1172,6 +1172,7 @@ class ProcessAliasTestCase(test_process.SignalMixin, unittest.TestCase):
         self.assertEquals([L[:-1] for L in lines], self.lines)
 
     def testAliasResolution(self):
+        dl = []
         aliases = {}
         domain = {'': TestDomain(aliases, ['user1', 'user2', 'user3'])}
         A1 = mail.alias.AliasGroup(['user1', '|echo', '/file'], domain, 'alias1')
@@ -1183,7 +1184,9 @@ class ProcessAliasTestCase(test_process.SignalMixin, unittest.TestCase):
             'alias3': A3,
         })
 
-        r1 = map(str, A1.resolve(aliases).objs)
+        multiWrapper = A1.resolve(aliases)
+        dl.append(multiWrapper.objs[1].eomReceived())
+        r1 = map(str, multiWrapper.objs)
         r1.sort()
         expected = map(str, [
             mail.alias.AddressAlias('user1', None, None),
@@ -1202,7 +1205,9 @@ class ProcessAliasTestCase(test_process.SignalMixin, unittest.TestCase):
         expected.sort()
         self.assertEquals(r2, expected)
 
-        r3 = map(str, A3.resolve(aliases).objs)
+        multiWrapper = A3.resolve(aliases)
+        dl.append(multiWrapper.objs[1].eomReceived())
+        r3 = map(str, multiWrapper.objs)
         r3.sort()
         expected = map(str, [
             mail.alias.AddressAlias('user1', None, None),
@@ -1211,6 +1216,7 @@ class ProcessAliasTestCase(test_process.SignalMixin, unittest.TestCase):
         ])
         expected.sort()
         self.assertEquals(r3, expected)
+        return defer.gatherResults(dl)
 
     def testCyclicAlias(self):
         aliases = {}
@@ -1230,12 +1236,17 @@ class ProcessAliasTestCase(test_process.SignalMixin, unittest.TestCase):
 
         A4 = mail.alias.AliasGroup(['|echo', 'alias1'], domain, 'alias4')
         aliases['alias4'] = A4
-        
-        r = map(str, A4.resolve(aliases).objs)
+
+        multiWrapper = A4.resolve(aliases)
+        d = multiWrapper.objs[0].eomReceived()
+        r = map(str, multiWrapper.objs)
         r.sort()
         expected = map(str, [
             mail.alias.MessageWrapper(DummyProcess(), 'echo')
         ])
+        self.assertEquals(r, expected)
+        return d
+
 
 if interfaces.IReactorProcess(reactor, None) is None:
     ProcessAliasTestCase = "IReactorProcess not supported"

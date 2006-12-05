@@ -2658,6 +2658,10 @@ class SlowMailbox(SimpleMailbox):
         return d
 
 class Timeout(IMAP4HelperMixin, unittest.TestCase):
+    def tearDown(self):
+        self.server.setTimeout(None)
+        IMAP4HelperMixin.tearDown(self)
+    
     def testServerTimeout(self):
         self.server.timeoutTest = True
         self.client.timeout = 5 #seconds

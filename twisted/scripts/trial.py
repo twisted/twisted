@@ -101,6 +101,8 @@ class Options(usage.Options, app.ReactorSelectionMixin):
                 ["force-gc", None, "Have Trial run gc.collect() before and "
                  "after each test case."],
                 ["profile", None, "Run tests under the Python profiler"],
+                ["unclean-warnings", None,
+                 "Turn dirty reactor errors into warnings"],
                 ["until-failure", "u", "Repeat test until it fails"],
                 ["no-recurse", "N", "Don't recurse into packages"],
                 ['help-reporters', None,
@@ -321,6 +323,7 @@ def _makeRunner(config):
                               logfile=config['logfile'],
                               tracebackFormat=config['tbformat'],
                               realTimeErrors=config['rterrors'],
+                              uncleanWarnings=config['unclean-warnings'],
                               workingDirectory=config['temp-directory'])
 
 

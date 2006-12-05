@@ -632,12 +632,11 @@ class TestCase(_Assertions):
         try:
             if self.forceGarbageCollection:
                 gc.collect()
-            util._Janitor().postCaseCleanup()
-        except util.FailureError, e:
-            result.addError(self, e.original)
-            self._passed = False
+            clean = util._Janitor(self, result).postCaseCleanup()
+            if not clean:
+                self._passed = False
         except:
-            result.cleanupErrors(failure.Failure())
+            result.addError(self, failure.Failure())
             self._passed = False
         for error in self._observer.getErrors():
             result.addError(self, error)
@@ -649,11 +648,9 @@ class TestCase(_Assertions):
 
     def _classCleanUp(self, result):
         try:
-            util._Janitor().postClassCleanup()
-        except util.FailureError, e:
-            result.cleanupErrors(e.original)
+            util._Janitor(self, result).postClassCleanup()
         except:
-            result.cleanupErrors(failure.Failure())
+            result.addError(self, failure.Failure())
 
     def _makeReactorMethod(self, name):
         """
@@ -988,11 +985,6 @@ class PyUnitResultAdapter(object):
     def upDownError(self, method, error, warn, printStatus):
         pass
 
-    def cleanupErrors(self, errs):
-        pass
-
-    def startSuite(self, name):
-        pass
 
 
 class TestVisitor(object):

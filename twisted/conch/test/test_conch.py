@@ -3,123 +3,174 @@
 # See LICENSE for details.
 
 import os, sys
-from twisted.cred import portal
-from twisted.internet import reactor, defer, protocol, error
-from twisted.python import log, runtime
-from twisted.trial import unittest
+
 try:
     import Crypto
 except:
     Crypto = None
 
+from twisted.cred import portal
+from twisted.internet import reactor, defer, protocol, error
+from twisted.python import log, runtime
+from twisted.trial import unittest
+
 from twisted.test.test_process import SignalMixin
-from test_ssh import ConchTestRealm, _LogTimeFormatMixin
+from twisted.conch.test.test_ssh import ConchTestRealm
+
+from twisted.conch.test.test_keys import publicRSA_openssh, privateRSA_openssh
+from twisted.conch.test.test_keys import publicDSA_openssh, privateDSA_openssh
+
+
 
 class Echo(protocol.Protocol):
     def connectionMade(self):
         log.msg('ECHO CONNECTION MADE')
 
+
     def connectionLost(self, reason):
         log.msg('ECHO CONNECTION DONE')
+
 
     def dataReceived(self, data):
         self.transport.write(data)
         if '\n' in data:
             self.transport.loseConnection()
 
+
+
 class EchoFactory(protocol.Factory):
     protocol = Echo
 
-class ConchTestOpenSSHProcess(protocol.ProcessProtocol):
 
+
+class ConchTestOpenSSHProcess(protocol.ProcessProtocol):
     buf = ''
 
-    def __init__(self, d):
-        self.deferred = d
 
-    def connectionMade(self):
-        log.msg('MAD(ssh): connection made')
+    def _getDeferred(self):
+        d, self.deferred = self.deferred, None
+        return d
+
 
     def outReceived(self, data):
         self.buf += data
 
-    def errReceived(self, data):
-        log.msg("ERR(ssh): '%s'" % data)
 
     def processEnded(self, reason):
-        unittest.assertEquals(reason.value.exitCode, 0, 'exit code was not 0: %s' % reason.value.exitCode)
-        self.buf = self.buf.replace('\r\n', '\n')
-        unittest.assertEquals(self.buf, 'goodbye\n')
-        self.deferred.callback(None)
+        if reason.value.exitCode != 0:
+            self._getDeferred().errback(
+                self.failureException("exit code was not 0: %s"
+                                      % reason.value.exitCode))
+        else:
+            buf = self.buf.replace('\r\n', '\n')
+            self._getDeferred().callback(buf)
+
 
 
 class ConchTestForwardingProcess(protocol.ProcessProtocol):
+    """
+    Manages a third-party process which launches a server.
 
-    def __init__(self, d, port, fac):
-        self.deferred = d
+    Uses L{ConchTestForwardingPort} to connect to the third-party server.
+    Once L{ConchTestForwardingPort} has disconnected, kill the process and fire
+    a Deferred with the data received by the L{ConchTestForwardingPort}.
+    """
+
+    def __init__(self, port, data):
+        """
+        @type port: C{int}
+        @param port: The port on which the third-party server is listening.
+        (it is assumed that the server is running on localhost).
+
+        @type data: C{str}
+        @param data: This is sent to the third-party server. Must end with '\n'
+        in order to trigger a disconnect.
+        """
         self.port = port
-        self.fac = fac
-        self.connected = 0
-        self.buf = ''
+        self.buffer = None
+        self.data = data
+
+
+    def _getDeferred(self):
+        d, self.deferred = self.deferred, None
+        return d
+
 
     def connectionMade(self):
-        reactor.callLater(1, self._connect)
+        self._connect()
+
 
     def _connect(self):
-        self.connected = 1
-        cc = protocol.ClientCreator(reactor, ConchTestForwardingPort, self)
+        """
+        Connect to the server, which is often a third-party process.
+        Tries to reconnect if it fails because we have no way of determining
+        exactly when the port becomes available for listening -- we can only
+        know when the process starts.
+        """
+        cc = protocol.ClientCreator(reactor, ConchTestForwardingPort, self,
+                                    self.data)
         d = cc.connectTCP('127.0.0.1', self.port)
         d.addErrback(self._ebConnect)
+        return d
+
 
     def _ebConnect(self, f):
-        # probably because the server wasn't listening in time
-        # but who knows, just try again
-        log.msg('ERROR CONNECTING TO %s' % self.port)
-        log.err(f)
-        log.flushErrors()
         reactor.callLater(1, self._connect)
 
-    def errReceived(self, data):
-        log.msg("ERR(ssh): '%s'" % data)
 
-    def processEnded(self, reason):
-        log.msg('FORWARDING PROCESS CLOSED')
-        self.deferred.callback(None)
+    def forwardingPortDisconnected(self, buffer):
+        self.buffer = buffer
+        self.transport.write('\x03')
+        self.transport.loseConnection()
+        reactor.callLater(0, self._reallyDie)
 
 
-class ConchTestForwardingPort(protocol.Protocol):
-
-    data  = 'test forwarding\n'
-
-    def __init__(self, proto):
-        self.proto = proto
-
-    def connectionMade(self):
-        log.msg('FORWARDING PORT OPEN')
-        self.proto.fac.proto.expectedLoseConnection = 1
-        self.buf = ''
-        self.transport.write(self.data)
-
-    def dataReceived(self, data):
-        self.buf += data
-
-    def connectionLost(self, reason):
-        log.msg('FORWARDING PORT CLOSED')
-        unittest.failUnlessEqual(self.buf, self.data)
-
-        # forwarding-only clients don't die on their own
-        self.proto.transport.write('\x03')
-        self.proto.transport.loseConnection()
-        reactor.callLater(0, self.reallyDie)
-
-    def reallyDie(self):
+    def _reallyDie(self):
         try:
-            self.proto.transport.signalProcess('KILL')
+            self.transport.signalProcess('KILL')
         except error.ProcessExitedAlready:
             pass
 
-from test_keys import publicRSA_openssh, privateRSA_openssh
-from test_keys import publicDSA_openssh, privateDSA_openssh
+
+    def processEnded(self, reason):
+        self._getDeferred().callback(self.buffer)
+
+
+
+class ConchTestForwardingPort(protocol.Protocol):
+    """
+    Connects to server launched by a third-party process (managed by
+    L{ConchTestForwardingProcess}) sends data, then reports whatever it
+    received back to the L{ConchTestForwardingProcess} once the connection
+    is ended.
+    """
+
+
+    def __init__(self, protocol, data):
+        """
+        @type protocol: L{ConchTestForwardingProcess}
+        @param protocol: The L{ProcessProtocol} which made this connection.
+
+        @type data: str
+        @param data: The data to be sent to the third-party server.
+        """
+        self.protocol = protocol
+        self.data = data
+
+
+    def connectionMade(self):
+        self.buffer = ''
+        self.transport.write(self.data)
+
+
+    def dataReceived(self, data):
+        self.buffer += data
+
+
+    def connectionLost(self, reason):
+        self.protocol.forwardingPortDisconnected(self.buffer)
+
+
 
 if Crypto:
     from twisted.conch.client import options, default, connect
@@ -127,7 +178,8 @@ if Crypto:
     from twisted.conch.ssh import forwarding
     from twisted.conch.ssh import connection
 
-    from test_ssh import ConchTestServerFactory, ConchTestPublicKeyChecker
+    from twisted.conch.test.test_ssh import ConchTestServerFactory
+    from twisted.conch.test.test_ssh import ConchTestPublicKeyChecker
 
 
     class SSHTestConnectionForUnix(connection.SSHConnection):
@@ -209,14 +261,30 @@ from twisted.conch.scripts.%s import run
 run()""" % mod]
     return start + list(args)
 
-class CmdLineClientTestBase(SignalMixin, _LogTimeFormatMixin):
+
+
+class ForwardingTestBase(SignalMixin):
+    """
+    Template class for tests of the Conch server's ability to forward arbitrary
+    protocols over SSH.
+
+    These tests are integration tests, not unit tests. They launch a Conch
+    server, a custom TCP server (just an L{EchoProtocol}) and then call
+    L{execute}.
+
+    L{execute} is implemented by subclasses of L{ForwardingTestBase}. It should
+    cause an SSH client to connect to the Conch server, asking it to forward
+    data to the custom TCP server.
+    """
 
     if not Crypto:
         skip = "can't run w/o PyCrypto"
 
-    def setUpClass(self):
-        SignalMixin.setUpClass(self)
-        _LogTimeFormatMixin.setUpClass(self)
+    def _createFiles(self):
+        for f in ['rsa_test','rsa_test.pub','dsa_test','dsa_test.pub',
+                  'kh_test']:
+            if os.path.exists(f):
+                os.remove(f)
         open('rsa_test','w').write(privateRSA_openssh)
         open('rsa_test.pub','w').write(publicRSA_openssh)
         open('dsa_test.pub','w').write(publicDSA_openssh)
@@ -225,71 +293,106 @@ class CmdLineClientTestBase(SignalMixin, _LogTimeFormatMixin):
         os.chmod('rsa_test', 33152)
         open('kh_test','w').write('127.0.0.1 '+publicRSA_openssh)
 
-    def tearDownClass(self):
-        SignalMixin.tearDownClass(self)
-        _LogTimeFormatMixin.tearDownClass(self)
-        for f in ['rsa_test','rsa_test.pub','dsa_test','dsa_test.pub', 'kh_test']:
-            os.remove(f)
 
-    def setUp(self):
-        realm = ConchTestRealm()
-        p = portal.Portal(realm)
-        p.registerChecker(ConchTestPublicKeyChecker())
-        self.fac = fac = ConchTestServerFactory()
-        fac.portal = p
-        self.server = reactor.listenTCP(0, fac, interface="127.0.0.1")
-
-    def tearDown(self):
-        try:
-            self.fac.proto.done = 1
-        except AttributeError:
-            pass
-        else:
-            self.fac.proto.transport.loseConnection()
-        return defer.maybeDeferred(self.server.stopListening)
-
-    def _getRandomPort(self):
+    def _getFreePort(self):
         f = EchoFactory()
         serv = reactor.listenTCP(0, f)
         port = serv.getHost().port
         serv.stopListening()
         return port
 
-    # actual tests
 
-    def testExec(self):
-        d = defer.Deferred()
-        p = ConchTestOpenSSHProcess(d)
-        return self.execute('echo goodbye', p)
-
-    def testLocalToRemoteForwarding(self):
-        f = EchoFactory()
-        f.fac = self.fac
-        serv = reactor.listenTCP(0, f)
-        port = serv.getHost().port
-        lport = self._getRandomPort()
-        d = defer.Deferred()
-        d.addCallback(lambda x : defer.maybeDeferred(serv.stopListening))
-        p = ConchTestForwardingProcess(d, lport,self.fac)
-        return self.execute('', p,
-                            preargs='-N -L%i:127.0.0.1:%i' % (lport, port))
-
-    def testRemoteToLocalForwarding(self):
-        f = EchoFactory()
-        f.fac = self.fac
-        serv = reactor.listenTCP(0, f)
-        port = serv.getHost().port
-        lport = self._getRandomPort()
-        d = defer.Deferred()
-        d.addCallback(lambda x : defer.maybeDeferred(serv.stopListening))
-        p = ConchTestForwardingProcess(d, lport, self.fac)
-        return self.execute('', p,
-                            preargs='-N -R %i:127.0.0.1:%i' % (lport, port))
+    def _makeConchFactory(self):
+        """
+        Make a L{ConchTestServerFactory}, which allows us to start a
+        L{ConchTestServer} -- i.e. an actually listening conch.
+        """
+        realm = ConchTestRealm()
+        p = portal.Portal(realm)
+        p.registerChecker(ConchTestPublicKeyChecker())
+        factory = ConchTestServerFactory()
+        factory.portal = p
+        return factory
 
 
-class OpenSSHClientTestCase(CmdLineClientTestBase, unittest.TestCase):
+    def setUp(self):
+        self._createFiles()
+        self.conchFactory = self._makeConchFactory()
+        self.conchFactory.expectedLoseConnection = 1
+        self.conchServer = reactor.listenTCP(0, self.conchFactory,
+                                             interface="127.0.0.1")
+        self.echoServer = reactor.listenTCP(0, EchoFactory())
+        self.echoPort = self.echoServer.getHost().port
+
+
+    def tearDown(self):
+        try:
+            self.conchFactory.proto.done = 1
+        except AttributeError:
+            pass
+        else:
+            self.conchFactory.proto.transport.loseConnection()
+        return defer.gatherResults([
+                defer.maybeDeferred(self.conchServer.stopListening),
+                defer.maybeDeferred(self.echoServer.stopListening)])
+
+
+    def test_exec(self):
+        """
+        Test that we can use whatever client to send the command "echo goodbye"
+        to the Conch server. Make sure we receive "goodbye" back from the
+        server.
+        """
+        d = self.execute('echo goodbye', ConchTestOpenSSHProcess())
+        return d.addCallback(self.assertEquals, 'goodbye\n')
+
+
+    def test_localToRemoteForwarding(self):
+        """
+        Test that we can use whatever client to forward a local port to a
+        specified port on the server.
+        """
+        lport = self._getFreePort()
+        process = ConchTestForwardingProcess(lport, 'test\n')
+        d = self.execute('', process,
+                         preargs='-N -L%i:127.0.0.1:%i'
+                         % (lport, self.echoPort))
+        d.addCallback(self.assertEqual, 'test\n')
+        return d
+
+
+    def test_remoteToLocalForwarding(self):
+        """
+        Test that we can use whatever client to forward a port from the server
+        to a port locally.
+        """
+        lport = self._getFreePort()
+        process = ConchTestForwardingProcess(lport, 'test\n')
+        d = self.execute('', process,
+                         preargs='-N -R %i:127.0.0.1:%i'
+                         % (lport, self.echoPort))
+        d.addCallback(self.assertEqual, 'test\n')
+        return d
+
+
+
+class OpenSSHClientTestCase(ForwardingTestBase, unittest.TestCase):
+
+    def _findSSH(self):
+        """
+        Find an installed executable on the system called 'ssh' and return
+        the absolute path to it.
+        """
+        # XXX - if we are going to search for installed binaries, then
+        # we should do it by examining the PATH environment variable.
+        for path in ['/usr', '', '/usr/local']:
+            # XXX - should also check that its executable
+            if os.path.exists(path + '/bin/ssh'):
+                return path + '/bin/ssh'
+         
 
     def execute(self, args, p, preargs = ''):
+        p.deferred = defer.Deferred()
         cmdline = ('ssh -2 -l testuser -p %i '
                    '-oUserKnownHostsFile=kh_test '
                    '-oPasswordAuthentication=no '
@@ -298,26 +401,26 @@ class OpenSSHClientTestCase(CmdLineClientTestBase, unittest.TestCase):
                    '-a '
                    '-i dsa_test ') + preargs + \
                    ' 127.0.0.1 ' + args
-        port = self.server.getHost().port
-        ssh_path = None
-        for path in ['/usr', '', '/usr/local']:
-            if os.path.exists(path+'/bin/ssh'):
-                ssh_path = path+'/bin/ssh'
-                break
-        if not ssh_path:
-            log.msg('skipping test, cannot find ssh')
-            raise unittest.SkipTest, 'skipping test, cannot find ssh'
+        port = self.conchServer.getHost().port
+        sshPath = self._findSSH()
+        if not sshPath:
+            raise unittest.SkipTest('skipping test, cannot find ssh')
         cmds = (cmdline % port).split()
-        reactor.spawnProcess(p, ssh_path, cmds)
+        reactor.spawnProcess(p, sshPath, cmds)
         return p.deferred
 
 
-class CmdLineClientTestCase(CmdLineClientTestBase, unittest.TestCase):
+
+class CmdLineClientTestCase(ForwardingTestBase, unittest.TestCase):
+    def setUp(self):
+        if runtime.platformType == 'win32':
+            raise unittest.SkipTest("can't run cmdline client on win32")
+        ForwardingTestBase.setUp(self)
+
 
     def execute(self, args, p, preargs=''):
-        if runtime.platformType == 'win32':
-            raise unittest.SkipTest, "can't run cmdline client on win32"
-        port = self.server.getHost().port
+        p.deferred = defer.Deferred()
+        port = self.conchServer.getHost().port
         cmd = ('-p %i -l testuser '
                '--known-hosts kh_test '
                '--user-authentications publickey '
@@ -335,12 +438,17 @@ class CmdLineClientTestCase(CmdLineClientTestBase, unittest.TestCase):
         return p.deferred
 
 
-class UnixClientTestCase(CmdLineClientTestBase, unittest.TestCase):
+
+class UnixClientTestCase(ForwardingTestBase, unittest.TestCase):
+    def setUp(self):
+        if runtime.platformType == 'win32':
+            raise unittest.SkipTest("can't run cmdline client on win32")
+        ForwardingTestBase.setUp(self)
+
 
     def execute(self, args, p, preargs = ''):
-        if runtime.platformType == 'win32':
-            raise unittest.SkipTest, "can't run cmdline client on win32"
-        port = self.server.getHost().port
+        p.deferred = defer.Deferred()
+        port = self.conchServer.getHost().port
         cmd1 = ('-p %i -l testuser '
                 '--known-hosts kh_test '
                 '--user-authentications publickey '
@@ -364,8 +472,12 @@ class UnixClientTestCase(CmdLineClientTestBase, unittest.TestCase):
         conn = SSHTestConnectionForUnix(p, sys.executable, cmds2)
         uao = default.SSHUserAuthClient(o['user'], o, conn)
         d = connect.connect(o['host'], int(o['port']), o, vhk, uao)
-        d.addErrback(lambda f: unittest.fail('Failure connecting to test server: %s' % f))
+        d.addErrback(lambda f:
+                     self.fail('Failure connecting to test server: %s' % f))
         d.addCallback(lambda x : p.deferred)
-        d.addCallback(lambda x : defer.maybeDeferred(
-            conn.transport.transport.loseConnection))
+        def cleanup(buf):
+            d = defer.maybeDeferred(conn.transport.transport.loseConnection)
+            d.addCallback(lambda x: buf)
+            return d
+        d.addCallback(cleanup)
         return d

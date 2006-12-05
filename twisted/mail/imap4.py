@@ -1636,13 +1636,13 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         try:
             id, msg = results.next()
         except StopIteration:
-            # All results have been processed, deliver completion notification.
-            self.sendPositiveResponse(tag, 'FETCH completed')
-
             # The idle timeout was suspended while we delivered results,
             # restore it now.
             self.setTimeout(self._oldTimeout)
             del self._oldTimeout
+
+            # All results have been processed, deliver completion notification.
+            self.sendPositiveResponse(tag, 'FETCH completed')
 
             # Instance state is now consistent again (ie, it is as though
             # the fetch command never ran), so allow any pending blocked

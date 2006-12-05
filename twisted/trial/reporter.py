@@ -16,7 +16,7 @@ import warnings
 
 from twisted.python import reflect, failure, log
 from twisted.python.util import untilConcludes
-from twisted.trial import itrial
+from twisted.trial import itrial, util
 import zope.interface as zi
 
 pyunit = __import__('unittest')
@@ -65,6 +65,11 @@ class TestResult(pyunit.TestResult, object):
     def _getTime(self):
         return time.time()
 
+    def _getFailure(self, error):
+        if isinstance(error, tuple):
+            return failure.Failure(error[1], error[0], error[2])
+        return error
+
     def startTest(self, test):
         """This must be called before the given test is commenced.
 
@@ -87,9 +92,7 @@ class TestResult(pyunit.TestResult, object):
         @type test: L{pyunit.TestCase}
         @type fail: L{failure.Failure} or L{tuple}
         """
-        if isinstance(fail, tuple):
-            fail = failure.Failure(fail[1], fail[0], fail[2])
-        self.failures.append((test, fail))
+        self.failures.append((test, self._getFailure(fail)))
 
     def addError(self, test, error):
         """Report an error that occurred while running the given test.
@@ -97,9 +100,7 @@ class TestResult(pyunit.TestResult, object):
         @type test: L{pyunit.TestCase}
         @type fail: L{failure.Failure} or L{tuple}
         """
-        if isinstance(error, tuple):
-            error = failure.Failure(error[1], error[0], error[2])
-        self.errors.append((test, error))
+        self.errors.append((test, self._getFailure(error)))
 
     def addSkip(self, test, reason):
         """
@@ -152,15 +153,17 @@ class TestResult(pyunit.TestResult, object):
     def cleanupErrors(self, errs):
         """Report an error that occurred during the cleanup between tests.
         """
-        # XXX - deprecate this method, we don't need it any more
+        warnings.warn("Cleanup errors are actual errors. Use addError. "
+                      "Deprecated in Twisted 2.5",
+                      category=DeprecationWarning, stacklevel=2)
 
     def startSuite(self, name):
-        # XXX - these should be removed, but not in this branch
-        pass
+        warnings.warn("startSuite deprecated in Twisted 2.5",
+                      category=DeprecationWarning, stacklevel=2)
 
     def endSuite(self, name):
-        # XXX - these should be removed, but not in this branch
-        pass
+        warnings.warn("endSuite deprecated in Twisted 2.5",
+                      category=DeprecationWarning, stacklevel=2)
 
 
 class Reporter(TestResult):
@@ -169,11 +172,13 @@ class Reporter(TestResult):
     separator = '-' * 79
     doubleSeparator = '=' * 79
 
-    def __init__(self, stream=sys.stdout, tbformat='default', realtime=False):
+    def __init__(self, stream=sys.stdout, tbformat='default', realtime=False,
+                 uncleanWarnings=False):
         super(Reporter, self).__init__()
         self.stream = SafeStream(stream)
         self.tbformat = tbformat
         self.realtime = realtime
+        self.uncleanWarnings = uncleanWarnings
 
     def startTest(self, test):
         super(Reporter, self).startTest(test)
@@ -185,10 +190,14 @@ class Reporter(TestResult):
             self.write(self._formatFailureTraceback(fail))
 
     def addError(self, test, error):
-        super(Reporter, self).addError(test, error)
-        if self.realtime:
-            error = self.errors[-1][1] # guarantee it's a Failure
-            self.write(self._formatFailureTraceback(error))
+        error = self._getFailure(error)
+        if self.uncleanWarnings and error.check(util.DirtyReactorError):
+            warnings.warn(error.getErrorMessage())
+        else:
+            super(Reporter, self).addError(test, error)
+            if self.realtime:
+                error = self.errors[-1][1] # guarantee it's a Failure
+                self.write(self._formatFailureTraceback(error))
 
     def write(self, format, *args):
         s = str(format)
@@ -548,8 +557,10 @@ class TreeReporter(Reporter):
     TODONE = 'red'
     SUCCESS = 'green'
 
-    def __init__(self, stream=sys.stdout, tbformat='default', realtime=False):
-        super(TreeReporter, self).__init__(stream, tbformat, realtime)
+    def __init__(self, stream=sys.stdout, tbformat='default', realtime=False,
+                 uncleanWarnings=False):
+        super(TreeReporter, self).__init__(stream, tbformat, realtime,
+                                           uncleanWarnings)
         self._lastTest = []
         for colorizer in [_Win32Colorizer, _AnsiColorizer, _NullColorizer]:
             if colorizer.supported():

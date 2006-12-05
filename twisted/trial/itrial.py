@@ -44,16 +44,19 @@ class IReporter(zi.Interface):
         """
 
     def startSuite(name):
-        """suites which wish to appear in reporter output should call this
+        """DEPRECATED in Twisted 2.5.
+        Suites which wish to appear in reporter output should call this
         before running their tests"""
 
     def endSuite(name):
-        """called at the end of a suite, if and only if that suite has called
+        """DEPRECATED in Twisted 2.5.
+        Called at the end of a suite, if and only if that suite has called
         'startSuite'
         """
 
     def cleanupErrors(errs):
-        """called when the reactor has been left in a 'dirty' state
+        """DEPRECATED in Twisted 2.5.
+        Called when the reactor has been left in a 'dirty' state
         @param errs: a list of L{twisted.python.failure.Failure}s
         """
 
