@@ -11,7 +11,7 @@ infrastructure.
 import cStringIO as StringIO
 
 import cgi, time, urlparse
-from urllib import unquote
+from urllib import quote, unquote
 from urlparse import urlsplit
 
 import weakref
@@ -313,10 +313,15 @@ class Request(http.Request):
                     (actualRes, newpath), res, path, updatepaths)
                 )
 
+        if path:
+            url = quote("/" + "/".join(path))
+        else:
+            url = "/"
+
         if newpath is StopTraversal:
             # We need to rethink how to do this.
             #if newres is res:
-                self._rememberURLForResource(path, res)
+                self._rememberResource(res, url)
                 return res
             #else:
             #    raise ValueError("locateChild must not return StopTraversal with a resource other than self.")
@@ -326,28 +331,24 @@ class Request(http.Request):
             assert not newpath is path, "URL traversal cycle detected when attempting to locateChild %r from resource %r." % (path, res)
             assert len(newpath) < len(path), "Infinite loop impending..."
 
-        if path:
-            url = "/" + "/".join(path)
-        else:
-            url = "/"
-
         if updatepaths:
             # We found a Resource... update the request.prepath and postpath
             for x in xrange(len(path) - len(newpath)):
                 self.prepath.append(self.postpath.pop(0))
 
         child = self._getChild(None, newres, newpath, updatepaths=updatepaths)
-        self._rememberURLForResource(url, child)
+        self._rememberResource(child, url)
 
         return child
 
-    _resourcesByURL = weakref.WeakKeyDictionary()
+    _urlsByResource = weakref.WeakKeyDictionary()
 
-    def _rememberURLForResource(self, url, resource):
+    def _rememberResource(self, resource, url):
         """
-        Remember the URL of visited resources.
+        Remember the URL of a visited resource.
         """
-        self._resourcesByURL[resource] = url
+        self._urlsByResource[resource] = url
+        return resource
 
     def urlForResource(self, resource):
         """
@@ -360,13 +361,18 @@ class Request(http.Request):
         this method will return one of those URLs, but which one is not defined,
         nor whether the same URL is returned in subsequent calls.
 
-        @return: the URL of C{resource} if known, otherwise C{None}.
+        @param resource: the resource to find a URI for.  This resource must
+            have been obtained from the request (ie. via its C{uri} attribute, or
+            through its C{locateResource} or C{locateChildResource} methods).
+        @return: a valid URL for C{resource} in this request.
+        @raise NoURLForResourceError: if C{resource} has no URL in this request
+            (because it was not obtained from the request).
         """
-        try:
-            return self._resourcesByURL[resource]
-        except KeyError:
-            return None
-
+        resource = self._urlsByResource.get(resource, None)
+        if resource is None:
+            raise NoURLForResourceError(resource)
+        return resource
+        
     def locateResource(self, url):
         """
         Looks up the resource with the given URL.
@@ -403,15 +409,56 @@ class Request(http.Request):
 
         segments = path.split("/")
         assert segments[0] == "", "URL path didn't begin with '/': %s" % (path,)
-        segments = segments[1:]
+        segments = map(unquote, segments[1:])
 
         def notFound(f):
             f.trap(http.HTTPError)
-            if f.response.code != responsecode.NOT_FOUND:
-                raise f
+            if f.value.response.code != responsecode.NOT_FOUND:
+                return f
             return None
 
-        return defer.maybeDeferred(self._getChild, None, self.site.resource, segments, updatepaths=False)
+        d = defer.maybeDeferred(self._getChild, None, self.site.resource, segments, updatepaths=False)
+        d.addCallback(self._rememberResource, path)
+        d.addErrback(notFound)
+        return d
+
+    def locateChildResource(self, parent, childName):
+        """
+        Looks up the child resource with the given name given the parent
+        resource.  This is similar to locateResource(), but doesn't have to
+        start the lookup from the root resource, so it is potentially faster.
+        @param parent: the parent of the resource being looked up.  This resource
+            must have been obtained from the request (ie. via its C{uri} attribute,
+            or through its C{locateResource} or C{locateChildResource} methods).
+        @param childName: the name of the child of C{parent} to looked up.
+            to C{parent}.
+        @return: a L{Deferred} resulting in the L{IResource} at the
+            given URL or C{None} if no such resource can be located.
+        @raise NoURLForResourceError: if C{resource} was not obtained from the
+            request.
+        """
+        if parent is None or childName is None:
+            return None
+
+        assert "/" not in childName, "Child name may not contain '/': %s" % (childName,)
+
+        parentURL = self.urlForResource(parent)
+        if not parentURL.endswith("/"):
+            parentURL += "/"
+        url = parentURL + quote(childName)
+
+        segment = childName
+
+        def notFound(f):
+            f.trap(http.HTTPError)
+            if f.value.response.code != responsecode.NOT_FOUND:
+                return f
+            return None
+
+        d = defer.maybeDeferred(self._getChild, None, parent, [segment], updatepaths=False)
+        d.addCallback(self._rememberResource, url)
+        d.addErrback(notFound)
+        return d
 
     def _processingFailed(self, reason):
         if reason.check(http.HTTPError) is not None:
@@ -492,4 +539,10 @@ class Site(object):
         return Request(site=self, *args, **kwargs)
 
 
-__all__ = ['Request', 'Site', 'StopTraversal', 'VERSION', 'defaultHeadersFilter', 'doTrace', 'parsePOSTData', 'preconditionfilter']
+class NoURLForResourceError(RuntimeError):
+    def __init__(self, resource):
+        RuntimeError.__init__(self, "Resource %r has no URL in this request." % (resource,))
+        self.resource = resource
+
+
+__all__ = ['Request', 'Site', 'StopTraversal', 'VERSION', 'defaultHeadersFilter', 'doTrace', 'parsePOSTData', 'preconditionfilter', 'NoURLForResourceError']

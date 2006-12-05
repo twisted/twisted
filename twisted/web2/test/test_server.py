@@ -445,7 +445,7 @@ class RedirectResourceTest(BaseCase):
                 (resource.RedirectResource(), url),
                 (301, {"location": url}, self.html(url))
             ))
-        return defer.DeferredList(ds)
+        return defer.DeferredList(ds, fireOnOneErrback=True)
 
     def test_hostRedirect(self):
         ds = []
@@ -457,7 +457,7 @@ class RedirectResourceTest(BaseCase):
                 (resource.RedirectResource(host="other"), url1),
                 (301, {"location": url2}, self.html(url2))
             ))
-        return defer.DeferredList(ds)
+        return defer.DeferredList(ds, fireOnOneErrback=True)
 
     def test_pathRedirect(self):
         root = BaseTestResource()
@@ -473,7 +473,7 @@ class RedirectResourceTest(BaseCase):
                 (resource.RedirectResource(path="/other"), url1),
                 (301, {"location": url2}, self.html(url2))
             ))
-        return defer.DeferredList(ds)
+        return defer.DeferredList(ds, fireOnOneErrback=True)
 
 
 class EmptyResource(resource.Resource):
@@ -491,25 +491,6 @@ class RememberURIs(BaseCase):
     """
     def test_requestedResource(self):
         """
-        Test urlForResource() on resource looked up via request processing.
-        """
-        root = EmptyResource(self)
-        root.expectedURI = "/"
-
-        child = EmptyResource(self)
-        child.expectedURI = "/foo"
-
-        root.putChild("foo", child)
-
-        request = SimpleRequest(server.Site(root), "GET", "/foo")
-
-        def gotResource(resource):
-            self.assertEquals(resource.expectedURI, request.urlForResource(resource))
-
-        return request.locateResource('/foo').addCallback(gotResource)
-
-    def test_deepResource(self):
-        """
         Test urlForResource() on deeply nested resource looked up via
         request processing.
         """
@@ -518,22 +499,42 @@ class RememberURIs(BaseCase):
 
         foo = EmptyResource(self)
         foo.expectedURI = "/foo"
-        root.putChild('foo', foo)
+        root.putChild("foo", foo)
 
         bar = EmptyResource(self)
-        bar.expectedURI = "/foo/bar"
-        foo.putChild('bar', bar)
+        bar.expectedURI = foo.expectedURI + "/bar"
+        foo.putChild("bar", bar)
 
         baz = EmptyResource(self)
-        baz.expectedURI = "/foo/bar/baz"
-        bar.putChild('baz', baz)
+        baz.expectedURI = bar.expectedURI + "/baz"
+        bar.putChild("baz", baz)
 
-        request = SimpleRequest(server.Site(root), "GET", "/foo/bar/baz")
+        ds = []
 
-        def gotResource(resource):
-            self.assertEquals(resource.expectedURI, request.urlForResource(resource))
+        for uri in (foo.expectedURI, bar.expectedURI, baz.expectedURI):
+            ds.append(self.assertResponse(
+                (root, uri, {'Host':'host'}),
+                (201, {}, None),
+            ))
 
-        return request.locateResource('/foo/bar/baz').addCallback(gotResource)
+        return defer.DeferredList(ds, fireOnOneErrback=True)
+
+    def test_urlEncoding(self):
+        """
+        Test to make sure that URL encoding is working.
+        """
+        root = EmptyResource(self)
+        root.expectedURI = "/"
+
+        child = EmptyResource(self)
+        child.expectedURI = "/foo%20bar"
+
+        root.putChild("foo bar", child)
+
+        return self.assertResponse(
+            (root, child.expectedURI, {'Host':'host'}),
+            (201, {}, None)
+        )
 
     def test_locateResource(self):
         """
@@ -543,13 +544,62 @@ class RememberURIs(BaseCase):
         child = resource.Resource()
         root.putChild("foo", child)
 
-        request = SimpleRequest(server.Site(root), "GET", "/foo")
+        request = SimpleRequest(server.Site(root), "GET", "/")
 
-        def _foundCb(found):
-            self.assertEquals("/foo", request.urlForResource(found))
+        def gotResource(resource):
+            self.assertEquals("/foo", request.urlForResource(resource))
 
         d = defer.maybeDeferred(request.locateResource, "/foo")
-        d.addCallback(_foundCb)
+        d.addCallback(gotResource)
+        return d
+
+    def test_unknownResource(self):
+        """
+        Test urlForResource() on unknown resource.
+        """
+        root = resource.Resource()
+        child = resource.Resource()
+        request = SimpleRequest(server.Site(root), "GET", "/")
+
+        self.assertRaises(server.NoURLForResourceError, request.urlForResource, child)
+
+    def test_locateChildResource(self):
+        """
+        Test urlForResource() on deeply nested resource looked up via
+        locateChildResource().
+        """
+        root = EmptyResource(self)
+        root.expectedURI = "/"
+
+        foo = EmptyResource(self)
+        foo.expectedURI = "/foo"
+        root.putChild("foo", foo)
+
+        bar = EmptyResource(self)
+        bar.expectedURI = "/foo/bar"
+        foo.putChild("bar", bar)
+
+        baz = EmptyResource(self)
+        baz.expectedURI = "/foo/bar/b%20a%20z"
+        bar.putChild("b a z", baz)
+
+        request = SimpleRequest(server.Site(root), "GET", "/")
+
+        def gotResource(resource):
+            # Make sure locateChildResource() gave us the right answer
+            self.assertEquals(resource, bar)
+
+            return request.locateChildResource(resource, "b a z").addCallback(gotChildResource)
+
+        def gotChildResource(resource):
+            # Make sure locateChildResource() gave us the right answer
+            self.assertEquals(resource, baz)
+
+            self.assertEquals(resource.expectedURI, request.urlForResource(resource))
+
+        d = request.locateResource(bar.expectedURI)
+        d.addCallback(gotResource)
+        return d
 
     def test_deferredLocateChild(self):
         """
@@ -568,9 +618,9 @@ class RememberURIs(BaseCase):
 
         request = SimpleRequest(server.Site(root), "GET", "/foo")
 
-        def _foundCb(found):
-            self.assertEquals("/foo", request.urlForResource(found))
+        def gotResource(resource):
+            self.assertEquals("/foo", request.urlForResource(resource))
 
         d = request.locateResource("/foo")
-        d.addCallback(_foundCb)
-        
+        d.addCallback(gotResource)
+        return d
