@@ -35,7 +35,7 @@ class CapturingReporter(object):
     separator = None
     testsRun = None
 
-    def __init__(self, *a, **kw):
+    def __init__(self, tbformat=None, args=None, realtime=None):
         """Create a capturing reporter."""
         self._calls = []
         self.shouldStop = False
@@ -133,8 +133,8 @@ class TestTrialRunner(unittest.TestCase):
         self.runner.run(self.test)
         self.failUnless(fd.closed)
 
-
 class TestRunner(unittest.TestCase):
+
     def setUp(self):
         unittest.TestCase.setUp(self)
         self.runners = []
@@ -240,26 +240,6 @@ class TestRunner(unittest.TestCase):
         my_runner = self.getRunner()
         result = my_runner._makeResult()
         self.assertEqual(result.__class__, self.config['reporter'])
-
-    def test_uncleanWarningsOffByDefault(self):
-        """
-        Test that, by default, Trial sets the 'uncleanWarnings' option on the
-        reporter to False. This means that dirty reactor errors will be
-        reported as errors. See L{test_reporter.TestDirtyReactor}.
-        """
-        self.parseOptions([])
-        result = self.getRunner()._makeResult()
-        self.assertEqual(result.uncleanWarnings, False)
-
-    def test_getsUncleanWarnings(self):
-        """
-        Test that specifying '--unclean-warnings' on the trial command line
-        will set the 'uncleanWarnings' option on the reporter to True.
-        See L{test_reporter.TestDirtyReactor} for implications.
-        """
-        self.parseOptions(['--unclean-warnings'])
-        result = self.getRunner()._makeResult()
-        self.assertEqual(result.uncleanWarnings, True)
 
     def test_runner_working_directory(self):
         self.parseOptions(['--temp-directory', 'some_path'])

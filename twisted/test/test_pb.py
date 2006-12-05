@@ -994,9 +994,8 @@ class NewCredTestCase(unittest.TestCase):
             reconnectedAlready = False
             def clientConnectionLost(self, connector, reason):
                 reconnecting = not self.reconnectedAlready
-                if reconnecting:
-                    self.reconnectedAlready = True
-                    connector.connect()
+                self.reconnectedAlready = True
+                connector.connect()
                 return pb.PBClientFactory.clientConnectionLost(
                     self, connector, reason, reconnecting)
 

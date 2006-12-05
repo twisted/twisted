@@ -374,39 +374,34 @@ class TestStrictTodo(unittest.TestCase, ResultsTestMixin):
         self.failUnlessEqual(expectedReasons, reasonsGotten)
 
 
+class _CleanUpReporter(reporter.Reporter):
+    def __init__(self):
+        super(_CleanUpReporter, self).__init__(StringIO.StringIO(), 'default',
+                                               False)
+
+    def cleanupErrors(self, errs):
+        self.cleanerrs = errs
+
+
 class TestCleanup(unittest.TestCase):
     def setUp(self):
-        self.result = reporter.Reporter(StringIO.StringIO())
+        self.result = _CleanUpReporter()
         self.loader = runner.TestLoader()
 
     def testLeftoverSockets(self):
-        """
-        Run a test that leaves sockets open. Check that trial reports a
-        L{util.DirtyReactorError} and that the error is against the suite, not
-        the test.
-        """
         suite = self.loader.loadMethod(
             erroneous.SocketOpenTest.test_socketsLeftOpen)
         suite.run(self.result)
-        self.failIf(self.result.wasSuccessful())
-        # socket cleanup happens at end of class's tests.
-        # all the tests in the class are successful, even if the suite
-        # fails
-        self.assertEqual(len(self.result.successes), 1)
-        self.failUnless(self.result.errors[0][1].check(util.DirtyReactorError))
+        self.assert_(self.result.cleanerrs)
+        self.assert_(isinstance(self.result.cleanerrs.value,
+                                util.DirtyReactorError))
 
     def testLeftoverPendingCalls(self):
-        """
-        Run a test that leaves a L{DelayedCall} hanging. Check that trial
-        reports a L{util.PendingTimedCallsError} and that the test itself
-        fails.
-        """
         suite = erroneous.ReactorCleanupTests('test_leftoverPendingCalls')
         suite.run(self.result)
-        self.failIf(self.result.wasSuccessful())
-        failure = self.result.errors[0][1]
-        self.assertEqual(len(self.result.successes), 0)
-        self.failUnless(failure.check(util.PendingTimedCallsError))
+        self.assert_(self.result.cleanerrs)
+        self.assert_(isinstance(self.result.cleanerrs.value,
+                                util.PendingTimedCallsError))
 
 
 class BogusReporter(reporter.Reporter):

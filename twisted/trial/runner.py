@@ -701,8 +701,7 @@ class TrialRunner(object):
         return currentDir
 
     def _makeResult(self):
-        return self.reporterFactory(self.stream, self.tbformat, self.rterrors,
-                                    self.uncleanWarnings)
+        return self.reporterFactory(self.stream, self.tbformat, self.rterrors)
 
     def __init__(self, reporterFactory,
                  mode=None,
@@ -711,7 +710,6 @@ class TrialRunner(object):
                  profile=False,
                  tracebackFormat='default',
                  realTimeErrors=False,
-                 uncleanWarnings=False,
                  workingDirectory=None):
         self.reporterFactory = reporterFactory
         self.logfile = logfile
@@ -719,7 +717,6 @@ class TrialRunner(object):
         self.stream = stream
         self.tbformat = tracebackFormat
         self.rterrors = realTimeErrors
-        self.uncleanWarnings = uncleanWarnings
         self._result = None
         self.workingDirectory = workingDirectory or '_trial_temp'
         self._logFileObserver = None

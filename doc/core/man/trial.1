@@ -95,12 +95,6 @@ will \fIdelete\fR the directory before re-creating it.
 Ask trial to look into <filename> and run any tests specified using the
 Emacs-style buffer variable 'test-case-name'.
 .TP
-\fB--unclean-warnings\fR
-As of Twisted 2.5, trial will report an error if the reactor is left unclean
-at the end of the test. This option is provided to assist in migrating from
-Twisted 2.4 to Twisted 2.5 and later. Enabling this option will turn the errors
-into warnings.
-.TP
 \fB-u\fR, \fB--until-failure\fR
 Keep looping the tests until one of them raises an error or a failure.
 This is particularly useful for reproducing intermittent failures.

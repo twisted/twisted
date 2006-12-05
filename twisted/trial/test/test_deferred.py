@@ -217,4 +217,5 @@ class TestTimeout(TestTester):
         if call.active():
             call.cancel()
         self.failIf(result.wasSuccessful())
+        self.failUnlessEqual(len(result.errors), 1)
         self._wasTimeout(result.errors[0][1])

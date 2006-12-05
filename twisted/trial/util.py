@@ -17,84 +17,61 @@ Maintainer: U{Jonathan Lange<mailto:jml@twistedmatrix.com>}
 """
 
 
-from itertools import chain
-import traceback, sys
+from __future__ import generators
 
-from twisted.python import failure, log, threadpool
+import traceback, gc, sys
+from twisted.python import log, threadpool
 from twisted.internet import interfaces, utils
 
+# Methods in this list will be omitted from a failed test's traceback if
+# they are the final frame.
+_failureConditionals = [
+    'fail', 'failIf', 'failUnless', 'failUnlessRaises', 'failUnlessEqual',
+    'failUnlessIdentical', 'failIfEqual', 'assertApproximates']
+
+# ---------------------------------
 
 DEFAULT_TIMEOUT = object()
 DEFAULT_TIMEOUT_DURATION = 120.0
 
 
 class FailureError(Exception):
-    """
-    DEPRECATED in Twisted 2.5
-
-    Wraps around a Failure so it can get re-raised as an Exception.
-    """
+    """Wraps around a Failure so it can get re-raised as an Exception"""
 
     def __init__(self, failure):
-        warnings.warn("Deprecated in Twisted 2.5", category=DeprecationWarning)
         Exception.__init__(self)
         self.original = failure
-
-
-class DirtyReactorWarning(Warning):
-    """
-    DEPRECATED in Twisted 2.5.
-    emitted when the reactor has been left in an unclean state
-    """
 
 
 class DirtyReactorError(Exception):
     """emitted when the reactor has been left in an unclean state"""
 
-    def __init__(self, msg):
-        Exception.__init__(self, self._getMessage(msg))
+class DirtyReactorWarning(Warning):
+    """emitted when the reactor has been left in an unclean state"""
 
-    def _getMessage(self, msg):
-        return ("reactor left in unclean state, the following Selectables "
-                "were left over: %s" % (msg,))
-
-
-class PendingTimedCallsError(DirtyReactorError):
+class PendingTimedCallsError(Exception):
     """raised when timed calls are left in the reactor"""
 
-    def _getMessage(self, msg):
-        return ("pendingTimedCalls still pending (consider setting "
-                "twisted.internet.base.DelayedCall.debug = True): %s" % (msg,))
+DIRTY_REACTOR_MSG = "THIS WILL BECOME AN ERROR SOON! reactor left in unclean state, the following Selectables were left over: "
+PENDING_TIMED_CALLS_MSG = "pendingTimedCalls still pending (consider setting twisted.internet.base.DelayedCall.debug = True):"
 
 
 class _Janitor(object):
-    def __init__(self, test, result):
-        self.test = test
-        self.result = result
+    logErrCheck = True
+    cleanPending = cleanThreads = cleanReactor = True
 
     def postCaseCleanup(self):
-        """
-        Called by L{unittest.TestCase} after a test to catch any logged errors
-        or pending L{DelayedCall}s.
-        """
-        passed = True
-        for error in self._cleanPending():
-            passed = False
-            self.result.addError(self.test, error)
-        return passed
+        return self._dispatch('cleanPending')
 
     def postClassCleanup(self):
-        """
-        Called by L{unittest.TestCase} after the last test in a C{TestCase}
-        subclass. Ensures the reactor is clean by murdering the threadpool,
-        catching any pending L{DelayedCall}s, open sockets etc.
-        """
-        for error in chain(self._cleanReactor(), self._cleanPending()):
-            self.result.addError(self.test, error)
-        self._cleanThreads()
+        return self._dispatch('cleanReactor',
+                              'cleanPending', 'cleanThreads')
 
+    def _dispatch(self, *attrs):
+        for attr in attrs:
+            getattr(self, "do_%s" % attr)()
 
-    def _cleanPending(self):
+    def do_cleanPending(cls):
         # don't import reactor when module is loaded
         from twisted.internet import reactor
 
@@ -102,18 +79,24 @@ class _Janitor(object):
         reactor.iterate(0)
         reactor.iterate(0)
 
-        for p in reactor.getDelayedCalls():
-            if p.active():
-                p.cancel()
-            else:
-                print "WEIRNESS! pending timed call not active+!"
-            yield failure.Failure(PendingTimedCallsError(p))
-    _cleanPending = utils.suppressWarnings(
-        _cleanPending, (('ignore',), {'category': DeprecationWarning,
-                                      'message':
-                                      r'reactor\.iterate cannot be used.*'}))
+        pending = reactor.getDelayedCalls()
+        if pending:
+            s = PENDING_TIMED_CALLS_MSG
+            for p in pending:
+                s += " %s\n" % (p,)
+                if p.active():
+                    p.cancel() # delete the rest
+                else:
+                    print "WEIRNESS! pending timed call not active+!"
+            raise PendingTimedCallsError(s)
+    do_cleanPending = utils.suppressWarnings(
+        do_cleanPending, (('ignore',), {'category': DeprecationWarning,
+                                        'message':
+                                        r'reactor\.iterate cannot be used.*'}))
+    do_cleanPending = classmethod(do_cleanPending)
 
-    def _cleanThreads(self):
+
+    def do_cleanThreads(cls):
         from twisted.internet import reactor
         if interfaces.IReactorThreads.providedBy(reactor):
             reactor.suggestThreadPoolSize(0)
@@ -126,12 +109,25 @@ class _Janitor(object):
                 reactor.threadpool = threadpool.ThreadPool(0, 10)
                 reactor.threadpool.start()
 
-    def _cleanReactor(self):
+
+    do_cleanThreads = classmethod(do_cleanThreads)
+
+    def do_cleanReactor(cls):
+        s = []
         from twisted.internet import reactor
-        for sel in reactor.removeAll():
-            if interfaces.IProcessTransport.providedBy(sel):
-                sel.signalProcess('KILL')
-            yield failure.Failure(DirtyReactorError(repr(sel)))
+        removedSelectables = reactor.removeAll()
+        if removedSelectables:
+            s.append(DIRTY_REACTOR_MSG)
+            for sel in removedSelectables:
+                if interfaces.IProcessTransport.providedBy(sel):
+                    sel.signalProcess('KILL')
+                s.append(repr(sel))
+        if s:
+            raise DirtyReactorError(' '.join(s))
+    do_cleanReactor = classmethod(do_cleanReactor)
+
+    def doGcCollect(cls):
+         gc.collect()
 
 
 def suppress(action='ignore', **kwarg):
