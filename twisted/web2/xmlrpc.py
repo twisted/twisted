@@ -13,12 +13,11 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 
 # System Imports
 import xmlrpclib
-import urlparse
 
 # Sibling Imports
 from twisted.web2 import resource, stream
-from twisted.web2 import responsecode, http, http_headers 
-from twisted.internet import defer, protocol, reactor
+from twisted.web2 import responsecode, http, http_headers
+from twisted.internet import defer
 from twisted.python import log, reflect
 
 # Useful so people don't need to import xmlrpclib directly
@@ -73,7 +72,7 @@ class XMLRPC(resource.Resource):
         s=("<html><head><title>XML-RPC responder</title></head>"
            "<body><h1>XML-RPC responder</h1>POST your XML-RPC here.</body></html>")
         
-        return http.Response(responsecode.OK, 
+        return http.Response(responsecode.OK,
             {'content-type': http_headers.MimeType('text', 'html')},
             s)
     
@@ -101,7 +100,7 @@ class XMLRPC(resource.Resource):
         except:
             f = Fault(self.FAILURE, "can't serialize output")
             s = xmlrpclib.dumps(f, methodresponse=1)
-        return http.Response(responsecode.OK, 
+        return http.Response(responsecode.OK,
             {'content-type': http_headers.MimeType('text', 'xml')},
             s)
 
@@ -126,7 +125,8 @@ class XMLRPC(resource.Resource):
         if functionPath.find(self.separator) != -1:
             prefix, functionPath = functionPath.split(self.separator, 1)
             handler = self.getSubHandler(prefix)
-            if handler is None: raise NoSuchFunction(self.NOT_FOUND, "no such subHandler %s" % prefix)
+            if handler is None:
+                raise NoSuchFunction(self.NOT_FOUND, "no such subHandler %s" % prefix)
             return handler.getFunction(functionPath)
 
         f = getattr(self, "xmlrpc_%s" % functionPath, None)
@@ -169,10 +169,11 @@ class XMLRPCIntrospection(XMLRPC):
         todo = [(self._xmlrpc_parent, '')]
         while todo:
             obj, prefix = todo.pop(0)
-            functions.extend([ prefix + name for name in obj._listFunctions() ])
-            todo.extend([ (obj.getSubHandler(name),
+            functions.extend([prefix + name for name in obj._listFunctions()])
+            todo.extend([(obj.getSubHandler(name),
                            prefix + name + obj.separator)
-                          for name in obj.getSubHandlerPrefixes() ])
+                          for name in obj.getSubHandlerPrefixes()])
+        functions.sort()
         return functions
 
     xmlrpc_listMethods.signature = [['array']]

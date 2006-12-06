@@ -8,29 +8,27 @@
 """Test XML-RPC support."""
 
 import xmlrpclib
+
 from twisted.web2 import xmlrpc
-from twisted.web2 import server
-from twisted.web2.channel import http
 from twisted.web2.xmlrpc import XMLRPC, addIntrospection
-from twisted.trial import unittest
-from twisted.internet import reactor, defer
-from twisted.python import log
+from twisted.internet import defer
 
-try:
-    from twisted.web.xmlrpc import Proxy
-except ImportError:
-    Proxy = None
-
-import time
+from twisted.web2.test.test_server import BaseCase
 
 class TestRuntimeError(RuntimeError):
-    pass
+    """
+    Fake RuntimeError for testing purposes.
+    """
 
 class TestValueError(ValueError):
-    pass
+    """
+    Fake ValueError for testing purposes.
+    """
 
-class Test(XMLRPC):
-
+class XMLRPCTestResource(XMLRPC):
+    """
+    This is the XML-RPC "server" against which the tests will be run.
+    """
     FAILURE = 666
     NOT_FOUND = 23
     SESSION_EXPIRED = 42
@@ -87,108 +85,174 @@ class Test(XMLRPC):
 
     xmlrpc_dict.help = 'Help for dict.'
 
-
-class XMLRPCTestCase(unittest.TestCase):
-    
-    if not Proxy:
-        skip = "Until web2 has an XML-RPC client, this test requires twisted.web."
+class XMLRPCServerBase(BaseCase):
+    """
+    The parent class of the XML-RPC test classes.
+    """
+    method = 'POST'
+    version = (1, 1)
 
     def setUp(self):
-        self.p = reactor.listenTCP(0, http.HTTPFactory(server.Site(Test())),
-                                   interface="127.0.0.1")
-        self.port = self.p.getHost().port
+        self.root = XMLRPCTestResource()
+        self.xml = ("<?xml version='1.0'?>\n<methodResponse>\n" +
+            "%s</methodResponse>\n")
 
-    def tearDown(self):
-        return self.p.stopListening()
+class XMLRPCServerGETTest(XMLRPCServerBase):
+    """
+    Attempt access to the RPC resources as regular HTTP resource.
+    """
 
-    def proxy(self):
-        return Proxy("http://127.0.0.1:%d/" % self.port)
+    def setUp(self):
+        super(XMLRPCServerGETTest, self).setUp()
+        self.method = 'GET'
+        self.errorRPC = ('<html><head><title>XML-RPC responder</title>' +
+            '</head><body><h1>XML-RPC responder</h1>POST your XML-RPC ' +
+            'here.</body></html>')
+        self.errorHTTP = ('<html><head><title>404 Not Found</title>' +
+            '</head><body><h1>Not Found</h1>The resource http://host/add ' +
+            'cannot be found.</body></html>')
 
-    def testResults(self):
+    def test_rootGET(self):
+        """
+        Test a simple GET against the XML-RPC server.
+        """
+        return self.assertResponse(
+            (self.root, 'http://host/'),
+            (200, {}, self.errorRPC))
+
+    def test_childGET(self):
+        """
+        Try to access an XML-RPC method as a regular resource via GET.
+        """
+        return self.assertResponse(
+            (self.root, 'http://host/add'),
+            (404, {}, self.errorHTTP))
+
+class XMLRPCServerPOSTTest(XMLRPCServerBase):
+    """
+    Tests for standard XML-RPC usage.
+    """
+    def test_RPCMethods(self):
+        """
+        Make RPC calls of the defined methods, checking for the expected 
+        results.
+        """
         inputOutput = [
             ("add", (2, 3), 5),
             ("defer", ("a",), "a"),
             ("dict", ({"a": 1}, "a"), 1),
             ("pair", ("a", 1), ["a", 1]),
             ("complex", (), {"a": ["b", "c", 12, []], "D": "foo"})]
-
         dl = []
         for meth, args, outp in inputOutput:
-            d = self.proxy().callRemote(meth, *args)
-            d.addCallback(self.assertEquals, outp)
+            postdata = xmlrpclib.dumps(args, meth)
+            respdata = xmlrpclib.dumps((outp,))
+            reqdata = (self.root, 'http://host/', {}, None, None, '', postdata)
+            d = self.assertResponse(reqdata, (200, {}, self.xml % respdata))
             dl.append(d)
         return defer.DeferredList(dl, fireOnOneErrback=True)
 
-    def testErrors(self):
+    def test_RPCFaults(self):
+        """
+        Ensure that RPC faults are properly processed.
+        """
         dl = []
-        for code, methodName in [(666, "fail"), (666, "deferFail"),
-                                 (12, "fault"), (23, "noSuchMethod"),
-                                 (17, "deferFault"), (42, "SESSION_TEST")]:
-            d = self.proxy().callRemote(methodName)
-            d = self.assertFailure(d, xmlrpc.Fault)
-            d.addCallback(lambda exc, code=code: self.assertEquals(exc.faultCode, code))
+        codeMethod = [
+            (12, "fault", 'hello'),
+            (23, "noSuchMethod", 'function noSuchMethod not found'),
+            (17, "deferFault", 'hi'),
+            (42, "SESSION_TEST", 'Session non-existant/expired.')]
+        for code, meth, fault in codeMethod:
+            postdata = xmlrpclib.dumps((), meth)
+            respdata = xmlrpclib.dumps(xmlrpc.Fault(code, fault))
+            reqdata = (self.root, 'http://host/', {}, None, None, '', postdata)
+            d = self.assertResponse(reqdata, (200, {}, respdata))
             dl.append(d)
         d = defer.DeferredList(dl, fireOnOneErrback=True)
-        d.addCallback(lambda ign: log.flushErrors(TestRuntimeError, TestValueError))
         return d
 
+    def test_RPCFailures(self):
+        """
+        Ensure that failures behave as expected.
+        """
+        dl = []
+        codeMethod = [
+            (666, "fail"),
+            (666, "deferFail")]
+        for code, meth in codeMethod:
+            postdata = xmlrpclib.dumps((), meth)
+            respdata = xmlrpclib.dumps(xmlrpc.Fault(code, 'error'))
+            reqdata = (self.root, 'http://host/', {}, None, None, '', postdata)
+            d = self.assertResponse(reqdata, (200, {}, respdata))
+            d.addCallback(self.flushLoggedErrors, TestRuntimeError, TestValueError)
+            dl.append(d)
+        d = defer.DeferredList(dl, fireOnOneErrback=True)
+        return d
 
-class XMLRPCTestCase2(XMLRPCTestCase):
-    """Test with proxy that doesn't add a slash."""
-
-    def proxy(self):
-        return Proxy("http://127.0.0.1:%d" % self.port)
-
-
-class XMLRPCTestIntrospection(XMLRPCTestCase):
+class XMLRPCTestIntrospection(XMLRPCServerBase):
 
     def setUp(self):
-        xmlrpc = Test()
-        addIntrospection(xmlrpc)
-        self.p = reactor.listenTCP(0, http.HTTPFactory(server.Site(xmlrpc)),
-            interface="127.0.0.1")
-        self.port = self.p.getHost().port
+        """
+        Introspection requires additional setup, most importantly, adding
+        introspection to the root object.
+        """
+        super(XMLRPCTestIntrospection, self).setUp()
+        addIntrospection(self.root)
+        self.methodList = ['add', 'complex', 'defer', 'deferFail',
+            'deferFault', 'dict', 'fail', 'fault', 'pair',
+            'system.listMethods', 'system.methodHelp', 'system.methodSignature']
 
-    def testListMethods(self):
-
+    def test_listMethods(self):
+        """
+        Check that the introspection method "listMethods" returns all the
+        methods we defined in the XML-RPC server.
+        """
         def cbMethods(meths):
             meths.sort()
             self.failUnlessEqual(
                 meths,
-                ['add', 'complex', 'defer', 'deferFail',
-                 'deferFault', 'dict', 'fail', 'fault',
-                 'pair', 'system.listMethods',
-                 'system.methodHelp',
-                 'system.methodSignature'])
+                )
+        postdata = xmlrpclib.dumps((), 'system.listMethods')
+        respdata = xmlrpclib.dumps((self.methodList,))
+        reqdata = (self.root, 'http://host/', {}, None, None, '', postdata)
+        return self.assertResponse(reqdata, (200, {}, self.xml % respdata))
 
-        d = self.proxy().callRemote("system.listMethods")
-        d.addCallback(cbMethods)
-        return d
-
-    def testMethodHelp(self):
-        inputOutputs = [
+    def test_methodHelp(self):
+        """
+        Check the RPC methods for docstrings or .help attributes.
+        """
+        inputOutput = [
             ("defer", "Help for defer."),
             ("fail", ""),
             ("dict", "Help for dict.")]
 
         dl = []
-        for meth, expected in inputOutputs:
-            d = self.proxy().callRemote("system.methodHelp", meth)
-            d.addCallback(self.assertEquals, expected)
+        for meth, outp in inputOutput:
+            postdata = xmlrpclib.dumps((meth,), 'system.methodHelp')
+            respdata = xmlrpclib.dumps((outp,))
+            reqdata = (self.root, 'http://host/', {}, None, None, '', postdata)
+            d = self.assertResponse(reqdata, (200, {}, self.xml % respdata))
             dl.append(d)
         return defer.DeferredList(dl, fireOnOneErrback=True)
 
-    def testMethodSignature(self):
-        inputOutputs = [
+    def test_methodSignature(self):
+        """
+        Check that the RPC methods whose signatures have been set via the
+        .signature attribute (on the method) are returned as expected.
+        """
+        inputOutput = [
             ("defer", ""),
             ("add", [['int', 'int', 'int'],
                      ['double', 'double', 'double']]),
             ("pair", [['array', 'string', 'int']])]
 
         dl = []
-        for meth, expected in inputOutputs:
-            d = self.proxy().callRemote("system.methodSignature", meth)
-            d.addCallback(self.assertEquals, expected)
+        for meth, outp in inputOutput:
+            postdata = xmlrpclib.dumps((meth,), 'system.methodSignature')
+            respdata = xmlrpclib.dumps((outp,))
+            reqdata = (self.root, 'http://host/', {}, None, None, '', postdata)
+            d = self.assertResponse(reqdata, (200, {}, self.xml % respdata))
             dl.append(d)
         return defer.DeferredList(dl, fireOnOneErrback=True)
+
 
