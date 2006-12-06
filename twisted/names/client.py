@@ -19,13 +19,17 @@ from __future__ import nested_scopes
 import os
 import errno
 
+from zope.interface import implements
+
 # Twisted imports
 from twisted.python.runtime import platform
 from twisted.internet import error, defer, protocol, interfaces
 from twisted.python import log, failure
-from twisted.names import dns
-from zope.interface import implements
-import common
+from twisted.names import dns, common
+from twisted.names.error import DNSFormatError, DNSServerError, DNSNameError
+from twisted.names.error import DNSNotImplementedError, DNSQueryRefusedError
+from twisted.names.error import DNSUnknownError
+
 
 class Resolver(common.ResolverBase):
     implements(interfaces.IResolver)
@@ -43,6 +47,13 @@ class Resolver(common.ResolverBase):
     resolv = None
     _lastResolvTime = None
     _resolvReadInterval = 60
+
+    _errormap = {
+        dns.EFORMAT: DNSFormatError,
+        dns.ESERVER: DNSServerError,
+        dns.ENAME: DNSNameError,
+        dns.ENOTIMP: DNSNotImplementedError,
+        dns.EREFUSED: DNSQueryRefusedError}
 
     def __init__(self, resolv = None, servers = None, timeout = (1, 3, 11, 45)):
         """
@@ -271,10 +282,23 @@ class Resolver(common.ResolverBase):
 
 
     def filterAnswers(self, message):
+        """
+        Extract results from the given message.
+
+        If the message was truncated, re-attempt the query over TCP and return
+        a Deferred which will fire with the results of that query.
+
+        If the message's result code is not L{dns.OK}, return a Failure
+        indicating the type of error which occurred.
+
+        Otherwise, return a three-tuple of lists containing the results from
+        the answers section, the authority section, and the additional section.
+        """
         if message.trunc:
             return self.queryTCP(message.queries).addCallback(self.filterAnswers)
-        else:
-            return (message.answers, message.authority, message.additional)
+        if message.rCode != dns.OK:
+            return failure.Failure(self._errormap.get(message.rCode, DNSUnknownError)(message))
+        return (message.answers, message.authority, message.additional)
 
 
     def _lookup(self, name, cls, type, timeout):

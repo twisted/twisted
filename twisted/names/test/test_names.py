@@ -12,8 +12,16 @@ import socket, operator, copy
 from twisted.trial import unittest
 
 from twisted.internet import reactor, defer, error
+from twisted.internet.defer import succeed
 from twisted.names import client, server, common, authority, hosts, dns
 from twisted.python import failure
+from twisted.names.error import DNSFormatError, DNSServerError, DNSNameError
+from twisted.names.error import DNSNotImplementedError, DNSQueryRefusedError
+from twisted.names.error import DNSUnknownError
+from twisted.names.dns import EFORMAT, ESERVER, ENAME, ENOTIMP, EREFUSED
+from twisted.names.dns import Message
+from twisted.names.client import Resolver
+
 
 def justPayload(results):
     return [r.payload for r in results[0]]
@@ -559,3 +567,87 @@ class ResolvConfHandling(unittest.TestCase):
         r = client.Resolver(resolv=resolvConf)
         self.assertEquals(r.dynServers, [('127.0.0.1', 53)])
         r._parseCall.cancel()
+
+
+
+class FilterAnswersTests(unittest.TestCase):
+    """
+    Test L{twisted.names.client.Resolver.filterAnswers}'s handling of various
+    error conditions it might encounter.
+    """
+    def setUp(self):
+        # Create a resolver pointed at an invalid server - we won't be hitting
+        # the network in any of these tests.
+        self.resolver = Resolver(servers=[('0.0.0.0', 0)])
+
+
+    def test_truncatedMessage(self):
+        """
+        Test that a truncated message results in an equivalent request made via
+        TCP.
+        """
+        m = Message(trunc=True)
+        m.addQuery('example.com')
+
+        def queryTCP(queries):
+            self.assertEqual(queries, m.queries)
+            response = Message()
+            response.answers = ['answer']
+            response.authority = ['authority']
+            response.additional = ['additional']
+            return succeed(response)
+        self.resolver.queryTCP = queryTCP
+        d = self.resolver.filterAnswers(m)
+        d.addCallback(
+            self.assertEqual, (['answer'], ['authority'], ['additional']))
+        return d
+
+
+    def _rcodeTest(self, rcode, exc):
+        m = Message(rCode=rcode)
+        err = self.resolver.filterAnswers(m)
+        err.trap(exc)
+
+
+    def test_formatError(self):
+        """
+        Test that a message with a result code of C{EFORMAT} results in a
+        failure wrapped around L{DNSFormatError}.
+        """
+        return self._rcodeTest(EFORMAT, DNSFormatError)
+
+
+    def test_serverError(self):
+        """
+        Like L{test_formatError} but for C{ESERVER}/L{DNSServerError}.
+        """
+        return self._rcodeTest(ESERVER, DNSServerError)
+
+
+    def test_nameError(self):
+        """
+        Like L{test_formatError} but for C{ENAME}/L{DNSNameError}.
+        """
+        return self._rcodeTest(ENAME, DNSNameError)
+
+
+    def test_notImplementedError(self):
+        """
+        Like L{test_formatError} but for C{ENOTIMP}/L{DNSNotImplementedError}.
+        """
+        return self._rcodeTest(ENOTIMP, DNSNotImplementedError)
+
+
+    def test_refusedError(self):
+        """
+        Like L{test_formatError} but for C{EREFUSED}/L{DNSQueryRefusedError}.
+        """
+        return self._rcodeTest(EREFUSED, DNSQueryRefusedError)
+
+
+    def test_refusedError(self):
+        """
+        Like L{test_formatError} but for an unrecognized error code and
+        L{DNSUnknownError}.
+        """
+        return self._rcodeTest(EREFUSED + 1, DNSUnknownError)

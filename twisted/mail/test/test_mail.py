@@ -40,6 +40,9 @@ import twisted.mail.relaymanager
 import twisted.mail.protocols
 import twisted.mail.alias
 
+from twisted.names.error import DNSNameError
+from twisted.names.dns import Record_MX
+
 from twisted import cred
 import twisted.cred.credentials
 import twisted.cred.checkers
@@ -858,6 +861,31 @@ class MXTestCase(unittest.TestCase):
 
     def testSimpleFailureWithFallback(self):
         return self.assertFailure(self.mx.getMX('test.domain'), DNSLookupError)
+
+
+    def test_failureWithSuccessfulFallback(self):
+        """
+        Test that if the MX record lookup fails, fallback is enabled, and an A
+        record is available for the name, then the Deferred returned by
+        L{MXCalculator.getMX} ultimately fires with a Record_MX instance which
+        gives the address in the A record for the name.
+        """
+        class DummyResolver(object):
+            """
+            Fake resolver which will fail an MX lookup but then succeed a
+            getHostByName call.
+            """
+            def lookupMailExchange(self, domain):
+                return defer.fail(DNSNameError())
+
+            def getHostByName(self, domain):
+                return defer.succeed("1.2.3.4")
+
+        self.mx.resolver = DummyResolver()
+        d = self.mx.getMX("domain")
+        d.addCallback(self.assertEqual, Record_MX(name="1.2.3.4"))
+        return d
+
 
     def testManyRecords(self):
         self.auth.addresses['test.domain'] = [

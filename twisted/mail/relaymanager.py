@@ -25,6 +25,7 @@ from twisted.mail import relay
 from twisted.mail import bounce
 from twisted.internet import protocol
 from twisted.internet.defer import Deferred, DeferredList
+from twisted.internet.error import DNSLookupError
 from twisted.mail import smtp
 from twisted.application import internet
 
@@ -490,8 +491,6 @@ class MXCalculator:
         return [a.payload for a in answers]
 
     def _cbMX(self, answers, domain):
-        if not answers:
-            raise IOError("No MX found for %r" % (domain,))
         answers = util.dsu(answers, lambda e: e.preference)
         for answer in answers:
             host = str(answer.name)
@@ -504,13 +503,21 @@ class MXCalculator:
         return answers[0]
 
     def _ebMX(self, failure, domain):
+        from twisted.names import error, dns
+
         if self.fallbackToDomain:
-            failure.trap(IOError)
+            failure.trap(error.DNSNameError)
             log.msg("MX lookup failed; attempting to use hostname (%s) directly" % (domain,))
 
             # Alright, I admit, this is a bit icky.
-            from twisted.names import dns
-            return self.resolver.getHostByName(domain
-                ).addCallback(lambda h: dns.Record_MX(name=h)
-                )
+            d = self.resolver.getHostByName(domain)
+            def cbResolved(addr):
+                return dns.Record_MX(name=addr)
+            def ebResolved(err):
+                err.trap(error.DNSNameError)
+                raise DNSLookupError()
+            d.addCallbacks(cbResolved, ebResolved)
+            return d
+        elif failure.check(error.DNSNameError):
+            raise IOError("No MX found for %r" % (domain,))
         return failure

@@ -143,16 +143,12 @@ class IRecord(Interface):
     @cvar TYPE: An indicator of what kind of record this is.
     """
 
-class DomainError(ValueError):
-    pass
 
-class AuthoritativeDomainError(ValueError):
-    pass
+# Backwards compatibility aliases - these should be deprecated or something I
+# suppose. -exarkun
+from twisted.names.error import DomainError, AuthoritativeDomainError
+from twisted.names.error import DNSQueryTimeoutError
 
-class DNSQueryTimeoutError(defer.TimeoutError):
-    def __init__(self, id):
-        self.id = id
-        defer.TimeoutError.__init__(self)
 
 def str2time(s):
     suffixes = (
