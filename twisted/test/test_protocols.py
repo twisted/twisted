@@ -8,35 +8,64 @@ Test cases for twisted.protocols package.
 
 from twisted.trial import unittest
 from twisted.protocols import basic, wire, portforward
-from twisted.internet import reactor, protocol, defer
+from twisted.internet import reactor, protocol, defer, task, error
 
-import string, struct
+import struct
 import StringIO
 
 class StringIOWithoutClosing(StringIO.StringIO):
+    """
+    A StringIO that can't be closed.
+    """
     def close(self):
-        pass
+        """
+        Do nothing.
+        """
 
 class LineTester(basic.LineReceiver):
+    """
+    A line receiver that parses data received and make actions on some tokens.
+
+    @type delimiter: C{str}
+    @ivar delimiter: character used between received lines.
+    @type MAX_LENGTH: C{int}
+    @ivar MAX_LENGTH: size of a line when C{lineLengthExceeded} will be called.
+    @type clock: L{twisted.internet.task.Clock}
+    @ivar clock: clock simulating reactor callLater. Pass it to constructor if
+        you want to use the pause/rawpause functionalities.
+    """
 
     delimiter = '\n'
     MAX_LENGTH = 64
 
+    def __init__(self, clock=None):
+        """
+        If given, use a clock to make callLater calls.
+        """
+        self.clock = clock
+
     def connectionMade(self):
+        """
+        Create/clean data received on connection.
+        """
         self.received = []
 
     def lineReceived(self, line):
+        """
+        Receive line and make some action for some tokens: pause, rawpause,
+        stop, len, produce, unproduce.
+        """
         self.received.append(line)
         if line == '':
             self.setRawMode()
         elif line == 'pause':
             self.pauseProducing()
-            reactor.callLater(0, self.resumeProducing)
+            self.clock.callLater(0, self.resumeProducing)
         elif line == 'rawpause':
             self.pauseProducing()
             self.setRawMode()
             self.received.append('')
-            reactor.callLater(0, self.resumeProducing)
+            self.clock.callLater(0, self.resumeProducing)
         elif line == 'stop':
             self.stopProducing()
         elif line[:4] == 'len ':
@@ -47,6 +76,10 @@ class LineTester(basic.LineReceiver):
             self.transport.unregisterProducer()
 
     def rawDataReceived(self, data):
+        """
+        Read raw data, until the quantity specified by a previous 'len' line is
+        reached.
+        """
         data, rest = data[:self.length], data[self.length:]
         self.length = self.length - len(data)
         self.received[-1] = self.received[-1] + data
@@ -54,24 +87,40 @@ class LineTester(basic.LineReceiver):
             self.setLineMode(rest)
 
     def lineLengthExceeded(self, line):
-        if len(line) > self.MAX_LENGTH+1:
-            self.setLineMode(line[self.MAX_LENGTH+1:])
+        """
+        Adjust line mode when long lines received.
+        """
+        if len(line) > self.MAX_LENGTH + 1:
+            self.setLineMode(line[self.MAX_LENGTH + 1:])
 
 
 class LineOnlyTester(basic.LineOnlyReceiver):
-
+    """
+    A buffering line only receiver.
+    """
     delimiter = '\n'
     MAX_LENGTH = 64
 
     def connectionMade(self):
+        """
+        Create/clean data received on connection.
+        """
         self.received = []
 
     def lineReceived(self, line):
+        """
+        Save received data.
+        """
         self.received.append(line)
 
 class WireTestCase(unittest.TestCase):
-
+    """
+    Test wire protocols.
+    """
     def testEcho(self):
+        """
+        Test wire.Echo protocol: send some data and check it send it back.
+        """
         t = StringIOWithoutClosing()
         a = wire.Echo()
         a.makeConnection(protocol.FileWrapper(t))
@@ -83,12 +132,18 @@ class WireTestCase(unittest.TestCase):
         self.failUnlessEqual(t.getvalue(), "helloworldhowareyou")
 
     def testWho(self):
+        """
+        Test wire.Who protocol.
+        """
         t = StringIOWithoutClosing()
         a = wire.Who()
         a.makeConnection(protocol.FileWrapper(t))
         self.failUnlessEqual(t.getvalue(), "root\r\n")
 
     def testQOTD(self):
+        """
+        Test wire.QOTD protocol.
+        """
         t = StringIOWithoutClosing()
         a = wire.QOTD()
         a.makeConnection(protocol.FileWrapper(t))
@@ -96,6 +151,9 @@ class WireTestCase(unittest.TestCase):
                              "An apple a day keeps the doctor away.\r\n")
 
     def testDiscard(self):
+        """
+        Test wire.Discard protocol.
+        """
         t = StringIOWithoutClosing()
         a = wire.Discard()
         a.makeConnection(protocol.FileWrapper(t))
@@ -107,7 +165,9 @@ class WireTestCase(unittest.TestCase):
         self.failUnlessEqual(t.getvalue(), "")
 
 class LineReceiverTestCase(unittest.TestCase):
-
+    """
+    Test LineReceiver, using the C{LineTester} wrapper.
+    """
     buffer = '''\
 len 10
 
@@ -131,6 +191,10 @@ a'''
               'len 0', 'foo 5', '', '67890', 'len 1', 'a']
 
     def testBuffer(self):
+        """
+        Test buffering for different packet size, checking received matches
+        expected data.
+        """
         for packet_size in range(1, 10):
             t = StringIOWithoutClosing()
             a = LineTester()
@@ -147,38 +211,52 @@ a'''
     pause_output2 = pause_output1+['twiddle3']
 
     def testPausing(self):
+        """
+        Test pause inside data receiving. It uses fake clock to see if
+        pausing/resuming work.
+        """
         for packet_size in range(1, 10):
             t = StringIOWithoutClosing()
-            a = LineTester()
+            clock = task.Clock()
+            a = LineTester(clock)
             a.makeConnection(protocol.FileWrapper(t))
             for i in range(len(self.pause_buf)/packet_size + 1):
                 s = self.pause_buf[i*packet_size:(i+1)*packet_size]
                 a.dataReceived(s)
             self.failUnlessEqual(self.pause_output1, a.received)
-            reactor.iterate(0)
+            clock.advance(0)
             self.failUnlessEqual(self.pause_output2, a.received)
 
     rawpause_buf = 'twiddle1\ntwiddle2\nlen 5\nrawpause\n12345twiddle3\n'
 
     rawpause_output1 = ['twiddle1', 'twiddle2', 'len 5', 'rawpause', '']
-    rawpause_output2 = ['twiddle1', 'twiddle2', 'len 5', 'rawpause', '12345', 'twiddle3']
+    rawpause_output2 = ['twiddle1', 'twiddle2', 'len 5', 'rawpause', '12345',
+                        'twiddle3']
 
     def testRawPausing(self):
+        """
+        Test pause inside raw date receiving.
+        """
         for packet_size in range(1, 10):
             t = StringIOWithoutClosing()
-            a = LineTester()
+            clock = task.Clock()
+            a = LineTester(clock)
             a.makeConnection(protocol.FileWrapper(t))
             for i in range(len(self.rawpause_buf)/packet_size + 1):
                 s = self.rawpause_buf[i*packet_size:(i+1)*packet_size]
                 a.dataReceived(s)
             self.failUnlessEqual(self.rawpause_output1, a.received)
-            reactor.iterate(0)
+            clock.advance(0)
             self.failUnlessEqual(self.rawpause_output2, a.received)
 
     stop_buf = 'twiddle1\ntwiddle2\nstop\nmore\nstuff\n'
 
     stop_output = ['twiddle1', 'twiddle2', 'stop']
+
     def testStopProducing(self):
+        """
+        Test stop inside producing.
+        """
         for packet_size in range(1, 10):
             t = StringIOWithoutClosing()
             a = LineTester()
@@ -190,15 +268,21 @@ a'''
 
 
     def testLineReceiverAsProducer(self):
+        """
+        Test produce/unproduce in receiving.
+        """
         a = LineTester()
         t = StringIOWithoutClosing()
         a.makeConnection(protocol.FileWrapper(t))
         a.dataReceived('produce\nhello world\nunproduce\ngoodbye\n')
-        self.assertEquals(a.received, ['produce', 'hello world', 'unproduce', 'goodbye'])
+        self.assertEquals(a.received,
+                          ['produce', 'hello world', 'unproduce', 'goodbye'])
 
 
 class LineOnlyReceiverTestCase(unittest.TestCase):
-
+    """
+    Test line only receiveer.
+    """
     buffer = """foo
     bleakness
     desolation
@@ -206,6 +290,9 @@ class LineOnlyReceiverTestCase(unittest.TestCase):
     """
 
     def testBuffer(self):
+        """
+        Test buffering over line protocol: data received should match buffer.
+        """
         t = StringIOWithoutClosing()
         a = LineOnlyTester()
         a.makeConnection(protocol.FileWrapper(t))
@@ -214,15 +301,18 @@ class LineOnlyReceiverTestCase(unittest.TestCase):
         self.failUnlessEqual(a.received, self.buffer.split('\n')[:-1])
 
     def testLineTooLong(self):
+        """
+        Test sending a line too long: it should close the connection.
+        """
         t = StringIOWithoutClosing()
         a = LineOnlyTester()
         a.makeConnection(protocol.FileWrapper(t))
         res = a.dataReceived('x'*200)
-        self.failIfEqual(res, None)
-            
-                
+        self.assertTrue(isinstance(res, error.ConnectionLost))
+
+
 class TestMixin:
-    
+
     def connectionMade(self):
         self.received = []
 
@@ -250,7 +340,7 @@ class LPTestCaseMixin:
         a = self.protocol()
         a.makeConnection(protocol.FileWrapper(t))
         return a
-    
+
     def testIllegal(self):
         for s in self.illegal_strings:
             r = self.getProtocol()
@@ -263,11 +353,12 @@ class NetstringReceiverTestCase(unittest.TestCase, LPTestCaseMixin):
 
     strings = ['hello', 'world', 'how', 'are', 'you123', ':today', "a"*515]
 
-    illegal_strings = ['9999999999999999999999', 'abc', '4:abcde',
-                       '51:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab,',]
+    illegal_strings = [
+        '9999999999999999999999', 'abc', '4:abcde',
+        '51:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab,',]
 
     protocol = TestNetstring
-    
+
     def testBuffer(self):
         for packet_size in range(1, 10):
             t = StringIOWithoutClosing()
@@ -294,7 +385,7 @@ class Int32TestCase(unittest.TestCase, LPTestCaseMixin):
     strings = ["a", "b" * 16]
     illegal_strings = ["\x10\x00\x00\x00aaaaaa"]
     partial_strings = ["\x00\x00\x00", "hello there", ""]
-    
+
     def testPartial(self):
         for s in self.partial_strings:
             r = self.getProtocol()
@@ -388,38 +479,61 @@ class ProducerTestCase(unittest.TestCase):
 
 
 class Portforwarding(unittest.TestCase):
+    """
+    Test port forwarding.
+    """
+    def setUp(self):
+        self.serverProtocol = wire.Echo()
+        self.clientProtocol = protocol.Protocol()
+        self.openPorts = []
+
+    def tearDown(self):
+        try:
+            self.clientProtocol.transport.loseConnection()
+        except:
+            pass
+        try:
+            self.serverProtocol.transport.loseConnection()
+        except:
+            pass
+        return defer.gatherResults(
+            [defer.maybeDeferred(p.stopListening) for p in self.openPorts])
+
     def testPortforward(self):
-        serverProtocol = wire.Echo()
+        """
+        Test port forwarding through Echo protocol.
+        """
         realServerFactory = protocol.ServerFactory()
-        realServerFactory.protocol = lambda: serverProtocol
+        realServerFactory.protocol = lambda: self.serverProtocol
         realServerPort = reactor.listenTCP(0, realServerFactory,
                                            interface='127.0.0.1')
+        self.openPorts.append(realServerPort)
 
         proxyServerFactory = portforward.ProxyFactory('127.0.0.1',
-                                                      realServerPort.getHost().port)
+                                realServerPort.getHost().port)
         proxyServerPort = reactor.listenTCP(0, proxyServerFactory,
                                             interface='127.0.0.1')
+        self.openPorts.append(proxyServerPort)
 
         nBytes = 1000
         received = []
-        clientProtocol = protocol.Protocol()
-        clientProtocol.dataReceived = received.extend
-        clientProtocol.connectionMade = lambda: clientProtocol.transport.write('x' * nBytes)
+        d = defer.Deferred()
+        def testDataReceived(data):
+            received.extend(data)
+            if len(received) >= nBytes:
+                self.assertEquals(''.join(received), 'x' * nBytes)
+                d.callback(None)
+        self.clientProtocol.dataReceived = testDataReceived
+
+        def testConnectionMade():
+            self.clientProtocol.transport.write('x' * nBytes)
+        self.clientProtocol.connectionMade = testConnectionMade
+
         clientFactory = protocol.ClientFactory()
-        clientFactory.protocol = lambda: clientProtocol
+        clientFactory.protocol = lambda: self.clientProtocol
 
-        reactor.connectTCP('127.0.0.1', proxyServerPort.getHost().port,
-                           clientFactory)
+        reactor.connectTCP(
+            '127.0.0.1', proxyServerPort.getHost().port, clientFactory)
 
-        c = 0
-        while len(received) < nBytes and c < 100:
-            reactor.iterate(0.01)
-            c += 1
+        return d
 
-        self.assertEquals(''.join(received), 'x' * nBytes)
-        
-        clientProtocol.transport.loseConnection()
-        serverProtocol.transport.loseConnection()
-        return defer.gatherResults([
-            defer.maybeDeferred(realServerPort.stopListening),
-            defer.maybeDeferred(proxyServerPort.stopListening)])
