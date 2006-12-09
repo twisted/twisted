@@ -1035,7 +1035,7 @@ class Command:
     @cvar response: A list like L{arguments}, but instead used for the return
     value.
 
-    @cvar errors: A mapping of error tag to exception type.
+    @cvar errors: A mapping of exception type to error tag.
 
     @cvar fatalErrors: like 'errors', but errors in this list will always
     terminate the connection, despite being of a recognizable error type.
