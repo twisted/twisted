@@ -1068,7 +1068,7 @@ __all__ = [
     'ServerErrorResponse', 'LineTooLong',
 
     # Protocol classes
-    'POP3', 'POP3Client', 'AdvancedPOP3Client'
+    'POP3', 'POP3Client', 'AdvancedPOP3Client',
 
     # Misc
     'APOPCredentials', 'Mailbox']

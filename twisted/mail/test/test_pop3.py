@@ -1055,3 +1055,17 @@ class ValueErrorAsyncDeferredCommandTestCase(ValueErrorCommandTestCase):
             d, a = self.pop3Server.mbox.waiting.pop()
             d.callback(a)
         ValueErrorCommandTestCase._flush(self)
+
+class POP3MiscTestCase(unittest.TestCase):
+    """
+    Miscellaneous tests more to do with module/package structure than
+    anything to do with the Post Office Protocol.
+    """
+    def test_all(self):
+        """
+        This test checks that all names listed in
+        twisted.mail.pop3.__all__ are actually present in the module.
+        """
+        mod = twisted.mail.pop3
+        for attr in mod.__all__:
+            self.failUnless(hasattr(mod, attr))
