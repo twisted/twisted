@@ -1715,11 +1715,17 @@ class SenderProtocol(protocol.Protocol):
     def write(self, data):
         self.transport.write(data)
 
-    def registerProducer(self):
-        pass
+    def registerProducer(self, producer, streaming):
+        """
+        Register the given producer with our transport.
+        """
+        self.transport.registerProducer(producer, streaming)
 
     def unregisterProducer(self):
-        pass
+        """
+        Unregister the previously registered producer.
+        """
+        self.transport.unregisterProducer()
 
     def finish(self):
         self.transport.loseConnection()
@@ -1962,6 +1968,8 @@ class FTPClient(FTPClientBasic):
 
     @ivar passive: See description in __init__.
     """
+    connectFactory = reactor.connectTCP
+
     def __init__(self, username='anonymous',
                  password='twisted@twistedmatrix.com',
                  passive=1):
@@ -2044,7 +2052,7 @@ class FTPClient(FTPClientBasic):
                 host, port = decodeHostPort(response[-1][4:])
 
                 f = _PassiveConnectionFactory(protocol)
-                _mutable[0] = reactor.connectTCP(host, port, f)
+                _mutable[0] = self.connectFactory(host, port, f)
 
             pasvCmd = FTPCommand('PASV')
             self.queueCommand(pasvCmd)
@@ -2330,7 +2338,7 @@ def parsePWDResponse(response):
 
     If I can't find the path, I return C{None}.
     """
-    match = re.search('".*"', response)
+    match = re.search('"(.*)"', response)
     if match:
         return match.groups()[0]
     else:

@@ -18,6 +18,7 @@ from twisted.protocols import basic
 from twisted.internet import reactor, protocol, defer, error
 from twisted.cred import portal, checkers, credentials
 from twisted.python import failure
+from twisted.test import proto_helpers
 
 from twisted.protocols import ftp, loopback
 
@@ -65,7 +66,7 @@ class FTPServerTestCase(unittest.TestCase):
 
         # Start the server
         p = portal.Portal(ftp.FTPRealm(self.directory))
-        p.registerChecker(checkers.AllowAnonymousAccess(), 
+        p.registerChecker(checkers.AllowAnonymousAccess(),
                           credentials.IAnonymous)
         self.factory = ftp.FTPFactory(portal=p)
         self.port = reactor.listenTCP(0, self.factory, interface="127.0.0.1")
@@ -106,13 +107,13 @@ class FTPServerTestCase(unittest.TestCase):
                               chainDeferred=None):
         """Asserts that a sending an FTP command receives the expected
         response.
-        
+
         Returns a Deferred.  Optionally accepts a deferred to chain its actions
         to.
         """
-        if chainDeferred is None: 
+        if chainDeferred is None:
             chainDeferred = defer.succeed(None)
-        
+
         def queueCommand(ignored):
             d = self.client.queueStringCommand(command)
             def gotResponse(responseLines):
@@ -122,7 +123,7 @@ class FTPServerTestCase(unittest.TestCase):
 
     def assertCommandFailed(self, command, expectedResponse=None,
                             chainDeferred=None):
-        if chainDeferred is None: 
+        if chainDeferred is None:
             chainDeferred = defer.succeed(None)
 
         def queueCommand(ignored):
@@ -143,7 +144,7 @@ class FTPServerTestCase(unittest.TestCase):
             'PASS test@twistedmatrix.com',
             ['230 Anonymous login ok, access restrictions apply.'],
             chainDeferred=d)
-        
+
 
 class BasicFTPServerTestCase(FTPServerTestCase):
     def testNotLoggedInReply(self):
@@ -228,14 +229,14 @@ class BasicFTPServerTestCase(FTPServerTestCase):
     def testUnknownCommand(self):
         d = self._anonymousLogin()
         return self.assertCommandFailed(
-            'GIBBERISH', 
+            'GIBBERISH',
             ["502 Command 'GIBBERISH' not implemented"],
             chainDeferred=d)
 
     def testRETRBeforePORT(self):
         d = self._anonymousLogin()
         return self.assertCommandFailed(
-            'RETR foo', 
+            'RETR foo',
             ["503 Incorrect sequence of commands: "
              "PORT or PASV required before RETR"],
             chainDeferred=d)
@@ -415,7 +416,7 @@ class FTPServerPortDataConnectionTestCase(FTPServerPasvDataConnectionTestCase):
         d = defer.maybeDeferred(
             FTPServerPasvDataConnectionTestCase.tearDown, self)
         l.append(d)
-        return defer.DeferredList(l, fireOnOneErrback=True) 
+        return defer.DeferredList(l, fireOnOneErrback=True)
 
     def testPORTCannotConnect(self):
         # Login
@@ -440,7 +441,7 @@ class FTPServerPortDataConnectionTestCase(FTPServerPasvDataConnectionTestCase):
                 ["425 Can't open data connection."])
         return d.addCallback(gotPortNum)
 
-        
+
 # -- Client Tests -----------------------------------------------------------
 
 class PrintLines(protocol.Protocol):
@@ -537,7 +538,7 @@ class FTPFileListingTests(unittest.TestCase):
             self.failUnless(file['size'] == 531, 'misparsed fileitem')
             self.failUnless(file['date'] == 'Jan 29 2003', 'misparsed fileitem')
             self.failUnless(file['filename'] == 'README', 'misparsed fileitem')
-            
+
         d = loopback.loopbackAsync(PrintLine(), fileList)
         return d.addCallback(check)
 
@@ -548,7 +549,7 @@ class FTPClientTests(unittest.TestCase):
         port = getattr(self, 'port', None)
         if port is not None:
             return port.stopListening()
-            
+
     def testFailedRETR(self):
         f = protocol.Factory()
         f.noisy = 0
@@ -589,6 +590,623 @@ class FTPClientTests(unittest.TestCase):
         from twisted.internet.main import CONNECTION_LOST
         ftpClient.connectionLost(failure.Failure(CONNECTION_LOST))
         self.failUnless(m, m)
+
+
+
+class FTPClientTestCase(unittest.TestCase):
+    """
+    Test advanced FTP client commands.
+    """
+    def setUp(self):
+        """
+        Create a FTP client and connect it to fake transport.
+        """
+        self.client = ftp.FTPClient()
+        self.transport = proto_helpers.StringTransport()
+        self.client.makeConnection(self.transport)
+
+
+    def tearDown(self):
+        """
+        Deliver disconnection notification to the client so that it can
+        perform any cleanup which may be required.
+        """
+        self.client.connectionLost(error.ConnectionLost())
+
+
+    def _testLogin(self):
+        """
+        Test the login part.
+        """
+        self.assertEquals(self.transport.value(), '')
+        self.client.lineReceived(
+            '331 Guest login ok, type your email address as password.')
+        self.assertEquals(self.transport.value(), 'USER anonymous\r\n')
+        self.transport.clear()
+        self.client.lineReceived(
+            '230 Anonymous login ok, access restrictions apply.')
+        self.assertEquals(self.transport.value(), 'TYPE I\r\n')
+        self.transport.clear()
+        self.client.lineReceived('200 Type set to I.')
+
+
+    def test_CDUP(self):
+        """
+        Test the CDUP command.
+
+        L{ftp.FTPClient.cdup} should return a Deferred which fires with a
+        sequence of one element which is the string the server sent
+        indicating that the command was executed successfully.
+
+        (XXX - This is a bad API)
+        """
+        def cbCdup(res):
+            self.assertEquals(res[0], '250 Requested File Action Completed OK')
+
+        self._testLogin()
+        d = self.client.cdup().addCallback(cbCdup)
+        self.assertEquals(self.transport.value(), 'CDUP\r\n')
+        self.transport.clear()
+        self.client.lineReceived('250 Requested File Action Completed OK')
+        return d
+
+
+    def test_failedCDUP(self):
+        """
+        Test L{ftp.FTPClient.cdup}'s handling of a failed CDUP command.
+
+        When the CDUP command fails, the returned Deferred should errback
+        with L{ftp.CommandFailed}.
+        """
+        self._testLogin()
+        d = self.client.cdup()
+        self.assertFailure(d, ftp.CommandFailed)
+        self.assertEquals(self.transport.value(), 'CDUP\r\n')
+        self.transport.clear()
+        self.client.lineReceived('550 ..: No such file or directory')
+        return d
+
+
+    def test_PWD(self):
+        """
+        Test the PWD command.
+
+        L{ftp.FTPClient.pwd} should return a Deferred which fires with a
+        sequence of one element which is a string representing the current
+        working directory on the server.
+
+        (XXX - This is a bad API)
+        """
+        def cbPwd(res):
+            self.assertEquals(ftp.parsePWDResponse(res[0]), "/bar/baz")
+
+        self._testLogin()
+        d = self.client.pwd().addCallback(cbPwd)
+        self.assertEquals(self.transport.value(), 'PWD\r\n')
+        self.client.lineReceived('257 "/bar/baz"')
+        return d
+
+
+    def test_failedPWD(self):
+        """
+        Test a failure in PWD command.
+
+        When the PWD command fails, the returned Deferred should errback
+        with L{ftp.CommandFailed}.
+        """
+        self._testLogin()
+        d = self.client.pwd()
+        self.assertFailure(d, ftp.CommandFailed)
+        self.assertEquals(self.transport.value(), 'PWD\r\n')
+        self.client.lineReceived('550 /bar/baz: No such file or directory')
+        return d
+
+
+    def test_CWD(self):
+        """
+        Test the CWD command.
+
+        L{ftp.FTPClient.cwd} should return a Deferred which fires with a
+        sequence of one element which is the string the server sent
+        indicating that the command was executed successfully.
+
+        (XXX - This is a bad API)
+        """
+        def cbCwd(res):
+            self.assertEquals(res[0], '250 Requested File Action Completed OK')
+
+        self._testLogin()
+        d = self.client.cwd("bar/foo").addCallback(cbCwd)
+        self.assertEquals(self.transport.value(), 'CWD bar/foo\r\n')
+        self.client.lineReceived('250 Requested File Action Completed OK')
+        return d
+
+
+    def test_failedCWD(self):
+        """
+        Test a failure in CWD command.
+
+        When the PWD command fails, the returned Deferred should errback
+        with L{ftp.CommandFailed}.
+        """
+        self._testLogin()
+        d = self.client.cwd("bar/foo")
+        self.assertFailure(d, ftp.CommandFailed)
+        self.assertEquals(self.transport.value(), 'CWD bar/foo\r\n')
+        self.client.lineReceived('550 bar/foo: No such file or directory')
+        return d
+
+
+    def test_passiveRETR(self):
+        """
+        Test the RETR command in passive mode: get a file and verify its
+        content.
+
+        L{ftp.FTPClient.retrieveFile} should return a Deferred which fires
+        with the protocol instance passed to it after the download has
+        completed.
+
+        (XXX - This API should be based on producers and consumers)
+        """
+        def cbRetr(res, proto):
+            self.assertEquals(proto.buffer, 'x' * 1000)
+
+        def cbConnect(host, port, factory):
+            self.assertEquals(host, '127.0.0.1')
+            self.assertEquals(port, 12345)
+            proto = factory.buildProtocol((host, port))
+            proto.makeConnection(proto_helpers.StringTransport())
+            self.client.lineReceived(
+                '150 File status okay; about to open data connection.')
+            proto.dataReceived("x" * 1000)
+            proto.connectionLost(failure.Failure(error.ConnectionDone("")))
+
+        self.client.connectFactory = cbConnect
+        self._testLogin()
+        proto = _BufferingProtocol()
+        d = self.client.retrieveFile("spam", proto)
+        d.addCallback(cbRetr, proto)
+        self.assertEquals(self.transport.value(), 'PASV\r\n')
+        self.transport.clear()
+        self.client.lineReceived('227 Entering Passive Mode (%s).' %
+            (ftp.encodeHostPort('127.0.0.1', 12345),))
+        self.assertEquals(self.transport.value(), 'RETR spam\r\n')
+        self.transport.clear()
+        self.client.lineReceived('226 Transfer Complete.')
+        return d
+
+
+    def test_RETR(self):
+        """
+        Test the RETR command in non-passive mode.
+
+        Like L{test_passiveRETR} but in the configuration where the server
+        establishes the data connection to the client, rather than the other
+        way around.
+        """
+        self.client.passive = False
+
+        def generatePort(portCmd):
+            portCmd.text = 'PORT %s' % (ftp.encodeHostPort('127.0.0.1', 9876),)
+            portCmd.protocol.makeConnection(proto_helpers.StringTransport())
+            portCmd.protocol.dataReceived("x" * 1000)
+            portCmd.protocol.connectionLost(
+                failure.Failure(error.ConnectionDone("")))
+
+        def cbRetr(res, proto):
+            self.assertEquals(proto.buffer, 'x' * 1000)
+
+        self.client.generatePortCommand = generatePort
+        self._testLogin()
+        proto = _BufferingProtocol()
+        d = self.client.retrieveFile("spam", proto)
+        d.addCallback(cbRetr, proto)
+        self.assertEquals(self.transport.value(), 'PORT %s\r\n' %
+            (ftp.encodeHostPort('127.0.0.1', 9876),))
+        self.transport.clear()
+        self.client.lineReceived('200 PORT OK')
+        self.assertEquals(self.transport.value(), 'RETR spam\r\n')
+        self.transport.clear()
+        self.client.lineReceived('226 Transfer Complete.')
+        return d
+
+
+    def test_failedRETR(self):
+        """
+        Try to RETR an unexisting file.
+
+        L{ftp.FTPClient.retrieveFile} should return a Deferred which
+        errbacks with L{ftp.CommandFailed} if the server indicates the file
+        cannot be transferred for some reason.
+        """
+        def cbConnect(host, port, factory):
+            self.assertEquals(host, '127.0.0.1')
+            self.assertEquals(port, 12345)
+            proto = factory.buildProtocol((host, port))
+            proto.makeConnection(proto_helpers.StringTransport())
+            self.client.lineReceived(
+                '150 File status okay; about to open data connection.')
+            proto.connectionLost(failure.Failure(error.ConnectionDone("")))
+
+        self.client.connectFactory = cbConnect
+        self._testLogin()
+        proto = _BufferingProtocol()
+        d = self.client.retrieveFile("spam", proto)
+        self.assertFailure(d, ftp.CommandFailed)
+        self.assertEquals(self.transport.value(), 'PASV\r\n')
+        self.transport.clear()
+        self.client.lineReceived('227 Entering Passive Mode (%s).' %
+            (ftp.encodeHostPort('127.0.0.1', 12345),))
+        self.assertEquals(self.transport.value(), 'RETR spam\r\n')
+        self.transport.clear()
+        self.client.lineReceived('550 spam: No such file or directory')
+        return d
+
+
+    def test_passiveSTOR(self):
+        """
+        Test the STOR command: send a file and verify its content.
+
+        L{ftp.FTPClient.storeFile} should return a two-tuple of Deferreds.
+        The first of which should fire with a protocol instance when the
+        data connection has been established and is responsible for sending
+        the contents of the file.  The second of which should fire when the
+        upload has completed, the data connection has been closed, and the
+        server has acknowledged receipt of the file.
+
+        (XXX - storeFile should take a producer as an argument, instead, and
+        only return a Deferred which fires when the upload has succeeded or
+        failed).
+        """
+        tr = proto_helpers.StringTransport()
+        def cbStore(sender):
+            self.client.lineReceived(
+                '150 File status okay; about to open data connection.')
+            sender.transport.write("x" * 1000)
+            sender.finish()
+            sender.connectionLost(failure.Failure(error.ConnectionDone("")))
+
+        def cbFinish(ign):
+            self.assertEquals(tr.value(), "x" * 1000)
+
+        def cbConnect(host, port, factory):
+            self.assertEquals(host, '127.0.0.1')
+            self.assertEquals(port, 12345)
+            proto = factory.buildProtocol((host, port))
+            proto.makeConnection(tr)
+
+        self.client.connectFactory = cbConnect
+        self._testLogin()
+        d1, d2 = self.client.storeFile("spam")
+        d1.addCallback(cbStore)
+        d2.addCallback(cbFinish)
+        self.assertEquals(self.transport.value(), 'PASV\r\n')
+        self.transport.clear()
+        self.client.lineReceived('227 Entering Passive Mode (%s).' %
+            (ftp.encodeHostPort('127.0.0.1', 12345),))
+        self.assertEquals(self.transport.value(), 'STOR spam\r\n')
+        self.transport.clear()
+        self.client.lineReceived('226 Transfer Complete.')
+        return defer.gatherResults([d1, d2])
+
+
+    def test_failedSTOR(self):
+        """
+        Test a failure in the STOR command.
+
+        If the server does not acknowledge successful receipt of the
+        uploaded file, the second Deferred returned by
+        L{ftp.FTPClient.storeFile} should errback with L{ftp.CommandFailed}.
+        """
+        tr = proto_helpers.StringTransport()
+        def cbStore(sender):
+            self.client.lineReceived(
+                '150 File status okay; about to open data connection.')
+            sender.transport.write("x" * 1000)
+            sender.finish()
+            sender.connectionLost(failure.Failure(error.ConnectionDone("")))
+
+        def cbConnect(host, port, factory):
+            self.assertEquals(host, '127.0.0.1')
+            self.assertEquals(port, 12345)
+            proto = factory.buildProtocol((host, port))
+            proto.makeConnection(tr)
+
+        self.client.connectFactory = cbConnect
+        self._testLogin()
+        d1, d2 = self.client.storeFile("spam")
+        d1.addCallback(cbStore)
+        self.assertFailure(d2, ftp.CommandFailed)
+        self.assertEquals(self.transport.value(), 'PASV\r\n')
+        self.transport.clear()
+        self.client.lineReceived('227 Entering Passive Mode (%s).' %
+            (ftp.encodeHostPort('127.0.0.1', 12345),))
+        self.assertEquals(self.transport.value(), 'STOR spam\r\n')
+        self.transport.clear()
+        self.client.lineReceived(
+            '426 Transfer aborted.  Data connection closed.')
+        return defer.gatherResults([d1, d2])
+
+
+    def test_STOR(self):
+        """
+        Test the STOR command in non-passive mode.
+
+        Like L{test_passiveSTOR} but in the configuration where the server
+        establishes the data connection to the client, rather than the other
+        way around.
+        """
+        tr = proto_helpers.StringTransport()
+        self.client.passive = False
+        def generatePort(portCmd):
+            portCmd.text = 'PORT %s' % ftp.encodeHostPort('127.0.0.1', 9876)
+            portCmd.protocol.makeConnection(tr)
+
+        def cbStore(sender):
+            self.assertEquals(self.transport.value(), 'PORT %s\r\n' %
+                (ftp.encodeHostPort('127.0.0.1', 9876),))
+            self.transport.clear()
+            self.client.lineReceived('200 PORT OK')
+            self.assertEquals(self.transport.value(), 'STOR spam\r\n')
+            self.transport.clear()
+            self.client.lineReceived(
+                '150 File status okay; about to open data connection.')
+            sender.transport.write("x" * 1000)
+            sender.finish()
+            sender.connectionLost(failure.Failure(error.ConnectionDone("")))
+            self.client.lineReceived('226 Transfer Complete.')
+
+        def cbFinish(ign):
+            self.assertEquals(tr.value(), "x" * 1000)
+
+        self.client.generatePortCommand = generatePort
+        self._testLogin()
+        d1, d2 = self.client.storeFile("spam")
+        d1.addCallback(cbStore)
+        d2.addCallback(cbFinish)
+        return defer.gatherResults([d1, d2])
+
+
+    def test_passiveLIST(self):
+        """
+        Test the LIST command.
+
+        L{ftp.FTPClient.list} should return a Deferred which fires with a
+        protocol instance which was passed to list after the command has
+        succeeded.
+
+        (XXX - This is a very unfortunate API; if my understanding is
+        correct, the results are always at least line-oriented, so allowing
+        a per-line parser function to be specified would make this simpler,
+        but a default implementation should really be provided which knows
+        how to deal with all the formats used in real servers, so
+        application developers never have to care about this insanity.  It
+        would also be nice to either get back a Deferred of a list of
+        filenames or to be able to consume the files as they are received
+        (which the current API does allow, but in a somewhat inconvenient
+        fashion) -exarkun)
+        """
+        def cbList(res, fileList):
+            fls = [f["filename"] for f in fileList.files]
+            expected = ["foo", "bar", "baz"]
+            expected.sort()
+            fls.sort()
+            self.assertEquals(fls, expected)
+
+        def cbConnect(host, port, factory):
+            self.assertEquals(host, '127.0.0.1')
+            self.assertEquals(port, 12345)
+            proto = factory.buildProtocol((host, port))
+            proto.makeConnection(proto_helpers.StringTransport())
+            self.client.lineReceived(
+                '150 File status okay; about to open data connection.')
+            sending = [
+                '-rw-r--r--    0 spam      egg      100 Oct 10 2006 foo\r\n',
+                '-rw-r--r--    3 spam      egg      100 Oct 10 2006 bar\r\n',
+                '-rw-r--r--    4 spam      egg      100 Oct 10 2006 baz\r\n',
+            ]
+            for i in sending:
+                proto.dataReceived(i)
+            proto.connectionLost(failure.Failure(error.ConnectionDone("")))
+
+        self.client.connectFactory = cbConnect
+        self._testLogin()
+        fileList = ftp.FTPFileListProtocol()
+        d = self.client.list('foo/bar', fileList).addCallback(cbList, fileList)
+        self.assertEquals(self.transport.value(), 'PASV\r\n')
+        self.transport.clear()
+        self.client.lineReceived('227 Entering Passive Mode (%s).' %
+            (ftp.encodeHostPort('127.0.0.1', 12345),))
+        self.assertEquals(self.transport.value(), 'LIST foo/bar\r\n')
+        self.client.lineReceived('226 Transfer Complete.')
+        return d
+
+
+    def test_LIST(self):
+        """
+        Test the LIST command in non-passive mode.
+
+        Like L{test_passiveLIST} but in the configuration where the server
+        establishes the data connection to the client, rather than the other
+        way around.
+        """
+        self.client.passive = False
+        def generatePort(portCmd):
+            portCmd.text = 'PORT %s' % (ftp.encodeHostPort('127.0.0.1', 9876),)
+            portCmd.protocol.makeConnection(proto_helpers.StringTransport())
+            self.client.lineReceived(
+                '150 File status okay; about to open data connection.')
+            sending = [
+                '-rw-r--r--    0 spam      egg      100 Oct 10 2006 foo\r\n',
+                '-rw-r--r--    3 spam      egg      100 Oct 10 2006 bar\r\n',
+                '-rw-r--r--    4 spam      egg      100 Oct 10 2006 baz\r\n',
+            ]
+            for i in sending:
+                portCmd.protocol.dataReceived(i)
+            portCmd.protocol.connectionLost(
+                failure.Failure(error.ConnectionDone("")))
+
+        def cbList(res, fileList):
+            fls = [f["filename"] for f in fileList.files]
+            expected = ["foo", "bar", "baz"]
+            expected.sort()
+            fls.sort()
+            self.assertEquals(fls, expected)
+
+        self.client.generatePortCommand = generatePort
+        self._testLogin()
+        fileList = ftp.FTPFileListProtocol()
+        d = self.client.list('foo/bar', fileList).addCallback(cbList, fileList)
+        self.assertEquals(self.transport.value(), 'PORT %s\r\n' %
+            (ftp.encodeHostPort('127.0.0.1', 9876),))
+        self.transport.clear()
+        self.client.lineReceived('200 PORT OK')
+        self.assertEquals(self.transport.value(), 'LIST foo/bar\r\n')
+        self.transport.clear()
+        self.client.lineReceived('226 Transfer Complete.')
+        return d
+
+
+    def test_failedLIST(self):
+        """
+        Test a failure in LIST command.
+
+        L{ftp.FTPClient.list} should return a Deferred which fails with
+        L{ftp.CommandFailed} if the server indicates the indicated path is
+        invalid for some reason.
+        """
+        def cbConnect(host, port, factory):
+            self.assertEquals(host, '127.0.0.1')
+            self.assertEquals(port, 12345)
+            proto = factory.buildProtocol((host, port))
+            proto.makeConnection(proto_helpers.StringTransport())
+            self.client.lineReceived(
+                '150 File status okay; about to open data connection.')
+            proto.connectionLost(failure.Failure(error.ConnectionDone("")))
+
+        self.client.connectFactory = cbConnect
+        self._testLogin()
+        fileList = ftp.FTPFileListProtocol()
+        d = self.client.list('foo/bar', fileList)
+        self.assertFailure(d, ftp.CommandFailed)
+        self.assertEquals(self.transport.value(), 'PASV\r\n')
+        self.transport.clear()
+        self.client.lineReceived('227 Entering Passive Mode (%s).' %
+            (ftp.encodeHostPort('127.0.0.1', 12345),))
+        self.assertEquals(self.transport.value(), 'LIST foo/bar\r\n')
+        self.client.lineReceived('550 foo/bar: No such file or directory')
+        return d
+
+
+    def test_NLST(self):
+        """
+        Test the NLST command in non-passive mode.
+
+        L{ftp.FTPClient.nlst} should return a Deferred which fires with a
+        list of filenames when the list command has completed.
+        """
+        self.client.passive = False
+        def generatePort(portCmd):
+            portCmd.text = 'PORT %s' % (ftp.encodeHostPort('127.0.0.1', 9876),)
+            portCmd.protocol.makeConnection(proto_helpers.StringTransport())
+            self.client.lineReceived(
+                '150 File status okay; about to open data connection.')
+            portCmd.protocol.dataReceived('foo\r\n')
+            portCmd.protocol.dataReceived('bar\r\n')
+            portCmd.protocol.dataReceived('baz\r\n')
+            portCmd.protocol.connectionLost(
+                failure.Failure(error.ConnectionDone("")))
+
+        def cbList(res, proto):
+            fls = proto.buffer.splitlines()
+            expected = ["foo", "bar", "baz"]
+            expected.sort()
+            fls.sort()
+            self.assertEquals(fls, expected)
+
+        self.client.generatePortCommand = generatePort
+        self._testLogin()
+        lstproto = _BufferingProtocol()
+        d = self.client.nlst('foo/bar', lstproto).addCallback(cbList, lstproto)
+        self.assertEquals(self.transport.value(), 'PORT %s\r\n' %
+            (ftp.encodeHostPort('127.0.0.1', 9876),))
+        self.transport.clear()
+        self.client.lineReceived('200 PORT OK')
+        self.assertEquals(self.transport.value(), 'NLST foo/bar\r\n')
+        self.client.lineReceived('226 Transfer Complete.')
+        return d
+
+
+    def test_passiveNLST(self):
+        """
+        Test the NLST command.
+
+        Like L{test_passiveNLST} but in the configuration where the server
+        establishes the data connection to the client, rather than the other
+        way around.
+        """
+        def cbList(res, proto):
+            fls = proto.buffer.splitlines()
+            expected = ["foo", "bar", "baz"]
+            expected.sort()
+            fls.sort()
+            self.assertEquals(fls, expected)
+
+        def cbConnect(host, port, factory):
+            self.assertEquals(host, '127.0.0.1')
+            self.assertEquals(port, 12345)
+            proto = factory.buildProtocol((host, port))
+            proto.makeConnection(proto_helpers.StringTransport())
+            self.client.lineReceived(
+                '150 File status okay; about to open data connection.')
+            proto.dataReceived('foo\r\n')
+            proto.dataReceived('bar\r\n')
+            proto.dataReceived('baz\r\n')
+            proto.connectionLost(failure.Failure(error.ConnectionDone("")))
+
+        self.client.connectFactory = cbConnect
+        self._testLogin()
+        lstproto = _BufferingProtocol()
+        d = self.client.nlst('foo/bar', lstproto).addCallback(cbList, lstproto)
+        self.assertEquals(self.transport.value(), 'PASV\r\n')
+        self.transport.clear()
+        self.client.lineReceived('227 Entering Passive Mode (%s).' %
+            (ftp.encodeHostPort('127.0.0.1', 12345),))
+        self.assertEquals(self.transport.value(), 'NLST foo/bar\r\n')
+        self.client.lineReceived('226 Transfer Complete.')
+        return d
+
+
+    def test_failedNLST(self):
+        """
+        Test a failure in NLST command.
+
+        L{ftp.FTPClient.nlst} should return a Deferred which fails with
+        L{ftp.CommandFailed} if the server indicates the indicated path is
+        invalid for some reason.
+        """
+        tr = proto_helpers.StringTransport()
+        def cbConnect(host, port, factory):
+            self.assertEquals(host, '127.0.0.1')
+            self.assertEquals(port, 12345)
+            proto = factory.buildProtocol((host, port))
+            proto.makeConnection(tr)
+            self.client.lineReceived(
+                '150 File status okay; about to open data connection.')
+            proto.connectionLost(failure.Failure(error.ConnectionDone("")))
+
+        self.client.connectFactory = cbConnect
+        self._testLogin()
+        lstproto = _BufferingProtocol()
+        d = self.client.nlst('foo/bar', lstproto)
+        self.assertFailure(d, ftp.CommandFailed)
+        self.assertEquals(self.transport.value(), 'PASV\r\n')
+        self.transport.clear()
+        self.client.lineReceived('227 Entering Passive Mode (%s).' %
+            (ftp.encodeHostPort('127.0.0.1', 12345),))
+        self.assertEquals(self.transport.value(), 'NLST foo/bar\r\n')
+        self.client.lineReceived('550 foo/bar: No such file or directory')
+        return d
 
 
 class DummyTransport:
