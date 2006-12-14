@@ -112,6 +112,24 @@ class ComponentizedTestCase(unittest.TestCase):
         assert co1 is co3
 
 
+    def test_getComponentDefaults(self):
+        """
+        Test that a default value specified to Componentized.getComponent if
+        there is no component for the requested interface.
+        """
+        componentized = components.Componentized()
+        default = object()
+        self.assertIdentical(
+            componentized.getComponent(ITest, default),
+            default)
+        self.assertIdentical(
+            componentized.getComponent(ITest, default=default),
+            default)
+        self.assertIdentical(
+            componentized.getComponent(ITest),
+            None)
+
+
 
 class AdapterTestCase(unittest.TestCase):
     """Test adapters."""

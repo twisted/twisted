@@ -292,7 +292,10 @@ class Componentized(styles.Versioned):
                 if (hasattr(adapter, "multiComponent") and
                     adapter.multiComponent):
                     self.addComponent(adapter)
+            if adapter is None:
+                return default
             return adapter
+
 
     def __conform__(self, interface):
         return self.getComponent(interface)
