@@ -14,10 +14,11 @@ from twisted.python import log
 import gzip
 import os
 import popen2
-import time
 import sys
 import signal
 import shutil
+import warnings
+from pprint import pformat
 
 try:
     import cStringIO as StringIO
@@ -26,6 +27,9 @@ except ImportError:
 
 # Twisted Imports
 from twisted.internet import reactor, protocol, error, interfaces, defer
+from twisted.internet.protocol import ProcessProtocol
+from twisted.internet.defer import Deferred
+
 from twisted.python import util, runtime
 from twisted.python import procutils
 
@@ -173,6 +177,141 @@ class TestManyProcessProtocol(TestProcessProtocol):
         else:
             self.deferred.errback(reason)
 
+
+
+class UtilityProcessProtocol(ProcessProtocol):
+    """
+    Helper class for launching a Python process and getting a result from it.
+
+    @ivar program: A string giving a Python program for the child process to
+    run.
+    """
+    program = None
+
+    def run(cls, reactor, argv, env):
+        """
+        Run a Python process connected to a new instance of this protocol
+        class.  Return the protocol instance.
+
+        The Python process is given C{self.program} on the command line to
+        execute, in addition to anything specified by C{argv}.  C{env} is
+        the complete environment.
+        """
+        exe = sys.executable
+        self = cls()
+        reactor.spawnProcess(
+            self, exe, [exe, "-c", self.program] + argv, env=env)
+        return self
+    run = classmethod(run)
+
+
+    def __init__(self):
+        self.bytes = []
+        self.requests = []
+
+
+    def parseChunks(self, bytes):
+        """
+        Called with all bytes received on stdout when the process exits.
+        """
+        raise NotImplementedError()
+
+
+    def getResult(self):
+        """
+        Return a Deferred which will fire with the result of L{parseChunks}
+        when the child process exits.
+        """
+        d = Deferred()
+        self.requests.append(d)
+        return d
+
+
+    def _fireResultDeferreds(self, result):
+        """
+        Callback all Deferreds returned up until now by L{getResult}
+        with the given result object.
+        """
+        requests = self.requests
+        self.requests = None
+        for d in requests:
+            d.callback(result)
+
+
+    def outReceived(self, bytes):
+        """
+        Accumulate output from the child process in a list.
+        """
+        self.bytes.append(bytes)
+
+
+    def processEnded(self, reason):
+        """
+        Handle process termination by parsing all received output and firing
+        any waiting Deferreds.
+        """
+        self._fireResultDeferreds(self.parseChunks(self.bytes))
+
+
+
+
+class GetArgumentVector(UtilityProcessProtocol):
+    """
+    Protocol which will read a serialized argv from a process and
+    expose it to interested parties.
+    """
+    program = (
+        "from sys import stdout, argv\n"
+        "stdout.write(chr(0).join(argv))\n"
+        "stdout.flush()\n")
+
+    def parseChunks(self, chunks):
+        """
+        Parse the output from the process to which this protocol was
+        connected, which is a single unterminated line of \\0-separated
+        strings giving the argv of that process.  Return this as a list of
+        str objects.
+        """
+        return ''.join(chunks).split('\0')
+
+
+
+class GetEnvironmentDictionary(UtilityProcessProtocol):
+    """
+    Protocol which will read a serialized environment dict from a process
+    and expose it to interested parties.
+    """
+    program = (
+        "from sys import stdout\n"
+        "from os import environ\n"
+        "items = environ.iteritems()\n"
+        "stdout.write(chr(0).join([k + chr(0) + v for k, v in items]))\n"
+        "stdout.flush()\n")
+
+    def parseChunks(self, chunks):
+        """
+        Parse the output from the process to which this protocol was
+        connected, which is a single unterminated line of \\0-separated
+        strings giving key value pairs of the environment from that process. 
+        Return this as a dictionary.
+        """
+        environString = ''.join(chunks)
+        if not environString:
+            return {}
+        environ = iter(environString.split('\0'))
+        d = {}
+        while 1:
+            try:
+                k = environ.next()
+            except StopIteration:
+                break
+            else:
+                v = environ.next()
+                d[k] = v
+        return d
+
+
+
 class ProcessTestCase(SignalMixin, unittest.TestCase):
     """Test running a process."""
 
@@ -287,6 +426,170 @@ class ProcessTestCase(SignalMixin, unittest.TestCase):
             recvdArgs = p.outF.getvalue().splitlines()
             self.assertEquals(recvdArgs, args)
         return d.addCallback(processEnded)
+
+
+    def test_wrongArguments(self):
+        """
+        Test invalid arguments to spawnProcess: arguments and environment
+        must only contains string or unicode, and not null bytes.
+        """
+        exe = sys.executable
+        p = protocol.ProcessProtocol()
+
+        badEnvs = [
+            {"foo": 2},
+            {"foo": "egg\0a"},
+            {3: "bar"},
+            {"bar\0foo": "bar"}]
+
+        badArgs = [
+            [exe, 2],
+            "spam",
+            [exe, "foo\0bar"]]
+
+        # Sanity check - this will fail for people who have mucked with
+        # their site configuration in a stupid way, but there's nothing we
+        # can do about that.
+        badUnicode = u'\N{SNOWMAN}'
+        try:
+            badUnicode.encode(sys.getdefaultencoding())
+        except UnicodeEncodeError:
+            # Okay, that unicode doesn't encode, put it in as a bad environment
+            # key.
+            badEnvs.append({badUnicode: 'value for bad unicode key'})
+            badEnvs.append({'key for bad unicode value': badUnicode})
+            badArgs.append([exe, badUnicode])
+        else:
+            # It _did_ encode.  Most likely, Gtk2 is being used and the
+            # default system encoding is UTF-8, which can encode anything. 
+            # In any case, if implicit unicode -> str conversion works for
+            # that string, we can't test that TypeError gets raised instead,
+            # so just leave it off.
+            pass
+
+        for env in badEnvs:
+            self.assertRaises(
+                TypeError,
+                reactor.spawnProcess, p, exe, [exe, "-c", ""], env=env)
+
+        for args in badArgs:
+            self.assertRaises(
+                TypeError,
+                reactor.spawnProcess, p, exe, args, env=None)
+
+
+    # Use upper-case so that the environment key test uses an upper case
+    # name: some versions of Windows only support upper case environment
+    # variable names, and I think Python (as of 2.5) doesn't use the right
+    # syscall for lowercase or mixed case names to work anyway.
+    okayUnicode = u"UNICODE"
+    encodedValue = "UNICODE"
+
+    def _deprecatedUnicodeSupportTest(self, processProtocolClass, argv=[], env={}):
+        """
+        Check that a deprecation warning is emitted when passing unicode to
+        spawnProcess for an argv value or an environment key or value. 
+        Check that the warning is of the right type, has the right message,
+        and refers to the correct file.  Unfortunately, don't check that the
+        line number is correct, because that is too hard for me to figure
+        out.
+
+        @param processProtocolClass: A L{UtilityProcessProtocol} subclass
+        which will be instantiated to communicate with the child process.
+
+        @param argv: The argv argument to spawnProcess.
+
+        @param env: The env argument to spawnProcess.
+
+        @return: A Deferred which fires when the test is complete.
+        """
+        # Sanity to check to make sure we can actually encode this unicode
+        # with the default system encoding.  This may be excessively
+        # paranoid. -exarkun
+        self.assertEqual(
+            self.okayUnicode.encode(sys.getdefaultencoding()),
+            self.encodedValue)
+
+        warningsShown = []
+        def showwarning(*args):
+            warningsShown.append(args)
+
+        origshow = warnings.showwarning
+        origregistry = globals().get('__warningregistry__', {})
+        try:
+            warnings.showwarning = showwarning
+            globals()['__warningregistry__'] = {}
+            p = processProtocolClass.run(reactor, argv, env)
+        finally:
+            warnings.showwarning = origshow
+            globals()['__warningregistry__'] = origregistry
+
+        d = p.getResult()
+        self.assertEqual(len(warningsShown), 1, pformat(warningsShown))
+        message, category, filename, lineno = warningsShown[0]
+        self.assertEqual(
+            message.args,
+            ("Argument strings and environment keys/values passed to "
+             "reactor.spawnProcess should be str, not unicode.",))
+        self.assertIdentical(category, DeprecationWarning)
+
+        # Use starts with because of .pyc/.pyo issues.
+        self.failUnless(
+            __file__.startswith(filename),
+            'Warning in %r, expected %r' % (filename, __file__))
+
+        # It would be nice to be able to check the line number as well, but
+        # different configurations actually end up reporting different line
+        # numbers (generally the variation is only 1 line, but that's enough
+        # to fail the test erroneously...).
+        # self.assertEqual(lineno, 202)
+
+        return d
+
+    def test_deprecatedUnicodeArgvSupport(self):
+        """
+        Test that a unicode string passed for an argument value is allowed
+        if it can be encoded with the default system encoding, but that a
+        deprecation warning is emitted.
+        """
+        d = self._deprecatedUnicodeSupportTest(GetArgumentVector, argv=[self.okayUnicode])
+        def gotArgVector(argv):
+            self.assertEqual(argv, ['-c', self.encodedValue])
+        d.addCallback(gotArgVector)
+        return d
+
+
+    def test_deprecatedUnicodeEnvKeySupport(self):
+        """
+        Test that a unicode string passed for the key of the environment
+        dictionary is allowed if it can be encoded with the default system
+        encoding, but that a deprecation warning is emitted.
+        """
+        d = self._deprecatedUnicodeSupportTest(
+            GetEnvironmentDictionary, env={self.okayUnicode: self.encodedValue})
+        def gotEnvironment(environ):
+            self.assertEqual(environ[self.encodedValue], self.encodedValue)
+        d.addCallback(gotEnvironment)
+        return d
+
+
+    def test_deprecatedUnicodeEnvValueSupport(self):
+        """
+        Test that a unicode string passed for the value of the environment
+        dictionary is allowed if it can be encoded with the default system
+        encoding, but that a deprecation warning is emitted.
+        """
+        d = self._deprecatedUnicodeSupportTest(
+            GetEnvironmentDictionary, env={self.encodedValue: self.okayUnicode})
+        def gotEnvironment(environ):
+            # On Windows, the environment contains more things than we
+            # specified, so only make sure that at least the key we wanted
+            # is there, rather than testing the dictionary for exact
+            # equality.
+            self.assertEqual(environ[self.encodedValue], self.encodedValue)
+        d.addCallback(gotEnvironment)
+        return d
+
 
 
 class TwoProcessProtocol(protocol.ProcessProtocol):

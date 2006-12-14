@@ -16,6 +16,8 @@ import warnings
 import socket
 import errno
 import os
+import sys
+
 from zope.interface import implements, classImplements
 
 from twisted.internet.interfaces import IReactorUNIX, IReactorUNIXDatagram
@@ -268,9 +270,88 @@ class PosixReactorBase(ReactorBase):
 
     # IReactorProcess
 
+    def _checkProcessArgs(self, args, env):
+        """
+        Check for valid arguments and environment to spawnProcess.
+
+        @return: A two element tuple giving values to use when creating the
+        process.  The first element of the tuple is a C{list} of C{str}
+        giving the values for argv of the child process.  The second element
+        of the tuple is either C{None} if C{env} was C{None} or a C{dict}
+        mapping C{str} environment keys to C{str} environment values.
+        """
+        # Any unicode string which Python would successfully implicitly
+        # encode to a byte string would have worked before these explicit
+        # checks were added.  Anything which would have failed with a
+        # UnicodeEncodeError during that implicit encoding step would have
+        # raised an exception in the child process and that would have been
+        # a pain in the butt to debug.
+        #
+        # So, we will explicitly attempt the same encoding which Python
+        # would implicitly do later.  If it fails, we will report an error
+        # without ever spawning a child process.  If it succeeds, we'll save
+        # the result so that Python doesn't need to do it implicitly later.
+        #
+        # For any unicode which we can actually encode, we'll also issue a
+        # deprecation warning, because no one should be passing unicode here
+        # anyway.
+        #
+        # -exarkun
+        defaultEncoding = sys.getdefaultencoding()
+
+        # Common check function
+        def argChecker(arg):
+            """
+            Return either a str or None.  If the given value is not
+            allowable for some reason, None is returned.  Otherwise, a
+            possibly different object which should be used in place of arg
+            is returned.  This forces unicode encoding to happen now, rather
+            than implicitly later.
+            """
+            if isinstance(arg, unicode):
+                try:
+                    arg = arg.encode(defaultEncoding)
+                except UnicodeEncodeError:
+                    return None
+                warnings.warn(
+                    "Argument strings and environment keys/values passed to "
+                    "reactor.spawnProcess should be str, not unicode.",
+                    category=DeprecationWarning,
+                    stacklevel=4)
+            if isinstance(arg, str) and '\0' not in arg:
+                return arg
+            return None
+
+        # Make a few tests to check input validity
+        if not isinstance(args, (tuple, list)):
+            raise TypeError("Arguments must be a tuple or list")
+        
+        outputArgs = []
+        for arg in args:
+            arg = argChecker(arg)
+            if arg is None:
+                raise TypeError("Arguments contain a non-string value")
+            else:
+                outputArgs.append(arg)
+
+        outputEnv = None
+        if env is not None:
+            outputEnv = {}
+            for key, val in env.iteritems():
+                key = argChecker(key)
+                if key is None:
+                    raise TypeError("Environment contains a non-string key")
+                val = argChecker(val)
+                if val is None:
+                    raise TypeError("Environment contains a non-string value")
+                outputEnv[key] = val
+        return outputArgs, outputEnv
+
+
     def spawnProcess(self, processProtocol, executable, args=(),
                      env={}, path=None,
                      uid=None, gid=None, usePTY=0, childFDs=None):
+        args, env = self._checkProcessArgs(args, env)
         if platformType == 'posix':
             if usePTY:
                 if childFDs is not None:
