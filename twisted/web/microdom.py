@@ -807,11 +807,12 @@ def parse(readable, *args, **kwargs):
             d = mdp.documents[0]
             if not isinstance(d, Element):
                 el = Element("html")
-                el.childNodes[:] = [d]
+                el.appendChild(d)
                 d = el
         else:
             d = Element("html")
-            d.childNodes[:] = mdp.documents
+            for child in mdp.documents:
+                d.appendChild(child)
     else:
         d = mdp.documents[0]
     doc = Document(d)

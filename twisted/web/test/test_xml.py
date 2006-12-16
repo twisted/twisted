@@ -102,6 +102,30 @@ class MicroDOMTest(TestCase):
         n = domhelpers.gatherTextNodes(l[0],1).replace('&nbsp;',' ')
         self.assertEquals(n.find('insane'), -1)
 
+
+    def test_lenientParenting(self):
+        """
+        Test that C{parentNode} attributes are set to meaningful values when
+        we are parsing HTML that lacks a root node.
+        """
+        # Spare the rod, ruin the child.
+        s = "<br/><br/>"
+        d = microdom.parseString(s, beExtremelyLenient=1)
+        self.assertIdentical(d.documentElement,
+                             d.documentElement.firstChild().parentNode)
+
+
+    def test_lenientParentSingle(self):
+        """
+        Test that the C{parentNode} attribute is set to a meaningful value
+        when we parse an HTML document that has a non-Element root node.
+        """
+        s = "Hello"
+        d = microdom.parseString(s, beExtremelyLenient=1)
+        self.assertIdentical(d.documentElement,
+                             d.documentElement.firstChild().parentNode)
+
+
     def testUnEntities(self):
         s = """
                 <HTML>
