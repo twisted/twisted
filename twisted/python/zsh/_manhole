@@ -1,19 +1,19 @@
 #compdef manhole
 _arguments -s -A "-*" \
+'--help[Display this help and exit.]' \
 '(--host)-h[host]:host:_hosts' \
 '(-h)--host=[host]:host:_hosts' \
-'--version[version]' \
-'(--perspective)-P[PB Perspective to ask for (if different than username)]:perspective:_files' \
-'(-P)--perspective=[PB Perspective to ask for (if different than username)]:perspective:_files' \
-'(--service)-s[PB Service]:service:_files' \
-'(-s)--service=[PB Service]:service:_files' \
-'(--user)-u[username]:user:_files' \
-'(-u)--user=[username]:user:_files' \
 '(--password)-w[password]:password:_files' \
 '(-w)--password=[password]:password:_files' \
-'--help[Display this help and exit.]' \
-'(--toolkit)-t[Front-end to use; one of gtk2 gtk1]:toolkit:(gtk2 gtk1)' \
-'(-t)--toolkit=[Front-end to use; one of gtk2 gtk1]:toolkit:(gtk2 gtk1)' \
+'(--perspective)-P[PB Perspective to ask for (if different than username)]:perspective:_files' \
+'(-P)--perspective=[PB Perspective to ask for (if different than username)]:perspective:_files' \
 '(--port)-p[port]:port:_files' \
 '(-p)--port=[port]:port:_files' \
+'(--service)-s[PB Service]:service:_files' \
+'(-s)--service=[PB Service]:service:_files' \
+'(--toolkit)-t[Front-end to use; one of gtk2]:toolkit:(gtk2)' \
+'(-t)--toolkit=[Front-end to use; one of gtk2]:toolkit:(gtk2)' \
+'(--user)-u[username]:user:_files' \
+'(-u)--user=[username]:user:_files' \
+'--version[version]' \
 && return 0

@@ -1,45 +1,328 @@
 #compdef twistd
+local _zsh_subcmds_array
+_zsh_subcmds_array=(
+"web2:An HTTP/1.1 web server that can serve from a filesystem or application resource."
+"ftp:An FTP server."
+"telnet:A simple, telnet-based remote debugging service."
+"socks:A SOCKSv4 proxy service."
+"manhole-old:An interactive remote debugger service."
+"portforward:A simple port-forwarder."
+"web:A general-purpose web server which can serve from a filesystem or application resource."
+"inetd:An inetd(8) replacement."
+"news:A news server."
+"words:A modern words server"
+"toc:An AIM TOC service."
+"dns:A domain name server."
+"mail:An email service"
+"manhole:An interactive remote debugger service accessible via telnet and ssh and providing syntax coloring and basic line editing functionality."
+"conch:A Conch SSH service."
+)
+
 _arguments -s -A "-*" \
-'(--profile)-p[Run in profile mode, dumping results to specified file]:profile:_files' \
-'(-p)--profile=[Run in profile mode, dumping results to specified file]:profile:_files' \
-'(--reactor)-r[Which reactor to use out of: kqueue, poll, qt, default, win, cfreactor, gtk, cf, glade, win32, gtk2, iocp, glib2, threadedselect, wx.]:reactor:(kqueue poll qt default win cfreactor gtk cf glade win32 gtk2 iocp glib2 threadedselect wx)' \
-'(-r)--reactor=[Which reactor to use out of: kqueue, poll, qt, default, win, cfreactor, gtk, cf, glade, win32, gtk2, iocp, glib2, threadedselect, wx.]:reactor:(kqueue poll qt default win cfreactor gtk cf glade win32 gtk2 iocp glib2 threadedselect wx)' \
-'(--file --xml --source -f -x -s --python)-y[read an application from within a Python file (implies -o)]:python:_files -g "*.(tac|py)"' \
-'(--file --xml --source -f -x -s -y)--python=[read an application from within a Python file (implies -o)]:python:_files -g "*.(tac|py)"' \
+'*::subcmd:->subcmd' \
+'--chroot=[Chroot to a supplied directory before running]:chroot directory:_dirs' \
+'(--debug)-b[run the application in the Python Debugger (implies nodaemon),]' \
+'(-b)--debug[run the application in the Python Debugger (implies nodaemon),]' \
 '(--encrypted)-e[The specified tap/aos/xml file is encrypted.]' \
 '(-e)--encrypted[The specified tap/aos/xml file is encrypted.]' \
-'--syslog[Log to syslog, not to file]' \
-'--prefix=[Use the given prefix when syslogging (default: twisted)]:prefix:_files' \
-'--report-profile=[E-mail address to use when reporting dynamic execution profiler stats.  This should not be combined with other profiling options.  This will only take effect if the application to be run has an application name.]:report-profile:_files' \
 '--euid[Set only effective user-id rather than real user-id. (This option has no effect unless the server is running as root, in which case it means not to shed all privileges after binding ports, retaining the option to regain privileges in cases such as spawning processes. Use with caution.)]' \
 '(--python --xml --source -y -x -s --file)-f[read the given .tap file]:file:_files -g "*.tap"' \
 '(--python --xml --source -y -x -s -f)--file=[read the given .tap file]:file:_files -g "*.tap"' \
-"--originalname[Don't try to change the process name]" \
-'(--rundir)-d[Change to a supplied directory before running]:rundir:_dirs' \
-'(-d)--rundir=[Change to a supplied directory before running]:rundir:_dirs' \
-'(--logfile)-l[log to a specified file, - for stdout]:logfile:_files' \
-'(-l)--logfile=[log to a specified file, - for stdout]:logfile:_files' \
-"(--nodaemon)-n[don't daemonize]" \
-"(-n)--nodaemon[don't daemonize]" \
-'(--uid)-u[The uid to run as.]:uid:_files' \
-'(-u)--uid=[The uid to run as.]:uid:_files' \
-'(--file --python --source -f -y -s --xml)-x[Read an application from a .tax file (Marmalade format).]:xml:_files -g "*.tax"' \
-'(--file --python --source -f -y -s -x)--xml=[Read an application from a .tax file (Marmalade format).]:xml:_files -g "*.tax"' \
-'--chroot=[Chroot to a supplied directory before running]:chroot directory:_dirs' \
-'(--no_save)-o[do not save state on shutdown]' \
-'(-o)--no_save[do not save state on shutdown]' \
-'--spew[Print an insanely verbose log of everything that happens.]' \
-'--help[Display this help and exit.]' \
-'(--quiet)-q[No-op for backwards compatability.]' \
-'(-q)--quiet[No-op for backwards compatability.]' \
-'(--file --python --xml -f -y -x --source)-s[Read an application from a .tas file (AOT format).]:source:_files -g "*.tas"' \
-'(--file --python --xml -f -y -x -s)--source=[Read an application from a .tas file (AOT format).]:source:_files -g "*.tas"' \
-"--nothotshot[Don't use the 'hotshot' profiler even if it's available.]" \
 '(--gid)-g[The gid to run as.]:gid:_files' \
 '(-g)--gid=[The gid to run as.]:gid:_files' \
-'--savestats[save the Stats object rather than the text output of the profiler.]' \
-'--version[Print version information and exit.]' \
-'(--debug)-b[run the application in the Python Debugger (implies nodaemon),]' \
-'(-b)--debug[run the application in the Python Debugger (implies nodaemon),]' \
+'--help[Display this help and exit.]' \
+'--help-reactors[Display a list of possibly available reactor names.]' \
+'(--logfile)-l[log to a specified file, - for stdout]:logfile:_files' \
+'(-l)--logfile=[log to a specified file, - for stdout]:logfile:_files' \
+'(--no_save)-o[do not save state on shutdown]' \
+'(-o)--no_save[do not save state on shutdown]' \
+"(--nodaemon)-n[don't daemonize]" \
+"(-n)--nodaemon[don't daemonize]" \
+"--nothotshot[Don't use the 'hotshot' profiler even if it's available.]" \
+"--originalname[Don't try to change the process name]" \
 '--pidfile=[Name of the pidfile (default: twistd.pid)]:pidfile:_files -g "*.pid"' \
+'--prefix=[Use the given prefix when syslogging (default: twisted)]:prefix:_files' \
+'(--profile)-p[Run in profile mode, dumping results to specified file]:profile:_files' \
+'(-p)--profile=[Run in profile mode, dumping results to specified file]:profile:_files' \
+'(--file --xml --source -f -x -s --python)-y[read an application from within a Python file (implies -o)]:python:_files -g "*.(tac|py)"' \
+'(--file --xml --source -f -x -s -y)--python=[read an application from within a Python file (implies -o)]:python:_files -g "*.(tac|py)"' \
+'(--quiet)-q[No-op for backwards compatability.]' \
+'(-q)--quiet[No-op for backwards compatability.]' \
+'(--reactor)-r[Which reactor to use (see --help-reactors for a list of possibilities)]:reactor:(kqueue win32 epoll iocp gtk cf gtk2 default debug-gui poll glib2 select wx)' \
+'(-r)--reactor=[Which reactor to use (see --help-reactors for a list of possibilities)]:reactor:(kqueue win32 epoll iocp gtk cf gtk2 default debug-gui poll glib2 select wx)' \
+'--report-profile=[E-mail address to use when reporting dynamic execution profiler stats.  This should not be combined with other profiling options.  This will only take effect if the application to be run has an application name.]:report-profile:_files' \
+'(--rundir)-d[Change to a supplied directory before running]:rundir:_dirs' \
+'(-d)--rundir=[Change to a supplied directory before running]:rundir:_dirs' \
+'--savestats[save the Stats object rather than the text output of the profiler.]' \
+'(--file --python --xml -f -y -x --source)-s[Read an application from a .tas file (AOT format).]:source:_files -g "*.tas"' \
+'(--file --python --xml -f -y -x -s)--source=[Read an application from a .tas file (AOT format).]:source:_files -g "*.tas"' \
+'--spew[Print an insanely verbose log of everything that happens.]' \
+'--syslog[Log to syslog, not to file]' \
+'(--uid)-u[The uid to run as.]:uid:_files' \
+'(-u)--uid=[The uid to run as.]:uid:_files' \
+'--version[Print version information and exit.]' \
+'(--file --python --source -f -y -s --xml)-x[Read an application from a .tax file (Marmalade format).]:xml:_files -g "*.tax"' \
+'(--file --python --source -f -y -s -x)--xml=[Read an application from a .tax file (Marmalade format).]:xml:_files -g "*.tax"' \
 && return 0
+if (( CURRENT == 1 )); then
+  _describe "service to run" _zsh_subcmds_array && ret=0
+fi
+(( ret )) || return 0
+
+service="$words[1]"
+
+case $service in
+web2)
+_arguments -s -A "-*" \
+"--allow-ignore-ext[Specify whether or not a request for 'foo' should return 'foo.ext']" \
+"(--certificate)-c[SSL certificate to use for HTTPS.]:certificate:_files -g '*.pem'" \
+"(-c)--certificate=[SSL certificate to use for HTTPS.]:certificate:_files -g '*.pem'" \
+'--class=[A class that will be used to serve the root resource.  Must implement twisted.web2.iweb.IResource and take no arguments.]:class:_files' \
+'--dav=[A path that will be used to serve the root resource as a DAV Collection.]:dav:_files' \
+'--help[Display this help and exit.]' \
+'--https=[Port to listen on for Secure HTTP.]:https:_files' \
+'--ignore-ext=[Specify an extension to ignore.  These will be processed in order.]:ignore-ext:_files' \
+'(--index)-i[Add the name of a file used to check for directory indexes.]:index:_files' \
+'(-i)--index=[Add the name of a file used to check for directory indexes.]:index:_files' \
+'(--logfile)-l[Common Access Logging Format file to write to if unspecified access log information will be written to the standard twisted log file.]:logfile:_files' \
+'(-l)--logfile=[Common Access Logging Format file to write to if unspecified access log information will be written to the standard twisted log file.]:logfile:_files' \
+"--mimetype=[Mapping from file extension to MIME Type in the form of 'ext=type'.]:mimetype:_files" \
+'--path=[A path that will be used to serve the root resource as a raw file]:path:_files' \
+'(--port)-p[Port to start the server on.]:port:_files' \
+'(-p)--port=[Port to start the server on.]:port:_files' \
+"(--privkey)-k[SSL certificate to use for HTTPS.]:privkey:_files -g '*.pem'" \
+"(-k)--privkey=[SSL certificate to use for HTTPS.]:privkey:_files -g '*.pem'" \
+"--processor=[\`ext=class' where \`class' is added as a Processor for files ending]:processor:_files" \
+'--version[version]' \
+'--vhost-class=[Specify a virtual host in the form of domain=class,]:vhost-class:_files' \
+'--vhost-dav=[Specify a virtual host in the form of domain=path,]:vhost-dav:_files' \
+'--vhost-path=[Specify a directory to use for automatic named virtual hosts.]:vhost-path:_files' \
+'--vhost-static=[Specify a virtual host in the form of domain=path to be served as]:vhost-static:_files' \
+&& return 0
+;;
+ftp)
+_arguments -s -A "-*" \
+'--help[Display this help and exit.]' \
+'--password-file=[username:password-style credentials database]:password-file:_files' \
+'(--port)-p[set the port number]:port:_files' \
+'(-p)--port=[set the port number]:port:_files' \
+'(--root)-r[define the root of the ftp-site.]:root:_files' \
+'(-r)--root=[define the root of the ftp-site.]:root:_files' \
+'--userAnonymous=[Name of the anonymous user.]:userAnonymous:_files' \
+'--version[version]' \
+&& return 0
+;;
+telnet)
+_arguments -s -A "-*" \
+'--help[Display this help and exit.]' \
+'(--password)-w[set the password]:password:_files' \
+'(-w)--password=[set the password]:password:_files' \
+'(--port)-p[port to listen on]:port:_files' \
+'(-p)--port=[port to listen on]:port:_files' \
+'(--username)-u[set the login username]:username:_users' \
+'(-u)--username=[set the login username]:username:_users' \
+'--version[version]' \
+&& return 0
+;;
+socks)
+_arguments -s -A "-*" \
+'--help[Display this help and exit.]' \
+'(--interface)-i[local interface to which we listen]:interface:_files' \
+'(-i)--interface=[local interface to which we listen]:interface:_files' \
+"(--log)-l[file to log connection data to]:log:_files -g '*.log'" \
+"(-l)--log=[file to log connection data to]:log:_files -g '*.log'" \
+'(--port)-p[Port on which to listen]:port:_files' \
+'(-p)--port=[Port on which to listen]:port:_files' \
+'--version[version]' \
+&& return 0
+;;
+manhole-old)
+_arguments -s -A "-*" \
+'--help[Display this help and exit.]' \
+"(--password)-w[Required.  '-' will prompt or read a password from stdin.]:password:_files" \
+"(-w)--password=[Required.  '-' will prompt or read a password from stdin.]:password:_files" \
+'(--port)-p[Port to listen on]:port:_files' \
+'(-p)--port=[Port to listen on]:port:_files' \
+'(--tracebacks)-T[Allow tracebacks to be sent over the network]' \
+'(-T)--tracebacks[Allow tracebacks to be sent over the network]' \
+'(--user)-u[Name of user to allow to log in]:user:_users' \
+'(-u)--user=[Name of user to allow to log in]:user:_users' \
+'--version[version]' \
+&& return 0
+;;
+portforward)
+_arguments -s -A "-*" \
+'(--dest_port)-d[Set the destination port.]:dest_port:_files' \
+'(-d)--dest_port=[Set the destination port.]:dest_port:_files' \
+'--help[Display this help and exit.]' \
+'(--host)-h[Set the host.]:host:_hosts' \
+'(-h)--host=[Set the host.]:host:_hosts' \
+'(--port)-p[Set the port number.]:port:_files' \
+'(-p)--port=[Set the port number.]:port:_files' \
+'--version[version]' \
+&& return 0
+;;
+web)
+_arguments -s -A "-*" \
+"--allow-ignore-ext[Specify whether or not a request for 'foo' should return 'foo.ext']" \
+"(--certificate)-c[SSL certificate to use for HTTPS. ]:certificate:_files -g '*.pem'" \
+"(-c)--certificate=[SSL certificate to use for HTTPS. ]:certificate:_files -g '*.pem'" \
+'--class=[Create a Resource subclass with a zero-argument constructor.]:class:_files' \
+'--flashconduit=[Start a flashconduit on the specified port.]:flashconduit:_files' \
+'--help[Display this help and exit.]' \
+'--https=[Port to listen on for Secure HTTP.]:https:_files' \
+'--ignore-ext=[Specify an extension to ignore.  These will be processed in order.]:ignore-ext:_files' \
+'(--index)-i[Add the name of a file used to check for directory indexes.]:index:_files' \
+'(-i)--index=[Add the name of a file used to check for directory indexes.]:index:_files' \
+"(--logfile)-l[Path to web CLF (Combined Log Format) log file.]:logfile:_files -g '*.log'" \
+"(-l)--logfile=[Path to web CLF (Combined Log Format) log file.]:logfile:_files -g '*.log'" \
+'(--mime-type)-m[Specify the default mime-type for static files.]:mime-type:_files' \
+'(-m)--mime-type=[Specify the default mime-type for static files.]:mime-type:_files' \
+'(--notracebacks)-n[Display tracebacks in broken web pages. Displaying tracebacks to users may be security risk!]' \
+'(-n)--notracebacks[Display tracebacks in broken web pages. Displaying tracebacks to users may be security risk!]' \
+'--path=[<path> is either a specific file or a directory to]:path:_files' \
+'--personal[Instead of generating a webserver, generate a ResourcePublisher which listens on ~/.twistd-web-pb]' \
+'(--port)-p[Port to start the server on.]:port:_files' \
+'(-p)--port=[Port to start the server on.]:port:_files' \
+"(--privkey)-k[SSL certificate to use for HTTPS.]:privkey:_files -g '*.pem'" \
+"(-k)--privkey=[SSL certificate to use for HTTPS.]:privkey:_files -g '*.pem'" \
+"--processor=[\`ext=class' where \`class' is added as a Processor for files ending]:processor:_files" \
+'--resource-script=[An .rpy file to be used as the root resource of the webserver.]:resource-script:_files' \
+'(--static)-s[Same as --path, this is deprecated and will be removed in a]:static:_files' \
+'(-s)--static=[Same as --path, this is deprecated and will be removed in a]:static:_files' \
+'(--user)-u[Makes a server with ~/public_html and ~/.twistd-web-pb support for]' \
+'(-u)--user[Makes a server with ~/public_html and ~/.twistd-web-pb support for]' \
+'--version[version]' \
+&& return 0
+;;
+inetd)
+_arguments -s -A "-*" \
+"(--file)-f[Service configuration file]:file:_files -g '*.conf'" \
+"(-f)--file=[Service configuration file]:file:_files -g '*.conf'" \
+'--help[Display this help and exit.]' \
+"(--nointernal)-i[Don't run internal services]" \
+"(-i)--nointernal[Don't run internal services]" \
+'(--rpc)-r[RPC procedure table file]:rpc:_files' \
+'(-r)--rpc=[RPC procedure table file]:rpc:_files' \
+'--version[version]' \
+&& return 0
+;;
+news)
+_arguments -s -A "-*" \
+'(--datadir)-d[Root data storage path]:datadir:_dirs' \
+'(-d)--datadir=[Root data storage path]:datadir:_dirs' \
+'--group=[The name of a newsgroup to carry.]:group:_files' \
+'--help[Display this help and exit.]' \
+'(--interface)-i[Interface to which to bind]:interface:_files' \
+'(-i)--interface=[Interface to which to bind]:interface:_files' \
+'(--mailhost)-m[Host of SMTP server to use]:mailhost:_hosts' \
+'(-m)--mailhost=[Host of SMTP server to use]:mailhost:_hosts' \
+'--moderator=[The email of the moderator for the most recently passed group.]:moderator:_files' \
+'(--port)-p[Listen port]:port:_files' \
+'(-p)--port=[Listen port]:port:_files' \
+'--server=[The address of a Usenet server to pass messages to and receive messages from.]:server:_files' \
+'--subscription=[A newsgroup to list as a recommended subscription.]:subscription:_files' \
+'--version[version]' \
+&& return 0
+;;
+words)
+_arguments -s -A "-*" \
+'--group=[Specify a group which should exist]:group:_files' \
+'--help[Display this help and exit.]' \
+'--hostname=[Name of this server; purely an informative]:hostname:_files' \
+'--irc-port=[strports description of the port to bind for the  irc server]:irc-port:_files' \
+'--passwd=[Name of a passwd-style password file. (REQUIRED)]:passwd:_files' \
+'--pb-port=[strports description of the port to bind for the  pb server]:pb-port:_files' \
+'--version[version]' \
+&& return 0
+;;
+toc)
+_arguments -s -A "-*" \
+'--help[Display this help and exit.]' \
+'(--port)-p[port]:port:_files' \
+'(-p)--port=[port]:port:_files' \
+'--version[version]' \
+&& return 0
+;;
+dns)
+_arguments -s -A "-*" \
+'--bindzone=[Specify the filename of a BIND9 syntax zone definition]:bindzone:_files' \
+'(--cache)-c[Enable record caching]' \
+'(-c)--cache[Enable record caching]' \
+'--help[Display this help and exit.]' \
+'--hosts-file=[Perform lookups with a hosts file]:hosts-file:_files' \
+'(--interface)-i[The interface to which to bind]:interface:_files' \
+'(-i)--interface=[The interface to which to bind]:interface:_files' \
+'(--port)-p[The port on which to listen]:port:_files' \
+'(-p)--port=[The port on which to listen]:port:_files' \
+'--pyzone=[Specify the filename of a Python syntax zone definition]:pyzone:_files' \
+'(--recursive)-r[Perform recursive lookups]' \
+'(-r)--recursive[Perform recursive lookups]' \
+'--resolv-conf=[Override location of resolv.conf (implies --recursive)]:resolv-conf:_files' \
+'--secondary=[Act as secondary for the specified domain, performing]:secondary:_files' \
+'(--verbose)-v[Log verbosely]' \
+'(-v)--verbose[Log verbosely]' \
+'--version[version]' \
+&& return 0
+;;
+mail)
+_arguments -s -A "-*" \
+'(--aliases)-A[Specify an aliases(5) file to use for this domain]:aliases:_files' \
+'(-A)--aliases=[Specify an aliases(5) file to use for this domain]:aliases:_files' \
+'(--bounce-to-postmaster)-b[undelivered mails are sent to the postmaster]' \
+'(-b)--bounce-to-postmaster[undelivered mails are sent to the postmaster]' \
+'(--certificate)-c[Certificate file to use for SSL connections]:certificate:_files' \
+'(-c)--certificate=[Certificate file to use for SSL connections]:certificate:_files' \
+'(--default)-D[Make the most recently specified domain the default domain.]' \
+'(-D)--default[Make the most recently specified domain the default domain.]' \
+'--disable-anonymous[Disallow non-authenticated SMTP connections]' \
+'(--esmtp)-E[Use RFC 1425/1869 SMTP extensions]' \
+'(-E)--esmtp[Use RFC 1425/1869 SMTP extensions]' \
+'--help[Display this help and exit.]' \
+'(--hostname)-H[The hostname by which to identify this server.]:hostname:_hosts' \
+'(-H)--hostname=[The hostname by which to identify this server.]:hostname:_hosts' \
+'(--maildirdbmdomain)-d[generate an SMTP/POP3 virtual domain which saves to "path"]:maildirdbmdomain:_files' \
+'(-d)--maildirdbmdomain=[generate an SMTP/POP3 virtual domain which saves to "path"]:maildirdbmdomain:_files' \
+'(--passwordfile)-P[Specify a file containing username:password login info for authenticated ESMTP connections.]:passwordfile:_files' \
+'(-P)--passwordfile=[Specify a file containing username:password login info for authenticated ESMTP connections.]:passwordfile:_files' \
+'(--pop3)-p[Port to start the POP3 server on (0 to disable).]:pop3:_files' \
+'(-p)--pop3=[Port to start the POP3 server on (0 to disable).]:pop3:_files' \
+'(--pop3s)-S[Port to start the POP3-over-SSL server on (0 to disable).]:pop3s:_files' \
+'(-S)--pop3s=[Port to start the POP3-over-SSL server on (0 to disable).]:pop3s:_files' \
+"(--relay)-R[Relay messages according to their envelope 'To', using the givenpath as a queue directory.]:relay:_files" \
+"(-R)--relay=[Relay messages according to their envelope 'To', using the givenpath as a queue directory.]:relay:_files" \
+'(--smtp)-s[Port to start the SMTP server on (0 to disable).]:smtp:_files' \
+'(-s)--smtp=[Port to start the SMTP server on (0 to disable).]:smtp:_files' \
+'(--user)-u[add a user/password to the last specified domains]:user:_files' \
+'(-u)--user=[add a user/password to the last specified domains]:user:_files' \
+'--version[version]' \
+&& return 0
+;;
+manhole)
+_arguments -s -A "-*" \
+'--help[Display this help and exit.]' \
+'(--passwd)-p[name of a passwd(5)-format username/password file]:passwd:_files' \
+'(-p)--passwd=[name of a passwd(5)-format username/password file]:passwd:_files' \
+'(--sshPort)-s[strports description of the address on which to listen for ssh connections]:sshPort:_files' \
+'(-s)--sshPort=[strports description of the address on which to listen for ssh connections]:sshPort:_files' \
+'(--telnetPort)-t[strports description of the address on which to listen for telnet connections]:telnetPort:_files' \
+'(-t)--telnetPort=[strports description of the address on which to listen for telnet connections]:telnetPort:_files' \
+'--user=[user]:user:_files' \
+'--version[version]' \
+&& return 0
+;;
+conch)
+_arguments -s -A "-*" \
+'(--data)-d[directory to look for host keys in]:data:_dirs' \
+'(-d)--data=[directory to look for host keys in]:data:_dirs' \
+'--help[Display this help and exit.]' \
+'(--interface)-i[local interface to which we listen]:interface:_files' \
+'(-i)--interface=[local interface to which we listen]:interface:_files' \
+'--moduli=[directory to look for moduli in (if different from --data)]:moduli:_dirs' \
+'(--port)-p[Port on which to listen]:port:_files' \
+'(-p)--port=[Port on which to listen]:port:_files' \
+'--version[version]' \
+&& return 0
+;;
+*) _message "don't know how to complete $service";;
+esac
