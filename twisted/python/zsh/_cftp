@@ -2,47 +2,47 @@
 _arguments -s -A "-*" \
 '1:host | user@host:{_ssh;if compset -P "*@"; then _wanted hosts expl "remote host name" _ssh_hosts && ret=0 elif compset -S "@*"; then _wanted users expl "login name" _ssh_users -S "" && ret=0 else if (( $+opt_args[-l] )); then tmp=() else tmp=( "users:login name:_ssh_users -qS@" ) fi; _alternative "hosts:remote host name:_ssh_hosts" "$tmp[@]" && ret=0 fi}' \
 '2::localfile:{if [[ $words[1] == *:* ]]; then; _files; fi}' \
-'(--noagent -a --agent)-A[Enable authentication agent forwarding]' \
-'(--noagent -a -A)--agent[Enable authentication agent forwarding]' \
-"(--batchfile)-b[File to read commands from, or '-' for stdin.]:batchfile:_files" \
-"(-b)--batchfile=[File to read commands from, or '-' for stdin.]:batchfile:_files" \
-'(--buffersize)-B[Size of send/receive buffer (default: 32768)]:buffersize:_files' \
-'(-B)--buffersize=[Size of send/receive buffer (default: 32768)]:buffersize:_files' \
+'(--subsystem)-s[Subsystem/server program to connect to.]:subsystem:_files' \
+'(-s)--subsystem=[Subsystem/server program to connect to.]:subsystem:_files' \
+'(--agent -A --noagent)-a[Disable authentication agent forwarding (default)]' \
+'(--agent -A -a)--noagent[Disable authentication agent forwarding (default)]' \
+"(--macs)-m[Specify MAC algorithms]:macs:_values -s , 'macs to choose from' hmac-sha1 none hmac-md5" \
+"(-m)--macs=[Specify MAC algorithms]:macs:_values -s , 'macs to choose from' hmac-sha1 none hmac-md5" \
+'(--option)-o[Ignored OpenSSH options]:option:_files' \
+'(-o)--option=[Ignored OpenSSH options]:option:_files' \
+"--host-key-algorithms=[Select host key algorithms]:host-key-algorithms:_values -s , 'host key algorithms to choose from' ssh-rsa ssh-dss" \
+'--user-authentications=[Types of user authentications to use.]:user-authentications:_files' \
 "(--ciphers)-c[Select encryption algorithms]:ciphers:_values -s , 'ciphers to choose from' idea-ctr blowfish-ctr none arcfour aes256-ctr cast128-ctr idea-cbc blowfish-cbc 3des-cbc aes256-cbc 3des-ctr cast128-cbc aes128-ctr aes192-cbc aes192-ctr aes128-cbc" \
 "(-c)--ciphers=[Select encryption algorithms]:ciphers:_values -s , 'ciphers to choose from' idea-ctr blowfish-ctr none arcfour aes256-ctr cast128-ctr idea-cbc blowfish-cbc 3des-cbc aes256-cbc 3des-ctr cast128-cbc aes128-ctr aes192-cbc aes192-ctr aes128-cbc" \
 '(--compress)-C[Enable compression.]' \
 '(-C)--compress[Enable compression.]' \
+'(--noagent -a --agent)-A[Enable authentication agent forwarding]' \
+'(--noagent -a -A)--agent[Enable authentication agent forwarding]' \
+'--known-hosts=[File to check for host keys]:known-hosts:_files' \
 "(--connection-usage)-K[Connection types to use]:connection-usage:_values -s , 'connection types to choose from' unix direct" \
 "(-K)--connection-usage=[Connection types to use]:connection-usage:_values -s , 'connection types to choose from' unix direct" \
-'--help[Display this help and exit.]' \
-"--host-key-algorithms=[Select host key algorithms]:host-key-algorithms:_values -s , 'host key algorithms to choose from' ssh-rsa ssh-dss" \
+'(--user)-l[Log in using this user name.]:user:_users' \
+'(-l)--user=[Log in using this user name.]:user:_users' \
+'(--reconnect)-r[Reconnect to the server if the connection is lost.]' \
+'(-r)--reconnect[Reconnect to the server if the connection is lost.]' \
+'--logfile=[File to log to, or - for stdout]:logfile:_files' \
+'(--port)-p[Connect to this port.  Server must be on the same port.]:port:_files' \
+'(-p)--port=[Connect to this port.  Server must be on the same port.]:port:_files' \
 '(--identity)-i[Identity for public-key authentication]:identity:_files' \
 '(-i)--identity=[Identity for public-key authentication]:identity:_files' \
-'--known-hosts=[File to check for host keys]:known-hosts:_files' \
+'--help[Display this help and exit.]' \
 '(--log)-v[Enable logging (defaults to stderr)]' \
 '(-v)--log[Enable logging (defaults to stderr)]' \
-'--logfile=[File to log to, or - for stdout]:logfile:_files' \
-"(--macs)-m[Specify MAC algorithms]:macs:_values -s , 'macs to choose from' hmac-sha1 none hmac-md5" \
-"(-m)--macs=[Specify MAC algorithms]:macs:_values -s , 'macs to choose from' hmac-sha1 none hmac-md5" \
-'(--agent -A --noagent)-a[Disable authentication agent forwarding (default)]' \
-'(--agent -A -a)--noagent[Disable authentication agent forwarding (default)]' \
 '(--nocache)-I[Do not allow connection sharing over this connection.]' \
 '(-I)--nocache[Do not allow connection sharing over this connection.]' \
 '(--nox11)-x[Disable X11 connection forwarding (default)]' \
 '(-x)--nox11[Disable X11 connection forwarding (default)]' \
-'(--option)-o[Ignored OpenSSH options]:option:_files' \
-'(-o)--option=[Ignored OpenSSH options]:option:_files' \
-'(--port)-p[Connect to this port.  Server must be on the same port.]:port:_files' \
-'(-p)--port=[Connect to this port.  Server must be on the same port.]:port:_files' \
-'(--reconnect)-r[Reconnect to the server if the connection is lost.]' \
-'(-r)--reconnect[Reconnect to the server if the connection is lost.]' \
-'(--requests)-R[Number of requests to make before waiting for a reply.]:requests:_files' \
-'(-R)--requests=[Number of requests to make before waiting for a reply.]:requests:_files' \
-'(--subsystem)-s[Subsystem/server program to connect to.]:subsystem:_files' \
-'(-s)--subsystem=[Subsystem/server program to connect to.]:subsystem:_files' \
-'(--user)-l[Log in using this user name.]:user:_users' \
-'(-l)--user=[Log in using this user name.]:user:_users' \
-'--user-authentications=[Types of user authentications to use.]:user-authentications:_files' \
+"(--batchfile)-b[File to read commands from, or '-' for stdin.]:batchfile:_files" \
+"(-b)--batchfile=[File to read commands from, or '-' for stdin.]:batchfile:_files" \
 '(--version)-V[Display version number only.]' \
 '(-V)--version[Display version number only.]' \
+'(--requests)-R[Number of requests to make before waiting for a reply.]:requests:_files' \
+'(-R)--requests=[Number of requests to make before waiting for a reply.]:requests:_files' \
+'(--buffersize)-B[Size of send/receive buffer (default: 32768)]:buffersize:_files' \
+'(-B)--buffersize=[Size of send/receive buffer (default: 32768)]:buffersize:_files' \
 && return 0

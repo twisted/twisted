@@ -1,11 +1,9 @@
 #compdef mktap
-local _zsh_subcmds_array
-_zsh_subcmds_array=(
-"web2:An HTTP/1.1 web server that can serve from a filesystem or application resource."
+_mktap_subcmds=(
 "ftp:An FTP server."
 "telnet:A simple, telnet-based remote debugging service."
 "socks:A SOCKSv4 proxy service."
-"manhole-old:An interactive remote debugger service."
+"manhole:An interactive remote debugger service."
 "portforward:A simple port-forwarder."
 "web:A general-purpose web server which can serve from a filesystem or application resource."
 "inetd:An inetd(8) replacement."
@@ -20,258 +18,230 @@ _zsh_subcmds_array=(
 
 _arguments -s -A "-*" \
 '*::subcmd:->subcmd' \
-'(--append)-a[An existing .tap file to append the plugin to, rather than creating a new one.]:tap file to append to:_files -g "*.tap"' \
-'(-a)--append=[An existing .tap file to append the plugin to, rather than creating a new one.]:tap file to append to:_files -g "*.tap"' \
+'(--uid)-u[The uid to run as.]:uid to run as:_files' \
+'(-u)--uid=[The uid to run as.]:uid to run as:_files' \
 '(--appname)-n[The process name to use for this application.]:appname:_files' \
 '(-n)--appname=[The process name to use for this application.]:appname:_files' \
-'(--debug)-d[Show debug information for plugin loading]' \
-'(-d)--debug[Show debug information for plugin loading]' \
 "(--encrypted)-e[Encrypt file before writing (will make the extension of the resultant file begin with 'e')]" \
 "(-e)--encrypted[Encrypt file before writing (will make the extension of the resultant file begin with 'e')]" \
 '(--gid)-g[The gid to run as.]:gid to run as:_files' \
 '(-g)--gid=[The gid to run as.]:gid to run as:_files' \
-'(--help)-h[Display this message]' \
-'(-h)--help[Display this message]' \
+'--version[version]' \
+'(--debug)-d[Show debug information for plugin loading]' \
+'(-d)--debug[Show debug information for plugin loading]' \
 '(--progress)-p[Show progress information for plugin loading]' \
 '(-p)--progress[Show progress information for plugin loading]' \
 "(--type)-t[The output format to use; this can be 'pickle', 'xml', or 'source'.]:output format:(pickle xml source)" \
 "(-t)--type=[The output format to use; this can be 'pickle', 'xml', or 'source'.]:output format:(pickle xml source)" \
-'(--uid)-u[The uid to run as.]:uid to run as:_files' \
-'(-u)--uid=[The uid to run as.]:uid to run as:_files' \
-'--version[version]' \
+'(--append)-a[An existing .tap file to append the plugin to, rather than creating a new one.]:tap file to append to:_files -g "*.tap"' \
+'(-a)--append=[An existing .tap file to append the plugin to, rather than creating a new one.]:tap file to append to:_files -g "*.tap"' \
+'(--help)-h[Display this message]' \
+'(-h)--help[Display this message]' \
 && return 0
 if (( CURRENT == 1 )); then
-  _describe "tap to build" _zsh_subcmds_array && ret=0
+  _describe "tap to build" _mktap_subcmds && ret=0
 fi
 (( ret )) || return 0
 
 service="$words[1]"
 
 case $service in
-web2)
-_arguments -s -A "-*" \
-"--allow-ignore-ext[Specify whether or not a request for 'foo' should return 'foo.ext']" \
-"(--certificate)-c[SSL certificate to use for HTTPS.]:certificate:_files -g '*.pem'" \
-"(-c)--certificate=[SSL certificate to use for HTTPS.]:certificate:_files -g '*.pem'" \
-'--class=[A class that will be used to serve the root resource.  Must implement twisted.web2.iweb.IResource and take no arguments.]:class:_files' \
-'--dav=[A path that will be used to serve the root resource as a DAV Collection.]:dav:_files' \
-'--help[Display this help and exit.]' \
-'--https=[Port to listen on for Secure HTTP.]:https:_files' \
-'--ignore-ext=[Specify an extension to ignore.  These will be processed in order.]:ignore-ext:_files' \
-'(--index)-i[Add the name of a file used to check for directory indexes.]:index:_files' \
-'(-i)--index=[Add the name of a file used to check for directory indexes.]:index:_files' \
-'(--logfile)-l[Common Access Logging Format file to write to if unspecified access log information will be written to the standard twisted log file.]:logfile:_files' \
-'(-l)--logfile=[Common Access Logging Format file to write to if unspecified access log information will be written to the standard twisted log file.]:logfile:_files' \
-"--mimetype=[Mapping from file extension to MIME Type in the form of 'ext=type'.]:mimetype:_files" \
-'--path=[A path that will be used to serve the root resource as a raw file]:path:_files' \
-'(--port)-p[Port to start the server on.]:port:_files' \
-'(-p)--port=[Port to start the server on.]:port:_files' \
-"(--privkey)-k[SSL certificate to use for HTTPS.]:privkey:_files -g '*.pem'" \
-"(-k)--privkey=[SSL certificate to use for HTTPS.]:privkey:_files -g '*.pem'" \
-"--processor=[\`ext=class' where \`class' is added as a Processor for files ending]:processor:_files" \
-'--version[version]' \
-'--vhost-class=[Specify a virtual host in the form of domain=class,]:vhost-class:_files' \
-'--vhost-dav=[Specify a virtual host in the form of domain=path,]:vhost-dav:_files' \
-'--vhost-path=[Specify a directory to use for automatic named virtual hosts.]:vhost-path:_files' \
-'--vhost-static=[Specify a virtual host in the form of domain=path to be served as]:vhost-static:_files' \
-&& return 0
-;;
 ftp)
 _arguments -s -A "-*" \
-'--help[Display this help and exit.]' \
 '--password-file=[username:password-style credentials database]:password-file:_files' \
-'(--port)-p[set the port number]:port:_files' \
-'(-p)--port=[set the port number]:port:_files' \
-'(--root)-r[define the root of the ftp-site.]:root:_files' \
-'(-r)--root=[define the root of the ftp-site.]:root:_files' \
+'--help[Display this help and exit.]' \
 '--userAnonymous=[Name of the anonymous user.]:userAnonymous:_files' \
 '--version[version]' \
+'(--root)-r[define the root of the ftp-site.]:root:_files' \
+'(-r)--root=[define the root of the ftp-site.]:root:_files' \
+'(--port)-p[set the port number]:port:_files' \
+'(-p)--port=[set the port number]:port:_files' \
 && return 0
 ;;
 telnet)
 _arguments -s -A "-*" \
-'--help[Display this help and exit.]' \
+'(--username)-u[set the login username]:username:_users' \
+'(-u)--username=[set the login username]:username:_users' \
 '(--password)-w[set the password]:password:_files' \
 '(-w)--password=[set the password]:password:_files' \
 '(--port)-p[port to listen on]:port:_files' \
 '(-p)--port=[port to listen on]:port:_files' \
-'(--username)-u[set the login username]:username:_users' \
-'(-u)--username=[set the login username]:username:_users' \
 '--version[version]' \
+'--help[Display this help and exit.]' \
 && return 0
 ;;
 socks)
 _arguments -s -A "-*" \
-'--help[Display this help and exit.]' \
 '(--interface)-i[local interface to which we listen]:interface:_files' \
 '(-i)--interface=[local interface to which we listen]:interface:_files' \
-"(--log)-l[file to log connection data to]:log:_files -g '*.log'" \
-"(-l)--log=[file to log connection data to]:log:_files -g '*.log'" \
+'--version[version]' \
+'--help[Display this help and exit.]' \
 '(--port)-p[Port on which to listen]:port:_files' \
 '(-p)--port=[Port on which to listen]:port:_files' \
-'--version[version]' \
+"(--log)-l[file to log connection data to]:log:_files -g '*.log'" \
+"(-l)--log=[file to log connection data to]:log:_files -g '*.log'" \
 && return 0
 ;;
-manhole-old)
+manhole)
 _arguments -s -A "-*" \
 '--help[Display this help and exit.]' \
+'--version[version]' \
+'(--user)-u[Name of user to allow to log in]:user:_users' \
+'(-u)--user=[Name of user to allow to log in]:user:_users' \
 "(--password)-w[Required.  '-' will prompt or read a password from stdin.]:password:_files" \
 "(-w)--password=[Required.  '-' will prompt or read a password from stdin.]:password:_files" \
 '(--port)-p[Port to listen on]:port:_files' \
 '(-p)--port=[Port to listen on]:port:_files' \
 '(--tracebacks)-T[Allow tracebacks to be sent over the network]' \
 '(-T)--tracebacks[Allow tracebacks to be sent over the network]' \
-'(--user)-u[Name of user to allow to log in]:user:_users' \
-'(-u)--user=[Name of user to allow to log in]:user:_users' \
-'--version[version]' \
 && return 0
 ;;
 portforward)
 _arguments -s -A "-*" \
-'(--dest_port)-d[Set the destination port.]:dest_port:_files' \
-'(-d)--dest_port=[Set the destination port.]:dest_port:_files' \
-'--help[Display this help and exit.]' \
 '(--host)-h[Set the host.]:host:_hosts' \
 '(-h)--host=[Set the host.]:host:_hosts' \
+'--version[version]' \
+'--help[Display this help and exit.]' \
 '(--port)-p[Set the port number.]:port:_files' \
 '(-p)--port=[Set the port number.]:port:_files' \
-'--version[version]' \
+'(--dest_port)-d[Set the destination port.]:dest_port:_files' \
+'(-d)--dest_port=[Set the destination port.]:dest_port:_files' \
 && return 0
 ;;
 web)
 _arguments -s -A "-*" \
-"--allow-ignore-ext[Specify whether or not a request for 'foo' should return 'foo.ext']" \
-"(--certificate)-c[SSL certificate to use for HTTPS. ]:certificate:_files -g '*.pem'" \
-"(-c)--certificate=[SSL certificate to use for HTTPS. ]:certificate:_files -g '*.pem'" \
-'--class=[Create a Resource subclass with a zero-argument constructor.]:class:_files' \
-'--flashconduit=[Start a flashconduit on the specified port.]:flashconduit:_files' \
 '--help[Display this help and exit.]' \
-'--https=[Port to listen on for Secure HTTP.]:https:_files' \
-'--ignore-ext=[Specify an extension to ignore.  These will be processed in order.]:ignore-ext:_files' \
-'(--index)-i[Add the name of a file used to check for directory indexes.]:index:_files' \
-'(-i)--index=[Add the name of a file used to check for directory indexes.]:index:_files' \
-"(--logfile)-l[Path to web CLF (Combined Log Format) log file.]:logfile:_files -g '*.log'" \
-"(-l)--logfile=[Path to web CLF (Combined Log Format) log file.]:logfile:_files -g '*.log'" \
-'(--mime-type)-m[Specify the default mime-type for static files.]:mime-type:_files' \
-'(-m)--mime-type=[Specify the default mime-type for static files.]:mime-type:_files' \
-'(--notracebacks)-n[Display tracebacks in broken web pages. Displaying tracebacks to users may be security risk!]' \
-'(-n)--notracebacks[Display tracebacks in broken web pages. Displaying tracebacks to users may be security risk!]' \
-'--path=[<path> is either a specific file or a directory to]:path:_files' \
-'--personal[Instead of generating a webserver, generate a ResourcePublisher which listens on ~/.twistd-web-pb]' \
-'(--port)-p[Port to start the server on.]:port:_files' \
-'(-p)--port=[Port to start the server on.]:port:_files' \
-"(--privkey)-k[SSL certificate to use for HTTPS.]:privkey:_files -g '*.pem'" \
-"(-k)--privkey=[SSL certificate to use for HTTPS.]:privkey:_files -g '*.pem'" \
-"--processor=[\`ext=class' where \`class' is added as a Processor for files ending]:processor:_files" \
 '--resource-script=[An .rpy file to be used as the root resource of the webserver.]:resource-script:_files' \
 '(--static)-s[Same as --path, this is deprecated and will be removed in a]:static:_files' \
 '(-s)--static=[Same as --path, this is deprecated and will be removed in a]:static:_files' \
 '(--user)-u[Makes a server with ~/public_html and ~/.twistd-web-pb support for]' \
 '(-u)--user[Makes a server with ~/public_html and ~/.twistd-web-pb support for]' \
+'--flashconduit=[Start a flashconduit on the specified port.]:flashconduit:_files' \
+'--path=[<path> is either a specific file or a directory to]:path:_files' \
+"(--logfile)-l[Path to web CLF (Combined Log Format) log file.]:logfile:_files -g '*.log'" \
+"(-l)--logfile=[Path to web CLF (Combined Log Format) log file.]:logfile:_files -g '*.log'" \
+'--class=[Create a Resource subclass with a zero-argument constructor.]:class:_files' \
+'--ignore-ext=[Specify an extension to ignore.  These will be processed in order.]:ignore-ext:_files' \
+"(--privkey)-k[SSL certificate to use for HTTPS.]:privkey:_files -g '*.pem'" \
+"(-k)--privkey=[SSL certificate to use for HTTPS.]:privkey:_files -g '*.pem'" \
+"--allow-ignore-ext[Specify whether or not a request for 'foo' should return 'foo.ext']" \
+'(--index)-i[Add the name of a file used to check for directory indexes.]:index:_files' \
+'(-i)--index=[Add the name of a file used to check for directory indexes.]:index:_files' \
+"(--certificate)-c[SSL certificate to use for HTTPS. ]:certificate:_files -g '*.pem'" \
+"(-c)--certificate=[SSL certificate to use for HTTPS. ]:certificate:_files -g '*.pem'" \
+'(--notracebacks)-n[Display tracebacks in broken web pages. Displaying tracebacks to users may be security risk!]' \
+'(-n)--notracebacks[Display tracebacks in broken web pages. Displaying tracebacks to users may be security risk!]' \
+'(--mime-type)-m[Specify the default mime-type for static files.]:mime-type:_files' \
+'(-m)--mime-type=[Specify the default mime-type for static files.]:mime-type:_files' \
+'(--port)-p[Port to start the server on.]:port:_files' \
+'(-p)--port=[Port to start the server on.]:port:_files' \
+'--personal[Instead of generating a webserver, generate a ResourcePublisher which listens on ~/.twistd-web-pb]' \
 '--version[version]' \
+'--https=[Port to listen on for Secure HTTP.]:https:_files' \
+"--processor=[\`ext=class' where \`class' is added as a Processor for files ending]:processor:_files" \
 && return 0
 ;;
 inetd)
 _arguments -s -A "-*" \
-"(--file)-f[Service configuration file]:file:_files -g '*.conf'" \
-"(-f)--file=[Service configuration file]:file:_files -g '*.conf'" \
-'--help[Display this help and exit.]' \
 "(--nointernal)-i[Don't run internal services]" \
 "(-i)--nointernal[Don't run internal services]" \
 '(--rpc)-r[RPC procedure table file]:rpc:_files' \
 '(-r)--rpc=[RPC procedure table file]:rpc:_files' \
 '--version[version]' \
+'--help[Display this help and exit.]' \
+"(--file)-f[Service configuration file]:file:_files -g '*.conf'" \
+"(-f)--file=[Service configuration file]:file:_files -g '*.conf'" \
 && return 0
 ;;
 news)
 _arguments -s -A "-*" \
-'(--datadir)-d[Root data storage path]:datadir:_dirs' \
-'(-d)--datadir=[Root data storage path]:datadir:_dirs' \
 '--group=[The name of a newsgroup to carry.]:group:_files' \
 '--help[Display this help and exit.]' \
-'(--interface)-i[Interface to which to bind]:interface:_files' \
-'(-i)--interface=[Interface to which to bind]:interface:_files' \
+'--server=[The address of a Usenet server to pass messages to and receive messages from.]:server:_files' \
+'--moderator=[The email of the moderator for the most recently passed group.]:moderator:_files' \
+'(--datadir)-d[Root data storage path]:datadir:_dirs' \
+'(-d)--datadir=[Root data storage path]:datadir:_dirs' \
 '(--mailhost)-m[Host of SMTP server to use]:mailhost:_hosts' \
 '(-m)--mailhost=[Host of SMTP server to use]:mailhost:_hosts' \
-'--moderator=[The email of the moderator for the most recently passed group.]:moderator:_files' \
+'--version[version]' \
+'(--interface)-i[Interface to which to bind]:interface:_files' \
+'(-i)--interface=[Interface to which to bind]:interface:_files' \
 '(--port)-p[Listen port]:port:_files' \
 '(-p)--port=[Listen port]:port:_files' \
-'--server=[The address of a Usenet server to pass messages to and receive messages from.]:server:_files' \
 '--subscription=[A newsgroup to list as a recommended subscription.]:subscription:_files' \
-'--version[version]' \
 && return 0
 ;;
 words)
 _arguments -s -A "-*" \
 '--group=[Specify a group which should exist]:group:_files' \
 '--help[Display this help and exit.]' \
+'--passwd=[Name of a passwd-style password file. (REQUIRED)]:passwd:_files' \
 '--hostname=[Name of this server; purely an informative]:hostname:_files' \
 '--irc-port=[strports description of the port to bind for the  irc server]:irc-port:_files' \
-'--passwd=[Name of a passwd-style password file. (REQUIRED)]:passwd:_files' \
 '--pb-port=[strports description of the port to bind for the  pb server]:pb-port:_files' \
 '--version[version]' \
 && return 0
 ;;
 toc)
 _arguments -s -A "-*" \
-'--help[Display this help and exit.]' \
+'--version[version]' \
 '(--port)-p[port]:port:_files' \
 '(-p)--port=[port]:port:_files' \
-'--version[version]' \
+'--help[Display this help and exit.]' \
 && return 0
 ;;
 dns)
 _arguments -s -A "-*" \
-'--bindzone=[Specify the filename of a BIND9 syntax zone definition]:bindzone:_files' \
+'(--verbose)-v[Log verbosely]' \
+'(-v)--verbose[Log verbosely]' \
+'--resolv-conf=[Override location of resolv.conf (implies --recursive)]:resolv-conf:_files' \
+'(--interface)-i[The interface to which to bind]:interface:_files' \
+'(-i)--interface=[The interface to which to bind]:interface:_files' \
+'--pyzone=[Specify the filename of a Python syntax zone definition]:pyzone:_files' \
+'--secondary=[Act as secondary for the specified domain, performing]:secondary:_files' \
+'(--recursive)-r[Perform recursive lookups]' \
+'(-r)--recursive[Perform recursive lookups]' \
 '(--cache)-c[Enable record caching]' \
 '(-c)--cache[Enable record caching]' \
 '--help[Display this help and exit.]' \
-'--hosts-file=[Perform lookups with a hosts file]:hosts-file:_files' \
-'(--interface)-i[The interface to which to bind]:interface:_files' \
-'(-i)--interface=[The interface to which to bind]:interface:_files' \
 '(--port)-p[The port on which to listen]:port:_files' \
 '(-p)--port=[The port on which to listen]:port:_files' \
-'--pyzone=[Specify the filename of a Python syntax zone definition]:pyzone:_files' \
-'(--recursive)-r[Perform recursive lookups]' \
-'(-r)--recursive[Perform recursive lookups]' \
-'--resolv-conf=[Override location of resolv.conf (implies --recursive)]:resolv-conf:_files' \
-'--secondary=[Act as secondary for the specified domain, performing]:secondary:_files' \
-'(--verbose)-v[Log verbosely]' \
-'(-v)--verbose[Log verbosely]' \
 '--version[version]' \
+'--bindzone=[Specify the filename of a BIND9 syntax zone definition]:bindzone:_files' \
+'--hosts-file=[Perform lookups with a hosts file]:hosts-file:_files' \
 && return 0
 ;;
 mail)
 _arguments -s -A "-*" \
-'(--aliases)-A[Specify an aliases(5) file to use for this domain]:aliases:_files' \
-'(-A)--aliases=[Specify an aliases(5) file to use for this domain]:aliases:_files' \
+'--help[Display this help and exit.]' \
+"(--relay)-R[Relay messages according to their envelope 'To', using the givenpath as a queue directory.]:relay:_files" \
+"(-R)--relay=[Relay messages according to their envelope 'To', using the givenpath as a queue directory.]:relay:_files" \
+'(--pop3s)-S[Port to start the POP3-over-SSL server on (0 to disable).]:pop3s:_files' \
+'(-S)--pop3s=[Port to start the POP3-over-SSL server on (0 to disable).]:pop3s:_files' \
+'(--smtp)-s[Port to start the SMTP server on (0 to disable).]:smtp:_files' \
+'(-s)--smtp=[Port to start the SMTP server on (0 to disable).]:smtp:_files' \
+'(--maildirdbmdomain)-d[generate an SMTP/POP3 virtual domain which saves to "path"]:maildirdbmdomain:_files' \
+'(-d)--maildirdbmdomain=[generate an SMTP/POP3 virtual domain which saves to "path"]:maildirdbmdomain:_files' \
+'(--pop3)-p[Port to start the POP3 server on (0 to disable).]:pop3:_files' \
+'(-p)--pop3=[Port to start the POP3 server on (0 to disable).]:pop3:_files' \
+'(--user)-u[add a user/password to the last specified domains]:user:_files' \
+'(-u)--user=[add a user/password to the last specified domains]:user:_files' \
 '(--bounce-to-postmaster)-b[undelivered mails are sent to the postmaster]' \
 '(-b)--bounce-to-postmaster[undelivered mails are sent to the postmaster]' \
+'(--aliases)-A[Specify an aliases(5) file to use for this domain]:aliases:_files' \
+'(-A)--aliases=[Specify an aliases(5) file to use for this domain]:aliases:_files' \
 '(--certificate)-c[Certificate file to use for SSL connections]:certificate:_files' \
 '(-c)--certificate=[Certificate file to use for SSL connections]:certificate:_files' \
 '(--default)-D[Make the most recently specified domain the default domain.]' \
 '(-D)--default[Make the most recently specified domain the default domain.]' \
+'(--hostname)-H[The hostname by which to identify this server.]:hostname:_hosts' \
+'(-H)--hostname=[The hostname by which to identify this server.]:hostname:_hosts' \
 '--disable-anonymous[Disallow non-authenticated SMTP connections]' \
 '(--esmtp)-E[Use RFC 1425/1869 SMTP extensions]' \
 '(-E)--esmtp[Use RFC 1425/1869 SMTP extensions]' \
-'--help[Display this help and exit.]' \
-'(--hostname)-H[The hostname by which to identify this server.]:hostname:_hosts' \
-'(-H)--hostname=[The hostname by which to identify this server.]:hostname:_hosts' \
-'(--maildirdbmdomain)-d[generate an SMTP/POP3 virtual domain which saves to "path"]:maildirdbmdomain:_files' \
-'(-d)--maildirdbmdomain=[generate an SMTP/POP3 virtual domain which saves to "path"]:maildirdbmdomain:_files' \
+'--version[version]' \
 '(--passwordfile)-P[Specify a file containing username:password login info for authenticated ESMTP connections.]:passwordfile:_files' \
 '(-P)--passwordfile=[Specify a file containing username:password login info for authenticated ESMTP connections.]:passwordfile:_files' \
-'(--pop3)-p[Port to start the POP3 server on (0 to disable).]:pop3:_files' \
-'(-p)--pop3=[Port to start the POP3 server on (0 to disable).]:pop3:_files' \
-'(--pop3s)-S[Port to start the POP3-over-SSL server on (0 to disable).]:pop3s:_files' \
-'(-S)--pop3s=[Port to start the POP3-over-SSL server on (0 to disable).]:pop3s:_files' \
-"(--relay)-R[Relay messages according to their envelope 'To', using the givenpath as a queue directory.]:relay:_files" \
-"(-R)--relay=[Relay messages according to their envelope 'To', using the givenpath as a queue directory.]:relay:_files" \
-'(--smtp)-s[Port to start the SMTP server on (0 to disable).]:smtp:_files' \
-'(-s)--smtp=[Port to start the SMTP server on (0 to disable).]:smtp:_files' \
-'(--user)-u[add a user/password to the last specified domains]:user:_files' \
-'(-u)--user=[add a user/password to the last specified domains]:user:_files' \
-'--version[version]' \
 && return 0
 ;;
 manhole)
@@ -279,25 +249,25 @@ _arguments -s -A "-*" \
 '--help[Display this help and exit.]' \
 '(--passwd)-p[name of a passwd(5)-format username/password file]:passwd:_files' \
 '(-p)--passwd=[name of a passwd(5)-format username/password file]:passwd:_files' \
+'--version[version]' \
+'--user=[user]:user:_files' \
 '(--sshPort)-s[strports description of the address on which to listen for ssh connections]:sshPort:_files' \
 '(-s)--sshPort=[strports description of the address on which to listen for ssh connections]:sshPort:_files' \
 '(--telnetPort)-t[strports description of the address on which to listen for telnet connections]:telnetPort:_files' \
 '(-t)--telnetPort=[strports description of the address on which to listen for telnet connections]:telnetPort:_files' \
-'--user=[user]:user:_files' \
-'--version[version]' \
 && return 0
 ;;
 conch)
 _arguments -s -A "-*" \
-'(--data)-d[directory to look for host keys in]:data:_dirs' \
-'(-d)--data=[directory to look for host keys in]:data:_dirs' \
+'--moduli=[directory to look for moduli in (if different from --data)]:moduli:_dirs' \
 '--help[Display this help and exit.]' \
+'--version[version]' \
 '(--interface)-i[local interface to which we listen]:interface:_files' \
 '(-i)--interface=[local interface to which we listen]:interface:_files' \
-'--moduli=[directory to look for moduli in (if different from --data)]:moduli:_dirs' \
+'(--data)-d[directory to look for host keys in]:data:_dirs' \
+'(-d)--data=[directory to look for host keys in]:data:_dirs' \
 '(--port)-p[Port on which to listen]:port:_files' \
 '(-p)--port=[Port on which to listen]:port:_files' \
-'--version[version]' \
 && return 0
 ;;
 *) _message "don't know how to complete $service";;

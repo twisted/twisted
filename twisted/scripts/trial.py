@@ -84,9 +84,6 @@ def isTestFile(filename):
             and os.path.splitext(basename)[1] == ('.py'))
 
 
-def _zshReporterAction():
-    return "(%s)" % (" ".join([p.longOpt for p in plugin.getPlugins(itrial.IReporter)]),)
-
 class Options(usage.Options, app.ReactorSelectionMixin):
     synopsis = """%s [options] [[file|package|module|TestCase|testmethod]...]
     """ % (os.path.basename(sys.argv[0]),)
@@ -120,8 +117,7 @@ class Options(usage.Options, app.ReactorSelectionMixin):
          'The reporter to use for this test run.  See --help-reporters for '
          'more info.']]
 
-    zsh_actions = {"tbformat":"(plain emacs cgitb)",
-                   "reporter":_zshReporterAction}
+    zsh_actions = {"tbformat":"(plain emacs cgitb)"}
     zsh_actionDescr = {"logfile":"log file name",
                        "random":"random seed"}
     zsh_extras = ["*:file|module|package|TestCase|testMethod:_files -g '*.py'"]
@@ -199,7 +195,7 @@ class Options(usage.Options, app.ReactorSelectionMixin):
         """Print an insanely verbose log of everything that happens.  Useful
         when debugging freezes or locks in complex code."""
         sys.settrace(spewer)
-
+        
 
     def opt_help_reporters(self):
         synopsis = ("Trial's output can be customized using plugins called "

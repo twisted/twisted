@@ -85,7 +85,7 @@ def fixPdb():
 
     def help_stop(self):
         print """stop - Continue execution, then cleanly shutdown the twisted reactor."""
-
+    
     def set_quit(self):
         os._exit(0)
 
@@ -247,14 +247,10 @@ def reportProfile(report_profile, name):
                 "name (--appname unspecified)")
 
 
-def _reactorZshAction():
-    return "(%s)" % " ".join([r.shortName for r in reactors.getReactorTypes()])
-
 class ReactorSelectionMixin:
     """
     Provides options for selecting a reactor to install.
     """
-    zsh_actions = {"reactor" : _reactorZshAction}
     def opt_help_reactors(self):
         """
         Display a list of possibly available reactor names.
