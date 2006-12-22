@@ -27,12 +27,7 @@ class _ListSerializer:
     """ Internal class which serializes an Element tree into a buffer """
     def __init__(self, prefixes=None, prefixesInScope=None):
         self.writelist = []
-
-        if prefixes is not None:
-            self.prefixes = prefixes.copy()
-        else:
-            self.prefixes = {}
-
+        self.prefixes = prefixes or {}
         self.prefixes.update(G_PREFIXES)
         self.prefixStack = [G_PREFIXES.values()] + (prefixesInScope or []) 
         self.prefixCounter = 0

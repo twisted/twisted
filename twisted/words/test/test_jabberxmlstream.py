@@ -206,23 +206,6 @@ class XmlStreamTest(unittest.TestCase):
         self.assertEquals(True, xs._headerSent)
 
 
-    def testSendHeaderAdditionalNamespaces(self):
-        """
-        Test for additional namespace declarations.
-        """
-        xs = self.xmlstream
-        xs.prefixes['jabber:server:dialback'] = 'db'
-        xs.sendHeader()
-        splitHeader = self.xmlstream.transport.value()[0:-1].split(' ')
-        self.assertIn("<stream:stream", splitHeader)
-        self.assertIn("xmlns:stream='http://etherx.jabber.org/streams'",
-                      splitHeader)
-        self.assertIn("xmlns:db='jabber:server:dialback'", splitHeader)
-        self.assertIn("xmlns='testns'", splitHeader)
-        self.assertIn("version='1.0'", splitHeader)
-        self.assertEquals(True, xs._headerSent)
-
-
     def testSendHeaderInitiating(self):
         """
         Test addressing when initiating a stream.

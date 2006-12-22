@@ -356,13 +356,13 @@ class XmlStream(xmlstream.XmlStream):
     otherHost = None
     sid = None
     initiating = True
+    prefixes = {NS_STREAMS: 'stream'}
 
     _headerSent = False     # True if the stream header has been sent
 
     def __init__(self, authenticator):
         xmlstream.XmlStream.__init__(self)
 
-        self.prefixes = {NS_STREAMS: 'stream'}
         self.authenticator = authenticator
         self.initializers = []
         self.features = {}
@@ -422,15 +422,7 @@ class XmlStream(xmlstream.XmlStream):
         """
         Send stream header.
         """
-
-        # set up optional extra namespaces
-        localPrefixes = {}
-        for uri, prefix in self.prefixes.iteritems():
-            if uri != NS_STREAMS:
-                localPrefixes[prefix] = uri
-
-        rootElem = domish.Element((NS_STREAMS, 'stream'), self.namespace,
-                                  localPrefixes=localPrefixes)
+        rootElem = domish.Element((NS_STREAMS, 'stream'), self.namespace)
 
         if self.initiating and self.otherHost:
             rootElem['to'] = self.otherHost
