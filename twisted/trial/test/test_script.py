@@ -3,24 +3,13 @@ from twisted.trial import unittest, runner
 from twisted.scripts import trial
 from twisted.python import util
 
+from twisted.trial.test.test_loader import testNames
+
 
 def sibpath(filename):
     """For finding files in twisted/trial/test"""
     return util.sibpath(__file__, filename)
 
-# XXX - duplicated in test_loader
-class CollectNames(unittest.TestVisitor):
-    def __init__(self):
-        self.tests = []
-        
-    def visitCase(self, test):
-        self.tests.append(test.id())
-
-
-def testNames(test):
-    collector = CollectNames()
-    test.visit(collector)
-    return collector.tests
 
 
 class TestGarbageCollect(unittest.TestCase):

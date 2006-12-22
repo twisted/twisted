@@ -836,9 +836,18 @@ class TestCase(_Assertions):
         """
         return util.acquireAttribute(self._parents, 'suppress', [])
 
+
     def visit(self, visitor):
-        """Call visitor.visitCase(self)."""
-        visitor.visitCase(self)
+        """
+        Visit this test case. Call C{visitor} with C{self} as a parameter.
+
+        @param visitor: A callable which expects a single parameter: a test
+        case.
+
+        @return: None
+        """
+        visitor(self)
+
 
     def mktemp(self):
         """Returns a unique name that may be used as either a temporary
@@ -994,23 +1003,6 @@ class PyUnitResultAdapter(object):
     def startSuite(self, name):
         pass
 
-
-class TestVisitor(object):
-
-    def visitCase(self, testCase):
-        """Visit the testCase testCase."""
-
-    def visitSuite(self, testSuite):
-        """Visit the TestModuleSuite testModule."""
-
-    def visitSuiteAfter(self, testSuite):
-        """Visit the TestModuleSuite testModule after its children."""
-
-    def visitTrial(self, testSuite):
-        """Visit the TestSuite testSuite."""
-
-    def visitTrialAfter(self, testSuite):
-        """Visit the TestSuite testSuite after its children."""
 
 
 class _SubTestCase(TestCase):

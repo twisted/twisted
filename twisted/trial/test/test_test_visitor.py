@@ -1,65 +1,81 @@
 from twisted.trial import unittest
-from twisted.trial.runner import TestLoader
+from twisted.trial.runner import TestSuite, suiteVisit
+
+pyunit = __import__('unittest')
+
+
+
+class MockVisitor(object):
+    def __init__(self):
+        self.calls = []
+
+
+    def __call__(self, testCase):
+        self.calls.append(testCase)
+
 
 
 class TestTestVisitor(unittest.TestCase):
-
     def setUp(self):
-        self.loader = TestLoader()
-        try:
-            from twisted.trial.unittest import TestVisitor
-            class MockVisitor(TestVisitor):
-                def __init__(self):
-                    self.calls = []
-                def visitCase(self, testCase):
-                    self.calls.append(("case", testCase))
-                def visitSuite(self, testModule):
-                    self.calls.append(("suite", testModule))
-                def visitSuiteAfter(self, testModule):
-                    self.calls.append(("suite_after", testModule))
-            self.mock_visitor = MockVisitor
-        except ImportError:
-            pass
+        self.visitor = MockVisitor()
 
-    def test_imports(self):
-        from twisted.trial.unittest import TestVisitor
 
-    def test_visit_case_default(self):
-        from twisted.trial.unittest import TestVisitor
-        testCase = self.loader.loadMethod(self.test_visit_case_default)
-        test_visitor = TestVisitor()
-        testCase.visit(test_visitor)
+    def test_visitCase(self):
+        """
+        Test that C{visit} works for a single test case.
+        """
+        testCase = TestTestVisitor('test_visitCase')
+        testCase.visit(self.visitor)
+        self.assertEqual(self.visitor.calls, [testCase])
 
-    def test_visit_case(self):
-        testCase = TestTestVisitor('test_visit_case')
-        test_visitor = self.mock_visitor()
-        testCase.visit(test_visitor)
-        self.assertEqual(test_visitor.calls, [("case", testCase)])
 
-    def test_visit_module_default(self):
-        from twisted.trial.unittest import TestVisitor
-        import sys
-        testCase = self.loader.loadModule(sys.modules[__name__])
-        test_visitor = TestVisitor()
-        testCase.visit(test_visitor)
+    def test_visitSuite(self):
+        """
+        Test that C{visit} hits all tests in a suite.
+        """
+        tests = [TestTestVisitor('test_visitCase'),
+                 TestTestVisitor('test_visitSuite')]
+        testSuite = TestSuite(tests)
+        testSuite.visit(self.visitor)
+        self.assertEqual(self.visitor.calls, tests)
 
-    def test_visit_module(self):
-        import sys
-        test_visitor = self.mock_visitor()
-        testCase = self.loader.loadModule(sys.modules[__name__])
-        testCase.visit(test_visitor)
-        self.failIf(len(test_visitor.calls) < 5, str(test_visitor.calls))
-        self.assertEqual(test_visitor.calls[1][0], "case")
 
-    def test_visit_class_default(self):
-        from twisted.trial.unittest import TestVisitor
-        testCase = self.loader.loadMethod(self.test_visit_class_default)
-        test_visitor = TestVisitor()
-        testCase.visit(test_visitor)
+    def test_visitEmptySuite(self):
+        """
+        Test that C{visit} on an empty suite hits nothing.
+        """
+        TestSuite().visit(self.visitor)
+        self.assertEqual(self.visitor.calls, [])
 
-    def test_visit_class(self):
-        test_visitor = self.mock_visitor()
-        testCase = self.loader.loadMethod(self.test_visit_class)
-        testCase.visit(test_visitor)
-        self.assertEqual(len(test_visitor.calls), 1)
-        self.assertEqual(test_visitor.calls[0][0], "case")
+
+    def test_visitNestedSuite(self):
+        """
+        Test that C{visit} recurses through suites.
+        """
+        tests = [TestTestVisitor('test_visitCase'),
+                 TestTestVisitor('test_visitSuite')]
+        testSuite = TestSuite([TestSuite([test]) for test in tests])
+        testSuite.visit(self.visitor)
+        self.assertEqual(self.visitor.calls, tests)
+
+
+    def test_visitPyunitSuite(self):
+        """
+        Test that C{suiteVisit} visits stdlib unittest suites
+        """
+        test = TestTestVisitor('test_visitPyunitSuite')
+        suite = pyunit.TestSuite([test])
+        suiteVisit(suite, self.visitor)
+        self.assertEqual(self.visitor.calls, [test])
+
+
+    def test_visitPyunitCase(self):
+        """
+        Test that a stdlib test case in a suite gets visited.
+        """
+        class PyunitCase(pyunit.TestCase):
+            def test_foo(self):
+                pass
+        test = PyunitCase('test_foo')
+        TestSuite([test]).visit(self.visitor)
+        self.assertEqual(self.visitor.calls, [test])

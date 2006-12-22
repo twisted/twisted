@@ -8,20 +8,18 @@ from twisted.trial import runner, reporter, unittest
 
 from twisted.python.modules import getModule
 
-# XXX - duplicated in test_script
-class CollectNames(unittest.TestVisitor):
-    def __init__(self):
-        self.tests = []
-
-    def visitCase(self, test):
-        self.tests.append(test.id())
 
 
-
+# XXX - this is used in test_script, perhaps it should be in a utility module
 def testNames(test):
-    collector = CollectNames()
-    test.visit(collector)
-    return collector.tests
+    """
+    Return the id of each test within the given test suite or case.
+    """
+    testIDs = []
+    def visit(test):
+        testIDs.append(test.id())
+    test.visit(visit)
+    return testIDs
 
 
 
@@ -196,6 +194,7 @@ class LoaderTest(packages.SysPathManglingTest):
         test = self.loader.loadMethod(sample.FooTest.test_foo)
         self.assertEqual(test.forceGarbageCollection, True)
 
+
     def test_loadWithoutForcedGarbageCollectionClass(self):
         """
         Tests loaded by default should not be set to force garbage collection.
@@ -203,10 +202,10 @@ class LoaderTest(packages.SysPathManglingTest):
         """
         import sample
         suite = self.loader.loadClass(sample.FooTest)
-        class Visitor(unittest.TestVisitor):
-            def visitCase(s, case):
-                self.assertEqual(case.forceGarbageCollection, False)
-        suite.visit(Visitor())
+        def visitor(case):
+            self.assertEqual(case.forceGarbageCollection, False)
+        suite.visit(visitor)
+
 
     def test_loadWithForcedGarbageCollectionClass(self):
         """
@@ -217,10 +216,10 @@ class LoaderTest(packages.SysPathManglingTest):
         import sample
         self.loader.forceGarbageCollection = True
         suite = self.loader.loadClass(sample.FooTest)
-        class Visitor(unittest.TestVisitor):
-            def visitCase(s, case):
-                self.assertEqual(case.forceGarbageCollection, True)
-        suite.visit(Visitor())
+        def visitor(case):
+            self.assertEqual(case.forceGarbageCollection, True)
+        suite.visit(visitor)
+
 
     def test_loadNonClass(self):
         import sample
@@ -469,6 +468,7 @@ class PackageOrderingTest(packages.SysPathManglingTest):
                     for methinfo in sortedMethods:
                         yield methinfo
 
+
     def loadSortedPackages(self, sorter=runner.name):
         """
         Verify that packages are loaded in the correct order.
@@ -476,7 +476,7 @@ class PackageOrderingTest(packages.SysPathManglingTest):
         import uberpackage
         self.loader.sorter = sorter
         suite = self.loader.loadPackage(uberpackage, recurse=True)
-        suite.visit(self)
+        suite.visit(self.visitCase)
         manifest = list(self._trialSortAlgorithm(sorter))
         for number, (manifestTest, actualTest) in enumerate(
             zip(manifest, self.resultingTests)):
@@ -486,8 +486,10 @@ class PackageOrderingTest(packages.SysPathManglingTest):
                  (number, manifestTest.name, actualTest.id()))
         self.assertEqual(len(manifest), len(self.resultingTests))
 
+
     def test_sortPackagesDefaultOrder(self):
         self.loadSortedPackages()
+
 
     def test_sortPackagesSillyOrder(self):
         def sillySorter(s):

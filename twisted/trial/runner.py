@@ -107,10 +107,11 @@ def _resolveDirectory(fn):
 
 def suiteVisit(suite, visitor):
     """
-    Cause the given visitor to visit the given suite.
+    Visit each test in C{suite} with C{visitor}.
 
-    @param visitor: an object with a 'visitCase' method, taking a single
-    argument, the TestCase instance to visit.
+    @param visitor: A callable which takes a single argument, the L{TestCase}
+    instance to visit.
+    @return: None
     """
     for case in suite._tests:
         visit = getattr(case, 'visit', None)
@@ -227,9 +228,14 @@ class PyUnitTestCase(object):
     def __call__(self, results):
         return self._test(results)
 
+
     def visit(self, visitor):
-        """Call visitor.visitCase(self)."""
-        visitor.visitCase(self)
+        """
+        Call the given visitor with the original, standard library, test case
+        that C{self} wraps. See L{unittest.TestCase.visit}.
+        """
+        visitor(self._test)
+
 
     def __getattr__(self, name):
         return getattr(self._test, name)
@@ -358,22 +364,29 @@ class ErrorHolder(TestHolder):
         super(ErrorHolder, self).__init__(description)
         self.error = error
 
+
     def __repr__(self):
         return "<ErrorHolder description=%r error=%r>" % (self.description,
                                                           self.error)
 
+
     def run(self, result):
         result.addError(self, self.error)
+
 
     def __call__(self, result):
         return self.run(result)
 
+
     def countTestCases(self):
         return 0
 
+
     def visit(self, visitor):
-        # This needs tests.
-        visitor.visitCase(self)
+        """
+        See L{unittest.TestCase.visit}.
+        """
+        visitor(self)
 
 
 
@@ -624,7 +637,8 @@ class TestLoader(object):
         return self.suiteFactory(suites)
 
 
-class DryRunVisitor(unittest.TestVisitor):
+
+class DryRunVisitor(object):
     """
     A visitor that makes a reporter think that every test visited has run
     successfully.
@@ -636,21 +650,15 @@ class DryRunVisitor(unittest.TestVisitor):
         """
         self.reporter = reporter
 
-    def visitSuite(self, testSuite):
-        # XXX - this shouldn't be here
-        self.reporter.startSuite(testSuite.name())
 
-    def visitSuiteAfter(self, testSuite):
-        # XXX - this shouldn't be here
-        self.reporter.endSuite(testSuite.name())
-
-    def visitCase(self, testCase):
+    def markSuccessful(self, testCase):
         """
         Convince the reporter that this test has been run successfully.
         """
         self.reporter.startTest(testCase)
         self.reporter.addSuccess(testCase)
         self.reporter.stopTest(testCase)
+
 
 
 class TrialRunner(object):
@@ -769,7 +777,7 @@ class TrialRunner(object):
         startTime = time.time()
         result.write("Running %d tests.\n", suite.countTestCases())
         if self.mode == self.DRY_RUN:
-            suite.visit(DryRunVisitor(result))
+            suite.visit(DryRunVisitor(result).markSuccessful)
         elif self.mode == self.DEBUG:
             # open question - should this be self.debug() instead.
             debugger = self._getDebugger()

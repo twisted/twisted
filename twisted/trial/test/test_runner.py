@@ -3,7 +3,9 @@
 # Copyright (c) 2005 Twisted Matrix Laboratories.
 # See LICENSE for details.
 #
+# Maintainer: Jonathan Lange <jml@twistedmatrix.com>
 # Author: Robert Collins <robertc@robertcollins.net>
+
 
 import StringIO
 from zope.interface import implements
@@ -15,6 +17,10 @@ from twisted.scripts import trial
 from twisted.plugins import twisted_trial
 from twisted import plugin
 
+
+pyunit = __import__('unittest')
+
+
 class CapturingDebugger(object):
 
     def __init__(self):
@@ -25,7 +31,11 @@ class CapturingDebugger(object):
         args[0](*args[1:], **kwargs)
 
 
+
 class CapturingReporter(object):
+    """
+    Reporter that keeps a log of all actions performed on it.
+    """
 
     implements(IReporter)
 
@@ -36,27 +46,35 @@ class CapturingReporter(object):
     testsRun = None
 
     def __init__(self, tbformat=None, args=None, realtime=None):
-        """Create a capturing reporter."""
+        """
+        Create a capturing reporter.
+        """
         self._calls = []
         self.shouldStop = False
 
+
     def startTest(self, method):
-        """report the beginning of a run of a single test method
+        """
+        Report the beginning of a run of a single test method
         @param method: an object that is adaptable to ITestMethod
         """
         self._calls.append('startTest')
 
+
     def stopTest(self, method):
-        """report the status of a single test method
+        """
+        Report the status of a single test method
         @param method: an object that is adaptable to ITestMethod
         """
         self._calls.append('stopTest')
+
 
     def cleanupErrors(self, errs):
         """called when the reactor has been left in a 'dirty' state
         @param errs: a list of L{twisted.python.failure.Failure}s
         """
         self._calls.append('cleanupError')
+
 
     def upDownError(self, userMeth, warn=True, printStatus=True):
         """called when an error occurs in a setUp* or tearDown* method
@@ -70,17 +88,22 @@ class CapturingReporter(object):
         """
         self._calls.append('upDownError')
 
+
     def addSuccess(self, test):
         self._calls.append('addSuccess')
+
 
     def printErrors(self):
         pass
 
+
     def printSummary(self):
         pass
 
+
     def write(self, *args, **kw):
         pass
+
 
     def writeln(self, *args, **kw):
         pass
@@ -103,7 +126,6 @@ class TestTrialRunner(unittest.TestCase):
         self.runner._tearDownLogFile()
 
     def _getObservers(self):
-        from twisted.python import log
         return log.theLogPublisher.observers
 
     def test_addObservers(self):
@@ -133,10 +155,82 @@ class TestTrialRunner(unittest.TestCase):
         self.runner.run(self.test)
         self.failUnless(fd.closed)
 
+
+
+class DryRunMixin(object):
+    def setUp(self):
+        self.log = []
+        self.stream = StringIO.StringIO()
+        self.runner = runner.TrialRunner(CapturingReporter,
+                                         runner.TrialRunner.DRY_RUN,
+                                         stream=self.stream)
+        self.makeTestFixtures()
+
+
+    def makeTestFixtures(self):
+        """
+        Set C{self.test} and C{self.suite}, where C{self.suite} is an empty
+        TestSuite.
+        """
+
+
+    def test_empty(self):
+        """
+        If there are no tests, the reporter should not receive any events to
+        report.
+        """
+        result = self.runner.run(runner.TestSuite())
+        self.assertEqual(result._calls, [])
+
+
+    def test_singleCaseReporting(self):
+        """
+        If we are running a single test, check the reporter starts, passes and
+        then stops the test during a dry run.
+        """
+        result = self.runner.run(self.test)
+        self.assertEqual(result._calls, ['startTest', 'addSuccess', 'stopTest'])
+
+
+    def test_testsNotRun(self):
+        """
+        When we are doing a dry run, the tests should not actually be run.
+        """
+        self.runner.run(self.test)
+        self.assertEqual(self.log, [])
+
+
+
+
+class DryRunTest(DryRunMixin, unittest.TestCase):
+    """
+    Check that 'dry run' mode works well with Trial tests.
+    """
+    def makeTestFixtures(self):
+        class MockTest(unittest.TestCase):
+            def test_foo(test):
+                self.log.append('test_foo')
+        self.test = MockTest('test_foo')
+        self.suite = runner.TestSuite()
+
+
+
+class PyUnitDryRunTest(DryRunMixin, unittest.TestCase):
+    """
+    Check that 'dry run' mode works well with stdlib unittest tests.
+    """
+    def makeTestFixtures(self):
+        class PyunitCase(pyunit.TestCase):
+            def test_foo(self):
+                pass
+        self.test = PyunitCase('test_foo')
+        self.suite = pyunit.TestSuite()
+
+
+
 class TestRunner(unittest.TestCase):
 
     def setUp(self):
-        unittest.TestCase.setUp(self)
         self.runners = []
         self.config = trial.Options()
         # whitebox hack a reporter in, because plugins are CACHED and will
@@ -163,53 +257,14 @@ class TestRunner(unittest.TestCase):
         self.original = plugin.getPlugins
         plugin.getPlugins = getPlugins
 
+        self.standardReport = ['startTest', 'addSuccess', 'stopTest',
+                               'startTest', 'addSuccess', 'stopTest',
+                               'startTest', 'addSuccess', 'stopTest',
+                               'startTest', 'addSuccess', 'stopTest',
+                               'startTest', 'addSuccess', 'stopTest',
+                               'startTest', 'addSuccess', 'stopTest',
+                               'startTest', 'addSuccess', 'stopTest']
 
-        self.standardReport = [
-            'startTest',
-            'addSuccess',
-            'stopTest',
-            'startTest',
-            'addSuccess',
-            'stopTest',
-            'startTest',
-            'addSuccess',
-            'stopTest',
-            'startTest',
-            'addSuccess',
-            'stopTest',
-            'startTest',
-            'addSuccess',
-            'stopTest',
-            'startTest',
-            'addSuccess',
-            'stopTest',
-            'startTest',
-            'addSuccess',
-            'stopTest',
-            ]
-        self.dryRunReport = [
-            'startTest',
-            'addSuccess',
-            'stopTest',
-            'startTest',
-            'addSuccess',
-            'stopTest',
-            'startTest',
-            'addSuccess',
-            'stopTest',
-            'startTest',
-            'addSuccess',
-            'stopTest',
-            'startTest',
-            'addSuccess',
-            'stopTest',
-            'startTest',
-            'addSuccess',
-            'stopTest',
-            'startTest',
-            'addSuccess',
-            'stopTest',
-            ]
 
     def tearDown(self):
         for x in self.runners:
@@ -228,10 +283,10 @@ class TestRunner(unittest.TestCase):
 
     def test_runner_can_get_reporter(self):
         self.parseOptions([])
-        reporter = self.config['reporter']
+        result = self.config['reporter']
         my_runner = self.getRunner()
         try:
-            self.assertEqual(reporter, my_runner._makeResult().__class__)
+            self.assertEqual(result, my_runner._makeResult().__class__)
         finally:
             my_runner._tearDownLogFile()
 
@@ -248,15 +303,6 @@ class TestRunner(unittest.TestCase):
             self.assertEquals(runner.workingDirectory, 'some_path')
         finally:
             runner._tearDownLogFile()
-
-    def test_runner_dry_run(self):
-        self.parseOptions(['--dry-run', '--reporter', 'capturing',
-                           'twisted.trial.test.sample'])
-        my_runner = self.getRunner()
-        loader = runner.TestLoader()
-        suite = loader.loadByName('twisted.trial.test.sample', True)
-        result = my_runner.run(suite)
-        self.assertEqual(self.dryRunReport, result._calls)
 
     def test_runner_normal(self):
         self.parseOptions(['--temp-directory', self.mktemp(),
