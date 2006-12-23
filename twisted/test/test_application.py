@@ -1,15 +1,17 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import copy, os, pickle, warnings
+import sys, copy, os, pickle, warnings
 
 from twisted.trial import unittest, util
 from twisted.application import service, internet, app
 from twisted.persisted import sob
 from twisted.python import log, usage
+from twisted.python.util import sibpath
 from twisted.internet import interfaces, defer
 from twisted.protocols import wire, basic
 from twisted.internet import protocol, reactor
+from twisted.internet.utils import getProcessOutputAndValue
 from twisted.application import reactors
 
 try:
@@ -687,3 +689,18 @@ class PluggableReactorTestCase(unittest.TestCase):
         options.parseOptions(['--reactor', 'fakereactortest', 'subcommand'])
         self.assertEqual(executed[0], INSTALL_EVENT)
         self.assertEqual(executed.count(INSTALL_EVENT), 1)
+
+
+    def test_qtStub(self):
+        """
+        Test that installing qtreactor when it's absent fails properly.
+        """
+        scriptPath = sibpath(__file__, "app_qtstub.py")
+        def _checkOutput((output, err, code)):
+            self.failIf(output, output)
+        result = getProcessOutputAndValue(
+            sys.executable,
+            args=(sys.executable, scriptPath),
+            env=None)
+        result.addCallback(_checkOutput)
+        return result
