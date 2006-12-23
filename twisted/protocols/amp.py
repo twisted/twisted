@@ -63,7 +63,43 @@ a Deferred whilch will fire with the result::
         lambda p: p.callRemote(Sum, a=13, b=81)).addCallback(
             lambda result: result['total'])
 
-For a complete, runnable example, see the files in the Twisted repository::
+You can also define the propogation of specific errors in AMP.  For example,
+for the slightly more complicated case of division, we might have to deal with
+division by zero::
+
+    class Divide(amp.Command):
+        arguments = [('numerator', amp.Integer()),
+                     ('denominator', amp.Integer())]
+        response = [('result', amp.Float())]
+        errors = {ZeroDivisionError: 'ZERO_DIVISION'}
+
+The 'errors' mapping here tells AMP that if a responder to Divide emits a
+L{ZeroDivisionError}, then the other side should be informed that an error of
+the type 'ZERO_DIVISION' has occurred.  Writing a responder which takes
+advantage of this is very simple - just raise your exception normally::
+
+    class JustDivide(amp.AMP):
+        def divide(self, numerator, denominator):
+            result = numerator / denominator
+            print 'Divided: %d / %d = %d' % (numerator, denominator, total)
+            return {'result': result}
+        Divide.responder(divide)
+
+On the client side, the errors mapping will be used to determine what the
+'ZERO_DIVISION' error means, and translated into an asynchronous exception,
+which can be handled normally as any L{Deferred} would be::
+
+    def trapZero(result):
+        result.trap(ZeroDivisionError)
+        print "Divided by zero: returning INF"
+        return 1e1000
+    ClientCreator(reactor, amp.AMP).connectTCP(...).addCallback(
+        lambda p: p.callRemote(Divide, numerator=1234,
+                               denominator=0)
+        ).addErrback(trapZero)
+
+For a complete, runnable example of both of these commands, see the files in
+the Twisted repository::
 
     doc/core/examples/ampserver.py
     doc/core/examples/ampclient.py
@@ -123,13 +159,14 @@ import types
 from cStringIO import StringIO
 from struct import pack
 
+from twisted.python.reflect import accumulateClassDict
+from twisted.python.failure import Failure
+from twisted.python import log, filepath
+
 from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.error import PeerVerifyError
 from twisted.internet.defer import Deferred, maybeDeferred, fail
 from twisted.protocols.basic import Int16StringReceiver, StatefulStringProtocol
-
-from twisted.python.failure import Failure
-from twisted.python import log, filepath
 
 from twisted.internet._sslverify import problemsFromTransport
 
@@ -727,17 +764,33 @@ class _AmpParserBase(_DispatchMixin):
         return self._sendBoxCommand(command, box)
 
 
-    def callRemote(self, commandObj, *a, **kw):
+    def callRemote(self, commandType, *a, **kw):
         """
-        This is the primary high-level API for sending messages via AMP.
+        This is the primary high-level API for sending messages via AMP.  Invoke it
+        with a command and appropriate arguments to send a message to this
+        connection's peer.
 
-        @param commandObj: a subclass of Command.
+        @param commandType: a subclass of Command.
+        @type commandType: L{type}
 
-        @param a: Positional (special) arguments taken by the command.  These
-        are generally not sent over the wire; the only 'special' argument 
+        @param a: Positional (special) arguments taken by the command.  Special
+        parameters will typically not be sent over the wire.  Generally, only
+        commands which do things other than send messages over the wire will
+        use positional parameters.  The only such command included with AMP is
+        L{ProtocolSwitchCommand}, which takes the protocol that will be
+        switched to as its positional parameter.
 
         @param kw: Keyword arguments taken by the command.  These are the
-        arguments declared in the command's 'arguments' attribute.
+        arguments declared in the command's 'arguments' attribute.  They will
+        be encoded and sent to the peer as arguments for the L{commandType}.
+
+        @return: If L{commandType} has a C{requiresAnswer} attribute set to
+        L{False}, then return L{None}.  Otherwise, return a L{Deferred} which
+        fires with a dictionary of objects representing the result of this
+        call.  Additionally, this L{Deferred} may fail with an exception
+        representing a connection failure, with L{UnknownRemoteError} if the
+        other end of the connection fails for an unknown reason, or with any
+        error specified as a key in L{commandType}'s C{errors} dictionary.
         """
 
         # XXX this takes command subclasses and not command objects on purpose.
@@ -746,10 +799,10 @@ class _AmpParserBase(_DispatchMixin):
         # (the Command instance) is pointless.  Command is kind of like
         # Interface, and should be more like it.
 
-        # In other words, the fact that commandObj is instantiated here is an
+        # In other words, the fact that commandType is instantiated here is an
         # implementation detail.  Don't rely on it.
 
-        co = commandObj(*a, **kw)
+        co = commandType(*a, **kw)
         return co._doCommand(self)
 
 
@@ -1035,7 +1088,16 @@ class Command:
     @cvar response: A list like L{arguments}, but instead used for the return
     value.
 
-    @cvar errors: A mapping of exception type to error tag.
+    @cvar errors: A mapping of subclasses of L{Exception} to wire-protocol tags
+    for errors represented as L{str}s.  Responders which raise keys from this
+    dictionary will have the error translated to the corresponding tag on the
+    wire.  Invokers which receive Deferreds from invoking this command with
+    L{AMP.callRemote} will potentially receive Failures with keys from this
+    mapping as their value.  This mapping is inherited; if you declare a
+    command which handles C{FooError} as 'FOO_ERROR', then subclass it and
+    specify C{BarError} as 'BAR_ERROR', responders to the subclass may raise
+    either C{FooError} or C{BarError}, and invokers must be able to deal with
+    either of those exceptions.
 
     @cvar fatalErrors: like 'errors', but errors in this list will always
     terminate the connection, despite being of a recognizable error type.
@@ -1062,13 +1124,18 @@ class Command:
             er = attrs['allErrors'] = {}
             if 'commandName' not in attrs:
                 attrs['commandName'] = name
-            for v, k in attrs.get('errors',{}).iteritems():
+            newtype = type.__new__(cls, name, bases, attrs)
+            errors = {}
+            fatalErrors = {}
+            accumulateClassDict(newtype, 'errors', errors)
+            accumulateClassDict(newtype, 'fatalErrors', fatalErrors)
+            for v, k in errors.iteritems():
                 re[k] = v
                 er[v] = k
-            for v, k in attrs.get('fatalErrors',{}).iteritems():
+            for v, k in fatalErrors.iteritems():
                 re[k] = v
                 er[v] = k
-            return type.__new__(cls, name, bases, attrs)
+            return newtype
 
     arguments = []
     response = []

@@ -1,6 +1,6 @@
 # Copyright 2005 Divmod, Inc.  See LICENSE file for details
 
-from twisted.python import log, filepath
+from twisted.python import filepath
 from twisted.protocols import amp
 from twisted.test import iosim
 from twisted.trial import unittest
@@ -598,7 +598,7 @@ class AMPTest(unittest.TestCase):
         cl = L.pop()
         cl.trap(error.ConnectionDone)
         # The exception should have been logged.
-        self.failUnless(log.flushErrors(ThingIDontUnderstandError))
+        self.failUnless(self.flushLoggedErrors(ThingIDontUnderstandError))
 
 
 
@@ -649,7 +649,7 @@ class AMPTest(unittest.TestCase):
         c.callRemote(NoAnswerHello, hello=HELLO)
         p.flush()
         # This should be logged locally.
-        self.failUnless(log.flushErrors(amp.RemoteAmpError))
+        self.failUnless(self.flushLoggedErrors(amp.RemoteAmpError))
         HELLO = 'world'
         c.callRemote(Hello, hello=HELLO).addErrback(L.append)
         p.flush()
@@ -1005,6 +1005,141 @@ class TLSTest(unittest.TestCase):
         # it might be a good idea to move this exception somewhere more
         # reasonable.
         self.assertFailure(d, PeerVerifyError)
+
+
+
+class InheritedError(Exception):
+    """
+    This error is used to check inheritance.
+    """
+
+
+
+class OtherInheritedError(Exception):
+    """
+    This is a distinct error for checking inheritance.
+    """
+
+
+
+class BaseCommand(amp.Command):
+    """
+    This provides a command that will be subclassed.
+    """
+    errors = {InheritedError: 'INHERITED_ERROR'}
+
+
+
+class InheritedCommand(BaseCommand):
+    """
+    This is a command which subclasses another command but does not override
+    anything.
+    """
+
+
+
+class AddErrorsCommand(BaseCommand):
+    """
+    This is a command which subclasses another command but adds errors to the
+    list.
+    """
+    arguments = [('other', amp.Boolean())]
+    errors = {OtherInheritedError: 'OTHER_INHERITED_ERROR'}
+
+
+
+class NormalCommandProtocol(amp.AMP):
+    """
+    This is a protocol which responds to L{BaseCommand}, and is used to test
+    that inheritance does not interfere with the normal handling of errors.
+    """
+    def resp(self):
+        raise InheritedError()
+    BaseCommand.responder(resp)
+
+
+
+class InheritedCommandProtocol(amp.AMP):
+    """
+    This is a protocol which responds to L{InheritedCommand}, and is used to
+    test that inherited commands inherit their bases' errors if they do not
+    respond to any of their own.
+    """
+    def resp(self):
+        raise InheritedError()
+    InheritedCommand.responder(resp)
+
+
+
+class AddedCommandProtocol(amp.AMP):
+    """
+    This is a protocol which responds to L{AddErrorsCommand}, and is used to
+    test that inherited commands can add their own new types of errors, but
+    still respond in the same way to their parents types of errors.
+    """
+    def resp(self, other):
+        if other:
+            raise OtherInheritedError()
+        else:
+            raise InheritedError()
+    AddErrorsCommand.responder(resp)
+
+
+
+class CommandInheritanceTests(unittest.TestCase):
+    """
+    These tests verify that commands inherit error conditions properly.
+    """
+
+    def errorCheck(self, err, proto, cmd, **kw):
+        """
+        Check that the appropriate kind of error is raised when a given command
+        is sent to a given protocol.
+        """
+        c, s, p = connectedServerAndClient(ServerClass=proto,
+                                           ClientClass=proto)
+        d = c.callRemote(cmd, **kw)
+        d2 = self.failUnlessFailure(d, err)
+        p.flush()
+        return d2
+
+
+    def test_basicErrorPropagation(self):
+        """
+        Verify that errors specified in a superclass are respected normally
+        even if it has subclasses.
+        """
+        return self.errorCheck(
+            InheritedError, NormalCommandProtocol, BaseCommand)
+
+
+    def test_inheritedErrorPropagation(self):
+        """
+        Verify that errors specified in a superclass command are propagated to
+        its subclasses.
+        """
+        return self.errorCheck(
+            InheritedError, InheritedCommandProtocol, InheritedCommand)
+
+
+    def test_inheritedErrorAddition(self):
+        """
+        Verify that new errors specified in a subclass of an existing command
+        are honored even if the superclass defines some errors.
+        """
+        return self.errorCheck(
+            OtherInheritedError, AddedCommandProtocol, AddErrorsCommand, other=True)
+
+
+    def test_additionWithOriginalError(self):
+        """
+        Verify that errors specified in a command's superclass are respected
+        even if that command defines new errors itself.
+        """
+        return self.errorCheck(
+            InheritedError, AddedCommandProtocol, AddErrorsCommand, other=False)
+
+
 
 def _loseAndPass(err, proto):
     # be specific, pass on the error to the client.
