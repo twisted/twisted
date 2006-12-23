@@ -82,11 +82,16 @@ class FileDescriptor(log.Logger, styles.Ephemeral, object):
                                   reflect.qual(self.__class__))
 
     def doRead(self):
+        """Called when data is avaliable for reading.
+
+        Subclasses must override this method. The result will be interpreted
+        in the same way as a result of doWrite().
+        """
         raise NotImplementedError("%s does not implement doRead" %
                                   reflect.qual(self.__class__))
 
     def doWrite(self):
-        """Called when data is available for writing.
+        """Called when data can be written.
 
         A result that is true (which will be a negative number) implies the
         connection was lost. A false result implies the connection is still
@@ -159,7 +164,10 @@ class FileDescriptor(log.Logger, styles.Ephemeral, object):
     def write(self, data):
         """Reliably write some data.
 
-        The data is buffered until his file descriptor is ready for writing.
+        The data is buffered until the underlying file descriptor is ready
+        for writing. If there is more than C{self.bufferSize} data in the
+        buffer and this descriptor has a registered streaming producer, its
+        C{pauseProducing()} method will be called.
         """
         if isinstance(data, unicode): # no, really, I mean it
             raise TypeError("Data must not be unicode")
@@ -168,20 +176,40 @@ class FileDescriptor(log.Logger, styles.Ephemeral, object):
         if data:
             self._tempDataBuffer.append(data)
             self._tempDataLen += len(data)
-            if self.producer is not None:
+            # If we are responsible for pausing our producer,
+            if self.producer is not None and self.streamingProducer:
+                # and our buffer is full,
                 if len(self.dataBuffer) + self._tempDataLen > self.bufferSize:
+                    # pause it.
                     self.producerPaused = 1
                     self.producer.pauseProducing()
             self.startWriting()
 
     def writeSequence(self, iovec):
+        """Reliably write a sequence of data.
+
+        Currently, this is a convenience method roughly equivalent to::
+
+            for chunk in iovec:
+                fd.write(chunk)
+
+        It may have a more efficient implementation at a later time or in a
+        different reactor.
+
+        As with the C{write()} method, if a buffer size limit is reached and a
+        streaming producer is registered, it will be paused until the buffered
+        data is written to the underlying file descriptor.
+        """
         if not self.connected or not iovec or self._writeDisconnected:
             return
         self._tempDataBuffer.extend(iovec)
         for i in iovec:
             self._tempDataLen += len(i)
-        if self.producer is not None:
+        # If we are responsible for pausing our producer,
+        if self.producer is not None and self.streamingProducer:
+            # and our buffer is full,
             if len(self.dataBuffer) + self._tempDataLen > self.bufferSize:
+                # pause it.
                 self.producerPaused = 1
                 self.producer.pauseProducing()
         self.startWriting()
@@ -257,10 +285,15 @@ class FileDescriptor(log.Logger, styles.Ephemeral, object):
 
         This sets this selectable to be a consumer for a producer.  When this
         selectable runs out of data on a write() call, it will ask the producer
-        to resumeProducing(). A producer should implement the IProducer
-        interface.
+        to resumeProducing(). When the FileDescriptor's internal data buffer is
+        filled, it will ask the producer to pauseProducing(). If the connection
+        is lost, FileDescriptor calls producer's stopProducing() method.
 
-        FileDescriptor provides some infrastructure for producer methods.
+        If streaming is true, the producer should provide the IPushProducer
+        interface. Otherwise, it is assumed that producer provides the
+        IPullProducer interface. In this case, the producer won't be asked
+        to pauseProducing(), but it has to be careful to write() data only
+        when its resumeProducing() method is called.
         """
         if self.producer is not None:
             raise RuntimeError("Cannot register producer %s, because producer %s was never unregistered." % (producer, self.producer))

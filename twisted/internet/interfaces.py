@@ -787,7 +787,7 @@ class IReadDescriptor(IFileDescriptor):
 class IWriteDescriptor(IFileDescriptor):
 
     def doWrite():
-        """Some data is available for reading on your descriptor.
+        """Some data can be written to your descriptor.
         """
 
 
@@ -825,13 +825,28 @@ class IConsumer(Interface):
     """A consumer consumes data from a producer."""
 
     def registerProducer(producer, streaming):
-        """Register to receive data from a producer.
+        """
+        Register to receive data from a producer.
 
         This sets self to be a consumer for a producer.  When this object runs
-        out of data on a write() call, it will ask the producer to
-        resumeProducing(). A producer should provide the L{IProducer}
-        interface.  A push producer which is unable to pause or stop need not
-        register or unregister.
+        out of data (as when a send(2) call on a socket succeeds in moving the
+        last data from a userspace buffer into a kernelspace buffer), it will
+        ask the producer to resumeProducing().
+
+        For L{IPullProducer} providers, C{resumeProducing} will be called once
+        each time data is required.
+
+        For L{IPushProducer} providers, C{pauseProducing} will be called
+        whenever the write buffer fills up and C{resumeProducing} will only be
+        called when it empties.
+
+        @type producer: L{IProducer} provider
+
+        @type streaming: C{bool}
+        @param streaming: C{True} if C{producer} provides L{IPushProducer},
+        C{False} if C{producer} provides L{IPullProducer}.
+
+        @return: C{None}
         """
 
     def unregisterProducer():

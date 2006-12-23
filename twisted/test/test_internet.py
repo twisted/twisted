@@ -285,18 +285,18 @@ class InterfaceTestCase(unittest.TestCase):
         clock.install()
         try:
             callbackTimes = [None, None]
-            
+
             def resetCallback():
                 callbackTimes[0] = clock()
-            
+
             def delayCallback():
                 callbackTimes[1] = clock()
 
             ireset = reactor.callLater(2, resetCallback)
             idelay = reactor.callLater(3, delayCallback)
-            
+
             clock.pump(reactor, [0, 1])
-            
+
             ireset.reset(2) # (now)1 + 2 = 3
             idelay.delay(3) # (orig)3 + 3 = 6
 
@@ -322,7 +322,7 @@ class InterfaceTestCase(unittest.TestCase):
             self.failUnless(d.getTime() - (time.time() + 10) < 1)
         finally:
             d.cancel()
-    
+
     def testCallInNextIteration(self):
         calls = []
         def f1():
@@ -333,7 +333,7 @@ class InterfaceTestCase(unittest.TestCase):
             reactor.callLater(0.0, f3)
         def f3():
             calls.append('f3')
-        
+
         reactor.callLater(0, f1)
         self.assertEquals(calls, [])
         reactor.iterate()
@@ -366,7 +366,7 @@ class InterfaceTestCase(unittest.TestCase):
         d = Deferred()
         reactor.callLater(0.2, d.callback, None)
         return d
-    
+
     testCallLaterOrder.todo = "See bug 1396"
     testCallLaterOrder.skip = "Trial bug, todo doesn't work! See bug 1397"
     def testCallLaterOrder2(self):
@@ -375,7 +375,7 @@ class InterfaceTestCase(unittest.TestCase):
 
         def seconds():
             return int(time.time())
-        
+
         from twisted.internet import base
         from twisted.python import runtime
         base_original = base.seconds
@@ -388,10 +388,10 @@ class InterfaceTestCase(unittest.TestCase):
             base.seconds = base_original
             return x
         return maybeDeferred(self.testCallLaterOrder).addBoth(cleanup)
-        
+
     testCallLaterOrder2.todo = "See bug 1396"
     testCallLaterOrder2.skip = "Trial bug, todo doesn't work! See bug 1397"
-    
+
     def testDelayedCallStringification(self):
         # Mostly just make sure str() isn't going to raise anything for
         # DelayedCalls within reason.
@@ -444,11 +444,11 @@ class CallFromThreadTests(unittest.TestCase):
 
     def _stopCallFromThreadCallback(self):
         self.stopped = True
-        
+
     def _callFromThreadCallback(self, d):
         reactor.callFromThread(self._callFromThreadCallback2, d)
         reactor.callLater(0, self._stopCallFromThreadCallback)
-        
+
     def _callFromThreadCallback2(self, d):
         try:
             self.assert_(self.stopped)
@@ -457,7 +457,7 @@ class CallFromThreadTests(unittest.TestCase):
             d.errback()
         else:
             d.callback(None)
-        
+
     def testCallFromThreadStops(self):
         """
         Ensure that callFromThread from inside a callFromThread
@@ -468,7 +468,7 @@ class CallFromThreadTests(unittest.TestCase):
         d = defer.Deferred()
         reactor.callFromThread(self._callFromThreadCallback, d)
         return d
-    
+
 
 class ReactorCoreTestCase(unittest.TestCase):
     def setUp(self):
@@ -690,7 +690,7 @@ class Resolve(unittest.TestCase):
         # started, fail if it does not complete in a timely fashion.
         helperPath = os.path.abspath(self.mktemp())
         helperFile = open(helperPath, 'w')
-        
+
         # Eeueuuggg
         reactorName = reactor.__module__
 
@@ -801,31 +801,202 @@ class ProtocolTestCase(unittest.TestCase):
         self.assert_( isinstance(protocol, factory.protocol) )
 
 
-class DummyProducer:
-    resumed = 0
-    stopped = 0
+class DummyProducer(object):
+    """
+    Very uninteresting producer implementation used by tests to ensure the
+    right methods are called by the consumer with which it is registered.
+
+    @type events: C{list} of C{str}
+    @ivar events: The producer/consumer related events which have happened to
+    this producer.  Strings in this list may be C{'resume'}, C{'stop'}, or
+    C{'pause'}.  Elements are added as they occur.
+    """
+
+    def __init__(self):
+        self.events = []
+
+
     def resumeProducing(self):
-         self.resumed += 1
+        self.events.append('resume')
+
 
     def stopProducing(self):
-         self.stopped += 1
+        self.events.append('stop')
+
+
+    def pauseProducing(self):
+        self.events.append('pause')
+
+
+
+class SillyDescriptor(abstract.FileDescriptor):
+    """
+    A descriptor whose data buffer gets filled very fast.
+
+    Useful for testing FileDescriptor's IConsumer interface, since
+    the data buffer fills as soon as at least four characters are
+    written to it, and gets emptied in a single doWrite() cycle.
+    """
+    bufferSize = 3
+    connected = True
+
+    def writeSomeData(self, data):
+        """
+        Always write all data.
+        """
+        return len(data)
+
+
+    def startWriting(self):
+        """
+        Do nothing: bypass the reactor.
+        """
+    stopWriting = startWriting
+
+
+
+class ReentrantProducer(DummyProducer):
+    """
+    Similar to L{DummyProducer}, but with a resumeProducing method which calls
+    back into an L{IConsumer} method of the consumer against which it is
+    registered.
+
+    @ivar consumer: The consumer with which this producer has been or will
+    be registered.
+
+    @ivar methodName: The name of the method to call on the consumer inside
+    C{resumeProducing}.
+
+    @ivar methodArgs: The arguments to pass to the consumer method invoked in
+    C{resumeProducing}.
+    """
+    def __init__(self, consumer, methodName, *methodArgs):
+        super(ReentrantProducer, self).__init__()
+        self.consumer = consumer
+        self.methodName = methodName
+        self.methodArgs = methodArgs
+
+
+    def resumeProducing(self):
+        super(ReentrantProducer, self).resumeProducing()
+        getattr(self.consumer, self.methodName)(*self.methodArgs)
+
+
 
 class TestProducer(unittest.TestCase):
-
-    def testDoubleProducer(self):
+    """
+    Test abstract.FileDescriptor's consumer interface.
+    """
+    def test_doubleProducer(self):
+        """
+        Verify that registering a non-streaming producer invokes its
+        resumeProducing() method and that you can only register one producer
+        at a time.
+        """
         fd = abstract.FileDescriptor()
         fd.connected = 1
         dp = DummyProducer()
         fd.registerProducer(dp, 0)
-        self.assertEquals(dp.resumed, 1)
+        self.assertEquals(dp.events, ['resume'])
         self.assertRaises(RuntimeError, fd.registerProducer, DummyProducer(), 0)
 
-    def testUnconnectedFileDescriptor(self):
+
+    def test_unconnectedFileDescriptor(self):
+        """
+        Verify that registering a producer when the connection has already
+        been closed invokes its stopProducing() method.
+        """
         fd = abstract.FileDescriptor()
         fd.disconnected = 1
         dp = DummyProducer()
         fd.registerProducer(dp, 0)
-        self.assertEquals(dp.stopped, 1)
+        self.assertEquals(dp.events, ['stop'])
+
+
+    def _dontPausePullConsumerTest(self, methodName):
+        descriptor = SillyDescriptor()
+        producer = DummyProducer()
+        descriptor.registerProducer(producer, streaming=False)
+        self.assertEqual(producer.events, ['resume'])
+        del producer.events[:]
+
+        # Fill up the descriptor's write buffer so we can observe whether or
+        # not it pauses its producer in that case.
+        getattr(descriptor, methodName)('1234')
+
+        self.assertEqual(producer.events, [])
+
+
+    def test_dontPausePullConsumerOnWrite(self):
+        """
+        Verify that FileDescriptor does not call producer.pauseProducing() on a
+        non-streaming pull producer in response to a L{IConsumer.write} call
+        which results in a full write buffer. Issue #2286.
+        """
+        return self._dontPausePullConsumerTest('write')
+
+
+    def test_dontPausePullConsumerOnWriteSequence(self):
+        """
+        Like L{test_dontPausePullConsumerOnWrite}, but for a call to
+        C{writeSequence} rather than L{IConsumer.write}.
+
+        C{writeSequence} is not part of L{IConsumer}, but
+        L{abstract.FileDescriptor} has supported consumery behavior in response
+        to calls to L{writeSequence} forever.
+        """
+        return self._dontPausePullConsumerTest('writeSequence')
+
+
+    def _reentrantStreamingProducerTest(self, methodName):
+        descriptor = SillyDescriptor()
+        producer = ReentrantProducer(descriptor, methodName, 'spam')
+        descriptor.registerProducer(producer, streaming=True)
+
+        # Start things off by filling up the descriptor's buffer so it will
+        # pause its producer.
+        getattr(descriptor, methodName)('spam')
+
+        # Sanity check - make sure that worked.
+        self.assertEqual(producer.events, ['pause'])
+        del producer.events[:]
+
+        # After one call to doWrite, the buffer has been emptied so the
+        # FileDescriptor should resume its producer.  That will result in an
+        # immediate call to FileDescriptor.write which will again fill the
+        # buffer and result in the producer being paused.
+        descriptor.doWrite()
+        self.assertEqual(producer.events, ['resume', 'pause'])
+        del producer.events[:]
+
+        # After a second call to doWrite, the exact same thing should have
+        # happened.  Prior to the bugfix for which this test was written,
+        # FileDescriptor would have incorrectly believed its producer was
+        # already resumed (it was paused) and so not resume it again.
+        descriptor.doWrite()
+        self.assertEqual(producer.events, ['resume', 'pause'])
+
+
+    def test_reentrantStreamingProducerUsingWrite(self):
+        """
+        Verify that FileDescriptor tracks producer's paused state correctly.
+        Issue #811, fixed in revision r12857.
+        """
+        return self._reentrantStreamingProducerTest('write')
+
+
+    def test_reentrantStreamingProducerUsingWriteSequence(self):
+        """
+        Like L{test_reentrantStreamingProducerUsingWrite}, but for calls to
+        C{writeSequence}.
+
+        C{writeSequence} is B{not} part of L{IConsumer}, however
+        C{abstract.FileDescriptor} has supported consumery behavior in response
+        to calls to C{writeSequence} forever.
+        """
+        return self._reentrantStreamingProducerTest('writeSequence')
+
+
 
 class PortStringification(unittest.TestCase):
     if interfaces.IReactorTCP(reactor, None) is not None:
