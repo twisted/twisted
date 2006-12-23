@@ -161,7 +161,7 @@ d.addErrback(printError)
 
 # this series of callbacks and errbacks will print "<p>Result: 12</p>"
 g = Getter()
-d = g.getData(4)
+d = g.getDummyData(4)
 d.addCallback(printData)
 d.addErrback(printError)
 
