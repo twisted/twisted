@@ -204,13 +204,11 @@ class GeneralOptions(usage.Options):
     #zsh_altArgDescr = {"foo":"use this description for foo instead"}
     #zsh_multiUse = ["foo", "bar"]
     zsh_mutuallyExclusive = [("tty", "notty")]
-    zsh_actions = {"cipher":"(%s)" % " ".join(transport.SSHClientTransport.supportedCiphers),
-                   "macs":"(%s)" % " ".join(transport.SSHClientTransport.supportedMACs)}
+#    zsh_actions = {"cipher":"(%s)" % " ".join(SSHClientTransport.supportedCiphers),
+#                   "macs":"(%s)" % " ".join(SSHClientTransport.supportedMACs)}
     zsh_actionDescr = {"localforward":"listen-port:host:port",
                        "remoteforward":"listen-port:host:port"}
-    # user, host, or user@host completion similar to zsh's ssh completion
-    zsh_extras = ['1:host | user@host:{_ssh;if compset -P "*@"; then _wanted hosts expl "remote host name" _ssh_hosts && ret=0 elif compset -S "@*"; then _wanted users expl "login name" _ssh_users -S "" && ret=0 else if (( $+opt_args[-l] )); then tmp=() else tmp=( "users:login name:_ssh_users -qS@" ) fi; _alternative "hosts:remote host name:_ssh_hosts" "$tmp[@]" && ret=0 fi}',
-                  '*:command: ']
+    zsh_extras = ["1:host | user@host: ", "*:command: "]
 
     identitys = []
     localForwards = []

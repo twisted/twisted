@@ -178,7 +178,7 @@ class MyOptions(usage.Options):
     #zsh_multiUse = ["foo", "bar"]
     #zsh_mutuallyExclusive = [("foo", "bar"), ("bar", "baz")]
     zsh_actions = {"host":"_hosts",
-                   "toolkit":"(gtk1 gtk2)"}
+                   "toolkit":"(%s)" % (' '.join(getAvailableToolkits()),)}
     #zsh_actionDescr = {"logfile":"log file name", "random":"random seed"}
 
 if __name__ == '__main__':

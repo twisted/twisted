@@ -1,28 +1,28 @@
 #compdef lore
 _arguments -s -A "-*" \
 '*:files:_files' \
-'(--book)-b[The book file to generate a book from]:book:_files' \
-'(-b)--book=[The book file to generate a book from]:book:_files' \
-'--config=[config]:config:_files' \
-'(--docsdir)-d[docsdir]:docsdir:_files' \
-'(-d)--docsdir=[docsdir]:docsdir:_files' \
-'--help[Display this help and exit.]' \
 '(--index)-x[The base filename you want to give your index file]:index:_files' \
 '(-x)--index=[The base filename you want to give your index file]:index:_files' \
-'(--input)-i[input]:input:_files' \
-'(-i)--input=[input]:input:_files' \
-'(--inputext)-e[The extension that your Lore input files have]:inputext:_files' \
-'(-e)--inputext=[The extension that your Lore input files have]:inputext:_files' \
 '(--linkrel)-l[linkrel]:linkrel:_files' \
 '(-l)--linkrel=[linkrel]:linkrel:_files' \
-'(--null)-n[Do not report filenames]' \
-'(-n)--null[Do not report filenames]' \
-'(--number)-N[Add chapter/section numbers to section headings]' \
-'(-N)--number[Add chapter/section numbers to section headings]' \
-'(--output)-o[output]:output:_files' \
-'(-o)--output=[output]:output:_files' \
+'--version[version]' \
 '(--plain)-p[Report filenames without progress bar]' \
 '(-p)--plain[Report filenames without progress bar]' \
+'(--number)-N[Add chapter/section numbers to section headings]' \
+'(-N)--number[Add chapter/section numbers to section headings]' \
+'(--book)-b[The book file to generate a book from]:book:_files' \
+'(-b)--book=[The book file to generate a book from]:book:_files' \
+'(--docsdir)-d[docsdir]:docsdir:_files' \
+'(-d)--docsdir=[docsdir]:docsdir:_files' \
+'(--input)-i[input]:input:_files' \
+'(-i)--input=[input]:input:_files' \
+'(--output)-o[output]:output:_files' \
+'(-o)--output=[output]:output:_files' \
+'(--null)-n[Do not report filenames]' \
+'(-n)--null[Do not report filenames]' \
+'--config=[config]:config:_files' \
+'(--inputext)-e[The extension that your Lore input files have]:inputext:_files' \
+'(-e)--inputext=[The extension that your Lore input files have]:inputext:_files' \
 '--prefixurl=[The prefix to stick on to relative links; only useful when processing directories]:prefixurl:_files' \
-'--version[version]' \
+'--help[Display this help and exit.]' \
 && return 0
