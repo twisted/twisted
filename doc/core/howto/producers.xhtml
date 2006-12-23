@@ -33,7 +33,7 @@
 
     <h2>Pull Producers</h2>
 
-    <p>The pull producer API is defined by the <code base="twisted.internet.interfaces" class="API">IPushProducer</code> interface.  Pull producers are useful in cases where there is no clear event source involved with the generation of data.  For example, if the data is the result of some algorithmic process that is bound only by CPU time, a pull producer is appropriate.</p>
+    <p>The pull producer API is defined by the <code base="twisted.internet.interfaces" class="API">IPullProducer</code> interface.  Pull producers are useful in cases where there is no clear event source involved with the generation of data.  For example, if the data is the result of some algorithmic process that is bound only by CPU time, a pull producer is appropriate.</p>
 
     <p>Pull producers are defined in terms of only two methods: <code base="twisted.internet.interfaces.IPullProducer" class="API">resumeProducing</code> and <code base="twisted.internet.interfaces.IPullProducer" class="API">stopProducing</code>.</p>
 
