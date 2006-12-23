@@ -1,25 +1,25 @@
 #compdef ckeygen
 _arguments -s -A "-*" \
-'(--comment)-C[Provide new comment.]:comment:_files' \
-'(-C)--comment=[Provide new comment.]:comment:_files' \
-'(--changepass)-p[Change passphrase of private key file.]' \
-'(-p)--changepass[Change passphrase of private key file.]' \
-'--help[Display this help and exit.]' \
-'(--fingerprint)-l[Show fingerprint of key file.]' \
-'(-l)--fingerprint[Show fingerprint of key file.]' \
-'(--pass)-P[Provide old passphrase]:pass:_files' \
-'(-P)--pass=[Provide old passphrase]:pass:_files' \
 '(--bits)-b[Number of bits in the key to create.]:bits:_files' \
 '(-b)--bits=[Number of bits in the key to create.]:bits:_files' \
-'(--quiet)-q[Quiet.]' \
-'(-q)--quiet[Quiet.]' \
+'(--changepass)-p[Change passphrase of private key file.]' \
+'(-p)--changepass[Change passphrase of private key file.]' \
+'(--comment)-C[Provide new comment.]:comment:_files' \
+'(-C)--comment=[Provide new comment.]:comment:_files' \
 '(--filename)-f[Filename of the key file.]:filename:_files' \
 '(-f)--filename=[Filename of the key file.]:filename:_files' \
+'(--fingerprint)-l[Show fingerprint of key file.]' \
+'(-l)--fingerprint[Show fingerprint of key file.]' \
+'--help[Display this help and exit.]' \
 '(--newpass)-N[Provide new passphrase.]:newpass:_files' \
 '(-N)--newpass=[Provide new passphrase.]:newpass:_files' \
-'--version[version]' \
-'(--type)-t[Specify type of key to create.]:type:(rsa dsa)' \
-'(-t)--type=[Specify type of key to create.]:type:(rsa dsa)' \
+'(--pass)-P[Provide old passphrase]:pass:_files' \
+'(-P)--pass=[Provide old passphrase]:pass:_files' \
+'(--quiet)-q[Quiet.]' \
+'(-q)--quiet[Quiet.]' \
 '(--showpub)-y[Read private key file and print public key.]' \
 '(-y)--showpub[Read private key file and print public key.]' \
+'(--type)-t[Specify type of key to create.]:type:(rsa dsa)' \
+'(-t)--type=[Specify type of key to create.]:type:(rsa dsa)' \
+'--version[version]' \
 && return 0
