@@ -1,38 +1,38 @@
 #compdef tkconch
 _arguments -s -A "-*" \
-'1:host | user@host: ' \
+'1:host | user@host:{_ssh;if compset -P "*@"; then _wanted hosts expl "remote host name" _ssh_hosts && ret=0 elif compset -S "@*"; then _wanted users expl "login name" _ssh_users -S "" && ret=0 else if (( $+opt_args[-l] )); then tmp=() else tmp=( "users:login name:_ssh_users -qS@" ) fi; _alternative "hosts:remote host name:_ssh_hosts" "$tmp[@]" && ret=0 fi}' \
 '*:command: ' \
+'(--ansilog)-a[Print the receieved data to stdout]' \
+'(-a)--ansilog[Print the receieved data to stdout]' \
+'(--cipher)-c[Select encryption algorithm.]:cipher:(aes256-ctr aes256-cbc aes192-ctr aes192-cbc aes128-ctr aes128-cbc cast128-ctr cast128-cbc blowfish-ctr blowfish idea-ctridea-cbc 3des-ctr 3des-cbc)' \
+'(-c)--cipher=[Select encryption algorithm.]:cipher:(aes256-ctr aes256-cbc aes192-ctr aes192-cbc aes128-ctr aes128-cbc cast128-ctr cast128-cbc blowfish-ctr blowfish idea-ctridea-cbc 3des-ctr 3des-cbc)' \
+'(--compress)-C[Enable compression.]' \
+'(-C)--compress[Enable compression.]' \
+"(--escape)-e[Set escape character; \`\`none'' = disable]:escape:_files" \
+"(-e)--escape=[Set escape character; \`\`none'' = disable]:escape:_files" \
+'--help[Display this help and exit.]' \
+'(--identity)-i[Identity for public key authentication]:identity:_files' \
+'(-i)--identity=[Identity for public key authentication]:identity:_files' \
+'(--localforward)-L[listen-port:host:port   Forward local port to remote address]:listen-port:host:port:_files' \
+'(-L)--localforward=[listen-port:host:port   Forward local port to remote address]:listen-port:host:port:_files' \
+'(--log)-v[Log to stderr]' \
+'(-v)--log[Log to stderr]' \
+'(--macs)-m[Specify MAC algorithms for protocol version 2.]:macs:(hmac-sha1 hmac-md5)' \
+'(-m)--macs=[Specify MAC algorithms for protocol version 2.]:macs:(hmac-sha1 hmac-md5)' \
+'(--noshell)-N[Do not execute a shell or command.]' \
+'(-N)--noshell[Do not execute a shell or command.]' \
+'(--tty -t --notty)-T[Do not allocate a tty.]' \
+'(--tty -t -T)--notty[Do not allocate a tty.]' \
+'(--port)-p[Connect to this port.  Server must be on the same port.]:port:_files' \
+'(-p)--port=[Connect to this port.  Server must be on the same port.]:port:_files' \
+'(--remoteforward)-R[listen-port:host:port   Forward remote port to local address]:listen-port:host:port:_files' \
+'(-R)--remoteforward=[listen-port:host:port   Forward remote port to local address]:listen-port:host:port:_files' \
 '(--subsystem)-s[Invoke command (mandatory) as SSH2 subsystem.]' \
 '(-s)--subsystem[Invoke command (mandatory) as SSH2 subsystem.]' \
 '(--notty -T --tty)-t[Tty; allocate a tty even if command is given.]' \
 '(--notty -T -t)--tty[Tty; allocate a tty even if command is given.]' \
-'(--macs)-m[Specify MAC algorithms for protocol version 2.]:macs:_files' \
-'(-m)--macs=[Specify MAC algorithms for protocol version 2.]:macs:_files' \
-'(--version)-V[Display version number only.]' \
-'(-V)--version[Display version number only.]' \
-'--help[Display this help and exit.]' \
-'(--compress)-C[Enable compression.]' \
-'(-C)--compress[Enable compression.]' \
-'(--ansilog)-a[Print the receieved data to stdout]' \
-'(-a)--ansilog[Print the receieved data to stdout]' \
-'(--tty -t --notty)-T[Do not allocate a tty.]' \
-'(--tty -t -T)--notty[Do not allocate a tty.]' \
-'(--cipher)-c[Select encryption algorithm.]:cipher:_files' \
-'(-c)--cipher=[Select encryption algorithm.]:cipher:_files' \
 '(--user)-l[Log in using this user name.]:user:_files' \
 '(-l)--user=[Log in using this user name.]:user:_files' \
-'(--noshell)-N[Do not execute a shell or command.]' \
-'(-N)--noshell[Do not execute a shell or command.]' \
-"(--escape)-e[Set escape character; \`\`none'' = disable]:escape:_files" \
-"(-e)--escape=[Set escape character; \`\`none'' = disable]:escape:_files" \
-'(--remoteforward)-R[listen-port:host:port   Forward remote port to local address]:listen-port:host:port:_files' \
-'(-R)--remoteforward=[listen-port:host:port   Forward remote port to local address]:listen-port:host:port:_files' \
-'(--localforward)-L[listen-port:host:port   Forward local port to remote address]:listen-port:host:port:_files' \
-'(-L)--localforward=[listen-port:host:port   Forward local port to remote address]:listen-port:host:port:_files' \
-'(--port)-p[Connect to this port.  Server must be on the same port.]:port:_files' \
-'(-p)--port=[Connect to this port.  Server must be on the same port.]:port:_files' \
-'(--identity)-i[Identity for public key authentication]:identity:_files' \
-'(-i)--identity=[Identity for public key authentication]:identity:_files' \
-'(--log)-v[Log to stderr]' \
-'(-v)--log[Log to stderr]' \
+'(--version)-V[Display version number only.]' \
+'(-V)--version[Display version number only.]' \
 && return 0

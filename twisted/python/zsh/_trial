@@ -1,39 +1,40 @@
 #compdef trial
 _arguments -s -A "-*" \
 "*:file|module|package|TestCase|testMethod:_files -g '*.py'" \
-'(--reactor)-r[Which reactor to use out of: kqueue, poll, qt, default, win, cfreactor, gtk, cf, glade, win32, gtk2, iocp, glib2, threadedselect, wx.]:reactor:(kqueue poll qt default win cfreactor gtk cf glade win32 gtk2 iocp glib2 threadedselect wx)' \
-'(-r)--reactor=[Which reactor to use out of: kqueue, poll, qt, default, win, cfreactor, gtk, cf, glade, win32, gtk2, iocp, glib2, threadedselect, wx.]:reactor:(kqueue poll qt default win cfreactor gtk cf glade win32 gtk2 iocp glib2 threadedselect wx)' \
-'(--extra)-x[Add an extra argument.  (This is a hack necessary for interfacing with]:extra:_files' \
-'(-x)--extra=[Add an extra argument.  (This is a hack necessary for interfacing with]:extra:_files' \
-'(--random)-z[Run tests in random order using the specified seed]:random seed:_files' \
-'(-z)--random=[Run tests in random order using the specified seed]:random seed:_files' \
-'--help-reporters[Help on available output plugins (reporters)]' \
-'--recursionlimit=[see sys.setrecursionlimit()]:recursionlimit:_files' \
-'--tbformat=[Specify the format to display tracebacks with. Valid formats are]:tbformat:(plain emacs cgitb)' \
-'--spew[Print an insanely verbose log of everything that happens.  Useful]' \
-"(--no-recurse)-N[Don't recurse into packages]" \
-"(-N)--no-recurse[Don't recurse into packages]" \
-'(--help)-h[Display this help and exit.]' \
-'(-h)--help[Display this help and exit.]' \
-'--version[version]' \
-"--nopm[don't automatically jump into debugger for postmorteming of exceptions]" \
-'--profile[Run tests under the Python profiler]' \
+'--coverage[Generate coverage information in the given directory (relative to]' \
+"(--debug)-b[Run tests in the Python debugger. Will load '.pdbrc' from current directory if it exists.]" \
+"(-b)--debug[Run tests in the Python debugger. Will load '.pdbrc' from current directory if it exists.]" \
+'(--debug-stacktraces)-B[Report Deferred creation and callback stack traces]' \
+'(-B)--debug-stacktraces[Report Deferred creation and callback stack traces]' \
+'--disablegc[Disable the garbage collector]' \
 '(--dry-run)-n[do everything but run the tests]' \
 '(-n)--dry-run[do everything but run the tests]' \
-'--suppresswarnings[Only print warnings to log, not stdout. DEPRECATED.]' \
-'--reporter=[The reporter to use for this test run.  See --help-reporters]:reporter:(bwverbose text timing verbose summary)' \
-'--coverage[Generate coverage information in the given directory (relative to]' \
+'(--extra)-x[Add an extra argument.  (This is a hack necessary for interfacing with]:extra:_files' \
+'(-x)--extra=[Add an extra argument.  (This is a hack necessary for interfacing with]:extra:_files' \
+'--force-gc[Have Trial run gc.collect() before and after each test case.]' \
+'(--help)-h[Display this help and exit.]' \
+'(-h)--help[Display this help and exit.]' \
+'--help-reactors[Display a list of possibly available reactor names.]' \
+'--help-reporters[Help on available output plugins (reporters)]' \
 '(--logfile)-l[log file name]:log file name:_files' \
 '(-l)--logfile=[log file name]:log file name:_files' \
+"(--no-recurse)-N[Don't recurse into packages]" \
+"(-N)--no-recurse[Don't recurse into packages]" \
+"--nopm[don't automatically jump into debugger for postmorteming of exceptions]" \
+'--profile[Run tests under the Python profiler]' \
+'(--random)-z[Run tests in random order using the specified seed]:random seed:_files' \
+'(-z)--random=[Run tests in random order using the specified seed]:random seed:_files' \
+'(--reactor)-r[Which reactor to use (see --help-reactors for a list of possibilities)]:reactor:(kqueue win32 epoll iocp gtk cf gtk2 default debug-gui poll glib2 select wx)' \
+'(-r)--reactor=[Which reactor to use (see --help-reactors for a list of possibilities)]:reactor:(kqueue win32 epoll iocp gtk cf gtk2 default debug-gui poll glib2 select wx)' \
+'--recursionlimit=[see sys.setrecursionlimit()]:recursionlimit:_files' \
+'--reporter=[The reporter to use for this test run.  See --help-reporters for more info.]:reporter:(bwverbose text verbose timing summary)' \
 '(--rterrors)-e[realtime errors, print out tracebacks as soon as they occur]' \
 '(-e)--rterrors[realtime errors, print out tracebacks as soon as they occur]' \
+'--spew[Print an insanely verbose log of everything that happens.  Useful]' \
+'--tbformat=[Specify the format to display tracebacks with. Valid formats are]:tbformat:(plain emacs cgitb)' \
+'--temp-directory=[Path to use as working directory for tests.]:temp-directory:_files' \
 '--testmodule=[Filename to grep for test cases (-*- test-case-name)]:testmodule:_files' \
 '(--until-failure)-u[Repeat test until it fails]' \
 '(-u)--until-failure[Repeat test until it fails]' \
-'(--debug-stacktraces)-B[Report Deferred creation and callback stack traces]' \
-'(-B)--debug-stacktraces[Report Deferred creation and callback stack traces]' \
-"(--debug)-b[Run tests in the Python debugger. Will load '.pdbrc' from current directory if it exists.]" \
-"(-b)--debug[Run tests in the Python debugger. Will load '.pdbrc' from current directory if it exists.]" \
-'--temp-directory=[Path to use as working directory for tests.]:temp-directory:_files' \
-'--disablegc[Disable the garbage collector]' \
+'--version[version]' \
 && return 0
