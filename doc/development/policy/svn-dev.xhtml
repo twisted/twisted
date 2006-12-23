@@ -58,11 +58,13 @@ problems.</p>
 
 <h2>Compiling C extensions</h2>
 
-<p>There are currently 3 C extension modules in Twisted:
-twisted.internet.cReactor, twisted.runner.portmap, and twisted.spread.cBanana
-. These modules are optional, but you'll have to compile them if you want to
-experience their features, performance improvements, or bugs. There are two
-approaches.</p>
+<p>
+There are currently several C extension modules in Twisted:
+twisted.protocols._c_urlarg, twisted.internet.cfsupport,
+twisted.internet.iocpreactor._iocp, and twisted.python._epoll.  These modules
+are optional, but you'll have to compile them if you want to experience their
+features, performance improvements, or bugs. There are two approaches.
+</p>
 
 <p>The first is to do a regular distutils <code>./setup.py build</code>, which
 will create a directory under <code>build/</code> to hold both the generated

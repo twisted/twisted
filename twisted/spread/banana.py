@@ -21,7 +21,7 @@ from twisted.internet import protocol
 from twisted.persisted import styles
 from twisted.python import log
 
-import types, copy, cStringIO, struct
+import copy, cStringIO, struct
 
 class BananaError(Exception):
     pass
@@ -62,10 +62,42 @@ VOCAB    = chr(0x87)
 
 HIGH_BIT_SET = chr(0x80)
 
+def setPrefixLimit(limit):
+    """
+    Set the limit on the prefix length for all Banana connections
+    established after this call.
+
+    The prefix length limit determines how many bytes of prefix a banana
+    decoder will allow before rejecting a potential object as too large.
+
+    @type limit: C{int}
+    @param limit: The number of bytes of prefix for banana to allow when
+    decoding.
+    """
+    global _PREFIX_LIMIT
+    _PREFIX_LIMIT = limit
+setPrefixLimit(64)
+
 SIZE_LIMIT = 640 * 1024   # 640k is all you'll ever need :-)
 
-class Pynana(protocol.Protocol, styles.Ephemeral):
+class Banana(protocol.Protocol, styles.Ephemeral):
     knownDialects = ["pb", "none"]
+
+    prefixLimit = None
+    sizeLimit = SIZE_LIMIT
+
+    def setPrefixLimit(self, limit):
+        """
+        Set the prefix limit for decoding done by this protocol instance.
+
+        @see L{setPrefixLimit}
+        """
+        self.prefixLimit = limit
+        self._smallestLongInt = -2 ** (limit * 7) + 1
+        self._smallestInt = -2 ** 31
+        self._largestInt = 2 ** 31 - 1
+        self._largestLongInt = 2 ** (limit * 7) - 1
+
 
     def connectionReady(self):
         """Surrogate for connectionMade
@@ -102,9 +134,11 @@ class Pynana(protocol.Protocol, styles.Ephemeral):
 
 
     def connectionMade(self):
+        self.setPrefixLimit(_PREFIX_LIMIT)
         self.currentDialect = None
         if not self.isClient:
             self.sendEncoded(self.knownDialects)
+
 
     def gotItem(self, item):
         l = self.listStack
@@ -128,14 +162,14 @@ class Pynana(protocol.Protocol, styles.Ephemeral):
                     break
                 pos = pos + 1
             else:
-                if pos > 64:
-                    raise BananaError("Security precaution: more than 64 bytes of prefix")
+                if pos > self.prefixLimit:
+                    raise BananaError("Security precaution: more than %d bytes of prefix" % (self.prefixLimit,))
                 return
             num = buffer[:pos]
             typebyte = buffer[pos]
             rest = buffer[pos+1:]
-            if len(num) > 64:
-                raise BananaError("Security precaution: longer than 64 bytes worth of prefix")
+            if len(num) > self.prefixLimit:
+                raise BananaError("Security precaution: longer than %d bytes worth of prefix" % (self.prefixLimit,))
             if typebyte == LIST:
                 num = b1282int(num)
                 if num > SIZE_LIMIT:
@@ -247,75 +281,48 @@ class Pynana(protocol.Protocol, styles.Ephemeral):
         self.transport.write(value)
 
     def _encode(self, obj, write):
-        if isinstance(obj, types.ListType) or isinstance(obj, types.TupleType):
+        if isinstance(obj, (list, tuple)):
             if len(obj) > SIZE_LIMIT:
-                raise BananaError, \
-                      "list/tuple is too long to send (%d)" % len(obj)
+                raise BananaError(
+                    "list/tuple is too long to send (%d)" % (len(obj),))
             int2b128(len(obj), write)
             write(LIST)
             for elem in obj:
                 self._encode(elem, write)
-        elif isinstance(obj, types.IntType):
-            if obj >= 0:
+        elif isinstance(obj, (int, long)):
+            if obj < self._smallestLongInt or obj > self._largestLongInt:
+                raise BananaError(
+                    "int/long is too large to send (%d)" % (obj,))
+            if obj < self._smallestInt:
+                int2b128(-obj, write)
+                write(LONGNEG)
+            elif obj < 0:
+                int2b128(-obj, write)
+                write(NEG)
+            elif obj <= self._largestInt:
                 int2b128(obj, write)
                 write(INT)
             else:
-                int2b128(-obj, write)
-                write(NEG)
-        elif isinstance(obj, types.LongType):
-            if obj >= 0l:
                 int2b128(obj, write)
                 write(LONGINT)
-            else:
-                int2b128(-obj, write)
-                write(LONGNEG)
-        elif isinstance(obj, types.FloatType):
+        elif isinstance(obj, float):
             write(FLOAT)
             write(struct.pack("!d", obj))
-        elif isinstance(obj, types.StringType):
+        elif isinstance(obj, str):
             # TODO: an API for extending banana...
-            if (self.currentDialect == "pb") and self.outgoingSymbols.has_key(obj):
+            if self.currentDialect == "pb" and obj in self.outgoingSymbols:
                 symbolID = self.outgoingSymbols[obj]
                 int2b128(symbolID, write)
                 write(VOCAB)
             else:
                 if len(obj) > SIZE_LIMIT:
-                    raise BananaError, \
-                          "string is too long to send (%d)" % len(obj)
+                    raise BananaError(
+                        "string is too long to send (%d)" % (len(obj),))
                 int2b128(len(obj), write)
                 write(STRING)
                 write(obj)
         else:
-            raise BananaError, "could not send object: %s" % repr(obj)
-Banana = Pynana
-
-
-class Canana(Pynana):
-
-    def connectionMade(self):
-        self.state = cBanana.newState()
-        self.cbuf = cBanana.newBuf()
-        Pynana.connectionMade(self)
-
-    def sendEncoded(self, obj):
-        self.cbuf.clear()
-        cBanana.encode(obj, self.cbuf)
-        rv = self.cbuf.get()
-        self.transport.write(rv)
-
-    def dataReceived(self, chunk):
-        buffer = self.buffer + chunk
-        processed = cBanana.dataReceived(self.state, buffer, self.callExpressionReceived)
-        self.buffer = buffer[processed:]
-
-#try:
-#    import cBanana
-#    cBanana.pyb1282int = b1282int
-#    cBanana.pyint2b128 = int2b128
-#except ImportError:
-#    pass
-#else:
-#    Banana = Canana
+            raise BananaError("could not send object: %r" % (obj,))
 
 
 # For use from the interactive interpreter

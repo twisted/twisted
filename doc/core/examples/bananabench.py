@@ -49,6 +49,7 @@ class BananaBench:
         endtime = time.time()
         print '    Decode took %s seconds' % (endtime - starttime)
         return endtime - starttime
+
     def performTest(self, method, data, encClass):
         self.setUp(encClass)
         method(data)
@@ -57,11 +58,8 @@ class BananaBench:
     def runTests(self, testData):
         print 'Test data is: %s' % testData
         print '  Using Pure Python Banana:'
-        self.performTest(self.testEncode, testData, banana.Pynana)
-        self.performTest(self.testDecode, testData, banana.Pynana)
-        print '  Using Python/C Banana:'
-        self.performTest(self.testEncode, testData, banana.Canana)
-        self.performTest(self.testDecode, testData, banana.Canana)
+        self.performTest(self.testEncode, testData, banana.Banana)
+        self.performTest(self.testDecode, testData, banana.Banana)
 
 bench = BananaBench()
 print 'Doing %s iterations of each test.' % iterationCount

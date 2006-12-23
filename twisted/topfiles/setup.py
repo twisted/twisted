@@ -32,11 +32,7 @@ def detectExtensions(builder):
         return []
 
     # Extension modules to build.
-    exts = [
-        Extension("twisted.spread.cBanana",
-                  ["twisted/spread/cBanana.c"],
-                  define_macros=builder.define_macros),
-        ]
+    exts = []
 
     # urllib.unquote accelerator
     exts.append( Extension("twisted.protocols._c_urlarg",
