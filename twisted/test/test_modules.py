@@ -235,6 +235,28 @@ class PathModificationTest(PySpaceTestCase):
 
 
 
+class RebindingTest(PathModificationTest):
+    """
+    These tests verify that the default path interrogation API works properly
+    even when sys.path has been rebound to a different object.
+    """
+    def _setupSysPath(self):
+        assert not self.pathSetUp
+        self.pathSetUp = True
+        self.savedSysPath = sys.path
+        sys.path = sys.path[:]
+        sys.path.append(self.pathExtensionName)
+
+
+    def tearDown(self):
+        """
+        Clean up sys.path by re-binding our original object.
+        """
+        if self.pathSetUp:
+            sys.path = self.savedSysPath
+
+
+
 class ZipPathModificationTest(PathModificationTest):
     def _setupSysPath(self):
         assert not self.pathSetUp
