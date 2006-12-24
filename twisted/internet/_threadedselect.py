@@ -26,14 +26,14 @@ the rest of Twisted::
 
 Interleave this reactor with your foreign event loop, at some point after
 your event loop is initialized::
-    
+
     | from twisted.internet import reactor
     | reactor.interleave(foreignEventLoopWakerFunction)
     | self.addSystemEventTrigger('after', 'shutdown', foreignEventLoopStop)
 
 Instead of shutting down the foreign event loop directly, shut down the
 reactor::
-    
+
     | from twisted.internet import reactor
     | reactor.stop()
 
@@ -53,7 +53,7 @@ you must allow for Twisted to come to a complete stop before quitting the
 application.  Typically, you will do this by setting up an after shutdown
 trigger to stop your foreign event loop, and call reactor.stop() where you
 would normally have initiated the shutdown procedure for the foreign event
-loop.  Shutdown functions that could be used in place of 
+loop.  Shutdown functions that could be used in place of
 "foreignEventloopStop" would be the ExitMainLoop method of the wxApp instance
 with wxPython, or the PyObjCTools.AppHelper.stopEventLoop function.
 """
@@ -115,7 +115,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         tple = posixbase.PosixReactorBase.callLater(self, *args, **kw)
         self.wakeUp()
         return tple
-    
+
     def _sendToMain(self, msg, *args):
         #print >>sys.stderr, 'sendToMain', msg, args
         self.toMainThread.put((msg, args))
@@ -125,7 +125,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
     def _sendToThread(self, fn, *args):
         #print >>sys.stderr, 'sendToThread', fn, args
         self.toThreadQueue.put((fn, args))
-    
+
     def _preenDescriptorsInThread(self):
         log.msg("Malformed file descriptor found.  Preening lists.")
         readers = self.reads.keys()
@@ -148,12 +148,12 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
                 #print >>sys.stderr, "worker got", fn, args
                 fn(*args)
         except SystemExit:
-            pass
+            pass # exception indicates this thread should exit
         except:
             f = failure.Failure()
             self._sendToMain('Failure', f)
         #print >>sys.stderr, "worker finished"
-    
+
     def _doSelectInThread(self, timeout):
         """Run one iteration of the I/O monitor loop.
 
@@ -193,12 +193,12 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
                     # OK, I really don't know what's going on.  Blow up.
                     raise
         self._sendToMain('Notify', r, w)
-        
+
     def _process_Notify(self, r, w):
         #print >>sys.stderr, "_process_Notify"
         reads = self.reads
         writes = self.writes
-    
+
         _drdw = self._doReadOrWrite
         _logrun = log.callWithLogger
         for selectables, method, dct in ((r, "doRead", reads), (w, "doWrite", writes)):
@@ -218,9 +218,8 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
     def ensureWorkerThread(self):
         if self.workerThread is None or not self.workerThread.isAlive():
             self.workerThread = Thread(target=self._workerInThread)
-            self.workerThread.setDaemon(True)
             self.workerThread.start()
-    
+
     def doThreadIteration(self, timeout):
         self._sendToThread(self._doIterationInThread, timeout)
         self.ensureWorkerThread()
@@ -228,12 +227,8 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         msg, args = self.toMainThread.get()
         #print >>sys.stderr, 'got', msg, args
         getattr(self, '_process_' + msg)(*args)
-    
-    doIteration = doThreadIteration
 
-    def mainLoopBegin(self):
-        if self.running:
-            self.runUntilCurrent()
+    doIteration = doThreadIteration
 
     def _interleave(self):
         while self.running:
@@ -267,7 +262,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         self.mainWaker = mainWaker
         loop.next()
         self.ensureWorkerThread()
-    
+
     def _mainLoopShutdown(self):
         self.mainWaker = None
         if self.workerThread is not None:
@@ -307,7 +302,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
             log.err()
         if why:
             self._disconnectSelectable(selectable, why, method == "doRead")
-    
+
     def addReader(self, reader):
         """Add a FileDescriptor for notification of data available to read.
         """
@@ -345,8 +340,8 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
                 q.get()()
             except StopIteration:
                 break
-        
-    
+
+
 
 def install():
     """Configure the twisted mainloop to be run using the select() reactor.
