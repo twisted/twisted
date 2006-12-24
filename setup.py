@@ -5,6 +5,14 @@
 
 """
 Distutils-launcher for Twisted projects.
+
+This is a script which emulates a distutils-style setup.py, by delegating its
+invocation arguments to actual distutils setup.py scripts for each Twisted
+subproject in turn.
+
+It locates other setup.py scripts by detecting whether it is run in a 'sumo'
+configuration, which is the structure of the released tarballs, or a 'non-sumo'
+(development) configuration, which is the structure of the SVN repository.
 """
 
 import sys, os, glob
@@ -16,7 +24,7 @@ specialPaths = {'core': 'twisted/topfiles/setup.py'}
 
 
 def runInDir(dir, f, *args, **kw):
-    """ 
+    """
     Run a function after chdiring to a directory, and chdir back to
     the original directory afterwards, even if the function fails.
     """
@@ -29,11 +37,18 @@ def runInDir(dir, f, *args, **kw):
 
 
 def getSumoProjDir(proj):
+    """
+    Return the existing directory which contains the specified
+    subproject. If no applicable directory is found, None is returned
+    (which may be because we are not running from a Sumo tarball). If
+    more than one appropriate directory is found, an AssertionError is
+    raised.
+    """
     globst = 'Twisted%s-*' % proj.capitalize()
     gl = glob.glob(globst)
-    assert len(gl) == 1, 'Wrong number of %s found!?' % proj
-    dir = gl[0]
-    return dir
+    assert not len(gl) > 1, 'Wrong number of %s directories found!?' % (proj,)
+    if gl:
+        return gl[0]
 
 
 def findSetupPy(project):
@@ -53,10 +68,12 @@ def findSetupPy(project):
     if os.path.exists(setupPy):
         return (setupPy, False)
 
-    setupPy = os.path.join(getSumoProjDir(project), 'setup.py')
-    tried.append(setupPy)
-    if os.path.exists(setupPy):
-        return (setupPy, True)
+    projdir = getSumoProjDir(project)
+    if projdir:
+        setupPy = os.path.join(projdir, 'setup.py')
+        tried.append(setupPy)
+        if os.path.exists(setupPy):
+            return (setupPy, True)
 
     sys.stderr.write("Error: No such project '%s'.\n" % (project,))
     sys.stderr.write(" (%s not found)\n" % (tried,))
@@ -84,6 +101,13 @@ def runSetup(project, args):
 
 
 def main(args):
+    """
+    Delegate setup.py functionality to individual subproject setup.py scripts.
+
+    If we are running from a Sumo tarball, the TwistedCore-* directory
+    will be added to PYTHONPATH so setup.py scripts can use
+    functionality from Twisted.
+    """
     os.environ["PYTHONPATH"] = "." + os.pathsep + os.getenv("PYTHONPATH", "")
     if len(args) == 0 or args[0] in ('-h', '--help'):
         sys.stdout.write(
@@ -92,6 +116,13 @@ Usage: setup.py <distutils args..>
 """)
         runSetup('core', ['-h'])
         sys.exit(0)
+
+    # If we've got a sumo ball, we should insert the Core directory
+    # into sys.path because setup.py files try to import
+    # twisted.python.dist.
+    coredir = getSumoProjDir("core")
+    if coredir and os.path.exists(coredir):
+        os.environ["PYTHONPATH"] += os.pathsep + os.path.abspath(coredir)
 
     for project in sumoSubprojects:
         runSetup(project, args)
