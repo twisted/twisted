@@ -212,3 +212,20 @@ class BananaTestCase(unittest.TestCase):
         self.enc.sendEncoded(-2147483648)
         self.enc.dataReceived(self.io.getvalue())
         assert self.result == -2147483648, "should be -2147483648, got %s" % self.result
+
+
+class GlobalCoderTests(unittest.TestCase):
+    """
+    Tests for the free functions L{banana.encode} and L{banana.decode}.
+    """
+    def test_statelessDecode(self):
+        """
+        Test that state doesn't carry over between calls to L{banana.decode}.
+        """
+        # Banana encoding of 2 ** 449
+        undecodable = '\x7f' * 65 + '\x85'
+        self.assertRaises(banana.BananaError, banana.decode, undecodable)
+
+        # Banana encoding of 1
+        decodable = '\x01\x81'
+        self.assertEqual(banana.decode(decodable), 1)

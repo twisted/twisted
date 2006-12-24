@@ -340,10 +340,14 @@ def encode(lst):
 
 
 def decode(st):
-    """Decode a banana-encoded string."""
-    l=[]
+    """
+    Decode a banana-encoded string.
+    """
+    l = []
     _i.expressionReceived = l.append
-    _i.dataReceived(st)
-    _i.buffer = ''
-    del _i.expressionReceived
+    try:
+        _i.dataReceived(st)
+    finally:
+        _i.buffer = ''
+        del _i.expressionReceived
     return l[0]
