@@ -1369,8 +1369,8 @@ def _testPermissions(uid, gid, spath, mode='r'):
     @param mode: 'r' or 'w' (read or write)
 
     @rtype: C{bool}
-    @returns: True if the given credentials have the specified form of
-    access to the given path
+    @return: True if the given credentials have the specified form of
+        access to the given path
     """
     if mode == 'r':
         usr = stat.S_IRUSR
@@ -1734,7 +1734,7 @@ class SenderProtocol(protocol.Protocol):
 def decodeHostPort(line):
     """Decode an FTP response specifying a host and port.
 
-    @returns: a 2-tuple of (host, port).
+    @return: a 2-tuple of (host, port).
     """
     abcdef = re.sub('[^0-9, ]', '', line)
     parsed = [int(p.strip()) for p in abcdef.split(',')]
@@ -1847,8 +1847,8 @@ class FTPClientBasic(basic.LineReceiver):
         @param public: a flag intended for internal use by FTPClient.  Don't
             change it unless you know what you're doing.
 
-        @returns: a L{Deferred} that will be called when the response to the
-        command has been received.
+        @return: a L{Deferred} that will be called when the response to the
+            command has been received.
         """
         ftpCommand = FTPCommand(command, public)
         self.queueCommand(ftpCommand)
@@ -1960,7 +1960,8 @@ class _PassiveConnectionFactory(protocol.ClientFactory):
 
 
 class FTPClient(FTPClientBasic):
-    """A Twisted FTP Client
+    """
+    A Twisted FTP Client
 
     Supports active and passive transfers.
 
@@ -1973,7 +1974,8 @@ class FTPClient(FTPClientBasic):
     def __init__(self, username='anonymous',
                  password='twisted@twistedmatrix.com',
                  passive=1):
-        """Constructor.
+        """
+        Constructor.
 
         I will login as soon as I receive the welcome message from the server.
 
@@ -1989,7 +1991,9 @@ class FTPClient(FTPClientBasic):
         self.passive = passive
 
     def fail(self, error):
-        """Disconnect, and also give an error to any queued deferreds."""
+        """
+        Disconnect, and also give an error to any queued deferreds.
+        """
         self.transport.loseConnection()
         self._fail(error)
 
@@ -2004,14 +2008,15 @@ class FTPClient(FTPClientBasic):
             L{FTPFileListProtocol}, or something that can be adapted to one.
             Typically this will be an L{IConsumer} implemenation.
 
-        @returns: L{Deferred}.
+        @return: L{Deferred}.
         """
         protocol = interfaces.IProtocol(protocol)
         wrapper = ProtocolWrapper(protocol, defer.Deferred())
         return self._openDataConnection(commands, wrapper)
 
     def queueLogin(self, username, password):
-        """Login: send the username, send the password, and
+        """
+        Login: send the username, send the password, and
         set retrieval mode to binary
         """
         FTPClientBasic.queueLogin(self, username, password)
@@ -2022,9 +2027,10 @@ class FTPClient(FTPClientBasic):
         d.addErrback(lambda x: None)
 
     def sendToConnection(self, commands):
-        """XXX
+        """
+        XXX
 
-        @returns: A tuple of two L{Deferred}s:
+        @return: A tuple of two L{Deferred}s:
                   - L{Deferred} L{IFinishableConsumer}. You must call
                     the C{finish} method on the IFinishableConsumer when the file
                     is completely transferred.
@@ -2103,7 +2109,9 @@ class FTPClient(FTPClientBasic):
         return d
 
     def generatePortCommand(self, portCmd):
-        """(Private) Generates the text of a given PORT command"""
+        """
+        (Private) Generates the text of a given PORT command.
+        """
 
         # The problem is that we don't create the listening port until we need
         # it for various reasons, and so we have to muck about to figure out
@@ -2135,12 +2143,15 @@ class FTPClient(FTPClientBasic):
         portCmd.text = 'PORT ' + encodeHostPort(host, port)
 
     def escapePath(self, path):
-        """Returns a FTP escaped path (replace newlines with nulls)"""
+        """
+        Returns a FTP escaped path (replace newlines with nulls).
+        """
         # Escape newline characters
         return path.replace('\n', '\0')
 
     def retrieveFile(self, path, protocol, offset=0):
-        """Retrieve a file from the given path
+        """
+        Retrieve a file from the given path
 
         This method issues the 'RETR' FTP command.
 
@@ -2151,7 +2162,7 @@ class FTPClient(FTPClientBasic):
         @param protocol: a L{Protocol} instance.
         @param offset: offset to start downloading from
 
-        @returns: L{Deferred}
+        @return: L{Deferred}
         """
         cmds = ['RETR ' + self.escapePath(path)]
         if offset:
@@ -2161,11 +2172,12 @@ class FTPClient(FTPClientBasic):
     retr = retrieveFile
 
     def storeFile(self, path, offset=0):
-        """Store a file at the given path.
+        """
+        Store a file at the given path.
 
         This method issues the 'STOR' FTP command.
 
-        @returns: A tuple of two L{Deferred}s:
+        @return: A tuple of two L{Deferred}s:
                   - L{Deferred} L{IFinishableConsumer}. You must call
                     the C{finish} method on the IFinishableConsumer when the file
                     is completely transferred.
@@ -2179,7 +2191,8 @@ class FTPClient(FTPClientBasic):
     stor = storeFile
 
     def list(self, path, protocol):
-        """Retrieve a file listing into the given protocol instance.
+        """
+        Retrieve a file listing into the given protocol instance.
 
         This method issues the 'LIST' FTP command.
 
@@ -2188,14 +2201,15 @@ class FTPClient(FTPClientBasic):
             L{FTPFileListProtocol} instance.  It can cope with most common file
             listing formats.
 
-        @returns: L{Deferred}
+        @return: L{Deferred}
         """
         if path is None:
             path = ''
         return self.receiveFromConnection(['LIST ' + self.escapePath(path)], protocol)
 
     def nlst(self, path, protocol):
-        """Retrieve a short file listing into the given protocol instance.
+        """
+        Retrieve a short file listing into the given protocol instance.
 
         This method issues the 'NLST' FTP command.
 
@@ -2209,30 +2223,82 @@ class FTPClient(FTPClientBasic):
         return self.receiveFromConnection(['NLST ' + self.escapePath(path)], protocol)
 
     def cwd(self, path):
-        """Issues the CWD (Change Working Directory) command.
+        """
+        Issues the CWD (Change Working Directory) command. It's also
+        available as changeDirectory, which parses the result.
 
-        @returns: a L{Deferred} that will be called when done.
+        @return: a L{Deferred} that will be called when done.
         """
         return self.queueStringCommand('CWD ' + self.escapePath(path))
 
-    def cdup(self):
-        """Issues the CDUP (Change Directory UP) command.
+    def changeDirectory(self, path):
+        """
+        Change the directory on the server and parse the result to determine
+        if it was successful or not.
 
-        @returns: a L{Deferred} that will be called when done.
+        @type path: C{str}
+        @param path: The path to which to change.
+
+        @return: a L{Deferred} which will be called back when the directory
+            change has succeeded or and errbacked if an error occurrs.
+        """
+        def cbParse(result):
+            try:
+                # The only valid code is 250
+                if int(result[0].split(' ', 1)[0]) == 250:
+                    return True
+                else:
+                    raise ValueError
+            except (IndexError, ValueError), e:
+                return failure.Failure(CommandFailed(result))
+        return self.cwd(path).addCallback(cbParse)
+
+    def cdup(self):
+        """
+        Issues the CDUP (Change Directory UP) command.
+
+        @return: a L{Deferred} that will be called when done.
         """
         return self.queueStringCommand('CDUP')
 
     def pwd(self):
-        """Issues the PWD (Print Working Directory) command.
+        """
+        Issues the PWD (Print Working Directory) command.
 
-        @returns: a L{Deferred} that will be called when done.  It is up to the
+        The L{getDirectory} does the same job but automatically parses the
+        result.
+
+        @return: a L{Deferred} that will be called when done.  It is up to the
             caller to interpret the response, but the L{parsePWDResponse} method
             in this module should work.
         """
         return self.queueStringCommand('PWD')
 
+    def getDirectory(self):
+        """
+        Returns the current remote directory.
+
+        @return: a L{Deferred} that will be called back with a C{str} giving
+            the remote directory or which will errback with L{CommandFailed}
+            if an error response is returned.
+        """
+        def cbParse(result):
+            try:
+                # The only valid code is 257
+                if int(result[0].split(' ', 1)[0]) != 257:
+                    raise ValueError
+            except (IndexError, ValueError), e:
+                return failure.Failure(CommandFailed(result))
+            path = parsePWDResponse(result[0])
+            if path is None:
+                return failure.Failure(CommandFailed(result))
+            return path
+        return self.pwd().addCallback(cbParse)
+
     def quit(self):
-        """Issues the QUIT command."""
+        """
+        Issues the QUIT command.
+        """
         return self.queueStringCommand('QUIT')
 
 

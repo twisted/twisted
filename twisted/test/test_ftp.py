@@ -1209,6 +1209,99 @@ class FTPClientTestCase(unittest.TestCase):
         return d
 
 
+    def test_changeDirectory(self):
+        """
+        Test the changeDirectory method.
+
+        L{ftp.FTPClient.changeDirectory} should return a Deferred which fires
+        with True if succeeded.
+        """
+        def cbCd(res):
+            self.assertEquals(res, True)
+
+        self._testLogin()
+        d = self.client.changeDirectory("bar/foo").addCallback(cbCd)
+        self.assertEquals(self.transport.value(), 'CWD bar/foo\r\n')
+        self.client.lineReceived('250 Requested File Action Completed OK')
+        return d
+
+
+    def test_failedChangeDirectory(self):
+        """
+        Test a failure in the changeDirectory method.
+
+        The behaviour here is the same as a failed CWD.
+        """
+        self._testLogin()
+        d = self.client.changeDirectory("bar/foo")
+        self.assertFailure(d, ftp.CommandFailed)
+        self.assertEquals(self.transport.value(), 'CWD bar/foo\r\n')
+        self.client.lineReceived('550 bar/foo: No such file or directory')
+        return d
+
+
+    def test_strangeFailedChangeDirectory(self):
+        """
+        Test a strange failure in changeDirectory method.
+
+        L{ftp.FTPClient.changeDirectory} is stricter than CWD as it checks
+        code 250 for success.
+        """
+        self._testLogin()
+        d = self.client.changeDirectory("bar/foo")
+        self.assertFailure(d, ftp.CommandFailed)
+        self.assertEquals(self.transport.value(), 'CWD bar/foo\r\n')
+        self.client.lineReceived('252 I do what I want !')
+        return d
+
+
+    def test_getDirectory(self):
+        """
+        Test the getDirectory method.
+
+        L{ftp.FTPClient.getDirectory} should return a Deferred which fires with
+        the current directory on the server. It wraps PWD command.
+        """
+        def cbGet(res):
+            self.assertEquals(res, "/bar/baz")
+
+        self._testLogin()
+        d = self.client.getDirectory().addCallback(cbGet)
+        self.assertEquals(self.transport.value(), 'PWD\r\n')
+        self.client.lineReceived('257 "/bar/baz"')
+        return d
+
+
+    def test_failedGetDirectory(self):
+        """
+        Test a failure in getDirectory method.
+
+        The behaviour should be the same as PWD.
+        """
+        self._testLogin()
+        d = self.client.getDirectory()
+        self.assertFailure(d, ftp.CommandFailed)
+        self.assertEquals(self.transport.value(), 'PWD\r\n')
+        self.client.lineReceived('550 /bar/baz: No such file or directory')
+        return d
+
+
+    def test_anotherFailedGetDirectory(self):
+        """
+        Test a different failure in getDirectory method.
+
+        The response should be quoted to be parsed, so it returns an error
+        otherwise.
+        """
+        self._testLogin()
+        d = self.client.getDirectory()
+        self.assertFailure(d, ftp.CommandFailed)
+        self.assertEquals(self.transport.value(), 'PWD\r\n')
+        self.client.lineReceived('257 /bar/baz')
+        return d
+
+
+
 class DummyTransport:
     def write(self, bytes):
         pass
