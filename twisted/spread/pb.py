@@ -68,7 +68,6 @@ import md5
 import random
 import new
 import types
-import warnings
 
 # Twisted Imports
 from twisted.python import log, failure
@@ -863,12 +862,12 @@ class Broker(banana.Banana):
                 log.msg("Peer will receive following PB traceback:", isError=True)
                 f = CopyableFailure()
                 self._sendError(f, requestID)
-            log.deferr()
+            log.err()
         else:
             if answerRequired:
                 if isinstance(netResult, defer.Deferred):
                     args = (requestID,)
-                    netResult.addCallbacks(self._sendAnswer, self._sendFailure,
+                    netResult.addCallbacks(self._sendAnswer, self._sendFailureOrError,
                                            callbackArgs=args, errbackArgs=args)
                     # XXX Should this be done somewhere else?
                 else:
@@ -894,6 +893,16 @@ class Broker(banana.Banana):
     ##
     # failure
     ##
+    def _sendFailureOrError(self, fail, requestID):
+        """
+        Call L{_sendError} or L{_sendFailure}, depending on whether C{fail}
+        represents an L{Error} subclass or not.
+        """
+        if fail.check(Error) is None:
+            self._sendFailure(fail, requestID)
+        else:
+            self._sendError(fail, requestID)
+
 
     def _sendFailure(self, fail, requestID):
         """Log error and then send it."""
