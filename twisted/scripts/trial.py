@@ -136,8 +136,8 @@ class Options(usage.Options, app.ReactorSelectionMixin):
 
     def opt_coverage(self):
         """
-        Generate coverage information in the given directory (relative to
-        trial temporary working directory). Requires Python 2.3.3.
+        Generate coverage information in the _trial_temp/coverage. Requires
+        Python 2.3.3.
         """
         coverdir = 'coverage'
         print "Setting coverage directory to %s." % (coverdir,)
