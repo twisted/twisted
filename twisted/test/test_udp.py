@@ -5,8 +5,8 @@
 #
 from twisted.trial import unittest, util
 
-from twisted.internet import protocol, reactor, error, defer, interfaces, address
-from twisted.python import log, failure, runtime
+from twisted.internet import protocol, reactor, error, defer, interfaces
+from twisted.python import failure, runtime
 
 
 class Mixin:
@@ -446,7 +446,7 @@ class UDPTestCase(unittest.TestCase):
             Flush the exceptions which the reactor should have logged and make
             sure they're actually there.
             """
-            errs = log.flushErrors(BadClientError)
+            errs = self.flushLoggedErrors(BadClientError)
             self.assertEquals(len(errs), 2, "Incorrectly found %d errors, expected 2" % (len(errs),))
         finalDeferred.addCallback(cbCompleted)
 
@@ -586,7 +586,7 @@ class ReactorShutdownInteraction(unittest.TestCase):
             # number of horrible errors might occur.  As long as the reactor
             # doesn't hang, this test is satisfied.  (There may be room for
             # another, stricter test.)
-            log.flushErrors()
+            self.flushLoggedErrors()
         finished.addCallback(flushErrors)
         self.server.transport.write('\0' * 64, ('127.0.0.1',
                                     self.server.transport.getHost().port))
