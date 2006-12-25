@@ -159,7 +159,7 @@ class SingleUseFactory(protocol.ClientFactory):
     def clientConnectionFailed(self, connector, reason):
         self.reasonFailed = reason
         return
-    
+
 THING_I_DONT_UNDERSTAND = 'gwebol nargo'
 class ThingIDontUnderstandError(Exception):
     pass
@@ -257,6 +257,19 @@ class DeferredSymmetricCommandProtocol(SimpleSymmetricCommandProtocol):
         raise UnknownProtocol(name)
     TestSwitchProto.responder(switchit)
 
+class BadNoAnswerCommandProtocol(SimpleSymmetricCommandProtocol):
+    def badResponder(self, hello, From, optional=None, Print=None,
+                     mixedCase=None, dash_arg=None, underscore_arg=None):
+        """
+        This responder does nothing and forgets to return a dictionary.
+        """
+    NoAnswerHello.responder(badResponder)
+
+class NoAnswerCommandProtocol(SimpleSymmetricCommandProtocol):
+    def goodNoAnswerResponder(self, hello, From, optional=None, Print=None,
+                              mixedCase=None, dash_arg=None, underscore_arg=None):
+        return dict(hello=hello+"-noanswer")
+    NoAnswerHello.responder(goodNoAnswerResponder)
 
 def connectedServerAndClient(ServerClass=SimpleSymmetricProtocol,
                              ClientClass=SimpleSymmetricProtocol,
@@ -657,6 +670,41 @@ class AMPTest(unittest.TestCase):
         self.failIf(s.greeted)
 
 
+    def test_noAnswerResponderBadAnswer(self):
+        """
+        Verify that responders of requiresAnswer=False commands have to return
+        a dictionary anyway.
+
+        (requiresAnswer is a hint from the _client_ - the server may be called
+        upon to answer commands in any case, if the client wants to know when
+        they complete.)
+        """
+        c, s, p = connectedServerAndClient(
+            ServerClass=BadNoAnswerCommandProtocol,
+            ClientClass=SimpleSymmetricCommandProtocol)
+        c.callRemote(NoAnswerHello, hello="hello")
+        p.flush()
+        le = self.flushLoggedErrors(amp.BadLocalReturn)
+        self.assertEquals(len(le), 1)
+
+
+    def test_noAnswerResponderAskedForAnswer(self):
+        """
+        Verify that responders with requiresAnswer=False will actually respond
+        if the client sets requiresAnswer=True.  In other words, verify that
+        requiresAnswer is a hint honored only by the client.
+        """
+        c, s, p = connectedServerAndClient(
+            ServerClass=NoAnswerCommandProtocol,
+            ClientClass=SimpleSymmetricCommandProtocol)
+        L = []
+        c.callRemote(Hello, hello="Hello!").addCallback(L.append)
+        p.flush()
+        self.assertEquals(len(L), 1)
+        self.assertEquals(L, [dict(hello="Hello!-noanswer",
+                                   Print=None)])  # Optional response argument
+
+
     def test_ampListCommand(self):
         """
         Test encoding of an argument that uses the AmpList encoding.
@@ -926,7 +974,7 @@ class TLSTest(unittest.TestCase):
         d = cli.callRemote(SecuredPing).addCallback(L.append)
         p.flush()
         # once for client once for server
-        self.assertEquals(okc.verifyCount, 2) 
+        self.assertEquals(okc.verifyCount, 2)
         L = []
         d = cli.callRemote(SecuredPing).addCallback(L.append)
         p.flush()

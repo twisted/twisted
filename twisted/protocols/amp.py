@@ -773,12 +773,11 @@ class _AmpParserBase(_DispatchMixin):
         @param commandType: a subclass of Command.
         @type commandType: L{type}
 
-        @param a: Positional (special) arguments taken by the command.  Special
-        parameters will typically not be sent over the wire.  Generally, only
-        commands which do things other than send messages over the wire will
-        use positional parameters.  The only such command included with AMP is
+        @param a: Positional (special) parameters taken by the command.
+        Positional parameters will typically not be sent over the wire.  The
+        only command included with AMP which uses positional parameters is
         L{ProtocolSwitchCommand}, which takes the protocol that will be
-        switched to as its positional parameter.
+        switched to as its first argument.
 
         @param kw: Keyword arguments taken by the command.  These are the
         arguments declared in the command's 'arguments' attribute.  They will
@@ -1111,7 +1110,11 @@ class Command:
     Defaults to a plain vanilla L{Box}.
 
     @ivar requiresAnswer: a boolean; defaults to True.  Set it to False on your
-    subclass if you want callRemote to return None.
+    subclass if you want callRemote to return None.  Note: this is a hint only
+    to the client side of the protocol.  The return-type of a command responder
+    method must always be a dictionary adhering to the contract specified by
+    L{response}, because clients are always free to request a response if they
+    want one.
     """
 
     class __metaclass__(type):
@@ -1214,10 +1217,11 @@ class Command:
         the behavior is undefined.
 
         @param methodfunc: A function which will later become a method, which
-        has a keyword signature compatible with my argument list and returns
-        something compatible with my result list.
+        has a keyword signature compatible with this command's L{argument} list
+        and returns a dictionary with a set of keys compatible with this
+        command's L{response} list.
 
-        @return: my methodfunc parameter
+        @return: the methodfunc parameter.
         """
         _RESPONDER_METACLASS_HELPER.append((cls, methodfunc))
         return methodfunc
