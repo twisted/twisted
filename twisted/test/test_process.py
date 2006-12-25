@@ -16,7 +16,6 @@ import os
 import popen2
 import sys
 import signal
-import shutil
 import warnings
 from pprint import pformat
 
@@ -1004,66 +1003,74 @@ class Win32ProcessTestCase(SignalMixin, unittest.TestCase):
         self.assertRaises(ValueError, reactor.spawnProcess, p, pyExe, pyArgs, childFDs={1:'r'})
 
 class UtilTestCase(unittest.TestCase):
-    def setUpClass(klass):
+    """
+    Tests for process-related helper functions (currently only
+    L{procutils.which}.
+    """
+    def setUp(self):
+        """
+        Create several directories and files, some of which are executable
+        and some of which are not.  Save the current PATH setting.
+        """
         j = os.path.join
-        foobar = j("foo", "bar")
-        foobaz = j("foo", "baz")
-        bazfoo = j("baz", "foo")
-        barfoo = j("baz", "bar")
 
-        for d in "foo", foobar, foobaz, "baz", bazfoo, barfoo:
-            if os.path.exists(d):
-                shutil.rmtree(d, True)
-            os.mkdir(d)
+        base = self.mktemp()
 
-        f = file(j(foobaz, "executable"), "w")
-        f.close()
-        os.chmod(j(foobaz, "executable"), 0700)
+        self.foo = j(base, "foo")
+        self.baz = j(base, "baz")
+        self.foobar = j(self.foo, "bar")
+        self.foobaz = j(self.foo, "baz")
+        self.bazfoo = j(self.baz, "foo")
+        self.bazbar = j(self.baz, "bar")
 
-        f = file(j("foo", "executable"), "w")
-        f.close()
-        os.chmod(j("foo", "executable"), 0700)
+        for d in self.foobar, self.foobaz, self.bazfoo, self.bazbar:
+            os.makedirs(d)
 
-        f = file(j(bazfoo, "executable"), "w")
-        f.close()
-        os.chmod(j(bazfoo, "executable"), 0700)
+        for name, mode in [(j(self.foobaz, "executable"), 0700),
+                           (j(self.foo, "executable"), 0700),
+                           (j(self.bazfoo, "executable"), 0700),
+                           (j(self.bazfoo, "executable.bin"), 0700),
+                           (j(self.bazbar, "executable"), 0)]:
+            f = file(name, "w")
+            f.close()
+            os.chmod(name, mode)
 
-        f = file(j(bazfoo, "executable.bin"), "w")
-        f.close()
-        os.chmod(j(bazfoo, "executable.bin"), 0700)
-
-        f = file(j(barfoo, "executable"), "w")
-        f.close()
-
-        klass.oldPath = os.environ['PATH']
-        os.environ['PATH'] = os.pathsep.join((foobar, foobaz, bazfoo, barfoo))
-
-    def tearDownClass(klass):
-        j = os.path.join
-        os.environ['PATH'] = klass.oldPath
-        foobar = j("foo", "bar")
-        foobaz = j("foo", "baz")
-        bazfoo = j("baz", "foo")
-        barfoo = j("baz", "bar")
+        self.oldPath = os.environ.get('PATH', None)
+        os.environ['PATH'] = os.pathsep.join((
+            self.foobar, self.foobaz, self.bazfoo, self.bazbar))
 
 
-        os.remove(j(foobaz, "executable"))
-        os.remove(j("foo", "executable"))
-        os.remove(j(bazfoo, "executable"))
-        os.remove(j(bazfoo, "executable.bin"))
-        os.remove(j(barfoo, "executable"))
+    def tearDown(self):
+        """
+        Restore the saved PATH setting.
+        """
+        if self.oldPath is None:
+            try:
+                del os.environ['PATH']
+            except KeyError:
+                pass
+        else:
+            os.environ['PATH'] = self.oldPath
 
-        for d in foobar, foobaz, bazfoo, barfoo, "foo", "baz":
-            os.rmdir(d)
+
+    def test_whichWithoutPATH(self):
+        """
+        Test that if C{os.environ} does not have a C{'PATH'} key,
+        L{procutils.which} returns an empty list.
+        """
+        del os.environ['PATH']
+        self.assertEqual(procutils.which("executable"), [])
+
 
     def testWhich(self):
         j = os.path.join
         paths = procutils.which("executable")
-        expectedPaths = [j("foo", "baz", "executable"),
-                         j("baz", "foo", "executable")]
+        expectedPaths = [j(self.foobaz, "executable"),
+                         j(self.bazfoo, "executable")]
         if runtime.platform.isWindows():
-            expectedPaths.append(j("baz", "bar", "executable"))
+            expectedPaths.append(j(self.bazbar, "executable"))
         self.assertEquals(paths, expectedPaths)
+
 
     def testWhichPathExt(self):
         j = os.path.join
@@ -1076,12 +1083,14 @@ class UtilTestCase(unittest.TestCase):
                 del os.environ['PATHEXT']
             else:
                 os.environ['PATHEXT'] = old
-        expectedPaths = [j("foo", "baz", "executable"),
-                         j("baz", "foo", "executable"),
-                         j("baz", "foo", "executable.bin")]
+        expectedPaths = [j(self.foobaz, "executable"),
+                         j(self.bazfoo, "executable"),
+                         j(self.bazfoo, "executable.bin")]
         if runtime.platform.isWindows():
-            expectedPaths.append(j("baz", "bar", "executable"))
+            expectedPaths.append(j(self.bazbar, "executable"))
         self.assertEquals(paths, expectedPaths)
+
+
 
 class ClosingPipesProcessProtocol(protocol.ProcessProtocol):
     output = ''
