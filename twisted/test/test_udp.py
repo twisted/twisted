@@ -5,8 +5,9 @@
 #
 from twisted.trial import unittest, util
 
+from twisted.internet.defer import Deferred, gatherResults, maybeDeferred
 from twisted.internet import protocol, reactor, error, defer, interfaces
-from twisted.python import failure, runtime
+from twisted.python import runtime
 
 
 class Mixin:
@@ -30,9 +31,9 @@ class Mixin:
 
 
 class Server(Mixin, protocol.DatagramProtocol):
-
     packetReceived = None
     refused = 0
+
 
     def datagramReceived(self, data, addr):
         self.packets.append((data, addr))
@@ -220,30 +221,49 @@ class OldConnectedUDPTestCase(PortCleanerUpper):
                       category=DeprecationWarning)]
 
 
-    def testConnectionRefused(self):
-        # assume no one listening on port 80 UDP
+    def test_connectionRefused(self):
+        """
+        Test that using the connected UDP API will deliver connection refused
+        notification when packets are sent to an address at which no one is
+        listening.
+        """
+        # XXX - assume no one listening on port 80 UDP
         client = Client()
-        port = reactor.connectUDP("127.0.0.1", 80, client)
+        clientStarted = client.startedDeferred = Deferred()
         server = Server()
-        port2 = reactor.listenUDP(0, server, interface="127.0.0.1")
-        reactor.iterate()
-        reactor.iterate()
-        reactor.iterate()
-        client.transport.write("a")
-        client.transport.write("b")
-        server.transport.write("c", ("127.0.0.1", 80))
-        server.transport.write("d", ("127.0.0.1", 80))
-        server.transport.write("e", ("127.0.0.1", 80))
-        server.transport.write("toserver", (port2.getHost().host,
-                                            port2.getHost().port))
-        server.transport.write("toclient", (port.getHost().host,
-                                            port.getHost().port))
-        reactor.iterate(); reactor.iterate()
-        self.assertEquals(client.refused, 1)
-        port.stopListening()
-        port2.stopListening()
-        reactor.iterate(); reactor.iterate()
-    testConnectionRefused.suppress = [
+        serverStarted = server.startedDeferred = Deferred()
+        started = gatherResults([clientStarted, serverStarted])
+
+        clientPort = reactor.connectUDP("127.0.0.1", 80, client)
+        serverPort = reactor.listenUDP(0, server, interface="127.0.0.1")
+
+        def cbStarted(ignored):
+            clientRefused = client.startedDeferred = Deferred()
+
+            client.transport.write("a")
+            client.transport.write("b")
+            server.transport.write("c", ("127.0.0.1", 80))
+            server.transport.write("d", ("127.0.0.1", 80))
+            server.transport.write("e", ("127.0.0.1", 80))
+
+            c = clientPort.getHost()
+            s = serverPort.getHost()
+            server.transport.write("toserver", (s.host, s.port))
+            server.transport.write("toclient", (c.host, c.port))
+
+            return self.assertFailure(clientRefused, error.ConnectionRefusedError)
+        started.addCallback(cbStarted)
+
+        def cleanup(passthrough):
+            result = gatherResults([
+                maybeDeferred(clientPort.stopListening),
+                maybeDeferred(serverPort.stopListening)])
+            result.addCallback(lambda ign: passthrough)
+            return result
+
+        started.addBoth(cleanup)
+        return started
+    test_connectionRefused.suppress = [
         util.suppress(message='use listenUDP and then transport.connect',
                       category=DeprecationWarning)]
 
@@ -596,38 +616,21 @@ class ReactorShutdownInteraction(unittest.TestCase):
 
 class MulticastTestCase(unittest.TestCase):
 
-    def _resultSet(self, result, l):
-        l.append(result)
-
-    def runUntilSuccess(self, method, *args, **kwargs):
-        l = []
-        d = method(*args, **kwargs)
-        d.addCallback(self._resultSet, l).addErrback(self._resultSet, l)
-        while not l:
-            reactor.iterate()
-        if isinstance(l[0], failure.Failure):
-            raise l[0].value
-
     def setUp(self):
         self.server = Server()
         self.client = Client()
         # multicast won't work if we listen over loopback, apparently
         self.port1 = reactor.listenMulticast(0, self.server)
         self.port2 = reactor.listenMulticast(0, self.client)
-        reactor.iterate()
-        reactor.iterate()
-        self.client.transport.connect("127.0.0.1",
-                                      self.server.transport.getHost().port)
+        self.client.transport.connect(
+            "127.0.0.1", self.server.transport.getHost().port)
+
 
     def tearDown(self):
-        self.port1.stopListening()
-        self.port2.stopListening()
-        del self.server
-        del self.client
-        del self.port1
-        del self.port2
-        reactor.iterate()
-        reactor.iterate()
+        return gatherResults([
+            maybeDeferred(self.port1.stopListening),
+            maybeDeferred(self.port2.stopListening)])
+
 
     def testTTL(self):
         for o in self.client, self.server:
@@ -635,81 +638,168 @@ class MulticastTestCase(unittest.TestCase):
             o.transport.setTTL(2)
             self.assertEquals(o.transport.getTTL(), 2)
 
-    def testLoopback(self):
+
+    def test_loopback(self):
+        """
+        Test that after loopback mode has been set, multicast packets are
+        delivered to their sender.
+        """
         self.assertEquals(self.server.transport.getLoopbackMode(), 1)
-        self.runUntilSuccess(self.server.transport.joinGroup, "225.0.0.250")
-        self.server.transport.write("hello",
-                                    ("225.0.0.250",
-                                     self.server.transport.getHost().port))
-        reactor.iterate()
-        self.assertEquals(len(self.server.packets), 1)
-        self.server.transport.setLoopbackMode(0)
-        self.assertEquals(self.server.transport.getLoopbackMode(), 0)
-        self.server.transport.write("hello",
-                                    ("225.0.0.250",
-                                     self.server.transport.getHost().port))
-        reactor.iterate()
-        self.assertEquals(len(self.server.packets), 1)
+        addr = self.server.transport.getHost()
+        joined = self.server.transport.joinGroup("225.0.0.250")
 
-    def testInterface(self):
-        for o in self.client, self.server:
-            self.assertEquals(o.transport.getOutgoingInterface(), "0.0.0.0")
-            self.runUntilSuccess(o.transport.setOutgoingInterface, "127.0.0.1")
-            self.assertEquals(o.transport.getOutgoingInterface(), "127.0.0.1")
+        def cbJoined(ignored):
+            d = self.server.packetReceived = Deferred()
+            self.server.transport.write("hello", ("225.0.0.250", addr.port))
+            return d
+        joined.addCallback(cbJoined)
 
-    def testJoinLeave(self):
-        for o in self.client, self.server:
-            self.runUntilSuccess(o.transport.joinGroup, "225.0.0.250")
-            self.runUntilSuccess(o.transport.leaveGroup, "225.0.0.250")
+        def cbPacket(ignored):
+            self.assertEqual(len(self.server.packets), 1)
+            self.server.transport.setLoopbackMode(0)
+            self.assertEquals(self.server.transport.getLoopbackMode(), 0)
+            self.server.transport.write("hello", ("225.0.0.250", addr.port))
+
+            # This is fairly lame.
+            d = Deferred()
+            reactor.callLater(0, d.callback, None)
+            return d
+        joined.addCallback(cbPacket)
+
+        def cbNoPacket(ignored):
+            self.assertEqual(len(self.server.packets), 1)
+        joined.addCallback(cbNoPacket)
+
+        return joined
 
 
-    def testJoinFailure(self):
+    def test_interface(self):
+        """
+        Test C{getOutgoingInterface} and C{setOutgoingInterface}.
+        """
+        self.assertEqual(
+            self.client.transport.getOutgoingInterface(), "0.0.0.0")
+        self.assertEqual(
+            self.server.transport.getOutgoingInterface(), "0.0.0.0")
+
+        d1 = self.client.transport.setOutgoingInterface("127.0.0.1")
+        d2 = self.server.transport.setOutgoingInterface("127.0.0.1")
+        result = gatherResults([d1, d2])
+
+        def cbInterfaces(ignored):
+            self.assertEqual(
+                self.client.transport.getOutgoingInterface(), "127.0.0.1")
+            self.assertEqual(
+                self.server.transport.getOutgoingInterface(), "127.0.0.1")
+        result.addCallback(cbInterfaces)
+        return result
+
+
+    def test_joinLeave(self):
+        """
+        Test that multicast a group can be joined and left.
+        """
+        d = self.client.transport.joinGroup("225.0.0.250")
+
+        def clientJoined(ignored):
+            return self.client.transport.leaveGroup("225.0.0.250")
+        d.addCallback(clientJoined)
+
+        def clientLeft(ignored):
+            return self.server.transport.joinGroup("225.0.0.250")
+        d.addCallback(clientLeft)
+
+        def serverJoined(ignored):
+            return self.server.transport.leaveGroup("225.0.0.250")
+        d.addCallback(serverJoined)
+
+        return d
+
+
+    def test_joinFailure(self):
+        """
+        Test that an attempt to join an address which is not a multicast
+        address fails with L{error.MulticastJoinError}.
+        """
         # 127.0.0.1 is not a multicast address, so joining it should fail.
         return self.assertFailure(
             self.client.transport.joinGroup("127.0.0.1"),
             error.MulticastJoinError)
-
     if runtime.platform.isWindows():
-        testJoinFailure.todo = "Windows' multicast is wonky"
+        test_joinFailure.todo = "Windows' multicast is wonky"
 
 
-    def testMulticast(self):
+    def test_multicast(self):
+        """
+        Test that a multicast group can be joined and messages sent to and
+        received from it.
+        """
         c = Server()
         p = reactor.listenMulticast(0, c)
-        self.runUntilSuccess(self.server.transport.joinGroup, "225.0.0.250")
-        c.transport.write("hello world",
-                          ("225.0.0.250",
-                           self.server.transport.getHost().port))
+        addr = self.server.transport.getHost()
 
-        iters = 0
-        while iters < 100 and len(self.server.packets) == 0:
-            reactor.iterate(0.05);
-            iters += 1
-        self.assertEquals(self.server.packets[0][0], "hello world")
-        p.stopListening()
+        joined = self.server.transport.joinGroup("225.0.0.250")
 
-    def testMultiListen(self):
-        c = Server()
-        p = reactor.listenMulticast(0, c, listenMultiple=True)
-        self.runUntilSuccess(self.server.transport.joinGroup, "225.0.0.250")
-        portno = p.getHost().port
-        c2 = Server()
-        p2 = reactor.listenMulticast(portno, c2, listenMultiple=True)
-        self.runUntilSuccess(self.server.transport.joinGroup, "225.0.0.250")
-        c.transport.write("hello world", ("225.0.0.250", portno))
-        d = defer.Deferred()
-        reactor.callLater(0.4, d.callback, None, c, c2, p, p2)
-        return d
+        def cbJoined(ignored):
+            d = self.server.packetReceived = Deferred()
+            c.transport.write("hello world", ("225.0.0.250", addr.port))
+            return d
+        joined.addCallback(cbJoined)
 
-    def _cbTestMultiListen(self, ignored, c, c2, p, p2):
-        self.assertEquals(c.packets[0][0], "hello world")
-        self.assertEquals(c2.packets[0][0], "hello world")
-        p.stopListening()
-        p2.stopListening()
+        def cbPacket(ignored):
+            self.assertEquals(self.server.packets[0][0], "hello world")
+        joined.addCallback(cbPacket)
 
-    testMultiListen.skip = ("on non-linux platforms it appears multiple "
-                            "processes can listen, but not multiple sockets "
-                            "in same process?")
+        def cleanup(passthrough):
+            result = maybeDeferred(p.stopListening)
+            result.addCallback(lambda ign: passthrough)
+            return result
+        joined.addCallback(cleanup)
+
+        return joined
+
+
+    def test_multiListen(self):
+        """
+        Test that multiple sockets can listen on the same multicast port and
+        that they both receive multicast messages directed to that address.
+        """
+        firstClient = Server()
+        firstPort = reactor.listenMulticast(
+            0, firstClient, listenMultiple=True)
+
+        portno = firstPort.getHost().port
+
+        secondClient = Server()
+        secondPort = reactor.listenMulticast(
+            portno, secondClient, listenMultiple=True)
+
+        joined = self.server.transport.joinGroup("225.0.0.250")
+
+        def serverJoined(ignored):
+            d1 = firstClient.packetReceived = Deferred()
+            d2 = secondClient.packetReceived = Deferred()
+            firstClient.transport.write("hello world", ("225.0.0.250", portno))
+            return gatherResults([d1, d2])
+        joined.addCallback(serverJoined)
+
+        def gotPackets(ignored):
+            self.assertEquals(firstClient.packets[0][0], "hello world")
+            self.assertEquals(secondClient.packets[0][0], "hello world")
+        joined.addCallback(gotPackets)
+
+        def cleanup(passthrough):
+            result = gatherResults([
+                maybeDeferred(firstPort.stopListening),
+                maybeDeferred(secondPort.stopListening)])
+            result.addCallback(lambda ign: passthrough)
+            return result
+        joined.addBoth(cleanup)
+        return joined
+    if runtime.platform.isWindows():
+        test_multiListen.skip = ("on non-linux platforms it appears multiple "
+                                 "processes can listen, but not multiple sockets "
+                                 "in same process?")
 
 if not interfaces.IReactorUDP(reactor, None):
     UDPTestCase.skip = "This reactor does not support UDP"
