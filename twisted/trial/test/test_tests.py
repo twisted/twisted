@@ -1,6 +1,5 @@
 import gc, StringIO, sys
 
-from twisted.python import log
 from twisted.trial import unittest, runner, reporter, util
 from twisted.trial.test import erroneous, suppression
 
@@ -173,58 +172,6 @@ class TestSkipClasses(unittest.TestCase, ResultsTestMixin):
         self.failUnlessEqual(expectedReasons, reasonsGiven)
 
 
-class TestSkipClassesRaised(unittest.TestCase, ResultsTestMixin):
-    class SkippedClass(unittest.TestCase):
-        def setUpClass(self):
-            raise unittest.SkipTest("class")
-        def setUp(self):
-            self.__class__._setUpRan = True
-        def tearDownClass(self):
-            self.__class__._tearDownClassRan = True
-        def test_skip1(self):
-            raise unittest.SkipTest('skip1')
-        def test_skip2(self):
-            raise RuntimeError("Ought to skip me")
-        test_skip2.skip = 'skip2'
-        def test_skip3(self):
-            pass
-        def test_skip4(self):
-            raise RuntimeError("Skip me too")
-
-    def setUp(self):
-        if hasattr(TestSkipClassesRaised.SkippedClass, 'skip'):
-            delattr(TestSkipClassesRaised.SkippedClass, 'skip')
-        self.loadSuite(TestSkipClassesRaised.SkippedClass)
-        TestSkipClassesRaised.SkippedClass._setUpRan = False
-        TestSkipClassesRaised.SkippedClass._tearDownClassRan = False
-
-    def test_counting(self):
-        self.assertCount(4)
-
-    def test_setUpRan(self):
-        self.suite(self.reporter)
-        self.failUnlessEqual(
-            TestSkipClassesRaised.SkippedClass._setUpRan, False)
-
-    def test_tearDownClassRan(self):
-        self.suite(self.reporter)
-        self.failUnlessEqual(
-            TestSkipClassesRaised.SkippedClass._tearDownClassRan, False)
-
-    def test_results(self):
-        self.suite(self.reporter)
-        self.failUnless(self.reporter.wasSuccessful())
-        self.failUnlessEqual(self.reporter.errors, [])
-        self.failUnlessEqual(self.reporter.failures, [])
-        self.failUnlessEqual(len(self.reporter.skips), 4)
-
-    def test_reasons(self):
-        self.suite(self.reporter)
-        expectedReasons = ['class', 'skip2', 'class', 'class']
-        # whitebox reporter
-        reasonsGiven = [ reason for test, reason in self.reporter.skips ]
-        self.failUnlessEqual(expectedReasons, reasonsGiven)
-
 
 class TestTodo(unittest.TestCase, ResultsTestMixin):
     class TodoTests(unittest.TestCase):
@@ -383,25 +330,30 @@ class _CleanUpReporter(reporter.Reporter):
         self.cleanerrs = errs
 
 
+
 class TestCleanup(unittest.TestCase):
     def setUp(self):
         self.result = _CleanUpReporter()
         self.loader = runner.TestLoader()
 
+
     def testLeftoverSockets(self):
-        suite = self.loader.loadMethod(
-            erroneous.SocketOpenTest.test_socketsLeftOpen)
+        suite = runner.ClassSuite(
+            [erroneous.SocketOpenTest('test_socketsLeftOpen')])
         suite.run(self.result)
         self.assert_(self.result.cleanerrs)
         self.assert_(isinstance(self.result.cleanerrs.value,
                                 util.DirtyReactorError))
 
+
     def testLeftoverPendingCalls(self):
-        suite = erroneous.ReactorCleanupTests('test_leftoverPendingCalls')
+        suite = runner.ClassSuite(
+            [erroneous.ReactorCleanupTests('test_leftoverPendingCalls')])
         suite.run(self.result)
         self.assert_(self.result.cleanerrs)
         self.assert_(isinstance(self.result.cleanerrs.value,
                                 util.PendingTimedCallsError))
+
 
 
 class BogusReporter(reporter.Reporter):
@@ -409,10 +361,6 @@ class BogusReporter(reporter.Reporter):
         super(BogusReporter, self).__init__(StringIO.StringIO(), 'default',
                                             False)
 
-    def upDownError(self, method, error, warn, printStatus):
-        super(BogusReporter, self).upDownError(method, error, False,
-                                               printStatus)
-        self.udeMethod = method
 
 
 class FixtureTest(unittest.TestCase):
@@ -422,8 +370,6 @@ class FixtureTest(unittest.TestCase):
 
     def testBrokenSetUp(self):
         self.loader.loadClass(erroneous.TestFailureInSetUp).run(self.reporter)
-        imi = self.reporter.udeMethod
-        self.assertEqual(imi, 'setUp')
         self.assert_(len(self.reporter.errors) > 0)
         self.assert_(isinstance(self.reporter.errors[0][1].value,
                                 erroneous.FoolishError))
@@ -431,37 +377,10 @@ class FixtureTest(unittest.TestCase):
     def testBrokenTearDown(self):
         suite = self.loader.loadClass(erroneous.TestFailureInTearDown)
         suite.run(self.reporter)
-        imi = self.reporter.udeMethod
-        self.assertEqual(imi, 'tearDown')
         errors = self.reporter.errors
         self.assert_(len(errors) > 0)
         self.assert_(isinstance(errors[0][1].value, erroneous.FoolishError))
 
-    def testBrokenSetUpClass(self):
-        suite = self.loader.loadClass(erroneous.TestFailureInSetUpClass)
-        suite.run(self.reporter)
-        imi = self.reporter.udeMethod
-        self.assertEqual(imi, 'setUpClass')
-        self.assert_(self.reporter.errors)
-
-    def testBrokenTearDownClass(self):
-        suite = self.loader.loadClass(erroneous.TestFailureInTearDownClass)
-        suite.run(self.reporter)
-        imi = self.reporter.udeMethod
-        self.assertEqual(imi, 'tearDownClass')
-
-
-class FixtureMetaTest(unittest.TestCase):
-    def test_testBrokenTearDownClass(self):
-        """FixtureTest.testBrokenTearDownClass succeeds when run twice
-        """
-        test = FixtureTest('testBrokenTearDownClass')
-        result = reporter.TestResult()
-        test(result)
-        self.failUnless(result.wasSuccessful())
-        result2 = reporter.TestResult()
-        test(result2)
-        self.failUnless(result2.wasSuccessful())
 
 
 class SuppressionTest(unittest.TestCase):
@@ -558,9 +477,11 @@ class TestGarbageCollectionDefault(GCMixin, unittest.TestCase):
         self.failUnlessEqual(self._collectCalled, ['setUp', 'test', 'tearDown'])
 
 
+
 class TestGarbageCollection(GCMixin, unittest.TestCase):
     def test_collectCalled(self):
-        """test gc.collect is called before and after each test
+        """
+        Test gc.collect is called before and after each test
         """
         test = TestGarbageCollection.BasicTest('test_foo')
         test.forceGarbageCollection = True
@@ -570,13 +491,16 @@ class TestGarbageCollection(GCMixin, unittest.TestCase):
             self._collectCalled,
             ['collect', 'setUp', 'test', 'tearDown', 'collect'])
 
+
     def test_collectCalledWhenTearDownClass(self):
-        """test gc.collect is called after tearDownClasss"""
+        """
+        Test gc.collect is called after tearDownClass
+        """
         tests = [TestGarbageCollection.ClassTest('test_1'),
                  TestGarbageCollection.ClassTest('test_2')]
         for t in tests:
             t.forceGarbageCollection = True
-        test = runner.TestSuite(tests)
+        test = runner.SharedClassSuite(tests)
         result = reporter.TestResult()
         test.run(result)
         # check that collect gets called after individual tests, and
@@ -584,7 +508,7 @@ class TestGarbageCollection(GCMixin, unittest.TestCase):
         self.failUnlessEqual(
             self._collectCalled,
             ['collect', 'test1', 'collect',
-             'collect', 'test2', 'tearDownClass', 'collect'])
+             'collect', 'test2', 'collect', 'tearDownClass', 'collect'])
 
 
 class TestUnhandledDeferred(unittest.TestCase):

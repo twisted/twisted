@@ -166,12 +166,38 @@ class LoaderTest(packages.SysPathManglingTest):
         self.failUnlessRaises(TypeError,
                               self.loader.loadMethod, ('foo', 'bar'))
 
+
     def test_loadClass(self):
         import sample
         suite = self.loader.loadClass(sample.FooTest)
         self.failUnlessEqual(2, suite.countTestCases())
         self.failUnlessEqual(['test_bar', 'test_foo'],
                              [test._testMethodName for test in suite._tests])
+        self.failUnless(isinstance(suite, runner.ClassSuite))
+
+
+    def test_loadClassWithSetUpClass(self):
+        """
+        Check that the loader creates a SharedClassSuite when loading from a
+        class with setUpClass.
+        """
+        from twisted.trial.test import erroneous
+        suite = self.loader.loadClass(erroneous.TestFailureInSetUpClass)
+        self.assertEqual([test._testMethodName for test in suite._tests],
+                         ['test_noop'])
+        self.failUnless(isinstance(suite, runner.SharedClassSuite))
+
+
+    def test_loadClassWithTearDownClass(self):
+        """
+        Check that the loader creates a SharedClassSuite when loading from a
+        class with tearDownClass.
+        """
+        from twisted.trial.test import erroneous
+        suite = self.loader.loadClass(erroneous.TestFailureInTearDownClass)
+        self.assertEqual([test._testMethodName for test in suite._tests],
+                         ['test_noop'])
+        self.failUnless(isinstance(suite, runner.SharedClassSuite))
 
 
     def test_loadWithoutForcedGarbageCollection(self):

@@ -147,7 +147,9 @@ class TestResult(pyunit.TestResult, object):
         self.successes.append((test,))
 
     def upDownError(self, method, error, warn, printStatus):
-        pass
+        warnings.warn("upDownError is deprecated since Twisted 2.5",
+                      category=DeprecationWarning, stacklevel=2)
+
 
     def cleanupErrors(self, errs):
         """Report an error that occurred during the cleanup between tests.
