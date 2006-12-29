@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.names.test.test_names -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2006 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -7,6 +7,13 @@
 Asynchronous client DNS
 
 API Stability: Unstable
+
+The functions exposed in this module can be used for asynchronous name
+resolution and dns queries.
+
+If you need to create a resolver with specific requirements, such as needing to
+do queries against a particular host, the L{createResolver} function will
+return an C{IResolver}.
 
 Future plans: Proper nameserver acquisition on Windows/MacOS,
 better caching, respect timeouts
@@ -64,7 +71,7 @@ class Resolver(common.ResolverBase):
         for modification and re-parsed if it is noticed to have changed.
 
         @type servers: C{list} of C{(str, int)} or C{None}
-        @param servers: If not None, interpreted as a list of addresses of
+        @param servers: If not C{None}, interpreted as a list of addresses of
         domain name servers to attempt to use for this lookup.  Addresses
         should be in dotted-quad form.  If specified, overrides C{resolv}.
 
@@ -409,7 +416,27 @@ class DNSClientFactory(protocol.ClientFactory):
 
 
 
-def createResolver(servers = None, resolvconf = None, hosts = None):
+def createResolver(servers=None, resolvconf=None, hosts=None):
+    """
+    Create and return a Resolver.
+
+    @type servers: C{list} of C{(str, int)} or C{None}
+    @param servers: If not C{None}, interpreted as a list of addresses of
+    domain name servers to attempt to use.  Addresses should be in dotted-quad
+    form.
+
+    @type resolvconf: C{str} or C{None}
+    @param resolvconf: If not C{None}, on posix systems will be interpreted as
+    an alternate resolv.conf to use. Will do nothing on windows systems. If
+    C{None}, /etc/resolv.conf will be used.
+
+    @type hosts: C{str} or C{None}
+    @param hosts: If not C{None}, an alternate hosts file to use. If C{None}
+    on posix systems, /etc/hosts will be used. On windows, C:\windows\hosts
+    will be used.
+
+    @rtype: C{IResolver}
+    """
     from twisted.names import resolve, cache, root, hosts as hostsModule
     if platform.getType() == 'posix':
         if resolvconf is None:
@@ -430,20 +457,357 @@ def createResolver(servers = None, resolvconf = None, hosts = None):
     return resolve.ResolverChain(L)
 
 theResolver = None
-def _makeLookup(method):
-    def lookup(*a, **kw):
-        global theResolver
-        if theResolver is None:
-            try:
-                theResolver = createResolver()
-            except ValueError:
-                theResolver = createResolver(servers=[('127.0.0.1', 53)])
+def getResolver():
+    """
+    Get a Resolver instance.
 
-        return getattr(theResolver, method)(*a, **kw)
-    return lookup
+    Create twisted.names.client.theResolver if it is C{None}, and then return
+    that value.
 
-for method in common.typeToMethod.values():
-    globals()[method] = _makeLookup(method)
-del method
+    @rtype: C{IResolver}
+    """
+    global theResolver
+    if theResolver is None:
+        try:
+            theResolver = createResolver()
+        except ValueError:
+            theResolver = createResolver(servers=[('127.0.0.1', 53)])
+    return theResolver
 
-getHostByName = _makeLookup('getHostByName')
+def getHostByName(name, timeout=None, effort=10):
+    """
+    Resolve a name to a valid ipv4 or ipv6 address.
+
+    Will errback with C{DNSQueryTimeoutError} on a timeout, C{DomainError} or
+    C{AuthoritativeDomainError} (or subclasses) on other errors.
+
+    @type name: C{str}
+    @param name: DNS name to resolve.
+
+    @type timeout: Sequence of C{int}
+    @param timeout: Number of seconds after which to reissue the query.
+    When the last timeout expires, the query is considered failed.
+
+    @type effort: C{int}
+    @param effort: How many times CNAME and NS records to follow while
+    resolving this name.
+
+    @rtype: C{Deferred}
+    """
+    return getResolver().getHostByName(name, timeout, effort)
+
+def lookupAddress(name, timeout=None):
+    """
+    Perform an A record lookup.
+
+    @type name: C{str}
+    @param name: DNS name to resolve.
+    
+    @type timeout: Sequence of C{int}
+    @param timeout: Number of seconds after which to reissue the query.
+    When the last timeout expires, the query is considered failed.
+    
+    @rtype: C{Deferred}
+    """
+    return getResolver().lookupAddress(name, timeout)
+
+def lookupIPV6Address(name, timeout=None):
+    """
+    Perform an AAAA record lookup.
+
+    @type name: C{str}
+    @param name: DNS name to resolve.
+    
+    @type timeout: Sequence of C{int}
+    @param timeout: Number of seconds after which to reissue the query.
+    When the last timeout expires, the query is considered failed.
+    
+    @rtype: C{Deferred}
+    """
+    return getResolver().lookupIPV6Address(name, timeout)
+
+def lookupAddress6(name, timeout=None):
+    """
+    Perform an A6 record lookup.
+
+    @type name: C{str}
+    @param name: DNS name to resolve.
+    
+    @type timeout: Sequence of C{int}
+    @param timeout: Number of seconds after which to reissue the query.
+    When the last timeout expires, the query is considered failed.
+    
+    @rtype: C{Deferred}
+    """
+    return getResolver().lookupAddress6(name, timeout)
+
+def lookupMailExchange(name, timeout=None):
+    """
+    Perform an MX record lookup.
+
+    @type name: C{str}
+    @param name: DNS name to resolve.
+    
+    @type timeout: Sequence of C{int}
+    @param timeout: Number of seconds after which to reissue the query.
+    When the last timeout expires, the query is considered failed.
+    
+    @rtype: C{Deferred}
+    """
+    return getResolver().lookupMailExchange(name, timeout)
+
+def lookupNameservers(name, timeout=None):
+    """
+    Perform an NS record lookup.
+
+    @type name: C{str}
+    @param name: DNS name to resolve.
+    
+    @type timeout: Sequence of C{int}
+    @param timeout: Number of seconds after which to reissue the query.
+    When the last timeout expires, the query is considered failed.
+    
+    @rtype: C{Deferred}
+    """
+    return getResolver().lookupNameservers(name, timeout)
+
+def lookupCanonicalName(name, timeout=None):
+    """
+    Perform a CNAME record lookup.
+
+    @type name: C{str}
+    @param name: DNS name to resolve.
+    
+    @type timeout: Sequence of C{int}
+    @param timeout: Number of seconds after which to reissue the query.
+    When the last timeout expires, the query is considered failed.
+    
+    @rtype: C{Deferred}
+    """
+    return getResolver().lookupCanonicalName(name, timeout)
+
+def lookupMailBox(name, timeout=None):
+    """
+    Perform an MB record lookup.
+
+    @type name: C{str}
+    @param name: DNS name to resolve.
+    
+    @type timeout: Sequence of C{int}
+    @param timeout: Number of seconds after which to reissue the query.
+    When the last timeout expires, the query is considered failed.
+    
+    @rtype: C{Deferred}
+    """
+    return getResolver().lookupMailBox(name, timeout)
+
+def lookupMailGroup(name, timeout=None):
+    """
+    Perform an MG record lookup.
+
+    @type name: C{str}
+    @param name: DNS name to resolve.
+    
+    @type timeout: Sequence of C{int}
+    @param timeout: Number of seconds after which to reissue the query.
+    When the last timeout expires, the query is considered failed.
+    
+    @rtype: C{Deferred}
+    """
+    return getResolver().lookupMailGroup(name, timeout)
+
+def lookupMailRename(name, timeout=None):
+    """
+    Perform an MR record lookup.
+
+    @type name: C{str}
+    @param name: DNS name to resolve.
+    
+    @type timeout: Sequence of C{int}
+    @param timeout: Number of seconds after which to reissue the query.
+    When the last timeout expires, the query is considered failed.
+    
+    @rtype: C{Deferred}
+    """
+    return getResolver().lookupMailRename(name, timeout)
+
+def lookupPointer(name, timeout=None):
+    """
+    Perform a PTR record lookup.
+
+    @type name: C{str}
+    @param name: DNS name to resolve.
+    
+    @type timeout: Sequence of C{int}
+    @param timeout: Number of seconds after which to reissue the query.
+    When the last timeout expires, the query is considered failed.
+    
+    @rtype: C{Deferred}
+    """
+    return getResolver().lookupPointer(name, timeout)
+
+def lookupAuthority(name, timeout=None):
+    """
+    Perform an SOA record lookup.
+
+    @type name: C{str}
+    @param name: DNS name to resolve.
+    
+    @type timeout: Sequence of C{int}
+    @param timeout: Number of seconds after which to reissue the query.
+    When the last timeout expires, the query is considered failed.
+    
+    @rtype: C{Deferred}
+    """
+    return getResolver().lookupAuthority(name, timeout)
+
+def lookupNull(name, timeout=None):
+    """
+    Perform a NULL record lookup.
+
+    @type name: C{str}
+    @param name: DNS name to resolve.
+    
+    @type timeout: Sequence of C{int}
+    @param timeout: Number of seconds after which to reissue the query.
+    When the last timeout expires, the query is considered failed.
+    
+    @rtype: C{Deferred}
+    """
+    return getResolver().lookupNull(name, timeout)
+
+def lookupWellKnownServices(name, timeout=None):
+    """
+    Perform a WKS record lookup.
+
+    @type name: C{str}
+    @param name: DNS name to resolve.
+    
+    @type timeout: Sequence of C{int}
+    @param timeout: Number of seconds after which to reissue the query.
+    When the last timeout expires, the query is considered failed.
+    
+    @rtype: C{Deferred}
+    """
+    return getResolver().lookupWellKnownServices(name, timeout)
+
+def lookupService(name, timeout=None):
+    """
+    Perform an SRV record lookup.
+
+    @type name: C{str}
+    @param name: DNS name to resolve.
+    
+    @type timeout: Sequence of C{int}
+    @param timeout: Number of seconds after which to reissue the query.
+    When the last timeout expires, the query is considered failed.
+    
+    @rtype: C{Deferred}
+    """
+    return getResolver().lookupService(name, timeout)
+
+def lookupHostInfo(name, timeout=None):
+    """
+    Perform a HINFO record lookup.
+
+    @type name: C{str}
+    @param name: DNS name to resolve.
+    
+    @type timeout: Sequence of C{int}
+    @param timeout: Number of seconds after which to reissue the query.
+    When the last timeout expires, the query is considered failed.
+    
+    @rtype: C{Deferred}
+    """
+    return getResolver().lookupHostInfo(name, timeout)
+
+def lookupMailboxInfo(name, timeout=None):
+    """
+    Perform an MINFO record lookup.
+
+    @type name: C{str}
+    @param name: DNS name to resolve.
+    
+    @type timeout: Sequence of C{int}
+    @param timeout: Number of seconds after which to reissue the query.
+    When the last timeout expires, the query is considered failed.
+    
+    @rtype: C{Deferred}
+    """
+    return getResolver().lookupMailboxInfo(name, timeout)
+
+def lookupText(name, timeout=None):
+    """
+    Perform a TXT record lookup.
+
+    @type name: C{str}
+    @param name: DNS name to resolve.
+    
+    @type timeout: Sequence of C{int}
+    @param timeout: Number of seconds after which to reissue the query.
+    When the last timeout expires, the query is considered failed.
+    
+    @rtype: C{Deferred}
+    """
+    return getResolver().lookupText(name, timeout)
+
+def lookupResponsibility(name, timeout=None):
+    """
+    Perform an RP record lookup.
+
+    @type name: C{str}
+    @param name: DNS name to resolve.
+    
+    @type timeout: Sequence of C{int}
+    @param timeout: Number of seconds after which to reissue the query.
+    When the last timeout expires, the query is considered failed.
+    
+    @rtype: C{Deferred}
+    """
+    return getResolver().lookupResponsibility(name, timeout)
+
+def lookupAFSDatabase(name, timeout=None):
+    """
+    Perform an AFSDB record lookup.
+
+    @type name: C{str}
+    @param name: DNS name to resolve.
+    
+    @type timeout: Sequence of C{int}
+    @param timeout: Number of seconds after which to reissue the query.
+    When the last timeout expires, the query is considered failed.
+    
+    @rtype: C{Deferred}
+    """
+    return getResolver().lookupAFSDatabase(name, timeout)
+
+def lookupZone(name, timeout=None):
+    """
+    Perform an AXFR record lookup.
+
+    @type name: C{str}
+    @param name: DNS name to resolve.
+    
+    @type timeout: C{int}
+    @param timeout: When this timeout expires, the query is considered failed.
+    
+    @rtype: C{Deferred}
+    """
+    # XXX: timeout here is not a list of ints, it is a single int.
+    return getResolver().lookupZone(name, timeout)
+
+def lookupAllRecords(name, timeout=None):
+    """
+    ALL_RECORD lookup.
+
+    @type name: C{str}
+    @param name: DNS name to resolve.
+    
+    @type timeout: Sequence of C{int}
+    @param timeout: Number of seconds after which to reissue the query.
+    When the last timeout expires, the query is considered failed.
+    
+    @rtype: C{Deferred}
+    """
+    return getResolver().lookupAllRecords(name, timeout)
+

@@ -12,7 +12,7 @@ def gotFailure(failure):
     failure.printTraceback()
     reactor.stop()
 
-gethostbyname = client.theResolver.getHostByName
-gethostbyname(sys.argv[1]).addCallbacks(gotResult, gotFailure)
+d = client.getHostByName(sys.argv[1])
+d.addCallbacks(gotResult, gotFailure)
 
 reactor.run()

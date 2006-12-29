@@ -25,7 +25,7 @@ except ValueError:
     sys.exit(1)
 
 resolver = client.Resolver('/etc/resolv.conf')
-d = resolver.lookupService('_%s._%s.%s' % (service, proto, domain), 1)
+d = resolver.lookupService('_%s._%s.%s' % (service, proto, domain), [1])
 d.addCallbacks(printAnswer, printFailure)
 
 reactor.run()
