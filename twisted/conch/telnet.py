@@ -1,4 +1,3 @@
-# -*- test-case-name: twisted.conch.test.test_telnet -*-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -159,11 +158,9 @@ class ITelnetProtocol(iinternet.IProtocol):
         """A command was received but not understood.
         """
 
-
     def unhandledSubnegotiation(bytes):
         """A subnegotiation command was received but not understood.
         """
-
 
     def enableLocal(option):
         """Enable the given option locally.
@@ -174,14 +171,12 @@ class ITelnetProtocol(iinternet.IProtocol):
         will be notified.
         """
 
-
     def enableRemote(option):
         """Indicate whether the peer should be allowed to enable this option.
 
         Returns True if the peer should be allowed to enable this option,
         False otherwise.
         """
-
 
     def disableLocal(option):
         """Disable the given option locally.
@@ -190,15 +185,9 @@ class ITelnetProtocol(iinternet.IProtocol):
         disabled.
         """
 
-
     def disableRemote(option):
         """Indicate that the peer has disabled this option.
-
-        Unlike enableRemote, this method cannot fail.  The option must be
-        disabled.
         """
-
-
 
 class ITelnetTransport(iinternet.ITransport):
     def do(option):
@@ -297,17 +286,16 @@ class TelnetProtocol(protocol.Protocol):
         pass
 
     def enableLocal(self, option):
-        return False
+        pass
 
     def enableRemote(self, option):
-        return False
+        pass
 
     def disableLocal(self, option):
-        raise NotImplementedError()
+        pass
 
     def disableRemote(self, option):
-        raise NotImplementedError()
-
+        pass
 
 
 class Telnet(protocol.Protocol):
@@ -673,46 +661,17 @@ class Telnet(protocol.Protocol):
     dontMap = {('no', False): dont_no_false,   ('no', True): dont_no_true,
                ('yes', False): dont_yes_false, ('yes', True): dont_yes_true}
 
-
     def enableLocal(self, option):
-        return False
-
+        return self.protocol.enableLocal(option)
 
     def enableRemote(self, option):
-        return False
-
+        return self.protocol.enableRemote(option)
 
     def disableLocal(self, option):
-        """
-        Locally disable an option which has previously been negotiated to
-        the enabled state.
-
-        This can B{only} be called after the option has been enabled.
-        L{Telnet.enableLocal} will never allow any option to be enabled, so
-        unless it is overridden, this method will never be called.  If
-        L{Telnet.enableLocal} is overridden to allow an option to be
-        enabled, this method must also be overridden to provide support for
-        disabling that option.
-        """
-        raise NotImplementedError(
-            "Base disableLocal cannot disable option %r" % (option,))
-
+        return self.protocol.disableLocal(option)
 
     def disableRemote(self, option):
-        """
-        Called when an option has been disabled on the peer.
-
-        This can B{only} be called after the option has been enabled. 
-        L{Telnet.enableRemote} will never allow any option to be enabled, so
-        unless it is overridden, this method will never be called.  If
-        L{Telnet.enableLocal} is overridden to allow an option to be
-        enabeld, this method must also be overridden to provide support for
-        disabling that option.
-        """
-        raise NotImplementedError(
-            "Base disableRemote cannot disable option %r" % (option,))
-
-
+        return self.protocol.disableRemote(option)
 
 class ProtocolTransportMixin:
     def write(self, bytes):

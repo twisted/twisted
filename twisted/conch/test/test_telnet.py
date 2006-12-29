@@ -11,57 +11,6 @@ from twisted.conch import telnet
 from twisted.trial import unittest
 from twisted.test import proto_helpers
 
-class TelnetTestCase(unittest.TestCase):
-    """
-    Tests for the Telnet protocol implementation.
-    """
-
-    # Just some byte value, used as the option we are trying to change the
-    # state of.
-    option = '\0'
-
-    def test_enableLocalRefused(self):
-        """
-        The vanilla telnet protocol implementation is aware of no options
-        and should refuse to enable any of them locally when asked.
-        """
-        protocol = telnet.Telnet()
-        self.failIf(
-            protocol.enableLocal(self.option),
-            "Should not have been able to enable option locally")
-
-
-    def test_enableRemoteRefused(self):
-        """
-        Like L{test_enableLocalRefused}, but for L{Telnet.enableRemote}.
-        """
-        protocol = telnet.Telnet()
-        self.failIf(
-            protocol.enableRemote(self.option),
-            "Should not have been allowed to enable option remotely")
-
-
-    def test_disableLocalExplodes(self):
-        """
-        The vanilla telnet protocol implementation is aware of no options and
-        will never allow an option to be enabled.  If a subclass overrides
-        L{Telnet.enableLocal} to allow an option to be enabled, it must also
-        override L{Telnet.disableLocal} to provide an implementation of
-        disabling that option.  If it does not, the base implementation should
-        signal this error very loudly.
-        """
-        protocol = telnet.Telnet()
-        self.assertRaises(NotImplementedError, protocol.disableLocal, self.option)
-
-
-    def test_disableRemoteExplodes(self):
-        """
-        Like L{test_disableLocalExplodes}, but for L{Telnet.disableRemote}.
-        """
-        protocol = telnet.Telnet()
-        self.assertRaises(NotImplementedError, protocol.disableRemote, self.option)
-
-
 class TestProtocol:
     implements(telnet.ITelnetProtocol)
 
@@ -113,14 +62,7 @@ class TestProtocol:
     def disableRemote(self, option):
         self.disabledRemote.append(option)
 
-
-
-class TelnetTransportTestCase(unittest.TestCase):
-    """
-    Tests for using the Telnet protocol implementation as a transport for a
-    higher level protocol.
-    """
-
+class TelnetTestCase(unittest.TestCase):
     def setUp(self):
         self.p = telnet.TelnetTransport(TestProtocol)
         self.t = proto_helpers.StringTransport()
