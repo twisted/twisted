@@ -57,6 +57,16 @@ class IReporter(zi.Interface):
         @param errs: a list of L{twisted.python.failure.Failure}s
         """
 
+    def upDownError(userMeth, warn=True, printStatus=True):
+        """called when an error occurs in a setUp* or tearDown* method
+        @param warn: indicates whether or not the reporter should emit a
+                     warning about the error
+        @type warn: Boolean
+        @param printStatus: indicates whether or not the reporter should
+                            print the name of the method and the status
+                            message appropriate for the type of error
+        @type printStatus: Boolean
+        """
 
     def addSuccess(test):
         """Record that test passed."""

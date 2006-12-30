@@ -4,22 +4,18 @@
 # See LICENSE for details.
 #
 # Maintainer: Jonathan Lange <jml@twistedmatrix.com>
+# Author: Robert Collins <robertc@robertcollins.net>
 
 
 import StringIO
 from zope.interface import implements
 
-from twisted import plugin
-from twisted.plugins import twisted_trial
-from twisted.python import failure, log, reflect
-from twisted.internet import defer
-
-from twisted.scripts import trial
-from twisted.trial import unittest, runner, reporter
 from twisted.trial.itrial import IReporter
-
-from twisted.trial.test import erroneous
-from twisted.trial.test.test_tests import ResultsTestMixin
+from twisted.trial import unittest, runner, reporter
+from twisted.python import failure, log, reflect
+from twisted.scripts import trial
+from twisted.plugins import twisted_trial
+from twisted import plugin
 
 
 pyunit = __import__('unittest')
@@ -78,6 +74,19 @@ class CapturingReporter(object):
         @param errs: a list of L{twisted.python.failure.Failure}s
         """
         self._calls.append('cleanupError')
+
+
+    def upDownError(self, userMeth, warn=True, printStatus=True):
+        """called when an error occurs in a setUp* or tearDown* method
+        @param warn: indicates whether or not the reporter should emit a
+                     warning about the error
+        @type warn: Boolean
+        @param printStatus: indicates whether or not the reporter should
+                            print the name of the method and the status
+                            message appropriate for the type of error
+        @type printStatus: Boolean
+        """
+        self._calls.append('upDownError')
 
 
     def addSuccess(self, test):
@@ -431,286 +440,3 @@ class TestErrorHolder(TestTestHolder):
         except ZeroDivisionError:
             error = failure.Failure()
         self.holder = runner.ErrorHolder(self.description, error)
-
-
-
-class TestSharedClassSuite(unittest.TestCase):
-    class MockTest(unittest.TestCase):
-        def setUpClass(self):
-            self.counter = 0
-            self.log.append('setUpClass')
-
-        def test_1(self):
-            self.log.append(1)
-            self.counter += 1
-
-        def test_2(self):
-            self.log.append(2)
-            self.counter += 1
-
-        def tearDownClass(self):
-            TestSharedClassSuite.counter = self.counter
-            self.log.append('tearDownClass')
-
-
-    def setUp(self):
-        self.result = reporter.TestResult()
-        self.MockTest.log = self.log = []
-
-
-    def test_logging(self):
-        """
-        Make sure the logging fixture works.
-        """
-        self.MockTest('test_1').setUpClass()
-        self.MockTest('test_2').setUpClass()
-        self.assertEqual(self.log, ['setUpClass', 'setUpClass'])
-
-
-    def test_emptySuite(self):
-        """
-        Check that we can construct an empty L{SharedClassSuite}.
-        """
-        suite = runner.SharedClassSuite()
-        self.assertEqual(suite.countTestCases(), 0)
-
-
-    def test_fixtures(self):
-        """
-        Check that setUpClass and tearDownClass get called when run for a single
-        test.
-        """
-        suite = runner.SharedClassSuite()
-        suite.addTest(self.MockTest('test_1'))
-        suite.addTest(self.MockTest('test_2'))
-        suite.run(self.result)
-        self.assertEqual(self.log, ['setUpClass', 1, 2, 'tearDownClass'])
-        self.assertEqual([], self.result.errors)
-
-
-    def test_addingForeignTest(self):
-        """
-        Make sure an error is raised if we try to add a test that is different
-        from tests already in the suite.
-        """
-        suite = runner.SharedClassSuite()
-        suite.addTest(self.MockTest('test_1'))
-        self.assertRaises(TypeError, suite.addTest, self)
-
-
-    def test_addingSuite(self):
-        """
-        Ordinarily, L{TestSuite}s can have suites added as tests. Since this
-        suite is intended to only run tests from a single class, it should not
-        let suites be added. Check that this is the case.
-        """
-        suite = runner.SharedClassSuite()
-        self.assertRaises(TypeError, suite.addTest, runner.TestSuite())
-
-
-    def test_attributeSharing(self):
-        """
-        Tests that have a setUpClass implementation share attributes with other
-        instances of the same TestCase subclass.
-        """
-        test1, test2 = self.MockTest('test_1'), self.MockTest('test_2')
-        suite = runner.SharedClassSuite([test1, test2])
-        suite.run(self.result)
-        self.assertEqual(self.counter, 2)
-
-
-    def test_reporting(self):
-        """
-        Given that L{SharedClassSuite} runs all of its tests in a single
-        L{TestCase} instance, check that the L{TestResult} object stores
-        results for each actual test run.
-        """
-        tests = [self.MockTest('test_1'), self.MockTest('test_2')]
-        suite = runner.SharedClassSuite(tests)
-        suite.run(self.result)
-        self.assertEqual([test.id() for test in tests],
-                         [test[0].id() for test in self.result.successes])
-
-
-    def testBrokenSetUpClass(self):
-        """
-        Check that errors raised in setUpClass get reported and that tests
-        do not get run.
-        """
-        loader = runner.TestLoader()
-        suite = loader.loadClass(erroneous.TestFailureInSetUpClass)
-        suite.run(self.result)
-        self.assertEqual(
-            self.result.errors[0][0].id(),
-            'twisted.trial.test.erroneous.TestFailureInSetUpClass')
-        self.assertEqual(len(self.result.successes), 0)
-
-
-    def testBrokenTearDownClass(self):
-        """
-        Check that errors raised in tearDownClass get reported.
-        """
-        loader = runner.TestLoader()
-        suite = loader.loadClass(erroneous.TestFailureInTearDownClass)
-        suite.run(self.result)
-        self.assertEqual(
-            self.result.errors[0][0].id(),
-            'twisted.trial.test.erroneous.TestFailureInTearDownClass')
-        self.assertEqual(len(self.result.successes), 1)
-
-
-
-class DeferredSharedSuiteTest(unittest.TestCase):
-    class MockTest(unittest.TestCase):
-        # We have to use callLater for these tests because the run() method
-        # blocks using _wait.
-
-        def setUpClass(self):
-            # Return asynchronous Deferred
-            from twisted.internet import reactor
-            d = defer.Deferred()
-            d.addCallback(self.addToLog)
-            reactor.callLater(0, d.callback, 'setUpClass')
-            return d
-
-        def addToLog(self, value):
-            self.log.append(value)
-
-        def raiseFailure(self, value):
-            self.fail(value)
-
-        def test_1(self):
-            self.log.append(1)
-
-        def tearDownClass(self):
-            # Return asynchronous Deferred
-            #
-            # This Deferred _has_ to fail in its callback, as that is the
-            # only way we can force a test failure to show up the lack of
-            # deferred-handling for tearDownClass.
-            #
-            # The technique in setUpClass will not work, as pending
-            # callLaters are already cleaned up at the end of run(),
-            # making it seem as if SharedClassSuite waited for the
-            # tearDownClass Deferred.
-            from twisted.internet import reactor
-            d = defer.Deferred()
-            d.addCallback(self.raiseFailure)
-            reactor.callLater(0, d.callback, 'tearDownClass')
-            return d
-
-
-    def setUp(self):
-        self.result = reporter.TestResult()
-        self.MockTest.log = self.log = []
-        self.test = runner.TestLoader().loadClass(self.MockTest)
-
-
-    def test_waitForDeferred(self):
-        """
-        Test that the suite's C{run} command waits for the returned
-        L{Deferred}s to fire.
-        """
-        self.test.run(self.result)
-        self.assertEqual(self.result.errors[0][1].getErrorMessage(),
-                         'tearDownClass')
-        self.assertEqual(self.log, ['setUpClass', 1])
-
-
-
-class FixtureMetaTest(unittest.TestCase):
-    def test_testBrokenTearDownClass(self):
-        """FixtureTest.testBrokenTearDownClass succeeds when run twice
-        """
-        test = TestSharedClassSuite('testBrokenTearDownClass')
-        result = reporter.TestResult()
-        test(result)
-        self.failUnless(result.wasSuccessful())
-        result2 = reporter.TestResult()
-        test(result2)
-        self.failUnless(result2.wasSuccessful())
-
-
-
-class TestSkipClassesRaised(unittest.TestCase):
-    """
-    Check the behaviour of tests which raise SkipTest in setUpClass.
-    """
-
-    class SkippedClass(unittest.TestCase):
-        def setUpClass(self):
-            raise unittest.SkipTest("class")
-
-        def setUp(self):
-            self.__class__._setUpRan = True
-
-        def tearDownClass(self):
-            self.__class__._tearDownClassRan = True
-
-        def test_skip1(self):
-            raise unittest.SkipTest('skip1')
-
-        def test_skip2(self):
-            raise RuntimeError("Ought to skip me")
-        test_skip2.skip = 'skip2'
-
-        def test_skip3(self):
-            pass
-
-        def test_skip4(self):
-            raise RuntimeError("Skip me too")
-
-
-    def setUp(self):
-        if hasattr(TestSkipClassesRaised.SkippedClass, 'skip'):
-            delattr(TestSkipClassesRaised.SkippedClass, 'skip')
-        self.suite = runner.SharedClassSuite()
-        self.suite.addTests(map(TestSkipClassesRaised.SkippedClass,
-                                ['test_skip1', 'test_skip2', 'test_skip3',
-                                 'test_skip4']))
-        self.reporter = reporter.TestResult()
-        TestSkipClassesRaised.SkippedClass._setUpRan = False
-        TestSkipClassesRaised.SkippedClass._tearDownClassRan = False
-
-
-    def test_setUpRan(self):
-        """
-        Check that setUp is not run if setUpClass raises L{SkipTest}.
-        """
-        self.suite(self.reporter)
-        self.failUnlessEqual(
-            TestSkipClassesRaised.SkippedClass._setUpRan, False)
-
-
-    def test_tearDownClassRan(self):
-        """
-        Check that tearDownClass is not run if setUpClass raises L{SkipTest}.
-        """
-        self.suite(self.reporter)
-        self.failUnlessEqual(
-            TestSkipClassesRaised.SkippedClass._tearDownClassRan, False)
-
-
-    def test_results(self):
-        """
-        Check that raising L{SkipTest} in setUpClass causes all tests to be
-        reported as skips.
-        """
-        self.suite(self.reporter)
-        self.failUnless(self.reporter.wasSuccessful())
-        self.failUnlessEqual(self.reporter.errors, [])
-        self.failUnlessEqual(self.reporter.failures, [])
-        self.failUnlessEqual(len(self.reporter.skips), 4)
-
-
-    def test_reasons(self):
-        """
-        Make sure that the message in the raised L{SkipTest} is used as the
-        skip reason, unless a test method has a 'skip' attribute already
-        defined.
-        """
-        self.suite(self.reporter)
-        expectedReasons = ['class', 'skip2', 'class', 'class']
-        # whitebox reporter
-        reasonsGiven = [ reason for test, reason in self.reporter.skips ]
-        self.failUnlessEqual(expectedReasons, reasonsGiven)

@@ -126,7 +126,6 @@ def suiteVisit(suite, visitor):
             case.visit(visitor)
 
 
-
 class TestSuite(pyunit.TestSuite):
     """
     Extend the standard library's C{TestSuite} with support for the visitor
@@ -194,173 +193,6 @@ class DocTestSuite(TestSuite):
         suite = doctest.DocTestSuite(testModule)
         for test in suite._tests: #yay encapsulation
             self.addTest(DocTestCase(test))
-
-
-
-class ClassSuite(TestSuite):
-    """
-    Suite that performs clean up operations that, for various reasons, must be
-    delayed to the end of a class. In particular, the existence of
-    C{setUpClass} and C{tearDownClass} means that we cannot clean up I{all}
-    resources at the end of each test, because I{some} resources exist for
-    longer than that.
-    """
-
-    def cleanUp(self, result):
-        """
-        Run L{TestCase._classCleanUp} on the first test in the suite that has
-        as C{_classCleanUp} callable attribute.
-
-        This allows the suite to have Python standard library tests and other
-        suites added to it.
-        """
-        for test in self._tests:
-            cleanup = getattr(test, '_classCleanUp', None)
-            if callable(cleanup):
-                return cleanup(result)
-
-
-    def run(self, result):
-        super(ClassSuite, self).run(result)
-        self.cleanUp(result)
-
-
-
-class SharedClassSuite(ClassSuite):
-    def __init__(self, *a, **kw):
-        super(SharedClassSuite, self).__init__(*a, **kw)
-        self._proceed = True
-
-
-    def addTest(self, test):
-        """
-        Add the given test to the suite. If a test has already been added to
-        the suite, then any other tests that are added must be instances of
-        the same class.
-
-        Unlike most suites, you cannot add L{TestSuite}s to this suite. All
-        tests within this suite must be instances of the same class.
-
-        @param test: L{unittest.TestCase}
-        @raises TypeError: If C{test} is not a L{unittest.TestCase} or is
-        of a different type to the tests already added.
-        @return: None
-        """
-        if not isTestCase(test.__class__):
-            raise TypeError("Can only add TestCases to ClassSuite, got %r"
-                            % (test,))
-        if self._tests and self._tests[0].__class__ != test.__class__:
-            raise TypeError("This suite only accepts tests of type %r, got %r"
-                            % (self._tests[0].__class__, test.__class__))
-        super(SharedClassSuite, self).addTest(test)
-
-
-    def getTestHolder(self):
-        """
-        Return a L{TestHolder} that represents this suite.
-
-        @return: L{TestHolder}
-        """
-        return TestHolder(reflect.qual(self._tests[0].__class__))
-
-
-    def skip(self, result, reason):
-        """
-        Skip all of the tests in this suite.
-        """
-        self._proceed = False
-        for test in self._tests:
-            result.startTest(test)
-            result.addSkip(test, test.getSkip() or reason)
-            result.stopTest(test)
-
-
-    def error(self, result, failure):
-        """
-        Mark this suite as having had an error raised in it.
-        """
-        self._proceed = False
-        test = self.getTestHolder()
-        result.startTest(test)
-        result.addError(test, failure)
-        result.stopTest(test)
-
-
-    def getSkip(self):
-        """
-        If a skip attribute has been set on this class or any of its containing
-        packages / modules, then return the value of that attribute. Otherwise,
-        return None.
-        """
-        parents = util.getPythonContainers(self._tests[0].runTest)
-        return util.acquireAttribute(parents, 'skip', None)
-
-
-    def _setUpClass(self, actual, result):
-        if not hasattr(actual, 'setUpClass'):
-            return defer.succeed(None)
-
-        def run():
-            skip = self.getSkip()
-            if skip is not None:
-                raise unittest.SkipTest(skip)
-            return actual.setUpClass()
-
-        def catchSkip(f):
-            f.trap(unittest.SkipTest)
-            self.skip(result, reason=f.getErrorMessage())
-
-        def catchAll(f):
-            self.error(result, f)
-
-        d = defer.maybeDeferred(run)
-        d.addErrback(catchSkip)
-        d.addErrback(catchAll)
-        return d
-
-
-    def _runTests(self, actual, result):
-        for test in self._tests:
-            actual._reportAs = TestHolder(test.id())
-            actual._testMethodName = test._testMethodName
-            actual.run(result)
-
-
-    def _tearDownClass(self, actual, result):
-        if not hasattr(actual, 'tearDownClass'):
-            return defer.succeed(None)
-
-        def catchAll(f):
-            self.error(result, f)
-
-        d = defer.maybeDeferred(actual.tearDownClass)
-        d.addErrback(catchAll)
-        d.addBoth(lambda _: self.cleanUp(result))
-        return d
-
-
-    def run(self, result):
-        """
-        Provide expected behaviour for running tests for a class with
-        C{setUpClass} or C{tearDownClass}.
-
-        C{setUpClass} and C{tearDownClass} allow the test author to set
-        attributes on the test case which are shared between all tests. This
-        means that each test is run on a single, shared instance. Further,
-        it means that the runner needs to accommodate errors, skips and
-        returned L{Deferred}s in the L{setUpClass} and L{tearDownClass}
-        methods.
-
-        @param result: L{unittest.TestResult}
-        """
-        if len(self._tests) == 0:
-            return
-        actual = self._tests[0]
-        actual._wait(self._setUpClass(actual, result))
-        if self._proceed:
-            self._runTests(actual, result)
-            actual._wait(self._tearDownClass(actual, result))
-
 
 
 class PyUnitTestCase(object):
@@ -652,15 +484,8 @@ class TestLoader(object):
 
     def loadClass(self, klass):
         """
-        Given a class which contains test cases, return a suite which contains
-        all the tests defined in the class.
-
-        If the class defines C{setUpClass} or C{tearDownClass} methods, returns
-        a L{SharedClassSuite}, which is necessary to make those methods behave
-        in the expected fashion.
-
-        @param klass: A Python class.
-        @return: L{TestSuite}
+        Given a class which contains test cases, return a sorted list of
+        C{TestCase} instances.
         """
         if not (isinstance(klass, type) or isinstance(klass, types.ClassType)):
             raise TypeError("%r is not a class" % (klass,))
@@ -669,9 +494,7 @@ class TestLoader(object):
         names = self.getTestCaseNames(klass)
         tests = self.sort([self._makeCase(klass, self.methodPrefix+name)
                            for name in names])
-        if hasattr(klass, 'setUpClass') or hasattr(klass, 'tearDownClass'):
-            return SharedClassSuite(tests)
-        return ClassSuite(tests)
+        return self.suiteFactory(tests)
     loadTestsFromTestCase = loadClass
 
     def getTestCaseNames(self, klass):
