@@ -122,7 +122,7 @@ class DeferredTestCase(unittest.TestCase):
         dl = defer.DeferredList([], fireOnOneCallback=1)
         dl.addCallbacks(cb)
         self.failUnlessEqual(result, [])
-
+        
     def testDeferredListFireOnOneError(self):
         defr1 = defer.Deferred()
         defr2 = defer.Deferred()

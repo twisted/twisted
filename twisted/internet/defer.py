@@ -177,7 +177,7 @@ class Deferred:
         cbs = ((callback, callbackArgs, callbackKeywords),
                (errback or (passthru), errbackArgs, errbackKeywords))
         self.callbacks.append(cbs)
-
+            
         if self.called:
             self._runCallbacks()
         return self
@@ -403,7 +403,7 @@ class DebugInfo:
 
 class FirstError(Exception):
     """First error to occur in a DeferredList if fireOnOneErrback is set.
-
+    
     @ivar subFailure: the L{Failure} that occurred.
     @ivar index: the index of the Deferred in the DeferredList where it
     happened.
@@ -434,7 +434,7 @@ class FirstError(Exception):
         if isinstance(other, tuple):
             return tuple(self) == other
         elif isinstance(other, FirstError):
-            return (self.subFailure == other.subFailure and
+            return (self.subFailure == other.subFailure and 
                     self.index == other.index)
         return False
 
@@ -537,92 +537,16 @@ FAILURE = False
 
 
 
-## deferredGenerator
 
 class waitForDeferred:
     """
-    See L{deferredGenerator}.
-    """
-
-    def __init__(self, d):
-        if not isinstance(d, Deferred):
-            raise TypeError("You must give waitForDeferred a Deferred. You gave it %r." % (d,))
-        self.d = d
-
-
-    def getResult(self):
-        if isinstance(self.result, failure.Failure):
-            self.result.raiseException()
-        return self.result
-
-
-
-def _deferGenerator(g, deferred):
-    """
-    See L{deferredGenerator}.
-    """
-    result = None
-
-    # This function is complicated by the need to prevent unbounded recursion
-    # arising from repeatedly yielding immediately ready deferreds.  This while
-    # loop and the waiting variable solve that by manually unfolding the
-    # recursion.
-
-    waiting = [True, # defgen is waiting for result?
-               None] # result
-
-    while 1:
-        try:
-            result = g.next()
-        except StopIteration:
-            deferred.callback(result)
-            return deferred
-        except:
-            deferred.errback()
-            return deferred
-
-        # Deferred.callback(Deferred) raises an error; we catch this case
-        # early here and give a nicer error message to the user in case
-        # they yield a Deferred.
-        if isinstance(result, Deferred):
-            return fail(TypeError("Yield waitForDeferred(d), not d!"))
-
-        if isinstance(result, waitForDeferred):
-            # a waitForDeferred was yielded, get the result.
-            # Pass result in so it don't get changed going around the loop
-            # This isn't a problem for waiting, as it's only reused if
-            # gotResult has already been executed.
-            def gotResult(r, result=result):
-                result.result = r
-                if waiting[0]:
-                    waiting[0] = False
-                    waiting[1] = r
-                else:
-                    _deferGenerator(g, deferred)
-            result.d.addBoth(gotResult)
-            if waiting[0]:
-                # Haven't called back yet, set flag so that we get reinvoked
-                # and return from the loop
-                waiting[0] = False
-                return deferred
-            # Reset waiting to initial values for next loop
-            waiting[0] = True
-            waiting[1] = None
-
-            result = None
-
-
-
-def deferredGenerator(f):
-    """
-    API Stability: stable
+    API Stability: semi-stable
 
     Maintainer: U{Christopher Armstrong<mailto:radix@twistedmatrix.com>}
 
-    deferredGenerator and waitForDeferred help you write Deferred-using code
-    that looks like a regular sequential function. If your code has a minimum
-    requirement of Python 2.5, consider the use of L{defgen} instead, which can
-    accomplish the same thing in a more concise manner.
+    waitForDeferred and deferredGenerator help you write Deferred-using code
+    that looks like it's blocking (but isn't really), with the help of
+    generators.
 
     There are two important functions involved: waitForDeferred, and
     deferredGenerator.  They are used together, like this::
@@ -673,148 +597,72 @@ def deferredGenerator(f):
     Deferred to the 'blocking' style, and deferredGenerator converts from the
     'blocking' style to a Deferred.
     """
-    def unwindGenerator(*args, **kwargs):
-        return _deferGenerator(f(*args, **kwargs), Deferred())
-    return mergeFunctionMetadata(f, unwindGenerator)
+
+    def __init__(self, d):
+        if not isinstance(d, Deferred):
+            raise TypeError("You must give waitForDeferred a Deferred. You gave it %r." % (d,))
+        self.d = d
 
 
-## defgen
+    def getResult(self):
+        if isinstance(self.result, failure.Failure):
+            self.result.raiseException()
+        return self.result
 
-# BaseException is only in Py 2.5.
-try:
-    BaseException
-except NameError:
-    BaseException=Exception
 
-class _DefGen_Return(BaseException):
-    def __init__(self, value):
-        self.value = value
 
-def returnValue(val):
+def _deferGenerator(g, deferred=None):
     """
-    Return val from a L{defgen} generator.
-
-    Note: this is currently implemented by raising an exception
-    derived from BaseException.  You might want to change any
-    'except:' clauses to an 'except Exception:' clause so as not to
-    catch this exception.
-
-    Also: while this function currently will work when called from
-    within arbitrary functions called from within the generator, do
-    not rely upon this behavior.
+    See L{waitForDeferred}.
     """
-    raise _DefGen_Return(val)
-
-def _defgen(result, g, deferred):
-    """
-    See L{defgen}.
-    """
-    # This function is complicated by the need to prevent unbounded recursion
-    # arising from repeatedly yielding immediately ready deferreds.  This while
-    # loop and the waiting variable solve that by manually unfolding the
-    # recursion.
-
-    waiting = [True, # defgen is waiting for result?
-               None] # result
-
+    result = None
     while 1:
+        if deferred is None:
+            deferred = Deferred()
         try:
-            # Send the last result back as the result of the yield expression.
-            if isinstance(result, failure.Failure):
-                result = g.throw(result.type, result.value, result.tb)
-            else:
-                result = g.send(result)
+            result = g.next()
         except StopIteration:
-            # fell off the end, or "return" statement
-            deferred.callback(None)
-            return deferred
-        except _DefGen_Return, e:
-            # returnValue call
-            deferred.callback(e.value)
+            deferred.callback(result)
             return deferred
         except:
             deferred.errback()
             return deferred
 
+        # Deferred.callback(Deferred) raises an error; we catch this case
+        # early here and give a nicer error message to the user in case
+        # they yield a Deferred. Perhaps eventually these semantics may
+        # change.
         if isinstance(result, Deferred):
-            # a deferred was yielded, get the result.
-            def gotResult(r):
+            return fail(TypeError("Yield waitForDeferred(d), not d!"))
+
+        if isinstance(result, waitForDeferred):
+            waiting = [True, None]
+            # Pass vars in so they don't get changed going around the loop
+            def gotResult(r, waiting=waiting, result=result):
+                result.result = r
                 if waiting[0]:
                     waiting[0] = False
                     waiting[1] = r
                 else:
-                    _defgen(r, g, deferred)
-
-            result.addBoth(gotResult)
+                    _deferGenerator(g, deferred)
+            result.d.addBoth(gotResult)
             if waiting[0]:
                 # Haven't called back yet, set flag so that we get reinvoked
                 # and return from the loop
                 waiting[0] = False
                 return deferred
-
-            result = waiting[1]
-            # Reset waiting to initial values for next loop.  gotResult uses
-            # waiting, but this isn't a problem because gotResult is only
-            # executed once, and if it hasn't been executed yet, the return
-            # branch above would have been taken.
+            result = None # waiting[1]
 
 
-            waiting[0] = True
-            waiting[1] = None
 
-
-    return deferred
-
-def defgen(f):
+def deferredGenerator(f):
     """
-    API Stability: semi-stable
-
-    Maintainer: U{Christopher Armstrong<mailto:radix@twistedmatrix.com>}
-
-    WARNING: this function will not work in Python 2.4 and earlier!
-
-    defgen helps you write Deferred-using code that looks like a
-    regular sequential function. This function uses features of Python
-    2.5 generators.  If you need to be compatible with Python 2.4 or
-    before, use the L{deferredGenerator} function instead, which
-    accomplishes the same thing, but with somewhat more boilerplate.
-
-        @defgen
-        def thingummy():
-            thing = yield makeSomeRequestResultingInDeferred()
-            print thing #the result! hoorj!
-
-    When you call anything that results in a Deferred, you can simply yield it;
-    your generator will automatically be resumed when the Deferred's result is
-    available. The generator will be sent the result of the Deferred with the
-    'send' method on generators, or if the result was a failure, 'throw'.
-
-    Your defgen-enabled generator will return a Deferred object, which will
-    result in the return value of the generator (or will fail with a failure
-    object if your generator raises an unhandled exception). Note that you can't
-    use 'return result' to return a value; use 'returnValue(result)'
-    instead. Falling off the end of the generator, or simply using 'return' will
-    cause the Deferred to have a result of None.
-
-    The Deferred returned from your deferred generator may errback if your
-    generator raised an exception.
-
-        @defgen
-        def thingummy():
-            thing = yield makeSomeRequestResultingInDeferred()
-            if thing == 'I love Twisted':
-                # will become the result of the Deferred
-                returnValue('TWISTED IS GREAT!')
-            else:
-                # will trigger an errback
-                raise Exception('DESTROY ALL LIFE')
+    See L{waitForDeferred}.
     """
     def unwindGenerator(*args, **kwargs):
-        return _defgen(None, f(*args, **kwargs), Deferred())
+        return _deferGenerator(f(*args, **kwargs))
     return mergeFunctionMetadata(f, unwindGenerator)
 
-
-## DeferredLock/DeferredQueue
 
 class _ConcurrencyPrimitive(object):
     def __init__(self):
@@ -997,6 +845,6 @@ class DeferredQueue(object):
 
 __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
            "AlreadyCalledError", "TimeoutError", "gatherResults",
-           "maybeDeferred", "waitForDeferred", "deferredGenerator", "defgen",
+           "maybeDeferred", "waitForDeferred", "deferredGenerator",
            "DeferredLock", "DeferredSemaphore", "DeferredQueue",
           ]
