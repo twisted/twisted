@@ -214,6 +214,43 @@ class BananaTestCase(unittest.TestCase):
         assert self.result == -2147483648, "should be -2147483648, got %s" % self.result
 
 
+    def test_sizedIntegerTypes(self):
+        """
+        Test that integers below the maximum C{INT} token size cutoff are
+        serialized as C{INT} or C{NEG} and that larger integers are
+        serialized as C{LONGINT} or C{LONGNEG}.
+        """
+        def encoded(n):
+            self.io.seek(0)
+            self.io.truncate()
+            self.enc.sendEncoded(n)
+            return self.io.getvalue()
+
+        baseIntIn = +2147483647
+        baseNegIn = -2147483648
+
+        baseIntOut = '\x7f\x7f\x7f\x07\x81'
+        self.assertEqual(encoded(baseIntIn - 2), '\x7d' + baseIntOut)
+        self.assertEqual(encoded(baseIntIn - 1), '\x7e' + baseIntOut)
+        self.assertEqual(encoded(baseIntIn - 0), '\x7f' + baseIntOut)
+
+        baseLongIntOut = '\x00\x00\x00\x08\x85'
+        self.assertEqual(encoded(baseIntIn + 1), '\x00' + baseLongIntOut)
+        self.assertEqual(encoded(baseIntIn + 2), '\x01' + baseLongIntOut)
+        self.assertEqual(encoded(baseIntIn + 3), '\x02' + baseLongIntOut)
+        
+        baseNegOut = '\x7f\x7f\x7f\x07\x83'
+        self.assertEqual(encoded(baseNegIn + 2), '\x7e' + baseNegOut)
+        self.assertEqual(encoded(baseNegIn + 1), '\x7f' + baseNegOut)
+        self.assertEqual(encoded(baseNegIn + 0), '\x00\x00\x00\x00\x08\x83')
+
+        baseLongNegOut = '\x00\x00\x00\x08\x86'
+        self.assertEqual(encoded(baseNegIn - 1), '\x01' + baseLongNegOut)
+        self.assertEqual(encoded(baseNegIn - 2), '\x02' + baseLongNegOut)
+        self.assertEqual(encoded(baseNegIn - 3), '\x03' + baseLongNegOut)
+
+
+
 class GlobalCoderTests(unittest.TestCase):
     """
     Tests for the free functions L{banana.encode} and L{banana.decode}.
