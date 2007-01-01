@@ -164,7 +164,7 @@ class HTTPClientChannelRequest(httpchan.HTTPParser):
 
     ## FIXME: Actually creates Response, function is badly named!
     def createRequest(self):
-        self.stream = stream_mod.ProducerStream()
+        self.stream = stream_mod.ProducerStream(self.length)
         self.response = http.Response(self.code, self.inHeaders, self.stream)
         self.stream.registerProducer(self, True)
         

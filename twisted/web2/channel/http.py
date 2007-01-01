@@ -200,8 +200,27 @@ class HTTPParser(object):
         
         
     def splitConnectionHeaders(self):
-        # Split off headers for the connection from headers for the request.
-        
+        """
+        Split off connection control headers from normal headers.
+
+        The normal headers are then passed on to user-level code, while the
+        connection headers are stashed in .connHeaders and used for things like
+        request/response framing.
+
+        This corresponds roughly with the HTTP RFC's description of 'hop-by-hop'
+        vs 'end-to-end' headers in RFC2616 S13.5.1, with the following
+        exceptions:
+
+        * proxy-authenticate and proxy-authorization are not treated as
+          connection headers.
+
+        * content-length is, as it is intimiately related with low-level HTTP
+          parsing, and is made available to user-level code via the stream
+          length, rather than a header value. (except for HEAD responses, in
+          which case it is NOT used by low-level HTTP parsing, and IS kept in
+          the normal headers.
+        """
+
         def move(name):
             h = inHeaders.getRawHeaders(name, None)
             if h is not None:
@@ -213,13 +232,14 @@ class HTTPParser(object):
         # doesn't sound like a good idea to me, because it makes it impossible
         # to have a non-authenticating transparent proxy in front of an
         # authenticating proxy. An authenticating proxy can eat them itself.
+        #
         # 'Proxy-Connection' is an undocumented HTTP 1.0 abomination.
-        connHeaderNames = ['connection', 'content-length', 'keep-alive', 'te',
+        connHeaderNames = ['content-length', 'connection', 'keep-alive', 'te',
                            'trailers', 'transfer-encoding', 'upgrade',
                            'proxy-connection']
         inHeaders = self.inHeaders
         connHeaders = http_headers.Headers()
-        
+
         move('connection')
         if self.version < (1,1):
             # Remove all headers mentioned in Connection, because a HTTP 1.0
@@ -230,10 +250,19 @@ class HTTPParser(object):
         else:
             # Otherwise, just add the headers listed to the list of those to move
             connHeaderNames.extend(connHeaders.getHeader('connection', ()))
-        
+
+        # If the request was HEAD, self.length has been set to 0 by
+        # HTTPClientRequest.submit; in this case, Content-Length should
+        # be treated as a response header, not a connection header.
+
+        # Note: this assumes the invariant that .length will always be None
+        # coming into this function, unless this is a HEAD request.
+        if self.length is not None:
+            connHeaderNames.remove('content-length')
+
         for headername in connHeaderNames:
             move(headername)
-        
+
         return connHeaders
 
     def setConnectionParams(self, connHeaders):
@@ -274,16 +303,15 @@ class HTTPParser(object):
             # No transfer-coding.
             self.chunkedIn = 0
             if self.parseCloseAsEnd:
-                # If no Content-Length, indeterminate length data
-                # (unless the responsecode was one of the special ones, or
-                #  the request method was HEAD.
-                # If the request was HEAD, self.length has been set to 0 by
-                # HTTPClientRequest.submit)
+                # If no Content-Length, then it's indeterminate length data
+                # (unless the responsecode was one of the special no body ones)
+                # Also note that for HEAD requests, connHeaders won't have
+                # content-length even if the response did.
                 if self.code in http.NO_BODY_CODES:
                     self.length = 0
                 else:
                     self.length = connHeaders.getHeader('content-length', self.length)
-                    
+
                 # If it's an indeterminate stream without transfer encoding, it must be
                 # the last request.
                 if self.length is None:
