@@ -5550,3 +5550,9 @@ How do I use it?
 %
 <MFen> hooray! correct layout, instantly. thanks, tables!
 %
+<exarkun> glyph: I will tell you what 'V' does in Perl's pack
+<exarkun> glyph: Unsigned long...
+<exarkun> glyph: ...VAX ordering
+<glyph> exarkun: GGgghhaalllgufffffaff
+<exarkun> critical hit!
+%
