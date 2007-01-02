@@ -57,13 +57,13 @@ responder for our 'Sum' command::
         Sum.responder(sum)
 
 Later, when you want to actually do a sum, the following expression will return
-a Deferred whilch will fire with the result::
+a Deferred which will fire with the result::
 
     ClientCreator(reactor, amp.AMP).connectTCP(...).addCallback(
         lambda p: p.callRemote(Sum, a=13, b=81)).addCallback(
             lambda result: result['total'])
 
-You can also define the propogation of specific errors in AMP.  For example,
+You can also define the propagation of specific errors in AMP.  For example,
 for the slightly more complicated case of division, we might have to deal with
 division by zero::
 
@@ -428,7 +428,7 @@ class QuitBox(AmpBox):
 
 class _SwitchBox(AmpBox):
     """
-    Implementation detail of ProtocolSwitchCommand: I am a JuiceBox which sets
+    Implementation detail of ProtocolSwitchCommand: I am a AmpBox which sets
     up state for the protocol to switch.
     """
 
@@ -469,7 +469,7 @@ class _DispatchMixin:
 
     def _wrapWithSerialization(self, aCallable, command):
         """
-        Wrap aCallable with its command's argument argument de-serialization
+        Wrap aCallable with its command's argument de-serialization
         and result serialization logic.
 
         @param aCallable: a callable with a 'command' attribute, designed to be
