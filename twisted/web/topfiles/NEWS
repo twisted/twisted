@@ -1,3 +1,35 @@
+0.7.0 (2007-01-02)
+==================
+
+Features
+--------
+ - Python 2.5 is now supported (#1867)
+ - twisted.web.xmlrpc now supports the <nil/> xml-rpc extension type
+   in both the server and the client (#469)
+
+Fixes
+-----
+ - Microdom and SUX now manages certain malformed XML more resiliently
+   (#1984, #2225, #2298)
+ - twisted.web.client.getPage can now deal with an URL of the form
+   "http://example.com" (no trailing slash) (#1080)
+ - The HTTP server now allows (invalid) URLs with multiple question
+   marks (#1550)
+ - '=' can now be in the value of a cookie (#1051)
+ - Microdom now correctly handles xmlns="" (#2184)
+
+Deprecations and Removals
+-------------------------
+ - websetroot was removed, because it wasn't working anyway (#945)
+ - woven.guard no longer supports the old twisted.cred API (#1440)
+
+Other
+-----
+The following changes are minor or closely related to other changes.
+
+ - #1636, #1637, #1638, #1936, #1883, #447
+
+
 0.6.0 (2006-05-21)
 ==================
 
