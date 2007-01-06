@@ -1,3 +1,112 @@
+2.5.0 (2006-12-29)
+==================
+
+Twisted 2.5.0 is a major feature release, with several interesting new
+developments and a great number of bug fixes. Some of the highlights
+follow.
+
+ * AMP, the Asynchronous Messaging Protocol, was introduced.  AMP is
+   a protocol which provides request/response semantics over a
+   persistent connection in a very simple and extensible manner.
+
+ * An Epoll-based reactor was added, which can be used with twistd or
+   trial by passing "-r epoll" on the command line. This may improve
+   performance of certain high-traffic network applications.
+
+ * The 'twistd' command can now accept sub-commands which name an
+   application to run. For example, 'twistd web --path .' will start a
+   web server serving files out of the current directory. This
+   functionality is meant to replace the old way of doing things with
+   'mktap' and 'twistd -f'.
+
+ * Python 2.5 is now supported. Previous releases of Twisted were
+   broken by changes in the release of Python 2.5.
+
+ * 'inlineCallbacks' was added, which allows taking advantage of the
+   new 'yield' expression syntax in Python 2.5 to avoid writing
+   callbacks for Deferreds.
+
+In addition to these changes, there are many other minor features and
+a large number of bug fixes.
+
+Features
+--------
+ - log.err can now take a second argument for specifying information
+   about an error (#1399)
+ - A time-simulating test helper class, twisted.internet.task.Clock,
+   was added (#1757)
+ - Trial docstring improvements were made (#1604, #2133)
+ - New SSL features were added to twisted.internet.ssl, such as client
+   validation (#302)
+ - Python 2.5 is now supported (#1867)
+ - Trial's assertFailure now provides more information on failure (#1869)
+ - Trial can now be run on tests within a zipfile (#1940)
+ - AMP, a new simple protocol for asynchronous messaging, was added (#1715)
+ - Trial's colorful reporter now works on win32 (#1646)
+ - Trial test modules may now dynamically construct TestSuites (#1638, #2165)
+ - twistd can now make use of plugins to run applications (#1922, #2013)
+ - Twisted now works with the latest (unreleased) zope.interface (#2160)
+ - An epoll-based reactor, epollreactor, was added. It is selectable
+   with the -r options to twistd and trial (#1953)
+ - twistd and trial now use the plugin system to find reactors which
+   can be selected (#719)
+ - twisted.internet.defer.inlineCallbacks was added. It takes
+   advantage of Python 2.5's generators to offer a way to deal with
+   Deferreds without callbacks (#2100)
+
+Fixes
+-----
+ - Traceback formatting in Trial was improved (#1454, #1610)
+ - twisted.python.filepath.FilePath.islink now actually returns True when
+   appropriate (#1773)
+ - twisted.plugin now no longer raises spurious errors (#926)
+ - twisted.pb Cacheables may now be new-style classes (#1324)
+ - FileDescriptor now deals with producers in a more
+   interface-compliant and robust manner (#2286, #811)
+ - "setup.py build" and other setup.py commands which don't actually
+   install the software now work (#1835)
+ - wxreactor has had various fixes (#1235, #1574, #1688)
+
+Deprecations and Removals
+-------------------------
+ - The old twisted.cred API (Perspectives, Identities and such) was
+   removed (#1440)
+ - twisted.spread.newjelly was removed (#1831)
+ - Various deprecated things in twisted.python.components were
+   removed: Interface, MetaInterface, getAdapterClass, and
+   getAdapterClassWithInheritance (#1636)
+ - twisted.enterprise.xmlreflector was removed (#661)
+ - mktap is slowly on its way out, now that twistd supports plugins. It
+   is not yet officially deprecated (#2013)
+ - tkmktap was removed, because it wasn't working anyway (#2020)
+ - reactor.iterate calls made inside of a Trial test case are
+   deprecated (#2090)
+ - twisted.internet.qtreactor was removed: It has been moved to a
+   separate project. See http://twistedmatrix.com/trac/wiki/QTReactor
+   (#2130, #2137)
+ - threadedselectreactor is now not a directly usable reactor; it is
+   only meant to help in writing other reactors (#2126)
+ - twisted.python.reflect.funcinfo is deprecated (#2079)
+ - twisted.spread.sturdy, which was already completely broken, was
+   removed (#2299)
+
+
+Other
+-----
+The following changes are minor or closely related to other changes.
+
+ - #1783, #1786, #1788, #1648, #1734, #1609, #1800, #1818,
+   #1629, #1829, #491, #1816, #1824, #1855, #1797, #1637, #1371,
+   #1892, #1887, #1897, #1563, #1741, #1943, #1952, #1276, 
+   #1837, #1726, #1963, #1965, #1973, #1976, #1991, #1936, #1113,
+   #630, #2002, #2040, #2044, #1617, #2045, #2055, #2056, #2022,
+   #2052, #1552, #1999, #1507, #2054, #1970, #1968, #662, #1910,
+   #1694, #1999, #1409, #2150, #2127, #2155, #1983, #2014, #2222,
+   #1067, #2136, #2065, #1430, #2173, #2212, #1871, #2147, #1199,
+   #2273, #428, #992, #815, #2024, #2292, #2125, #2139, #2291, #2174,
+   #2306, #2228, #2309, #2319, #2317, #2313, #2154, #1985, #1201
+
+
 2.4.0 (2006-05-21)
 ==================
 
