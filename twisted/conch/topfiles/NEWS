@@ -1,3 +1,23 @@
+0.8.0 (2007-01-06)
+==================
+
+Features
+--------
+ - Manhole now supports Ctrl-l to emulate the same behavior in the
+   Python interactive interpreter (#1565)
+ - Python 2.5 is now supported (#1867)
+
+Misc
+----
+ - #1673, #1636, #1892, #1943, #2057, #1180, #1185, #2148, #2159, #2291, 
+
+Deprecations and Removals
+-------------------------
+
+ - The old twisted.cred API (Identities, Authorizers, etc) is no
+   longer supported (#1440)
+
+
 0.7.0 (2006-05-21)
 ==================
 
