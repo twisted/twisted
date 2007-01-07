@@ -1,3 +1,31 @@
+0.4.0 (2007-01-06)
+==================
+
+Features
+--------
+ - Plaintext POP3 logins are now possible over SSL or TLS (#1809)
+
+Fixes
+-----
+ - ESMTP servers now greet with an "ESMTP" string (#1891)
+ - The POP3 client can now correctly deal with concurrent POP3
+   retrievals (#1988, #1691)
+ - In the IMAP4 server, a bug involving retrieving the first part
+   of a single-part message was fixed. This improves compatibility
+   with Pine (#1978)
+ - A bug in the IMAP4 server which caused corruption under heavy
+   pipelining was fixed (#1992)
+ - More strict support for the AUTH command was added to the SMTP
+   server, to support the AUTH <mechanism>
+   <initial-authentication-data> form of the command (#1552)
+ - An SMTP bug involving the interaction with validateFrom, which
+   caused multiple conflicting SMTP messages to be sent over the wire,
+   was fixed (#2158)
+
+Misc
+----
+ - #1648, #1801, #1636, #2003, #1936, #1202, #2051, #2072, #2248, #2250
+
 0.3.0 (2006-05-21)
 ==================
 
