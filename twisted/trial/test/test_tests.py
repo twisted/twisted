@@ -470,11 +470,11 @@ class SuppressionTest(unittest.TestCase):
 
     def setUp(self):
         self.stream = StringIO.StringIO()
-        self._stdout, sys.stdout = sys.stdout, self.stream
+        self._stderr, sys.stderr = sys.stderr, self.stream
         self.loader = runner.TestLoader()
 
     def tearDown(self):
-        sys.stdout = self._stdout
+        sys.stderr = self._stderr
         self.stream = None
 
     def getIO(self):

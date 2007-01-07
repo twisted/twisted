@@ -760,8 +760,7 @@ class TrialRunner(object):
             return
         def seeWarnings(x):
            if x.has_key('warning'):
-               print
-               print x['format'] % x
+               sys.stderr.write(("\n" + x['format'] + "\n") % x)
         log.addObserver(seeWarnings)
         self._logWarnings = True
 
@@ -773,34 +772,38 @@ class TrialRunner(object):
         # decorate the suite with reactor cleanup and log starting
         # This should move out of the runner and be presumed to be
         # present
-        suite = TrialSuite([test])
-        startTime = time.time()
-        result.write("Running %d tests.\n", suite.countTestCases())
-        if self.mode == self.DRY_RUN:
-            suite.visit(DryRunVisitor(result).markSuccessful)
-        elif self.mode == self.DEBUG:
-            # open question - should this be self.debug() instead.
-            debugger = self._getDebugger()
-            oldDir = self._setUpTestdir()
-            try:
-                self._setUpLogging()
-                debugger.runcall(suite.run, result)
-            finally:
-                os.chdir(oldDir)
-        else:
-            oldDir = self._setUpTestdir()
-            try:
-                self._setUpLogging()
-                suite.run(result)
-            finally:
-                os.chdir(oldDir)
-        endTime = time.time()
-        result.printErrors()
-        result.writeln(result.separator)
-        result.writeln('Ran %d tests in %.3fs', result.testsRun,
-                       endTime - startTime)
-        result.write('\n')
-        result.printSummary()
+        getattr(result, 'acquireStreams', lambda : None)()
+        try:
+            suite = TrialSuite([test])
+            startTime = time.time()
+            result.write("Running %d tests.\n", suite.countTestCases())
+            if self.mode == self.DRY_RUN:
+                suite.visit(DryRunVisitor(result).markSuccessful)
+            elif self.mode == self.DEBUG:
+                # open question - should this be self.debug() instead.
+                debugger = self._getDebugger()
+                oldDir = self._setUpTestdir()
+                try:
+                    self._setUpLogging()
+                    debugger.runcall(suite.run, result)
+                finally:
+                    os.chdir(oldDir)
+            else:
+                oldDir = self._setUpTestdir()
+                try:
+                    self._setUpLogging()
+                    suite.run(result)
+                finally:
+                    os.chdir(oldDir)
+            endTime = time.time()
+            result.printErrors()
+            result.writeln(result.separator)
+            result.writeln('Ran %d tests in %.3fs', result.testsRun,
+                           endTime - startTime)
+            result.write('\n')
+            result.printSummary()
+        finally:
+            getattr(result, 'releaseStreams', lambda : None)()
         return result
 
     def runUntilFailure(self, test):

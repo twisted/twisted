@@ -112,7 +112,9 @@ class EvilReprStr(EvilStr, EvilRepr):
 class LogPublisherTestCaseMixin:
     def setUp(self):
         # Fuck you Python.
+        save = sys.__dict__.copy()
         reload(sys)
+        sys.__dict__.update(save)
         self._origEncoding = sys.getdefaultencoding()
         sys.setdefaultencoding('ascii')
 

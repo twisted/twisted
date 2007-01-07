@@ -163,6 +163,38 @@ class TestResult(pyunit.TestResult, object):
         pass
 
 
+class ReporterStream(object):
+    """
+    A stream which writes to a reporter, to associate output with a given test.
+    """
+
+    def __init__(self, reporter, tag):
+        """
+        Create a ReporterStream and report results to the given reporter.
+
+        @param reporter: a L{Reporter} to report to.
+        @param tag: a L{str}, naming the type of output
+        """
+        self.reporter = reporter
+        self.tag = tag
+
+
+    def write(self, data):
+        """
+        Send some data.
+        """
+        self.reporter.testOutput(data, self.tag)
+
+
+    def __getattr__(self, name):
+        """
+        Forward to reporter's stream for everything else.
+        """
+        return getattr(self.reporter.stream, name)
+
+
+
+
 class Reporter(TestResult):
     zi.implements(itrial.IReporter)
 
@@ -174,6 +206,33 @@ class Reporter(TestResult):
         self.stream = SafeStream(stream)
         self.tbformat = tbformat
         self.realtime = realtime
+
+
+    def testOutput(self, data, tag):
+        """
+        The currently-running test produced some output.
+        """
+        self.stream.write(data)
+
+
+    def acquireStreams(self):
+        """
+        Acquire stdout and stderr to appropriately modify output.
+        """
+        self.capturedStdout = sys.stdout
+        self.capturedStderr = sys.stderr
+        sys.stdout = ReporterStream(self, 'out')
+        sys.stderr = ReporterStream(self, 'err')
+
+
+    def releaseStreams(self):
+        """
+        Release stdout and stderr back to what they were at the start of this whole
+        sordid business.
+        """
+        sys.stdout = self.capturedStdout
+        sys.stderr = self.capturedStderr
+
 
     def startTest(self, test):
         super(Reporter, self).startTest(test)
@@ -545,7 +604,7 @@ class TreeReporter(Reporter):
     ERROR = 'red'
     TODO = 'blue'
     SKIP = 'blue'
-    TODONE = 'red'
+    TODONE = 'yellow'
     SUCCESS = 'green'
 
     def __init__(self, stream=sys.stdout, tbformat='default', realtime=False):
@@ -595,7 +654,9 @@ class TreeReporter(Reporter):
         self.currentLine = format
         super(TreeReporter, self).write(self.currentLine)
 
+    _anyOutputYet = False
     def _testPrelude(self, test):
+        self._anyOutputYet = False
         segments = [test.__class__.__module__, test.__class__.__name__]
         indentLevel = 0
         for seg in segments:
@@ -607,9 +668,23 @@ class TreeReporter(Reporter):
             indentLevel += 1
         self._lastTest = segments
 
+    def testOutput(self, output, tag):
+        """
+        A test produced some output.  Do something.
+        """
+        if not self._anyOutputYet:
+            self.endLine('[OUTPUT]', 'cyan')
+            self._anyOutputYet = True
+        if tag == 'err':
+            color = 'magenta'
+        else:
+            color = 'cyan'
+        self._colorizer.write(output, color)
+
+
     def cleanupErrors(self, errs):
-        self._colorizer.write('    cleanup errors', self.ERROR)
-        self.endLine('[ERROR]', self.ERROR)
+        self.endLine('[CLEANUP ERRORS]', 'yellow')
+        self._anyOutputYet = True
         super(TreeReporter, self).cleanupErrors(errs)
 
     def upDownError(self, method, error, warn, printStatus):
@@ -625,7 +700,11 @@ class TreeReporter(Reporter):
         super(TreeReporter, self).startTest(method)
 
     def endLine(self, message, color):
-        spaces = ' ' * (self.columns - len(self.currentLine) - len(message))
+        if self._anyOutputYet:
+            spaces = ' ' * (self.columns - len(message))
+        else:
+            spaces = ' ' * (self.columns - len(self.currentLine) - len(message))
         super(TreeReporter, self).write(spaces)
         self._colorizer.write(message, color)
         super(TreeReporter, self).write("\n")
+        self.currentLine = ''
