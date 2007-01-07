@@ -1,20 +1,42 @@
-x.x.x (YYYY-MM-DD)
+0.5.0 (2007-01-06)
 ==================
 
- - Jabber:
+Features
+--------
+ - (Jabber) IQ.send now optionally has a 'timeout' parameter which
+   specifies a time at which to errback the Deferred with a
+   TimeoutError (#2218)
+ - (Jabber) SASL authentication, resource binding and session
+   establishment were added. (#1046) The following were done in
+   support of this change:
    - Rework ConnectAuthenticator to work with initializer objects that
      provide a stream initialization step.
    - Reimplement iq:auth as an initializer.
    - Reimplement TLS negotiation as an initializer.
-   - Implement SASL authentication, resource binding and session establishment.
    - Add XMPPAuthenticator as a XMPP 1.0 client authenticator (only), along
      with XMPPClientFactory.
    - Add support for working with pre-XMPP-1.0 error stanzas.
-   - Add full tests for protocols/jabber/xmlstream.py
-   - Properly import SSL libraries, and only fail TLS when really needed.
    - Remove hasFeature() from XmlStream as you can test (uri, name) in
-	 xs.features.
+     xs.features.
    - Add sendFooter() and sendStreamError() to XmlStream
+
+Fixes
+-----
+ - (Jabber) Deferreds from queries which were never resolved before
+   a lost connection are now errbacked (#2006)
+ - (Jabber) servers which didn't send a 'realm' directive in
+   authentication challenges no longer cause the Jabber client to
+   choke (#2098)
+ - (MSN) error responses are now properly turned into errbacks (#2019)
+ - (IRC) A trivial bug in IRCClient which would cause whois(oper=True)
+   to always raise an exception was fixed (#2089)
+ - (IM) Bugs in the error handling and already-connecting cases of
+   AbstractAccount.logOn were fixed (#2086)
+
+Misc
+----
+ - #1734, #1735, #1636, #1936, #1883, #1995, #2171, #2165, #2177
+
 
 0.4.0 (2006-05-21)
 ==================
@@ -41,6 +63,7 @@ Fixes
 
 0.3.0:
  - Jabber:
+
    - Fix digest authentication in Jabber
    - Add Jabber xmlstream module that contains the Jabber specific bits that
      got factored out of Twisted Xish's xmlstream, and make it suitable for
