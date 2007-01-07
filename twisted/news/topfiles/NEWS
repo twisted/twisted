@@ -1,3 +1,12 @@
+0.3.0 (2007-01-06)
+==================
+Fixes
+-----
+ - News was updated to work with the latest twisted.components changes
+   to Twisted (#1636)
+ - The 'ip' attribute is no longer available on NNTP protocols (#1936)
+
+
 0.2.0 (2006-05-24)
 ==================
 
