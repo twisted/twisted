@@ -4,7 +4,6 @@ import os, time, pickle, errno, zipfile
 from twisted.python import filepath
 from twisted.python.runtime import platform
 from twisted.trial import unittest
-from twisted.python.win32 import WindowsError, ERROR_DIRECTORY
 
 class AbstractFilePathTestCase(unittest.TestCase):
 
@@ -97,123 +96,6 @@ class AbstractFilePathTestCase(unittest.TestCase):
         self.failUnlessEqual(f1.open().read(), self.f1content)
         f2 = self.path.child('sub1').child('file2')
         self.failUnlessEqual(f2.open().read(), self.f2content)
-
-
-    def test_dictionaryKeys(self):
-        """
-        Verify that path instances are usable as dictionary keys.
-        """
-        f1 = self.path.child('file1')
-        f1prime = self.path.child('file1')
-        f2 = self.path.child('file2')
-        dictoid = {}
-        dictoid[f1] = 3
-        dictoid[f1prime] = 4
-        self.assertEquals(dictoid[f1], 4)
-        self.assertEquals(dictoid.keys(), [f1])
-        self.assertIdentical(dictoid.keys()[0], f1)
-        self.assertNotIdentical(dictoid.keys()[0], f1prime) # sanity check
-        dictoid[f2] = 5
-        self.assertEquals(dictoid[f2], 5)
-        self.assertEquals(len(dictoid), 2)
-
-
-    def test_dictionaryKeyWithString(self):
-        """
-        Verify that path instances are usable as dictionary keys which do not clash
-        with their string counterparts.
-        """
-        f1 = self.path.child('file1')
-        dictoid = {f1: 'hello'}
-        dictoid[f1.path] = 'goodbye'
-        self.assertEquals(len(dictoid), 2)
-
-
-    def test_childrenNonexistentError(self):
-        """
-        Verify that children raises the appropriate exception for non-existent
-        directories.
-        """
-        self.assertRaises(filepath.UnlistableError,
-                          self.path.child('not real').children)
-
-    def test_childrenNotDirectoryError(self):
-        """
-        Verify that listdir raises the appropriate exception for attempting to list
-        a file rather than a directory.
-        """
-        self.assertRaises(filepath.UnlistableError,
-                          self.path.child('file1').children)
-
-
-    def test_timesAreFloats(self):
-        """
-        Verify that all times returned from the various time functions are floats
-        (and therefore 'high precision').
-        """
-        for p in self.path, self.path.child('file1'):
-            self.failUnlessEqual(type(p.getatime()), int)
-            self.failUnlessEqual(type(p.getmtime()), int)
-            self.failUnlessEqual(type(p.getctime()), int)
-
-
-
-class FakeWindowsPath(filepath.FilePath):
-    """
-    A test version of FilePath which overrides listdir to raise L{WindowsError}.
-    """
-
-    def listdir(self):
-        """
-        @raise WindowsError: always.
-        """
-        raise WindowsError(
-            ERROR_DIRECTORY,
-            "A directory's validness was called into question")
-
-
-class ListingCompatibilityTests(unittest.TestCase):
-    """
-    These tests verify compatibility with legacy behavior of directory listing.
-    """
-
-    def test_windowsErrorExcept(self):
-        """
-        Verify that when a WindowsError is raised from listdir, catching
-        WindowsError works.
-        """
-        fwp = FakeWindowsPath(self.mktemp())
-        self.assertRaises(filepath.UnlistableError, fwp.children)
-        self.assertRaises(WindowsError, fwp.children)
-
-
-    def test_alwaysCatchOSError(self):
-        """
-        Verify that in the normal case where a directory does not exist, we will
-        get an OSError.
-        """
-        fp = filepath.FilePath(self.mktemp())
-        self.assertRaises(OSError, fp.children)
-
-
-    def test_keepOriginalAttributes(self):
-        """
-        Verify that the Unlistable exception raised will preserve the attributes of
-        the previously-raised exception.
-        """
-        fp = filepath.FilePath(self.mktemp())
-        ose = self.assertRaises(OSError, fp.children)
-        d1 = dir(ose)
-        d1.remove('originalException')
-        d2 = dir(ose.originalException)
-        d1.sort()
-        d2.sort()
-        self.assertEquals(d1, d2)
-
-
-
-
-
 
 
 def zipit(dirname, zfname):

@@ -2,109 +2,44 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-"""
-Object-oriented filesystem path representation.
-"""
+from twisted.python.runtime import platform
 
 import os
 import errno
 import random
 import sha
-import base64
 
 from os.path import isabs, exists, normpath, abspath, splitext
 from os.path import basename, dirname
 from os.path import join as joinpath
 from os import sep as slash
 from os import listdir, utime, stat
-from os import stat_float_times
+
+from stat import ST_MODE, ST_MTIME, ST_ATIME, ST_CTIME, ST_SIZE
 
 from stat import S_ISREG, S_ISDIR
 
-# Please keep this as light as possible on other Twisted imports; many, many
-# things import this module, and it would be good if it could easily be
-# modified for inclusion in the standard library.  --glyph
+try:
+    from os.path import islink
+except ImportError:
+    def islink(path):
+        return False
 
-from twisted.python.runtime import platform
+try:
+    from os import urandom as randomBytes
+except ImportError:
+    def randomBytes(n):
+        randomData = [random.randrange(256) for n in xrange(n)]
+        return ''.join(map(chr, randomData))
 
-from twisted.python.win32 import ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND
-from twisted.python.win32 import ERROR_INVALID_NAME, ERROR_DIRECTORY
-from twisted.python.win32 import WindowsError
-
-def _stub_islink(path):
-    """
-    Always return 'false' if the operating system does not support symlinks.
-
-    @param path: a path string.
-    @type path: L{str}
-    @return: false
-    """
-    return False
-
-
-def _stub_urandom(n):
-    """
-    Provide random data in versions of Python prior to 2.4.  This is an
-    effectively compatible replacement for 'os.urandom'.
-
-    @type n: L{int}
-    @param n: the number of bytes of data to return
-    @return: C{n} bytes of random data.
-    @rtype: str
-    """
-    randomData = [random.randrange(256) for n in xrange(n)]
-    return ''.join(map(chr, randomData))
-
-
-def _stub_armor(s):
-    """
-    ASCII-armor for random data.  This uses a hex encoding, although we will
-    prefer url-safe base64 encoding for features in this module if it is
-    available.
-    """
-    return s.encode('hex')
-
-islink = getattr(os.path, 'islink', _stub_islink)
-randomBytes = getattr(os, 'urandom', _stub_urandom)
-armor = getattr(base64, 'urlsafe_b64encode', _stub_armor)
+try:
+    from base64 import urlsafe_b64encode as armor
+except ImportError:
+    def armor(s):
+        return s.encode('hex')
 
 class InsecurePath(Exception):
     pass
-
-
-class UnlistableError(OSError):
-    """
-    An exception which is used to distinguish between errors which mean 'this
-    is not a directory you can list' and other, more catastrophic errors.
-
-    This error will try to look as much like the original error as possible,
-    while still being catchable as an independent type.
-
-    @ivar originalException: the actual original exception instance, either an
-    L{OSError} or a L{WindowsError}.
-    """
-    def __init__(self, originalException):
-        """
-        Create an UnlistableError exception.
-
-        @param originalException: an instance of OSError.
-        """
-        self.__dict__.update(originalException.__dict__)
-        self.originalException = originalException
-
-
-
-class _WindowsUnlistableError(UnlistableError, WindowsError):
-    """
-    This exception is raised on Windows, for compatibility with previous
-    releases of FilePath where unportable programs may have done "except
-    WindowsError:" around a call to children().
-
-    It is private because all application code may portably catch
-    L{UnlistableError} instead.
-    """
-
-
 
 def _secureEnoughString():
     """
@@ -121,61 +56,7 @@ class _PathHelper:
         return self.open().read()
 
     def children(self):
-        """
-        List the chilren of this path object.
-
-        @raise OSError: If an error occurs while listing the directory.  If the
-        error is 'serious', meaning that the operation failed due to an access
-        violation, exhaustion of some kind of resource (file descriptors or
-        memory), OSError or a platform-specific variant be raised.
-
-        @raise UnlistableError: If the inability to list the directory due to
-        this path not existing or not being a directory, the more specific
-        OSError subclass L{UnlistableError} is raised instead.
-
-        @return: an iterable of all currently-existing children of this object
-        accessible with L{_PathHelper.child}.
-        """
-        try:
-            subnames = self.listdir()
-        except WindowsError, winErrObj:
-            # WindowsError is an OSError subclass, so if not for this clause
-            # the OSError clause below would be handling these.  Windows error
-            # codes aren't the same as POSIX error codes, so we need to handle
-            # them differently.
-
-            # Under Python 2.5 on Windows, WindowsError has a winerror
-            # attribute and an errno attribute.  The winerror attribute is
-            # bound to the Windows error code while the errno attribute is
-            # bound to a translation of that code to a perhaps equivalent POSIX
-            # error number.
-
-            # Under Python 2.4 on Windows, WindowsError only has an errno
-            # attribute.  It is bound to the Windows error code.
-
-            # For simplicity of code and to keep the number of paths through
-            # this suite minimal, we grab the Windows error code under either
-            # version.
-
-            # Furthermore, attempting to use os.listdir on a non-existent path
-            # in Python 2.4 will result in a Windows error code of
-            # ERROR_PATH_NOT_FOUND.  However, in Python 2.5,
-            # ERROR_FILE_NOT_FOUND results instead. -exarkun
-            winerror = getattr(winErrObj, 'winerror', winErrObj.errno)
-            if winerror not in (ERROR_PATH_NOT_FOUND,
-                                ERROR_FILE_NOT_FOUND,
-                                ERROR_INVALID_NAME,
-                                ERROR_DIRECTORY):
-                raise
-            raise _WindowsUnlistableError(winErrObj)
-        except OSError, ose:
-            if ose.errno not in (errno.ENOENT, errno.ENOTDIR):
-                # Other possible errors here, according to linux manpages:
-                # EACCES, EMIFLE, ENFILE, ENOMEM.  None of these seem like the
-                # sort of thing which should be handled normally. -glyph
-                raise
-            raise UnlistableError(ose)
-        return map(self.child, subnames)
+        return map(self.child, self.listdir())
 
     def walk(self):
         """
@@ -222,38 +103,6 @@ class _PathHelper:
         if f == ancestor and segments:
             return segments
         raise ValueError("%r not parent of %r" % (ancestor, self))
-
-
-    # new in 2.6.0
-    def __hash__(self):
-        """
-        Hash the same as another FilePath with the same path as mine.
-        """
-        return hash((self.__class__, self.path))
-
-
-    # pending deprecation in 2.6.0
-    def getmtime(self):
-        """
-        Deprecated.  Use getModificationTime instead.
-        """
-        return int(self.getModificationTime())
-
-
-    def getatime(self):
-        """
-        Deprecated.  Use getAccessTime instead.
-        """
-        return int(self.getAccessTime())
-
-
-    def getctime(self):
-        """
-        Deprecated.  Use getStatusChangeTime instead.
-        """
-        return int(self.getStatusChangeTime())
-
-
 
 class FilePath(_PathHelper):
     """I am a path on the filesystem that only permits 'downwards' access.
@@ -366,18 +215,6 @@ class FilePath(_PathHelper):
     # stat methods below
 
     def restat(self, reraise=True):
-        """
-        Re-calculate cached effects of 'stat'.  To refresh information on a file
-        after you know the filesystem may have changed, call this method.
-
-        Note: This method will unconditionally set Python's stat_float_times to
-        true.  Beware if your stat-calling code expects integers.
-
-        @param reraise: a boolean.  If true, re-raise exceptions from
-        L{os.stat}; otherwise, simply swallow them and set this path's current
-        stat value to 0.
-        """
-        stat_float_times(1)
         try:
             self.statinfo = stat(self.path)
         except OSError:
@@ -390,50 +227,28 @@ class FilePath(_PathHelper):
         if not st:
             self.restat()
             st = self.statinfo
-        return st.st_size
+        return st[ST_SIZE]
 
-
-    def getModificationTime(self):
-        """
-        Retrieve the time of last access from this file.
-
-        @return: a number of seconds from the epoch.
-        @rtype: float
-        """
+    def getmtime(self):
         st = self.statinfo
         if not st:
             self.restat()
             st = self.statinfo
-        return st.st_mtime
+        return st[ST_MTIME]
 
-
-    def getStatusChangeTime(self):
-        """
-        Retrieve the time of the last status change for this file.
-
-        @return: a number of seconds from the epoch.
-        @rtype: float
-        """
+    def getctime(self):
         st = self.statinfo
         if not st:
             self.restat()
             st = self.statinfo
-        return st.st_ctime
+        return st[ST_CTIME]
 
-
-    def getAccessTime(self):
-        """
-        Retrieve the time that this file was last accessed.
-
-        @return: a number of seconds from the epoch.
-        @rtype: float
-        """
+    def getatime(self):
         st = self.statinfo
         if not st:
             self.restat()
             st = self.statinfo
-        return st.st_atime
-
+        return st[ST_ATIME]
 
     def exists(self):
         if self.statinfo:
@@ -451,7 +266,7 @@ class FilePath(_PathHelper):
             st = self.statinfo
             if not st:
                 return False
-        return S_ISDIR(st.st_mode)
+        return S_ISDIR(st[ST_MODE])
 
     def isfile(self):
         st = self.statinfo
@@ -460,7 +275,7 @@ class FilePath(_PathHelper):
             st = self.statinfo
             if not st:
                 return False
-        return S_ISREG(st.st_mode)
+        return S_ISREG(st[ST_MODE])
 
     def islink(self):
         # We can't use cached stat results here, because that is the stat of

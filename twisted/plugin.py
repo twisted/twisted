@@ -11,25 +11,33 @@ Plugin system for Twisted.
 
 from __future__ import generators
 
+import os, errno
+
 from zope.interface import Interface, providedBy
 
-def _determinePickleModule():
-    """
-    Determine which 'pickle' API module to use.
-    """
-    try:
-        import cPickle
-        return cPickle
-    except ImportError:
-        import pickle
-        return pickle
-
-pickle = _determinePickleModule()
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 from twisted.python.components import getAdapterFactory
 from twisted.python.reflect import namedAny
+from twisted.python.win32 import ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND
+from twisted.python.win32 import ERROR_INVALID_NAME, WindowsError
 from twisted.python import log
-from twisted.python.modules import getModule
+
+try:
+    from os import stat_float_times
+    from os.path import getmtime as _getmtime
+    def getmtime(x):
+        sft = stat_float_times()
+        stat_float_times(True)
+        try:
+            return _getmtime(x)
+        finally:
+            stat_float_times(sft)
+except:
+    from os.path import getmtime
 
 class IPlugin(Interface):
     """Interface that must be implemented by all plugins.
@@ -103,70 +111,109 @@ except AttributeError:
 _exts = fromkeys(['.py', '.so', '.pyd', '.dll'])
 
 def getCache(module):
-    """
-    Compute all the possible loadable plugins, while loading as few as
-    possible and hitting the filesystem as little as possible.
-
-    @param module: a Python module object.  This represents a package to search
-    for plugins.
-
-    @return: a dictionary mapping module names to CachedDropin instances.
-    """
-    allCachesCombined = {}
-    mod = getModule(module.__name__)
-    # don't want to walk deep, only immediate children.
-    lastPath = None
-    buckets = {}
-    # Fill buckets with modules by related entry on the given package's
-    # __path__.  There's an abstraction inversion going on here, because this
-    # information is already represented internally in twisted.python.modules,
-    # but it's simple enough that I'm willing to live with it.  If anyone else
-    # wants to fix up this iteration so that it's one path segment at a time,
-    # be my guest.  --glyph
-    for plugmod in mod.iterModules():
-        fpp = plugmod.filePath.parent()
-        if fpp not in buckets:
-            buckets[fpp] = []
-        bucket = buckets[fpp]
-        bucket.append(plugmod)
-    for pseudoPackagePath, bucket in buckets.iteritems():
-        dropinPath = pseudoPackagePath.child('dropin.cache')
+    topcache = {}
+    for p in module.__path__:
+        dropcache = os.path.join(p, "dropin.cache")
         try:
-            dropinDotCache = pickle.load(dropinPath.open('rb'))
+            cache = pickle.load(file(dropcache))
+            lastCached = getmtime(dropcache)
+            dirtyCache = False
         except:
-            dropinDotCache = {}
+            cache = {}
             lastCached = 0
-        else:
-            lastCached = dropinPath.getModificationTime()
+            dirtyCache = True
+        try:
+            dropinNames = os.listdir(p)
+        except WindowsError, e:
+            # WindowsError is an OSError subclass, so if not for this clause
+            # the OSError clause below would be handling these.  Windows
+            # error codes aren't the same as POSIX error codes, so we need
+            # to handle them differently.
 
-        needsWrite = False
-        existingKeys = {}
-        for pluginModule in bucket:
-            pluginKey = pluginModule.name.split('.')[-1]
-            existingKeys[pluginKey] = True
-            if ((pluginKey not in dropinDotCache) or
-                (pluginModule.filePath.getModificationTime() >= lastCached)):
-                needsWrite = True
+            # Under Python 2.5 on Windows, WindowsError has a winerror
+            # attribute and an errno attribute.  The winerror attribute is
+            # bound to the Windows error code while the errno attribute is
+            # bound to a translation of that code to a perhaps equivalent
+            # POSIX error number.
+
+            # Under Python 2.4 on Windows, WindowsError only has an errno
+            # attribute.  It is bound to the Windows error code.
+
+            # For simplicity of code and to keep the number of paths through
+            # this suite minimal, we grab the Windows error code under
+            # either version.
+
+            # Furthermore, attempting to use os.listdir on a non-existent
+            # path in Python 2.4 will result in a Windows error code of
+            # ERROR_PATH_NOT_FOUND.  However, in Python 2.5,
+            # ERROR_FILE_NOT_FOUND results instead. -exarkun
+            err = getattr(e, 'winerror', e.errno)
+            if err in (ERROR_PATH_NOT_FOUND, ERROR_FILE_NOT_FOUND):
+                continue
+            elif err == ERROR_INVALID_NAME:
+                log.msg("Invalid path %r in search path for %s" % (p, module.__name__))
+                continue
+            else:
+                raise
+        except OSError, ose:
+            if ose.errno not in (errno.ENOENT, errno.ENOTDIR):
+                raise
+            else:
+                continue
+        else:
+            pys = {}
+            for dropinName in dropinNames:
+                moduleName, moduleExt = os.path.splitext(dropinName)
+                if moduleName != '__init__' and moduleExt in _exts:
+                    pyFile = os.path.join(p, dropinName)
+                    try:
+                        pys[moduleName] = getmtime(pyFile)
+                    except:
+                        log.err()
+
+        for moduleName, lastChanged in pys.iteritems():
+            if lastChanged >= lastCached or moduleName not in cache:
+                dirtyCache = True
                 try:
-                    provider = pluginModule.load()
+                    provider = namedAny(module.__name__ + '.' + moduleName)
                 except:
-                    # dropinDotCache.pop(pluginKey, None)
                     log.err()
                 else:
                     entry = _generateCacheEntry(provider)
-                    dropinDotCache[pluginKey] = entry
-        # Make sure that the cache doesn't contain any stale plugins.
-        for pluginKey in dropinDotCache.keys():
-            if pluginKey not in existingKeys:
-                del dropinDotCache[pluginKey]
-                needsWrite = True
-        if needsWrite:
-            dropinPath.setContent(pickle.dumps(dropinDotCache))
-        allCachesCombined.update(dropinDotCache)
-    return allCachesCombined
+                    cache[moduleName] = entry
 
+        for moduleName in cache.keys():
+            if moduleName not in pys:
+                dirtyCache = True
+                del cache[moduleName]
 
-def getPlugins(interface, package=None):
+        topcache.update(cache)
+
+        if dirtyCache:
+            newCacheData = pickle.dumps(cache, 2)
+            tmpCacheFile = dropcache + ".new"
+            try:
+                stage = 'opening'
+                f = file(tmpCacheFile, 'wb')
+                stage = 'writing'
+                f.write(newCacheData)
+                stage = 'closing'
+                f.close()
+                stage = 'renaming'
+                os.rename(tmpCacheFile, dropcache)
+            except (OSError, IOError), e:
+                # A large number of errors can occur here.  There's nothing we
+                # can really do about any of them, but they are also non-fatal
+                # (they only slow us down by preventing results from being
+                # cached).  Notify the user of the error, but proceed as if it
+                # had not occurred.
+                log.msg("Error %s plugin cache file %r (%r): %r" % (
+                    stage, tmpCacheFile, dropcache, os.strerror(e.errno)))
+
+    return topcache
+
+import twisted.plugins
+def getPlugins(interface, package=twisted.plugins):
     """Retrieve all plugins implementing the given interface beneath the given module.
 
     @param interface: An interface class.  Only plugins which
@@ -177,8 +224,6 @@ def getPlugins(interface, package=None):
 
     @return: An iterator of plugins.
     """
-    if package is None:
-        import twisted.plugins as package
     allDropins = getCache(package)
     for dropin in allDropins.itervalues():
         for plugin in dropin.plugins:
@@ -190,7 +235,7 @@ def getPlugins(interface, package=None):
                 if adapted is not None:
                     yield adapted
 
-
+                    
 # Old, backwards compatible name.  Don't use this.
 getPlugIns = getPlugins
 
