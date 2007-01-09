@@ -59,16 +59,12 @@ from os.path import dirname, split as splitpath
 import sys
 import zipimport
 import inspect
-from errno import ENOTDIR
-
 from zope.interface import Interface, implements
 
 from twisted.python.components import registerAdapter
-from twisted.python.filepath import FilePath
+from twisted.python.filepath import FilePath, UnlistableError
 from twisted.python.zippath import ZipArchive
 from twisted.python.reflect import namedAny
-from twisted.python.win32 import WindowsError
-from twisted.python.win32 import ERROR_DIRECTORY
 
 _nothing = object()
 
@@ -129,25 +125,16 @@ class _ModuleIteratorHelper:
         for placeToLook in self._packagePaths():
             try:
                 children = placeToLook.children()
-            except WindowsError, e:
-                errno = getattr(e, 'winerror', e.errno)
-                if errno == ERROR_DIRECTORY:
-                    # It is a non-directory, skip it.
-                    continue
-                raise
-            except OSError, e:
-                if e.errno in (ENOTDIR,):
-                    # It is a non-directory, skip it.
-                    continue
-                raise
+            except UnlistableError:
+                continue
 
             for potentialTopLevel in children:
-                name, ext = potentialTopLevel.splitext()
+                ext = potentialTopLevel.splitext()[1]
+                potentialBasename = potentialTopLevel.basename()[:-len(ext)]
                 if ext in PYTHON_EXTENSIONS:
                     # TODO: this should be a little choosier about which path entry
                     # it selects first, and it should do all the .so checking and
                     # crud
-                    potentialBasename = potentialTopLevel.basename()[:-len(ext)]
                     if not _isPythonIdentifier(potentialBasename):
                         continue
                     modname = self._subModuleName(potentialBasename)
@@ -160,7 +147,10 @@ class _ModuleIteratorHelper:
                         pm = PythonModule(modname, potentialTopLevel, self._getEntry())
                         assert pm != self
                         yield pm
-                elif potentialTopLevel.isdir():
+                else:
+                    if (ext or not _isPythonIdentifier(potentialBasename)
+                        or not potentialTopLevel.isdir()):
+                        continue
                     modname = self._subModuleName(potentialTopLevel.basename())
                     for ext in PYTHON_EXTENSIONS:
                         initpy = potentialTopLevel.child("__init__"+ext)
@@ -319,6 +309,7 @@ class PythonModule(_ModuleIteratorHelper):
         assert not name.endswith(".__init__")
         self.name = name
         self.filePath = filePath
+        self.parentPath = filePath.parent()
         self.pathEntry = pathEntry
 
     def _getEntry(self):
@@ -424,17 +415,16 @@ class PythonModule(_ModuleIteratorHelper):
             return
         if self.isLoaded():
             for fn in self.load().__path__:
-                sfpp = self.filePath.parent()
-                if fn == sfpp.path:
+                if fn == self.parentPath.path:
                     # this should _really_ exist.
-                    assert sfpp.exists()
-                    yield sfpp
+                    assert self.parentPath.exists()
+                    yield self.parentPath
                 else:
                     smp = self.pathEntry.pythonPath._smartPath(fn)
                     if smp.exists():
                         yield smp
         else:
-            yield self.filePath.parent()
+            yield self.parentPath
 
 
 class PathEntry(_ModuleIteratorHelper):
@@ -505,7 +495,9 @@ class _ZipMapImpl:
         if myPath == itsPath:
             return za
         # This is NOT a general-purpose rule for sys.path or __file__:
-        # zipimport specifically uses regular OS path syntax in its pathnames.
+        # zipimport specifically uses regular OS path syntax in its pathnames,
+        # even though zip files specify that slashes are always the separator,
+        # regardless of platform.
         segs = itsPath.segmentsFrom(myPath)
         zp = za
         for seg in segs:
