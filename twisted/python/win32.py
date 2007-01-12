@@ -8,12 +8,13 @@ See also twisted.python.shortcut.
 """
 
 import re
+import exceptions
 
 try:
     import win32api
     import win32con
 except ImportError:
-    win32api = win32con = None
+    pass
 
 from twisted.python.runtime import platform
 
@@ -23,14 +24,19 @@ ERROR_PATH_NOT_FOUND = 3
 ERROR_INVALID_NAME = 123
 ERROR_DIRECTORY = 267
 
-try:
-    WindowsError = WindowsError
-except NameError:
-    class WindowsError:
-        """
-        Stand-in for sometimes-builtin exception on platforms for which it
-        is missing.
-        """
+def _determineWindowsError():
+    """
+    Determine which WindowsError name to export.
+    """
+    return getattr(exceptions, 'WindowsError', FakeWindowsError)
+
+class FakeWindowsError(OSError):
+    """
+    Stand-in for sometimes-builtin exception on platforms for which it
+    is missing.
+    """
+
+WindowsError = _determineWindowsError()
 
 # XXX fix this to use python's builtin _winreg?
 

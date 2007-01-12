@@ -13,6 +13,8 @@ See the constructor for ZipArchive for use.
 __metaclass__ = type
 
 import os
+import time
+import errno
 
 from twisted.python.zipstream import ChunkingZipFile
 
@@ -80,13 +82,24 @@ class ZipPath(_PathHelper):
         return False
 
     def listdir(self):
-        return self.archive.childmap[self.pathInArchive].keys()
+        if self.exists():
+            if self.isdir():
+                return self.archive.childmap[self.pathInArchive].keys()
+            else:
+                raise OSError(errno.ENOTDIR, "Leaf zip entry listed")
+        else:
+            raise OSError(errno.ENOENT, "Non-existent zip entry listed")
+
 
     def splitext(self):
-        # ugh, terrible API, these paths are unusable; but the extension is
-        # what we're after 99% of the time
-        n = self.path.rfind('.')
-        return self.path[:n], self.path[n:]
+        """
+        Return a value similar to that returned by os.path.splitext.
+        """
+        # This happens to work out because of the fact that we use OS-specific
+        # path separators in the constructor to construct our fake 'path'
+        # attribute.
+        return os.path.splitext(self.path)
+
 
     def basename(self):
         return self.pathInArchive.split(ZIP_PATH_SEP)[-1]
@@ -101,6 +114,39 @@ class ZipPath(_PathHelper):
 
     def restat(self):
         pass
+
+
+    def getAccessTime(self):
+        """
+        Retrieve this file's last access-time.  This is the same as the last access
+        time for the archive.
+
+        @return: a number of seconds since the epoch
+        """
+        return self.archive.getAccessTime()
+
+
+    def getModificationTime(self):
+        """
+        Retrieve this file's last modification time.  This is the time of
+        modification recorded in the zipfile.
+
+        @return: a number of seconds since the epoch.
+        """
+        return time.mktime(
+            self.archive.zipfile.NameToInfo[self.pathInArchive].date_time
+            + (0, 0, 0))
+
+
+    def getStatusChangeTime(self):
+        """
+        Retrieve this file's last modification time.  This name is provided for
+        compatibility, and returns the same value as getmtime.
+
+        @return: a number of seconds since the epoch.
+        """
+        return self.getModificationTime()
+
 
 
 class ZipArchive(ZipPath):
@@ -144,3 +190,26 @@ class ZipArchive(ZipPath):
         Returns true if the underlying archive exists.
         """
         return FilePath(self.zipfile.filename).exists()
+
+
+    def getAccessTime(self):
+        """
+        Return the archive file's last access time.
+        """
+        return FilePath(self.zipfile.filename).getAccessTime()
+
+
+    def getModificationTime(self):
+        """
+        Return the archive file's modification time.
+        """
+        return FilePath(self.zipfile.filename).getModificationTime()
+
+
+    def getStatusChangeTime(self):
+        """
+        Return the archive file's status change time.
+        """
+        return FilePath(self.zipfile.filename).getStatusChangeTime()
+
+

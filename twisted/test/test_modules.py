@@ -10,6 +10,7 @@ import os
 import sys
 import itertools
 import zipfile
+import compileall
 
 from twisted.trial.unittest import TestCase
 
@@ -22,9 +23,11 @@ from twisted.test.test_paths import zipit
 class PySpaceTestCase(TestCase):
 
     def findByIteration(self, modname, where=modules, importPackages=False):
-        """ You don't ever actually want to do this, so it's not in the public API, but
+        """
+        You don't ever actually want to do this, so it's not in the public API, but
         sometimes we want to compare the result of an iterative call with a
-        lookup call and make sure they're the same for test purposes.  """
+        lookup call and make sure they're the same for test purposes.
+        """
         for modinfo in where.walkModules(importPackages=importPackages):
             if modinfo.name == modname:
                 return modinfo
@@ -86,16 +89,20 @@ class BasicTests(PySpaceTestCase):
 
 
     def test_twistedShowsUp(self):
-        """ Scrounge around in the top-level module namespace and make sure that
+        """
+        Scrounge around in the top-level module namespace and make sure that
         Twisted shows up, and that the module thusly obtained is the same as
-        the module that we find when we look for it explicitly by name.  """
+        the module that we find when we look for it explicitly by name.
+        """
         self.assertEquals(modules.getModule('twisted'),
                           self.findByIteration("twisted"))
 
 
     def test_dottedNames(self):
-        """ Verify that the walkModules APIs will give us back subpackages, not just
-        subpackages.  """
+        """
+        Verify that the walkModules APIs will give us back subpackages, not just
+        subpackages.
+        """
         self.assertEquals(
             modules.getModule('twisted.python'),
             self.findByIteration("twisted.python",
@@ -103,8 +110,10 @@ class BasicTests(PySpaceTestCase):
 
 
     def test_onlyTopModules(self):
-        """ Verify that the iterModules API will only return top-level modules and
-        packages, not submodules or subpackages.  """
+        """
+        Verify that the iterModules API will only return top-level modules and
+        packages, not submodules or subpackages.
+        """
         for module in modules.iterModules():
             self.failIf(
                 '.' in module.name,
@@ -113,8 +122,10 @@ class BasicTests(PySpaceTestCase):
 
 
     def test_loadPackagesAndModules(self):
-        """ Verify that we can locate and load packages, modules, submodules, and
-        subpackages.  """
+        """
+        Verify that we can locate and load packages, modules, submodules, and
+        subpackages.
+        """
         for n in ['os',
                   'twisted',
                   'twisted.python',
@@ -129,8 +140,10 @@ class BasicTests(PySpaceTestCase):
 
 
     def test_pathEntriesOnPath(self):
-        """ Verify that path entries discovered via module loading are, in fact, on
-        sys.path somewhere.  """
+        """
+        Verify that path entries discovered via module loading are, in fact, on
+        sys.path somewhere.
+        """
         for n in ['os',
                   'twisted',
                   'twisted.python',
@@ -140,10 +153,42 @@ class BasicTests(PySpaceTestCase):
                 sys.path)
 
 
+    def test_alwaysPreferPy(self):
+        """
+        Verify that .py files will always be preferred to .pyc files, regardless of
+        directory listing order.
+        """
+        mypath = FilePath(self.mktemp())
+        mypath.createDirectory()
+        pp = modules.PythonPath(sysPath=[mypath.path])
+        originalSmartPath = pp._smartPath
+        def _evilSmartPath(pathName):
+            o = originalSmartPath(pathName)
+            originalChildren = o.children
+            def evilChildren():
+                # normally this order is random; let's make sure it always
+                # comes up .pyc-first.
+                x = originalChildren()
+                x.sort()
+                x.reverse()
+                return x
+            o.children = evilChildren
+            return o
+        mypath.child("abcd.py").setContent('\n')
+        compileall.compile_dir(mypath.path, quiet=True)
+        # sanity check
+        self.assertEquals(len(mypath.children()), 2)
+        pp._smartPath = _evilSmartPath
+        self.assertEquals(pp['abcd'].filePath,
+                          mypath.child('abcd.py'))
+
+
 
 class PathModificationTest(PySpaceTestCase):
-    """ These tests share setup/cleanup behavior of creating a dummy package and
-    stuffing some code in it.  """
+    """
+    These tests share setup/cleanup behavior of creating a dummy package and
+    stuffing some code in it.
+    """
 
     _serialnum = itertools.count().next # used to generate serial numbers for
                                         # package names.
@@ -186,13 +231,15 @@ class PathModificationTest(PySpaceTestCase):
 
 
     def test_underUnderPathAlreadyImported(self):
-        """ Verify that iterModules will honor the __path__ of already-loaded packages.
+        """
+        Verify that iterModules will honor the __path__ of already-loaded packages.
         """
         self._underUnderPathTest()
 
 
     def test_underUnderPathNotAlreadyImported(self):
-        """ Verify that iterModules will honor the __path__ of already-loaded packages.
+        """
+        Verify that iterModules will honor the __path__ of already-loaded packages.
         """
         self._underUnderPathTest(False)
 
@@ -210,16 +257,20 @@ class PathModificationTest(PySpaceTestCase):
 
 
     def test_listingModules(self):
-        """ Make sure the module list comes back as we expect from iterModules on a
-        package, whether zipped or not.  """
+        """
+        Make sure the module list comes back as we expect from iterModules on a
+        package, whether zipped or not.
+        """
         self._setupSysPath()
         self._listModules()
 
 
     def test_listingModulesAlreadyImported(self):
-        """ Make sure the module list comes back as we expect from iterModules on a
+        """
+        Make sure the module list comes back as we expect from iterModules on a
         package, whether zipped or not, even if the package has already been
-        imported.  """
+        imported.
+        """
         self._setupSysPath()
         namedAny(self.packageName)
         self._listModules()
