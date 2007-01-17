@@ -9,6 +9,7 @@ See also twisted.python.shortcut.
 
 import re
 import exceptions
+import sys, errno, os
 
 try:
     import win32api
@@ -145,6 +146,6 @@ else:
     def rename(src, dest):
         """Rename src to dest. Unlike os.rename, will replace an existing
         destination file, like os.rename on unix."""
-        if ospath.exists(dest):
+        if os.path.exists(dest):
             os.unlink(dest)
         os.rename(src, dest)

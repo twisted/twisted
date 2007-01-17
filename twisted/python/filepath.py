@@ -6,13 +6,14 @@
 Object-oriented filesystem path representation.
 """
 
-import os
+import os, sys
 import errno
 import random
 import sha
 from os import path as ospath
 import base64
 import glob
+import warnings
 
 from os import sep as slash
 
@@ -24,6 +25,7 @@ from stat import S_ISREG, S_ISDIR
 
 from twisted.python.runtime import platform
 
+from twisted.python import win32
 from twisted.python.win32 import ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND
 from twisted.python.win32 import ERROR_INVALID_NAME, ERROR_DIRECTORY
 from twisted.python.win32 import WindowsError
@@ -554,7 +556,7 @@ class _BaseFilePath(_PathHelper):
                       "Please use os.path.splitext if necessary.",
                       category=DeprecationWarning, stacklevel=2)
 
-        return self._convertToInputType(ospath.splitext(self.fsPathname))
+        return ospath.splitext(self.path)
 
     def __repr__(self):
         return 'FilePath(%r)' % (self.fsPathname,)
@@ -611,7 +613,7 @@ class _BaseFilePath(_PathHelper):
     def setContent(self, content, ext='.new'):
         sib = self.siblingExtension(ext)
         sib.open('w').write(content)
-         and ospath.exists(self.fsPathname):
+        if platform.isWindows() and ospath.exists(self.fsPathname):
             os.unlink(self.fsPathname)
         os.rename(sib.fsPathname, self.fsPathname)
 
@@ -733,15 +735,15 @@ if ospath.supports_unicode_filenames and platform.isWindows():
             return path
 
         def _coerceToFsExt(self, ext):
-            if not isinstance(path, unicode):
-                return path.decode(sys.getfilesystemencoding())
-            return path
+            if not isinstance(ext, unicode):
+                return ext.decode(sys.getfilesystemencoding())
+            return ext
 
         def _getDisplayPathname(self):
             """Property getter for displayPathname."""
             return self.fsPathname
 
-        displayPathname = property(_getDisplayPathnamee)
+        displayPathname = property(_getDisplayPathname)
 
         # listdir is broken without a \ on the end in Python 2.3/2.4, since they
         # append a '/*.*' instead of '\*.*'. Sigh.
@@ -771,6 +773,7 @@ else:
 
         displayPathname = property(_getDisplayPathname)
 
-
+        def _listdir(self, path):
+            return os.listdir(path)
 
 FilePath.clonePath = FilePath

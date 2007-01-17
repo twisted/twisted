@@ -183,7 +183,7 @@ class FakeWindowsPath(filepath.FilePath):
     A test version of FilePath which overrides listdir to raise L{WindowsError}.
     """
 
-    def listdir(self):
+    def _listdir(self, path):
         """
         @raise WindowsError: always.
         """
