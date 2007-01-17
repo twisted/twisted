@@ -10,13 +10,11 @@ import os
 import errno
 import random
 import sha
+from os import path as ospath
 import base64
+import glob
 
-from os.path import isabs, exists, normpath, abspath, splitext
-from os.path import basename, dirname
-from os.path import join as joinpath
 from os import sep as slash
-from os import listdir, utime, stat
 
 from stat import S_ISREG, S_ISDIR
 
@@ -121,7 +119,7 @@ class _PathHelper:
 
     def children(self):
         """
-        List the chilren of this path object.
+        List the children of this path object.
 
         @raise OSError: If an error occurs while listing the directory.  If the
         error is 'serious', meaning that the operation failed due to an access
@@ -136,7 +134,7 @@ class _PathHelper:
         accessible with L{_PathHelper.child}.
         """
         try:
-            subnames = self.listdir()
+            subnames = self._listdir(self.fsPathname)
         except WindowsError, winErrObj:
             # WindowsError is an OSError subclass, so if not for this clause
             # the OSError clause below would be handling these.  Windows error
@@ -207,6 +205,8 @@ class _PathHelper:
         ancestor, i.e. a path for /x/y/z is passed as an ancestor for /a/b/c/d.
 
         @return: a list of strs
+
+        FIXME: a list of strs is now wrong. Deprecate?
         """
         # this might be an unnecessarily inefficient implementation but it will
         # work on win32 and for zipfiles; later I will deterimine if the
@@ -215,20 +215,19 @@ class _PathHelper:
         p = f.parent()
         segments = []
         while f != ancestor and p != f:
-            segments[0:0] = [f.basename()]
+            segments[0:0] = [f.fsBasename]
             f = p
             p = p.parent()
         if f == ancestor and segments:
             return segments
         raise ValueError("%r not parent of %r" % (ancestor, self))
 
-
     # new in 2.6.0
     def __hash__(self):
         """
         Hash the same as another FilePath with the same path as mine.
         """
-        return hash((self.__class__, self.path))
+        return hash((self.__class__, self.fsPathname))
 
 
     # pending deprecation in 2.6.0
@@ -254,7 +253,7 @@ class _PathHelper:
 
 
 
-class FilePath(_PathHelper):
+class _BaseFilePath(_PathHelper):
     """
     I am a path on the filesystem that only permits 'downwards' access.
 
@@ -278,16 +277,37 @@ class FilePath(_PathHelper):
     Greater-than-second precision is only available in Windows on Python2.5 and
     later.
 
+    @type fsPathname: C{str} or C{unicode}
+    @ivar fsPathname: The filesystem native pathname for this file. It will be a
+    unicode string on some OSes and a byte string on others. It should only be
+    used for passing to python filesystem APIs.
+
+    @type displayPathname: C{unicode}
+    @ivar displayPathname: The pathname for this file, suitable for displaying
+    to a user. It is always unicode (decoded with 'replace' conversion if
+    necessary). However, due to the conversion, there may have been some data
+    loss.
+
+    @type fsBasename: C{str} or C{unicode}
+    @ivar fsBasename: The basename (last component of the path), in the
+    system preferred format. (see fsPathname)
+
+    @type displayBasename: C{unicode}
+    @ivar displayBasename: The basename (last component of the path), in
+    unicode, formatted for display.
+
     @type alwaysCreate: C{bool}
     @ivar alwaysCreate: When opening this file, only succeed if the file does not
     already exist.
     """
 
     statinfo = None
-    path = None
+    fsPathname = None
 
     def __init__(self, path, alwaysCreate=False):
-        self.path = abspath(path)
+        # Used to set the return type of various deprecated functionality
+        self._inputWasUnicode = (str, unicode)[isinstance(path, unicode)]
+        self.fsPathname = ospath.abspath(self._coerceToFsPath(path))
         self.alwaysCreate = alwaysCreate
 
     def __getstate__(self):
@@ -296,16 +316,54 @@ class FilePath(_PathHelper):
             del d['statinfo']
         return d
 
+    def _convertToInputType(self, arg):
+        """Convert arg to the same type as the input."""
+        if self._inputWasUnicode:
+            if isinstance(arg, unicode):
+                return arg
+            else:
+                try:
+                    return arg.decode(sys.getfilesystemencoding())
+                except UnicodeDecodeError:
+                    # Upon error converting to unicode, return str.
+                    return arg
+        else:
+            # path was str
+            if isinstance(arg, unicode):
+                # Upon error, replace with ? chars.
+                return arg.encode(sys.getfilesystemencoding(), 'replace')
+            else:
+                return arg
+
+    def _getPath(self):
+        warnings.warn("Filepath.path is deprecated as of Twisted 2.6. "
+                      "Please use .fsPathname or .displayPathname instead.",
+                      category=DeprecationWarning, stacklevel=2)
+        return self._convertToInputType(self.fsPathname)
+
+    path = property(_getPath)
+
+    def _getFSBasename(self):
+        return ospath.basename(self.fsPathname)
+
+    def _getDisplayBasename(self):
+        return ospath.basename(self.displayPathname)
+
+    fsBasename = property(_getFSBasename)
+    displayBasename = property(_getDisplayBasename)
+
     def child(self, path):
+        path = self._coerceToFsPath(path)
+
         if platform.isWindows() and path.count(":"):
-            # Catch paths like C:blah that don't have a slash
+            # No NTFS file streams allowed.
             raise InsecurePath("%r contains a colon." % (path,))
-        norm = normpath(path)
+        norm = ospath.normpath(path)
         if slash in norm:
             raise InsecurePath("%r contains one or more directory separators" % (path,))
-        newpath = abspath(joinpath(self.path, norm))
-        if not newpath.startswith(self.path):
-            raise InsecurePath("%r is not a child of %s" % (newpath, self.path))
+        newpath = ospath.abspath(ospath.join(self.fsPathname, norm))
+        if not newpath.startswith(self.fsPathname):
+            raise InsecurePath("%r is not a child of %s" % (newpath, self.fsPathname))
         return self.clonePath(newpath)
 
     def preauthChild(self, path):
@@ -314,9 +372,11 @@ class FilePath(_PathHelper):
 
         (NOT slashes at the beginning. It still needs to be a _child_).
         """
-        newpath = abspath(joinpath(self.path, normpath(path)))
-        if not newpath.startswith(self.path):
-            raise InsecurePath("%s is not a child of %s" % (newpath, self.path))
+        path = self._coerceToFsPath(path)
+
+        newpath = ospath.abspath(ospath.join(self.fsPathname, ospath.normpath(path)))
+        if not newpath.startswith(self.fsPathname):
+            raise InsecurePath("%s is not a child of %s" % (newpath, self.fsPathname))
         return self.clonePath(newpath)
 
     def childSearchPreauth(self, *paths):
@@ -328,10 +388,11 @@ class FilePath(_PathHelper):
 
         If no appropriately-named children exist, this will return None.
         """
-        p = self.path
+        p = self.fsPathname
         for child in paths:
-            jp = joinpath(p, child)
-            if exists(jp):
+            child = self._coerceToFsPath(child)
+            jp = ospath.join(p, child)
+            if ospath.exists(jp):
                 return self.clonePath(jp)
 
     def siblingExtensionSearch(self, *exts):
@@ -343,30 +404,35 @@ class FilePath(_PathHelper):
         in exts, then if the file referred to by this path exists, 'self' will
         be returned.
 
-        The extension '*' has a magic meaning, which means "any path that
-        begins with self.path+'.' is acceptable".
+        The extension '*' has a magic meaning, which means "any filename that
+        begins with my name + '.' is acceptable".
         """
-        p = self.path
         for ext in exts:
             if not ext and self.exists():
                 return self
             if ext == '*':
-                basedot = basename(p)+'.'
-                for fn in listdir(dirname(p)):
+                basedot = self.fsBasename+'.'
+                parent = self.parent()
+                try:
+                    fns = self._listdir(parent.fsPathname)
+                except OSError:
+                    fns = []
+                for fn in fns:
                     if fn.startswith(basedot):
-                        return self.clonePath(joinpath(dirname(p), fn))
-            p2 = p + ext
-            if exists(p2):
-                return self.clonePath(p2)
+                        return self.clonePath(ospath.dirname(self.fsPathname)+slash+fn)
+            else:
+                sibpath = self.siblingExtension(ext)
+                if sibpath.exists():
+                    return sibpath
 
     def siblingExtension(self, ext):
-        return self.clonePath(self.path+ext)
+        return self.clonePath(self.fsPathname+self._coerceToFsExt(ext))
 
     def open(self, mode='r'):
         if self.alwaysCreate:
             assert 'a' not in mode, "Appending not supported when alwaysCreate == True"
             return self.create()
-        return open(self.path, mode+'b')
+        return open(self.fsPathname, mode+'b')
 
     # stat methods below
 
@@ -380,7 +446,7 @@ class FilePath(_PathHelper):
         cached stat information.
         """
         try:
-            self.statinfo = stat(self.path)
+            self.statinfo = os.stat(self.fsPathname)
         except OSError:
             self.statinfo = 0
             if reraise:
@@ -468,38 +534,49 @@ class FilePath(_PathHelper):
         # the destination - (see #1773) which in *every case* but this one is
         # the right thing to use.  We could call lstat here and use that, but
         # it seems unlikely we'd actually save any work that way.  -glyph
-        return islink(self.path)
+        return islink(self.fsPathname)
 
     def isabs(self):
-        return isabs(self.path)
+        warnings.warn("Filepath.isabs() is deprecated as of Twisted 2.6. "
+                      "It has never returned anything but True, anyhow.",
+                      category=DeprecationWarning, stacklevel=2)
+        return True
 
     def listdir(self):
-        return listdir(self.path)
+        warnings.warn("Filepath.listdir() is deprecated as of Twisted 2.6. "
+                      "Please use .children() instead.",
+                      category=DeprecationWarning, stacklevel=2)
+
+        return [self._convertToInputType(x) for x in self._listdir(self.fsPathname)]
 
     def splitext(self):
-        return splitext(self.path)
+        warnings.warn("Filepath.splitext() is deprecated as of Twisted 2.6. "
+                      "Please use os.path.splitext if necessary.",
+                      category=DeprecationWarning, stacklevel=2)
+
+        return self._convertToInputType(ospath.splitext(self.fsPathname))
 
     def __repr__(self):
-        return 'FilePath(%r)' % (self.path,)
+        return 'FilePath(%r)' % (self.fsPathname,)
 
     def touch(self):
         try:
             self.open('a').close()
         except IOError:
             pass
-        utime(self.path, None)
+        os.utime(self.fsPathname, None)
 
     def remove(self):
         if self.isdir():
             for child in self.children():
                 child.remove()
-            os.rmdir(self.path)
+            os.rmdir(self.fsPathname)
         else:
-            os.remove(self.path)
+            os.remove(self.fsPathname)
         self.restat(False)
 
     def makedirs(self):
-        return os.makedirs(self.path)
+        return os.makedirs(self.fsPathname)
 
     def globChildren(self, pattern):
         """
@@ -507,35 +584,46 @@ class FilePath(_PathHelper):
         FilePaths representing my children that match the given
         pattern.
         """
-        import glob
-        path = self.path[-1] == '/' and self.path + pattern or slash.join([self.path, pattern])
+        pattern = self._coerceToFsPath(pattern)
+        if self.fsPathname[-1] == slash:
+            path = self.fsPathname + pattern
+        else:
+            slash.join([self.fsPathname, pattern])
         return map(self.clonePath, glob.glob(path))
 
     def basename(self):
-        return basename(self.path)
+        warnings.warn("Filepath.basename() is deprecated as of Twisted 2.6. "
+                      "Please use .fsBasename or .displayBasename instead.",
+                      category=DeprecationWarning, stacklevel=2)
+
+        return self._convertToInputType(ospath.basename(self.fsPathname))
 
     def dirname(self):
-        return dirname(self.path)
+        warnings.warn("Filepath.dirname() is deprecated as of Twisted 2.6. "
+                      "Please use .parent() instead.",
+                      category=DeprecationWarning, stacklevel=2)
+
+        return self._convertToInputType(ospath.dirname(self.fsPathname))
 
     def parent(self):
-        return self.clonePath(self.dirname())
+        return self.clonePath(ospath.dirname(self.fsPathname))
 
     def setContent(self, content, ext='.new'):
         sib = self.siblingExtension(ext)
         sib.open('w').write(content)
-        if platform.isWindows() and exists(self.path):
-            os.unlink(self.path)
-        os.rename(sib.path, self.path)
+         and ospath.exists(self.fsPathname):
+            os.unlink(self.fsPathname)
+        os.rename(sib.fsPathname, self.fsPathname)
 
     # new in 2.2.0
 
     def __cmp__(self, other):
         if not isinstance(other, FilePath):
             return NotImplemented
-        return cmp(self.path, other.path)
+        return cmp(self.fsPathname, other.fsPathname)
 
     def createDirectory(self):
-        os.mkdir(self.path)
+        os.mkdir(self.fsPathname)
 
     def requireCreate(self, val=1):
         self.alwaysCreate = val
@@ -543,9 +631,9 @@ class FilePath(_PathHelper):
     def create(self):
         """Exclusively create a file, only if this file previously did not exist.
         """
-        fdint = os.open(self.path, (os.O_EXCL |
-                                    os.O_CREAT |
-                                    os.O_RDWR))
+        fdint = os.open(self.fsPathname, (os.O_EXCL |
+                                          os.O_CREAT |
+                                          os.O_RDWR))
 
         # XXX TODO: 'name' attribute of returned files is not mutable or
         # settable via fdopen, so this file is slighly less functional than the
@@ -557,7 +645,7 @@ class FilePath(_PathHelper):
         """
         Create a path naming a temporary sibling of this path in a secure fashion.
         """
-        sib = self.sibling(_secureEnoughString() + self.basename())
+        sib = self.sibling(_secureEnoughString() + self.fsBasename)
         sib.requireCreate()
         return sib
 
@@ -572,7 +660,7 @@ class FilePath(_PathHelper):
             if not destination.exists():
                 destination.createDirectory()
             for child in self.children():
-                destChild = destination.child(child.basename())
+                destChild = destination.child(child.fsBasename)
                 child.copyTo(destChild)
         elif self.isfile():
             writefile = destination.open('w')
@@ -599,7 +687,7 @@ class FilePath(_PathHelper):
 
     def moveTo(self, destination):
         try:
-            os.rename(self.path, destination.path)
+            os.rename(self.fsPathname, destination.fsPathname)
             self.restat(False)
         except OSError, ose:
             if ose.errno == errno.EXDEV:
@@ -621,6 +709,68 @@ class FilePath(_PathHelper):
                 mysecsib.remove() # slow
             else:
                 raise
+
+
+if ospath.supports_unicode_filenames and platform.isWindows():
+    class FilePath(_BaseFilePath):
+        def __init__(self, path, alwaysCreate=False):
+            _BaseFilePath.__init__(path, alwaysCreate)
+            # Now mangle the pathname to have the stupid \\?\ prefix that makes
+            # windows allow you to access long paths and special files.
+            if not self.fsPathname.startswith('\\\\?\\'):
+                if self.fsPathname.startswith('\\\\'):
+                    # UNC pathname: \\server\share -> \\?\UNC\server\share
+                    self.fsPathname = '\\\\?\\UNC'+self.fsPathname[1:]
+                self.fsPathname = '\\\\?\\'+self.fsPathname
+
+        def _coerceToFsPath(self, path):
+            if not path:
+                # abspath/normpath are broken on input of u'' and returns a str.
+                # Work around said brokenness.
+                return ospath.normpath(ospath.getcwdu())
+            elif not isinstance(path, unicode):
+                return path.decode(sys.getfilesystemencoding())
+            return path
+
+        def _coerceToFsExt(self, ext):
+            if not isinstance(path, unicode):
+                return path.decode(sys.getfilesystemencoding())
+            return path
+
+        def _getDisplayPathname(self):
+            """Property getter for displayPathname."""
+            return self.fsPathname
+
+        displayPathname = property(_getDisplayPathnamee)
+
+        # listdir is broken without a \ on the end in Python 2.3/2.4, since they
+        # append a '/*.*' instead of '\*.*'. Sigh.
+        def _listdir(self, path):
+            if not path.endswith('\\'):
+                path = path + '\\'
+            return os.listdir(path)
+
+        # Also override setContent to use windows-specific REPLACE_EXISTING call.
+        def setContent(self, content, ext='.new'):
+            sib = self.siblingExtension(ext)
+            sib.open('w').write(content)
+            win32.rename(sib.fsPathname, self.fsPathname)
+
+else:
+    class FilePath(_BaseFilePath):
+        def _coerceToFsPath(self, path):
+            if isinstance(path, unicode):
+                return path.encode(sys.getfilesystemencoding())
+            return path
+
+        _coerceToFsExt = _coerceToFsPath
+
+        def _getDisplayPathname(self):
+            """Property getter for displayPathname."""
+            return self.fsPathname.decode(sys.getfilesystemencoding(), 'replace')
+
+        displayPathname = property(_getDisplayPathname)
+
 
 
 FilePath.clonePath = FilePath

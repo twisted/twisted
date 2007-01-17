@@ -153,3 +153,78 @@ except AttributeError:
         def __call__(self, obj):
             return getattr(obj, self.name)
     operator.attrgetter = attrgetter
+
+
+## Repair os.stat for Windows in python 2.3/2.4, if we have pywin32 installed.
+import os
+if sys.version_info[:2] < (2,5) and os.path.supports_unicode_filenames:
+    try:
+        import win32file, pywintypes
+    except ImportError:
+        pass
+    else:
+## This code is cribbed from Python 2.5's C implementation of stat on top of
+## GetFileAttributesEx[W]. Even though the windows APIs actually report
+## high-resolution UTC timestamps, PyWin32 "helpfully" converts the times to
+## local time with only 1-second resolution.  Luckily, Python2.3 and 2.4 also
+## only have 1-second resolution and timezone screwups (due to using MSCRT,
+## which is designed especially to make life miserable for people trying to
+## write portable programs), so, this doesn't actually hurt.  Yay, I guess...
+
+        import calendar, time
+        import stat as stat_mod
+
+        def _PyTimeToUTC(pytime):
+            """Convert the PyTime object (which is in local time) to a UTC number."""
+            return calendar.timegm(time.localtime(int(pytime)))
+
+        def _attributesToMode(attr):
+            """Convert windowsish FILE_ATTRIBUTE_* to unixish mode."""
+            m = 0
+            if attr & win32file.FILE_ATTRIBUTE_DIRECTORY:
+                m |= stat_mod.S_IFDIR | 0111
+            else:
+                m |= stat_mod.S_IFREG
+
+            if attr & win32file.FILE_ATTRIBUTE_READONLY:
+                m |= 0444
+            else:
+                m |= 0666
+            return m
+
+        def stat(fname):
+            """stat(path) -> stat result
+
+            Perform a stat system call on the given path.
+            """
+
+            try:
+                 if isinstance(fname, unicode):
+                     win_stat = win32file.GetFileAttributesExW(fname)
+                 else:
+                     win_stat = win32file.GetFileAttributesEx(fname)
+            except pywintypes.error:
+                raise OSError(2, 'No such file or directory: %r' % fname)
+
+            ctime = _PyTimeToUTC(win_stat[1])
+            atime = _PyTimeToUTC(win_stat[2])
+            mtime = _PyTimeToUTC(win_stat[3])
+            mode = _attributesToMode(win_stat[0])
+            size = win_stat[4]
+
+            # tuple is: mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime
+            # dict contains the float times (which in this case don't actually have
+            # higher precision.)
+            if os.stat_float_times():
+                time_type = float
+            else:
+                time_type = int
+            result = os.stat_result((mode, 0L, 0, 0, 0, 0,
+                                     size, atime, mtime, ctime),
+                                    {'st_mtime': time_type(mtime),
+                                     'st_atime': time_type(atime),
+                                     'st_ctime': time_type(ctime)})
+            return result
+
+        stat.__module__ = 'os'
+        os.stat = stat
