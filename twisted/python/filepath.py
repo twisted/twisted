@@ -319,7 +319,7 @@ class _BaseFilePath(_PathHelper):
         return d
 
     def _convertToInputType(self, arg):
-        """Convert arg to the same type as the input."""
+        """Convert arg to the same type as the type of the input 'path' argument."""
         if self._inputWasUnicode:
             if isinstance(arg, unicode):
                 return arg
@@ -716,14 +716,21 @@ class _BaseFilePath(_PathHelper):
 if ospath.supports_unicode_filenames and platform.isWindows():
     class FilePath(_BaseFilePath):
         def __init__(self, path, alwaysCreate=False):
-            _BaseFilePath.__init__(path, alwaysCreate)
+            _BaseFilePath.__init__(self, path, alwaysCreate)
             # Now mangle the pathname to have the stupid \\?\ prefix that makes
             # windows allow you to access long paths and special files.
-            if not self.fsPathname.startswith('\\\\?\\'):
-                if self.fsPathname.startswith('\\\\'):
+            if not self.fsPathname.startswith(u'\\\\?\\'):
+                if self.fsPathname.startswith(u'\\\\'):
                     # UNC pathname: \\server\share -> \\?\UNC\server\share
-                    self.fsPathname = '\\\\?\\UNC'+self.fsPathname[1:]
-                self.fsPathname = '\\\\?\\'+self.fsPathname
+                    self.fsPathname = u'\\\\?\\UNC'+self.fsPathname[1:]
+                else:
+                    self.fsPathname = u'\\\\?\\'+self.fsPathname
+
+            # Work around bug in python: os.path.join('foo\\c:', 'bar') =>
+            # 'foo\\c:bar', when we wanted 'foo\\c:\\bar'
+            if self.fsPathname[-1] == u':':
+                self.fsPathname += u'\\'
+
 
         def _coerceToFsPath(self, path):
             if not path:
@@ -731,7 +738,8 @@ if ospath.supports_unicode_filenames and platform.isWindows():
                 # Work around said brokenness.
                 return ospath.normpath(ospath.getcwdu())
             elif not isinstance(path, unicode):
-                return path.decode(sys.getfilesystemencoding())
+                path = path.decode(sys.getfilesystemencoding())
+
             return path
 
         def _coerceToFsExt(self, ext):
@@ -741,9 +749,63 @@ if ospath.supports_unicode_filenames and platform.isWindows():
 
         def _getDisplayPathname(self):
             """Property getter for displayPathname."""
-            return self.fsPathname
+            if self.fsPathname.startswith(u'\\\\?\\UNC\\'):
+                return u'\\'+self.fsPathname[7:]
+            else:
+                return self.fsPathname[4:]
 
         displayPathname = property(_getDisplayPathname)
+
+
+        def _getPath(self):
+            # FIXME: is cutting off the whacky prefix really the right thing to
+            # do?  What if it ends up as an invalid pathname? That might be bad,
+            # if the user does something with the path like tries to open it; it
+            # might be better to just return the path with the prefix on it...
+            # or, maybe, raise an exception? I dunno...
+
+            # Hmm...I guess trying out the new path with abspath, and if it
+            # gives the same path, we're safe, return that, otherwise return
+            # path with whacky prefix.  That'll catch both path too long errors
+            # (abspath either raises exception or returns '.'), and device-files
+            # (abspath returns something like '\\\\con').
+
+            # More hmmm...this still leaves the problem of filenames
+            # unencodeable in a str, but that problem already existed.
+
+            path = _BaseFilePath._getPath(self)
+
+            # Attempt to determine if we can safely cut off the prefix
+            if path.startswith('\\\\?\\UNC\\'):
+                cutpath = '\\'+path[7:]
+            else:
+                cutpath = path[4:]
+
+            try:
+                abspath = ospath.abspath(cutpath)
+                if abspath[-1] == ':':
+                    abspath += '\\'
+            except TypeError:
+                # yes, TypeError. If cutpath is too long, abspath can raise:
+                # "TypeError: _getfullpathname() argument 1 must be (buffer overflow), not str"
+                return path
+
+            if abspath != cutpath:
+                return path
+            return abspath
+
+        path = property(_getPath)
+
+        # parent needs to take account of special prefix and not try to traverse up it:
+        def parent(self):
+            # dirname normally tops out at \\\\ or C:\\. The equivalents here
+            # are \\\\?\\UNC and \\\\?\\C:\\, so make sure it tops out at those.
+            # The first needs a special check, the second happens automatically
+            # by virtue of FilePath(u'\\\\?\\C:').fsPathname == u'\\\\?\\C:\\'
+            if self.fsPathname == u'\\\\?\\UNC':
+                return self
+
+            return self.clonePath(ospath.dirname(self.fsPathname))
 
         # listdir is broken without a \ on the end in Python 2.3/2.4, since they
         # append a '/*.*' instead of '\*.*'. Sigh.
