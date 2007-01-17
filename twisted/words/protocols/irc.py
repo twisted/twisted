@@ -901,7 +901,7 @@ class IRCClient(basic.LineReceiver):
         self.setNick(nickname)
         if self.username is None:
             self.username = nickname
-        self.sendLine("USER %s foo bar :%s" % (self.username, self.realname))
+        self.sendLine("USER %s %s %s :%s" % (self.username, hostname, servername, self.realname))
 
     def setNick(self, nickname):
         self.nickname = nickname

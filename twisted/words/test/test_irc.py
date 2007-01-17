@@ -1,15 +1,17 @@
 # Copyright (c) 2001-2005 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-from twisted.trial import unittest
-from twisted.words.protocols import irc
-from twisted.internet import protocol
-import StringIO
+from StringIO import StringIO
 import time
 
+from twisted.trial import unittest
+from twisted.trial.unittest import TestCase
+from twisted.words.protocols import irc
+from twisted.words.protocols.irc import IRCClient
+from twisted.internet import protocol
 
-class StringIOWithoutClosing(StringIO.StringIO):
+
+class StringIOWithoutClosing(StringIO):
     def close(self):
         pass
 
@@ -392,3 +394,58 @@ class ClientMsgTests(unittest.TestCase):
         self.assertRaises(ValueError, irc.split, 'foo', 0)
         self.assertEquals([], irc.split('', 1))
         self.assertEquals([], irc.split(''))
+
+
+class ClientTests(TestCase):
+    """
+    Tests for the protocol-level behavior of IRCClient methods intended to
+    be called by application code.
+    """
+    def setUp(self):
+        self.transport = StringIO()
+        self.protocol = IRCClient()
+        self.protocol.performLogin = False
+        self.protocol.makeConnection(self.transport)
+
+        # Sanity check - we don't want anything to have happened at this
+        # point, since we're not in a test yet.
+        self.failIf(self.transport.getvalue())
+
+
+    def test_register(self):
+        """
+        Verify that the L{IRCClient.register} method sends a a USER command
+        with the correct arguments.
+        """
+        username = 'testuser'
+        hostname = 'testhost'
+        servername = 'testserver'
+        self.protocol.realname = 'testname'
+        self.protocol.password = None
+        self.protocol.register(username, hostname, servername)
+        expected = [
+            'NICK %s' % (username,),
+            'USER %s %s %s :%s' % (
+                username, hostname, servername, self.protocol.realname),
+            '']
+        self.assertEqual(self.transport.getvalue().split('\r\n'), expected)
+
+
+    def test_registerWithPassword(self):
+        """
+        Verify that if the C{password} attribute of L{IRCClient} is not
+        C{None}, the C{register} method also authenticates using it.
+        """
+        username = 'testuser'
+        hostname = 'testhost'
+        servername = 'testserver'
+        self.protocol.realname = 'testname'
+        self.protocol.password = 'testpass'
+        self.protocol.register(username, hostname, servername)
+        expected = [
+            'PASS %s' % (self.protocol.password,),
+            'NICK %s' % (username,),
+            'USER %s %s %s :%s' % (
+                username, hostname, servername, self.protocol.realname),
+            '']
+        self.assertEqual(self.transport.getvalue().split('\r\n'), expected)
