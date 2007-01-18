@@ -2,14 +2,13 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-"""VT102 terminal manipulation
+"""
+VT102 and VT220 terminal manipulation.
 
 API Stability: Unstable
 
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 """
-
-import string
 
 from zope.interface import implements, Interface
 
@@ -128,6 +127,19 @@ class ITerminalTransport(iinternet.ITransport):
     def resetModes(mode):
         """Reset the given modes on the terminal.
         """
+
+
+    def setPrivateModes(modes):
+        """
+        Set the given DEC private modes on the terminal.
+        """
+
+
+    def resetPrivateModes(modes):
+        """
+        Reset the given DEC private modes on the terminal.
+        """
+
 
     def applicationKeypadMode():
         """Cause keypad to generate control functions.

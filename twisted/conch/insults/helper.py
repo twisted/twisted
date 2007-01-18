@@ -199,6 +199,36 @@ class TerminalBuffer(protocol.Protocol):
             except KeyError:
                 pass
 
+
+    def setPrivateModes(self, modes):
+        """
+        Enable the given modes.
+
+        Track which modes have been enabled so that the implementations of
+        other L{insults.ITerminalTransport} methods can be properly implemented
+        to respect these settings.
+
+        @see: L{resetPrivateModes}
+        @see: L{insults.ITerminalTransport.setPrivateModes}
+        """
+        for m in modes:
+            self.privateModes[m] = True
+
+
+    def resetPrivateModes(self, modes):
+        """
+        Disable the given modes.
+
+        @see: L{setPrivateModes}
+        @see: L{insults.ITerminalTransport.resetPrivateModes}
+        """
+        for m in modes:
+            try:
+                del self.privateModes[m]
+            except KeyError:
+                pass
+
+
     def applicationKeypadMode(self):
         self.keypadMode = 'app'
 
@@ -306,6 +336,9 @@ class TerminalBuffer(protocol.Protocol):
         self.home = insults.Vector(0, 0)
         self.x = self.y = 0
         self.modes = {}
+        self.privateModes = {}
+        self.setPrivateModes([insults.privateModes.AUTO_WRAP,
+                              insults.privateModes.CURSOR_MODE])
         self.numericKeypad = 'app'
         self.activeCharset = insults.G0
         self.graphicRendition = {

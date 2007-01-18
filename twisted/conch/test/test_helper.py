@@ -4,7 +4,7 @@
 
 from twisted.conch.insults import helper
 from twisted.conch.insults.insults import G0, G1, G2, G3
-from twisted.conch.insults.insults import modes
+from twisted.conch.insults.insults import modes, privateModes
 from twisted.conch.insults.insults import NORMAL, BOLD, UNDERLINE, BLINK, REVERSE_VIDEO
 
 from twisted.trial import unittest
@@ -23,6 +23,42 @@ class BufferTestCase(unittest.TestCase):
         self.assertEquals(str(self.term),
                           '\n' * (HEIGHT - 1))
         self.assertEquals(self.term.reportCursorPosition(), (0, 0))
+
+
+    def test_initialPrivateModes(self):
+        """
+        Verify that only DEC Auto Wrap Mode (DECAWM) and DEC Text Cursor Enable
+        Mode (DECTCEM) are initially in the Set Mode (SM) state.
+        """
+        self.assertEqual(
+            {privateModes.AUTO_WRAP: True,
+             privateModes.CURSOR_MODE: True},
+            self.term.privateModes)
+
+
+    def test_setPrivateModes(self):
+        """
+        Verify that L{helper.TerminalBuffer.setPrivateModes} changes the Set
+        Mode (SM) state to "set" for the private modes it is passed.
+        """
+        expected = self.term.privateModes.copy()
+        self.term.setPrivateModes([privateModes.SCROLL, privateModes.SCREEN])
+        expected[privateModes.SCROLL] = True
+        expected[privateModes.SCREEN] = True
+        self.assertEqual(expected, self.term.privateModes)
+
+
+    def test_resetPrivateModes(self):
+        """
+        Verify that L{helper.TerminalBuffer.resetPrivateModes} changes the Set
+        Mode (SM) state to "reset" for the private modes it is passed.
+        """
+        expected = self.term.privateModes.copy()
+        self.term.resetPrivateModes([privateModes.AUTO_WRAP, privateModes.CURSOR_MODE])
+        del expected[privateModes.AUTO_WRAP]
+        del expected[privateModes.CURSOR_MODE]
+        self.assertEqual(expected, self.term.privateModes)
+
 
     def testCursorDown(self):
         self.term.cursorDown(3)
@@ -486,4 +522,3 @@ class ExpectTestCase(unittest.TestCase):
 
         self.assertEquals(len(result), 1)
         self.assertEquals(result[0].group(), "zoom")
-
