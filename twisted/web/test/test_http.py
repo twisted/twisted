@@ -88,7 +88,10 @@ Accept: text/html
 
     expected_response = "HTTP/1.0 200 OK\015\012Request: /\015\012Command: GET\015\012Version: HTTP/1.0\015\012Content-length: 13\015\012\015\012'''\012None\012'''\012"
 
-    def testBuffer(self):
+    def test_buffer(self):
+        """
+        Send requests over a channel and check responses match what is expected.
+        """
         b = StringIOWithoutClosing()
         a = http.HTTPChannel()
         a.requestFactory = DummyHTTPHandler
@@ -98,18 +101,7 @@ Accept: text/html
             a.dataReceived(byte)
         a.connectionLost(IOError("all one"))
         value = b.getvalue()
-        if value != self.expected_response:
-            for i in range(len(value)):
-                if len(self.expected_response) <= i:
-                    print `value[i-5:i+10]`, `self.expected_response[i-5:i+10]`
-                elif value[i] != self.expected_response[i]:
-                    print `value[i-5:i+10]`, `self.expected_response[i-5:i+10]`
-                    break
-            print '---VALUE---'
-            print repr(value)
-            print '---EXPECTED---'
-            print repr(self.expected_response)
-            raise AssertionError
+        self.assertEquals(value, self.expected_response)
 
 
 class HTTP1_1TestCase(HTTP1_0TestCase):
@@ -299,7 +291,7 @@ class ParsingTestCase(unittest.TestCase):
             s = "%s:%s" % (u, p)
             f = "GET / HTTP/1.0\nAuthorization: Basic %s\n\n" % (s.encode("base64").strip(), )
             self.runRequest(f, Request, 0)
-    
+
     def testTooManyHeaders(self):
         httpRequest = "GET / HTTP/1.0\n"
         for i in range(502):
@@ -309,7 +301,7 @@ class ParsingTestCase(unittest.TestCase):
             def process(self):
                 raise RuntimeError, "should not get called"
         self.runRequest(httpRequest, MyRequest, 0)
-        
+
     def testHeaders(self):
         httpRequest = """\
 GET / HTTP/1.0
@@ -424,7 +416,7 @@ abasdfg
 --AaB03x--
 '''
         self.runRequest(req, http.Request, success=False)
-        
+
 class QueryArgumentsTestCase(unittest.TestCase):
     def testUnquote(self):
         try:
@@ -439,7 +431,7 @@ class QueryArgumentsTestCase(unittest.TestCase):
         self.failUnlessEqual(urllib.unquote("%1quite%1"),
             _c_urlarg.unquote("%1quite%1"))
         # unquoted text, followed by some quoted chars, ends in a trailing %
-        self.failUnlessEqual(urllib.unquote("blah%21%40%23blah%"), 
+        self.failUnlessEqual(urllib.unquote("blah%21%40%23blah%"),
             _c_urlarg.unquote("blah%21%40%23blah%"))
         # Empty string
         self.failUnlessEqual(urllib.unquote(""), _c_urlarg.unquote(""))
@@ -489,3 +481,4 @@ class ClientStatusParsing(unittest.TestCase):
         self.failUnlessEqual(c.version, 'HTTP/1.0')
         self.failUnlessEqual(c.status, '201')
         self.failUnlessEqual(c.message, '')
+
