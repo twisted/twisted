@@ -10,17 +10,9 @@ infrastructure.
 
 # System Imports
 
-try:
-    import cStringIO as StringIO
-except ImportError:
-    import StringIO
-
-import base64
 import string
-import socket
 import types
 import operator
-import cgi
 import copy
 import time
 import os
@@ -35,12 +27,10 @@ NOT_DONE_YET = 1
 
 # Twisted Imports
 from twisted.spread import pb
-from twisted.internet import reactor, protocol, defer, address, task
+from twisted.internet import defer, address, task
 from twisted.web import http
-from twisted.python import log, reflect, roots, failure, components
+from twisted.python import log, reflect, failure, components
 from twisted import copyright
-from twisted.cred import util
-from twisted.persisted import styles
 
 # Sibling Imports
 import error, resource
@@ -75,7 +65,7 @@ class UnsupportedMethod(Exception):
     def __init__(self, allowedMethods, *args):
         Exception.__init__(self, allowedMethods, *args)
         self.allowedMethods = allowedMethods
-        
+
         if not operator.isSequenceType(allowedMethods):
             why = "but my first argument is not a sequence."
             s = ("First argument must be a sequence of"
@@ -387,66 +377,118 @@ class _RemoteProducerWrapper:
 
 
 class Session(components.Componentized):
-    """A user's session with a system.
+    """
+    A user's session with a system.
 
     This utility class contains no functionality, but is used to
     represent a session.
+
+    @ivar sessionTimeout: timeout of a session, in seconds.
+    @ivar loopFactory: factory for creating L{task.LoopingCall}. Mainly for
+        testing.
     """
+    sessionTimeout = 900
+    loopFactory = task.LoopingCall
+
     def __init__(self, site, uid):
-        """Initialize a session with a unique ID for that session.
+        """
+        Initialize a session with a unique ID for that session.
         """
         components.Componentized.__init__(self)
         self.site = site
         self.uid = uid
         self.expireCallbacks = []
-        self.checkExpiredLoop = task.LoopingCall(self.checkExpired)
+        self.checkExpiredLoop = None
         self.touch()
         self.sessionNamespaces = {}
 
+
+    def startCheckingExpiration(self, lifetime):
+        """
+        Start expiration tracking.
+
+        @type lifetime: C{int} or C{float}
+        @param lifetime: The number of seconds this session is allowed to be
+        idle before it expires.
+
+        @return: C{None}
+        """
+        self.checkExpiredLoop = self.loopFactory(self.checkExpired)
+        self.checkExpiredLoop.start(lifetime, now=False)
+
+
     def notifyOnExpire(self, callback):
-        """Call this callback when the session expires or logs out.
+        """
+        Call this callback when the session expires or logs out.
         """
         self.expireCallbacks.append(callback)
 
+
     def expire(self):
-        """Expire/logout of the session.
         """
-        #log.msg("expired session %s" % self.uid)
+        Expire/logout of the session.
+        """
         del self.site.sessions[self.uid]
         for c in self.expireCallbacks:
             c()
         self.expireCallbacks = []
-        self.checkExpiredLoop.stop()
-        # Break reference cycle.
-        self.checkExpiredLoop = None
+        if self.checkExpiredLoop is not None:
+            self.checkExpiredLoop.stop()
+            # Break reference cycle.
+            self.checkExpiredLoop = None
+
+
+    def _getTime(self):
+        """
+        Return current time used for session validity.
+        """
+        return time.time()
+
 
     def touch(self):
-        self.lastModified = time.time()
+        """
+        Notify session modification.
+        """
+        self.lastModified = self._getTime()
+
 
     def checkExpired(self):
-        """Is it time for me to expire?
+        """
+        Is it time for me to expire?
 
         If I haven't been touched in fifteen minutes, I will call my
         expire method.
         """
         # If I haven't been touched in 15 minutes:
-        if time.time() - self.lastModified > 900:
-            if self.site.sessions.has_key(self.uid):
+        if self._getTime() - self.lastModified > self.sessionTimeout:
+            if self.uid in self.site.sessions:
                 self.expire()
-
 
 
 version = "TwistedWeb/%s" % copyright.version
 
 
 class Site(http.HTTPFactory):
-
+    """
+    A web site: manage log, sessions, and resources.
+    
+    @ivar counter: increment value used for generating unique sessions ID.
+    @ivar requestFactory: factory creating requests objects. Default to
+        L{Request}.
+    @ivar displayTracebacks: if set, Twisted internal errors are displayed on
+        rendered pages. Default to C{True}.
+    @ivar sessionFactory: factory for sessions objects. Default to L{Session}.
+    @ivar sessionCheckTime: interval between each check of session expiration.
+    """
     counter = 0
     requestFactory = Request
     displayTracebacks = True
-    
+    sessionFactory = Session
+    sessionCheckTime = 1800
+
     def __init__(self, resource, logPath=None, timeout=60*60*12):
-        """Initialize.
+        """
+        Initialize.
         """
         http.HTTPFactory.__init__(self, logPath=logPath, timeout=timeout)
         self.sessions = {}
@@ -462,28 +504,32 @@ class Site(http.HTTPFactory):
         return d
 
     def _mkuid(self):
-        """(internal) Generate an opaque, unique ID for a user's session.
+        """
+        (internal) Generate an opaque, unique ID for a user's session.
         """
         import md5, random
         self.counter = self.counter + 1
         return md5.new("%s_%s" % (str(random.random()) , str(self.counter))).hexdigest()
 
     def makeSession(self):
-        """Generate a new Session instance, and store it for future reference.
+        """
+        Generate a new Session instance, and store it for future reference.
         """
         uid = self._mkuid()
-        session = self.sessions[uid] = Session(self, uid)
-        session.checkExpiredLoop.start(1800)
+        session = self.sessions[uid] = self.sessionFactory(self, uid)
+        session.startCheckingExpiration(self.sessionCheckTime)
         return session
 
     def getSession(self, uid):
-        """Get a previously generated session, by its unique ID.
+        """
+        Get a previously generated session, by its unique ID.
         This raises a KeyError if the session is not found.
         """
         return self.sessions[uid]
 
     def buildProtocol(self, addr):
-        """Generate a channel attached to this site.
+        """
+        Generate a channel attached to this site.
         """
         channel = http.HTTPFactory.buildProtocol(self, addr)
         channel.requestFactory = self.requestFactory
@@ -493,19 +539,22 @@ class Site(http.HTTPFactory):
     isLeaf = 0
 
     def render(self, request):
-        """Redirect because a Site is always a directory.
+        """
+        Redirect because a Site is always a directory.
         """
         request.redirect(request.prePathURL() + '/')
         request.finish()
 
     def getChildWithDefault(self, pathEl, request):
-        """Emulate a resource's getChild method.
+        """
+        Emulate a resource's getChild method.
         """
         request.site = self
         return self.resource.getChildWithDefault(pathEl, request)
 
     def getResourceFor(self, request):
-        """Get a resource for a request.
+        """
+        Get a resource for a request.
 
         This iterates through the resource heirarchy, calling
         getChildWithDefault on each resource it finds for a path element,
@@ -519,3 +568,4 @@ class Site(http.HTTPFactory):
 
 
 import html
+

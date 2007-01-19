@@ -2,14 +2,12 @@
 # See LICENSE for details.
 
 from twisted.trial import unittest
-import string, random, copy
 from cStringIO import StringIO
 
 from twisted.web import server, resource, util
-from twisted.internet import defer, interfaces, error
+from twisted.internet import defer, interfaces, error, task
 from twisted.web import http
-from twisted.protocols import loopback
-from twisted.python import log, reflect
+from twisted.python import log
 from twisted.internet.address import IPv4Address
 from zope.interface import implements
 
@@ -57,11 +55,11 @@ class DummyRequest:
     def addArg(self, name, value):
         self.args[name] = [value]
     def setResponseCode(self, code):
-        assert not self.written, "Response code cannot be set after data has been written: %s." % string.join(self.written, "@@@@")
+        assert not self.written, "Response code cannot be set after data has been written: %s." % "@@@@".join(self.written)
     def setLastModified(self, when):
-        assert not self.written, "Last-Modified cannot be set after data has been written: %s." % string.join(self.written, "@@@@")
+        assert not self.written, "Last-Modified cannot be set after data has been written: %s." % "@@@@".join(self.written)
     def setETag(self, tag):
-        assert not self.written, "ETag cannot be set after data has been written: %s." % string.join(self.written, "@@@@")
+        assert not self.written, "ETag cannot be set after data has been written: %s." % "@@@@".join(self.written)
 
 class ResourceTestCase(unittest.TestCase):
     def testListEntities(self):
@@ -90,20 +88,61 @@ class SiteTest(unittest.TestCase):
 class SessionTest(unittest.TestCase):
 
     def setUp(self):
+        clock = self.clock = task.Clock()
+        # Define a looping call using the clock
+        class MockLoopingCall(task.LoopingCall):
+            def _callLater(self, delay):
+                return clock.callLater(delay, self)
+
+        times = self.times = []
+
+        # Define a session that 1) user the mock looping call 2) use own timer
+        class MockSession(server.Session):
+            loopFactory = MockLoopingCall
+
+            def _getTime(self):
+                return times.pop(0)
+
         self.site = server.Site(SimpleResource())
+        self.site.sessionFactory = MockSession
+
+
+    def test_basicExpiration(self):
+        """
+        Test session expiration: setup a session, and simulate an expiration
+        time.
+        """
+        self.times.extend([0, server.Session.sessionTimeout + 1])
+        session = self.site.makeSession()
+        hasExpired = [False]
+        def cbExpire():
+            hasExpired[0] = True
+        session.notifyOnExpire(cbExpire)
+        self.clock.advance(server.Site.sessionCheckTime - 1)
+        # Looping call should not have been executed
+        self.failIf(hasExpired[0])
+
+        self.clock.advance(1)
+
+        self.failUnless(hasExpired[0])
+
 
     def test_delayedCallCleanup(self):
-        """Checking to make sure Sessions do not leave extra DelayedCalls.
         """
-        from twisted.internet import reactor
-        delayedCallsBeforeSession = repr(reactor.getDelayedCalls())
+        Checking to make sure Sessions do not leave extra DelayedCalls.
+        """
+        self.times.extend([0, 100])
 
         session = self.site.makeSession()
+        loop = session.checkExpiredLoop
         session.touch()
+        self.failUnless(loop.running)
+
         session.expire()
 
-        self.failUnlessEqual(delayedCallsBeforeSession,
-                             repr(reactor.getDelayedCalls()))
+        self.failIf(self.clock.calls)
+        self.failIf(loop.running)
+        
 
 
 # Conditional requests:
