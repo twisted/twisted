@@ -71,11 +71,14 @@ class ButtonDemo(insults.TerminalProtocol):
         self.window.filthy()
         self._draw()
 
+    def _schedule(self, f):
+        reactor.callLater(0, f)
+
     def connectionMade(self):
         self.terminal.eraseDisplay()
         self.terminal.resetPrivateModes([insults.privateModes.CURSOR_MODE])
 
-        self.window = window.TopWindow(self._draw)
+        self.window = window.TopWindow(self._draw, self._schedule)
         self.output = window.TextOutput((15, 1))
         self.input = window.TextInput(15, self._setText)
         self.select1 = window.Selection(map(str, range(100)), self._setText, 10)
