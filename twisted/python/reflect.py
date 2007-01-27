@@ -23,6 +23,10 @@ import traceback
 import weakref
 import re
 import warnings
+try:
+    from collections import deque
+except ImportError:
+    deque = list
 
 RegexType = type(re.compile(""))
 
@@ -311,7 +315,7 @@ def getClass(obj):
 
 # I should really have a better name for this...
 def isinst(inst,clazz):
-    if type(inst) != types.InstanceType or type(clazz)!=types.ClassType:
+    if type(inst) != types.InstanceType or type(clazz)!= types.ClassType:
         return isinstance(inst,clazz)
     cl = inst.__class__
     cl2 = getcurrent(cl)
@@ -369,11 +373,11 @@ def namedAny(name):
                     pass
                 raise exc_info[0], exc_info[1], exc_info[2]
             moduleNames.pop()
-    
+
     obj = topLevelPackage
     for n in names[1:]:
         obj = getattr(obj, n)
-        
+
     return obj
 
 def _reclass(clazz):
@@ -635,7 +639,7 @@ def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None, showUnknowns
         for k, v in start.items():
             objgrep(k, goal, eq, path+'{'+repr(v)+'}', paths, seen, showUnknowns, maxDepth)
             objgrep(v, goal, eq, path+'['+repr(k)+']', paths, seen, showUnknowns, maxDepth)
-    elif isinstance(start, types.ListType) or isinstance(start, types.TupleType):
+    elif isinstance(start, (list, tuple, deque)):
         for idx in xrange(len(start)):
             objgrep(start[idx], goal, eq, path+'['+str(idx)+']', paths, seen, showUnknowns, maxDepth)
     elif isinstance(start, types.MethodType):

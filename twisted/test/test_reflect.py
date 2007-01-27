@@ -13,6 +13,10 @@ import weakref
 from twisted.trial import unittest
 from twisted.python import reflect
 
+try:
+    from collections import deque
+except ImportError:
+    deque = None
 
 class SettableTest(unittest.TestCase):
     def setUp(self):
@@ -134,7 +138,10 @@ class LookupsTestCaseII(unittest.TestCase):
             reflect.namedAny, "tcelfer.nohtyp.detsiwt")
 
 class ObjectGrep(unittest.TestCase):
-    def testDictionary(self):
+    def test_dictionary(self):
+        """
+        Test references search through a dictionnary, as a key or as a value.
+        """
         o = object()
         d1 = {None: o}
         d2 = {o: None}
@@ -142,19 +149,28 @@ class ObjectGrep(unittest.TestCase):
         self.assertIn("[None]", reflect.objgrep(d1, o, reflect.isSame))
         self.assertIn("{None}", reflect.objgrep(d2, o, reflect.isSame))
 
-    def testList(self):
+    def test_list(self):
+        """
+        Test references search through a list.
+        """
         o = object()
         L = [None, o]
 
         self.assertIn("[1]", reflect.objgrep(L, o, reflect.isSame))
 
-    def testTuple(self):
+    def test_tuple(self):
+        """
+        Test references search through a tuple.
+        """
         o = object()
         T = (o, None)
 
         self.assertIn("[0]", reflect.objgrep(T, o, reflect.isSame))
 
-    def testInstance(self):
+    def test_instance(self):
+        """
+        Test references search through an object attribute.
+        """
         class Dummy:
             pass
         o = object()
@@ -163,7 +179,10 @@ class ObjectGrep(unittest.TestCase):
 
         self.assertIn(".o", reflect.objgrep(d, o, reflect.isSame))
 
-    def testWeakref(self):
+    def test_weakref(self):
+        """
+        Test references search through a weakref object.
+        """
         class Dummy:
             pass
         o = Dummy()
@@ -171,7 +190,10 @@ class ObjectGrep(unittest.TestCase):
 
         self.assertIn("()", reflect.objgrep(w1, o, reflect.isSame))
 
-    def testBoundMethod(self):
+    def test_boundMethod(self):
+        """
+        Test references search through method special attributes.
+        """
         class Dummy:
             def dummy(self):
                 pass
@@ -182,7 +204,10 @@ class ObjectGrep(unittest.TestCase):
         self.assertIn(".im_class", reflect.objgrep(m, m.im_class, reflect.isSame))
         self.assertIn(".im_func", reflect.objgrep(m, m.im_func, reflect.isSame))
 
-    def testEverything(self):
+    def test_everything(self):
+        """
+        Test references search using complex set of objects.
+        """
         class Dummy:
             def method(self):
                 pass
@@ -199,7 +224,10 @@ class ObjectGrep(unittest.TestCase):
 
         self.assertIn("().im_self.attr[2][0][2]{'Foosh'}", reflect.objgrep(w, o, reflect.isSame))
 
-    def testDepthLimit(self):
+    def test_depthLimit(self):
+        """
+        Test the depth of references search.
+        """
         a = []
         b = [a]
         c = [a, b]
@@ -208,6 +236,20 @@ class ObjectGrep(unittest.TestCase):
         self.assertEquals(['[0]'], reflect.objgrep(d, a, reflect.isSame, maxDepth=1))
         self.assertEquals(['[0]', '[1][0]'], reflect.objgrep(d, a, reflect.isSame, maxDepth=2))
         self.assertEquals(['[0]', '[1][0]', '[1][1][0]'], reflect.objgrep(d, a, reflect.isSame, maxDepth=3))
+
+    def test_deque(self):
+        """
+        Test references search through a deque object. Only for Python > 2.3.
+        """
+        o = object()
+        D = deque()
+        D.append(None)
+        D.append(o)
+
+        self.assertIn("[1]", reflect.objgrep(D, o, reflect.isSame))
+
+    if deque is None:
+        test_deque.skip = "Deque not available"
 
 
 class GetClass(unittest.TestCase):
@@ -330,3 +372,4 @@ class SafeStr(unittest.TestCase):
         class X(BTBase):
             breakName = True
         reflect.safe_str(X())
+
