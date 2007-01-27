@@ -17,7 +17,8 @@ import datetime
 from twisted.python import util, context, reflect
 
 class ILogContext:
-    """Actually, this interface is just a synoym for the dictionary interface,
+    """
+    Actually, this interface is just a synoym for the dictionary interface,
     but it serves as a key for the default information in a log.
 
     I do not inherit from Interface because the world is a cruel place.
@@ -65,7 +66,7 @@ _ignoreErrors = []
 def startKeepingErrors():
     """
     DEPRECATED in Twisted 2.5.
-    
+
     Support function for testing frameworks.
 
     Start keeping errors in a buffer which can be retrieved (and emptied) with
@@ -112,7 +113,9 @@ def _flushErrors(*errorTypes):
     return k
 
 def ignoreErrors(*types):
-    """DEPRECATED"""
+    """
+    DEPRECATED
+    """
     warnings.warn("log.ignoreErrors is deprecated since Twisted 2.5",
                   category=DeprecationWarning, stacklevel=2)
     _ignore(*types)
@@ -125,7 +128,9 @@ def _ignore(*types):
         _ignoreErrors.append(type)
 
 def clearIgnores():
-    """DEPRECATED"""
+    """
+    DEPRECATED
+    """
     warnings.warn("log.clearIgnores is deprecated since Twisted 2.5",
                   category=DeprecationWarning, stacklevel=2)
     _clearIgnores()
@@ -180,7 +185,9 @@ class Logger:
         return '-'
 
 class LogPublisher:
-    """Class for singleton log message publishing."""
+    """
+    Class for singleton log message publishing.
+    """
 
     synchronized = ['msg']
 
@@ -188,7 +195,8 @@ class LogPublisher:
         self.observers = []
 
     def addObserver(self, other):
-        """Add a new observer.
+        """
+        Add a new observer.
 
         Observers are callable objects that will be called with each new log
         message (a dict).
@@ -197,11 +205,14 @@ class LogPublisher:
         self.observers.append(other)
 
     def removeObserver(self, other):
-        """Remove an observer."""
+        """
+        Remove an observer.
+        """
         self.observers.remove(other)
 
     def msg(self, *message, **kw):
-        """Log a new message.
+        """
+        Log a new message.
 
         For example::
 
@@ -292,11 +303,16 @@ class FileLogObserver:
 
     def formatTime(self, when):
         """
-        Return the given UTC value formatted as a human-readable string
-        representing that time in the local timezone.
+        Format the given UTC value as a string representing that time in the
+        local timezone.
+
+        By default it's formatted as a ISO8601-like string (ISO8601 date and
+        ISO8601 time separated by a space). It can be customized using the
+        C{timeFormat} attribute, which will be used as input for the underlying
+        C{time.strftime} call.
 
         @type when: C{int}
-        @param when: POSIX timestamp to convert to a human-readable string.
+        @param when: POSIX timestamp to convert.
 
         @rtype: C{str}
         """
@@ -307,9 +323,9 @@ class FileLogObserver:
         when = datetime.datetime.utcfromtimestamp(when + tzOffset)
         tzHour = int(tzOffset / 60 / 60)
         tzMin = int(tzOffset / 60 % 60)
-        return '%d/%02d/%02d %02d:%02d %+03d%02d' % (
+        return '%d-%02d-%02d %02d:%02d:%02d%+03d%02d' % (
             when.year, when.month, when.day,
-            when.hour, when.minute,
+            when.hour, when.minute, when.second,
             tzHour, tzMin)
 
 
@@ -335,16 +351,22 @@ class FileLogObserver:
         util.untilConcludes(self.flush)  # Hoorj!
 
     def start(self):
-        """Start observing log events."""
+        """
+        Start observing log events.
+        """
         addObserver(self.emit)
 
     def stop(self):
-        """Stop observing log events."""
+        """
+        Stop observing log events.
+        """
         removeObserver(self.emit)
 
 
 class StdioOnnaStick:
-    """Class that pretends to be stout/err."""
+    """
+    Class that pretends to be stout/err.
+    """
 
     closed = 0
     softspace = 0
@@ -391,15 +413,17 @@ except NameError:
 
 
 def startLogging(file, *a, **kw):
-    """Initialize logging to a specified file.
+    """
+    Initialize logging to a specified file.
     """
     flo = FileLogObserver(file)
     startLoggingWithObserver(flo.emit, *a, **kw)
 
 def startLoggingWithObserver(observer, setStdout=1):
-    """Initialize logging to a specified observer. If setStdout is true
-       (defaults to yes), also redirect sys.stdout and sys.stderr
-       to the specified file.
+    """
+    Initialize logging to a specified observer. If setStdout is true
+    (defaults to yes), also redirect sys.stdout and sys.stderr
+    to the specified file.
     """
     global defaultObserver, _oldshowwarning
     if not _oldshowwarning:
@@ -424,7 +448,8 @@ class NullFile:
 
 
 def discardLogs():
-    """Throw away all logs.
+    """
+    Throw away all logs.
     """
     global logfile
     logfile = NullFile()
@@ -439,7 +464,8 @@ except NameError:
 
 
 class DefaultObserver:
-    """Default observer.
+    """
+    Default observer.
 
     Will ignore all non-error messages and send error messages to sys.stderr.
     Will be removed when startLogging() is called for the first time.

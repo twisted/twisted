@@ -48,7 +48,7 @@ class LogTest(unittest.TestCase):
             log.err(e)
             i = self.catcher.pop()
             self.assertEquals(i['isError'], 1)
-            log.flushErrors(ig)
+            self.flushLoggedErrors(ig)
 
     def testErrorsWithWhy(self):
         for e, ig in [("hello world","hello world"),
@@ -58,7 +58,7 @@ class LogTest(unittest.TestCase):
             i = self.catcher.pop()
             self.assertEquals(i['isError'], 1)
             self.assertEquals(i['why'], 'foobar')
-            log.flushErrors(ig)
+            self.flushLoggedErrors(ig)
 
 
     def testErroneousErrors(self):
@@ -164,23 +164,23 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
 
         # Pretend to be in US/Eastern for a moment
         self.flo.getTimezoneOffset = lambda: 18000
-        self.assertEquals(self.flo.formatTime(when), '2001/02/02 23:05 -0500')
+        self.assertEquals(self.flo.formatTime(when), '2001-02-02 23:05:06-0500')
 
         # Okay now we're in Eastern Europe somewhere
         self.flo.getTimezoneOffset = lambda: -3600
-        self.assertEquals(self.flo.formatTime(when), '2001/02/03 05:05 +0100')
+        self.assertEquals(self.flo.formatTime(when), '2001-02-03 05:05:06+0100')
 
         # And off in the Pacific or someplace like that
         self.flo.getTimezoneOffset = lambda: -39600
-        self.assertEquals(self.flo.formatTime(when), '2001/02/03 15:05 +1100')
+        self.assertEquals(self.flo.formatTime(when), '2001-02-03 15:05:06+1100')
 
         # One of those weird places with a half-hour offset timezone
         self.flo.getTimezoneOffset = lambda: 5400
-        self.assertEquals(self.flo.formatTime(when), '2001/02/03 02:35 -0130')
+        self.assertEquals(self.flo.formatTime(when), '2001-02-03 02:35:06-0130')
 
         # Half-hour offset in the other direction
         self.flo.getTimezoneOffset = lambda: -5400
-        self.assertEquals(self.flo.formatTime(when), '2001/02/03 05:35 +0130')
+        self.assertEquals(self.flo.formatTime(when), '2001-02-03 05:35:06+0130')
 
         # If a strftime-format string is present on the logger, it should
         # use that instead.  Note we don't assert anything about day, hour
@@ -238,3 +238,4 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
         self.lp.msg(format=EvilReprStr(), blat=1)
         self.assertEquals(len(self.out), 1)
         self.assertIn('PATHOLOGICAL', self.out[0])
+
