@@ -1,5 +1,3 @@
-#! /usr/bin/python
-
 import sys
 
 from twisted.trial import unittest

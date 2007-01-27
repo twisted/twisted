@@ -1,4 +1,3 @@
-#! /usr/bin/python
 
 """
 This module provides support for Twisted to interact with the glib mainloop.
