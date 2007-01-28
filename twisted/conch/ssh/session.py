@@ -14,10 +14,10 @@ Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 
 import struct
 
-from twisted.internet import protocol, reactor
+from twisted.internet import protocol
 from twisted.python import log
 from twisted.conch.interfaces import ISession
-import common, channel
+from twisted.conch.ssh import common, channel
 
 class SSHSession(channel.SSHChannel):
 
@@ -78,7 +78,7 @@ class SSHSession(channel.SSHChannel):
         term, windowSize, modes = parseRequest_pty_req(data)
         log.msg('pty request: %s %s' % (term, windowSize))
         try:
-            self.session.getPty(term, windowSize, modes) 
+            self.session.getPty(term, windowSize, modes)
         except:
             log.err()
             return 0
@@ -88,7 +88,6 @@ class SSHSession(channel.SSHChannel):
     def request_window_change(self, data):
         if not self.session:
             self.session = ISession(self.avatar)
-        import fcntl, tty
         winSize = parseRequest_window_change(data)
         try:
             self.session.windowChanged(winSize)
@@ -122,6 +121,8 @@ class SSHSession(channel.SSHChannel):
     def closed(self):
         if self.session:
             self.session.closed()
+        elif self.client:
+            self.client.transport.loseConnection()
 
     #def closeReceived(self):
     #    self.loseConnection() # don't know what to do with this
@@ -139,7 +140,7 @@ class _ProtocolWrapper(protocol.ProcessProtocol):
         self.proto = proto
 
     def connectionMade(self): self.proto.connectionMade()
-    
+
     def outReceived(self, data): self.proto.dataReceived(data)
 
     def processEnded(self, reason): self.proto.connectionLost(reason)
@@ -160,7 +161,7 @@ class _DummyTransport:
 
     def loseConnection(self):
         self.proto.connectionLost(protocol.connectionDone)
-    
+
 def wrapProcessProtocol(inst):
     if isinstance(inst, protocol.Protocol):
         return _ProtocolWrapper(inst)
@@ -194,7 +195,7 @@ class SSHSessionProcessProtocol(protocol.ProcessProtocol):
         self.session.loseConnection()
 
     def processEnded(self, reason = None):
-        if reason and hasattr(reason.value, 'exitCode'): 
+        if reason and hasattr(reason.value, 'exitCode'):
             log.msg('exitCode: %s' % repr(reason.value.exitCode))
             self.session.conn.sendRequest(self.session, 'exit-status', struct.pack('!L', reason.value.exitCode))
         self.session.loseConnection()

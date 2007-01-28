@@ -3,11 +3,13 @@
 # See LICENSE file for details.
 
 import os
+import struct
 import sys
 
 from twisted.trial import unittest
 try:
     from twisted.conch import unix
+    unix # shut up pyflakes
 except ImportError:
     unix = None
     try:
@@ -18,19 +20,17 @@ except ImportError:
         pass
 
 from twisted.conch import avatar
-from twisted.conch.ssh import filetransfer, session
+from twisted.conch.ssh import common, connection, filetransfer, session
 from twisted.internet import defer, reactor
 from twisted.protocols import loopback
-from twisted.python import components, log
+from twisted.python import components
 
 
-class FileTransferTestAvatar(avatar.ConchUser):
-
-    def __init__(self, homeDir):
+class TestAvatar(avatar.ConchUser):
+    def __init__(self):
         avatar.ConchUser.__init__(self)
         self.channelLookup['session'] = session.SSHSession
         self.subsystemLookup['sftp'] = filetransfer.FileTransferServer
-        self.homeDir = homeDir
 
     def _runAsUser(self, f, *args, **kw):
         try:
@@ -44,8 +44,16 @@ class FileTransferTestAvatar(avatar.ConchUser):
             r = func(*args, **kw)
         return r
 
+
+class FileTransferTestAvatar(TestAvatar):
+
+    def __init__(self, homeDir):
+        TestAvatar.__init__(self)
+        self.homeDir = homeDir
+
     def getHomeDir(self):
         return os.path.join(os.getcwd(), self.homeDir)
+
 
 class ConchSessionForTestAvatar:
 
@@ -73,7 +81,7 @@ if unix:
                 raise NotImplementedError
 
         components.registerAdapter(FileTransferForTestAvatar,
-                                   FileTransferTestAvatar,
+                                   TestAvatar,
                                    filetransfer.ISFTPServer)
 
 class SFTPTestBase(unittest.TestCase):
@@ -177,7 +185,7 @@ class TestOurServerOurClient(SFTPTestBase):
             return d
 
         def _err(f):
-            log.flushErrors()
+            self.flushLoggedErrors()
             return f
 
         def _close(openFile):
@@ -375,3 +383,109 @@ class TestOurServerOurClient(SFTPTestBase):
         d = self.client.extendedRequest('testBadRequest', '')
         self._emptyBuffers()
         return self.assertFailure(d, NotImplementedError)
+
+
+class FakeConn:
+    def sendClose(self, channel):
+        pass
+
+
+class TestFileTransferClose(unittest.TestCase):
+
+    if not unix:
+        skip = "can't run on non-posix computers"
+
+    def setUp(self):
+        self.avatar = TestAvatar()
+
+    def buildServerConnection(self):
+        # make a server connection
+        conn = connection.SSHConnection()
+        # server connections have a 'self.transport.avatar'.
+        class DummyTransport:
+            def __init__(self):
+                self.transport = self
+            def sendPacket(self, kind, data):
+                pass
+            def logPrefix(self):
+                return 'dummy transport'
+        conn.transport = DummyTransport()
+        conn.transport.avatar = self.avatar
+        return conn
+
+    def interceptConnectionLost(self, sftpServer):
+        self.connectionLostFired = False
+        origConnectionLost = sftpServer.connectionLost
+        def connectionLost(reason):
+            self.connectionLostFired = True
+            origConnectionLost(reason)
+        sftpServer.connectionLost = connectionLost
+
+    def assertSFTPConnectionLost(self):
+        self.assertTrue(self.connectionLostFired,
+            "sftpServer's connectionLost was not called")
+
+    def test_sessionClose(self):
+        """
+        Closing a session should notify an SFTP subsystem launched by that
+        session.
+        """
+        # make a session
+        testSession = session.SSHSession(conn=FakeConn(), avatar=self.avatar)
+
+        # start an SFTP subsystem on the session
+        testSession.request_subsystem(common.NS('sftp'))
+        sftpServer = testSession.client.transport.proto
+
+        # intercept connectionLost so we can check that it's called
+        self.interceptConnectionLost(sftpServer)
+
+        # close session
+        testSession.closeReceived()
+
+        self.assertSFTPConnectionLost()
+
+    def test_clientClosesChannelOnConnnection(self):
+        """
+        A client sending CHANNEL_CLOSE should trigger closeReceived on the
+        associated channel instance.
+        """
+        conn = self.buildServerConnection()
+
+        # somehow get a session
+        packet = common.NS('session') + struct.pack('>L', 0) * 3
+        conn.ssh_CHANNEL_OPEN(packet)
+        sessionChannel = conn.channels[0]
+
+        sessionChannel.request_subsystem(common.NS('sftp'))
+        sftpServer = sessionChannel.client.transport.proto
+        self.interceptConnectionLost(sftpServer)
+
+        # intercept closeReceived
+        self.interceptConnectionLost(sftpServer)
+
+        # close the connection
+        conn.ssh_CHANNEL_CLOSE(struct.pack('>L', 0))
+
+        self.assertSFTPConnectionLost()
+
+
+    def test_stopConnectionServiceClosesChannel(self):
+        """
+        Closing an SSH connection should close all sessions within it.
+        """
+        conn = self.buildServerConnection()
+
+        # somehow get a session
+        packet = common.NS('session') + struct.pack('>L', 0) * 3
+        conn.ssh_CHANNEL_OPEN(packet)
+        sessionChannel = conn.channels[0]
+
+        sessionChannel.request_subsystem(common.NS('sftp'))
+        sftpServer = sessionChannel.client.transport.proto
+        self.interceptConnectionLost(sftpServer)
+
+        # close the connection
+        conn.serviceStopped()
+
+        self.assertSFTPConnectionLost()
