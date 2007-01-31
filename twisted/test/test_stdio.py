@@ -57,52 +57,66 @@ class StandardInputOutputTestCase(unittest.TestCase):
         return d.addCallbacks(cb, eb)
 
 
-    def testLoseConnection(self):
+    def test_loseConnection(self):
+        """
+        Verify that a protocol connected to L{StandardIO} can disconnect
+        itself using C{transport.loseConnection}.
+        """
         p = StandardIOTestProcessProtocol()
         d = p.onCompletion
         self._spawnProcess(p, 'stdio_test_loseconn.py')
 
         def processEnded(reason):
-            self.assertEquals(p.data, {})
+            self.failIfIn(1, p.data)
             reason.trap(error.ProcessDone)
         return self._requireFailure(d, processEnded)
 
 
-    def testHostAndPeer(self):
+    def test_hostAndPeer(self):
+        """
+        Verify that the transport of a protocol connected to L{StandardIO}
+        has C{getHost} and C{getPeer} methods.
+        """
         p = StandardIOTestProcessProtocol()
         d = p.onCompletion
         self._spawnProcess(p, 'stdio_test_hostpeer.py')
 
         def processEnded(reason):
-            hostpeer = p.data.pop(1)
-            self.assertEquals(p.data, {})
-            host, peer = hostpeer.splitlines()
+            host, peer = p.data[1].splitlines()
             self.failUnless(host)
             self.failUnless(peer)
             reason.trap(error.ProcessDone)
         return self._requireFailure(d, processEnded)
 
 
-    def testWrite(self):
+    def test_write(self):
+        """
+        Verify that the C{write} method of the transport of a protocol
+        connected to L{StandardIO} sends bytes to standard out.
+        """
         p = StandardIOTestProcessProtocol()
         d = p.onCompletion
 
         self._spawnProcess(p, 'stdio_test_write.py')
 
         def processEnded(reason):
-            self.assertEquals(p.data, {1: 'ok!'})
+            self.assertEquals(p.data[1], 'ok!')
             reason.trap(error.ProcessDone)
         return self._requireFailure(d, processEnded)
 
 
-    def testWriteSequence(self):
+    def test_writeSequence(self):
+        """
+        Verify that the C{writeSequence} method of the transport of a
+        protocol connected to L{StandardIO} sends bytes to standard out.
+        """
         p = StandardIOTestProcessProtocol()
         d = p.onCompletion
 
         self._spawnProcess(p, 'stdio_test_writeseq.py')
 
         def processEnded(reason):
-            self.assertEquals(p.data, {1: 'ok!'})
+            self.assertEquals(p.data[1], 'ok!')
             reason.trap(error.ProcessDone)
         return self._requireFailure(d, processEnded)
 
@@ -116,7 +130,11 @@ class StandardInputOutputTestCase(unittest.TestCase):
         return junkPath
 
 
-    def testProducer(self):
+    def test_producer(self):
+        """
+        Verify that the transport of a protocol connected to L{StandardIO}
+        is a working L{IProducer} provider.
+        """
         p = StandardIOTestProcessProtocol()
         d = p.onCompletion
 
@@ -134,13 +152,17 @@ class StandardInputOutputTestCase(unittest.TestCase):
         p.onConnection.addCallback(connectionMade)
 
         def processEnded(reason):
-            self.assertEquals(p.data, {1: ''.join(written)})
+            self.assertEquals(p.data[1], ''.join(written))
             self.failIf(toWrite, "Connection lost with %d writes left to go." % (len(toWrite),))
             reason.trap(error.ProcessDone)
         return self._requireFailure(d, processEnded)
 
 
-    def testConsumer(self):
+    def test_consumer(self):
+        """
+        Verify that the transport of a protocol connected to L{StandardIO}
+        is a working L{IConsumer} provider.
+        """
         p = StandardIOTestProcessProtocol()
         d = p.onCompletion
 
@@ -149,6 +171,6 @@ class StandardInputOutputTestCase(unittest.TestCase):
         self._spawnProcess(p, 'stdio_test_consumer.py', junkPath)
 
         def processEnded(reason):
-            self.assertEquals(p.data, {1: file(junkPath).read()})
+            self.assertEquals(p.data[1], file(junkPath).read())
             reason.trap(error.ProcessDone)
         return self._requireFailure(d, processEnded)

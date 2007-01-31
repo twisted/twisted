@@ -4,7 +4,7 @@
 
 """
 Main program for the child process run by
-L{twisted.test.test_stdio.StandardInputOutputTestCase.testHostAndPeer} to test
+L{twisted.test.test_stdio.StandardInputOutputTestCase.test_hostAndPeer} to test
 that ITransport.getHost() and ITransport.getPeer() work for process transports.
 """
 

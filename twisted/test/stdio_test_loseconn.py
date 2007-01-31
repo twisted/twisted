@@ -4,7 +4,7 @@
 
 """
 Main program for the child process run by
-L{twisted.test.test_stdio.StandardInputOutputTestCase.testLoseConnection} to
+L{twisted.test.test_stdio.StandardInputOutputTestCase.test_loseConnection} to
 test that ITransport.loseConnection() works for process transports.
 """
 

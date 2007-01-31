@@ -4,7 +4,7 @@
 
 """
 Main program for the child process run by
-L{twisted.test.test_stdio.StandardInputOutputTestCase.testConsumer} to test
+L{twisted.test.test_stdio.StandardInputOutputTestCase.test_consumer} to test
 that process transports implement IConsumer properly.
 """
 

@@ -1,20 +1,19 @@
 # -*- test-case-name: twisted.test.test_util -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2004,2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+import os.path, sys
+import shutil, errno
 
 from twisted.trial import unittest
 
 from twisted.python import util
-from twisted.python.runtime import platformType
 from twisted.internet import reactor
 from twisted.internet.interfaces import IReactorProcess
 from twisted.internet.protocol import ProcessProtocol
 from twisted.internet.defer import Deferred
 from twisted.internet.error import ProcessDone
 
-import os.path, sys
-import shutil, errno
 
 class UtilTestCase(unittest.TestCase):
 
@@ -32,7 +31,7 @@ class UtilTestCase(unittest.TestCase):
             pass
         else:
             raise unittest.FailTest, "util.raises didn't raise when it should have"
-   
+
     def testUninterruptably(self):
         def f(a, b):
             self.calls += 1
@@ -40,17 +39,17 @@ class UtilTestCase(unittest.TestCase):
             if exc is not None:
                 raise exc(errno.EINTR, "Interrupted system call!")
             return a + b
-        
+
         self.exceptions = [None]
         self.calls = 0
         self.assertEquals(util.untilConcludes(f, 1, 2), 3)
         self.assertEquals(self.calls, 1)
-        
+
         self.exceptions = [None, OSError, IOError]
         self.calls = 0
         self.assertEquals(util.untilConcludes(f, 2, 3), 5)
         self.assertEquals(self.calls, 3)
-    
+
     def testUnsignedID(self):
         util.id = lambda x: x
         try:
@@ -122,7 +121,7 @@ class OrderedDictTest(unittest.TestCase):
         d = util.OrderedDict({'monkey': 'ook',
                               'apple': 'red'})
         self.failUnless(d._order)
-        
+
         d = util.OrderedDict(((1,1),(3,3),(2,2),(0,0)))
         self.assertEquals(repr(d), "{1: 1, 3: 3, 2: 2, 0: 0}")
 
@@ -200,7 +199,7 @@ class GetPasswordTest(unittest.TestCase):
 
         def processFinished((reason, output)):
             reason.trap(ProcessDone)
-            self.assertEquals(output, [(1, 'secret')])
+            self.assertIn((1, 'secret'), output)
 
         return p.finished.addCallback(processFinished)
 
@@ -324,7 +323,7 @@ class Bar(object):
     pass
 
 class TestFancyEqMixin(unittest.TestCase):
-            
+
     def testIsInstance(self):
         eq = EQ(8, 9)
         f = Bar()

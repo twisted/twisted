@@ -4,7 +4,7 @@
 
 """
 Main program for the child process run by
-L{twisted.test.test_stdio.StandardInputOutputTestCase.testWriteSequence} to test that
+L{twisted.test.test_stdio.StandardInputOutputTestCase.test_writeSequence} to test that
 ITransport.writeSequence() works for process transports.
 """
 

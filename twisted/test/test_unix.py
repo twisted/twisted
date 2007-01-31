@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_unix -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2004,2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -7,8 +7,7 @@ import stat, os, sys
 import socket
 
 from twisted.internet import interfaces, reactor, protocol, error, address, defer, utils
-from twisted.python import lockfile, failure
-from twisted.protocols import loopback
+from twisted.python import lockfile
 from twisted.trial import unittest
 
 
@@ -100,7 +99,7 @@ class UnixSocketTestCase(PortCleanerUpper):
         l = reactor.listenUNIX(filename, f)
         self._sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self._sock.bind(peername)
-        self._sock.connect(filename)            
+        self._sock.connect(filename)
         d = f.deferred
         def done(x):
             self._addPorts(l)
@@ -149,7 +148,7 @@ class UnixSocketTestCase(PortCleanerUpper):
         d.addCallback(_portStuff)
         d.addCallback(_check)
         return d
-    
+
 
     def testSocketLocking(self):
         filename = self.mktemp()
@@ -173,7 +172,7 @@ class UnixSocketTestCase(PortCleanerUpper):
                   "reactor.listenUNIX(%r, protocol.ServerFactory(), wantPID=True)\n") % (self.filename,)
         env = {'PYTHONPATH': os.pathsep.join(sys.path)}
 
-        d = utils.getProcessOutput(sys.executable, ("-u", "-c", source), env=env)
+        d = utils.getProcessValue(sys.executable, ("-u", "-c", source), env=env)
         d.addCallback(callback)
         return d
 
@@ -304,4 +303,3 @@ if not interfaces.IReactorUNIX(reactor, None):
     UnixSocketTestCase.skip = "This reactor does not support UNIX domain sockets"
 if not interfaces.IReactorUNIXDatagram(reactor, None):
     DatagramUnixSocketTestCase.skip = "This reactor does not support UNIX datagram sockets"
-
