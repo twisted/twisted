@@ -1,9 +1,7 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2004,2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
-
-import sys, time
+import os, sys, time
 
 from twisted.trial import unittest
 
@@ -153,6 +151,61 @@ class LogPublisherTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
 
 
 class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
+    def test_getTimezoneOffset(self):
+        """
+        Attempt to verify that L{FileLogObserver.getTimezoneOffset} returns
+        correct values for the current C{TZ} environment setting.  Do this
+        by setting C{TZ} to various well-known values and asserting that the
+        reported offset is correct.
+        """
+        localDaylightTuple = (2006, 6, 30, 0, 0, 0, 4, 181, 1)
+        utcDaylightTimestamp = time.mktime(localDaylightTuple)
+        localStandardTuple = (2007, 1, 31, 0, 0, 0, 2, 31, 0)
+        utcStandardTimestamp = time.mktime(localStandardTuple)
+
+        originalTimezone = os.environ.get('TZ', None)
+        try:
+            # Test something west of UTC
+            os.environ['TZ'] = 'US/Eastern'
+            time.tzset()
+            self.assertEqual(
+                self.flo.getTimezoneOffset(utcDaylightTimestamp),
+                14400)
+            self.assertEqual(
+                self.flo.getTimezoneOffset(utcStandardTimestamp),
+                18000)
+
+            # Test something east of UTC
+            os.environ['TZ'] = 'Europe/Berlin'
+            time.tzset()
+            self.assertEqual(
+                self.flo.getTimezoneOffset(utcDaylightTimestamp),
+                -7200)
+            self.assertEqual(
+                self.flo.getTimezoneOffset(utcStandardTimestamp),
+                -3600)
+
+            # Test a timezone that doesn't have DST
+            os.environ['TZ'] = 'Africa/Johannesburg'
+            time.tzset()
+            self.assertEqual(
+                self.flo.getTimezoneOffset(utcDaylightTimestamp),
+                -7200)
+            self.assertEqual(
+                self.flo.getTimezoneOffset(utcStandardTimestamp),
+                -7200)
+        finally:
+            if originalTimezone is None:
+                del os.environ['TZ']
+            else:
+                os.environ['TZ'] = originalTimezone
+            time.tzset()
+    if getattr(time, 'tzset', None) is None:
+        test_getTimezoneOffset.skip = (
+            "Platform cannot change timezone, cannot verify correct offsets "
+            "in well-known timezones.")
+
+
     def test_timeFormatting(self):
         """
         Test the method of L{FileLogObserver} which turns a timestamp into a
@@ -163,23 +216,23 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
         when = time.mktime((2001, 2, 3, 4, 5, 6, 7, 8, 0)) - time.timezone
 
         # Pretend to be in US/Eastern for a moment
-        self.flo.getTimezoneOffset = lambda: 18000
+        self.flo.getTimezoneOffset = lambda when: 18000
         self.assertEquals(self.flo.formatTime(when), '2001-02-02 23:05:06-0500')
 
         # Okay now we're in Eastern Europe somewhere
-        self.flo.getTimezoneOffset = lambda: -3600
+        self.flo.getTimezoneOffset = lambda when: -3600
         self.assertEquals(self.flo.formatTime(when), '2001-02-03 05:05:06+0100')
 
         # And off in the Pacific or someplace like that
-        self.flo.getTimezoneOffset = lambda: -39600
+        self.flo.getTimezoneOffset = lambda when: -39600
         self.assertEquals(self.flo.formatTime(when), '2001-02-03 15:05:06+1100')
 
         # One of those weird places with a half-hour offset timezone
-        self.flo.getTimezoneOffset = lambda: 5400
+        self.flo.getTimezoneOffset = lambda when: 5400
         self.assertEquals(self.flo.formatTime(when), '2001-02-03 02:35:06-0130')
 
         # Half-hour offset in the other direction
-        self.flo.getTimezoneOffset = lambda: -5400
+        self.flo.getTimezoneOffset = lambda when: -5400
         self.assertEquals(self.flo.formatTime(when), '2001-02-03 05:35:06+0130')
 
         # If a strftime-format string is present on the logger, it should

@@ -11,7 +11,7 @@ from __future__ import division
 import sys
 import time
 import warnings
-import datetime
+from datetime import datetime
 
 # Sibling Imports
 from twisted.python import util, context, reflect
@@ -288,17 +288,19 @@ class FileLogObserver:
         return text
 
 
-    def getTimezoneOffset(self):
+    def getTimezoneOffset(self, when):
         """
         Return the current local timezone offset from UTC.
+
+        @type when: C{int}
+        @param when: POSIX (ie, UTC) timestamp for which to find the offset.
 
         @rtype: C{int}
         @return: The number of seconds offset from UTC.  West is positive,
         east is negative.
         """
-        if time.daylight:
-            return time.altzone
-        return time.timezone
+        offset = datetime.utcfromtimestamp(when) - datetime.fromtimestamp(when)
+        return offset.days * (60 * 60 * 24) + offset.seconds
 
 
     def formatTime(self, when):
@@ -312,15 +314,15 @@ class FileLogObserver:
         C{time.strftime} call.
 
         @type when: C{int}
-        @param when: POSIX timestamp to convert.
+        @param when: POSIX (ie, UTC) timestamp for which to find the offset.
 
         @rtype: C{str}
         """
         if self.timeFormat is not None:
             return time.strftime(self.timeFormat, time.localtime(when))
 
-        tzOffset = -self.getTimezoneOffset()
-        when = datetime.datetime.utcfromtimestamp(when + tzOffset)
+        tzOffset = -self.getTimezoneOffset(when)
+        when = datetime.utcfromtimestamp(when + tzOffset)
         tzHour = int(tzOffset / 60 / 60)
         tzMin = int(tzOffset / 60 % 60)
         return '%d-%02d-%02d %02d:%02d:%02d%+03d%02d' % (
