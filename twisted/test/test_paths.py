@@ -12,7 +12,7 @@ from twisted.python import filepath
 from twisted.python.zippath import ZipArchive
 from twisted.python.runtime import platform
 
-from twisted.trial import unittest
+from twisted.trial import unittest, util as trial_util
 
 
 class AbstractFilePathTestCase(unittest.TestCase):
@@ -157,7 +157,7 @@ class AbstractFilePathTestCase(unittest.TestCase):
 
     def test_newTimesAreFloats(self):
         """
-        Verify that all times returned from the various new time functions are ints
+        Verify that all times returned from the various new time functions are floats
         (and hopefully therefore 'high precision').
         """
         for p in self.path, self.path.child('file1'):
@@ -176,14 +176,79 @@ class AbstractFilePathTestCase(unittest.TestCase):
             self.failUnlessEqual(type(p.getmtime()), int)
             self.failUnlessEqual(type(p.getctime()), int)
 
+def callWithFilesystemEncoding(enc):
+    def withFilesystemEncoding(f):
+        def wrapped(*args, **kwargs):
+            import sys
+            def getfsenc():
+                return enc
 
+            old_getfsenc = sys.getfilesystemencoding
+            sys.getfilesystemencoding = getfsenc
+            try:
+                return f(*args, **kwargs)
+            finally:
+                sys.getfilesystemencoding = old_getfsenc
+        return wrapped
+    return withFilesystemEncoding
+
+class TestUnixPaths(unittest.TestCase):
+    # Suppress deprecation warnings eminating from calls in this module
+    suppress = [trial_util.suppress(category=DeprecationWarning, module='twisted.test.test_paths')]
+    
+    def assertMyEq(self, a, b):
+        """
+        Assert that a == b, but also check the types are the same (so that 'foo'
+        isn't considered the same as u'foo'.
+        """
+        self.assertIdentical(type(a), type(b))
+        self.assertEquals(a, b)
+
+    def test_basic(self):
+        """
+        Test that the fs/display base/path name attrs work.
+        """
+        fp = filepath.FilePath('/foo')
+
+        self.assertMyEq(fp.fsBasename, 'foo')
+        self.assertMyEq(fp.displayBasename, u'foo')
+        self.assertMyEq(fp.basename(), 'foo')
+
+        self.assertMyEq(fp.fsPathname, '/foo')
+        self.assertMyEq(fp.displayPathname, u'/foo')
+        self.assertMyEq(fp.path, '/foo')
+
+    def test_unicode(self):
+        """Test giving a unicode argument (with utf8 fs encoding)."""
+        # Make the filesystem encoding utf8.
+        import sys
+
+        fp = filepath.FilePath(u'/f\u0151o')
+
+        self.assertMyEq(fp.fsBasename, 'f\xc5\x91o')
+        self.assertMyEq(fp.displayBasename, u'f\u0151o')
+        self.assertMyEq(fp.basename(), u'f\u0151o')
+
+        self.assertMyEq(fp.fsPathname, '/f\xc5\x91o')
+        self.assertMyEq(fp.displayPathname, u'/f\u0151o')
+        self.assertMyEq(fp.path, u'/f\u0151o')
+    test_unicode = callWithFilesystemEncoding('utf-8')(test_unicode)
+
+    def test_unicode_unencodable(self):
+        """Test passing a unicode argument which is not encodable in the fs
+        encoding."""
+        self.assertRaises(UnicodeError, filepath.FilePath, u'\u0080')
+    test_unicode_unencodable = callWithFilesystemEncoding('ascii')(test_unicode_unencodable)
+
+class TestWinPaths(unittest.TestCase):
+        pass
 
 class FakeWindowsPath(filepath.FilePath):
     """
     A test version of FilePath which overrides listdir to raise L{WindowsError}.
     """
 
-    def _listdir(self, path):
+    def _listdir(self):
         """
         @raise WindowsError: always.
         """
@@ -291,9 +356,18 @@ class FilePathTestCase(AbstractFilePathTestCase):
         self.failIf(f3.siblingExtensionSearch(*exts))
 
     def testPreauthChild(self):
+        """
+        Test that preauthChild accepts a path with / in it, and doesn't accept
+        a path which is not a child of fp.
+        """
         fp = filepath.FilePath('.')
         fp.preauthChild('foo/bar')
-        self.assertRaises(filepath.InsecurePath, fp.child, '/foo')
+        self.assertRaises(filepath.InsecurePath, fp.preauthChild, '/foo')
+        self.assertRaises(filepath.InsecurePath, fp.preauthChild, '..')
+
+    def testPreauthChildDotDot(self):
+        """Check that preauthChild doesn't mangle .. segments"""
+        # TODO: make a symlink and check that link/.. goes to the right place.
 
     def testStatCache(self):
         p = self.path.child('stattest')

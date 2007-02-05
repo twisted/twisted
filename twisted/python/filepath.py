@@ -136,7 +136,7 @@ class _PathHelper:
         accessible with L{_PathHelper.child}.
         """
         try:
-            subnames = self._listdir(self.fsPathname)
+            subnames = self._listdir()
         except WindowsError, winErrObj:
             # WindowsError is an OSError subclass, so if not for this clause
             # the OSError clause below would be handling these.  Windows error
@@ -320,7 +320,7 @@ class _BaseFilePath(_PathHelper):
 
     def _convertToInputType(self, arg):
         """Convert arg to the same type as the type of the input 'path' argument."""
-        if self._inputWasUnicode:
+        if self._inputWasUnicode is unicode:
             if isinstance(arg, unicode):
                 return arg
             else:
@@ -376,7 +376,7 @@ class _BaseFilePath(_PathHelper):
         """
         path = self._coerceToFsPath(path)
 
-        newpath = ospath.abspath(ospath.join(self.fsPathname, ospath.normpath(path)))
+        newpath = ospath.abspath(ospath.join(self.fsPathname, path))
         if not newpath.startswith(self.fsPathname):
             raise InsecurePath("%s is not a child of %s" % (newpath, self.fsPathname))
         return self.clonePath(newpath)
@@ -416,7 +416,7 @@ class _BaseFilePath(_PathHelper):
                 basedot = self.fsBasename+'.'
                 parent = self.parent()
                 try:
-                    fns = self._listdir(parent.fsPathname)
+                    fns = parent._listdir()
                 except OSError:
                     fns = []
                 for fn in fns:
@@ -549,7 +549,7 @@ class _BaseFilePath(_PathHelper):
                       "Please use .children() instead.",
                       category=DeprecationWarning, stacklevel=2)
 
-        return [self._convertToInputType(x) for x in self._listdir(self.fsPathname)]
+        return [self._convertToInputType(x) for x in self._listdir()]
 
     def splitext(self):
         warnings.warn("Filepath.splitext() is deprecated as of Twisted 2.6. "
@@ -613,9 +613,10 @@ class _BaseFilePath(_PathHelper):
     def setContent(self, content, ext='.new'):
         sib = self.siblingExtension(ext)
         sib.open('w').write(content)
-        if platform.isWindows() and ospath.exists(self.fsPathname):
-            os.unlink(self.fsPathname)
-        os.rename(sib.fsPathname, self.fsPathname)
+        if platform.isWindows():
+            win32.rename(sib.fsPathname, self.fsPathname)
+        else:
+            os.rename(sib.fsPathname, self.fsPathname)
 
     # new in 2.2.0
 
@@ -809,16 +810,11 @@ if ospath.supports_unicode_filenames and platform.isWindows():
 
         # listdir is broken without a \ on the end in Python 2.3/2.4, since they
         # append a '/*.*' instead of '\*.*'. Sigh.
-        def _listdir(self, path):
-            if not path.endswith('\\'):
-                path = path + '\\'
+        def _listdir(self):
+            path = self.fsPathname
+            if not path.endswith(u'\\'):
+                path = path + u'\\'
             return os.listdir(path)
-
-        # Also override setContent to use windows-specific REPLACE_EXISTING call.
-        def setContent(self, content, ext='.new'):
-            sib = self.siblingExtension(ext)
-            sib.open('w').write(content)
-            win32.rename(sib.fsPathname, self.fsPathname)
 
 else:
     class FilePath(_BaseFilePath):
@@ -835,7 +831,7 @@ else:
 
         displayPathname = property(_getDisplayPathname)
 
-        def _listdir(self, path):
-            return os.listdir(path)
+        def _listdir(self):
+            return os.listdir(self.fsPathname)
 
 FilePath.clonePath = FilePath
