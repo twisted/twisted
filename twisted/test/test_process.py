@@ -35,7 +35,7 @@ from twisted.python import procutils
 class TrivialProcessProtocol(protocol.ProcessProtocol):
     def __init__(self, d):
         self.deferred = d
-    
+
     def processEnded(self, reason):
         self.reason = reason
         self.deferred.callback(None)
@@ -126,11 +126,11 @@ class SignalProtocol(protocol.ProcessProtocol):
             return
         v = reason.value
         if v.exitCode is not None:
-            self.deferred.callback("SIG%s: exitCode is %s, not None" % 
+            self.deferred.callback("SIG%s: exitCode is %s, not None" %
                                    (self.signal, v.exitCode))
             return
         if v.signal != getattr(signal,'SIG'+self.signal):
-            self.deferred.callback("SIG%s: .signal was %s, wanted %s" % 
+            self.deferred.callback("SIG%s: .signal was %s, wanted %s" %
                                    (self.signal, v.signal,
                                     getattr(signal,'SIG'+self.signal)))
             return
@@ -139,7 +139,7 @@ class SignalProtocol(protocol.ProcessProtocol):
                                    % (self.signal, os.WTERMSIG(v.status)))
             return
         self.deferred.callback(None)
-        
+
 
 class SignalMixin:
     # XXX: Trial now does this (see
@@ -291,7 +291,7 @@ class GetEnvironmentDictionary(UtilityProcessProtocol):
         """
         Parse the output from the process to which this protocol was
         connected, which is a single unterminated line of \\0-separated
-        strings giving key value pairs of the environment from that process. 
+        strings giving key value pairs of the environment from that process.
         Return this as a dictionary.
         """
         environString = ''.join(chunks)
@@ -460,7 +460,7 @@ class ProcessTestCase(SignalMixin, unittest.TestCase):
             badArgs.append([exe, badUnicode])
         else:
             # It _did_ encode.  Most likely, Gtk2 is being used and the
-            # default system encoding is UTF-8, which can encode anything. 
+            # default system encoding is UTF-8, which can encode anything.
             # In any case, if implicit unicode -> str conversion works for
             # that string, we can't test that TypeError gets raised instead,
             # so just leave it off.
@@ -487,7 +487,7 @@ class ProcessTestCase(SignalMixin, unittest.TestCase):
     def _deprecatedUnicodeSupportTest(self, processProtocolClass, argv=[], env={}):
         """
         Check that a deprecation warning is emitted when passing unicode to
-        spawnProcess for an argv value or an environment key or value. 
+        spawnProcess for an argv value or an environment key or value.
         Check that the warning is of the right type, has the right message,
         and refers to the correct file.  Unfortunately, don't check that the
         line number is correct, because that is too hard for me to figure
@@ -643,13 +643,14 @@ class TestTwoProcessesNonPosix(TestTwoProcessesBase, SignalMixin, unittest.TestC
 
 class TestTwoProcessesPosix(TestTwoProcessesBase, SignalMixin, unittest.TestCase):
     def tearDown(self):
-        for i in (0,1):
-            pp, process = self.pp[i], self.processes[i]
+        for pp, process in zip(self.pp, self.processes):
             if not pp.finished:
                 try:
                     os.kill(process.pid, signal.SIGTERM)
                 except OSError:
-                    print "OSError"
+                    # If the test failed the process may already be dead
+                    # The error here is only noise
+                    pass
         return self._onClose()
 
     def kill(self, num):
@@ -883,7 +884,7 @@ class PosixProcessBase:
                              env=None,
                              usePTY=self.usePTY)
         return d
-        
+
     def testSignalHUP(self):
         d = self._testSignal('HUP')
         d.addCallback(self.failIf)
@@ -898,7 +899,7 @@ class PosixProcessBase:
         d = self._testSignal('KILL')
         d.addCallback(self.failIf)
         return d
-        
+
 
 class PosixProcessTestCase(SignalMixin, unittest.TestCase, PosixProcessBase):
     # add three non-pty test cases
