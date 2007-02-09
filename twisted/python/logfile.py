@@ -20,7 +20,7 @@ class BaseLogFile:
     """
 
     synchronized = ["write", "rotate"]
-    
+
     def __init__(self, name, directory, defaultMode=None):
         self.directory = directory
         assert os.path.isdir(self.directory)
@@ -31,9 +31,9 @@ class BaseLogFile:
         else:
             self.defaultMode = defaultMode
         self._openFile()
-    
+
     def shouldRotate(self):
-        """Override with a method to that returns true if the log 
+        """Override with a method to that returns true if the log
         should be rotated"""
         raise NotImplementedError
 
@@ -52,71 +52,97 @@ class BaseLogFile:
             except OSError:
                 # Probably /dev/null or something?
                 pass
-    
+
     def __getstate__(self):
         state = self.__dict__.copy()
         del state["_file"]
         return state
-    
+
     def __setstate__(self, state):
         self.__dict__ = state
         self._openFile()
-    
+
     def write(self, data):
         """Write some data to the file."""
         if self.shouldRotate():
             self.flush()
             self.rotate()
         self._file.write(data)
-    
+
     def flush(self):
         """Flush the file."""
         self._file.flush()
-    
+
     def close(self):
         """Close the file.
-        
+
         The file cannot be used once it has been closed.
         """
         self.closed = 1
         self._file.close()
         self._file = None
-    
+
     def getCurrentLog(self):
         """Return a LogReader for the current log file."""
         return LogReader(self.path)
-    
+
 class LogFile(BaseLogFile):
-    """A log file that can be rotated.
-    
+    """
+    A log file that can be rotated.
+
     A rotateLength of None disables automatic log rotation.
     """
-    def __init__(self, name, directory, rotateLength=1000000, defaultMode=None):
+    def __init__(self, name, directory, rotateLength=1000000, defaultMode=None,
+                 maxRotatedFiles=None):
+        """
+        Create a log file rotating on length.
+
+        @param name: file name.
+        @type name: C{str}
+        @param directory: path of the log file.
+        @type directory: C{str}
+        @param rotateLength: size of the log file where it rotates. Default to
+            1M.
+        @type rotateLength: C{int}
+        @param defaultMode: mode used to create the file.
+        @type defaultMode: C{int}
+        @param maxRotatedFiles: if not None, max number of log files the class
+            creates. Warning: it removes all log files above this number.
+        @type maxRotatedFiles: C{int}
+        """
         BaseLogFile.__init__(self, name, directory, defaultMode)
         self.rotateLength = rotateLength
+        self.maxRotatedFiles = maxRotatedFiles
 
     def _openFile(self):
         BaseLogFile._openFile(self)
         self.size = self._file.tell()
-        
+
     def shouldRotate(self):
-        """Rotate when the log file size is larger than rotateLength"""
+        """
+        Rotate when the log file size is larger than rotateLength.
+        """
         return self.rotateLength and self.size >= self.rotateLength
 
     def getLog(self, identifier):
-        """Given an integer, return a LogReader for an old log file."""
+        """
+        Given an integer, return a LogReader for an old log file.
+        """
         filename = "%s.%d" % (self.path, identifier)
         if not os.path.exists(filename):
             raise ValueError, "no such logfile exists"
         return LogReader(filename)
 
     def write(self, data):
-        """Write some data to the file"""
+        """
+        Write some data to the file.
+        """
         BaseLogFile.write(self, data)
         self.size += len(data)
 
     def rotate(self):
-        """Rotate the file and create a new one.
+        """
+        Rotate the file and create a new one.
 
         If it's not possible to open new logfile, this will fail silently,
         and continue logging to old logfile.
@@ -126,13 +152,18 @@ class LogFile(BaseLogFile):
         logs = self.listLogs()
         logs.reverse()
         for i in logs:
-            os.rename("%s.%d" % (self.path, i), "%s.%d" % (self.path, i + 1))
+            if self.maxRotatedFiles is not None and i >= self.maxRotatedFiles:
+                os.remove("%s.%d" % (self.path, i))
+            else:
+                os.rename("%s.%d" % (self.path, i), "%s.%d" % (self.path, i + 1))
         self._file.close()
         os.rename(self.path, "%s.1" % self.path)
         self._openFile()
 
     def listLogs(self):
-        """Return sorted list of integers - the old logs' identifiers."""
+        """
+        Return sorted list of integers - the old logs' identifiers.
+        """
         result = []
         for name in glob.glob("%s.*" % self.path):
             try:
@@ -158,7 +189,7 @@ class DailyLogFile(BaseLogFile):
     def _openFile(self):
         BaseLogFile._openFile(self)
         self.lastDate = self.toDate(os.stat(self.path)[8])
-        
+
     def shouldRotate(self):
         """Rotate when the date has changed since last write"""
         return self.toDate() > self.lastDate
@@ -166,7 +197,7 @@ class DailyLogFile(BaseLogFile):
     def toDate(self, *args):
         """Convert a unixtime to (year, month, day) localtime tuple,
         or return the current (year, month, day) localtime tuple.
-        
+
         This function primarily exists so you may overload it with
         gmtime, or some cruft to make unit testing possible.
         """
@@ -223,13 +254,13 @@ threadable.synchronize(DailyLogFile)
 
 class LogReader:
     """Read from a log file."""
-    
+
     def __init__(self, name):
         self._file = open(name, "r")
-    
+
     def readLines(self, lines=10):
         """Read a list of lines from the log file.
-        
+
         This doesn't returns all of the files lines - call it multiple times.
         """
         result = []
