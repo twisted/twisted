@@ -31,7 +31,7 @@ def calcHA1(
     pszNonce,
     pszCNonce,
 ):
-
+    
     m = algorithms[pszAlg]()
     m.update(pszUserName)
     m.update(":")
@@ -106,7 +106,7 @@ class DigestedCredentials:
         nc = self.fields.get('nc')
         algo = self.fields.get('algorithm', 'md5').lower()
         qop = self.fields.get('qop', 'auth')
-
+        
         expected = calcResponse(
             calcHA1(algo, self.username, self.realm, password, nonce, cnonce),
             algo, nonce, nc, cnonce, qop, self.method, uri, None
@@ -171,5 +171,5 @@ class DigestCredentialFactory:
             raise error.LoginFailed('Invalid response, opaque not outstanding')
 
         del self.outstanding[auth['opaque']]
-
+            
         return DigestedCredentials(username, request.method, self.realm, auth)
