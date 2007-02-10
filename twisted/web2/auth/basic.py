@@ -11,7 +11,7 @@ class BasicCredentialFactory(object):
     """
 
     implements(ICredentialFactory)
-    
+
     scheme = 'basic'
 
     def __init__(self, realm):
@@ -25,7 +25,7 @@ class BasicCredentialFactory(object):
             creds = (response + '===').decode('base64')
         except:
             raise error.LoginFailed('Invalid credentials')
-        
+
         creds = creds.split(':', 1)
         if len(creds) == 2:
             return credentials.UsernamePassword(*creds)
