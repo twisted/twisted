@@ -16,8 +16,9 @@ import traceback
 import warnings
 
 # Twisted imports
-from twisted.python import log, failure
+from twisted.python import log, failure, lockfile
 from twisted.python.util import unsignedID, mergeFunctionMetadata
+from twisted.internet.interfaces import IReactorTime
 
 class AlreadyCalledError(Exception):
     pass
@@ -995,9 +996,64 @@ class DeferredQueue(object):
             raise QueueUnderflow()
 
 
+class DeferredFilesystemLock(lockfile.FilesystemLock):
+    """
+    A FilesystemLock that allows for a deferred to be fired
+    when the lock is acquired.
+    """
+
+    interval = 1
+
+    def __init__(self, name, scheduler=None):
+        """
+        @param name: The name of the lock to acquire
+        @param scheduler: A provider of IReactorTime
+        """
+
+        lockfile.FilesystemLock.__init__(self, name)
+
+        if not scheduler:
+            from twisted.internet import reactor
+            scheduler = reactor
+
+        self.scheduler = IReactorTime(scheduler)
+
+    def deferUntilLocked(self, timeout=None):
+        """
+        Wait until we acquire this lock.
+
+        @type timeout: C{int}
+        @param timeout: the number of seconds after which to time out if the
+            lock had not been acquired.
+
+        @type interval: C{int}
+        @param interval: the number of seconds to wait in between attempts to
+            acquire the lock.
+
+        @return: a deferred which will callback when the lock is acquired, or
+            errback with a L{TimeoutError} after timing out.
+        """
+        d = Deferred()
+
+        def tryNow(c):
+            if self.lock():
+                d.callback(None)
+            else:
+                if timeout is not None and c * self.interval >= timeout:
+                    d.errback(failure.Failure(TimeoutError()))
+                    return
+
+                self.scheduler.callLater(self.interval, tryNow, c + 1)
+
+        tryNow(1)
+
+        return d
+
+
 __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
            "AlreadyCalledError", "TimeoutError", "gatherResults",
            "maybeDeferred",
            "waitForDeferred", "deferredGenerator", "inlineCallbacks",
            "DeferredLock", "DeferredSemaphore", "DeferredQueue",
+           "DeferredFilesystemLock",
           ]
