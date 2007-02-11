@@ -14,7 +14,6 @@ from twisted.trial import unittest, util
 from twisted.internet import reactor, defer
 from twisted.python import failure, log
 
-from twisted.internet.task import Clock
 
 class GenericError(Exception):
     pass
@@ -671,60 +670,3 @@ class OtherPrimitives(unittest.TestCase):
         queue = defer.DeferredQueue(backlog=0)
         self.assertRaises(defer.QueueUnderflow, queue.get)
 
-
-class DeferredFilesystemLockTestCase(unittest.TestCase):
-    """
-    Test the behavior of the DeferredFilesystemLock
-    """
-    def test_waitUntilLockedWithNoLock(self):
-        """
-        Test that the lock can be acquired when no lock exists.
-        """
-        clock = Clock()
-
-        lockf = self.mktemp()
-        lock = defer.DeferredFilesystemLock(lockf, scheduler=clock)
-        d = lock.deferUntilLocked(timeout=1)
-
-        return d
-
-    def test_waitUntilLockedWithTimeoutLocked(self):
-        """
-        Test that the lock can not be acquired when the lock exists
-        for longer than the timeout.
-        """
-        clock = Clock()
-
-        lockf = self.mktemp()
-        lock = defer.DeferredFilesystemLock(lockf, scheduler=clock)
-        self.failUnless(lock.lock())
-
-        d = lock.deferUntilLocked(timeout=5)
-        self.assertFailure(d, defer.TimeoutError)
-
-        clock.pump(xrange(10))
-
-        return d
-
-    def test_waitUntilLockedWithTimeoutUnlocked(self):
-        """
-        Test that a lock can be acquired while a lock already exists
-        but the lock is unlocked before our timeout.
-        """
-        def onTimeout(f):
-            f.trap(defer.TimeoutError)
-            self.fail("Should not have timed out")
-
-        clock = Clock()
-
-        lockf = self.mktemp()
-        lock = defer.DeferredFilesystemLock(lockf, scheduler=clock)
-        self.failUnless(lock.lock())
-
-        clock.callLater(1, lock.unlock)
-        d = lock.deferUntilLocked(timeout=10)
-        d.addErrback(onTimeout)
-
-        clock.pump(xrange(10))
-
-        return d
