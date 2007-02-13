@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.conch.test.test_conch -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import os, sys
@@ -14,7 +14,6 @@ from twisted.internet import reactor, defer, protocol, error
 from twisted.python import log, runtime
 from twisted.trial import unittest
 
-from twisted.test.test_process import SignalMixin
 from twisted.conch.test.test_ssh import ConchTestRealm
 
 from twisted.conch.test.test_keys import publicRSA_openssh, privateRSA_openssh
@@ -286,7 +285,7 @@ run()""" % mod]
 
 
 
-class ForwardingTestBase(SignalMixin):
+class ForwardingTestBase:
     """
     Template class for tests of the Conch server's ability to forward arbitrary
     protocols over SSH.

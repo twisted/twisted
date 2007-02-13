@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.conch.test.test_manhole -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """Asynchronous local terminal input handling
@@ -51,10 +51,20 @@ class TerminalProcessProtocol(protocol.ProcessProtocol):
             self.proto.connectionLost(reason)
             self.proto = None
 
+
+
 class ConsoleManhole(ColoredManhole):
-    def handle_QUIT(self):
-        ColoredManhole.handle_QUIT(self)
+    """
+    A manhole protocol specifically for use with L{stdio.StandardIO}.
+    """
+    def connectionLost(self, reason):
+        """
+        When the connection is lost, there is nothing more to do.  Stop the
+        reactor so that the process can exit.
+        """
         reactor.stop()
+
+
 
 def runWithProtocol(klass):
     fd = sys.__stdin__.fileno()
@@ -66,7 +76,9 @@ def runWithProtocol(klass):
         reactor.run()
     finally:
         termios.tcsetattr(fd, termios.TCSANOW, oldSettings)
-        os.write(0, "\r\x1bc\r")
+        os.write(fd, "\r\x1bc\r")
+
+
 
 def main(argv=None):
     log.startLogging(file('child.log', 'w'))
@@ -78,6 +90,7 @@ def main(argv=None):
     else:
         klass = ConsoleManhole
     runWithProtocol(klass)
+
 
 if __name__ == '__main__':
     main()

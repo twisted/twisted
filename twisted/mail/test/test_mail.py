@@ -1,5 +1,4 @@
-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -7,21 +6,17 @@ import os
 import errno
 import md5
 import shutil
-import smtplib
 import pickle
 import StringIO
 import rfc822
-
-from twisted.trial import unittest
 import tempfile
 
-from zope.interface import providedBy, Interface, implements
+from zope.interface import Interface, implements
 
 from twisted.trial import unittest
 from twisted.mail import smtp
 from twisted.mail import pop3
 from twisted.names import dns
-from twisted.protocols import basic
 from twisted.internet import protocol
 from twisted.internet import defer
 from twisted.internet.defer import Deferred
@@ -47,9 +42,6 @@ from twisted import cred
 import twisted.cred.credentials
 import twisted.cred.checkers
 import twisted.cred.portal
-
-# Since we run a couple processes, we need SignalMixin from test_process
-from twisted.test import test_process
 
 from twisted.test.proto_helpers import LineSendingProtocol
 
@@ -149,7 +141,7 @@ class FileMessageTestCase(unittest.TestCase):
 
     def testFinalName(self):
         return self.fp.eomReceived().addCallback(self._cbFinalName)
-    
+
     def _cbFinalName(self, result):
         self.assertEquals(result, self.final)
         self.failUnless(self.f.closed)
@@ -497,7 +489,7 @@ class ServiceDomainTestCase(unittest.TestCase):
         return defer.maybeDeferred(self.D.validateTo, user
             ).addCallback(self._cbValidateTo
             )
-    
+
     def _cbValidateTo(self, result):
         self.failUnless(callable(result))
 
@@ -578,7 +570,7 @@ class VirtualPOP3TestCase(unittest.TestCase):
         return self.P.authenticateUserPASS('user', 'password'
             ).addCallback(self._cbAuthenticatePASS
             )
-    
+
     def _cbAuthenticatePASS(self, result):
         self.assertEquals(len(result), 3)
         self.assertEquals(result[0], pop3.IMailbox)
@@ -894,14 +886,14 @@ class MXTestCase(unittest.TestCase):
         return self.mx.getMX('test.domain'
             ).addCallback(self._cbManyRecordsSuccessfulLookup
             )
-    
+
     def _cbManyRecordsSuccessfulLookup(self, mx):
         self.failUnless(str(mx.name).split('.', 1)[0] in ('mx1', 'mx2', 'mx3'))
         self.mx.markBad(str(mx.name))
         return self.mx.getMX('test.domain'
             ).addCallback(self._cbManyRecordsDifferentResult, mx
             )
-    
+
     def _cbManyRecordsDifferentResult(self, nextMX, mx):
         self.assertNotEqual(str(mx.name), str(nextMX.name))
         self.mx.markBad(str(nextMX.name))
@@ -909,18 +901,18 @@ class MXTestCase(unittest.TestCase):
         return self.mx.getMX('test.domain'
             ).addCallback(self._cbManyRecordsLastResult, mx, nextMX
             )
-    
+
     def _cbManyRecordsLastResult(self, lastMX, mx, nextMX):
         self.assertNotEqual(str(mx.name), str(lastMX.name))
         self.assertNotEqual(str(nextMX.name), str(lastMX.name))
 
         self.mx.markBad(str(lastMX.name))
         self.mx.markGood(str(nextMX.name))
-        
+
         return self.mx.getMX('test.domain'
             ).addCallback(self._cbManyRecordsRepeatSpecificResult, nextMX
             )
-    
+
     def _cbManyRecordsRepeatSpecificResult(self, againMX, nextMX):
         self.assertEqual(str(againMX.name), str(nextMX.name))
 
@@ -1170,7 +1162,7 @@ class AliasTestCase(unittest.TestCase):
 class DummyProcess(object):
     __slots__ = ['onEnd']
 
-class ProcessAliasTestCase(test_process.SignalMixin, unittest.TestCase):
+class ProcessAliasTestCase(unittest.TestCase):
     lines = [
         'First line',
         'Next line',
@@ -1258,7 +1250,7 @@ class ProcessAliasTestCase(test_process.SignalMixin, unittest.TestCase):
 
         A4 = mail.alias.AliasGroup(['|echo', 'alias1'], domain, 'alias4')
         aliases['alias4'] = A4
-        
+
         r = map(str, A4.resolve(aliases).objs)
         r.sort()
         expected = map(str, [

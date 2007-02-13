@@ -1,4 +1,4 @@
-# Copyright (c) 2006 Twisted Matrix Laboratories.
+# Copyright (c) 2006-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import os, sys
@@ -9,29 +9,70 @@ from twisted.internet import error, defer, protocol, reactor
 
 
 class StandardIOTestProcessProtocol(protocol.ProcessProtocol):
+    """
+    Test helper for collecting output from a child process and notifying
+    something when it exits.
+
+    @ivar onConnection: A L{defer.Deferred} which will be called back with
+    C{None} when the connection to the child process is established.
+
+    @ivar onCompletion: A L{defer.Deferred} which will be errbacked with the
+    failure associated with the child process exiting when it exits.
+
+    @ivar onDataReceived: A L{defer.Deferred} which will be called back with
+    this instance whenever C{childDataReceived} is called, or C{None} to
+    suppress these callbacks.
+
+    @ivar data: A C{dict} mapping file descriptors to strings containing all
+    bytes received from the child process on each file descriptor.
+    """
+    onDataReceived = None
+
     def __init__(self):
         self.onConnection = defer.Deferred()
         self.onCompletion = defer.Deferred()
+        self.data = {}
 
 
     def connectionMade(self):
-        self.data = {}
         self.onConnection.callback(None)
 
 
     def childDataReceived(self, name, bytes):
+        """
+        Record all bytes received from the child process in the C{data}
+        dictionary.  Fire C{onDataReceived} if it is not C{None}.
+        """
         self.data[name] = self.data.get(name, '') + bytes
+        if self.onDataReceived is not None:
+            d, self.onDataReceived = self.onDataReceived, None
+            d.callback(self)
 
 
     def processEnded(self, reason):
-        for k in self.data.keys():
-            self.data[k] = ''.join(self.data[k])
         self.onCompletion.callback(reason)
 
 
 
 class StandardInputOutputTestCase(unittest.TestCase):
-    def _spawnProcess(self, proto, sibling, *args):
+    def _spawnProcess(self, proto, sibling, *args, **kw):
+        """
+        Launch a child Python process and communicate with it using the
+        given ProcessProtocol.
+
+        @param proto: A L{ProcessProtocol} instance which will be connected
+        to the child process.
+
+        @param sibling: The basename of a file containing the Python program
+        to run in the child process.
+
+        @param *args: strings which will be passed to the child process on
+        the command line as C{argv[2:]}.
+
+        @param **kw: additional arguments to pass to L{reactor.spawnProcess}.
+
+        @return: The L{IProcessTransport} provider for the spawned process.
+        """
         import twisted
         subenv = dict(os.environ)
         subenv['PYTHONPATH'] = os.pathsep.join(
@@ -39,14 +80,15 @@ class StandardInputOutputTestCase(unittest.TestCase):
                     os.path.dirname(os.path.dirname(twisted.__file__))),
              subenv.get('PYTHONPATH', '')
              ])
+        args = [sys.executable,
+             filepath.FilePath(__file__).sibling(sibling).path,
+             reactor.__class__.__module__] + list(args)
         return reactor.spawnProcess(
             proto,
             sys.executable,
-            [sys.executable,
-             filepath.FilePath(__file__).sibling(sibling).path,
-             reactor.__class__.__module__] + list(args),
+            args,
             env=subenv,
-            )
+            **kw)
 
 
     def _requireFailure(self, d, callback):
@@ -70,6 +112,40 @@ class StandardInputOutputTestCase(unittest.TestCase):
             self.failIfIn(1, p.data)
             reason.trap(error.ProcessDone)
         return self._requireFailure(d, processEnded)
+
+
+    def test_lastWriteReceived(self):
+        """
+        Verify that a write made directly to stdout using L{os.write}
+        after StandardIO has finished is reliably received by the
+        process reading that stdout.
+        """
+        p = StandardIOTestProcessProtocol()
+
+        # Note: the OS X bug which prompted the addition of this test
+        # is an apparent race condition involving non-blocking PTYs.
+        # Delaying the parent process significantly increases the
+        # likelihood of the race going the wrong way.  If you need to
+        # fiddle with this code at all, uncommenting the next line
+        # will likely make your life much easier.  It is commented out
+        # because it makes the test quite slow.
+
+        # p.onConnection.addCallback(lambda ign: __import__('time').sleep(5))
+
+        try:
+            self._spawnProcess(p, 'stdio_test_lastwrite.py', usePTY=True)
+        except ValueError, e:
+            # Some platforms don't work with usePTY=True
+            raise unittest.SkipTest(str(e))
+
+        def processEnded(reason):
+            """
+            Asserts that the parent received the bytes written by the child
+            after the child received "\x1c".
+            """
+            self.assertEqual(p.data[1], 'x')
+            reason.trap(error.ProcessDone)
+        return self._requireFailure(p.onCompletion, processEnded)
 
 
     def test_hostAndPeer(self):

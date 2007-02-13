@@ -1,5 +1,4 @@
-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -11,13 +10,15 @@ import warnings, os, sys, signal
 
 # Twisted Imports
 from twisted.trial import unittest
-from twisted.test.test_process import SignalMixin
 
 from twisted.internet import reactor, utils, interfaces
 
 
-class UtilsTestCase(SignalMixin, unittest.TestCase):
-    """Test running a process."""
+class UtilsTestCase(unittest.TestCase):
+    """
+    Test running a process using L{utils.getProcessOutput},
+    L{utils.getProcessValue}, and L{utils.getProcessOutputAndValue}.
+    """
 
     output = None
     value = None

@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.conch.test.test_recvline -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import sys, os
@@ -474,9 +474,7 @@ try:
 except ImportError:
     stdio = None
 
-from twisted.test.test_process import SignalMixin
-
-class _StdioMixin(_BaseMixin, SignalMixin):
+class _StdioMixin(_BaseMixin):
     def setUp(self):
         # A memory-only terminal emulator, into which the server will
         # write things and make other state changes.  What ends up

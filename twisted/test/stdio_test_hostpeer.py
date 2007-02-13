@@ -1,5 +1,5 @@
-# -*- test-case-name: twisted.test.test_stdio.StandardInputOutputTestCase.testHostAndPeer -*-
-# Copyright (c) 2006 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.test.test_stdio.StandardInputOutputTestCase.test_hostAndPeer -*-
+# Copyright (c) 2006-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """

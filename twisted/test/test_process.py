@@ -1,5 +1,4 @@
-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -8,8 +7,6 @@ Test running processes.
 """
 from __future__ import nested_scopes, generators
 
-from twisted.trial import unittest
-from twisted.python import log
 
 import gzip
 import os
@@ -17,20 +14,124 @@ import popen2
 import sys
 import signal
 import warnings
+import StringIO
 from pprint import pformat
 
-try:
-    import cStringIO as StringIO
-except ImportError:
-    import StringIO
 
 # Twisted Imports
 from twisted.internet import reactor, protocol, error, interfaces, defer
 from twisted.internet.protocol import ProcessProtocol
 from twisted.internet.defer import Deferred
+from twisted.trial import unittest
 
 from twisted.python import util, runtime
 from twisted.python import procutils
+
+
+class StubProcessProtocol(protocol.ProcessProtocol):
+    """
+    ProcessProtocol counter-implementation: all methods on this class raise an
+    exception, so instances of this may be used to verify that only certain
+    methods are called.
+    """
+    def outReceived(self, data):
+        raise NotImplementedError()
+
+    def errReceived(self, data):
+        raise NotImplementedError()
+
+    def inConnectionLost(self):
+        raise NotImplementedError()
+
+    def outConnectionLost(self):
+        raise NotImplementedError()
+
+    def errConnectionLost(self):
+        raise NotImplementedError()
+
+
+
+class ProcessProtocolTests(unittest.TestCase):
+    """
+    Tests for behavior provided by the process protocol base class,
+    L{protocol.ProcessProtocol}.
+    """
+    def test_outReceived(self):
+        """
+        Verify that when stdout is delivered to
+        L{ProcessProtocol.childDataReceived}, it is forwarded to
+        L{ProcessProtocol.outReceived}.
+        """
+        received = []
+        class OutProtocol(StubProcessProtocol):
+            def outReceived(self, data):
+                received.append(data)
+
+        bytes = "bytes"
+        p = OutProtocol()
+        p.childDataReceived(1, bytes)
+        self.assertEqual(received, [bytes])
+
+
+    def test_errReceived(self):
+        """
+        Similar to L{test_outReceived}, but for stderr.
+        """
+        received = []
+        class ErrProtocol(StubProcessProtocol):
+            def errReceived(self, data):
+                received.append(data)
+
+        bytes = "bytes"
+        p = ErrProtocol()
+        p.childDataReceived(2, bytes)
+        self.assertEqual(received, [bytes])
+
+
+    def test_inConnectionLost(self):
+        """
+        Verify that when stdin close notification is delivered to
+        L{ProcessProtocol.childConnectionLost}, it is forwarded to
+        L{ProcessProtocol.inConnectionLost}.
+        """
+        lost = []
+        class InLostProtocol(StubProcessProtocol):
+            def inConnectionLost(self):
+                lost.append(None)
+
+        p = InLostProtocol()
+        p.childConnectionLost(0)
+        self.assertEqual(lost, [None])
+
+
+    def test_outConnectionLost(self):
+        """
+        Similar to L{test_inConnectionLost}, but for stdout.
+        """
+        lost = []
+        class OutLostProtocol(StubProcessProtocol):
+            def outConnectionLost(self):
+                lost.append(None)
+
+        p = OutLostProtocol()
+        p.childConnectionLost(1)
+        self.assertEqual(lost, [None])
+
+
+    def test_errConnectionLost(self):
+        """
+        Similar to L{test_inConnectionLost}, but for stderr.
+        """
+        lost = []
+        class ErrLostProtocol(StubProcessProtocol):
+            def errConnectionLost(self):
+                lost.append(None)
+
+        p = ErrLostProtocol()
+        p.childConnectionLost(2)
+        self.assertEqual(lost, [None])
+
+
 
 class TrivialProcessProtocol(protocol.ProcessProtocol):
     def __init__(self, d):
@@ -40,6 +141,8 @@ class TrivialProcessProtocol(protocol.ProcessProtocol):
         self.reason = reason
         self.deferred.callback(None)
 
+
+
 class TestProcessProtocol(protocol.ProcessProtocol):
 
     def connectionMade(self):
@@ -48,28 +151,38 @@ class TestProcessProtocol(protocol.ProcessProtocol):
         self.err = ''
         self.transport.write("abcd")
 
-    def outReceived(self, data):
-        self.data = self.data + data
+    def childDataReceived(self, childFD, data):
+        """
+        Override and disable the dispatch provided by the base class to ensure
+        that it is really this method which is being called, and the transport
+        is not going directly to L{outReceived} or L{errReceived}.
+        """
+        if childFD == 1:
+            self.data += data
+        elif childFD == 2:
+            self.err += data
 
-    def outConnectionLost(self):
-        self.stages.append(2)
-        if self.data != "abcd":
-            raise RuntimeError
-        self.transport.write("1234")
 
-    def errReceived(self, data):
-        self.err = self.err + data
-
-    def errConnectionLost(self):
-        self.stages.append(3)
-        if self.err != "1234":
-            print 'err != 1234: ' + repr(self.err)
-            raise RuntimeError()
-        self.transport.write("abcd")
-        self.stages.append(4)
-
-    def inConnectionLost(self):
-        self.stages.append(5)
+    def childConnectionLost(self, childFD):
+        """
+        Similarly to L{childDataReceived}, disable the automatic dispatch
+        provided by the base implementation to verify that the transport is
+        calling this method directly.
+        """
+        if childFD == 1:
+            self.stages.append(2)
+            if self.data != "abcd":
+                raise RuntimeError
+            self.transport.write("1234")
+        elif childFD == 2:
+            self.stages.append(3)
+            if self.err != "1234":
+                print 'err != 1234: ' + repr(self.err)
+                raise RuntimeError()
+            self.transport.write("abcd")
+            self.stages.append(4)
+        elif childFD == 0:
+            self.stages.append(5)
 
     def processEnded(self, reason):
         self.reason = reason
@@ -141,29 +254,6 @@ class SignalProtocol(protocol.ProcessProtocol):
         self.deferred.callback(None)
 
 
-class SignalMixin:
-    # XXX: Trial now does this (see
-    #      twisted.trial.runner.MethodInfoBase._setUpSigchldHandler)... perhaps
-    #      this class should be removed?  Or trial shouldn't bother, and this
-    #      class used where it matters?
-    #        - spiv, 2005-04-01
-    sigchldHandler = None
-
-    def setUpClass(self):
-        # make sure SIGCHLD handler is installed, as it should be on
-        # reactor.run(). Do this because the reactor may not have been run
-        # by the time this test runs.
-        if hasattr(reactor, "_handleSigchld") and hasattr(signal, "SIGCHLD"):
-            log.msg("Installing SIGCHLD signal handler.")
-            self.sigchldHandler = signal.signal(signal.SIGCHLD,
-                                                reactor._handleSigchld)
-        else:
-            log.msg("Skipped installing SIGCHLD signal handler.")
-
-    def tearDownClass(self):
-        if self.sigchldHandler:
-            log.msg("Uninstalled SIGCHLD signal handler.")
-            signal.signal(signal.SIGCHLD, self.sigchldHandler)
 
 class TestManyProcessProtocol(TestProcessProtocol):
     def __init__(self):
@@ -311,7 +401,7 @@ class GetEnvironmentDictionary(UtilityProcessProtocol):
 
 
 
-class ProcessTestCase(SignalMixin, unittest.TestCase):
+class ProcessTestCase(unittest.TestCase):
     """Test running a process."""
 
     usePTY = False
@@ -638,10 +728,10 @@ class TestTwoProcessesBase:
         reactor.callLater(2, self.close, 1)
         return self._onClose()
 
-class TestTwoProcessesNonPosix(TestTwoProcessesBase, SignalMixin, unittest.TestCase):
+class TestTwoProcessesNonPosix(TestTwoProcessesBase, unittest.TestCase):
     pass
 
-class TestTwoProcessesPosix(TestTwoProcessesBase, SignalMixin, unittest.TestCase):
+class TestTwoProcessesPosix(TestTwoProcessesBase, unittest.TestCase):
     def tearDown(self):
         for pp, process in zip(self.pp, self.processes):
             if not pp.finished:
@@ -765,7 +855,7 @@ class FDChecker(protocol.ProcessProtocol):
             return
         self.deferred.callback(None)
 
-class FDTest(SignalMixin, unittest.TestCase):
+class FDTest(unittest.TestCase):
     def NOTsetUp(self):
         from twisted.internet import process
         process.Process.debug_child = True
@@ -901,7 +991,8 @@ class PosixProcessBase:
         return d
 
 
-class PosixProcessTestCase(SignalMixin, unittest.TestCase, PosixProcessBase):
+
+class PosixProcessTestCase(unittest.TestCase, PosixProcessBase):
     # add three non-pty test cases
 
     def testStderr(self):
@@ -942,7 +1033,7 @@ class PosixProcessTestCase(SignalMixin, unittest.TestCase, PosixProcessBase):
 
 
 
-class PosixProcessTestCasePTY(SignalMixin, unittest.TestCase, PosixProcessBase):
+class PosixProcessTestCasePTY(unittest.TestCase, PosixProcessBase):
     """Just like PosixProcessTestCase, but use ptys instead of pipes."""
     usePTY = 1
     # PTYs only offer one input and one output. What still makes sense?
@@ -975,7 +1066,7 @@ class PosixProcessTestCasePTY(SignalMixin, unittest.TestCase, PosixProcessBase):
         p = Accumulator()
         self.assertRaises(ValueError, reactor.spawnProcess, p, pyExe, pyArgs, usePTY=1, childFDs={1:'r'})
 
-class Win32ProcessTestCase(SignalMixin, unittest.TestCase):
+class Win32ProcessTestCase(unittest.TestCase):
     """Test process programs that are packaged with twisted."""
 
     def testStdinReader(self):

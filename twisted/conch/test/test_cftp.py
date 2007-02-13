@@ -1,8 +1,13 @@
 # -*- test-case-name: twisted.conch.test.test_cftp -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE file for details.
 
-import sys
+import sys, os, tempfile
+
+try:
+    import Crypto
+except ImportError:
+    Crypto = None
 
 try:
     from twisted.conch import unix
@@ -16,20 +21,14 @@ except ImportError:
         # In Python 2.4, the bad import has already been cleaned up for us.
         pass
 
-try:
-    import Crypto
-except ImportError:
-    Crypto = None
-
 from twisted.cred import portal
 from twisted.internet import reactor, protocol, interfaces, defer, error
 from twisted.internet.utils import getProcessOutputAndValue
 from twisted.python import log
-from twisted.test import test_process
 
-import test_ssh, test_conch
-from test_filetransfer import SFTPTestBase, FileTransferTestAvatar
-import sys, os, time, tempfile
+from twisted.conch.test import test_ssh, test_conch
+from twisted.conch.test.test_filetransfer import SFTPTestBase
+from twisted.conch.test.test_filetransfer import FileTransferTestAvatar
 
 
 class FileTransferTestRealm:
@@ -47,7 +46,7 @@ class SFTPTestProcess(protocol.ProcessProtocol):
     the tests are) and the cftp client process (which does the work that is
     being tested).
     """
-    
+
     def __init__(self, onOutReceived):
         """
         @param onOutReceived: A L{Deferred} to be fired as soon as data is
@@ -81,7 +80,7 @@ class SFTPTestProcess(protocol.ProcessProtocol):
         if self.onOutReceived is not None:
             d, self.onOutReceived = self.onOutReceived, None
             d.callback(data)
-        self.buffer += data            
+        self.buffer += data
         self._checkForCommand()
 
     def _checkForCommand(self):
@@ -96,7 +95,7 @@ class SFTPTestProcess(protocol.ProcessProtocol):
 
     def errReceived(self, data):
         """
-        Called by Twisted when the cftp client prints data to stderr. 
+        Called by Twisted when the cftp client prints data to stderr.
         """
         log.msg('err: %s' % data)
 
@@ -113,7 +112,7 @@ class SFTPTestProcess(protocol.ProcessProtocol):
         callback even if the server returns some kind of error.
 
         @param command: A string containing an sftp command.
-        
+
         @return: A C{Deferred} that fires when the sftp server returns a
         result. The payload is the server's response string.
         """
@@ -128,7 +127,7 @@ class SFTPTestProcess(protocol.ProcessProtocol):
         commands are completed.
 
         @param commands: A list of strings containing sftp commands.
-        
+
         @return: A C{Deferred} that fires when all commands are completed. The
         payload is a list of response strings from the server, in the same
         order as the commands.
@@ -197,11 +196,10 @@ class CFTPClientTestBase(SFTPTestBase):
                 pass
 
 
-class TestOurServerCmdLineClient(test_process.SignalMixin, CFTPClientTestBase):
+class TestOurServerCmdLineClient(CFTPClientTestBase):
     def setUpClass(self):
         if hasattr(self, 'skip'):
            return
-        test_process.SignalMixin.setUpClass(self)
         CFTPClientTestBase.setUpClass(self)
 
     def setUp(self):
@@ -232,7 +230,6 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, CFTPClientTestBase):
     def tearDownClass(self):
         if hasattr(self, 'skip'):
             return
-        test_process.SignalMixin.tearDownClass(self)
         CFTPClientTestBase.tearDownClass(self)
 
     def tearDown(self):
@@ -348,7 +345,7 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, CFTPClientTestBase):
                                   self.testDir + '/test file2',
                                   "get failed")
             return self.runCommand('rm "test file2"')
-        
+
         d = self.runCommand('get testfile1 "%s/test file2"' % (self.testDir,))
         d.addCallback(_checkGet)
         d.addCallback(lambda _: self.failIf(
@@ -358,7 +355,7 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, CFTPClientTestBase):
 
     def testWildcardGet(self):
         """
-        Test that 'get' works correctly when given wildcard parameters. 
+        Test that 'get' works correctly when given wildcard parameters.
         """
         def _check(ignored):
             self.assertFilesEqual(self.testDir + '/testRemoveFile',
@@ -367,7 +364,7 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, CFTPClientTestBase):
             self.assertFilesEqual(self.testDir + '/testRenameFile',
                                   'testRenameFile',
                                   'testRenameFile get failed')
-            
+
         d = self.runCommand('get testR*')
         return d.addCallback(_check)
 
@@ -385,7 +382,7 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, CFTPClientTestBase):
                                   self.testDir + '/test"file2')
             self.failUnless(result.endswith(expectedOutput))
             return self.runCommand('rm "test\\"file2"')
-        
+
         d = self.runCommand('put %s/testfile1 "test\\"file2"'
                             % (self.testDir,))
         d.addCallback(_checkPut)
@@ -409,13 +406,13 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, CFTPClientTestBase):
             self.assertFilesEqual(self.testDir + '/testRenameFile',
                                   self.testDir + '/../testRenameFile',
                                   'testRenameFile get failed')
-        
+
         d = self.runScript('cd ..',
                            'put %s/testR*' % (self.testDir,),
                            'cd %s' % os.path.basename(self.testDir))
         d.addCallback(check)
         return d
-    
+
 
     def testLink(self):
         """
@@ -483,11 +480,7 @@ class TestOurServerCmdLineClient(test_process.SignalMixin, CFTPClientTestBase):
         return d.addCallback(self.assertEqual, 'hello')
 
 
-class TestOurServerBatchFile(test_process.SignalMixin, CFTPClientTestBase):
-    def setUpClass(self):
-        test_process.SignalMixin.setUpClass(self)
-        CFTPClientTestBase.setUpClass(self)
-
+class TestOurServerBatchFile(CFTPClientTestBase):
     def setUp(self):
         CFTPClientTestBase.setUp(self)
         self.startServer()
@@ -495,10 +488,6 @@ class TestOurServerBatchFile(test_process.SignalMixin, CFTPClientTestBase):
     def tearDown(self):
         CFTPClientTestBase.tearDown(self)
         return self.stopServer()
-
-    def tearDownClass(self):
-        test_process.SignalMixin.tearDownClass(self)
-        CFTPClientTestBase.tearDownClass(self)
 
     def _getBatchOutput(self, f):
         fn = tempfile.mktemp()
@@ -580,11 +569,10 @@ exit
         return d
 
 
-class TestOurServerUnixClient(test_process.SignalMixin, CFTPClientTestBase):
+class TestOurServerUnixClient(CFTPClientTestBase):
     def setUpClass(self):
         if hasattr(self, 'skip'):
             return
-        test_process.SignalMixin.setUpClass(self)
         CFTPClientTestBase.setUpClass(self)
 
     def setUp(self):
@@ -609,10 +597,6 @@ class TestOurServerUnixClient(test_process.SignalMixin, CFTPClientTestBase):
         self.conn = conn = test_conch.SSHTestConnectionForUnix(None)
         uao = default.SSHUserAuthClient(o['user'], o, conn)
         return connect.connect(o['host'], int(o['port']), o, vhk, uao)
-
-    def tearDownClass(self):
-        test_process.SignalMixin.tearDownClass(self)
-        CFTPClientTestBase.tearDownClass(self)
 
     def tearDown(self):
         d = defer.maybeDeferred(self.conn.transport.loseConnection)

@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.test.test_process -*-
 
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -12,7 +12,7 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 # System Imports
-import os, sys, traceback, select, errno, struct, cStringIO, types, signal
+import os, sys, traceback, select, errno, types, signal
 
 try:
     import pty
@@ -27,7 +27,6 @@ except ImportError:
 from twisted.persisted import styles
 from twisted.python import log, failure
 from twisted.python.util import switchUID
-from twisted.internet import protocol
 from twisted.internet.error import ProcessExitedAlready
 
 # Sibling Imports
@@ -78,7 +77,7 @@ def detectLinuxBrokenPipeBehavior():
         brokenLinuxPipeBehavior = False
     os.close(r)
     os.close(w)
-    
+
 # Call at import time
 detectLinuxBrokenPipeBehavior()
 
@@ -91,7 +90,7 @@ class ProcessWriter(abstract.FileDescriptor):
     connected = 1
     ic = 0
     enableReadHack = False
-    
+
     def __init__(self, reactor, proc, name, fileno, forceReadHack=False):
         """Initialize, specifying a Process instance to connect to.
         """
@@ -100,7 +99,7 @@ class ProcessWriter(abstract.FileDescriptor):
         self.proc = proc
         self.name = name
         self.fd = fileno
-        
+
         if forceReadHack:
             self.enableReadHack = True
         else:
@@ -113,10 +112,10 @@ class ProcessWriter(abstract.FileDescriptor):
             except OSError:
                 # It's a write-only pipe end, enable hack
                 self.enableReadHack = True
-            
+
         if self.enableReadHack:
             self.startReading()
-            
+
     def fileno(self):
         """Return the fileno() of my process's stdin.
         """
@@ -150,15 +149,15 @@ class ProcessWriter(abstract.FileDescriptor):
         """The only way a write pipe can become "readable" is at EOF, because the
         child has closed it, and we're using a reactor which doesn't distinguish
         between readable and closed (such as the select reactor).
-        
+
         Except that's not true on linux < 2.6.11. It has the following characteristics:
         write pipe is completely empty => POLLOUT (writable in select)
         write pipe is not completely empty => POLLIN (readable in select)
         write pipe's reader closed => POLLIN|POLLERR (readable and writable in select)
-        
+
         That's what this funky code is for. If linux was not broken, this function could
         be simply "return CONNECTION_LOST".
-        
+
         BUG: We call select no matter what the reactor.
         If the reactor is pollreactor, and the fd is > 1024, this will fail.
         (only occurs on broken versions of linux, though).
@@ -173,12 +172,18 @@ class ProcessWriter(abstract.FileDescriptor):
                 return CONNECTION_LOST
         else:
             self.stopReading()
-        
+
     def connectionLost(self, reason):
         """See abstract.FileDescriptor.connectionLost.
         """
+        # At least on OS X 10.4, exiting while stdout is non-blocking can
+        # result in data loss.  For some reason putting the file descriptor
+        # back into blocking mode seems to resolve this issue.
+        fdesc.setBlocking(self.fd)
+
         abstract.FileDescriptor.connectionLost(self, reason)
         self.proc.childConnectionLost(self.name, reason)
+
 
 
 class ProcessReader(abstract.FileDescriptor):
@@ -198,7 +203,7 @@ class ProcessReader(abstract.FileDescriptor):
         self.name = name
         self.fd = fileno
         self.startReading()
-        
+
     def fileno(self):
         """Return the fileno() of my process's stderr.
         """
@@ -224,7 +229,7 @@ class ProcessReader(abstract.FileDescriptor):
             self.disconnecting = 1
             self.stopReading()
             self.reactor.callLater(0, self.connectionLost, failure.Failure(CONNECTION_DONE))
-    
+
     def connectionLost(self, reason):
         """Close my end of the pipe, signal the Process (which signals the
         ProcessProtocol).
@@ -276,9 +281,6 @@ class Process(styles.Ephemeral):
                     "reactor.run(installSignalHandler=0). You will probably "
                     "never see this process finish, and it may become a "
                     "zombie process.")
-            # if you see this message during a unit test, look in
-            # test-standard.xhtml or twisted.test.test_process.SignalMixin
-            # for a workaround
 
         self.lostProcess = False
 
@@ -384,7 +386,7 @@ class Process(styles.Ephemeral):
         self.status = -1 # this records the exit status of the child
 
         self.proto = proto
-        
+
         # arrange for the parent-side pipes to be read and written
         for childFD, parentFD in helpers.items():
             os.close(fdmap[childFD])
@@ -542,7 +544,7 @@ class Process(styles.Ephemeral):
 
     def writeToChild(self, childFD, data):
         self.pipes[childFD].write(data)
-    
+
     def closeChildFD(self, childFD):
         # for writer pipes, loseConnection tries to write the remaining data
         # out to the pipe before closing it
@@ -555,7 +557,7 @@ class Process(styles.Ephemeral):
         for p in self.pipes.itervalues():
             if isinstance(p, ProcessReader):
                 p.stopReading()
- 
+
     def resumeProducing(self):
         for p in self.pipes.itervalues():
             if isinstance(p, ProcessReader):
@@ -577,7 +579,7 @@ class Process(styles.Ephemeral):
 
     def write(self,data):
         """Call this to write to standard input on this process.
-        
+
         NOTE: This will silently lose data if there is no standard input.
         """
         if self.pipes.has_key(0):
@@ -598,7 +600,7 @@ class Process(styles.Ephemeral):
         """Call this to unregister producer for standard input."""
         if self.pipes.has_key(0):
             self.pipes[0].unregisterProducer()
-    
+
     def writeSequence(self, seq):
         """Call this to write to standard input on this process.
 
@@ -609,7 +611,7 @@ class Process(styles.Ephemeral):
 
     def childDataReceived(self, name, data):
         self.proto.childDataReceived(name, data)
-        
+
     def signalProcess(self, signalID):
         if signalID in ('HUP', 'STOP', 'INT', 'KILL', 'TERM'):
             signalID = getattr(signal, 'SIG'+signalID)
@@ -678,7 +680,7 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
     """An operating-system Process that uses PTY support."""
     status = -1
     pid = None
-    
+
     def __init__(self, reactor, command, args, environment, path, proto,
                  uid=None, gid=None, usePTY=None):
         """Spawn an operating-system process.
@@ -731,12 +733,12 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
                         except:
                             pass
                         os.close(fd)
-                    
+
                 os.setsid()
-                
+
                 if hasattr(termios, 'TIOCSCTTY'):
                     fcntl.ioctl(slavefd, termios.TIOCSCTTY, '')
-                
+
                 for fd in range(3):
                     if fd != slavefd:
                         os.close(fd)
@@ -829,7 +831,9 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
         """Called when my standard output stream is ready for reading.
         """
         try:
-            return fdesc.readFromFD(self.fd, self.proto.outReceived)
+            return fdesc.readFromFD(
+                self.fd,
+                lambda bytes: self.proto.childDataReceived(1, bytes))
         except OSError:
             return CONNECTION_LOST
 
