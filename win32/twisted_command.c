@@ -16,13 +16,18 @@
    Twisted command. It is meant to be used with MingW.
 */
 
-char scriptPath[_MAX_PATH]; // _MAX_PATH comes from stdlib.h
-char scriptExt[] = "py";
+static char scriptPath[_MAX_PATH]; // _MAX_PATH comes from stdlib.h
+static char scriptExt[] = "py";
+static char exeName[] = "\\python.exe";
 
 int main(int argc, char** argv) {
 	char** new_argv;
 	int i, len;
 	FILE* fp;
+	PyObject* sys;
+	char* interpreterPath;
+	char* exec_prefix;
+	PyObject* py_interpreterPath;
 
 	// get the path to this process' exe module
 	GetModuleFileName(NULL, scriptPath, sizeof(scriptPath));
@@ -45,6 +50,36 @@ int main(int argc, char** argv) {
 
 	Py_Initialize();
 	PySys_SetArgv(argc, new_argv);
+
+	// figure out path to python.exe
+	exec_prefix = Py_GetExecPrefix();
+	if ((interpreterPath = malloc(strlen(exec_prefix) + strlen(exeName) + 1)) == NULL) {
+		printf("Can't allocate memory\n");
+		exit(1);
+	}
+	strcpy(interpreterPath, exec_prefix);
+	strcat(interpreterPath, exeName);
+
+	// make a Python string out of it
+	if ((py_interpreterPath = PyString_FromString(interpreterPath)) == NULL) {
+		PyErr_Print();
+		exit(1);
+	}
+
+	// don't need the C string anymore
+	free(interpreterPath);
+
+	// import sys
+	if ((sys = PyImport_ImportModule("sys")) == NULL) { // import sys
+		PyErr_Print();
+		exit(1);
+	}
+
+	// set sys.executable to what some people tend to expect :(
+	if (PyObject_SetAttrString(sys, "executable", py_interpreterPath) == -1) {
+		PyErr_Print();
+		exit(1);
+	}
 
 	if ((fp = fopen(scriptPath, "r")) == NULL) {
 		perror("Error opening script");
