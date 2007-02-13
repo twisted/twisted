@@ -31,8 +31,10 @@ int main(int argc, char** argv) {
 	// copy "py" over "exe" and null-terminate
 	strcpy(scriptPath+len-3, scriptExt);
 
-	if ((new_argv = malloc( (argc+1) * sizeof(char*) )) == NULL)
+	if ((new_argv = malloc( (argc+1) * sizeof(char*) )) == NULL) {
 		printf("Can't allocate memory\n");
+		exit(1);
+	}
 
 	new_argv[0] = scriptPath; // insert the script file to run
 
