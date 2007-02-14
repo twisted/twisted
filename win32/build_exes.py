@@ -10,10 +10,12 @@ binDir = os.path.join(thisDir, "..", "bin")
 pyIncludeDir = os.path.join(sys.prefix, "include")
 pyLibsDir = os.path.join(sys.prefix, "libs")
 libName = "python" + sys.version[:3].replace('.', '')
-cPath = os.path.join(thisDir, "twisted_command.c")
 buildDir = "twisted_cmds"
-exeName = "twisted_command.exe"
-oName = "twisted_command.o"
+cmdName = "twisted_command"
+cPath = os.path.join(thisDir, "%s.c" % (cmdName,))
+rcPath = os.path.join(thisDir, "%s.rc" % (cmdName,))
+exeName = "%s.exe" % (cmdName,)
+oName = "%s.o" % (cmdName,)
 
 if os.path.exists(exeName):
     os.unlink(exeName)
@@ -21,7 +23,9 @@ if os.path.exists(exeName):
 if os.path.exists(oName):
     os.unlink(oName)
 
-os.system("gcc -mno-cygwin %s -I%s -L%s -lmsvcr71 -l%s -o %s" % (cPath, pyIncludeDir, pyLibsDir, libName, exeName))
+os.system("gcc -c -mno-cygwin %s -I%s" % (cPath, pyIncludeDir))
+os.system("windres %s %s_res.o" % (rcPath, cmdName))
+os.system("gcc %s.o %s_res.o -L%s -lmsvcr71 -l%s -o %s" % (cmdName, cmdName, pyLibsDir, libName, exeName))
 
 if not os.path.exists(exeName):
     print 'gcc produced no output file. exiting.'
