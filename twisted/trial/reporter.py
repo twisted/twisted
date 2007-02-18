@@ -236,9 +236,6 @@ class Reporter(TestResult):
         # [Deferred._runCallbacks] from the front, and trim the
         # [unittest.fail] from the end.
 
-        # There is also another case, when the test method is badly defined and
-        # contains extra arguments.
-
         newFrames = list(frames)
 
         if len(frames) < 2:
@@ -254,10 +251,6 @@ class Reporter(TestResult):
         elif (first[0] == "_runCallbacks"
               and os.path.splitext(os.path.basename(first[1]))[0] == 'defer'):
             newFrames = newFrames[1:]
-
-        if not newFrames:
-            # The method fails before getting called, probably an argument problem
-            return newFrames
 
         last = newFrames[-1]
         if (last[0].startswith('fail')

@@ -16,7 +16,6 @@ from twisted.python import failure, log, reflect
 from twisted.scripts import trial
 from twisted.plugins import twisted_trial
 from twisted import plugin
-from twisted.internet import defer
 
 
 pyunit = __import__('unittest')
@@ -441,45 +440,3 @@ class TestErrorHolder(TestTestHolder):
         except ZeroDivisionError:
             error = failure.Failure()
         self.holder = runner.ErrorHolder(self.description, error)
-
-class TestMalformedMethod(unittest.TestCase):
-    """
-    Test that trial manages when test methods don't have correct signatures.
-    """
-    class ContainMalformed(unittest.TestCase):
-        """
-        This TestCase holds malformed test methods that trial should handle.
-        """
-        def test_foo(self, blah):
-            pass
-        def test_bar():
-            pass
-        test_spam = defer.deferredGenerator(test_bar)
-
-    def _test(self, method):
-        stream = StringIO.StringIO()
-        trialRunner = runner.TrialRunner(reporter.Reporter, stream=stream)
-        test = TestMalformedMethod.ContainMalformed(method)
-        result = trialRunner.run(test)
-        self.failUnlessEqual(result.testsRun, 1)
-        self.failIf(result.wasSuccessful())
-        self.failUnlessEqual(len(result.errors), 1)
-
-    def test_extraArg(self):
-        """
-        Test when the method has extra (useless) arguments.
-        """
-        self._test('test_foo')
-
-    def test_noArg(self):
-        """
-        Test when the method doesn't have even self as argument.
-        """
-        self._test('test_bar')
-
-    def test_decorated(self):
-        """
-        Test a decorated method also fails.
-        """
-        self._test('test_spam')
-
