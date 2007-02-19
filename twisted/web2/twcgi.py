@@ -26,7 +26,6 @@ from twisted.web2 import http
 from twisted.web2 import resource
 from twisted.web2 import responsecode
 from twisted.web2 import server
-from twisted.web2 import static
 from twisted.web2 import stream
 
 
