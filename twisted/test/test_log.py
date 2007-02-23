@@ -1,14 +1,12 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2004,2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import os, sys, time, logging
-from cStringIO import StringIO
+import os, sys, time
 
 from twisted.trial import unittest
 
 from twisted.python import log
 from twisted.python import failure
-
 
 class LogTest(unittest.TestCase):
 
@@ -293,64 +291,4 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
         self.lp.msg(format=EvilReprStr(), blat=1)
         self.assertEquals(len(self.out), 1)
         self.assertIn('PATHOLOGICAL', self.out[0])
-
-
-class PythonLoggingObserverTestCase(unittest.TestCase):
-    """
-    Test the bridge with python logging module.
-    """
-    def setUp(self):
-        self.out = StringIO()
-
-        rootLogger = logging.getLogger("")
-        self.originalLevel = rootLogger.getEffectiveLevel()
-        rootLogger.setLevel(logging.DEBUG)
-        self.hdlr = logging.StreamHandler(self.out)
-        fmt = logging.Formatter(logging.BASIC_FORMAT)
-        self.hdlr.setFormatter(fmt)
-        rootLogger.addHandler(self.hdlr)
-
-        self.lp = log.LogPublisher()
-        self.flo = log.PythonLoggingObserver()
-        self.lp.addObserver(self.flo.emit)
-
-    def tearDown(self):
-        rootLogger = logging.getLogger("")
-        rootLogger.removeHandler(self.hdlr)
-        rootLogger.setLevel(self.originalLevel)
-        logging.shutdown()
-
-    def test_singleString(self):
-        """
-        Test simple output, and default log level.
-        """
-        self.lp.msg("Hello, world.")
-        self.assertIn("Hello, world.", self.out.getvalue())
-        self.assertIn("INFO", self.out.getvalue())
-
-    def test_errorString(self):
-        """
-        Test error output.
-        """
-        self.lp.msg(failure=failure.Failure(ValueError("That is bad.")), isError=True)
-        self.assertIn("ERROR", self.out.getvalue())
-
-    def test_formatString(self):
-        """
-        Test logging with a format.
-        """
-        self.lp.msg(format="%(bar)s oo %(foo)s", bar="Hello", foo="world")
-        self.assertIn("Hello oo world", self.out.getvalue())
-
-    def test_customLevel(self):
-        """
-        Test the logLevel keyword for customizing level used.
-        """
-        self.lp.msg("Spam egg.", logLevel=logging.DEBUG)
-        self.assertIn("Spam egg.", self.out.getvalue())
-        self.assertIn("DEBUG", self.out.getvalue())
-        self.out.reset()
-        self.lp.msg("Foo bar.", logLevel=logging.WARNING)
-        self.assertIn("Foo bar.", self.out.getvalue())
-        self.assertIn("WARNING", self.out.getvalue())
 
