@@ -1,10 +1,8 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2005 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-"""
-Test cases for twisted.words.xish.utility
-"""
 
+import sys, os
 from twisted.trial import unittest
 
 from twisted.words.xish.domish import Element
@@ -68,11 +66,11 @@ class EventDispatcherTest(unittest.TestCase):
         self.assertEquals(cb2.called, 1)
         self.assertEquals(cb2.object, pres)
         self.assertEquals(cb3.called, 0)
-
+        
         d.dispatch(d, "//event/testevent")
         self.assertEquals(cb3.called, 1)
         self.assertEquals(cb3.object, d)
-
+        
         d.removeObserver("/presence", cb2.call)
         d.dispatch(pres)
         self.assertEquals(cb2.called, 1)
@@ -83,7 +81,7 @@ class EventDispatcherTest(unittest.TestCase):
         msg = Element(("ns", "message"))
         pres = Element(("ns", "presence"))
         cb = CallbackTracker2(d)
-
+        
         d.addObserver("/message", cb.call2)
         d.dispatch(msg)
         self.assertEquals(cb.called, 0)
@@ -127,65 +125,3 @@ class EventDispatcherTest(unittest.TestCase):
         self.assertEquals(cb.callList, [cb.call1, cb.call2, cb.call3],
                           "Calls out of order: %s" %
                           repr([c.__name__ for c in cb.callList]))
-
-    # Observers are put into CallbackLists that are then put into dictionaries
-    # keyed by the event trigger. Upon removal of the last observer for a
-    # particular event trigger, the (now empty) CallbackList and corresponding
-    # event trigger should be removed from those dictionaries to prevent
-    # slowdown and memory leakage.
-
-    def test_cleanUpRemoveEventObserver(self):
-        """
-        Test observer clean-up after removeObserver for named events.
-        """
-
-        d = EventDispatcher()
-        cb = CallbackTracker()
-
-        d.addObserver('//event/test', cb.call)
-        d.dispatch(None, '//event/test')
-        self.assertEqual(1, cb.called)
-        d.removeObserver('//event/test', cb.call)
-        self.assertEqual(0, len(d._eventObservers.pop(0)))
-
-    def test_cleanUpRemoveXPathObserver(self):
-        """
-        Test observer clean-up after removeObserver for XPath events.
-        """
-
-        d = EventDispatcher()
-        cb = CallbackTracker()
-        msg = Element((None, "message"))
-
-        d.addObserver('/message', cb.call)
-        d.dispatch(msg)
-        self.assertEqual(1, cb.called)
-        d.removeObserver('/message', cb.call)
-        self.assertEqual(0, len(d._xpathObservers.pop(0)))
-
-    def test_cleanUpOnetimeEventObserver(self):
-        """
-        Test observer clean-up after onetime named events.
-        """
-
-        d = EventDispatcher()
-        cb = CallbackTracker()
-
-        d.addOnetimeObserver('//event/test', cb.call)
-        d.dispatch(None, '//event/test')
-        self.assertEqual(1, cb.called)
-        self.assertEqual(0, len(d._eventObservers.pop(0)))
-
-    def test_cleanUpOnetimeXPathObserver(self):
-        """
-        Test observer clean-up after onetime XPath events.
-        """
-
-        d = EventDispatcher()
-        cb = CallbackTracker()
-        msg = Element((None, "message"))
-
-        d.addOnetimeObserver('/message', cb.call)
-        d.dispatch(msg)
-        self.assertEqual(1, cb.called)
-        self.assertEqual(0, len(d._xpathObservers.pop(0)))
