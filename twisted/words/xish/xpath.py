@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.words.test.test_xpath -*-
 #
-# Copyright (c) 2001-2005 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -8,10 +8,6 @@ try:
     import cStringIO as StringIO
 except ImportError:
     import StringIO
-
-def _isStr(s):
-    """ Internal method to determine if an object is a string """
-    return isinstance(s, type('')) or isinstance(s, type(u''))
 
 class LiteralValue(str):
     def value(self, elem):
@@ -135,7 +131,8 @@ class _Location:
                 self.childLocation.queryForStringList(c, resultlist)
         else:
             for c in elem.children:
-                if _isStr(c): resultlist.append(c)
+                if isinstance(c, (str, unicode)):
+                    resultlist.append(c)
 
 class _AnyLocation:
     def __init__(self):
@@ -219,7 +216,8 @@ class _AnyLocation:
     def queryForStringList(self, elem, resultlist):
         if self.isRootMatch(elem):
             for c in elem.children:
-                if _isStr(c): resultlist.append(c)
+                if isinstance(c, (str, unicode)):
+                    resultlist.append(c)
         for c in elem.elements():
             self.queryForStringList(c, resultlist)
         
