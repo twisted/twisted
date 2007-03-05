@@ -1,3 +1,5 @@
+import md5
+from twisted.internet import address
 from twisted.trial import unittest
 from twisted.cred import error
 from twisted.web2.auth import basic, digest, wrapper
@@ -9,11 +11,28 @@ from twisted.web2.test import test_server
 import base64
 
 class FakeDigestCredentialFactory(digest.DigestCredentialFactory):
+    """
+    A Fake Digest Credential Factory that generates a predictable
+    nonce and opaque
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(FakeDigestCredentialFactory, self).__init__(*args, **kwargs)
+
+        self.privateKey = "0"
+
     def generateNonce(self):
+        """
+        Generate a static nonce
+        """
         return '178288758716122392881254770685'
 
-    def generateOpaque(self):
-        return '1041524039'
+    def _getTime(self):
+        """
+        Return a stable time
+        """
+        return 0
+
 
 class BasicAuthTestCase(unittest.TestCase):
     def setUp(self):
@@ -54,38 +73,360 @@ class BasicAuthTestCase(unittest.TestCase):
                           self.credentialFactory.decode,
                           response, _trivial_GET)
 
-challengeResponse = ('digest', {'nonce': '178288758716122392881254770685',
-                                'qop': 'auth', 'realm': 'test realm',
-                                'algorithm': 'md5', 'opaque': '1041524039'})
 
-authRequest = 'username="username", realm="test realm", nonce="178288758716122392881254770685", uri="/write/", response="62f388be1cf678fbdfce87910871bcc5", opaque="1041524039", algorithm="md5", cnonce="29fc54aa1641c6fa0e151419361c8f23", nc=00000001, qop="auth"'
+clientAddress = address.IPv4Address('TCP', '127.0.0.1', 80)
+
+challengeOpaque = ('75c4bd95b96b7b7341c646c6502f0833-MTc4Mjg4NzU'
+                   '4NzE2MTIyMzkyODgxMjU0NzcwNjg1LHJlbW90ZWhvc3Q'
+                   'sMA==')
+
+challengeNonce = '178288758716122392881254770685'
+
+challengeResponse = ('digest',
+                     {'nonce': challengeNonce,
+                      'qop': 'auth', 'realm': 'test realm',
+                      'algorithm': 'md5',
+                      'opaque': challengeOpaque})
+
+cnonce = "29fc54aa1641c6fa0e151419361c8f23"
+
+authRequest1 = ('username="username", realm="test realm", nonce="%s", '
+                'uri="/write/", response="%s", opaque="%s", algorithm="md5", '
+                'cnonce="29fc54aa1641c6fa0e151419361c8f23", nc=00000001, '
+                'qop="auth"')
+
+authRequest2 = ('username="username", realm="test realm", nonce="%s", '
+                'uri="/write/", response="%s", opaque="%s", algorithm="md5", '
+                'cnonce="29fc54aa1641c6fa0e151419361c8f23", nc=00000002, '
+                'qop="auth"')
 
 namelessAuthRequest = 'realm="test realm",nonce="doesn\'t matter"'
 
+
 class DigestAuthTestCase(unittest.TestCase):
+    """
+    Test the behavior of DigestCredentialFactory
+    """
+
     def setUp(self):
-        self.credentialFactory = FakeDigestCredentialFactory('md5',
-                                                             'test realm')
+        """
+        Create a DigestCredentialFactory for testing
+        """
+        self.credentialFactory = digest.DigestCredentialFactory('md5',
+                                                                'test realm')
 
-    def testGetChallenge(self):
-        self.assertEquals(
-            self.credentialFactory.getChallenge(None),
-            challengeResponse[1])
+    def getDigestResponse(self, challenge, ncount):
+        """
+        Calculate the response for the given challenge
+        """
+        nonce = challenge.get('nonce')
+        algo = challenge.get('algorithm').lower()
+        qop = challenge.get('qop')
 
-    def testResponse(self):
-        challenge = self.credentialFactory.getChallenge(None)
+        expected = digest.calcResponse(
+            digest.calcHA1(algo,
+                           "username",
+                           "test realm",
+                           "password",
+                           nonce,
+                           cnonce),
+            algo, nonce, ncount, cnonce, qop, "GET", "/write/", None
+            )
+        return expected
 
-        creds = self.credentialFactory.decode(authRequest, _trivial_GET)
+    def test_getChallenge(self):
+        """
+        Test that all the required fields exist in the challenge,
+        and that the information matches what we put into our
+        DigestCredentialFactory
+        """
+
+        challenge = self.credentialFactory.getChallenge(clientAddress)
+        self.assertEquals(challenge['qop'], 'auth')
+        self.assertEquals(challenge['realm'], 'test realm')
+        self.assertEquals(challenge['algorithm'], 'md5')
+        self.assertTrue(challenge.has_key("nonce"))
+        self.assertTrue(challenge.has_key("opaque"))
+
+    def test_response(self):
+        """
+        Test that we can decode a valid response to our challenge
+        """
+
+        challenge = self.credentialFactory.getChallenge(clientAddress)
+
+        clientResponse = authRequest1 % (
+            challenge['nonce'],
+            self.getDigestResponse(challenge, "00000001"),
+            challenge['opaque'])
+
+        creds = self.credentialFactory.decode(clientResponse, _trivial_GET)
         self.failUnless(creds.checkPassword('password'))
 
-    def testFailsWithDifferentMethod(self):
-        challenge = self.credentialFactory.getChallenge(None)
+    def test_multiResponse(self):
+        """
+        Test that multiple responses to to a single challenge are handled
+        successfully.
+        """
 
-        creds = self.credentialFactory.decode(authRequest, SimpleRequest(None, 'POST', '/'))
+        challenge = self.credentialFactory.getChallenge(clientAddress)
+
+        clientResponse = authRequest1 % (
+            challenge['nonce'],
+            self.getDigestResponse(challenge, "00000001"),
+            challenge['opaque'])
+
+        creds = self.credentialFactory.decode(clientResponse, _trivial_GET)
+        self.failUnless(creds.checkPassword('password'))
+
+        clientResponse = authRequest2 % (
+            challenge['nonce'],
+            self.getDigestResponse(challenge, "00000002"),
+            challenge['opaque'])
+
+        creds = self.credentialFactory.decode(clientResponse, _trivial_GET)
+        self.failUnless(creds.checkPassword('password'))
+
+    def test_failsWithDifferentMethod(self):
+        """
+        Test that the response fails if made for a different request method
+        than it is being issued for.
+        """
+
+        challenge = self.credentialFactory.getChallenge(clientAddress)
+
+        clientResponse = authRequest1 % (
+            challenge['nonce'],
+            self.getDigestResponse(challenge, "00000001"),
+            challenge['opaque'])
+
+        creds = self.credentialFactory.decode(clientResponse,
+                                              SimpleRequest(None, 'POST', '/'))
         self.failIf(creds.checkPassword('password'))
 
-    def testNoUsername(self):
-        self.assertRaises(error.LoginFailed, self.credentialFactory.decode, namelessAuthRequest, _trivial_GET)
+    def test_noUsername(self):
+        """
+        Test that login fails when our response does not contain a username,
+        or the username field is empty.
+        """
+
+        # Check for no username
+        e = self.assertRaises(error.LoginFailed,
+                              self.credentialFactory.decode,
+                              namelessAuthRequest,
+                              _trivial_GET)
+        self.assertEquals(str(e), "Invalid response, no username given.")
+
+        # Check for an empty username
+        e = self.assertRaises(error.LoginFailed,
+                              self.credentialFactory.decode,
+                              namelessAuthRequest + ',username=""',
+                              _trivial_GET)
+        self.assertEquals(str(e), "Invalid response, no username given.")
+
+    def test_noNonce(self):
+        """
+        Test that login fails when our response does not contain a nonce
+        """
+
+        e = self.assertRaises(error.LoginFailed,
+                              self.credentialFactory.decode,
+                              'realm="Test",username="Foo",opaque="bar"',
+                              _trivial_GET)
+        self.assertEquals(str(e), "Invalid response, no nonce given.")
+
+    def test_noOpaque(self):
+        """
+        Test that login fails when our response does not contain a nonce
+        """
+
+        e = self.assertRaises(error.LoginFailed,
+                              self.credentialFactory.decode,
+                              'realm="Test",username="Foo"',
+                              _trivial_GET)
+        self.assertEquals(str(e), "Invalid response, no opaque given.")
+
+    def test_checkHash(self):
+        """
+        Check that given a hash of the form 'username:realm:password'
+        we can verify the digest challenge
+        """
+
+        challenge = self.credentialFactory.getChallenge(clientAddress)
+
+        clientResponse = authRequest1 % (
+            challenge['nonce'],
+            self.getDigestResponse(challenge, "00000001"),
+            challenge['opaque'])
+
+        creds = self.credentialFactory.decode(clientResponse, _trivial_GET)
+
+        self.failUnless(creds.checkHash(
+                md5.md5('username:test realm:password').hexdigest()))
+
+        self.failIf(creds.checkHash(
+                md5.md5('username:test realm:bogus').hexdigest()))
+
+    def test_invalidOpaque(self):
+        """
+        Test that login fails when the opaque does not contain all the required
+        parts.
+        """
+
+        credentialFactory = FakeDigestCredentialFactory('md5', 'test realm')
+
+        challenge = credentialFactory.getChallenge(clientAddress)
+
+        self.assertRaises(
+            error.LoginFailed,
+            credentialFactory.verifyOpaque,
+            'badOpaque',
+            challenge['nonce'],
+            clientAddress.host)
+
+        badOpaque = ('foo-%s' % (
+                'nonce,clientip'.encode('base64').strip('\n'),))
+
+        self.assertRaises(
+            error.LoginFailed,
+            credentialFactory.verifyOpaque,
+            badOpaque,
+            challenge['nonce'],
+            clientAddress.host)
+
+        self.assertRaises(
+            error.LoginFailed,
+            credentialFactory.verifyOpaque,
+            '',
+            challenge['nonce'],
+            clientAddress.host)
+
+    def test_incompatibleNonce(self):
+        """
+        Test that login fails when the given nonce from the response, does not
+        match the nonce encoded in the opaque.
+        """
+
+        credentialFactory = FakeDigestCredentialFactory('md5', 'test realm')
+
+        challenge = credentialFactory.getChallenge(clientAddress)
+
+        badNonceOpaque = credentialFactory.generateOpaque(
+            '1234567890',
+            clientAddress.host)
+
+        self.assertRaises(
+            error.LoginFailed,
+            credentialFactory.verifyOpaque,
+            badNonceOpaque,
+            challenge['nonce'],
+            clientAddress.host)
+
+        self.assertRaises(
+            error.LoginFailed,
+            credentialFactory.verifyOpaque,
+            badNonceOpaque,
+            '',
+            clientAddress.host)
+
+    def test_incompatibleClientIp(self):
+        """
+        Test that the login fails when the request comes from a client ip
+        other than what is encoded in the opaque.
+        """
+
+        credentialFactory = FakeDigestCredentialFactory('md5', 'test realm')
+
+        challenge = credentialFactory.getChallenge(clientAddress)
+
+        badNonceOpaque = credentialFactory.generateOpaque(
+            challenge['nonce'],
+            '10.0.0.1')
+
+        self.assertRaises(
+            error.LoginFailed,
+            credentialFactory.verifyOpaque,
+            badNonceOpaque,
+            challenge['nonce'],
+            clientAddress.host)
+
+    def test_oldNonce(self):
+        """
+        Test that the login fails when the given opaque is older than
+        DigestCredentialFactory.CHALLENGE_LIFETIME_SECS
+        """
+
+        credentialFactory = FakeDigestCredentialFactory('md5', 'test realm')
+
+        challenge = credentialFactory.getChallenge(clientAddress)
+
+        key = '%s,%s,%s' % (challenge['nonce'],
+                            clientAddress.host,
+                            '-137876876')
+        digest = md5.new(key + credentialFactory.privateKey).hexdigest()
+        ekey = key.encode('base64')
+
+        oldNonceOpaque = '%s-%s' % (digest, ekey.strip('\n'))
+
+        self.assertRaises(
+            error.LoginFailed,
+            credentialFactory.verifyOpaque,
+            oldNonceOpaque,
+            challenge['nonce'],
+            clientAddress.host)
+
+    def test_mismatchedOpaqueChecksum(self):
+        """
+        Test that login fails when the opaque checksum fails verification
+        """
+
+        credentialFactory = FakeDigestCredentialFactory('md5', 'test realm')
+
+        challenge = credentialFactory.getChallenge(clientAddress)
+
+
+        key = '%s,%s,%s' % (challenge['nonce'],
+                            clientAddress.host,
+                            '0')
+
+        digest = md5.new(key + 'this is not the right pkey').hexdigest()
+
+        badChecksum = '%s-%s' % (digest,
+                                 key.encode('base64').strip('\n'))
+
+        self.assertRaises(
+            error.LoginFailed,
+            credentialFactory.verifyOpaque,
+            badChecksum,
+            challenge['nonce'],
+            clientAddress.host)
+
+    def test_incompatibleCalcHA1Options(self):
+        """
+        Test that the appropriate error is raised when any of the
+        pszUsername, pszRealm, or pszPassword arguments are specified with
+        the preHA1 keyword argument.
+        """
+
+        arguments = (
+            ("user", "realm", "password", "preHA1"),
+            (None, "realm", None, "preHA1"),
+            (None, None, "password", "preHA1"),
+            )
+
+        for pszUsername, pszRealm, pszPassword, preHA1 in arguments:
+            self.assertRaises(
+                TypeError,
+                digest.calcHA1,
+                "md5",
+                pszUsername,
+                pszRealm,
+                pszPassword,
+                "nonce",
+                "cnonce",
+                preHA1=preHA1
+                )
+
 
 from zope.interface import implements
 from twisted.cred import portal, checkers
@@ -104,6 +445,7 @@ class TestHTTPUser(object):
             response.
         """
         self.username = username
+
 
 class TestAuthRealm(object):
     """
@@ -169,7 +511,7 @@ class HTTPAuthResourceTest(test_server.BaseCase):
         del self.credFactory
         del self.protectedResource
 
-    def test_AuthenticatedRequest(self):
+    def test_authenticatedRequest(self):
         """
         Test that after successful authentication the request provides
         IAuthenticatedRequest and that the request.avatar implements
@@ -207,7 +549,7 @@ class HTTPAuthResourceTest(test_server.BaseCase):
         d.addCallback(checkRequest)
         return d
 
-    def test_AllowedMethods(self):
+    def test_allowedMethods(self):
         """
         Test that unknown methods result in a 401 instead of a 405 when
         authentication hasn't been completed.
@@ -219,17 +561,18 @@ class HTTPAuthResourceTest(test_server.BaseCase):
                                         [self.credFactory],
                                         self.portal,
                                         interfaces=(IHTTPUser,))
-        d = self.assertResponse((root, 'http://localhost/'),
-                                (401,
-                                 {'WWW-Authenticate': [('basic',
-                                                        {'realm': "test realm"})]},
-                                None))
+        d = self.assertResponse(
+            (root, 'http://localhost/'),
+            (401,
+             {'WWW-Authenticate': [('basic',
+                                    {'realm': "test realm"})]},
+             None))
 
         self.method = 'GET'
 
         return d
 
-    def test_UnauthorizedResponse(self):
+    def test_unauthorizedResponse(self):
         """
         Test that a request with no credentials results in a
         valid Unauthorized response.
@@ -240,22 +583,24 @@ class HTTPAuthResourceTest(test_server.BaseCase):
                                         interfaces=(IHTTPUser,))
 
         def makeDeepRequest(res):
-            return self.assertResponse((root,
-                                        'http://localhost/foo/bar/baz/bax'),
-                                       (401,
-                                        {'WWW-Authenticate': [('basic',
-                                                               {'realm': "test realm"})]},
-                                        None))
+            return self.assertResponse(
+                (root,
+                 'http://localhost/foo/bar/baz/bax'),
+                (401,
+                 {'WWW-Authenticate': [('basic',
+                                        {'realm': "test realm"})]},
+                 None))
 
-        d = self.assertResponse((root, 'http://localhost/'),
-                                (401,
-                                 {'WWW-Authenticate': [('basic',
-                                                        {'realm': "test realm"})]},
-                                 None))
+        d = self.assertResponse(
+            (root, 'http://localhost/'),
+            (401,
+             {'WWW-Authenticate': [('basic',
+                                    {'realm': "test realm"})]},
+             None))
 
         return d.addCallback(makeDeepRequest)
 
-    def test_BadCredentials(self):
+    def test_badCredentials(self):
         """
         Test that a request with bad credentials results in a valid
         Unauthorized response
@@ -267,16 +612,17 @@ class HTTPAuthResourceTest(test_server.BaseCase):
 
         credentials = base64.encodestring('bad:credentials')
 
-        d = self.assertResponse((root, 'http://localhost/',
-                                 {'authorization': ('basic', credentials)}),
-                                (401,
-                                 {'WWW-Authenticate': [('basic',
-                                                        {'realm': "test realm"})]},
-                                 None))
+        d = self.assertResponse(
+            (root, 'http://localhost/',
+             {'authorization': [('basic', credentials)]}),
+            (401,
+             {'WWW-Authenticate': [('basic',
+                                    {'realm': "test realm"})]},
+             None))
 
         return d
 
-    def test_SuccessfulLogin(self):
+    def test_successfulLogin(self):
         """
         Test that a request with good credentials results in the
         appropriate response from the protected resource
@@ -297,7 +643,7 @@ class HTTPAuthResourceTest(test_server.BaseCase):
 
         return d
 
-    def test_WrongScheme(self):
+    def test_wrongScheme(self):
         """
         Test that a request with credentials for a scheme that is not
         advertised by this resource results in the appropriate
@@ -319,16 +665,17 @@ class HTTPAuthResourceTest(test_server.BaseCase):
 
         return d
 
-    def test_MultipleWWWAuthenticateSchemes(self):
+    def test_multipleWWWAuthenticateSchemes(self):
         """
         Test that our unauthorized response can contain challenges for
         multiple authentication schemes.
         """
-        root = wrapper.HTTPAuthResource(self.protectedResource,
-                                        (basic.BasicCredentialFactory('test realm'),
-                                         FakeDigestCredentialFactory('md5', 'test realm')),
-                                        self.portal,
-                                        interfaces=(IHTTPUser,))
+        root = wrapper.HTTPAuthResource(
+            self.protectedResource,
+            (basic.BasicCredentialFactory('test realm'),
+             FakeDigestCredentialFactory('md5', 'test realm')),
+            self.portal,
+            interfaces=(IHTTPUser,))
 
         d = self.assertResponse((root, 'http://localhost/', {}),
                                 (401,
@@ -339,15 +686,18 @@ class HTTPAuthResourceTest(test_server.BaseCase):
 
         return d
 
-    def test_AuthorizationAgainstMultipleSchemes(self):
+    def test_authorizationAgainstMultipleSchemes(self):
         """
-        Test that we can authenticate to either authentication scheme.
+        Test that we can successfully authenticate when presented
+        with multiple WWW-Authenticate headers
         """
-        root = wrapper.HTTPAuthResource(self.protectedResource,
-                                        (basic.BasicCredentialFactory('test realm'),
-                                         FakeDigestCredentialFactory('md5', 'test realm')),
+
+        root = wrapper.HTTPAuthResource(
+            self.protectedResource,
+            (basic.BasicCredentialFactory('test realm'),
+             FakeDigestCredentialFactory('md5', 'test realm')),
                                         self.portal,
-                                        interfaces=(IHTTPUser,))
+            interfaces=(IHTTPUser,))
 
         def respondBasic(ign):
             credentials = base64.encodestring('username:password')
@@ -362,7 +712,7 @@ class HTTPAuthResourceTest(test_server.BaseCase):
 
         def respond(ign):
             d = self.assertResponse((root, 'http://localhost/',
-                                     {'authorization': authRequest}),
+                                     {'authorization': authRequest1}),
                                     (200,
                                      {},
                                      None))
@@ -377,7 +727,7 @@ class HTTPAuthResourceTest(test_server.BaseCase):
 
         return d
 
-    def test_WrappedResourceGetsFullSegments(self):
+    def test_wrappedResourceGetsFullSegments(self):
         """
         Test that the wrapped resource gets all the URL segments in it's
         locateChild.
@@ -405,7 +755,7 @@ class HTTPAuthResourceTest(test_server.BaseCase):
 
         return d
 
-    def test_InvalidCredentials(self):
+    def test_invalidCredentials(self):
         """
         Malformed or otherwise invalid credentials (as determined by
         the credential factory) should result in an Unauthorized response
