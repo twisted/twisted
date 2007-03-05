@@ -166,7 +166,12 @@ class KQueueReactor(posixbase.PosixReactorBase):
         for event in l:
             why = None
             fd, filter = event.ident, event.filter
-            selectable = selectables[fd]
+            try:
+                selectable = selectables[fd]
+            except KeyError:
+                # Handles the infrequent case where one selectable's
+                # handler disconnects another.
+                continue
             log.callWithLogger(selectable, _drdw, selectable, fd, filter)
 
     def _doWriteOrRead(self, selectable, fd, filter):
