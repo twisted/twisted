@@ -4,7 +4,7 @@
 Wrapper Resources for rfc2617 HTTP Auth.
 """
 from zope.interface import implements, directlyProvides
-from twisted.cred import error
+from twisted.cred import error, credentials
 from twisted.python import failure
 from twisted.web2 import responsecode
 from twisted.web2 import http
@@ -69,7 +69,67 @@ class HTTPAuthResource(object):
         self.portal = portal
         self.interfaces = interfaces
 
-    def login(self, factory, response, req):
+    def _loginSucceeded(self, avatar, request):
+        """
+        Callback for successful login.
+
+        @param avatar: A tuple of the form (interface, avatar) as
+            returned by your realm.
+
+        @param request: L{IRequest} that encapsulates this auth
+            attempt.
+
+        @return: the IResource in C{self.wrappedResource}
+        """
+        request.avatarInterface, request.avatar = avatar
+
+        directlyProvides(request, IAuthenticatedRequest)
+
+        def _addAuthenticateHeaders(request, response):
+            """
+            A response filter that adds www-authenticate headers
+            to an outgoing response if it's code is UNAUTHORIZED (401)
+            and it does not already have them.
+            """
+            if response.code == responsecode.UNAUTHORIZED:
+                if not response.headers.hasHeader('www-authenticate'):
+                    newResp = UnauthorizedResponse(self.credentialFactories,
+                                                   request.remoteAddr)
+
+                    response.headers.setHeader(
+                        'www-authenticate',
+                        newResp.headers.getHeader('www-authenticate'))
+
+            return response
+
+        _addAuthenticateHeaders.handleErrors = True
+
+        request.addResponseFilter(_addAuthenticateHeaders)
+
+        return self.wrappedResource
+
+    def _loginFailed(self, result, request):
+        """
+        Errback for failed login.
+
+        @param result: L{Failure} returned by portal.login
+
+        @param request: L{IRequest} that encapsulates this auth
+            attempt.
+
+        @return: A L{Failure} containing an L{HTTPError} containing the
+            L{UnauthorizedResponse} if C{result} is an L{UnauthorizedLogin}
+            or L{UnhandledCredentials} error
+        """
+        result.trap(error.UnauthorizedLogin, error.UnhandledCredentials)
+
+        return failure.Failure(
+            http.HTTPError(
+                UnauthorizedResponse(
+                self.credentialFactories,
+                request.remoteAddr)))
+
+    def login(self, factory, response, request):
         """
         @param factory: An L{ICredentialFactory} that understands the given
             response.
@@ -81,59 +141,61 @@ class HTTPAuthResource(object):
         @return: A L{Deferred} that fires with the wrappedResource on success
             or a failure containing an L{UnauthorizedResponse}
         """
-        def _loginSucceeded(avatar):
-            # Login succeeded so attach the avatar and interface to
-            # the request.  Then note that the request now provides
-            # IAuthenticatedRequest and return the wrappedResource
-
-            req.avatarInterface, req.avatar = avatar
-
-            directlyProvides(req, IAuthenticatedRequest)
-
-            return self.wrappedResource
-
-        def _loginFailed(res):
-            # Return the unauthorized response with the appropriate
-            # challenges for the credentialFactories
-            res.trap(error.UnauthorizedLogin)
-
-            return failure.Failure(
-                http.HTTPError(
-                    UnauthorizedResponse(
-                    self.credentialFactories,
-                    req.remoteAddr)))
-
         try:
-            creds = factory.decode(response, req)
+            creds = factory.decode(response, request)
         except error.LoginFailed:
             raise http.HTTPError(UnauthorizedResponse(
                                     self.credentialFactories,
-                                    req.remoteAddr))
+                                    request.remoteAddr))
 
 
         return self.portal.login(creds, None, *self.interfaces
-                                ).addCallbacks(_loginSucceeded,
-                                               _loginFailed)
+                                ).addCallbacks(self._loginSucceeded,
+                                               self._loginFailed,
+                                               (request,), None,
+                                               (request,), None)
 
-    def authenticate(self, req):
+    def authenticate(self, request):
         """
         Attempt to authenticate the givin request
 
-        @param req: An L{IRequest} to be authenticated.
+        @param request: An L{IRequest} to be authenticated.
         """
-        authHeader = req.headers.getHeader('authorization')
+        authHeader = request.headers.getHeader('authorization')
 
-        if authHeader is None or authHeader[0] not in self.credentialFactories:
+        if authHeader is None:
+            return self.portal.login(credentials.Anonymous(),
+                                     None,
+                                     *self.interfaces
+                                     ).addCallbacks(self._loginSucceeded,
+                                                    self._loginFailed,
+                                                    (request,), None,
+                                                    (request,), None)
+
+        elif authHeader[0] not in self.credentialFactories:
             raise http.HTTPError(UnauthorizedResponse(
                                     self.credentialFactories,
-                                    req.remoteAddr))
+                                    request.remoteAddr))
         else:
             return self.login(self.credentialFactories[authHeader[0]],
-                              authHeader[1], req)
+                              authHeader[1], request)
 
-    def locateChild(self, req, seg):
-        # Authenticate the given request without modifying seg
-        return self.authenticate(req), seg
+    def locateChild(self, request, seg):
+        """
+        Authenticate the request then return the C{self.wrappedResource}
+        and the unmodified segments.
+        """
+        return self.authenticate(request), seg
 
-    def renderHTTP(self, req):
-        return self.authenticate(req)
+    def renderHTTP(self, request):
+        """
+        Authenticate the request then return the result of calling renderHTTP
+        on C{self.wrappedResource}
+        """
+        def _renderResource(resource):
+            return resource.renderHTTP(request)
+
+        d = self.authenticate(request)
+        d.addCallback(_renderResource)
+
+        return d

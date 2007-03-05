@@ -2,6 +2,7 @@ import md5
 from twisted.internet import address
 from twisted.trial import unittest
 from twisted.cred import error
+from twisted.web2 import http, responsecode
 from twisted.web2.auth import basic, digest, wrapper
 from twisted.web2.auth.interfaces import IAuthenticatedRequest, IHTTPUser
 from twisted.web2.test.test_server import SimpleRequest
@@ -456,6 +457,9 @@ class TestAuthRealm(object):
 
     def requestAvatar(self, avatarId, mind, *interfaces):
         if IHTTPUser in interfaces:
+            if avatarId == checkers.ANONYMOUS:
+                return IHTTPUser, TestHTTPUser('anonymous')
+
             return IHTTPUser, TestHTTPUser(avatarId)
 
         raise NotImplementedError("Only IHTTPUser interface is supported")
@@ -478,6 +482,28 @@ class ProtectedResource(test_server.BaseTestResource):
     def locateChild(self, req, segments):
         self.segments = segments
         return super(ProtectedResource, self).locateChild(req, segments)
+
+
+class NonAnonymousResource(test_server.BaseTestResource):
+    """
+    A resource that forces authentication by raising an
+    HTTPError with an UNAUTHORIZED code if the request is
+    an anonymous one.
+    """
+    addSlash = True
+
+    sendOwnHeaders = False
+
+    def render(self, req):
+        if req.avatar.username == 'anonymous':
+            if not self.sendOwnHeaders:
+                raise http.HTTPError(responsecode.UNAUTHORIZED)
+            else:
+                return http.Response(
+                    responsecode.UNAUTHORIZED,
+                    {'www-authenticate': [('basic', {'realm': 'foo'})]})
+        else:
+            return super(NonAnonymousResource, self).render(req)
 
 
 class HTTPAuthResourceTest(test_server.BaseCase):
@@ -773,6 +799,145 @@ class HTTPAuthResourceTest(test_server.BaseCase):
                                  {'WWW-Authenticate': [('basic',
                                                         {'realm': "test realm"})]},
                                  None))
+
+        return d
+
+    def test_anonymousAuthentication(self):
+        """
+        If our portal has a credentials checker for IAnonymous credentials
+        authentication succeeds if no Authorization header is present
+        """
+
+        self.portal.registerChecker(checkers.AllowAnonymousAccess())
+
+        self.protectedResource.responseText = "Anonymous access allowed"
+
+        root = wrapper.HTTPAuthResource(self.protectedResource,
+                                        [self.credFactory],
+                                        self.portal,
+                                        interfaces=(IHTTPUser,))
+
+        def _checkRequest(ign):
+            self.assertEquals(
+                self.protectedResource.request.avatar.username,
+                'anonymous')
+
+        d = self.assertResponse((root, 'http://localhost/',
+                                 {}),
+                                (200,
+                                 {},
+                                 "Anonymous access allowed"))
+        d.addCallback(_checkRequest)
+
+        return d
+
+    def test_forceAuthentication(self):
+        """
+        Test that if an HTTPError with an Unauthorized status code is raised
+        from within our protected resource, we add the WWW-Authenticate 
+        headers if they do not already exist.
+        """
+        self.portal.registerChecker(checkers.AllowAnonymousAccess())
+
+        nonAnonResource = NonAnonymousResource()
+        nonAnonResource.responseText = "We don't like anonymous users"
+
+        root = wrapper.HTTPAuthResource(nonAnonResource,
+                                        [self.credFactory],
+                                        self.portal,
+                                        interfaces = (IHTTPUser,))
+
+        def _tryAuthenticate(result):
+            credentials = base64.encodestring('username:password')
+
+            d2 = self.assertResponse(
+                (root, 'http://localhost/',
+                 {'authorization': ('basic', credentials)}),
+                (200,
+                 {},
+                 "We don't like anonymous users"))
+
+            return d2
+
+        d = self.assertResponse(
+            (root, 'http://localhost/',
+             {}),
+            (401,
+             {'WWW-Authenticate': [('basic',
+                                    {'realm': "test realm"})]},
+             None))
+
+        d.addCallback(_tryAuthenticate)
+
+        return d
+
+    def test_responseFilterDoesntClobberHeaders(self):
+        """
+        Test that if an UNAUTHORIZED response is returned and
+        already has 'WWW-Authenticate' headers we don't add them.
+        """
+        self.portal.registerChecker(checkers.AllowAnonymousAccess())
+
+        nonAnonResource = NonAnonymousResource()
+        nonAnonResource.responseText = "We don't like anonymous users"
+        nonAnonResource.sendOwnHeaders = True
+
+        root = wrapper.HTTPAuthResource(nonAnonResource,
+                                        [self.credFactory],
+                                        self.portal,
+                                        interfaces = (IHTTPUser,))
+
+        d = self.assertResponse(
+            (root, 'http://localhost/',
+             {}),
+            (401,
+             {'WWW-Authenticate': [('basic',
+                                    {'realm': "foo"})]},
+             None))
+
+        return d
+
+    def test_renderHTTP(self):
+        """
+        Test that if the renderHTTP method is ever called we authenticate
+        the request and delegate rendering to the wrapper.
+        """
+        self.protectedResource.responseText = "I hope you can see me."
+        self.protectedResource.addSlash = True
+
+        root = wrapper.HTTPAuthResource(self.protectedResource,
+                                        [self.credFactory],
+                                        self.portal,
+                                        interfaces = (IHTTPUser,))
+
+        request = SimpleRequest(None, "GET", "/")
+        request.prepath = ['']
+
+        def _gotSecondResponse(response):
+            self.assertEquals(response.code, 200)
+            self.assertEquals(str(response.stream.read()),
+                              "I hope you can see me.")
+
+        def _gotResponse(exception):
+            response = exception.response
+
+            self.assertEquals(response.code, 401)
+            self.failUnless(response.headers.hasHeader('WWW-Authenticate'))
+            self.assertEquals(response.headers.getHeader('WWW-Authenticate'),
+                              [('basic', {'realm': "test realm"})])
+
+            credentials = base64.encodestring('username:password')
+
+            request.headers.setHeader('authorization',
+                                      ['basic', credentials])
+
+            d = root.renderHTTP(request)
+            d.addCallback(_gotSecondResponse)
+
+        d = self.assertFailure(root.renderHTTP(request),
+                               http.HTTPError)
+
+        d.addCallback(_gotResponse)
 
         return d
 
