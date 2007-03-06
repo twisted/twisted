@@ -71,6 +71,50 @@ class NoCurrentExceptionError(Exception):
     """
 
 
+class _Traceback(object):
+    """
+    Fake traceback object which can be passed to functions in the standard
+    library L{traceback} module.
+    """
+
+    def __init__(self, frames):
+        """
+        Construct a fake traceback object using a list of frames. Note that
+        although frames generally include locals and globals, this information
+        is not kept by this object, since locals and globals are not used in
+        standard tracebacks.
+
+        @param frames: [(methodname, filename, lineno, locals, globals), ...]
+        """
+        assert len(frames) > 0, "Must pass some frames"
+        head, frames = frames[0], frames[1:]
+        name, filename, lineno, localz, globalz = head
+        self.tb_frame = _Frame(name, filename)
+        self.tb_lineno = lineno
+        if len(frames) == 0:
+            self.tb_next = None
+        else:
+            self.tb_next = _Traceback(frames)
+
+
+class _Frame(object):
+    """
+    A fake frame object, used by L{_Traceback}.
+    """
+
+    def __init__(self, name, filename):
+        self.f_code = _Code(name, filename)
+        self.f_globals = {}
+
+
+class _Code(object):
+    """
+    A fake code object, used by L{_Traceback} via L{_Frame}.
+    """
+    def __init__(self, name, filename):
+        self.co_name = name
+        self.co_filename = filename
+
 
 class Failure:
     """A basic abstraction for an error that has occurred.
@@ -301,6 +345,23 @@ class Failure:
         """Remove references to other objects, replacing them with strings.
         """
         self.__dict__ = self.__getstate__()
+
+    def getTracebackObject(self):
+        """
+        Get an object that represents this Failure's stack that can be passed
+        to traceback.extract_tb.
+
+        If the original traceback object is still present, return that. If this
+        traceback object has been lost but we still have the information,
+        return a fake traceback object (see L{_Traceback}). If there is no
+        traceback information at all, return None.
+        """
+        if self.tb is not None:
+            return self.tb
+        elif len(self.frames) > 0:
+            return _Traceback(self.frames)
+        else:
+            return None
 
     def getErrorMessage(self):
         """Get a string of the exception which caused this Failure."""

@@ -127,3 +127,70 @@ class FailureTestCase(unittest.TestCase):
         the Failure should raise a synchronous exception.
         """
         self.assertRaises(failure.NoCurrentExceptionError, failure.Failure)
+
+    def test_getTracebackObject(self):
+        """
+        If the C{Failure} has not been cleaned, then C{getTracebackObject}
+        should return the traceback object that it was given in the
+        constructor.
+        """
+        f = self._getDivisionFailure()
+        self.assertEqual(f.getTracebackObject(), f.tb)
+
+    def test_getTracebackObjectFromClean(self):
+        """
+        If the Failure has been cleaned, then C{getTracebackObject} should
+        return an object that looks the same to L{traceback.extract_tb}.
+        """
+        f = self._getDivisionFailure()
+        expected = traceback.extract_tb(f.getTracebackObject())
+        f.cleanFailure()
+        observed = traceback.extract_tb(f.getTracebackObject())
+        self.assertEqual(expected, observed)
+
+    def test_getTracebackObjectWithoutTraceback(self):
+        """
+        L{failure.Failure}s need not be constructed with traceback objects. If
+        a C{Failure} has no traceback information at all, C{getTracebackObject}
+        should just return None.
+
+        None is a good value, because traceback.extract_tb(None) -> [].
+        """
+        f = failure.Failure(Exception("some error"))
+        self.assertEqual(f.getTracebackObject(), None)
+
+
+class TestFormattableTraceback(unittest.TestCase):
+    """
+    Whitebox tests that show that L{failure._Traceback} constructs objects that
+    can be used by L{traceback.extract_tb}.
+
+    If the objects can be used by L{traceback.extract_tb}, then they can be
+    formatted using L{traceback.format_tb} and friends.
+    """
+
+    def test_singleFrame(self):
+        """
+        A C{_Traceback} object constructed with a single frame should be able
+        to be passed to L{traceback.extract_tb}, and we should get a singleton
+        list containing a (filename, lineno, methodname, line) tuple.
+        """
+        tb = failure._Traceback([['method', 'filename.py', 123, {}, {}]])
+        # Note that we don't need to test that extract_tb correctly extracts
+        # the line's contents. In this case, since filename.py doesn't exist,
+        # it will just use None.
+        self.assertEqual(traceback.extract_tb(tb),
+                         [('filename.py', 123, 'method', None)])
+
+    def test_manyFrames(self):
+        """
+        A C{_Traceback} object constructed with multiple frames should be able
+        to be passed to L{traceback.extract_tb}, and we should get a list
+        containing a tuple for each frame.
+        """
+        tb = failure._Traceback([
+            ['method1', 'filename.py', 123, {}, {}],
+            ['method2', 'filename.py', 235, {}, {}]])
+        self.assertEqual(traceback.extract_tb(tb),
+                         [('filename.py', 123, 'method1', None),
+                          ('filename.py', 235, 'method2', None)])

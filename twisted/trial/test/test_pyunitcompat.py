@@ -3,11 +3,22 @@
 #
 # Maintainer: Jonathan Lange <jml@twistedmatrix.com>
 
-from twisted.trial.unittest import TestCase
+
+import sys
+import traceback
+
+from twisted.python.failure import Failure
+from twisted.trial.unittest import TestCase, PyUnitResultAdapter
 
 pyunit = __import__('unittest')
 
+
 class TestPyUnitResult(TestCase):
+    """
+    Tests to show that PyUnitResultAdapter wraps TestResult objects from the
+    standard library 'unittest' module in such a way as to make them usable and
+    useful from Trial.
+    """
 
     def test_success(self):
         class SuccessTest(TestCase):
@@ -68,3 +79,67 @@ class TestPyUnitResult(TestCase):
         self.assertEqual(1, len(result.errors))
         self.failIf(result.wasSuccessful())
 
+    def test_tracebackFromFailure(self):
+        """
+        Errors added through the L{PyUnitResultAdapter} should have the same
+        traceback information as if there were no adapter at all.
+        """
+        try:
+            1/0
+        except ZeroDivisionError:
+            exc_info = sys.exc_info()
+            f = Failure()
+        pyresult = pyunit.TestResult()
+        result = PyUnitResultAdapter(pyresult)
+        result.addError(self, f)
+        self.assertEqual(pyresult.errors[0][1],
+                         ''.join(traceback.format_exception(*exc_info)))
+
+
+    def test_traceback(self):
+        """
+        As test_tracebackFromFailure, but covering more code.
+        """
+        class ErrorTest(TestCase):
+            exc_info = None
+            def test_foo(self):
+                try:
+                    1/0
+                except ZeroDivisionError:
+                    self.exc_info = sys.exc_info()
+                    raise
+        test = ErrorTest('test_foo')
+        result = pyunit.TestResult()
+        test.run(result)
+
+        # We can't test that the tracebacks are equal, because Trial's
+        # machinery inserts a few extra frames on the top and we don't really
+        # want to trim them off without an extremely good reason.
+        #
+        # So, we just test that the result's stack ends with the the
+        # exception's stack.
+
+        expected_stack = ''.join(traceback.format_tb(test.exc_info[2]))
+        observed_stack = '\n'.join(result.errors[0][1].splitlines()[:-1])
+
+        self.assertEqual(expected_stack.strip(),
+                         observed_stack[-len(expected_stack):].strip())
+
+
+    def test_tracebackFromCleanFailure(self):
+        """
+        Errors added through the L{PyUnitResultAdapter} should have the same
+        traceback information as if there were no adapter at all, even if the
+        Failure that held the information has been cleaned.
+        """
+        try:
+            1/0
+        except ZeroDivisionError:
+            exc_info = sys.exc_info()
+            f = Failure()
+        f.cleanFailure()
+        pyresult = pyunit.TestResult()
+        result = PyUnitResultAdapter(pyresult)
+        result.addError(self, f)
+        self.assertEqual(pyresult.errors[0][1],
+                         ''.join(traceback.format_exception(*exc_info)))

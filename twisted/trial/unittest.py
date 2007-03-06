@@ -949,9 +949,7 @@ class PyUnitResultAdapter(object):
     def _exc_info(self, err):
         if isinstance(err, failure.Failure):
             # Unwrap the Failure into a exc_info tuple.
-            # XXX: if err.tb is a real traceback and not stringified, we should
-            #      use that.
-            err = (err.type, err.value, None)
+            err = (err.type, err.value, err.getTracebackObject())
         return err
 
     def startTest(self, method):
