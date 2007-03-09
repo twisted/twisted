@@ -1,10 +1,30 @@
-import base64
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+XMPP-specific SASL profile.
+"""
+
+import re
 from twisted.internet import defer
 from twisted.words.protocols.jabber import sasl_mechanisms, xmlstream
 from twisted.words.xish import domish
 
-NS_XMPP_SASL = 'urn:ietf:params:xml:ns:xmpp-sasl'
+# The b64decode and b64encode functions from the base64 module are new in
+# Python 2.4. For Python 2.3 compatibility, the legacy interface is used while
+# working around MIMEisms.
 
+try:
+    from base64 import b64decode, b64encode
+except ImportError:
+    import base64
+
+    def b64encode(s):
+        return "".join(base64.encodestring(s).split("\n"))
+
+    b64decode = base64.decodestring
+
+NS_XMPP_SASL = 'urn:ietf:params:xml:ns:xmpp-sasl'
 
 def get_mechanisms(xs):
     """
@@ -24,12 +44,10 @@ class SASLError(Exception):
     """
 
 
-
 class SASLNoAcceptableMechanism(SASLError):
     """
     The server did not present an acceptable SASL mechanism.
     """
-
 
 
 class SASLAuthError(SASLError):
@@ -44,6 +62,45 @@ class SASLAuthError(SASLError):
         return "SASLAuthError with condition %r" % self.condition
 
 
+class SASLIncorrectEncodingError(SASLError):
+    """
+    SASL base64 encoding was incorrect.
+
+    RFC 3920 specifies that any characters not in the base64 alphabet
+    and padding characters present elsewhere than at the end of the string
+    MUST be rejected. See also L{fromBase64}.
+
+    This exception is raised whenever the encoded string does not adhere
+    to these additional restrictions or when the decoding itself fails.
+
+    The recommended behaviour for so-called receiving entities (like servers in
+    client-to-server connections, see RFC 3920 for terminology) is to fail the
+    SASL negotiation with a C{'incorrect-encoding'} condition. For initiating
+    entities, one should assume the receiving entity to be either buggy or
+    malevolent. The stream should be terminated and reconnecting is not
+    advised.
+    """
+
+base64Pattern = re.compile("^[0-9A-Za-z+/]*[0-9A-Za-z+/=]{,2}$")
+
+def fromBase64(s):
+    """
+    Decode base64 encoded string.
+
+    This helper performs regular decoding of a base64 encoded string, but also
+    rejects any characters that are not in the base64 alphabet and padding
+    occurring elsewhere from the last or last two characters, as specified in
+    section 14.9 of RFC 3920. This safeguards against various attack vectors
+    among which the creation of a covert channel that "leaks" information.
+    """
+
+    if base64Pattern.match(s) is None:
+        raise SASLIncorrectEncodingError()
+
+    try:
+        return b64decode(s)
+    except Exception, e:
+        raise SASLIncorrectEncodingError(str(e))
 
 class SASLInitiatingInitializer(xmlstream.BaseFeatureInitiatingInitializer):
     """
@@ -55,11 +112,11 @@ class SASLInitiatingInitializer(xmlstream.BaseFeatureInitiatingInitializer):
     feature = (NS_XMPP_SASL, 'mechanisms')
     _deferred = None
 
-    def start(self):
+    def setMechanism(self):
         """
-        Start SASL authentication exchange.
+        Select and setup authentication mechanism.
 
-        Used the authenticator's C{jid} and C{password} attribute for the
+        Uses the authenticator's C{jid} and C{password} attribute for the
         authentication credentials. If no supported SASL mechanisms are
         advertized by the receiving party, a failing deferred is returned with
         a L{SASLNoAcceptableMechanism} exception.
@@ -75,15 +132,20 @@ class SASLInitiatingInitializer(xmlstream.BaseFeatureInitiatingInitializer):
         elif 'PLAIN' in mechanisms:
             self.mechanism = sasl_mechanisms.Plain(None, jid.user, password)
         else:
-            return defer.fail(SASLNoAcceptableMechanism)
+            raise SASLNoAcceptableMechanism()
 
+    def start(self):
+        """
+        Start SASL authentication exchange.
+        """
+
+        self.setMechanism()
         self._deferred = defer.Deferred()
         self.xmlstream.addObserver('/challenge', self.onChallenge)
         self.xmlstream.addOnetimeObserver('/success', self.onSuccess)
         self.xmlstream.addOnetimeObserver('/failure', self.onFailure)
         self.sendAuth(self.mechanism.getInitialResponse())
         return self._deferred
-
 
     def sendAuth(self, data=None):
         """
@@ -95,12 +157,12 @@ class SASLInitiatingInitializer(xmlstream.BaseFeatureInitiatingInitializer):
         @param data: initial client response.
         @type data: L{str} or L{None}.
         """
+
         auth = domish.Element((NS_XMPP_SASL, 'auth'))
         auth['mechanism'] = self.mechanism.name
         if data is not None:
-            auth.addContent(base64.b64encode(data) or '=')
+            auth.addContent(b64encode(data) or '=')
         self.xmlstream.send(auth)
-
 
     def sendResponse(self, data=''):
         """
@@ -109,11 +171,11 @@ class SASLInitiatingInitializer(xmlstream.BaseFeatureInitiatingInitializer):
         @param data: client response.
         @type data: L{str}.
         """
+
         response = domish.Element((NS_XMPP_SASL, 'response'))
         if data:
-            response.addContent(base64.b64encode(data))
+            response.addContent(b64encode(data))
         self.xmlstream.send(response)
-
 
     def onChallenge(self, element):
         """
@@ -122,9 +184,13 @@ class SASLInitiatingInitializer(xmlstream.BaseFeatureInitiatingInitializer):
         @param element: the challenge protocol element.
         @type element: L{domish.Element}.
         """
-        challenge = base64.b64decode(str(element))
-        self.sendResponse(self.mechanism.getResponse(challenge))
 
+        try:
+            challenge = fromBase64(str(element))
+        except SASLIncorrectEncodingError:
+            self._deferred.errback()
+        else:
+            self.sendResponse(self.mechanism.getResponse(challenge))
 
     def onSuccess(self, success):
         """
@@ -134,12 +200,12 @@ class SASLInitiatingInitializer(xmlstream.BaseFeatureInitiatingInitializer):
                         could hold additional data.
         @type success: L{domish.Element}
         """
+
         self.xmlstream.removeObserver('/challenge', self.onChallenge)
         self.xmlstream.removeObserver('/failure', self.onFailure)
         self.xmlstream.reset()
         self.xmlstream.sendHeader()
         self._deferred.callback(xmlstream.Reset)
-
 
     def onFailure(self, failure):
         """
@@ -149,6 +215,7 @@ class SASLInitiatingInitializer(xmlstream.BaseFeatureInitiatingInitializer):
                         the error condition.
         @type failure: L{domish.Element}
         """
+
         self.xmlstream.removeObserver('/challenge', self.onChallenge)
         self.xmlstream.removeObserver('/success', self.onSuccess)
         try:
