@@ -1,11 +1,9 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
-#
 
 from twisted.cred import portal
 from twisted.python import components, log
-from twisted.internet.process import ProcessExitedAlready
+from twisted.internet.error import ProcessExitedAlready
 from zope import interface
 from ssh import session, forwarding, filetransfer
 from ssh.filetransfer import FXF_READ, FXF_WRITE, FXF_APPEND, FXF_CREAT, FXF_TRUNC, FXF_EXCL

@@ -1,7 +1,6 @@
 # -*- test-case-name: twisted.test.test_internet -*-
-# $Id: default.py,v 1.90 2004/01/06 22:35:22 warner Exp $
 #
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -134,6 +133,8 @@ class _UnixWaker(log.Logger, styles.Ephemeral):
     def wakeUp(self):
         """Write one byte to the pipe, and flush it.
         """
+        # We don't use fdesc.writeToFD since we need to distinguish
+        # between EINTR (try again) and EAGAIN (do nothing).
         if self.o is not None:
             try:
                 util.untilConcludes(os.write, self.o, 'x')

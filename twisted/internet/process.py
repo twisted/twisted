@@ -4,7 +4,8 @@
 # See LICENSE for details.
 
 
-"""UNIX Process management.
+"""
+UNIX Process management.
 
 Do NOT use this module directly - use reactor.spawnProcess() instead.
 
@@ -27,17 +28,18 @@ except ImportError:
 from twisted.persisted import styles
 from twisted.python import log, failure
 from twisted.python.util import switchUID
-from twisted.internet.error import ProcessExitedAlready
+from twisted.internet import protocol, fdesc, abstract, error
+from twisted.internet.main import CONNECTION_LOST, CONNECTION_DONE
 
-# Sibling Imports
-import abstract, fdesc, error
-from main import CONNECTION_LOST, CONNECTION_DONE
-
+# Some people were importing this, which is incorrect, just keeping it
+# here for backwards compatability:
+ProcessExitedAlready = error.ProcessExitedAlready
 
 reapProcessHandlers = {}
 
 def reapAllProcesses():
-    """Reap all registered processes.
+    """
+    Reap all registered processes.
     """
     for process in reapProcessHandlers.values():
         process.reapProcess()
@@ -82,7 +84,8 @@ def detectLinuxBrokenPipeBehavior():
 detectLinuxBrokenPipeBehavior()
 
 class ProcessWriter(abstract.FileDescriptor):
-    """(Internal) Helper class to write into a Process's input pipe.
+    """
+    (Internal) Helper class to write into a Process's input pipe.
 
     I am a helper which describes a selectable asynchronous writer to a
     process's input pipe, including stdin.
@@ -92,7 +95,8 @@ class ProcessWriter(abstract.FileDescriptor):
     enableReadHack = False
 
     def __init__(self, reactor, proc, name, fileno, forceReadHack=False):
-        """Initialize, specifying a Process instance to connect to.
+        """
+        Initialize, specifying a Process instance to connect to.
         """
         abstract.FileDescriptor.__init__(self, reactor)
         fdesc.setNonBlocking(fileno)
@@ -117,36 +121,27 @@ class ProcessWriter(abstract.FileDescriptor):
             self.startReading()
 
     def fileno(self):
-        """Return the fileno() of my process's stdin.
+        """
+        Return the fileno() of my process's stdin.
         """
         return self.fd
 
-    # Copy relevant parts of the protocol
     def writeSomeData(self, data):
-        """Write some data to the open process.
         """
-        try:
-            rv = os.write(self.fd, data)
-            if rv == len(data) and self.enableReadHack:
-                self.startReading()
-            return rv
-        except IOError, io:
-            if io.args[0] == errno.EAGAIN:
-                return 0
-            return CONNECTION_LOST
-        except OSError, ose:
-            if ose.errno == errno.EPIPE:
-                return CONNECTION_LOST
-            if ose.errno == errno.EAGAIN: # MacOS-X does this
-                return 0
-            raise
+        Write some data to the open process.
+        """
+        rv = fdesc.writeToFD(self.fd, data)
+        if rv == len(data) and self.enableReadHack:
+            self.startReading()
+        return rv
 
     def write(self, data):
         self.stopReading()
         abstract.FileDescriptor.write(self, data)
 
     def doRead(self):
-        """The only way a write pipe can become "readable" is at EOF, because the
+        """
+        The only way a write pipe can become "readable" is at EOF, because the
         child has closed it, and we're using a reactor which doesn't distinguish
         between readable and closed (such as the select reactor).
 
@@ -174,7 +169,8 @@ class ProcessWriter(abstract.FileDescriptor):
             self.stopReading()
 
     def connectionLost(self, reason):
-        """See abstract.FileDescriptor.connectionLost.
+        """
+        See abstract.FileDescriptor.connectionLost.
         """
         # At least on OS X 10.4, exiting while stdout is non-blocking can
         # result in data loss.  For some reason putting the file descriptor
@@ -187,7 +183,8 @@ class ProcessWriter(abstract.FileDescriptor):
 
 
 class ProcessReader(abstract.FileDescriptor):
-    """ProcessReader
+    """
+    ProcessReader
 
     I am a selectable representation of a process's output pipe, such as
     stdout and stderr.
@@ -195,7 +192,8 @@ class ProcessReader(abstract.FileDescriptor):
     connected = 1
 
     def __init__(self, reactor, proc, name, fileno):
-        """Initialize, specifying a process to connect to.
+        """
+        Initialize, specifying a process to connect to.
         """
         abstract.FileDescriptor.__init__(self, reactor)
         fdesc.setNonBlocking(fileno)
@@ -205,7 +203,8 @@ class ProcessReader(abstract.FileDescriptor):
         self.startReading()
 
     def fileno(self):
-        """Return the fileno() of my process's stderr.
+        """
+        Return the fileno() of my process's stderr.
         """
         return self.fd
 
@@ -217,7 +216,8 @@ class ProcessReader(abstract.FileDescriptor):
         return CONNECTION_LOST
 
     def doRead(self):
-        """This is called when the pipe becomes readable.
+        """
+        This is called when the pipe becomes readable.
         """
         return fdesc.readFromFD(self.fd, self.dataReceived)
 
@@ -231,7 +231,8 @@ class ProcessReader(abstract.FileDescriptor):
             self.reactor.callLater(0, self.connectionLost, failure.Failure(CONNECTION_DONE))
 
     def connectionLost(self, reason):
-        """Close my end of the pipe, signal the Process (which signals the
+        """
+        Close my end of the pipe, signal the Process (which signals the
         ProcessProtocol).
         """
         abstract.FileDescriptor.connectionLost(self, reason)
@@ -239,7 +240,8 @@ class ProcessReader(abstract.FileDescriptor):
 
 
 class Process(styles.Ephemeral):
-    """An operating-system Process.
+    """
+    An operating-system Process.
 
     This represents an operating-system process with arbitrary input/output
     pipes connected to it. Those pipes may represent standard input,
@@ -260,7 +262,8 @@ class Process(styles.Ephemeral):
     def __init__(self,
                  reactor, command, args, environment, path, proto,
                  uid=None, gid=None, childFDs=None):
-        """Spawn an operating-system process.
+        """
+        Spawn an operating-system process.
 
         This is where the hard work of disconnecting all currently open
         files / forking / executing the new process happens.  (This is
@@ -521,7 +524,8 @@ class Process(styles.Ephemeral):
         os.execvpe(command, args, environment)
 
     def reapProcess(self):
-        """Try to reap a process (without blocking) via waitpid.
+        """
+        Try to reap a process (without blocking) via waitpid.
 
         This is called when sigchild is caught or a Process object loses its
         "connection" (stdout is closed) This ought to result in reaping all
@@ -565,7 +569,8 @@ class Process(styles.Ephemeral):
 
     # compatibility
     def closeStdin(self):
-        """Call this to close standard input on this process.
+        """
+        Call this to close standard input on this process.
         """
         self.closeChildFD(0)
     def closeStdout(self):
@@ -578,7 +583,8 @@ class Process(styles.Ephemeral):
         self.closeStdout()
 
     def write(self,data):
-        """Call this to write to standard input on this process.
+        """
+        Call this to write to standard input on this process.
 
         NOTE: This will silently lose data if there is no standard input.
         """
@@ -586,7 +592,8 @@ class Process(styles.Ephemeral):
             self.pipes[0].write(data)
 
     def registerProducer(self, producer, streaming):
-        """Call this to register producer for standard input.
+        """
+        Call this to register producer for standard input.
 
         If there is no standard input producer.stopProducing() will
         be called immediately.
@@ -597,12 +604,14 @@ class Process(styles.Ephemeral):
             producer.stopProducing()
 
     def unregisterProducer(self):
-        """Call this to unregister producer for standard input."""
+        """
+        Call this to unregister producer for standard input."""
         if self.pipes.has_key(0):
             self.pipes[0].unregisterProducer()
 
     def writeSequence(self, seq):
-        """Call this to write to standard input on this process.
+        """
+        Call this to write to standard input on this process.
 
         NOTE: This will silently lose data if there is no standard input.
         """
@@ -616,7 +625,7 @@ class Process(styles.Ephemeral):
         if signalID in ('HUP', 'STOP', 'INT', 'KILL', 'TERM'):
             signalID = getattr(signal, 'SIG'+signalID)
         if self.pid is None:
-            raise ProcessExitedAlready
+            raise error.ProcessExitedAlready()
         os.kill(self.pid, signalID)
 
     def processEnded(self, status):
@@ -677,13 +686,16 @@ class Process(styles.Ephemeral):
                                           self.pid, self.status)
 
 class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
-    """An operating-system Process that uses PTY support."""
+    """
+    An operating-system Process that uses PTY support.
+    """
     status = -1
     pid = None
 
     def __init__(self, reactor, command, args, environment, path, proto,
                  uid=None, gid=None, usePTY=None):
-        """Spawn an operating-system process.
+        """
+        Spawn an operating-system process.
 
         This is where the hard work of disconnecting all currently open
         files / forking / executing the new process happens.  (This is
@@ -781,7 +793,8 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
         registerReapProcessHandler(self.pid, self)
 
     def reapProcess(self):
-        """Try to reap a process (without blocking) via waitpid.
+        """
+        Try to reap a process (without blocking) via waitpid.
 
         This is called when sigchild is caught or a Process object loses its
         "connection" (stdout is closed) This ought to result in reaping all
@@ -828,7 +841,8 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
         self.maybeCallProcessEnded()
 
     def doRead(self):
-        """Called when my standard output stream is ready for reading.
+        """
+        Called when my standard output stream is ready for reading.
         """
         try:
             return fdesc.readFromFD(
@@ -838,7 +852,8 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
             return CONNECTION_LOST
 
     def fileno(self):
-        """This returns the file number of standard output on this process.
+        """
+        This returns the file number of standard output on this process.
         """
         return self.fd
 
@@ -869,7 +884,8 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
                 log.err()
 
     def connectionLost(self, reason):
-        """I call this to clean up when one or all of my connections has died.
+        """
+        I call this to clean up when one or all of my connections has died.
         """
         abstract.FileDescriptor.connectionLost(self, reason)
         os.close(self.fd)
@@ -877,14 +893,10 @@ class PTYProcess(abstract.FileDescriptor, styles.Ephemeral):
         self.maybeCallProcessEnded()
 
     def writeSomeData(self, data):
-        """Write some data to the open process.
         """
-        try:
-            return os.write(self.fd, data)
-        except IOError,io:
-            if io.args[0] == errno.EAGAIN:
-                return 0
-            return CONNECTION_LOST
+        Write some data to the open process.
+        """
+        return fdesc.writeToFD(self.fd, data)
 
     def __repr__(self):
         return "<%s pid=%s status=%s>" % (self.__class__.__name__,
