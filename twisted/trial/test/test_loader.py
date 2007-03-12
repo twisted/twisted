@@ -1,6 +1,7 @@
 
 import md5
 import os
+import shutil
 
 from twisted.python import util
 from twisted.trial.test import packages
@@ -122,7 +123,22 @@ class FileTest(packages.SysPathManglingTest):
         finally:
             os.remove(filename)
 
-
+    def test_directory(self):
+        """
+        Test loader against a filesystem directory. It should handle
+        'path' and 'path/' the same way.
+        """
+        path  = util.sibpath(__file__, 'goodDirectory')
+        os.mkdir(path)
+        f = file(os.path.join(path, '__init__.py'), "w")
+        f.close()
+        try:
+            module = runner.filenameToModule(path)
+            self.assert_(module.__name__.endswith('goodDirectory'))
+            module = runner.filenameToModule(path + os.path.sep)
+            self.assert_(module.__name__.endswith('goodDirectory'))
+        finally:
+            shutil.rmtree(path)
 
 class LoaderTest(packages.SysPathManglingTest):
     def setUp(self):

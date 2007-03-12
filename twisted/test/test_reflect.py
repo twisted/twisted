@@ -7,7 +7,7 @@
 Test cases for twisted.reflect module.
 """
 
-import weakref
+import weakref, os
 
 # Twisted Imports
 from twisted.trial import unittest
@@ -372,4 +372,27 @@ class SafeStr(unittest.TestCase):
         class X(BTBase):
             breakName = True
         reflect.safe_str(X())
+
+
+class FilenameToModule(unittest.TestCase):
+    """
+    Test L{reflect.filenameToModuleName} detection.
+    """
+    def test_directory(self):
+        """
+        Tests it finds good name for directories/packages.
+        """
+        module = reflect.filenameToModuleName(os.path.join('twisted', 'test'))
+        self.assertEquals(module, 'test')
+        module = reflect.filenameToModuleName(os.path.join('twisted', 'test')
+                                              + os.path.sep)
+        self.assertEquals(module, 'test')
+
+    def test_file(self):
+        """
+        Test it finds good name for files.
+        """
+        module = reflect.filenameToModuleName(
+            os.path.join('twisted', 'test', 'test_reflect.py'))
+        self.assertEquals(module, 'test_reflect')
 

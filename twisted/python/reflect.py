@@ -664,12 +664,10 @@ def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None, showUnknowns
         print 'unknown type', type(start), start
     return paths
 
-def _startswith(s, sub):
-    # aug python2.1
-    return s[:len(sub)] == sub
 
 def filenameToModuleName(fn):
-    """Convert a name in the filesystem to the name of the Python module it is.
+    """
+    Convert a name in the filesystem to the name of the Python module it is.
 
     This is agressive about getting a module name back from a file; it will
     always return a string.  Agressive means 'sometimes wrong'; it won't look
@@ -678,7 +676,11 @@ def filenameToModuleName(fn):
     module.
     """
     fullName = os.path.abspath(fn)
-    modName = os.path.splitext(os.path.basename(fn))[0]
+    base = os.path.basename(fn)
+    if not base:
+        # this happens when fn ends with a path separator, just skit it
+        base = os.path.basename(fn[:-1])
+    modName = os.path.splitext(base)[0]
     while 1:
         fullName = os.path.dirname(fullName)
         if os.path.exists(os.path.join(fullName, "__init__.py")):
