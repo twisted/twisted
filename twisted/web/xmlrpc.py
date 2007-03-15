@@ -1,10 +1,11 @@
 # -*- test-case-name: twisted.web.test.test_xmlrpc -*-
 #
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""A generic resource for publishing objects via XML-RPC.
+"""
+A generic resource for publishing objects via XML-RPC.
 
 Requires xmlrpclib (comes standard with Python 2.2 and later, otherwise can be
 downloaded from http://www.pythonware.com/products/xmlrpc/).
@@ -39,12 +40,14 @@ Boolean = xmlrpclib.Boolean
 DateTime = xmlrpclib.DateTime
 
 class NoSuchFunction(Fault):
-    """There is no function by the given name."""
-    pass
+    """
+    There is no function by the given name.
+    """
 
 
 class Handler:
-    """Handle a XML-RPC request and store the state for a request in progress.
+    """
+    Handle a XML-RPC request and store the state for a request in progress.
 
     Override the run() method and return result using self.result,
     a Deferred.
@@ -63,15 +66,17 @@ class Handler:
         self.resource = resource # the XML-RPC resource we are connected to
         self.result = defer.Deferred()
         self.run(*args)
-    
+
     def run(self, *args):
         # event driven equivalent of 'raise UnimplementedError'
-        self.result.errback(NotImplementedError("Implement run() in subclasses"))
+        self.result.errback(
+            NotImplementedError("Implement run() in subclasses"))
 
 
 class XMLRPC(resource.Resource):
-    """A resource that implements XML-RPC.
-    
+    """
+    A resource that implements XML-RPC.
+
     You probably want to connect this to '/RPC2'.
 
     Methods published can return XML-RPC serializable results, Faults,
@@ -109,12 +114,12 @@ class XMLRPC(resource.Resource):
     def render(self, request):
         request.content.seek(0, 0)
         args, functionPath = xmlrpclib.loads(request.content.read())
+        request.setHeader("content-type", "text/xml")
         try:
             function = self._getFunction(functionPath)
         except Fault, f:
             self._cbRender(f, request)
         else:
-            request.setHeader("content-type", "text/xml")
             defer.maybeDeferred(function, *args).addErrback(
                 self._ebRender
             ).addCallback(
@@ -128,10 +133,12 @@ class XMLRPC(resource.Resource):
         if not isinstance(result, Fault):
             result = (result,)
         try:
-            s = xmlrpclib.dumps(result, methodresponse=True, allow_none=self.allowNone)
+            s = xmlrpclib.dumps(result, methodresponse=True,
+                                allow_none=self.allowNone)
         except:
             f = Fault(self.FAILURE, "can't serialize output")
-            s = xmlrpclib.dumps(f, methodresponse=True, allow_none=self.allowNone)
+            s = xmlrpclib.dumps(f, methodresponse=True,
+                                allow_none=self.allowNone)
         request.setHeader("content-length", str(len(s)))
         request.write(s)
         request.finish()
@@ -143,7 +150,8 @@ class XMLRPC(resource.Resource):
         return Fault(self.FAILURE, "error")
 
     def _getFunction(self, functionPath):
-        """Given a string, return a function, or raise NoSuchFunction.
+        """
+        Given a string, return a function, or raise NoSuchFunction.
 
         This returned function will be called, and should return the result
         of the call, a Deferred, or a Fault instance.
@@ -157,24 +165,31 @@ class XMLRPC(resource.Resource):
         if functionPath.find(self.separator) != -1:
             prefix, functionPath = functionPath.split(self.separator, 1)
             handler = self.getSubHandler(prefix)
-            if handler is None: raise NoSuchFunction(self.NOT_FOUND, "no such subHandler %s" % prefix)
+            if handler is None:
+                raise NoSuchFunction(self.NOT_FOUND,
+                    "no such subHandler %s" % prefix)
             return handler._getFunction(functionPath)
 
         f = getattr(self, "xmlrpc_%s" % functionPath, None)
         if not f:
-            raise NoSuchFunction(self.NOT_FOUND, "function %s not found" % functionPath)
+            raise NoSuchFunction(self.NOT_FOUND,
+                "function %s not found" % functionPath)
         elif not callable(f):
-            raise NoSuchFunction(self.NOT_FOUND, "function %s not callable" % functionPath)
+            raise NoSuchFunction(self.NOT_FOUND,
+                "function %s not callable" % functionPath)
         else:
             return f
 
     def _listFunctions(self):
-        """Return a list of the names of all xmlrpc methods."""
+        """
+        Return a list of the names of all xmlrpc methods.
+        """
         return reflect.prefixedMethodNames(self.__class__, 'xmlrpc_')
 
 
 class XMLRPCIntrospection(XMLRPC):
-    """Implement the XML-RPC Introspection API.
+    """
+    Implement the XML-RPC Introspection API.
 
     By default, the methodHelp method returns the 'help' method attribute,
     if it exists, otherwise the __doc__ method attribute, if it exists,
@@ -186,7 +201,8 @@ class XMLRPCIntrospection(XMLRPC):
     """
 
     def __init__(self, parent):
-        """Implement Introspection support for an XMLRPC server.
+        """
+        Implement Introspection support for an XMLRPC server.
 
         @param parent: the XMLRPC server to add Introspection support to.
         """
@@ -195,12 +211,14 @@ class XMLRPCIntrospection(XMLRPC):
         self._xmlrpc_parent = parent
 
     def xmlrpc_listMethods(self):
-        """Return a list of the method names implemented by this server."""
+        """
+        Return a list of the method names implemented by this server.
+        """
         functions = []
         todo = [(self._xmlrpc_parent, '')]
         while todo:
             obj, prefix = todo.pop(0)
-            functions.extend([ prefix + name for name in obj._listFunctions() ])
+            functions.extend([prefix + name for name in obj._listFunctions()])
             todo.extend([ (obj.getSubHandler(name),
                            prefix + name + obj.separator)
                           for name in obj.getSubHandlerPrefixes() ])
@@ -209,7 +227,8 @@ class XMLRPCIntrospection(XMLRPC):
     xmlrpc_listMethods.signature = [['array']]
 
     def xmlrpc_methodHelp(self, method):
-        """Return a documentation string describing the use of the given method.
+        """
+        Return a documentation string describing the use of the given method.
         """
         method = self._xmlrpc_parent._getFunction(method)
         return (getattr(method, 'help', None)
@@ -218,7 +237,8 @@ class XMLRPCIntrospection(XMLRPC):
     xmlrpc_methodHelp.signature = [['string', 'string']]
 
     def xmlrpc_methodSignature(self, method):
-        """Return a list of type signatures.
+        """
+        Return a list of type signatures.
 
         Each type signature is a list of the form [rtype, type1, type2, ...]
         where rtype is the return type and typeN is the type of the Nth
@@ -233,7 +253,8 @@ class XMLRPCIntrospection(XMLRPC):
 
 
 def addIntrospection(xmlrpc):
-    """Add Introspection support to an XMLRPC server.
+    """
+    Add Introspection support to an XMLRPC server.
 
     @param xmlrpc: The xmlrpc server to add Introspection support to.
     """
@@ -276,10 +297,12 @@ class _QueryFactory(protocol.ClientFactory):
     deferred = None
     protocol = QueryProtocol
 
-    def __init__(self, path, host, method, user=None, password=None, allowNone=False, args=()):
+    def __init__(self, path, host, method, user=None, password=None,
+                 allowNone=False, args=()):
         self.path, self.host = path, host
         self.user, self.password = user, password
-        self.payload = payloadTemplate % (method, xmlrpclib.dumps(args, allow_none=allowNone))
+        self.payload = payloadTemplate % (method,
+            xmlrpclib.dumps(args, allow_none=allowNone))
         self.deferred = defer.Deferred()
 
     def parseResponse(self, contents):
@@ -307,14 +330,18 @@ class _QueryFactory(protocol.ClientFactory):
 
 
 class Proxy:
-    """A Proxy for making remote XML-RPC calls.
+    """
+    A Proxy for making remote XML-RPC calls.
 
     Pass the URL of the remote XML-RPC server to the constructor.
 
     Use proxy.callRemote('foobar', *args) to call remote method
     'foobar' with *args.
 
+    @ivar queryFactory: object returning a factory for XML-RPC protocol. Mainly
+        useful for tests.
     """
+    queryFactory = _QueryFactory
 
     def __init__(self, url, user=None, password=None, allowNone=False):
         """
@@ -368,7 +395,7 @@ class Proxy:
         self.allowNone = allowNone
 
     def callRemote(self, method, *args):
-        factory = _QueryFactory(
+        factory = self.queryFactory(
             self.path, self.host, method, self.user,
             self.password, self.allowNone, args)
         if self.secure:
@@ -380,3 +407,4 @@ class Proxy:
         return factory.deferred
 
 __all__ = ["XMLRPC", "Handler", "NoSuchFunction", "Fault", "Proxy"]
+
