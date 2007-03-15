@@ -1,11 +1,9 @@
 # -*- test-case-name: twisted.web.test.test_xmlrpc -*-
 #
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-"""
-Test XML-RPC support.
-"""
+"""Test XML-RPC support."""
 
 try:
     import xmlrpclib
@@ -19,7 +17,9 @@ else:
 from twisted.trial import unittest
 from twisted.web import server, static
 from twisted.internet import reactor, defer
+from twisted.python import log
 
+import time
 
 class TestRuntimeError(RuntimeError):
     pass
@@ -37,9 +37,7 @@ class Test(XMLRPC):
 
     # the doc string is part of the test
     def xmlrpc_add(self, a, b):
-        """
-        This function add two numbers.
-        """
+        """This function add two numbers."""
         return a + b
 
     xmlrpc_add.signature = [['int', 'int', 'int'],
@@ -47,9 +45,7 @@ class Test(XMLRPC):
 
     # the doc string is part of the test
     def xmlrpc_pair(self, string, num):
-        """
-        This function puts the two arguments in an array.
-        """
+        """This function puts the two arguments in an array."""
         return [string, num]
 
     xmlrpc_pair.signature = [['array', 'string', 'int']]
@@ -83,8 +79,7 @@ class Test(XMLRPC):
             return XMLRPC._getFunction(self, functionPath)
         except xmlrpc.NoSuchFunction:
             if functionPath.startswith("SESSION"):
-                raise xmlrpc.Fault(self.SESSION_EXPIRED,
-                                   "Session non-existant/expired.")
+                raise xmlrpc.Fault(self.SESSION_EXPIRED, "Session non-existant/expired.")
             else:
                 raise
 
@@ -106,53 +101,20 @@ class TestAuthHeader(Test):
     def xmlrpc_authinfo(self):
         return self.request.getUser(), self.request.getPassword()
 
-
-class TestQueryProtocol(xmlrpc.QueryProtocol):
-    """
-    QueryProtocol for tests that saves headers received inside the factory.
-    """
-    def handleHeader(self, key, val):
-        self.factory.headers[key] = val
-
-
-class TestQueryFactory(xmlrpc._QueryFactory):
-    """
-    QueryFactory using L{TestQueryProtocol} for saving headers.
-    """
-    protocol = TestQueryProtocol
-
-    def __init__(self, *args, **kwargs):
-        self.headers = {}
-        xmlrpc._QueryFactory.__init__(self, *args, **kwargs)
-
-
 class XMLRPCTestCase(unittest.TestCase):
 
     def setUp(self):
         self.p = reactor.listenTCP(0, server.Site(Test()),
                                    interface="127.0.0.1")
         self.port = self.p.getHost().port
-        self.factories = []
 
     def tearDown(self):
-        self.factories = []
         return self.p.stopListening()
 
-    def queryFactory(self, *args, **kwargs):
-        """
-        Specific queryFactory for proxy that uses our custom
-        L{TestQueryFactory}, and save factories.
-        """
-        factory = TestQueryFactory(*args, **kwargs)
-        self.factories.append(factory)
-        return factory
-
     def proxy(self):
-        p = xmlrpc.Proxy("http://127.0.0.1:%d/" % self.port)
-        p.queryFactory = self.queryFactory
-        return p
+        return xmlrpc.Proxy("http://127.0.0.1:%d/" % self.port)
 
-    def test_results(self):
+    def testResults(self):
         inputOutput = [
             ("add", (2, 3), 5),
             ("defer", ("a",), "a"),
@@ -167,41 +129,25 @@ class XMLRPCTestCase(unittest.TestCase):
             dl.append(d)
         return defer.DeferredList(dl, fireOnOneErrback=True)
 
-    def test_errors(self):
-        """
-        Verify that for each way a method exposed via XML-RPC can fail, the
-        correct 'Content-type' header is set in the response and that the
-        client-side Deferred is errbacked with an appropriate C{Fault}
-        instance.
-        """
+    def testErrors(self):
         dl = []
         for code, methodName in [(666, "fail"), (666, "deferFail"),
                                  (12, "fault"), (23, "noSuchMethod"),
                                  (17, "deferFault"), (42, "SESSION_TEST")]:
             d = self.proxy().callRemote(methodName)
             d = self.assertFailure(d, xmlrpc.Fault)
-            d.addCallback(lambda exc, code=code:
-                self.assertEquals(exc.faultCode, code))
+            d.addCallback(lambda exc, code=code: self.assertEquals(exc.faultCode, code))
             dl.append(d)
         d = defer.DeferredList(dl, fireOnOneErrback=True)
-        def cb(ign):
-            for factory in self.factories:
-                self.assertEquals(factory.headers['Content-type'],
-                                  'text/xml')
-            self.flushLoggedErrors(TestRuntimeError, TestValueError)
-        d.addCallback(cb)
+        d.addCallback(lambda ign: log.flushErrors(TestRuntimeError, TestValueError))
         return d
 
 
 class XMLRPCTestCase2(XMLRPCTestCase):
-    """
-    Test with proxy that doesn't add a slash.
-    """
+    """Test with proxy that doesn't add a slash."""
 
     def proxy(self):
-        p = xmlrpc.Proxy("http://127.0.0.1:%d" % self.port)
-        p.queryFactory = self.queryFactory
-        return p
+        return xmlrpc.Proxy("http://127.0.0.1:%d" % self.port)
 
 
 
@@ -226,8 +172,7 @@ class XMLRPCAllowNoneTestCase(unittest.TestCase):
 
 
     def proxy(self):
-        return xmlrpc.Proxy("http://127.0.0.1:%d" % (self.port,),
-                            allowNone=True)
+        return xmlrpc.Proxy("http://127.0.0.1:%d" % (self.port,), allowNone=True)
 
 
     def test_deferredNone(self):
@@ -263,31 +208,22 @@ class XMLRPCTestAuthenticated(XMLRPCTestCase):
         self.p = reactor.listenTCP(0, server.Site(TestAuthHeader()),
                                    interface="127.0.0.1")
         self.port = self.p.getHost().port
-        self.factories = []
 
 
-    def test_authInfoInURL(self):
-        p = xmlrpc.Proxy("http://%s:%s@127.0.0.1:%d/" % (
-            self.user, self.password, self.port))
-        d = p.callRemote("authinfo")
-        d.addCallback(self.assertEquals, [self.user, self.password])
-        return d
+    def testAuthInfoInURL(self):
+        p = xmlrpc.Proxy("http://%s:%s@127.0.0.1:%d/" % (self.user, self.password, self.port))
+        return p.callRemote("authinfo").addCallback(self.assertEquals, [self.user, self.password])
 
 
-    def test_explicitAuthInfo(self):
-        p = xmlrpc.Proxy("http://127.0.0.1:%d/" % (
-            self.port,), self.user, self.password)
-        d = p.callRemote("authinfo")
-        d.addCallback(self.assertEquals, [self.user, self.password])
-        return d
+    def testExplicitAuthInfo(self):
+        p = xmlrpc.Proxy("http://127.0.0.1:%d/" % (self.port,), self.user, self.password)
+        return p.callRemote("authinfo").addCallback(self.assertEquals, [self.user, self.password])
 
 
-    def test_explicitAuthInfoOverride(self):
-        p = xmlrpc.Proxy("http://wrong:info@127.0.0.1:%d/" % (
-                self.port,), self.user, self.password)
-        d = p.callRemote("authinfo")
-        d.addCallback(self.assertEquals, [self.user, self.password])
-        return d
+    def testExplicitAuthInfoOverride(self):
+        p = xmlrpc.Proxy("http://wrong:info@127.0.0.1:%d/" % (self.port,), self.user, self.password)
+        return p.callRemote("authinfo").addCallback(self.assertEquals, [self.user, self.password])
+
 
 
 class XMLRPCTestIntrospection(XMLRPCTestCase):
@@ -297,9 +233,8 @@ class XMLRPCTestIntrospection(XMLRPCTestCase):
         addIntrospection(xmlrpc)
         self.p = reactor.listenTCP(0, server.Site(xmlrpc),interface="127.0.0.1")
         self.port = self.p.getHost().port
-        self.factories = []
 
-    def test_listMethods(self):
+    def testListMethods(self):
 
         def cbMethods(meths):
             meths.sort()
@@ -315,7 +250,7 @@ class XMLRPCTestIntrospection(XMLRPCTestCase):
         d.addCallback(cbMethods)
         return d
 
-    def test_methodHelp(self):
+    def testMethodHelp(self):
         inputOutputs = [
             ("defer", "Help for defer."),
             ("fail", ""),
@@ -328,7 +263,7 @@ class XMLRPCTestIntrospection(XMLRPCTestCase):
             dl.append(d)
         return defer.DeferredList(dl, fireOnOneErrback=True)
 
-    def test_methodSignature(self):
+    def testMethodSignature(self):
         inputOutputs = [
             ("defer", ""),
             ("add", [['int', 'int', 'int'],
@@ -347,14 +282,11 @@ class XMLRPCClientErrorHandling(unittest.TestCase):
     def setUp(self):
         self.resource = static.File(__file__)
         self.resource.isLeaf = True
-        self.port = reactor.listenTCP(0, server.Site(self.resource),
-                                                     interface='127.0.0.1')
+        self.port = reactor.listenTCP(0, server.Site(self.resource), interface='127.0.0.1')
 
     def tearDown(self):
         return self.port.stopListening()
 
-    def test_erroneousResponse(self):
-        proxy = xmlrpc.Proxy("http://127.0.0.1:%d/" %
-                             (self.port.getHost().port,))
+    def testErroneousResponse(self):
+        proxy = xmlrpc.Proxy("http://127.0.0.1:%d/" % (self.port.getHost().port,))
         return self.assertFailure(proxy.callRemote("someMethod"), Exception)
-
