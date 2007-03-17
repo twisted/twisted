@@ -1,14 +1,13 @@
 
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 
 """
 Test cases for defer module.
 """
 
-from __future__ import nested_scopes
+import gc
 
 from twisted.trial import unittest, util
 from twisted.internet import reactor, defer
@@ -149,7 +148,7 @@ class DeferredTestCase(unittest.TestCase):
         failure = result[0]
 
         # the type of the failure is a FirstError
-        self.failUnless(issubclass(failure.type, defer.FirstError), 
+        self.failUnless(issubclass(failure.type, defer.FirstError),
             'issubclass(failure.type, defer.FirstError) failed: '
             'failure.type is %r' % (failure.type,)
         )
@@ -506,27 +505,69 @@ class AlreadyCalledTestCase(unittest.TestCase):
         d.addBoth(lambda ign: None)
 
 
+
 class LogTestCase(unittest.TestCase):
+    """
+    Test logging of unhandled errors.
+    """
 
     def setUp(self):
+        """
+        Add a custom observer to observer logging.
+        """
         self.c = []
         log.addObserver(self.c.append)
 
     def tearDown(self):
+        """
+        Remove the observer.
+        """
         log.removeObserver(self.c.append)
 
-    def testErrorLog(self):
-        c = self.c
-        defer.Deferred().addCallback(lambda x: 1/0).callback(1)
-# do you think it is rad to have memory leaks glyph
-##        d = defer.Deferred()
-##        d.addCallback(lambda x: 1/0)
-##        d.callback(1)
-##        del d
-        c2 = [e for e in c if e["isError"]]
+    def _check(self):
+        """
+        Check the output of the log observer to see if the error is present.
+        """
+        c2 = [e for e in self.c if e["isError"]]
         self.assertEquals(len(c2), 2)
         c2[1]["failure"].trap(ZeroDivisionError)
-        log.flushErrors(ZeroDivisionError)
+        self.flushLoggedErrors(ZeroDivisionError)
+
+    def test_errorLog(self):
+        """
+        Verify that when a Deferred with no references to it is fired, and its
+        final result (the one not handled by any callback) is an exception,
+        that exception will be logged immediately.
+        """
+        defer.Deferred().addCallback(lambda x: 1/0).callback(1)
+        self._check()
+
+    def test_errorLogWithInnerFrameRef(self):
+        """
+        Same as L{test_errorLog}, but with an inner frame.
+        """
+        def _subErrorLogWithInnerFrameRef():
+            d = defer.Deferred()
+            d.addCallback(lambda x: 1/0)
+            d.callback(1)
+
+        _subErrorLogWithInnerFrameRef()
+        gc.collect()
+        self._check()
+
+    def test_errorLogWithInnerFrameCycle(self):
+        """
+        Same as L{test_errorLogWithInnerFrameRef}, plus create a cycle.
+        """
+        def _subErrorLogWithInnerFrameCycle():
+            d = defer.Deferred()
+            d.addCallback(lambda x, d=d: 1/0)
+            d._d = d
+            d.callback(1)
+
+        _subErrorLogWithInnerFrameCycle()
+        gc.collect()
+        self._check()
 
 
 class DeferredTestCaseII(unittest.TestCase):
