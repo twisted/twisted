@@ -1,11 +1,10 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
 Now with 30% more starch.
 """
 
-from __future__ import generators
 
 import hmac
 from zope.interface import implements, Interface
@@ -13,7 +12,6 @@ from zope.interface import implements, Interface
 from twisted.trial import unittest
 from twisted.cred import portal, checkers, credentials, error
 from twisted.python import components
-from twisted.python import util
 from twisted.internet import defer
 from twisted.internet.defer import deferredGenerator as dG, waitForDeferred as wFD
 
@@ -51,6 +49,20 @@ class Testable(components.Adapter):
 # components.Interface(TestAvatar).adaptWith(Testable, ITestable)
 
 components.registerAdapter(Testable, TestAvatar, ITestable)
+
+class IDerivedCredentials(credentials.IUsernamePassword):
+    pass
+
+class DerivedCredentials(object):
+    implements(IDerivedCredentials, ITestable)
+
+    def __init__(self, username, password):
+        self.username = username
+        self.password = password
+
+    def checkPassword(self, password):
+        return password == self.password
+
 
 class TestRealm:
     implements(portal.IRealm)
@@ -90,6 +102,29 @@ class NewCredTest(unittest.TestCase):
         if f:
             raise f[0]
         # print l[0].getBriefTraceback()
+        iface, impl, logout = l[0]
+        # whitebox
+        self.assertEquals(iface, ITestable)
+        self.failUnless(iface.providedBy(impl),
+                        "%s does not implement %s" % (impl, iface))
+        # greybox
+        self.failUnless(impl.original.loggedIn)
+        self.failUnless(not impl.original.loggedOut)
+        logout()
+        self.failUnless(impl.original.loggedOut)
+
+    def test_derivedInterface(self):
+        """
+        Login with credentials implementing an interface inheriting from an
+        interface registered with a checker (but not itself registered).
+        """
+        l = []
+        f = []
+        self.portal.login(DerivedCredentials("bob", "hello"), self, ITestable
+            ).addCallback(l.append
+            ).addErrback(f.append)
+        if f:
+            raise f[0]
         iface, impl, logout = l[0]
         # whitebox
         self.assertEquals(iface, ITestable)
@@ -177,7 +212,7 @@ class OnDiskDatabaseTestCase(unittest.TestCase):
             [defer.maybeDeferred(db.requestAvatarId, c) for c in creds])
         d.addCallback(self.assertEquals, [u for u, p in self.users])
         return d
-    
+
     def testRequestAvatarId_hashed(self):
         dbfile = self.mktemp()
         db = checkers.FilePasswordDB(dbfile, caseSensitive=0)
@@ -236,7 +271,7 @@ class HashedPasswordOnDiskDatabaseTestCase(unittest.TestCase):
                                 for c in badCreds], consumeErrors=True)
         d.addCallback(self._assertFailures, error.UnauthorizedLogin)
         return d
-    
+
     def testHashedCredentials(self):
         hashedCreds = [credentials.UsernameHashedPassword(u, crypt(p, u[:2]))
                        for u, p in self.users]
@@ -255,7 +290,7 @@ class HashedPasswordOnDiskDatabaseTestCase(unittest.TestCase):
         skip = "crypt module not available"
 
 class PluggableAuthenticationModulesTest(unittest.TestCase):
-    
+
     def setUpClass(self):
         self._oldCallIntoPAM = pamauth.callIntoPAM
         pamauth.callIntoPAM = self.callIntoPAM
@@ -397,3 +432,4 @@ class LocallyHashedFilePasswordDBCheckerTestCase(LocallyHashedFilePasswordDBMixi
 
 class NetworkHashedFilePasswordDBCheckerTestCase(NetworkHashedFilePasswordDBMixin, CheckersMixin, unittest.TestCase):
     pass
+
