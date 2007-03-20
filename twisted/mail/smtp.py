@@ -1493,7 +1493,7 @@ class ESMTP(SMTP):
                                 # care about it.
             rest = parts[1]
         else:
-            rest = None
+            rest = ''
         self.state_AUTH(rest)
 
 
@@ -1532,7 +1532,7 @@ class ESMTP(SMTP):
             self.mode = COMMAND
             return
 
-        if response is None:
+        if response == '':
             challenge = self.challenger.getChallenge()
             encoded = challenge.encode('base64')
             self.sendCode(334, encoded)
