@@ -91,6 +91,7 @@ class SSHUserAuthServer(service.SSHService):
         d.addCallbacks(self._cbFinishedAuth)
         d.addErrback(self._ebMaybeBadAuth)
         d.addErrback(self._ebBadAuth)
+        return d
 
     def _cbFinishedAuth(self, (interface, avatar, logout)):
         self.transport.isAuthorized = True
