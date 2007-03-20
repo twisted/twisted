@@ -780,7 +780,7 @@ class ESMTPAuthenticationTestCase(unittest.TestCase):
             self.transport.value().splitlines())
 
 
-    def assertServerAuthenticated(self, loginArgs):
+    def assertServerAuthenticated(self, loginArgs, username="username", password="password"):
         """
         Assert that a login attempt has been made, that the credentials and
         interfaces passed to it are correct, and that when the login request
@@ -792,8 +792,8 @@ class ESMTPAuthenticationTestCase(unittest.TestCase):
         d, credentials, mind, interfaces = loginArgs.pop()
         self.assertEqual(loginArgs, [])
         self.failUnless(twisted.cred.credentials.IUsernamePassword.providedBy(credentials))
-        self.assertEqual(credentials.username, 'username')
-        self.failUnless(credentials.checkPassword('password'))
+        self.assertEqual(credentials.username, username)
+        self.failUnless(credentials.checkPassword(password))
         self.assertIn(smtp.IMessageDeliveryFactory, interfaces)
         self.assertIn(smtp.IMessageDelivery, interfaces)
         d.callback((smtp.IMessageDeliveryFactory, None, lambda: None))
@@ -871,6 +871,27 @@ class ESMTPAuthenticationTestCase(unittest.TestCase):
 
         self.assertServerAuthenticated(loginArgs)
 
+
+    def test_plainAuthenticationEmptyPassword(self):
+        """
+        Test that giving an empty password for plain auth succeeds.
+        """
+        loginArgs = []
+        self.server.portal = self.portalFactory(loginArgs)
+
+        self.server.dataReceived('EHLO\r\n')
+        self.transport.clear()
+
+        self.assertServerResponse(
+            'AUTH LOGIN\r\n',
+            ["334 " + "User Name\0".encode('base64').strip()])
+
+        self.assertServerResponse(
+            'username'.encode('base64') + '\r\n',
+            ["334 " + "Password\0".encode('base64').strip()])
+
+        self.assertServerResponse('\r\n', [])
+        self.assertServerAuthenticated(loginArgs, password='')
 
     def test_plainAuthenticationInitialResponse(self):
         """

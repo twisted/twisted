@@ -1493,7 +1493,7 @@ class ESMTP(SMTP):
                                 # care about it.
             rest = parts[1]
         else:
-            rest = ''
+            rest = None
         self.state_AUTH(rest)
 
 
@@ -1526,13 +1526,18 @@ class ESMTP(SMTP):
     def state_AUTH(self, response):
         """
         Handle one step of challenge/response authentication.
+
+        @param response: The text of a response. If None, this
+        function has been called as a result of an AUTH command with
+        no initial response. A response of '*' aborts authentication,
+        as per RFC 2554.
         """
         if self.portal is None:
             self.sendCode(454, 'Temporary authentication failure')
             self.mode = COMMAND
             return
 
-        if response == '':
+        if response is None:
             challenge = self.challenger.getChallenge()
             encoded = challenge.encode('base64')
             self.sendCode(334, encoded)
