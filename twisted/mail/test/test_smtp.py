@@ -872,6 +872,27 @@ class ESMTPAuthenticationTestCase(unittest.TestCase):
         self.assertServerAuthenticated(loginArgs)
 
 
+    def test_plainAuthenticationEmptyPasswd(self):
+        """
+        Test that giving an empty password for plain auth doesn't
+        raise an exception.
+        """
+        loginArgs = []
+        self.server.portal = self.portalFactory(loginArgs)
+
+        self.server.dataReceived('EHLO\r\n')
+        self.transport.clear()
+
+        self.assertServerResponse(
+            'AUTH LOGIN\r\n',
+            ["334 " + "User Name\0".encode('base64').strip()])
+
+        self.assertServerResponse(
+            'username'.encode('base64') + '\r\n',
+            ["334 " + "Password\0".encode('base64').strip()])
+
+        self.assertServerResponse('\r\n', [])
+
     def test_plainAuthenticationInitialResponse(self):
         """
         The response to the first challenge may be included on the AUTH command
