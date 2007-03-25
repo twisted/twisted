@@ -11,9 +11,13 @@ try:
 except ImportError:
     from StringIO import StringIO
 
-from twisted.internet import address
+import struct
+
+from twisted.internet import address, task
 from twisted.trial import unittest
 from twisted.names import dns
+
+from twisted.test import proto_helpers
 
 class RoundtripDNSTestCase(unittest.TestCase):
     """Encoding and then decoding various objects."""
@@ -149,7 +153,6 @@ class MessageTestCase(unittest.TestCase):
         self.assertEquals(msg2.answers[0].payload.payload, bytes)
 
 
-
 class TestController(object):
     """
     Pretend to be a DNS query processor for a DNSDatagramProtocol.
@@ -162,13 +165,12 @@ class TestController(object):
         self.messages.append((msg, proto, addr))
 
 
-
 class DatagramProtocolTestCase(unittest.TestCase):
     """
     Test various aspects of DNSDatagramProtocol.
     """
 
-    def testTruncatedPacket(self):
+    def test_truncatedPacket(self):
         """
         Test that when a short datagram is received, datagramReceived does
         not raise an exception while processing it.
@@ -177,3 +179,91 @@ class DatagramProtocolTestCase(unittest.TestCase):
         proto = dns.DNSDatagramProtocol(controller)
         proto.datagramReceived('', address.IPv4Address('UDP', '127.0.0.1', 12345))
         self.assertEquals(controller.messages, [])
+
+    def test_simpleQuery(self):
+        """
+        Test content received after a query.
+        """
+        controller = TestController()
+        proto = dns.DNSDatagramProtocol(controller)
+        transport = proto_helpers.FakeDatagramTransport()
+        proto.makeConnection(transport)
+        d = proto.query(('127.0.0.1', 21345), [dns.Query('foo')])
+        self.assertEquals(len(proto.liveMessages.keys()), 1)
+        m = dns.Message()
+        m.id = proto.liveMessages.items()[0][0]
+        m.answers = [dns.RRHeader(payload=dns.Record_A(address='1.2.3.4'))]
+        called = False
+        def cb(result):
+            self.assertEquals(result.answers[0].payload.dottedQuad(), '1.2.3.4')
+        d.addCallback(cb)
+        proto.datagramReceived(m.toStr(), ('127.0.0.1', 21345))
+        return d
+
+    def test_queryTimeout(self):
+        """
+        Test that query timeouts after some seconds.
+        """
+        clock = task.Clock()
+        controller = TestController()
+        proto = dns.DNSDatagramProtocol(controller)
+        proto.makeConnection(proto_helpers.FakeDatagramTransport())
+        proto.callLater = clock.callLater
+        d = proto.query(('127.0.0.1', 21345), [dns.Query('foo')])
+        self.assertEquals(len(proto.liveMessages), 1)
+        clock.advance(10)
+        self.assertFailure(d, dns.DNSQueryTimeoutError)
+        self.assertEquals(len(proto.liveMessages), 0)
+        return d
+
+
+class TestTCPController(TestController):
+    """
+    Pretend to be a DNS query processor for a DNSProtocol.
+    """
+    def connectionMade(self, proto):
+        pass
+
+
+class DNSProtocolTestCase(unittest.TestCase):
+    """
+    Test various aspects of DNSProtocol.
+    """
+
+    def test_queryTimeout(self):
+        """
+        Test that query timeouts after some seconds.
+        """
+        clock = task.Clock()
+        controller = TestTCPController()
+        proto = dns.DNSProtocol(controller)
+        proto.makeConnection(proto_helpers.StringTransport())
+        proto.callLater = clock.callLater
+        d = proto.query([dns.Query('foo')])
+        self.assertEquals(len(proto.liveMessages), 1)
+        clock.advance(60)
+        self.assertFailure(d, dns.DNSQueryTimeoutError)
+        self.assertEquals(len(proto.liveMessages), 0)
+        return d
+
+    def test_simpleQuery(self):
+        """
+        Test content received after a query.
+        """
+        controller = TestTCPController()
+        proto = dns.DNSProtocol(controller)
+        proto.makeConnection(proto_helpers.StringTransport())
+        d = proto.query([dns.Query('foo')])
+        self.assertEquals(len(proto.liveMessages.keys()), 1)
+        m = dns.Message()
+        m.id = proto.liveMessages.items()[0][0]
+        m.answers = [dns.RRHeader(payload=dns.Record_A(address='1.2.3.4'))]
+        called = False
+        def cb(result):
+            self.assertEquals(result.answers[0].payload.dottedQuad(), '1.2.3.4')
+        d.addCallback(cb)
+        s = m.toStr()
+        s = struct.pack('!H', len(s)) + s
+        proto.dataReceived(s)
+        return d
+
