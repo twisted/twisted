@@ -1,7 +1,7 @@
 # -*- test-case-name: twisted.test.test_failure -*-
 # See also test suite twisted.test.test_pbfailure
 
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -13,10 +13,10 @@ See L{Failure}.
 # System Imports
 import sys
 import linecache
-import string
 import inspect
 from cStringIO import StringIO
-import types
+
+from twisted.python import reflect
 
 count = 0
 traceupLength = 4
@@ -46,7 +46,7 @@ def format_frames(frames, write, detail="default"):
     elif detail == "default":
         for method, filename, lineno, localVars, globalVars in frames:
             w( '  File "%s", line %s, in %s\n' % (filename, lineno, method))
-            w( '    %s\n' % string.strip(linecache.getline(filename, lineno)))
+            w( '    %s\n' % linecache.getline(filename, lineno).strip())
     elif detail == "verbose":
         for method, filename, lineno, localVars, globalVars in frames:
             w("%s:%d: %s(...)\n" % (filename, lineno, method))
@@ -60,7 +60,7 @@ def format_frames(frames, write, detail="default"):
 
 # slyphon: i have a need to check for this value in trial
 #          so I made it a module-level constant
-EXCEPTION_CAUGHT_HERE = "--- <exception caught here> ---" 
+EXCEPTION_CAUGHT_HERE = "--- <exception caught here> ---"
 
 
 
@@ -143,9 +143,7 @@ class Failure:
         self.type = self.value = tb = None
 
         #strings Exceptions/Failures are bad, mmkay?
-        if ((isinstance(exc_value, types.StringType) or
-             isinstance(exc_value, types.UnicodeType))
-            and exc_type is None):
+        if isinstance(exc_value, (str, unicode)) and exc_type is None:
             import warnings
             warnings.warn(
                 "Don't pass strings (like %r) to failure.Failure (replacing with a DefaultException)." %
@@ -194,7 +192,7 @@ class Failure:
             # and if we were passed a plain exception with no
             # traceback, it's not useful anyway
             f = stackOffset = None
-        
+
         while stackOffset and f:
             # This excludes this Failure.__init__ frame from the
             # stack, leaving it to start with our caller instead.
@@ -237,7 +235,7 @@ class Failure:
             for d in globalz, localz:
                 if d.has_key("__builtins__"):
                     del d["__builtins__"]
-            
+
             frames.append([
                 f.f_code.co_name,
                 f.f_code.co_filename,
@@ -315,7 +313,7 @@ class Failure:
         if self.pickled:
             return self.__dict__
         c = self.__dict__.copy()
-        
+
         c['frames'] = [
             [
                 v[0], v[1], v[2],
@@ -450,43 +448,6 @@ def startDebugMode():
     Failure.__init__ = _debuginit
 
 
-def visualtest():
-    def c():
-        1/0
-
-    def b():
-        c()
-
-    def a():
-        b()
-
-    def _frameworkCode(detailLevel, elideFrameworkCode):
-        try:
-            a()
-        except:
-            Failure().printTraceback(sys.stdout, detail=detailLevel, elideFrameworkCode=elideFrameworkCode)
-
-    def _moreFrameworkCode(*a, **kw):
-        return _frameworkCode(*a, **kw)
-
-    def frameworkCode(*a, **kw):
-        return _moreFrameworkCode(*a, **kw)
-
-    print 'Failure visual test case:'
-    for verbosity in ['brief', 'default', 'verbose']:
-        for truth in True, False:
-            print
-            print '----- next ----'
-            print 'detail: ',verbosity
-            print 'elideFrameworkCode:', truth
-            print
-            frameworkCode(verbosity, truth)
-
-
 # Sibling imports - at the bottom and unqualified to avoid unresolvable
 # circularity
-import reflect, log
-
-
-if __name__ == '__main__':
-    visualtest()
+import log
