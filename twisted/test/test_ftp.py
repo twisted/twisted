@@ -1,8 +1,9 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""FTP tests.
+"""
+FTP tests.
 
 Maintainer: U{Andrew Bennetts<mailto:spiv@twistedmatrix.com>}
 """
@@ -579,8 +580,15 @@ class FTPClientTests(unittest.TestCase):
         d.addCallback(gotClient)
         return self.assertFailure(d, ftp.CommandFailed)
 
-    def testErrbacksUponDisconnect(self):
+    def test_errbacksUponDisconnect(self):
+        """
+        Test the ftp command errbacks when a connection lost happens during
+        the operation.
+        """
         ftpClient = ftp.FTPClient()
+        tr = proto_helpers.StringTransportWithDisconnection()
+        ftpClient.makeConnection(tr)
+        tr.protocol = ftpClient
         d = ftpClient.list('some path', Dummy())
         m = []
         def _eb(failure):
@@ -590,6 +598,7 @@ class FTPClientTests(unittest.TestCase):
         from twisted.internet.main import CONNECTION_LOST
         ftpClient.connectionLost(failure.Failure(CONNECTION_LOST))
         self.failUnless(m, m)
+        return d
 
 
 
@@ -602,8 +611,9 @@ class FTPClientTestCase(unittest.TestCase):
         Create a FTP client and connect it to fake transport.
         """
         self.client = ftp.FTPClient()
-        self.transport = proto_helpers.StringTransport()
+        self.transport = proto_helpers.StringTransportWithDisconnection()
         self.client.makeConnection(self.transport)
+        self.transport.protocol = self.client
 
 
     def tearDown(self):
@@ -840,6 +850,40 @@ class FTPClientTestCase(unittest.TestCase):
         self.assertEquals(self.transport.value(), 'RETR spam\r\n')
         self.transport.clear()
         self.client.lineReceived('550 spam: No such file or directory')
+        return d
+
+
+    def test_lostRETR(self):
+        """
+        Try a RETR, but disconnect during the transfer.
+        L{ftp.FTPClient.retrieveFile} should return a Deferred which
+        errbacks with L{ftp.ConnectionLost)
+        """
+        self.client.passive = False
+
+        l = []
+        def generatePort(portCmd):
+            portCmd.text = 'PORT %s' % (ftp.encodeHostPort('127.0.0.1', 9876),)
+            tr = proto_helpers.StringTransportWithDisconnection()
+            portCmd.protocol.makeConnection(tr)
+            tr.protocol = portCmd.protocol
+            portCmd.protocol.dataReceived("x" * 500)
+            l.append(tr)
+
+        self.client.generatePortCommand = generatePort
+        self._testLogin()
+        proto = _BufferingProtocol()
+        d = self.client.retrieveFile("spam", proto)
+        self.assertEquals(self.transport.value(), 'PORT %s\r\n' %
+            (ftp.encodeHostPort('127.0.0.1', 9876),))
+        self.transport.clear()
+        self.client.lineReceived('200 PORT OK')
+        self.assertEquals(self.transport.value(), 'RETR spam\r\n')
+
+        self.assert_(l)
+        l[0].loseConnection()
+        self.transport.loseConnection()
+        self.assertFailure(d, ftp.ConnectionLost)
         return d
 
 
@@ -1467,3 +1511,4 @@ class PathHandling(unittest.TestCase):
 
         for inp in ['../..', '../../', '../a/../..']:
             self.assertRaises(ftp.InvalidPath, ftp.toSegments, ['x'], inp)
+

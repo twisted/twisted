@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_ftp -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -443,7 +443,7 @@ class DTP(object, protocol.Protocol):
 class DTPFactory(protocol.ClientFactory):
     """
     DTP protocol factory.
-    
+
     @ivar peerCheck: perform checks to make sure the ftp-pi's peer is the same
         as the dtp's
     @ivar pi: a reference to this factory's protocol interpreter
@@ -605,7 +605,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         def processFailed(err):
             if err.check(FTPCmdError):
                 self.sendLine(err.value.response())
-            elif (err.check(TypeError) and 
+            elif (err.check(TypeError) and
                   err.value.args[0].find('takes exactly') != -1):
                 self.reply(SYNTAX_ERR, "%s requires an argument." % (cmd,))
             else:
@@ -1771,8 +1771,11 @@ class FTPDataPortFactory(protocol.ServerFactory):
 
 
 class FTPClientBasic(basic.LineReceiver):
-    """Foundations of an FTP client."""
-    debug = 0
+    """
+    Foundations of an FTP client.
+    """
+    debug = False
+
     def __init__(self):
         self.actionQueue = []
         self.greeting = None
@@ -1782,15 +1785,24 @@ class FTPClientBasic(basic.LineReceiver):
         self._failed = 0
 
     def fail(self, error):
-        """Give an error to any queued deferreds."""
+        """
+        Give an error to any queued deferreds.
+        """
         self._fail(error)
 
     def _fail(self, error):
-        """Errback all queued deferreds."""
+        """
+        Errback all queued deferreds.
+        """
         if self._failed:
             # We're recursing; bail out here for simplicity
             return error
         self._failed = 1
+        if self.nextDeferred:
+            try:
+                self.nextDeferred.errback(failure.Failure(ConnectionLost('FTP connection lost', error)))
+            except defer.AlreadyCalledError:
+                pass
         for ftpCommand in self.actionQueue:
             ftpCommand.fail(failure.Failure(ConnectionLost('FTP connection lost', error)))
         return error
@@ -1799,13 +1811,17 @@ class FTPClientBasic(basic.LineReceiver):
         self.greeting = greeting
 
     def sendLine(self, line):
-        """(Private) Sends a line, unless line is None."""
+        """
+        (Private) Sends a line, unless line is None.
+        """
         if line is None:
             return
         basic.LineReceiver.sendLine(self, line)
 
     def sendNextCommand(self):
-        """(Private) Processes the next command in the queue."""
+        """
+        (Private) Processes the next command in the queue.
+        """
         ftpCommand = self.popCommandQueue()
         if ftpCommand is None:
             self.nextDeferred = None
@@ -1827,7 +1843,8 @@ class FTPClientBasic(basic.LineReceiver):
         self.sendLine(ftpCommand.text)
 
     def queueCommand(self, ftpCommand):
-        """Add an FTPCommand object to the queue.
+        """
+        Add an FTPCommand object to the queue.
 
         If it's the only thing in the queue, and we are connected and we aren't
         waiting for a response of an earlier command, the command will be sent
@@ -1841,7 +1858,8 @@ class FTPClientBasic(basic.LineReceiver):
             self.sendNextCommand()
 
     def queueStringCommand(self, command, public=1):
-        """Queues a string to be issued as an FTP command
+        """
+        Queues a string to be issued as an FTP command
 
         @param command: string of an FTP command to queue
         @param public: a flag intended for internal use by FTPClient.  Don't
@@ -1855,15 +1873,18 @@ class FTPClientBasic(basic.LineReceiver):
         return ftpCommand.deferred
 
     def popCommandQueue(self):
-        """Return the front element of the command queue, or None if empty."""
+        """
+        Return the front element of the command queue, or None if empty.
+        """
         if self.actionQueue:
             return self.actionQueue.pop(0)
         else:
             return None
 
     def queueLogin(self, username, password):
-        """Login: send the username, send the password.
-        
+        """
+        Login: send the username, send the password.
+
         If the password is C{None}, the PASS command won't be sent.  Also, if
         the response to the USER command has a response code of 230 (User logged
         in), then PASS won't be sent either.
@@ -1872,7 +1893,7 @@ class FTPClientBasic(basic.LineReceiver):
         deferreds = []
         userDeferred = self.queueStringCommand('USER ' + username, public=0)
         deferreds.append(userDeferred)
-        
+
         # Prepare the PASS command (if a password is given)
         if password is not None:
             passwordCmd = FTPCommand('PASS ' + password, public=0)
@@ -1896,7 +1917,9 @@ class FTPClientBasic(basic.LineReceiver):
             deferred.addErrback(lambda x: None)
 
     def lineReceived(self, line):
-        """(Private) Parses the response messages from the FTP server."""
+        """
+        (Private) Parses the response messages from the FTP server.
+        """
         # Add this line to the current response
         if self.debug:
             log.msg('--> %s' % line)
@@ -1907,7 +1930,7 @@ class FTPClientBasic(basic.LineReceiver):
         codeIsValid = re.match(r'\d{3} ', line)
         if not codeIsValid:
             return
-        
+
         code = line[0:3]
 
         # Ignore marks
@@ -2065,7 +2088,7 @@ class FTPClient(FTPClientBasic):
             pasvCmd.deferred.addCallback(doPassive).addErrback(self.fail)
 
             results = [cmdsDeferred, pasvCmd.deferred, protocol.deferred]
-            d = defer.DeferredList(results, fireOnOneErrback=1, consumeErrors=1)
+            d = defer.DeferredList(results, fireOnOneErrback=True, consumeErrors=True)
             d.addErrback(_unwrapFirstError)
 
             # Ensure the connection is always closed
@@ -2101,8 +2124,8 @@ class FTPClient(FTPClientBasic):
             cmdsDeferred.addErrback(lambda e, pc=portCmd: pc.fail(e) or e)
 
             results = [cmdsDeferred, portCmd.deferred, portCmd.transferDeferred]
-            d = defer.DeferredList(results, fireOnOneErrback=1, consumeErrors=1)
-            # XXX: d.addErrback(_unwrapFirstError), but add a test.
+            d = defer.DeferredList(results, fireOnOneErrback=True, consumeErrors=True)
+            d.addErrback(_unwrapFirstError)
 
         for cmd in cmds:
             self.queueCommand(cmd)
