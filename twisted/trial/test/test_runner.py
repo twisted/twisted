@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.trial.test.test_runner -*-
 
-# Copyright (c) 2005 Twisted Matrix Laboratories.
+# Copyright (c) 2005-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 #
 # Maintainer: Jonathan Lange <jml@twistedmatrix.com>
@@ -8,7 +8,6 @@
 
 
 import StringIO
-import os
 from zope.interface import implements
 
 from twisted.trial.itrial import IReporter
@@ -131,10 +130,13 @@ class TestTrialRunner(unittest.TestCase):
         return log.theLogPublisher.observers
 
     def test_addObservers(self):
+        """
+        Tests that the runner add logging observers during the run.
+        """
         originalCount = len(self._getObservers())
         self.runner.run(self.test)
         newCount = len(self._getObservers())
-        self.failUnlessEqual(originalCount + 2, newCount)
+        self.failUnlessEqual(originalCount + 1, newCount)
 
     def test_addObservers_repeat(self):
         self.runner.run(self.test)
@@ -144,18 +146,33 @@ class TestTrialRunner(unittest.TestCase):
         self.failUnlessEqual(count, newCount)
 
     def test_logFileAlwaysActive(self):
-        """test that a new file is opened on each run"""
+        """
+        Test that a new file is opened on each run.
+        """
+        oldSetUpLogging = self.runner._setUpLogging
+        l = []
+        def setUpLogging():
+            oldSetUpLogging()
+            l.append(self.runner._logFileObserver)
+        self.runner._setUpLogging = setUpLogging
         self.runner.run(self.test)
-        fd = self.runner._logFileObserver
         self.runner.run(self.test)
-        fd2 = self.runner._logFileObserver
-        self.failIf(fd is fd2, "Should have created a new file observer")
+        self.failUnlessEqual(len(l), 2)
+        self.failIf(l[0] is l[1], "Should have created a new file observer")
 
     def test_logFileGetsClosed(self):
+        """
+        Test that file created is closed during the run.
+        """
+        oldSetUpLogging = self.runner._setUpLogging
+        l = []
+        def setUpLogging():
+            oldSetUpLogging()
+            l.append(self.runner._logFileObject)
+        self.runner._setUpLogging = setUpLogging
         self.runner.run(self.test)
-        fd = self.runner._logFileObject
-        self.runner.run(self.test)
-        self.failUnless(fd.closed)
+        self.failUnlessEqual(len(l), 1)
+        self.failUnless(l[0].closed)
 
 
 
@@ -344,6 +361,9 @@ class TestTrialSuite(unittest.TestCase):
 
 class TestUntilFailure(unittest.TestCase):
     class FailAfter(unittest.TestCase):
+        """
+        A test  case that fails when run 3 times in a row.
+        """
         count = []
         def test_foo(self):
             self.count.append(None)
@@ -355,6 +375,10 @@ class TestUntilFailure(unittest.TestCase):
         self.test = TestUntilFailure.FailAfter('test_foo')
 
     def test_runUntilFailure(self):
+        """
+        Test that the runUntilFailure method of the runner actually fail after
+        a few runs.
+        """
         stream = StringIO.StringIO()
         trialRunner = runner.TrialRunner(reporter.Reporter, stream=stream)
         result = trialRunner.runUntilFailure(self.test)
@@ -458,10 +482,11 @@ class TestMalformedMethod(unittest.TestCase):
         test_spam = defer.deferredGenerator(test_bar)
 
     def _test(self, method):
+        """
+        Wrapper for one of the test method of L{ContainMalformed}.
+        """
         stream = StringIO.StringIO()
-        wd = self.mktemp()
-        os.mkdir(wd)
-        trialRunner = runner.TrialRunner(reporter.Reporter, stream=stream, workingDirectory=wd)
+        trialRunner = runner.TrialRunner(reporter.Reporter, stream=stream)
         test = TestMalformedMethod.ContainMalformed(method)
         result = trialRunner.run(test)
         self.failUnlessEqual(result.testsRun, 1)

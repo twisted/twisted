@@ -1,7 +1,7 @@
 # -*- test-case-name: twisted.trial.test.test_runner -*-
 
 #
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -786,6 +786,7 @@ class TrialRunner(object):
                 self._setUpLogging()
                 debugger.runcall(suite.run, result)
             finally:
+                self._tearDownLogFile()
                 os.chdir(oldDir)
         else:
             oldDir = self._setUpTestdir()
@@ -793,6 +794,7 @@ class TrialRunner(object):
                 self._setUpLogging()
                 suite.run(result)
             finally:
+                self._tearDownLogFile()
                 os.chdir(oldDir)
         endTime = time.time()
         result.printErrors()
