@@ -5579,3 +5579,9 @@ How do I use it?
 <exarkun> it's healthy
 <exarkun> I just gained 3 hp
 %
+<radix> I think all of our HOWTOs should be moved into docstrings :-)
+<Brend> radix: Right! That way people can look at the source files,
+    and follow the usual chain of mystification -> hope -> rejoicing ->
+    source code -> confusion -> panic -> roped-into-maintaining-package
+    without even having to switch windows
+%
