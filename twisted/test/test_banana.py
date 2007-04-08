@@ -1,19 +1,15 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-from twisted.trial import unittest
-
-try:
-    import cStringIO as StringIO
-except ImportError:
-    import StringIO
-
+import StringIO
 import sys
+
 # Twisted Imports
+from twisted.trial import unittest
 from twisted.spread import banana
 from twisted.python import failure
 from twisted.internet import protocol, main
+
 
 class MathTestCase(unittest.TestCase):
     def testInt2b128(self):
@@ -63,7 +59,7 @@ class BananaTestCase(unittest.TestCase):
         for exp in (32, 64, 128, 256):
             for add in (0, 1):
                 n = 2 ** exp + add
-                self.io.reset()
+                self.io.truncate(0)
                 self.enc.sendEncoded(n)
                 self.enc.dataReceived(self.io.getvalue())
                 self.assertEqual(self.result, n)
@@ -100,7 +96,7 @@ class BananaTestCase(unittest.TestCase):
         self.enc.setPrefixLimit(self.enc.prefixLimit * 2)
         self.enc.sendEncoded(smallest)
         encoded = self.io.getvalue()
-        self.io.reset()
+        self.io.truncate(0)
         self.enc.setPrefixLimit(self.enc.prefixLimit / 2)
 
         self.assertRaises(banana.BananaError, self.enc.dataReceived, encoded)
@@ -128,7 +124,7 @@ class BananaTestCase(unittest.TestCase):
         self.enc.setPrefixLimit(self.enc.prefixLimit * 2)
         self.enc.sendEncoded(largest)
         encoded = self.io.getvalue()
-        self.io.reset()
+        self.io.truncate(0)
         self.enc.setPrefixLimit(self.enc.prefixLimit / 2)
 
         self.assertRaises(banana.BananaError, self.enc.dataReceived, encoded)
@@ -238,7 +234,7 @@ class BananaTestCase(unittest.TestCase):
         self.assertEqual(encoded(baseIntIn + 1), '\x00' + baseLongIntOut)
         self.assertEqual(encoded(baseIntIn + 2), '\x01' + baseLongIntOut)
         self.assertEqual(encoded(baseIntIn + 3), '\x02' + baseLongIntOut)
-        
+
         baseNegOut = '\x7f\x7f\x7f\x07\x83'
         self.assertEqual(encoded(baseNegIn + 2), '\x7e' + baseNegOut)
         self.assertEqual(encoded(baseNegIn + 1), '\x7f' + baseNegOut)
