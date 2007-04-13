@@ -13,7 +13,7 @@ from twisted.trial.util import suppress as SUPPRESS
 from twisted.protocols import basic, loopback
 from twisted.internet import defer
 from twisted.internet.protocol import Protocol
-from twisted.internet.defer import Deferred
+from twisted.internet.defer import Deferred, gatherResults
 from twisted.internet.interfaces import IAddress, IPushProducer, IPullProducer
 from twisted.internet import reactor
 
@@ -234,6 +234,84 @@ class LoopbackAsyncTestCase(LoopbackTestCase):
         C{write} to issue the greeting.
         """
         return self._greetingtest("writeSequence", True)
+
+
+    def test_manyWrites(self):
+        """
+        Verify that a large number of writes to the transport are handled
+        properly with no stack overflows or other issues.
+        """
+        byte = 'x'
+        count = 2 ** 10
+
+        class WriterProtocol(Protocol):
+            remaining = count
+            succeeded = False
+
+            def __init__(self, finished):
+                self.finished = finished
+
+            def connectionMade(self):
+                """
+                Initialize a tracking buffer and start writing to the peer.
+                """
+                self.buffer = []
+                self.transport.write(byte)
+
+            def dataReceived(self, bytes):
+                """
+                Record the bytes received and schedule a write to our peer.
+
+                The write doesn't happen synchronously in this function so
+                as to trigger the Deferred-using codepath in loopbackAsync. 
+                There should probably be another test which covers the
+                non-Deferred-using codepath.
+                """
+                self.buffer.append(bytes)
+                self.remaining -= 1
+                if self.remaining:
+                    reactor.callLater(0, self.transport.write, byte)
+                else:
+                    self.transport.loseConnection()
+                    # This is currently an unfortunate necessity.  The main
+                    # point of this test is to verify that the above
+                    # loseConnection call does not fail with a
+                    # RuntimeError("maximum recursion depth exceeded"). 
+                    # Ideally, if this exception were raised, the test would
+                    # simply fail as a result of that.  However, since this
+                    # exception only occurs when all the stack space has
+                    # been exhausted, it might be the case that in handling
+                    # it and attempting to mark the test as failed, trial
+                    # itself will run out of stack space and fail to
+                    # accomplish this.  Therefore, we toggle this attribute
+                    # to true after calling loseConnection, so that it will
+                    # only execute if loseConnection returns successfully
+                    # (rather than raising an exception).  Later in the
+                    # test, we check to make sure the value is true,
+                    # ensuring the loseConnection call has succeeded.
+                    # -exarkun
+                    self.succeeded = True
+
+            def connectionLost(self, reason):
+                self.finished.callback(''.join(self.buffer))
+
+
+        serverDone = Deferred()
+        server = WriterProtocol(serverDone)
+        clientDone = Deferred()
+        client = WriterProtocol(clientDone)
+
+        def cbConnLost((serverBuffer, clientBuffer)):
+            self.assertEqual(serverBuffer, byte * count)
+            self.assertEqual(clientBuffer, byte * (count - 1))
+            self.failUnless(server.succeeded)
+            self.failUnless(client.succeeded)
+
+        loopback.loopbackAsync(server, client)
+
+        d = gatherResults([serverDone, clientDone])
+        d.addCallback(cbConnLost)
+        return d
 
 
     def _producertest(self, producerClass):
