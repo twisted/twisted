@@ -273,24 +273,6 @@ class LoopbackAsyncTestCase(LoopbackTestCase):
                     reactor.callLater(0, self.transport.write, byte)
                 else:
                     self.transport.loseConnection()
-                    # This is currently an unfortunate necessity.  The main
-                    # point of this test is to verify that the above
-                    # loseConnection call does not fail with a
-                    # RuntimeError("maximum recursion depth exceeded"). 
-                    # Ideally, if this exception were raised, the test would
-                    # simply fail as a result of that.  However, since this
-                    # exception only occurs when all the stack space has
-                    # been exhausted, it might be the case that in handling
-                    # it and attempting to mark the test as failed, trial
-                    # itself will run out of stack space and fail to
-                    # accomplish this.  Therefore, we toggle this attribute
-                    # to true after calling loseConnection, so that it will
-                    # only execute if loseConnection returns successfully
-                    # (rather than raising an exception).  Later in the
-                    # test, we check to make sure the value is true,
-                    # ensuring the loseConnection call has succeeded.
-                    # -exarkun
-                    self.succeeded = True
 
             def connectionLost(self, reason):
                 self.finished.callback(''.join(self.buffer))
@@ -304,8 +286,6 @@ class LoopbackAsyncTestCase(LoopbackTestCase):
         def cbConnLost((serverBuffer, clientBuffer)):
             self.assertEqual(serverBuffer, byte * count)
             self.assertEqual(clientBuffer, byte * (count - 1))
-            self.failUnless(server.succeeded)
-            self.failUnless(client.succeeded)
 
         loopback.loopbackAsync(server, client)
 
