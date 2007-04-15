@@ -103,7 +103,7 @@ def loopbackAsync(server, client):
 
     @param server: The protocol instance representing the server-side of this
     connection.
-    
+
     @param client: The protocol instance representing the client-side of this
     connection.
 
@@ -116,11 +116,13 @@ def loopbackAsync(server, client):
     server.makeConnection(_LoopbackTransport(serverToClient))
     client.makeConnection(_LoopbackTransport(clientToServer))
 
-    return _loopbackAsyncBody(server, serverToClient, client, clientToServer)
+    result = defer.Deferred()
+    _loopbackAsyncBody(server, serverToClient, client, clientToServer, result)
+    return result
 
 
 
-def _loopbackAsyncBody(server, serverToClient, client, clientToServer):
+def _loopbackAsyncBody(server, serverToClient, client, clientToServer, result):
     """
     Transfer bytes from the output queue of each protocol to the input of the other.
 
@@ -162,8 +164,8 @@ def _loopbackAsyncBody(server, serverToClient, client, clientToServer):
             # Neither side wrote any data.  Wait for some new data to be added
             # before trying to do anything further.
             d = clientToServer._notificationDeferred = serverToClient._notificationDeferred = defer.Deferred()
-            d.addCallback(_loopbackAsyncContinue, server, serverToClient, client, clientToServer)
-            return d
+            d.addCallback(_loopbackAsyncContinue, server, serverToClient, client, clientToServer, result)
+            break
         if serverToClient.disconnect:
             # The server wants to drop the connection.  Flush any remaining
             # data it has.
@@ -178,17 +180,18 @@ def _loopbackAsyncBody(server, serverToClient, client, clientToServer):
             # Someone wanted to disconnect, so okay, the connection is gone.
             server.connectionLost(failure.Failure(main.CONNECTION_DONE))
             client.connectionLost(failure.Failure(main.CONNECTION_DONE))
-            return defer.succeed(None)
+            result.callback(None)
+            break
 
 
 
-def _loopbackAsyncContinue(ignored, server, serverToClient, client, clientToServer):
+def _loopbackAsyncContinue(ignored, server, serverToClient, client, clientToServer, result):
     # Clear the Deferred from each message queue, since it has already fired
     # and cannot be used again.
     clientToServer._notificationDeferred = serverToClient._notificationDeferred = None
 
     # Push some more bytes around.
-    return _loopbackAsyncBody(server, serverToClient, client, clientToServer)
+    _loopbackAsyncBody(server, serverToClient, client, clientToServer, result)
 
 
 
@@ -216,7 +219,7 @@ class LoopbackRelay:
     def clearBuffer(self):
         if self.shouldLose == -1:
             return
-        
+
         if self.producer:
             self.producer.resumeProducing()
         if self.buffer:
