@@ -1,6 +1,5 @@
 # -*- test-case-name: twisted.test.test_application -*-
-#
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import sys, os, pdb, getpass, traceback, signal
@@ -151,10 +150,19 @@ class ApplicationRunner(object):
     def __init__(self, config):
         self.config = config
 
+
     def run(self):
-        """Run the application."""
+        """
+        Run the application.
+        """
         self.preApplication()
         self.application = self.createOrGetApplication()
+
+        # Later, try adapting self.application to ILogObserverFactory or
+        # whatever and getting an observer from it, instead.  Fall back to
+        # self.getLogObserver if the adaption fails.
+        self.startLogging(self.getLogObserver())
+
         self.postApplication()
 
 
@@ -164,6 +172,25 @@ class ApplicationRunner(object):
 
         This should set up any state necessary before loading and
         running the Application.
+        """
+        raise NotImplementedError
+
+
+    def startLogging(self, observer):
+        """
+        Initialize the logging system.
+
+        @param observer: The observer to add to the logging system.
+        """
+        log.startLoggingWithObserver(observer)
+        sys.stdout.flush()
+        initialLog()
+
+
+    def getLogObserver(self):
+        """
+        Create a log observer to be added to the logging system before running
+        this application.
         """
         raise NotImplementedError
 

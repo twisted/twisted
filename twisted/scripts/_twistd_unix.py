@@ -1,7 +1,8 @@
 # -*- test-case-name: twisted.test.test_twistd -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+import warnings
 
 from twisted.python import log, syslog
 from twisted.python.util import switchUID
@@ -99,30 +100,66 @@ def removePID(pidfile):
         log.msg("Failed to unlink PID file:")
         log.deferr()
 
-def startLogging(logfilename, sysLog, prefix, nodaemon):
-    if logfilename == '-':
-        if not nodaemon:
-            print 'daemons cannot log to stdout'
-            os._exit(1)
-        logFile = sys.stdout
-    elif sysLog:
-        syslog.startLogging(prefix)
-    elif nodaemon and not logfilename:
-        logFile = sys.stdout
+
+def _getLogObserver(logfilename, sysLog, prefix, nodaemon):
+    """
+    Create and return a suitable log observer for the given configuration.
+
+    The observer will go to syslog using the prefix C{prefix} if C{sysLog} is
+    true.  Otherwise, it will go to the file named C{logfilename} or, if
+    C{nodaemon} is true and C{logfilename} is C{"-"}, to stdout.
+
+    @type logfilename: C{str}
+    @param logfilename: The name of the file to which to log, if other than the
+    default.
+
+    @type sysLog: C{bool}
+    @param sysLog: A flag indicating whether to use syslog instead of file
+    logging.
+
+    @type prefix: C{str}
+    @param prefix: If C{sysLog} is C{True}, the string prefix to use for syslog
+    messages.
+
+    @type nodaemon: C{bool}
+    @param nodaemon: A flag indicating the process will not be daemonizing.
+
+    @return: An object suitable to be passed to C{log.addObserver}.
+    """
+    if sysLog:
+        observer = syslog.SyslogObserver(prefix).emit
     else:
-        logFile = app.getLogFile(logfilename or 'twistd.log')
-        try:
-            import signal
-        except ImportError:
-            pass
+        if logfilename == '-':
+            if not nodaemon:
+                print 'daemons cannot log to stdout'
+                os._exit(1)
+            logFile = sys.stdout
+        elif nodaemon and not logfilename:
+            logFile = sys.stdout
         else:
-            def rotateLog(signal, frame):
-                from twisted.internet import reactor
-                reactor.callFromThread(logFile.rotate)
-            signal.signal(signal.SIGUSR1, rotateLog)
-        
-    if not sysLog:
-        log.startLogging(logFile)
+            logFile = app.getLogFile(logfilename or 'twistd.log')
+            try:
+                import signal
+            except ImportError:
+                pass
+            else:
+                def rotateLog(signal, frame):
+                    from twisted.internet import reactor
+                    reactor.callFromThread(logFile.rotate)
+                signal.signal(signal.SIGUSR1, rotateLog)
+        observer = log.FileLogObserver(logFile).emit
+    return observer
+
+
+def startLogging(*args, **kw):
+    warnings.warn(
+        """
+        Use ApplicationRunner instead of startLogging.
+        """,
+        category=PendingDeprecationWarning,
+        stacklevel=2)
+    observer = _getLogObserver(*args, **kw)
+    log.startLoggingWithObserver(observer)
     sys.stdout.flush()
 
 
@@ -195,13 +232,20 @@ class UnixApplicationRunner(app.ApplicationRunner):
         Do pre-application-creation setup.
         """
         checkPID(self.config['pidfile'])
-        self.config['nodaemon'] = (self.config['nodaemon'] 
+        self.config['nodaemon'] = (self.config['nodaemon']
                                    or self.config['debug'])
         self.oldstdout = sys.stdout
         self.oldstderr = sys.stderr
-        startLogging(self.config['logfile'], self.config['syslog'],
-                     self.config['prefix'], self.config['nodaemon'])
-        app.initialLog()
+
+
+    def getLogObserver(self):
+        """
+        Override to supply a log observer suitable for POSIX based on the given
+        arguments.
+        """
+        return _getLogObserver(
+            self.config['logfile'], self.config['syslog'],
+            self.config['prefix'], self.config['nodaemon'])
 
 
     def postApplication(self):

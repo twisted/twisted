@@ -1,10 +1,15 @@
+# Copyright (c) 2007 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 import os
+import sys
 import cPickle
 
 from twisted.trial import unittest
 
 from twisted.application import service, app
 from twisted.scripts import twistd
+from twisted.python import log
 
 
 class MockServiceMaker(object):
@@ -25,9 +30,9 @@ class MockServiceMaker(object):
 
 class CrippledApplicationRunner(twistd._SomeApplicationRunner):
     """
-    An application runner that cripples the platform-specific runner
-    so that we can use it without actually running any
-    environment-affecting code.
+    An application runner that cripples the platform-specific runner and
+    nasty side-effect-having code so that we can use it without actually
+    running any environment-affecting code.
     """
     def preApplication(self):
         pass
@@ -35,6 +40,8 @@ class CrippledApplicationRunner(twistd._SomeApplicationRunner):
     def postApplication(self):
         pass
 
+    def startLogging(self, observer):
+        pass
 
 
 class ServerOptionsTest(unittest.TestCase):
@@ -96,6 +103,17 @@ class TestApplicationRunner(app.ApplicationRunner):
         self.order = ["pre"]
         self.hadApplicationPreApplication = hasattr(self, 'application')
 
+
+    def getLogObserver(self):
+        self.order.append("log")
+        self.hadApplicationLogObserver = hasattr(self, 'application')
+        return lambda events: None
+
+
+    def startLogging(self, observer):
+        pass
+
+
     def postApplication(self):
         self.order.append("post")
         self.hadApplicationPostApplication = hasattr(self, 'application')
@@ -114,7 +132,7 @@ class ApplicationRunnerTest(unittest.TestCase):
         config.subOptions = object()
         config.subCommand = 'test_command'
         self.config = config
-        
+
 
     def test_applicationRunnerGetsCorrectApplication(self):
         """
@@ -126,7 +144,7 @@ class ApplicationRunnerTest(unittest.TestCase):
         arunner.run()
 
         self.assertIdentical(
-            self.serviceMaker.options, self.config.subOptions, 
+            self.serviceMaker.options, self.config.subOptions,
             "ServiceMaker.makeService needs to be passed the correct "
             "sub Command object.")
         self.assertIdentical(
@@ -145,4 +163,35 @@ class ApplicationRunnerTest(unittest.TestCase):
         s.run()
         self.failIf(s.hadApplicationPreApplication)
         self.failUnless(s.hadApplicationPostApplication)
-        self.assertEquals(s.order, ["pre", "post"])
+        self.failUnless(s.hadApplicationLogObserver)
+        self.assertEquals(s.order, ["pre", "log", "post"])
+
+
+    def test_stdoutLogObserver(self):
+        """
+        Verify that if C{'-'} is specified as the log file, stdout is used.
+        """
+        self.config.parseOptions(["--logfile", "-", "--nodaemon"])
+        runner = CrippledApplicationRunner(self.config)
+        observerMethod = runner.getLogObserver()
+        observer = observerMethod.im_self
+        self.failUnless(isinstance(observer, log.FileLogObserver))
+        writeMethod = observer.write
+        fileObj = writeMethod.__self__
+        self.assertIdentical(fileObj, sys.stdout)
+
+
+    def test_fileLogObserver(self):
+        """
+        Verify that if a string other than C{'-'} is specified as the log file,
+        the file with that name is used.
+        """
+        logfilename = os.path.abspath(self.mktemp())
+        self.config.parseOptions(["--logfile", logfilename])
+        runner = CrippledApplicationRunner(self.config)
+        observerMethod = runner.getLogObserver()
+        observer = observerMethod.im_self
+        self.failUnless(isinstance(observer, log.FileLogObserver))
+        writeMethod = observer.write
+        fileObj = writeMethod.im_self
+        self.assertEqual(fileObj.path, logfilename)
