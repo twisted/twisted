@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -9,6 +9,7 @@ Test cases for twisted.protocols package.
 from twisted.trial import unittest
 from twisted.protocols import basic, wire, portforward
 from twisted.internet import reactor, protocol, defer, task, error
+from twisted.test import proto_helpers
 
 import struct
 import StringIO
@@ -311,6 +312,7 @@ class LineOnlyReceiverTestCase(unittest.TestCase):
         self.assertTrue(isinstance(res, error.ConnectionLost))
 
 
+
 class TestMixin:
 
     def connectionMade(self):
@@ -537,3 +539,15 @@ class Portforwarding(unittest.TestCase):
 
         return d
 
+
+
+class StringTransportTestCase(unittest.TestCase):
+    """
+    Test L{proto_helpers.StringTransport} helper behaviour.
+    """
+    def test_noUnicode(self):
+        """
+        Test that L{proto_helpers.StringTransport} doesn't accept unicode data.
+        """
+        s = proto_helpers.StringTransport()
+        self.assertRaises(TypeError, s.write, u'foo')

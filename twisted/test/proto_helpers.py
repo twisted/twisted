@@ -1,5 +1,4 @@
-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -11,6 +10,7 @@ except ImportError:
 from twisted.protocols import basic
 from twisted.internet import error
 
+
 class LineSendingProtocol(basic.LineReceiver):
     lostConn = False
 
@@ -18,19 +18,20 @@ class LineSendingProtocol(basic.LineReceiver):
         self.lines = lines[:]
         self.response = []
         self.start = start
-    
+
     def connectionMade(self):
         if self.start:
             map(self.sendLine, self.lines)
-    
+
     def lineReceived(self, line):
         if not self.start:
             map(self.sendLine, self.lines)
             self.lines = []
         self.response.append(line)
-    
+
     def connectionLost(self, reason):
         self.lostConn = True
+
 
 class FakeDatagramTransport:
     noAddr = object()
@@ -40,6 +41,7 @@ class FakeDatagramTransport:
 
     def write(self, packet, addr=noAddr):
         self.written.append((packet, addr))
+
 
 class StringTransport:
     disconnecting = 0
@@ -61,6 +63,8 @@ class StringTransport:
         return self.io.getvalue()
 
     def write(self, data):
+        if isinstance(data, unicode): # no, really, I mean it
+            raise TypeError("Data must not be unicode")
         self.io.write(data)
 
     def writeSequence(self, data):
@@ -83,3 +87,4 @@ class StringTransport:
 class StringTransportWithDisconnection(StringTransport):
     def loseConnection(self):
         self.protocol.connectionLost(error.ConnectionDone("Bye."))
+
