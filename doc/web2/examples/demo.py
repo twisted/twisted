@@ -7,11 +7,10 @@
 import os.path
 import cgi as pycgi
 
-from twisted.web2 import log, iweb
+from twisted.web2 import log
 from twisted.web2 import static, wsgi, resource, responsecode, twcgi
-from twisted.web2 import resource, stream, http, http_headers
+from twisted.web2 import stream, http, http_headers
 from twisted.internet import reactor
-
 
 ### A demo WSGI application.
 def simple_wsgi_app(environ, start_response):
@@ -61,11 +60,11 @@ class FormPost(resource.PostableResource):
         <form method="POST" enctype="multipart/form-data">
         <input name="foo">
         <input name="bar" type="file">
-        <input type="submit">        
+        <input type="submit">
         </form>
         <p>
         Arg dict: %r, Files: %r""" % (req.args, req.files))
-    
+
 ### Toplevel resource. This is a more normal resource.
 class Toplevel(resource.Resource):
     # addSlash=True to make sure it's treated as a directory-like resource
@@ -95,7 +94,7 @@ Hello!  This is a twisted.web2 demo.
             responsecode.OK,
             {'content-type': http_headers.MimeType('text', 'html')},
             contents)
-          
+
     # Add some child resources
     child_file = static.File(os.path.join(os.path.dirname(resource.__file__), 'TODO'))
     child_dir = static.File('.')
@@ -112,7 +111,6 @@ Hello!  This is a twisted.web2 demo.
 if __name__ == '__builtin__':
     from twisted.application import service, strports
     from twisted.web2 import server, vhost, channel
-    from twisted.internet.ssl import DefaultOpenSSLContextFactory
     from twisted.python import util
 
     # Create the resource we will be serving
@@ -125,13 +123,14 @@ if __name__ == '__builtin__':
     # Create the site and application objects
     site = server.Site(res)
     application = service.Application("demo")
-    
+
     # Serve it via standard HTTP on port 8080
     s = strports.service('tcp:8080', channel.HTTPFactory(site))
     s.setServiceParent(application)
 
     # Serve it via HTTPs on port 8081
-    s = strports.service('ssl:8081:privateKey=doc/core/examples/server.pem', channel.HTTPFactory(site))
+    certPath = util.sibpath(__file__, os.path.join("..", "..", "core", "examples", "server.pem"))
+    s = strports.service('ssl:8081:privateKey=%s' % certPath, channel.HTTPFactory(site))
     s.setServiceParent(application)
 
     # Serve it via SCGI on port 3000
