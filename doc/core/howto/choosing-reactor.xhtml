@@ -30,6 +30,7 @@
       <li><a href="#win32_wfmo">Win32 (WFMO)</a></li>
       <li><a href="#win32_iocp">Win32 (IOCP)</a></li>
       <li><a href="#cfreactor">Mac OS X</a></li>
+      <li><a href="#epoll">Epoll for Linux 2.6</a></li>
     </ul>
 
     <p>The remaining custom reactor implementations provide support
@@ -72,6 +73,7 @@
     <tr><th>Win32 (WFMO)</th><td>Experimental</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Win32</td></tr>
     <tr><th>Win32 (IOCP)</th><td>Experimental</td><td>Y</td><td>N</td><td>N</td><td>N</td><td>N</td><td>Y</td><td>Win32</td></tr>
     <tr><th>CoreFoundation</th><td>Unmaintained</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>OS X</td></tr>
+    <tr><th>epoll</th><td>Stable</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Linux 2.6</td></tr>
     <tr><th>Gtk</th><td>Stable</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Unix, Win32</td></tr>
     <tr><th>wx</th><td>Experimental</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Unix, Win32</td></tr>
     <tr><th>kqueue</th><td>Experimental</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>Y</td><td>FreeBSD</td></tr>
@@ -82,7 +84,7 @@
     <h3>Select()-based Reactor</h3><a name="select" />
 
     <p>
-    The select reactor is currently the default reactor on all platforms. 
+    The select reactor is currently the default reactor on all platforms.
     The following code will install it, if no other reactor has been
     installed:
     </p>
@@ -101,7 +103,7 @@ from twisted.internet import selectreactor
 selectreactor.install()
 </pre>
 
-    
+
     <h3>Poll()-based Reactor</h3><a name="poll" />
 
     <p>The PollReactor will work on any platform that provides
@@ -151,6 +153,18 @@ win32eventreactor.install()
 <pre class="python">
 from twisted.internet import iocpreactor
 iocpreactor.install()
+</pre>
+
+    <h3>Epoll-based Reactor</h3><a name="epoll" />
+
+    <p>The EPollReactor will work on any platform that provides
+    <code class="python">epoll</code>, today only Linux 2.6 and over. The
+    implementation of the epoll reactor currently use the Level Triggered
+    interface, which is basically like poll() but scales much better.</p>
+
+<pre class="python">
+from twisted.internet import epollreactor
+epollreactor.install()
 </pre>
 
     <h2>GUI Integration Reactors</h2>
@@ -218,13 +232,13 @@ tksupport.install(root)
 
     <h3>wxPython</h3><a name="wxpython" />
 
-	<p>Twisted currently supports two methods of integrating
-	wxPython. Unfortunately, neither method will work on all wxPython
-	platforms (such as GTK2 or Windows). It seems that the only
-	portable way to integrate with wxPython is to run it in a separate
-	thread. One of these methods may be sufficient if your wx app is
-	limited to a single platform.</p>
-	
+    <p>Twisted currently supports two methods of integrating
+    wxPython. Unfortunately, neither method will work on all wxPython
+    platforms (such as GTK2 or Windows). It seems that the only
+    portable way to integrate with wxPython is to run it in a separate
+    thread. One of these methods may be sufficient if your wx app is
+    limited to a single platform.</p>
+
     <p>As with <a href="#tkinter">Tkinter</a>, the support for integrating
     Twisted with a <a href="http://www.wxpython.org">wxPython</a>
     application uses specialized support code rather than a simple reactor.</p>
