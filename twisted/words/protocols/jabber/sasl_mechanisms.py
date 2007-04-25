@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.words.test.test_jabbersaslmechanisms -*-
 #
-# Copyright (c) 2001-2006 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -87,7 +87,7 @@ class DigestMD5(object):
 
         # Compat for implementations that do not send this along with
         # a succesful authentication.
-        if directives.has_key('rspauth'):
+        if 'rspauth' in directives:
             return ''
 
         try:
@@ -108,15 +108,40 @@ class DigestMD5(object):
         @return: challenge directives and their values.
         @rtype: L{dict} of L{str} to L{str}.
         """
-        directive_list = challenge.split(',')
-        directives = {}
-        for directive in directive_list:
-            name, value = directive.split('=')
-            value = value.replace("'","")
-            value = value.replace('"','')
-            directives[name] = value
-        return directives
+        s = challenge
+        paramDict = {}
+        cur = 0
+        remainingParams = True
+        while remainingParams:
+            # Parse a param. We can't just split on commas, because there can
+            # be some commas inside (quoted) param values, e.g.:
+            # qop="auth,auth-int"
 
+            middle = s.index("=", cur)
+            name = s[cur:middle].lstrip()
+            middle += 1
+            if s[middle] == '"':
+                middle += 1
+                end = s.index('"', middle)
+                value = s[middle:end]
+                cur = s.find(',', end) + 1
+                if cur == 0:
+                    remainingParams = False
+            else:
+                end = s.find(',', middle)
+                if end == -1:
+                    value = s[middle:].rstrip()
+                    remainingParams = False
+                else:
+                    value = s[middle:end].rstrip()
+                cur = end + 1
+            paramDict[name] = value
+
+        for param in ('qop', 'cipher'):
+            if param in paramDict:
+                paramDict[param] = paramDict[param].split(',')
+
+        return paramDict
 
     def _unparse(self, directives):
         """
@@ -133,7 +158,7 @@ class DigestMD5(object):
         directive_list = []
         for name, value in directives.iteritems():
             if name in ('username', 'realm', 'cnonce',
-                        'nonce', 'digest-uri', 'authzid'):
+                        'nonce', 'digest-uri', 'authzid', 'cipher'):
                 directive = '%s="%s"' % (name, value)
             else:
                 directive = '%s=%s' % (name, value)
