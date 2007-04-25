@@ -150,7 +150,7 @@ class Manhole(recvline.HistoricRecvLine):
     namespace = None
 
     def __init__(self, namespace=None):
-        recvline.HistoricRecvLine.__init__(self, namespace)
+        recvline.HistoricRecvLine.__init__(self)
         if namespace is not None:
             self.namespace = namespace.copy()
 
