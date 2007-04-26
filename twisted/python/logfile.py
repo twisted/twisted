@@ -1,8 +1,7 @@
 # -*- test-case-name: twisted.test.test_logfile -*-
 
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 A rotating, browsable log file.
@@ -11,12 +10,11 @@ A rotating, browsable log file.
 # System Imports
 import os, glob, string, time
 
-# sibling imports
-
-import threadable
+from twisted.python import threadable
 
 class BaseLogFile:
-    """The base class for a log file that can be rotated.
+    """
+    The base class for a log file that can be rotated.
     """
 
     synchronized = ["write", "rotate"]
@@ -32,13 +30,25 @@ class BaseLogFile:
             self.defaultMode = defaultMode
         self._openFile()
 
+    def fromFullPath(cls, filename, *args, **kwargs):
+        """
+        Construct a log file from a full file path.
+        """
+        logPath = os.path.abspath(filename)
+        return cls(os.path.basename(logPath), os.path.dirname(logPath), *args, **kwargs)
+    fromFullPath = classmethod(fromFullPath)
+
     def shouldRotate(self):
-        """Override with a method to that returns true if the log
-        should be rotated"""
+        """
+        Override with a method to that returns true if the log
+        should be rotated.
+        """
         raise NotImplementedError
 
     def _openFile(self):
-        """Open the log file."""
+        """
+        Open the log file.
+        """
         self.closed = 0
         if os.path.exists(self.path):
             self._file = open(self.path, "r+", 1)
@@ -63,18 +73,23 @@ class BaseLogFile:
         self._openFile()
 
     def write(self, data):
-        """Write some data to the file."""
+        """
+        Write some data to the file.
+        """
         if self.shouldRotate():
             self.flush()
             self.rotate()
         self._file.write(data)
 
     def flush(self):
-        """Flush the file."""
+        """
+        Flush the file.
+        """
         self._file.flush()
 
     def close(self):
-        """Close the file.
+        """
+        Close the file.
 
         The file cannot be used once it has been closed.
         """
@@ -83,8 +98,11 @@ class BaseLogFile:
         self._file = None
 
     def getCurrentLog(self):
-        """Return a LogReader for the current log file."""
+        """
+        Return a LogReader for the current log file.
+        """
         return LogReader(self.path)
+
 
 class LogFile(BaseLogFile):
     """

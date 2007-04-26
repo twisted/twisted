@@ -4,7 +4,7 @@
 
 import sys, os, pdb, getpass, traceback, signal
 
-from twisted.python import runtime, log, usage, reflect, failure, util, logfile
+from twisted.python import runtime, log, usage, failure, util, logfile
 from twisted.persisted import sob
 from twisted.application import service, reactors
 from twisted.internet import defer
@@ -84,7 +84,7 @@ def fixPdb():
 
     def help_stop(self):
         print """stop - Continue execution, then cleanly shutdown the twisted reactor."""
-    
+
     def set_quit(self):
         os._exit(0)
 
@@ -432,7 +432,14 @@ def startApplication(application, save):
                                   service.IService(application).stopService)
 
 def getLogFile(logfilename):
-    logPath = os.path.abspath(logfilename)
-    logFile = logfile.LogFile(os.path.basename(logPath),
-                              os.path.dirname(logPath))
-    return logFile
+    """
+    Build a log file from the full path.
+    """
+    import warnings
+    warnings.warn(
+        "app.getLogFile is deprecated. Use "
+        "twisted.python.logfile.LogFile.fromFullPath instead",
+        DeprecationWarning, stacklevel=2)
+
+    return logfile.LogFile.fromFullPath(logfilename)
+

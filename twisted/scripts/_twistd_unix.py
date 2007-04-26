@@ -4,7 +4,7 @@
 
 import warnings
 
-from twisted.python import log, syslog
+from twisted.python import log, syslog, logfile
 from twisted.python.util import switchUID
 from twisted.application import app, service
 from twisted.scripts import mktap
@@ -137,7 +137,7 @@ def _getLogObserver(logfilename, sysLog, prefix, nodaemon):
         elif nodaemon and not logfilename:
             logFile = sys.stdout
         else:
-            logFile = app.getLogFile(logfilename or 'twistd.log')
+            logFile = logfile.LogFile.fromFullPath(logfilename or 'twistd.log')
             try:
                 import signal
             except ImportError:

@@ -1,7 +1,5 @@
-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 from twisted.trial import unittest
 
@@ -189,6 +187,17 @@ class LogFileTestCase(unittest.TestCase):
         self.assertEquals(file("%s.3" % self.path).read(), "2" * 11)
         self.failUnless(not os.path.exists("%s.4" % self.path))
 
+    def test_fromFullPath(self):
+        """
+        Test the fromFullPath method.
+        """
+        log1 = logfile.LogFile(self.name, self.dir, 10, defaultMode=0777)
+        log2 = logfile.LogFile.fromFullPath(self.path, 10, defaultMode=0777)
+        self.assertEquals(log1.name, log2.name)
+        self.assertEquals(os.path.abspath(log1.path), log2.path)
+        self.assertEquals(log1.rotateLength, log2.rotateLength)
+        self.assertEquals(log1.defaultMode, log2.defaultMode)
+
 
 class RiggedDailyLogFile(logfile.DailyLogFile):
     _clock = 0.0
@@ -204,7 +213,9 @@ class RiggedDailyLogFile(logfile.DailyLogFile):
         return time.gmtime(self._clock)[:3]
 
 class DailyLogFileTestCase(unittest.TestCase):
-    """Test the rotating log file."""
+    """
+    Test rotating log file.
+    """
 
     def setUp(self):
         self.dir = self.mktemp()
@@ -250,3 +261,4 @@ class DailyLogFileTestCase(unittest.TestCase):
         log._clock = 259199 # 1970/01/03 23:59.59
         log.write("3")
         self.assert_(not os.path.exists(days[2]))
+

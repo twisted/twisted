@@ -3,7 +3,7 @@
 
 import warnings
 
-from twisted.python import log
+from twisted.python import log, logfile
 from twisted.application import app, service, internet
 from twisted import copyright
 import sys, os
@@ -13,7 +13,7 @@ class ServerOptions(app.ServerOptions):
 
     optFlags = [['nodaemon','n',  "(for backwards compatability)."],
                 ]
-    
+
     def opt_version(self):
         """Print version information and exit.
         """
@@ -38,7 +38,7 @@ def _getLogObserver(logfilename):
     if logfilename == '-' or not logfilename:
         logFile = sys.stdout
     else:
-        logFile = app.getLogFile(logfilename)
+        logFile = logfile.LogFile.fromFullPath(logfilename)
     return log.FileLogObserver(logFile).emit
 
 

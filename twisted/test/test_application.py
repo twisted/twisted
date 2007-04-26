@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import sys, copy, os, pickle, warnings
@@ -6,7 +6,7 @@ import sys, copy, os, pickle, warnings
 from twisted.trial import unittest, util
 from twisted.application import service, internet, app
 from twisted.persisted import sob
-from twisted.python import log, usage
+from twisted.python import usage
 from twisted.python.util import sibpath
 from twisted.internet import interfaces, defer
 from twisted.protocols import wire, basic
@@ -93,7 +93,7 @@ class TestService(unittest.TestCase):
         s.stopService()
         self.assert_(not s.running)
 
-    def testRunningChildren(self):
+    def testRunningChildren1(self):
         s = service.Service()
         p = service.MultiService()
         s.setServiceParent(p)
@@ -106,7 +106,7 @@ class TestService(unittest.TestCase):
         self.assert_(not s.running)
         self.assert_(not p.running)
 
-    def testRunningChildren(self):
+    def testRunningChildren2(self):
         s = service.Service()
         def checkRunning():
             self.assert_(s.running)
@@ -252,6 +252,9 @@ class TestAppSupport(unittest.TestCase):
         self.assertEqual(app.getPassphrase(0), None)
 
     def testLoadApplication(self):
+        """
+        Test loading an application file in different dump format.
+        """
         a = service.Application("hello")
         baseconfig = {'file': None, 'xml': None, 'source': None, 'python':None}
         for style in 'source xml pickle'.split():
@@ -272,6 +275,10 @@ class TestAppSupport(unittest.TestCase):
         a1 = app.getApplication(config, None)
         self.assertEqual(service.IService(a1).name, "hello")
 
+    testLoadApplication.suppress = [
+        util.suppress(message="twisted.persisted.marmalade is deprecated",
+                      category=DeprecationWarning)]
+
     def test_convertStyle(self):
         appl = service.Application("lala")
         for instyle in 'xml source pickle'.split():
@@ -288,12 +295,20 @@ class TestAppSupport(unittest.TestCase):
                 self.assertEqual(service.IService(appl2).name, "lala")
 
     def test_getLogFile(self):
+        """
+        Test L{app.getLogFile}, veryfying the LogFile instance it returns.
+        """
         os.mkdir("logfiledir")
         l = app.getLogFile(os.path.join("logfiledir", "lala"))
         self.assertEqual(l.path,
                          os.path.abspath(os.path.join("logfiledir", "lala")))
         self.assertEqual(l.name, "lala")
         self.assertEqual(l.directory, os.path.abspath("logfiledir"))
+
+    test_getLogFile.suppress = [
+        util.suppress(message="app.getLogFile is deprecated. Use "
+                      "twisted.python.logfile.LogFile.fromFullPath instead",
+                      category=DeprecationWarning)]
 
     def test_startApplication(self):
         appl = service.Application("lala")
@@ -492,7 +507,7 @@ class TestInternet2(unittest.TestCase):
         d.addCallback(lambda x : t.stopService)
         d.addCallback(lambda x : self.assertEqual(
             [ZeroDivisionError],
-            [o.value.__class__ for o in log.flushErrors(ZeroDivisionError)]))
+            [o.value.__class__ for o in self.flushLoggedErrors(ZeroDivisionError)]))
         return d
 
     def testEverythingThere(self):
@@ -528,7 +543,7 @@ class TestTimerBasic(unittest.TestCase):
 
     def tearDown(self):
         return self.t.stopService()
-        
+
     def testTimerRestart(self):
         # restart the same TimerService
         d1 = defer.Deferred()
@@ -704,3 +719,4 @@ class PluggableReactorTestCase(unittest.TestCase):
             env=None)
         result.addCallback(_checkOutput)
         return result
+
