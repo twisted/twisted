@@ -17,7 +17,7 @@ else:
     from twisted.web.xmlrpc import XMLRPC, addIntrospection
 
 from twisted.trial import unittest
-from twisted.web import server, static
+from twisted.web import server, static, client, error, http
 from twisted.internet import reactor, defer
 
 
@@ -192,6 +192,27 @@ class XMLRPCTestCase(unittest.TestCase):
         d.addCallback(cb)
         return d
 
+    def test_errorGet(self):
+        """
+        A classic GET on the xml server should return a NOT_ALLOWED.
+        """
+        d = client.getPage("http://127.0.0.1:%d/" % (self.port,))
+        d = self.assertFailure(d, error.Error)
+        d.addCallback(
+            lambda exc: self.assertEquals(int(exc.args[0]), http.NOT_ALLOWED))
+        return d
+
+    def test_errorXMLContent(self):
+        """
+        Test that an invalid XML input returns an L{xmlrpc.Fault}.
+        """
+        d = client.getPage("http://127.0.0.1:%d/" % (self.port,),
+                           method="POST", postdata="foo")
+        def cb(result):
+            self.assertRaises(xmlrpc.Fault, xmlrpclib.loads, result)
+        d.addCallback(cb)
+        return d
+
 
 class XMLRPCTestCase2(XMLRPCTestCase):
     """
@@ -344,6 +365,9 @@ class XMLRPCTestIntrospection(XMLRPCTestCase):
 
 
 class XMLRPCClientErrorHandling(unittest.TestCase):
+    """
+    Test error handling on the xmlrpc client.
+    """
     def setUp(self):
         self.resource = static.File(__file__)
         self.resource.isLeaf = True
@@ -354,6 +378,10 @@ class XMLRPCClientErrorHandling(unittest.TestCase):
         return self.port.stopListening()
 
     def test_erroneousResponse(self):
+        """
+        Test that calling the xmlrpc client on a static http server raises
+        an exception.
+        """
         proxy = xmlrpc.Proxy("http://127.0.0.1:%d/" %
                              (self.port.getHost().port,))
         return self.assertFailure(proxy.callRemote("someMethod"), Exception)

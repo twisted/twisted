@@ -23,10 +23,9 @@ import xmlrpclib
 import urlparse
 
 # Sibling Imports
-from twisted.web import resource, server
+from twisted.web import resource, server, http
 from twisted.internet import defer, protocol, reactor
 from twisted.python import log, reflect, failure
-from twisted.web import http
 
 # These are deprecated, use the class level definitions
 NOT_FOUND = 8001
@@ -96,6 +95,7 @@ class XMLRPC(resource.Resource):
 
     isLeaf = 1
     separator = '.'
+    allowedMethods = ('POST',)
 
     def __init__(self, allowNone=False):
         resource.Resource.__init__(self)
@@ -111,20 +111,25 @@ class XMLRPC(resource.Resource):
     def getSubHandlerPrefixes(self):
         return self.subHandlers.keys()
 
-    def render(self, request):
+    def render_POST(self, request):
         request.content.seek(0, 0)
-        args, functionPath = xmlrpclib.loads(request.content.read())
         request.setHeader("content-type", "text/xml")
         try:
-            function = self._getFunction(functionPath)
-        except Fault, f:
+            args, functionPath = xmlrpclib.loads(request.content.read())
+        except Exception, e:
+            f = Fault(self.FAILURE, "Can't deserialize input: %s" % (e,))
             self._cbRender(f, request)
         else:
-            defer.maybeDeferred(function, *args).addErrback(
-                self._ebRender
-            ).addCallback(
-                self._cbRender, request
-            )
+            try:
+                function = self._getFunction(functionPath)
+            except Fault, f:
+                self._cbRender(f, request)
+            else:
+                defer.maybeDeferred(function, *args).addErrback(
+                    self._ebRender
+                ).addCallback(
+                    self._cbRender, request
+                )
         return server.NOT_DONE_YET
 
     def _cbRender(self, result, request):
@@ -135,8 +140,8 @@ class XMLRPC(resource.Resource):
         try:
             s = xmlrpclib.dumps(result, methodresponse=True,
                                 allow_none=self.allowNone)
-        except:
-            f = Fault(self.FAILURE, "can't serialize output")
+        except Exception, e:
+            f = Fault(self.FAILURE, "Can't serialize output: %s" % (e,))
             s = xmlrpclib.dumps(f, methodresponse=True,
                                 allow_none=self.allowNone)
         request.setHeader("content-length", str(len(s)))
