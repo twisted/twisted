@@ -1,10 +1,12 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""Test methods in twisted.internet.threads and reactor thread APIs."""
+"""
+Test methods in twisted.internet.threads and reactor thread APIs.
+"""
 
-import sys, os
+import sys, os, time
 
 from twisted.trial import unittest
 
@@ -16,61 +18,91 @@ class ReactorThreadsTestCase(unittest.TestCase):
     Tests for the reactor threading API.
     """
 
-    def testSuggestThreadPoolSize(self):
-        # XXX Uh, how about some asserts?
+    def test_suggestThreadPoolSize(self):
+        """
+        Try to change maximum number of threads.
+        """
         reactor.suggestThreadPoolSize(34)
+        self.assertEquals(reactor.threadpool.max, 34)
         reactor.suggestThreadPoolSize(4)
+        self.assertEquals(reactor.threadpool.max, 4)
 
 
-    def testCallInThread(self):
-        waiter = threading.Event()
-        result = []
-        def threadedFunc():
-            result.append(threadable.isInIOThread())
-            waiter.set()
-
-        reactor.callInThread(threadedFunc)
-        waiter.wait(120)
-        if not waiter.isSet():
-            self.fail("Timed out waiting for event.")
-        else:
-            self.assertEquals(result, [False])
+    def _waitForThread(self):
+        """
+        The reactor's threadpool is only available when the reactor is running,
+        so to have a sane behavior during the tests we make a dummy
+        L{threads.deferToThread} call.
+        """
+        return threads.deferToThread(time.sleep, 0)
 
 
-    def testCallFromThread(self):
-        firedByReactorThread = defer.Deferred()
-        firedByOtherThread = defer.Deferred()
+    def test_callInThread(self):
+        """
+        Test callInThread functionality: set a C{threading.Event}, and check
+        that it's not in the main thread.
+        """
+        def cb(ign):
+            waiter = threading.Event()
+            result = []
+            def threadedFunc():
+                result.append(threadable.isInIOThread())
+                waiter.set()
 
-        def threadedFunc():
-            reactor.callFromThread(firedByOtherThread.callback, None)
-
-        reactor.callInThread(threadedFunc)
-        reactor.callFromThread(firedByReactorThread.callback, None)
-
-        return defer.DeferredList(
-            [firedByReactorThread, firedByOtherThread],
-            fireOnOneErrback=True)
+            reactor.callInThread(threadedFunc)
+            waiter.wait(120)
+            if not waiter.isSet():
+                self.fail("Timed out waiting for event.")
+            else:
+                self.assertEquals(result, [False])
+        return self._waitForThread().addCallback(cb)
 
 
-    def testWakerOverflow(self):
-        self.failure = None
-        waiter = threading.Event()
-        def threadedFunction():
-            # Hopefully a hundred thousand queued calls is enough to
-            # trigger the error condition
-            for i in xrange(100000):
-                try:
-                    reactor.callFromThread(lambda: None)
-                except:
-                    self.failure = failure.Failure()
-                    break
-            waiter.set()
-        reactor.callInThread(threadedFunction)
-        waiter.wait(120)
-        if not waiter.isSet():
-            self.fail("Timed out waiting for event")
-        if self.failure is not None:
-            return defer.fail(self.failure)
+    def test_callFromThread(self):
+        """
+        Test callFromThread functionality: from the main thread, and from
+        another thread.
+        """
+        def cb(ign):
+            firedByReactorThread = defer.Deferred()
+            firedByOtherThread = defer.Deferred()
+
+            def threadedFunc():
+                reactor.callFromThread(firedByOtherThread.callback, None)
+
+            reactor.callInThread(threadedFunc)
+            reactor.callFromThread(firedByReactorThread.callback, None)
+
+            return defer.DeferredList(
+                [firedByReactorThread, firedByOtherThread],
+                fireOnOneErrback=True)
+        return self._waitForThread().addCallback(cb)
+
+
+    def test_wakerOverflow(self):
+        """
+        Try to make an overflow on the reactor waker using callFromThread.
+        """
+        def cb(ign):
+            self.failure = None
+            waiter = threading.Event()
+            def threadedFunction():
+                # Hopefully a hundred thousand queued calls is enough to
+                # trigger the error condition
+                for i in xrange(100000):
+                    try:
+                        reactor.callFromThread(lambda: None)
+                    except:
+                        self.failure = failure.Failure()
+                        break
+                waiter.set()
+            reactor.callInThread(threadedFunction)
+            waiter.wait(120)
+            if not waiter.isSet():
+                self.fail("Timed out waiting for event")
+            if self.failure is not None:
+                return defer.fail(self.failure)
+        return self._waitForThread().addCallback(cb)
 
 
 class Counter:

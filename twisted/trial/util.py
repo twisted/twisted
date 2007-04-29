@@ -1,9 +1,10 @@
 # -*- test-case-name: twisted.trial.test.test_util -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 #
 
-"""A collection of utility functions and classes, used internally by Trial.
+"""
+A collection of utility functions and classes, used internally by Trial.
 
 API Stability: Unstable
 
@@ -17,10 +18,7 @@ Maintainer: U{Jonathan Lange<mailto:jml@twistedmatrix.com>}
 """
 
 
-from __future__ import generators
-
 import traceback, gc, sys
-from twisted.python import log, threadpool
 from twisted.internet import interfaces, utils
 
 # Methods in this list will be omitted from a failed test's traceback if
@@ -100,17 +98,17 @@ class _Janitor(object):
         from twisted.internet import reactor
         if interfaces.IReactorThreads.providedBy(reactor):
             reactor.suggestThreadPoolSize(0)
-            if hasattr(reactor, 'threadpool') and reactor.threadpool:
-                reactor.threadpool.stop()
-                reactor.threadpool = None
-                # *Put it back* and *start it up again*.  The
-                # reactor's threadpool is *private*: we cannot just
-                # rape it and walk away.
-                reactor.threadpool = threadpool.ThreadPool(0, 10)
-                reactor.threadpool.start()
-
+            if getattr(reactor, 'threadpool', None) is not None:
+                try:
+                    reactor.removeSystemEventTrigger(reactor.threadpoolShutdownID)
+                except KeyError:
+                    pass
+                # Remote the threadpool, and let the reactor put it back again
+                # later like a good boy
+                reactor._stopThreadPool()
 
     do_cleanThreads = classmethod(do_cleanThreads)
+
 
     def do_cleanReactor(cls):
         s = []
