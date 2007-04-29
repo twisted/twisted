@@ -1,6 +1,9 @@
-# Copyright (c) 2001-2005 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+Tests for L{twisted.words.xish.domish}.
+"""
 
 from twisted.trial import unittest
 from twisted.words.xish import domish
@@ -64,7 +67,7 @@ class DomishTestCase(unittest.TestCase):
         # Check child ops
         self.assertEquals(e.children[1], e.bar2)
         self.assertEquals(e.children[2], e.bar)
-        
+
         # Check attribute ops
         self.assertEquals(e["attrib1"], "value1")
         del e["attrib1"]
@@ -124,7 +127,7 @@ class DomishStreamTests:
         self.stream.parse(xml)
         self.assertEquals(self.root.uri, '')
         self.assertEquals(self.elements[0].uri, 'etherx')
-        
+
     def testNoDefaultNS(self):
         xml = "<stream:stream xmlns:stream='etherx'><error/></stream:stream>"""
 
@@ -155,15 +158,40 @@ class DomishStreamTests:
         self.assertEquals(self.elements[0].uri, 'testns2')
 
     def testUnclosedElement(self):
-        self.assertRaises(domish.ParserError, self.stream.parse, 
+        self.assertRaises(domish.ParserError, self.stream.parse,
                                               "<root><error></root>")
+
+    def test_namespaceReuse(self):
+        """
+        Test that reuse of namespaces does affect an element's serialization.
+
+        When one element uses a prefix for a certain namespace, this is
+        stored in the C{localPrefixes} attribute of the element. We want
+        to make sure that elements created after such use, won't have this
+        prefix end up in their C{localPrefixes} attribute, too.
+        """
+
+        xml = """<root>
+                   <foo:child1 xmlns:foo='testns'/>
+                   <child2 xmlns='testns'/>
+                 </root>"""
+
+        self.stream.parse(xml)
+        self.assertEquals('child1', self.elements[0].name)
+        self.assertEquals('testns', self.elements[0].uri)
+        self.assertEquals('', self.elements[0].defaultUri)
+        self.assertEquals({'foo': 'testns'}, self.elements[0].localPrefixes)
+        self.assertEquals('child2', self.elements[1].name)
+        self.assertEquals('testns', self.elements[1].uri)
+        self.assertEquals('testns', self.elements[1].defaultUri)
+        self.assertEquals({}, self.elements[1].localPrefixes)
 
 class DomishExpatStreamTestCase(unittest.TestCase, DomishStreamTests):
     def setUp(self):
         DomishStreamTests.setUp(self)
 
     def setUpClass(self):
-        try: 
+        try:
             import pyexpat
         except ImportError:
             raise unittest.SkipTest, "Skipping ExpatElementStream test, since no expat wrapper is available."
@@ -219,7 +247,7 @@ class SerializerTests:
         e = domish.Element((None, "foo"))
         e.addElement(("ns2", "bar"), 'ns2')
         self.assertEquals(e.toXml(), "<foo><bar xmlns='ns2'/></foo>")
-    
+
     def testOnlyChildDefaultNamespace2(self):
         e = domish.Element((None, "foo"))
         e.addElement("bar")
@@ -293,6 +321,30 @@ class SerializerTests:
         e.addElement('baz')
         self.assertIdentical(e.baz.defaultUri, None)
         self.assertEquals(e.toXml(), "<bar:foo xmlns:bar='testns'><baz/></bar:foo>")
+
+    def test_prefixesReuse(self):
+        """
+        Test that prefixes passed to serialization are not modified.
+
+        This test makes sure that passing a dictionary of prefixes repeatedly
+        to C{toXml} of elements does not cause serialization errors. A
+        previous implementation changed the passed in dictionary internally,
+        causing havoc later on.
+        """
+        prefixes = {'testns': 'foo'}
+
+        # test passing of dictionary
+        s = domish.SerializerClass(prefixes=prefixes)
+        self.assertNotIdentical(prefixes, s.prefixes)
+
+        # test proper serialization on prefixes reuse
+        e = domish.Element(('testns2', 'foo'),
+                           localPrefixes={'quux': 'testns2'})
+        self.assertEquals("<quux:foo xmlns:quux='testns2'/>",
+                          e.toXml(prefixes=prefixes))
+        e = domish.Element(('testns2', 'foo'))
+        self.assertEquals("<foo xmlns='testns2'/>",
+                          e.toXml(prefixes=prefixes))
 
     def testRawXMLSerialization(self):
         e = domish.Element((None, "foo"))

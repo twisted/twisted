@@ -1,9 +1,15 @@
 # -*- test-case-name: twisted.words.test.test_domish -*-
 #
-# Copyright (c) 2001-2005 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import generators
+"""
+DOM-like XML processing support.
+
+This module provides support for parsing XML into DOM-like object structures
+and serializing such structures to an XML string representation, optimized
+for use in streaming XML applications.
+"""
 
 import types
 
@@ -21,15 +27,17 @@ def _splitPrefix(name):
 # Global map of prefixes that always get injected
 # into the serializers prefix map (note, that doesn't
 # mean they're always _USED_)
-G_PREFIXES = { "http://www.w3.org/XML/1998/namespace":"xml" }    
+G_PREFIXES = { "http://www.w3.org/XML/1998/namespace":"xml" }
 
 class _ListSerializer:
     """ Internal class which serializes an Element tree into a buffer """
     def __init__(self, prefixes=None, prefixesInScope=None):
         self.writelist = []
-        self.prefixes = prefixes or {}
+        self.prefixes = {}
+        if prefixes:
+            self.prefixes.update(prefixes)
         self.prefixes.update(G_PREFIXES)
-        self.prefixStack = [G_PREFIXES.values()] + (prefixesInScope or []) 
+        self.prefixStack = [G_PREFIXES.values()] + (prefixesInScope or [])
         self.prefixCounter = 0
 
     def getValue(self):
@@ -194,7 +202,7 @@ class SerializedXML(unicode):
     """ Marker class for pre-serialized XML in the DOM. """
     pass
 
-        
+
 class Namespace:
     """ Convenience object for tracking namespace declarations. """
     def __init__(self, uri):
@@ -223,7 +231,7 @@ class IElement(Interface):
     def toXml(prefixes=None, closeElement=1, defaultUri='',
               prefixesInScope=None):
         """ Serializes object to a (partial) XML document
-        
+
         @param prefixes: dictionary that maps namespace URIs to suggested
                          prefix names.
         @type prefixes: L{dict}
@@ -289,7 +297,7 @@ class Element(object):
     attributes, where C{uri} holds the namespace URI. There is also a default
     namespace, for child elements. This is stored in the C{defaultUri}
     attribute. Note that C{''} means the empty namespace.
-    
+
     Serialization of Elements through C{toXml()} will use these attributes
     for generating proper serialized XML. When both C{uri} and C{defaultUri}
     are not None in the Element and all of its descendents, serialization
@@ -301,15 +309,15 @@ class Element(object):
       <twisted.words.xish.domish.Element object at 0x83002ac>
       >>> root.toXml()
       u"<root xmlns='myns'><child>test</child></root>"
-    
+
     For partial serialization, needed for streaming XML, a special value for
     namespace URIs can be used: C{None}.
-    
+
     Using C{None} as the value for C{uri} means: this element is in whatever
     namespace inherited by the closest logical ancestor when the complete XML
     document has been serialized. The serialized start tag will have a
     non-prefixed name, and no xmlns declaration will be generated.
-    
+
     Similarly, C{None} for C{defaultUri} means: the default namespace for my
     child elements is inherited from the logical ancestors of this element,
     when the complete XML document has been serialized.
@@ -407,14 +415,14 @@ class Element(object):
         for n in self.children:
             if IElement.providedBy(n) and n.name == key:
                 return n
-            
+
         # Tweak the behaviour so that it's more friendly about not
         # finding elements -- we need to document this somewhere :)
         if key.startswith('_'):
             raise AttributeError(key)
         else:
             return None
-            
+
     def __getitem__(self, key):
         return self.attributes[self._dqa(key)]
 
@@ -425,7 +433,7 @@ class Element(object):
         self.attributes[self._dqa(key)] = value
 
     def __str__(self):
-        """ Retrieve the first CData (content) node 
+        """ Retrieve the first CData (content) node
         """
         for n in self.children:
             if isinstance(n, types.StringTypes): return n
@@ -445,10 +453,10 @@ class Element(object):
     def hasAttribute(self, attrib):
         """ Determine if the specified attribute exists """
         return self.attributes.has_key(self._dqa(attrib))
-    
+
     def compareAttribute(self, attrib, value):
         """ Safely compare the value of an attribute against a provided value.
-        
+
         C{None}-safe.
         """
         return self.attributes.get(self._dqa(attrib), None) == value
@@ -722,7 +730,7 @@ class ExpatElementStream:
         self.parser.EndNamespaceDeclHandler = self._onEndNamespace
         self.currElem = None
         self.defaultNsStack = ['']
-        self.documentStarted = 0        
+        self.documentStarted = 0
         self.localPrefixes = {}
 
     def parse(self, buffer):
@@ -764,7 +772,7 @@ class ExpatElementStream:
         # Check for null current elem; end of doc
         if self.currElem is None:
             self.DocumentEndEvent()
-            
+
         # Check for parent that is None; that's
         # the top of the stack
         elif self.currElem.parent is None:
