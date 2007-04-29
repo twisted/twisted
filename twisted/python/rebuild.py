@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_rebuild -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -14,15 +14,14 @@ import time
 import linecache
 
 # Sibling Imports
-import log
-import reflect
+from twisted.python import log, reflect
 
 lastRebuild = time.time()
 
 
 class Sensitive:
-
-    """A utility mixin that's sensitive to rebuilds.
+    """
+    A utility mixin that's sensitive to rebuilds.
 
     This is a mixin for classes (usually those which represent collections of
     callbacks) to make sure that their code is up-to-date before running.
@@ -38,7 +37,8 @@ class Sensitive:
         self.lastRebuild = time.time()
 
     def latestVersionOf(self, anObject):
-        """Get the latest version of an object.
+        """
+        Get the latest version of an object.
 
         This can handle just about anything callable; instances, functions,
         methods, and classes.
@@ -64,7 +64,8 @@ class Sensitive:
 _modDictIDMap = {}
 
 def latestFunction(oldFunc):
-    """Get the latest version of a function.
+    """
+    Get the latest version of a function.
     """
     # This may be CPython specific, since I believe jython instantiates a new
     # module upon reload.
@@ -76,30 +77,47 @@ def latestFunction(oldFunc):
 
 
 def latestClass(oldClass):
-    """Get the latest version of a class.
+    """
+    Get the latest version of a class.
     """
     module = reflect.namedModule(oldClass.__module__)
     newClass = getattr(module, oldClass.__name__)
-    newBases = []
-    for base in newClass.__bases__:
-        newBases.append(latestClass(base))
+    newBases = [latestClass(base) for base in newClass.__bases__]
 
     try:
         # This makes old-style stuff work
         newClass.__bases__ = tuple(newBases)
         return newClass
     except TypeError:
+        if newClass.__module__ == "__builtin__":
+            # __builtin__ members can't be reloaded sanely
+            return newClass
         ctor = getattr(newClass, '__metaclass__', type)
         return ctor(newClass.__name__, tuple(newBases), dict(newClass.__dict__))
 
 
-def updateInstance(self):
-    """Updates an instance to be current
+class RebuildError(Exception):
     """
-    self.__class__ = latestClass(self.__class__)
+    Exception raised when trying to rebuild a class whereas it's not possible.
+    """
+
+
+def updateInstance(self):
+    """
+    Updates an instance to be current.
+    """
+    try:
+        self.__class__ = latestClass(self.__class__)
+    except TypeError:
+        if hasattr(self.__class__, '__slots__'):
+            raise RebuildError("Can't rebuild class with __slots__ on Python < 2.6")
+        else:
+            raise
+
 
 def __getattr__(self, name):
-    """A getattr method to cause a class to be refreshed.
+    """
+    A getattr method to cause a class to be refreshed.
     """
     if name == '__del__':
         raise AttributeError("Without this, Python segfaults.")
@@ -108,22 +126,24 @@ def __getattr__(self, name):
     result = getattr(self, name)
     return result
 
+
 def rebuild(module, doLog=1):
-    """Reload a module and do as much as possible to replace its references.
+    """
+    Reload a module and do as much as possible to replace its references.
     """
     global lastRebuild
     lastRebuild = time.time()
     if hasattr(module, 'ALLOW_TWISTED_REBUILD'):
         # Is this module allowed to be rebuilt?
         if not module.ALLOW_TWISTED_REBUILD:
-            raise RuntimeError, "I am not allowed to be rebuilt."
+            raise RuntimeError("I am not allowed to be rebuilt.")
     if doLog:
-        log.msg( 'Rebuilding %s...' % str(module.__name__))
+        log.msg('Rebuilding %s...' % str(module.__name__))
 
     ## Safely handle adapter re-registration
     from twisted.python import components
-    components.ALLOW_DUPLICATES = 1
-    
+    components.ALLOW_DUPLICATES = True
+
     d = module.__dict__
     _modDictIDMap[id(d)] = module
     newclasses = {}
@@ -236,8 +256,9 @@ def rebuild(module, doLog=1):
             log.logfile.write(".")
             log.logfile.flush()
 
-    components.ALLOW_DUPLICATES = 0
+    components.ALLOW_DUPLICATES = False
     if doLog:
         log.msg('')
         log.msg('   Rebuilt %s.' % str(module.__name__))
     return module
+

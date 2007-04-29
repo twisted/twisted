@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -17,7 +17,8 @@ class Baz(object): pass
 class Buz(Bar, Baz): pass
 
 class RebuildTestCase(unittest.TestCase):
-    """Simple testcase for rebuilding, to at least exercise the code.
+    """
+    Simple testcase for rebuilding, to at least exercise the code.
     """
     def setUp(self):
         self.libPath = self.mktemp()
@@ -31,7 +32,6 @@ class RebuildTestCase(unittest.TestCase):
         sys.path.remove(self.libPath)
 
     def testFileRebuild(self):
-        from twisted.python.rebuild import rebuild
         from twisted.python.util import sibpath
         import shutil, time
         shutil.copyfile(sibpath(__file__, "myrebuilder1.py"),
@@ -57,7 +57,7 @@ class RebuildTestCase(unittest.TestCase):
         time.sleep(1.1)
         shutil.copyfile(sibpath(__file__, "myrebuilder2.py"),
                         os.path.join(self.fakelibPath, "myrebuilder.py"))
-        rebuild(myrebuilder)
+        rebuild.rebuild(myrebuilder)
         try:
             object
         except NameError:
@@ -72,11 +72,13 @@ class RebuildTestCase(unittest.TestCase):
         # self.assertEquals(c.b(), 'c')
 
     def testRebuild(self):
-        """Rebuilding an unchanged module."""
+        """
+        Rebuilding an unchanged module.
+        """
         # This test would actually pass if rebuild was a no-op, but it
         # ensures rebuild doesn't break stuff while being a less
         # complex test than testFileRebuild.
-        
+
         x = crash_test_dummy.X('a')
 
         rebuild.rebuild(crash_test_dummy, doLog=False)
@@ -123,21 +125,93 @@ class RebuildTestCase(unittest.TestCase):
         from twisted.spread import banana
         rebuild.latestClass(banana.Banana)
 
-class NewStyleTestCase(unittest.TestCase):
-    todo = """New Style classes are poorly supported"""
 
+
+class NewStyleTestCase(unittest.TestCase):
+    """
+    Tests for rebuilding new-style classes of various sorts.
+    """
     def setUp(self):
         self.m = new.module('whipping')
         sys.modules['whipping'] = self.m
-    
+
+
     def tearDown(self):
         del sys.modules['whipping']
         del self.m
-    
-    def testSlots(self):
-        exec "class SlottedClass(object): __slots__ = 'a'," in self.m.__dict__
-        rebuild.updateInstance(self.m.SlottedClass())
 
-    def testTypeSubclass(self):
-        exec "class ListSubclass(list): pass" in self.m.__dict__
-        rebuild.updateInstance(self.m.ListSubclass())
+
+    def test_slots(self):
+        """
+        Try to rebuild a new style class with slots defined.
+        """
+        classDefinition = (
+            "class SlottedClass(object):\n"
+            "    __slots__ = ['a']\n")
+
+        exec classDefinition in self.m.__dict__
+        inst = self.m.SlottedClass()
+        inst.a = 7
+        exec classDefinition in self.m.__dict__
+        rebuild.updateInstance(inst)
+        self.assertEqual(inst.a, 7)
+        self.assertIdentical(type(inst), self.m.SlottedClass)
+
+    if sys.version_info < (2, 6):
+        test_slots.skip = "__class__ assignment for class with slots is only available starting Python 2.6"
+
+
+    def test_errorSlots(self):
+        """
+        Try to rebuild a new style class with slots defined: this should fail.
+        """
+        classDefinition = (
+            "class SlottedClass(object):\n"
+            "    __slots__ = ['a']\n")
+
+        exec classDefinition in self.m.__dict__
+        inst = self.m.SlottedClass()
+        inst.a = 7
+        exec classDefinition in self.m.__dict__
+        self.assertRaises(rebuild.RebuildError, rebuild.updateInstance, inst)
+
+    if sys.version_info >= (2, 6):
+        test_errorSlots.skip = "__class__ assignment for class with slots should work starting Python 2.6"
+
+
+    def test_typeSubclass(self):
+        """
+        Try to rebuild a base type subclass.
+        """
+        classDefinition = (
+            "class ListSubclass(list):\n"
+            "    pass\n")
+
+        exec classDefinition in self.m.__dict__
+        inst = self.m.ListSubclass()
+        inst.append(2)
+        exec classDefinition in self.m.__dict__
+        rebuild.updateInstance(inst)
+        self.assertEqual(inst[0], 2)
+        self.assertIdentical(type(inst), self.m.ListSubclass)
+
+
+    def test_instanceSlots(self):
+        """
+        Test that when rebuilding an instance with a __slots__ attribute, it
+        fails accurately instead of giving a L{rebuild.RebuildError}.
+        """
+        classDefinition = (
+            "class NotSlottedClass(object):\n"
+            "    pass\n")
+
+        exec classDefinition in self.m.__dict__
+        inst = self.m.NotSlottedClass()
+        inst.__slots__ = ['a']
+        classDefinition = (
+            "class NotSlottedClass:\n"
+            "    pass\n")
+        exec classDefinition in self.m.__dict__
+        # Moving from new-style class to old-style should fail.
+        self.assertRaises(TypeError, rebuild.updateInstance, inst)
+
