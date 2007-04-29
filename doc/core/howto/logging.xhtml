@@ -78,6 +78,38 @@ log.startLogging(sys.stdout)
     as <code class="API" base="twisted.python.logfile">DailyLogFile</code>,
     which will rotate the log to a new file once per day.</p>
 
+    <h3>Using the Python logging module</h3>
+
+    <p>If your application uses the logging module or you want to use its ease
+    of configuration but don't want to lose twisted-produced messages,
+    the observer
+    <code class="API" base="twisted.python.log">PythonLoggingObserver</code>
+    should be useful to you</p>
+
+    <p>You just start it like any other observers:
+        <pre class="python">
+observer = log.PythonLoggingObserver()
+observer.start()
+        </pre>
+    And then you'll just have to configure logging to do what you want:
+    <a href="http://docs.python.org/lib/module-logging.html">
+    logging documentation</a>.
+    </p>
+
+    <p>This method allows you to customize the log level received by the
+    logging module using the <code>logLevel</code> keyword:
+        <pre class="python">
+log.msg("This is important!", logLevel=logging.CRITICAL)
+log.msg("Don't mind", logLevel=logging.DEBUG)
+        </pre>
+    Unless logLevel is provided, logging.INFO is used for <code>log.msg</code>
+    and logging.ERROR is used for <code>log.err</code>.
+    </p>
+
+    <p>One special care should be made when you use special configuration of
+    the python logging module: some handlers (e.g. SMTP, HTTP) uses network
+    so can block inside the reactor loop. <em>Nothing</em> in the bridge is
+    done to prevent that.</p>
 
     <h2>Writing log observers</h2>
 
