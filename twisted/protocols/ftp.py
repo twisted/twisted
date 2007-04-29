@@ -257,20 +257,26 @@ class PermissionDeniedError(FTPCmdError):
 
 
 class IsNotADirectoryError(FTPCmdError):
-    """raised when RMD is called on a path that isn't a directory
+    """
+    Raised when RMD is called on a path that isn't a directory.
     """
     errorCode = IS_NOT_A_DIR
+
 
 class CmdSyntaxError(FTPCmdError):
     errorCode = SYNTAX_ERR
 
+
 class CmdArgSyntaxError(FTPCmdError):
     errorCode = SYNTAX_ERR_IN_ARGS
 
+
 class CmdNotImplementedError(FTPCmdError):
-    """raised when an unimplemented command is given to the server
+    """
+    Raised when an unimplemented command is given to the server.
     """
     errorCode = CMD_NOT_IMPLMNTD
+
 
 class CmdNotImplementedForArgError(FTPCmdError):
     errorCode = CMD_NOT_IMPLMNTD_FOR_PARAM
@@ -923,6 +929,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             if not err.check(PermissionDeniedError, FileNotFoundError, IsNotADirectoryError):
                 log.msg("Unexpected error attempting to open file for transmission:")
                 log.err(err)
+            if err.check(FTPCmdError):
+                return (err.value.errorCode, '/'.join(newsegs))
             return (FILE_NOT_FOUND, '/'.join(newsegs))
 
         d = self.shell.openForReading(newsegs)
@@ -984,6 +992,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             if not err.check(PermissionDeniedError, FileNotFoundError, IsNotADirectoryError):
                 log.msg("Unexpected error attempting to open file for upload:")
                 log.err(err)
+            if isinstance(err.value, FTPCmdError):
+                return (err.value.errorCode, '/'.join(newsegs))
             return (FILE_NOT_FOUND, '/'.join(newsegs))
 
         d = self.shell.openForWriting(newsegs)
@@ -1407,7 +1417,8 @@ def _testPermissions(uid, gid, spath, mode='r'):
 
 
 class FTPAnonymousShell(object):
-    """An anonymous implementation of IFTPShell
+    """
+    An anonymous implementation of IFTPShell
 
     @type filesystemRoot: L{twisted.python.filepath.FilePath}
     @ivar filesystemRoot: The path which is considered the root of
@@ -1447,6 +1458,15 @@ class FTPAnonymousShell(object):
             return defer.fail()
         else:
             return defer.succeed(_FileReader(f))
+
+
+    def openForWriting(self, path):
+        """
+        Reject write attempts by anonymous users with
+        L{PermissionDeniedError}.
+        """
+        return defer.fail(PermissionDeniedError("STOR not allowed"))
+
 
     def access(self, path):
         p = self._path(path)

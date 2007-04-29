@@ -58,7 +58,12 @@ class _BufferingProtocol(protocol.Protocol):
 
 
 class FTPServerTestCase(unittest.TestCase):
-    """Simple tests for an FTP server with the default settings."""
+    """
+    Simple tests for an FTP server with the default settings.
+
+    @ivar clientFactory: class used as ftp client.
+    """
+    clientFactory = ftp.FTPClientBasic
 
     def setUp(self):
         # Create a directory
@@ -85,7 +90,7 @@ class FTPServerTestCase(unittest.TestCase):
 
         # Connect a client to it
         portNum = self.port.getHost().port
-        clientCreator = protocol.ClientCreator(reactor, ftp.FTPClientBasic)
+        clientCreator = protocol.ClientCreator(reactor, self.clientFactory)
         d2 = clientCreator.connectTCP("127.0.0.1", portNum)
         def gotClient(client):
             self.client = client
@@ -294,6 +299,27 @@ class BasicFTPServerTestCase(FTPServerTestCase):
         self.assertCommandResponse('SYST', ["215 UNIX Type: L8"],
                                    chainDeferred=d)
         return d
+
+
+class FTPServerTestCaseAdvancedClient(FTPServerTestCase):
+    """
+    Test FTP server with the L{ftp.FTPClient} class.
+    """
+    clientFactory = ftp.FTPClient
+
+    def test_anonymousSTOR(self):
+        """
+        Try to make an STOR as anonymous, and check that we got a permission
+        denied error.
+        """
+        def eb(res):
+            res.trap(ftp.CommandFailed)
+            self.assertEquals(res.value.args[0][0],
+                '550 foo: Permission denied.')
+        d1, d2 = self.client.storeFile('foo')
+        d2.addErrback(eb)
+        return defer.gatherResults([d1, d2])
+
 
 class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
     def _makeDataConnection(self, ignored=None):
@@ -1511,4 +1537,19 @@ class PathHandling(unittest.TestCase):
 
         for inp in ['../..', '../../', '../a/../..']:
             self.assertRaises(ftp.InvalidPath, ftp.toSegments, ['x'], inp)
+
+
+class FTPShellTestCase(unittest.TestCase):
+    """
+    Test functionnalities for FTP shells classes.
+    """
+    def test_anonymousWrite(self):
+        """
+        Check that L{ftp.FTPAnonymousShell} returns an error when trying to
+        open it in write mode.
+        """
+        shell = ftp.FTPAnonymousShell('')
+        d = shell.openForWriting('foo')
+        self.assertFailure(d, ftp.PermissionDeniedError)
+        return d
 
