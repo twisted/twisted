@@ -4,7 +4,7 @@
 from twisted.trial import unittest
 
 # system imports
-import os, shutil, time
+import os, shutil, time, stat
 
 # twisted imports
 from twisted.python import logfile
@@ -119,14 +119,13 @@ class LogFileTestCase(unittest.TestCase):
         """
         Check rotated files have same permissions as original.
         """
-        if not hasattr(os, "chmod"): return
         f = open(self.path, "w").close()
         os.chmod(self.path, 0707)
-        mode = os.stat(self.path)[0]
+        mode = os.stat(self.path)[stat.ST_MODE]
         log = logfile.LogFile(self.name, self.dir)
         log.write("abc")
         log.rotate()
-        self.assertEquals(mode, os.stat(self.path)[0])
+        self.assertEquals(mode, os.stat(self.path)[stat.ST_MODE])
 
     def testNoPermission(self):
         """
@@ -197,6 +196,24 @@ class LogFileTestCase(unittest.TestCase):
         self.assertEquals(os.path.abspath(log1.path), log2.path)
         self.assertEquals(log1.rotateLength, log2.rotateLength)
         self.assertEquals(log1.defaultMode, log2.defaultMode)
+
+    def test_defaultPermissions(self):
+        """
+        Test the default permission of the log file: if the file exist, it
+        should keep the permission.
+        """
+        f = file(self.path, "w")
+        os.chmod(self.path, 0707)
+        f.close()
+        log1 = logfile.LogFile(self.name, self.dir)
+        self.assertEquals(stat.S_IMODE(os.stat(self.path)[stat.ST_MODE]), 0707)
+
+    def test_specifiedPermissions(self):
+        """
+        Test specifying the permissions used on the log file.
+        """
+        log1 = logfile.LogFile(self.name, self.dir, defaultMode=0066)
+        self.assertEquals(stat.S_IMODE(os.stat(self.path)[stat.ST_MODE]), 0066)
 
 
 class RiggedDailyLogFile(logfile.DailyLogFile):
