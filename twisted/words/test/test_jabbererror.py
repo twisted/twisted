@@ -1,3 +1,6 @@
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 from twisted.trial import unittest
 
 from twisted.words.protocols.jabber import error
@@ -49,21 +52,21 @@ class StreamErrorTest(unittest.TestCase):
 
 class StanzaErrorTest(unittest.TestCase):
 
-    def test_getElementPlain(self):
+    def testGetElementPlain(self):
         e = error.StanzaError('feature-not-implemented')
         element = e.getElement()
         self.assertEquals(element.uri, None)
         self.assertEquals(element['type'], 'cancel')
         self.assertEquals(element['code'], '501')
 
-    def test_getElementType(self):
+    def testGetElementType(self):
         e = error.StanzaError('feature-not-implemented', 'auth')
         element = e.getElement()
         self.assertEquals(element.uri, None)
         self.assertEquals(element['type'], 'auth')
         self.assertEquals(element['code'], '501')
 
-    def test_toResponse(self):
+    def testToResponse(self):
         stanza = domish.Element(('jabber:client', 'message'))
         stanza['type'] = 'get'
         stanza['to'] = 'user1@example.com'
@@ -76,30 +79,6 @@ class StanzaErrorTest(unittest.TestCase):
         self.assertEqual(response.error.children[0].name,
                          'service-unavailable')
         self.assertEqual(response.error['type'], 'cancel')
-
-    def test_toResponsePartialAddressing(self):
-        stanza = domish.Element(('jabber:client', 'message'))
-        stanza['type'] = 'get'
-        stanza['to'] = 'user1@example.com'
-        e = error.StanzaError('service-unavailable')
-        response = e.toResponse(stanza)
-        self.assertEqual(response['from'], 'user1@example.com')
-        self.failIf(response.hasAttribute('to'))
-
-        stanza = domish.Element(('jabber:client', 'message'))
-        stanza['type'] = 'get'
-        stanza['from'] = 'user2@example.com/resource'
-        e = error.StanzaError('service-unavailable')
-        response = e.toResponse(stanza)
-        self.failIf(response.hasAttribute('from'))
-        self.assertEqual(response['to'], 'user2@example.com/resource')
-
-        stanza = domish.Element(('jabber:client', 'message'))
-        stanza['type'] = 'get'
-        e = error.StanzaError('service-unavailable')
-        response = e.toResponse(stanza)
-        self.failIf(response.hasAttribute('to'))
-        self.failIf(response.hasAttribute('from'))
 
 class ParseErrorTest(unittest.TestCase):
 

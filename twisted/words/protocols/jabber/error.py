@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.words.test.test_jabbererror -*-
 #
-# Copyright (c) 2001-2006 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -177,12 +177,12 @@ class StanzaError(Error):
         @param stanza: the stanza to respond to
         @type stanza: L{domish.Element}
         """
-        from twisted.words.protocols.jabber.xmlstream import toResponse
-        response = toResponse(stanza, 'error')
-        response.children = stanza.children
+        if stanza.getAttribute('to'):
+            stanza.swapAttributeValues('to', 'from')
+        stanza['type'] = 'error'
         stanza.addChild(self.getElement())
+        return stanza
 
-        return response
 
 
 def _getText(element):
