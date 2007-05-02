@@ -1,3 +1,10 @@
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Tests for L{twisted.words.protocols.jabber.xmlstream}.
+"""
+
 from twisted.trial import unittest
 
 from twisted.internet import defer, task
@@ -152,7 +159,7 @@ class IQTest(unittest.TestCase):
 
         self.iq.timeout = 60
         d = self.iq.send()
-        
+
         xs = self.xmlstream
         xs.connectionLost("Closed by peer")
         self.assertFailure(d, ConnectionLost)
@@ -164,14 +171,11 @@ class XmlStreamTest(unittest.TestCase):
     def onStreamStart(self, obj):
         self.gotStreamStart = True
 
-
     def onStreamEnd(self, obj):
         self.gotStreamEnd = True
 
-
     def onStreamError(self, obj):
         self.gotStreamError = True
-
 
     def setUp(self):
         """
@@ -190,8 +194,7 @@ class XmlStreamTest(unittest.TestCase):
         xs.version = (1, 0)
         self.xmlstream = xs
 
-
-    def testSendHeaderBasic(self):
+    def test_sendHeaderBasic(self):
         """
         Basic test on the header sent by sendHeader.
         """
@@ -205,8 +208,7 @@ class XmlStreamTest(unittest.TestCase):
         self.assertIn("version='1.0'", splitHeader)
         self.assertEquals(True, xs._headerSent)
 
-
-    def testSendHeaderInitiating(self):
+    def test_sendHeaderInitiating(self):
         """
         Test addressing when initiating a stream.
         """
@@ -219,8 +221,7 @@ class XmlStreamTest(unittest.TestCase):
         self.assertIn("to='otherHost'", splitHeader)
         self.assertNotIn("from='thisHost'", splitHeader)
 
-
-    def testSendHeaderReceiving(self):
+    def test_sendHeaderReceiving(self):
         """
         Test addressing when receiving a stream.
         """
@@ -235,8 +236,7 @@ class XmlStreamTest(unittest.TestCase):
         self.assertIn("from='thisHost'", splitHeader)
         self.assertIn("id='session01'", splitHeader)
 
-
-    def testReceiveStreamError(self):
+    def test_receiveStreamError(self):
         """
         Test events when a stream error is received.
         """
@@ -248,8 +248,7 @@ class XmlStreamTest(unittest.TestCase):
         self.assert_(self.gotStreamError)
         self.assert_(self.gotStreamEnd)
 
-
-    def testSendStreamErrorInitiating(self):
+    def test_sendStreamErrorInitiating(self):
         """
         Test sendStreamError on an initiating xmlstream with a header sent.
 
@@ -263,8 +262,7 @@ class XmlStreamTest(unittest.TestCase):
         self.assertNotEqual('', xs.transport.value())
         self.assert_(self.gotStreamEnd)
 
-
-    def testSendStreamErrorInitiatingNoHeader(self):
+    def test_sendStreamErrorInitiatingNoHeader(self):
         """
         Test sendStreamError on an initiating xmlstream without having sent a
         header.
@@ -280,8 +278,7 @@ class XmlStreamTest(unittest.TestCase):
         self.assertEqual('', xs.transport.value())
         self.assert_(self.gotStreamEnd)
 
-
-    def testSendStreamErrorReceiving(self):
+    def test_sendStreamErrorReceiving(self):
         """
         Test sendStreamError on a receiving xmlstream with a header sent.
 
@@ -295,8 +292,7 @@ class XmlStreamTest(unittest.TestCase):
         self.assertNotEqual('', xs.transport.value())
         self.assert_(self.gotStreamEnd)
 
-
-    def testSendStreamErrorReceivingNoHeader(self):
+    def test_sendStreamErrorReceivingNoHeader(self):
         """
         Test sendStreamError on a receiving xmlstream without having sent a
         header.
@@ -312,27 +308,47 @@ class XmlStreamTest(unittest.TestCase):
         self.assertNotEqual('', xs.transport.value())
         self.assert_(self.gotStreamEnd)
 
-
-    def testOnDocumentStart(self):
+    def test_onDocumentStartInitiating(self):
         """
         Test onDocumentStart to fill the appropriate attributes from the
-        stream header and stream start event.
+        stream header and stream start event for the initiating entity.
         """
         xs = self.xmlstream
         xs.initiating = True
         xs.dataReceived("<stream:stream xmlns='jabber:client' "
                          "xmlns:stream='http://etherx.jabber.org/streams' "
-                         "from='example.com' id='12345' version='1.0'>")
+                         "from='example.com' to='example.org' id='12345' "
+                         "version='1.0'>")
         self.assert_(self.gotStreamStart)
         self.assertEqual((1, 0), xs.version)
         self.assertEqual('12345', xs.sid)
+        self.assertEqual('testns', xs.namespace)
+        self.assertEqual('example.com', xs.otherHost)
+        self.assertIdentical(None, xs.thisHost)
         xs.dataReceived("<stream:features>"
                           "<test xmlns='testns'/>"
                         "</stream:features>")
         self.assertIn(('testns', 'test'), xs.features)
 
+    def test_onDocumentStartReceiving(self):
+        """
+        Test onDocumentStart to fill the appropriate attributes from the
+        stream header and stream start event for the receiving entity.
+        """
+        xs = self.xmlstream
+        xs.initiating = False
+        xs.dataReceived("<stream:stream xmlns='jabber:client' "
+                         "xmlns:stream='http://etherx.jabber.org/streams' "
+                         "from='example.org' to='example.com' id='12345' "
+                         "version='1.0'>")
+        self.assert_(self.gotStreamStart)
+        self.assertEqual((1, 0), xs.version)
+        self.assertIdentical(None, xs.sid)
+        self.assertEqual('jabber:client', xs.namespace)
+        self.assertIdentical(None, xs.otherHost)
+        self.assertEqual('example.com', xs.thisHost)
 
-    def testOnDocumentStartLegacy(self):
+    def test_onDocumentStartLegacy(self):
         """
         Test onDocumentStart to fill the appropriate attributes from the
         stream header and stream start event for a pre-XMPP-1.0 header.
@@ -344,8 +360,7 @@ class XmlStreamTest(unittest.TestCase):
         self.assert_(self.gotStreamStart)
         self.assertEqual((0, 0), xs.version)
 
-
-    def testReset(self):
+    def test_reset(self):
         """
         Test resetting the XML stream to start a new layer.
         """
@@ -356,8 +371,7 @@ class XmlStreamTest(unittest.TestCase):
         self.assertNotEqual(stream, xs.stream)
         self.assertNot(xs._headerSent)
 
-
-    def testSend(self):
+    def test_send(self):
         """
         Test send with various types of objects.
         """
@@ -375,8 +389,7 @@ class XmlStreamTest(unittest.TestCase):
         xs.send(el)
         self.assertEqual(xs.transport.value(), '<stream:features/>')
 
-
-    def testAuthenticator(self):
+    def test_authenticator(self):
         """
         Test that the associated authenticator is correctly called.
         """
@@ -407,10 +420,8 @@ class XmlStreamTest(unittest.TestCase):
         self.assertEqual([None], connectionMade)
 
 
-
 class TestError(Exception):
     pass
-
 
 
 class ConnectAuthenticatorTest(unittest.TestCase):

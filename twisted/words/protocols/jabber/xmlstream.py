@@ -385,7 +385,6 @@ class XmlStream(xmlstream.XmlStream):
         self._headerSent = False
         self._initializeStream()
 
-
     def onStreamError(self, errelem):
         """
         Called when a stream:error element has been received.
@@ -399,7 +398,6 @@ class XmlStream(xmlstream.XmlStream):
         self.dispatch(failure.Failure(error.exceptionFromStreamError(errelem)),
                       STREAM_ERROR_EVENT)
         self.transport.loseConnection()
-
 
     def onFeatures(self, features):
         """
@@ -416,7 +414,6 @@ class XmlStream(xmlstream.XmlStream):
         for feature in features.elements():
             self.features[(feature.uri, feature.name)] = feature
         self.authenticator.streamStarted()
-
 
     def sendHeader(self):
         """
@@ -440,13 +437,11 @@ class XmlStream(xmlstream.XmlStream):
         self.send(rootElem.toXml(prefixes=self.prefixes, closeElement=0))
         self._headerSent = True
 
-
     def sendFooter(self):
         """
         Send stream footer.
         """
         self.send('</stream:stream>')
-
 
     def sendStreamError(self, streamError):
         """
@@ -471,7 +466,6 @@ class XmlStream(xmlstream.XmlStream):
 
         self.transport.loseConnection()
 
-
     def send(self, obj):
         """
         Send data over the stream.
@@ -488,7 +482,6 @@ class XmlStream(xmlstream.XmlStream):
 
         xmlstream.XmlStream.send(self, obj)
 
-
     def connectionMade(self):
         """
         Called when a connection is made.
@@ -497,7 +490,6 @@ class XmlStream(xmlstream.XmlStream):
         """
         xmlstream.XmlStream.connectionMade(self)
         self.authenticator.connectionMade()
-
 
     def onDocumentStart(self, rootelem):
         """
@@ -523,8 +515,12 @@ class XmlStream(xmlstream.XmlStream):
         xmlstream.XmlStream.onDocumentStart(self, rootelem)
 
         # Extract stream identifier
-        if rootelem.hasAttribute("id"):
-            self.sid = rootelem["id"]
+        if self.initiating:
+            self.sid = rootelem.getAttribute("id")
+            self.otherHost = rootelem.getAttribute("from")
+        else:
+            self.namespace = rootelem.defaultUri
+            self.thisHost = rootelem.getAttribute("to")
 
         # Extract stream version and take minimum with the version sent
         if rootelem.hasAttribute("version"):
@@ -548,7 +544,6 @@ class XmlStream(xmlstream.XmlStream):
                                     self.onFeatures)
         else:
             self.authenticator.streamStarted()
-
 
 
 class XmlStreamFactory(xmlstream.XmlStreamFactory):
