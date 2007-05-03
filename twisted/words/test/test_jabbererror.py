@@ -1,6 +1,10 @@
 # Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+Tests for L{twisted.words.protocols.jabber.error}.
+"""
+
 from twisted.trial import unittest
 
 from twisted.words.protocols.jabber import error
@@ -52,33 +56,42 @@ class StreamErrorTest(unittest.TestCase):
 
 class StanzaErrorTest(unittest.TestCase):
 
-    def testGetElementPlain(self):
+    def test_getElementPlain(self):
         e = error.StanzaError('feature-not-implemented')
         element = e.getElement()
         self.assertEquals(element.uri, None)
         self.assertEquals(element['type'], 'cancel')
         self.assertEquals(element['code'], '501')
 
-    def testGetElementType(self):
+    def test_getElementType(self):
         e = error.StanzaError('feature-not-implemented', 'auth')
         element = e.getElement()
         self.assertEquals(element.uri, None)
         self.assertEquals(element['type'], 'auth')
         self.assertEquals(element['code'], '501')
 
-    def testToResponse(self):
+    def test_toResponse(self):
+        """
+        Test an error response is generated from a stanza.
+
+        The addressing on the (new) response stanza should be reversed, an
+        error child (with proper properties) added and the type set to
+        C{'error'}.
+        """
         stanza = domish.Element(('jabber:client', 'message'))
-        stanza['type'] = 'get'
+        stanza['type'] = 'chat'
         stanza['to'] = 'user1@example.com'
         stanza['from'] = 'user2@example.com/resource'
         e = error.StanzaError('service-unavailable')
         response = e.toResponse(stanza)
+        self.assertNotIdentical(response, stanza)
         self.assertEqual(response['from'], 'user1@example.com')
         self.assertEqual(response['to'], 'user2@example.com/resource')
         self.assertEqual(response['type'], 'error')
         self.assertEqual(response.error.children[0].name,
                          'service-unavailable')
         self.assertEqual(response.error['type'], 'cancel')
+        self.assertNotEqual(stanza.children, response.children)
 
 class ParseErrorTest(unittest.TestCase):
 

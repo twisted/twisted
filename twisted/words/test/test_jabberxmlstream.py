@@ -30,7 +30,7 @@ class IQTest(unittest.TestCase):
         self.xmlstream.dataReceived(
            "<stream:stream xmlns:stream='http://etherx.jabber.org/streams' "
                           "xmlns='testns' from='otherhost' version='1.0'>")
-        self.iq = xmlstream.IQ(self.xmlstream, type='get')
+        self.iq = xmlstream.IQ(self.xmlstream, 'get')
 
     def testBasic(self):
         self.assertEquals(self.iq['type'], 'get')
@@ -634,3 +634,51 @@ class BaseFeatureInitiatingInitializerTest(unittest.TestCase):
         """
         self.init.required = False
         self.assertIdentical(None, self.init.initialize())
+
+class ToResponseTest(unittest.TestCase):
+
+    def test_toResponse(self):
+        """
+        Test that a response stanza is generated with addressing swapped.
+        """
+        stanza = domish.Element(('jabber:client', 'iq'))
+        stanza['type'] = 'get'
+        stanza['to'] = 'user1@example.com'
+        stanza['from'] = 'user2@example.com/resource'
+        response = xmlstream.toResponse(stanza, 'result')
+        self.assertNotIdentical(stanza, response)
+        self.assertEqual(response['from'], 'user1@example.com')
+        self.assertEqual(response['to'], 'user2@example.com/resource')
+        self.assertEqual(response['type'], 'result')
+
+    def test_toResponseNoFrom(self):
+        """
+        Test that a response is generated from a stanza without a from address.
+        """
+        stanza = domish.Element(('jabber:client', 'iq'))
+        stanza['type'] = 'get'
+        stanza['to'] = 'user1@example.com'
+        response = xmlstream.toResponse(stanza)
+        self.assertEqual(response['from'], 'user1@example.com')
+        self.failIf(response.hasAttribute('to'))
+
+    def test_toResponseNoTo(self):
+        """
+        Test that a response is generated from a stanza without a to address.
+        """
+        stanza = domish.Element(('jabber:client', 'iq'))
+        stanza['type'] = 'get'
+        stanza['from'] = 'user2@example.com/resource'
+        response = xmlstream.toResponse(stanza)
+        self.failIf(response.hasAttribute('from'))
+        self.assertEqual(response['to'], 'user2@example.com/resource')
+
+    def test_toResponseNoAddressing(self):
+        """
+        Test that a response is generated from a stanza without any addressing.
+        """
+        stanza = domish.Element(('jabber:client', 'message'))
+        stanza['type'] = 'chat'
+        response = xmlstream.toResponse(stanza)
+        self.failIf(response.hasAttribute('to'))
+        self.failIf(response.hasAttribute('from'))

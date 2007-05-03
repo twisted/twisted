@@ -45,6 +45,7 @@ def hashPassword(sid, password):
     import sha
     return sha.new("%s%s" % (sid, password)).hexdigest()
 
+
 class Authenticator:
     """
     Base class for business logic of initializing an XmlStream
@@ -107,6 +108,7 @@ class Authenticator:
 
         """
         self.xmlstream = xmlstream
+
 
 class ConnectAuthenticator(Authenticator):
     """
@@ -173,11 +175,13 @@ class ConnectAuthenticator(Authenticator):
     def streamStarted(self):
         self.initializeStream()
 
+
 class FeatureNotAdvertized(Exception):
     """
     Exception indicating a stream feature was not advertized, while required by
     the initiating entity.
     """
+
 
 class BaseFeatureInitiatingInitializer(object):
     """
@@ -226,15 +230,18 @@ class BaseFeatureInitiatingInitializer(object):
         May return a deferred for asynchronous initialization.
         """
 
+
 class TLSError(Exception):
     """
     TLS base exception.
     """
 
+
 class TLSFailed(TLSError):
     """
     Exception indicating failed TLS negotiation
     """
+
 
 class TLSRequired(TLSError):
     """
@@ -244,6 +251,7 @@ class TLSRequired(TLSError):
     negotiation and the initiating does not desire to negotiate TLS.
     """
 
+
 class TLSNotSupported(TLSError):
     """
     Exception indicating missing TLS support.
@@ -251,6 +259,7 @@ class TLSNotSupported(TLSError):
     This exception is raised when the initiating entity wants and requires to
     negotiate TLS when the OpenSSL library is not available.
     """
+
 
 class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
     """
@@ -317,7 +326,6 @@ class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
         self.xmlstream.addOnetimeObserver("/failure", self.onFailure)
         self.xmlstream.send(domish.Element((NS_XMPP_TLS, "starttls")))
         return self._deferred
-
 
 
 class XmlStream(xmlstream.XmlStream):
@@ -569,7 +577,6 @@ class TimeoutError(Exception):
     """
 
 
-
 def upgradeWithIQResponseTracker(xs):
     """
     Enhances an XmlStream for iq response tracking.
@@ -620,7 +627,6 @@ def upgradeWithIQResponseTracker(xs):
     directlyProvides(xs, ijabber.IIQResponseTracker)
 
 
-
 class IQ(domish.Element):
     """
     Wrapper for an iq stanza.
@@ -637,17 +643,17 @@ class IQ(domish.Element):
 
     timeout = None
 
-    def __init__(self, xmlstream, type = "set"):
+    def __init__(self, xmlstream, stanzaType="set"):
         """
         @type xmlstream: L{xmlstream.XmlStream}
         @param xmlstream: XmlStream to use for transmission of this IQ
 
-        @type type: L{str}
-        @param type: IQ type identifier ('get' or 'set')
+        @type stanzaType: L{str}
+        @param stanzaType: IQ type identifier ('get' or 'set')
         """
         domish.Element.__init__(self, (None, "iq"))
         self.addUniqueId()
-        self["type"] = type
+        self["type"] = stanzaType
         self._xmlstream = xmlstream
 
     def send(self, to=None):
@@ -689,3 +695,36 @@ class IQ(domish.Element):
 
         self._xmlstream.send(self)
         return d
+
+
+def toResponse(stanza, stanzaType=None):
+    """
+    Create a response stanza from another stanza.
+
+    This takes the addressing and id attributes from a stanza to create a (new,
+    empty) response stanza. The addressing attributes are swapped and the id
+    copied. Optionally, the stanza type of the response can be specified.
+
+    @param stanza: the original stanza
+    @type stanza: L{domish.Element}
+    @param stanzaType: optional response stanza type
+    @type stanzaType: C{str}
+    @return: the response stanza.
+    @rtype: L{domish.Element}
+    """
+
+    toAddr = stanza.getAttribute('from')
+    fromAddr = stanza.getAttribute('to')
+    stanzaID = stanza.getAttribute('id')
+
+    response = domish.Element((None, stanza.name))
+    if toAddr:
+        response['to'] = toAddr
+    if fromAddr:
+        response['from'] = fromAddr
+    if id:
+        response['id'] = stanzaID
+    if type:
+        response['type'] = stanzaType
+
+    return response
