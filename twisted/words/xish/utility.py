@@ -7,6 +7,7 @@
 Event Dispatching and Callback utilities.
 """
 
+from twisted.python import log
 from twisted.words.xish import xpath
 
 class _MethodWrapper(object):
@@ -290,7 +291,11 @@ class EventDispatcher:
         for priority in priorities:
             for query, callbacklist in observers[priority].iteritems():
                 if match(query, obj):
-                    callbacklist.callback(obj)
+                    try:
+                        callbacklist.callback(obj)
+                    except:
+                        log.err()
+
                     foundTarget = True
                     if callbacklist.isEmpty():
                         emptyLists.append((priority, query))
