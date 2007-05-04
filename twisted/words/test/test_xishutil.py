@@ -208,29 +208,3 @@ class EventDispatcherTest(unittest.TestCase):
         d.dispatch(msg)
         self.assertEqual(1, cb.called)
         self.assertEqual(0, len(d._xpathObservers.pop(0)))
-
-    def test_observerRaisingException(self):
-        """
-        Test that exceptions in observers do not bubble up to dispatch.
-
-        The exceptions raised in observers should be logged and other
-        observers should be called as if nothing happened.
-        """
-
-        class TestError(Exception):
-            pass
-
-        def raiseError(_):
-            raise TestError()
-
-        d = EventDispatcher()
-        cb = CallbackTracker()
-        d.addObserver('//event/test', raiseError)
-        d.addObserver('//event/test', cb.call)
-        try:
-            d.dispatch(None, '//event/test')
-        except TestError:
-            self.fail("TestError raised. Should have been logged instead.")
-
-        self.assertEqual(1, cb.called)
-        self.assertEqual(1, len(self.flushLoggedErrors(TestError)))
