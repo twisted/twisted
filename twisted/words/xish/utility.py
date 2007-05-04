@@ -7,6 +7,7 @@
 Event Dispatching and Callback utilities.
 """
 
+from twisted.python import log
 from twisted.words.xish import xpath
 
 class _MethodWrapper(object):
@@ -85,6 +86,10 @@ class CallbackList:
         The passed arguments are event specific and augment and override
         the callback specific arguments as described above.
 
+        @note: Exceptions raised by callbacks are trapped and logged. They will
+               not propagate up to make sure other callbacks will still be
+               called, and the event dispatching allways succeeds.
+
         @param args: Positional arguments to the callable.
         @type args: C{list}
         @param kwargs: Keyword arguments to the callable.
@@ -92,7 +97,11 @@ class CallbackList:
         """
 
         for key, (methodwrapper, onetime) in self.callbacks.items():
-            methodwrapper(*args, **kwargs)
+            try:
+                methodwrapper(*args, **kwargs)
+            except:
+                log.err()
+
             if onetime:
                 del self.callbacks[key]
 
