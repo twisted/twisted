@@ -555,19 +555,19 @@ class XmlStream(xmlstream.XmlStream):
 
 
 class XmlStreamFactory(xmlstream.XmlStreamFactory):
+    """
+    Factory for Jabber XmlStream objects as a reconnecting client.
+
+    Note that this differs from L{xmlstream.XmlStreamFactory} in that
+    it generates Jabber specific L{XmlStream} instances that have
+    authenticators.
+    """
+
+    protocol = XmlStream
+
     def __init__(self, authenticator):
-        xmlstream.XmlStreamFactory.__init__(self)
+        xmlstream.XmlStreamFactory.__init__(self, authenticator)
         self.authenticator = authenticator
-
-
-    def buildProtocol(self, _):
-        self.resetDelay()
-        # Create the stream and register all the bootstrap observers
-        xs = XmlStream(self.authenticator)
-        xs.factory = self
-        for event, fn in self.bootstraps: xs.addObserver(event, fn)
-        return xs
-
 
 
 class TimeoutError(Exception):

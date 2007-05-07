@@ -1,9 +1,10 @@
 # -*- test-case-name: twisted.words.test.test_xmlstream -*-
 #
-# Copyright (c) 2001-2005 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-""" XML Stream processing.
+"""
+XML Stream processing.
 
 An XML Stream is defined as a connection over which two XML documents are
 exchanged during the lifetime of the connection, one for each direction. The
@@ -68,7 +69,8 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
         connection.
         """
         try:
-            if self.rawDataInFn: self.rawDataInFn(data)
+            if self.rawDataInFn:
+                self.rawDataInFn(data)
             self.stream.parse(data)
         except domish.ParserError:
             self.dispatch(self, STREAM_ERROR_EVENT)
@@ -81,7 +83,7 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
         """
         self.dispatch(self, STREAM_END_EVENT)
         self.stream = None
-        
+
     ### --------------------------------------------------------------
     ###
     ### DOM events
@@ -93,7 +95,7 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
 
         Dispatches the L{STREAM_START_EVENT}.
         """
-        self.dispatch(self, STREAM_START_EVENT)    
+        self.dispatch(self, STREAM_START_EVENT)
 
     def onElement(self, element):
         """ Called whenever a direct child element of the root element has
@@ -136,44 +138,74 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
         """
         if domish.IElement.providedBy(obj):
             obj = obj.toXml()
-            
+
         if isinstance(obj, unicode):
             obj = obj.encode('utf-8')
-            
+
         if self.rawDataOutFn:
             self.rawDataOutFn(obj)
-            
+
         self.transport.write(obj)
 
 
-class XmlStreamFactory(protocol.ReconnectingClientFactory):
-    """ Factory for XmlStream protocol objects as a reconnection client.
-    
-    This factory generates XmlStream objects when a connection has been
-    established. To make sure certain event observers are set up before
-    incoming data is processed, you can set up bootstrap event observers using
-    C{addBootstrap}.
+class XmlStreamFactoryMixin(object):
+    """
+    XmlStream factory mixin that takes care of event handlers.
+
+    To make sure certain event observers are set up before incoming data is
+    processed, you can set up bootstrap event observers using C{addBootstrap}.
+
+    The C{event} and C{fn} parameters correspond with the C{event} and
+    C{observerfn} arguments to L{utility.EventDispatcher.addObserver}.
     """
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         self.bootstraps = []
+        self.args = args
+        self.kwargs = kwargs
 
     def buildProtocol(self, addr):
-        """ Create an instance of XmlStream.
+        """
+        Create an instance of XmlStream.
 
         The returned instance will have bootstrap event observers registered
         and will proceed to handle input on an incoming connection.
         """
-        self.resetDelay()
-        xs = XmlStream()
+        xs = self.protocol(*self.args, **self.kwargs)
         xs.factory = self
-        for event, fn in self.bootstraps: xs.addObserver(event, fn)
+        for event, fn in self.bootstraps:
+            xs.addObserver(event, fn)
         return xs
 
     def addBootstrap(self, event, fn):
-        """ Add a bootstrap event handler. """
+        """
+        Add a bootstrap event handler.
+        """
         self.bootstraps.append((event, fn))
 
     def removeBootstrap(self, event, fn):
-        """ Remove a bootstrap event handler. """
+        """
+        Remove a bootstrap event handler.
+        """
         self.bootstraps.remove((event, fn))
+
+
+class XmlStreamFactory(XmlStreamFactoryMixin,
+                       protocol.ReconnectingClientFactory):
+    """
+    Factory for XmlStream protocol objects as a reconnection client.
+    """
+
+    protocol = XmlStream
+
+    def buildProtocol(self, addr):
+        """
+        Create a protocol instance.
+
+        Overrides L{XmlStreamFactoryMixin.buildProtocol} to work with
+        a L{ReconnectingClientFactory}. As this is called upon having an
+        connection established, we are resetting the delay for reconnection
+        attempts when the connection is lost again.
+        """
+        self.resetDelay()
+        return XmlStreamFactoryMixin.buildProtocol(self, addr)
