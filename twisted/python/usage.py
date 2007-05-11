@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_usage -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -8,26 +8,55 @@ twisted.python.usage is a module for parsing/handling the
 command line of your program.
 
 For information on how to use it, see
-U{http://twistedmatrix.com/projects/core/documentation/howto/options.html}, or doc/howto/options.html
-in your Twisted directory.
+U{http://twistedmatrix.com/projects/core/documentation/howto/options.html},
+or doc/howto/options.html in your Twisted directory.
 """
 
 # System Imports
-import string
 import os
 import sys
 import getopt
 from os import path
 
 # Sibling Imports
-import reflect
-import text
-import util
+from twisted.python import reflect, text, util
+
 
 class UsageError(Exception):
     pass
 
+
 error = UsageError
+
+
+class CoerceParameter(object):
+    """
+    Utility class that can corce a parameter before storing it.
+    """
+    def __init__(self, options, coerce):
+        """
+        @param options: parent Options object
+        @param coerce: callable used to coerce the value.
+        """
+        self.options = options
+        self.coerce = coerce
+        self.doc = getattr(self.coerce, 'coerceDoc', '')
+
+    def dispatch(self, parameterName, value):
+        """
+        When called in dispatch, do the coerce for C{value} and save the
+        returned value.
+        """
+        if value is None:
+            raise UsageError("Parameter '%s' requires an argument."
+                             % (parameterName,))
+        try:
+            value = self.coerce(value)
+        except ValueError, e:
+            raise UsageError("Parameter type enforcement failed: %s" % (e,))
+
+        self.options.opts[parameterName] = value
+
 
 class Options(dict):
     """
@@ -56,6 +85,11 @@ class Options(dict):
 
     | optParameters = [['outfile', 'O', 'outfile.log', 'Description...']]
 
+    A coerce function can also be specified as the last element: it will be
+    called with the argument and should return the value that will be stored
+    for the option. This function can have a C{coerceDoc} attribute which
+    will be appended to the documentation of the option.
+
     subCommands is a list of 4-tuples of (command name, command shortcut,
     parser class, documentation).  If the first non-option argument found is
     one of the given command names, an instance of the given parser class is
@@ -63,8 +97,10 @@ class Options(dict):
     self.opts[command] is set to the command name.  For example::
 
     | subCommands = [
-    |      ['inquisition', 'inquest', InquisitionOptions, 'Perform an inquisition'],
-    |      ['holyquest', 'quest', HolyQuestOptions, 'Embark upon a holy quest']
+    |      ['inquisition', 'inquest', InquisitionOptions,
+    |           'Perform an inquisition'],
+    |      ['holyquest', 'quest', HolyQuestOptions,
+    |           'Embark upon a holy quest']
     |  ]
 
     In this case, C{"<program> holyquest --horseback --for-grail"} will cause
@@ -89,8 +125,9 @@ class Options(dict):
     can do things like C{'self["option"] = val'} in these methods.
 
     Advanced functionality is covered in the howto documentation,
-    available at U{http://twistedmatrix.com/projects/core/documentation/howto/options.html}, or
-    doc/howto/options.html in your Twisted directory.
+    available at
+    U{http://twistedmatrix.com/projects/core/documentation/howto/options.html},
+    or doc/howto/options.html in your Twisted directory.
     """
 
     subCommand = None
@@ -107,7 +144,7 @@ class Options(dict):
         self.shortOpt = ''
         self.docs = {}
         self.synonyms = {}
-        self.__dispatch = {}
+        self._dispatch = {}
 
 
         collectors = [
@@ -126,7 +163,7 @@ class Options(dict):
             self.defaults.update(settings)
 
             self.synonyms.update(synonyms)
-            self.__dispatch.update(dispatch)
+            self._dispatch.update(dispatch)
 
     def __hash__(self):
         """
@@ -137,7 +174,9 @@ class Options(dict):
         return int(id(self) % sys.maxint)
 
     def opt_help(self):
-        """Display this help and exit."""
+        """
+        Display this help and exit.
+        """
         print self.__str__()
         sys.exit(0)
 
@@ -149,7 +188,8 @@ class Options(dict):
     #opt_h = opt_help # this conflicted with existing 'host' options.
 
     def parseOptions(self, options=None):
-        """The guts of the command-line parser.
+        """
+        The guts of the command-line parser.
         """
 
         if options is None:
@@ -160,7 +200,6 @@ class Options(dict):
         except getopt.error, e:
             raise UsageError(str(e))
 
-
         for opt, arg in opts:
             if opt[1] == '-':
                 opt = opt[2:]
@@ -168,13 +207,16 @@ class Options(dict):
                 opt = opt[1:]
 
             optMangled = opt
-            if not self.synonyms.has_key(optMangled):
-                optMangled = string.replace(opt, "-", "_")
-                if not self.synonyms.has_key(optMangled):
-                    raise UsageError, "No such option '%s'" % (opt,)
+            if optMangled not in self.synonyms:
+                optMangled = opt.replace("-", "_")
+                if optMangled not in self.synonyms:
+                    raise UsageError("No such option '%s'" % (opt,))
 
             optMangled = self.synonyms[optMangled]
-            self.__dispatch[optMangled](optMangled, arg)
+            if isinstance(self._dispatch[optMangled], CoerceParameter):
+                self._dispatch[optMangled].dispatch(optMangled, arg)
+            else:
+                self._dispatch[optMangled](optMangled, arg)
 
         if (getattr(self, 'subCommands', None)
             and (args or self.defaultSubCommand is not None)):
@@ -199,17 +241,17 @@ class Options(dict):
         self.postOptions()
 
     def postOptions(self):
-        """I am called after the options are parsed.
+        """
+        I am called after the options are parsed.
 
         Override this method in your subclass to do something after
         the options have been parsed and assigned, like validate that
         all options are sane.
         """
-        pass
-
 
     def parseArgs(self):
-        """I am called with any leftover arguments which were not options.
+        """
+        I am called with any leftover arguments which were not options.
 
         Override me to do something with the remaining arguments on
         the command line, those which were not flags or options. e.g.
@@ -221,24 +263,17 @@ class Options(dict):
         parseArgs will blow up if I am passed any arguments at
         all!
         """
-        pass
 
     def _generic_flag(self, flagName, value=None):
         if value not in ('', None):
-            raise UsageError, ("Flag '%s' takes no argument."
-                               " Not even \"%s\"." % (flagName, value))
+            raise UsageError("Flag '%s' takes no argument."
+                             " Not even \"%s\"." % (flagName, value))
 
         self.opts[flagName] = 1
 
-    def _generic_parameter(self, parameterName, value):
-        if value is None:
-            raise UsageError, ("Parameter '%s' requires an argument."
-                               % (parameterName,))
-
-        self.opts[parameterName] = value
-
     def _gather_flags(self):
-        """Gather up boolean (flag) options.
+        """
+        Gather up boolean (flag) options.
         """
 
         longOpt, shortOpt = [], ''
@@ -250,7 +285,7 @@ class Options(dict):
         for flag in flags:
             long, short, doc = util.padTo(3, flag)
             if not long:
-                raise ValueError, "A flag cannot be without a name."
+                raise ValueError("A flag cannot be without a name.")
 
             docs[long] = doc
             settings[long] = 0
@@ -263,9 +298,9 @@ class Options(dict):
 
         return longOpt, shortOpt, docs, settings, synonyms, dispatch
 
-
     def _gather_parameters(self):
-        """Gather options which take a value.
+        """
+        Gather options which take a value.
         """
         longOpt, shortOpt = [], ''
         docs, settings, synonyms, dispatch = {}, {}, {}, {}
@@ -276,7 +311,8 @@ class Options(dict):
                                     parameters)
         if parameters:
             import warnings
-            warnings.warn("Options.optStrings is deprecated, please use optParameters instead.", stacklevel=2)
+            warnings.warn("Options.optStrings is deprecated, "
+                          "please use optParameters instead.", stacklevel=2)
 
         reflect.accumulateClassList(self.__class__, 'optParameters',
                                     parameters)
@@ -284,9 +320,9 @@ class Options(dict):
         synonyms = {}
 
         for parameter in parameters:
-            long, short, default, doc = util.padTo(4, parameter)
+            long, short, default, doc, paramType = util.padTo(5, parameter)
             if not long:
-                raise ValueError, "A parameter cannot be without a name."
+                raise ValueError("A parameter cannot be without a name.")
 
             docs[long] = doc
             settings[long] = default
@@ -295,13 +331,17 @@ class Options(dict):
                 synonyms[short] = long
             longOpt.append(long + '=')
             synonyms[long] = long
-            dispatch[long] = self._generic_parameter
+            if paramType is not None:
+                dispatch[long] = CoerceParameter(self, paramType)
+            else:
+                dispatch[long] = CoerceParameter(self, str)
 
         return longOpt, shortOpt, docs, settings, synonyms, dispatch
 
 
     def _gather_handlers(self):
-        """Gather up options with their own handler methods.
+        """
+        Gather up options with their own handler methods.
         """
 
         longOpt, shortOpt = [], ''
@@ -315,11 +355,11 @@ class Options(dict):
 
             takesArg = not flagFunction(method, name)
 
-            prettyName = string.replace(name, '_', '-')
+            prettyName = name.replace('_', '-')
             doc = getattr(method, '__doc__', None)
             if doc:
                 ## Only use the first line.
-                #docs[name] = string.split(doc, '\n')[0]
+                #docs[name] = doc.split('\n')[0]
                 docs[prettyName] = doc
             else:
                 docs[prettyName] = self.docs.get(prettyName)
@@ -350,8 +390,8 @@ class Options(dict):
         reverse_dct = {}
         # Map synonyms
         for name in dct.keys():
-            method = getattr(self, 'opt_'+name)
-            if not reverse_dct.has_key(method):
+            method = getattr(self, 'opt_' + name)
+            if method not in reverse_dct:
                 reverse_dct[method] = []
             reverse_dct[method].append(name)
 
@@ -373,8 +413,9 @@ class Options(dict):
         return self.getSynopsis() + '\n' + self.getUsage(width=None)
 
     def getSynopsis(self):
-        """ Returns a string containing a description of these options and how to
-            pass them to the executed file.
+        """
+        Returns a string containing a description of these options and how to
+        pass them to the executed file.
         """
 
         default = "%s%s" % (path.basename(sys.argv[0]),
@@ -389,13 +430,14 @@ class Options(dict):
         synopsis = synopsis.rstrip()
 
         if self.parent is not None:
-            synopsis = ' '.join((self.parent.getSynopsis(), self.parent.subCommand, synopsis))
+            synopsis = ' '.join((self.parent.getSynopsis(),
+                                 self.parent.subCommand, synopsis))
 
         return synopsis
 
     def getUsage(self, width=None):
-        #If subOptions exists by now, then there was probably an error while
-        #parsing its options.
+        # If subOptions exists by now, then there was probably an error while
+        # parsing its options.
         if hasattr(self, 'subOptions'):
             return self.subOptions.getUsage(width=width)
 
@@ -423,7 +465,7 @@ class Options(dict):
             if (key != longname) and (len(key) == 1):
                 longToShort[longname] = key
             else:
-                if not longToShort.has_key(longname):
+                if longname not in longToShort:
                     longToShort[longname] = None
                 else:
                     pass
@@ -441,7 +483,8 @@ class Options(dict):
                  'short': longToShort[opt],
                  'doc': self.docs[opt],
                  'optType': optType,
-                 'default': self.defaults.get(opt, None)
+                 'default': self.defaults.get(opt, None),
+                 'dispatch': self._dispatch.get(opt, None)
                  })
 
         if not (getattr(self, "longdesc", None) is None):
@@ -455,12 +498,12 @@ class Options(dict):
 
         if longdesc:
             longdesc = ('\n' +
-                        string.join(text.wordWrap(longdesc, width), '\n').strip()
+                        '\n'.join(text.wordWrap(longdesc, width)).strip()
                         + '\n')
 
         if optDicts:
             chunks = docMakeChunks(optDicts, width)
-            s = "Options:\n%s" % (string.join(chunks, ''))
+            s = "Options:\n%s" % (''.join(chunks))
         else:
             s = "Options: None\n"
 
@@ -472,7 +515,8 @@ class Options(dict):
 
 
 def docMakeChunks(optList, width=80):
-    """Makes doc chunks for option declarations.
+    """
+    Makes doc chunks for option declarations.
 
     Takes a list of dictionaries, each of which may have one or more
     of the keys 'long', 'short', 'doc', 'default', 'optType'.
@@ -504,12 +548,11 @@ def docMakeChunks(optList, width=80):
     optChunks = []
     seen = {}
     for opt in optList:
-        if seen.has_key(opt.get('short', None)) \
-           or seen.has_key(opt.get('long', None)):
+        if opt.get('short', None) in seen or opt.get('long', None) in seen:
             continue
         for x in opt.get('short', None), opt.get('long', None):
             if x is not None:
-                seen[x]=1
+                seen[x] = 1
 
         optLines = []
         comma = " "
@@ -543,6 +586,12 @@ def docMakeChunks(optList, width=80):
            and not (opt.get('default', None) is None):
             doc = "%s [default: %s]" % (doc, opt['default'])
 
+        if (opt.get("optType", None) == "parameter") \
+           and opt.get('dispatch', None) is not None:
+            d = opt['dispatch']
+            if isinstance(d, CoerceParameter) and d.doc:
+                doc = "%s. %s" % (doc, d.doc)
+
         if doc:
             column2_l = text.wordWrap(doc, colWidth2)
         else:
@@ -553,15 +602,30 @@ def docMakeChunks(optList, width=80):
         for line in column2_l:
             optLines.append("%s%s\n" % (colFiller1, line))
 
-        optChunks.append(string.join(optLines, ''))
+        optChunks.append(''.join(optLines))
 
     return optChunks
 
-def flagFunction(method, name = None):
+
+def flagFunction(method, name=None):
     reqArgs = method.im_func.func_code.co_argcount
     if reqArgs > 2:
-        raise UsageError('Invalid Option function for %s' % (name or method.func_name))
+        raise UsageError('Invalid Option function for %s' %
+                         (name or method.func_name))
     if reqArgs == 2:
         # argName = method.im_func.func_code.co_varnames[1]
         return 0
     return 1
+
+
+def portCoerce(value):
+    """
+    Coerce a string value to an int port number, and checks the validity.
+    """
+    value = int(value)
+    if value < 0 or value > 65535:
+        raise ValueError("Port number not in range: %s" % (value,))
+    return value
+portCoerce.coerceDoc = "Must be an int between 0 and 65535."
+
+

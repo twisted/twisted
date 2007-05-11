@@ -25,9 +25,9 @@ class Options(usage.Options):
     synopsis = "Usage: mktap mail [options]"
 
     optParameters = [
-        ["pop3", "p", 8110, "Port to start the POP3 server on (0 to disable)."],
-        ["pop3s", "S", 0, "Port to start the POP3-over-SSL server on (0 to disable)."],
-        ["smtp", "s", 8025, "Port to start the SMTP server on (0 to disable)."],
+        ["pop3", "p", 8110, "Port to start the POP3 server on (0 to disable).", usage.portCoerce],
+        ["pop3s", "S", 0, "Port to start the POP3-over-SSL server on (0 to disable).", usage.portCoerce],
+        ["smtp", "s", 8025, "Port to start the SMTP server on (0 to disable).", usage.portCoerce],
         ["certificate", "c", None, "Certificate file to use for SSL connections"],
         ["relay", "R", None,
             "Relay messages according to their envelope 'To', using the given"
@@ -114,15 +114,6 @@ class Options(usage.Options):
     opt_A = opt_aliases
 
     def postOptions(self):
-        for f in ('pop3', 'smtp', 'pop3s'):
-            try:
-                self[f] = int(self[f])
-                if not (0 <= self[f] < 2 ** 16):
-                    raise ValueError
-            except ValueError:
-                raise usage.UsageError(
-                    'Invalid port specified to --%s: %s' % (f, self[f])
-                )
         if self['pop3s']:
             if not self['certificate']:
                 raise usage.UsageError("Cannot specify --pop3s without "
