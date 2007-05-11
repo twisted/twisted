@@ -1,6 +1,11 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+Tests for L{twisted.web.client}.
+"""
+
+from urlparse import urlparse
 
 from twisted.trial import unittest
 from twisted.web import server, static, client, error, util, resource
@@ -72,8 +77,13 @@ class BrokenDownloadResource(resource.Resource):
         request.write('abc')
         return ''
 
+
+
 class ParseUrlTestCase(unittest.TestCase):
-    """Test URL parsing facility and defaults values."""
+    """
+    Test URL parsing facility and defaults values.
+    """
+
     def testParse(self):
         scheme, host, port, path = client._parse("http://127.0.0.1/")
         self.assertEquals(path, "/")
@@ -90,6 +100,23 @@ class ParseUrlTestCase(unittest.TestCase):
         self.assertEquals(port, 7890)
         self.assertEquals(host, "egg")
         self.assertEquals(path, "/")
+
+
+    def test_externalUnicodeInterference(self):
+        """
+        L{client._parse} should return C{str} for the scheme, host, and path
+        elements of its return tuple, even when passed an URL which has
+        previously been passed to L{urlparse} as a C{unicode} string.
+        """
+        badInput = u'http://example.com/path'
+        goodInput = badInput.encode('ascii')
+        urlparse(badInput)
+        scheme, host, port, path = client._parse(goodInput)
+        self.assertTrue(isinstance(scheme, str))
+        self.assertTrue(isinstance(host, str))
+        self.assertTrue(isinstance(path, str))
+
+
 
 class WebClientTestCase(unittest.TestCase):
     def _listen(self, site):

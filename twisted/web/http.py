@@ -1,10 +1,11 @@
 # -*- test-case-name: twisted.web.test.test_http -*-
 
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""HyperText Transfer Protocol implementation.
+"""
+HyperText Transfer Protocol implementation.
 
 This is used by twisted.web.
 
@@ -29,6 +30,7 @@ import time
 import calendar
 import warnings
 import os
+from urlparse import urlparse as _urlparse
 
 from zope.interface import implements
 
@@ -163,6 +165,34 @@ monthname = [None,
              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 weekdayname_lower = [name.lower() for name in weekdayname]
 monthname_lower = [name and name.lower() for name in monthname]
+
+def urlparse(url):
+    """
+    Parse an URL into six components.
+
+    This is similar to L{urlparse.urlparse}, but rejects C{unicode} input
+    and always produces C{str} output.
+
+    @type url C{str}
+
+    @raise TypeError: The given url was a C{unicode} string instead of a
+    C{str}.
+
+    @rtype: six-tuple of str
+    @return: The scheme, net location, path, params, query string, and fragment
+    of the URL.
+    """
+    if isinstance(url, unicode):
+        raise TypeError("url must be str, not unicode")
+    scheme, netloc, path, params, query, fragment = _urlparse(url)
+    if isinstance(scheme, unicode):
+        scheme = scheme.encode('ascii')
+        netloc = netloc.encode('ascii')
+        path = path.encode('ascii')
+        query = query.encode('ascii')
+        fragment = fragment.encode('ascii')
+    return scheme, netloc, path, params, query, fragment
+
 
 def parse_qs(qs, keep_blank_values=0, strict_parsing=0, unquote=unquote):
     """like cgi.parse_qs, only with custom unquote function"""

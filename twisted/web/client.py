@@ -1,16 +1,18 @@
 # -*- test-case-name: twisted.web.test.test_webclient -*-
 
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 #
 
-"""HTTP client.
+"""
+HTTP client.
 
 API Stability: stable
 """
 
-import urlparse, os, types
+import os, types
+from urlparse import urlunparse
 
 from twisted.web import http
 from twisted.internet import defer, protocol, reactor
@@ -363,10 +365,23 @@ class HTTPDownloader(HTTPClientFactory):
 
 
 def _parse(url, defaultPort=None):
+    """
+    Split the given URL into the scheme, host, port, and path.
+
+    @type url: C{str}
+    @param url: An URL to parse.
+
+    @type defaultPort: C{int} or C{None}
+    @param defaultPort: An alternate value to use as the port if the URL does
+    not include one.
+
+    @return: A four-tuple of the scheme, host, port, and path of the URL.  All
+    of these are C{str} instances except for port, which is an C{int}.
+    """
     url = url.strip()
-    parsed = urlparse.urlparse(url)
+    parsed = http.urlparse(url)
     scheme = parsed[0]
-    path = urlparse.urlunparse(('','')+parsed[2:])
+    path = urlunparse(('','')+parsed[2:])
     if defaultPort is None:
         if scheme == 'https':
             defaultPort = 443

@@ -1,18 +1,19 @@
-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""Test HTTP support."""
+"""
+Test HTTP support.
+"""
 
-from __future__ import nested_scopes
+from urlparse import urlparse, urlunsplit, clear_cache
+import string, random, urllib, cgi
 
 from twisted.trial import unittest
 from twisted.web import http
 from twisted.protocols import loopback
 from twisted.internet import protocol
 from twisted.test.test_protocols import StringIOWithoutClosing
-import string, random, urllib, cgi
 
 
 class DateTimeTest(unittest.TestCase):
@@ -445,6 +446,69 @@ class QueryArgumentsTestCase(unittest.TestCase):
             http.parse_qs("a=&b=c", keep_blank_values = 1))
         self.failUnlessEqual(cgi.parse_qs("a=&b=c"),
             http.parse_qs("a=&b=c"))
+
+
+    def test_urlparse(self):
+        """
+        For a given URL, L{http.urlparse} should behave the same as
+        L{urlparse}, except it should always return C{str}, never C{unicode}.
+        """
+        def urls():
+            for scheme in ('http', 'https'):
+                for host in ('example.com',):
+                    for port in (None, 100):
+                        for path in ('', 'path'):
+                            if port is not None:
+                                host = host + ':' + str(port)
+                                yield urlunsplit((scheme, host, path, '', ''))
+
+
+        def assertSameParsing(url, decode):
+            """
+            Verify that C{url} is parsed into the same objects by both
+            L{http.urlparse} and L{urlparse}.
+            """
+            urlToStandardImplementation = url
+            if decode:
+                urlToStandardImplementation = url.decode('ascii')
+            standardResult = urlparse(urlToStandardImplementation)
+            scheme, netloc, path, params, query, fragment = http.urlparse(url)
+            self.assertEqual(
+                (scheme, netloc, path, params, query, fragment),
+                standardResult)
+            self.assertTrue(isinstance(scheme, str))
+            self.assertTrue(isinstance(netloc, str))
+            self.assertTrue(isinstance(path, str))
+            self.assertTrue(isinstance(params, str))
+            self.assertTrue(isinstance(query, str))
+            self.assertTrue(isinstance(fragment, str))
+
+        # With caching, unicode then str
+        clear_cache()
+        for url in urls():
+            assertSameParsing(url, True)
+            assertSameParsing(url, False)
+
+        # With caching, str then unicode
+        clear_cache()
+        for url in urls():
+            assertSameParsing(url, False)
+            assertSameParsing(url, True)
+
+        # Without caching
+        for url in urls():
+            clear_cache()
+            assertSameParsing(url, True)
+            clear_cache()
+            assertSameParsing(url, False)
+
+
+    def test_urlparseRejectsUnicode(self):
+        """
+        L{http.urlparse} should reject unicode input early.
+        """
+        self.assertRaises(TypeError, http.urlparse, u'http://example.org/path')
+
 
     def testEscchar(self):
         try:
