@@ -1,39 +1,60 @@
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 """
 Helper class to writing deterministic time-based unit tests.
 
-Do not use this module.  It is a lie.  See L{twisted.test.test_task.Clock}
-instead, but don't use that either because it might also be a lie.
+Do not use this module.  It is a lie.  See L{twisted.internet.task.Clock}
+instead.
 """
 
 class Clock(object):
+    """
+    A utility for monkey-patches various parts of Twisted to use a
+    simulated timing mechanism. DO NOT use this class. Use
+    L{twisted.internet.task.Clock}.
+    """
     rightNow = 0.0
 
     def __call__(self):
+        """
+        Return the current simulated time.
+        """
         return self.rightNow
 
     def install(self):
+        """
+        Monkeypatch L{twisted.internet.reactor.seconds} to use
+        L{__call__} as a time source
+        """
         # Violation is fun.
-        from twisted.internet import base, task
-        from twisted.python import runtime
-        self.base_original = base.seconds
-        self.task_original = task.seconds
-        self.runtime_original = runtime.seconds
-        base.seconds = self
-        task.seconds = self
-        runtime.seconds = self
+        from twisted.internet import reactor
+        self.reactor_original = reactor.seconds
+        reactor.seconds = self
 
     def uninstall(self):
-        from twisted.internet import base, task
-        from twisted.python import runtime
-        base.seconds = self.base_original
-        runtime.seconds = self.runtime_original
-        task.seconds = self.task_original
-    
+        """
+        Remove the monkeypatching of L{twisted.internet.reactor.seconds}.
+        """
+        from twisted.internet import reactor
+        reactor.seconds = self.reactor_original
+
     def adjust(self, amount):
+        """
+        Adjust the current simulated time upward by the given C{amount}.
+
+        Note that this does not cause any scheduled calls to be run.
+        """
         self.rightNow += amount
 
     def pump(self, reactor, timings):
+        """
+        Iterate the given C{reactor} with increments of time specified
+        by C{timings}.
+
+        For each timing, the simulated time will be L{adjust}ed and
+        the reactor will be iterated twice.
+        """
         timings = list(timings)
         timings.reverse()
         self.adjust(timings.pop())

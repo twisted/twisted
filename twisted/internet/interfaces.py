@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -366,9 +366,11 @@ class IReactorProcess(Interface):
 
     def spawnProcess(processProtocol, executable, args=(), env={}, path=None,
                      uid=None, gid=None, usePTY=0, childFDs=None):
-        """Spawn a process, with a process protocol.
+        """
+        Spawn a process, with a process protocol.
 
-        @param processProtocol: a L{twisted.internet.protocol.ProcessProtocol} instance
+        @param processProtocol: a L{twisted.internet.protocol.ProcessProtocol}
+            instance
 
         @param executable: the file name to spawn - the full path should be
                            used.
@@ -430,11 +432,21 @@ class IReactorProcess(Interface):
         """
 
 class IReactorTime(Interface):
-    """Time methods that a Reactor should implement.
+    """
+    Time methods that a Reactor should implement.
     """
 
+    def seconds():
+        """
+        Get the current time in seconds.
+
+        @return: A number-like object of some sort.
+        """
+
+
     def callLater(delay, callable, *args, **kw):
-        """Call a function later.
+        """
+        Call a function later.
 
         @type delay:  C{float}
         @param delay: the number of seconds to wait.
@@ -452,7 +464,8 @@ class IReactorTime(Interface):
         """
 
     def cancelCallLater(callID):
-        """This method is deprecated.
+        """
+        This method is deprecated.
 
         Cancel a call that would happen later.
 
@@ -463,7 +476,8 @@ class IReactorTime(Interface):
         """
 
     def getDelayedCalls():
-        """Retrieve all currently scheduled delayed calls.
+        """
+        Retrieve all currently scheduled delayed calls.
 
         @return: A tuple of all L{IDelayedCall} providers representing all
                  currently scheduled calls. This is everything that has been
@@ -472,20 +486,23 @@ class IReactorTime(Interface):
 
 
 class IDelayedCall(Interface):
-    """A scheduled call.
+    """
+    A scheduled call.
 
     There are probably other useful methods we can add to this interface;
     suggestions are welcome.
     """
 
     def getTime():
-        """Get time when delayed call will happen.
+        """
+        Get time when delayed call will happen.
 
         @return: time in seconds since epoch (a float).
         """
 
     def cancel():
-        """Cancel the scheduled call.
+        """
+        Cancel the scheduled call.
 
         @raises twisted.internet.error.AlreadyCalled: if the call has already
             happened.
@@ -494,7 +511,8 @@ class IDelayedCall(Interface):
         """
 
     def delay(secondsLater):
-        """Delay the scheduled call.
+        """
+        Delay the scheduled call.
 
         @param secondsLater: how many seconds from its current firing time to delay
 
@@ -505,7 +523,8 @@ class IDelayedCall(Interface):
         """
 
     def reset(secondsFromNow):
-        """Reset the scheduled call's timer.
+        """
+        Reset the scheduled call's timer.
 
         @param secondsFromNow: how many seconds from now it should fire,
             equivalent to C{.cancel()} and then doing another

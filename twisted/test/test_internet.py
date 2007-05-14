@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -194,14 +194,62 @@ class SystemEventTestCase(unittest.TestCase):
                               r.removeSystemEventTrigger, None)
 
 
-class InterfaceTestCase(unittest.TestCase):
+class TimeTestCase(unittest.TestCase):
     """
-    Tests for a random pile of crap in twisted.internet, I suppose.
+    Tests for the IReactorTime part of the reactor.
     """
+
+
+    def test_seconds(self):
+        """
+        L{twisted.internet.reactor.seconds} should return something
+        like a number.
+
+        1. This test specifically does not assert any relation to the
+           "system time" as returned by L{time.time} or
+           L{twisted.python.runtime.seconds}, because at some point we
+           may find a better option for scheduling calls than
+           wallclock-time.
+        2. This test *also* does not assert anything about the type of
+           the result, because operations may not return ints or
+           floats: For example, datetime-datetime == timedelta(0).
+        """
+        now = reactor.seconds()
+        self.assertEquals(now-now+now, now)
+
+
+    def test_callLaterUsesReactorSecondsInDelayedCall(self):
+        """
+        L{reactor.callLater} should use the reactor's seconds factory
+        to produce the time at which the DelayedCall will be called.
+        """
+        oseconds = reactor.seconds
+        reactor.seconds = lambda: 100
+        try:
+            call = reactor.callLater(5, lambda: None)
+            self.assertEquals(call.getTime(), 105)
+        finally:
+            reactor.seconds = oseconds
+
+
+    def test_callLaterUsesReactorSecondsAsDelayedCallSecondsFactory(self):
+        """
+        L{reactor.callLater} should propagate its own seconds factory
+        to the DelayedCall to use as its own seconds factory.
+        """
+        oseconds = reactor.seconds
+        reactor.seconds = lambda: 100
+        try:
+            call = reactor.callLater(5, lambda: None)
+            self.assertEquals(call.seconds(), 100)
+        finally:
+            reactor.seconds = oseconds
+
 
     def test_callLater(self):
         """
-        Test that a DelayedCall really calls the function it is supposed to call.
+        Test that a DelayedCall really calls the function it is
+        supposed to call.
         """
         d = Deferred()
         reactor.callLater(0, d.callback, None)
@@ -281,6 +329,10 @@ class InterfaceTestCase(unittest.TestCase):
 
 
     def testCallLaterDelayAndReset(self):
+        """
+        Test that the reactor handles DelayedCalls which have been
+        reset or delayed.
+        """
         clock = Clock()
         clock.install()
         try:
@@ -297,13 +349,16 @@ class InterfaceTestCase(unittest.TestCase):
 
             clock.pump(reactor, [0, 1])
 
+            self.assertIdentical(callbackTimes[0], None)
+            self.assertIdentical(callbackTimes[1], None)
+
             ireset.reset(2) # (now)1 + 2 = 3
             idelay.delay(3) # (orig)3 + 3 = 6
 
             clock.pump(reactor, [0, 1])
 
             self.assertIdentical(callbackTimes[0], None)
-            self.assertIdentical(callbackTimes[0], None)
+            self.assertIdentical(callbackTimes[1], None)
 
             clock.pump(reactor, [0, 1])
 
@@ -422,7 +477,8 @@ class InterfaceTestCase(unittest.TestCase):
         """
         def seconds():
             return 10
-        dc = base.DelayedCall(5, lambda: None, (), {}, lambda dc: None, lambda dc: None, seconds)
+        dc = base.DelayedCall(5, lambda: None, (), {}, lambda dc: None, 
+                              lambda dc: None, seconds)
         self.assertEquals(dc.getTime(), 5)
         dc.reset(3)
         self.assertEquals(dc.getTime(), 13)

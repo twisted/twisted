@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_task -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -14,7 +14,6 @@ __metaclass__ = type
 
 import time
 
-from twisted.python.runtime import seconds
 from twisted.python import reflect
 
 from twisted.internet import base, defer
@@ -26,6 +25,11 @@ class LoopingCall:
     @ivar f: The function to call.
     @ivar a: A tuple of arguments to pass the function.
     @ivar kw: A dictionary of keyword arguments to pass to the function.
+    @ivar clock: A provider of
+        L{twisted.internet.interfaces.IReactorTime}.  The default is
+        L{twisted.internet.reactor}. Feel free to set this to
+        something else, but it probably ought to be set *before*
+        calling L{start}.
 
     If C{f} returns a deferred, rescheduling will not take place until the
     deferred has fired. The result value is ignored.
@@ -38,16 +42,13 @@ class LoopingCall:
     count = None
     starttime = None
 
-    def _callLater(self, delay):
-        from twisted.internet import reactor
-        return reactor.callLater(delay, self)
-
-    _seconds = staticmethod(seconds)
-
     def __init__(self, f, *a, **kw):
         self.f = f
         self.a = a
         self.kw = kw
+        from twisted.internet import reactor
+        self.clock = reactor
+
 
     def start(self, interval, now=True):
         """Start running function every interval seconds.
@@ -70,7 +71,7 @@ class LoopingCall:
             raise ValueError, "interval must be >= 0"
         self.running = True
         d = self.deferred = defer.Deferred()
-        self.starttime = self._seconds()
+        self.starttime = self.clock.seconds()
         self.count = 0
         self.interval = interval
         if now:
@@ -111,17 +112,17 @@ class LoopingCall:
 
     def _reschedule(self):
         if self.interval == 0:
-            self.call = self._callLater(0)
+            self.call = self.clock.callLater(0, self)
             return
 
-        fromNow = self.starttime - self._seconds()
+        fromNow = self.starttime - self.clock.seconds()
 
         while self.running:
             self.count += 1
             fromStart = self.count * self.interval
             delay = fromNow + fromStart
             if delay > 0:
-                self.call = self._callLater(delay)
+                self.call = self.clock.callLater(delay, self)
                 return
 
     def __repr__(self):

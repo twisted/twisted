@@ -30,13 +30,14 @@ from twisted.internet.interfaces import IResolverSimple, IReactorPluggableResolv
 from twisted.internet.interfaces import IConnector, IDelayedCall
 from twisted.internet import main, error, abstract, defer, threads
 from twisted.python import log, failure, reflect
-from twisted.python.runtime import seconds, platform
+from twisted.python.runtime import seconds as runtimeSeconds, platform
 from twisted.internet.defer import Deferred, DeferredList
 from twisted.persisted import styles
 
 # This import is for side-effects!  Even if you don't see any code using it
 # in this module, don't delete it.
 from twisted.python import threadable
+
 
 class DelayedCall(styles.Ephemeral):
 
@@ -46,7 +47,8 @@ class DelayedCall(styles.Ephemeral):
     debug = False
     _str = None
 
-    def __init__(self, time, func, args, kw, cancel, reset, seconds=None):
+    def __init__(self, time, func, args, kw, cancel, reset,
+                 seconds=runtimeSeconds):
         """
         @param time: Seconds from the epoch at which to call C{func}.
         @param func: The callable to call.
@@ -115,16 +117,13 @@ class DelayedCall(styles.Ephemeral):
         elif self.called:
             raise error.AlreadyCalled
         else:
-            if self.seconds is None:
-                new_time = seconds() + secondsFromNow
-            else:
-                new_time = self.seconds() + secondsFromNow
-            if new_time < self.time:
+            newTime = self.seconds() + secondsFromNow
+            if newTime < self.time:
                 self.delayed_time = 0
-                self.time = new_time
+                self.time = newTime
                 self.resetter(self)
             else:
-                self.delayed_time = new_time - self.time
+                self.delayed_time = newTime - self.time
 
     def delay(self, secondsLater):
         """Reschedule this call for a later time
@@ -175,10 +174,7 @@ class DelayedCall(styles.Ephemeral):
         else:
             func = None
 
-        if self.seconds is None:
-            now = seconds()
-        else:
-            now = self.seconds()
+        now = self.seconds()
         L = ["<DelayedCall %s [%ss] called=%s cancelled=%s" % (
                 id(self), self.time - now, self.called, self.cancelled)]
         if func is not None:
@@ -451,15 +447,18 @@ class ReactorBase(object):
 
     # IReactorTime
 
+    seconds = staticmethod(runtimeSeconds)
+
     def callLater(self, _seconds, _f, *args, **kw):
         """See twisted.internet.interfaces.IReactorTime.callLater.
         """
         assert callable(_f), "%s is not callable" % _f
         assert sys.maxint >= _seconds >= 0, \
                "%s is not greater than or equal to 0 seconds" % (_seconds,)
-        tple = DelayedCall(seconds() + _seconds, _f, args, kw,
+        tple = DelayedCall(self.seconds() + _seconds, _f, args, kw,
                            self._cancelCallLater,
-                           self._moveCallLaterSooner)
+                           self._moveCallLaterSooner,
+                           seconds=self.seconds)
         self._newTimedCalls.append(tple)
         return tple
 
@@ -517,7 +516,7 @@ class ReactorBase(object):
         if not self._pendingTimedCalls:
             return None
 
-        return max(0, self._pendingTimedCalls[0].time - seconds())
+        return max(0, self._pendingTimedCalls[0].time - self.seconds())
 
     def runUntilCurrent(self):
         """Run all pending timed calls.
@@ -544,7 +543,7 @@ class ReactorBase(object):
         # insert new delayed calls now
         self._insertNewDelayedCalls()
 
-        now = seconds()
+        now = self.seconds()
         while self._pendingTimedCalls and (self._pendingTimedCalls[0].time <= now):
             call = heappop(self._pendingTimedCalls)
             if call.cancelled:

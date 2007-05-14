@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 from twisted.trial import unittest
@@ -88,17 +88,28 @@ class SiteTest(unittest.TestCase):
 class SessionTest(unittest.TestCase):
 
     def setUp(self):
+        """
+        Set up a session using a simulated scheduler. Creates a
+        C{times} attribute which specifies the return values of the
+        session's C{_getTime} method.
+        """
         clock = self.clock = task.Clock()
-        # Define a looping call using the clock
-        class MockLoopingCall(task.LoopingCall):
-            def _callLater(self, delay):
-                return clock.callLater(delay, self)
-
         times = self.times = []
 
-        # Define a session that 1) user the mock looping call 2) use own timer
         class MockSession(server.Session):
-            loopFactory = MockLoopingCall
+            """
+            A mock L{server.Session} object which fakes out scheduling
+            with the C{clock} attribute and fakes out the current time
+            to be the elements of L{SessionTest}'s C{times} attribute.
+            """
+            def loopFactory(self, *a, **kw):
+                """
+                Create a L{task.LoopingCall} which uses
+                L{SessionTest}'s C{clock} attribute.
+                """
+                call = task.LoopingCall(*a, **kw)
+                call.clock = clock
+                return call
 
             def _getTime(self):
                 return times.pop(0)
