@@ -5594,3 +5594,8 @@ How do I use it?
 <det> When can we expect dots?
 <glyph> det: You've been waiting for years to say that, haven't you.
 %
+<glyph> while 1: pass
+<glyph> that's pretty CPU intensive
+<dracflamloc> yup
+<dracflamloc> you'd be better off doing that in a compiled language
+%
