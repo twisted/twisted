@@ -1,6 +1,13 @@
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Tests for the behaviour of unit tests.
+"""
+
 import gc, StringIO, sys
 
-from twisted.python import log
+from twisted.internet import defer, reactor
 from twisted.trial import unittest, runner, reporter, util
 from twisted.trial.test import erroneous, suppression
 
@@ -510,8 +517,9 @@ class SuppressionTest(unittest.TestCase):
 
 
 class GCMixin:
-    """I provide a few mock tests that log setUp, tearDown, test execution and
-    garbage collection.  I'm used to test whether gc.collect gets called.
+    """
+    I provide a few mock tests that log setUp, tearDown, test execution and
+    garbage collection. I'm used to test whether gc.collect gets called.
     """
 
     class BasicTest(unittest.TestCase):
@@ -560,7 +568,8 @@ class TestGarbageCollectionDefault(GCMixin, unittest.TestCase):
 
 class TestGarbageCollection(GCMixin, unittest.TestCase):
     def test_collectCalled(self):
-        """test gc.collect is called before and after each test
+        """
+        test gc.collect is called before and after each test.
         """
         test = TestGarbageCollection.BasicTest('test_foo')
         test.forceGarbageCollection = True
@@ -571,7 +580,9 @@ class TestGarbageCollection(GCMixin, unittest.TestCase):
             ['collect', 'setUp', 'test', 'tearDown', 'collect'])
 
     def test_collectCalledWhenTearDownClass(self):
-        """test gc.collect is called after tearDownClasss"""
+        """
+        test gc.collect is called after tearDownClass.
+        """
         tests = [TestGarbageCollection.ClassTest('test_1'),
                  TestGarbageCollection.ClassTest('test_2')]
         for t in tests:
@@ -625,3 +636,107 @@ class TestUnhandledDeferred(unittest.TestCase):
         gc.collect()
         gc.enable()
         self.flushLoggedErrors()
+
+
+class TestAddCleanup(unittest.TestCase):
+    """
+    Test the addCleanup method of TestCase.
+    """
+
+
+    class MockTest(unittest.TestCase):
+        def setUp(self):
+            unittest.TestCase.setUp(self)
+            self.log = ['setUp']
+
+        def append(self, thing):
+            self.log.append(thing)
+
+        def tearDown(self):
+            self.log.append('tearDown')
+
+        def runTest(self):
+            self.log.append('runTest')
+
+
+    def setUp(self):
+        unittest.TestCase.setUp(self)
+        self.result = reporter.TestResult()
+        self.test = TestAddCleanup.MockTest()
+
+
+    def test_addCleanupCalledInReverseOrder(self):
+        """
+        Callables added with addCleanup should be called after tearDown in
+        reverse order of addition.
+        """
+        self.test.addCleanup(self.test.append, "foo")
+        self.test.addCleanup(self.test.append, 'bar')
+        self.test.run(self.result)
+        self.assertEqual(['setUp', 'runTest', 'bar', 'foo', 'tearDown'],
+                         self.test.log)
+
+
+    def test_addCleanupWaitsForDeferreds(self):
+        """
+        If an added callable returns a Deferred, then the test should wait
+        until that Deferred has fired before running the next cleanup method.
+        """
+        def cleanup(message):
+            d = defer.Deferred()
+            reactor.callLater(0, d.callback, message)
+            return d.addCallback(self.test.append)
+        self.test.addCleanup(self.test.append, 'foo')
+        self.test.addCleanup(cleanup, 'bar')
+        self.test.run(self.result)
+        self.assertEqual(['setUp', 'runTest', 'bar', 'foo', 'tearDown'],
+                         self.test.log)
+
+
+    def test_errorInCleanupIsCaptured(self):
+        """
+        Errors raised in cleanup functions should be treated like errors in
+        C{tearDown}. They should be added as errors and fail the test. Skips,
+        todos and failures are all treated as errors.
+        """
+        self.test.addCleanup(self.test.fail, 'foo')
+        self.test.run(self.result)
+        self.failIf(self.result.wasSuccessful())
+        self.assertEqual(1, len(self.result.errors))
+        [(test, error)] = self.result.errors
+        self.assertEqual(test, self.test)
+        self.assertEqual(error.getErrorMessage(), 'foo')
+
+
+    def test_cleanupsContinueRunningAfterError(self):
+        """
+        If a cleanup raises an error then that does not stop the other cleanups
+        from being run.
+        """
+        self.test.addCleanup(self.test.append, 'foo')
+        self.test.addCleanup(self.test.fail, 'bar')
+        self.test.run(self.result)
+        self.assertEqual(['setUp', 'runTest', 'foo', 'tearDown'],
+                         self.test.log)
+        self.assertEqual(1, len(self.result.errors))
+        [(test, error)] = self.result.errors
+        self.assertEqual(test, self.test)
+        self.assertEqual(error.getErrorMessage(), 'bar')
+
+
+    def test_multipleErrorsReported(self):
+        """
+        If more than one cleanup fails, then the test should fail with more
+        than one error.
+        """
+        self.test.addCleanup(self.test.fail, 'foo')
+        self.test.addCleanup(self.test.fail, 'bar')
+        self.test.run(self.result)
+        self.assertEqual(['setUp', 'runTest', 'tearDown'],
+                         self.test.log)
+        self.assertEqual(2, len(self.result.errors))
+        [(test1, error1), (test2, error2)] = self.result.errors
+        self.assertEqual(test1, self.test)
+        self.assertEqual(test2, self.test)
+        self.assertEqual(error1.getErrorMessage(), 'bar')
+        self.assertEqual(error2.getErrorMessage(), 'foo')
