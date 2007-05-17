@@ -19,7 +19,8 @@ Maintainer: U{Jonathan Lange<mailto:jml@twistedmatrix.com>}
 
 
 import traceback, gc, sys
-from twisted.internet import interfaces, utils
+from twisted.python import failure
+from twisted.internet import defer, interfaces, utils
 
 # Methods in this list will be omitted from a failed test's traceback if
 # they are the final frame.
@@ -246,5 +247,36 @@ def findObject(name):
     return (True, obj)
 
 
+
+def _runSequentially(callables, stopOnFirstError=False):
+    """
+    Run the given callables one after the other. If a callable returns a
+    Deferred, wait until it has finished before running the next callable.
+
+    @param callables: An iterable of callables that take no parameters.
+
+    @param stopOnFirstError: If True, then stop running callables as soon as
+        one raises an exception or fires an errback. False by default.
+
+    @return: A L{Deferred} that fires a list of C{(flag, value)} tuples. Each
+        tuple will be either C{(SUCCESS, <return value>)} or C{(FAILURE,
+        <Failure>)}.
+    """
+    results = []
+    for f in callables:
+        d = defer.maybeDeferred(f)
+        thing = defer.waitForDeferred(d)
+        yield thing
+        try:
+            results.append((defer.SUCCESS, thing.getResult()))
+        except:
+            results.append((defer.FAILURE, failure.Failure()))
+            if stopOnFirstError:
+                break
+    yield results
+_runSequentially = defer.deferredGenerator(_runSequentially)
+
+
+
 __all__ = ['FailureError', 'DirtyReactorWarning', 'DirtyReactorError',
-           'PendingTimedCallsError']
+           'PendingTimedCallsError', 'runSequentially']

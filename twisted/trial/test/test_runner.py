@@ -250,7 +250,6 @@ class PyUnitDryRunTest(DryRunMixin, unittest.TestCase):
 class TestRunner(unittest.TestCase):
 
     def setUp(self):
-        self.runners = []
         self.config = trial.Options()
         # whitebox hack a reporter in, because plugins are CACHED and will
         # only reload if the FILE gets changed.
@@ -286,9 +285,6 @@ class TestRunner(unittest.TestCase):
 
 
     def tearDown(self):
-        for x in self.runners:
-            x._tearDownLogFile()
-        self.runners = []
         plugin.getPlugins = self.original
 
 
@@ -297,7 +293,7 @@ class TestRunner(unittest.TestCase):
 
     def getRunner(self):
         r = trial._makeRunner(self.config)
-        self.runners.append(r)
+        self.addCleanup(r._tearDownLogFile)
         return r
 
     def test_runner_can_get_reporter(self):

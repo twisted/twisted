@@ -710,4 +710,3 @@ class OtherPrimitives(unittest.TestCase):
 
         queue = defer.DeferredQueue(backlog=0)
         self.assertRaises(defer.QueueUnderflow, queue.get)
-
