@@ -995,37 +995,6 @@ class DeferredQueue(object):
             raise QueueUnderflow()
 
 
-
-def runSequentially(callables, stopOnFirstError=False):
-    """
-    Run the given callables one after the other. If a callable returns a
-    Deferred, wait until it has finished before running the next callable.
-
-    @param callables: An iterable of callables that take no parameters.
-
-    @param stopOnFirstError: If True, then stop running callables as soon as
-        one raises an exception or fires an errback. False by default.
-
-    @return: A L{Deferred} that fires a list of C{(flag, value)} tuples. Each
-        tuple will be either C{(SUCCESS, <return value>)} or C{(FAILURE,
-        <Failure>)}.
-    """
-    results = []
-    for f in callables:
-        d = maybeDeferred(f)
-        thing = waitForDeferred(d)
-        yield thing
-        try:
-            results.append((SUCCESS, thing.getResult()))
-        except:
-            results.append((FAILURE, failure.Failure()))
-            if stopOnFirstError:
-                break
-    yield results
-runSequentially = deferredGenerator(runSequentially)
-
-
-
 __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
            "AlreadyCalledError", "TimeoutError", "gatherResults",
            "maybeDeferred",

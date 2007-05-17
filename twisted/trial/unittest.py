@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.trial.test.test_tests -*-
 #
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -468,7 +468,6 @@ class TestCase(_Assertions):
             self.__class__._instances.add(self)
         self._passed = False
         self.forceGarbageCollection = False
-        self._cleanups = []
 
     def _initInstances(cls):
         cls._instances = sets.Set()
@@ -581,7 +580,6 @@ class TestCase(_Assertions):
         d.addCallbacks(self._cbDeferTestMethod, self._ebDeferTestMethod,
                        callbackArgs=(result,),
                        errbackArgs=(result,))
-        d.addBoth(self.deferRunCleanups, result)
         d.addBoth(self.deferTearDown, result)
         if self._shared and hasattr(self, 'tearDownClass') and self._isLast():
             d.addBoth(self.deferTearDownClass, result)
@@ -619,23 +617,6 @@ class TestCase(_Assertions):
             result.stop()
         result.upDownError('tearDown', failure, warn=False, printStatus=True)
         self._passed = False
-
-    def deferRunCleanups(self, ignored, result):
-        """
-        Run any scheduled cleanups and report errors (if any to the result
-        object.
-        """
-        d = self._runCleanups()
-        d.addCallback(self._cbDeferRunCleanups, result)
-        return d
-
-    def _cbDeferRunCleanups(self, cleanupResults, result):
-        for flag, failure in cleanupResults:
-            if flag == defer.FAILURE:
-                result.addError(self, failure)
-                if failure.check(KeyboardInterrupt):
-                    result.stop()
-                self._passed = False
 
     def deferTearDownClass(self, ignored, result):
         d = self._run('tearDownClass', result)
@@ -732,35 +713,6 @@ class TestCase(_Assertions):
         @return: A list of failures that have been removed.
         """
         return self._observer.flushErrors(*errorTypes)
-
-
-    def addCleanup(self, f, *args, **kwargs):
-        """
-        Add the given function to a list of functions to be called after
-        C{tearDown}.
-
-        Functions will be run in reverse order of being added. This helps
-        ensure that tear down complements set up.
-
-        The function may return a Deferred. If so, C{TestCase} will wait until
-        the Deferred has fired before proceeding to the next function.
-        """
-        self._cleanups.append((f, args, kwargs))
-
-
-    def _runCleanups(self):
-        """
-        Run the cleanups added with L{addCleanup} in order.
-
-        @return: A C{Deferred} that fires when all cleanups are run.
-        """
-        def _makeFunction(f, args, kwargs):
-            return lambda: f(*args, **kwargs)
-        callables = []
-        while len(self._cleanups) > 0:
-            f, args, kwargs = self._cleanups.pop()
-            callables.append(_makeFunction(f, args, kwargs))
-        return defer.runSequentially(callables)
 
 
     def runTest(self):
