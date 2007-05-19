@@ -334,7 +334,7 @@ class TestNetstring(TestMixin, basic.NetstringReceiver):
 
 class LPTestCaseMixin:
 
-    illegal_strings = []
+    illegalStrings = []
     protocol = None
 
     def getProtocol(self):
@@ -343,8 +343,11 @@ class LPTestCaseMixin:
         a.makeConnection(protocol.FileWrapper(t))
         return a
 
-    def testIllegal(self):
-        for s in self.illegal_strings:
+    def test_illegal(self):
+        """
+        Assert that illegal strings cause the transport to be closed.
+        """
+        for s in self.illegalStrings:
             r = self.getProtocol()
             for c in s:
                 r.dataReceived(c)
@@ -355,7 +358,7 @@ class NetstringReceiverTestCase(unittest.TestCase, LPTestCaseMixin):
 
     strings = ['hello', 'world', 'how', 'are', 'you123', ':today', "a"*515]
 
-    illegal_strings = [
+    illegalStrings = [
         '9999999999999999999999', 'abc', '4:abcde',
         '51:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab,',]
 
@@ -377,31 +380,144 @@ class NetstringReceiverTestCase(unittest.TestCase, LPTestCaseMixin):
             self.assertEquals(a.received, self.strings)
 
 
-class TestInt32(TestMixin, basic.Int32StringReceiver):
-    MAX_LENGTH = 50
+class IntNTestCaseMixin(LPTestCaseMixin):
+    """
+    TestCase mixin for int-prefixed protocols.
+    """
 
+    protocol = None
+    strings = None
+    illegalStrings = None
+    partialStrings = None
 
-class Int32TestCase(unittest.TestCase, LPTestCaseMixin):
+    def test_receive(self):
+        """
+        Test receiving data find the same data send.
+        """
+        r = self.getProtocol()
+        for s in self.strings:
+            for c in struct.pack(self.protocol.structFormat,len(s)) + s:
+                r.dataReceived(c)
+        self.assertEquals(r.received, self.strings)
 
-    protocol = TestInt32
-    strings = ["a", "b" * 16]
-    illegal_strings = ["\x10\x00\x00\x00aaaaaa"]
-    partial_strings = ["\x00\x00\x00", "hello there", ""]
-
-    def testPartial(self):
-        for s in self.partial_strings:
+    def test_partial(self):
+        """
+        Send partial data, nothing should be definitely received.
+        """
+        for s in self.partialStrings:
             r = self.getProtocol()
-            r.MAX_LENGTH = 99999999
             for c in s:
                 r.dataReceived(c)
             self.assertEquals(r.received, [])
 
-    def testReceive(self):
+    def test_send(self):
+        """
+        Test sending data over protocol.
+        """
         r = self.getProtocol()
-        for s in self.strings:
-            for c in struct.pack("!i",len(s))+s:
-                r.dataReceived(c)
-        self.assertEquals(r.received, self.strings)
+        r.sendString("b" * 16)
+        self.assertEquals(r.transport.file.getvalue(),
+            struct.pack(self.protocol.structFormat, 16) + "b" * 16)
+
+
+class TestInt32(TestMixin, basic.Int32StringReceiver):
+    """
+    A L{basic.Int32StringReceiver} storing received strings in an array.
+
+    @ivar received: array holding received strings.
+    """
+
+
+class Int32TestCase(unittest.TestCase, IntNTestCaseMixin):
+    """
+    Test case for int32-prefixed protocol
+    """
+    protocol = TestInt32
+    strings = ["a", "b" * 16]
+    illegalStrings = ["\x10\x00\x00\x00aaaaaa"]
+    partialStrings = ["\x00\x00\x00", "hello there", ""]
+
+    def test_data(self):
+        """
+        Test specific behavior of the 32-bits length.
+        """
+        r = self.getProtocol()
+        r.sendString("foo")
+        self.assertEquals(r.transport.file.getvalue(), "\x00\x00\x00\x03foo")
+        r.dataReceived("\x00\x00\x00\x04ubar")
+        self.assertEquals(r.received, ["ubar"])
+
+
+class TestInt16(TestMixin, basic.Int16StringReceiver):
+    """
+    A L{basic.Int16StringReceiver} storing received strings in an array.
+
+    @ivar received: array holding received strings.
+    """
+
+
+class Int16TestCase(unittest.TestCase, IntNTestCaseMixin):
+    """
+    Test case for int16-prefixed protocol
+    """
+    protocol = TestInt16
+    strings = ["a", "b" * 16]
+    illegalStrings = ["\x10\x00aaaaaa"]
+    partialStrings = ["\x00", "hello there", ""]
+
+    def test_data(self):
+        """
+        Test specific behavior of the 16-bits length.
+        """
+        r = self.getProtocol()
+        r.sendString("foo")
+        self.assertEquals(r.transport.file.getvalue(), "\x00\x03foo")
+        r.dataReceived("\x00\x04ubar")
+        self.assertEquals(r.received, ["ubar"])
+
+    def test_tooLongSend(self):
+        """
+        Send too much data: that should cause an error.
+        """
+        r = self.getProtocol()
+        tooSend = "b" * (2**(r.prefixLength*8) + 1)
+        self.assertRaises(AssertionError, r.sendString, tooSend)
+
+
+class TestInt8(TestMixin, basic.Int8StringReceiver):
+    """
+    A L{basic.Int8StringReceiver} storing received strings in an array.
+
+    @ivar received: array holding received strings.
+    """
+
+
+class Int8TestCase(unittest.TestCase, IntNTestCaseMixin):
+    """
+    Test case for int8-prefixed protocol
+    """
+    protocol = TestInt8
+    strings = ["a", "b" * 16]
+    illegalStrings = ["\x00\x00aaaaaa"]
+    partialStrings = ["\x08", "dzadz", ""]
+
+    def test_data(self):
+        """
+        Test specific behavior of the 8-bits length.
+        """
+        r = self.getProtocol()
+        r.sendString("foo")
+        self.assertEquals(r.transport.file.getvalue(), "\x03foo")
+        r.dataReceived("\x04ubar")
+        self.assertEquals(r.received, ["ubar"])
+
+    def test_tooLongSend(self):
+        """
+        Send too much data: that should cause an error.
+        """
+        r = self.getProtocol()
+        tooSend = "b" * (2**(r.prefixLength*8) + 1)
+        self.assertRaises(AssertionError, r.sendString, tooSend)
 
 
 class OnlyProducerTransport(object):

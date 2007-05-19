@@ -1,10 +1,11 @@
 # -*- test-case-name: twisted.test.test_protocols -*-
 
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""Basic protocols, such as line-oriented, netstring, and 32-bit-int prefixed strings.
+"""
+Basic protocols, such as line-oriented, netstring, and int prefixed strings.
 
 API Stability: semi-stable.
 
@@ -288,77 +289,104 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
         return self.transport.loseConnection()
 
 
-class Int32StringReceiver(protocol.Protocol, _PauseableMixin):
-    """A receiver for int32-prefixed strings.
+class StringTooLongError(AssertionError):
+    """
+    Raised when trying to send a string too long for a length prefixed
+    protocol.
+    """
+
+
+class IntNStringReceiver(protocol.Protocol, _PauseableMixin):
+    """
+    Generic class for length prefixed protocols.
+
+    @ivar recvd: buffer holding received data when splitted.
+    @type recvd: C{str}
+
+    @ivar structFormat: format used for struct packing/unpacking. Define it in
+        subclass.
+    @type structFormat: C{str}
+
+    @ivar prefixLength: length of the prefix, in bytes. Define it in subclass,
+        using C{struct.calcSize(structFormat)}
+    @type prefixLength: C{int}
+    """
+    MAX_LENGTH = 99999
+    recvd = ""
+
+    def stringReceived(self, msg):
+        """
+        Override this.
+        """
+        raise NotImplementedError
+
+    def dataReceived(self, recd):
+        """
+        Convert int prefixed strings into calls to stringReceived.
+        """
+        self.recvd = self.recvd + recd
+        while len(self.recvd) >= self.prefixLength and not self.paused:
+            length ,= struct.unpack(
+                self.structFormat, self.recvd[:self.prefixLength])
+            if length > self.MAX_LENGTH:
+                self.transport.loseConnection()
+                return
+            if len(self.recvd) < length + self.prefixLength:
+                break
+            packet = self.recvd[self.prefixLength:length + self.prefixLength]
+            self.recvd = self.recvd[length + self.prefixLength:]
+            self.stringReceived(packet)
+
+    def sendString(self, data):
+        """
+        Send an prefixed string to the other end of the connection.
+
+        @type data: C{str}
+        """
+        if len(data) >= 2 ** (8 * self.prefixLength):
+            raise StringTooLongError(
+                "Try to send %s bytes whereas maximum is %s" % (
+                len(data), 2 ** (8 * self.prefixLength)))
+        self.transport.write(struct.pack(self.structFormat, len(data)) + data)
+
+
+class Int32StringReceiver(IntNStringReceiver):
+    """
+    A receiver for int32-prefixed strings.
 
     An int32 string is a string prefixed by 4 bytes, the 32-bit length of
     the string encoded in network byte order.
 
     This class publishes the same interface as NetstringReceiver.
     """
-
-    MAX_LENGTH = 99999
-    recvd = ""
-
-    def stringReceived(self, msg):
-        """Override this.
-        """
-        raise NotImplementedError
-
-    def dataReceived(self, recd):
-        """Convert int32 prefixed strings into calls to stringReceived.
-        """
-        self.recvd = self.recvd + recd
-        while len(self.recvd) > 3 and not self.paused:
-            length ,= struct.unpack("!i",self.recvd[:4])
-            if length > self.MAX_LENGTH:
-                self.transport.loseConnection()
-                return
-            if len(self.recvd) < length+4:
-                break
-            packet = self.recvd[4:length+4]
-            self.recvd = self.recvd[length+4:]
-            self.stringReceived(packet)
-
-    def sendString(self, data):
-        """Send an int32-prefixed string to the other end of the connection.
-        """
-        self.transport.write(struct.pack("!i",len(data))+data)
+    structFormat = "!I"
+    prefixLength = struct.calcsize(structFormat)
 
 
-class Int16StringReceiver(protocol.Protocol, _PauseableMixin):
-    """A receiver for int16-prefixed strings.
+class Int16StringReceiver(IntNStringReceiver):
+    """
+    A receiver for int16-prefixed strings.
 
     An int16 string is a string prefixed by 2 bytes, the 16-bit length of
     the string encoded in network byte order.
 
     This class publishes the same interface as NetstringReceiver.
     """
+    structFormat = "!H"
+    prefixLength = struct.calcsize(structFormat)
 
-    recvd = ""
 
-    def stringReceived(self, msg):
-        """Override this.
-        """
-        raise NotImplementedError
+class Int8StringReceiver(IntNStringReceiver):
+    """
+    A receiver for int8-prefixed strings.
 
-    def dataReceived(self, recd):
-        """Convert int16 prefixed strings into calls to stringReceived.
-        """
-        self.recvd = self.recvd + recd
-        while len(self.recvd) > 1 and not self.paused:
-            length = (ord(self.recvd[0]) * 256) + ord(self.recvd[1])
-            if len(self.recvd) < length+2:
-                break
-            packet = self.recvd[2:length+2]
-            self.recvd = self.recvd[length+2:]
-            self.stringReceived(packet)
+    An int8 string is a string prefixed by 1 byte, the 8-bit length of
+    the string.
 
-    def sendString(self, data):
-        """Send an int16-prefixed string to the other end of the connection.
-        """
-        assert len(data) < 65536, "message too long"
-        self.transport.write(struct.pack("!h",len(data)) + data)
+    This class publishes the same interface as NetstringReceiver.
+    """
+    structFormat = "!B"
+    prefixLength = struct.calcsize(structFormat)
 
 
 class StatefulStringProtocol:
