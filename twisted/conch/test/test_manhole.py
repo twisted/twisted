@@ -1,15 +1,20 @@
 # -*- test-case-name: twisted.conch.test.test_manhole -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import generators
+"""
+Tests for L{twisted.conch.manhole}.
+"""
 
 import traceback
 
 from twisted.trial import unittest
 from twisted.internet import error, defer
+from twisted.test.proto_helpers import StringTransport
 from twisted.conch.test.test_recvline import _TelnetMixin, _SSHMixin, _StdioMixin, stdio, ssh
 from twisted.conch import manhole
+from twisted.conch.insults import insults
+
 
 def determineDefaultFunctionName():
     """
@@ -21,6 +26,42 @@ def determineDefaultFunctionName():
     except:
         return traceback.extract_stack()[0][2]
 defaultFunctionName = determineDefaultFunctionName()
+
+
+
+class ManholeInterpreterTests(unittest.TestCase):
+    """
+    Tests for L{manhole.ManholeInterpreter}.
+    """
+    def test_resetBuffer(self):
+        """
+        L{ManholeInterpreter.resetBuffer} should empty the input buffer.
+        """
+        interpreter = manhole.ManholeInterpreter(None)
+        interpreter.buffer.extend(["1", "2"])
+        interpreter.resetBuffer()
+        self.assertFalse(interpreter.buffer)
+
+
+
+class ManholeProtocolTests(unittest.TestCase):
+    """
+    Tests for L{manhole.Manhole}.
+    """
+    def test_interruptResetsInterpreterBuffer(self):
+        """
+        L{manhole.Manhole.handle_INT} should cause the interpreter input buffer
+        to be reset.
+        """
+        transport = StringTransport()
+        terminal = insults.ServerProtocol(manhole.Manhole)
+        terminal.makeConnection(transport)
+        protocol = terminal.terminalProtocol
+        interpreter = protocol.interpreter
+        interpreter.buffer.extend(["1", "2"])
+        protocol.handle_INT()
+        self.assertFalse(interpreter.buffer)
+
 
 
 class WriterTestCase(unittest.TestCase):
@@ -162,6 +203,36 @@ class ManholeLoopbackMixin:
                  ">>> done"])
 
         return done.addCallback(finished)
+
+
+    def test_interruptDuringContinuation(self):
+        """
+        Sending ^C to Manhole while in a state where more input is required to
+        complete a statement should discard the entire ongoing statement and
+        reset the input prompt to the non-continuation prompt.
+        """
+        continuing = self.recvlineClient.expect("things")
+
+        self._testwrite("(\nthings")
+
+        def gotContinuation(ignored):
+            self._assertBuffer(
+                [">>> (",
+                 "... things"])
+            interrupted = self.recvlineClient.expect(">>> ")
+            self._testwrite(manhole.CTRL_C)
+            return interrupted
+        continuing.addCallback(gotContinuation)
+
+        def gotInterruption(ignored):
+            self._assertBuffer(
+                [">>> (",
+                 "... things",
+                 "KeyboardInterrupt",
+                 ">>> "])
+        continuing.addCallback(gotInterruption)
+        return continuing
+
 
     def testControlBackslash(self):
         self._testwrite("cancelled line")

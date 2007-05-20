@@ -1,8 +1,9 @@
 # -*- test-case-name: twisted.conch.test.test_manhole -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-"""Line-input oriented interactive interpreter loop.
+"""
+Line-input oriented interactive interpreter loop.
 
 Provides classes for handling Python source input and arbitrary output
 interactively from a Twisted application.  Also included is syntax coloring
@@ -164,12 +165,19 @@ class Manhole(recvline.HistoricRecvLine):
 
 
     def handle_INT(self):
+        """
+        Handle ^C as an interrupt keystroke by resetting the current input
+        variables to their initial state.
+        """
+        self.pn = 0
+        self.lineBuffer = []
+        self.lineBufferIndex = 0
+        self.interpreter.resetBuffer()
+
         self.terminal.nextLine()
         self.terminal.write("KeyboardInterrupt")
         self.terminal.nextLine()
         self.terminal.write(self.ps[self.pn])
-        self.lineBuffer = []
-        self.lineBufferIndex = 0
 
 
     def handle_EOF(self):
