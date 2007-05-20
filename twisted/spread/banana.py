@@ -90,7 +90,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
         """
         Set the prefix limit for decoding done by this protocol instance.
 
-        @see L{setPrefixLimit}
+        @see: L{setPrefixLimit}
         """
         self.prefixLimit = limit
         self._smallestLongInt = -2 ** (limit * 7) + 1

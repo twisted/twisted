@@ -3,7 +3,7 @@
 # See LICENSE for details.
 
 """
-Rebuild the completion functions for the currently active version of Twisted:
+Rebuild the completion functions for the currently active version of Twisted::
     $ python zshcomp.py -i
 
 This module implements a zsh code generator which generates completion code for
@@ -12,7 +12,7 @@ Tab at the command line work.
 
 API Stability: Unstable
 
-@maintainer: Eric Mangold
+Maintainer: Eric Mangold
 
 To build completion functions for your own commands, and not Twisted commands,
 then just do something like this::

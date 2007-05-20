@@ -23,12 +23,12 @@ class IHTTPClientManager(Interface):
         pass
 
     def clientPipelining(proto):
-        """Called when the L{HTTPClientProtocol determines that it is able to
+        """Called when the L{HTTPClientProtocol} determines that it is able to
         support request pipelining.
     
         @param proto: The L{HTTPClientProtocol} that is changing state.
         @type proto: L{HTTPClientProtocol}
-        """     
+        """
         pass
     
     def clientGone(proto):

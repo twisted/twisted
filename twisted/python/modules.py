@@ -17,7 +17,7 @@ includes methods to locate top-level modules, with or without loading them.
 The top-level exposed functions in this module for accessing the system path
 are "walkModules", "iterModules", and "getModule".
 
-From most to least specific, here are the objects provided:
+From most to least specific, here are the objects provided::
 
                   PythonPath  # sys.path
                       |
@@ -37,7 +37,7 @@ From most to least specific, here are the objects provided:
                      ...
 
 Here's an example of idiomatic usage: this is what you would do to list all of
-the modules outside the standard library's python-files directory.
+the modules outside the standard library's python-files directory::
 
     import os
     stdlibdir = os.path.dirname(os.__file__)

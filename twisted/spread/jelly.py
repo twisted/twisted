@@ -278,7 +278,7 @@ class Jellyable:
 
     def jellyFor(self, jellier):
         """
-        @see L{twisted.spread.interfaces.IJellyable.jellyFor}
+        @see: L{twisted.spread.interfaces.IJellyable.jellyFor}
         """
         sxp = jellier.prepare(self)
         sxp.extend([
@@ -302,7 +302,7 @@ class Unjellyable:
         """
         Perform the inverse operation of L{Jellyable.jellyFor}.
 
-        @see L{twisted.spread.interfaces.IUnjellyable.unjellyFor}
+        @see: L{twisted.spread.interfaces.IUnjellyable.unjellyFor}
         """
         state = unjellier.unjelly(jellyList[1])
         self.setStateFor(unjellier, state)

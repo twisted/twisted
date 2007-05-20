@@ -60,28 +60,28 @@ class DAVPropertyMixIn (MetaDataMixin):
     There are three categories of DAV properties, for the purposes of how this
     class manages them.  A X{property} is either a X{live property} or a
     X{dead property}, and live properties are split into two categories:
-    
-    1. Dead properties.  There are properties that the server simply stores as
-       opaque data.  These are store in the X{dead property store}, which is
-       provided by subclasses via the L{deadProperties} method.
 
-    2. Live properties which are always computed.  These properties aren't
-       stored anywhere (by this class) but instead are derived from the resource
-       state or from data that is persisted elsewhere.  These are listed in the
-       L{liveProperties} attribute and are handled explicitly by the
-       L{readProperty} method.
+     1. Dead properties.  There are properties that the server simply stores as
+        opaque data.  These are store in the X{dead property store}, which is
+        provided by subclasses via the L{deadProperties} method.
 
-    3. Live properties may be acted on specially and are stored in the X{dead
-       property store}.  These are not listed in the L{liveProperties} attribute,
-       but may be handled specially by the property access methods.  For
-       example, L{writeProperty} might validate the data and refuse to write
-       data it deems inappropriate for a given property.
+     2. Live properties which are always computed.  These properties aren't
+        stored anywhere (by this class) but instead are derived from the resource
+        state or from data that is persisted elsewhere.  These are listed in the
+        L{liveProperties} attribute and are handled explicitly by the
+        L{readProperty} method.
+
+     3. Live properties may be acted on specially and are stored in the X{dead
+        property store}.  These are not listed in the L{liveProperties} attribute,
+        but may be handled specially by the property access methods.  For
+        example, L{writeProperty} might validate the data and refuse to write
+        data it deems inappropriate for a given property.
 
     There are two sets of property access methods.  The first group
     (L{hasProperty}, etc.) provides access to all properties.  They
     automatically figure out which category a property falls into and act
     accordingly.
-    
+
     The second group (L{hasDeadProperty}, etc.) accesses the dead property store
     directly and bypasses any live property logic that exists in the first group
     of methods.  These methods are used by the first group of methods, and there

@@ -173,7 +173,7 @@ def urlparse(url):
     This is similar to L{urlparse.urlparse}, but rejects C{unicode} input
     and always produces C{str} output.
 
-    @type url C{str}
+    @type url: C{str}
 
     @raise TypeError: The given url was a C{unicode} string instead of a
     C{str}.

@@ -264,8 +264,9 @@ class HTTPClientProtocol(basic.LineReceiver, policies.TimeoutMixin, object):
             otherwise 'Connection: keep-alive'
         @type closeAfter: C{bool}
 
-        @return: L{twisted.internet.defer.Deferred} 
-        @callback: L{twisted.web2.http.Response} from the server.
+        @rtype: L{twisted.internet.defer.Deferred}
+        @return: A Deferred which will be called back with the
+            L{twisted.web2.http.Response} from the server.
         """
 
         # Assert we're in a valid state to submit more

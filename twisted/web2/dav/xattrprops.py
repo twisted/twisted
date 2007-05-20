@@ -47,7 +47,7 @@ from twisted.web2.dav import davxml
 class xattrPropertyStore (object):
     """
 
-    This implementation uses Bob Ippolito's xattr package, available from:
+    This implementation uses Bob Ippolito's xattr package, available from::
 
         http://undefined.org/python/#xattr
 

@@ -101,7 +101,7 @@ class IFileSystemContainer(IFileSystemNode):
         """
         Returns a node object for child childName
 
-        @raises NotFoundError if no child with that name exists.
+        @raises: NotFoundError if no child with that name exists.
         """
 
     def createDirectory(childName):

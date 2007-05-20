@@ -286,7 +286,7 @@ def XMPPClientFactory(jid, password):
     Client factory for XMPP 1.0 (only).
 
     This returns a L{xmlstream.XmlStreamFactory} with an L{XMPPAuthenticator}
-    object to perform the stream initialization steps (such as authentication}.
+    object to perform the stream initialization steps (such as authentication).
 
     @see: The notes at L{XMPPAuthenticator} describe how the L{jid} and
     L{password} parameters are to be used.

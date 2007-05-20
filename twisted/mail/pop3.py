@@ -881,8 +881,7 @@ class IMailbox(Interface):
 
         @return: The number of octets in the specified message, or an iterable
         of integers representing the number of octets in all the messages.  Any
-        value which would have referred to a deleted message should be set to
-        0.
+        value which would have referred to a deleted message should be set to 0.
 
         @raise ValueError: if C{index} is greater than the index of any message
         in the mailbox.
@@ -896,7 +895,7 @@ class IMailbox(Interface):
 
         @rtype: A file-like object
         @return: A file containing the message data with lines delimited by
-        C{\n}.
+        C{\\n}.
         """
 
     def getUidl(index):

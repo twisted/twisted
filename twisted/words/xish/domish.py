@@ -213,11 +213,12 @@ class Namespace:
         return (self._uri, n)
 
 class IElement(Interface):
-    """ Interface to XML element nodes.
+    """
+    Interface to XML element nodes.
 
     See L{Element} for a detailed example of its general use.
 
-    @warning: this Interface is not yet complete!
+    Warning: this Interface is not yet complete!
     """
 
     uri = Attribute(""" Element's namespace URI """)
@@ -324,7 +325,7 @@ class Element(object):
 
     To illustrate, an example from a Jabber stream. Assume the start tag of the
     root element of the stream has already been serialized, along with several
-    complete child elements, and sent off, looking like this:
+    complete child elements, and sent off, looking like this::
 
       <stream:stream xmlns:stream='http://etherx.jabber.org/streams'
                      xmlns='jabber:client' to='example.com'>

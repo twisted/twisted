@@ -22,6 +22,9 @@ from twisted.internet import base, defer
 class LoopingCall:
     """Call a function repeatedly.
 
+    If C{f} returns a deferred, rescheduling will not take place until the
+    deferred has fired. The result value is ignored.
+
     @ivar f: The function to call.
     @ivar a: A tuple of arguments to pass the function.
     @ivar kw: A dictionary of keyword arguments to pass to the function.
@@ -30,9 +33,6 @@ class LoopingCall:
         L{twisted.internet.reactor}. Feel free to set this to
         something else, but it probably ought to be set *before*
         calling L{start}.
-
-    If C{f} returns a deferred, rescheduling will not take place until the
-    deferred has fired. The result value is ignored.
     """
 
     call = None
