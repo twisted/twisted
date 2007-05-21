@@ -156,6 +156,9 @@ class ISFTPServer(Interface):
         This method returns when the rename succeeds, or a L{Deferred} that is
         called back when it succeeds.
 
+        @raise SFTPError: when C{newpath} is an existing directory, (using code
+            FX_FILE_ALREADY_EXISTS).
+
         @param oldpath: the current location of the file.
         @param newpath: the new file name.
         """
