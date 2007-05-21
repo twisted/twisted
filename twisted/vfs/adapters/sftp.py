@@ -1,5 +1,8 @@
 # -*- test-case-name: twisted.vfs.test.test_sftp -*-
 
+# Copyright (c) 2007 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 import os, time
 
 import zope.interface
@@ -24,7 +27,7 @@ from twisted.vfs import ivfs, pathutils
 def translateErrors(function):
     """Decorator that catches VFSErrors and re-raises them as the corresponding
     SFTPErrors."""
-    
+
     def f(*args, **kwargs):
         try:
             result = function(*args, **kwargs)
@@ -127,18 +130,11 @@ class AdaptFileSystemUserToISFTP:
     removeFile = translateErrors(removeFile)
 
     def renameFile(self, oldpath, newpath):
-        try:
-            targetNode = self.filesystem.fetch(newpath)
-        except (ivfs.NotFoundError, KeyError):
-            # Something with the new name already exists.
-            pass
-        else:
-            if ivfs.IFileSystemContainer(targetNode, None):
-                # The target node is a container.  We assume the caller means to
-                # move the source node into the container rather than replace
-                # it, and adjust newpath accordingly.
-                newpath = self.filesystem.joinPath(
-                    newpath, self.filesystem.basename(oldpath))
+        """
+        Rename C{oldpath} to C{newpath}.
+
+        See L{twisted.conch.interfaces.ISFTPServer.renameFile.
+        """
         old = self.filesystem.fetch(oldpath)
         old.rename(newpath)
     renameFile = translateErrors(renameFile)
@@ -230,7 +226,7 @@ class AdaptFileSystemLeafToISFTPFile:
 
     def getAttrs(self):
         return _attrify(self.original)
-        
+
     def setAttrs(self, attrs):
         try:
             # XXX: setMetadata isn't yet part of the IFileSystemNode interface

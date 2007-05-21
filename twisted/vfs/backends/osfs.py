@@ -54,6 +54,13 @@ class OSNode:
             os.utime(self.realPath, (atime, mtime))
 
     def rename(self, newName):
+        """
+        Rename this node to C{newName}.
+
+        @param newName: A valid filename for the current directory.
+        @raise AlreadyExistsError: If C{newName} is a directory which already
+            exists.
+        """
         from twisted.vfs import pathutils
         newParent = pathutils.fetch(pathutils.getRoot(self),
                                     pathutils.dirname(newName))
@@ -61,7 +68,15 @@ class OSNode:
         # assumes newParent is also an OSDirectory.  Probably should politely
         # decline (rather than break with an undefined error) if it's not.
         newPath = os.path.join(newParent.realPath, pathutils.basename(newName))
-        os.rename(self.realPath, newPath)
+        try:
+            os.rename(self.realPath, newPath)
+        except OSError, e:
+            if e.errno in (errno.EISDIR, errno.ENOTEMPTY, errno.EEXIST):
+                raise ivfs.AlreadyExistsError(
+                    "Can't rename %s to %s: %s already exists"
+                    % (self.realPath, newPath, newPath))
+            else:
+                raise
         self.realPath = newPath
         self.name = newName
         self.parent = newParent
