@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -9,13 +9,16 @@ API Stability: stable
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
+# System Imports
+import types, string
 from zope.interface import implements
 
 # Twisted Imports
 from twisted.python import log, reflect, failure
 from twisted.persisted import styles
-from twisted.internet import interfaces, main
 
+# Sibling Imports
+import interfaces, main
 
 class FileDescriptor(log.Logger, styles.Ephemeral, object):
     """An object which can be operated on by select().
@@ -340,29 +343,16 @@ class FileDescriptor(log.Logger, styles.Ephemeral, object):
 
 
 def isIPAddress(addr):
-    """
-    Determine whether the given string represents an IPv4 address.
-
-    @type addr: C{str}
-    @param addr: A string which may or may not be the decimal dotted
-    representation of an IPv4 address.
-
-    @rtype: C{bool}
-    @return: C{True} if C{addr} represents an IPv4 address, C{False}
-    otherwise.
-    """
-    dottedParts = addr.split('.')
-    if len(dottedParts) <= 4:
-        for octet in dottedParts:
-            try:
-                value = int(octet)
-            except ValueError:
-                return False
+    parts = string.split(addr, '.')
+    if len(parts) == 4:
+        try:
+            for part in map(int, parts):
+                if not (0<=part<256):
+                    break
             else:
-                if value < 0 or value > 255:
-                    return False
-        return True
-    return False
-
+                return 1
+        except ValueError:
+                pass
+    return 0
 
 __all__ = ["FileDescriptor"]
