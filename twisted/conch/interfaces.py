@@ -1,6 +1,3 @@
-# Copyright (c) 2007 Twisted Matrix Laboratories.
-# See LICENSE for details.
-
 from zope.interface import Interface
 
 class IConchUser(Interface):
@@ -157,8 +154,7 @@ class ISFTPServer(Interface):
         Rename the given file.
 
         This method returns when the rename succeeds, or a L{Deferred} that is
-        called back when it succeeds. If the rename fails, C{renameFile} will
-        raise an implementation-dependent exception.
+        called back when it succeeds.
 
         @param oldpath: the current location of the file.
         @param newpath: the new file name.
