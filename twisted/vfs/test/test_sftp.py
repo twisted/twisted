@@ -1,3 +1,6 @@
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 """Tests for the SFTP server VFS adapter."""
 
 import os
@@ -35,7 +38,7 @@ class SFTPErrorTranslationTests(unittest.TestCase):
         e = self.assertRaises(SFTPError, f)
         self.assertEqual(code, e.code)
         self.assertEqual(message, e.message)
-    
+
     def testPermissionError(self):
         """PermissionError is translated to FX_PERMISSION_DENIED."""
         self.assertTranslation(ivfs.PermissionError, FX_PERMISSION_DENIED)
@@ -153,7 +156,7 @@ class SFTPAdapterTest(unittest.TestCase):
         # The FXF_TRUNC flag causes an existing file to be truncated.
         child = self.sftp.openFile('file.txt', FXF_WRITE|FXF_TRUNC, None)
         self.failUnless(ISFTPFile.providedBy(child))
-        
+
         # The file should have been truncated to 0 size.
         attrs = child.getAttrs()
         self.failUnlessEqual(0, attrs['size'])
@@ -177,17 +180,23 @@ class SFTPAdapterTest(unittest.TestCase):
         self.sftp.renameFile('file.txt', 'radixiscool.txt')
         self._assertNodes('/', ['.', '..', 'ned', 'radixiscool.txt'])
 
-    def test_renameToDirectory(self):
-        self.sftp.renameFile('/file.txt', '/ned')
-        self._assertNodes('/', ['.', '..', 'ned'])
-        self._assertNodes('/ned', ['.', '..', 'file.txt'])
+    def test_renameFileToExistingDirectory(self):
+        """
+        Renaming a file to an existing directory should fail.
+        """
+        e = self.assertRaises(SFTPError,
+                              self.sftp.renameFile, '/file.txt', '/ned')
+        self.assertEqual(FX_FILE_ALREADY_EXISTS, e.code)
 
-    def test_renameInDirectory(self):
-        self.sftp.renameFile('/file.txt', '/ned')
-        self._assertNodes('/', ['.', '..', 'ned'])
-        self._assertNodes('/ned', ['.', '..', 'file.txt'])
-        self.sftp.renameFile('/ned/file.txt', '/ned/file2.txt')
-        self._assertNodes('/ned', ['.', '..', 'file2.txt'])
+    def test_renameDirectoryToExistingDirectory(self):
+        """
+        Renaming a directory to an existing directory should fail.
+        """
+        self.ned.createDirectory('foo').createFile('a')
+        self.ned.createDirectory('bar').createFile('b')
+        e = self.assertRaises(SFTPError,
+                              self.sftp.renameFile, '/ned/foo', '/ned/bar')
+        self.assertEqual(FX_FILE_ALREADY_EXISTS, e.code)
 
     def test_makeDirectory(self):
         self.sftp.makeDirectory('/dir', None)
@@ -233,7 +242,7 @@ class SFTPAdapterTest(unittest.TestCase):
             except SFTPError, e:
                 if e.code == FX_OP_UNSUPPORTED:
                     raise unittest.SkipTest(
-                        "The VFS backend %r doesn't support setAttrs" 
+                        "The VFS backend %r doesn't support setAttrs"
                         % (self.root,))
                 else:
                     raise
@@ -249,7 +258,7 @@ class SFTPAdapterTest(unittest.TestCase):
                 file.setAttrs({'mtime': mtime})
             except NotImplementedError:
                 raise unittest.SkipTest(
-                    "The VFS backend %r doesn't support setAttrs" 
+                    "The VFS backend %r doesn't support setAttrs"
                     % (self.root,))
             else:
                 self.assertEqual(
@@ -308,7 +317,7 @@ class SFTPAdapterOSFSTest(SFTPAdapterTest):
 class DummyDir(inmem.FakeDirectory):
     def createDirectory(self, childName):
         d = defer.Deferred()
-        d2 = defer.maybeDeferred(inmem.FakeDirectory.createDirectory, 
+        d2 = defer.maybeDeferred(inmem.FakeDirectory.createDirectory,
                                  self, childName)
         from twisted.internet import reactor
         reactor.callLater(1, d2.chainDeferred, d)
