@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_threadpool -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -13,18 +13,13 @@ instead of creating a thread pool directly.
 # System Imports
 import Queue
 import threading
-import threadable
 import copy
 import sys
 
 # Twisted Imports
-from twisted.python import log, runtime, context
-class WorkerStop:
-    pass
-WorkerStop = WorkerStop()
+from twisted.python import log, runtime, context, threadable
 
-# initialize threading
-threadable.init(1)
+WorkerStop = object()
 
 
 class ThreadPool:
@@ -36,16 +31,19 @@ class ThreadPool:
     a single thread, unless you make a subclass where stop() and
     _startSomeWorkers() are synchronized.
     """
-    __inited = 0
     min = 5
     max = 20
-    joined = 0
-    started = 0
+    joined = False
+    started = False
     workers = 0
     name = None
 
+    threadFactory = threading.Thread
+    currentThread = staticmethod(threading.currentThread)
+
     def __init__(self, minthreads=5, maxthreads=20, name=None):
-        """Create a new threadpool.
+        """
+        Create a new threadpool.
 
         @param minthreads: minimum number of threads in the pool
 
@@ -67,27 +65,24 @@ class ThreadPool:
             self.working = ThreadSafeList()
 
     def start(self):
-        """Start the threadpool.
         """
-        self.joined = 0
-        self.started = 1
+        Start the threadpool.
+        """
+        self.joined = False
+        self.started = True
         # Start some threads.
         self.adjustPoolsize()
 
     def startAWorker(self):
-        self.workers = self.workers + 1
+        self.workers += 1
         name = "PoolThread-%s-%s" % (self.name or id(self), self.workers)
-        try:
-            firstJob = self.q.get(0)
-        except Queue.Empty:
-            firstJob = None
-        newThread = threading.Thread(target=self._worker, name=name, args=(firstJob,))
+        newThread = self.threadFactory(target=self._worker, name=name)
         self.threads.append(newThread)
         newThread.start()
 
     def stopAWorker(self):
         self.q.put(WorkerStop)
-        self.workers = self.workers-1
+        self.workers -= 1
 
     def __setstate__(self, state):
         self.__dict__ = state
@@ -100,14 +95,14 @@ class ThreadPool:
         return state
 
     def _startSomeWorkers(self):
-        while (
-            self.workers < self.max and # Don't create too many
-            len(self.waiters) < self.q.qsize() # but create enough
-            ):
+        neededSize = self.q.qsize() + len(self.working)
+        # Create enough, but not too many
+        while self.workers < min(self.max, neededSize):
             self.startAWorker()
 
     def dispatch(self, owner, func, *args, **kw):
-        """Dispatch a function to be a run in a thread.
+        """
+        Dispatch a function to be a run in a thread.
         """
         self.callInThread(func,*args,**kw)
 
@@ -129,27 +124,33 @@ class ThreadPool:
             callback(result)
 
     def dispatchWithCallback(self, owner, callback, errback, func, *args, **kw):
-        """Dispatch a function, returning the result to a callback function.
+        """
+        Dispatch a function, returning the result to a callback function.
 
         The callback function will be called in the thread - make sure it is
         thread-safe.
         """
-        self.callInThread(self._runWithCallback, callback, errback, func, args, kw)
+        self.callInThread(
+            self._runWithCallback, callback, errback, func, args, kw
+        )
 
-    def _worker(self, o):
-        ct = threading.currentThread()
-        while 1:
-            if o is WorkerStop:
-                break
-            elif o is not None:
-                self.working.append(ct)
-                ctx, function, args, kwargs = o
-                try:
-                    context.call(ctx, function, *args, **kwargs)
-                except:
-                    context.call(ctx, log.deferr)
-                self.working.remove(ct)
-                del o, ctx, function, args, kwargs
+    def _worker(self):
+        """
+        Method used as target of the created threads: retrieve task to run
+        from the threadpool, run it, and proceed to the next task until
+        threadpool is stopped.
+        """
+        ct = self.currentThread()
+        o = self.q.get()
+        while o is not WorkerStop:
+            self.working.append(ct)
+            ctx, function, args, kwargs = o
+            try:
+                context.call(ctx, function, *args, **kwargs)
+            except:
+                context.call(ctx, log.err)
+            self.working.remove(ct)
+            del o, ctx, function, args, kwargs
             self.waiters.append(ct)
             o = self.q.get()
             self.waiters.remove(ct)
@@ -157,12 +158,14 @@ class ThreadPool:
         self.threads.remove(ct)
 
     def stop(self):
-        """Shutdown the threads in the threadpool."""
-        self.joined = 1
+        """
+        Shutdown the threads in the threadpool.
+        """
+        self.joined = True
         threads = copy.copy(self.threads)
-        for thread in range(self.workers):
+        while self.workers:
             self.q.put(WorkerStop)
-            self.workers = self.workers-1
+            self.workers -= 1
 
         # and let's just make sure
         # FIXME: threads that have died before calling stop() are not joined.
@@ -200,7 +203,9 @@ class ThreadPool:
 
 
 class ThreadSafeList:
-    """In Jython 2.1 lists aren't thread-safe, so this wraps it."""
+    """
+    In Jython 2.1 lists aren't thread-safe, so this wraps it.
+    """
 
     def __init__(self):
         self.lock = threading.Lock()
@@ -222,3 +227,4 @@ class ThreadSafeList:
 
     def __len__(self):
         return len(self.l)
+
