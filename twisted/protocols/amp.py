@@ -1,5 +1,7 @@
 # -*- test-case-name: twisted.test.test_amp -*-
-# Copyright 2005 Divmod, Inc.  See LICENSE file for details
+# Copyright (c) 2005 Divmod, Inc.
+# Copyright (c) 2007 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 """
 This module implements AMP, the Asynchronous Messaging Protocol.
@@ -483,7 +485,7 @@ class _DispatchMixin:
         fails with an error.
         """
         def doit(box):
-            kw = _stringsToObjects(box, command.arguments, self)
+            kw = command.parseArguments(box, self)
             def checkKnownErrors(error):
                 key = error.trap(*command.allErrors)
                 code = command.allErrors[key]
@@ -1177,12 +1179,12 @@ class Command:
 
     def makeResponse(cls, objects, proto):
         """
-        This is a hook which can be used to implement a custom factory
-        response.
+        Serialize a mapping of arguments using this L{Command}'s
+        response schema.
 
-        @param objects: a dict with keys similar to the names specified in
-        self.arguments, having values of the types that the Argument objects in
-        self.arguments can format.
+        @param objects: a dict with keys matching the names specified in
+        self.response, having values of the types that the Argument objects in
+        self.response can format.
 
         @param proto: an L{AMP}.
 
@@ -1191,6 +1193,56 @@ class Command:
         return _objectsToStrings(objects, cls.response, cls.responseType(),
                                  proto)
     makeResponse = classmethod(makeResponse)
+
+
+    def makeArguments(cls, objects, proto):
+        """
+        Serialize a mapping of arguments using this L{Command}'s
+        argument schema.
+
+        @param objects: a dict with keys similar to the names specified in
+        self.arguments, having values of the types that the Argument objects in
+        self.arguments can parse.
+
+        @param proto: an L{AMP}.
+
+        @return: An instance of this L{Command}'s C{commandType}.
+        """
+        return _objectsToStrings(objects, cls.arguments, cls.commandType(),
+                                 proto)
+    makeArguments = classmethod(makeArguments)
+
+
+    def parseResponse(cls, box, protocol):
+        """
+        Parse a mapping of serialized arguments using this
+        L{Command}'s response schema.
+
+        @param box: A mapping of response-argument names to the
+        serialized forms of those arguments.
+        @param protocol: The L{AMP} protocol.
+
+        @return: A mapping of response-argument names to the parsed
+        forms.
+        """
+        return _stringsToObjects(box, cls.response, protocol)
+    parseResponse = classmethod(parseResponse)
+
+
+    def parseArguments(cls, box, protocol):
+        """
+        Parse a mapping of serialized arguments using this
+        L{Command}'s argument schema.
+
+        @param box: A mapping of argument names to the seralized forms
+        of those arguments.
+        @param protocol: The L{AMP} protocol.
+
+        @return: A mapping of argument names to the parsed forms.
+        """
+        return _stringsToObjects(box, cls.arguments, protocol)
+    parseArguments = classmethod(parseArguments)
+
 
     def responder(cls, methodfunc):
         """
@@ -1247,13 +1299,12 @@ class Command:
                                                UnknownRemoteError)
             return Failure(errorType(rje.description))
 
-        d = proto._sendBoxCommand(
-            self.commandName, _objectsToStrings(
-                self.structured, self.arguments, self.commandType(), proto),
-            self.requiresAnswer)
+        d = proto._sendBoxCommand(self.commandName,
+                                  self.makeArguments(self.structured, proto),
+                                  self.requiresAnswer)
 
         if self.requiresAnswer:
-            d.addCallback(_stringsToObjects, self.response, proto)
+            d.addCallback(self.parseResponse, proto)
             d.addErrback(_massageError)
 
         return d
@@ -1834,10 +1885,13 @@ def _objectsToStrings(objects, arglist, strings, proto):
     @param arglist: a list of 2-tuples of strings and Argument objects, as
     described in L{Command.arguments}.
 
+    @param strings: [OUT PARAMETER] An object providing the L{dict}
+    interface which will be populated with serialized data.
+
     @param proto: an L{AMP} instance.
 
-    @return: the converted dictionary mapping names to encoded argument
-    strings.
+    @return: The converted dictionary mapping names to encoded argument
+    strings (identical to C{strings}).
     """
     myObjects = {}
     for (k, v) in objects.items():

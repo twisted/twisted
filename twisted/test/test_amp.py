@@ -1,4 +1,6 @@
-# Copyright 2005 Divmod, Inc.  See LICENSE file for details
+# Copyright (c) 2005 Divmod, Inc.
+# Copyright (c) 2007 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 from twisted.python import filepath
 from twisted.protocols import amp
@@ -6,7 +8,6 @@ from twisted.test import iosim
 from twisted.trial import unittest
 from twisted.internet import protocol, defer, error
 
-from twisted.internet.error import PeerVerifyError
 
 class TestProto(protocol.Protocol):
     def __init__(self, onConnLost, dataToSend):
@@ -24,6 +25,8 @@ class TestProto(protocol.Protocol):
     def connectionLost(self, reason):
         self.onConnLost.callback(self.data)
 
+
+
 class SimpleSymmetricProtocol(amp.AMP):
 
     def sendHello(self, text):
@@ -36,6 +39,8 @@ class SimpleSymmetricProtocol(amp.AMP):
 
     def amp_HOWDOYOUDO(self, box):
         return amp.QuitBox(howdoyoudo='world')
+
+
 
 class UnfriendlyGreeting(Exception):
     """Greeting was insufficiently kind.
@@ -61,6 +66,8 @@ class TransportPeer(amp.Argument):
 
     def toBox(self, name, strings, objects, proto):
         return
+
+
 
 class Hello(amp.Command):
 
@@ -1052,7 +1059,7 @@ class TLSTest(unittest.TestCase):
 
         # it might be a good idea to move this exception somewhere more
         # reasonable.
-        self.assertFailure(d, PeerVerifyError)
+        self.assertFailure(d, error.PeerVerifyError)
 
 
 
@@ -1315,4 +1322,238 @@ class WithServerTLSVerification(LiveFireBase, unittest.TestCase):
         """
         def secured(result):
             return self.cli.callRemote(SecuredPing)
-        return self.cli.callRemote(amp.StartTLS, tls_verifyAuthorities=[tempcert])
+        return self.cli.callRemote(amp.StartTLS,
+                                   tls_verifyAuthorities=[tempcert])
+
+
+
+class ProtocolIncludingArgument(amp.Argument):
+    """
+    An L{amp.Argument} which encodes its parser and serializer
+    arguments *including the protocol* into its parsed and serialized
+    forms.
+    """
+
+    def fromStringProto(self, string, protocol):
+        """
+        Don't decode anything; just return all possible information.
+
+        @return: A two-tuple of the input string and the protocol.
+        """
+        return (string, protocol)
+
+    def toStringProto(self, obj, protocol):
+        """
+        Encode identifying information about L{object} and protocol
+        into a string for later verification.
+
+        @type obj: L{object}
+        @type protocol: L{amp.AMP}
+        """
+        return "%s:%s" % (id(obj), id(protocol))
+
+
+
+class ProtocolIncludingCommand(amp.Command):
+    """
+    A command that has argument and response schemas which use
+    L{ProtocolIncludingArgument}.
+    """
+    arguments = [('weird', ProtocolIncludingArgument())]
+    response = [('weird', ProtocolIncludingArgument())]
+
+
+
+class MagicSchemaCommand(amp.Command):
+    """
+    A command which overrides L{parseResponse}, L{parseArguments}, and
+    L{makeResponse}.
+    """
+    def parseResponse(self, strings, protocol):
+        """
+        Don't do any parsing, just jam the input strings and protocol
+        onto the C{protocol.parseResponseArguments} attribute as a
+        two-tuple. Return the original strings.
+        """
+        protocol.parseResponseArguments = (strings, protocol)
+        return strings
+    parseResponse = classmethod(parseResponse)
+
+
+    def parseArguments(cls, strings, protocol):
+        """
+        Don't do any parsing, just jam the input strings and protocol
+        onto the C{protocol.parseArgumentsArguments} attribute as a
+        two-tuple. Return the original strings.
+        """
+        protocol.parseArgumentsArguments = (strings, protocol)
+        return strings
+    parseArguments = classmethod(parseArguments)
+
+
+    def makeArguments(cls, objects, protocol):
+        """
+        Don't do any serializing, just jam the input strings and protocol
+        onto the C{protocol.makeArgumentsArguments} attribute as a
+        two-tuple. Return the original strings.
+        """
+        protocol.makeArgumentsArguments = (objects, protocol)
+        return objects
+    makeArguments = classmethod(makeArguments)
+
+
+
+class NoNetworkProtocol(amp.AMP):
+    """
+    An L{amp.AMP} subclass which overrides private methods to avoid
+    testing the network. It also provides a responder for
+    L{MagicSchemaCommand} that does nothing, so that tests can test
+    aspects of the interaction of L{amp.Command}s and L{amp.AMP}.
+
+    @ivar parseArgumentsArguments: Arguments that have been passed to any
+    L{MagicSchemaCommand}, if L{MagicSchemaCommand} has been handled by
+    this protocol.
+
+    @ivar parseResponseArguments: Responses that have been returned from a
+    L{MagicSchemaCommand}, if L{MagicSchemaCommand} has been handled by
+    this protocol.
+
+    @ivar makeArgumentsArguments: Arguments that have been serialized by any
+    L{MagicSchemaCommand}, if L{MagicSchemaCommand} has been handled by
+    this protocol.
+    """
+    def _sendBoxCommand(self, commandName, strings, requiresAnswer):
+        """
+        Return a Deferred which fires with the original strings.
+        """
+        return defer.succeed(strings)
+
+    MagicSchemaCommand.responder(lambda s, weird: {})
+
+
+
+class MyBox(dict):
+    """
+    A unique dict subclass.
+    """
+
+
+
+class ProtocolIncludingCommandWithDifferentCommandType(
+    ProtocolIncludingCommand):
+    """
+    A L{ProtocolIncludingCommand} subclass whose commandType is L{MyBox}
+    """
+    commandType = MyBox
+
+
+
+class CommandTestCase(unittest.TestCase):
+    """
+    Tests for L{amp.Command}.
+    """
+
+    def test_parseResponse(self):
+        """
+        There should be a class method of Command which accepts a
+        mapping of argument names to serialized forms and returns a
+        similar mapping whose values have been parsed via the
+        Command's response schema.
+        """
+        protocol = object()
+        result = 'whatever'
+        strings = {'weird': result}
+        self.assertEqual(
+            ProtocolIncludingCommand.parseResponse(strings, protocol),
+            {'weird': (result, protocol)})
+
+
+    def test_callRemoteCallsParseResponse(self):
+        """
+        Making a remote call on a L{amp.Command} subclass which
+        overrides the C{parseResponse} method should call that
+        C{parseResponse} method to get the response.
+        """
+        client = NoNetworkProtocol()
+        thingy = "weeoo"
+        response = client.callRemote(MagicSchemaCommand, weird=thingy)
+        def gotResponse(ign):
+            self.assertEquals(client.parseResponseArguments,
+                              ({"weird": thingy}, client))
+        response.addCallback(gotResponse)
+        return response
+
+
+    def test_parseArguments(self):
+        """
+        There should be a class method of L{amp.Command} which accepts
+        a mapping of argument names to serialized forms and returns a
+        similar mapping whose values have been parsed via the
+        command's argument schema.
+        """
+        protocol = object()
+        result = 'whatever'
+        strings = {'weird': result}
+        self.assertEqual(
+            ProtocolIncludingCommand.parseArguments(strings, protocol),
+            {'weird': (result, protocol)})
+
+
+    def test_responderCallsParseArguments(self):
+        """
+        Making a remote call on a L{amp.Command} subclass which
+        overrides the C{parseArguments} method should call that
+        C{parseArguments} method to get the arguments.
+        """
+        protocol = NoNetworkProtocol()
+        responder = protocol.lookupFunction(MagicSchemaCommand.commandName)
+        argument = object()
+        response = responder(dict(weird=argument))
+        response.addCallback(
+            lambda ign: self.assertEqual(protocol.parseArgumentsArguments,
+                                         ({"weird": argument}, protocol)))
+        return response
+
+
+    def test_makeArguments(self):
+        """
+        There should be a class method of L{amp.Command} which accepts
+        a mapping of argument names to objects and returns a similar
+        mapping whose values have been serialized via the command's
+        argument schema.
+        """
+        protocol = object()
+        argument = object()
+        objects = {'weird': argument}
+        self.assertEqual(
+            ProtocolIncludingCommand.makeArguments(objects, protocol),
+            {'weird': "%d:%d" % (id(argument), id(protocol))})
+
+
+    def test_makeArgumentsUsesCommandType(self):
+        """
+        L{amp.Command.makeArguments}'s return type should be the type
+        of the result of L{amp.Command.commandType}.
+        """
+        protocol = object()
+        objects = {"weird": "whatever"}
+
+        result = ProtocolIncludingCommandWithDifferentCommandType.makeArguments(
+            objects, protocol)
+        self.assertIdentical(type(result), MyBox)
+
+
+    def test_callRemoteCallsMakeArguments(self):
+        """
+        Making a remote call on a L{amp.Command} subclass which
+        overrides the C{makeArguments} method should call that
+        C{makeArguments} method to get the response.
+        """
+        client = NoNetworkProtocol()
+        argument = object()
+        response = client.callRemote(MagicSchemaCommand, weird=argument)
+        def gotResponse(ign):
+            self.assertEqual(client.makeArgumentsArguments,
+                             ({"weird": argument}, client))
+        response.addCallback(gotResponse)
+        return response
