@@ -1,9 +1,10 @@
 # -*- test-case-name: twisted.test.test_ssl -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""SSL transport. Requires PyOpenSSL (http://pyopenssl.sf.net).
+"""
+SSL transport. Requires PyOpenSSL (http://pyopenssl.sf.net).
 
 SSL connections require a ContextFactory so they can create SSL contexts.
 End users should only use the ContextFactory classes directly - for SSL
@@ -44,14 +45,12 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 supported = False
 
 # System imports
+import warnings
 from OpenSSL import SSL
 from zope.interface import implements, implementsOnly, implementedBy
 
-# sibling imports
-import tcp, interfaces
-
 # Twisted imports
-from twisted.internet import base, address
+from twisted.internet import base, address, tcp, interfaces
 
 
 class ContextFactory:
@@ -114,7 +113,7 @@ class Client(tcp.Client):
 
     implementsOnly(interfaces.ISSLTransport,
                    *[i for i in implementedBy(tcp.Client) if i != interfaces.ITLSTransport])
-    
+
     def __init__(self, host, port, bindAddress, ctxFactory, connector, reactor=None):
         # tcp.Client.__init__ depends on self.ctxFactory being set
         self.ctxFactory = ctxFactory
@@ -140,7 +139,7 @@ class Server(tcp.Server):
     """
 
     implements(interfaces.ISSLTransport)
-    
+
     def getHost(self):
         """Return server's address."""
         h, p = self.socket.getsockname()
@@ -155,7 +154,7 @@ class Server(tcp.Server):
 class Port(tcp.Port):
     """I am an SSL port."""
     _socketShutdownMethod = 'sock_shutdown'
-    
+
     transport = Server
 
     def __init__(self, port, factory, ctxFactory, backlog=50, interface='', reactor=None):
@@ -163,9 +162,19 @@ class Port(tcp.Port):
         self.ctxFactory = ctxFactory
 
     def createInternetSocket(self):
-        """(internal) create an SSL socket
         """
-        sock = tcp.Port.createInternetSocket(self)
+        DEPRECATED.
+        """
+        warnings.warn("Port.createInternetSocket is deprecated, "
+                      "please use Port.createSocket instead.",
+                      category=DeprecationWarning, stacklevel=2)
+        return self.createtSocket()
+
+    def createtSocket(self):
+        """
+        (internal) create an SSL socket
+        """
+        sock = tcp.Port.createSocket(self)
         return SSL.Connection(self.ctxFactory.getContext(), sock)
 
     def _preMakeConnection(self, transport):

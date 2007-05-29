@@ -1,10 +1,11 @@
 # -*- test-case-name: twisted.test.test_udp -*-
 
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""Various asynchronous UDP classes.
+"""
+Various asynchronous UDP classes.
 
 Please do not use this module directly.
 
@@ -14,7 +15,6 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 # System Imports
-import os
 import socket
 import operator
 import struct
@@ -33,12 +33,8 @@ else:
     from errno import EWOULDBLOCK, EINTR, EMSGSIZE, ECONNREFUSED, EAGAIN
 
 # Twisted Imports
-from twisted.internet import protocol, base, defer, address
-from twisted.persisted import styles
+from twisted.internet import base, defer, address, abstract, error, interfaces
 from twisted.python import log, reflect, failure
-
-# Sibling Imports
-import abstract, error, interfaces
 
 
 class Port(base.BasePort):
@@ -86,7 +82,7 @@ class Port(base.BasePort):
 
     def _bindSocket(self):
         try:
-            skt = self.createInternetSocket()
+            skt = self.createSocket()
             skt.bind((self.interface, self.port))
         except socket.error, le:
             raise error.CannotListenError, (self.interface, self.port, le)
@@ -359,23 +355,38 @@ class MulticastMixin:
         """Leave multicast group, return Deferred of success."""
         return self.reactor.resolve(addr).addCallback(self._joinAddr1, interface, 0)
 
+    def createInternetSocket(self):
+        """
+        DEPRECATED.
+        """
+        warnings.warn("MulticastPort.createInternetSocket is deprecated, "
+                      "please use MulticastPort.createSocket instead.",
+                      category=DeprecationWarning, stacklevel=2)
+        return self.createSocket()
+
+    def createSocket(self):
+        """
+        Create a socket and sets L{socket.SO_REUSEADDR} and
+        L{socket.SO_REUSEPORT} on it.
+        """
+        skt = Port.createSocket(self)
+        if self.listenMultiple:
+            skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            if hasattr(socket, "SO_REUSEPORT"):
+                skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        return skt
+
 
 class MulticastPort(MulticastMixin, Port):
-    """UDP Port that supports multicasting."""
+    """
+    UDP Port that supports multicasting.
+    """
 
     implements(interfaces.IMulticastTransport)
 
     def __init__(self, port, proto, interface='', maxPacketSize=8192, reactor=None, listenMultiple=False):
         Port.__init__(self, port, proto, interface, maxPacketSize, reactor)
         self.listenMultiple = listenMultiple
-
-    def createInternetSocket(self):
-        skt = Port.createInternetSocket(self)
-        if self.listenMultiple:
-            skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            if hasattr(socket, "SO_REUSEPORT"):
-                skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-        return skt
 
 
 class ConnectedMulticastPort(MulticastMixin, ConnectedPort):

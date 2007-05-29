@@ -1,16 +1,14 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
 import socket
-import struct
-import operator
 
 from twisted.internet import interfaces, defer, error, protocol, address
 from twisted.internet.udp import MulticastMixin
 from twisted.internet.abstract import isIPAddress
 from twisted.persisted import styles
-from twisted.python import log, failure, reflect
+from twisted.python import log, reflect
 
 from ops import ReadFileOp, WriteFileOp, WSARecvFromOp, WSASendToOp
 from util import StateEventMachineType
@@ -43,7 +41,7 @@ class Port(log.Logger, styles.Ephemeral, object):
         self.read_op = self.read_op_class(self)
         self.readbuf = reactor.AllocateReadBuffer(maxPacketSize)
         self.reactor = reactor
-    
+
     def __repr__(self):
         if self._realPortNumber is not None:
             return "<%s on %s>" % (self.protocol.__class__, self._realPortNumber)
@@ -54,12 +52,12 @@ class Port(log.Logger, styles.Ephemeral, object):
         if not isIPAddress(host):
             raise ValueError, "please pass only IP addresses, not domain names"
         self.state = "connecting"
-        return defer.maybeDeferred(self._connectDone, host, port)      
+        return defer.maybeDeferred(self._connectDone, host, port)
 
     def handle_connecting_connect(self, host, port):
         raise RuntimeError, "already connected, reconnecting is not currently supported (talk to itamar if you want this)"
     handle_connected_connect = handle_connecting_connect
-        
+
     def _connectDone(self, host, port):
         self._connectedAddr = (host, port)
         self.state = "connected"
@@ -83,13 +81,13 @@ class Port(log.Logger, styles.Ephemeral, object):
 #            print "bound %s to %s" % (skt.fileno(), self.bindAddress)
         except socket.error, le:
             raise error.CannotListenError, (None, None, le)
-        
+
         # Make sure that if we listened on port 0, we update that to
         # reflect what the OS actually assigned us.
         self._realPortNumber = skt.getsockname()[1]
-        
+
         log.msg("%s starting on %s"%(self.protocol.__class__, self._realPortNumber))
-        
+
         self.socket = skt
 
     def _connectSocket(self, host):
@@ -200,7 +198,9 @@ class Port(log.Logger, styles.Ephemeral, object):
 
 
 class MulticastPort(MulticastMixin, Port):
-    """UDP Port that supports multicasting."""
+    """
+    UDP Port that supports multicasting.
+    """
 
     implements(interfaces.IMulticastTransport)
 
@@ -208,10 +208,3 @@ class MulticastPort(MulticastMixin, Port):
         Port.__init__(self, bindAddress, proto, maxPacketSize)
         self.listenMultiple = listenMultiple
 
-    def createInternetSocket(self):
-        skt = Port.createInternetSocket(self)
-        if self.listenMultiple:
-            skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            if hasattr(socket, "SO_REUSEPORT"):
-                skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-        return skt

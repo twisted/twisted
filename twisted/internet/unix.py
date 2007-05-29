@@ -1,10 +1,11 @@
 # -*- test-case-name: twisted.test.test_unix -*-
 
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""Various asynchronous TCP/IP classes.
+"""
+Various asynchronous TCP/IP classes.
 
 End users shouldn't use this module directly - use the reactor APIs instead.
 
@@ -13,14 +14,14 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 
 # System imports
 import os, stat, socket
-from errno import *
+from errno import EINTR, EMSGSIZE, EAGAIN, EWOULDBLOCK, ECONNREFUSED
 from zope.interface import implements, implementsOnly, implementedBy
 
 if not hasattr(socket, 'AF_UNIX'):
     raise ImportError, "UNIX sockets not supported on this platform"
 
 # Twisted imports
-from twisted.internet import base, tcp, udp, error, interfaces, protocol, address, defer
+from twisted.internet import base, tcp, udp, error, interfaces, protocol, address
 from twisted.internet.error import CannotListenError
 from twisted.python import lockfile, log, reflect, failure
 
@@ -83,7 +84,7 @@ class Port(tcp.Port):
 
         self.factory.doStart()
         try:
-            skt = self.createInternetSocket()
+            skt = self.createSocket()
             skt.bind(self.port)
         except socket.error, le:
             raise CannotListenError, (None, self.port, le)
@@ -124,7 +125,7 @@ class Client(tcp.BaseClient):
         self.realAddress = self.addr = filename
         if checkPID and not lockfile.isLocked(filename + ".lock"):
             self._finishInit(None, None, error.BadFileError(filename), reactor)
-        self._finishInit(self.doConnect, self.createInternetSocket(),
+        self._finishInit(self.doConnect, self.createSocket(),
                          None, reactor)
 
     def getPeer(self):
@@ -171,7 +172,7 @@ class DatagramPort(udp.Port):
     def _bindSocket(self):
         log.msg("%s starting on %s"%(self.protocol.__class__, repr(self.port)))
         try:
-            skt = self.createInternetSocket() # XXX: haha misnamed method
+            skt = self.createSocket()
             if self.port:
                 skt.bind(self.port)
         except socket.error, le:

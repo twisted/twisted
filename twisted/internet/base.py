@@ -727,8 +727,28 @@ class BaseConnector(styles.Ephemeral):
         raise NotImplementedError, "implement in subclasses"
 
 
+def createSocket(addressFamily, socketType):
+    """
+    Create a non-blocking socket with C{FD_CLOEXEC} set on it.
+
+    @param addressFamily: first argument to L{socket.socket}, generally
+        L{socket.AF_INET} or L{socket.AF_UNIX}.
+    @param socketType: second argument to L{socket.socket}, generally
+        L{SOCK_STREAM} or L{SOCK_DGRAM}.
+
+    @return: a L{socket.socket} object.
+    """
+    s = socket.socket(addressFamily, socketType)
+    s.setblocking(False)
+    if fcntl and hasattr(fcntl, 'FD_CLOEXEC'):
+        old = fcntl.fcntl(s.fileno(), fcntl.F_GETFD)
+        fcntl.fcntl(s.fileno(), fcntl.F_SETFD, old | fcntl.FD_CLOEXEC)
+    return s
+
+
 class BasePort(abstract.FileDescriptor):
-    """Basic implementation of a ListeningPort.
+    """
+    Basic implementation of a ListeningPort.
 
     Note: This does not actually implement IListeningPort.
     """
@@ -737,17 +757,26 @@ class BasePort(abstract.FileDescriptor):
     socketType = None
 
     def createInternetSocket(self):
-        s = socket.socket(self.addressFamily, self.socketType)
-        s.setblocking(0)
-        if fcntl and hasattr(fcntl, 'FD_CLOEXEC'):
-            old = fcntl.fcntl(s.fileno(), fcntl.F_GETFD)
-            fcntl.fcntl(s.fileno(), fcntl.F_SETFD, old | fcntl.FD_CLOEXEC)
-        return s
+        """
+        DEPRECATED.
+        """
+        warnings.warn("BasePort.createInternetSocket is deprecated, "
+                      "please use BasePort.createSocket instead.",
+                      category=DeprecationWarning, stacklevel=2)
+        return self.createSocket()
 
+    def createSocket(self):
+        """
+        Create a socket for the addressFamily and socketType of the class.
+        """
+        return createSocket(self.addressFamily, self.socketType)
 
     def doWrite(self):
-        """Raises a RuntimeError"""
-        raise RuntimeError, "doWrite called on a %s" % reflect.qual(self.__class__)
+        """
+        Raises a RuntimeError
+        """
+        raise RuntimeError("doWrite called on a %s" %
+                           (reflect.qual(self.__class__),))
 
 
 __all__ = []
