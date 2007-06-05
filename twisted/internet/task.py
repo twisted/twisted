@@ -323,14 +323,14 @@ class Clock:
         """
         See L{twisted.internet.interfaces.IReactorTime.callLater}.
         """
-        self.calls.append(
-            base.DelayedCall(self.seconds() + when,
-                             what, a, kw,
-                             self.calls.remove,
-                             lambda c: None,
-                             self.seconds))
+        dc =  base.DelayedCall(self.seconds() + when,
+                               what, a, kw,
+                               self.calls.remove,
+                               lambda c: None,
+                               self.seconds)
+        self.calls.append(dc)
         self.calls.sort(lambda a, b: cmp(a.getTime(), b.getTime()))
-        return self.calls[-1]
+        return dc
 
 
     def advance(self, amount):
