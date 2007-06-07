@@ -1,9 +1,9 @@
-from __future__ import generators
+# Copyright (c) 2005-2007 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 import time
 from twisted.web2.test.test_server import BaseCase
-from twisted.web2 import resource
-from twisted.internet import reactor, interfaces
+from twisted.internet import reactor, interfaces, defer
 from twisted.python import log
 
 if interfaces.IReactorThreads(reactor, None) is not None:
@@ -11,18 +11,27 @@ if interfaces.IReactorThreads(reactor, None) is not None:
 else:
     WSGI = None
 
+
 class TestError(Exception):
     pass
 
+
 class TestContainer(BaseCase):
-    wait_timeout = 10.0
+    """
+    Tests various applications with the WSGI container.
+    """
 
     def flushErrors(self, result, error):
-        log.flushErrors(error)
+        """
+        Flush the specified C{error] and forward C{result}.
+        """
+        self.flushLoggedErrors(error)
         return result
-    
+
     def test_getContainedResource(self):
-        """Test that non-blocking WSGI applications render properly."""
+        """
+        Test that non-blocking WSGI applications render properly.
+        """
         def application(environ, start_response):
             status = '200 OK'
             response_headers = [('Content-type','text/html')]
@@ -36,9 +45,13 @@ class TestContainer(BaseCase):
             (200, {"Content-Length": None}, '<html><h1>Some HTML</h1></html>'))
 
     def test_getBlockingResource(self):
-        """Test that blocking WSGI applications render properly."""
+        """
+        Test that blocking WSGI applications render properly.
+        """
         def application(environ, start_response):
-            """Simplest possible application object"""
+            """
+            Simplest possible application object.
+            """
             status = '200 OK'
             response_headers = [('Content-type','text/html')]
             writer = start_response(status, response_headers)
@@ -50,10 +63,13 @@ class TestContainer(BaseCase):
 
         return self.assertResponse(
             (WSGI(application), 'http://host/'),
-            (200, {"Content-Length": None}, '<h1>A little bit of HTML</h1><p>Hello!</p>'))
+            (200, {"Content-Length": None},
+            '<h1>A little bit of HTML</h1><p>Hello!</p>'))
 
     def test_responseCode(self):
-        """Test that WSGIResource handles strange response codes properly."""
+        """
+        Test that WSGIResource handles strange response codes properly.
+        """
         def application(environ, start_response):
             status = '314'
             response_headers = [('Content-type','text/html')]
@@ -67,7 +83,7 @@ class TestContainer(BaseCase):
     def test_errorfulResource(self):
         def application(environ, start_response):
             raise TestError("This is an expected error")
-        
+
         return self.assertResponse(
             (WSGI(application), 'http://host/'),
             (500, {}, None)).addBoth(self.flushErrors, TestError)
@@ -77,20 +93,20 @@ class TestContainer(BaseCase):
             write = start_response("200 OK", {})
             write("Foo")
             raise TestError("This is an expected error")
-        
+
         return self.assertResponse(
             (WSGI(application), 'http://host/'),
             (200, {"Content-Length": None}, "Foo"), failure=True
             ).addBoth(self.flushErrors, TestError)
-    
+
     def test_errorfulIterator(self):
         def iterator():
             raise TestError("This is an expected error")
-        
+
         def application(environ, start_response):
             start_response("200 OK", {})
             return iterator()
-        
+
         return self.assertResponse(
             (WSGI(application), 'http://host/'),
             (500, {}, None)).addBoth(self.flushErrors, TestError)
@@ -100,11 +116,11 @@ class TestContainer(BaseCase):
             yield "Foo"
             yield "Bar"
             raise TestError("This is also expected")
-        
+
         def application(environ, start_response):
             start_response("200 OK", {})
             return iterator()
-        
+
         return self.assertResponse(
             (WSGI(application), 'http://host/'),
             (200, {"Content-Length": None}, "FooBar"), failure=True
@@ -113,7 +129,7 @@ class TestContainer(BaseCase):
     def test_didntCallStartResponse(self):
         def application(environ, start_response):
             return ["Foo"]
-        
+
         return self.assertResponse(
             (WSGI(application), 'http://host/'),
             (500, {}, None)).addBoth(self.flushErrors, RuntimeError)
@@ -122,7 +138,7 @@ class TestContainer(BaseCase):
         def application(environ, start_response):
             start_response("200 OK", {})
             yield "Foo"
-        
+
         return self.assertResponse(
             (WSGI(application), 'http://host/'),
             (200, {"Content-Length": None}, "Foo"))
@@ -131,7 +147,7 @@ class TestContainer(BaseCase):
         def application(environ, start_response):
             write = start_response("200 OK", {})
             return ["Foo", "Bar"]
-        
+
         return self.assertResponse(
             (WSGI(application), 'http://host/'),
             (200, {"Content-Length": 6}, "FooBar"))
@@ -142,9 +158,10 @@ class TestContainer(BaseCase):
             out = input.read(-1)
             start_response("200 OK", {})
             return [out]
-        
+
         return self.assertResponse(
-            (WSGI(application), 'http://host/', {}, None, None, '', "This is some content"),
+            (WSGI(application), 'http://host/', {}, None, None, '',
+            "This is some content"),
             (200, {"Content-Length": 20}, "This is some content"))
 
     def test_readInputLines(self):
@@ -153,7 +170,7 @@ class TestContainer(BaseCase):
             out = 'X'.join(input.readlines())
             start_response("200 OK", {})
             return [out]
-        
+
         d = self.assertResponse(
             (WSGI(application), 'http://host/', {}, None, None, '', "a\nb\nc"),
             (200, {"Content-Length": 7}, "a\nXb\nXc"))
@@ -164,7 +181,9 @@ class TestContainer(BaseCase):
         return d
 
     def test_readInputLineSizeNegZero(self):
-        """Test that calling wsgi.input.readline works with -1 and 0 and none."""
+        """
+        Test that calling wsgi.input.readline works with -1 and 0 and none.
+        """
         def application(environ, start_response):
             input = environ['wsgi.input']
 
@@ -184,7 +203,9 @@ class TestContainer(BaseCase):
              "Line Xblah blah\nXXOh Line\nX"))
 
     def test_readInputLineSize(self):
-        """Test that readline() with a size works."""
+        """
+        Test that readline() with a size works.
+        """
         def application(environ, start_response):
             input = environ['wsgi.input']
 
@@ -210,29 +231,32 @@ class TestContainer(BaseCase):
             out.extend(["X", input.readline()])
             out.extend(["X", input.read(1)])
             out.extend(["X", input.readline()])
-            
+
             start_response("200 OK", {})
             return out
-        
+
         return self.assertResponse(
             (WSGI(application), 'http://host/', {}, None, None, '',
              "Line blah blah\nOh Line\n"),
             (200, {"Content-Length": 26}, "Line Xblah blah\nXOXh Line\n"))
 
     def test_readiter(self):
-        """Test that using wsgi.input as an iterator works."""
+        """
+        Test that using wsgi.input as an iterator works.
+        """
         def application(environ, start_response):
             input = environ['wsgi.input']
             out = 'X'.join(input)
-            
+
             start_response("200 OK", {})
             return [out]
-        
+
         return self.assertResponse(
             (WSGI(application), 'http://host/', {}, None, None, '',
              "Line blah blah\nOh Line\n"),
             (200, {"Content-Length": 24}, "Line blah blah\nXOh Line\n"))
-        
+
+
 class TestWSGIEnvironment(BaseCase):
     """
     Test that the WSGI container does everything we expect it to do
@@ -253,27 +277,41 @@ class TestWSGIEnvironment(BaseCase):
         keys = env.keys()
         keys.sort()
         envstring = ''.join(['%s=%r;' % (k, v) for k, v in env.items()])
-        self.assertResponse(
+        return self.assertResponse(
             (WSGI(self.envApp(*keys)), uri, None, None, version),
             (200, {}, envstring))
 
     def test_wsgi_url_scheme(self):
-        """wsgi.url_scheme"""
-        self.assertEnv('https://host/', {'wsgi.url_scheme': 'https'})
-        self.assertEnv('http://host/', {'wsgi.url_scheme': 'http'})
+        """
+        Check the value of C{wsgi.url_scheme} variable for the http and the
+        https cases.
+        """
+        return defer.gatherResults([
+            self.assertEnv('https://host/', {'wsgi.url_scheme': 'https'}),
+            self.assertEnv('http://host/', {'wsgi.url_scheme': 'http'})
+        ])
 
     def test_SERVER_PROTOCOL(self):
-        """SERVER_PROTOCOL"""
-        self.assertEnv('http://host/', {'SERVER_PROTOCOL': 'HTTP/1.1'})
+        """
+        Check the value the C{SERVER_PROTOCOL} variable in the WSGI environment.
+        """
+        return self.assertEnv('http://host/', {'SERVER_PROTOCOL': 'HTTP/1.1'})
 
     def test_SERVER_PORT(self):
-        """SERVER_PORT"""
-        self.assertEnv('http://host/', {'SERVER_PORT': '80'})
-        self.assertEnv('http://host:523/', {'SERVER_PORT': '523'})
-        self.assertEnv('https://host/', {'SERVER_PORT': '443'})
-        self.assertEnv('https://host:523/', {'SERVER_PORT': '523'})
-        self.assertEnv('/foo', {'SERVER_PORT': '80'}, version=(1,0))
+        """
+        Check the value of the C{SERVER_PORT} variable in the WSGI environment,
+        for different kind of URLs.
+        """
+        return defer.gatherResults([
+            self.assertEnv('http://host/', {'SERVER_PORT': '80'}),
+            self.assertEnv('http://host:523/', {'SERVER_PORT': '523'}),
+            self.assertEnv('https://host/', {'SERVER_PORT': '443'}),
+            self.assertEnv('https://host:523/', {'SERVER_PORT': '523'}),
+            self.assertEnv('/foo', {'SERVER_PORT': '80'}, version=(1,0))
+        ])
+
 
 if WSGI is None:
     for cls in (TestContainer, TestWSGIEnvironment):
         setattr(cls, 'skip', 'Required thread support is missing, skipping')
+
