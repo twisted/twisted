@@ -1,4 +1,7 @@
-import StringIO
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# See LICENSE for details
+
+import StringIO, warnings
 
 from twisted.python import reflect, failure
 from twisted.python.util import dsu
@@ -26,7 +29,7 @@ class TestAssertions(unittest.TestCase):
     This is pretty paranoid.  Still, a certain paranoia is healthy if you
     are testing a unit testing framework.
     """
-    
+
     class FailingTest(unittest.TestCase):
         def test_fails(self):
             raise self.failureException()
@@ -93,7 +96,7 @@ class TestAssertions(unittest.TestCase):
         self._testUnequalPair('cat', 'dog')
         self._testEqualPair([1], [1])
         self._testUnequalPair([1], 'orange')
-    
+
     def test_failUnlessEqual_custom(self):
         x = MockEquality('first')
         y = MockEquality('second')
@@ -217,7 +220,7 @@ class TestAssertions(unittest.TestCase):
                              "first parameter (%r, %r)" % (ret, x))
         self.failUnlessRaises(self.failureException,
                               self.failUnlessAlmostEqual, x, y, precision)
-        
+
     def test_failIfAlmostEqual(self):
         precision = 5
         x = 8.000001
@@ -297,7 +300,7 @@ class TestAssertions(unittest.TestCase):
         """
         class ExampleFailure(Exception):
             pass
- 
+
         class TC(unittest.TestCase):
             failureException = ExampleFailure
             def test_assertFailure(self):
@@ -310,6 +313,65 @@ class TestAssertions(unittest.TestCase):
         result = reporter.TestResult()
         test.run(result)
         self.assertEqual(1, len(result.failures))
+
+    def test_assertWarns(self):
+        """
+        Test basic assertWarns report.
+        """
+        def deprecated(a):
+            warnings.warn("Woo deprecated", category=DeprecationWarning)
+            return a
+        r = self.assertWarns(DeprecationWarning, ("Woo deprecated",), __file__,
+            deprecated, 123)
+        self.assertEquals(r, 123)
+
+    def test_assertWarnsRegistryClean(self):
+        """
+        Test that assertWarns cleans the warning registry, so the warning is
+        not swallowed the second time.
+        """
+        def deprecated(a):
+            warnings.warn("Woo deprecated", category=DeprecationWarning)
+            return a
+        r1 = self.assertWarns(DeprecationWarning, ("Woo deprecated",), __file__,
+            deprecated, 123)
+        self.assertEquals(r1, 123)
+        # The warning should be raised again
+        r2 = self.assertWarns(DeprecationWarning, ("Woo deprecated",), __file__,
+            deprecated, 321)
+        self.assertEquals(r2, 321)
+
+    def test_assertWarnsError(self):
+        """
+        Test assertWarns failure when no warning is generated.
+        """
+        def normal(a):
+            return a
+        self.assertRaises(self.failureException,
+            self.assertWarns, DeprecationWarning, ("Woo deprecated",), __file__,
+            normal, 123)
+
+    def test_assertWarnsWrongCategory(self):
+        """
+        Test assertWarns failure when the category is wrong.
+        """
+        def deprecated(a):
+            warnings.warn("Foo deprecated", category=DeprecationWarning)
+            return a
+        self.assertRaises(self.failureException,
+            self.assertWarns, UserWarning, ("Foo deprecated",), __file__,
+            deprecated, 123)
+
+    def test_assertWarnsWrongMessage(self):
+        """
+        Test assertWarns failure when the message is wrong.
+        """
+        def deprecated(a):
+            warnings.warn("Foo deprecated", category=DeprecationWarning)
+            return a
+        self.assertRaises(self.failureException,
+            self.assertWarns, DeprecationWarning, ("Bar deprecated",), __file__,
+            deprecated, 123)
 
 
 class TestAssertionNames(unittest.TestCase):

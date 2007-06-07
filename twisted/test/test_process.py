@@ -5,7 +5,6 @@
 """
 Test running processes.
 """
-from __future__ import nested_scopes, generators
 
 
 import gzip
@@ -13,9 +12,7 @@ import os
 import popen2
 import sys
 import signal
-import warnings
 import StringIO
-from pprint import pformat
 
 
 # Twisted Imports
@@ -599,41 +596,12 @@ class ProcessTestCase(unittest.TestCase):
             self.okayUnicode.encode(sys.getdefaultencoding()),
             self.encodedValue)
 
-        warningsShown = []
-        def showwarning(*args):
-            warningsShown.append(args)
-
-        origshow = warnings.showwarning
-        origregistry = globals().get('__warningregistry__', {})
-        try:
-            warnings.showwarning = showwarning
-            globals()['__warningregistry__'] = {}
-            p = processProtocolClass.run(reactor, argv, env)
-        finally:
-            warnings.showwarning = origshow
-            globals()['__warningregistry__'] = origregistry
-
-        d = p.getResult()
-        self.assertEqual(len(warningsShown), 1, pformat(warningsShown))
-        message, category, filename, lineno = warningsShown[0]
-        self.assertEqual(
-            message.args,
+        p = self.assertWarns(DeprecationWarning,
             ("Argument strings and environment keys/values passed to "
-             "reactor.spawnProcess should be str, not unicode.",))
-        self.assertIdentical(category, DeprecationWarning)
+             "reactor.spawnProcess should be str, not unicode.",), __file__,
+            processProtocolClass.run, reactor, argv, env)
+        return p.getResult()
 
-        # Use starts with because of .pyc/.pyo issues.
-        self.failUnless(
-            __file__.startswith(filename),
-            'Warning in %r, expected %r' % (filename, __file__))
-
-        # It would be nice to be able to check the line number as well, but
-        # different configurations actually end up reporting different line
-        # numbers (generally the variation is only 1 line, but that's enough
-        # to fail the test erroneously...).
-        # self.assertEqual(lineno, 202)
-
-        return d
 
     def test_deprecatedUnicodeArgvSupport(self):
         """
