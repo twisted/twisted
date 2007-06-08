@@ -12,37 +12,34 @@ from twisted.words.xish import domish
 
 NS_XML = 'http://www.w3.org/XML/1998/namespace'
 NS_STREAMS = 'http://etherx.jabber.org/streams'
+NS_XMPP_STREAMS = 'urn:ietf:params:xml:ns:xmpp-streams'
 NS_XMPP_STANZAS = 'urn:ietf:params:xml:ns:xmpp-stanzas'
 
-class ErrorTest(unittest.TestCase):
+class BaseErrorTest(unittest.TestCase):
 
     def testGetElementPlain(self):
-        e = error.Error('feature-not-implemented')
+        e = error.BaseError('feature-not-implemented')
         element = e.getElement()
         self.assertIdentical(element.uri, None)
         self.assertEquals(len(element.children), 1)
-        self.assertEquals(element.children[0].name, 'feature-not-implemented')
-        self.assertEquals(element.children[0].uri, NS_XMPP_STANZAS)
 
     def testGetElementText(self):
-        e = error.Error('feature-not-implemented', 'text')
+        e = error.BaseError('feature-not-implemented', 'text')
         element = e.getElement()
         self.assertEquals(len(element.children), 2)
-        self.assertEquals(element.text.uri, NS_XMPP_STANZAS)
         self.assertEquals(unicode(element.text), 'text')
         self.assertEquals(element.text.getAttribute((NS_XML, 'lang')), None)
 
     def testGetElementTextLang(self):
-        e = error.Error('feature-not-implemented', 'text', 'en_US')
+        e = error.BaseError('feature-not-implemented', 'text', 'en_US')
         element = e.getElement()
         self.assertEquals(len(element.children), 2)
-        self.assertEquals(element.text.uri, NS_XMPP_STANZAS)
         self.assertEquals(unicode(element.text), 'text')
         self.assertEquals(element.text[(NS_XML, 'lang')], 'en_US')
 
     def testGetElementAppCondition(self):
         ac = domish.Element(('testns', 'myerror'))
-        e = error.Error('feature-not-implemented', appCondition=ac)
+        e = error.BaseError('feature-not-implemented', appCondition=ac)
         element = e.getElement()
         self.assertEquals(len(element.children), 2)
         self.assertEquals(element.myerror, ac)
@@ -53,6 +50,22 @@ class StreamErrorTest(unittest.TestCase):
         e = error.StreamError('feature-not-implemented')
         element = e.getElement()
         self.assertEquals(element.uri, NS_STREAMS)
+
+    def test_getElementConditionNamespace(self):
+        """
+        Test that the error condition element has the correct namespace.
+        """
+        e = error.StreamError('feature-not-implemented')
+        element = e.getElement()
+        self.assertEquals(NS_XMPP_STREAMS, getattr(element, 'feature-not-implemented').uri)
+
+    def test_getElementTextNamespace(self):
+        """
+        Test that the error text element has the correct namespace.
+        """
+        e = error.StreamError('feature-not-implemented', 'text')
+        element = e.getElement()
+        self.assertEquals(NS_XMPP_STREAMS, element.text.uri)
 
 class StanzaErrorTest(unittest.TestCase):
 
@@ -69,6 +82,22 @@ class StanzaErrorTest(unittest.TestCase):
         self.assertEquals(element.uri, None)
         self.assertEquals(element['type'], 'auth')
         self.assertEquals(element['code'], '501')
+
+    def test_getElementConditionNamespace(self):
+        """
+        Test that the error condition element has the correct namespace.
+        """
+        e = error.StanzaError('feature-not-implemented')
+        element = e.getElement()
+        self.assertEquals(NS_XMPP_STANZAS, getattr(element, 'feature-not-implemented').uri)
+
+    def test_getElementTextNamespace(self):
+        """
+        Test that the error text element has the correct namespace.
+        """
+        e = error.StanzaError('feature-not-implemented', text='text')
+        element = e.getElement()
+        self.assertEquals(NS_XMPP_STANZAS, element.text.uri)
 
     def test_toResponse(self):
         """
