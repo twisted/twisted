@@ -1,12 +1,14 @@
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 """
 An implementation of PEP 333: Python Web Server Gateway Interface (WSGI).
 """
 
 import os, threading
-import Queue
 from zope.interface import implements
 
-from twisted.internet import defer
+from twisted.internet import defer, threads
 from twisted.python import log, failure
 from twisted.web2 import http
 from twisted.web2 import iweb
@@ -31,7 +33,7 @@ class WSGIResource(object):
     any lower part of the url hierarchy is received.
     """
     implements(iweb.IResource)
-    
+
     def __init__(self, application):
         self.application = application
 
@@ -44,22 +46,10 @@ class WSGIResource(object):
         # Run it in a thread
         reactor.callInThread(handler.run)
         return d
-    
+
     def locateChild(self, request, segments):
         return self, server.StopTraversal
-            
-def callInReactor(__f, *__a, **__kw):
-    from twisted.internet import reactor
-    queue = Queue.Queue()
-    reactor.callFromThread(__callFromThread, queue, __f, __a, __kw)
-    result = queue.get()
-    if isinstance(result, failure.Failure):
-        result.raiseException()
-    return result
 
-def __callFromThread(queue, f, a, kw):
-    result = defer.maybeDeferred(f, *a, **kw)
-    result.addBoth(queue.put)
 
 class InputStream(object):
     """
@@ -67,11 +57,11 @@ class InputStream(object):
     expected to have the same behavior as the same-named methods for
     python's builtin file object.
     """
-    
+
     def __init__(self, newstream):
         # Called in IO thread
         self.stream = stream.BufferedStream(newstream)
-        
+
     def read(self, size=None):
         """
         Read at most size bytes from the input, or less if EOF is
@@ -80,7 +70,7 @@ class InputStream(object):
         # Called in application thread
         if size < 0:
             size = None
-        return callInReactor(self.stream.readExactly, size)
+        return threads.blockingCallFromThread(self.stream.readExactly, size)
 
     def readline(self, size=None):
         """
@@ -101,8 +91,9 @@ class InputStream(object):
             # other file-like-objects...
             size = None
 
-        return callInReactor(self.stream.readline, '\n', size = size)
-    
+        return threads.blockingCallFromThread(
+            self.stream.readline, '\n', size=size)
+
     def readlines(self, hint=None):
         """
         Read until EOF, collecting all lines in a list, and returns
@@ -129,8 +120,8 @@ class InputStream(object):
             if not line:
                 return
             yield line
-                
-    
+
+
 class ErrorStream(object):
     """
     This class implements the 'wsgi.error' object.
@@ -152,7 +143,7 @@ class WSGIHandler(object):
     headersSent = False
     stopped = False
     stream = None
-    
+
     def __init__(self, application, request):
         # Called in IO thread
         self.setupEnvironment(request)
@@ -173,7 +164,7 @@ class WSGIHandler(object):
         env['wsgi.run_once']     = False
         env['wsgi.file_wrapper'] = FileWrapper
         self.environment = env
-        
+
     def startWSGIResponse(self, status, response_headers, exc_info=None):
         # Called in application thread
         if exc_info is not None:
@@ -212,7 +203,7 @@ class WSGIHandler(object):
         # Called in IO thread
         self.responseDeferred.errback(f)
         self.responseDeferred = None
-            
+
     def write(self, output):
         # Called in application thread
         from twisted.internet import reactor
@@ -222,10 +213,10 @@ class WSGIHandler(object):
         if not self.headersSent:
             self.stream=self.response.stream=stream.ProducerStream()
             self.headersSent = True
-            
+
             # threadsafe event object to communicate paused state.
             self.unpaused = threading.Event()
-            
+
             # After this, we cannot touch self.response from this
             # thread any more
             def _start():
@@ -261,13 +252,13 @@ class WSGIHandler(object):
                     self.stream.write(s)
                 self.stream.finish()
             reactor.callFromThread(_write)
-            
-            
+
+
     def handleResult(self, result):
         # Called in application thread
         try:
             from twisted.internet import reactor
-            if (isinstance(result, FileWrapper) and 
+            if (isinstance(result, FileWrapper) and
                    hasattr(result.filelike, 'fileno') and
                    not self.headersSent):
                 if self.response is None:
@@ -288,24 +279,24 @@ class WSGIHandler(object):
                 # and free up this thread to do other work.
                 self.writeAll(result)
                 return
-            
+
             # Otherwise, this thread has to keep running to provide the
             # data.
             for data in result:
                 if self.stopped:
                     return
                 self.write(data)
-            
+
             if not self.headersSent:
                 if self.response is None:
                     raise RuntimeError(
                         "Application didn't call startResponse, and didn't send any data!")
-                
+
                 self.headersSent = True
                 reactor.callFromThread(self.__callback)
             else:
                 reactor.callFromThread(self.stream.finish)
-                
+
         finally:
             if hasattr(result,'close'):
                 result.close()
@@ -317,10 +308,10 @@ class WSGIHandler(object):
     def resumeProducing(self):
         # Called in IO thread
         self.unpaused.clear()
-        
+
     def stopProducing(self):
         self.stopped = True
-        
+
 class FileWrapper(object):
     """
     Wrapper to convert file-like objects to iterables, to implement
@@ -332,10 +323,10 @@ class FileWrapper(object):
         self.blksize = blksize
         if hasattr(filelike,'close'):
             self.close = filelike.close
-            
+
     def __iter__(self):
         return self
-        
+
     def next(self):
         data = self.filelike.read(self.blksize)
         if data:

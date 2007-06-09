@@ -1,8 +1,8 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-"""Extended thread dispatching support.
+"""
+Extended thread dispatching support.
 
 For basic support see reactor threading API docs.
 
@@ -11,15 +11,16 @@ API Stability: stable
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
-# twisted imports
-from twisted.python import log, failure
+import Queue
 
-# sibling imports
+from twisted.python import failure
 from twisted.internet import defer
 
 
 def _putResultInDeferred(deferred, f, args, kwargs):
-    """Run a function and give results to a Deferred."""
+    """
+    Run a function and give results to a Deferred.
+    """
     from twisted.internet import reactor
     try:
         result = f(*args, **kwargs)
@@ -29,8 +30,11 @@ def _putResultInDeferred(deferred, f, args, kwargs):
     else:
         reactor.callFromThread(deferred.callback, result)
 
+
 def deferToThread(f, *args, **kwargs):
-    """Run function in thread and return result as Deferred."""
+    """
+    Run function in thread and return result as Deferred.
+    """
     d = defer.Deferred()
     from twisted.internet import reactor
     reactor.callInThread(_putResultInDeferred, d, f, args, kwargs)
@@ -38,12 +42,16 @@ def deferToThread(f, *args, **kwargs):
 
 
 def _runMultiple(tupleList):
-    """Run a list of functions."""
+    """
+    Run a list of functions.
+    """
     for f, args, kwargs in tupleList:
         f(*args, **kwargs)
 
+
 def callMultipleInThread(tupleList):
-    """Run a list of functions in the same thread.
+    """
+    Run a list of functions in the same thread.
 
     tupleList should be a list of (function, argsList, kwargsDict) tuples.
     """
@@ -51,4 +59,31 @@ def callMultipleInThread(tupleList):
     reactor.callInThread(_runMultiple, tupleList)
 
 
-__all__ = ["deferToThread", "callMultipleInThread"]
+def blockingCallFromThread(f, *a, **kw):
+    """
+    Run a function in the reactor from a thread, and wait for the result
+    synchronously, i.e. until the callback chain returned by the function get a
+    result.
+
+    @param f: the callable to run in the reactor thread
+    @type f: any callable.
+    @param a: the arguments to pass to C{f}.
+    @param kw: the keyword arguments to pass to C{f}.
+
+    @return: the result of the callback chain.
+    @raise: any error raised during the callback chain.
+    """
+    from twisted.internet import reactor
+    queue = Queue.Queue()
+    def _callFromThread():
+        result = defer.maybeDeferred(f, *a, **kw)
+        result.addBoth(queue.put)
+    reactor.callFromThread(_callFromThread)
+    result = queue.get()
+    if isinstance(result, failure.Failure):
+        result.raiseException()
+    return result
+
+
+__all__ = ["deferToThread", "callMultipleInThread", "blockingCallFromThread"]
+

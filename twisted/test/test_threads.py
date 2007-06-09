@@ -104,6 +104,87 @@ class ReactorThreadsTestCase(unittest.TestCase):
                 return defer.fail(self.failure)
         return self._waitForThread().addCallback(cb)
 
+    def _testBlockingCallFromThread(self, reactorFunc):
+        """
+        Utility method to test L{threads.blockingCallFromThread}.
+        """
+        waiter = threading.Event()
+        results = []
+        errors = []
+        def cb1(ign):
+            def threadedFunc():
+                try:
+                    r = threads.blockingCallFromThread(reactorFunc)
+                except Exception, e:
+                    errors.append(e)
+                else:
+                    results.append(r)
+                waiter.set()
+
+            reactor.callInThread(threadedFunc)
+            return threads.deferToThread(waiter.wait, self.getTimeout())
+
+        def cb2(ign):
+            if not waiter.isSet():
+                self.fail("Timed out waiting for event")
+            return results, errors
+
+        return self._waitForThread().addCallback(cb1).addBoth(cb2)
+
+    def test_blockingCallFromThread(self):
+        """
+        Test blockingCallFromThread facility: create a thread, call a function
+        in the reactor using L{threads.blockingCallFromThread}, and verify the
+        result returned.
+        """
+        def reactorFunc():
+            return defer.succeed("foo")
+        def cb(res):
+            self.assertEquals(res[0][0], "foo")
+
+        return self._testBlockingCallFromThread(reactorFunc).addCallback(cb)
+
+    def test_asyncBlockingCallFromThread(self):
+        """
+        Test blockingCallFromThread as above, but be sure the resulting
+        Deferred is not already fired.
+        """
+        def reactorFunc():
+            d = defer.Deferred()
+            reactor.callLater(0.1, d.callback, "egg")
+            return d
+        def cb(res):
+            self.assertEquals(res[0][0], "egg")
+
+        return self._testBlockingCallFromThread(reactorFunc).addCallback(cb)
+
+    def test_errorBlockingCallFromThread(self):
+        """
+        Test error report for blockingCallFromThread.
+        """
+        def reactorFunc():
+            return defer.fail(RuntimeError("bar"))
+        def cb(res):
+            self.assert_(isinstance(res[1][0], RuntimeError))
+            self.assertEquals(res[1][0].args[0], "bar")
+
+        return self._testBlockingCallFromThread(reactorFunc).addCallback(cb)
+
+    def test_asyncErrorBlockingCallFromThread(self):
+        """
+        Test error report for blockingCallFromThread as above, but be sure the
+        resulting Deferred is not already fired.
+        """
+        def reactorFunc():
+            d = defer.Deferred()
+            reactor.callLater(0.1, d.errback, RuntimeError("spam"))
+            return d
+        def cb(res):
+            self.assert_(isinstance(res[1][0], RuntimeError))
+            self.assertEquals(res[1][0].args[0], "spam")
+
+        return self._testBlockingCallFromThread(reactorFunc).addCallback(cb)
+
 
 class Counter:
     index = 0

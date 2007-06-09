@@ -97,6 +97,35 @@ d = threads.deferToThread(doLongCalculation)
 d.addCallback(printResult)
 </pre>
 
+    <p>If you wish to call a method in the reactor thread and get its
+    result, you can use <code base="twisted.internet.threads" class="API">
+    blockingCallFromThread</code>:</p>
+
+<pre class="python">
+from twisted.internet import threads, reactor, defer
+from twisted.web.client import getPage
+from twisted.web.error import Error
+
+def inThread():
+    try:
+        result = threads.blockingCallFromThread(
+            getPage, "http://twistedmatrix.com/")
+    except Error, exc:
+        print exc
+    else:
+        print result
+    reactor.callFromThread(reactor.stop)
+
+reactor.callInThread(inThread)
+reactor.run()
+</pre>
+
+    <p><code>blockingCallFromThread</code> will return the object or raise
+    the exception returned or raised by the function passed to it. If the
+    function passed to it returns a Deferred, it will return the value the
+    Deferred is called back with or raise the exception it is errbacked
+    with.</p>
+
     <h2>Managing the Thread Pool</h2>
 
     <p>The thread pool is implemented by <code
