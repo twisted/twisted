@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.mail.test.test_imap -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -7,22 +7,18 @@
 Test case for twisted.mail.imap4
 """
 
-from __future__ import nested_scopes
-
 try:
     from cStringIO import StringIO
 except ImportError:
     from StringIO import StringIO
 
 import os
-import sys
 import types
-import time
+
 from zope.interface import implements
 
 from twisted.mail.imap4 import MessageSet
 from twisted.mail import imap4
-from twisted.mail import smtp
 from twisted.protocols import loopback
 from twisted.internet import defer
 from twisted.internet import error
@@ -30,7 +26,6 @@ from twisted.internet import reactor
 from twisted.internet import interfaces
 from twisted.trial import unittest
 from twisted.python import util
-from twisted.python.util import sibpath
 from twisted.python import failure
 
 from twisted import cred
@@ -65,7 +60,7 @@ class IMAP4UTF7TestCase(unittest.TestCase):
         [u'Hello & world', 'Hello &- world'],
         [u'Hello\xffworld', 'Hello&AP8-world'],
         [u'\xff\xfe\xfd\xfc', '&AP8A,gD9APw-'],
-        [u'~peter/mail/\u65e5\u672c\u8a9e/\u53f0\u5317', 
+        [u'~peter/mail/\u65e5\u672c\u8a9e/\u53f0\u5317',
          '~peter/mail/&ZeVnLIqe-/&U,BTFw-'], # example from RFC 2060
     ]
 
@@ -1140,7 +1135,7 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         d.addCallback(lambda _: self.assertEquals(str(self.failure.value),
                                                   'No such mailbox'))
         return d
-    
+
 
     def testIllegalDelete(self):
         m = SimpleMailbox()
@@ -1842,6 +1837,80 @@ class HandCraftedTestCase(IMAP4HelperMixin, unittest.TestCase):
             ).addCallback(strip(fetch)
             ).addCallback(test)
 
+
+    def test_literalWithoutPrecedingWhitespace(self):
+        """
+        Literals should be recognized even when they are not preceded by
+        whitespace.
+        """
+        transport = StringTransport()
+        protocol = imap4.IMAP4Client()
+
+        protocol.makeConnection(transport)
+        protocol.lineReceived('* OK [IMAP4rev1]')
+
+        def login():
+            d = protocol.login('blah', 'blah')
+            protocol.dataReceived('0001 OK LOGIN\r\n')
+            return d
+        def select():
+            d = protocol.select('inbox')
+            protocol.lineReceived('0002 OK SELECT')
+            return d
+        def fetch():
+            d = protocol.fetchSpecific('1:*',
+                headerType='HEADER.FIELDS',
+                headerArgs=['SUBJECT'])
+            protocol.dataReceived(
+                '* 1 FETCH (BODY[HEADER.FIELDS ({7}\r\nSUBJECT)] "Hello")\r\n')
+            protocol.dataReceived('0003 OK FETCH completed\r\n')
+            return d
+        def test(result):
+            self.assertEqual(
+                result,  {1: [['BODY', ['HEADER.FIELDS', ['SUBJECT']], 'Hello']]})
+
+        d = login()
+        d.addCallback(strip(select))
+        d.addCallback(strip(fetch))
+        d.addCallback(test)
+        return d
+
+
+    def test_nonIntegerLiteralLength(self):
+        """
+        If the server sends a literal length which cannot be parsed as an
+        integer, L{IMAP4Client.lineReceived} should cause the protocol to be
+        disconnected by raising L{imap4.IllegalServerResponse}.
+        """
+        transport = StringTransport()
+        protocol = imap4.IMAP4Client()
+
+        protocol.makeConnection(transport)
+        protocol.lineReceived('* OK [IMAP4rev1]')
+
+        def login():
+            d = protocol.login('blah', 'blah')
+            protocol.dataReceived('0001 OK LOGIN\r\n')
+            return d
+        def select():
+            d = protocol.select('inbox')
+            protocol.lineReceived('0002 OK SELECT')
+            return d
+        def fetch():
+            d = protocol.fetchSpecific('1:*',
+                headerType='HEADER.FIELDS',
+                headerArgs=['SUBJECT'])
+            self.assertRaises(
+                imap4.IllegalServerResponse,
+                protocol.dataReceived,
+                '* 1 FETCH {xyz}\r\n...')
+        d = login()
+        d.addCallback(strip(select))
+        d.addCallback(strip(fetch))
+        return d
+
+
+
 class FakeyServer(imap4.IMAP4Server):
     state = 'select'
     timeout = None
@@ -2083,7 +2152,7 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
 
     def testFetchBodyStructureUID(self):
         return self.testFetchBodyStructure(1)
-    
+
     def testFetchSimplifiedBody(self, uid=0):
         self.function = self.client.fetchSimplifiedBody
         self.messages = '21'
@@ -2598,7 +2667,7 @@ class TLSTestCase(IMAP4HelperMixin, unittest.TestCase):
         def check(ignored):
             self.assertEquals(self.server.startedTLS, True)
             self.assertEquals(self.client.startedTLS, True)
-            self.assertEquals(len(called), len(methods))        
+            self.assertEquals(len(called), len(methods))
         d = self.loopback()
         d.addCallback(check)
         return d
@@ -2646,7 +2715,9 @@ class TLSTestCase(IMAP4HelperMixin, unittest.TestCase):
             self.failUnless(failure)
             self.assertIdentical(failure[0], imap4.IMAP4Exception)
         return self.loopback().addCallback(check)
-        
+
+
+
 class SlowMailbox(SimpleMailbox):
     howSlow = 2
 

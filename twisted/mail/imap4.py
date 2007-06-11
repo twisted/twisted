@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.mail.test.test_imap -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -18,25 +18,9 @@ To do::
   Make APPEND recognize (again) non-existent mailboxes before accepting the literal
 """
 
-from __future__ import nested_scopes
-from __future__ import generators
-
-from twisted.protocols import basic
-from twisted.protocols import policies
-from twisted.internet import defer
-from twisted.internet import error
-from twisted.internet.defer import maybeDeferred
-from twisted.python import log, util, failure, text
-from twisted.internet import interfaces
-
-from twisted import cred
-import twisted.cred.error
-import twisted.cred.credentials
-
 import rfc822
 import base64
 import binascii
-import time
 import hmac
 import re
 import tempfile
@@ -44,8 +28,6 @@ import string
 import time
 import random
 import types
-import sys
-from zope.interface import implements, Interface
 
 import email.Utils
 
@@ -53,6 +35,20 @@ try:
     import cStringIO as StringIO
 except:
     import StringIO
+
+from zope.interface import implements, Interface
+
+from twisted.protocols import basic
+from twisted.protocols import policies
+from twisted.internet import defer
+from twisted.internet import error
+from twisted.internet.defer import maybeDeferred
+from twisted.python import log, text
+from twisted.internet import interfaces
+
+from twisted import cred
+import twisted.cred.error
+import twisted.cred.credentials
 
 class MessageSet(object):
     """
@@ -1770,7 +1766,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 if mf is not None:
                     return FileProducer(mf.open()).beginProducing(self.transport)
                 return MessageProducer(msg, None, self._scheduler).beginProducing(self.transport)
-            
+
         else:
             _w('BODY ' + collapseNestedLists([getBodyStructure(msg)]))
 
@@ -2077,17 +2073,26 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def lineReceived(self, line):
+        """
+        Attempt to parse a single line from the server.
+
+        @type line: C{str}
+        @param line: The line from the server, without the line delimiter.
+
+        @raise IllegalServerResponse: If the line or some part of the line
+            does not represent an allowed message from the server at this time.
+        """
 #        print 'C: ' + repr(line)
         if self.timeout > 0:
             self.resetTimeout()
 
-        lastPart = line.rfind(' ')
+        lastPart = line.rfind('{')
         if lastPart != -1:
             lastPart = line[lastPart + 1:]
-            if lastPart.startswith('{') and lastPart.endswith('}'):
+            if lastPart.endswith('}'):
                 # It's a literal a-comin' in
                 try:
-                    octets = int(lastPart[1:-1])
+                    octets = int(lastPart[:-1])
                 except ValueError:
                     raise IllegalServerResponse(line)
                 if self._parts is None:
@@ -4223,7 +4228,7 @@ class IAccount(Interface):
         @rtype: C{list} of C{tuple}
         @return: A list of C{(mailboxName, mailboxObject)} which meet the
         given criteria.  C{mailboxObject} should implement either
-        C{IMailboxInfo} or C{IMailbox}.  A Deferred may also be returned. 
+        C{IMailboxInfo} or C{IMailbox}.  A Deferred may also be returned.
         """
 
 class INamespacePresenter(Interface):
@@ -4595,7 +4600,7 @@ class IMessage(IMessagePart):
 
 class IMessageFile(Interface):
     """Optional message interface for representing messages as files.
-    
+
     If provided by message objects, this interface will be used instead
     the more complex MIME-based interface.
     """
@@ -5415,7 +5420,7 @@ codecs.register(imap4_utf_7)
 __all__ = [
     # Protocol classes
     'IMAP4Server', 'IMAP4Client',
-    
+
     # Interfaces
     'IMailboxListener', 'IClientAuthentication', 'IAccount', 'IMailbox',
     'INamespacePresenter', 'ICloseableMailbox', 'IMailboxInfo',
@@ -5435,10 +5440,8 @@ __all__ = [
 
     # Simple query interface
     'Query', 'Not', 'Or',
-    
+
     # Miscellaneous
     'MemoryAccount',
     'statusRequestHelper',
-    
-    
 ]
