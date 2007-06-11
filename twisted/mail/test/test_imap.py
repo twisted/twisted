@@ -1743,6 +1743,82 @@ class UnsolicitedResponseTestCase(IMAP4HelperMixin, unittest.TestCase):
         E = self.client.events
         self.assertEquals(E, [['newMessages', 20, None], ['newMessages', None, 10]])
 
+
+class ClientCapabilityTests(unittest.TestCase):
+    """
+    Tests for issuance of the CAPABILITY command and handling of its response.
+    """
+    def setUp(self):
+        """
+        Create an L{imap4.IMAP4Client} connected to a L{StringTransport}.
+        """
+        self.transport = StringTransport()
+        self.protocol = imap4.IMAP4Client()
+        self.protocol.makeConnection(self.transport)
+        self.protocol.dataReceived('* OK [IMAP4rev1]\r\n')
+
+
+    def test_simpleAtoms(self):
+        """
+        A capability response consisting only of atoms without C{'='} in them
+        should result in a dict mapping those atoms to C{None}.
+        """
+        capabilitiesResult = self.protocol.getCapabilities(useCache=False)
+        self.protocol.dataReceived('* CAPABILITY IMAP4rev1 LOGINDISABLED\r\n')
+        self.protocol.dataReceived('0001 OK Capability completed.\r\n')
+        def gotCapabilities(capabilities):
+            self.assertEqual(
+                capabilities, {'IMAP4rev1': None, 'LOGINDISABLED': None})
+        capabilitiesResult.addCallback(gotCapabilities)
+        return capabilitiesResult
+
+
+    def test_categoryAtoms(self):
+        """
+        A capability response consisting of atoms including C{'='} should have
+        those atoms split on that byte and have capabilities in the same
+        category aggregated into lists in the resulting dictionary.
+
+        (n.b. - I made up the word "category atom"; the protocol has no notion
+        of structure here, but rather allows each capability to define the
+        semantics of its entry in the capability response in a freeform manner.
+        If I had realized this earlier, the API for capabilities would look
+        different.  As it is, we can hope that no one defines any crazy
+        semantics which are incompatible with this API, or try to figure out a
+        better API when someone does. -exarkun)
+        """
+        capabilitiesResult = self.protocol.getCapabilities(useCache=False)
+        self.protocol.dataReceived('* CAPABILITY IMAP4rev1 AUTH=LOGIN AUTH=PLAIN\r\n')
+        self.protocol.dataReceived('0001 OK Capability completed.\r\n')
+        def gotCapabilities(capabilities):
+            self.assertEqual(
+                capabilities, {'IMAP4rev1': None, 'AUTH': ['LOGIN', 'PLAIN']})
+        capabilitiesResult.addCallback(gotCapabilities)
+        return capabilitiesResult
+
+
+    def test_mixedAtoms(self):
+        """
+        A capability response consisting of both simple and category atoms of
+        the same type should result in a list containing C{None} as well as the
+        values for the category.
+        """
+        capabilitiesResult = self.protocol.getCapabilities(useCache=False)
+        # Exercise codepath for both orderings of =-having and =-missing
+        # capabilities.
+        self.protocol.dataReceived(
+            '* CAPABILITY IMAP4rev1 FOO FOO=BAR BAR=FOO BAR\r\n')
+        self.protocol.dataReceived('0001 OK Capability completed.\r\n')
+        def gotCapabilities(capabilities):
+            self.assertEqual(capabilities, {'IMAP4rev1': None,
+                                            'FOO': [None, 'BAR'],
+                                            'BAR': ['FOO', None]})
+        capabilitiesResult.addCallback(gotCapabilities)
+        return capabilitiesResult
+
+
+
+
 class HandCraftedTestCase(IMAP4HelperMixin, unittest.TestCase):
     def testTrailingLiteral(self):
         transport = StringTransport()

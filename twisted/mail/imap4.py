@@ -2298,11 +2298,19 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         for rest in lines:
             rest = rest.split()[1:]
             for cap in rest:
-                eq = cap.find('=')
-                if eq == -1:
-                    caps[cap] = None
+                parts = cap.split('=', 1)
+                if len(parts) == 1:
+                    category, value = parts[0], None
                 else:
-                    caps.setdefault(cap[:eq], []).append(cap[eq+1:])
+                    category, value = parts
+                caps.setdefault(category, []).append(value)
+
+        # Preserve a non-ideal API for backwards compatibility.  It would
+        # probably be entirely sensible to have an object with a wider API than
+        # dict here so this could be presented less insanely.
+        for category in caps:
+            if caps[category] == [None]:
+                caps[category] = None
         self._capCache = caps
         return caps
 
