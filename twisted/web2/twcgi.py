@@ -1,9 +1,10 @@
 # -*- test-case-name: twisted.web2.test.test_cgi -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""I hold resource classes and helper classes that deal with CGI scripts.
+"""
+I hold resource classes and helper classes that deal with CGI scripts.
 
 Things which are still not working properly:
 
@@ -37,16 +38,16 @@ def createCGIEnvironment(request):
     remotehost = request.remoteAddr
 
     python_path = os.pathsep.join(sys.path)
-    
+
     env = dict(os.environ)
     # MUST provide:
     if request.stream.length:
         env["CONTENT_LENGTH"] = str(request.stream.length)
-    
+
     ctype = request.headers.getRawHeaders('content-type')
     if ctype:
         env["CONTENT_TYPE"] = ctype[0]
-    
+
     env["GATEWAY_INTERFACE"] = "CGI/1.1"
 
     if request.postpath:
@@ -54,34 +55,37 @@ def createCGIEnvironment(request):
         env["PATH_INFO"] = '/' + '/'.join(request.postpath)
     # MUST always be present, even if no query
     env["QUERY_STRING"] = request.querystring
-    
+
     env["REMOTE_ADDR"] = remotehost.host
     env["REQUEST_METHOD"] = request.method
     # Should we raise an exception if this contains "/" chars?
-    env["SCRIPT_NAME"] = '/' + '/'.join(request.prepath)
-    
+    if request.prepath:
+        env["SCRIPT_NAME"] = '/' + '/'.join(request.prepath)
+    else:
+        env["SCRIPT_NAME"] = ''
+
     env["SERVER_NAME"] = request.host
     env["SERVER_PORT"] = str(request.port)
-    
+
     env["SERVER_PROTOCOL"] = "HTTP/%i.%i" % request.clientproto
     env["SERVER_SOFTWARE"] = server.VERSION
-    
+
     # SHOULD provide
     # env["AUTH_TYPE"] # FIXME: add this
     # env["REMOTE_HOST"] # possibly dns resolve?
-    
+
     # MAY provide
     # env["PATH_TRANSLATED"] # Completely worthless
     # env["REMOTE_IDENT"] # Completely worthless
     # env["REMOTE_USER"] # FIXME: add this
-    
+
     # Unofficial, but useful and expected by applications nonetheless
     env["REMOTE_PORT"] = str(remotehost.port)
     env["REQUEST_SCHEME"] = request.scheme
     env["REQUEST_URI"] = request.uri
     env["HTTPS"] = ("off", "on")[request.scheme=="https"]
     env["SERVER_PORT_SECURE"] = ("0", "1")[request.scheme=="https"]
-    
+
     # Propagate HTTP headers
     for title, header in request.headers.getAllRawHeaders():
         envname = title.translate(headerNameTranslation)
@@ -110,7 +114,7 @@ def runCGI(request, filename, filterscript=None):
         qargs = []
     else:
         qargs = [urllib.unquote(x) for x in request.querystring.split('+')]
-    
+
     if filterscript is None:
         filterscript = filename
         qargs = [filename] + qargs
@@ -127,7 +131,7 @@ class CGIScript(resource.LeafResource):
     My implementation is complex due to the fact that it requires asynchronous
     IPC with an external process with an unpleasant protocol.
     """
-    
+
     def __init__(self, filename):
         """Initialize, with the name of a CGI script file.
         """
@@ -164,7 +168,7 @@ class FilteredScript(CGIScript):
         if filters is not None:
             self.filters = filters
         CGIScript.__init__(self, filename)
-        
+
 
     def render(self, request):
         for filterscript in self.filters:
@@ -309,7 +313,7 @@ class CGIProcessProtocol(protocol.ProcessProtocol):
                 # it must specify Status: 302 itself.
                 self.response.code = 302
                 self.response.stream = None
-            
+
         self.deferred.callback(self.response)
 
 
@@ -321,9 +325,9 @@ class CGIDirectory(resource.Resource, filepath.FilePath):
                      CGI scripts from, for example /var/www/cgi-bin/
     @type pathname: str
     """
-    
+
     addSlash = True
-    
+
     def __init__(self, pathname):
         resource.Resource.__init__(self)
         filepath.FilePath.__init__(self, pathname)

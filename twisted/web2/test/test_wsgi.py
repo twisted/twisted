@@ -273,12 +273,16 @@ class TestWSGIEnvironment(BaseCase):
             return ['%s=%r;' % (k, environ.get(k, '')) for k in varnames]
         return _app
 
-    def assertEnv(self, uri, env, version=None):
+    def assertEnv(self, uri, env, version=None, prepath=''):
+        """
+        Check the value of the rendering envirnment against
+        the string returned by the testing WSGIApp.
+        """
         keys = env.keys()
         keys.sort()
         envstring = ''.join(['%s=%r;' % (k, v) for k, v in env.items()])
         return self.assertResponse(
-            (WSGI(self.envApp(*keys)), uri, None, None, version),
+            (WSGI(self.envApp(*keys)), uri, None, None, version, prepath),
             (200, {}, envstring))
 
     def test_wsgi_url_scheme(self):
@@ -308,6 +312,20 @@ class TestWSGIEnvironment(BaseCase):
             self.assertEnv('https://host/', {'SERVER_PORT': '443'}),
             self.assertEnv('https://host:523/', {'SERVER_PORT': '523'}),
             self.assertEnv('/foo', {'SERVER_PORT': '80'}, version=(1,0))
+        ])
+
+    def test_SCRIPT_NAME(self):
+        """
+        Check the value of C{SCRIPT_NAME}, depending of the prepath field.
+        """
+        return defer.gatherResults([
+            self.assertEnv('http://host/', {'SCRIPT_NAME': ''}),
+            self.assertEnv('http://host/myscript/foobar',
+                {'SCRIPT_NAME': '/myscript', 'PATH_INFO': '/foobar'}, prepath='/myscript'),
+            self.assertEnv('http://host/myscript/foobar/',
+                {'SCRIPT_NAME': '/myscript/foobar', 'PATH_INFO': '/'}, prepath='/myscript/foobar'),
+            self.assertEnv('http://host/myscript/foobar?bar=baz',
+                {'SCRIPT_NAME': '/myscript', 'PATH_INFO': '/foobar'}, prepath='/myscript')
         ])
 
 
