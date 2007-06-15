@@ -123,11 +123,12 @@ Content-Type: %s\r
 
     def test_compareFileContents(self):
         def gotFname(fname):
-            contents = file(fname, 'r').read()
-            self.assertEquals(contents, 'Test contents')
+            contents = file(fname, 'rb').read()
+            self.assertEquals(contents, 'Test contents\n')
 
         d = self.uploadFile('FileNameOne', 'myfilename', 'text/plain',
-                            'Test contents')
+                            'Test contents\n')
         d.addCallback(self.fileNameFromResponse)
         d.addCallback(gotFname)
         return d
+

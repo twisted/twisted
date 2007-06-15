@@ -130,7 +130,7 @@ class Data(resource.Resource):
         self.data = data
         self.type = http_headers.MimeType.fromString(type)
         self.created_time = time.time()
-    
+
     def etag(self):
         lastModified = self.lastModified()
         return http_headers.ETag("%X-%X" % (lastModified, hash(self.data)),
@@ -207,7 +207,7 @@ class File(StaticRenderMixin):
                 (key.lower(), value)
                 for key, value in processors.items()
                 ])
-            
+
         if indexNames is not None:
             self.indexNames = indexNames
 
@@ -336,7 +336,7 @@ class File(StaticRenderMixin):
         # If getChild() finds a child resource, return it
         child = self.getChild(segments[0])
         if child is not None: return (child, segments[1:])
-        
+
         # If we're not backed by a directory, we have no children.
         # But check for existance first; we might be a collection resource
         # that the request wants created.
@@ -345,7 +345,7 @@ class File(StaticRenderMixin):
 
         # OK, we need to return a child corresponding to the first segment
         path = segments[0]
-        
+
         if path:
             fpath = self.fp.child(path)
         else:
@@ -429,7 +429,7 @@ class FileSaver(resource.PostableResource):
     allowedTypes = (http_headers.MimeType('text', 'plain'),
                     http_headers.MimeType('text', 'html'),
                     http_headers.MimeType('text', 'css'))
-    
+
     def __init__(self, destination, expectedFields=[], allowedTypes=None, maxBytes=1000000, permissions=0644):
         self.destination = destination
         self.allowedTypes = allowedTypes or self.allowedTypes
@@ -439,20 +439,20 @@ class FileSaver(resource.PostableResource):
 
     def makeUniqueName(self, filename):
         """Called when a unique filename is needed.
-        
+
         filename is the name of the file as given by the client.
-        
+
         Returns the fully qualified path of the file to create. The
         file must not yet exist.
         """
-        
+
         return tempfile.mktemp(suffix=os.path.splitext(filename)[1], dir=self.destination)
 
     def isSafeToWrite(self, filename, mimetype, filestream):
         """Returns True if it's "safe" to write this file,
         otherwise it raises an exception.
         """
-        
+
         if filestream.length > self.maxBytes:
             raise IOError("%s: File exceeds maximum length (%d > %d)" % (filename,
                                                                          filestream.length,
@@ -460,21 +460,22 @@ class FileSaver(resource.PostableResource):
 
         if mimetype not in self.allowedTypes:
             raise IOError("%s: File type not allowed %s" % (filename, mimetype))
-        
+
         return True
-    
+
     def writeFile(self, filename, mimetype, fileobject):
-        """Does the I/O dirty work after it calls isWriteable to make
+        """Does the I/O dirty work after it calls isSafeToWrite to make
         sure it's safe to write this file.
         """
         filestream = stream.FileStream(fileobject)
-        
+
         if self.isSafeToWrite(filename, mimetype, filestream):
             outname = self.makeUniqueName(filename)
-            
-            fileobject = os.fdopen(os.open(outname, os.O_WRONLY | os.O_CREAT | os.O_EXCL,
-                                           self.permissions), 'w', 0)
-            
+
+            flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0)
+
+            fileobject = os.fdopen(os.open(outname, flags, self.permissions), 'wb', 0)
+                
             stream.readIntoFile(filestream, fileobject)
 
         return outname
@@ -506,17 +507,17 @@ class FileSaver(resource.PostableResource):
 # """I contain AsIsProcessor, which serves files 'As Is'
 #    Inspired by Apache's mod_asis
 # """
-# 
+#
 # class ASISProcessor:
 #     implements(iweb.IResource)
-#     
+#
 #     def __init__(self, path):
 #         self.path = path
-# 
+#
 #     def renderHTTP(self, request):
 #         request.startedWriting = 1
 #         return File(self.path)
-# 
+#
 #     def locateChild(self, request):
 #         return None, ()
 
@@ -569,7 +570,7 @@ def loadMimeTypes(mimetype_locations=['/etc/mime.types']):
     for location in mimetype_locations:
         if os.path.exists(location):
             contentTypes.update(mimetypes.read_mime_types(location))
-            
+
     return contentTypes
 
 def getTypeAndEncoding(filename, types, encodings, defaultType):
