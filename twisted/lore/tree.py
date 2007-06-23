@@ -551,16 +551,19 @@ def setIndexLink(template, indexFilename):
 
     @type indexFilename: C{str}
     @param indexFilename: The address of the index document to which to link.
-    If any C{False} value, this function will do nothing.
+    If any C{False} value, this function will remove all index-link nodes.
 
     @return: C{None}
     """
-    if not indexFilename:
-        return
-    indexLinks = domhelpers.findElementsWithAttribute(template, "class", "index-link")
+    indexLinks = domhelpers.findElementsWithAttribute(template,
+                                                      "class",
+                                                      "index-link")
     for link in indexLinks:
-        link.nodeName = link.tagName = link.endTagName = 'a'
-        link.attributes = InsensitiveDict({'href': indexFilename})
+        if indexFilename is None:
+            link.parentNode.removeChild(link)
+        else:
+            link.nodeName = link.tagName = link.endTagName = 'a'
+            link.attributes = InsensitiveDict({'href': indexFilename})
 
 
 
