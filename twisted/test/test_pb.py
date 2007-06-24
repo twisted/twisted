@@ -1,9 +1,8 @@
-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-"""Tests for Perspective Broker module.
+"""
+Tests for Perspective Broker module.
 
 TODO: update protocol level tests to use new connection API, leaving
 only specific tests for old API.
@@ -13,19 +12,19 @@ only specific tests for old API.
 # Clean up warning suppression. Find a better replacement for the handful of
 # reactor.callLater(0.1, ..) calls.
 
-import sys, os, time
+import sys, os, time, gc
 
 from cStringIO import StringIO
-from zope.interface import implements
+from zope.interface import implements, Interface
 
 from twisted.trial import unittest
 
-from twisted.spread import pb, util
-from twisted.internet import protocol, main
+from twisted.spread import pb, util, publish
+from twisted.internet import protocol, main, reactor, defer
 from twisted.python import failure, log
 from twisted.cred.error import UnauthorizedLogin
 from twisted.cred import portal, checkers, credentials
-from twisted.internet import reactor, defer
+
 
 class Dummy(pb.Viewable):
     def view_doNothing(self, user):
@@ -35,11 +34,9 @@ class Dummy(pb.Viewable):
             return 'goodbye, cruel world!'
 
 
-
 class DummyPerspective(pb.Avatar):
     def perspective_getDummyViewPoint(self):
         return Dummy()
-
 
 
 class DummyRealm(object):
@@ -51,9 +48,9 @@ class DummyRealm(object):
                 return iface, DummyPerspective(), lambda: None
 
 
-
 class IOPump:
-    """Utility to pump data between clients and servers for protocol testing.
+    """
+    Utility to pump data between clients and servers for protocol testing.
 
     Perhaps this is a utility worthy of being in protocol.py?
     """
@@ -64,8 +61,10 @@ class IOPump:
         self.serverIO = serverIO
 
     def flush(self):
-        """Pump until there is no more input or output. This does not run any
-        timers, so don't use it with any code that calls reactor.callLater"""
+        """
+        Pump until there is no more input or output. This does not run any
+        timers, so don't use it with any code that calls reactor.callLater.
+        """
         # failsafe timeout
         timeout = time.time() + 5
         while self.pump():
@@ -73,7 +72,8 @@ class IOPump:
                 return
 
     def pump(self):
-        """Move data back and forth.
+        """
+        Move data back and forth.
 
         Returns whether any data was moved.
         """
@@ -97,9 +97,9 @@ class IOPump:
             return 0
 
 
-
 def connectedServerAndClient():
-    """Returns a 3-tuple: (client, server, pump)
+    """
+    Returns a 3-tuple: (client, server, pump).
     """
     clientBroker = pb.Broker()
     checker = checkers.InMemoryUsernamePasswordDatabaseDontUse(guest='guest')
@@ -116,7 +116,6 @@ def connectedServerAndClient():
     return clientBroker, serverBroker, pump
 
 
-
 class SimpleRemote(pb.Referenceable):
     def remote_thunk(self, arg):
         self.arg = arg
@@ -125,9 +124,11 @@ class SimpleRemote(pb.Referenceable):
     def remote_knuth(self, arg):
         raise Exception()
 
+
 class NestedRemote(pb.Referenceable):
     def remote_getSimple(self):
         return SimpleRemote()
+
 
 class SimpleCopy(pb.Copyable):
     def __init__(self):
@@ -135,34 +136,43 @@ class SimpleCopy(pb.Copyable):
         self.y = {"Hello":"World"}
         self.z = ['test']
 
+
 class SimpleLocalCopy(pb.RemoteCopy):
-    def check(self):
-        # checks based on above '__init__'
-        assert self.x == 1
-        assert self.y['Hello'] == 'World'
-        assert self.z[0] == 'test'
-        return 1
+    pass
 
 pb.setCopierForClass(SimpleCopy, SimpleLocalCopy)
 
+
 class SimpleFactoryCopy(pb.Copyable):
+    """
+    @cvar allIDs: hold every created instances of this class.
+    @type allIDs: C{dict}
+    """
     allIDs = {}
     def __init__(self, id):
         self.id = id
         SimpleFactoryCopy.allIDs[id] = self
 
+
 def createFactoryCopy(state):
-    id = state.get("id", None)
-    if not id:
-        raise "factory copy state has no 'id' member %s" % repr(state)
-    if not SimpleFactoryCopy.allIDs.has_key(id):
-        raise "factory class has no ID: %s" % SimpleFactoryCopy.allIDs
-    inst = SimpleFactoryCopy.allIDs[id]
+    """
+    Factory of L{SimpleFactoryCopy}, getting a created instance given the
+    C{id} found in C{state}.
+    """
+    stateId = state.get("id", None)
+    if stateId is None:
+        raise RuntimeError("factory copy state has no 'id' member %s" %
+                           (repr(state),))
+    if not stateId in SimpleFactoryCopy.allIDs:
+        raise RuntimeError("factory class has no ID: %s" %
+                           (SimpleFactoryCopy.allIDs,))
+    inst = SimpleFactoryCopy.allIDs[stateId]
     if not inst:
-        raise "factory method found no object with id"
+        raise RuntimeError("factory method found no object with id")
     return inst
 
 pb.setFactoryForClass(SimpleFactoryCopy, createFactoryCopy)
+
 
 class NestedCopy(pb.Referenceable):
     def remote_getCopy(self):
@@ -170,12 +180,14 @@ class NestedCopy(pb.Referenceable):
 
     def remote_getFactory(self, value):
         return SimpleFactoryCopy(value)
-    
+
+
 class SimpleCache(pb.Cacheable):
     def __init___(self):
         self.x = 1
         self.y = {"Hello":"World"}
         self.z = ['test']
+
 
 class NestedComplicatedCache(pb.Referenceable):
     def __init__(self):
@@ -207,6 +219,7 @@ class VeryVeryComplicatedCacheable(pb.Cacheable):
         if observer == self.observer:
             self.observer = None
 
+
 class RatherBaroqueCache(pb.RemoteCache):
     def observe_foo(self, newFoo):
         self.foo = newFoo
@@ -214,17 +227,8 @@ class RatherBaroqueCache(pb.RemoteCache):
     def observe_end(self):
         log.msg("the end of things")
 
-    def checkFoo4(self):
-        return (self.foo == 4)
-
-    def check(self):
-        # checks based on above '__init__'
-        assert self.x == 1
-        assert self.y == 2
-        assert self.foo == 3
-        return 1
-
 pb.setCopierForClass(VeryVeryComplicatedCacheable, RatherBaroqueCache)
+
 
 class SimpleLocalCache(pb.RemoteCache):
     def setCopyableState(self, state):
@@ -237,13 +241,10 @@ class SimpleLocalCache(pb.RemoteCache):
         return self
 
     def check(self):
-        # checks based on above '__init__'
-        assert self.x == 1
-        assert self.y['Hello'] == 'World'
-        assert self.z[0] == 'test'
         return 1
 
 pb.setCopierForClass(SimpleCache, SimpleLocalCache)
+
 
 class NestedCache(pb.Referenceable):
     def __init__(self):
@@ -269,6 +270,7 @@ class Observable(pb.Referenceable):
     def notify(self, obj):
         for observer in self.observers:
             observer.callRemote('notify', self, obj)
+
 
 class DeferredRemote(pb.Referenceable):
     def __init__(self):
@@ -296,20 +298,24 @@ class Observer(pb.Referenceable):
         self.notified = self.notified + 1
         other.callRemote('unobserve',self)
 
+
 class NewStyleCopy(pb.Copyable, pb.RemoteCopy, object):
     def __init__(self, s):
         self.s = s
 pb.setUnjellyableForClass(NewStyleCopy, NewStyleCopy)
 
+
 class NewStyleCopy2(pb.Copyable, pb.RemoteCopy, object):
     allocated = 0
     initialized = 0
     value = 1
+
     def __new__(self):
         NewStyleCopy2.allocated += 1
         inst = object.__new__(self)
         inst.value = 2
         return inst
+
     def __init__(self):
         NewStyleCopy2.initialized += 1
 
@@ -319,11 +325,14 @@ pb.setUnjellyableForClass(NewStyleCopy2, NewStyleCopy2)
 class NewStyleCacheCopy(pb.Cacheable, pb.RemoteCache, object):
     def getStateToCacheAndObserveFor(self, perspective, observer):
         return self.__dict__
+
 pb.setCopierForClass(NewStyleCacheCopy, NewStyleCacheCopy)
+
 
 class Echoer(pb.Root):
     def remote_echo(self, st):
         return st
+
 
 class CachedReturner(pb.Root):
     def __init__(self, cache):
@@ -331,97 +340,116 @@ class CachedReturner(pb.Root):
     def remote_giveMeCache(self, st):
         return self.cache
 
+
 class NewStyleTestCase(unittest.TestCase):
-    ref = None
-    
+
+    def setUp(self):
+        """
+        Create a pb server using L{Echoer} protocol and connect a client to it.
+        """
+        self.server = reactor.listenTCP(0, pb.PBServerFactory(Echoer()))
+        clientFactory = pb.PBClientFactory()
+        reactor.connectTCP("localhost", self.server.getHost().port,
+                           clientFactory)
+        def gotRoot(ref):
+            self.ref = ref
+        return clientFactory.getRootObject().addCallback(gotRoot)
+
     def tearDown(self):
-        if self.ref:
-            self.ref.broker.transport.loseConnection()
+        """
+        Close client and server connections, reset values of L{NewStyleCopy2}
+        class variables.
+        """
+        NewStyleCopy2.allocated = 0
+        NewStyleCopy2.initialized = 0
+        NewStyleCopy2.value = 1
+        self.ref.broker.transport.loseConnection()
         return self.server.stopListening()
 
-    def testNewStyle(self):
-        self.server = reactor.listenTCP(0, pb.PBServerFactory(Echoer()))
-        f = pb.PBClientFactory()
-        reactor.connectTCP("localhost", self.server.getHost().port, f)
-        d = f.getRootObject()
-        d.addCallback(self._testNewStyle_1)
-        return d
-    def _testNewStyle_1(self, ref):
-        self.ref = ref
+    def test_newStyle(self):
+        """
+        Create a new style object, send it over the wire, and check the result.
+        """
         orig = NewStyleCopy("value")
-        d = ref.callRemote("echo", orig)
-        d.addCallback(self._testNewStyle_2, orig)
+        d = self.ref.callRemote("echo", orig)
+        def cb(res):
+            self.failUnless(isinstance(res, NewStyleCopy))
+            self.failUnlessEqual(res.s, "value")
+            self.failIf(res is orig) # no cheating :)
+        d.addCallback(cb)
         return d
-    def _testNewStyle_2(self, res, orig):
-        self.failUnless(isinstance(res, NewStyleCopy))
-        self.failUnlessEqual(res.s, "value")
-        self.failIf(res is orig) # no cheating :)
 
-    def testAlloc(self):
-        self.server = reactor.listenTCP(0, pb.PBServerFactory(Echoer()))
-        f = pb.PBClientFactory()
-        reactor.connectTCP("localhost", self.server.getHost().port, f)
-        d = f.getRootObject()
-        d.addCallback(self._testAlloc_1)
-        return d
-    def _testAlloc_1(self, ref):
-        self.ref = ref
+    def test_alloc(self):
+        """
+        Send a new style object and check the number of allocations.
+        """
         orig = NewStyleCopy2()
         self.failUnlessEqual(NewStyleCopy2.allocated, 1)
         self.failUnlessEqual(NewStyleCopy2.initialized, 1)
-        d = ref.callRemote("echo", orig)
+        d = self.ref.callRemote("echo", orig)
+        def cb(res):
+            # receiving the response creates a third one on the way back
+            self.failUnless(isinstance(res, NewStyleCopy2))
+            self.failUnlessEqual(res.value, 2)
+            self.failUnlessEqual(NewStyleCopy2.allocated, 3)
+            self.failUnlessEqual(NewStyleCopy2.initialized, 1)
+            self.failIf(res is orig) # no cheating :)
         # sending the object creates a second one on the far side
-        d.addCallback(self._testAlloc_2, orig)
+        d.addCallback(cb)
         return d
-    def _testAlloc_2(self, res, orig):
-        # receiving the response creates a third one on the way back
-        self.failUnless(isinstance(res, NewStyleCopy2))
-        self.failUnlessEqual(res.value, 2)
-        self.failUnlessEqual(NewStyleCopy2.allocated, 3)
-        self.failUnlessEqual(NewStyleCopy2.initialized, 1)
-        self.failIf(res is orig) # no cheating :)
+
 
 
 class NewStyleCachedTestCase(unittest.TestCase):
-    ref = None
-    
+
+    def setUp(self):
+        """
+        Create a pb server using L{CachedReturner} protocol and connect a
+        client to it.
+        """
+        self.orig = NewStyleCacheCopy()
+        self.orig.s = "value"
+        self.server = reactor.listenTCP(0,
+            pb.PBServerFactory(CachedReturner(self.orig)))
+        clientFactory = pb.PBClientFactory()
+        reactor.connectTCP("localhost", self.server.getHost().port,
+                           clientFactory)
+        def gotRoot(ref):
+            self.ref = ref
+        return clientFactory.getRootObject().addCallback(gotRoot)
+
     def tearDown(self):
-        if self.ref:
-            self.ref.broker.transport.loseConnection()
+        """
+        Close client and server connections.
+        """
+        self.ref.broker.transport.loseConnection()
         return self.server.stopListening()
 
-    def testNewStyleCache(self):
-        orig = NewStyleCacheCopy()
-        orig.s = "value"
-        self.server = reactor.listenTCP(0, pb.PBServerFactory(CachedReturner(orig)))
-        f = pb.PBClientFactory()
-        reactor.connectTCP("localhost", self.server.getHost().port, f)
-        d = f.getRootObject()
-        d.addCallback(self._testNewStyleCache_1, orig)
+    def test_newStyleCache(self):
+        """
+        Get the object from the cache, and checks its properties.
+        """
+        d = self.ref.callRemote("giveMeCache", self.orig)
+        def cb(res):
+            self.failUnless(isinstance(res, NewStyleCacheCopy))
+            self.failUnlessEqual(res.s, "value")
+            self.failIf(res is self.orig) # no cheating :)
+        d.addCallback(cb)
         return d
-    def _testNewStyleCache_1(self, ref, orig):
-        self.ref = ref
-        d = ref.callRemote("giveMeCache", orig)
-        d.addCallback(self._testNewStyleCache_2, orig)
-        return d
-    def _testNewStyleCache_2(self, res, orig):
-        self.failUnless(isinstance(res, NewStyleCacheCopy))
-        self.failUnlessEqual(res.s, "value")
-        self.failIf(res is orig) # no cheating :)
 
 
 class BrokerTestCase(unittest.TestCase):
     thunkResult = None
 
     def tearDown(self):
-        import os
         try:
-            os.unlink('None-None-TESTING.pub') # from RemotePublished.getFileName
+            # from RemotePublished.getFileName
+            os.unlink('None-None-TESTING.pub')
         except OSError:
             pass
 
     def thunkErrorBad(self, error):
-        assert 0, "This should cause a return value, not %s" % error
+        self.fail("This should cause a return value, not %s" % (error,))
 
     def thunkResultGood(self, result):
         self.thunkResult = result
@@ -430,9 +458,9 @@ class BrokerTestCase(unittest.TestCase):
         pass
 
     def thunkResultBad(self, result):
-        assert 0, "This should cause an error, not %s" % result
+        self.fail("This should cause an error, not %s" % (result,))
 
-    def testReference(self):
+    def test_reference(self):
         c, s, pump = connectedServerAndClient()
 
         class X(pb.Referenceable):
@@ -451,12 +479,12 @@ class BrokerTestCase(unittest.TestCase):
         pump.pump()
         pump.pump()
         pump.pump()
-        assert x.caught is z, "X should have caught Z"
+        self.assertIdentical(x.caught, z, "X should have caught Z")
 
         # make sure references to remote methods are equals
         self.assertEquals(y.remoteMethod('throw'), y.remoteMethod('throw'))
 
-    def testResult(self):
+    def test_result(self):
         c, s, pump = connectedServerAndClient()
         for x, y in (c, s), (s, c):
             # test reflexivity
@@ -464,19 +492,20 @@ class BrokerTestCase(unittest.TestCase):
             x.setNameForLocal("foo", foo)
             bar = y.remoteForName("foo")
             self.expectedThunkResult = 8
-            bar.callRemote('thunk',self.expectedThunkResult - 1).addCallbacks(self.thunkResultGood, self.thunkErrorBad)
+            bar.callRemote('thunk',self.expectedThunkResult - 1
+                ).addCallbacks(self.thunkResultGood, self.thunkErrorBad)
             # Send question.
             pump.pump()
             # Send response.
             pump.pump()
             # Shouldn't require any more pumping than that...
-            assert self.thunkResult == self.expectedThunkResult,\
-                   "result wasn't received."
+            self.assertEquals(self.thunkResult, self.expectedThunkResult,
+                              "result wasn't received.")
 
     def refcountResult(self, result):
         self.nestedRemote = result
 
-    def testTooManyRefs(self):
+    def test_tooManyRefs(self):
         l = []
         e = []
         c, s, pump = connectedServerAndClient()
@@ -489,20 +518,24 @@ class BrokerTestCase(unittest.TestCase):
             x.callRemote("getSimple").addCallbacks(l.append, e.append)
             pump.pump()
         expected = (pb.MAX_BROKER_REFS - 1)
-        assert s.transport.closed, "transport was not closed"
-        assert len(l) == expected, "expected %s got %s" % (expected, len(l))
+        self.assertTrue(s.transport.closed, "transport was not closed")
+        self.assertEquals(len(l), expected,
+                          "expected %s got %s" % (expected, len(l)))
 
-    def testCopy(self):
+    def test_copy(self):
         c, s, pump = connectedServerAndClient()
         foo = NestedCopy()
         s.setNameForLocal("foo", foo)
         x = c.remoteForName("foo")
-        x.callRemote('getCopy').addCallbacks(self.thunkResultGood, self.thunkErrorBad)
+        x.callRemote('getCopy'
+            ).addCallbacks(self.thunkResultGood, self.thunkErrorBad)
         pump.pump()
         pump.pump()
-        assert self.thunkResult.check() == 1, "check failed"
+        self.assertEquals(self.thunkResult.x, 1)
+        self.assertEquals(self.thunkResult.y['Hello'], 'World')
+        self.assertEquals(self.thunkResult.z[0], 'test')
 
-    def testObserve(self):
+    def test_observe(self):
         c, s, pump = connectedServerAndClient()
 
         # this is really testing the comparison between remote objects, to make
@@ -519,11 +552,10 @@ class BrokerTestCase(unittest.TestCase):
         a.notify(10)
         pump.pump()
         pump.pump()
-        assert b.obj is not None, "didn't notify"
-        assert b.obj == 1, 'notified too much'
+        self.assertNotIdentical(b.obj, None, "didn't notify")
+        self.assertEquals(b.obj, 1, 'notified too much')
 
-
-    def testDefer(self):
+    def test_defer(self):
         c, s, pump = connectedServerAndClient()
         d = DeferredRemote()
         s.setNameForLocal("d", d)
@@ -532,18 +564,19 @@ class BrokerTestCase(unittest.TestCase):
         results = []
         e.callRemote('doItLater').addCallback(results.append)
         pump.pump(); pump.pump()
-        assert not d.run, "Deferred method run too early."
+        self.assertFalse(d.run, "Deferred method run too early.")
         d.d.callback(5)
-        assert d.run == 5, "Deferred method run too late."
+        self.assertEquals(d.run, 5, "Deferred method run too late.")
         pump.pump(); pump.pump()
-        assert results[0] == 6, "Incorrect result."
-        
-    def testRefcount(self):
+        self.assertEquals(results[0], 6, "Incorrect result.")
+
+    def test_refcount(self):
         c, s, pump = connectedServerAndClient()
         foo = NestedRemote()
         s.setNameForLocal("foo", foo)
         bar = c.remoteForName("foo")
-        bar.callRemote('getSimple').addCallbacks(self.refcountResult, self.thunkErrorBad)
+        bar.callRemote('getSimple'
+            ).addCallbacks(self.refcountResult, self.thunkErrorBad)
 
         # send question
         pump.pump()
@@ -553,19 +586,18 @@ class BrokerTestCase(unittest.TestCase):
         # delving into internal structures here, because GC is sort of
         # inherently internal.
         rluid = self.nestedRemote.luid
-        assert s.localObjects.has_key(rluid), "Should have key."
+        self.assertIn(rluid, s.localObjects)
         del self.nestedRemote
         # nudge the gc
         if sys.hexversion >= 0x2000000 and os.name != "java":
-            import gc
             gc.collect()
         # try to nudge the GC even if we can't really
         pump.pump()
         pump.pump()
         pump.pump()
-        assert not s.localObjects.has_key(rluid), "Should NOT have key."
+        self.assertNotIn(rluid, s.localObjects)
 
-    def testCache(self):
+    def test_cache(self):
         c, s, pump = connectedServerAndClient()
         obj = NestedCache()
         obj2 = NestedComplicatedCache()
@@ -575,33 +607,42 @@ class BrokerTestCase(unittest.TestCase):
         o2 = c.remoteForName("obj")
         o3 = c.remoteForName("xxx")
         coll = []
-        o2.callRemote("getCache").addCallback(coll.append).addErrback(coll.append)
-        o2.callRemote("getCache").addCallback(coll.append).addErrback(coll.append)
+        o2.callRemote("getCache"
+            ).addCallback(coll.append).addErrback(coll.append)
+        o2.callRemote("getCache"
+            ).addCallback(coll.append).addErrback(coll.append)
         complex = []
         o3.callRemote("getCache").addCallback(complex.append)
         o3.callRemote("getCache").addCallback(complex.append)
         pump.flush()
         # `worst things first'
-        assert complex[0].check()
+        self.assertEquals(complex[0].x, 1)
+        self.assertEquals(complex[0].y, 2)
+        self.assertEquals(complex[0].foo, 3)
+
         vcc.setFoo4()
         pump.flush()
-        assert complex[0].checkFoo4(), "method was not called."
-        assert len(coll) == 2
+        self.assertEquals(complex[0].foo, 4)
+        self.assertEquals(len(coll), 2)
         cp = coll[0][0]
-        assert cp.checkMethod().im_self is cp, "potential refcounting issue"
-        assert cp.checkSelf() is cp, "other potential refcounting issue"
+        self.assertIdentical(cp.checkMethod().im_self, cp,
+                             "potential refcounting issue")
+        self.assertIdentical(cp.checkSelf(), cp,
+                             "other potential refcounting issue")
         col2 = []
         o2.callRemote('putCache',cp).addCallback(col2.append)
         pump.flush()
         # The objects were the same (testing lcache identity)
-        assert col2[0]
+        self.assertTrue(col2[0])
         # test equality of references to methods
-        self.assertEquals(o2.remoteMethod("getCache"), o2.remoteMethod("getCache"))
+        self.assertEquals(o2.remoteMethod("getCache"),
+                          o2.remoteMethod("getCache"))
 
         # now, refcounting (similiar to testRefCount)
         luid = cp.luid
         baroqueLuid = complex[0].luid
-        assert s.remotelyCachedObjects.has_key(luid), "remote cache doesn't have it"
+        self.assertIn(luid, s.remotelyCachedObjects,
+                      "remote cache doesn't have it")
         del coll
         del cp
         pump.flush()
@@ -612,21 +653,21 @@ class BrokerTestCase(unittest.TestCase):
         # del vcc.observer
         # nudge the gc
         if sys.hexversion >= 0x2000000 and os.name != "java":
-            import gc
             gc.collect()
         # try to nudge the GC even if we can't really
         pump.flush()
         # The GC is done with it.
-        assert not s.remotelyCachedObjects.has_key(luid), "Server still had it after GC"
-        assert not c.locallyCachedObjects.has_key(luid), "Client still had it after GC"
-        assert not s.remotelyCachedObjects.has_key(baroqueLuid), "Server still had complex after GC"
-        assert not c.locallyCachedObjects.has_key(baroqueLuid), "Client still had complex after GC"
-        assert vcc.observer is None, "observer was not removed"
+        self.assertNotIn(luid, s.remotelyCachedObjects,
+                         "Server still had it after GC")
+        self.assertNotIn(luid, c.locallyCachedObjects,
+                         "Client still had it after GC")
+        self.assertNotIn(baroqueLuid, s.remotelyCachedObjects,
+                         "Server still had complex after GC")
+        self.assertNotIn(baroqueLuid, c.locallyCachedObjects,
+                         "Client still had complex after GC")
+        self.assertIdentical(vcc.observer, None, "observer was not removed")
 
-
-
-    def testPublishable(self):
-        import os
+    def test_publishable(self):
         try:
             os.unlink('None-None-TESTING.pub') # from RemotePublished.getFileName
         except OSError:
@@ -643,31 +684,34 @@ class BrokerTestCase(unittest.TestCase):
         self.assertEquals(obj.activateCalled, 1)
         self.assertEquals(obj.isActivated, 1)
         self.assertEquals(obj.yayIGotPublished, 1)
-        self.assertEquals(obj._wasCleanWhenLoaded, 0) # timestamp's dirty, we don't have a cache file
+        # timestamp's dirty, we don't have a cache file
+        self.assertEquals(obj._wasCleanWhenLoaded, 0)
         c, s, pump = connectedServerAndClient()
         s.setNameForLocal("foo", foo)
         bar = c.remoteForName("foo")
         bar.callRemote('getPub').addCallbacks(accum.append, self.thunkErrorBad)
         pump.flush()
         obj = accum.pop()
-        self.assertEquals(obj._wasCleanWhenLoaded, 1) # timestamp's clean, our cache file is up-to-date
+        # timestamp's clean, our cache file is up-to-date
+        self.assertEquals(obj._wasCleanWhenLoaded, 1)
 
     def gotCopy(self, val):
         self.thunkResult = val.id
-        
-    def testFactoryCopy(self):
+
+    def test_factoryCopy(self):
         c, s, pump = connectedServerAndClient()
         ID = 99
         obj = NestedCopy()
         s.setNameForLocal("foo", obj)
         x = c.remoteForName("foo")
-        x.callRemote('getFactory', ID).addCallbacks(self.gotCopy, self.thunkResultBad)
+        x.callRemote('getFactory', ID
+            ).addCallbacks(self.gotCopy, self.thunkResultBad)
         pump.pump()
         pump.pump()
         pump.pump()
-        assert self.thunkResult == ID, "ID not correct on factory object %s" % self.thunkResult
+        self.assertEquals(self.thunkResult, ID,
+            "ID not correct on factory object %s" % (self.thunkResult,))
 
-from twisted.spread.util import StringPager, FilePager, getAllPages
 
 bigString = "helloworld" * 50
 
@@ -679,93 +723,136 @@ def finishedCallback(*args, **kw):
     callbackArgs = args
     callbackKeyword = kw
 
+
 class Pagerizer(pb.Referenceable):
     def __init__(self, callback, *args, **kw):
         self.callback, self.args, self.kw = callback, args, kw
 
     def remote_getPages(self, collector):
-        StringPager(collector, bigString, 100, self.callback, *self.args, **self.kw)
+        util.StringPager(collector, bigString, 100,
+                         self.callback, *self.args, **self.kw)
         self.args = self.kw = None
 
+
 class FilePagerizer(pb.Referenceable):
+    pager = None
+
     def __init__(self, filename, callback, *args, **kw):
         self.filename = filename
         self.callback, self.args, self.kw = callback, args, kw
 
     def remote_getPages(self, collector):
-        FilePager(collector, file(self.filename), self.callback, *self.args, **self.kw)
+        self.pager = util.FilePager(collector, file(self.filename),
+                                    self.callback, *self.args, **self.kw)
         self.args = self.kw = None
-        
+
 
 class PagingTestCase(unittest.TestCase):
+    """
+    Test pb objects sending data by pages.
+    """
+
     def setUpClass(self):
+        """
+        Create a file used to test L{util.FilePager}.
+        """
         self.filename = self.mktemp()
         fd = file(self.filename, 'w')
         fd.write(bigString)
         fd.close()
 
     def tearDownClass(self):
+        """
+        Remove the created file.
+        """
         os.remove(self.filename)
 
-    def testPagingWithCallback(self):
+    def test_pagingWithCallback(self):
+        """
+        Test L{util.StringPager}, passing a callback to fire when all pages
+        are sent.
+        """
         c, s, pump = connectedServerAndClient()
-        s.setNameForLocal("foo", Pagerizer(finishedCallback, 'hello', value = 10))
+        s.setNameForLocal("foo", Pagerizer(finishedCallback, 'hello', value=10))
         x = c.remoteForName("foo")
         l = []
-        getAllPages(x, "getPages").addCallback(l.append)
+        util.getAllPages(x, "getPages").addCallback(l.append)
         while not l:
             pump.pump()
-        assert ''.join(l[0]) == bigString, "Pages received not equal to pages sent!"
-        assert callbackArgs == ('hello',), "Completed callback not invoked"
-        assert callbackKeyword == {'value': 10}, "Completed callback not invoked"
+        self.assertEquals(''.join(l[0]), bigString,
+                          "Pages received not equal to pages sent!")
+        self.assertEquals(callbackArgs, ('hello',),
+                          "Completed callback not invoked")
+        self.assertEquals(callbackKeyword, {'value': 10},
+                          "Completed callback not invoked")
 
-    def testPagingWithoutCallback(self):
+    def test_pagingWithoutCallback(self):
+        """
+        Test L{util.StringPager} without a callback.
+        """
         c, s, pump = connectedServerAndClient()
         s.setNameForLocal("foo", Pagerizer(None))
         x = c.remoteForName("foo")
         l = []
-        getAllPages(x, "getPages").addCallback(l.append)
+        util.getAllPages(x, "getPages").addCallback(l.append)
         while not l:
             pump.pump()
-        assert ''.join(l[0]) == bigString, "Pages received not equal to pages sent!"
+        self.assertEquals(''.join(l[0]), bigString,
+                          "Pages received not equal to pages sent!")
 
-    def testFilePagingWithCallback(self):
+    def test_filePagingWithCallback(self):
+        """
+        Test L{util.FilePager}, passing a callback to fire when all pages
+        are sent, and verify that the pager doesn't keep chunks in memory.
+        """
         c, s, pump = connectedServerAndClient()
-        s.setNameForLocal("bar", FilePagerizer(self.filename, finishedCallback,
-                                               'frodo', value = 9))
+        pagerizer = FilePagerizer(self.filename, finishedCallback,
+                                  'frodo', value = 9)
+        s.setNameForLocal("bar", pagerizer)
         x = c.remoteForName("bar")
         l = []
-        getAllPages(x, "getPages").addCallback(l.append)
+        util.getAllPages(x, "getPages").addCallback(l.append)
         while not l:
             pump.pump()
-        assert ''.join(l[0]) == bigString, "Pages received not equal to pages sent!"
-        assert callbackArgs == ('frodo',), "Completed callback not invoked"
-        assert callbackKeyword == {'value': 9}, "Completed callback not invoked"
+        self.assertEquals(''.join(l[0]), bigString,
+                          "Pages received not equal to pages sent!")
+        self.assertEquals(callbackArgs, ('frodo',),
+                          "Completed callback not invoked")
+        self.assertEquals(callbackKeyword, {'value': 9},
+                          "Completed callback not invoked")
+        self.assertEquals(pagerizer.pager.chunks, [])
 
-    def testFilePagingWithoutCallback(self):
+    def test_filePagingWithoutCallback(self):
+        """
+        Test L{util.FilePager} without a callback.
+        """
         c, s, pump = connectedServerAndClient()
-        s.setNameForLocal("bar", FilePagerizer(self.filename, None))
+        pagerizer = FilePagerizer(self.filename, None)
+        s.setNameForLocal("bar", pagerizer)
         x = c.remoteForName("bar")
         l = []
-        getAllPages(x, "getPages").addCallback(l.append)
+        util.getAllPages(x, "getPages").addCallback(l.append)
         while not l:
             pump.pump()
-        assert ''.join(l[0]) == bigString, "Pages received not equal to pages sent!"
+        self.assertEquals(''.join(l[0]), bigString,
+                          "Pages received not equal to pages sent!")
+        self.assertEquals(pagerizer.pager.chunks, [])
 
-
-from twisted.spread import publish
 
 class DumbPublishable(publish.Publishable):
     def getStateToPublish(self):
         return {"yayIGotPublished": 1}
 
+
 class DumbPub(publish.RemotePublished):
     def activated(self):
         self.activateCalled = 1
 
+
 class GetPublisher(pb.Referenceable):
     def __init__(self):
         self.pub = DumbPublishable("TESTING")
+
     def remote_getPub(self):
         return self.pub
 
@@ -773,21 +860,27 @@ class GetPublisher(pb.Referenceable):
 pb.setCopierForClass(DumbPublishable, DumbPub)
 
 class DisconnectionTestCase(unittest.TestCase):
-    """Test disconnection callbacks."""
-    
+    """
+    Test disconnection callbacks.
+    """
+
     def error(self, *args):
-        raise RuntimeError, "I shouldn't have been called: %s" % args
-    
+        raise RuntimeError("I shouldn't have been called: %s" % (args,))
+
     def gotDisconnected(self):
-        """Called on broker disconnect."""
+        """
+        Called on broker disconnect.
+        """
         self.gotCallback = 1
-    
+
     def objectDisconnected(self, o):
-        """Called on RemoteReference disconnect."""
+        """
+        Called on RemoteReference disconnect.
+        """
         self.assertEquals(o, self.remoteObject)
         self.objectCallback = 1
 
-    def testBadSerialization(self):
+    def test_badSerialization(self):
         c, s, pump = connectedServerAndClient()
         pump.pump()
         s.setNameForLocal("o", BadCopySet())
@@ -797,51 +890,55 @@ class DisconnectionTestCase(unittest.TestCase):
         pump.flush()
         self.assertEquals(len(l), 1)
 
-    def testDisconnection(self):
+    def test_disconnection(self):
         c, s, pump = connectedServerAndClient()
         pump.pump()
         s.setNameForLocal("o", SimpleRemote())
-        
+
         # get a client reference to server object
         r = c.remoteForName("o")
         pump.pump()
         pump.pump()
         pump.pump()
-        
+
         # register and then unregister disconnect callbacks
         # making sure they get unregistered
         c.notifyOnDisconnect(self.error)
-        self.assert_(self.error in c.disconnects)
+        self.assertIn(self.error, c.disconnects)
         c.dontNotifyOnDisconnect(self.error)
-        self.assert_(not (self.error in c.disconnects))
-        
+        self.assertNotIn(self.error, c.disconnects)
+
         r.notifyOnDisconnect(self.error)
-        self.assert_(r._disconnected in c.disconnects)
-        self.assert_(self.error in r.disconnectCallbacks)
+        self.assertIn(r._disconnected, c.disconnects)
+        self.assertIn(self.error, r.disconnectCallbacks)
         r.dontNotifyOnDisconnect(self.error)
-        self.assert_(not (r._disconnected in c.disconnects))
-        self.assert_(not (self.error in r.disconnectCallbacks))
-        
+        self.assertNotIn(r._disconnected, c.disconnects)
+        self.assertNotIn(self.error, r.disconnectCallbacks)
+
         # register disconnect callbacks
         c.notifyOnDisconnect(self.gotDisconnected)
         r.notifyOnDisconnect(self.objectDisconnected)
         self.remoteObject = r
-        
+
         # disconnect
         c.connectionLost(failure.Failure(main.CONNECTION_DONE))
-        self.assert_(self.gotCallback)
-        self.assert_(self.objectCallback)
+        self.assertTrue(self.gotCallback)
+        self.assertTrue(self.objectCallback)
+
 
 class FreakOut(Exception):
     pass
 
+
 class BadCopyable(pb.Copyable):
     def getStateToCopyFor(self, p):
-        raise FreakOut
+        raise FreakOut()
+
 
 class BadCopySet(pb.Referenceable):
     def remote_setBadCopy(self, bc):
         return None
+
 
 class LocalRemoteTest(util.LocalAsRemote):
     reportAllTracebacks = 0
@@ -853,53 +950,23 @@ class LocalRemoteTest(util.LocalAsRemote):
         return x + y
 
     def async_fail(self):
-        raise RuntimeError
-
-
-class SpreadUtilTestCase(unittest.TestCase):
-    """Tests for twisted.spread.util"""
-
-    def testSync(self):
-        o = LocalRemoteTest()
-        self.assertEquals(o.callRemote("add1", 2), 3)
-
-    def testAsync(self):
-        o = LocalRemoteTest()
-        d = o.callRemote("add", 2, y=4)
-        self.assert_(isinstance(d, defer.Deferred))
-        d.addCallback(self.assertEquals, 6)
-        return d
-
-    def testAsyncFail(self):
-        l = []
-        o = LocalRemoteTest()
-        d = o.callRemote("fail")
-        d.addCallbacks(lambda res: self.fail("supposed to fail"),
-                       lambda f: self.assert_(isinstance(f, failure.Failure)))
-        return d
-
-    def testRemoteMethod(self):
-        o = LocalRemoteTest()
-        m = o.remoteMethod("add1")
-        self.assertEquals(m(3), 4)
-
-
-
-
-
+        raise RuntimeError()
 
 
 class MyRealm:
-    """A test realm."""
+    """
+    A test realm.
+    """
 
     def __init__(self):
         self.p = MyPerspective()
-    
+
     def requestAvatar(self, avatarId, mind, interface):
         assert interface == pb.IPerspective
         assert mind == "BRAINS!"
         self.p.loggedIn = 1
         return pb.IPerspective, self.p, self.p.logout
+
 
 class MyPerspective(pb.Avatar):
 
@@ -909,12 +976,13 @@ class MyPerspective(pb.Avatar):
 
     def __init__(self):
         pass
-    
+
     def perspective_getViewPoint(self):
         return MyView()
 
     def logout(self):
-        self.loggedOut = 1
+        self.loggedOut = True
+
 
 class MyView(pb.Viewable):
 
@@ -937,14 +1005,13 @@ class NewCredTestCase(unittest.TestCase):
     def tearDown(self):
         return self.port.stopListening()
 
-
     def getFactoryAndRootObject(self, clientFactory=pb.PBClientFactory):
         factory = clientFactory()
         rootObjDeferred = factory.getRootObject()
         reactor.connectTCP('127.0.0.1', self.portno, factory)
         return factory, rootObjDeferred
 
-    def testGetRootObject(self):
+    def test_getRootObject(self):
         """
         Assert only that L{PBClientFactory.getRootObject}'s Deferred fires with
         a L{RemoteReference}.
@@ -960,8 +1027,7 @@ class NewCredTestCase(unittest.TestCase):
 
         return rootObjDeferred.addCallback(gotRootObject)
 
-
-    def testDeadReferenceError(self):
+    def test_deadReferenceError(self):
         """
         Test that when a connection is lost, calling a method on a
         RemoteReference obtained from it raises DeadReferenceError.
@@ -983,8 +1049,7 @@ class NewCredTestCase(unittest.TestCase):
 
         return rootObjDeferred.addCallback(gotRootObject)
 
-
-    def testClientConnectionLost(self):
+    def test_clientConnectionLost(self):
         """
         Test that if the L{reconnecting} flag is passed with a True value then
         a remote call made from a disconnection notification callback gets a
@@ -1026,8 +1091,7 @@ class NewCredTestCase(unittest.TestCase):
             return d.addCallback(disconnected)
         return rootObjDeferred.addCallback(gotRootObject)
 
-
-    def testImmediateClose(self):
+    def test_immediateClose(self):
         """
         Test that if a Broker loses its connection without receiving any bytes,
         it doesn't raise any exceptions or log any errors.
@@ -1036,8 +1100,7 @@ class NewCredTestCase(unittest.TestCase):
         serverProto.makeConnection(protocol.FileWrapper(StringIO()))
         serverProto.connectionLost(failure.Failure(main.CONNECTION_DONE))
 
-
-    def testLoginLogout(self):
+    def test_loginLogout(self):
         factory = pb.PBClientFactory()
         # NOTE: real code probably won't need anything where we have the
         # "BRAINS!" argument, passing None is fine. We just do it here to
@@ -1049,22 +1112,22 @@ class NewCredTestCase(unittest.TestCase):
         reactor.connectTCP("127.0.0.1", self.portno, factory)
         d.addCallback(self._testLoginLogout_1, factory)
         return d
+
     def _testLoginLogout_1(self, p, factory):
         self.assertEquals(self.realm.p.loggedIn, 1)
-        self.assert_(isinstance(p, pb.RemoteReference))
+        self.assertTrue(isinstance(p, pb.RemoteReference))
         factory.disconnect()
         d = defer.Deferred()
         reactor.callLater(0.1, d.callback, None)
         d.addCallback(lambda res: self.assertEquals(self.realm.p.loggedOut, 1))
         return d
 
-
-    def testBadLogin(self):
+    def test_dadLogin(self):
         d = defer.succeed(None)
         for username, password in [("nosuchuser", "pass"),
                                    ("user", "wrongpass")]:
             d.addCallback(self._testBadLogin_once, username, password)
-        d.addBoth(lambda res: log.flushErrors(UnauthorizedLogin))
+        d.addBoth(lambda res: self.flushLoggedErrors(UnauthorizedLogin))
         return d
 
     def _testBadLogin_once(self, res, username, password):
@@ -1077,8 +1140,7 @@ class NewCredTestCase(unittest.TestCase):
         d.addCallback(lambda res: factory.disconnect())
         return d
 
-
-    def testView(self):
+    def test_view(self):
         factory = pb.PBClientFactory()
         d = factory.login(credentials.UsernamePassword("user", "pass"),
                           "BRAINS!")
@@ -1088,6 +1150,7 @@ class NewCredTestCase(unittest.TestCase):
         d.addCallback(self.assertEquals, True)
         d.addCallback(lambda res: factory.disconnect())
         return d
+
 
 class NonSubclassingPerspective:
     implements(pb.IPerspective)
@@ -1101,7 +1164,8 @@ class NonSubclassingPerspective:
     # Methods required by MyRealm
     def logout(self):
         self.loggedOut = True
-    
+
+
 class NSPTestCase(unittest.TestCase):
     def setUp(self):
         self.realm = MyRealm()
@@ -1115,16 +1179,129 @@ class NSPTestCase(unittest.TestCase):
         self.portno = self.port.getHost().port
 
     def tearDown(self):
-        self.port.stopListening()
+        return self.port.stopListening()
 
-    def testNSP(self):
+    def test_NSP(self):
         factory = pb.PBClientFactory()
         d = factory.login(credentials.UsernamePassword('user', 'pass'),
                           "BRAINS!")
         reactor.connectTCP('127.0.0.1', self.portno, factory)
         d.addCallback(lambda p: p.callRemote('ANYTHING', 'here', bar='baz'))
-        d.addCallback(self.assertEquals, 
+        d.addCallback(self.assertEquals,
                       ('ANYTHING', ('here',), {'bar': 'baz'}))
         d.addCallback(lambda res: factory.disconnect())
         return d
+
+
+class IForwarded(Interface):
+    """
+    Interface used for testing L{util.LocalAsyncForwarder}.
+    """
+
+    def forwardMe():
+        """
+        Simple synchronous method.
+        """
+
+    def forwardDeferred():
+        """
+        Simple asynchronous method.
+        """
+
+
+class Forwarded:
+    """
+    Test implementation of L{IForwarded}.
+
+    @ivar forwarded: set if C{forwardMe} is called.
+    @type forwarded: C{bool}
+    @ivar unforwarded: set if C{dontForwardMe} is called.
+    @type unforwarded: C{bool}
+    """
+    implements(IForwarded)
+    forwarded = False
+    unforwarded = False
+
+    def forwardMe(self):
+        """
+        Set a local flag to test afterwards.
+        """
+        self.forwarded = True
+
+    def dontForwardMe(self):
+        """
+        Set a local flag to test afterwards. This should not be called as it's
+        not in the interface.
+        """
+        print "HERE"
+        self.unforwarded = True
+
+    def forwardDeferred(self):
+        """
+        Asynchronously return C{True}.
+        """
+        return defer.succeed(True)
+
+
+class SpreadUtilTestCase(unittest.TestCase):
+    """
+    Tests for L{twisted.spread.util}.
+    """
+
+    def test_sync(self):
+        """
+        Call a synchronous method of a L{util.LocalAsRemote} object and check
+        the result.
+        """
+        o = LocalRemoteTest()
+        self.assertEquals(o.callRemote("add1", 2), 3)
+
+    def test_async(self):
+        """
+        Call an asynchronous method of a L{util.LocalAsRemote} object and check
+        the result.
+        """
+        o = LocalRemoteTest()
+        o = LocalRemoteTest()
+        d = o.callRemote("add", 2, y=4)
+        self.assertTrue(isinstance(d, defer.Deferred))
+        d.addCallback(self.assertEquals, 6)
+        return d
+
+    def test_asyncFail(self):
+        """
+        Test a asynchronous failure on a remote method call.
+        """
+        l = []
+        o = LocalRemoteTest()
+        d = o.callRemote("fail")
+        def eb(f):
+            self.assertTrue(isinstance(f, failure.Failure))
+            f.trap(RuntimeError)
+        d.addCallbacks(lambda res: self.fail("supposed to fail"), eb)
+        return d
+
+    def test_remoteMethod(self):
+        """
+        Test the C{remoteMethod} facility of L{util.LocalAsRemote}.
+        """
+        o = LocalRemoteTest()
+        m = o.remoteMethod("add1")
+        self.assertEquals(m(3), 4)
+
+    def test_localAsyncForwarder(self):
+        """
+        Test a call to L{util.LocalAsyncForwarder} using L{Forwarded} local
+        object.
+        """
+        f = Forwarded()
+        lf = util.LocalAsyncForwarder(f, IForwarded)
+        lf.callRemote("forwardMe")
+        self.assertTrue(f.forwarded)
+        lf.callRemote("dontForwardMe")
+        self.assertFalse(f.unforwarded)
+        rr = lf.callRemote("forwardDeferred")
+        l = []
+        rr.addCallback(l.append)
+        self.assertEqual(l[0], 1)
 

@@ -1,14 +1,21 @@
-# -*- test-case-name: twisted.test.test_spread -*-
+# -*- test-case-name: twisted.test.test_pb -*-
 
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""Utility classes for spread."""
+"""
+Utility classes for spread.
+"""
 
 from twisted.internet import defer
 from twisted.python.failure import Failure
+from twisted.spread import pb
+from twisted.protocols import basic
+from twisted.internet import interfaces
+
 from zope.interface import implements
+
 
 class LocalMethod:
     def __init__(self, local, name):
@@ -24,8 +31,10 @@ class LocalAsRemote:
     A class useful for emulating the effects of remote behavior locally.
     """
     reportAllTracebacks = 1
+
     def callRemote(self, name, *args, **kw):
-        """Call a specially-designated local method.
+        """
+        Call a specially-designated local method.
 
         self.callRemote('x') will first try to invoke a method named
         sync_x and return its result (which should probably be a
@@ -49,7 +58,8 @@ class LocalAsRemote:
 
 
 class LocalAsyncForwarder:
-    """A class useful for forwarding a locally-defined interface.
+    """
+    A class useful for forwarding a locally-defined interface.
     """
 
     def __init__(self, forwarded, interfaceClass, failWhenNotImplemented=0):
@@ -74,7 +84,8 @@ class LocalAsyncForwarder:
 
 
 class Pager:
-    """I am an object which pages out information.
+    """
+    I am an object which pages out information.
     """
     def __init__(self, collector, callback=None, *args, **kw):
         """
@@ -92,7 +103,8 @@ class Pager:
         collector.broker.registerPageProducer(self)
 
     def stillPaging(self):
-        """(internal) Method called by Broker.
+        """
+        (internal) Method called by Broker.
         """
         if not self._stillPaging:
             self.collector.callRemote("endedPaging")
@@ -101,22 +113,27 @@ class Pager:
         return self._stillPaging
 
     def sendNextPage(self):
-        """(internal) Method called by Broker.
+        """
+        (internal) Method called by Broker.
         """
         self.collector.callRemote("gotPage", self.nextPage())
 
     def nextPage(self):
-        """Override this to return an object to be sent to my collector.
+        """
+        Override this to return an object to be sent to my collector.
         """
         raise NotImplementedError()
-    
+
     def stopPaging(self):
-        """Call this when you're done paging.
+        """
+        Call this when you're done paging.
         """
         self._stillPaging = 0
 
+
 class StringPager(Pager):
-    """A simple pager that splits a string into chunks.
+    """
+    A simple pager that splits a string into chunks.
     """
     def __init__(self, collector, st, chunkSize=8192, callback=None, *args, **kw):
         self.string = st
@@ -132,17 +149,14 @@ class StringPager(Pager):
         return val
 
 
-from twisted.protocols import basic
-from twisted.internet import interfaces
-
 class FilePager(Pager):
-    """Reads a file in chunks and sends the chunks as they come.
+    """
+    Reads a file in chunks and sends the chunks as they come.
     """
     implements(interfaces.IConsumer)
-    
+
     def __init__(self, collector, fd, callback=None, *args, **kw):
         self.chunks = []
-        self.pointer = 0
         self.startProducing(fd)
         Pager.__init__(self, collector, callback, *args, **kw)
 
@@ -162,31 +176,40 @@ class FilePager(Pager):
         self.chunks.append(chunk)
 
     def sendNextPage(self):
-        if self.pointer >= len(self.chunks):
+        """
+        Get the first chunk read and send it to collector.
+        """
+        if not self.chunks:
             return
-        val = self.chunks[self.pointer]
-        self.pointer += 1
+        val = self.chunks.pop(0)
         self.producer.resumeProducing()
         self.collector.callRemote("gotPage", val)
 
 
-### Utility paging stuff.
-from twisted.spread import pb
+# Utility paging stuff.
 class CallbackPageCollector(pb.Referenceable):
-    """I receive pages from the peer. You may instantiate a Pager with a
+    """
+    I receive pages from the peer. You may instantiate a Pager with a
     remote reference to me. I will call the callback with a list of pages
-    once they are all received."""
+    once they are all received.
+    """
     def __init__(self, callback):
         self.pages = []
         self.callback = callback
+
     def remote_gotPage(self, page):
         self.pages.append(page)
+
     def remote_endedPaging(self):
         self.callback(self.pages)
 
+
 def getAllPages(referenceable, methodName, *args, **kw):
-    """A utility method that will call a remote method which expects a
-    PageCollector as the first argument."""
+    """
+    A utility method that will call a remote method which expects a
+    PageCollector as the first argument.
+    """
     d = defer.Deferred()
     referenceable.callRemote(methodName, CallbackPageCollector(d.callback), *args, **kw)
     return d
+
