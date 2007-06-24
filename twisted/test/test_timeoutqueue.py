@@ -61,8 +61,8 @@ class TimeoutQueueTest(unittest.TestCase):
             return timeoutqueue.TimeoutQueue()
         self.q = self.assertWarns(
             DeprecationWarning,
-            ("timeoutqueue is deprecated since Twisted 2.6",),
-             __file__,
+            "timeoutqueue is deprecated since Twisted 2.6",
+            __file__,
             createQueue)
 
     if interfaces.IReactorThreads(reactor, None) is None:

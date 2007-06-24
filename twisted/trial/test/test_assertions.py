@@ -321,7 +321,7 @@ class TestAssertions(unittest.TestCase):
         def deprecated(a):
             warnings.warn("Woo deprecated", category=DeprecationWarning)
             return a
-        r = self.assertWarns(DeprecationWarning, ("Woo deprecated",), __file__,
+        r = self.assertWarns(DeprecationWarning, "Woo deprecated", __file__,
             deprecated, 123)
         self.assertEquals(r, 123)
 
@@ -333,11 +333,11 @@ class TestAssertions(unittest.TestCase):
         def deprecated(a):
             warnings.warn("Woo deprecated", category=DeprecationWarning)
             return a
-        r1 = self.assertWarns(DeprecationWarning, ("Woo deprecated",), __file__,
+        r1 = self.assertWarns(DeprecationWarning, "Woo deprecated", __file__,
             deprecated, 123)
         self.assertEquals(r1, 123)
         # The warning should be raised again
-        r2 = self.assertWarns(DeprecationWarning, ("Woo deprecated",), __file__,
+        r2 = self.assertWarns(DeprecationWarning, "Woo deprecated", __file__,
             deprecated, 321)
         self.assertEquals(r2, 321)
 
@@ -348,7 +348,7 @@ class TestAssertions(unittest.TestCase):
         def normal(a):
             return a
         self.assertRaises(self.failureException,
-            self.assertWarns, DeprecationWarning, ("Woo deprecated",), __file__,
+            self.assertWarns, DeprecationWarning, "Woo deprecated", __file__,
             normal, 123)
 
     def test_assertWarnsWrongCategory(self):
@@ -359,7 +359,7 @@ class TestAssertions(unittest.TestCase):
             warnings.warn("Foo deprecated", category=DeprecationWarning)
             return a
         self.assertRaises(self.failureException,
-            self.assertWarns, UserWarning, ("Foo deprecated",), __file__,
+            self.assertWarns, UserWarning, "Foo deprecated", __file__,
             deprecated, 123)
 
     def test_assertWarnsWrongMessage(self):
@@ -370,8 +370,65 @@ class TestAssertions(unittest.TestCase):
             warnings.warn("Foo deprecated", category=DeprecationWarning)
             return a
         self.assertRaises(self.failureException,
-            self.assertWarns, DeprecationWarning, ("Bar deprecated",), __file__,
+            self.assertWarns, DeprecationWarning, "Bar deprecated", __file__,
             deprecated, 123)
+
+    def test_assertWarnsOnClass(self):
+        """
+        Test asserWarns works when creating a class instance.
+        """
+        class Warn:
+            def __init__(self):
+                warnings.warn("Do not call me", category=RuntimeWarning)
+        r = self.assertWarns(RuntimeWarning, "Do not call me", __file__,
+            Warn)
+        self.assertTrue(isinstance(r, Warn))
+        r = self.assertWarns(RuntimeWarning, "Do not call me", __file__,
+            Warn)
+        self.assertTrue(isinstance(r, Warn))
+
+    def test_assertWarnsOnMethod(self):
+        """
+        Test assertWarns works when used on an instance method.
+        """
+        class Warn:
+            def deprecated(self, a):
+                warnings.warn("Bar deprecated", category=DeprecationWarning)
+                return a
+        w = Warn()
+        r = self.assertWarns(DeprecationWarning, "Bar deprecated", __file__,
+            w.deprecated, 321)
+        self.assertEquals(r, 321)
+        r = self.assertWarns(DeprecationWarning, "Bar deprecated", __file__,
+            w.deprecated, 321)
+        self.assertEquals(r, 321)
+
+    def test_assertWarnsOnCall(self):
+        """
+        Test assertWarns works on instance with C{__call__} method.
+        """
+        class Warn:
+            def __call__(self, a):
+                warnings.warn("Egg deprecated", category=DeprecationWarning)
+                return a
+        w = Warn()
+        r = self.assertWarns(DeprecationWarning, "Egg deprecated", __file__,
+            w, 321)
+        self.assertEquals(r, 321)
+        r = self.assertWarns(DeprecationWarning, "Egg deprecated", __file__,
+            w, 321)
+        self.assertEquals(r, 321)
+
+    def test_assertWarnsFilter(self):
+        """
+        Test assertWarns on a warning filterd by default.
+        """
+        def deprecated(a):
+            warnings.warn("Woo deprecated", category=PendingDeprecationWarning)
+            return a
+        r = self.assertWarns(PendingDeprecationWarning, "Woo deprecated",
+            __file__, deprecated, 123)
+        self.assertEquals(r, 123)
 
 
 class TestAssertionNames(unittest.TestCase):

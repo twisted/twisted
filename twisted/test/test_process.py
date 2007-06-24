@@ -597,8 +597,8 @@ class ProcessTestCase(unittest.TestCase):
             self.encodedValue)
 
         p = self.assertWarns(DeprecationWarning,
-            ("Argument strings and environment keys/values passed to "
-             "reactor.spawnProcess should be str, not unicode.",), __file__,
+            "Argument strings and environment keys/values passed to "
+            "reactor.spawnProcess should be str, not unicode.", __file__,
             processProtocolClass.run, reactor, argv, env)
         return p.getResult()
 
