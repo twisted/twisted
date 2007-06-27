@@ -1,12 +1,13 @@
 # Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import warnings
 
 from twisted.python import log, logfile
 from twisted.application import app, service, internet
 from twisted import copyright
+
 import sys, os
+
 
 class ServerOptions(app.ServerOptions):
     synopsis = "Usage: twistd [options]"
@@ -15,43 +16,63 @@ class ServerOptions(app.ServerOptions):
                 ]
 
     def opt_version(self):
-        """Print version information and exit.
+        """
+        Print version information and exit.
         """
         print 'twistd (the Twisted Windows runner) %s' % copyright.version
         print copyright.copyright
         sys.exit()
 
 
-def _getLogObserver(logfilename):
+class AppLogger(app.AppLogger):
     """
-    Create and return a suitable log observer for the given configuration.
-
-    The observer will go to stdout if C{logfilename} is empty or equal to
-    C{"-"}.  Otherwise, it will go to a file with that name.
-
-    @type logfilename: C{str}
-    @param logfilename: The name of the file to which to log, if other than the
-    default.
-
-    @return: An object suitable to be passed to C{log.addObserver}.
+    Logger specific to windows.
     """
-    if logfilename == '-' or not logfilename:
-        logFile = sys.stdout
-    else:
-        logFile = logfile.LogFile.fromFullPath(logfilename)
-    return log.FileLogObserver(logFile).emit
 
-
-def startLogging(*args, **kw):
-    warnings.warn(
+    def getLogObserver(self):
         """
-        Use ApplicationRunner instead of startLogging."
-        """,
-        category=PendingDeprecationWarning,
-        stacklevel=2)
-    observer = _getLogObserver(*args, **kw)
-    log.startLoggingWithObserver(observer)
-    sys.stdout.flush()
+        Create and return a suitable log observer for the given configuration.
+
+        The observer will go to stdout if C{logfilename} is empty or equal to
+        C{"-"}.  Otherwise, it will go to a file with that name.
+
+        @return: An object suitable to be passed to C{log.addObserver}.
+        """
+        logfilename = self.config['logfile']
+        if logfilename == '-' or not logfilename:
+            logFile = sys.stdout
+        else:
+            logFile = logfile.LogFile.fromFullPath(logfilename)
+        return log.FileLogObserver(logFile).emit
+
+
+class AppRunner(app.AppRunner):
+    """
+    Runner specific to windows.
+    """
+
+    def setupEnvironment(self):
+        """
+        Manage environment, only rundir for now.
+        """
+        os.chdir(self.options['rundir'])
+
+    def startApplication(self, application):
+        """
+        Start the application: prepare the environment, call normal start.
+        """
+        self.setupEnvironment()
+        service.IService(self.application).privilegedStartService()
+        app.AppRunner.startApplication(self, application)
+        app.AppRunner.startApplication(self, internet.TimerService(0.1, lambda:None), 0)
+
+
+class ApplicationConfig(app.ApplicationConfig):
+    """
+    Configuration specific to windows.
+    """
+    runnerFactory = AppRunner
+    loggerFactory = AppLogger
 
 
 class WindowsApplicationRunner(app.ApplicationRunner):
@@ -63,28 +84,13 @@ class WindowsApplicationRunner(app.ApplicationRunner):
         """
         Do pre-application-creation setup.
         """
-        self.oldstdout = sys.stdout
-        self.oldstderr = sys.stderr
-        os.chdir(self.config['rundir'])
-
-
-    def getLogObserver(self):
-        """
-        Override to supply a log observer suitable for Windows based on the
-        given arguments.
-        """
-        return _getLogObserver(self.config['logfile'])
-
 
     def postApplication(self):
         """
         Start the application and run the reactor.
         """
-        service.IService(self.application).privilegedStartService()
-        app.startApplication(self.application, not self.config['no_save'])
-        app.startApplication(internet.TimerService(0.1, lambda:None), 0)
-        app.runReactorWithLogging(self.config, self.oldstdout, self.oldstderr)
-        app.reportProfile(self.config['report-profile'],
-                          service.IProcess(self.application).processName)
-        log.msg("Server Shut Down.")
+        self.config.runner.start(self.application)
+        # Here the application has stopped
+        self.config.profiling.reportProfile(self.config.process.processName)
+        self.config.logger.finalLog()
 
