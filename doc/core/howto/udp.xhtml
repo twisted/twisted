@@ -101,7 +101,7 @@ class Helloer(DatagramProtocol):
     # Possibly invoked if there is no server listening on the
     # address to which we are sending.
     def connectionRefused(self):
-        print "Noone listening"
+        print "No one listening"
 
 # 0 means any port, we don't care in this case
 reactor.listenUDP(0, Helloer())
