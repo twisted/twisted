@@ -261,6 +261,24 @@ class LogBotFactory(protocol.ClientFactory):
     self.factory. It can then access attributes of the factory in its logic.
     In the case of LogBot, it opens the file and connects to the channel
     stored in the factory.</p>
-    
+
+    <h2>Further Reading</h2>
+
+    <p>The <code class="API" base="twisted.internet.protocol">Protocol</code>
+    class used throughout this document is a base implementation of <code
+    class="API" base="twisted.internet.interfaces">IProtocol</code> used in
+    most Twisted applications for convenience.  To learn about the
+    complete<code>IProtocol</code> interface, see the API documentation for
+    <code class="API" base="twisted.internet.interfaces">IProtocol</code>.</p>
+
+    <p>The <code>transport</code> attribute used in some examples in this
+    document provides the <code class="API" base="twisted.internet.interfaces">
+    ITCPTransport</code> interface.  To learn about the complete interface, see
+    the API documentation for <code class="API"
+    base="twisted.internet.interfaces">ITCPTransport</code>.</p>
+
+    <p>Interface classes are a way of specifying what methods and attributes an
+    object has and how they behave.  See the <a href="components.xhtml">
+    Components: Interfaces and Adapters</a> document.</p>
   </body>
 </html>
