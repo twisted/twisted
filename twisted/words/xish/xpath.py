@@ -3,6 +3,13 @@
 # Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+XPath query support.
+
+This module provides L{XPathQuery} to match
+L{domish.Element<twisted.words.xish.domish.Element>} instances against
+XPath-like expressions.
+"""
 
 try:
     import cStringIO as StringIO
@@ -12,7 +19,8 @@ except ImportError:
 class LiteralValue(str):
     def value(self, elem):
         return self
-    
+
+
 class IndexValue:
     def __init__(self, index):
         self.index = int(index) - 1
@@ -20,20 +28,22 @@ class IndexValue:
     def value(self, elem):
         return elem.children[self.index]
 
+
 class AttribValue:
-    def __init__(self, attribname):        
+    def __init__(self, attribname):
         self.attribname = attribname
         if self.attribname == "xmlns":
             self.value = self.value_ns
 
     def value_ns(self, elem):
-        return elem.uri 
+        return elem.uri
 
     def value(self, elem):
         if self.attribname in elem.attributes:
             return elem.attributes[self.attribname]
         else:
             return None
+
 
 class CompareValue:
     def __init__(self, lhs, op, rhs):
@@ -50,11 +60,50 @@ class CompareValue:
     def _compareNotEqual(self, elem):
         return self.lhs.value(elem) != self.rhs.value(elem)
 
+
+class BooleanValue:
+    """
+    Provide boolean XPath expression operators.
+
+    @ivar lhs: Left hand side expression of the operator.
+    @ivar op: The operator. One of C{'and'}, C{'or'}.
+    @ivar rhs: Right hand side expression of the operator.
+    @ivar value: Reference to the method that will calculate the value of
+                 this expression given an element.
+    """
+    def __init__(self, lhs, op, rhs):
+        self.lhs = lhs
+        self.rhs = rhs
+        if op == "and":
+            self.value = self._booleanAnd
+        else:
+            self.value = self._booleanOr
+
+    def _booleanAnd(self, elem):
+        """
+        Calculate boolean and of the given expressions given an element.
+
+        @param elem: The element to calculate the value of the expression from.
+        """
+        return self.lhs.value(elem) and self.rhs.value(elem)
+
+    def _booleanOr(self, elem):
+        """
+        Calculate boolean or of the given expressions given an element.
+
+        @param elem: The element to calculate the value of the expression from.
+        """
+        return self.lhs.value(elem) or self.rhs.value(elem)
+
+
 def Function(fname):
-    """ Internal method which selects the function object """
+    """
+    Internal method which selects the function object
+    """
     klassname = "_%s_Function" % fname
     c = globals()[klassname]()
     return c
+
 
 class _not_Function:
     def __init__(self):
@@ -62,16 +111,18 @@ class _not_Function:
 
     def setParams(self, baseValue):
         self.baseValue = baseValue
-        
+
     def value(self, elem):
         return not self.baseValue.value(elem)
+
 
 class _text_Function:
     def setParams(self):
         pass
-    
+
     def value(self, elem):
         return str(elem)
+
 
 class _Location:
     def __init__(self):
@@ -82,7 +133,7 @@ class _Location:
     def matchesPredicates(self, elem):
         if self.elementName != None and self.elementName != elem.name:
             return 0
-                
+
         for p in self.predicates:
             if not p.value(elem):
                 return 0
@@ -104,17 +155,17 @@ class _Location:
 
     def queryForString(self, elem, resultbuf):
         if not self.matchesPredicates(elem):
-            return 
+            return
 
         if self.childLocation != None:
             for c in elem.elements():
                 self.childLocation.queryForString(c, resultbuf)
-        else:            
+        else:
             resultbuf.write(str(elem))
 
     def queryForNodes(self, elem, resultlist):
         if not self.matchesPredicates(elem):
-            return 
+            return
 
         if self.childLocation != None:
             for c in elem.elements():
@@ -133,6 +184,7 @@ class _Location:
             for c in elem.children:
                 if isinstance(c, (str, unicode)):
                     resultlist.append(c)
+
 
 class _AnyLocation:
     def __init__(self):
@@ -210,8 +262,8 @@ class _AnyLocation:
 
         # Now check each child
         for c in elem.elements():
-            self.queryForNodes(c, resultlist)            
-        
+            self.queryForNodes(c, resultlist)
+
 
     def queryForStringList(self, elem, resultlist):
         if self.isRootMatch(elem):
@@ -220,7 +272,6 @@ class _AnyLocation:
                     resultlist.append(c)
         for c in elem.elements():
             self.queryForStringList(c, resultlist)
-        
 
 
 class XPathQuery:
@@ -256,6 +307,7 @@ class XPathQuery:
         else:
             return result
 
+
 __internedQueries = {}
 
 def internQuery(queryString):
@@ -263,19 +315,18 @@ def internQuery(queryString):
         __internedQueries[queryString] = XPathQuery(queryString)
     return __internedQueries[queryString]
 
+
 def matches(xpathstr, elem):
     return internQuery(xpathstr).matches(elem)
+
 
 def queryForStringList(xpathstr, elem):
     return internQuery(xpathstr).queryForStringList(elem)
 
+
 def queryForString(xpathstr, elem):
     return internQuery(xpathstr).queryForString(elem)
 
+
 def queryForNodes(xpathstr, elem):
     return internQuery(xpathstr).queryForNodes(elem)
-
-# Convenience main to generate new xpathparser.py
-if __name__ == "__main__":
-    from twisted.python import yapps2
-    yapps2.generate('xpathparser.g')
