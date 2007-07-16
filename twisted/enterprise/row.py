@@ -1,9 +1,11 @@
 # -*- test-case-name: twisted.test.test_reflector -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
 """
+DEPRECATED.
+
 A (R)elational (O)bject (W)rapper.
 
 This is an extremely thin wrapper.
@@ -11,10 +13,14 @@ This is an extremely thin wrapper.
 Maintainer: U{Dave Peticolas<mailto:davep@twistedmatrix.com>}
 """
 
+import warnings
+
 from twisted.enterprise.util import DBError, NOQUOTE, getKeyColumn, dbTypeMap
 
+
 class RowObject:
-    """I represent a row in a table in a relational database.
+    """
+    I represent a row in a table in a relational database.
 
     My class is "populated" by a Reflector object. After I am
     populated, instances of me are able to interact with a particular
@@ -38,11 +44,17 @@ class RowObject:
        rowFactoryMethod  # method to create an instance of this class.
                          # HACK: must be in a list!!! [factoryMethod] (optional)
        rowForeignKeys    # keys to other tables (optional)
-                        
     """
 
     populated = 0    # set on the class when the class is "populated" with SQL
     dirty = 0        # set on an instance when the instance is out-of-sync with the database
+
+    def __init__(self):
+        """
+        DEPRECATED.
+        """
+        warnings.warn("twisted.enterprise.row is deprecated since Twisted 2.6",
+                      category=DeprecationWarning, stacklevel=2)
 
     def assignKeyAttr(self, attrName, value):
         """Assign to a key attribute.

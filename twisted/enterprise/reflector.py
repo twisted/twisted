@@ -1,14 +1,17 @@
 # -*- test-case-name: twisted.test.test_reflector -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-import weakref
+import weakref, warnings
 
 from twisted.enterprise.util import DBError
 
 class Reflector:
-    """Base class for enterprise reflectors. This implements row caching.
+    """
+    DEPRECATED.
+
+    Base class for enterprise reflectors. This implements row caching.
     """
     populated = 0
 
@@ -19,7 +22,8 @@ class Reflector:
         @param rowClasses: a list of row class objects that describe the
             database schema.
         """
-
+        warnings.warn("twisted.enterprise.reflector is deprecated since Twisted 2.6",
+                      category=DeprecationWarning, stacklevel=2)
         self.rowCache = weakref.WeakValueDictionary() # does not hold references to cached rows.
         self.rowClasses = rowClasses
         self.schema = {}

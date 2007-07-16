@@ -1,22 +1,25 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""Tests for twisted.enterprise.adbapi."""
+"""
+Tests for twisted.enterprise.adbapi.
+"""
 
 from twisted.trial import unittest
 
-import os, stat, tempfile
+import os, stat
 
 from twisted.enterprise.adbapi import ConnectionPool, ConnectionLost
 from twisted.internet import reactor, defer, interfaces
-from twisted.python import log
+
 
 simple_table_schema = """
 CREATE TABLE simple (
   x integer
 )
 """
+
 
 class ADBAPITestBase:
     """Test the asynchronous DB-API code."""
@@ -53,7 +56,7 @@ class ADBAPITestBase:
             d.addCallback(self._testPool_1_2)
             d.addCallback(self._testPool_1_3)
             d.addCallback(self._testPool_1_4)
-            d.addCallback(lambda res: log.flushErrors())
+            d.addCallback(lambda res: self.flushLoggedErrors())
         d.addCallback(self._testPool_2)
         d.addCallback(self._testPool_3)
         d.addCallback(self._testPool_4)
@@ -223,17 +226,17 @@ class ADBAPITestBase:
         finally:
             curs.close()
         return "done"
-        
+
     def close_withConnection(self, conn):
         conn.close()
-        
+
     def bad_withConnection(self, conn):
         curs = conn.cursor()
         try:
             curs.execute("select * from NOTABLE")
         finally:
             curs.close()
-        
+
 
 class ReconnectTestBase:
     """Test the asynchronous DB-API code with reconnect."""
@@ -333,11 +336,11 @@ class DBTestConnector:
 
     def setUpClass(self):
         if self.needs_dbdir:
-            self.DB_DIR = tempfile.mktemp()
+            self.DB_DIR = self.mktemp()
             os.mkdir(self.DB_DIR)
 
         if not self.can_connect():
-            raise unittest.SkipTest, '%s: Cannot access db' % self.TEST_PREFIX
+            raise unittest.SkipTest('%s: Cannot access db' % self.TEST_PREFIX)
 
     def can_connect(self):
         """Return true if this database is present on the system
@@ -529,7 +532,8 @@ class FirebirdConnector(DBTestConnector):
         conn.drop_database()
 
 def makeSQLTests(base, suffix, globals):
-    """Make a test case for every db connector which can connect.
+    """
+    Make a test case for every db connector which can connect.
 
     @param base: Base class for test case. Additional base classes
                  will be a DBConnector subclass and unittest.TestCase
@@ -541,7 +545,7 @@ def makeSQLTests(base, suffix, globals):
     for connclass in connectors:
         name = connclass.TEST_PREFIX + suffix
         import new
-        klass = new.classobj(name, (connclass, base, unittest.TestCase), {})
+        klass = new.classobj(name, (connclass, base, unittest.TestCase), base.__dict__)
         globals[name] = klass
 
 # GadflyADBAPITestCase SQLiteADBAPITestCase PyPgSQLADBAPITestCase

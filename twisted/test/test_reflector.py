@@ -1,22 +1,25 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+Tests for twisted.enterprise reflectors.
+"""
 
-"""Tests for twisted.enterprise reflectors."""
-
-from twisted.trial import unittest
-
-import os, random
+import random
 
 from twisted.internet import reactor, interfaces, defer
 from twisted.enterprise.row import RowObject
-from twisted.enterprise.reflector import *
+from twisted.enterprise.reflector import EQUAL
 from twisted.enterprise.sqlreflector import SQLReflector
 from twisted.enterprise import util
 from twisted.test.test_adbapi import makeSQLTests
+from twisted.trial.util import suppress as suppressWarning
+from twisted.trial import unittest
+
 
 tableName = "testTable"
 childTableName = "childTable"
+
 
 class TestRow(RowObject):
     rowColumns = [("key_string",      "varchar"),
@@ -26,6 +29,7 @@ class TestRow(RowObject):
                   ("column_5_",       "int")]
     rowKeyColumns = [("key_string", "varchar")]
     rowTableName  = tableName
+
 
 class ChildRow(RowObject):
     rowColumns    = [("childId",  "int"),
@@ -40,6 +44,7 @@ class ChildRow(RowObject):
                        [("test_key","varchar")],
                        [("key_string","varchar")],
                        None, 1)]
+
 
 main_table_schema = """
 CREATE TABLE testTable (
@@ -61,6 +66,7 @@ CREATE TABLE childTable (
   data           varchar(64)
 )
 """
+
 
 def randomizeRow(row, nulls_ok=True, trailing_spaces_ok=True):
     values = {}
@@ -84,6 +90,7 @@ def randomizeRow(row, nulls_ok=True, trailing_spaces_ok=True):
         values[name] = value
     return values
 
+
 def rowMatches(row, values):
     for name, type in row.rowColumns:
         if getattr(row, name) != values[name]:
@@ -92,8 +99,21 @@ def rowMatches(row, values):
             return False
     return True
 
+
+rowObjectSuppression = suppressWarning(
+    message="twisted.enterprise.row is deprecated since Twisted 2.6",
+    category=DeprecationWarning)
+
+
+reflectorSuppression = suppressWarning(
+    message="twisted.enterprise.reflector is deprecated since Twisted 2.6",
+    category=DeprecationWarning)
+
+
 class ReflectorTestBase:
-    """Base class for testing reflectors."""
+    """
+    Base class for testing reflectors.
+    """
 
     if interfaces.IReactorThreads(reactor, None) is None:
         skip = "No thread support, no reflector tests"
@@ -117,7 +137,10 @@ class ReflectorTestBase:
     def destroyReflector(self):
         pass
 
-    def testReflector(self):
+    def test_reflector(self):
+        """
+        Full featured tests of reflector.
+        """
         # create one row to work with
         row = TestRow()
         row.assignKeyAttr("key_string", "first")
@@ -144,6 +167,7 @@ class ReflectorTestBase:
         d.addCallback(_getParent)
         d.addCallback(self._cbTestReflector)
         return d
+    test_reflector.suppress = [rowObjectSuppression, reflectorSuppression]
 
     def _cbTestReflector(self, parent):
         # create some child rows
@@ -266,7 +290,10 @@ class ReflectorTestBase:
         return d
 
 
-    def testSaveAndDelete(self):
+    def test_saveAndDelete(self):
+        """
+        Create a row and then try to delete it.
+        """
         # create one row to work with
         row = TestRow()
         row.assignKeyAttr("key_string", "first")
@@ -278,15 +305,20 @@ class ReflectorTestBase:
             return self.reflector.deleteRow(row)
         d.addCallback(_deleteRow)
         return d
+    test_saveAndDelete.suppress = [rowObjectSuppression, reflectorSuppression]
 
 
     def gotData(self, data):
         self.data = data
 
+
 ReflectorTestBase.timeout = 30.0
 
+
 class SQLReflectorTestBase(ReflectorTestBase):
-    """Base class for the SQL reflector."""
+    """
+    Base class for the SQL reflector.
+    """
 
     def createReflector(self):
         self.startDB()
@@ -319,12 +351,46 @@ class SQLReflectorTestBase(ReflectorTestBase):
         d.addCallback(close)
         return d
 
+
+class DeprecationTestCase(unittest.TestCase):
+    """
+    Test various deprecations of twisted.enterprise.
+    """
+
+    def test_rowDeprecation(self):
+        """
+        Test deprecation of L{RowObject}.
+        """
+        def wrapper():
+            return TestRow()
+        self.assertWarns(DeprecationWarning,
+            "twisted.enterprise.row is deprecated since Twisted 2.6",
+            __file__,
+            wrapper)
+
+    def test_reflectorDeprecation(self):
+        """
+        Test deprecation of L{SQLReflector}.
+        """
+        def wrapper():
+            return SQLReflector(None, ())
+        from twisted.enterprise import sqlreflector
+        self.assertWarns(DeprecationWarning,
+            "twisted.enterprise.reflector is deprecated since Twisted 2.6",
+            sqlreflector.__file__,
+            wrapper)
+
+
 # GadflyReflectorTestCase SQLiteReflectorTestCase PyPgSQLReflectorTestCase
 # PsycopgReflectorTestCase MySQLReflectorTestCase FirebirdReflectorTestCase
 makeSQLTests(SQLReflectorTestBase, 'ReflectorTestCase', globals())
 
+
 class NoSlashSQLReflector(SQLReflector):
-    """An sql reflector that only escapes single quotes."""
+    """
+    An sql reflector that only escapes single quotes.
+    """
 
     def escape_string(self, text):
         return text.replace("'", "''")
+
