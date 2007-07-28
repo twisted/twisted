@@ -1,20 +1,21 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
+"""
+Test code for policies.
+"""
 
-"""Test code for policies."""
-from __future__ import nested_scopes
+import time
+
 from StringIO import StringIO
 
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransportWithDisconnection
 from twisted.test.time_helpers import Clock
 
-import time
-
 from twisted.internet import protocol, reactor, address, defer
 from twisted.protocols import policies
+
 
 class StringIOWithoutClosing(StringIO):
     def close(self): pass
@@ -23,7 +24,7 @@ class SimpleProtocol(protocol.Protocol):
 
     connected = disconnected = 0
     buffer = ""
-    
+
     def __init__(self):
         self.dConnected = defer.Deferred()
         self.dDisconnected = defer.Deferred()
@@ -106,7 +107,7 @@ class WrapperTestCase(unittest.TestCase):
 
 class WrappingFactory(policies.WrappingFactory):
     protocol = lambda s, f, p: p
-    
+
     def startFactory(self):
         policies.WrappingFactory.startFactory(self)
         self.deferred.callback(None)
@@ -124,11 +125,11 @@ class ThrottlingTestCase(unittest.TestCase):
         tServer = policies.ThrottlingFactory(server, 2)
         wrapTServer = WrappingFactory(tServer)
         wrapTServer.deferred = defer.Deferred()
-        
+
         # Start listening
         p = reactor.listenTCP(0, wrapTServer, interface="127.0.0.1")
         n = p.getHost().port
-        
+
         def _connect123(results):
             reactor.connectTCP("127.0.0.1", n, SillyFactory(c1))
             c1.dConnected.addCallback(lambda r: reactor.connectTCP("127.0.0.1", n, SillyFactory(c2)))
@@ -162,7 +163,7 @@ class ThrottlingTestCase(unittest.TestCase):
                 defer.maybeDeferred(p.stopListening),
                 c2.dDisconnected,
                 c4.dDisconnected])
-        
+
         wrapTServer.deferred.addCallback(_connect123)
         wrapTServer.deferred.addCallback(_check123)
         wrapTServer.deferred.addCallback(_lose1)
@@ -281,16 +282,29 @@ class ThrottlingTestCase(unittest.TestCase):
     testWriteLimit.skip = "Inaccurate tests are worse than no tests."
 
 
-class TimeoutTestCase(unittest.TestCase):
-    def setUpClass(self):
+
+class ClockMixin:
+    """
+    Mixin defining TestCase methods to install a L{Clock} in L{setUp} and
+    removes it in L{tearDown}.
+    """
+    def setUp(self):
+        """
+        Install a testable, deterministic clock.
+        """
         self.clock = Clock()
         self.clock.install()
 
 
-    def tearDownClass(self):
+    def tearDown(self):
+        """
+        Remove the test clock installed by L{setUp}.
+        """
         self.clock.uninstall()
 
 
+
+class TimeoutTestCase(ClockMixin, unittest.TestCase):
     def _serverSetup(self):
         # Create a server factory, get a protocol from it, connect it to a
         # transport, and return all three.
@@ -393,16 +407,7 @@ class TimeoutTester(protocol.Protocol, policies.TimeoutMixin):
         self.timedOut = 1
 
 
-class TestTimeout(unittest.TestCase):
-
-    def setUpClass(self):
-        self.clock = Clock()
-        self.clock.install()
-
-    def tearDownClass(self):
-        self.clock.uninstall()
-
-
+class TestTimeout(ClockMixin, unittest.TestCase):
     def testOverriddenCallLater(self):
         """
         Test that setting callLater on a subclass of TimeoutMixin causes the
