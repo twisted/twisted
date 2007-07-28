@@ -752,7 +752,7 @@ class PagingTestCase(unittest.TestCase):
     Test pb objects sending data by pages.
     """
 
-    def setUpClass(self):
+    def setUp(self):
         """
         Create a file used to test L{util.FilePager}.
         """
@@ -761,11 +761,6 @@ class PagingTestCase(unittest.TestCase):
         fd.write(bigString)
         fd.close()
 
-    def tearDownClass(self):
-        """
-        Remove the created file.
-        """
-        os.remove(self.filename)
 
     def test_pagingWithCallback(self):
         """
