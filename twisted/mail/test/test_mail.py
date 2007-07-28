@@ -1171,12 +1171,20 @@ class ProcessAliasTestCase(unittest.TestCase):
         'Last line'
     ]
 
-    def setUpClass(self):
+    def setUp(self):
+        """
+        Replace L{smtp.DNSNAME} with a well-known value.
+        """
         self.DNSNAME = smtp.DNSNAME
         smtp.DNSNAME = ''
 
-    def tearDownClass(self):
+
+    def tearDown(self):
+        """
+        Restore the original value of L{smtp.DNSNAME}.
+        """
         smtp.DNSNAME = self.DNSNAME
+
 
     def testProcessAlias(self):
         path = util.sibpath(__file__, 'process.alias.sh')
