@@ -291,12 +291,21 @@ class HashedPasswordOnDiskDatabaseTestCase(unittest.TestCase):
 
 class PluggableAuthenticationModulesTest(unittest.TestCase):
 
-    def setUpClass(self):
+    def setUp(self):
+        """
+        Replace L{pamauth.callIntoPAM} with a dummy implementation with
+        easily-controlled behavior.
+        """
         self._oldCallIntoPAM = pamauth.callIntoPAM
         pamauth.callIntoPAM = self.callIntoPAM
 
-    def tearDownClass(self):
+
+    def tearDown(self):
+        """
+        Restore the original value of L{pamauth.callIntoPAM}.
+        """
         pamauth.callIntoPAM = self._oldCallIntoPAM
+
 
     def callIntoPAM(self, service, user, conv):
         if service != 'Twisted':
