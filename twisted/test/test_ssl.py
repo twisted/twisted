@@ -1,8 +1,7 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-from __future__ import nested_scopes
 from twisted.trial import unittest, util as trial_util
 from twisted.internet import protocol, reactor, interfaces, defer
 from twisted.protocols import basic
@@ -159,9 +158,9 @@ class ContextGeneratingMixin:
             os.extsep.join((base, 'key')),
             os.extsep.join((base, 'cert')),
             *args, **kwArgs)
-        
+
         return base, serverCtxFactory
-    
+
     def setupServerAndClient(self, clientArgs, clientKwArgs, serverArgs, serverKwArgs):
         self.clientBase, self.clientCtxFactory = self.makeContextFactory(
             *clientArgs, **clientKwArgs)
@@ -211,28 +210,6 @@ class TLSTestCase(unittest.TestCase):
     port = None
     clientProto = None
     serverProto = None
-
-    def setUpClass(self):
-        # This is really, really bad and really, really stupid.  If you are
-        # reading this and Twisted has gained support for handling
-        # SSL.Errors without automatically logging them (causing this test
-        # to fail), please rewrite this test to *not* call ignoreErrors
-        # here, and instead simply not log the exception that testUnTLS
-        # induces:
-        #
-        # OpenSSL.SSL.Error: [('SSL routines', 'SSL3_READ_BYTES', 'ssl handshake failure')]
-        #
-        # This happens because only one side of the connection is speaking
-        # SSL in that test method, the other end is just collecting bytes
-        # and examining them.
-        #
-        # Until it is possible to avoid having this error logged, we have to
-        # rely on the asserts in the tests making sure things are going
-        # alright.
-        log.ignoreErrors(SSL.Error)
-
-    def tearDownClass(self):
-        log.clearIgnores()
 
     def tearDown(self):
         if self.clientProto is not None and self.clientProto.transport is not None:
@@ -376,20 +353,20 @@ class ConnectionLostTestCase(unittest.TestCase, ContextGeneratingMixin):
         self.setupServerAndClient(
             (org, org + ", client"), {},
             (org, org + ", server"), {})
-        
+
         # Set up a server, connect to it with a client, which should work since our verifiers
         # allow anything, then disconnect.
         serverProtocolFactory = protocol.ServerFactory()
         serverProtocolFactory.protocol = protocol.Protocol
-        self.serverPort = serverPort = reactor.listenSSL(0, 
+        self.serverPort = serverPort = reactor.listenSSL(0,
             serverProtocolFactory, self.serverCtxFactory)
 
         clientProtocolFactory = protocol.ClientFactory()
         clientProtocolFactory.protocol = ImmediatelyDisconnectingProtocol
         clientProtocolFactory.connectionDisconnected = defer.Deferred()
-        clientConnector = reactor.connectSSL('127.0.0.1', 
+        clientConnector = reactor.connectSSL('127.0.0.1',
             serverPort.getHost().port, clientProtocolFactory, self.clientCtxFactory)
-        
+
         return clientProtocolFactory.connectionDisconnected.addCallback(
             lambda ignoredResult: self.serverPort.stopListening())
 
@@ -449,6 +426,6 @@ class ConnectionLostTestCase(unittest.TestCase, ContextGeneratingMixin):
 
 
 if interfaces.IReactorSSL(reactor, None) is None:
-    for tCase in [StolenTCPTestCase, TLSTestCase, SpammyTLSTestCase, 
+    for tCase in [StolenTCPTestCase, TLSTestCase, SpammyTLSTestCase,
                   BufferingTestCase, ConnectionLostTestCase]:
         tCase.skip = "Reactor does not support SSL, cannot run SSL tests"
