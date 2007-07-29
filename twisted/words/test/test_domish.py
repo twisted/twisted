@@ -208,7 +208,9 @@ class DomishSuxStreamTestCase(unittest.TestCase, DomishStreamTests):
 
         self.streamClass = domish.SuxElementStream
 
-class SerializerTests:
+
+
+class SerializerTests(unittest.TestCase):
     def testNoNamespace(self):
         e = domish.Element((None, "foo"))
         self.assertEquals(e.toXml(), "<foo/>")
@@ -365,12 +367,3 @@ class SerializerTests:
         e.addContent(u"A degree symbol...\u00B0")
         self.assertEquals(e.toXml(),
                           u"<foo test='my value\u0221e'>A degree symbol...\u00B0</foo>")
-
-class DomishTestListSerializer(unittest.TestCase, SerializerTests):
-    def setUpClass(self):
-        self.__serializerClass = domish.SerializerClass
-        domish.SerializerClass = domish._ListSerializer
-
-    def tearDownClass(self):
-        domish.SerializerClass = self.__serializerClass
-
