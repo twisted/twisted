@@ -12,6 +12,8 @@ from twisted import copyright
 
 # Expose the new implementation of installReactor at the old location.
 from twisted.application.reactors import installReactor
+from twisted.application.reactors import NoSuchReactor
+from twisted.application.reactors import ReactorInstallationFailed
 
 
 def runWithProfiler(reactor, config):
@@ -282,12 +284,16 @@ class ReactorSelectionMixin:
     Provides options for selecting a reactor to install.
     """
     zsh_actions = {"reactor" : _reactorZshAction}
+    messageOutput = sys.stdout
+
+
     def opt_help_reactors(self):
         """
         Display a list of possibly available reactor names.
         """
         for r in reactors.getReactorTypes():
-            print '    ', r.shortName, '\t', r.description
+            self.messageOutput.write('    %s\t%s\n' %
+                                     (r.shortName, r.description))
         raise SystemExit(0)
 
 
@@ -300,7 +306,20 @@ class ReactorSelectionMixin:
         # runs and accidentally imports and installs the default reactor.
         #
         # This could probably be improved somehow.
-        installReactor(shortName)
+        try:
+            installReactor(shortName)
+        except NoSuchReactor:
+            self.messageOutput.write("The specified reactor does not exist: "
+                                     "'%s'\n" % (shortName,))
+            self.messageOutput.write("See the list of available reactors with "
+                                     "--help-reactors\n")
+            raise SystemExit(1)
+        except ReactorInstallationFailed, e:
+            self.messageOutput.write("The specified reactor cannot be used, "
+                                     "failed with error: %s\n" % (e,))
+            self.messageOutput.write("See the list of available reactors with "
+                                     "--help-reactors\n")
+            raise SystemExit(1)
     opt_r = opt_reactor
 
 
