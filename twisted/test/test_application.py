@@ -2,8 +2,6 @@
 # See LICENSE for details.
 
 import sys, copy, os, pickle, warnings
-from StringIO import StringIO
-
 
 from twisted.trial import unittest, util
 from twisted.application import service, internet, app
@@ -681,22 +679,6 @@ class PluggableReactorTestCase(unittest.TestCase):
             reactors.installReactor, 'somereactor')
 
 
-    def test_installNotAvailableReactor(self):
-        """
-        Test that L{reactors.installReactor} raises
-        L{reactors.ReactorInstallationFailed} when asked to install a reactor
-        which doesn't work in this environment.
-        """
-        global install
-        def install():
-            raise ImportError("Missing foo bar")
-        name = 'fakereactortest'
-        package = __name__
-        description = 'description'
-        self.pluginResults = [reactors.Reactor(name, package, description)]
-        self.assertRaises(reactors.ReactorInstallationFailed,
-            reactors.installReactor, name)
-
 
     def test_reactorSelectionMixin(self):
         """
@@ -716,56 +698,12 @@ class PluggableReactorTestCase(unittest.TestCase):
         global install
         def install():
             executed.append(INSTALL_EVENT)
-        self.pluginResults = [
-            reactors.Reactor('fakereactortest', __name__, 'described')
-        ]
+        self.pluginResults = [reactors.Reactor('fakereactortest', __name__, 'described')]
 
         options = ReactorSelectionOptions()
         options.parseOptions(['--reactor', 'fakereactortest', 'subcommand'])
         self.assertEqual(executed[0], INSTALL_EVENT)
         self.assertEqual(executed.count(INSTALL_EVENT), 1)
-
-
-    def test_reactorSelectionMixinNonExistent(self):
-        """
-        Test that the usage mixin exits when passing a non existent reactor,
-        giving an error message.
-        """
-        class ReactorSelectionOptions(usage.Options, app.ReactorSelectionMixin):
-            pass
-        self.pluginResults = []
-
-        options = ReactorSelectionOptions()
-        options.messageOutput = StringIO()
-        self.assertRaises(SystemExit, options.parseOptions,
-                          ['--reactor', 'fakereactortest', 'subcommand'])
-        self.assertIn("fakereactortest", options.messageOutput.getvalue())
-        self.assertIn("help-reactors", options.messageOutput.getvalue())
-
-
-    def test_reactorSelectionMixinNotAvailable(self):
-        """
-        Test that the usage mixin exits when passing a reactor not available,
-        giving an error message.
-        """
-        class ReactorSelectionOptions(usage.Options, app.ReactorSelectionMixin):
-            pass
-        message = "Missing foo bar"
-        global install
-        def install():
-            raise ImportError(message)
-
-        name = 'fakereactortest'
-        package = __name__
-        description = 'description'
-        self.pluginResults = [reactors.Reactor(name, package, description)]
-
-        options = ReactorSelectionOptions()
-        options.messageOutput = StringIO()
-        self.assertRaises(SystemExit, options.parseOptions,
-                          ['--reactor', 'fakereactortest', 'subcommand'])
-        self.assertIn(message, options.messageOutput.getvalue())
-        self.assertIn("help-reactors", options.messageOutput.getvalue())
 
 
     def test_qtStub(self):

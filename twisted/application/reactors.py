@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_application -*-
-# Copyright (c) 2006-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2006 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -41,11 +41,6 @@ class NoSuchReactor(KeyError):
     """
 
 
-class ReactorInstallationFailed(RuntimeError):
-    """
-    Raised when the installation of a reactor fails.
-    """
-
 
 class Reactor(object):
     """
@@ -82,9 +77,6 @@ def installReactor(shortName):
     """
     for installer in getReactorTypes():
         if installer.shortName == shortName:
-            try:
-                installer.install()
-            except Exception, e:
-                raise ReactorInstallationFailed(e)
+            installer.install()
             return
     raise NoSuchReactor(shortName)
