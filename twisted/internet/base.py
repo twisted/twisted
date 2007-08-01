@@ -250,6 +250,148 @@ class BlockingResolver:
         else:
             return defer.succeed(address)
 
+
+class _ThreePhaseEvent(object):
+    """
+    Collection of callables (with arguments) which can be invoked as a group in
+    a particular order.
+
+    This provides the underlying implementation for the reactor's system event
+    triggers.  An instance of this class tracks triggers for all phases of a
+    single type of event.
+
+    @ivar before: A list of the before-phase triggers containing three-tuples
+        of a callable, a tuple of positional arguments, and a dict of keyword
+        arguments
+
+    @ivar finishedBefore: A list of the before-phase triggers which have
+        already been executed.  This is only populated in the C{'BEFORE'} state.
+
+    @ivar during: A list of the during-phase triggers containing three-tuples
+        of a callable, a tuple of positional arguments, and a dict of keyword
+        arguments
+
+    @ivar after: A list of the after-phase triggers containing three-tuples
+        of a callable, a tuple of positional arguments, and a dict of keyword
+        arguments
+
+    @ivar state: A string indicating what is currently going on with this
+        object.  One of C{'BASE'} (for when nothing in particular is happening;
+        this is the initial value), C{'BEFORE'} (when the before-phase triggers
+        are in the process of being executed).
+    """
+    def __init__(self):
+        self.before = []
+        self.during = []
+        self.after = []
+        self.state = 'BASE'
+
+
+    def addTrigger(self, phase, callable, *args, **kwargs):
+        """
+        Add a trigger to the indicate phase.
+
+        @param phase: One of C{'before'}, C{'during'}, or C{'after'}.
+
+        @param callable: An object to be called when this event is triggered.
+        @param *args: Positional arguments to pass to C{callable}.
+        @param **kwargs: Keyword arguments to pass to C{callable}.
+
+        @return: An opaque handle which may be passed to L{removeTrigger} to
+            reverse the effects of calling this method.
+        """
+        if phase not in ('before', 'during', 'after'):
+            raise KeyError("invalid phase")
+        getattr(self, phase).append((callable, args, kwargs))
+        return phase, callable, args, kwargs
+
+
+    def removeTrigger(self, handle):
+        """
+        Remove a previously added trigger callable.
+
+        @param handle: An object previously returned by L{addTrigger}.  The
+            trigger added by that call will be removed.
+
+        @raise ValueError: If the trigger associated with C{handle} has already
+            been removed or if C{handle} is not a valid handle.
+        """
+        return getattr(self, 'removeTrigger_' + self.state)(handle)
+
+
+    def removeTrigger_BASE(self, handle):
+        """
+        Just try to remove the trigger.
+
+        @see removeTrigger
+        """
+        try:
+            phase, callable, args, kwargs = handle
+        except (TypeError, ValueError), e:
+            raise ValueError("invalid trigger handle")
+        else:
+            if phase not in ('before', 'during', 'after'):
+                raise KeyError("invalid phase")
+            getattr(self, phase).remove((callable, args, kwargs))
+
+
+    def removeTrigger_BEFORE(self, handle):
+        """
+        Remove the trigger if it has yet to be executed, otherwise emit a
+        warning that in the future an exception will be raised when removing an
+        already-executed trigger.
+
+        @see removeTrigger
+        """
+        phase, callable, args, kwargs = handle
+        if phase != 'before':
+            return self.removeTrigger_BASE(handle)
+        if (callable, args, kwargs) in self.finishedBefore:
+            warnings.warn(
+                "Removing already-fired system event triggers will raise an "
+                "exception in a future version of Twisted.",
+                category=DeprecationWarning,
+                stacklevel=3)
+        else:
+            self.removeTrigger_BASE(handle)
+
+
+    def fireEvent(self):
+        """
+        Call the triggers added to this event.
+        """
+        self.state = 'BEFORE'
+        self.finishedBefore = []
+        beforeResults = []
+        while self.before:
+            callable, args, kwargs = self.before.pop(0)
+            self.finishedBefore.append((callable, args, kwargs))
+            try:
+                result = callable(*args, **kwargs)
+            except:
+                log.err()
+            else:
+                if isinstance(result, Deferred):
+                    beforeResults.append(result)
+        DeferredList(beforeResults).addCallback(self._continueFiring)
+
+
+    def _continueFiring(self, ignored):
+        """
+        Call the during and after phase triggers for this event.
+        """
+        self.state = 'BASE'
+        self.finishedBefore = []
+        for phase in self.during, self.after:
+            while phase:
+                callable, args, kwargs = phase.pop(0)
+                try:
+                    callable(*args, **kwargs)
+                except:
+                    log.err()
+
+
+
 class ReactorBase(object):
     """Default base class for Reactors.
     """
@@ -377,64 +519,31 @@ class ReactorBase(object):
         self.runUntilCurrent()
         self.doIteration(delay)
 
+
     def fireSystemEvent(self, eventType):
         """See twisted.internet.interfaces.IReactorCore.fireSystemEvent.
         """
-        sysEvtTriggers = self._eventTriggers.get(eventType)
-        if not sysEvtTriggers:
-            return
-        defrList = []
-        for callable, args, kw in sysEvtTriggers[0]:
-            try:
-                d = callable(*args, **kw)
-            except:
-                log.deferr()
-            else:
-                if isinstance(d, Deferred):
-                    defrList.append(d)
-        if defrList:
-            DeferredList(defrList).addBoth(self._cbContinueSystemEvent, eventType)
-        else:
-            self.callLater(0, self._continueSystemEvent, eventType)
+        event = self._eventTriggers.get(eventType)
+        if event is not None:
+            event.fireEvent()
 
-
-    def _cbContinueSystemEvent(self, result, eventType):
-        self._continueSystemEvent(eventType)
-
-
-    def _continueSystemEvent(self, eventType):
-        sysEvtTriggers = self._eventTriggers.get(eventType)
-        for callList in sysEvtTriggers[1], sysEvtTriggers[2]:
-            for callable, args, kw in callList:
-                try:
-                    callable(*args, **kw)
-                except:
-                    log.deferr()
-        # now that we've called all callbacks, no need to store
-        # references to them anymore, in fact this can cause problems.
-        del self._eventTriggers[eventType]
 
     def addSystemEventTrigger(self, _phase, _eventType, _f, *args, **kw):
         """See twisted.internet.interfaces.IReactorCore.addSystemEventTrigger.
         """
         assert callable(_f), "%s is not callable" % _f
-        if self._eventTriggers.has_key(_eventType):
-            triglist = self._eventTriggers[_eventType]
-        else:
-            triglist = [[], [], []]
-            self._eventTriggers[_eventType] = triglist
-        evtList = triglist[{"before": 0, "during": 1, "after": 2}[_phase]]
-        evtList.append((_f, args, kw))
-        return (_phase, _eventType, (_f, args, kw))
+        if _eventType not in self._eventTriggers:
+            self._eventTriggers[_eventType] = _ThreePhaseEvent()
+        return (_eventType, self._eventTriggers[_eventType].addTrigger(
+            _phase, _f, *args, **kw))
+
 
     def removeSystemEventTrigger(self, triggerID):
         """See twisted.internet.interfaces.IReactorCore.removeSystemEventTrigger.
         """
-        phase, eventType, item = triggerID
-        self._eventTriggers[eventType][{"before": 0,
-                                        "during": 1,
-                                        "after":  2}[phase]
-                                       ].remove(item)
+        eventType, handle = triggerID
+        self._eventTriggers[eventType].removeTrigger(handle)
+
 
     def callWhenRunning(self, _callable, *args, **kw):
         """See twisted.internet.interfaces.IReactorCore.callWhenRunning.

@@ -659,6 +659,15 @@ class IReactorCore(Interface):
         """Removes a trigger added with addSystemEventTrigger.
 
         @param triggerID: a value returned from addSystemEventTrigger.
+
+        @raise KeyError: If there is no system event trigger for the given
+            C{triggerID}.
+
+        @raise ValueError: If there is no system event trigger for the given
+            C{triggerID}.
+
+        @raise TypeError: If there is no system event trigger for the given
+            C{triggerID}.
         """
 
     def callWhenRunning(callable, *args, **kw):
