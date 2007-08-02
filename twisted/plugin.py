@@ -1,5 +1,6 @@
 # -*- test-case-name: twisted.test.test_plugin -*-
 # Copyright (c) 2005 Divmod, Inc.
+# Copyright (c) 2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -9,7 +10,8 @@ Plugin system for Twisted.
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-from __future__ import generators
+import os
+import sys
 
 from zope.interface import Interface, providedBy
 
@@ -79,11 +81,31 @@ class CachedPlugin(object):
     # backwards compat HOORJ
     getComponent = __conform__
 
+
+
 class CachedDropin(object):
+    """
+    A collection of L{CachedPlugin} instances from a particular module in a
+    plugin package.
+
+    @type moduleName: C{str}
+    @ivar moduleName: The fully qualified name of the plugin module this
+        represents.
+
+    @type description: C{str} or C{NoneType}
+    @ivar description: A brief explanation of this collection of plugins
+        (probably the plugin module's docstring).
+
+    @type plugins: C{list}
+    @ivar plugins: The L{CachedPlugin} instances which were loaded from this
+        dropin.
+    """
     def __init__(self, moduleName, description):
         self.moduleName = moduleName
         self.description = description
         self.plugins = []
+
+
 
 def _generateCacheEntry(provider):
     dropin = CachedDropin(provider.__name__,
@@ -199,4 +221,34 @@ def getPlugins(interface, package=None):
 getPlugIns = getPlugins
 
 
-__all__ = ['getPlugins']
+def pluginPackagePaths(name):
+    """
+    Return a list of additional directories which should be searched for
+    modules to be included as part of the named plugin package.
+
+    @type name: C{str}
+    @param name: The fully-qualified Python name of a plugin package, eg
+        C{'twisted.plugins'}.
+
+    @rtype: C{list} of C{str}
+    @return: The absolute paths to other directories which may contain plugin
+        modules for the named plugin package.
+    """
+    package = name.split('.')
+    # Note that this may include directories which do not exist.  It may be
+    # preferable to remove such directories at this point, rather than allow
+    # them to be searched later on.
+    #
+    # Note as well that only '__init__.py' will be considered to make a
+    # directory a package (and thus exclude it from this list).  This means
+    # that if you create a master plugin package which has some other kind of
+    # __init__ (eg, __init__.pyc) it will be incorrectly treated as a
+    # supplementary plugin directory.
+    return [
+        os.path.abspath(os.path.join(x, *package))
+        for x
+        in sys.path
+        if
+        not os.path.exists(os.path.join(x, *package + ['__init__.py']))]
+
+__all__ = ['getPlugins', 'pluginPackagePaths']

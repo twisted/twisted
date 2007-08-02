@@ -1,5 +1,6 @@
 # -*- test-case-name: twisted.test.test_plugin -*-
 # Copyright (c) 2005 Divmod, Inc.
+# Copyright (c) 2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -11,7 +12,6 @@ the __path__ variable.
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
 
-import os, sys
-__path__ = [os.path.abspath(os.path.join(x, 'twisted', 'plugins')) for x in sys.path]
-
+from twisted.plugin import pluginPackagePaths
+__path__.extend(pluginPackagePaths(__name__))
 __all__ = []                    # nothing to see here, move along, move along
