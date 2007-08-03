@@ -556,26 +556,12 @@ class TestLoggingFactory(policies.TrafficLoggingFactory):
         self.openFile = StringIO()
         return self.openFile
 
-
-
 class LoggingFactoryTestCase(unittest.TestCase):
-
-    def tearDown(self):
-        """
-        Clean up connection counters.
-        """
-        TestLoggingFactory.resetCounter()
-
-
-    def test_thingsGetLogged(self):
-        """
-        Check the output produced by L{policies.TrafficLoggingFactory}.
-        """
+    def testThingsGetLogged(self):
         wrappedFactory = Server()
         wrappedFactory.protocol = WriteSequenceEchoProtocol
         t = StringTransportWithDisconnection()
         f = TestLoggingFactory(wrappedFactory, 'test')
-        self.assertEqual(f._counter, 0)
         p = f.buildProtocol(('1.2.3.4', 5678))
         t.protocol = p
         p.makeConnection(t)
@@ -587,17 +573,17 @@ class LoggingFactoryTestCase(unittest.TestCase):
         p.dataReceived('here are some bytes')
 
         v = f.openFile.getvalue()
-        self.assertIn("C 1: 'here are some bytes'", v)
-        self.assertIn("S 1: 'here are some bytes'", v)
+        self.assertNotEqual(-1, v.find("C 1: 'here are some bytes'"), "Expected client string not found in %r" % (v,))
+        self.assertNotEqual(-1, v.find("S 1: 'here are some bytes'"), "Expected server string not found in %r" % (v,))
         self.assertEquals(t.value(), 'here are some bytes')
 
         t.clear()
         p.dataReceived('prepare for vector! to the extreme')
         v = f.openFile.getvalue()
-        self.assertIn("SV 1: ['prepare for vector! to the extreme']", v)
+        self.assertNotEqual(-1, v.find("SV 1: ['prepare for vector! to the extreme']"), "Expected server string not found in %r" % (v,))
         self.assertEquals(t.value(), 'prepare for vector! to the extreme')
 
         p.loseConnection()
 
         v = f.openFile.getvalue()
-        self.assertIn('ConnectionDone', v)
+        self.assertNotEqual(-1, v.find('ConnectionDone'), "Connection done notification not found in %r" % (v,))

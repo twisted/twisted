@@ -1,10 +1,10 @@
 # -*- test-case-name: twisted.test.test_policies -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+#
 
-"""
-Resource limiting policies.
+"""Resource limiting policies.
 
 @seealso: See also L{twisted.protocols.htb} for rate limiting.
 """
@@ -14,10 +14,10 @@ import sys, operator
 
 # twisted imports
 from twisted.internet.protocol import ServerFactory, Protocol, ClientFactory
+from twisted.internet.interfaces import ITransport
 from twisted.internet import reactor, error
 from twisted.python import log
-from zope.interface import providedBy, directlyProvides
-
+from zope.interface import implements, providedBy, directlyProvides
 
 class ProtocolWrapper(Protocol):
     """Wraps protocol instances and acts as their transport as well."""
@@ -426,48 +426,32 @@ class TimeoutFactory(WrappingFactory):
 
 
 class TrafficLoggingProtocol(ProtocolWrapper):
+    _counter = 0
 
-    def __init__(self, factory, wrappedProtocol, logfile, lengthLimit=None,
-                 number=0):
-        """
-        @param factory: factory which created this protocol.
-        @type factory: C{protocol.Factory}.
-        @param wrappedProtocol: the underlying protocol.
-        @type wrappedProtocol: C{protocol.Protocol}.
-        @param logfile: file opened for writing used to write log messages.
-        @type logfile: C{file}
-        @param lengthLimit: maximum size of the datareceived logged.
-        @type lengthLimit: C{int}
-        @param number: identifier of the connection.
-        @type number: C{int}.
-        """
+    def __init__(self, factory, wrappedProtocol, logfile, lengthLimit=None):
         ProtocolWrapper.__init__(self, factory, wrappedProtocol)
         self.logfile = logfile
         self.lengthLimit = lengthLimit
-        self._number = number
-
+        TrafficLoggingProtocol._counter += 1
+        self._number = TrafficLoggingProtocol._counter
 
     def _log(self, line):
         self.logfile.write(line + '\n')
         self.logfile.flush()
-
 
     def _mungeData(self, data):
         if self.lengthLimit and len(data) > self.lengthLimit:
             data = data[:self.lengthLimit - 12] + '<... elided>'
         return data
 
-
     # IProtocol
     def connectionMade(self):
         self._log('*')
         return ProtocolWrapper.connectionMade(self)
 
-
     def dataReceived(self, data):
         self._log('C %d: %r' % (self._number, self._mungeData(data)))
         return ProtocolWrapper.dataReceived(self, data)
-
 
     def connectionLost(self, reason):
         self._log('C %d: %r' % (self._number, reason))
@@ -479,16 +463,13 @@ class TrafficLoggingProtocol(ProtocolWrapper):
         self._log('S %d: %r' % (self._number, self._mungeData(data)))
         return ProtocolWrapper.write(self, data)
 
-
     def writeSequence(self, iovec):
         self._log('SV %d: %r' % (self._number, [self._mungeData(d) for d in iovec]))
         return ProtocolWrapper.writeSequence(self, iovec)
 
-
     def loseConnection(self):
         self._log('S %d: *' % (self._number,))
         return ProtocolWrapper.loseConnection(self)
-
 
 
 class TrafficLoggingFactory(WrappingFactory):
@@ -501,25 +482,14 @@ class TrafficLoggingFactory(WrappingFactory):
         self.lengthLimit = lengthLimit
         WrappingFactory.__init__(self, wrappedFactory)
 
-
     def open(self, name):
         return file(name, 'w')
-
 
     def buildProtocol(self, addr):
         self._counter += 1
         logfile = self.open(self.logfilePrefix + '-' + str(self._counter))
         return self.protocol(self, self.wrappedFactory.buildProtocol(addr),
-                             logfile, self.lengthLimit, self._counter)
-
-
-    def resetCounter(cls):
-        """
-        Reset the value of the counter used to identify connections.
-        """
-        cls._counter = 0
-
-    resetCounter = classmethod(resetCounter)
+                             logfile, self.lengthLimit)
 
 
 class TimeoutMixin:
