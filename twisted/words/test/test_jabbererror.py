@@ -17,27 +17,39 @@ NS_XMPP_STANZAS = 'urn:ietf:params:xml:ns:xmpp-stanzas'
 
 class BaseErrorTest(unittest.TestCase):
 
-    def testGetElementPlain(self):
+    def test_getElementPlain(self):
+        """
+        Test getting an element for a plain error.
+        """
         e = error.BaseError('feature-not-implemented')
         element = e.getElement()
         self.assertIdentical(element.uri, None)
         self.assertEquals(len(element.children), 1)
 
-    def testGetElementText(self):
+    def test_getElementText(self):
+        """
+        Test getting an element for an error with a text.
+        """
         e = error.BaseError('feature-not-implemented', 'text')
         element = e.getElement()
         self.assertEquals(len(element.children), 2)
         self.assertEquals(unicode(element.text), 'text')
         self.assertEquals(element.text.getAttribute((NS_XML, 'lang')), None)
 
-    def testGetElementTextLang(self):
+    def test_getElementTextLang(self):
+        """
+        Test getting an element for an error with a text and language.
+        """
         e = error.BaseError('feature-not-implemented', 'text', 'en_US')
         element = e.getElement()
         self.assertEquals(len(element.children), 2)
         self.assertEquals(unicode(element.text), 'text')
         self.assertEquals(element.text[(NS_XML, 'lang')], 'en_US')
 
-    def testGetElementAppCondition(self):
+    def test_getElementAppCondition(self):
+        """
+        Test getting an element for an error with an app specific condition.
+        """
         ac = domish.Element(('testns', 'myerror'))
         e = error.BaseError('feature-not-implemented', appCondition=ac)
         element = e.getElement()
@@ -46,7 +58,10 @@ class BaseErrorTest(unittest.TestCase):
 
 class StreamErrorTest(unittest.TestCase):
 
-    def testGetElementPlain(self):
+    def test_getElementPlain(self):
+        """
+        Test namespace of the element representation of an error.
+        """
         e = error.StreamError('feature-not-implemented')
         element = e.getElement()
         self.assertEquals(element.uri, NS_STREAMS)
@@ -70,6 +85,9 @@ class StreamErrorTest(unittest.TestCase):
 class StanzaErrorTest(unittest.TestCase):
 
     def test_getElementPlain(self):
+        """
+        Test getting an element for a plain stanza error.
+        """
         e = error.StanzaError('feature-not-implemented')
         element = e.getElement()
         self.assertEquals(element.uri, None)
@@ -77,6 +95,9 @@ class StanzaErrorTest(unittest.TestCase):
         self.assertEquals(element['code'], '501')
 
     def test_getElementType(self):
+        """
+        Test getting an element for a stanza error with a given type.
+        """
         e = error.StanzaError('feature-not-implemented', 'auth')
         element = e.getElement()
         self.assertEquals(element.uri, None)
@@ -127,54 +148,75 @@ class ParseErrorTest(unittest.TestCase):
     def setUp(self):
         self.error = domish.Element((None, 'error'))
 
-    def testEmpty(self):
-        result = error._parseError(self.error)
+    def test_empty(self):
+        """
+        Test parsing of the empty error element.
+        """
+        result = error._parseError(self.error, 'errorns')
         self.assertEqual({'condition': None,
                           'text': None,
                           'textLang': None,
                           'appCondition': None}, result)
 
-    def testCondition(self):
-        self.error.addElement((NS_XMPP_STANZAS, 'bad-request'))
-        result = error._parseError(self.error)
+    def test_condition(self):
+        """
+        Test parsing of an error element with a condition.
+        """
+        self.error.addElement(('errorns', 'bad-request'))
+        result = error._parseError(self.error, 'errorns')
         self.assertEqual('bad-request', result['condition'])
 
-    def testText(self):
-        text = self.error.addElement((NS_XMPP_STANZAS, 'text'))
+    def test_text(self):
+        """
+        Test parsing of an error element with a text.
+        """
+        text = self.error.addElement(('errorns', 'text'))
         text.addContent('test')
-        result = error._parseError(self.error)
+        result = error._parseError(self.error, 'errorns')
         self.assertEqual('test', result['text'])
         self.assertEqual(None, result['textLang'])
 
-    def testTextLang(self):
-        text = self.error.addElement((NS_XMPP_STANZAS, 'text'))
+    def test_textLang(self):
+        """
+        Test parsing of an error element with a text with a defined language.
+        """
+        text = self.error.addElement(('errorns', 'text'))
         text[NS_XML, 'lang'] = 'en_US'
         text.addContent('test')
-        result = error._parseError(self.error)
+        result = error._parseError(self.error, 'errorns')
         self.assertEqual('en_US', result['textLang'])
 
-    def testTextLangInherited(self):
-        text = self.error.addElement((NS_XMPP_STANZAS, 'text'))
+    def test_textLangInherited(self):
+        """
+        Test parsing of an error element with a text with inherited language.
+        """
+        text = self.error.addElement(('errorns', 'text'))
         self.error[NS_XML, 'lang'] = 'en_US'
         text.addContent('test')
-        result = error._parseError(self.error)
+        result = error._parseError(self.error, 'errorns')
         self.assertEqual('en_US', result['textLang'])
-    testTextLangInherited.todo = "xml:lang inheritance not implemented"
+    test_textLangInherited.todo = "xml:lang inheritance not implemented"
 
-    def testAppCondition(self):
+    def test_appCondition(self):
+        """
+        Test parsing of an error element with an app specific condition.
+        """
         condition = self.error.addElement(('testns', 'condition'))
-        result = error._parseError(self.error)
+        result = error._parseError(self.error, 'errorns')
         self.assertEqual(condition, result['appCondition'])
 
-    def testMultipleAppConditions(self):
+    def test_appConditionMultiple(self):
+        """
+        Test parsing of an error element with multiple app specific conditions.
+        """
         condition = self.error.addElement(('testns', 'condition'))
         condition2 = self.error.addElement(('testns', 'condition2'))
-        result = error._parseError(self.error)
+        result = error._parseError(self.error, 'errorns')
         self.assertEqual(condition2, result['appCondition'])
 
 class ExceptionFromStanzaTest(unittest.TestCase):
 
-    def testBasic(self):
+    def test_basic(self):
         """
         Test basic operations of exceptionFromStanza.
 
@@ -215,7 +257,7 @@ class ExceptionFromStanzaTest(unittest.TestCase):
         self.assertEquals(uc, result.appCondition)
         self.assertEquals([p], result.children)
 
-    def testLegacy(self):
+    def test_legacy(self):
         """
         Test legacy operations of exceptionFromStanza.
 
@@ -242,3 +284,25 @@ class ExceptionFromStanzaTest(unittest.TestCase):
         self.assertEquals('wait', result.type)
         self.assertEquals('Unable to resolve hostname.', result.text)
         self.assertEquals([p], result.children)
+
+class ExceptionFromStreamErrorTest(unittest.TestCase):
+
+    def test_basic(self):
+        """
+        Test basic operations of exceptionFromStreamError.
+
+        Given a realistic stream error, check if a sane exception is returned.
+
+        Using this error::
+
+          <stream:error xmlns:stream='http://etherx.jabber.org/streams'>
+            <xml-not-well-formed xmlns='urn:ietf:params:xml:ns:xmpp-streams'/>
+          </stream:error>
+        """
+
+        e = domish.Element(('http://etherx.jabber.org/streams', 'error'))
+        e.addElement((NS_XMPP_STREAMS, 'xml-not-well-formed'))
+
+        result = error.exceptionFromStreamError(e)
+        self.assert_(isinstance(result, error.StreamError))
+        self.assertEquals('xml-not-well-formed', result.condition)

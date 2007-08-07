@@ -238,13 +238,16 @@ def _getText(element):
 
 
 
-def _parseError(error):
+def _parseError(error, errorNamespace):
     """
     Parses an error element.
 
-    @param error: the error element to be parsed
+    @param error: The error element to be parsed
     @type error: L{domish.Element}
-    @return: dictionary with extracted error information. If present, keys
+    @param errorNamespace: The namespace of the elements that hold the error
+                           condition and text.
+    @type errorNamespace: C{str}
+    @return: Dictionary with extracted error information. If present, keys
              C{condition}, C{text}, C{textLang} have a string value,
              and C{appCondition} has an L{domish.Element} value.
     @rtype: L{dict}
@@ -255,7 +258,7 @@ def _parseError(error):
     appCondition = None
 
     for element in error.elements():
-        if element.uri == NS_XMPP_STANZAS:
+        if element.uri == errorNamespace:
             if element.name == 'text':
                 text = _getText(element)
                 textLang = element.getAttribute((NS_XML, 'lang'))
@@ -282,7 +285,7 @@ def exceptionFromStreamError(element):
     @return: the generated exception object
     @rtype: L{StreamError}
     """
-    error = _parseError(element)
+    error = _parseError(element, NS_XMPP_STREAMS)
 
     exception = StreamError(error['condition'],
                             error['text'],
@@ -309,7 +312,7 @@ def exceptionFromStanza(stanza):
         if element.name == 'error' and element.uri == stanza.uri:
             code = element.getAttribute('code')
             type = element.getAttribute('type')
-            error = _parseError(element)
+            error = _parseError(element, NS_XMPP_STANZAS)
             condition = error['condition']
             text = error['text']
             textLang = error['textLang']
