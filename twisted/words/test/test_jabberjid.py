@@ -1,12 +1,19 @@
-# Copyright (c) 2001-2005 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
+
+"""
+Tests for L{twisted.words.protocols.jabber.jid}.
+"""
 
 from twisted.trial import unittest
 
 from twisted.words.protocols.jabber import jid
 
 class JIDParsingTest(unittest.TestCase):
-    def testParse(self):
+    def test_parse(self):
+        """
+        Test different forms of JIDs.
+        """
         # Basic forms
         self.assertEquals(jid.parse("user@host/resource"),
                           ("user", "host", "resource"))
@@ -30,52 +37,183 @@ class JIDParsingTest(unittest.TestCase):
                           (None, "boo", "foo/bar"))
         self.assertEquals(jid.parse("boo//foo"),
                           (None, "boo", "/foo"))
-        
-    def testInvalid(self):
-        # No host
-        try:
-            jid.parse("user@")
-            assert 0
-        except jid.InvalidFormat:
-            assert 1
 
-        # Double @@
-        try:
-            jid.parse("user@@host")
-            assert 0
-        except jid.InvalidFormat:
-            assert 1
+    def test_noHost(self):
+        """
+        Test for failure on no host part.
+        """
+        self.assertRaises(jid.InvalidFormat, jid.parse, "user@")
 
-        # Multiple @
-        try:
-            jid.parse("user@host@host")
-            assert 0
-        except jid.InvalidFormat:
-            assert 1
+    def test_doubleAt(self):
+        """
+        Test for failure on double @ signs.
 
-    def testPrep(self):
-        # case map of user
+        This should fail because @ is not a valid character for the host
+        part of the JID.
+        """
+        self.assertRaises(jid.InvalidFormat, jid.parse, "user@@host")
+
+    def test_multipleAt(self):
+        """
+        Test for failure on two @ signs.
+
+        This should fail because @ is not a valid character for the host
+        part of the JID.
+        """
+        self.assertRaises(jid.InvalidFormat, jid.parse, "user@host@host")
+
+    # Basic tests for case mapping. These are fallback tests for the
+    # prepping done in twisted.words.protocols.jabber.xmpp_stringprep
+
+    def test_prepCaseMapUser(self):
+        """
+        Test case mapping of the user part of the JID.
+        """
         self.assertEquals(jid.prep("UsEr", "host", "resource"),
                           ("user", "host", "resource"))
-            
-        # case map of host
+
+    def test_prepCaseMapHost(self):
+        """
+        Test case mapping of the host part of the JID.
+        """
         self.assertEquals(jid.prep("user", "hoST", "resource"),
                           ("user", "host", "resource"))
 
-        # no case map of resource
+    def test_prepNoCaseMapResource(self):
+        """
+        Test no case mapping of the resourcce part of the JID.
+        """
+        self.assertEquals(jid.prep("user", "hoST", "resource"),
+                          ("user", "host", "resource"))
         self.assertNotEquals(jid.prep("user", "host", "Resource"),
                              ("user", "host", "resource"))
 
-class JIDClassTest(unittest.TestCase):
-    def testBasic(self):
-        j = jid.internJID("user@host")
-        self.assertEquals(j.userhost(), "user@host")
+class JIDTest(unittest.TestCase):
+
+    def test_noneArguments(self):
+        """
+        Test that using no arguments raises an exception.
+        """
+        self.assertRaises(RuntimeError, jid.JID)
+
+    def test_attributes(self):
+        """
+        Test that the attributes correspond with the JID parts.
+        """
+        j = jid.JID("user@host/resource")
         self.assertEquals(j.user, "user")
         self.assertEquals(j.host, "host")
-        self.assertEquals(j.resource, None)
+        self.assertEquals(j.resource, "resource")
 
+    def test_userhost(self):
+        """
+        Test the extraction of the bare JID.
+        """
+        j = jid.JID("user@host/resource")
+        self.assertEquals("user@host", j.userhost())
+
+    def test_userhostOnlyHost(self):
+        """
+        Test the extraction of the bare JID of the full form host/resource.
+        """
+        j = jid.JID("host/resource")
+        self.assertEquals("host", j.userhost())
+
+    def test_userhostJID(self):
+        """
+        Test getting a JID object of the bare JID.
+        """
+        j1 = jid.JID("user@host/resource")
         j2 = jid.internJID("user@host")
-        self.assertEquals(id(j), id(j2))
+        self.assertIdentical(j2, j1.userhostJID())
 
-        j_uhj = j.userhostJID()
-        self.assertEquals(id(j), id(j_uhj))
+    def test_userhostJIDNoResource(self):
+        """
+        Test getting a JID object of the bare JID when there was no resource.
+        """
+        j = jid.JID("user@host")
+        self.assertIdentical(j, j.userhostJID())
+
+    def test_fullHost(self):
+        """
+        Test giving a string representation of the JID with only a host part.
+        """
+        j = jid.JID(tuple=(None, 'host', None))
+        self.assertEqual('host', j.full())
+
+    def test_fullHostResource(self):
+        """
+        Test giving a string representation of the JID with host, resource.
+        """
+        j = jid.JID(tuple=(None, 'host', 'resource'))
+        self.assertEqual('host/resource', j.full())
+
+    def test_fullUserHost(self):
+        """
+        Test giving a string representation of the JID with user, host.
+        """
+        j = jid.JID(tuple=('user', 'host', None))
+        self.assertEqual('user@host', j.full())
+
+    def test_fullAll(self):
+        """
+        Test giving a string representation of the JID.
+        """
+        j = jid.JID(tuple=('user', 'host', 'resource'))
+        self.assertEqual('user@host/resource', j.full())
+
+    def test_equality(self):
+        """
+        Test JID equality.
+        """
+        j1 = jid.JID("user@host/resource")
+        j2 = jid.JID("user@host/resource")
+        self.assertNotIdentical(j1, j2)
+        self.assertEqual(j1, j2)
+
+    def test_equalityWithNonJIDs(self):
+        """
+        Test JID equality.
+        """
+        j = jid.JID("user@host/resource")
+        self.assertFalse(j == 'user@host/resource')
+
+    def test_inequality(self):
+        """
+        Test JID inequality.
+        """
+        j1 = jid.JID("user1@host/resource")
+        j2 = jid.JID("user2@host/resource")
+        self.assertNotEqual(j1, j2)
+
+    def test_inequalityWithNonJIDs(self):
+        """
+        Test JID equality.
+        """
+        j = jid.JID("user@host/resource")
+        self.assertNotEqual(j, 'user@host/resource')
+
+    def test_hashable(self):
+        """
+        Test JID hashability.
+        """
+        j1 = jid.JID("user@host/resource")
+        j2 = jid.JID("user@host/resource")
+        self.assertEqual(hash(j1), hash(j2))
+
+    def test_unicode(self):
+        """
+        Test unicode representation of JIDs.
+        """
+        j = jid.JID(tuple=('user', 'host', 'resource'))
+        self.assertEquals("user@host/resource", unicode(j))
+
+
+class InternJIDTest(unittest.TestCase):
+    def test_identity(self):
+        """
+        Test that two interned JIDs yield the same object.
+        """
+        j1 = jid.internJID("user@host")
+        j2 = jid.internJID("user@host")
+        self.assertIdentical(j1, j2)
