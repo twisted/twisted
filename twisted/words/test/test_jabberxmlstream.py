@@ -645,11 +645,13 @@ class ToResponseTest(unittest.TestCase):
         stanza['type'] = 'get'
         stanza['to'] = 'user1@example.com'
         stanza['from'] = 'user2@example.com/resource'
+        stanza['id'] = 'stanza1'
         response = xmlstream.toResponse(stanza, 'result')
         self.assertNotIdentical(stanza, response)
         self.assertEqual(response['from'], 'user1@example.com')
         self.assertEqual(response['to'], 'user2@example.com/resource')
         self.assertEqual(response['type'], 'result')
+        self.assertEqual(response['id'], 'stanza1')
 
     def test_toResponseNoFrom(self):
         """
@@ -682,3 +684,11 @@ class ToResponseTest(unittest.TestCase):
         response = xmlstream.toResponse(stanza)
         self.failIf(response.hasAttribute('to'))
         self.failIf(response.hasAttribute('from'))
+
+    def test_noID(self):
+        """
+        Test that a proper response is generated without id attribute.
+        """
+        stanza = domish.Element(('jabber:client', 'message'))
+        response = xmlstream.toResponse(stanza)
+        self.failIf(response.hasAttribute('id'))

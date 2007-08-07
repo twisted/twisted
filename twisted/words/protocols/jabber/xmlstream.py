@@ -722,7 +722,7 @@ def toResponse(stanza, stanzaType=None):
         response['to'] = toAddr
     if fromAddr:
         response['from'] = fromAddr
-    if id:
+    if stanzaID:
         response['id'] = stanzaID
     if type:
         response['type'] = stanzaType
