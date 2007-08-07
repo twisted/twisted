@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.names.test.test_client -*-
-# Copyright (c) 2001-2006 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -7,12 +7,13 @@ Test cases for twisted.names.client
 """
 
 from twisted.names import client, dns
+from twisted.names.error import DNSQueryTimeoutError
 from twisted.trial import unittest
 from twisted.names.common import ResolverBase
 from twisted.internet import defer
 
 class FakeResolver(ResolverBase):
-    
+
     def _lookup(self, name, cls, qtype, timeout):
         """
         The getHostByNameTest does a different type of query that requires it
@@ -24,11 +25,77 @@ class FakeResolver(ResolverBase):
                     payload=dns.Record_A(address='127.0.0.1', ttl=60))
         else:
             rr = dns.RRHeader(name=name, type=qtype, cls=cls, ttl=60)
-            
+
         results = [rr]
         authority = []
         addtional = []
         return defer.succeed((results, authority, addtional))
+
+
+
+class StubDNSDatagramProtocol(object):
+    """
+    L{dns.DNSDatagramProtocol}-alike.
+
+    @ivar queries: A C{list} of tuples giving the arguments passed to
+        C{query} along with the L{defer.Deferred} which was returned from
+        the call.
+    """
+    def __init__(self):
+        self.queries = []
+
+
+    def query(self, address, queries, timeout=10, id=None):
+        """
+        Record the given arguments and return a Deferred which will not be
+        called back by this code.
+        """
+        result = defer.Deferred()
+        self.queries.append((address, queries, timeout, id, result))
+        return result
+
+
+
+class ResolverTests(unittest.TestCase):
+    """
+    Tests for L{client.Resolver}.
+    """
+    def test_datagramQueryServerOrder(self):
+        """
+        L{client.Resolver.queryUDP} should issue queries to its
+        L{dns.DNSDatagramProtocol} with server addresses taken from its own
+        C{servers} and C{dynServers} lists, proceeding through them in order
+        as L{DNSQueryTimeoutError}s occur.
+        """
+        protocol = StubDNSDatagramProtocol()
+        protocol.transport = object()
+
+        servers = [object(), object()]
+        dynServers = [object(), object()]
+        resolver = client.Resolver(servers=servers)
+        resolver.dynServers = dynServers
+        resolver.protocol = protocol
+
+        expectedResult = object()
+        queryResult = resolver.queryUDP(None)
+        queryResult.addCallback(self.assertEqual, expectedResult)
+
+        self.assertEqual(len(protocol.queries), 1)
+        self.assertIdentical(protocol.queries[0][0], servers[0])
+        protocol.queries[0][-1].errback(DNSQueryTimeoutError(0))
+        self.assertEqual(len(protocol.queries), 2)
+        self.assertIdentical(protocol.queries[1][0], servers[1])
+        protocol.queries[1][-1].errback(DNSQueryTimeoutError(1))
+        self.assertEqual(len(protocol.queries), 3)
+        self.assertIdentical(protocol.queries[2][0], dynServers[0])
+        protocol.queries[2][-1].errback(DNSQueryTimeoutError(2))
+        self.assertEqual(len(protocol.queries), 4)
+        self.assertIdentical(protocol.queries[3][0], dynServers[1])
+        protocol.queries[3][-1].callback(expectedResult)
+
+        return queryResult
+
+
 
 class ClientTestCase(unittest.TestCase):
 
@@ -238,4 +305,3 @@ class ClientTestCase(unittest.TestCase):
         d = client.lookupAllRecords(self.hostname)
         d.addCallback(self.checkResult, dns.ALL_RECORDS)
         return d
-

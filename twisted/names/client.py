@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.names.test.test_names -*-
-# Copyright (c) 2001-2006 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -224,6 +224,10 @@ class Resolver(common.ResolverBase):
         addresses = self.servers + list(self.dynServers)
         if not addresses:
             return defer.fail(IOError("No domain name servers available"))
+
+        # Make sure we go through servers in the list in the order they were
+        # specified.
+        addresses.reverse()
 
         used = addresses.pop()
         return self.protocol.query(used, queries, timeout[0]
@@ -502,11 +506,11 @@ def lookupAddress(name, timeout=None):
 
     @type name: C{str}
     @param name: DNS name to resolve.
-    
+
     @type timeout: Sequence of C{int}
     @param timeout: Number of seconds after which to reissue the query.
     When the last timeout expires, the query is considered failed.
-    
+
     @rtype: C{Deferred}
     """
     return getResolver().lookupAddress(name, timeout)
@@ -517,11 +521,11 @@ def lookupIPV6Address(name, timeout=None):
 
     @type name: C{str}
     @param name: DNS name to resolve.
-    
+
     @type timeout: Sequence of C{int}
     @param timeout: Number of seconds after which to reissue the query.
     When the last timeout expires, the query is considered failed.
-    
+
     @rtype: C{Deferred}
     """
     return getResolver().lookupIPV6Address(name, timeout)
@@ -532,11 +536,11 @@ def lookupAddress6(name, timeout=None):
 
     @type name: C{str}
     @param name: DNS name to resolve.
-    
+
     @type timeout: Sequence of C{int}
     @param timeout: Number of seconds after which to reissue the query.
     When the last timeout expires, the query is considered failed.
-    
+
     @rtype: C{Deferred}
     """
     return getResolver().lookupAddress6(name, timeout)
@@ -547,11 +551,11 @@ def lookupMailExchange(name, timeout=None):
 
     @type name: C{str}
     @param name: DNS name to resolve.
-    
+
     @type timeout: Sequence of C{int}
     @param timeout: Number of seconds after which to reissue the query.
     When the last timeout expires, the query is considered failed.
-    
+
     @rtype: C{Deferred}
     """
     return getResolver().lookupMailExchange(name, timeout)
@@ -562,11 +566,11 @@ def lookupNameservers(name, timeout=None):
 
     @type name: C{str}
     @param name: DNS name to resolve.
-    
+
     @type timeout: Sequence of C{int}
     @param timeout: Number of seconds after which to reissue the query.
     When the last timeout expires, the query is considered failed.
-    
+
     @rtype: C{Deferred}
     """
     return getResolver().lookupNameservers(name, timeout)
@@ -577,11 +581,11 @@ def lookupCanonicalName(name, timeout=None):
 
     @type name: C{str}
     @param name: DNS name to resolve.
-    
+
     @type timeout: Sequence of C{int}
     @param timeout: Number of seconds after which to reissue the query.
     When the last timeout expires, the query is considered failed.
-    
+
     @rtype: C{Deferred}
     """
     return getResolver().lookupCanonicalName(name, timeout)
@@ -592,11 +596,11 @@ def lookupMailBox(name, timeout=None):
 
     @type name: C{str}
     @param name: DNS name to resolve.
-    
+
     @type timeout: Sequence of C{int}
     @param timeout: Number of seconds after which to reissue the query.
     When the last timeout expires, the query is considered failed.
-    
+
     @rtype: C{Deferred}
     """
     return getResolver().lookupMailBox(name, timeout)
@@ -607,11 +611,11 @@ def lookupMailGroup(name, timeout=None):
 
     @type name: C{str}
     @param name: DNS name to resolve.
-    
+
     @type timeout: Sequence of C{int}
     @param timeout: Number of seconds after which to reissue the query.
     When the last timeout expires, the query is considered failed.
-    
+
     @rtype: C{Deferred}
     """
     return getResolver().lookupMailGroup(name, timeout)
@@ -622,11 +626,11 @@ def lookupMailRename(name, timeout=None):
 
     @type name: C{str}
     @param name: DNS name to resolve.
-    
+
     @type timeout: Sequence of C{int}
     @param timeout: Number of seconds after which to reissue the query.
     When the last timeout expires, the query is considered failed.
-    
+
     @rtype: C{Deferred}
     """
     return getResolver().lookupMailRename(name, timeout)
@@ -637,11 +641,11 @@ def lookupPointer(name, timeout=None):
 
     @type name: C{str}
     @param name: DNS name to resolve.
-    
+
     @type timeout: Sequence of C{int}
     @param timeout: Number of seconds after which to reissue the query.
     When the last timeout expires, the query is considered failed.
-    
+
     @rtype: C{Deferred}
     """
     return getResolver().lookupPointer(name, timeout)
@@ -652,11 +656,11 @@ def lookupAuthority(name, timeout=None):
 
     @type name: C{str}
     @param name: DNS name to resolve.
-    
+
     @type timeout: Sequence of C{int}
     @param timeout: Number of seconds after which to reissue the query.
     When the last timeout expires, the query is considered failed.
-    
+
     @rtype: C{Deferred}
     """
     return getResolver().lookupAuthority(name, timeout)
@@ -667,11 +671,11 @@ def lookupNull(name, timeout=None):
 
     @type name: C{str}
     @param name: DNS name to resolve.
-    
+
     @type timeout: Sequence of C{int}
     @param timeout: Number of seconds after which to reissue the query.
     When the last timeout expires, the query is considered failed.
-    
+
     @rtype: C{Deferred}
     """
     return getResolver().lookupNull(name, timeout)
@@ -682,11 +686,11 @@ def lookupWellKnownServices(name, timeout=None):
 
     @type name: C{str}
     @param name: DNS name to resolve.
-    
+
     @type timeout: Sequence of C{int}
     @param timeout: Number of seconds after which to reissue the query.
     When the last timeout expires, the query is considered failed.
-    
+
     @rtype: C{Deferred}
     """
     return getResolver().lookupWellKnownServices(name, timeout)
@@ -697,11 +701,11 @@ def lookupService(name, timeout=None):
 
     @type name: C{str}
     @param name: DNS name to resolve.
-    
+
     @type timeout: Sequence of C{int}
     @param timeout: Number of seconds after which to reissue the query.
     When the last timeout expires, the query is considered failed.
-    
+
     @rtype: C{Deferred}
     """
     return getResolver().lookupService(name, timeout)
@@ -712,11 +716,11 @@ def lookupHostInfo(name, timeout=None):
 
     @type name: C{str}
     @param name: DNS name to resolve.
-    
+
     @type timeout: Sequence of C{int}
     @param timeout: Number of seconds after which to reissue the query.
     When the last timeout expires, the query is considered failed.
-    
+
     @rtype: C{Deferred}
     """
     return getResolver().lookupHostInfo(name, timeout)
@@ -727,11 +731,11 @@ def lookupMailboxInfo(name, timeout=None):
 
     @type name: C{str}
     @param name: DNS name to resolve.
-    
+
     @type timeout: Sequence of C{int}
     @param timeout: Number of seconds after which to reissue the query.
     When the last timeout expires, the query is considered failed.
-    
+
     @rtype: C{Deferred}
     """
     return getResolver().lookupMailboxInfo(name, timeout)
@@ -742,11 +746,11 @@ def lookupText(name, timeout=None):
 
     @type name: C{str}
     @param name: DNS name to resolve.
-    
+
     @type timeout: Sequence of C{int}
     @param timeout: Number of seconds after which to reissue the query.
     When the last timeout expires, the query is considered failed.
-    
+
     @rtype: C{Deferred}
     """
     return getResolver().lookupText(name, timeout)
@@ -757,11 +761,11 @@ def lookupResponsibility(name, timeout=None):
 
     @type name: C{str}
     @param name: DNS name to resolve.
-    
+
     @type timeout: Sequence of C{int}
     @param timeout: Number of seconds after which to reissue the query.
     When the last timeout expires, the query is considered failed.
-    
+
     @rtype: C{Deferred}
     """
     return getResolver().lookupResponsibility(name, timeout)
@@ -772,11 +776,11 @@ def lookupAFSDatabase(name, timeout=None):
 
     @type name: C{str}
     @param name: DNS name to resolve.
-    
+
     @type timeout: Sequence of C{int}
     @param timeout: Number of seconds after which to reissue the query.
     When the last timeout expires, the query is considered failed.
-    
+
     @rtype: C{Deferred}
     """
     return getResolver().lookupAFSDatabase(name, timeout)
@@ -787,10 +791,10 @@ def lookupZone(name, timeout=None):
 
     @type name: C{str}
     @param name: DNS name to resolve.
-    
+
     @type timeout: C{int}
     @param timeout: When this timeout expires, the query is considered failed.
-    
+
     @rtype: C{Deferred}
     """
     # XXX: timeout here is not a list of ints, it is a single int.
@@ -802,12 +806,11 @@ def lookupAllRecords(name, timeout=None):
 
     @type name: C{str}
     @param name: DNS name to resolve.
-    
+
     @type timeout: Sequence of C{int}
     @param timeout: Number of seconds after which to reissue the query.
     When the last timeout expires, the query is considered failed.
-    
+
     @rtype: C{Deferred}
     """
     return getResolver().lookupAllRecords(name, timeout)
-
