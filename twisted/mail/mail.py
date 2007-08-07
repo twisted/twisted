@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.mail.test.test_mail -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -61,17 +61,28 @@ class DomainWithDefaultDict:
     def __len__(self):
         return len(self.domains)
 
+
     def __str__(self):
-        return '<DomainWithDefaultsDict %s>' % (self.domains,)
+        """
+        Return a string describing the underlying domain mapping of this
+        object.
+        """
+        return '<DomainWithDefaultDict %s>' % (self.domains,)
+
 
     def __repr__(self):
-        return 'DomainWithDefaultsDict(%s)>' % (self.domains,)
+        """
+        Return a pseudo-executable string describing the underlying domain
+        mapping of this object.
+        """
+        return 'DomainWithDefaultDict(%s)' % (self.domains,)
+
 
     def get(self, key, default=None):
         return self.domains.get(key, default)
 
     def copy(self):
-        return DomainWithDefaultsDict(self.domains.copy(), self.default)
+        return DomainWithDefaultDict(self.domains.copy(), self.default)
 
     def iteritems(self):
         return self.domains.iteritems()

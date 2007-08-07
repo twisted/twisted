@@ -98,6 +98,44 @@ class DomainWithDefaultsTestCase(unittest.TestCase):
         self.assertEquals(d.popitem(), ('key', 'value'))
         self.assertEquals(len(d), 0)
 
+        dcopy = d.copy()
+        self.assertEquals(d.domains, dcopy.domains)
+        self.assertEquals(d.default, dcopy.default)
+
+
+    def _stringificationTest(self, stringifier):
+        """
+        Assert that the class name of a L{mail.mail.DomainWithDefaultDict}
+        instance and the string-formatted underlying domain dictionary both
+        appear in the string produced by the given string-returning function.
+
+        @type stringifier: one-argument callable
+        @param stringifier: either C{str} or C{repr}, to be used to get a
+            string to make assertions against.
+        """
+        domain = mail.mail.DomainWithDefaultDict({}, 'Default')
+        self.assertIn(domain.__class__.__name__, stringifier(domain))
+        domain['key'] = 'value'
+        self.assertIn(str({'key': 'value'}), stringifier(domain))
+
+
+    def test_str(self):
+        """
+        L{DomainWithDefaultDict.__str__} should return a string including
+        the class name and the domain mapping held by the instance.
+        """
+        self._stringificationTest(str)
+
+
+    def test_repr(self):
+        """
+        L{DomainWithDefaultDict.__repr__} should return a string including
+        the class name and the domain mapping held by the instance.
+        """
+        self._stringificationTest(repr)
+
+
+
 class BounceTestCase(unittest.TestCase):
     def setUp(self):
         self.domain = mail.mail.BounceDomain()
