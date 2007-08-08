@@ -1,14 +1,12 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2006 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-"""
-Tests for L{twisted.words.protocols.jabber.client}
-"""
-
 import sha
+from twisted.test import proto_helpers
 from twisted.trial import unittest
 from twisted.words.protocols.jabber import client, error, jid, xmlstream
 from twisted.words.protocols.jabber.sasl import SASLInitiatingInitializer
+
 
 class CheckVersionInitializerTest(unittest.TestCase):
     def setUp(self):
@@ -16,12 +14,14 @@ class CheckVersionInitializerTest(unittest.TestCase):
         xs = xmlstream.XmlStream(a)
         self.init = client.CheckVersionInitializer(xs)
 
+
     def testSupported(self):
         """
         Test supported version number 1.0
         """
         self.init.xmlstream.version = (1, 0)
         self.init.initialize()
+
 
     def testNotSupported(self):
         """
@@ -32,10 +32,12 @@ class CheckVersionInitializerTest(unittest.TestCase):
         self.assertEquals('unsupported-version', exc.condition)
 
 
+
 class InitiatingInitializerHarness(object):
     def setUp(self):
         self.output = []
-        self.authenticator = xmlstream.ConnectAuthenticator('example.org')
+
+        self.authenticator = xmlstream.Authenticator()
         self.xmlstream = xmlstream.XmlStream(self.authenticator)
         self.xmlstream.send = self.output.append
         self.xmlstream.connectionMade()
@@ -44,12 +46,14 @@ class InitiatingInitializerHarness(object):
                         "from='example.com' id='12345' version='1.0'>")
 
 
+
 class IQAuthInitializerTest(InitiatingInitializerHarness, unittest.TestCase):
     def setUp(self):
         super(IQAuthInitializerTest, self).setUp()
         self.init = client.IQAuthInitializer(self.xmlstream)
         self.authenticator.jid = jid.JID('user@example.com/resource')
         self.authenticator.password = 'secret'
+
 
     def testBasic(self):
         """
@@ -62,7 +66,7 @@ class IQAuthInitializerTest(InitiatingInitializerHarness, unittest.TestCase):
         # The initializer should have sent query to find out auth methods.
 
         # Examine query.
-        iq = self.output[-1]
+        iq = self.output[0]
         self.assertEquals('iq', iq.name)
         self.assertEquals('get', iq['type'])
         self.assertEquals(('jabber:iq:auth', 'query'),
@@ -77,7 +81,7 @@ class IQAuthInitializerTest(InitiatingInitializerHarness, unittest.TestCase):
 
         # Upon receiving the response, the initializer can start authentication
 
-        iq = self.output[-1]
+        iq = self.output[1]
         self.assertEquals('iq', iq.name)
         self.assertEquals('set', iq['type'])
         self.assertEquals(('jabber:iq:auth', 'query'),
@@ -90,6 +94,7 @@ class IQAuthInitializerTest(InitiatingInitializerHarness, unittest.TestCase):
         self.xmlstream.dataReceived("<iq type='result' id='%s'/>" % iq['id'])
         return d
 
+
     def testDigest(self):
         """
         Test digest authentication.
@@ -100,7 +105,7 @@ class IQAuthInitializerTest(InitiatingInitializerHarness, unittest.TestCase):
 
         # The initializer should have sent query to find out auth methods.
 
-        iq = self.output[-1]
+        iq = self.output[0]
 
         # Send server response
         iq['type'] = 'result'
@@ -111,7 +116,7 @@ class IQAuthInitializerTest(InitiatingInitializerHarness, unittest.TestCase):
 
         # Upon receiving the response, the initializer can start authentication
 
-        iq = self.output[-1]
+        iq = self.output[1]
         self.assertEquals('iq', iq.name)
         self.assertEquals('set', iq['type'])
         self.assertEquals(('jabber:iq:auth', 'query'),
@@ -125,33 +130,36 @@ class IQAuthInitializerTest(InitiatingInitializerHarness, unittest.TestCase):
         self.xmlstream.dataReceived("<iq type='result' id='%s'/>" % iq['id'])
         return d
 
+
     def testFailRequestFields(self):
         """
         Test failure of request for fields.
         """
         d = self.init.initialize()
-        iq = self.output[-1]
+        iq = self.output[0]
         response = error.StanzaError('not-authorized').toResponse(iq)
         self.xmlstream.dataReceived(response.toXml())
         self.assertFailure(d, error.StanzaError)
         return d
+
 
     def testFailAuth(self):
         """
         Test failure of request for fields.
         """
         d = self.init.initialize()
-        iq = self.output[-1]
+        iq = self.output[0]
         iq['type'] = 'result'
         iq.query.addElement('username')
         iq.query.addElement('password')
         iq.query.addElement('resource')
         self.xmlstream.dataReceived(iq.toXml())
-        iq = self.output[-1]
+        iq = self.output[1]
         response = error.StanzaError('not-authorized').toResponse(iq)
         self.xmlstream.dataReceived(response.toXml())
         self.assertFailure(d, error.StanzaError)
         return d
+
 
 
 class BindInitializerTest(InitiatingInitializerHarness, unittest.TestCase):
@@ -159,6 +167,7 @@ class BindInitializerTest(InitiatingInitializerHarness, unittest.TestCase):
         super(BindInitializerTest, self).setUp()
         self.init = client.BindInitializer(self.xmlstream)
         self.authenticator.jid = jid.JID('user@example.com/resource')
+
 
     def testBasic(self):
         """
@@ -171,7 +180,7 @@ class BindInitializerTest(InitiatingInitializerHarness, unittest.TestCase):
                               self.authenticator.jid)
 
         d = self.init.start().addCallback(cb)
-        iq = self.output[-1]
+        iq = self.output[0]
         self.assertEquals('iq', iq.name)
         self.assertEquals('set', iq['type'])
         self.assertEquals(('urn:ietf:params:xml:ns:xmpp-bind', 'bind'),
@@ -181,6 +190,7 @@ class BindInitializerTest(InitiatingInitializerHarness, unittest.TestCase):
         iq.bind.addElement('jid', content='user@example.com/other resource')
         self.xmlstream.dataReceived(iq.toXml())
         return d
+
 
     def testFailure(self):
         """
@@ -193,17 +203,18 @@ class BindInitializerTest(InitiatingInitializerHarness, unittest.TestCase):
                               self.authenticator.jid)
 
         d = self.init.start()
-        id = self.output[-1]['id']
+        id = self.output[0]['id']
         self.xmlstream.dataReceived("<iq type='error' id='%s'/>" % id)
         self.assertFailure(d, error.StanzaError)
         return d
 
 
-class SessionInitializerTest(InitiatingInitializerHarness, unittest.TestCase):
 
+class SessionInitializerTest(InitiatingInitializerHarness, unittest.TestCase):
     def setUp(self):
         super(SessionInitializerTest, self).setUp()
         self.init = client.SessionInitializer(self.xmlstream)
+
 
     def testSuccess(self):
         """
@@ -212,13 +223,14 @@ class SessionInitializerTest(InitiatingInitializerHarness, unittest.TestCase):
         Set up a stream, and act as if resource binding succeeds.
         """
         d = self.init.start()
-        iq = self.output[-1]
+        iq = self.output[0]
         self.assertEquals('iq', iq.name)
         self.assertEquals('set', iq['type'])
         self.assertEquals(('urn:ietf:params:xml:ns:xmpp-session', 'session'),
                           (iq.children[0].uri, iq.children[0].name))
         self.xmlstream.dataReceived("<iq type='result' id='%s'/>" % iq['id'])
         return d
+
 
     def testFailure(self):
         """
@@ -227,10 +239,11 @@ class SessionInitializerTest(InitiatingInitializerHarness, unittest.TestCase):
         Set up a stream, and act as if session establishment succeeds.
         """
         d = self.init.start()
-        id = self.output[-1]['id']
+        id = self.output[0]['id']
         self.xmlstream.dataReceived("<iq type='error' id='%s'/>" % id)
         self.assertFailure(d, error.StanzaError)
         return d
+
 
 
 class XMPPAuthenticatorTest(unittest.TestCase):

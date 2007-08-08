@@ -90,7 +90,7 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
     ###
     ### --------------------------------------------------------------
 
-    def onDocumentStart(self, rootElement):
+    def onDocumentStart(self, rootelem):
         """ Called whenever the start tag of a root element has been received.
 
         Dispatches the L{STREAM_START_EVENT}.

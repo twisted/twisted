@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.words.test.test_jabbercomponent -*-
 #
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2006 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -65,7 +65,7 @@ class ComponentInitiatingInitializer(object):
     def _cbHandshake(self, _):
         # we have successfully shaken hands and can now consider this
         # entity to represent the component JID.
-        self.xmlstream.thisEntity = self.xmlstream.otherEntity
+        self.xmlstream.thisHost = self.xmlstream.otherHost
         self._deferred.callback(None)
 
 class ConnectComponentAuthenticator(xmlstream.ConnectAuthenticator):
