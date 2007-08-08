@@ -1,11 +1,14 @@
-# Copyright (c) 2001-2005 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+Tests for L{twisted.words.protocols.jabber.component}
+"""
 
-import sys, os, sha
+import sha
 from twisted.trial import unittest
 
-from twisted.words.protocols.jabber.component import ConnectComponentAuthenticator, ComponentInitiatingInitializer
+from twisted.words.protocols.jabber import component
 from twisted.words.protocols import jabber
 from twisted.words.protocols.jabber import xmlstream
 
@@ -30,7 +33,8 @@ class ComponentInitiatingInitializerTest(unittest.TestCase):
                 "<stream:stream xmlns='test:component' "
                 "xmlns:stream='http://etherx.jabber.org/streams' "
                 "from='example.com' id='12345' version='1.0'>")
-        self.init = ComponentInitiatingInitializer(self.xmlstream)
+        self.xmlstream.sid = '12345'
+        self.init = component.ComponentInitiatingInitializer(self.xmlstream)
 
     def testHandshake(self):
         """
@@ -41,7 +45,7 @@ class ComponentInitiatingInitializerTest(unittest.TestCase):
 
         # the initializer should have sent the handshake request
 
-        handshake = self.output[0]
+        handshake = self.output[-1]
         self.assertEquals('handshake', handshake.name)
         self.assertEquals('test:component', handshake.uri)
         self.assertEquals(sha.new("%s%s" % ('12345', 'secret')).hexdigest(),
@@ -57,12 +61,12 @@ class ComponentInitiatingInitializerTest(unittest.TestCase):
 class ComponentAuthTest(unittest.TestCase):
     def authPassed(self, stream):
         self.authComplete = True
-        
+
     def testAuth(self):
         self.authComplete = False
         outlist = []
 
-        ca = ConnectComponentAuthenticator("cjid", "secret")
+        ca = component.ConnectComponentAuthenticator("cjid", "secret")
         xs = xmlstream.XmlStream(ca)
         xs.transport = DummyTransport(outlist)
 
@@ -81,20 +85,20 @@ class ComponentAuthTest(unittest.TestCase):
         xs.dataReceived("<handshake/>")
 
         self.assertEquals(self.authComplete, True)
-        
+
 
 class JabberServiceHarness(jabber.component.Service):
     def __init__(self):
         self.componentConnectedFlag = False
         self.componentDisconnectedFlag = False
         self.transportConnectedFlag = False
-        
+
     def componentConnected(self, xmlstream):
         self.componentConnectedFlag = True
 
     def componentDisconnected(self):
         self.componentDisconnectedFlag = True
-        
+
     def transportConnected(self, xmlstream):
         self.transportConnectedFlag = True
 
