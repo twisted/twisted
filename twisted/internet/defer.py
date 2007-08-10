@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.test.test_defer -*-
 #
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -721,7 +721,7 @@ def _inlineCallbacks(result, g, deferred):
         try:
             # Send the last result back as the result of the yield expression.
             if isinstance(result, failure.Failure):
-                result = g.throw(result.type, result.value, result.tb)
+                result = result.throwExceptionIntoGenerator(g)
             else:
                 result = g.send(result)
         except StopIteration:

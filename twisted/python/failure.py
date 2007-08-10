@@ -136,6 +136,12 @@ class Failure:
         (L{sys.exc_info}()).  However, if you want to specify a
         particular kind of failure, you can pass an exception as an
         argument.
+
+        If no C{exc_value} is passed, then an "original" Failure will
+        be searched for. If the current exception handler that this
+        Failure is being constructed in is handling an exception
+        raised by L{raiseException}, then this Failure will act like
+        the original Failure.
         """
         global count
         count = count + 1
@@ -151,6 +157,10 @@ class Failure:
             exc_value = DefaultException(exc_value)
 
         stackOffset = 0
+
+        if exc_value is None:
+            exc_value = self._findFailure()
+
         if exc_value is None:
             self.type, self.value, tb = sys.exc_info()
             if self.type is None:
@@ -293,6 +303,7 @@ class Failure:
                 return error
         return None
 
+
     def raiseException(self):
         """
         raise the original exception, preserving traceback
@@ -300,6 +311,66 @@ class Failure:
         """
         raise self.type, self.value, self.tb
 
+
+    def throwExceptionIntoGenerator(self, g):
+        """
+        Throw the original exception into the given generator,
+        preserving traceback information if available.
+
+        @return: The next value yielded from the generator.
+        @raise StopIteration: If there are no more values in the generator.
+        @raise anything else: Anything that the generator raises.
+        """
+        return g.throw(self.type, self.value, self.tb)
+
+
+    def _findFailure(cls):
+        """
+        Find the failure that represents the exception currently in context.
+        """
+        tb = sys.exc_info()[-1]
+        if not tb:
+            return
+
+        second_last_tb = None
+        last_tb = tb
+        while last_tb.tb_next:
+            second_last_tb = last_tb
+            last_tb = last_tb.tb_next
+
+        # NOTE: f_locals.get('self') is used rather than
+        # f_locals['self'] because psyco frames do not contain
+        # anything in their locals() dicts.  psyco makes debugging
+        # difficult anyhow, so losing the Failure objects (and thus
+        # the tracebacks) here when it is used is not that big a deal.
+
+        # handle raiseException-originated exceptions
+        frame = last_tb.tb_frame
+        if frame.f_code is cls.raiseException.func_code:
+            return frame.f_locals.get('self')
+
+        # handle throwExceptionIntoGenerator-originated exceptions
+        # this is tricky, and differs if the exception was caught
+        # inside the generator, or above it:
+
+        # if the exception was caught above the generator.throw
+        # (outside the generator), it will appear in the tb (as the
+        # second last item):
+        if second_last_tb:
+            frame = second_last_tb.tb_frame
+            if frame.f_code is cls.throwExceptionIntoGenerator.func_code:
+                return frame.f_locals.get('self')
+
+        # if the exception was caught below the generator.throw
+        # (inside the generator), it will appear in the frames' linked
+        # list, above the top-level traceback item (which must be the
+        # generator frame itself, thus its caller is
+        # throwExceptionIntoGenerator).
+        frame = tb.tb_frame.f_back
+        if frame and frame.f_code is cls.throwExceptionIntoGenerator.func_code:
+            return frame.f_locals.get('self')
+
+    _findFailure = classmethod(_findFailure)
 
     def __repr__(self):
         return "<%s %s>" % (self.__class__, self.type)

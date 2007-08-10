@@ -1,5 +1,5 @@
 
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -22,6 +22,15 @@ class BrokenStr(Exception):
     def __str__(self):
         raise self
 
+
+def getDivisionFailure():
+    try:
+        1/0
+    except:
+        f = failure.Failure()
+    return f
+
+
 class FailureTestCase(unittest.TestCase):
 
     def testFailAndTrap(self):
@@ -40,7 +49,7 @@ class FailureTestCase(unittest.TestCase):
             raise ValueError()
         except:
             f = failure.Failure()
-        self.assertRaises(failure.Failure,f.trap,OverflowError)
+        self.assertRaises(failure.Failure, f.trap, OverflowError)
 
     def testPrinting(self):
         out = StringIO.StringIO()
@@ -59,13 +68,6 @@ class FailureTestCase(unittest.TestCase):
         self.assertEquals(f.value, e)
 
 
-    def _getDivisionFailure(self):
-        try:
-            1/0
-        except:
-            f = failure.Failure()
-        return f
-
     def _getInnermostFrameLine(self, f):
         try:
             f.raiseException()
@@ -76,18 +78,21 @@ class FailureTestCase(unittest.TestCase):
             raise Exception(
                 "f.raiseException() didn't raise ZeroDivisionError!?")
 
+
     def testRaiseExceptionWithTB(self):
-        f = self._getDivisionFailure()
+        f = getDivisionFailure()
         innerline = self._getInnermostFrameLine(f)
         self.assertEquals(innerline, '1/0')
 
+
     def testLackOfTB(self):
-        f = self._getDivisionFailure()
+        f = getDivisionFailure()
         f.cleanFailure()
         innerline = self._getInnermostFrameLine(f)
         self.assertEquals(innerline, '1/0')
 
     testLackOfTB.todo = "the traceback is not preserved, exarkun said he'll try to fix this! god knows how"
+
 
     def _getStringFailure(self):
         try:
@@ -108,7 +113,13 @@ class FailureTestCase(unittest.TestCase):
     testStringExceptions.suppress = [
         util.suppress(message='raising a string exception is deprecated')]
 
+
     def testBrokenStr(self):
+        """
+        Formatting a traceback of a Failure which refers to an object
+        that has a broken __str__ implementation should not cause
+        getTraceback to raise an exception.
+        """
         x = BrokenStr()
         try:
             str(x)
@@ -119,6 +130,7 @@ class FailureTestCase(unittest.TestCase):
             f.getTraceback()
         except:
             self.fail("getTraceback() shouldn't raise an exception")
+
 
     def testConstructionFails(self):
         """
@@ -134,7 +146,7 @@ class FailureTestCase(unittest.TestCase):
         should return the traceback object that it was given in the
         constructor.
         """
-        f = self._getDivisionFailure()
+        f = getDivisionFailure()
         self.assertEqual(f.getTracebackObject(), f.tb)
 
     def test_getTracebackObjectFromClean(self):
@@ -142,7 +154,7 @@ class FailureTestCase(unittest.TestCase):
         If the Failure has been cleaned, then C{getTracebackObject} should
         return an object that looks the same to L{traceback.extract_tb}.
         """
-        f = self._getDivisionFailure()
+        f = getDivisionFailure()
         expected = traceback.extract_tb(f.getTracebackObject())
         f.cleanFailure()
         observed = traceback.extract_tb(f.getTracebackObject())
@@ -158,6 +170,67 @@ class FailureTestCase(unittest.TestCase):
         """
         f = failure.Failure(Exception("some error"))
         self.assertEqual(f.getTracebackObject(), None)
+
+class FindFailureTests(unittest.TestCase):
+    """
+    Tests for functionality related to L{Failure._findFailure}.
+    """
+
+    def test_findNoFailureInExceptionHandler(self):
+        """
+        Within an exception handler, _findFailure should return
+        C{None} in case no Failure is associated with the current
+        exception.
+        """
+        try:
+            1/0
+        except:
+            self.assertEqual(failure.Failure._findFailure(), None)
+        else:
+            self.fail("No exception raised from 1/0!?")
+
+
+    def test_findNoFailure(self):
+        """
+        Outside of an exception handler, _findFailure should return None.
+        """
+        self.assertEqual(sys.exc_info()[-1], None) #environment sanity check
+        self.assertEqual(failure.Failure._findFailure(), None)
+
+
+    def test_findFailure(self):
+        """
+        Within an exception handler, it should be possible to find the
+        original Failure that caused the current exception (if it was
+        caused by raiseException).
+        """
+        f = getDivisionFailure()
+        f.cleanFailure()
+        try:
+            f.raiseException()
+        except:
+            self.assertEqual(failure.Failure._findFailure(), f)
+        else:
+            self.fail("No exception raised from raiseException!?")
+
+
+    def test_failureConstructionFindsOriginalFailure(self):
+        """
+        When a Failure is constructed in the context of an exception
+        handler that is handling an exception raised by
+        raiseException, the new Failure should be chained to that
+        original Failure.
+        """
+        f = getDivisionFailure()
+        f.cleanFailure()
+        try:
+            f.raiseException()
+        except:
+            newF = failure.Failure()
+            self.assertEqual(f.getTraceback(), newF.getTraceback())
+        else:
+            self.fail("No exception raised from raiseException!?")
+
 
 
 class TestFormattableTraceback(unittest.TestCase):
@@ -194,3 +267,7 @@ class TestFormattableTraceback(unittest.TestCase):
         self.assertEqual(traceback.extract_tb(tb),
                          [('filename.py', 123, 'method1', None),
                           ('filename.py', 235, 'method2', None)])
+
+
+if sys.version_info[:2] >= (2, 5):
+    from twisted.test.generator_failure_tests import TwoPointFiveFailureTests
