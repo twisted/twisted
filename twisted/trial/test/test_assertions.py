@@ -430,6 +430,79 @@ class TestAssertions(unittest.TestCase):
             __file__, deprecated, 123)
         self.assertEquals(r, 123)
 
+    def test_assertIsInstance(self):
+        """
+        Test a true condition of assertIsInstance.
+        """
+        A = type('A', (object,), {})
+        a = A()
+        self.assertIsInstance(a, A)
+
+    def test_assertIsInstanceMultipleClasses(self):
+        """
+        Test a true condition of assertIsInstance with multiple classes.
+        """
+        A = type('A', (object,), {})
+        B = type('B', (object,), {})
+        a = A()
+        self.assertIsInstance(a, (A, B))
+
+    def test_assertIsInstanceError(self):
+        """
+        Test an error with assertIsInstance.
+        """
+        A = type('A', (object,), {})
+        B = type('B', (object,), {})
+        a = A()
+        self.assertRaises(self.failureException, self.assertIsInstance, a, B)
+
+    def test_assertIsInstanceErrorMultipleClasses(self):
+        """
+        Test an error with assertIsInstance and multiple classes.
+        """
+        A = type('A', (object,), {})
+        B = type('B', (object,), {})
+        C = type('C', (object,), {})
+        a = A()
+        self.assertRaises(self.failureException, self.assertIsInstance, a, (B, C))
+
+    def test_assertNotIsInstance(self):
+        """
+        Test a true condition of assertNotIsInstance.
+        """
+        A = type('A', (object,), {})
+        B = type('B', (object,), {})
+        a = A()
+        self.assertNotIsInstance(a, B)
+
+    def test_assertNotIsInstanceMultipleClasses(self):
+        """
+        Test a true condition of assertNotIsInstance and multiple classes.
+        """
+        A = type('A', (object,), {})
+        B = type('B', (object,), {})
+        C = type('C', (object,), {})
+        a = A()
+        self.assertNotIsInstance(a, (B, C))
+
+    def test_assertNotIsInstanceError(self):
+        """
+        Test an error with assertNotIsInstance.
+        """
+        A = type('A', (object,), {})
+        a = A()
+        self.assertRaises(self.failureException, self.assertNotIsInstance, a, A)
+
+    def test_assertNotIsInstanceErrorMultipleClasses(self):
+        """
+        Test an error with assertNotIsInstance and multiple classes.
+        """
+        A = type('A', (object,), {})
+        B = type('B', (object,), {})
+        a = A()
+        self.assertRaises(self.failureException, self.assertNotIsInstance, a, (A, B))
+
+
 
 class TestAssertionNames(unittest.TestCase):
     """Tests for consistency of naming within TestCase assertion methods
