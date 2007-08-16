@@ -519,7 +519,7 @@ class _StdioMixin(_BaseMixin):
         # Kill the child process.  We're done with it.
         try:
             self.clientTransport.signalProcess("KILL")
-        except OSError:
+        except (error.ProcessExitedAlready, OSError):
             pass
         def trap(failure):
             failure.trap(error.ProcessTerminated)

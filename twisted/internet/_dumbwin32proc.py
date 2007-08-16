@@ -243,6 +243,8 @@ class Process(_pollingfile._PollingTimer):
 
 
     def signalProcess(self, signalID):
+        if self.closed:
+            raise error.ProcessExitedAlready()
         if signalID in ("INT", "TERM", "KILL"):
             win32process.TerminateProcess(self.hProcess, 1)
 
