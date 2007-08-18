@@ -49,12 +49,21 @@ def MP(number):
         bn = '\000' + bn
     return struct.pack('>L',len(bn)) + bn
 
-def getMP(data):
+def getMP(data, count=1):
     """
-    get multiple precision integer
+    Get multiple precision integer out of the string.  A multiple precision
+    integer is stored as a 4-byte length followed by length bytes of the
+    integer.  If count is specified, get count integers out of the string.
+    The return value is a tuple of count integers followed by the rest of
+    the data.
     """
-    length=struct.unpack('>L',data[:4])[0]
-    return Util.number.bytes_to_long(data[4:4+length]),data[4+length:]
+    mp = []
+    c = 0
+    for i in range(count):
+        length, = struct.unpack('>L',data[c:c+4])
+        mp.append(Util.number.bytes_to_long(data[c+4:c+4+length]))
+        c += 4 + length
+    return tuple(mp) + (data[c:],)
 
 def _MPpow(x, y, z):
     """return the MP version of (x**y)%z
@@ -74,10 +83,14 @@ MP_py = MP
 _MPpow_py = _MPpow
 pyPow = pow
 
-def _fastgetMP(i):
-    l = struct.unpack('!L', i[:4])[0]
-    n = i[4:l+4][::-1]
-    return long(gmpy.mpz(n+'\x00', 256)), i[4+l:]
+def _fastgetMP(data, count=1):
+    mp = []
+    c = 0
+    for i in range(count):
+        l = struct.unpack('!L', data[c:c+4])[0]
+        mp.append(long(gmpy.mpz(data[c+4:c+l+4][::-1]+'\x00')))
+        c += l + 4
+    return mp + (data[c+4+l:],)
 
 def _fastMP(i):
     i2 = gmpy.mpz(i).binary()[::-1]
