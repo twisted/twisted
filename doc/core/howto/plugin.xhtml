@@ -12,7 +12,7 @@
     describe how to extend applications written in such a way).  This
     extensibility is achieved through the definition of one or more
     APIs and a mechanism for collecting code plugins which
-    implementation this API to provide some additional functionality.
+    implement this API to provide some additional functionality.
     At the base of this system is the <code
     class="API">twisted.plugin</code> module.</p>
 
@@ -39,7 +39,7 @@
     <ol>
       <li>
         <p>
-        Define an interface which plugins will be required to implement. 
+        Define an interface which plugins will be required to implement.
         This is done using the <code class="API">zope.interface</code>
         package in the same way one would define an interface for any other
         purpose.
@@ -147,19 +147,21 @@ steelPlate = SimpleMaterial(2.06842719e11, 2.7 + 0.2j)
 brassPlate = SimpleMaterial(1.03421359e11, 1.4 + 0.5j)
     </pre>
 
-    <p><code>steelPlate</code> and <code>brassPlate</code> now provide
-    both <code class="API">IPlugin</code> and <code>IMaterial</code>.
-    All that remains is to make this module available at an
-    appropriate location.  For this, there are two options.  The first
-    of these is primarily useful during development: if a directory
-    which has been added to <code>sys.path</code> (typically by adding
-    it to the <code class="shell">PYTHONPATH</code> environment
-    variable) contains a <em>directory</em> (not a Python package)
+    <p><code>steelPlate</code> and <code>brassPlate</code> now provide both
+    <code class="API">IPlugin</code> and <code>IMaterial</code>.  All that
+    remains is to make this module available at an appropriate location.
+    For this, there are two options.  The first of these is primarily useful
+    during development: if a directory which has been added to <code>
+    sys.path</code> (typically by adding it to the <code class="shell">
+    PYTHONPATH</code> environment variable) contains a <em>directory</em>
     named <code class="shell">twisted/plugins/</code>, each <code
-    class="shell">.py</code> file in that directory will be loaded as
-    a source of plugins.  Second, each module in the installed version
-    of Twisted's <code class="shell">twisted.plugins</code> package
-    will also be loaded as a source of plugins.</p>
+    class="shell">.py</code> file in that directory will be loaded as a
+    source of plugins.  This directory <em>must not</em> be a Python
+    package: including <code class="shell">__init__.py</code> will cause the
+    directory to be skipped and no plugins loaded from it.  Second, each
+    module in the installed version of Twisted's <code class="shell">
+    twisted.plugins</code> package will also be loaded as a source of
+    plugins.</p>
 
     <p>Once this plugin is installed in one of these two ways,
     <code>displayAllKnownMaterials</code> can be run and we will see
@@ -183,10 +185,8 @@ brassPlate = SimpleMaterial(1.03421359e11, 1.4 + 0.5j)
     the following lines.</p>
 
     <pre class="python">
-import os, sys
-__path__ = [os.path.abspath(os.path.join(x, 'yourproject', 'plugins')) 
-            for x in sys.path]
-
+from twisted.plugin import pluginPackagePaths
+__path__.extend(pluginPackagePaths(__name__))
 __all__ = []
     </pre>
 
