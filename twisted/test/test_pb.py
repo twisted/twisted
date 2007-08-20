@@ -21,8 +21,9 @@ from twisted.trial import unittest
 
 from twisted.spread import pb, util, publish
 from twisted.internet import protocol, main, reactor, defer
+from twisted.internet.defer import Deferred, gatherResults
 from twisted.python import failure, log
-from twisted.cred.error import UnauthorizedLogin
+from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.cred import portal, checkers, credentials
 
 
@@ -180,6 +181,7 @@ class NestedCopy(pb.Referenceable):
 
     def remote_getFactory(self, value):
         return SimpleFactoryCopy(value)
+
 
 
 class SimpleCache(pb.Cacheable):
@@ -342,7 +344,6 @@ class CachedReturner(pb.Root):
 
 
 class NewStyleTestCase(unittest.TestCase):
-
     def setUp(self):
         """
         Create a pb server using L{Echoer} protocol and connect a client to it.
@@ -354,6 +355,7 @@ class NewStyleTestCase(unittest.TestCase):
         def gotRoot(ref):
             self.ref = ref
         return clientFactory.getRootObject().addCallback(gotRoot)
+
 
     def tearDown(self):
         """
@@ -401,7 +403,6 @@ class NewStyleTestCase(unittest.TestCase):
 
 
 class NewStyleCachedTestCase(unittest.TestCase):
-
     def setUp(self):
         """
         Create a pb server using L{CachedReturner} protocol and connect a
@@ -418,12 +419,14 @@ class NewStyleCachedTestCase(unittest.TestCase):
             self.ref = ref
         return clientFactory.getRootObject().addCallback(gotRoot)
 
+
     def tearDown(self):
         """
         Close client and server connections.
         """
         self.ref.broker.transport.loseConnection()
         return self.server.stopListening()
+
 
     def test_newStyleCache(self):
         """
@@ -436,6 +439,7 @@ class NewStyleCachedTestCase(unittest.TestCase):
             self.failIf(res is self.orig) # no cheating :)
         d.addCallback(cb)
         return d
+
 
 
 class BrokerTestCase(unittest.TestCase):
@@ -570,6 +574,7 @@ class BrokerTestCase(unittest.TestCase):
         pump.pump(); pump.pump()
         self.assertEquals(results[0], 6, "Incorrect result.")
 
+
     def test_refcount(self):
         c, s, pump = connectedServerAndClient()
         foo = NestedRemote()
@@ -697,6 +702,7 @@ class BrokerTestCase(unittest.TestCase):
 
     def gotCopy(self, val):
         self.thunkResult = val.id
+
 
     def test_factoryCopy(self):
         c, s, pump = connectedServerAndClient()
@@ -862,6 +868,7 @@ class DisconnectionTestCase(unittest.TestCase):
     def error(self, *args):
         raise RuntimeError("I shouldn't have been called: %s" % (args,))
 
+
     def gotDisconnected(self):
         """
         Called on broker disconnect.
@@ -948,19 +955,31 @@ class LocalRemoteTest(util.LocalAsRemote):
         raise RuntimeError()
 
 
-class MyRealm:
+
+class TestRealm(object):
     """
-    A test realm.
+    A realm which repeatedly gives out a single instance of L{MyPerspective}
+    for non-anonymous logins and which gives out a new instance of L{Echoer}
+    for each anonymous login.
     """
 
     def __init__(self):
         self.p = MyPerspective()
 
     def requestAvatar(self, avatarId, mind, interface):
+        """
+        Verify that the mind and interface supplied have the expected values
+        (this should really be done somewhere else, like inside a test method)
+        and return an avatar appropriate for the given identifier.
+        """
         assert interface == pb.IPerspective
         assert mind == "BRAINS!"
-        self.p.loggedIn = 1
-        return pb.IPerspective, self.p, self.p.logout
+        if avatarId is checkers.ANONYMOUS:
+            return pb.IPerspective, Echoer(), lambda: None
+        else:
+            self.p.loggedIn = 1
+            return pb.IPerspective, self.p, self.p.logout
+
 
 
 class MyPerspective(pb.Avatar):
@@ -972,11 +991,23 @@ class MyPerspective(pb.Avatar):
     def __init__(self):
         pass
 
+
     def perspective_getViewPoint(self):
         return MyView()
 
+
+    def perspective_add(self, a, b):
+        """
+        Add the given objects and return the result.  This is a method
+        unavailable on L{Echoer}, so it can only be invoked by authenticated
+        users who received their avatar from L{TestRealm}.
+        """
+        return a + b
+
+
     def logout(self):
         self.loggedOut = True
+
 
 
 class MyView(pb.Viewable):
@@ -985,19 +1016,28 @@ class MyView(pb.Viewable):
         return isinstance(user, MyPerspective)
 
 
-class NewCredTestCase(unittest.TestCase):
 
+class NewCredTestCase(unittest.TestCase):
+    """
+    Tests related to the L{twisted.cred} support in PB.
+    """
     def setUp(self):
-        self.realm = MyRealm()
+        """
+        Create a portal with no checkers and wrap it around a simple test
+        realm.  Set up a PB server on a TCP port which serves perspectives
+        using that portal.
+        """
+        self.realm = TestRealm()
         self.portal = portal.Portal(self.realm)
-        self.checker = checkers.InMemoryUsernamePasswordDatabaseDontUse()
-        self.checker.addUser("user", "pass")
-        self.portal.registerChecker(self.checker)
         self.factory = pb.PBServerFactory(self.portal)
         self.port = reactor.listenTCP(0, self.factory, interface="127.0.0.1")
         self.portno = self.port.getHost().port
 
+
     def tearDown(self):
+        """
+        Shut down the TCP port created by L{setUp}.
+        """
         return self.port.stopListening()
 
     def getFactoryAndRootObject(self, clientFactory=pb.PBClientFactory):
@@ -1005,6 +1045,7 @@ class NewCredTestCase(unittest.TestCase):
         rootObjDeferred = factory.getRootObject()
         reactor.connectTCP('127.0.0.1', self.portno, factory)
         return factory, rootObjDeferred
+
 
     def test_getRootObject(self):
         """
@@ -1021,6 +1062,7 @@ class NewCredTestCase(unittest.TestCase):
             return disconnectedDeferred
 
         return rootObjDeferred.addCallback(gotRootObject)
+
 
     def test_deadReferenceError(self):
         """
@@ -1043,6 +1085,7 @@ class NewCredTestCase(unittest.TestCase):
             return disconnectedDeferred
 
         return rootObjDeferred.addCallback(gotRootObject)
+
 
     def test_clientConnectionLost(self):
         """
@@ -1086,6 +1129,7 @@ class NewCredTestCase(unittest.TestCase):
             return d.addCallback(disconnected)
         return rootObjDeferred.addCallback(gotRootObject)
 
+
     def test_immediateClose(self):
         """
         Test that if a Broker loses its connection without receiving any bytes,
@@ -1095,56 +1139,203 @@ class NewCredTestCase(unittest.TestCase):
         serverProto.makeConnection(protocol.FileWrapper(StringIO()))
         serverProto.connectionLost(failure.Failure(main.CONNECTION_DONE))
 
+
     def test_loginLogout(self):
+        """
+        Test that login can be performed with IUsernamePassword credentials and
+        that when the connection is dropped the avatar is logged out.
+        """
+        self.portal.registerChecker(
+            checkers.InMemoryUsernamePasswordDatabaseDontUse(user='pass'))
         factory = pb.PBClientFactory()
+        creds = credentials.UsernamePassword("user", "pass")
+
         # NOTE: real code probably won't need anything where we have the
         # "BRAINS!" argument, passing None is fine. We just do it here to
         # test that it is being passed. It is used to give additional info to
         # the realm to aid perspective creation, if you don't need that,
         # ignore it.
-        d = factory.login(credentials.UsernamePassword("user", "pass"),
-                          "BRAINS!")
+        mind = "BRAINS!"
+
+        d = factory.login(creds, mind)
+        def cbLogin(perspective):
+            self.assertEquals(self.realm.p.loggedIn, 1)
+            self.assert_(isinstance(perspective, pb.RemoteReference))
+
+            factory.disconnect()
+            d = Deferred()
+            reactor.callLater(1.0, d.callback, None)
+            return d
+        d.addCallback(cbLogin)
+
+        def cbLogout(ignored):
+            self.assertEquals(self.realm.p.loggedOut, 1)
+        d.addCallback(cbLogout)
+
         reactor.connectTCP("127.0.0.1", self.portno, factory)
-        d.addCallback(self._testLoginLogout_1, factory)
         return d
 
-    def _testLoginLogout_1(self, p, factory):
-        self.assertEquals(self.realm.p.loggedIn, 1)
-        self.assertTrue(isinstance(p, pb.RemoteReference))
-        factory.disconnect()
-        d = defer.Deferred()
-        reactor.callLater(0.1, d.callback, None)
-        d.addCallback(lambda res: self.assertEquals(self.realm.p.loggedOut, 1))
-        return d
 
-    def test_dadLogin(self):
-        d = defer.succeed(None)
-        for username, password in [("nosuchuser", "pass"),
-                                   ("user", "wrongpass")]:
-            d.addCallback(self._testBadLogin_once, username, password)
-        d.addBoth(lambda res: self.flushLoggedErrors(UnauthorizedLogin))
-        return d
-
-    def _testBadLogin_once(self, res, username, password):
+    def test_badUsernamePasswordLogin(self):
+        """
+        Test that a login attempt with an invalid user or invalid password
+        fails in the appropriate way.
+        """
+        self.portal.registerChecker(
+            checkers.InMemoryUsernamePasswordDatabaseDontUse(user='pass'))
         factory = pb.PBClientFactory()
-        creds = credentials.UsernamePassword(username, password)
-        d = factory.login(creds, "BRAINS!")
-        c = reactor.connectTCP("127.0.0.1", self.portno, factory)
-        d.addCallbacks(lambda res: self.fail("should have failed"),
-                       lambda f: f.trap(UnauthorizedLogin))
-        d.addCallback(lambda res: factory.disconnect())
+
+        firstLogin = factory.login(
+            credentials.UsernamePassword('nosuchuser', 'pass'))
+        secondLogin = factory.login(
+            credentials.UsernamePassword('user', 'wrongpass'))
+
+        self.assertFailure(firstLogin, UnauthorizedLogin)
+        self.assertFailure(secondLogin, UnauthorizedLogin)
+        d = gatherResults([firstLogin, secondLogin])
+
+        def cleanup(passthrough):
+            self.flushLoggedErrors(UnauthorizedLogin)
+            factory.disconnect()
+            return passthrough
+        d.addBoth(cleanup)
+
+        reactor.connectTCP("127.0.0.1", self.portno, factory)
         return d
+
+
+    def test_anonymousLogin(self):
+        """
+        Verify that a PB server using a portal configured with an checker which
+        allows IAnonymous credentials can be logged into using IAnonymous
+        credentials.
+        """
+        self.portal.registerChecker(checkers.AllowAnonymousAccess())
+        factory = pb.PBClientFactory()
+        d = factory.login(credentials.Anonymous(), "BRAINS!")
+
+        def cbLoggedIn(perspective):
+            return perspective.callRemote('echo', 123)
+        d.addCallback(cbLoggedIn)
+
+        d.addCallback(self.assertEqual, 123)
+
+        def cleanup(passthrough):
+            factory.disconnect()
+            d = Deferred()
+            reactor.callLater(1.0, d.callback, None)
+            return d
+        d.addBoth(cleanup)
+
+        reactor.connectTCP("127.0.0.1", self.portno, factory)
+        return d
+
+
+    def test_anonymousLoginNotPermitted(self):
+        """
+        Verify that without an anonymous checker set up, anonymous login is
+        rejected.
+        """
+        self.portal.registerChecker(
+            checkers.InMemoryUsernamePasswordDatabaseDontUse(user='pass'))
+        factory = pb.PBClientFactory()
+        d = factory.login(credentials.Anonymous(),"BRAINS!")
+        self.assertFailure(d, UnhandledCredentials)
+
+        def cleanup(passthrough):
+            self.flushLoggedErrors(UnhandledCredentials)
+            factory.disconnect()
+            return passthrough
+        d.addBoth(cleanup)
+
+        reactor.connectTCP('127.0.0.1', self.portno, factory)
+        return d
+
+
+    def test_anonymousLoginWithMultipleCheckers(self):
+        """
+        Like L{test_anonymousLogin} but against a portal with a checker for
+        both IAnonymous and IUsernamePassword.
+        """
+        self.portal.registerChecker(checkers.AllowAnonymousAccess())
+        self.portal.registerChecker(
+            checkers.InMemoryUsernamePasswordDatabaseDontUse(user='pass'))
+        factory = pb.PBClientFactory()
+        d = factory.login(credentials.Anonymous(), "BRAINS!")
+
+        def cbLogin(perspective):
+            return perspective.callRemote('echo', 123)
+        d.addCallback(cbLogin)
+
+        d.addCallback(self.assertEqual, 123)
+
+        def cleanup(passthrough):
+            factory.disconnect()
+            return passthrough
+        d.addBoth(cleanup)
+
+        reactor.connectTCP('127.0.0.1', self.portno, factory)
+        return d
+
+
+    def test_authenticatedLoginWithMultipleCheckers(self):
+        """
+        Like L{test_anonymousLoginWithMultipleCheckers} but check that
+        username/password authentication works.
+        """
+        self.portal.registerChecker(checkers.AllowAnonymousAccess())
+        self.portal.registerChecker(
+            checkers.InMemoryUsernamePasswordDatabaseDontUse(user='pass'))
+        factory = pb.PBClientFactory()
+        d = factory.login(
+            credentials.UsernamePassword('user', 'pass'), "BRAINS!")
+
+        def cbLogin(perspective):
+            return perspective.callRemote('add', 100, 23)
+        d.addCallback(cbLogin)
+
+        d.addCallback(self.assertEqual, 123)
+
+        def cleanup(passthrough):
+            factory.disconnect()
+            return passthrough
+        d.addBoth(cleanup)
+
+        reactor.connectTCP('127.0.0.1', self.portno, factory)
+        return d
+
 
     def test_view(self):
+        """
+        Verify that a viewpoint can be retrieved after authenticating with
+        cred.
+        """
+        self.portal.registerChecker(
+            checkers.InMemoryUsernamePasswordDatabaseDontUse(user='pass'))
         factory = pb.PBClientFactory()
-        d = factory.login(credentials.UsernamePassword("user", "pass"),
-                          "BRAINS!")
+        d = factory.login(
+            credentials.UsernamePassword("user", "pass"), "BRAINS!")
+
+        def cbLogin(perspective):
+            return perspective.callRemote("getViewPoint")
+        d.addCallback(cbLogin)
+
+        def cbView(viewpoint):
+            return viewpoint.callRemote("check")
+        d.addCallback(cbView)
+
+        d.addCallback(self.failUnless)
+
+        def cleanup(passthrough):
+            factory.disconnect()
+            d = Deferred()
+            reactor.callLater(1.0, d.callback, None)
+            return d
+        d.addBoth(cleanup)
+
         reactor.connectTCP("127.0.0.1", self.portno, factory)
-        d.addCallback(lambda p: p.callRemote("getViewPoint"))
-        d.addCallback(lambda v: v.callRemote("check"))
-        d.addCallback(self.assertEquals, True)
-        d.addCallback(lambda res: factory.disconnect())
         return d
+
 
 
 class NonSubclassingPerspective:
@@ -1156,14 +1347,15 @@ class NonSubclassingPerspective:
         kwargs = broker.unserialize(kwargs, self)
         return broker.serialize((message, args, kwargs))
 
-    # Methods required by MyRealm
+    # Methods required by TestRealm
     def logout(self):
         self.loggedOut = True
 
 
+
 class NSPTestCase(unittest.TestCase):
     def setUp(self):
-        self.realm = MyRealm()
+        self.realm = TestRealm()
         self.realm.p = NonSubclassingPerspective()
         self.portal = portal.Portal(self.realm)
         self.checker = checkers.InMemoryUsernamePasswordDatabaseDontUse()
@@ -1186,6 +1378,7 @@ class NSPTestCase(unittest.TestCase):
                       ('ANYTHING', ('here',), {'bar': 'baz'}))
         d.addCallback(lambda res: factory.disconnect())
         return d
+
 
 
 class IForwarded(Interface):
@@ -1299,4 +1492,3 @@ class SpreadUtilTestCase(unittest.TestCase):
         l = []
         rr.addCallback(l.append)
         self.assertEqual(l[0], 1)
-

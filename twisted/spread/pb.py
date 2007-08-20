@@ -1,6 +1,5 @@
 # -*- test-case-name: twisted.test.test_pb -*-
-#
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -73,7 +72,8 @@ import types
 from twisted.python import log, failure
 from twisted.internet import defer, protocol
 from twisted.cred.portal import Portal
-from twisted.cred.credentials import ICredentials, IUsernameHashedPassword
+from twisted.cred.credentials import IAnonymous, ICredentials
+from twisted.cred.credentials import IUsernameHashedPassword, Anonymous
 from twisted.persisted import styles
 from twisted.python.components import registerAdapter
 
@@ -1095,17 +1095,50 @@ class PBClientFactory(protocol.ClientFactory):
     def _cbResponse(self, (challenge, challenger), password, client):
         return challenger.callRemote("respond", respond(challenge, password), client)
 
+
+    def _cbLoginAnonymous(self, root, client):
+        """
+        Attempt an anonymous login on the given remote root object.
+
+        @type root: L{RemoteReference}
+        @param root: The object on which to attempt the login, most likely
+            returned by a call to L{PBClientFactory.getRootObject}.
+
+        @param client: A jellyable object which will be used as the I{mind}
+            parameter for the login attempt.
+
+        @rtype: L{Deferred}
+        @return: A L{Deferred} which will be called back with a
+            L{RemoteReference} to an avatar when anonymous login succeeds, or
+            which will errback if anonymous login fails.
+        """
+        return root.callRemote("loginAnonymous", client)
+
+
     def login(self, credentials, client=None):
-        """Login and get perspective from remote PB server.
+        """
+        Login and get perspective from remote PB server.
 
-        Currently only credentials implementing
-        L{twisted.cred.credentials.IUsernamePassword} are supported.
+        Currently the following credentials are supported::
 
-        @return: Deferred of RemoteReference to the perspective.
+            L{twisted.cred.credentials.IUsernamePassword}
+            L{twisted.cred.credentials.IAnonymous}
+
+        @rtype: L{Deferred}
+        @return: A L{Deferred} which will be called back with a
+            L{RemoteReference} for the avatar logged in to, or which will
+            errback if login fails.
         """
         d = self.getRootObject()
-        d.addCallback(self._cbSendUsername, credentials.username, credentials.password, client)
+
+        if IAnonymous.providedBy(credentials):
+            d.addCallback(self._cbLoginAnonymous, client)
+        else:
+            d.addCallback(
+                self._cbSendUsername, credentials.username,
+                credentials.password, client)
         return d
+
 
 
 class PBServerFactory(protocol.ServerFactory):
@@ -1173,8 +1206,6 @@ class IUsernameMD5Password(ICredentials):
         """
 
 
-
-
 class _PortalRoot:
     """Root object, used to login to portal."""
 
@@ -1189,44 +1220,83 @@ class _PortalRoot:
 registerAdapter(_PortalRoot, Portal, IPBRoot)
 
 
-class _PortalWrapper(Referenceable):
-    """Root Referenceable object, used to login to portal."""
+
+class _JellyableAvatarMixin:
+    """
+    Helper class for code which deals with avatars which PB must be capable of
+    sending to a peer.
+    """
+    def _cbLogin(self, (interface, avatar, logout)):
+        """
+        Ensure that the avatar to be returned to the client is jellyable and
+        set up disconnection notification to call the realm's logout object.
+        """
+        if not IJellyable.providedBy(avatar):
+            avatar = AsReferenceable(avatar, "perspective")
+        self.broker.notifyOnDisconnect(logout)
+        return avatar
+
+
+
+class _PortalWrapper(Referenceable, _JellyableAvatarMixin):
+    """
+    Root Referenceable object, used to login to portal.
+    """
 
     def __init__(self, portal, broker):
         self.portal = portal
         self.broker = broker
 
+
     def remote_login(self, username):
-        """Start of username/password login."""
+        """
+        Start of username/password login.
+        """
         c = challenge()
-        return c, _PortalAuthChallenger(self, username, c)
+        return c, _PortalAuthChallenger(self.portal, self.broker, username, c)
 
 
-class _PortalAuthChallenger(Referenceable):
-    """Called with response to password challenge."""
+    def remote_loginAnonymous(self, mind):
+        """
+        Attempt an anonymous login.
 
+        @param mind: An object to use as the mind parameter to the portal login
+            call (possibly None).
+
+        @rtype: L{Deferred}
+        @return: A Deferred which will be called back with an avatar when login
+            succeeds or which will be errbacked if login fails somehow.
+        """
+        d = self.portal.login(Anonymous(), mind, IPerspective)
+        d.addCallback(self._cbLogin)
+        return d
+
+
+
+class _PortalAuthChallenger(Referenceable, _JellyableAvatarMixin):
+    """
+    Called with response to password challenge.
+    """
     implements(IUsernameHashedPassword, IUsernameMD5Password)
 
-    def __init__(self, portalWrapper, username, challenge):
-        self.portalWrapper = portalWrapper
+    def __init__(self, portal, broker, username, challenge):
+        self.portal = portal
+        self.broker = broker
         self.username = username
         self.challenge = challenge
 
+
     def remote_respond(self, response, mind):
         self.response = response
-        d = self.portalWrapper.portal.login(self, mind, IPerspective)
-        d.addCallback(self._loggedIn)
+        d = self.portal.login(self, mind, IPerspective)
+        d.addCallback(self._cbLogin)
         return d
 
-    def _loggedIn(self, (interface, perspective, logout)):
-        if not IJellyable.providedBy(perspective):
-            perspective = AsReferenceable(perspective, "perspective")
-        self.portalWrapper.broker.notifyOnDisconnect(logout)
-        return perspective
 
     # IUsernameHashedPassword:
     def checkPassword(self, password):
         return self.checkMD5Password(md5.md5(password).digest())
+
 
     # IUsernameMD5Password
     def checkMD5Password(self, md5Password):

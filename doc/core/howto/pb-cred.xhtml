@@ -573,6 +573,26 @@ used public-key encryption or even fancier techniques).</p>
 that Avatar.</p>
 
 
+<h3>Anonymous Clients</h3>
+
+<a href="listings/pb/pbAnonServer.py" class="py-listing">pbAnonServer.py</a>
+<a href="listings/pb/pbAnonClient.py" class="py-listing">pbAnonClient.py</a>
+
+<p>pbAnonServer.py implements a server based on pb6server.py, extending it to
+permit anonymous logins in addition to authenticated logins. A
+<code class="API" base="twisted.cred.checkers">AllowAnonymousAccess</code>
+checker and a <code class="API" base="twisted.cred.checkers">
+InMemoryUsernamePasswordDatabaseDontUse</code> checker are registered and the
+client's choice of credentials object determines which is used to authenticate
+the login.  In either case, the realm will be called on to create an avatar for
+the login.  <code>AllowAnonymousAccess</code> always produces an <code>avatarId
+</code> of <code class="API" base="twisted.cred.checkers">ANONYMOUS</code>.</p>
+
+<p>On the client side, the only change is the use of an instance of
+<code class="API" base="twisted.cred.credentials">Anonymous</code> when calling
+<code class="API" base="twisted.spread.pb">PBClientFactory.login</code>.</p>
+
+
 <h2>Using Avatars</h2>
 
 
