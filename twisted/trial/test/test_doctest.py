@@ -34,7 +34,7 @@ class TestRunners(unittest.TestCase):
         suite = runner.DocTestSuite(mockdoctest)
         result = reporter.TestResult()
         suite.run(result)
-        self.assertEqual(5, len(result.successes))
+        self.assertEqual(5, result.successes)
         # doctest reports failures as errors in 2.3
         self.assertEqual(2, len(result.errors) + len(result.failures))
 

@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.trial.test.test_script -*-
 
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -310,6 +310,8 @@ def _getLoader(config):
         print 'Running tests shuffled with seed %d\n' % config['random']
     if config['force-gc']:
         loader.forceGarbageCollection = True
+    if not config['until-failure']:
+        loader.suiteFactory = runner.DestructiveTestSuite
     return loader
 
 

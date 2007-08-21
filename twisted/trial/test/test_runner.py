@@ -1,5 +1,3 @@
-# -*- test-case-name: twisted.trial.test.test_runner -*-
-
 # Copyright (c) 2005-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 #
@@ -463,6 +461,8 @@ class TestErrorHolder(TestTestHolder):
             error = failure.Failure()
         self.holder = runner.ErrorHolder(self.description, error)
 
+
+
 class TestMalformedMethod(unittest.TestCase):
     """
     Test that trial manages when test methods don't have correct signatures.
@@ -506,4 +506,67 @@ class TestMalformedMethod(unittest.TestCase):
         Test a decorated method also fails.
         """
         self._test('test_spam')
+
+
+
+class DestructiveTestSuiteTestCase(unittest.TestCase):
+    """
+    Test for L{runner.DestructiveTestSuite}.
+    """
+
+    def test_basic(self):
+        """
+        Thes destructive test suite should run the tests normally.
+        """
+        called = []
+        class MockTest(unittest.TestCase):
+            def test_foo(test):
+                called.append(True)
+        test = MockTest('test_foo')
+        result = reporter.TestResult()
+        suite = runner.DestructiveTestSuite([test])
+        self.assertEquals(called, [])
+        suite.run(result)
+        self.assertEquals(called, [True])
+        self.assertEquals(suite.countTestCases(), 0)
+
+
+    def test_shouldStop(self):
+        """
+        Test the C{shouldStop} management: raising a C{KeyboardInterrupt} must
+        interrupt the suite.
+        """
+        called = []
+        class MockTest(unittest.TestCase):
+            def test_foo1(test):
+                called.append(1)
+            def test_foo2(test):
+                raise KeyboardInterrupt()
+            def test_foo3(test):
+                called.append(2)
+        result = reporter.TestResult()
+        loader = runner.TestLoader()
+        loader.suiteFactory = runner.DestructiveTestSuite
+        suite = loader.loadClass(MockTest)
+        self.assertEquals(called, [])
+        suite.run(result)
+        self.assertEquals(called, [1])
+        # The last test shouldn't have been run
+        self.assertEquals(suite.countTestCases(), 1)
+
+
+    def test_cleanup(self):
+        """
+        Checks that the test suite cleanups its tests during the run, so that
+        it ends empty.
+        """
+        class MockTest(unittest.TestCase):
+            def test_foo(test):
+                pass
+        test = MockTest('test_foo')
+        result = reporter.TestResult()
+        suite = runner.DestructiveTestSuite([test])
+        self.assertEquals(suite.countTestCases(), 1)
+        suite.run(result)
+        self.assertEquals(suite.countTestCases(), 0)
 

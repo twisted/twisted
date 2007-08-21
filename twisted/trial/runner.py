@@ -11,7 +11,6 @@ Maintainer: Jonathan Lange <jml@twistedmatrix.com>
 """
 
 
-from __future__ import generators
 import pdb, shutil, sets
 import os, types, warnings, sys, inspect, imp
 import random, doctest, time
@@ -126,6 +125,7 @@ def suiteVisit(suite, visitor):
             case.visit(visitor)
 
 
+
 class TestSuite(pyunit.TestSuite):
     """
     Extend the standard library's C{TestSuite} with support for the visitor
@@ -146,6 +146,25 @@ class TestSuite(pyunit.TestSuite):
         for test in self._tests:
             if result.shouldStop:
                 break
+            test(result)
+        return result
+
+
+
+class DestructiveTestSuite(TestSuite):
+    """
+    A test suite which remove the tests once run, to minimize memory usage.
+    """
+
+    def run(self, result):
+        """
+        Almost the same as L{TestSuite.run}, but with C{self._tests} being
+        empty at the end.
+        """
+        while self._tests:
+            if result.shouldStop:
+                break
+            test = self._tests.pop(0)
             test(result)
         return result
 
@@ -819,3 +838,4 @@ class TrialRunner(object):
             if not result.wasSuccessful():
                 break
         return result
+

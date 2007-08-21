@@ -5,7 +5,7 @@
 Tests for the behaviour of unit tests.
 """
 
-import gc, StringIO, sys
+import gc, StringIO, sys, weakref
 
 from twisted.internet import defer, reactor
 from twisted.trial import unittest, runner, reporter, util
@@ -47,7 +47,7 @@ class TestSuccess(unittest.TestCase):
 
 
     def assertSuccessful(self, test, result):
-        self.assertEqual(result.successes,  [(test,)])
+        self.assertEqual(result.successes, 1)
         self.assertEqual(result.failures, [])
         self.assertEqual(result.errors, [])
         self.assertEqual(result.expectedFailures, [])
@@ -73,6 +73,19 @@ class TestSuccess(unittest.TestCase):
         test = unittest.TestCase()
         test.run(self.result)
         self.assertSuccessful(test, self.result)
+
+
+    def test_noReference(self):
+        """
+        Test that no reference is kept on a successful test.
+        """
+        test = TestSuccess('test_successful')
+        ref = weakref.ref(test)
+        test.run(self.result)
+        self.assertSuccessful(test, self.result)
+        del test
+        gc.collect()
+        self.assertIdentical(ref(), None)
 
 
 

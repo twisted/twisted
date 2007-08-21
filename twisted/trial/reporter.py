@@ -1,11 +1,12 @@
 # -*- test-case-name: twisted.trial.test.test_reporter -*-
 #
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 #
 # Maintainer: Jonathan Lange <jml@twistedmatrix.com>
 
-"""Defines classes that handle the results of tests.
+"""
+Defines classes that handle the results of tests.
 
 API Stability: Unstable
 """
@@ -44,7 +45,11 @@ class SafeStream(object):
 
 
 class TestResult(pyunit.TestResult, object):
-    """Accumulates the results of several L{twisted.trial.unittest.TestCase}s.
+    """
+    Accumulates the results of several L{twisted.trial.unittest.TestCase}s.
+
+    @ivar successes: count the number of successes achieved by the test run.
+    @type successes: C{int}
     """
 
     def __init__(self):
@@ -52,7 +57,7 @@ class TestResult(pyunit.TestResult, object):
         self.skips = []
         self.expectedFailures = []
         self.unexpectedSuccesses = []
-        self.successes = []
+        self.successes = 0
         self._timings = []
 
     def __repr__(self):
@@ -144,7 +149,7 @@ class TestResult(pyunit.TestResult, object):
 
         @type test: L{pyunit.TestCase}
         """
-        self.successes.append((test,))
+        self.successes += 1
 
     def upDownError(self, method, error, warn, printStatus):
         pass
@@ -310,10 +315,12 @@ class Reporter(TestResult):
         """
         summaries = []
         for stat in ("skips", "expectedFailures", "failures", "errors",
-                     "unexpectedSuccesses", "successes"):
+                     "unexpectedSuccesses"):
             num = len(getattr(self, stat))
             if num:
                 summaries.append('%s=%d' % (stat, num))
+        if self.successes:
+           summaries.append('successes=%d' % (self.successes,))
         summary = (summaries and ' ('+', '.join(summaries)+')') or ''
         if not self.wasSuccessful():
             status = "FAILED"

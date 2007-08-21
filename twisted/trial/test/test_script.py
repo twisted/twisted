@@ -1,3 +1,6 @@
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 import StringIO, sys, sets
 from twisted.trial import unittest, runner
 from twisted.scripts import trial
@@ -32,6 +35,38 @@ class TestGarbageCollect(unittest.TestCase):
         """
         loader = trial._getLoader(self.config)
         self.assertEqual(False, loader.forceGarbageCollection)
+
+
+
+class TestSuiteUsed(unittest.TestCase):
+    """
+    Check the category of tests suite used by the loader.
+    """
+
+    def setUp(self):
+        """
+        Create a trial configuration object.
+        """
+        self.config = trial.Options()
+
+
+    def test_defaultSuite(self):
+        """
+        By default, the loader should use L{runner.DestructiveTestSuite}
+        """
+        loader = trial._getLoader(self.config)
+        self.assertEquals(loader.suiteFactory, runner.DestructiveTestSuite)
+
+
+    def test_untilFailureSuite(self):
+        """
+        The C{until-failure} configuration uses the L{runner.TestSuite} to keep
+        instances alive across runs.
+        """
+        self.config['until-failure'] = True
+        loader = trial._getLoader(self.config)
+        self.assertEquals(loader.suiteFactory, runner.TestSuite)
+
 
 
 class TestModuleTest(unittest.TestCase):
@@ -161,9 +196,9 @@ class TestModuleTest(unittest.TestCase):
         self.failUnlessEqual({'test-case-name':
                               'twisted.trial.test.test_tests'},
                              localVars)
-        
+
     def test_parseLocalVariables(self):
-        declaration = ('-*- test-case-name: twisted.trial.test.test_tests; ' 
+        declaration = ('-*- test-case-name: twisted.trial.test.test_tests; '
                        'foo: bar -*-')
         localVars = trial._parseLocalVariables(declaration)
         self.failUnlessEqual({'test-case-name':
@@ -196,7 +231,7 @@ class TestModuleTest(unittest.TestCase):
         self.failUnlessEqual({'test-case-name':
                               'twisted.trial.test.test_test_visitor'},
                              localVars)
-        
+
     def test_noVariablesInFile(self):
         localVars = trial.loadLocalVariables(sibpath('novars.py'))
         self.failUnlessEqual({}, localVars)
