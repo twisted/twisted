@@ -1,4 +1,5 @@
-# Copyright (c) 2001-2006 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.names.test.test_srvconnect -*-
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import random
@@ -7,7 +8,8 @@ from zope.interface import implements
 
 from twisted.internet import error, interfaces
 
-from twisted.names import client
+from twisted.names import client, dns
+from twisted.names.error import DNSNameError
 
 class _SRVConnector_ClientFactoryWrapper:
     def __init__(self, connector, wrappedFactory):
@@ -64,7 +66,7 @@ class SRVConnector:
             d = client.lookupService('_%s._%s.%s' % (self.service,
                                                      self.protocol,
                                                      self.domain))
-            d.addCallback(self._cbGotServers)
+            d.addCallbacks(self._cbGotServers, self._ebGotServers)
             d.addCallback(lambda x, self=self: self._reallyConnect())
             d.addErrback(self.connectionFailed)
         elif self.connector is None:
@@ -72,8 +74,20 @@ class SRVConnector:
         else:
             self.connector.connect()
 
+    def _ebGotServers(self, failure):
+        failure.trap(DNSNameError)
+
+        # Some DNS servers reply with NXDOMAIN when in fact there are
+        # just no SRV records for that domain. Act as if we just got an
+        # empty response and use fallback.
+
+        self.servers = []
+        self.orderedServers = []
+
     def _cbGotServers(self, (answers, auth, add)):
-        if len(answers)==1 and answers[0].payload.target=='.':
+        if len(answers) == 1 and answers[0].type == dns.SRV \
+                             and answers[0].payload \
+                             and answers[0].payload.target == dns.Name('.'):
             # decidedly not available
             raise error.DNSLookupError("Service %s not available for domain %s."
                                        % (repr(self.service), repr(self.domain)))
@@ -81,6 +95,9 @@ class SRVConnector:
         self.servers = []
         self.orderedServers = []
         for a in answers:
+            if a.type != dns.SRV or not a.payload:
+                continue
+
             self.orderedServers.append((a.payload.priority, a.payload.weight,
                                         str(a.payload.target), a.payload.port))
 
