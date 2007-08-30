@@ -5604,3 +5604,6 @@ How do I use it?
 <tjs> we dont talk about that anymore..
 <tjs> poor old Aunty Anne, in the kitchen, with the bread knife 
 %
+<glyph> ***** You have declared an explicit schema in a dynamic language *****
+<glyph> Would you like to RESTART, RESTORE, or IMPLEMENT ORTHOGONAL PERSISTENCE?
+%
