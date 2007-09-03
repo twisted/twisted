@@ -552,15 +552,22 @@ class FTPOverflowProtocol(basic.LineReceiver):
 
 
 class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
-    """Protocol Interpreter for the File Transfer Protocol
+    """
+    Protocol Interpreter for the File Transfer Protocol
 
     @ivar state: The current server state.  One of L{UNAUTH},
-    L{INAUTH}, L{AUTHED}, L{RENAMING}.
+        L{INAUTH}, L{AUTHED}, L{RENAMING}.
 
     @ivar shell: The connected avatar
     @ivar binary: The transfer mode.  If false, ASCII.
     @ivar dtpFactory: Generates a single DTP for this session
     @ivar dtpPort: Port returned from listenTCP
+    @ivar listenFactory: A callable with the signature of
+        L{twisted.internet.interfaces.IReactorTCP.listenTCP} which will be used
+        to create Ports for passive connections (mainly for testing).
+
+    @ivar passivePortRange: iterator used as source of passive port numbers.
+    @type passivePortRange: C{iterator}
     """
 
     disconnected = False
@@ -571,13 +578,16 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
     # how long the DTP waits for a connection
     dtpTimeout = 10
 
-    portal      = None
-    shell       = None     # the avatar
-    dtpFactory  = None     # generates a single DTP for this session
-    dtpPort     = None     # object returned from listenTCP
+    portal = None
+    shell = None
+    dtpFactory = None
+    dtpPort = None
     dtpInstance = None
-    binary      = True     # binary transfers? False implies ASCII. defaults to True
+    binary = True
 
+    passivePortRange = xrange(0, 1)
+
+    listenFactory = reactor.listenTCP
 
     def reply(self, key, *args):
         msg = RESPONSE[key] % args
@@ -677,6 +687,23 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
                 return BAD_CMD_SEQ, "RNTO required after RNFR"
 
 
+    def getDTPPort(self, factory):
+        """
+        Return a port for passive access, using C{self.passivePortRange}
+        attribute.
+        """
+        for portn in self.passivePortRange:
+            try:
+                dtpPort = self.listenFactory(portn, factory)
+            except error.CannotListenError:
+                continue
+            else:
+                return dtpPort
+        raise error.CannotListenError('', portn,
+            "No port available in range %s" %
+            (self.passivePortRange,))
+
+
     def ftp_USER(self, username):
         """
         First part of login.  Get the username the peer wants to
@@ -746,7 +773,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             self.cleanupDTP()
         self.dtpFactory = DTPFactory(pi=self)
         self.dtpFactory.setTimeout(self.dtpTimeout)
-        self.dtpPort = reactor.listenTCP(0, self.dtpFactory)
+        self.dtpPort = self.getDTPPort(self.dtpFactory)
 
         host = self.transport.getHost().host
         port = self.dtpPort.getHost().port
@@ -1149,10 +1176,14 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
 
 class FTPFactory(policies.LimitTotalConnectionsFactory):
-    """A factory for producing ftp protocol instances
+    """
+    A factory for producing ftp protocol instances
 
     @ivar timeOut: the protocol interpreter's idle timeout time in seconds,
         default is 600 seconds.
+
+    @ivar passivePortRange: value forwarded to C{protocol.passivePortRange}.
+    @type passivePortRange: C{iterator}
     """
     protocol = FTP
     overflowProtocol = FTPOverflowProtocol
@@ -1161,6 +1192,8 @@ class FTPFactory(policies.LimitTotalConnectionsFactory):
     timeOut = 600
 
     welcomeMessage = "Twisted %s FTP Server" % (copyright.version,)
+
+    passivePortRange = xrange(0, 1)
 
     def __init__(self, portal=None, userAnonymous='anonymous'):
         self.portal = portal
@@ -1172,6 +1205,7 @@ class FTPFactory(policies.LimitTotalConnectionsFactory):
         if p is not None:
             p.wrappedProtocol.portal = self.portal
             p.wrappedProtocol.timeOut = self.timeOut
+            p.passivePortRange = self.passivePortRange
         return p
 
     def stopFactory(self):

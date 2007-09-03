@@ -8,8 +8,6 @@ FTP tests.
 Maintainer: U{Andrew Bennetts<mailto:spiv@twistedmatrix.com>}
 """
 
-from __future__ import nested_scopes
-
 import os.path
 from StringIO import StringIO
 import shutil
@@ -299,6 +297,46 @@ class BasicFTPServerTestCase(FTPServerTestCase):
         self.assertCommandResponse('SYST', ["215 UNIX Type: L8"],
                                    chainDeferred=d)
         return d
+
+
+    def test_portRangeForwardError(self):
+        """
+        Exceptions other than L{error.CannotListenError} which are raised by
+        C{listenFactory} should be raised to the caller of L{FTP.getDTPPort}.
+        """
+        def listenFactory(portNumber, factory):
+            raise RuntimeError()
+        self.serverProtocol.listenFactory = listenFactory
+
+        self.assertRaises(RuntimeError, self.serverProtocol.getDTPPort,
+                          protocol.Factory())
+
+
+    def test_portRange(self):
+        """
+        L{FTP.passivePortRange} should determine the ports which
+        L{FTP.getDTPPort} attempts to bind. If no port from that iterator can
+        be bound, L{error.CannotListenError} should be raised, otherwise the
+        first successful result from L{FTP.listenFactory} should be returned.
+        """
+        def listenFactory(portNumber, factory):
+            if portNumber in (22032, 22033, 22034):
+                raise error.CannotListenError('localhost', portNumber, 'error')
+            return portNumber
+        self.serverProtocol.listenFactory = listenFactory
+
+        port = self.serverProtocol.getDTPPort(protocol.Factory())
+        self.assertEquals(port, 0)
+
+        self.serverProtocol.passivePortRange = xrange(22032, 65536)
+        port = self.serverProtocol.getDTPPort(protocol.Factory())
+        self.assertEquals(port, 22035)
+
+        self.serverProtocol.passivePortRange = xrange(22032, 22035)
+        self.assertRaises(error.CannotListenError,
+                          self.serverProtocol.getDTPPort,
+                          protocol.Factory())
+
 
 
 class FTPServerTestCaseAdvancedClient(FTPServerTestCase):
