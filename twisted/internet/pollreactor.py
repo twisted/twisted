@@ -1,8 +1,9 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""A poll() based implementation of the twisted main loop.
+"""
+A poll() based implementation of the twisted main loop.
 
 To install the event loop (and you should do this before any connections,
 listeners or connectors are added)::
@@ -16,42 +17,76 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 # System imports
-import select, errno, sys
+import errno, sys
+from select import error as SelectError, poll
+from select import POLLIN, POLLOUT, POLLHUP, POLLERR, POLLNVAL
 
 from zope.interface import implements
 
 # Twisted imports
-from twisted.python import log, threadable, failure
+from twisted.python import log
 from twisted.internet import main, posixbase, error
 from twisted.internet.interfaces import IReactorFDSet
 
-# globals
-reads = {}
-writes = {}
-selectables = {}
-poller = select.poll()
-
-POLL_DISCONNECTED = (select.POLLHUP | select.POLLERR | select.POLLNVAL)
+POLL_DISCONNECTED = (POLLHUP | POLLERR | POLLNVAL)
 
 
 class PollReactor(posixbase.PosixReactorBase):
-    """A reactor that uses poll(2)."""
+    """
+    A reactor that uses poll(2).
+
+    @ivar _poller: A L{poll} which will be used to check for I/O
+        readiness.
+
+    @ivar _selectables: A dictionary mapping integer file descriptors to
+        instances of L{FileDescriptor} which have been registered with the
+        reactor.  All L{FileDescriptors} which are currently receiving read or
+        write readiness notifications will be present as values in this
+        dictionary.
+
+    @ivar _reads: A dictionary mapping integer file descriptors to arbitrary
+        values (this is essentially a set).  Keys in this dictionary will be
+        registered with C{_poller} for read readiness notifications which will
+        be dispatched to the corresponding L{FileDescriptor} instances in
+        C{_selectables}.
+
+    @ivar _writes: A dictionary mapping integer file descriptors to arbitrary
+        values (this is essentially a set).  Keys in this dictionary will be
+        registered with C{_poller} for write readiness notifications which will
+        be dispatched to the corresponding L{FileDescriptor} instances in
+        C{_selectables}.
+    """
     implements(IReactorFDSet)
-    
+
+    def __init__(self):
+        """
+        Initialize polling object, file descriptor tracking dictionaries, and
+        the base class.
+        """
+        self._poller = poll()
+        self._selectables = {}
+        self._reads = {}
+        self._writes = {}
+        posixbase.PosixReactorBase.__init__(self)
+
+
     def _updateRegistration(self, fd):
         """Register/unregister an fd with the poller."""
         try:
-            poller.unregister(fd)
+            self._poller.unregister(fd)
         except KeyError:
             pass
 
         mask = 0
-        if reads.has_key(fd): mask = mask | select.POLLIN
-        if writes.has_key(fd): mask = mask | select.POLLOUT
+        if fd in self._reads:
+            mask = mask | POLLIN
+        if fd in self._writes:
+            mask = mask | POLLOUT
         if mask != 0:
-            poller.register(fd, mask)
+            self._poller.register(fd, mask)
         else:
-            if selectables.has_key(fd): del selectables[fd]
+            if fd in self._selectables:
+                del self._selectables[fd]
 
     def _dictRemove(self, selectable, mdict):
         try:
@@ -63,14 +98,14 @@ class PollReactor(posixbase.PosixReactorBase):
         except:
             # the hard way: necessary because fileno() may disappear at any
             # moment, thanks to python's underlying sockets impl
-            for fd, fdes in selectables.items():
+            for fd, fdes in self._selectables.items():
                 if selectable is fdes:
                     break
             else:
                 # Hmm, maybe not the right course of action?  This method can't
                 # fail, because it happens inside error detection...
                 return
-        if mdict.has_key(fd):
+        if fd in mdict:
             del mdict[fd]
             self._updateRegistration(fd)
 
@@ -78,61 +113,54 @@ class PollReactor(posixbase.PosixReactorBase):
         """Add a FileDescriptor for notification of data available to read.
         """
         fd = reader.fileno()
-        if not reads.has_key(fd):
-            selectables[fd] = reader
-            reads[fd] =  1
+        if fd not in self._reads:
+            self._selectables[fd] = reader
+            self._reads[fd] =  1
             self._updateRegistration(fd)
 
-    def addWriter(self, writer, writes=writes, selectables=selectables):
+    def addWriter(self, writer):
         """Add a FileDescriptor for notification of data available to write.
         """
         fd = writer.fileno()
-        if not writes.has_key(fd):
-            selectables[fd] = writer
-            writes[fd] =  1
+        if fd not in self._writes:
+            self._selectables[fd] = writer
+            self._writes[fd] =  1
             self._updateRegistration(fd)
 
-    def removeReader(self, reader, reads=reads):
+    def removeReader(self, reader):
         """Remove a Selectable for notification of data available to read.
         """
-        return self._dictRemove(reader, reads)
+        return self._dictRemove(reader, self._reads)
 
-    def removeWriter(self, writer, writes=writes):
+    def removeWriter(self, writer):
         """Remove a Selectable for notification of data available to write.
         """
-        return self._dictRemove(writer, writes)
+        return self._dictRemove(writer, self._writes)
 
-    def removeAll(self, reads=reads, writes=writes, selectables=selectables):
+    def removeAll(self):
         """Remove all selectables, and return a list of them."""
         if self.waker is not None:
             self.removeReader(self.waker)
-        result = selectables.values()
-        fds = selectables.keys()
-        reads.clear()
-        writes.clear()
-        selectables.clear()
+        result = self._selectables.values()
+        fds = self._selectables.keys()
+        self._reads.clear()
+        self._writes.clear()
+        self._selectables.clear()
         for fd in fds:
-            poller.unregister(fd)
-            
+            self._poller.unregister(fd)
+
         if self.waker is not None:
             self.addReader(self.waker)
         return result
 
-    def doPoll(self, timeout,
-               reads=reads,
-               writes=writes,
-               selectables=selectables,
-               select=select,
-               log=log,
-               POLLIN=select.POLLIN,
-               POLLOUT=select.POLLOUT):
+    def doPoll(self, timeout):
         """Poll the poller for new events."""
         if timeout is not None:
             timeout = int(timeout * 1000) # convert seconds to milliseconds
 
         try:
-            l = poller.poll(timeout)
-        except select.error, e:
+            l = self._poller.poll(timeout)
+        except SelectError, e:
             if e[0] == errno.EINTR:
                 return
             else:
@@ -140,20 +168,16 @@ class PollReactor(posixbase.PosixReactorBase):
         _drdw = self._doReadOrWrite
         for fd, event in l:
             try:
-                selectable = selectables[fd]
+                selectable = self._selectables[fd]
             except KeyError:
                 # Handles the infrequent case where one selectable's
                 # handler disconnects another.
                 continue
-            log.callWithLogger(selectable, _drdw, selectable, fd, event, POLLIN, POLLOUT, log)
+            log.callWithLogger(selectable, _drdw, selectable, fd, event)
 
     doIteration = doPoll
 
-    def _doReadOrWrite(self, selectable, fd, event, POLLIN, POLLOUT, log, 
-        faildict={
-            error.ConnectionDone: failure.Failure(error.ConnectionDone()),
-            error.ConnectionLost: failure.Failure(error.ConnectionLost())
-        }):
+    def _doReadOrWrite(self, selectable, fd, event):
         why = None
         inRead = False
         if event & POLL_DISCONNECTED and not (event & POLLIN):
@@ -179,8 +203,8 @@ class PollReactor(posixbase.PosixReactorBase):
 def install():
     """Install the poll() reactor."""
     p = PollReactor()
-    import main
-    main.installReactor(p)
+    from twisted.internet.main import installReactor
+    installReactor(p)
 
 
 __all__ = ["PollReactor", "install"]

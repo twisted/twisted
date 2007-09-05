@@ -1,8 +1,9 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""A win32event based implementation of the Twisted main loop.
+"""
+A win32event based implementation of the Twisted main loop.
 
 This requires win32all or ActivePython to be installed.
 
@@ -42,99 +43,111 @@ Or:
 The 2nd solution is probably what will get implemented.
 """
 
+# System imports
+import time
+import sys
+
+from zope.interface import implements
+
 # Win32 imports
-from win32file import WSAEventSelect, FD_READ, FD_WRITE, FD_CLOSE, \
-                      FD_ACCEPT, FD_CONNECT
-from win32event import CreateEvent, MsgWaitForMultipleObjects, \
-                       WAIT_OBJECT_0, WAIT_TIMEOUT, INFINITE, QS_ALLINPUT, QS_ALLEVENTS
-import win32api
-import win32con
-import win32event
-import win32file
-import win32pipe
-import win32process
-import win32security
-import pywintypes
-import msvcrt
+from win32file import WSAEventSelect, FD_READ, FD_CLOSE, FD_ACCEPT, FD_CONNECT
+from win32event import CreateEvent, MsgWaitForMultipleObjects
+from win32event import WAIT_OBJECT_0, WAIT_TIMEOUT, QS_ALLINPUT, QS_ALLEVENTS
+
 import win32gui
 
 # Twisted imports
-from twisted.internet import abstract, posixbase, main, error
+from twisted.internet import posixbase
 from twisted.python import log, threadable, failure
-from twisted.internet.interfaces import IReactorFDSet, IReactorProcess, IProcessTransport
+from twisted.internet.interfaces import IReactorFDSet, IReactorProcess
 
 from twisted.internet._dumbwin32proc import Process
 
-# System imports
-import os
-import threading
-import Queue
-import string
-import time
-import sys
-from zope.interface import implements
-
-
-# globals
-reads = {}
-writes = {}
-events = {}
-
 
 class Win32Reactor(posixbase.PosixReactorBase):
-    """Reactor that uses Win32 event APIs."""
+    """
+    Reactor that uses Win32 event APIs.
 
+    @ivar _reads: A dictionary mapping L{FileDescriptor} instances to a
+        win32 event object used to check for read events for that descriptor.
+
+    @ivar _writes: A dictionary mapping L{FileDescriptor} instances to a
+        arbitrary value.  Keys in this dictionary will be given a chance to
+        write out their data.
+
+    @ivar _events: A dictionary mapping win32 event object to tuples of
+        L{FileDescriptor} instances and event masks.
+    """
     implements(IReactorFDSet, IReactorProcess)
 
     dummyEvent = CreateEvent(None, 0, 0, None)
 
-    def _makeSocketEvent(self, fd, action, why, events=events):
-        """Make a win32 event object for a socket."""
+    def __init__(self):
+        self._reads = {}
+        self._writes = {}
+        self._events = {}
+        posixbase.PosixReactorBase.__init__(self)
+
+
+    def _makeSocketEvent(self, fd, action, why):
+        """
+        Make a win32 event object for a socket.
+        """
         event = CreateEvent(None, 0, 0, None)
         WSAEventSelect(fd, event, why)
-        events[event] = (fd, action)
+        self._events[event] = (fd, action)
         return event
 
-    def addEvent(self, event, fd, action, events=events):
-        """Add a new win32 event to the event loop."""
-        events[event] = (fd, action)
+
+    def addEvent(self, event, fd, action):
+        """
+        Add a new win32 event to the event loop.
+        """
+        self._events[event] = (fd, action)
+
 
     def removeEvent(self, event):
-        """Remove an event."""
-        del events[event]
-
-    def addReader(self, reader, reads=reads):
-        """Add a socket FileDescriptor for notification of data available to read.
         """
-        if not reads.has_key(reader):
-            reads[reader] = self._makeSocketEvent(reader, 'doRead', FD_READ|FD_ACCEPT|FD_CONNECT|FD_CLOSE)
-
-    def addWriter(self, writer, writes=writes):
-        """Add a socket FileDescriptor for notification of data available to write.
+        Remove an event.
         """
-        if not writes.has_key(writer):
-            writes[writer] = 1
+        del self._events[event]
+
+
+    def addReader(self, reader):
+        """
+        Add a socket FileDescriptor for notification of data available to read.
+        """
+        if reader not in self._reads:
+            self._reads[reader] = self._makeSocketEvent(
+                reader, 'doRead', FD_READ | FD_ACCEPT | FD_CONNECT | FD_CLOSE)
+
+    def addWriter(self, writer):
+        """
+        Add a socket FileDescriptor for notification of data available to write.
+        """
+        if writer not in self._writes:
+            self._writes[writer] = 1
 
     def removeReader(self, reader):
         """Remove a Selectable for notification of data available to read.
         """
-        if reads.has_key(reader):
-            del events[reads[reader]]
-            del reads[reader]
+        if reader in self._reads:
+            del self._events[self._reads[reader]]
+            del self._reads[reader]
 
-    def removeWriter(self, writer, writes=writes):
+    def removeWriter(self, writer):
         """Remove a Selectable for notification of data available to write.
         """
-        if writes.has_key(writer):
-            del writes[writer]
+        if writer in self._writes:
+            del self._writes[writer]
 
     def removeAll(self):
-        """Remove all selectables, and return a list of them."""
-        return self._removeAll(reads, writes)
+        """
+        Remove all selectables, and return a list of them.
+        """
+        return self._removeAll(self._reads, self._writes)
 
-    def doWaitForMultipleEvents(self, timeout,
-                                reads=reads,
-                                writes=writes):
+    def doWaitForMultipleEvents(self, timeout):
         log.msg(channel='system', event='iteration', reactor=self)
         if timeout is None:
             #timeout = INFINITE
@@ -142,20 +155,20 @@ class Win32Reactor(posixbase.PosixReactorBase):
         else:
             timeout = int(timeout * 1000)
 
-        if not (events or writes):
+        if not (self._events or self._writes):
             # sleep so we don't suck up CPU time
             time.sleep(timeout / 1000.0)
             return
 
         canDoMoreWrites = 0
-        for fd in writes.keys():
+        for fd in self._writes.keys():
             if log.callWithLogger(fd, self._runWrite, fd):
                 canDoMoreWrites = 1
 
         if canDoMoreWrites:
             timeout = 0
 
-        handles = events.keys() or [self.dummyEvent]
+        handles = self._events.keys() or [self.dummyEvent]
         val = MsgWaitForMultipleObjects(handles, 0, timeout, QS_ALLINPUT | QS_ALLEVENTS)
         if val == WAIT_TIMEOUT:
             return
@@ -165,7 +178,7 @@ class Win32Reactor(posixbase.PosixReactorBase):
                 self.callLater(0, self.stop)
                 return
         elif val >= WAIT_OBJECT_0 and val < WAIT_OBJECT_0 + len(handles):
-            fd, action = events[handles[val - WAIT_OBJECT_0]]
+            fd, action = self._events[handles[val - WAIT_OBJECT_0]]
             log.callWithLogger(fd, self._runAction, action, fd)
 
     def _runWrite(self, fd):

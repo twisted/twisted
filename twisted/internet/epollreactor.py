@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2006 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -21,23 +21,49 @@ import sys, errno
 # Twisted imports
 from twisted.python import _epoll
 from twisted.python import log
-from twisted.internet import main, posixbase, error
+from twisted.internet import posixbase, error
+from twisted.internet.main import CONNECTION_LOST
 
-# globals. They're often passed as default arguments for performance purpose.
-reads = {}
-writes = {}
-selectables = {}
-
-# Create the poller we're going to use (we should really do this in __init__
-# of the reactor - but hey, poorly thought out globals like this are
-# practically a design pattern in Twisted reactors.  The 1024 here is just a
-# hint to the kernel, it is not a hard maximum.
-poller = _epoll.epoll(1024)
 
 class EPollReactor(posixbase.PosixReactorBase):
     """
     A reactor that uses epoll(4).
+
+    @ivar _poller: A L{poll} which will be used to check for I/O
+        readiness.
+
+    @ivar _selectables: A dictionary mapping integer file descriptors to
+        instances of L{FileDescriptor} which have been registered with the
+        reactor.  All L{FileDescriptors} which are currently receiving read or
+        write readiness notifications will be present as values in this
+        dictionary.
+
+    @ivar _reads: A dictionary mapping integer file descriptors to arbitrary
+        values (this is essentially a set).  Keys in this dictionary will be
+        registered with C{_poller} for read readiness notifications which will
+        be dispatched to the corresponding L{FileDescriptor} instances in
+        C{_selectables}.
+
+    @ivar _writes: A dictionary mapping integer file descriptors to arbitrary
+        values (this is essentially a set).  Keys in this dictionary will be
+        registered with C{_poller} for write readiness notifications which will
+        be dispatched to the corresponding L{FileDescriptor} instances in
+        C{_selectables}.
     """
+
+    def __init__(self):
+        """
+        Initialize epoll object, file descriptor tracking dictionaries, and the
+        base class.
+        """
+        # Create the poller we're going to use.  The 1024 here is just a hint
+        # to the kernel, it is not a hard maximum.
+        self._poller = _epoll.epoll(1024)
+        self._reads = {}
+        self._writes = {}
+        self._selectables = {}
+        posixbase.PosixReactorBase.__init__(self)
+
 
     def _add(self, xer, primary, other, selectables, event, antievent):
         """
@@ -60,21 +86,22 @@ class EPollReactor(posixbase.PosixReactorBase):
             # Let them all through so someone sees a traceback and fixes
             # something.  We'll do the same thing for every other call to
             # this method in this file.
-            poller._control(cmd, fd, flags)
+            self._poller._control(cmd, fd, flags)
 
-    def addReader(self, reader, reads=reads, writes=writes,
-                  selectables=selectables):
+
+    def addReader(self, reader):
         """
         Add a FileDescriptor for notification of data available to read.
         """
-        self._add(reader, reads, writes, selectables, _epoll.IN, _epoll.OUT)
+        self._add(reader, self._reads, self._writes, self._selectables, _epoll.IN, _epoll.OUT)
 
-    def addWriter(self, writer, writes=writes, reads=reads,
-                  selectables=selectables):
+
+    def addWriter(self, writer):
         """
         Add a FileDescriptor for notification of data available to write.
         """
-        self._add(writer, writes, reads, selectables, _epoll.OUT, _epoll.IN)
+        self._add(writer, self._writes, self._reads, self._selectables, _epoll.OUT, _epoll.IN)
+
 
     def _remove(self, xer, primary, other, selectables, event, antievent):
         """
@@ -100,55 +127,50 @@ class EPollReactor(posixbase.PosixReactorBase):
                 del selectables[fd]
             del primary[fd]
             # See comment above _control call in _add.
-            poller._control(cmd, fd, flags)
+            self._poller._control(cmd, fd, flags)
 
-    def removeReader(self, reader, reads=reads, writes=writes,
-                     selectables=selectables):
+
+    def removeReader(self, reader):
         """
         Remove a Selectable for notification of data available to read.
         """
-        self._remove(reader, reads, writes, selectables, _epoll.IN, _epoll.OUT)
+        self._remove(reader, self._reads, self._writes, self._selectables, _epoll.IN, _epoll.OUT)
 
-    def removeWriter(self, writer, writes=writes, reads=reads,
-                     selectables=selectables):
+
+    def removeWriter(self, writer):
         """
         Remove a Selectable for notification of data available to write.
         """
-        self._remove(writer, writes, reads, selectables, _epoll.OUT, _epoll.IN)
+        self._remove(writer, self._writes, self._reads, self._selectables, _epoll.OUT, _epoll.IN)
 
-    def removeAll(self, reads=reads, writes=writes, selectables=selectables):
+    def removeAll(self):
         """
         Remove all selectables, and return a list of them.
         """
         if self.waker is not None:
             fd = self.waker.fileno()
-            if fd in reads:
-                del reads[fd]
-                del selectables[fd]
-        result = selectables.values()
-        fds = selectables.keys()
-        reads.clear()
-        writes.clear()
-        selectables.clear()
+            if fd in self._reads:
+                del self._reads[fd]
+                del self._selectables[fd]
+        result = self._selectables.values()
+        fds = self._selectables.keys()
+        self._reads.clear()
+        self._writes.clear()
+        self._selectables.clear()
         for fd in fds:
             try:
                 # Actually, we'll ignore all errors from this, since it's
                 # just last-chance cleanup.
-                poller._control(_epoll.CTL_DEL, fd, 0)
+                self._poller._control(_epoll.CTL_DEL, fd, 0)
             except IOError:
                 pass
         if self.waker is not None:
             fd = self.waker.fileno()
-            reads[fd] = 1
-            selectables[fd] = self.waker
+            self._reads[fd] = 1
+            self._selectables[fd] = self.waker
         return result
 
-    def doPoll(self, timeout,
-               reads=reads,
-               writes=writes,
-               selectables=selectables,
-               wait=poller.wait,
-               log=log):
+    def doPoll(self, timeout):
         """
         Poll the poller for new events.
         """
@@ -161,7 +183,7 @@ class EPollReactor(posixbase.PosixReactorBase):
             # currently tracking (because that's maybe a good heuristic) and
             # the amount of time we block to the value specified by our
             # caller.
-            l = wait(len(selectables), timeout)
+            l = self._poller.wait(len(self._selectables), timeout)
         except IOError, err:
             if err.errno == errno.EINTR:
                 return
@@ -174,7 +196,7 @@ class EPollReactor(posixbase.PosixReactorBase):
         _drdw = self._doReadOrWrite
         for fd, event in l:
             try:
-                selectable = selectables[fd]
+                selectable = self._selectables[fd]
             except KeyError:
                 pass
             else:
@@ -190,7 +212,7 @@ class EPollReactor(posixbase.PosixReactorBase):
         why = None
         inRead = False
         if event in (_epoll.HUP, _epoll.ERR):
-            why = main.CONNECTION_LOST
+            why = CONNECTION_LOST
         else:
             try:
                 if event & _epoll.IN:
@@ -214,7 +236,8 @@ def install():
     Install the epoll() reactor.
     """
     p = EPollReactor()
-    main.installReactor(p)
+    from twisted.internet.main import installReactor
+    installReactor(p)
 
 
 __all__ = ["EPollReactor", "install"]

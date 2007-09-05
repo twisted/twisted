@@ -1,7 +1,5 @@
-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 This module provides support for Twisted to interact with the PyGTK mainloop.
@@ -19,7 +17,7 @@ API Stability: stable
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
-__all__ = ['install']
+import sys
 
 # System Imports
 try:
@@ -28,51 +26,62 @@ try:
 except ImportError, AttributeError:
     pass # maybe we're using pygtk before this hack existed.
 import gtk
-import sys, time
+
 from zope.interface import implements
 
 # Twisted Imports
-from twisted.python import log, threadable, runtime, failure
+from twisted.python import log, runtime
 from twisted.internet.interfaces import IReactorFDSet
 
 # Sibling Imports
-from twisted.internet import main, posixbase, selectreactor
-
-reads = {}
-writes = {}
-hasReader = reads.has_key
-hasWriter = writes.has_key
-
-# the next callback
-_simtag = None
+from twisted.internet import posixbase, selectreactor
 
 
 class GtkReactor(posixbase.PosixReactorBase):
-    """GTK+ event loop reactor.
     """
+    GTK+ event loop reactor.
 
+    @ivar _reads: A dictionary mapping L{FileDescriptor} instances to gtk INPUT_READ
+        watch handles.
+
+    @ivar _writes: A dictionary mapping L{FileDescriptor} instances to gtk
+        INTPUT_WRITE watch handles.
+
+    @ivar _simtag: A gtk timeout handle for the next L{simulate} call.
+    """
     implements(IReactorFDSet)
 
+    def __init__(self):
+        """
+        Initialize the file descriptor tracking dictionaries and the base
+        class.
+        """
+        self._simtag = None
+        self._reads = {}
+        self._writes = {}
+        posixbase.PosixReactorBase.__init__(self)
+
+
     def addReader(self, reader):
-        if not hasReader(reader):
-            reads[reader] = gtk.input_add(reader, gtk.GDK.INPUT_READ, self.callback)
+        if reader not in self._reads:
+            self._reads[reader] = gtk.input_add(reader, gtk.GDK.INPUT_READ, self.callback)
 
     def addWriter(self, writer):
-        if not hasWriter(writer):
-            writes[writer] = gtk.input_add(writer, gtk.GDK.INPUT_WRITE, self.callback)
+        if writer not in self._writes:
+            self._writes[writer] = gtk.input_add(writer, gtk.GDK.INPUT_WRITE, self.callback)
 
     def removeAll(self):
-        return self._removeAll(reads, writes)
+        return self._removeAll(self._reads, self._writes)
 
     def removeReader(self, reader):
-        if hasReader(reader):
-            gtk.input_remove(reads[reader])
-            del reads[reader]
+        if reader in self._reads:
+            gtk.input_remove(self._reads[reader])
+            del self._reads[reader]
 
     def removeWriter(self, writer):
-        if hasWriter(writer):
-            gtk.input_remove(writes[writer])
-            del writes[writer]
+        if writer in self._writes:
+            gtk.input_remove(self._writes[writer])
+            del self._writes[writer]
 
     doIterationTimer = None
 
@@ -139,7 +148,7 @@ class GtkReactor(posixbase.PosixReactorBase):
 
         if why:
             self._disconnectSelectable(source, why, didRead == source.doRead)
-    
+
     def callback(self, source, condition):
         log.callWithLogger(source, self._readAndWrite, source, condition)
         self.simulate() # fire Twisted timers
@@ -148,21 +157,27 @@ class GtkReactor(posixbase.PosixReactorBase):
     def simulate(self):
         """Run simulation loops and reschedule callbacks.
         """
-        global _simtag
-        if _simtag is not None:
-            gtk.timeout_remove(_simtag)
+        if self._simtag is not None:
+            gtk.timeout_remove(self._simtag)
         self.runUntilCurrent()
         timeout = min(self.timeout(), 0.1)
         if timeout is None:
             timeout = 0.1
-        _simtag = gtk.timeout_add(int(timeout * 1010), self.simulate) # grumble
+        # Quoth someone other than me, "grumble", yet I know not why. Try to be
+        # more specific in your complaints, guys. -exarkun
+        self._simtag = gtk.timeout_add(int(timeout * 1010), self.simulate)
+
 
 
 class PortableGtkReactor(selectreactor.SelectReactor):
     """Reactor that works on Windows.
 
     input_add is not supported on GTK+ for Win32, apparently.
+
+    @ivar _simtag: A gtk timeout handle for the next L{simulate} call.
     """
+    _simtag = None
+
 
     def crash(self):
         gtk.mainquit()
@@ -175,14 +190,16 @@ class PortableGtkReactor(selectreactor.SelectReactor):
     def simulate(self):
         """Run simulation loops and reschedule callbacks.
         """
-        global _simtag
-        if _simtag is not None:
-            gtk.timeout_remove(_simtag)
+        if self._simtag is not None:
+            gtk.timeout_remove(self._simtag)
         self.iterate()
         timeout = min(self.timeout(), 0.1)
         if timeout is None:
             timeout = 0.1
-        _simtag = gtk.timeout_add((timeout * 1010), self.simulate) # grumble
+
+        # See comment for identical line in GtkReactor.simulate.
+        self._simtag = gtk.timeout_add((timeout * 1010), self.simulate)
+
 
 
 def install():
@@ -203,3 +220,5 @@ def portableInstall():
 
 if runtime.platform.getType() != 'posix':
     install = portableInstall
+
+__all__ = ['install']

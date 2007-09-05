@@ -1,8 +1,9 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""A kqueue()/kevent() based implementation of the Twisted main loop.
+"""
+A kqueue()/kevent() based implementation of the Twisted main loop.
 
 To install the event loop (and you should do this before any connections,
 listeners or connectors are added)::
@@ -66,89 +67,108 @@ You're going to need to patch PyKqueue::
 import errno, sys
 
 # PyKQueue imports
-from kqsyscall import *
+from kqsyscall import EVFILT_READ, EVFILT_WRITE, EV_DELETE, EV_ADD
+from kqsyscall import kqueue, kevent
 
 # Twisted imports
 from twisted.python import log, failure
-
-# Sibling imports
-import main
-import posixbase
-
-# globals
-reads = {}
-writes = {}
-selectables = {}
-kq = kqueue()
+from twisted.internet import main, posixbase
 
 
 class KQueueReactor(posixbase.PosixReactorBase):
-    """A reactor that uses kqueue(2)/kevent(2)."""
+    """
+    A reactor that uses kqueue(2)/kevent(2).
+
+    @ivar _kq: A L{kqueue} which will be used to check for I/O readiness.
+
+    @ivar _selectables: A dictionary mapping integer file descriptors to
+        instances of L{FileDescriptor} which have been registered with the
+        reactor.  All L{FileDescriptors} which are currently receiving read or
+        write readiness notifications will be present as values in this
+        dictionary.
+
+    @ivar _reads: A dictionary mapping integer file descriptors to arbitrary
+        values (this is essentially a set).  Keys in this dictionary will be
+        registered with C{_kq} for read readiness notifications which will be
+        dispatched to the corresponding L{FileDescriptor} instances in
+        C{_selectables}.
+
+    @ivar _writes: A dictionary mapping integer file descriptors to arbitrary
+        values (this is essentially a set).  Keys in this dictionary will be
+        registered with C{_kq} for write readiness notifications which will be
+        dispatched to the corresponding L{FileDescriptor} instances in
+        C{_selectables}.
+    """
+    def __init__(self):
+        """
+        Initialize kqueue object, file descriptor tracking dictionaries, and the
+        base class.
+        """
+        self._kq = kqueue()
+        self._reads = {}
+        self._writes = {}
+        self._selectables = {}
+        posixbase.PosixReactorBase.__init__(self)
+
 
     def _updateRegistration(self, *args):
-        kq.kevent([kevent(*args)], 0, 0)
+        self._kq.kevent([kevent(*args)], 0, 0)
 
     def addReader(self, reader):
         """Add a FileDescriptor for notification of data available to read.
         """
         fd = reader.fileno()
-        if not reads.has_key(fd):
-            selectables[fd] = reader
-            reads[fd] = 1
+        if fd not in self._reads:
+            self._selectables[fd] = reader
+            self._reads[fd] = 1
             self._updateRegistration(fd, EVFILT_READ, EV_ADD)
 
-    def addWriter(self, writer, writes=writes, selectables=selectables):
+    def addWriter(self, writer):
         """Add a FileDescriptor for notification of data available to write.
         """
         fd = writer.fileno()
-        if not writes.has_key(fd):
-            selectables[fd] = writer
-            writes[fd] = 1
+        if fd not in self._writes:
+            self._selectables[fd] = writer
+            self._writes[fd] = 1
             self._updateRegistration(fd, EVFILT_WRITE, EV_ADD)
 
     def removeReader(self, reader):
         """Remove a Selectable for notification of data available to read.
         """
         fd = reader.fileno()
-        if reads.has_key(fd):
-            del reads[fd]
-            if not writes.has_key(fd): del selectables[fd]
+        if fd in self._reads:
+            del self._reads[fd]
+            if fd not in self._writes:
+                del self._selectables[fd]
             self._updateRegistration(fd, EVFILT_READ, EV_DELETE)
 
-    def removeWriter(self, writer, writes=writes):
+    def removeWriter(self, writer):
         """Remove a Selectable for notification of data available to write.
         """
         fd = writer.fileno()
-        if writes.has_key(fd):
-            del writes[fd]
-            if not reads.has_key(fd): del selectables[fd]
+        if fd in self._writes:
+            del self._writes[fd]
+            if fd not in self._reads:
+                del self._selectables[fd]
             self._updateRegistration(fd, EVFILT_WRITE, EV_DELETE)
 
     def removeAll(self):
         """Remove all selectables, and return a list of them."""
         if self.waker is not None:
             self.removeReader(self.waker)
-        result = selectables.values()
-        for fd in reads.keys():
+        result = self._selectables.values()
+        for fd in self._reads.keys():
             self._updateRegistration(fd, EVFILT_READ, EV_DELETE)
-        for fd in writes.keys():
+        for fd in self._writes.keys():
             self._updateRegistration(fd, EVFILT_WRITE, EV_DELETE)
-        reads.clear()
-        writes.clear()
-        selectables.clear()
+        self._reads.clear()
+        self._writes.clear()
+        self._selectables.clear()
         if self.waker is not None:
             self.addReader(self.waker)
         return result
 
-    def doKEvent(self, timeout,
-                 reads=reads,
-                 writes=writes,
-                 selectables=selectables,
-                 kq=kq,
-                 log=log,
-                 OSError=OSError,
-                 EVFILT_READ=EVFILT_READ,
-                 EVFILT_WRITE=EVFILT_WRITE):
+    def doKEvent(self, timeout):
         """Poll the kqueue for new events."""
         if timeout is None:
             timeout = 1000
@@ -156,7 +176,7 @@ class KQueueReactor(posixbase.PosixReactorBase):
             timeout = int(timeout * 1000) # convert seconds to milliseconds
 
         try:
-            l = kq.kevent([], len(selectables), timeout)
+            l = self._kq.kevent([], len(self._selectables), timeout)
         except OSError, e:
             if e[0] == errno.EINTR:
                 return
@@ -167,7 +187,7 @@ class KQueueReactor(posixbase.PosixReactorBase):
             why = None
             fd, filter = event.ident, event.filter
             try:
-                selectable = selectables[fd]
+                selectable = self._selectables[fd]
             except KeyError:
                 # Handles the infrequent case where one selectable's
                 # handler disconnects another.

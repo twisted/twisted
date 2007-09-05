@@ -1,11 +1,10 @@
 # -*- test-case-name: twisted.test.test_internet -*-
-# $Id: default.py,v 1.90 2004/01/06 22:35:22 warner Exp $
-#
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""Select reactor
+"""
+Select reactor
 
 API Stability: stable
 
@@ -14,6 +13,8 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 
 from time import sleep
 import sys
+import select
+from errno import EINTR, EBADF
 
 from zope.interface import implements
 
@@ -21,15 +22,7 @@ from twisted.internet.interfaces import IReactorFDSet
 from twisted.internet import error
 from twisted.internet import posixbase
 from twisted.python import log
-from twisted.persisted import styles
 from twisted.python.runtime import platformType
-
-import select
-from errno import EINTR, EBADF
-
-# global state for selector
-reads = {}
-writes = {}
 
 
 def win32select(r, w, e, timeout=None):
@@ -59,41 +52,57 @@ _NO_FILENO = error.ConnectionFdescWentAway('Handler has no fileno method')
 _NO_FILEDESC = error.ConnectionFdescWentAway('Filedescriptor went away')
 
 class SelectReactor(posixbase.PosixReactorBase):
-    """A select() based reactor - runs on all POSIX platforms and on Win32.
+    """
+    A select() based reactor - runs on all POSIX platforms and on Win32.
+
+    @ivar _reads: A dictionary mapping L{FileDescriptor} instances to arbitrary
+        values (this is essentially a set).  Keys in this dictionary will be
+        checked for read events.
+
+    @ivar _writes: A dictionary mapping L{FileDescriptor} instances to
+        arbitrary values (this is essentially a set).  Keys in this dictionary
+        will be checked for writability.
     """
     implements(IReactorFDSet)
 
+    def __init__(self):
+        """
+        Initialize file descriptor tracking dictionaries and the base class.
+        """
+        self._reads = {}
+        self._writes = {}
+        posixbase.PosixReactorBase.__init__(self)
+
+
     def _preenDescriptors(self):
         log.msg("Malformed file descriptor found.  Preening lists.")
-        readers = reads.keys()
-        writers = writes.keys()
-        reads.clear()
-        writes.clear()
-        for selDict, selList in ((reads, readers), (writes, writers)):
+        readers = self._reads.keys()
+        writers = self._writes.keys()
+        self._reads.clear()
+        self._writes.clear()
+        for selDict, selList in ((self._reads, readers),
+                                 (self._writes, writers)):
             for selectable in selList:
                 try:
                     select.select([selectable], [selectable], [selectable], 0)
-                except:
+                except Exception, e:
                     log.msg("bad descriptor %s" % selectable)
+                    self._disconnectSelectable(selectable, e, False)
                 else:
                     selDict[selectable] = 1
 
 
-    def doSelect(self, timeout,
-                 # Since this loop should really be as fast as possible,
-                 # I'm caching these global attributes so the interpreter
-                 # will hit them in the local namespace.
-                 reads=reads,
-                 writes=writes):
-        """Run one iteration of the I/O monitor loop.
+    def doSelect(self, timeout):
+        """
+        Run one iteration of the I/O monitor loop.
 
         This will run all selectables who had input or output readiness
         waiting for them.
         """
         while 1:
             try:
-                r, w, ignored = _select(reads.keys(),
-                                        writes.keys(),
+                r, w, ignored = _select(self._reads.keys(),
+                                        self._writes.keys(),
                                         [], timeout)
                 break
             except ValueError, ve:
@@ -109,7 +118,7 @@ class SelectReactor(posixbase.PosixReactorBase):
                 # select(2) encountered an error
                 if se.args[0] in (0, 2):
                     # windows does this if it got an empty list
-                    if (not reads) and (not writes):
+                    if (not self._reads) and (not self._writes):
                         return
                     else:
                         raise
@@ -122,12 +131,12 @@ class SelectReactor(posixbase.PosixReactorBase):
                     raise
         _drdw = self._doReadOrWrite
         _logrun = log.callWithLogger
-        for selectables, method, dict in ((r, "doRead", reads),
-                                          (w,"doWrite", writes)):
-            hkm = dict.has_key
+        for selectables, method, fdset in ((r, "doRead", self._reads),
+                                           (w,"doWrite", self._writes)):
             for selectable in selectables:
                 # if this was disconnected in another thread, kill it.
-                if not hkm(selectable):
+                # ^^^^ --- what the !@#*?  serious!  -exarkun
+                if selectable not in fdset:
                     continue
                 # This for pausing input when we're not ready for more.
                 _logrun(selectable, _drdw, selectable, method, dict)
@@ -147,32 +156,36 @@ class SelectReactor(posixbase.PosixReactorBase):
             log.err()
         if why:
             self._disconnectSelectable(selectable, why, method=="doRead")
-    
+
     def addReader(self, reader):
-        """Add a FileDescriptor for notification of data available to read.
         """
-        reads[reader] = 1
+        Add a FileDescriptor for notification of data available to read.
+        """
+        self._reads[reader] = 1
 
     def addWriter(self, writer):
-        """Add a FileDescriptor for notification of data available to write.
         """
-        writes[writer] = 1
+        Add a FileDescriptor for notification of data available to write.
+        """
+        self._writes[writer] = 1
 
     def removeReader(self, reader):
-        """Remove a Selectable for notification of data available to read.
         """
-        if reads.has_key(reader):
-            del reads[reader]
+        Remove a Selectable for notification of data available to read.
+        """
+        if reader in self._reads:
+            del self._reads[reader]
 
     def removeWriter(self, writer):
-        """Remove a Selectable for notification of data available to write.
         """
-        if writes.has_key(writer):
-            del writes[writer]
+        Remove a Selectable for notification of data available to write.
+        """
+        if writer in self._writes:
+            del self._writes[writer]
 
     def removeAll(self):
-        return self._removeAll(reads, writes)
-    
+        return self._removeAll(self._reads, self._writes)
+
 
 def install():
     """Configure the twisted mainloop to be run using the select() reactor.
