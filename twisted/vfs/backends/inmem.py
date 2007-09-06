@@ -1,12 +1,9 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2006 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-"""
-In-memory VFS backend.
-"""
+"""In-memory VFS backend."""
 
-import os
-from cStringIO import StringIO
+import cStringIO
 
 from zope.interface import implements
 
@@ -28,7 +25,7 @@ class _FakeNode:
         if newParent.exists(pathutils.basename(newName)):
             raise ivfs.VFSError(
                 "Cannot rename over the top of an existing directory")
-
+            
         del self.parent._children[self.name]
         self.name = pathutils.basename(pathutils.basename(newName))
         newParent._children[self.name] = self
@@ -66,13 +63,8 @@ class FakeDirectory(_FakeNode):
         }
 
     def createFile(self, childName, exclusive=False):
-        if self.exists(childName):
-            if exclusive:
-                raise ivfs.AlreadyExistsError(childName)
-            child = self.child(childName)
-            if not ivfs.IFileSystemLeaf.providedBy(child):
-                raise IOError("Directory existing with name %s" % (childName,))
-            return child
+        if exclusive and self.exists(childName):
+            raise ivfs.AlreadyExistsError(childName)
         child = FakeFile(childName, self)
         child.create()
         return child
@@ -85,7 +77,7 @@ class FakeDirectory(_FakeNode):
         return child
 
     def exists(self, childName):
-        return childName in self._children
+        return self._children.has_key(childName)
 
 
 class FakeFile(_FakeNode):
@@ -94,15 +86,12 @@ class FakeFile(_FakeNode):
     implements(ivfs.IFileSystemLeaf)
 
     def __init__(self, name=None, parent=None, data=''):
-        self.data = StringIO()
+        self.data = cStringIO.StringIO()
         self.data.write(data)
         self.parent = parent
         self.name = name
 
     def open(self, flags):
-        if flags & os.O_TRUNC:
-            self.data.seek(0)
-            self.data.truncate()
         return self
 
     def getMetadata(self):

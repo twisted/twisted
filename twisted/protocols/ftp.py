@@ -95,8 +95,6 @@ PERMISSION_DENIED                       = "550.2"     # permission denied
 ANON_USER_DENIED                        = "550.3"     # anonymous users can't alter filesystem
 IS_NOT_A_DIR                            = "550.4"     # rmd called on a path that is not a directory
 REQ_ACTN_NOT_TAKEN                      = "550.5"
-FILE_EXISTS                             = "550.6"
-IS_A_DIR                                = "550.7"
 PAGE_TYPE_UNK                           = "551"
 EXCEEDED_STORAGE_ALLOC                  = "552"
 FILENAME_NOT_ALLOWED                    = "553"
@@ -162,8 +160,6 @@ RESPONSE = {
     PERMISSION_DENIED:                  '550 %s: Permission denied.',
     ANON_USER_DENIED:                   '550 Anonymous users are forbidden to change the filesystem',
     IS_NOT_A_DIR:                       '550 Cannot rmd, %s is not a directory',
-    FILE_EXISTS:                        '550 %s: File exists',
-    IS_A_DIR:                           '550 %s: is a directory',
     REQ_ACTN_NOT_TAKEN:                 '550 Requested action not taken: %s',
     EXCEEDED_STORAGE_ALLOC:             '552 Requested file action aborted, exceeded file storage allocation',
     FILENAME_NOT_ALLOWED:               '553 Requested action not taken, file name not allowed'
@@ -200,47 +196,44 @@ def toSegments(cwd, path):
 
 
 def errnoToFailure(e, path):
-    """
-    Map C{OSError} and C{IOError} to standard FTP errors.
-    """
-    if e == errno.ENOENT:
+    if e == errno.ENOENT or e == errno.EISDIR:
         return defer.fail(FileNotFoundError(path))
     elif e == errno.EACCES or e == errno.EPERM:
         return defer.fail(PermissionDeniedError(path))
     elif e == errno.ENOTDIR:
         return defer.fail(IsNotADirectoryError(path))
-    elif e == errno.EEXIST:
-        return defer.fail(FileExistsError(path))
-    elif e == errno.EISDIR:
-        return defer.fail(IsADirectoryError(path))
     else:
         return defer.fail()
 
+# Generic VFS exceptions
+class FilesystemShellException(Exception):
+    """Base for IFTPShell errors.
+    """
 
+class NoSuchFile(FilesystemShellException):
+    pass
+
+class PermissionDenied(FilesystemShellException):
+    pass
+
+class WrongFiletype(FilesystemShellException):
+    pass
+
+
+# -- Custom Exceptions --
 
 class FTPCmdError(Exception):
-    """
-    Generic exception for FTP commands.
-    """
     def __init__(self, *msg):
         Exception.__init__(self, *msg)
         self.errorMessage = msg
 
-
     def response(self):
-        """
-        Generate a FTP response message for this error.
-        """
+        """Generate a FTP response message for this error."""
         return RESPONSE[self.errorCode] % self.errorMessage
 
 
-
 class FileNotFoundError(FTPCmdError):
-    """
-    Raised when trying to access a non existent file or directory.
-    """
     errorCode = FILE_NOT_FOUND
-
 
 
 class AnonUserDeniedError(FTPCmdError):
@@ -255,14 +248,12 @@ class AnonUserDeniedError(FTPCmdError):
     errorCode = ANON_USER_DENIED
 
 
-
 class PermissionDeniedError(FTPCmdError):
     """
     Raised when access is attempted to a resource to which access is
     not allowed.
     """
     errorCode = PERMISSION_DENIED
-
 
 
 class IsNotADirectoryError(FTPCmdError):
@@ -272,38 +263,12 @@ class IsNotADirectoryError(FTPCmdError):
     errorCode = IS_NOT_A_DIR
 
 
-
-class FileExistsError(FTPCmdError):
-    """
-    Raised when attempted to override an existing resource.
-    """
-    errorCode = FILE_EXISTS
-
-
-
-class IsADirectoryError(FTPCmdError):
-    """
-    Raised when DELE is called on a path that is a directory.
-    """
-    errorCode = IS_A_DIR
-
-
-
 class CmdSyntaxError(FTPCmdError):
-    """
-    Raised when a command syntax is wrong.
-    """
     errorCode = SYNTAX_ERR
 
 
-
 class CmdArgSyntaxError(FTPCmdError):
-    """
-    Raised when a command is called with wrong value or a wrong number of
-    arguments.
-    """
     errorCode = SYNTAX_ERR_IN_ARGS
-
 
 
 class CmdNotImplementedError(FTPCmdError):
@@ -313,37 +278,44 @@ class CmdNotImplementedError(FTPCmdError):
     errorCode = CMD_NOT_IMPLMNTD
 
 
-
 class CmdNotImplementedForArgError(FTPCmdError):
     errorCode = CMD_NOT_IMPLMNTD_FOR_PARAM
-
-
 
 class FTPError(Exception):
     pass
 
+class FTPTimeoutError(Exception):
+    pass
 
+class DTPError(Exception):
+    pass
+
+class BogusClientError(Exception):
+    """thrown when a client other than the one we opened this
+    DTP connection for attempts to connect, or a client attempts to
+    get us to connect to an ip that differs from the one where the
+    request came from"""
+    pass
+
+class PathBelowTLDError(FTPCmdError):
+    errorCode = PERMISSION_DENIED
+
+class ClientDisconnectError(Exception):
+    pass
 
 class PortConnectionError(Exception):
     pass
 
-
-
 class BadCmdSequenceError(FTPCmdError):
-    """
-    Raised when a client sends a series of commands in an illogical sequence.
-    """
+    """raised when a client sends a series of commands in an illogical sequence"""
     errorCode = BAD_CMD_SEQ
 
-
-
 class AuthorizationError(FTPCmdError):
-    """
-    Raised when client authentication fails.
-    """
+    """raised when client authentication fails"""
     errorCode = AUTH_FAILURE
 
 
+# -- Utility Functions --
 
 def debugDeferred(self, *_):
     log.msg('debugDeferred(): %s' % str(_), debug=True)
@@ -356,7 +328,6 @@ _months = [
     None,
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
 
 class DTP(object, protocol.Protocol):
     implements(interfaces.IConsumer)
@@ -1245,7 +1216,6 @@ class FTPFactory(policies.LimitTotalConnectionsFactory):
 
 # -- Cred Objects --
 
-
 class IFTPShell(Interface):
     """
     An abstraction of the shell commands used by the FTP protocol for
@@ -1382,12 +1352,9 @@ class IFTPShell(Interface):
         """
 
 
-
 class IReadFile(Interface):
+    """A file out of which bytes may be read.
     """
-    A file out of which bytes may be read.
-    """
-
     def send(consumer):
         """
         Produce the contents of the given path to the given consumer.  This
@@ -1400,12 +1367,9 @@ class IReadFile(Interface):
         """
 
 
-
 class IWriteFile(Interface):
+    """A file into which bytes may be written.
     """
-    A file into which bytes may be written.
-    """
-
     def receive():
         """
         Create a consumer which will write to this file.  This method may
@@ -1413,7 +1377,6 @@ class IWriteFile(Interface):
 
         @rtype: C{Deferred} of C{IConsumer}
         """
-
 
 
 def _getgroups(uid):
@@ -1487,7 +1450,6 @@ def _testPermissions(uid, gid, spath, mode='r'):
     return access
 
 
-
 class FTPAnonymousShell(object):
     """
     An anonymous implementation of IFTPShell
@@ -1501,31 +1463,24 @@ class FTPAnonymousShell(object):
     def __init__(self, filesystemRoot):
         self.filesystemRoot = filesystemRoot
 
-
     def _path(self, path):
         return reduce(filepath.FilePath.child, path, self.filesystemRoot)
-
 
     def makeDirectory(self, path):
         return defer.fail(AnonUserDeniedError())
 
-
     def removeDirectory(self, path):
         return defer.fail(AnonUserDeniedError())
-
 
     def removeFile(self, path):
         return defer.fail(AnonUserDeniedError())
 
-
     def rename(self, fromPath, toPath):
         return defer.fail(AnonUserDeniedError())
-
 
     def receive(self, path):
         path = self._path(path)
         return defer.fail(AnonUserDeniedError())
-
 
     def openForReading(self, path):
         p = self._path(path)
@@ -1559,68 +1514,46 @@ class FTPAnonymousShell(object):
         else:
             return defer.succeed(None)
 
-
     def stat(self, path, keys=()):
         p = self._path(path)
         if p.isdir():
-            try:
-                statResult = self._statNode(p, keys)
-            except (IOError, OSError), e:
-                return errnoToFailure(e.errno, path)
-            except:
-                return defer.fail()
-            else:
-                return defer.succeed(statResult)
+            return defer.fail(WrongFiletype())
         else:
             return self.list(path, keys).addCallback(lambda res: res[0][1])
 
-
     def list(self, path, keys=()):
-        fPath = self._path(path)
-        if fPath.isdir():
-            entries = fPath.listdir()
-            fEntries = [fPath.child(p) for p in entries]
-        elif fPath.isfile():
-            entries = [os.path.join(*fPath.segmentsFrom(self.filesystemRoot))]
-            fEntries = [fPath]
+        path = self._path(path)
+        if path.isdir():
+            entries = path.listdir()
         else:
-            return defer.fail(FileNotFoundError(path))
+            entries = [None]
 
         results = []
-        for fName, fPath in zip(entries, fEntries):
+        for fName in entries:
             ent = []
             results.append((fName, ent))
             if keys:
+                if fName is not None:
+                    p = os.path.join(path.path, fName)
+                else:
+                    p = path.path
                 try:
-                    ent.extend(self._statNode(fPath, keys))
+                    statResult = os.stat(p)
                 except (IOError, OSError), e:
-                    return errnoToFailure(e.errno, fName)
+                    return errnoToFailure(e.errno, path)
                 except:
                     return defer.fail()
 
+            for k in keys:
+                ent.append(getattr(self, '_list_' + k)(statResult))
         return defer.succeed(results)
 
+    _list_size = operator.attrgetter('st_size')
+    _list_permissions = operator.attrgetter('st_mode')
+    _list_hardlinks = operator.attrgetter('st_nlink')
+    _list_modified = operator.attrgetter('st_mtime')
 
-    def _statNode(self, fPath, keys):
-        """
-        Shortcut method to get stat info on a node.
-
-        @param fPath: the node to stat.
-        @type fPath: C{filepath.FilePath}
-
-        @param keys: the stat keys to get.
-        @type keys: C{iterable}
-        """
-        fPath.restat()
-        return [getattr(self, '_stat_' + k)(fPath.statinfo) for k in keys]
-
-    _stat_size = operator.attrgetter('st_size')
-    _stat_permissions = operator.attrgetter('st_mode')
-    _stat_hardlinks = operator.attrgetter('st_nlink')
-    _stat_modified = operator.attrgetter('st_mtime')
-
-
-    def _stat_owner(self, st):
+    def _list_owner(self, st):
         if pwd is not None:
             try:
                 return pwd.getpwuid(st.st_uid)[0]
@@ -1628,8 +1561,7 @@ class FTPAnonymousShell(object):
                 pass
         return str(st.st_uid)
 
-
-    def _stat_group(self, st):
+    def _list_group(self, st):
         if grp is not None:
             try:
                 return grp.getgrgid(st.st_gid)[0]
@@ -1637,10 +1569,8 @@ class FTPAnonymousShell(object):
                 pass
         return str(st.st_gid)
 
-
-    def _stat_directory(self, st):
+    def _list_directory(self, st):
         return bool(st.st_mode & stat.S_IFDIR)
-
 
 
 class _FileReader(object):
@@ -1663,15 +1593,11 @@ class _FileReader(object):
         return d
 
 
-
 class FTPShell(FTPAnonymousShell):
-
     def makeDirectory(self, path):
         p = self._path(path)
         try:
             p.makedirs()
-        except (IOError, OSError), e:
-            return errnoToFailure(e.errno, path)
         except:
             return defer.fail()
         else:
@@ -1682,8 +1608,6 @@ class FTPShell(FTPAnonymousShell):
         p = self._path(path)
         try:
             os.rmdir(p.path)
-        except (IOError, OSError), e:
-            return errnoToFailure(e.errno, path)
         except:
             return defer.fail()
         else:
@@ -1692,12 +1616,8 @@ class FTPShell(FTPAnonymousShell):
 
     def removeFile(self, path):
         p = self._path(path)
-        if p.isdir():
-            return defer.fail(IsADirectoryError(path))
         try:
             p.remove()
-        except (IOError, OSError), e:
-            return errnoToFailure(e.errno, path)
         except:
             return defer.fail()
         else:
@@ -1709,8 +1629,6 @@ class FTPShell(FTPAnonymousShell):
         tp = self._path(toPath)
         try:
             os.rename(fp.path, tp.path)
-        except (IOError, OSError), e:
-            return errnoToFailure(e.errno, fromPath)
         except:
             return defer.fail()
         else:
@@ -1721,12 +1639,9 @@ class FTPShell(FTPAnonymousShell):
         p = self._path(path)
         try:
             fObj = p.open('wb')
-        except (IOError, OSError), e:
-            return errnoToFailure(e.errno, path)
         except:
             return defer.fail()
         return defer.succeed(_FileWriter(fObj))
-
 
 
 class _FileWriter(object):
@@ -1741,7 +1656,6 @@ class _FileWriter(object):
         self._receive = True
         # FileConsumer will close the file object
         return defer.succeed(FileConsumer(self.fObj))
-
 
 
 class FTPRealm:
