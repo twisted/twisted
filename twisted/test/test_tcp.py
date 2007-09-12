@@ -1106,9 +1106,15 @@ class MyHCProtocol(MyProtocol):
     
     def readConnectionLost(self):
         self.readHalfClosed = True
+        # Invoke notification logic from the base class to simplify testing.
+        if self.writeHalfClosed:
+            self.connectionLost(None)
 
     def writeConnectionLost(self):
         self.writeHalfClosed = True
+        # Invoke notification logic from the base class to simplify testing.
+        if self.readHalfClosed:
+            self.connectionLost(None)
 
 
 class MyHCFactory(protocol.ServerFactory):
@@ -1262,45 +1268,73 @@ class HalfClose2TestCase(unittest.TestCase):
         return defer.gatherResults([d, d2])
 
 
-class HalfClose3TestCase(PortCleanerUpper):
-    """Test half-closing connections where notification code has bugs."""
+class HalfCloseBuggyApplicationTests(unittest.TestCase):
+    """
+    Test half-closing connections where notification code has bugs.
+    """
 
     def setUp(self):
-        PortCleanerUpper.setUp(self)
-        self.f = f = MyHCFactory()
-        self.p = p = reactor.listenTCP(0, f, interface="127.0.0.1")
-        self.ports.append(p)
-        d = loopUntil(lambda :p.connected)
-        def connect(ignored):
-            c = protocol.ClientCreator(reactor, MyHCProtocol)
-            return c.connectTCP(p.getHost().host, p.getHost().port)
-        def setClient(client):
-            self.client = client
-            self.assertEquals(self.client.transport.connected, 1)
-        d.addCallback(connect)
-        d.addCallback(setClient)
-        return d
+        """
+        Set up a server and connect a client to it.  Return a Deferred which
+        only fires once this is done.
+        """
+        self.serverFactory = MyHCFactory()
+        self.serverFactory.protocolConnectionMade = defer.Deferred()
+        self.port = reactor.listenTCP(
+            0, self.serverFactory, interface="127.0.0.1")
+        self.addCleanup(self.port.stopListening)
+        addr = self.port.getHost()
+        creator = protocol.ClientCreator(reactor, MyHCProtocol)
+        clientDeferred = creator.connectTCP(addr.host, addr.port)
+        def setClient(clientProtocol):
+            self.clientProtocol = clientProtocol
+        clientDeferred.addCallback(setClient)
+        return defer.gatherResults([
+            self.serverFactory.protocolConnectionMade,
+            clientDeferred])
+
 
     def aBug(self, *args):
-        raise RuntimeError, "ONO I AM BUGGY CODE"
-    
-    def testReadNotificationRaises(self):
-        self.f.protocol.readConnectionLost = self.aBug
-        self.client.transport.loseWriteConnection()
-        d = loopUntil(lambda :self.f.protocol.closed)
+        """
+        Fake implementation of a callback which illegally raises an
+        exception.
+        """
+        raise RuntimeError("ONO I AM BUGGY CODE")
+
+
+    def _notificationRaisesTest(self):
+        """
+        Helper for testing that an exception is logged by the time the
+        client protocol loses its connection.
+        """
+        closed = self.clientProtocol.closedDeferred = defer.Deferred()
+        self.clientProtocol.transport.loseWriteConnection()
         def check(ignored):
-            # XXX client won't be closed?! why isn't server sending RST?
-            # or maybe it is and we have a bug here.
-            self.client.transport.loseConnection()
-            log.flushErrors(RuntimeError)
-        return d.addCallback(check)
-    
-    def testWriteNotificationRaises(self):
-        self.client.writeConnectionLost = self.aBug
-        self.client.transport.loseWriteConnection()
-        d = loopUntil(lambda :self.client.closed)
-        d.addCallback(lambda _: log.flushErrors(RuntimeError))
-        return d
+            errors = self.flushLoggedErrors(RuntimeError)
+            self.assertEqual(len(errors), 1)
+        closed.addCallback(check)
+        return closed
+
+
+    def test_readNotificationRaises(self):
+        """
+        If C{readConnectionLost} raises an exception when the transport
+        calls it to notify the protocol of that event, the exception should
+        be logged and the protocol should be disconnected completely.
+        """
+        self.serverFactory.protocol.readConnectionLost = self.aBug
+        return self._notificationRaisesTest()
+
+
+    def test_writeNotificationRaises(self):
+        """
+        If C{writeConnectionLost} raises an exception when the transport
+        calls it to notify the protocol of that event, the exception should
+        be logged and the protocol should be disconnected completely.
+        """
+        self.clientProtocol.writeConnectionLost = self.aBug
+        return self._notificationRaisesTest()
+
 
 
 try:
