@@ -451,7 +451,8 @@ class Failure:
     def printTraceback(self, file=None, elideFrameworkCode=0, detail='default'):
         """Emulate Python's standard error reporting mechanism.
         """
-        if file is None: file = log.logerr
+        if file is None:
+            file = log.logerr
         w = file.write
 
         # Preamble
@@ -480,8 +481,16 @@ class Failure:
 
         # postamble, if any
         if not detail == 'brief':
-            w("%s: %s\n" % (reflect.qual(self.type),
-                            reflect.safe_str(self.value)))
+            # Unfortunately, self.type will not be a class object if this
+            # Failure was created implicitly from a string exception. 
+            # qual() doesn't make any sense on a string, so check for this
+            # case here and just write out the string if that's what we
+            # have.
+            if isinstance(self.type, (str, unicode)):
+                w(self.type + "\n")
+            else:
+                w("%s: %s\n" % (reflect.qual(self.type),
+                                reflect.safe_str(self.value)))
         # chaining
         if isinstance(self.value, Failure):
             # TODO: indentation for chained failures?

@@ -94,24 +94,38 @@ class FailureTestCase(unittest.TestCase):
     testLackOfTB.todo = "the traceback is not preserved, exarkun said he'll try to fix this! god knows how"
 
 
+    _stringException = "bugger off"
     def _getStringFailure(self):
         try:
-            raise "bugger off"
+            raise self._stringException
         except:
             f = failure.Failure()
         return f
 
-    def testStringExceptions(self):
+    def test_raiseStringExceptions(self):
         # String exceptions used to totally bugged f.raiseException
         f = self._getStringFailure()
         try:
             f.raiseException()
         except:
-            self.assertEquals(sys.exc_info()[0], "bugger off")
+            self.assertEquals(sys.exc_info()[0], self._stringException)
         else:
             raise AssertionError("Should have raised")
-    testStringExceptions.suppress = [
+    test_raiseStringExceptions.suppress = [
         util.suppress(message='raising a string exception is deprecated')]
+
+
+    def test_printStringExceptions(self):
+        """
+        L{Failure.printTraceback} should write out stack and exception
+        information, even for string exceptions.
+        """
+        failure = self._getStringFailure()
+        output = StringIO.StringIO()
+        failure.printTraceback(file=output)
+        lines = output.getvalue().splitlines()
+        # The last line should be the value of the raised string
+        self.assertEqual(lines[-1], self._stringException)
 
 
     def testBrokenStr(self):
