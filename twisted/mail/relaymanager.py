@@ -1,9 +1,10 @@
 # -*- test-case-name: twisted.mail.test.test_mail -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""Infrastructure for relaying mail through smart host
+"""
+Infrastructure for relaying mail through smart host
 
 Today, internet e-mail has stopped being Peer-to-peer for many problems,
 spam (unsolicited bulk mail) among them. Instead, most nodes on the
@@ -19,8 +20,13 @@ The classes here are meant to facilitate support for such a configuration
 for the twisted.mail SMTP server
 """
 
+import rfc822
+import os
+import time
+
 from twisted.python import log
 from twisted.python import util
+from twisted.python.failure import Failure
 from twisted.mail import relay
 from twisted.mail import bounce
 from twisted.internet import protocol
@@ -28,10 +34,6 @@ from twisted.internet.defer import Deferred, DeferredList
 from twisted.internet.error import DNSLookupError
 from twisted.mail import smtp
 from twisted.application import internet
-
-import rfc822
-import os
-import time
 
 try:
     import cPickle as pickle
@@ -491,6 +493,10 @@ class MXCalculator:
         return [a.payload for a in answers]
 
     def _cbMX(self, answers, domain):
+        # Do this import here so that relaymanager.py doesn't depend on
+        # twisted.names, only MXCalculator will.
+        from twisted.names.error import DNSNameError
+
         answers = util.dsu(answers, lambda e: e.preference)
         for answer in answers:
             host = str(answer.name)
@@ -500,7 +506,14 @@ class MXCalculator:
             if t > 0:
                 del self.badMXs[host]
                 return answer
-        return answers[0]
+        if answers:
+            return answers[0]
+        # Treat no answers the same as an error - jump to the errback to try
+        # to look up an A record.  This provides behavior described as a
+        # special case in RFC 974 in the section headed I{Interpreting the
+        # List of MX RRs}.
+        return Failure(DNSNameError("No MX records for %r" % (domain,)))
+
 
     def _ebMX(self, failure, domain):
         from twisted.names import error, dns

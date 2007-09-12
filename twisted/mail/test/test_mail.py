@@ -1,6 +1,9 @@
 # Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+Tests for large portions of L{twisted.mail}.
+"""
 
 import os
 import errno
@@ -891,6 +894,42 @@ class MXTestCase(unittest.TestCase):
 
     def testSimpleFailureWithFallback(self):
         return self.assertFailure(self.mx.getMX('test.domain'), DNSLookupError)
+
+
+    def test_successWithoutResults(self):
+        """
+        If an MX lookup succeeds but the result set is empty,
+        L{MXCalculator.getMX} should try to look up an I{A} record for the
+        requested name and call back its returned Deferred with that
+        address.
+        """
+        ip = '1.2.3.4'
+        domain = 'example.org'
+
+        class DummyResolver(object):
+            """
+            Fake resolver which will respond to an MX lookup with an empty
+            result set.
+
+            @ivar mx: A dictionary mapping hostnames to three-tuples of
+                results to be returned from I{MX} lookups.
+
+            @ivar a: A dictionary mapping hostnames to addresses to be
+                returned from I{A} lookups.
+            """
+            mx = {domain: ([], [], [])}
+            a = {domain: ip}
+
+            def lookupMailExchange(self, domain):
+                return defer.succeed(self.mx[domain])
+
+            def getHostByName(self, domain):
+                return defer.succeed(self.a[domain])
+
+        self.mx.resolver = DummyResolver()
+        d = self.mx.getMX(domain)
+        d.addCallback(self.assertEqual, Record_MX(name=ip))
+        return d
 
 
     def test_failureWithSuccessfulFallback(self):
