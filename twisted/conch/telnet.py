@@ -1,7 +1,9 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.conch.test.test_telnet -*-
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-"""Telnet protocol implementation.
+"""
+Telnet protocol implementation.
 
 API Stability: Unstable
 
@@ -12,7 +14,6 @@ import struct
 
 from zope.interface import implements
 
-from twisted.application import internet
 from twisted.internet import protocol, interfaces as iinternet, defer
 from twisted.python import log
 
@@ -662,16 +663,49 @@ class Telnet(protocol.Protocol):
                ('yes', False): dont_yes_false, ('yes', True): dont_yes_true}
 
     def enableLocal(self, option):
-        return self.protocol.enableLocal(option)
+        """
+        Reject all attempts to enable options.
+        """
+        return False
+
 
     def enableRemote(self, option):
-        return self.protocol.enableRemote(option)
+        """
+        Reject all attempts to enable options.
+        """
+        return False
+
 
     def disableLocal(self, option):
-        return self.protocol.disableLocal(option)
+        """
+        Signal a programming error by raising an exception.
+
+        L{enableLocal} must return true for the given value of C{option} in
+        order for this method to be called.  If a subclass of L{Telnet}
+        overrides enableLocal to allow certain options to be enabled, it must
+        also override disableLocal to disable those options.
+
+        @raise NotImplementedError: Always raised.
+        """
+        raise NotImplementedError(
+            "Don't know how to disable local telnet option %r" % (option,))
+
 
     def disableRemote(self, option):
-        return self.protocol.disableRemote(option)
+        """
+        Signal a programming error by raising an exception.
+
+        L{enableRemote} must return true for the given value of C{option} in
+        order for this method to be called.  If a subclass of L{Telnet}
+        overrides enableRemote to allow certain options to be enabled, it must
+        also override disableRemote tto disable those options.
+
+        @raise NotImplementedError: Always raised.
+        """
+        raise NotImplementedError(
+            "Don't know how to disable remote telnet option %r" % (option,))
+
+
 
 class ProtocolTransportMixin:
     def write(self, bytes):

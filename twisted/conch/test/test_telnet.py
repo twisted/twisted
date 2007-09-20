@@ -1,6 +1,10 @@
 # -*- test-case-name: twisted.conch.test.test_telnet -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
+
+"""
+Tests for L{twisted.conch.telnet}.
+"""
 
 from zope.interface import implements
 
@@ -62,7 +66,12 @@ class TestProtocol:
     def disableRemote(self, option):
         self.disabledRemote.append(option)
 
-class TelnetTestCase(unittest.TestCase):
+
+
+class TelnetTransportTestCase(unittest.TestCase):
+    """
+    Tests for L{telnet.TelnetTransport}.
+    """
     def setUp(self):
         self.p = telnet.TelnetTransport(TestProtocol)
         self.t = proto_helpers.StringTransport()
@@ -485,3 +494,54 @@ class TelnetTestCase(unittest.TestCase):
         d2 = self.assertFailure(d2, TestException)
         d3 = self.assertFailure(d3, TestException)
         return defer.gatherResults([d1, d2, d3])
+
+
+
+class TelnetTests(unittest.TestCase):
+    """
+    Tests for L{telnet.Telnet}.
+
+    L{telnet.Telnet} implements the TELNET protocol (RFC 854), including option
+    and suboption negotiation, and option state tracking.
+    """
+    def setUp(self):
+        """
+        Create an unconnected L{telnet.Telnet} to be used by tests.
+        """
+        self.protocol = telnet.Telnet()
+
+
+    def test_enableLocal(self):
+        """
+        L{telnet.Telnet.enableLocal} should reject all options, since
+        L{telnet.Telnet} does not know how to implement any options.
+        """
+        self.assertFalse(self.protocol.enableLocal('\0'))
+
+
+    def test_enableRemote(self):
+        """
+        L{telnet.Telnet.enableRemote} should reject all options, since
+        L{telnet.Telnet} does not know how to implement any options.
+        """
+        self.assertFalse(self.protocol.enableRemote('\0'))
+
+
+    def test_disableLocal(self):
+        """
+        It is an error for L{telnet.Telnet.disableLocal} to be called, since
+        L{telnet.Telnet.enableLocal} will never allow any options to be enabled
+        locally.  If a subclass overrides enableLocal, it must also override
+        disableLocal.
+        """
+        self.assertRaises(NotImplementedError, self.protocol.disableLocal, '\0')
+
+
+    def test_disableRemote(self):
+        """
+        It is an error for L{telnet.Telnet.disableRemote} to be called, since
+        L{telnet.Telnet.enableRemote} will never allow any options to be
+        enabled remotely.  If a subclass overrides enableRemote, it must also
+        override disableRemote.
+        """
+        self.assertRaises(NotImplementedError, self.protocol.disableRemote, '\0')
