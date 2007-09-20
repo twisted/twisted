@@ -8,6 +8,7 @@ Tests for epoll wrapper.
 import socket, errno, time
 
 from twisted.trial import unittest
+from twisted.python.util import untilConcludes
 
 try:
     from twisted.python import _epoll
@@ -110,7 +111,7 @@ class EPoll(unittest.TestCase):
                    _epoll.ET)
 
         now = time.time()
-        events = p.wait(4, 1000)
+        events = untilConcludes(p.wait, 4, 1000)
         then = time.time()
         self.failIf(then - now > 0.01)
 
@@ -122,7 +123,7 @@ class EPoll(unittest.TestCase):
         self.assertEquals(events, expected)
 
         now = time.time()
-        events = p.wait(4, 200)
+        events = untilConcludes(p.wait, 4, 200)
         then = time.time()
         self.failUnless(then - now > 0.1)
         self.failIf(events)
@@ -131,7 +132,7 @@ class EPoll(unittest.TestCase):
         server.send("world!!!")
 
         now = time.time()
-        events = p.wait(4, 1000)
+        events = untilConcludes(p.wait, 4, 1000)
         then = time.time()
         self.failIf(then - now > 0.01)
 

@@ -24,6 +24,7 @@ from twisted.python import log
 from twisted.internet import posixbase, error
 from twisted.internet.main import CONNECTION_LOST
 
+_POLL_DISCONNECTED = (_epoll.HUP | _epoll.ERR)
 
 class EPollReactor(posixbase.PosixReactorBase):
     """
@@ -211,7 +212,7 @@ class EPollReactor(posixbase.PosixReactorBase):
         """
         why = None
         inRead = False
-        if event in (_epoll.HUP, _epoll.ERR):
+        if event & _POLL_DISCONNECTED and not (event & _epoll.IN):
             why = CONNECTION_LOST
         else:
             try:
