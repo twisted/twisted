@@ -15,6 +15,8 @@ import Queue
 import threading
 import copy
 import sys
+import warnings
+
 
 # Twisted Imports
 from twisted.python import log, runtime, context, threadable
@@ -27,7 +29,7 @@ class ThreadPool:
     This class (hopefully) generalizes the functionality of a pool of
     threads to which work can be dispatched.
 
-    dispatch(), dispatchWithCallback() and stop() should only be called from
+    callInThread() and stop() should only be called from
     a single thread, unless you make a subclass where stop() and
     _startSomeWorkers() are synchronized.
     """
@@ -102,9 +104,14 @@ class ThreadPool:
 
     def dispatch(self, owner, func, *args, **kw):
         """
+        DEPRECATED: use L{callInThread} instead.
+
         Dispatch a function to be a run in a thread.
         """
-        self.callInThread(func,*args,**kw)
+        warnings.warn("dispatch() is deprecated since Twisted 2.6, "
+                      "use callInThread() instead",
+                      DeprecationWarning, stacklevel=2)
+        self.callInThread(func, *args, **kw)
 
     def callInThread(self, func, *args, **kw):
         if self.joined:
@@ -125,11 +132,16 @@ class ThreadPool:
 
     def dispatchWithCallback(self, owner, callback, errback, func, *args, **kw):
         """
+        DEPRECATED: use L{twisted.internet.threads.deferToThread} instead.
+
         Dispatch a function, returning the result to a callback function.
 
         The callback function will be called in the thread - make sure it is
         thread-safe.
         """
+        warnings.warn("dispatchWithCallback() is deprecated since Twisted 2.6, "
+                      "use twisted.internet.threads.deferToThread() instead.",
+                      DeprecationWarning, stacklevel=2)
         self.callInThread(
             self._runWithCallback, callback, errback, func, args, kw
         )

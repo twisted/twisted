@@ -4,7 +4,7 @@
 
 import pickle, time, weakref, gc
 
-from twisted.trial import unittest
+from twisted.trial import unittest, util
 from twisted.python import threadable
 from twisted.internet import reactor, interfaces
 
@@ -52,8 +52,9 @@ threadable.synchronize(Synchronization)
 
 
 class ThreadPoolTestCase(unittest.TestCase):
-    """Test threadpools."""
-
+    """
+    Test threadpools.
+    """
 
     def test_threadCreationArguments(self):
         """
@@ -88,7 +89,7 @@ class ThreadPoolTestCase(unittest.TestCase):
             event = threading.Event()
             tp.callInThread(event.set)
             event.wait(self.getTimeout())
-            
+
             del worker
             del unique
             gc.collect()
@@ -97,7 +98,12 @@ class ThreadPoolTestCase(unittest.TestCase):
         finally:
             tp.stop()
 
-    def testPersistence(self):
+
+    def test_persistence(self):
+        """
+        Threadpools can be pickled and unpickled, which should preserve the
+        number of threads and other parameters.
+        """
         tp = threadpool.ThreadPool(7, 20)
         tp.start()
 
@@ -136,9 +142,13 @@ class ThreadPoolTestCase(unittest.TestCase):
 
 
     def _threadpoolTest(self, method):
+        """
+        Test synchronization of calls made with C{method}, which should be
+        one of the mecanisms of the threadpool to execute work in threads.
+        """
         # This is a schizophrenic test: it seems to be trying to test
-        # both the dispatch() behavior of the ThreadPool as well as
-        # the serialization behavior of threadable.synchronize().  It
+        # both the callInThread()/dispatch() behavior of the ThreadPool as well
+        # as the serialization behavior of threadable.synchronize().  It
         # would probably make more sense as two much simpler tests.
         N = 10
 
@@ -150,7 +160,7 @@ class ThreadPoolTestCase(unittest.TestCase):
             actor = Synchronization(N, waiting)
 
             for i in xrange(N):
-                tp.dispatch(actor, actor.run)
+                method(tp, actor)
 
             self._waitForLock(waiting)
 
@@ -160,17 +170,33 @@ class ThreadPoolTestCase(unittest.TestCase):
             tp.stop()
 
 
-    def testDispatch(self):
+    def test_dispatch(self):
+        """
+        Call C{_threadpoolTest} with C{dispatch}.
+        """
         return self._threadpoolTest(
             lambda tp, actor: tp.dispatch(actor, actor.run))
 
+    test_dispatch.suppress = [util.suppress(
+                message="dispatch\(\) is deprecated since Twisted 2.6, "
+                        "use callInThread\(\) instead",
+                category=DeprecationWarning)]
 
-    def testCallInThread(self):
+
+    def test_callInThread(self):
+        """
+        Call C{_threadpoolTest} with C{callInThread}.
+        """
         return self._threadpoolTest(
             lambda tp, actor: tp.callInThread(actor.run))
 
 
-    def testExistingWork(self):
+    def test_existingWork(self):
+        """
+        Work added to the threadpool before its start should be executed once
+        the threadpool is started: this is ensured by trying to release a lock
+        previously acquired.
+        """
         waiter = threading.Lock()
         waiter.acquire()
 
@@ -180,6 +206,44 @@ class ThreadPoolTestCase(unittest.TestCase):
 
         try:
             self._waitForLock(waiter)
+        finally:
+            tp.stop()
+
+
+    def test_dispatchDeprecation(self):
+        """
+        Test for the deprecation of the dispatch method.
+        """
+        tp = threadpool.ThreadPool()
+        tp.start()
+        def cb():
+            return tp.dispatch(None, lambda: None)
+        try:
+            self.assertWarns(DeprecationWarning,
+                "dispatch() is deprecated since Twisted 2.6, "
+                "use callInThread() instead",
+                __file__, cb)
+        finally:
+            tp.stop()
+
+
+    def test_dispatchWithCallbackDeprecation(self):
+        """
+        Test for the deprecation of the dispatchWithCallback method.
+        """
+        tp = threadpool.ThreadPool()
+        tp.start()
+        def cb():
+            return tp.dispatchWithCallback(
+                None,
+                lambda x: None,
+                lambda x: None,
+                lambda: None)
+        try:
+            self.assertWarns(DeprecationWarning,
+                "dispatchWithCallback() is deprecated since Twisted 2.6, "
+                "use twisted.internet.threads.deferToThread() instead.",
+                __file__, cb)
         finally:
             tp.stop()
 
@@ -240,3 +304,4 @@ if interfaces.IReactorThreads(reactor, None) is None:
 else:
     import threading
     from twisted.python import threadpool
+
