@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 #
 # Maintainer: Jonathan Lange <jml@twistedmatrix.com>
@@ -414,6 +414,16 @@ class TestTreeReporter(unittest.TestCase):
     test_cleanupError = suppressWarnings(
         test_cleanupError,
         util.suppress(category=reporter.BrokenTestCaseWarning))
+
+    def test_upDownError(self):
+        """
+        Run upDownError and check that the output is correct and colored
+        correctly.
+        """
+        self.result.upDownError("method", None, None, False)
+        color, text = self.log[0]
+        self.assertEqual(color.strip(), self.result.ERROR)
+        self.assertEqual(text.strip(), 'method')
 
 
 class TestReporter(unittest.TestCase):

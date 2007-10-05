@@ -627,7 +627,7 @@ class TreeReporter(Reporter):
         super(TreeReporter, self).cleanupErrors(errs)
 
     def upDownError(self, method, error, warn, printStatus):
-        self.write(self.color("  %s" % method, self.ERROR))
+        self._colorizer.write("  %s" % method, self.ERROR)
         if printStatus:
             self.endLine('[ERROR]', self.ERROR)
         super(TreeReporter, self).upDownError(method, error, warn, printStatus)
