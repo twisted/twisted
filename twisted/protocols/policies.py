@@ -156,7 +156,8 @@ class ThrottlingProtocol(ProtocolWrapper):
 
 
 class ThrottlingFactory(WrappingFactory):
-    """Throttles bandwidth and number of connections.
+    """
+    Throttles bandwidth and number of connections.
 
     Write bandwidth will only be throttled if there is a producer
     registered.
@@ -164,7 +165,8 @@ class ThrottlingFactory(WrappingFactory):
 
     protocol = ThrottlingProtocol
 
-    def __init__(self, wrappedFactory, maxConnectionCount=sys.maxint, readLimit=None, writeLimit=None):
+    def __init__(self, wrappedFactory, maxConnectionCount=sys.maxint,
+                 readLimit=None, writeLimit=None):
         WrappingFactory.__init__(self, wrappedFactory)
         self.connectionCount = 0
         self.maxConnectionCount = maxConnectionCount
@@ -177,59 +179,89 @@ class ThrottlingFactory(WrappingFactory):
         self.unthrottleWritesID = None
         self.checkWriteBandwidthID = None
 
+
+    def callLater(self, period, func):
+        """
+        Wrapper around L{reactor.callLater} for test purpose.
+        """
+        return reactor.callLater(period, func)
+
+
     def registerWritten(self, length):
-        """Called by protocol to tell us more bytes were written."""
+        """
+        Called by protocol to tell us more bytes were written.
+        """
         self.writtenThisSecond += length
 
+
     def registerRead(self, length):
-        """Called by protocol to tell us more bytes were read."""
+        """
+        Called by protocol to tell us more bytes were read.
+        """
         self.readThisSecond += length
 
+
     def checkReadBandwidth(self):
-        """Checks if we've passed bandwidth limits."""
+        """
+        Checks if we've passed bandwidth limits.
+        """
         if self.readThisSecond > self.readLimit:
             self.throttleReads()
             throttleTime = (float(self.readThisSecond) / self.readLimit) - 1.0
-            self.unthrottleReadsID = reactor.callLater(throttleTime,
-                                                       self.unthrottleReads)
+            self.unthrottleReadsID = self.callLater(throttleTime,
+                                                    self.unthrottleReads)
         self.readThisSecond = 0
-        self.checkReadBandwidthID = reactor.callLater(1, self.checkReadBandwidth)
+        self.checkReadBandwidthID = self.callLater(1, self.checkReadBandwidth)
+
 
     def checkWriteBandwidth(self):
         if self.writtenThisSecond > self.writeLimit:
             self.throttleWrites()
             throttleTime = (float(self.writtenThisSecond) / self.writeLimit) - 1.0
-            self.unthrottleWritesID = reactor.callLater(throttleTime,
+            self.unthrottleWritesID = self.callLater(throttleTime,
                                                         self.unthrottleWrites)
         # reset for next round
         self.writtenThisSecond = 0
-        self.checkWriteBandwidthID = reactor.callLater(1, self.checkWriteBandwidth)
+        self.checkWriteBandwidthID = self.callLater(1, self.checkWriteBandwidth)
+
 
     def throttleReads(self):
-        """Throttle reads on all protocols."""
+        """
+        Throttle reads on all protocols.
+        """
         log.msg("Throttling reads on %s" % self)
         for p in self.protocols.keys():
             p.throttleReads()
 
+
     def unthrottleReads(self):
-        """Stop throttling reads on all protocols."""
+        """
+        Stop throttling reads on all protocols.
+        """
         self.unthrottleReadsID = None
         log.msg("Stopped throttling reads on %s" % self)
         for p in self.protocols.keys():
             p.unthrottleReads()
 
+
     def throttleWrites(self):
-        """Throttle writes on all protocols."""
+        """
+        Throttle writes on all protocols.
+        """
         log.msg("Throttling writes on %s" % self)
         for p in self.protocols.keys():
             p.throttleWrites()
 
+
     def unthrottleWrites(self):
-        """Stop throttling writes on all protocols."""
+        """
+        Stop throttling writes on all protocols.
+        """
         self.unthrottleWritesID = None
         log.msg("Stopped throttling writes on %s" % self)
         for p in self.protocols.keys():
             p.unthrottleWrites()
+
 
     def buildProtocol(self, addr):
         if self.connectionCount == 0:
@@ -245,6 +277,7 @@ class ThrottlingFactory(WrappingFactory):
             log.msg("Max connection count reached!")
             return None
 
+
     def unregisterProtocol(self, p):
         WrappingFactory.unregisterProtocol(self, p)
         self.connectionCount -= 1
@@ -258,6 +291,8 @@ class ThrottlingFactory(WrappingFactory):
             if self.checkWriteBandwidthID is not None:
                 self.checkWriteBandwidthID.cancel()
 
+
+
 class SpewingProtocol(ProtocolWrapper):
     def dataReceived(self, data):
         log.msg("Received: %r" % data)
@@ -267,8 +302,11 @@ class SpewingProtocol(ProtocolWrapper):
         log.msg("Sending: %r" % data)
         ProtocolWrapper.write(self,data)
 
+
+
 class SpewingFactory(WrappingFactory):
     protocol = SpewingProtocol
+
 
 
 class LimitConnectionsByPeer(WrappingFactory):
@@ -336,14 +374,17 @@ class LimitTotalConnectionsFactory(ServerFactory):
         self.connectionCount -= 1
 
 
+
 class TimeoutProtocol(ProtocolWrapper):
-    """Protocol that automatically disconnects when the connection is idle.
+    """
+    Protocol that automatically disconnects when the connection is idle.
 
     Stability: Unstable
     """
 
     def __init__(self, factory, wrappedProtocol, timeoutPeriod):
-        """Constructor.
+        """
+        Constructor.
 
         @param factory: An L{IFactory}.
         @param wrappedProtocol: A L{Protocol} to wrapp.
@@ -354,8 +395,10 @@ class TimeoutProtocol(ProtocolWrapper):
         self.timeoutCall = None
         self.setTimeout(timeoutPeriod)
 
+
     def setTimeout(self, timeoutPeriod=None):
-        """Set a timeout.
+        """
+        Set a timeout.
 
         This will cancel any existing timeouts.
 
@@ -365,10 +408,12 @@ class TimeoutProtocol(ProtocolWrapper):
         self.cancelTimeout()
         if timeoutPeriod is not None:
             self.timeoutPeriod = timeoutPeriod
-        self.timeoutCall = reactor.callLater(self.timeoutPeriod, self.timeoutFunc)
+        self.timeoutCall = self.factory.callLater(self.timeoutPeriod, self.timeoutFunc)
+
 
     def cancelTimeout(self):
-        """Cancel the timeout.
+        """
+        Cancel the timeout.
 
         If the timeout was already cancelled, this does nothing.
         """
@@ -379,29 +424,38 @@ class TimeoutProtocol(ProtocolWrapper):
                 pass
             self.timeoutCall = None
 
+
     def resetTimeout(self):
-        """Reset the timeout, usually because some activity just happened."""
+        """
+        Reset the timeout, usually because some activity just happened.
+        """
         if self.timeoutCall:
             self.timeoutCall.reset(self.timeoutPeriod)
+
 
     def write(self, data):
         self.resetTimeout()
         ProtocolWrapper.write(self, data)
 
+
     def writeSequence(self, seq):
         self.resetTimeout()
         ProtocolWrapper.writeSequence(self, seq)
+
 
     def dataReceived(self, data):
         self.resetTimeout()
         ProtocolWrapper.dataReceived(self, data)
 
+
     def connectionLost(self, reason):
         self.cancelTimeout()
         ProtocolWrapper.connectionLost(self, reason)
 
+
     def timeoutFunc(self):
-        """This method is called when the timeout is triggered.
+        """
+        This method is called when the timeout is triggered.
 
         By default it calls L{loseConnection}.  Override this if you want
         something else to happen.
@@ -409,20 +463,32 @@ class TimeoutProtocol(ProtocolWrapper):
         self.loseConnection()
 
 
+
 class TimeoutFactory(WrappingFactory):
-    """Factory for TimeoutWrapper.
+    """
+    Factory for TimeoutWrapper.
 
     Stability: Unstable
     """
     protocol = TimeoutProtocol
 
+
     def __init__(self, wrappedFactory, timeoutPeriod=30*60):
         self.timeoutPeriod = timeoutPeriod
         WrappingFactory.__init__(self, wrappedFactory)
 
+
     def buildProtocol(self, addr):
         return self.protocol(self, self.wrappedFactory.buildProtocol(addr),
                              timeoutPeriod=self.timeoutPeriod)
+
+
+    def callLater(self, period, func):
+        """
+        Wrapper around L{reactor.callLater} for test purpose.
+        """
+        return reactor.callLater(period, func)
+
 
 
 class TrafficLoggingProtocol(ProtocolWrapper):
