@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_application -*-
-# Copyright (c) 2006 Twisted Matrix Laboratories.
+# Copyright (c) 2006-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -41,7 +41,6 @@ class NoSuchReactor(KeyError):
     """
 
 
-
 class Reactor(object):
     """
     @ivar moduleName: The fully-qualified Python name of the module of which
@@ -74,9 +73,11 @@ def installReactor(shortName):
     Install the reactor with the given C{shortName} attribute.
 
     @raise NoSuchReactor: If no reactor is found with a matching C{shortName}.
+
+    @raise: anything that the specified reactor can raise when installed.
     """
     for installer in getReactorTypes():
         if installer.shortName == shortName:
-            installer.install()
-            return
+            return installer.install()
     raise NoSuchReactor(shortName)
+

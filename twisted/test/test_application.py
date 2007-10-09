@@ -2,6 +2,8 @@
 # See LICENSE for details.
 
 import sys, copy, os, pickle, warnings
+from StringIO import StringIO
+
 
 from twisted.trial import unittest, util
 from twisted.application import service, internet, app
@@ -583,15 +585,34 @@ class TestTimerBasic(unittest.TestCase):
         return d
 
 
+class FakeReactor(reactors.Reactor):
+    """
+    A fake reactor with a hooked install method.
+    """
+
+    def __init__(self, install, *args, **kwargs):
+        """
+        @param install: any callable that will be used as install method.
+        @type install: C{callable}
+        """
+        reactors.Reactor.__init__(self, *args, **kwargs)
+        self.install = install
+
+
+
 class PluggableReactorTestCase(unittest.TestCase):
     """
     Tests for the reactor discovery/inspection APIs.
     """
+
     def setUp(self):
         """
         Override the L{reactors.getPlugins} function, normally bound to
         L{twisted.plugin.getPlugins}, in order to control which
         L{IReactorInstaller} plugins are seen as available.
+
+        C{self.pluginResults} can be customized and will be used as the
+        result of calls to C{reactors.getPlugins}.
         """
         self.pluginCalls = []
         self.pluginResults = []
@@ -643,10 +664,10 @@ class PluggableReactorTestCase(unittest.TestCase):
         calls its install attribute.
         """
         installed = []
-        global install
         def install():
             installed.append(True)
-        installer = reactors.Reactor('fakereactortest', __name__, 'described')
+        installer = FakeReactor(install,
+                                'fakereactortest', __name__, 'described')
         installer.install()
         self.assertEqual(installed, [True])
 
@@ -657,13 +678,12 @@ class PluggableReactorTestCase(unittest.TestCase):
         the specified reactor.
         """
         installed = []
-        global install
         def install():
             installed.append(True)
         name = 'fakereactortest'
         package = __name__
         description = 'description'
-        self.pluginResults = [reactors.Reactor(name, package, description)]
+        self.pluginResults = [FakeReactor(install, name, package, description)]
         reactors.installReactor(name)
         self.assertEqual(installed, [True])
 
@@ -678,6 +698,19 @@ class PluggableReactorTestCase(unittest.TestCase):
             reactors.NoSuchReactor,
             reactors.installReactor, 'somereactor')
 
+
+    def test_installNotAvailableReactor(self):
+        """
+        Test that L{reactors.installReactor} raises an exception when asked to
+        install a reactor which doesn't work in this environment.
+        """
+        def install():
+            raise ImportError("Missing foo bar")
+        name = 'fakereactortest'
+        package = __name__
+        description = 'description'
+        self.pluginResults = [FakeReactor(install, name, package, description)]
+        self.assertRaises(ImportError, reactors.installReactor, name)
 
 
     def test_reactorSelectionMixin(self):
@@ -695,15 +728,59 @@ class PluggableReactorTestCase(unittest.TestCase):
                 return [('subcommand', None, lambda: self, 'test subcommand')]
             subCommands = property(subCommands)
 
-        global install
         def install():
             executed.append(INSTALL_EVENT)
-        self.pluginResults = [reactors.Reactor('fakereactortest', __name__, 'described')]
+        self.pluginResults = [
+            FakeReactor(install, 'fakereactortest', __name__, 'described')
+        ]
 
         options = ReactorSelectionOptions()
         options.parseOptions(['--reactor', 'fakereactortest', 'subcommand'])
         self.assertEqual(executed[0], INSTALL_EVENT)
         self.assertEqual(executed.count(INSTALL_EVENT), 1)
+
+
+    def test_reactorSelectionMixinNonExistent(self):
+        """
+        Test that the usage mixin exits when trying to use a non existent
+        reactor (the name not matching to any reactor), giving an error
+        message.
+        """
+        class ReactorSelectionOptions(usage.Options, app.ReactorSelectionMixin):
+            pass
+        self.pluginResults = []
+
+        options = ReactorSelectionOptions()
+        options.messageOutput = StringIO()
+        e = self.assertRaises(usage.UsageError, options.parseOptions,
+                              ['--reactor', 'fakereactortest', 'subcommand'])
+        self.assertIn("fakereactortest", e.args[0])
+        self.assertIn("help-reactors", e.args[0])
+
+
+    def test_reactorSelectionMixinNotAvailable(self):
+        """
+        Test that the usage mixin exits when trying to use a reactor not
+        available (the reactor raises an error at installation), giving an
+        error message.
+        """
+        class ReactorSelectionOptions(usage.Options, app.ReactorSelectionMixin):
+            pass
+        message = "Missing foo bar"
+        def install():
+            raise ImportError(message)
+
+        name = 'fakereactortest'
+        package = __name__
+        description = 'description'
+        self.pluginResults = [FakeReactor(install, name, package, description)]
+
+        options = ReactorSelectionOptions()
+        options.messageOutput = StringIO()
+        e =  self.assertRaises(usage.UsageError, options.parseOptions,
+                               ['--reactor', 'fakereactortest', 'subcommand'])
+        self.assertIn(message, e.args[0])
+        self.assertIn("help-reactors", e.args[0])
 
 
     def test_qtStub(self):
