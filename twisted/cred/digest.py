@@ -70,12 +70,15 @@ def _parseDigest(digestString):
         paramDict[name] = value
     return paramDict
 
+
+
 def parseChallenge(challenge):
     """
     Parses a digest challenge.
 
     @param challenge: the string representation of the digest challenge.
     @type challenge: C{str}.
+
     @return: dictionary of parsed fields.
     @rtype: C{dict}.
     """
@@ -87,16 +90,20 @@ def parseChallenge(challenge):
     fields['stale'] = (fields.get('stale') == "true")
     return fields
 
+
+
 def parseResponse(response):
     """
     Parses a digest response.
 
     @param response: the string representation of the digest response.
     @type response: C{str}.
+
     @return: dictionary of parsed fields.
     @rtype: C{dict}.
     """
     return _parseDigest(response)
+
 
 
 def _unparseDigest(**fields):
@@ -108,12 +115,15 @@ def _unparseDigest(**fields):
                     for (k, v) in fields.iteritems() if v])
     return s
 
+
+
 def unparseChallenge(**fields):
     """
     Generate the string representation of a digest challenge.
 
     @param fields: dictionary of fields.
     @type fields: C{dict}.
+
     @return: string representation of the challenge.
     @rtype: C{str}.
     """
@@ -124,12 +134,15 @@ def unparseChallenge(**fields):
         fields['stale'] = 'true'
     return _unparseDigest(**fields)
 
+
+
 def unparseResponse(**fields):
     """
     Generate the string representation of a digest response.
 
     @param fields: dictionary of fields.
     @type fields: C{dict}.
+
     @return: string representation of the response.
     @rtype: C{str}.
     """
@@ -144,26 +157,24 @@ algorithms = {
     'sha': sha.new,
 }
 
-# DigestCalcHA1
-def calcHA1(
-    pszAlg,
-    pszUserName,
-    pszRealm,
-    pszPassword,
-    pszNonce,
-    pszCNonce,
-    pszAuthzID=None,
-    preHA1=None
-):
+
+
+def calcHA1(pszAlg, pszUserName, pszRealm, pszPassword, pszNonce, pszCNonce,
+            pszAuthzID=None, preHA1=None):
     """
     @param pszAlg: The name of the algorithm to use to calculate the digest.
         Currently supported are md5 md5-sess and sha.
 
     @param pszUserName: The username
+
     @param pszRealm: The realm
+
     @param pszPassword: The password
+
     @param pszNonce: The nonce
+
     @param pszCNonce: The cnonce
+
     @param pszAuthzID: The optional authzid (or None)
 
     @param preHA1: If available this is a str containing a previously
@@ -202,12 +213,13 @@ def calcHA1(
 
     return HA1.encode('hex')
 
-def calcDigestHash(
-    pszAlg,
-    pszUserName,
-    pszRealm,
-    pszPassword
-):
+
+
+def calcDigestHash(pszAlg, pszUserName, pszRealm, pszPassword):
+    """
+    Calculate the hash of username/realm/password using the algorithm specified
+    in C{pszAlg}.
+    """
     m = algorithms[pszAlg]()
     m.update(pszUserName)
     m.update(":")
@@ -216,18 +228,13 @@ def calcDigestHash(
     m.update(pszPassword)
     return m.hexdigest()
 
-# DigestCalcResponse
-def calcResponse(
-    HA1,
-    algo,
-    pszNonce,
-    pszNonceCount,
-    pszCNonce,
-    pszQop,
-    pszMethod,
-    pszDigestUri,
-    pszHEntity,
-):
+
+
+def calcResponse(HA1, algo, pszNonce, pszNonceCount, pszCNonce, pszQop,
+                 pszMethod, pszDigestUri, pszHEntity):
+    """
+    Build the response hash in response of a challenge.
+    """
     m = algorithms[algo]()
     m.update(pszMethod)
     m.update(":")
@@ -235,7 +242,7 @@ def calcResponse(
     if pszQop == "auth-int" or pszQop == "auth-conf":
         m.update(":")
         m.update(pszHEntity)
-    HA2 = m.digest().encode('hex')
+    HA2 = m.hexdigest()
 
     m = algorithms[algo]()
     m.update(HA1)
@@ -250,8 +257,7 @@ def calcResponse(
         m.update(pszQop)
         m.update(":")
     m.update(HA2)
-    respHash = m.digest().encode('hex')
-    return respHash
+    return m.hexdigest()
 
 
 
@@ -269,13 +275,19 @@ class IDigestMechanism(Interface):
 
         @param cnonce: the cnonce parameter.
         @type cnonce: C{str}.
+
         @param nc: the nonce-count parameter.
         @type nc: C{str}.
-        @param qop: the qop parameter (can be None for old-school Digest auth).
+
+        @param qop: the qop parameter (can be C{None} for old-school Digest
+            auth).
         @type qop: C{str}.
-        @param realm: the realm parameter (can be None if the server supplies one).
+
+        @param realm: the realm parameter (can be C{None} if the server
+            supplies one).
         @type realm: C{str}.
         """
+
 
     def getDigestHash(password):
         """
@@ -283,9 +295,11 @@ class IDigestMechanism(Interface):
 
         @param password: the clear-text password.
         @type password: C{str}.
+
         @return: the digest hash, in hexadecimal form.
         @rtype: C{str}.
         """
+
 
     def getResponseFromPassword(password, method=None, bodyHash=None):
         """
@@ -293,13 +307,18 @@ class IDigestMechanism(Interface):
 
         @param password: the clear-text password.
         @type password: C{str}.
+
         @param method: optional method name for integrity checking.
         @type method: C{str}.
-        @param bodyHash: optional hash of the message body for integrity checking.
+
+        @param bodyHash: optional hash of the message body for integrity
+            checking.
         @type bodyHash: C{str}.
+
         @return: digest response in hexadecimal form.
         @rtype: C{str}.
         """
+
 
     def getResponseFromDigestHash(digestHash, method=None, bodyHash=None):
         """
@@ -308,10 +327,14 @@ class IDigestMechanism(Interface):
 
         @param digestHash: the pre-computed digest hash in hexadecimal form.
         @type digestHash: C{str}.
+
         @param method: optional method name for integrity checking.
         @type method: C{str}.
-        @param bodyHash: optional hash of the message body for integrity checking.
+
+        @param bodyHash: optional hash of the message body for integrity
+            checking.
         @type bodyHash: C{str}.
+
         @return: digest response in hexadecimal form.
         @rtype: C{str}.
         """
@@ -319,7 +342,27 @@ class IDigestMechanism(Interface):
 
 
 class BaseDigestMechanism(object):
+    """
+    Base class for all authentication mechanim using digest.
+    """
+
     def __init__(self, username, uri, fields, authzid=None, algorithm=None):
+        """
+        @param username: the user used in the challenge.
+        @type username: C{str} or C{unicode}
+
+        @param uri: challenge uri.
+        @type uri: C{str}
+
+        @param fields: infos extracted from the challenge.
+        @type fields: C{dict}
+
+        @param authzid: optional authentication id.
+        @type authzid: C{str}
+
+        @param algorithm: optional digest algorithm to use.
+        @type algorithm: C{str}
+        """
         self.charset = 'charset' in fields and 'utf-8' or 'iso-8859-1'
         self.username = username
         self.uri = uri
@@ -331,14 +374,30 @@ class BaseDigestMechanism(object):
 
         self.lastDigestHash = None
 
+
+    def _guessAlgorithm(self, fields):
+        """
+        Specify an algorithm for this mecanism, using the C{fields} if
+        necessary.
+        """
+        raise NotImplementedError()
+
+
     def setClientParams(self, cnonce, nc, qop, realm=None):
+        """
+        Set the client-supplied digest parameters.
+        """
         self.cnonce = cnonce
         self.nc = nc
         self.qop = qop
         if realm:
             self.realm = realm
 
+
     def getBodyHash(self, body=None):
+        """
+        Return the hash of the specified body, if necessary.
+        """
         if self.qop == "auth-int" and body is not None:
             hashAlg = algorithms[self.algorithm]
             bodyHash = hashAlg(body).hexdigest()
@@ -346,15 +405,28 @@ class BaseDigestMechanism(object):
             bodyHash = None
         return bodyHash
 
+
     def getDigestHash(self, password):
+        """
+        Build hash of the password, using previously saved username, realm and
+        algorithm.
+        """
         username, password = self.specialEncode(self.username, password)
         return calcDigestHash(self.algorithm, username, self.realm, password)
 
+
     def getResponseFromPassword(self, password, method=None, bodyHash=None):
+        """
+        Build the hash response from a password.
+        """
         digestHash = self.getDigestHash(password)
         return self.getResponseFromDigestHash(digestHash, method, bodyHash)
 
+
     def getResponseFromDigestHash(self, digestHash, method=None, bodyHash=None):
+        """
+        Build the hash response from a previous digest hash.
+        """
         if method is None:
             method = DEFAULT_METHOD
         bodyHash = bodyHash or DEFAULT_BODY_HASH
@@ -362,8 +434,9 @@ class BaseDigestMechanism(object):
         return calcResponse(
             calcHA1(self.algorithm, None, None, None, self.nonce, self.cnonce,
                 pszAuthzID=self.authzid, preHA1=digestHash),
-            self.algorithm, self.nonce, self.nc, self.cnonce, self.qop, method, self.uri, bodyHash
-        )
+            self.algorithm, self.nonce, self.nc, self.cnonce, self.qop, method,
+            self.uri, bodyHash)
+
 
     def encode(self, s):
         """
@@ -372,12 +445,14 @@ class BaseDigestMechanism(object):
 
         @param s: string to be encoded.
         @type s: C{str} or C{unicode}.
+
         @return: encoded string.
         @rtype: C{str}.
         """
         if isinstance(s, unicode):
             return s.encode(self.charset)
         return s
+
 
     def specialEncode(self, *strings):
         """
@@ -388,6 +463,7 @@ class BaseDigestMechanism(object):
 
         @param strings: strings to be encoded.
         @type strings: sequence of C{unicode} or C{str}.
+
         @return: list of encoded strings.
         @rtype: sequence of C{str}.
         """
@@ -402,6 +478,7 @@ class BaseDigestMechanism(object):
         return _encode(self.charset)
 
 
+
 class SASLDigestMechanism(BaseDigestMechanism):
     """
     The SASL Digest mechanism (as per RFC 2831).
@@ -410,7 +487,12 @@ class SASLDigestMechanism(BaseDigestMechanism):
     digestURIFieldName = "digest-uri"
 
     def _guessAlgorithm(self, fields):
+        """
+        The digest algorith is fixed to C{md5-sess}.
+        """
         return "md5-sess"
+
+
 
 class HTTPDigestMechanism(BaseDigestMechanism):
     """
@@ -420,7 +502,11 @@ class HTTPDigestMechanism(BaseDigestMechanism):
     digestURIFieldName = "uri"
 
     def _guessAlgorithm(self, fields):
+        """
+        Get the algorithm for the C{fields}, with default to C{md5}.
+        """
         return fields.get('algorithm', 'MD5').lower()
+
 
 
 # TODO: add IIntegrityChecker for the "auth-int" case
@@ -430,6 +516,7 @@ class IUsernameDigestHash(Interface):
     This credential is used when a CredentialChecker has access to the hash
     of the username:realm:password as in an Apache .htdigest file.
     """
+
     def checkHash(digestHash):
         """
         @param digestHash: The hashed username:realm:password to check against.
@@ -437,6 +524,8 @@ class IUsernameDigestHash(Interface):
         @return: a deferred which becomes, or a boolean indicating if the
             hash matches.
         """
+
+
 
 class DigestedCredentials(object):
     """
@@ -446,6 +535,19 @@ class DigestedCredentials(object):
     implements(sasl.ISASLCredentials, IUsernameDigestHash)
 
     def __init__(self, mechanism, response, method=None, bodyHash=None):
+        """
+        @param mechanism: instance of a digest mechanism.
+        @type mechanism: provider of C{IDigestMechanism}
+
+        @param response: expected response of the challenge.
+        @type response: C{str}
+
+        @param method: optional method name for integrity checking.
+        @type method: C{str}
+
+        @param bodyHash: optional hash of the body.
+        @type bodyHash: C{str}
+        """
         self.mechanism = mechanism
         self.username = self.mechanism.username
         self.authzid = self.mechanism.authzid
@@ -454,11 +556,20 @@ class DigestedCredentials(object):
         self.bodyHash = bodyHash
         self.rspauth = None
 
+
     def checkPassword(self, password):
+        """
+        Check if password match: calculate its hash and compare it to the
+        expected value.
+        """
         digestHash = self.mechanism.getDigestHash(password)
         return self.checkHash(digestHash)
 
+
     def checkHash(self, digestHash):
+        """
+        Check the integrity of the hash against the expected one.
+        """
         expected = self.mechanism.getResponseFromDigestHash(
             digestHash, self.method, self.bodyHash)
         if expected == self.response:
@@ -473,7 +584,12 @@ class DigestedCredentials(object):
         return False
 
 
+
 class BaseDigestResponder(object):
+    """
+    Base class for digest responder.
+    """
+
     def __init__(self, username, password, realm=None, authzid=None):
         """
         Construct a digest responder. You can pass an optional default realm
@@ -482,10 +598,13 @@ class BaseDigestResponder(object):
 
         @param username: username to authenticate with.
         @type username: C{str} or C{unicode}.
+
         @param password: password to authenticate with.
         @type password: C{str} or C{unicode}.
+
         @param realm: optional realm.
         @type realm: C{str}.
+
         @param authzid: optional authorization ID.
         @type authzid: C{str}.
         """
@@ -498,28 +617,35 @@ class BaseDigestResponder(object):
         self.prevNonce = None
         self.lastMechanism = None
 
+
     def getResponse(self, challenge, uri, method=None, body=None):
         """
         Process a server challenge.
-        Returns a tuple of the challenge type and the response to be sent (if any).
-        The challenge type gives the protocol a hint as to what policy to adopt:
-        - if instance of InitialChallenge, there was no previous successful
-          authentication. If it is the second InitialChallenge in a row, then
-          perhaps it is time to ask the user another password.
-        - if instance of ChallengeRenewal, the server refused the previous
-          response because the challenge we responded to was too old. Sending a
-          new response without re-asking for a password is recommended.
-        - if instance of FinalChallenge, authentication was successful on both
-          sides.
+        Returns a tuple of the challenge type and the response to be sent
+        (if any). The challenge type gives the protocol a hint as to what
+        policy to adopt:
+            - if instance of InitialChallenge, there was no previous successful
+              authentication. If it is the second InitialChallenge in a row,
+              then perhaps it is time to ask the user another password.
+            - if instance of ChallengeRenewal, the server refused the previous
+              response because the challenge we responded to was too old.
+              Sending a new response without re-asking for a password is
+              recommended.
+            - if instance of FinalChallenge, authentication was successful on
+              both sides.
 
         @param challenge: server challenge.
         @type challenge: C{str}.
+
         @param uri: the URI to authenticate against.
         @type uri: C{str}.
+
         @param method: optional method for message integrity.
         @type method: C{str}.
+
         @param body: optional body for message integrity.
         @type body: C{str}.
+
         @return: tuple of L{ChallengeType}, (C{str} or None).
         """
         f = parseChallenge(challenge)
@@ -567,11 +693,13 @@ class BaseDigestResponder(object):
             self.lastMechanism = mechanism
 
         bodyHash = mechanism.getBodyHash(body)
-        digestResponse = mechanism.getResponseFromPassword(self.password, method, bodyHash)
+        digestResponse = mechanism.getResponseFromPassword(self.password,
+                                                           method, bodyHash)
 
         if rspauth:
             if rspauth != digestResponse:
-                raise sasl.FailedChallenge("Invalid final challenge: wrong rspauth value.")
+                raise sasl.FailedChallenge(
+                    "Invalid final challenge: wrong rspauth value.")
             return chalType, None
 
         respFields = {
@@ -591,14 +719,20 @@ class BaseDigestResponder(object):
             respFields['authzid'] = self.authzid
         return chalType, unparseResponse(**respFields)
 
+
     def _chooseQop(self, chalQops, method=None, body=None):
+        """
+        Decide of the Quality Of Protection to use for a specific response.
+        """
         # XXX factor out choice of qop in concrete mechanism?
-        if "auth-int" in chalQops and (body is not None or "auth" not in chalQops):
+        if "auth-int" in chalQops and (body is not None or
+                                       "auth" not in chalQops):
             return "auth-int"
         elif "auth" in chalQops:
             return "auth"
         else:
             return None
+
 
 
 class SASLDigestResponder(BaseDigestResponder):
@@ -609,11 +743,17 @@ class SASLDigestResponder(BaseDigestResponder):
     mechanismClass = SASLDigestMechanism
 
     def getInitialResponse(self, uri):
+        """
+        Initial response of SASL digest doesn't exist.
+        """
         return None
+
 
     # Override method to have the correct signature (without optional arguments)
     def getResponse(self, challenge, uri):
         return BaseDigestResponder.getResponse(self, challenge, uri)
+
+
 
 class HTTPDigestResponder(BaseDigestResponder):
     """
@@ -622,11 +762,20 @@ class HTTPDigestResponder(BaseDigestResponder):
     mechanismClass = HTTPDigestMechanism
 
 
+
 class NonceSlot(object):
     """
     Contains a nonce-count, an IDelayedCall and a weakref to its creator.
     """
+
     def __init__(self, dc, container):
+        """
+        @param dc: a call to cancel when container disappear.
+        @type dc: C{DelayedCall}
+
+        @param container: the object responsible for the lifetime of the nonce.
+        @type container: any
+        """
         self.nc = 0
         def _destroyed(_, dc=dc):
             if dc.active():
@@ -634,7 +783,11 @@ class NonceSlot(object):
         self._ref = weakref.ref(container, _destroyed)
 
 
+
 class BaseDigestChallenger(object):
+    """
+    Basic class of digest challenger.
+    """
     CHALLENGE_LIFETIME_SECS = 15 * 60    # 15 minutes
 
     _callLater = reactor.callLater
@@ -648,19 +801,23 @@ class BaseDigestChallenger(object):
         self.realm = realm
         self.nonces = {}
 
+
     def processResponse(self, response, method=None, body=None):
         """
-        Process the response from the client and return credentials for checking
-        the password. It can also return None if the challenge responded to is
-        too old, in which case you'll have to generate a new one with
-        getRenewedChallenge().
+        Process the response from the client and return credentials for
+        checking the password. It can also return None if the challenge
+        responded to is too old, in which case you'll have to generate a new
+        one with getRenewedChallenge().
 
         @param challenge: server challenge.
         @type challenge: C{str}.
+
         @param method: optional method for message integrity.
         @type method: C{str}.
+
         @param body: optional body for message integrity.
         @type body: C{str}.
+
         @return: credentials.
         @rtype: L{twisted.cred.credentials.IUsernameHashedPassword}.
         """
@@ -704,6 +861,7 @@ class BaseDigestChallenger(object):
         bodyHash = mechanism.getBodyHash(body)
         return DigestedCredentials(mechanism, digestResponse, method, bodyHash)
 
+
     def getChallenge(self):
         """
         Get a challenge to send the client.
@@ -714,16 +872,20 @@ class BaseDigestChallenger(object):
         f = self._getAuthChallenge()
         return unparseChallenge(**f)
 
+
     def getSuccessfulChallenge(self, response, cred):
         """
         Get the final challenge, i.e. when auth when successful.
-        Returns None if the particular SASL mechanism doesn't define a final challenge.
+        Returns C{None} if the particular SASL mechanism doesn't define a final
+        challenge.
 
         @param response: latest successful response.
         @type response: C{str}.
+
         @param response: credentials of the successful response (as returned by
             processResponse()).
         @type response: L{twisted.cred.credentials.IUsernameHashedPassword}.
+
         @return: server challenge.
         @rtype: C{str}.
         """
@@ -735,10 +897,11 @@ class BaseDigestChallenger(object):
         f = { 'rspauth': cred.rspauth }
         return unparseChallenge(**f)
 
+
     def getRenewedChallenge(self, response):
         """
-        Get a renewed challenge to send the client (i.e. when received a response
-        to an expired challenge).
+        Get a renewed challenge to send the client (i.e. when received a
+        response to an expired challenge).
 
         @param response: response received to the previous challenge.
         @type response: C{str}.
@@ -749,17 +912,19 @@ class BaseDigestChallenger(object):
         f['stale'] = True
         return unparseChallenge(**f)
 
+
     def generateNonce(self):
         """
         Generate a nonce to be sent as part of the challenge.
-        This is an unique string that can be returned to us and verified,
-        but unpredictable by an attacker.
+        This is an unique string that can be returned to us and verified, but
+        unpredictable by an attacker.
 
         @return: nonce.
         @rtype: C{str}.
         """
         while True:
-            nonce = "%d.%s" % (self._getTime(), sha.new(secureRandom(20)).hexdigest())
+            nonce = "%d.%s" % (self._getTime(),
+                               sha.new(secureRandom(20)).hexdigest())
             if nonce not in self.nonces:
                 break
         # The following function object must not contain any reference to self
@@ -770,23 +935,28 @@ class BaseDigestChallenger(object):
         self.nonces[nonce] = NonceSlot(dc, self)
         return nonce
 
+
     def acceptNonce(self, nonce, nc=None):
         """
         Given the nonce from the client response, verify that the nonce is
         fresh enough and that the nonce-count is appropriate.
-        Returns True if the nonce is accepted, False if the challenge is not fresh enough,
-        raises an error if the nonce or nonce-count is invalid (e.g. faked).
-        If True is returned, the nc value is eaten and trying to reuse it will
-        raise an error (protection against replays).
+        Returns C{True} if the nonce is accepted, C{False} if the challenge is
+        not fresh enough, and raises an error if the nonce or nonce-count is
+        invalid (e.g. faked).
+        If C{True} is returned, the nc value is eaten and trying to reuse it
+        will raise an error (protection against replays).
 
         This method is implicitly called by processResponse().
 
         @param nonce: nonce value from the Digest response
         @type nonce: C{str}.
+
         @param nc: nonce-count value from the Digest response
         @type nc: C{str}.
+
         @return: True if the nonce is fresh enough.
         @rtype: C{bool}.
+
         @raise L{twisted.cred.error.LoginFailed}
         """
         try:
@@ -813,7 +983,11 @@ class BaseDigestChallenger(object):
 
         return True
 
+
     def _getAuthChallenge(self):
+        """
+        Build challenge fields.
+        """
         nonce = self.generateNonce()
         f = {
             'nonce': nonce,
@@ -825,12 +999,14 @@ class BaseDigestChallenger(object):
         self._populateChallenge(f)
         return f
 
+
     def _getTime(self):
         """
         Parameterize the time based seed used in _generateNonce()
         so we can deterministically unittest it's behavior.
         """
         return time.time()
+
 
 
 class SASLDigestChallenger(BaseDigestChallenger):
@@ -846,8 +1022,13 @@ class SASLDigestChallenger(BaseDigestChallenger):
     def processResponse(self, response):
         return BaseDigestChallenger.processResponse(self, response)
 
+
     def _populateChallenge(self, fields):
+        """
+        Populate the challenge fields: the charset must be forced to utf-8.
+        """
         fields['charset'] = 'utf-8'
+
 
 
 class HTTPDigestChallenger(BaseDigestChallenger):
@@ -859,5 +1040,10 @@ class HTTPDigestChallenger(BaseDigestChallenger):
     acceptWeakDigest = True
     algorithm = "md5"
 
+
     def _populateChallenge(self, fields):
+        """
+        Populate the challenge fields: set opaque to false.
+        """
         fields['opaque'] = '0'
+

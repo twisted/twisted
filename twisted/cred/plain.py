@@ -32,8 +32,10 @@ class PlainCredentials(object):
         # Convert empty string to None
         self.authzid = authzid or None
 
+
     def checkPassword(self, password):
         return password == self.password
+
 
 
 class SASLPlainResponder(object):
@@ -56,8 +58,10 @@ class SASLPlainResponder(object):
 
         @param username: username to authenticate with.
         @type username: C{str} or C{unicode}.
+
         @param password: password to authenticate with.
         @type password: C{str} or C{unicode}.
+
         @param authzid: optional authorization ID.
         @type authzid: C{str}.
         """
@@ -65,12 +69,15 @@ class SASLPlainResponder(object):
         self.password = password
         self.authzid = authzid
 
+
     def getInitialResponse(self, uri):
         return self._getResponse()
+
 
     def getResponse(self, challenge, uri):
         resp = self._getResponse()
         return sasl.InitialChallenge(), resp
+
 
     def _getResponse(self):
         """
@@ -98,6 +105,7 @@ class SASLPlainChallenger(object):
     def __init__(self):
         pass
 
+
     def processResponse(self, response):
         try:
             authzid, username, password = response.split('\0')
@@ -116,13 +124,15 @@ class SASLPlainChallenger(object):
                 "Cannot decode SASL PLAIN response to %s." % self.charset)
         return PlainCredentials(username, password, authzid)
 
+
     def getChallenge(self):
         return None
+
 
     def getSuccessfulChallenge(self, response, cred):
         return None
 
+
     def getRenewedChallenge(self, response):
         return None
-
 

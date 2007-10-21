@@ -355,12 +355,12 @@ class HTTPResponderTestCase(_BaseResponderTestCase, unittest.TestCase):
         responder.cnonce = "0a4f113b"
         chalType, unparsed = responder.getResponse(chal2,
             uri="/dir/index.html", method="GET")
-        self.assertTrue(isinstance(chalType, sasl.InitialChallenge))
+        self.assertIsInstance(chalType, sasl.InitialChallenge)
         self._checkResponseToChallenge(unparsed, chal2, checkDict)
         # Subsequent auth increments nc
         chalType, unparsed = responder.getResponse(chal2,
             uri="/dir/index.html", method="GET")
-        self.assertTrue(isinstance(chalType, sasl.InitialChallenge))
+        self.assertIsInstance(chalType, sasl.InitialChallenge)
         checkDict['nc'] = "00000002"
         del checkDict['response']
         f = self._checkResponseToChallenge(unparsed, chal2, checkDict)
@@ -385,12 +385,12 @@ class HTTPResponderTestCase(_BaseResponderTestCase, unittest.TestCase):
             username="robobob5003", password="spameggs")
         chalType, unparsed = responder.getResponse(chal3,
             uri="sip:domain.tld", method="REGISTER")
-        self.assertTrue(isinstance(chalType, sasl.InitialChallenge))
+        self.assertIsInstance(chalType, sasl.InitialChallenge)
         self._checkResponseToChallenge(unparsed, chal3, checkDict)
         # Subsequent auth returns same response
         chalType, unparsed = responder.getResponse(chal3,
             uri="sip:domain.tld", method="REGISTER")
-        self.assertTrue(isinstance(chalType, sasl.InitialChallenge))
+        self.assertIsInstance(chalType, sasl.InitialChallenge)
         self._checkResponseToChallenge(unparsed, chal3, checkDict)
 
 
@@ -408,7 +408,7 @@ class SASLResponderTestCase(_BaseResponderTestCase, unittest.TestCase):
             username="chris", password="secret")
         chalType, unparsed = responder.getResponse(chal1, uri="/")
         f = digest.parseResponse(unparsed)
-        self.assertEquals(f.get('authzid'), None)
+        self.assertIdentical(f.get('authzid'), None)
 
 
     def test_authzid(self):
@@ -494,12 +494,12 @@ class SASLResponderTestCase(_BaseResponderTestCase, unittest.TestCase):
         responder.cnonce = "OA6MHXh6VqTrRk"
         chalType, unparsed = responder.getResponse(chal1,
             uri="imap/elwood.innosoft.com")
-        self.assertTrue(isinstance(chalType, sasl.InitialChallenge))
+        self.assertIsInstance(chalType, sasl.InitialChallenge)
         self._checkResponseToChallenge(unparsed, chal1, checkDict)
         # Subsequent auth increments nc
         chalType, unparsed = responder.getResponse(chal1,
             uri="imap/elwood.innosoft.com")
-        self.assertTrue(isinstance(chalType, sasl.InitialChallenge))
+        self.assertIsInstance(chalType, sasl.InitialChallenge)
         checkDict['nc'] = "00000002"
         del checkDict['response']
         f = self._checkResponseToChallenge(unparsed, chal1, checkDict)
@@ -516,8 +516,8 @@ class SASLResponderTestCase(_BaseResponderTestCase, unittest.TestCase):
         responder.getResponse(chal1, uri="imap/elwood.innosoft.com")
         chalType, unparsed = responder.getResponse(final1,
             uri="imap/elwood.innosoft.com")
-        self.assertTrue(isinstance(chalType, sasl.FinalChallenge))
-        self.assertTrue(unparsed is None)
+        self.assertIsInstance(chalType, sasl.FinalChallenge)
+        self.assertIdentical(unparsed, None)
         # Bad rspauth
         self.assertRaises(sasl.FailedChallenge, responder.getResponse,
             "rspauth=0", uri="imap/elwood.innosoft.com")
@@ -543,12 +543,12 @@ class SASLResponderTestCase(_BaseResponderTestCase, unittest.TestCase):
         responder.cnonce = "AJRUc5Jx0UQbv5SJ9FoyUnaZpqZIHDhLTU+Awn/K0Uw="
         chalType, unparsed = responder.getResponse(chal4,
             uri="smtp/localhost.sendmail.com.")
-        self.assertTrue(isinstance(chalType, sasl.InitialChallenge))
+        self.assertIsInstance(chalType, sasl.InitialChallenge)
         self._checkResponseToChallenge(unparsed, chal4, checkDict)
         # Subsequent auth increments nc
         chalType, unparsed = responder.getResponse(chal4,
             uri="smtp/localhost.sendmail.com.")
-        self.assertTrue(isinstance(chalType, sasl.InitialChallenge))
+        self.assertIsInstance(chalType, sasl.InitialChallenge)
         checkDict['nc'] = "00000002"
         del checkDict['response']
         f = self._checkResponseToChallenge(unparsed, chal4, checkDict)
@@ -734,7 +734,7 @@ class _BaseChallengerTestCase(object):
             chalType, resp = r.getResponse(chal, uri, method, body)
         else:
             chalType, resp = r.getResponse(chal, uri)
-        self.assertTrue(isinstance(chalType, sasl.InitialChallenge))
+        self.assertIsInstance(chalType, sasl.InitialChallenge)
         f = digest.parseResponse(resp)
         if body is not None:
             self.assertEquals(f['qop'], "auth-int")
@@ -907,7 +907,7 @@ class HTTPChallengerTestCase(unittest.TestCase, _BaseChallengerTestCase):
         chal = c.getChallenge()
         chalType, resp = r.getResponse(chal, "/", method, body)
         f = digest.parseResponse(resp)
-        self.assertEquals(f.get('qop'), None)
+        self.assertIdentical(f.get('qop'), None)
         credentials = c.processResponse(resp, method, body)
         self.assertTrue(credentials.checkPassword("secret"))
         self.assertFalse(credentials.checkPassword("secreta"))

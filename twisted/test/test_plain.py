@@ -22,12 +22,14 @@ class CredentialsTestCase(unittest.TestCase):
         self.assertTrue(c.checkPassword("secret"))
         self.assertFalse(c.checkPassword("secreta"))
 
+
     def test_noAuthzid(self):
         """
         Check credentials without an authzid.
         """
         c = plain.PlainCredentials("chris", "secret", "")
-        self.assertTrue(c.authzid is None)
+        self.assertIdentical(c.authzid, None)
+
 
     def test_authzid(self):
         """
@@ -35,6 +37,8 @@ class CredentialsTestCase(unittest.TestCase):
         """
         c = plain.PlainCredentials("chris", "secret", "paul")
         self.assertEquals(c.authzid, "paul")
+
+
 
 class ResponderTestCase(unittest.TestCase):
     """
@@ -50,8 +54,9 @@ class ResponderTestCase(unittest.TestCase):
         self.assertEquals(resp, expected)
         # Accept any challenge
         chalType, resp = responder.getResponse("123", uri)
-        self.assertTrue(isinstance(chalType, sasl.InitialChallenge))
+        self.assertIsInstance(chalType, sasl.InitialChallenge)
         self.assertEquals(resp, expected)
+
 
     def test_noAuthzid(self):
         """
@@ -59,6 +64,7 @@ class ResponderTestCase(unittest.TestCase):
         """
         r = plain.SASLPlainResponder(username="chris", password="secret")
         self._check_responses(r, "imap/elwood.innosoft.com", "\0chris\0secret")
+
 
     def test_authzid(self):
         """
@@ -69,6 +75,7 @@ class ResponderTestCase(unittest.TestCase):
         self._check_responses(r,
             "imap/elwood.innosoft.com", "paul\0chris\0secret")
 
+
     def test_nonASCII(self):
         """
         Generate responses for non-ASCII username/password/authzid.
@@ -77,6 +84,8 @@ class ResponderTestCase(unittest.TestCase):
             password=u'h\xe9h\xe9', authzid=u"gis\xe8le")
         self._check_responses(r, "imap/elwood.innosoft.com",
             "gis\xc3\xa8le\0andr\xc3\xa9\0h\xc3\xa9h\xc3\xa9")
+
+
 
 class ChallengerTestCase(unittest.TestCase):
     """
@@ -88,22 +97,25 @@ class ChallengerTestCase(unittest.TestCase):
         Generate an empty (initial) challenge.
         """
         c = plain.SASLPlainChallenger()
-        self.assertTrue(c.getChallenge() is None)
+        self.assertIdentical(c.getChallenge(), None)
+
 
     def test_getRenewedChallenge(self):
         """
         Generate an empty renewed challenge.
         """
         c = plain.SASLPlainChallenger()
-        self.assertTrue(c.getRenewedChallenge("\0chris\0secret") is None)
+        self.assertIdentical(c.getRenewedChallenge("\0chris\0secret"), None)
+
 
     def test_getSuccessfulChallenge(self):
         """
         Generate an empty successful challenge.
         """
         c = plain.SASLPlainChallenger()
-        self.assertTrue(c.getSuccessfulChallenge("\0chris\0secret",
-            plain.PlainCredentials("chris", "secret")) is None)
+        self.assertIdentical(c.getSuccessfulChallenge("\0chris\0secret",
+            plain.PlainCredentials("chris", "secret")), None)
+
 
     def test_InvalidResponse(self):
         """
@@ -124,6 +136,7 @@ class ChallengerTestCase(unittest.TestCase):
         self.assertRaises(sasl.InvalidResponse,
             c.processResponse, "paul\0chris\0")
 
+
     def test_nonUTF8Response(self):
         """
         Raise an error when a response can't be decoded with UTF-8.
@@ -131,6 +144,7 @@ class ChallengerTestCase(unittest.TestCase):
         c = plain.SASLPlainChallenger()
         self.assertRaises(sasl.InvalidResponse,
             c.processResponse, "andr\xe9\0chris\0secret")
+
 
     def test_UTF8Response(self):
         """
@@ -143,6 +157,7 @@ class ChallengerTestCase(unittest.TestCase):
         self.assertTrue(cred.checkPassword(u'h\xe9h\xe9'))
         self.assertEquals(cred.authzid, u"gis\xe8le")
 
+
     def test_emptyAuthzid(self):
         """
         Properly parse an empty authzid.
@@ -151,4 +166,5 @@ class ChallengerTestCase(unittest.TestCase):
         cred = c.processResponse("\0chris\0secret")
         self.assertEquals(cred.username, "chris")
         self.assertTrue(cred.checkPassword("secret"))
-        self.assertTrue(cred.authzid is None)
+        self.assertIdentical(cred.authzid, None)
+

@@ -1,5 +1,6 @@
 # Copyright (c) 2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
+
 """
 Interfaces for SASL mechanisms as described in RFC 4422.
 
@@ -16,15 +17,21 @@ class SASLError(error.LoginFailed):
     A generic SASL error.
     """
 
+
+
 class InvalidResponse(SASLError):
     """
     A response contains invalid (e.g. missing or mismatching) values.
     """
 
+
+
 class InvalidChallenge(SASLError):
     """
     A challenge contains invalid (e.g. missing or mismatching) values.
     """
+
+
 
 class FailedChallenge(SASLError):
     """
@@ -32,15 +39,18 @@ class FailedChallenge(SASLError):
     (e.g. for a final Digest challenge with a wrong rspauth value).
     """
 
+
+
 class UnexpectedFinalChallenge(InvalidChallenge):
     """
     A final challenge has been received but no response was previously sent.
     """
 
 
+
 class IAuthzID(Interface):
     """
-    I encapsulate an authorization ID.
+    Encapsulate an authorization ID.
 
     This credential is used when an authentication mechanism optionally
     provides an authorization ID as part as the authentication process.
@@ -50,6 +60,8 @@ class IAuthzID(Interface):
     @type authzid: C{str} or None
     @ivar authzid: optional authorization ID.
     """
+
+
 
 class ISASLCredentials(credentials.IUsernameHashedPassword, IAuthzID):
     """
@@ -68,15 +80,21 @@ class ChallengeType(object):
     An SASL challenge type.
     """
 
+
+
 class InitialChallenge(ChallengeType):
     """
     An SASL initial challenge.
     """
 
+
+
 class ChallengeRenewal(ChallengeType):
     """
     An SASL challenge renewal.
     """
+
+
 
 class FinalChallenge(ChallengeType):
     """
@@ -97,9 +115,11 @@ class ISASLResponder(Interface):
 
         @param uri: the protocol-dependent URI to authenticate against.
         @type uri: C{str}.
+
         @return: initial client response string, or None.
         @rtype: C{str}.
         """
+
 
     def getResponse(challenge, uri):
         """
@@ -107,21 +127,25 @@ class ISASLResponder(Interface):
         Returns a tuple of the challenge type and the response to be sent
         (if any).
         The challenge type gives the protocol a hint as to what policy to adopt:
-        - if instance of InitialChallenge, there was no previous successful
-          authentication. If it is the second InitialChallenge in a row, then
-          perhaps it is time to ask the user another password.
-        - if instance of ChallengeRenewal, the server refused the previous
-          response because the challenge we responded to was too old. Sending a
-          new response without re-asking for a password is recommended.
-        - if instance of FinalChallenge, authentication was successful on both
-          sides.
+            - if instance of InitialChallenge, there was no previous successful
+              authentication. If it is the second InitialChallenge in a row,
+              then perhaps it is time to ask the user another password.
+            - if instance of ChallengeRenewal, the server refused the previous
+              response because the challenge we responded to was too old.
+              Sending a new response without re-asking for a password is
+              recommended.
+            - if instance of FinalChallenge, authentication was successful on
+              both sides.
 
         @param challenge: server challenge.
         @type challenge: C{str}.
+
         @param uri: the protocol-dependent URI to authenticate against.
         @type uri: C{str}.
+
         @return: tuple of L{ChallengeType}, (C{str} or None).
         """
+
 
 
 class ISASLChallenger(Interface):
@@ -139,9 +163,11 @@ class ISASLChallenger(Interface):
 
         @param challenge: server challenge.
         @type challenge: C{str}.
+
         @return: credentials.
         @rtype: L{ISASLCredentials}.
         """
+
 
     def getChallenge():
         """
@@ -151,6 +177,7 @@ class ISASLChallenger(Interface):
         @rtype: C{str}.
         """
 
+
     def getRenewedChallenge(response):
         """
         Get a renewed challenge to send the client (i.e. when received a
@@ -158,9 +185,11 @@ class ISASLChallenger(Interface):
 
         @param response: response received to the previous challenge.
         @type response: C{str}.
+
         @return: server challenge.
         @rtype: C{str}.
         """
+
 
     def getSuccessfulChallenge(response, credentials):
         """
@@ -170,9 +199,11 @@ class ISASLChallenger(Interface):
 
         @param response: latest successful response.
         @type response: C{str}.
+
         @param credentials: credentials of the successful response (as returned
             by processResponse()).
         @type credentials: L{ISASLCredentials}.
+
         @return: server challenge.
         @rtype: C{str}.
         """
