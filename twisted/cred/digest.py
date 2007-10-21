@@ -957,7 +957,8 @@ class BaseDigestChallenger(object):
         @return: True if the nonce is fresh enough.
         @rtype: C{bool}.
 
-        @raise L{twisted.cred.error.LoginFailed}
+        @raise sasl.InvalidResponse: if the nonce is invalid and the
+            authentication should fail.
         """
         try:
             timestamp, seed = nonce.split(".")
