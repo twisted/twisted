@@ -55,7 +55,7 @@ opaque="5ccc069c403ebaf9f0171e9517f40e41"\
 """
 
 # a SIP challenge without qop
-chal3 = """realm="voip.wengo.fr",nonce="0115a73e3d7bbad83eb238c35e2756fa",\
+chal3 = """realm="domain.tld",nonce="0115a73e3d7bbad83eb238c35e2756fa",\
 opaque="00e04875776e15b" """
 
 # an SASL challenge with qop=auth-int
@@ -85,6 +85,7 @@ class ChallengeParseTestCase(unittest.TestCase):
         f = digest.parseChallenge(chal)
         self.assertEquals(f, fields)
 
+
     def test_parseWWWQuoted(self):
         """
         Various levels of quoting.
@@ -98,6 +99,7 @@ class ChallengeParseTestCase(unittest.TestCase):
             'stale': False,
         })
         self._roundTrip(f)
+
 
     def test_parseWWWMixquoted(self):
         """
@@ -114,6 +116,7 @@ class ChallengeParseTestCase(unittest.TestCase):
         })
         self._roundTrip(f)
 
+
     def test_parseStaleTrue(self):
         """
         Explicit stale=true.
@@ -121,6 +124,7 @@ class ChallengeParseTestCase(unittest.TestCase):
         f = digest.parseChallenge('realm="testrealm@host.com",stale=true')
         self.assertEquals(f['stale'], True)
         self._roundTrip(f)
+
 
     def test_parseStaleFalse(self):
         """
@@ -130,6 +134,7 @@ class ChallengeParseTestCase(unittest.TestCase):
         self.assertEquals(f['stale'], False)
         self._roundTrip(f)
 
+
     def test_parseStaleAbsent(self):
         """
         Implicit stale=false.
@@ -137,6 +142,7 @@ class ChallengeParseTestCase(unittest.TestCase):
         f = digest.parseChallenge('realm="testrealm@host.com"')
         self.assertEquals(f['stale'], False)
         self._roundTrip(f)
+
 
     def test_parseSASLChal(self):
         """
@@ -153,6 +159,7 @@ class ChallengeParseTestCase(unittest.TestCase):
         })
         self._roundTrip(f)
 
+
     def test_parseHTTPChal(self):
         """
         A real HTTP challenge.
@@ -167,6 +174,7 @@ class ChallengeParseTestCase(unittest.TestCase):
         })
         self._roundTrip(f)
 
+
     def test_parseFinalChal(self):
         """
         A real final (rspauth) challenge.
@@ -177,6 +185,8 @@ class ChallengeParseTestCase(unittest.TestCase):
             'qop': [],
             'stale': False,
         })
+
+
 
 class ResponseParseTestCase(unittest.TestCase):
     """
@@ -190,6 +200,7 @@ class ResponseParseTestCase(unittest.TestCase):
         resp = digest.unparseResponse(**fields)
         f = digest.parseResponse(resp)
         self.assertEquals(f, fields)
+
 
     def test_parseSASLResp(self):
         """
@@ -208,6 +219,7 @@ class ResponseParseTestCase(unittest.TestCase):
             'qop': 'auth',
         })
         self._roundTrip(f)
+
 
     def test_parseWWWResp(self):
         """
@@ -228,6 +240,7 @@ class ResponseParseTestCase(unittest.TestCase):
         self._roundTrip(f)
 
 
+
 class HTTPMechanismTestCase(unittest.TestCase):
     """
     Test cases for the HTTPDigestMechanism class.
@@ -242,6 +255,8 @@ class HTTPMechanismTestCase(unittest.TestCase):
         mech.setClientParams("0a4f113b", "00000001", "auth")
         r = mech.getResponseFromPassword("Circle Of Life", "GET")
         self.assertEquals(r, "6629fae49393a05397450978507c4ef1")
+
+
 
 class SASLMechanismTestCase(unittest.TestCase):
     """
@@ -290,6 +305,7 @@ class _BaseResponderTestCase(object):
         return f2
 
 
+
 class HTTPResponderTestCase(_BaseResponderTestCase, unittest.TestCase):
     """
     Test cases for the HTTPDigestResponder class.
@@ -318,6 +334,7 @@ class HTTPResponderTestCase(_BaseResponderTestCase, unittest.TestCase):
             uri="/dir/index.html", method="GET")
         f2 = self._checkResponseToChallenge(unparsed, chal2, checkDict)
         self.assertEquals(f['response'], f2['response'])
+
 
     def test_respondMD5Auth(self):
         """
@@ -349,31 +366,34 @@ class HTTPResponderTestCase(_BaseResponderTestCase, unittest.TestCase):
         f = self._checkResponseToChallenge(unparsed, chal2, checkDict)
         self.assertNotEquals(f['response'], "6629fae49393a05397450978507c4ef1")
 
+
     def test_respondMD5WithoutQop(self):
         """
         Support for RFC 2069 servers (no qop).
         """
         checkDict = {
             'charset': None,
-            'uri': "sip:voip.wengo.fr",
+            'uri': "sip:domain.tld",
             'nonce': "0115a73e3d7bbad83eb238c35e2756fa",
             'cnonce': None,
             'nc': None,
             'qop': None,
             'username': "robobob5003",
-            'response': "3727aec655653050494b164f1a483769",
+            'response': "0883c5e1ce2ea2af5e44fc3e3ae1643b",
         }
         responder = digest.HTTPDigestResponder(
             username="robobob5003", password="spameggs")
         chalType, unparsed = responder.getResponse(chal3,
-            uri="sip:voip.wengo.fr", method="REGISTER")
+            uri="sip:domain.tld", method="REGISTER")
         self.assertTrue(isinstance(chalType, sasl.InitialChallenge))
         self._checkResponseToChallenge(unparsed, chal3, checkDict)
         # Subsequent auth returns same response
         chalType, unparsed = responder.getResponse(chal3,
-            uri="sip:voip.wengo.fr", method="REGISTER")
+            uri="sip:domain.tld", method="REGISTER")
         self.assertTrue(isinstance(chalType, sasl.InitialChallenge))
         self._checkResponseToChallenge(unparsed, chal3, checkDict)
+
+
 
 class SASLResponderTestCase(_BaseResponderTestCase, unittest.TestCase):
     """
@@ -390,6 +410,7 @@ class SASLResponderTestCase(_BaseResponderTestCase, unittest.TestCase):
         f = digest.parseResponse(unparsed)
         self.assertEquals(f.get('authzid'), None)
 
+
     def test_authzid(self):
         """
         Authzid in response if specified.
@@ -399,6 +420,7 @@ class SASLResponderTestCase(_BaseResponderTestCase, unittest.TestCase):
         chalType, unparsed = responder.getResponse(chal1, uri="/")
         f = digest.parseResponse(unparsed)
         self.assertEquals(f.get('authzid'), "paul")
+
 
     def test_latinUsernameAndPassword(self):
         """
@@ -426,6 +448,7 @@ class SASLResponderTestCase(_BaseResponderTestCase, unittest.TestCase):
         f2 = digest.parseResponse(unparsed)
         self.assertEquals(f['response'], f2['response'])
 
+
     def test_unicodeUsernameAndPassword(self):
         """
         Username/password with non iso-8859-1 characters and charset=utf-8
@@ -450,6 +473,7 @@ class SASLResponderTestCase(_BaseResponderTestCase, unittest.TestCase):
             chal1, uri="/dir/index.html")
         f2 = self._checkResponseToChallenge(unparsed, chal1, checkDict)
         self.assertEquals(f['response'], f2['response'])
+
 
     def test_respondMD5SessAuth(self):
         """
@@ -481,6 +505,7 @@ class SASLResponderTestCase(_BaseResponderTestCase, unittest.TestCase):
         f = self._checkResponseToChallenge(unparsed, chal1, checkDict)
         self.assertNotEquals(f['response'], "d388dad90d4bbd760a152321f2143af7")
 
+
     def test_respondMD5SessAuthFinal(self):
         """
         Generate rspauth for algorithm=md5-sess and qop=auth.
@@ -496,6 +521,7 @@ class SASLResponderTestCase(_BaseResponderTestCase, unittest.TestCase):
         # Bad rspauth
         self.assertRaises(sasl.FailedChallenge, responder.getResponse,
             "rspauth=0", uri="imap/elwood.innosoft.com")
+
 
     def test_respondMD5SessAuthInt(self):
         """
@@ -528,6 +554,7 @@ class SASLResponderTestCase(_BaseResponderTestCase, unittest.TestCase):
         f = self._checkResponseToChallenge(unparsed, chal4, checkDict)
         self.assertNotEquals(f['response'], "780c0451303666e1ea9a24de7b5eb08b")
 
+
     def test_overrideRealm(self):
         """
         Default responder realm overriden by realm in challenge.
@@ -538,6 +565,7 @@ class SASLResponderTestCase(_BaseResponderTestCase, unittest.TestCase):
         chalType, unparsed = responder.getResponse(chal1,
             uri="imap/elwood.innosoft.com")
         self._checkResponseToChallenge(unparsed, chal1, {})
+
 
     def test_noRealm(self):
         """
@@ -563,8 +591,12 @@ class StaticTimeSASLChallenger(digest.SASLDigestChallenger):
         digest.SASLDigestChallenger.__init__(self, *args, **kargs)
         self._clock = task.Clock()
         self._callLater = self._clock.callLater
+
+
     def _getTime(self):
         return self._clock.seconds()
+
+
 
 class StaticTimeHTTPChallenger(digest.HTTPDigestChallenger):
     """
@@ -575,8 +607,12 @@ class StaticTimeHTTPChallenger(digest.HTTPDigestChallenger):
         digest.HTTPDigestChallenger.__init__(self, *args, **kargs)
         self._clock = task.Clock()
         self._callLater = self._clock.callLater
+
+
     def _getTime(self):
         return self._clock.seconds()
+
+
 
 class _BaseChallengerTestCase(object):
     """
@@ -594,6 +630,7 @@ class _BaseChallengerTestCase(object):
         self.assertEquals(c.acceptNonce(nonce, "00000001"), True)
         self.assertEquals(c.acceptNonce(nonce2, "00000001"), True)
 
+
     def test_expiredNonce(self):
         """
         Don't accept an expired nonce.
@@ -608,6 +645,7 @@ class _BaseChallengerTestCase(object):
         c._clock.advance(c.CHALLENGE_LIFETIME_SECS * 0.5 + 1)
         self.assertEquals(c.acceptNonce(nonce2, "00000001"), False)
 
+
     def test_nonceInFuture(self):
         """
         Don't accept a nonce generated in the future.
@@ -619,6 +657,7 @@ class _BaseChallengerTestCase(object):
         self.assertRaises(sasl.InvalidResponse,
             c.acceptNonce, nonce, "00000001")
 
+
     def test_fakeNonce(self):
         """
         Don't accept a fake nonce (i.e. not generated by us).
@@ -629,6 +668,7 @@ class _BaseChallengerTestCase(object):
             c.acceptNonce, nonce + "1", "00000001")
         self.assertRaises(sasl.InvalidResponse,
             c.acceptNonce, "1" + nonce, "00000001")
+
 
     def test_nonceReplay(self):
         """
@@ -648,6 +688,7 @@ class _BaseChallengerTestCase(object):
             c.acceptNonce, nonce, "00000004")
         self.assertEquals(c.acceptNonce(nonce, "00000003"), True)
 
+
     def test_getChallenge(self):
         """
         Generate a challenge.
@@ -661,6 +702,7 @@ class _BaseChallengerTestCase(object):
         self.assertEquals(c.acceptNonce(f['nonce'], "00000001"), True)
         self.assertEquals(f['stale'], False)
         self._check_getChallenge(f)
+
 
     def test_getRenewedChallenge(self):
         """
@@ -676,6 +718,7 @@ class _BaseChallengerTestCase(object):
         self.assertEquals(c.acceptNonce(f['nonce'], "00000001"), True)
         self.assertEquals(f['stale'], True)
         self._check_getRenewedChallenge(f)
+
 
     def _check_processResponseOk(self, realm, uri, username, password,
             method=None, body=None):
@@ -701,6 +744,7 @@ class _BaseChallengerTestCase(object):
             credentials = c.processResponse(resp)
         self.assertTrue(credentials.checkPassword(password))
         self.assertFalse(credentials.checkPassword(password + "a"))
+
 
     def _check_multipleRoundTrip(self, realm, uri, username, password,
             method=None, body=None):
@@ -733,6 +777,7 @@ class _BaseChallengerTestCase(object):
         self.assertTrue(credentials.checkPassword(password))
         self.assertFalse(credentials.checkPassword(password + "a"))
 
+
     def _check_getSuccessfulChallenge(self, response, uri, password, rspauth):
         """
         Check the getSuccessfulChallenge method of the responder.
@@ -747,6 +792,7 @@ class _BaseChallengerTestCase(object):
         unparsed = c.getSuccessfulChallenge(resp1, cred)
         f2 = digest.parseChallenge(unparsed)
         self.assertEquals(f2['rspauth'], rspauth)
+
 
 
 class SASLChallengerTestCase(unittest.TestCase, _BaseChallengerTestCase):
@@ -766,6 +812,7 @@ class SASLChallengerTestCase(unittest.TestCase, _BaseChallengerTestCase):
         self.assertEquals(f['charset'], "utf-8")
         self.assertEquals(f['algorithm'], "md5-sess")
 
+
     def _check_getRenewedChallenge(self, f):
         """
         Callback for basic checking of renewed challenge fields.
@@ -774,6 +821,7 @@ class SASLChallengerTestCase(unittest.TestCase, _BaseChallengerTestCase):
         self.assertEquals(f['charset'], "utf-8")
         self.assertEquals(f['algorithm'], "md5-sess")
 
+
     def test_processResponseOk(self):
         """
         Full challenger -> responder -> challenger roundtrip,
@@ -781,11 +829,13 @@ class SASLChallengerTestCase(unittest.TestCase, _BaseChallengerTestCase):
         """
         self._check_processResponseOk("example.com", "/", "chris", "secret")
 
+
     def test_multipleRoundTrip(self):
         """
         Multiple roundtrip with same challenger and responder.
         """
         self._check_multipleRoundTrip("example.com", "/", "chris", "secret")
+
 
     def test_getSuccessfulChallenge(self):
         """
@@ -793,6 +843,7 @@ class SASLChallengerTestCase(unittest.TestCase, _BaseChallengerTestCase):
         """
         self._check_getSuccessfulChallenge(resp1, "imap/elwood.innosoft.com",
             password="secret", rspauth="ea40f60335c427b5527b84dbabcdfffd")
+
 
 
 class HTTPChallengerTestCase(unittest.TestCase, _BaseChallengerTestCase):
@@ -812,6 +863,7 @@ class HTTPChallengerTestCase(unittest.TestCase, _BaseChallengerTestCase):
         self.assertTrue('charset' not in f)
         self.assertEquals(f['algorithm'], "md5")
 
+
     def _check_getRenewedChallenge(self, f):
         """
         Callback for basic checking of renewed challenge fields.
@@ -819,6 +871,7 @@ class HTTPChallengerTestCase(unittest.TestCase, _BaseChallengerTestCase):
         self.assertTrue('opaque' in f)
         self.assertTrue('charset' not in f)
         self.assertEquals(f['algorithm'], "md5")
+
 
     def test_processResponseOk(self):
         """
@@ -831,6 +884,7 @@ class HTTPChallengerTestCase(unittest.TestCase, _BaseChallengerTestCase):
         self._check_processResponseOk("example.com", "/", "chris", "secret",
             "GET", "blah")
 
+
     def test_multipleRoundTrip(self):
         """
         Multiple roundtrip with same challenger and responder.
@@ -840,6 +894,7 @@ class HTTPChallengerTestCase(unittest.TestCase, _BaseChallengerTestCase):
             "GET")
         self._check_multipleRoundTrip("example.com", "/", "chris", "secret",
             "GET", "blah")
+
 
     def test_weakDigest(self):
         """
