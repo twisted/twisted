@@ -13,16 +13,15 @@ http://tools.ietf.org/html/rfc2069
 """
 
 import time
-import os
 import md5
 import sha
-import random
 import weakref
 
 from zope.interface import implements, Interface, Attribute
 
-from twisted.cred import credentials, sasl
+from twisted.cred import sasl
 from twisted.internet import reactor
+from twisted.python.randbytes import secureRandom
 
 try:
     set
@@ -33,34 +32,6 @@ except NameError:
 DEFAULT_METHOD = "AUTHENTICATE"
 DEFAULT_BODY_HASH = "0" * 32
 
-
-def secureRandom(nbytes):
-    """
-    Return a number of (hopefully) secure random bytes.
-
-    @param nbytes: number of bytes to generate.
-    @type nbytes: C{int}.
-    @return: a string of random bytes.
-    @rtype: C{str}.
-    """
-    try:
-        # NOTE: os.urandom is slow on some platforms (10x slower than
-        # getrandbits here on an Ubuntu box)
-        bytes = os.urandom(nbytes)
-    except (AttributeError, NotImplementedError):
-        # Why getrandbits() doesn't simply return bytes is beyond me...
-        try:
-            n = random.getrandbits(nbytes * 8)
-            hexBytes = ("%%0%dx" % (nbytes * 2)) % n
-        except AttributeError:
-            # getrandbits() is 2.4+ only
-            lim = 2**32
-            hexBytes = ""
-            for i in range((nbytes + 3) // 4):
-                hexBytes += "%08x" % random.randrange(lim)
-            hexBytes = hexBytes[:nbytes * 2]
-        bytes = hexBytes.decode('hex')
-    return bytes
 
 
 # Fields which shouldn't be quoted

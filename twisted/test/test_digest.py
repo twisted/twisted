@@ -5,8 +5,6 @@
 Test cases for twisted.cred.digest
 """
 
-import os
-import random
 import time
 
 from twisted.internet import task
@@ -72,77 +70,6 @@ nc=00000001,qop=auth-int,charset=utf-8,\
 digest-uri="smtp/localhost.sendmail.com.",\
 response=0e7cfcae717eeac972fc9d5606a1083d"""
 
-
-
-class SecureRandomTestCase(unittest.TestCase):
-    """
-    Test secure random number generation.
-    """
-
-    def _check(self):
-        """
-        Check secureRandom behaviour.
-        """
-        for nbytes in range(17, 25):
-            s = digest.secureRandom(nbytes)
-            self.assertEquals(len(s), nbytes)
-            s2 = digest.secureRandom(nbytes)
-            self.assertEquals(len(s2), nbytes)
-            # This is crude but hey
-            self.assertNotEquals(s2, s)
-
-    def test_normal(self):
-        """
-        Test secureRandom() in normal conditions (os.urandom).
-        """
-        self._check()
-
-    def test_withoutUrandom(self):
-        """
-        Test secureRandom() without os.urandom.
-        """
-        old_urandom = getattr(os, "urandom", None)
-        try:
-            if old_urandom:
-                del os.urandom
-            self._check()
-        finally:
-            if old_urandom:
-                os.urandom = old_urandom
-
-    def test_withoutUrandomAndGetrandbits(self):
-        """
-        Test secureRandom() with neither os.urandom nor random.getrandbits.
-        """
-        old_urandom = getattr(os, "urandom", None)
-        old_getrandbits = getattr(random, "getrandbits", None)
-        try:
-            if old_urandom:
-                del os.urandom
-            if old_getrandbits:
-                del random.getrandbits
-            self._check()
-        finally:
-            if old_urandom:
-                os.urandom = old_urandom
-            if old_getrandbits:
-                random.getrandbits = old_getrandbits
-
-    def test_unimplemented(self):
-        """
-        Test secureRandom() with unimplemented os.urandom.
-        """
-        old_urandom = getattr(os, "urandom", None)
-        try:
-            def my_urandom(_):
-                raise NotImplementedError
-            os.urandom = my_urandom
-            self._check()
-        finally:
-            if old_urandom:
-                os.urandom = old_urandom
-            else:
-                del os.urandom
 
 
 class ChallengeParseTestCase(unittest.TestCase):
