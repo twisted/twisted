@@ -13,11 +13,6 @@ from zope.interface import implements
 from twisted.cred import credentials, sasl
 
 
-def _encode(s, charset):
-    if isinstance(s, unicode):
-        return s.encode(charset)
-    return s
-
 
 class PlainCredentials(object):
     """
@@ -57,13 +52,13 @@ class SASLPlainResponder(object):
         doesn't specify one.
 
         @param username: username to authenticate with.
-        @type username: C{str} or C{unicode}.
+        @type username: C{unicode}.
 
         @param password: password to authenticate with.
-        @type password: C{str} or C{unicode}.
+        @type password: C{unicode}.
 
         @param authzid: optional authorization ID.
-        @type authzid: C{str}.
+        @type authzid: C{unicode}.
         """
         self.username = username
         self.password = password
@@ -88,7 +83,7 @@ class SASLPlainResponder(object):
         """
         # XXX add support for authentication without authzid?
         # (seen in twisted.mail.smtp)
-        resp = "\0".join(map(lambda s: _encode(s, self.charset),
+        resp = "\0".join(map(lambda s: s.encode(self.charset),
             [self.authzid or "", self.username, self.password]))
         return resp
 

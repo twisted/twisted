@@ -326,14 +326,6 @@ class HTTPResponderTestCase(_BaseResponderTestCase, unittest.TestCase):
         chalType, unparsed = responder.getResponse(chal2,
             uri="/dir/index.html", method="GET")
         f = self._checkResponseToChallenge(unparsed, chal2, checkDict)
-        # Already encoded username
-        responder = digest.HTTPDigestResponder(
-            username="andr\xe9", password="Circle Of Life")
-        responder.cnonce = "1234"
-        chalType, unparsed = responder.getResponse(chal2,
-            uri="/dir/index.html", method="GET")
-        f2 = self._checkResponseToChallenge(unparsed, chal2, checkDict)
-        self.assertEquals(f['response'], f2['response'])
 
 
     def test_respondMD5Auth(self):
@@ -439,14 +431,6 @@ class SASLResponderTestCase(_BaseResponderTestCase, unittest.TestCase):
         chalType, unparsed = responder.getResponse(
             chal1, uri="/dir/index.html")
         f = self._checkResponseToChallenge(unparsed, chal1, checkDict)
-        # ISO-8859-1 encoded username and password
-        responder = digest.SASLDigestResponder(
-            username="andr\xe9", password="h\xe9")
-        responder.cnonce = "1234"
-        chalType, unparsed = responder.getResponse(
-            chal1, uri="/dir/index.html")
-        f2 = digest.parseResponse(unparsed)
-        self.assertEquals(f['response'], f2['response'])
 
 
     def test_unicodeUsernameAndPassword(self):
@@ -465,14 +449,6 @@ class SASLResponderTestCase(_BaseResponderTestCase, unittest.TestCase):
         chalType, unparsed = responder.getResponse(
             chal1, uri="/dir/index.html")
         f = self._checkResponseToChallenge(unparsed, chal1, checkDict)
-        # Already encoded username and password (UTF-8)
-        responder = digest.SASLDigestResponder(
-            username="andr\xc3\xa9", password="\xc4\x81")
-        responder.cnonce = "1234"
-        chalType, unparsed = responder.getResponse(
-            chal1, uri="/dir/index.html")
-        f2 = self._checkResponseToChallenge(unparsed, chal1, checkDict)
-        self.assertEquals(f['response'], f2['response'])
 
 
     def test_respondMD5SessAuth(self):
@@ -830,6 +806,24 @@ class SASLChallengerTestCase(unittest.TestCase, _BaseChallengerTestCase):
         self._check_processResponseOk("example.com", "/", "chris", "secret")
 
 
+    def test_processResponseWithLatinUsername(self):
+        """
+        Full challenger -> responder -> challenger roundtrip,
+        with credentials check on an ISO-8859-1 username.
+        """
+        self._check_processResponseOk(
+            "example.com", "/", u"andr\u00e9", "secret")
+
+
+    def test_processResponseWithUTF8Password(self):
+        """
+        Full challenger -> responder -> challenger roundtrip,
+        with credentials check on an unicode (non ISO-8859-1) password.
+        """
+        self._check_processResponseOk(
+            "example.com", "/", u"andr\u00e9", u"\u0101")
+
+
     def test_multipleRoundTrip(self):
         """
         Multiple roundtrip with same challenger and responder.
@@ -894,6 +888,19 @@ class HTTPChallengerTestCase(unittest.TestCase, _BaseChallengerTestCase):
             "GET")
         self._check_multipleRoundTrip("example.com", "/", "chris", "secret",
             "GET", "blah")
+
+
+    def test_processResponseWithLatinUsername(self):
+        """
+        Full challenger -> responder -> challenger roundtrip,
+        with credentials check on an ISO-8859-1 username.
+        """
+        self._check_processResponseOk(
+            "example.com", "/", u"andr\u00e9", "secret")
+        self._check_processResponseOk(
+            "example.com", "/", u"andr\u00e9", "secret", "GET")
+        self._check_processResponseOk(
+            "example.com", "/", u"andr\u00e9", "secret", "GET", "blah")
 
 
     def test_weakDigest(self):

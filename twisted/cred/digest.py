@@ -294,7 +294,7 @@ class IDigestMechanism(Interface):
         Get the digest hash from a clear-text password.
 
         @param password: the clear-text password.
-        @type password: C{str}.
+        @type password: C{unicode}.
 
         @return: the digest hash, in hexadecimal form.
         @rtype: C{str}.
@@ -306,7 +306,7 @@ class IDigestMechanism(Interface):
         Get the digest response from a clear-text password.
 
         @param password: the clear-text password.
-        @type password: C{str}.
+        @type password: C{unicode}.
 
         @param method: optional method name for integrity checking.
         @type method: C{str}.
@@ -364,9 +364,15 @@ class BaseDigestMechanism(object):
         @type algorithm: C{str}
         """
         self.charset = 'charset' in fields and 'utf-8' or 'iso-8859-1'
-        self.username = username
+        if isinstance(username, str):
+            self.username = self.decode(username)
+        else:
+            self.username = username
         self.uri = uri
-        self.authzid = authzid
+        if isinstance(authzid, str):
+            self.authzid = self.decode(authzid)
+        else:
+            self.authzid = authzid
 
         self.nonce = fields.get('nonce')
         self.realm = fields.get('realm')
@@ -440,36 +446,47 @@ class BaseDigestMechanism(object):
 
     def encode(self, s):
         """
-        If the argument is an unicode string, encode it according to the stored
-        charset parameter.
+        Encode the given (unicode) string according to the stored charset
+        parameter.
 
         @param s: string to be encoded.
-        @type s: C{str} or C{unicode}.
+        @type s: or C{unicode}.
 
         @return: encoded string.
         @rtype: C{str}.
         """
-        if isinstance(s, unicode):
-            return s.encode(self.charset)
-        return s
+        return s.encode(self.charset)
+
+
+    def decode(self, s):
+        """
+        Decode the given (bytes) string according to the stored
+        charset parameter.
+
+        @param s: string to be decoded.
+        @type s: C{str}.
+        @return: decoded string.
+        @rtype: C{unicode}.
+        """
+        return s.decode(self.charset)
 
 
     def specialEncode(self, *strings):
         """
         Apply the special encoding algorithm as defined in RFC 2831 to the
-        given strings: if the stored charset parameter is utf-8 and all the
-        strings can be encoded to iso-8859-1, then encode them into iso-8859-1.
+        given unicode strings: if the stored charset parameter is utf-8 and
+        all the strings can be encoded to iso-8859-1, then encode them into
+        iso-8859-1.
         Otherwise, encode them according to the stored charset parameter.
 
         @param strings: strings to be encoded.
-        @type strings: sequence of C{unicode} or C{str}.
+        @type strings: sequence of C{unicode}.
 
         @return: list of encoded strings.
         @rtype: sequence of C{str}.
         """
         def _encode(charset):
-            return [isinstance(s, unicode) and s.encode(charset) or s
-                for s in strings]
+            return [s.encode(charset) for s in strings]
         if self.charset == 'utf-8':
             try:
                 return _encode('iso-8859-1')
@@ -520,6 +537,7 @@ class IUsernameDigestHash(Interface):
     def checkHash(digestHash):
         """
         @param digestHash: The hashed username:realm:password to check against.
+        @type digestHash: C{str}
 
         @return: a deferred which becomes, or a boolean indicating if the
             hash matches.
@@ -597,16 +615,16 @@ class BaseDigestResponder(object):
         doesn't specify one.
 
         @param username: username to authenticate with.
-        @type username: C{str} or C{unicode}.
+        @type username: C{unicode}.
 
         @param password: password to authenticate with.
-        @type password: C{str} or C{unicode}.
+        @type password: C{unicode}.
 
         @param realm: optional realm.
         @type realm: C{str}.
 
         @param authzid: optional authorization ID.
-        @type authzid: C{str}.
+        @type authzid: C{unicode}.
         """
         self.username = username
         self.password = password
@@ -716,7 +734,7 @@ class BaseDigestResponder(object):
             if s in f:
                 respFields[s] = f[s]
         if self.authzid:
-            respFields['authzid'] = self.authzid
+            respFields['authzid'] = mechanism.encode(self.authzid)
         return chalType, unparseResponse(**respFields)
 
 
@@ -1012,7 +1030,8 @@ class BaseDigestChallenger(object):
 
 class SASLDigestChallenger(BaseDigestChallenger):
     """
-    An SASL Digest challenger generates challenges and processes responses from a client.
+    An SASL Digest challenger generates challenges and processes responses from
+    a client using an SASL-enabled protocol.
     """
     implements(sasl.ISASLChallenger)
     mechanismClass = SASLDigestMechanism
@@ -1034,7 +1053,9 @@ class SASLDigestChallenger(BaseDigestChallenger):
 
 class HTTPDigestChallenger(BaseDigestChallenger):
     """
-    An HTTP Digest challenger generates challenges and processes responses from a client.
+    An HTTP Digest challenger generates challenges and processes responses from
+    a client using HTTP or another protocol using the same authentication
+    mechanism (e.g. SIP).
     """
     mechanismClass = HTTPDigestMechanism
     # Required to support RFC 2069-only clients
