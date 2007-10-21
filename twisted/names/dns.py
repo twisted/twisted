@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.names.test.test_dns -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -28,33 +28,6 @@ except ImportError:
 
 AF_INET6 = socket.AF_INET6
 
-try:
-    from Crypto.Util import randpool
-except ImportError:
-    for randSource in ('urandom',):
-        try:
-            f = file('/dev/' + randSource)
-            f.read(2)
-            f.close()
-        except:
-            pass
-        else:
-            def randomSource(r = file('/dev/' + randSource, 'rb').read):
-                return struct.unpack('H', r(2))[0]
-            break
-    else:
-        warnings.warn(
-            "PyCrypto not available - proceeding with non-cryptographically "
-            "secure random source",
-            RuntimeWarning,
-            1
-        )
-
-        def randomSource():
-            return random.randint(0, 65535)
-else:
-    def randomSource(r = randpool.RandomPool().get_bytes):
-        return struct.unpack('H', r(2))[0]
 from zope.interface import implements, Interface
 
 
@@ -62,6 +35,15 @@ from zope.interface import implements, Interface
 from twisted.internet import protocol, defer
 from twisted.python import log, failure
 from twisted.python import util as tputil
+from twisted.python import randbytes
+
+
+def randomSource():
+    """
+    Wrapper around L{randbytes.secureRandom} to return 2 random chars.
+    """
+    return struct.unpack('H', randbytes.secureRandom(2, fallback=True))[0]
+
 
 PORT = 53
 

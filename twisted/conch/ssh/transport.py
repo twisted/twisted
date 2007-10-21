@@ -31,10 +31,10 @@ from Crypto.Util import randpool
 # twisted imports
 from twisted.conch import error
 from twisted.internet import protocol, defer
-from twisted.python import log
+from twisted.python import log, randbytes
 
 # sibling importsa
-from common import NS, getNS, MP, getMP, _MPpow, ffs, entropy # ease of use
+from common import NS, getNS, MP, getMP, _MPpow, ffs # ease of use
 import keys
 
 
@@ -84,7 +84,7 @@ class SSHTransportBase(protocol.Protocol):
         self.sendKexInit()
 
     def sendKexInit(self):
-        self.ourKexInitPayload = chr(MSG_KEXINIT)+entropy.get_bytes(16)+ \
+        self.ourKexInitPayload = chr(MSG_KEXINIT)+randbytes.secureRandom(16)+ \
                        NS(','.join(self.supportedKeyExchanges))+ \
                        NS(','.join(self.supportedPublicKeys))+ \
                        NS(','.join(self.supportedCiphers))+ \
@@ -111,7 +111,7 @@ class SSHTransportBase(protocol.Protocol):
         if lenPad < 4:
             lenPad = lenPad+bs
         packet = struct.pack('!LB', totalSize+lenPad-4, lenPad)+ \
-                payload+entropy.get_bytes(lenPad)
+                payload+randbytes.secureRandom(lenPad)
         assert len(packet)%bs == 0, '%s extra bytes in packet'%(len(packet)%bs)
         if self.currentEncryptions:
             encPacket = self.currentEncryptions.encrypt(packet) + self.currentEncryptions.makeMAC(self.outgoingPacketSequence, packet)
@@ -331,7 +331,7 @@ class SSHServerTransport(SSHTransportBase):
             return
         if self.kexAlg == 'diffie-hellman-group1-sha1': # this is really KEXDH_INIT
             clientDHPubKey, foo = getMP(packet)
-            y = Util.number.getRandomNumber(16, entropy.get_bytes)
+            y = Util.number.getRandomNumber(16, randbytes.secureRandom)
             f = pow(DH_GENERATOR, y, DH_PRIME)
             sharedSecret = _MPpow(clientDHPubKey, y, DH_PRIME)
             h = sha.new()
@@ -382,10 +382,10 @@ class SSHServerTransport(SSHTransportBase):
         minimum = long(math.floor(math.log(self.p) / math.log(2)) + 1)
         tries = 0
         pSize = Util.number.size(self.p)
-        y = Util.number.getRandomNumber(pSize, entropy.get_bytes)
+        y = Util.number.getRandomNumber(pSize, randbytes.secureRandom)
         while tries < 10 and y < minimum:
             tries += 1
-            y = Util.number.getRandomNumber(pSize, entropy.get_bytes)
+            y = Util.number.getRandomNumber(pSize, randbytes.secureRandom)
         assert(y >= minimum) # TODO: test_conch just hangs if this is hit
         # the chance of it being hit are really really low
 
@@ -487,7 +487,7 @@ class SSHClientTransport(SSHTransportBase):
                                             self.incomingCompressionType))
 
         if self.kexAlg == 'diffie-hellman-group1-sha1':
-            self.x = Util.number.getRandomNumber(512, entropy.get_bytes)
+            self.x = Util.number.getRandomNumber(512, randbytes.secureRandom)
             self.DHpubKey = pow(DH_GENERATOR, self.x, DH_PRIME)
             self.sendPacket(MSG_KEXDH_INIT, MP(self.DHpubKey))
         else:
@@ -505,7 +505,7 @@ class SSHClientTransport(SSHTransportBase):
         else:
             self.p, rest = getMP(packet)
             self.g, rest = getMP(rest)
-            self.x = getMP('\x00\x00\x00\x40'+entropy.get_bytes(64))[0]
+            self.x = getMP('\x00\x00\x00\x40'+randbytes.secureRandom(64))[0]
             self.DHpubKey = pow(self.g, self.x, self.p)
             self.sendPacket(MSG_KEX_DH_GEX_INIT, MP(self.DHpubKey))
 

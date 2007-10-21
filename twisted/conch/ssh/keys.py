@@ -21,7 +21,7 @@ from Crypto.PublicKey import RSA, DSA
 from Crypto import Util
 
 #twisted
-from twisted.python import log
+from twisted.python import log, randbytes
 
 # sibling imports
 import asn1, common, sexpy
@@ -302,7 +302,7 @@ def makePrivateKeyString_openssh(obj, passphrase):
     else:
         raise BadKeyError('unknown key type %s' % keyType)
     if passphrase:
-        iv = common.entropy.get_bytes(8)
+        iv = randbytes.secureRandom(8)
         hexiv = ''.join(['%02X' % ord(x) for x in iv])
         keyData += 'Proc-Type: 4,ENCRYPTED\n'
         keyData += 'DEK-Info: DES-EDE3-CBC,%s\n\n' % hexiv
@@ -406,7 +406,7 @@ def signData_rsa(obj, data):
 
 def signData_dsa(obj, data):
     sigData = sha.new(data).digest()
-    randData = common.entropy.get_bytes(19)
+    randData = randbytes.secureRandom(19)
     sig = obj.sign(sigData, randData)
     # SSH insists that the DSS signature blob be two 160-bit integers
     # concatenated together. The sig[0], [1] numbers from obj.sign are just

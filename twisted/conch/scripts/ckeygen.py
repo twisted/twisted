@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 #
@@ -7,8 +7,8 @@
 #""" Implementation module for the `ckeygen` command.
 #"""
 
-from twisted.conch.ssh import keys, common
-from twisted.python import log, usage
+from twisted.conch.ssh import keys
+from twisted.python import log, usage, randbytes
 
 import sys, os, getpass, md5, socket
 if getpass.getpass == getpass.unix_getpass:
@@ -20,7 +20,7 @@ if getpass.getpass == getpass.unix_getpass:
         reload(getpass)
 
 class GeneralOptions(usage.Options):
-    synopsis = """Usage:    ckeygen [options] 
+    synopsis = """Usage:    ckeygen [options]
  """
 
     optParameters = [['bits', 'b', 1024, 'Number of bits in the key to create.'],
@@ -29,7 +29,7 @@ class GeneralOptions(usage.Options):
                      ['comment', 'C', None, 'Provide new comment.'],
                      ['newpass', 'N', None, 'Provide new passphrase.'],
                      ['pass', 'P', None, 'Provide old passphrase']]
-    
+
     optFlags = [['fingerprint', 'l', 'Show fingerprint of key file.'],
                 ['changepass', 'p', 'Change passphrase of private key file.'],
                 ['quiet', 'q', 'Quiet.'],
@@ -79,13 +79,13 @@ def handleError():
 def generateRSAkey(options):
     from Crypto.PublicKey import RSA
     print 'Generating public/private rsa key pair.'
-    key = RSA.generate(int(options['bits']), common.entropy.get_bytes)
+    key = RSA.generate(int(options['bits']), randbytes.secureRandom)
     _saveKey(key, options)
 
 def generateDSAkey(options):
     from Crypto.PublicKey import DSA
     print 'Generating public/private dsa key pair.'
-    key = DSA.generate(int(options['bits']), common.entropy.get_bytes)
+    key = DSA.generate(int(options['bits']), randbytes.secureRandom)
     _saveKey(key, options)
 
 def printFingerprint(options):
@@ -127,7 +127,7 @@ def changePassPhrase(options):
         options['newpass'] = p1
     open(options['filename'], 'w').write(
     keys.makePrivateKeyString(key, passphrase=options['newpass']))
-    print 'Your identification has been saved with the new passphrase.' 
+    print 'Your identification has been saved with the new passphrase.'
 
 def displayPublicKey(options):
     if not options['filename']:
@@ -143,7 +143,7 @@ def displayPublicKey(options):
                 options['pass'] = getpass.getpass('Enter passphrase: ')
             key = keys.getPrivateKeyObject(options['filename'], passphrase = options['pass'])
     print keys.makePublicKeyString(key)
-        
+
 def _saveKey(key, options):
     if not options['filename']:
         kind = keys.objectType(key)

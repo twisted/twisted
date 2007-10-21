@@ -1,26 +1,40 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.conch.test.test_ssh -*-
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-# 
 
-"""Common functions for the SSH classes.
+"""
+Common functions for the SSH classes.
 
 This module is unstable.
 
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """
 
-import struct
+import struct, warnings
+
 try:
     from Crypto import Util
-    from Crypto.Util import randpool
 except ImportError:
-    import warnings
-    warnings.warn("PyCrypto not installed, but continuing anyways!", 
+    warnings.warn("PyCrypto not installed, but continuing anyways!",
             RuntimeWarning)
-else:
-    entropy = randpool.RandomPool()
-    entropy.stir()
+
+from twisted.python import randbytes
+
+class Entropy(object):
+    """
+    A Crypto.Util.randpool.RandomPool mock for compatibility.
+    """
+    def get_bytes(self, numBytes):
+        """
+        Get a number of random bytes.
+        """
+        warnings.warn("entropy.get_bytes is deprecated, please use "
+                      "twisted.python.randbytes.secureRandom instead.",
+            category=DeprecationWarning, stacklevel=2)
+        return randbytes.secureRandom(numBytes)
+
+entropy = Entropy()
 
 
 def NS(t):
@@ -96,10 +110,10 @@ def install():
     MP = _fastMP
     _MPpow = _fastMPpow
     __builtins__['pow'] = _fastpow # evil evil
-    
+
 try:
     import gmpy
     install()
 except ImportError:
     pass
-    
+
