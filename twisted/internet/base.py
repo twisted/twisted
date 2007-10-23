@@ -393,13 +393,14 @@ class _ThreePhaseEvent(object):
 
 
 class ReactorBase(object):
-    """Default base class for Reactors.
+    """
+    Default base class for Reactors.
     """
 
     implements(IReactorCore, IReactorTime, IReactorPluggableResolver)
 
-    installed = 0
-    usingThreads = 0
+    installed = False
+    usingThreads = False
     resolver = BlockingResolver()
 
     __name__ = "twisted.internet.reactor"
@@ -410,7 +411,7 @@ class ReactorBase(object):
         self._pendingTimedCalls = []
         self._newTimedCalls = []
         self._cancellations = 0
-        self.running = 0
+        self.running = False
         self.waker = None
 
         self.addSystemEventTrigger('during', 'shutdown', self.crash)
@@ -474,16 +475,19 @@ class ReactorBase(object):
     # IReactorCore
 
     def stop(self):
-        """See twisted.internet.interfaces.IReactorCore.stop.
+        """
+        See twisted.internet.interfaces.IReactorCore.stop.
         """
         if not self.running:
-            raise RuntimeError, "can't stop reactor that isn't running"
+            raise error.ReactorNotRunning(
+                "Can't stop reactor that isn't running.")
         self.fireSystemEvent("shutdown")
 
     def crash(self):
-        """See twisted.internet.interfaces.IReactorCore.crash.
         """
-        self.running = 0
+        See twisted.internet.interfaces.IReactorCore.crash.
+        """
+        self.running = False
 
     def sigInt(self, *args):
         """Handle a SIGINT interrupt.
@@ -553,6 +557,23 @@ class ReactorBase(object):
         else:
             return self.addSystemEventTrigger('after', 'startup',
                                               _callable, *args, **kw)
+
+    def startRunning(self):
+        """
+        Method called when reactor starts: do some initialization and fire
+        startup events.
+
+        Don't call this directly, call reactor.run() instead: it should take
+        care of calling this.
+        """
+        if self.running:
+            warnings.warn(
+                    "Reactor already running! This behavior is deprecated "
+                    "since Twisted 2.6, it will raise an exception starting "
+                    "Twisted 2.7", category=DeprecationWarning, stacklevel=3)
+        self.running = True
+        threadable.registerAsIOThread()
+        self.fireSystemEvent('startup')
 
     # IReactorTime
 
@@ -693,7 +714,7 @@ class ReactorBase(object):
         threadpoolShutdownID = None
 
         def _initThreads(self):
-            self.usingThreads = 1
+            self.usingThreads = True
             self.resolver = ThreadedResolver(self)
             self.installWaker()
 

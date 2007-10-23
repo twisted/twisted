@@ -112,6 +112,7 @@ class GtkReactor(posixbase.PosixReactorBase):
             self.doIterationTimer = None
 
     def crash(self):
+        posixbase.PosixReactorBase.crash(self)
         gtk.mainquit()
 
     def run(self, installSignalHandlers=1):
@@ -180,6 +181,7 @@ class PortableGtkReactor(selectreactor.SelectReactor):
 
 
     def crash(self):
+        selectreactor.SelectReactor.crash(self)
         gtk.mainquit()
 
     def run(self, installSignalHandlers=1):

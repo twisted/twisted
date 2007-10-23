@@ -4,7 +4,8 @@
 # See LICENSE for details.
 
 
-"""Posix reactor base class
+"""
+Posix reactor base class
 
 API Stability: stable
 
@@ -26,7 +27,7 @@ from twisted.internet.interfaces import IHalfCloseableDescriptor
 from twisted.internet import error
 from twisted.internet import tcp, udp
 
-from twisted.python import log, threadable, failure, util
+from twisted.python import log, failure, util
 from twisted.persisted import styles
 from twisted.python.runtime import platformType, platform
 
@@ -163,7 +164,8 @@ elif platformType == 'win32':
 
 
 class PosixReactorBase(ReactorBase):
-    """A basis for reactors that use file descriptors.
+    """
+    A basis for reactors that use file descriptors.
     """
     implements(IReactorArbitrary, IReactorTCP, IReactorUDP, IReactorMulticast)
 
@@ -173,11 +175,14 @@ class PosixReactorBase(ReactorBase):
             self.installWaker()
 
     def _handleSignals(self):
-        """Install the signal handlers for the Twisted event loop."""
+        """
+        Install the signal handlers for the Twisted event loop.
+        """
         try:
             import signal
         except ImportError:
-            log.msg("Warning: signal module unavailable -- not installing signal handlers.")
+            log.msg("Warning: signal module unavailable -- "
+                    "not installing signal handlers.")
             return
 
         if signal.getsignal(signal.SIGINT) == signal.default_int_handler:
@@ -193,7 +198,8 @@ class PosixReactorBase(ReactorBase):
             signal.signal(signal.SIGCHLD, self._handleSigchld)
 
     def _handleSigchld(self, signum, frame, _threadSupport=platform.supportsThreads()):
-        """Reap all processes on SIGCHLD.
+        """
+        Reap all processes on SIGCHLD.
 
         This gets called on SIGCHLD. We do no processing inside a signal
         handler, as the calls we make here could occur between any two
@@ -206,17 +212,15 @@ class PosixReactorBase(ReactorBase):
         else:
             self.callLater(0, process.reapAllProcesses)
 
-    def startRunning(self, installSignalHandlers=1):
-        # Just in case we're started on a different thread than
-        # we're made on
-        threadable.registerAsIOThread()
-
-        self.fireSystemEvent('startup')
+    def startRunning(self, installSignalHandlers=True):
+        """
+        Forward call to ReactorBase, install signal handlers if asked.
+        """
+        ReactorBase.startRunning(self)
         if installSignalHandlers:
             self._handleSignals()
-        self.running = 1
 
-    def run(self, installSignalHandlers=1):
+    def run(self, installSignalHandlers=True):
         self.startRunning(installSignalHandlers=installSignalHandlers)
         self.mainLoop()
 
@@ -240,7 +244,8 @@ class PosixReactorBase(ReactorBase):
         error.ConnectionDone: failure.Failure(error.ConnectionDone()),
         error.ConnectionLost: failure.Failure(error.ConnectionLost())
         }):
-        """Utility function for disconnecting a selectable.
+        """
+        Utility function for disconnecting a selectable.
 
         Supports half-close notification, isRead should be boolean indicating
         whether error resulted from doRead().
@@ -259,7 +264,8 @@ class PosixReactorBase(ReactorBase):
             selectable.connectionLost(failure.Failure(why))
 
     def installWaker(self):
-        """Install a `waker' to allow threads and signals to wake up the IO thread.
+        """
+        Install a `waker' to allow threads and signals to wake up the IO thread.
 
         We use the self-pipe trick (http://cr.yp.to/docs/selfpipe.html) to wake
         the reactor. On Windows we use a pair of sockets.
@@ -326,7 +332,7 @@ class PosixReactorBase(ReactorBase):
         # Make a few tests to check input validity
         if not isinstance(args, (tuple, list)):
             raise TypeError("Arguments must be a tuple or list")
-        
+
         outputArgs = []
         for arg in args:
             arg = argChecker(arg)

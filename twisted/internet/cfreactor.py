@@ -308,7 +308,7 @@ class CFReactor(posixbase.PosixReactorBase):
     def crash(self):
         if not self.running:
             raise ValueError, "Can't crash a stopped reactor"
-        self.running = False
+        posixbase.PosixReactorBase.crash(self)
         self.crashing = True
         if self.timer is not None:
             self.runLoop.removeTimer(self.timer)

@@ -167,6 +167,7 @@ class Gtk2Reactor(posixbase.PosixReactorBase):
             self.doIterationTimer = None
 
     def crash(self):
+        posixbase.PosixReactorBase.crash(self)
         self.__crash()
 
     def run(self, installSignalHandlers=1):
@@ -227,6 +228,7 @@ class PortableGtkReactor(selectreactor.SelectReactor):
     """
 
     def crash(self):
+        selectreactor.SelectReactor.crash(self)
         import gtk
         # mainquit is deprecated in newer versions
         if hasattr(gtk, 'main_quit'):

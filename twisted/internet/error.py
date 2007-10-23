@@ -265,3 +265,16 @@ class NotListeningError(RuntimeError):
             s = '%s: %s' % (s, ' '.join(self.args))
         s = '%s.' % s
         return s
+
+
+class ReactorNotRunning(RuntimeError):
+    """
+    Error raised when trying to stop a reactor which is not running.
+    """
+
+
+class ReactorAlreadyRunning(RuntimeError):
+    """
+    Error raised when trying to start the reactor multiple times.
+    """
+

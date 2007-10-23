@@ -1,11 +1,11 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-from twisted.internet import defer, base, main
+from twisted.internet import base, main
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorMulticast, IReactorArbitrary, IReactorProcess
 from twisted.python import threadable, log, reflect
-from zope.interface import implements, implementsOnly
+from zope.interface import implementsOnly
 
 import tcp, udp, process, process_waiter
 from _iocp import iocpcore
@@ -23,11 +23,6 @@ class Proactor(iocpcore, base.ReactorBase, log.Logger):
         self.logstr = reflect.qual(self.__class__)
         self.processWaiter = process_waiter.ProcessWaiter(self)
 #        self.completables = {}
-
-    def startRunning(self):
-        threadable.registerAsIOThread()
-        self.fireSystemEvent('startup')
-        self.running = 1
 
     def run(self):
         self.startRunning()

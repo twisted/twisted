@@ -4,7 +4,7 @@
 
 from twisted.trial import unittest
 from twisted.internet import reactor, protocol, error, abstract, defer
-from twisted.internet import interfaces, base
+from twisted.internet import interfaces, base, task
 
 from twisted.test.time_helpers import Clock
 
@@ -16,7 +16,7 @@ if ssl and not ssl.supported:
     ssl = None
 
 from twisted.internet.defer import Deferred, maybeDeferred
-from twisted.python import util
+from twisted.python import util, runtime
 
 import os
 import sys
@@ -881,8 +881,6 @@ class TimeTestCase(unittest.TestCase):
         def seconds():
             return int(time.time())
 
-        from twisted.internet import base
-        from twisted.python import runtime
         base_original = base.seconds
         runtime_original = runtime.seconds
         base.seconds = seconds
@@ -927,7 +925,7 @@ class TimeTestCase(unittest.TestCase):
         """
         def seconds():
             return 10
-        dc = base.DelayedCall(5, lambda: None, (), {}, lambda dc: None, 
+        dc = base.DelayedCall(5, lambda: None, (), {}, lambda dc: None,
                               lambda dc: None, seconds)
         self.assertEquals(dc.getTime(), 5)
         dc.reset(3)
@@ -976,46 +974,127 @@ class CallFromThreadTests(unittest.TestCase):
         return d
 
 
-class ReactorCoreTestCase(unittest.TestCase):
+
+class DummyReactor(base.ReactorBase):
+    """
+    A reactor faking the methods needed to make it starts.
+    """
+
+    def __init__(self, clock):
+        """
+        @param clock: the clock used to fake time.
+        @type clock: C{task.Clock}.
+        """
+        base.ReactorBase.__init__(self)
+        self.clock = clock
+
+
+    def installWaker(self):
+        """
+        Called by C{self._initThreads}: no waker is needed for the tests.
+        """
+
+
+    def callLater(self, _seconds, _f, *args, **kw):
+        """
+        Override callLater using the internal clock.
+        """
+        return self.clock.callLater( _seconds, _f, *args, **kw)
+
+
+    def removeAll(self):
+        """
+        Needed during stop.
+        """
+        return []
+
+
+
+class ReactorBaseTestCase(unittest.TestCase):
+    """
+    Tests for L{base.ReactorBase} object.
+    """
+
     def setUp(self):
-        self.triggers = []
-        self.timers = []
+        """
+        Create a clock and a L{DummyReactor}.
+        """
+        self.clock = task.Clock()
+        self.reactor = DummyReactor(self.clock)
 
 
-    def addTrigger(self, event, phase, func):
-        t = reactor.addSystemEventTrigger(event, phase, func)
-        self.triggers.append(t)
-        return t
+    def test_stopWhenNotStarted(self):
+        """
+        Test that the reactor stop raises an error when the reactor is not
+        started.
+        """
+        self.assertRaises(RuntimeError, self.reactor.stop)
 
 
-    def removeTrigger(self, trigger):
-        reactor.removeSystemEventTrigger(trigger)
-        self.triggers.remove(trigger)
+    def test_stopWhenAlreadyStopped(self):
+        """
+        Test that the reactor stop raises an error when the reactor is already
+        stopped.
+        """
+        self.reactor.startRunning()
+        self.reactor.stop()
+        self.assertRaises(RuntimeError, self.reactor.stop)
 
 
-    def addTimer(self, when, func):
-        t = reactor.callLater(when, func)
-        self.timers.append(t)
-        return t
+    def test_stopShutDownEvents(self):
+        """
+        Verify that reactor.stop fires shutdown events.
+        """
+        events = []
+        self.reactor.addSystemEventTrigger(
+            "before", "shutdown",
+            lambda: events.append(("before", "shutdown")))
+        self.reactor.addSystemEventTrigger(
+            "during", "shutdown",
+            lambda: events.append(("during", "shutdown")))
+        self.reactor.startRunning()
+        self.reactor.stop()
+        self.assertEquals(events, [("before", "shutdown"),
+                                   ("during", "shutdown")])
 
 
-    def removeTimer(self, timer):
-        try:
-            timer.cancel()
-        except error.AlreadyCalled:
-            pass
-        self.timers.remove(timer)
+    def test_multipleRun(self):
+        """
+        Verify that the reactor.startRunning raises an error when called
+        multiple times.
+        """
+        self.reactor.startRunning()
+        self.assertWarns(DeprecationWarning,
+            "Reactor already running! This behavior is deprecated since "
+            "Twisted 2.6, it will raise an exception starting Twisted 2.7",
+            __file__,
+            self.reactor.startRunning)
 
 
-    def tearDown(self):
-        for t in self.triggers:
-            try:
-                reactor.removeSystemEventTrigger(t)
-            except:
-                pass
+    def test_crash(self):
+        """
+        reactor.crash should NOT fire shutdown triggers.
+        """
+        events = []
+        self.reactor.addSystemEventTrigger(
+            "before", "shutdown",
+            lambda: events.append(("before", "shutdown")))
+
+        self.reactor.callWhenRunning(
+            self.reactor.callLater, 0, self.reactor.crash)
+        self.reactor.startRunning()
+        self.clock.advance(0.1)
+        self.failIf(events, "reactor.crash invoked shutdown triggers, but it "
+                            "isn't supposed to.")
 
 
-    def testRun(self):
+
+class ReactorCoreTestCase(unittest.TestCase):
+    """
+    Test core functionalities of the reactor.
+    """
+
+    def test_run(self):
         """
         Test that reactor.crash terminates reactor.run
         """
@@ -1024,7 +1103,7 @@ class ReactorCoreTestCase(unittest.TestCase):
             reactor.run()
 
 
-    def testIterate(self):
+    def test_iterate(self):
         """
         Test that reactor.iterate(0) doesn't block
         """
@@ -1036,31 +1115,8 @@ class ReactorCoreTestCase(unittest.TestCase):
         reactor.iterate(0) # shouldn't block
         stop = time.time()
         elapsed = stop - start
-        #print "elapsed", elapsed
         self.failUnless(elapsed < 8)
         t.cancel()
-
-
-    def test_crash(self):
-        """
-        reactor.crash should NOT fire shutdown triggers
-        """
-        events = []
-        self.addTrigger(
-            "before", "shutdown",
-            lambda: events.append(("before", "shutdown")))
-
-        # reactor.crash called from an "after-startup" trigger is too early
-        # for the gtkreactor: gtk_mainloop is not yet running. Same is true
-        # when called with reactor.callLater(0). Must be >0 seconds in the
-        # future to let gtk_mainloop start first.
-        reactor.callWhenRunning(
-            reactor.callLater, 0, reactor.crash)
-        reactor.run()
-        self.failIf(events, "reactor.crash invoked shutdown triggers, but it "
-                            "isn't supposed to.")
-
-    # XXX Test that reactor.stop() invokes shutdown triggers
 
 
 
@@ -1252,7 +1308,7 @@ class Order:
         self.stage = 3
 
 
-class callFromThreadTestCase(unittest.TestCase):
+class CallFromThreadTestCase(unittest.TestCase):
     """Task scheduling from threads tests."""
 
     if interfaces.IReactorThreads(reactor, None) is None:
