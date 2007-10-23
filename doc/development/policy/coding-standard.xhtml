@@ -73,7 +73,18 @@
     control structure indentation is always visible.</p>
 
     <p>Lines are flowed at 79 columns. They must not have trailing
-    whitespaces.</p>
+    whitespaces. Long lines must be wrapped using implied line continuation
+    inside parentheses; backslashes aren't allowed. To handle long import
+    lines, please repeat the import like this:</p>
+
+<pre class="python">
+from very.long.package import foo, bar, baz
+from very.long.package import qux, quux, quuux
+</pre>
+
+    <p>Top-level classes and functions must be separated with 3 blank lines,
+    and class-level functions with 2 blank lines. The control-L (i.e. ^L) form
+    feed character must not be used.</p>
 
     <h2>Modules</h2>
 
@@ -106,6 +117,12 @@
     to be introduced which can ultimately lead to unimportable modules or
     duplicate instances of a single module.  Relative imports also make the
     task of refactoring more difficult.</p>
+
+    <p>In case of local names conflicts due to import, use the <code>as</code>
+    syntax, for example:
+    <pre class="python">from twisted.trial import util as trial_util</pre></p>
+
+    <p>The encoding must always be ASCII, so no coding cookie is necessary.</p>
 
     <h2>Packages</h2>
 
@@ -165,7 +182,15 @@ parent.Foo = Foo
     <p>Docstrings should be indented to the level of the code they
     are documenting.</p>
 
-    <p>Docstrings should be triple-quoted.</p>
+    <p>Docstrings should be triple-quoted. The opening and the closing of the
+    docstrings should be on a line by themselves. For example:
+<pre class="python">
+class MyClass(object):
+    """
+    MyClass docstring.
+    """
+</pre>
+    </p>
 
     <p>Docstrings should be written in epytext format; more
     documentation is available in the
@@ -189,7 +214,8 @@ parent.Foo = Foo
     <p>For example,</p>
 <pre class="python">
 def foo2bar(f):
-    """I am a function to convert foos to bars.
+    """
+    I am a function to convert foos to bars.
 
     I should be used when you have a foo but you want a bar; note that this is
     a non-destructive operation.  If I can\'t convert the foo to a bar I will
@@ -526,6 +552,16 @@ global-ignores = dropin.cache *.pyc *.pyo *.o *.lo *.la #*# .*.rej *.rej .*~
 
     </li>
     </ul>
+
+    <h2>Fallback</h2>
+
+    <p>In case of conventions not enforced in this document, the reference
+    documents to use in fallback is
+    <a href="http://www.python.org/dev/peps/pep-0008/">PEP 8</a> for Python
+    code and <a href="http://www.python.org/dev/peps/pep-0007/">PEP 7</a> for
+    C code. For example, the paragraph <strong>Whitespace in Expressions and
+    Statements</strong> in PEP 8 describes what should be done in Twisted
+    code.</p>
 
     <h2>Recommendations</h2>
 
