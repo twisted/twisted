@@ -181,10 +181,9 @@ def calcHA1(pszAlg, pszUserName, pszRealm, pszPassword, pszNonce, pszCNonce,
        calculated HA1 as a hex string. If this is given then the values for
        pszUserName, pszRealm, and pszPassword are ignored.
     """
-
     if (preHA1 and (pszUserName or pszRealm or pszPassword)):
-        raise TypeError(("preHA1 is incompatible with the pszUserName, "
-                         "pszRealm, and pszPassword arguments"))
+        raise ValueError("preHA1 is incompatible with the pszUserName, "
+                         "pszRealm, and pszPassword arguments")
 
     if preHA1 is None:
         # We need to calculate the HA1 from the username:realm:password
@@ -827,8 +826,8 @@ class BaseDigestChallenger(object):
         responded to is too old, in which case you'll have to generate a new
         one with getRenewedChallenge().
 
-        @param challenge: server challenge.
-        @type challenge: C{str}.
+        @param response: server challenge.
+        @type response: C{str}.
 
         @param method: optional method for message integrity.
         @type method: C{str}.
@@ -842,10 +841,13 @@ class BaseDigestChallenger(object):
         f = parseResponse(response)
         nonce = f.get('nonce')
         if not nonce:
-            raise sasl.InvalidResponse('Missing once.')
+            raise sasl.InvalidResponse("Missing nonce.")
         realm = f.get('realm')
-        if self.realm and realm != self.realm:
-            raise sasl.InvalidResponse("Invalid realm '%s'" % realm)
+        if self.realm:
+            if realm is None:
+                raise sasl.InvalidResponse("Missing realm.")
+            elif realm != self.realm:
+                raise sasl.InvalidResponse("Invalid realm '%s'." % (realm,))
         username = f.get('username')
         if not username:
             raise sasl.InvalidResponse("Missing username.")
@@ -859,14 +861,14 @@ class BaseDigestChallenger(object):
         nc = f.get('nc')
         qop = f.get('qop')
         if not qop and not self.acceptWeakDigest:
-            raise sasl.InvalidResponse("Missing qop value")
+            raise sasl.InvalidResponse("Missing qop value.")
         if qop and qop != "auth" and qop != "auth-int":
-            raise sasl.InvalidResponse("Invalid qop value '%s'" % qop)
+            raise sasl.InvalidResponse("Invalid qop value '%s'." % (qop,))
         if qop and (not nc or not cnonce):
             raise sasl.InvalidResponse("Missing nc and/or cnonce value.")
         algo = f.get('algorithm')
         if algo and algo != self.algorithm:
-            raise sasl.InvalidResponse("Invalid algorithm '%s'" % algo)
+            raise sasl.InvalidResponse("Invalid algorithm '%s'." % (algo,))
         authzid = f.get('authzid')
 
         if not self.acceptNonce(nonce, nc or None):
@@ -982,13 +984,13 @@ class BaseDigestChallenger(object):
             timestamp, seed = nonce.split(".")
             timestamp = int(timestamp)
         except ValueError:
-            raise sasl.InvalidResponse("Invalid nonce value")
+            raise sasl.InvalidResponse("Invalid nonce value.")
 
         age = self._getTime() - timestamp
         if age > self.CHALLENGE_LIFETIME_SECS - 1:
             return False
         if age < 0:
-            raise sasl.InvalidResponse("Invalid nonce value")
+            raise sasl.InvalidResponse("Invalid nonce value.")
 
         # We check the nc only if the nonce is fresh, because otherwise the
         # entry in self.nonces will have been deleted.

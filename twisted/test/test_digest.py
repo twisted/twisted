@@ -72,6 +72,29 @@ response=0e7cfcae717eeac972fc9d5606a1083d"""
 
 
 
+class UtilitiesTestCase(unittest.TestCase):
+    """
+    Tests for utility functions of digest.
+    """
+
+    def test_calcHA1preHA1AndUser(self):
+        """
+        Check that L{digest.calcHA1} raises an exception when preHA1 is
+        specified with other informations.
+        """
+        self.assertRaises(ValueError, digest.calcHA1, 'md5', 'user', 'realm',
+                'password', 'nonce', 'cnonce', preHA1='preHA1')
+
+
+    def test_calcHA1WithoutpreHA1(self):
+        """
+        If preHA1 is not specified in L{digest.calcHA1}, it should be
+        calculated with other informations.
+        """
+        self.assertEquals(digest.calcHA1('md5', 'user', 'realm', 'password',
+            'nonce', 'cnonce'), 'ebbc0ff9a121dbb6789bbe5f82174fa0')
+
+
 class ChallengeParseTestCase(unittest.TestCase):
     """
     Test cases for the parseChallenge function.
@@ -499,6 +522,17 @@ class SASLResponderTestCase(_BaseResponderTestCase, unittest.TestCase):
             "rspauth=0", uri="imap/elwood.innosoft.com")
 
 
+    def test_unexpectedFinalChallenge(self):
+        """
+        A final challenge sent without a previous challenge should raise
+        an exception.
+        """
+        responder = digest.SASLDigestResponder(username="chris",
+            password="secret")
+        self.assertRaises(sasl.UnexpectedFinalChallenge,
+            responder.getResponse, final1, uri="imap/elwood.innosoft.com")
+
+
     def test_respondMD5SessAuthInt(self):
         """
         Generate response for algorithm=md5-sess, qop=auth-int, and
@@ -770,6 +804,17 @@ class _BaseChallengerTestCase(object):
         self.assertEquals(f2['rspauth'], rspauth)
 
 
+    def _check_processResponseError(self, response, message):
+        """
+        Check that processing the given response raise a
+        L{sasl.InvalidResponse}, with the specified message.
+        """
+        c = self.challengerClass("example.com")
+        error = self.assertRaises(sasl.InvalidResponse,
+                                  c.processResponse, response)
+        self.assertEquals(str(error), message)
+
+
 
 class SASLChallengerTestCase(unittest.TestCase, _BaseChallengerTestCase):
     """
@@ -837,6 +882,156 @@ class SASLChallengerTestCase(unittest.TestCase, _BaseChallengerTestCase):
         """
         self._check_getSuccessfulChallenge(resp1, "imap/elwood.innosoft.com",
             password="secret", rspauth="ea40f60335c427b5527b84dbabcdfffd")
+
+
+    def test_processResponseWithoutNonce(self):
+        """
+        C{processResponse} should raise an exception when nonce is missing.
+        """
+        response = """username="chris", charset="utf-8", realm="example.com",
+qop="auth", cnonce="27820981e17b5328ca57da861dc71436b8bce3b7", nc=00000001,
+digest-uri="/", response=8721b91249d933caac86e455ac540921"""
+        self._check_processResponseError(response, "Missing nonce.")
+
+
+    def test_processResponseWithoutCnonce(self):
+        """
+        C{processResponse} should raise an exception when cnonce is missing.
+        """
+        response = """username="chris",
+nonce="1193303803.810376196fa01ada2e23af4c66b9d4f2580ed8c8", charset="utf-8",
+realm="example.com", qop="auth",
+cnonce="a55d42daf1f13f5a16e6f1657054ec79bf674431", digest-uri="/",
+response=bdf54ad80839a8c207020a4575d384e0"""
+        self._check_processResponseError(response,
+                "Missing nc and/or cnonce value.")
+
+
+    def test_processResponseWithoutRealm(self):
+        """
+        C{processResponse} should raise an exception when realm is missing.
+        """
+        response = """username="chris",
+nonce="1193304196.47466b8453c62a518449d607b68621146ac441f9", charset="utf-8",
+qop="auth", cnonce="9401ee17a73b0843a89c987de83e6060c439ae03", nc=00000001,
+digest-uri="/", response=430b342dfb56551f0955418a1e76ab70"""
+        self._check_processResponseError(response, "Missing realm.")
+
+
+    def test_processResponseWithInvalidRealm(self):
+        """
+        C{processResponse} should raise an exception when realm doesn't match
+        the realm of the responder.
+        """
+        response = """username="chris",
+nonce="1193304196.47466b8453c62a518449d607b68621146ac441f9", charset="utf-8",
+realm="wrongexample.com", qop="auth",
+cnonce="9401ee17a73b0843a89c987de83e6060c439ae03", nc=00000001, digest-uri="/",
+response=430b342dfb56551f0955418a1e76ab70"""
+        self._check_processResponseError(response,
+                "Invalid realm 'wrongexample.com'.")
+
+
+    def test_processWithoutUsername(self):
+        """
+        C{processResponse} should raise an exception when username is missing.
+        """
+        response = """
+nonce="1193304464.bc495502323c4b96573491c822c1d1853c0d820d", charset="utf-8",
+realm="example.com", qop="auth",
+cnonce="ec08bcfcd068e2eb1d6be9da5ddc1fc0589e8bc0", nc=00000001, digest-uri="/",
+response=1e03d87a358bdaad0334e3a40500e63b"""
+        self._check_processResponseError(response, "Missing username.")
+
+
+    def test_processWithoutResponse(self):
+        """
+        C{processResponse} should raise an exception when digest response is
+        missing.
+        """
+        response = """username="chris",
+nonce="1193304563.56182ed7a7561e8b67e74e3c501849e31ca0a103", charset="utf-8",
+realm="example.com", qop="auth",
+cnonce="6b71899e7045ee4ae55c8c8f0d307137edde354c", digest-uri="/",
+nc=00000001"""
+        self._check_processResponseError(response, "Missing digest response.")
+
+
+    def test_processWithoutURI(self):
+        """
+        C{processResponse} should raise an exception when URI is missing.
+        """
+        response = """username="chris",
+nonce="1193304697.5550bd0e3565b8c2ed1b4118b0f1724b72f1e6ed", charset="utf-8",
+realm="example.com", qop="auth",
+cnonce="d99048191cbe3427578aab7f52510e35d0378dca", nc=00000001,
+response=9b134c5f20218f556ca91031c7342c37"""
+        self._check_processResponseError(response, "Missing digest URI.")
+
+
+    def test_processWithoutQOP(self):
+        """
+        C{processResponse} should raise an exception when QOP is missing.
+        """
+        response = """username="chris",
+nonce="1193304949.15f1d7500f3f516eed44876b8d88144c5764ce12", charset="utf-8",
+realm="example.com", cnonce="9032d855287cbe5f6041d355c136a12a6d3f642c",
+nc=00000001, digest-uri="/", response=84352483446ab9f2f5d59465891ebcdd"""
+        self._check_processResponseError(response, "Missing qop value.")
+
+
+    def test_processInvalidQOP(self):
+        """
+        C{processResponse} should raise an exception when QOP has an invalid
+        value.
+        """
+        response = """username="chris",
+nonce="1193304949.15f1d7500f3f516eed44876b8d88144c5764ce12", charset="utf-8",
+realm="example.com", qop="spam",
+cnonce="9032d855287cbe5f6041d355c136a12a6d3f642c", nc=00000001, digest-uri="/",
+response=84352483446ab9f2f5d59465891ebcdd"""
+        self._check_processResponseError(response, "Invalid qop value 'spam'.")
+
+
+    def test_processInvalidAlgorithm(self):
+        """
+        C{processResponse} should raise an exception when the algorithm is not
+        handled.
+        """
+        response = """username="chris", algorithm="foobar",
+nonce="1193304949.15f1d7500f3f516eed44876b8d88144c5764ce12", charset="utf-8",
+realm="example.com", qop="auth",
+cnonce="9032d855287cbe5f6041d355c136a12a6d3f642c", nc=00000001, digest-uri="/",
+response=84352483446ab9f2f5d59465891ebcdd"""
+        self._check_processResponseError(response,
+                                         "Invalid algorithm 'foobar'.")
+
+
+    def test_processInvalidNonce(self):
+        """
+        C{processResponse} should raise an exception when nonce has an invalid
+        value.
+        """
+        response = """username="chris",
+nonce="foo.15f1d7500f3f516eed44876b8d88144c5764ce12", charset="utf-8",
+realm="example.com", qop="auth",
+cnonce="9032d855287cbe5f6041d355c136a12a6d3f642c", nc=00000001, digest-uri="/",
+response=84352483446ab9f2f5d59465891ebcdd"""
+        self._check_processResponseError(response, "Invalid nonce value.")
+
+
+    def test_processOldNonce(self):
+        """
+        C{processResponse} should not return any credentials if the nonce is
+        too old.
+        """
+        response = """username="chris",
+nonce="0193304949.15f1d7500f3f516eed44876b8d88144c5764ce12", charset="utf-8",
+realm="example.com", qop="auth",
+cnonce="9032d855287cbe5f6041d355c136a12a6d3f642c", nc=00000001, digest-uri="/",
+response=84352483446ab9f2f5d59465891ebcdd"""
+        c = self.challengerClass("example.com")
+        self.assertIdentical(c.processResponse(response), None)
 
 
 
