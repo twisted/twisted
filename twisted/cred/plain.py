@@ -22,6 +22,16 @@ class PlainCredentials(object):
     implements(credentials.IUsernamePassword, sasl.ISASLCredentials)
 
     def __init__(self, username, password, authzid=None):
+        """
+        @param username: the login of the user.
+        @type username: C{unicode}
+
+        @param password: the password of the user.
+        @type password: C{unicode}
+
+        @param authzid: optional authentication ID.
+        @type authzid: C{unicode}
+        """
         self.username = username
         self.password = password
         # Convert empty string to None
@@ -29,6 +39,9 @@ class PlainCredentials(object):
 
 
     def checkPassword(self, password):
+        """
+        Check the validity of the plain password agains the expected one.
+        """
         return password == self.password
 
 
@@ -66,10 +79,16 @@ class SASLPlainResponder(object):
 
 
     def getInitialResponse(self, uri):
+        """
+        Build the initial response.
+        """
         return self._getResponse()
 
 
     def getResponse(self, challenge, uri):
+        """
+        Build the challenge initialization.
+        """
         resp = self._getResponse()
         return sasl.InitialChallenge(), resp
 
@@ -97,11 +116,10 @@ class SASLPlainChallenger(object):
 
     charset = 'utf-8'
 
-    def __init__(self):
-        pass
-
-
     def processResponse(self, response):
+        """
+        Parse SASL response and build credentials from it.
+        """
         try:
             authzid, username, password = response.split('\0')
         except ValueError:
@@ -121,13 +139,22 @@ class SASLPlainChallenger(object):
 
 
     def getChallenge(self):
+        """
+        There is no challenge in PLAIN authentication.
+        """
         return None
 
 
     def getSuccessfulChallenge(self, response, cred):
+        """
+        There is no successfull challenge in PLAIN authentication.
+        """
         return None
 
 
     def getRenewedChallenge(self, response):
+        """
+        There is no renewed challenge in PLAIN authentication.
+        """
         return None
 
