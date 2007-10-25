@@ -310,8 +310,9 @@ class Reporter(TestResult):
         self._printResults('[SUCCESS!?!]', self.unexpectedSuccesses,
                            self._printUnexpectedSuccess)
 
-    def printSummary(self):
-        """Print a line summarising the test results to the stream.
+    def _getSummary(self):
+        """
+        Return a formatted count of tests status results.
         """
         summaries = []
         for stat in ("skips", "expectedFailures", "failures", "errors",
@@ -322,10 +323,17 @@ class Reporter(TestResult):
         if self.successes:
            summaries.append('successes=%d' % (self.successes,))
         summary = (summaries and ' ('+', '.join(summaries)+')') or ''
-        if not self.wasSuccessful():
-            status = "FAILED"
-        else:
+        return summary
+
+    def printSummary(self):
+        """
+        Print a line summarising the test results to the stream.
+        """
+        summary = self._getSummary()
+        if self.wasSuccessful():
             status = "PASSED"
+        else:
+            status = "FAILED"
         self.write("%s%s\n", status, summary)
 
 
@@ -643,3 +651,19 @@ class TreeReporter(Reporter):
         super(TreeReporter, self).write(spaces)
         self._colorizer.write(message, color)
         super(TreeReporter, self).write("\n")
+
+    def printSummary(self):
+        """
+        Print a line summarising the test results to the stream, and color the
+        status result.
+        """
+        summary = self._getSummary()
+        if self.wasSuccessful():
+            status = "PASSED"
+            color = self.SUCCESS
+        else:
+            status = "FAILED"
+            color = self.FAILURE
+        self._colorizer.write(status, color)
+        self.write("%s\n", summary)
+

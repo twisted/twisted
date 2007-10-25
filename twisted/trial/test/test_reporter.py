@@ -425,6 +425,29 @@ class TestTreeReporter(unittest.TestCase):
         self.assertEqual(color.strip(), self.result.ERROR)
         self.assertEqual(text.strip(), 'method')
 
+    def test_summaryColoredSuccess(self):
+        """
+        The summary in case of success should have a good count of successes
+        and be colored properly.
+        """
+        self.result.addSuccess(self.test)
+        self.result.printSummary()
+        self.assertEquals(self.log[1], (self.result.SUCCESS, 'PASSED'))
+        self.assertEquals(self.stream.getvalue().strip(), "(successes=1)")
+
+    def test_summaryColoredFailure(self):
+        """
+        The summary in case of failure should have a good count of errors
+        and be colored properly.
+        """
+        try:
+            raise RuntimeError('foo')
+        except RuntimeError, excValue:
+            self.result.addError(self, sys.exc_info())
+        self.result.printSummary()
+        self.assertEquals(self.log[1], (self.result.FAILURE, 'FAILED'))
+        self.assertEquals(self.stream.getvalue().strip(), "(errors=1)")
+
 
 class TestReporter(unittest.TestCase):
     resultFactory = reporter.Reporter
