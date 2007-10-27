@@ -1,9 +1,9 @@
+# Copyright (c) 2006-2007 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 """
-
 Tests for twisted.python.modules, abstract access to imported or importable
 objects.
-
 """
 
 import os
@@ -19,6 +19,8 @@ from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedAny
 
 from twisted.test.test_paths import zipit
+
+
 
 class PySpaceTestCase(TestCase):
 
@@ -181,6 +183,28 @@ class BasicTests(PySpaceTestCase):
         pp._smartPath = _evilSmartPath
         self.assertEquals(pp['abcd'].filePath,
                           mypath.child('abcd.py'))
+
+
+    def test_packageMissingPath(self):
+        """
+        A package can delete its __path__ for some reasons,
+        C{modules.PythonPath} should be able to deal with it.
+        """
+        mypath = FilePath(self.mktemp())
+        mypath.createDirectory()
+        pp = modules.PythonPath(sysPath=[mypath.path])
+        subpath = mypath.child("abcd")
+        subpath.createDirectory()
+        subpath.child("__init__.py").setContent('del __path__\n')
+        sys.path.append(mypath.path)
+        import abcd
+        try:
+            l = list(pp.walkModules())
+            self.assertEquals(len(l), 1)
+            self.assertEquals(l[0].name, 'abcd')
+        finally:
+            del abcd
+            sys.path.remove(mypath.path)
 
 
 
