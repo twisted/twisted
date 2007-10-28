@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 #
 # Maintainer: Jonathan Lange <jml@twistedmatrix.com>
@@ -7,10 +7,15 @@
 import sys
 import traceback
 
+from zope.interface import implements
+
 from twisted.python.failure import Failure
 from twisted.trial.unittest import TestCase, PyUnitResultAdapter
+from twisted.trial.itrial import IReporter
+from twisted.trial.test import erroneous
 
 pyunit = __import__('unittest')
+
 
 
 class TestPyUnitResult(TestCase):
@@ -19,6 +24,47 @@ class TestPyUnitResult(TestCase):
     standard library 'unittest' module in such a way as to make them usable and
     useful from Trial.
     """
+
+    def test_dontUseAdapterWhenReporterProvidesIReporter(self):
+        """
+        The L{PyUnitResultAdapter} is only used when the result passed to
+        C{run} does *not* provide L{IReporter}.
+        """
+        class StubReporter(object):
+            """
+            A reporter which records data about calls made to it.
+
+            @ivar errors: Errors passed to L{addError}.
+            @ivar failures: Failures passed to L{addFailure}.
+            """
+
+            implements(IReporter)
+
+            def __init__(self):
+                self.errors = []
+                self.failures = []
+
+            def startTest(self, test):
+                """
+                Do nothing.
+                """
+
+            def stopTest(self, test):
+                """
+                Do nothing.
+                """
+
+            def addError(self, test, error):
+                """
+                Record the error.
+                """
+                self.errors.append(error)
+
+        test = erroneous.ErrorTest("test_foo")
+        result = StubReporter()
+        test.run(result)
+        self.assertIsInstance(result.errors[0], Failure)
+
 
     def test_success(self):
         class SuccessTest(TestCase):
@@ -49,12 +95,7 @@ class TestPyUnitResult(TestCase):
         self.failIf(result.wasSuccessful())
 
     def test_error(self):
-        class ErrorTest(TestCase):
-            ran = False
-            def test_foo(s):
-                s.ran = True
-                1/0
-        test = ErrorTest('test_foo')
+        test = erroneous.ErrorTest('test_foo')
         result = pyunit.TestResult()
         test.run(result)
 
@@ -81,8 +122,8 @@ class TestPyUnitResult(TestCase):
 
     def test_tracebackFromFailure(self):
         """
-        Errors added through the L{PyUnitResultAdapter} should have the same
-        traceback information as if there were no adapter at all.
+        Errors added through the L{PyUnitResultAdapter} have the same traceback
+        information as if there were no adapter at all.
         """
         try:
             1/0
@@ -128,9 +169,9 @@ class TestPyUnitResult(TestCase):
 
     def test_tracebackFromCleanFailure(self):
         """
-        Errors added through the L{PyUnitResultAdapter} should have the same
-        traceback information as if there were no adapter at all, even if the
-        Failure that held the information has been cleaned.
+        Errors added through the L{PyUnitResultAdapter} have the same
+        traceback information as if there were no adapter at all, even
+        if the Failure that held the information has been cleaned.
         """
         try:
             1/0

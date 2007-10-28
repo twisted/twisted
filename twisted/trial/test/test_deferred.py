@@ -36,7 +36,7 @@ class TestSetUp(unittest.TestCase):
         self.failUnlessEqual(len(result.failures), 0)
         self.failUnlessEqual(len(result.errors), 1)
         self.failIf(detests.DeferredSetUpCallbackFail.testCalled)
-        
+
     def test_error(self):
         self.failIf(detests.DeferredSetUpError.testCalled)
         result, suite = self._loadSuite(detests.DeferredSetUpError)
@@ -57,7 +57,7 @@ class TestSetUp(unittest.TestCase):
         self.failUnlessEqual(len(result.errors), 0)
         self.failUnlessEqual(len(result.skips), 1)
         self.failIf(detests.DeferredSetUpSkip.testCalled)
-        
+
 
 class TestNeverFire(unittest.TestCase):
     def setUp(self):
@@ -74,7 +74,7 @@ class TestNeverFire(unittest.TestCase):
         return r, s
 
     def test_setUp(self):
-        self.failIf(detests.DeferredSetUpNeverFire.testCalled)        
+        self.failIf(detests.DeferredSetUpNeverFire.testCalled)
         result, suite = self._loadSuite(detests.DeferredSetUpNeverFire)
         suite(result)
         self.failIf(result.wasSuccessful())
@@ -121,7 +121,7 @@ class TestDeferred(TestTester):
         self.failIf(result.wasSuccessful())
         self.failUnlessEqual(result.testsRun, 1)
         self.failUnlessEqual(len(result.failures), 1)
-        
+
     def test_errorInCallback(self):
         result = self.runTest('test_errorInCallback')
         self.failIf(result.wasSuccessful())
@@ -142,7 +142,7 @@ class TestDeferred(TestTester):
         self.failUnlessEqual(len(result.errors), 0)
         self.failUnlessEqual(len(result.failures), 0)
         self.failUnlessEqual(len(result.expectedFailures), 1)
-        
+
     def test_thread(self):
         result = self.runTest('test_thread')
         self.failUnlessEqual(result.testsRun, 1)
@@ -180,13 +180,13 @@ class TestTimeout(TestTester):
         self.failUnlessEqual(result.testsRun, 1)
         self.failUnlessEqual(len(result.errors), 1)
         self._wasTimeout(result.errors[0][1])
-    
+
     def test_skip(self):
         result = self.runTest('test_skip')
         self.failUnless(result.wasSuccessful())
         self.failUnlessEqual(result.testsRun, 1)
         self.failUnlessEqual(len(result.skips), 1)
-    
+
     def test_todo(self):
         result = self.runTest('test_expectedFailure')
         self.failUnless(result.wasSuccessful())
@@ -207,7 +207,7 @@ class TestTimeout(TestTester):
         suite.run(result)
         self.failUnlessEqual(len(result.errors), 1)
         self._wasTimeout(result.errors[0][1])
-        
+
     def test_callbackReturnsNonCallingDeferred(self):
         #hacky timeout
         # raises KeyboardInterrupt because Trial sucks
@@ -217,5 +217,4 @@ class TestTimeout(TestTester):
         if call.active():
             call.cancel()
         self.failIf(result.wasSuccessful())
-        self.failUnlessEqual(len(result.errors), 1)
         self._wasTimeout(result.errors[0][1])

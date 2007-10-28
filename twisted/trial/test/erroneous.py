@@ -59,6 +59,24 @@ class TestFailureInDeferredChain(unittest.TestCase):
         self.fail("I fail later")
 
 
+
+class ErrorTest(unittest.TestCase):
+    """
+    A test case which has a L{test_foo} which will raise an error.
+
+    @ivar ran: boolean indicating whether L{test_foo} has been run.
+    """
+    ran = False
+
+    def test_foo(self):
+        """
+        Set C{self.ran} to True and raise a C{ZeroDivisionError}
+        """
+        self.ran = True
+        1/0
+
+
+
 class TestSkipTestCase(unittest.TestCase):
     pass
 
@@ -66,7 +84,7 @@ TestSkipTestCase.skip = "skipping this test"
 
 
 class TestSkipTestCase2(unittest.TestCase):
-    
+
     def setUpClass(self):
         raise unittest.SkipTest, "thi stest is fukct"
 
@@ -76,7 +94,7 @@ class TestSkipTestCase2(unittest.TestCase):
 
 class DelayedCall(unittest.TestCase):
     hiddenExceptionMsg = "something blew up"
-    
+
     def go(self):
         raise RuntimeError(self.hiddenExceptionMsg)
 
@@ -128,7 +146,7 @@ class TimingOutDeferred(unittest.TestCase):
 def unexpectedException(self):
     """i will raise an unexpected exception...
     ... *CAUSE THAT'S THE KINDA GUY I AM*
-    
+
     >>> 1/0
     """
 

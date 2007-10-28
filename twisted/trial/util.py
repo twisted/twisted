@@ -17,123 +17,210 @@ Any non-Trial Twisted code that uses this module will be shot.
 Maintainer: U{Jonathan Lange<mailto:jml@twistedmatrix.com>}
 """
 
+import traceback, sys
 
-import traceback, gc, sys
-from twisted.python import failure
-from twisted.internet import defer, interfaces, utils
+from twisted.internet import defer, utils, interfaces
+from twisted.python.failure import Failure
 
-# Methods in this list will be omitted from a failed test's traceback if
-# they are the final frame.
-_failureConditionals = [
-    'fail', 'failIf', 'failUnless', 'failUnlessRaises', 'failUnlessEqual',
-    'failUnlessIdentical', 'failIfEqual', 'assertApproximates']
-
-# ---------------------------------
 
 DEFAULT_TIMEOUT = object()
 DEFAULT_TIMEOUT_DURATION = 120.0
 
 
 class FailureError(Exception):
-    """Wraps around a Failure so it can get re-raised as an Exception"""
+    """
+    DEPRECATED in Twisted 2.6. This exception is never raised by Trial.
+
+    Wraps around a Failure so it can get re-raised as an Exception.
+    """
 
     def __init__(self, failure):
         Exception.__init__(self)
         self.original = failure
 
 
-class DirtyReactorError(Exception):
-    """emitted when the reactor has been left in an unclean state"""
 
 class DirtyReactorWarning(Warning):
-    """emitted when the reactor has been left in an unclean state"""
+    """
+    DEPRECATED in Twisted 2.6.
 
-class PendingTimedCallsError(Exception):
-    """raised when timed calls are left in the reactor"""
+    This warning is not used by Trial any more.
+    """
 
-DIRTY_REACTOR_MSG = "THIS WILL BECOME AN ERROR SOON! reactor left in unclean state, the following Selectables were left over: "
-PENDING_TIMED_CALLS_MSG = "pendingTimedCalls still pending (consider setting twisted.internet.base.DelayedCall.debug = True):"
+
+
+class DirtyReactorError(Exception):
+    """
+    DEPRECATED in Twisted 2.6. This is not used by Trial any more.
+    """
+
+    def __init__(self, msg):
+        Exception.__init__(self, self._getMessage(msg))
+
+    def _getMessage(self, msg):
+        return ("reactor left in unclean state, the following Selectables "
+                "were left over: %s" % (msg,))
+
+
+
+
+class PendingTimedCallsError(DirtyReactorError):
+    """
+    DEPRECATED in Twisted 2.6. This is not used by Trial any more.
+    """
+
+    def _getMessage(self, msg):
+        return ("pendingTimedCalls still pending (consider setting "
+                "twisted.internet.base.DelayedCall.debug = True): %s" % (msg,))
+
+
+
+class DirtyReactorAggregateError(Exception):
+    """
+    Passed to L{twisted.trial.itrial.IReporter.addError} when the reactor is
+    left in an unclean state after a test.
+
+    @ivar delayedCalls: The L{DelayedCall} objects which weren't cleaned up.
+    @ivar selectables: The selectables which weren't cleaned up.
+    """
+
+    def __init__(self, delayedCalls, selectables=None):
+        self.delayedCalls = delayedCalls
+        self.selectables = selectables
+
+    def __str__(self):
+        """
+        Return a multi-line message describing all of the unclean state.
+        """
+        msg = "Reactor was unclean."
+        if self.delayedCalls:
+            msg += ("\nDelayedCalls: (set "
+                    "twisted.internet.base.DelayedCall.debug = True to "
+                    "debug)\n")
+            msg += "\n".join(map(str, self.delayedCalls))
+        if self.selectables:
+            msg += "\nSelectables:\n"
+            msg += "\n".join(map(str, self.selectables))
+        return msg
+
 
 
 class _Janitor(object):
-    logErrCheck = True
-    cleanPending = cleanThreads = cleanReactor = True
+    """
+    The guy that cleans up after you.
+
+    @ivar test: The L{TestCase} to report errors about.
+    @ivar result: The L{IReporter} to report errors to.
+    @ivar reactor: The reactor to use. If None, the global reactor
+        will be used.
+    """
+    def __init__(self, test, result, reactor=None):
+        """
+        @param test: See L{_Janitor.test}.
+        @param result: See L{_Janitor.result}.
+        @param reactor: See L{_Janitor.reactor}.
+        """
+        self.test = test
+        self.result = result
+        self.reactor = reactor
+
 
     def postCaseCleanup(self):
-        return self._dispatch('cleanPending')
+        """
+        Called by L{unittest.TestCase} after a test to catch any logged errors
+        or pending L{DelayedCall}s.
+        """
+        calls = self._cleanPending()
+        if calls:
+            aggregate = DirtyReactorAggregateError(calls)
+            self.result.addError(self.test, Failure(aggregate))
+            return False
+        return True
+
 
     def postClassCleanup(self):
-        return self._dispatch('cleanReactor',
-                              'cleanPending', 'cleanThreads')
+        """
+        Called by L{unittest.TestCase} after the last test in a C{TestCase}
+        subclass. Ensures the reactor is clean by murdering the threadpool,
+        catching any pending L{DelayedCall}s, open sockets etc.
+        """
+        selectables = self._cleanReactor()
+        calls = self._cleanPending()
+        if selectables or calls:
+            aggregate = DirtyReactorAggregateError(calls, selectables)
+            self.result.addError(self.test, Failure(aggregate))
+        self._cleanThreads()
 
-    def _dispatch(self, *attrs):
-        for attr in attrs:
-            getattr(self, "do_%s" % attr)()
 
-    def do_cleanPending(cls):
-        # don't import reactor when module is loaded
-        from twisted.internet import reactor
+    def _getReactor(self):
+        """
+        Get either the passed-in reactor or the global reactor.
+        """
+        if self.reactor is not None:
+            reactor = self.reactor
+        else:
+            from twisted.internet import reactor
+        return reactor
+
+
+    def _cleanPending(self):
+        """
+        Cancel all pending calls and return their string representations.
+        """
+        reactor = self._getReactor()
 
         # flush short-range timers
         reactor.iterate(0)
         reactor.iterate(0)
 
-        pending = reactor.getDelayedCalls()
-        if pending:
-            s = PENDING_TIMED_CALLS_MSG
-            for p in pending:
-                s += " %s\n" % (p,)
-                if p.active():
-                    p.cancel() # delete the rest
-                else:
-                    print "WEIRNESS! pending timed call not active+!"
-            raise PendingTimedCallsError(s)
-    do_cleanPending = utils.suppressWarnings(
-        do_cleanPending, (('ignore',), {'category': DeprecationWarning,
-                                        'message':
-                                        r'reactor\.iterate cannot be used.*'}))
-    do_cleanPending = classmethod(do_cleanPending)
+        delayedCallStrings = []
+        for p in reactor.getDelayedCalls():
+            if p.active():
+                delayedString = str(p)
+                p.cancel()
+            else:
+                print "WEIRDNESS! pending timed call not active!"
+            delayedCallStrings.append(delayedString)
+        return delayedCallStrings
+    _cleanPending = utils.suppressWarnings(
+        _cleanPending, (('ignore',), {'category': DeprecationWarning,
+                                      'message':
+                                      r'reactor\.iterate cannot be used.*'}))
 
-
-    def do_cleanThreads(cls):
-        from twisted.internet import reactor
+    def _cleanThreads(self):
+        reactor = self._getReactor()
         if interfaces.IReactorThreads.providedBy(reactor):
             reactor.suggestThreadPoolSize(0)
             if getattr(reactor, 'threadpool', None) is not None:
                 try:
-                    reactor.removeSystemEventTrigger(reactor.threadpoolShutdownID)
+                    reactor.removeSystemEventTrigger(
+                        reactor.threadpoolShutdownID)
                 except KeyError:
                     pass
-                # Remote the threadpool, and let the reactor put it back again
+                # Remove the threadpool, and let the reactor put it back again
                 # later like a good boy
                 reactor._stopThreadPool()
 
-    do_cleanThreads = classmethod(do_cleanThreads)
-
-
-    def do_cleanReactor(cls):
-        s = []
-        from twisted.internet import reactor
-        removedSelectables = reactor.removeAll()
-        if removedSelectables:
-            s.append(DIRTY_REACTOR_MSG)
-            for sel in removedSelectables:
-                if interfaces.IProcessTransport.providedBy(sel):
-                    sel.signalProcess('KILL')
-                s.append(repr(sel))
-        if s:
-            raise DirtyReactorError(' '.join(s))
-    do_cleanReactor = classmethod(do_cleanReactor)
-
-    def doGcCollect(cls):
-         gc.collect()
+    def _cleanReactor(self):
+        """
+        Remove all selectables from the reactor, kill any of them that were
+        processes, and return their string representation.
+        """
+        reactor = self._getReactor()
+        selectableStrings = []
+        for sel in reactor.removeAll():
+            if interfaces.IProcessTransport.providedBy(sel):
+                sel.signalProcess('KILL')
+            selectableStrings.append(repr(sel))
+        return selectableStrings
 
 
 def suppress(action='ignore', **kwarg):
-    """sets up the .suppress tuple properly, pass options to this method
-    as you would the stdlib warnings.filterwarnings()
+    """
+    Sets up the .suppress tuple properly, pass options to this method as you
+    would the stdlib warnings.filterwarnings()
 
-    so to use this with a .suppress magic attribute you would do the
+    So, to use this with a .suppress magic attribute you would do the
     following:
 
       >>> from twisted.trial import unittest, util
@@ -146,10 +233,10 @@ def suppress(action='ignore', **kwarg):
       ...
       >>>
 
-    note that as with the todo and timeout attributes: the module level
+    Note that as with the todo and timeout attributes: the module level
     attribute acts as a default for the class attribute which acts as a default
     for the method attribute. The suppress attribute can be overridden at any
-    level by specifying .suppress = []
+    level by specifying C{.suppress = []}
     """
     return ((action,), kwarg)
 
@@ -270,7 +357,7 @@ def _runSequentially(callables, stopOnFirstError=False):
         try:
             results.append((defer.SUCCESS, thing.getResult()))
         except:
-            results.append((defer.FAILURE, failure.Failure()))
+            results.append((defer.FAILURE, Failure()))
             if stopOnFirstError:
                 break
     yield results

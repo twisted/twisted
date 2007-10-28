@@ -15,10 +15,12 @@ import sys, os
 import time
 import warnings
 
-from twisted.python import reflect, failure, log
-from twisted.python.util import untilConcludes
-from twisted.trial import itrial
-import zope.interface as zi
+from twisted.python import reflect, log
+from twisted.python.failure import Failure
+from twisted.python.util import untilConcludes, proxyForInterface
+from twisted.trial import itrial, util
+
+from zope.interface import implements
 
 pyunit = __import__('unittest')
 
@@ -51,6 +53,7 @@ class TestResult(pyunit.TestResult, object):
     @ivar successes: count the number of successes achieved by the test run.
     @type successes: C{int}
     """
+    implements(itrial.IReporter)
 
     def __init__(self):
         super(TestResult, self).__init__()
@@ -69,6 +72,14 @@ class TestResult(pyunit.TestResult, object):
 
     def _getTime(self):
         return time.time()
+
+    def _getFailure(self, error):
+        """
+        Convert a C{sys.exc_info()}-style tuple to a L{Failure}, if necessary.
+        """
+        if isinstance(error, tuple):
+            return Failure(error[1], error[0], error[2])
+        return error
 
     def startTest(self, test):
         """This must be called before the given test is commenced.
@@ -90,21 +101,17 @@ class TestResult(pyunit.TestResult, object):
         """Report a failed assertion for the given test.
 
         @type test: L{pyunit.TestCase}
-        @type fail: L{failure.Failure} or L{tuple}
+        @type fail: L{Failure} or L{tuple}
         """
-        if isinstance(fail, tuple):
-            fail = failure.Failure(fail[1], fail[0], fail[2])
-        self.failures.append((test, fail))
+        self.failures.append((test, self._getFailure(fail)))
 
     def addError(self, test, error):
         """Report an error that occurred while running the given test.
 
         @type test: L{pyunit.TestCase}
-        @type fail: L{failure.Failure} or L{tuple}
+        @type fail: L{Failure} or L{tuple}
         """
-        if isinstance(error, tuple):
-            error = failure.Failure(error[1], error[0], error[2])
-        self.errors.append((test, error))
+        self.errors.append((test, self._getFailure(error)))
 
     def addSkip(self, test, reason):
         """
@@ -133,12 +140,12 @@ class TestResult(pyunit.TestResult, object):
         self.unexpectedSuccesses.append((test, todo))
 
     def addExpectedFailure(self, test, error, todo):
-        """Report that the given test succeeded against expectations.
+        """Report that the given test failed, and was expected to do so.
 
         In Trial, tests can be marked 'todo'. That is, they are expected to fail.
 
         @type test: L{pyunit.TestCase}
-        @type error: L{failure.Failure}
+        @type error: L{Failure}
         @type todo: L{unittest.Todo}
         """
         # XXX - 'todo' should just be a string
@@ -157,19 +164,45 @@ class TestResult(pyunit.TestResult, object):
     def cleanupErrors(self, errs):
         """Report an error that occurred during the cleanup between tests.
         """
-        # XXX - deprecate this method, we don't need it any more
+        warnings.warn("Cleanup errors are actual errors. Use addError. "
+                      "Deprecated in Twisted 2.6",
+                      category=DeprecationWarning, stacklevel=2)
 
     def startSuite(self, name):
-        # XXX - these should be removed, but not in this branch
-        pass
+        warnings.warn("startSuite deprecated in Twisted 2.6",
+                      category=DeprecationWarning, stacklevel=2)
 
     def endSuite(self, name):
-        # XXX - these should be removed, but not in this branch
-        pass
+        warnings.warn("endSuite deprecated in Twisted 2.6",
+                      category=DeprecationWarning, stacklevel=2)
+
+
+
+class UncleanWarningsReporterWrapper(proxyForInterface(itrial.IReporter)):
+    """
+    A wrapper for a reporter that converts L{util.DirtyReactorError}s
+    to warnings.
+
+    @ivar original: The original reporter.
+    """
+    implements(itrial.IReporter)
+
+    def addError(self, test, error):
+        """
+        If the error is a L{util.DirtyReactorError}, instead of
+        reporting it as a normal error, throw a warning.
+        """
+
+        if (isinstance(error, Failure)
+            and error.check(util.DirtyReactorAggregateError)):
+            warnings.warn(error.getErrorMessage())
+        else:
+            self.original.addError(test, error)
+
 
 
 class Reporter(TestResult):
-    zi.implements(itrial.IReporter)
+    implements(itrial.IReporter)
 
     separator = '-' * 79
     doubleSeparator = '=' * 79
@@ -190,6 +223,7 @@ class Reporter(TestResult):
             self.write(self._formatFailureTraceback(fail))
 
     def addError(self, test, error):
+        error = self._getFailure(error)
         super(Reporter, self).addError(test, error)
         if self.realtime:
             error = self.errors[-1][1] # guarantee it's a Failure

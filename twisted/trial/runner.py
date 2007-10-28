@@ -21,6 +21,7 @@ from twisted.python.util import dsu
 from twisted.internet import defer, interfaces
 from twisted.trial import util, unittest
 from twisted.trial.itrial import ITestCase
+from twisted.trial.reporter import UncleanWarningsReporterWrapper
 
 pyunit = __import__('unittest')
 
@@ -728,7 +729,11 @@ class TrialRunner(object):
         return currentDir
 
     def _makeResult(self):
-        return self.reporterFactory(self.stream, self.tbformat, self.rterrors)
+        reporter = self.reporterFactory(self.stream, self.tbformat,
+                                        self.rterrors)
+        if self.uncleanWarnings:
+            reporter = UncleanWarningsReporterWrapper(reporter)
+        return reporter
 
     def __init__(self, reporterFactory,
                  mode=None,
@@ -737,6 +742,7 @@ class TrialRunner(object):
                  profile=False,
                  tracebackFormat='default',
                  realTimeErrors=False,
+                 uncleanWarnings=False,
                  workingDirectory=None):
         self.reporterFactory = reporterFactory
         self.logfile = logfile
@@ -744,6 +750,7 @@ class TrialRunner(object):
         self.stream = stream
         self.tbformat = tracebackFormat
         self.rterrors = realTimeErrors
+        self.uncleanWarnings = uncleanWarnings
         self._result = None
         self.workingDirectory = workingDirectory or '_trial_temp'
         self._logFileObserver = None

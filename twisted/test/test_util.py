@@ -5,9 +5,12 @@
 import os.path, sys
 import shutil, errno
 
+from zope.interface import Interface, implements, Attribute
+
 from twisted.trial import unittest
 
 from twisted.python import util
+from twisted.python.util import proxyForInterface
 from twisted.internet import reactor
 from twisted.internet.interfaces import IReactorProcess
 from twisted.internet.protocol import ProcessProtocol
@@ -336,3 +339,191 @@ class TestFancyEqMixin(unittest.TestCase):
         self.failUnlessEqual(eb, ea)
         self.failUnlessEqual((ea != eb), False)
         self.failUnlessEqual((eb != ea), False)
+
+
+
+class IProxiedInterface(Interface):
+    """
+    An interface class for use by L{proxyForInterface}.
+    """
+
+    ifaceAttribute = Attribute("""
+        An example declared attribute, which should be proxied.""")
+
+    def yay():
+        """
+        A sample method which should be proxied.
+        """
+
+
+class Yayable(object):
+    """
+    A provider of L{IProxiedInterface} which increments a counter for
+    every call to C{yay}.
+
+    @ivar yays: The number of times C{yay} has been called.
+    """
+    implements(IProxiedInterface)
+
+    def __init__(self):
+        self.yays = 0
+
+    def yay(self):
+        """
+        Increment C{self.yays}.
+        """
+        self.yays += 1
+        return self.yays
+
+
+
+class IMultipleMethods(Interface):
+    """
+    An interface with multiple methods.
+    """
+
+    def methodOne():
+        """
+        The first method. Should return 1.
+        """
+
+    def methodTwo():
+        """
+        The second method. Should return 2.
+        """
+
+
+
+class MultipleMethodImplementor(object):
+    """
+    A precise implementation of L{IMultipleMethods}.
+    """
+
+    def methodOne(self):
+        """
+        @return: 1
+        """
+        return 1
+
+
+    def methodTwo(self):
+        """
+        @return: 2
+        """
+        return 2
+
+
+
+class ProxyForInterfaceTests(unittest.TestCase):
+    """
+    Tests for L{proxyForInterface}.
+    """
+
+    def test_original(self):
+        """
+        Proxy objects should have an C{original} attribute which refers to the
+        original object passed to the constructor.
+        """
+        original = object()
+        proxy = proxyForInterface(IProxiedInterface)(original)
+        self.assertIdentical(proxy.original, original)
+
+
+    def test_proxyMethod(self):
+        """
+        The class created from L{proxyForInterface} passes methods on an
+        interface to the object which is passed to its constructor.
+        """
+        klass = proxyForInterface(IProxiedInterface)
+        yayable = Yayable()
+        proxy = klass(yayable)
+        proxy.yay()
+        self.assertEquals(proxy.yay(), 2)
+        self.assertEquals(yayable.yays, 2)
+
+
+    def test_proxyAttribute(self):
+        """
+        Proxy objects should proxy declared attributes, but not other
+        attributes.
+        """
+        yayable = Yayable()
+        yayable.ifaceAttribute = object()
+        proxy = proxyForInterface(IProxiedInterface)(yayable)
+        self.assertIdentical(proxy.ifaceAttribute, yayable.ifaceAttribute)
+        self.assertRaises(AttributeError, lambda: proxy.yays)
+
+
+    def test_proxySetAttribute(self):
+        """
+        The attributes that proxy objects proxy should be assignable and affect
+        the original object.
+        """
+        yayable = Yayable()
+        proxy = proxyForInterface(IProxiedInterface)(yayable)
+        thingy = object()
+        proxy.ifaceAttribute = thingy
+        self.assertIdentical(yayable.ifaceAttribute, thingy)
+
+
+    def test_proxyDeleteAttribute(self):
+        """
+        The attributes that proxy objects proxy should be deletable and affect
+        the original object.
+        """
+        yayable = Yayable()
+        yayable.ifaceAttribute = None
+        proxy = proxyForInterface(IProxiedInterface)(yayable)
+        del proxy.ifaceAttribute
+        self.assertFalse(hasattr(yayable, 'ifaceAttribute'))
+
+
+    def test_multipleMethods(self):
+        """
+        [Regression test] The proxy should send its method calls to the correct
+        method, not the incorrect one.
+        """
+        multi = MultipleMethodImplementor()
+        proxy = proxyForInterface(IMultipleMethods)(multi)
+        self.assertEquals(proxy.methodOne(), 1)
+        self.assertEquals(proxy.methodTwo(), 2)
+
+
+    def test_subclassing(self):
+        """
+        It is possible to subclass the result of L{proxyForInterface}.
+        """
+
+        class SpecializedProxy(proxyForInterface(IProxiedInterface)):
+            """
+            A specialized proxy which can decrement the number of yays.
+            """
+            def boo(self):
+                """
+                Decrement the number of yays.
+                """
+                self.original.yays -= 1
+
+        yayable = Yayable()
+        special = SpecializedProxy(yayable)
+        self.assertEquals(yayable.yays, 0)
+        special.boo()
+        self.assertEquals(yayable.yays, -1)
+
+
+    def test_proxyName(self):
+        """
+        The name of a proxy class indicates which interface it proxies.
+        """
+        proxy = proxyForInterface(IProxiedInterface)
+        self.assertEquals(
+            proxy.__name__,
+            "(Proxy for twisted.test.test_util.IProxiedInterface)")
+
+
+    def test_provides(self):
+        """
+        The resulting proxy provides the Interface that it proxies.
+        """
+        proxy = proxyForInterface(IProxiedInterface)
+        self.assertTrue(IProxiedInterface.providedBy(proxy))

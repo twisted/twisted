@@ -394,34 +394,43 @@ class TestStrictTodo(unittest.TestCase, ResultsTestMixin):
         self.failUnlessEqual(expectedReasons, reasonsGotten)
 
 
-class _CleanUpReporter(reporter.Reporter):
-    def __init__(self):
-        super(_CleanUpReporter, self).__init__(StringIO.StringIO(), 'default',
-                                               False)
-
-    def cleanupErrors(self, errs):
-        self.cleanerrs = errs
-
 
 class TestCleanup(unittest.TestCase):
+
     def setUp(self):
-        self.result = _CleanUpReporter()
+        self.result = reporter.Reporter(StringIO.StringIO())
         self.loader = runner.TestLoader()
 
+
     def testLeftoverSockets(self):
+        """
+        Trial reports a L{util.DirtyReactorAggregateError} if a test leaves
+        sockets behind.
+        """
         suite = self.loader.loadMethod(
             erroneous.SocketOpenTest.test_socketsLeftOpen)
         suite.run(self.result)
-        self.assert_(self.result.cleanerrs)
-        self.assert_(isinstance(self.result.cleanerrs.value,
-                                util.DirtyReactorError))
+        self.failIf(self.result.wasSuccessful())
+        # socket cleanup happens at end of class's tests.
+        # all the tests in the class are successful, even if the suite
+        # fails
+        self.assertEqual(self.result.successes, 1)
+        failure = self.result.errors[0][1]
+        self.failUnless(failure.check(util.DirtyReactorAggregateError))
+
 
     def testLeftoverPendingCalls(self):
+        """
+        Trial reports a L{util.DirtyReactorAggregateError} and fails the test
+        if a test leaves a L{DelayedCall} hanging.
+        """
         suite = erroneous.ReactorCleanupTests('test_leftoverPendingCalls')
         suite.run(self.result)
-        self.assert_(self.result.cleanerrs)
-        self.assert_(isinstance(self.result.cleanerrs.value,
-                                util.PendingTimedCallsError))
+        self.failIf(self.result.wasSuccessful())
+        failure = self.result.errors[0][1]
+        self.assertEqual(self.result.successes, 0)
+        self.failUnless(failure.check(util.DirtyReactorAggregateError))
+
 
 
 class BogusReporter(reporter.Reporter):
@@ -429,16 +438,19 @@ class BogusReporter(reporter.Reporter):
         super(BogusReporter, self).__init__(StringIO.StringIO(), 'default',
                                             False)
 
+
     def upDownError(self, method, error, warn, printStatus):
         super(BogusReporter, self).upDownError(method, error, False,
                                                printStatus)
         self.udeMethod = method
 
 
+
 class FixtureTest(unittest.TestCase):
     def setUp(self):
         self.reporter = BogusReporter()
         self.loader = runner.TestLoader()
+
 
     def testBrokenSetUp(self):
         self.loader.loadClass(erroneous.TestFailureInSetUp).run(self.reporter)
@@ -447,6 +459,7 @@ class FixtureTest(unittest.TestCase):
         self.assert_(len(self.reporter.errors) > 0)
         self.assert_(isinstance(self.reporter.errors[0][1].value,
                                 erroneous.FoolishError))
+
 
     def testBrokenTearDown(self):
         suite = self.loader.loadClass(erroneous.TestFailureInTearDown)
@@ -457,12 +470,14 @@ class FixtureTest(unittest.TestCase):
         self.assert_(len(errors) > 0)
         self.assert_(isinstance(errors[0][1].value, erroneous.FoolishError))
 
+
     def testBrokenSetUpClass(self):
         suite = self.loader.loadClass(erroneous.TestFailureInSetUpClass)
         suite.run(self.reporter)
         imi = self.reporter.udeMethod
         self.assertEqual(imi, 'setUpClass')
         self.assert_(self.reporter.errors)
+
 
     def testBrokenTearDownClass(self):
         suite = self.loader.loadClass(erroneous.TestFailureInTearDownClass)
@@ -471,7 +486,9 @@ class FixtureTest(unittest.TestCase):
         self.assertEqual(imi, 'tearDownClass')
 
 
+
 class FixtureMetaTest(unittest.TestCase):
+
     def test_testBrokenTearDownClass(self):
         """FixtureTest.testBrokenTearDownClass succeeds when run twice
         """
@@ -484,21 +501,27 @@ class FixtureMetaTest(unittest.TestCase):
         self.failUnless(result2.wasSuccessful())
 
 
+
 class SuppressionTest(unittest.TestCase):
+
     def runTests(self, suite):
         suite.run(reporter.TestResult())
+
 
     def setUp(self):
         self.stream = StringIO.StringIO()
         self._stdout, sys.stdout = sys.stdout, self.stream
         self.loader = runner.TestLoader()
 
+
     def tearDown(self):
         sys.stdout = self._stdout
         self.stream = None
 
+
     def getIO(self):
         return self.stream.getvalue()
+
 
     def testSuppressMethod(self):
         self.runTests(self.loader.loadMethod(
@@ -507,12 +530,14 @@ class SuppressionTest(unittest.TestCase):
         self.assertSubstring(suppression.CLASS_WARNING_MSG, self.getIO())
         self.assertSubstring(suppression.MODULE_WARNING_MSG, self.getIO())
 
+
     def testSuppressClass(self):
         self.runTests(self.loader.loadMethod(
             suppression.TestSuppression.testSuppressClass))
         self.assertSubstring(suppression.METHOD_WARNING_MSG, self.getIO())
         self.assertNotSubstring(suppression.CLASS_WARNING_MSG, self.getIO())
         self.assertSubstring(suppression.MODULE_WARNING_MSG, self.getIO())
+
 
     def testSuppressModule(self):
         self.runTests(self.loader.loadMethod(
@@ -521,12 +546,14 @@ class SuppressionTest(unittest.TestCase):
         self.assertSubstring(suppression.CLASS_WARNING_MSG, self.getIO())
         self.assertNotSubstring(suppression.MODULE_WARNING_MSG, self.getIO())
 
+
     def testOverrideSuppressClass(self):
         self.runTests(self.loader.loadMethod(
             suppression.TestSuppression.testOverrideSuppressClass))
         self.assertSubstring(suppression.CLASS_WARNING_MSG, self.getIO())
         self.assertSubstring(suppression.MODULE_WARNING_MSG, self.getIO())
         self.assertSubstring(suppression.METHOD_WARNING_MSG, self.getIO())
+
 
 
 class GCMixin:
@@ -568,7 +595,9 @@ class GCMixin:
         gc.collect = self._oldCollect
 
 
+
 class TestGarbageCollectionDefault(GCMixin, unittest.TestCase):
+
     def test_collectNotDefault(self):
         """
         By default, tests should not force garbage collection.
@@ -579,7 +608,9 @@ class TestGarbageCollectionDefault(GCMixin, unittest.TestCase):
         self.failUnlessEqual(self._collectCalled, ['setUp', 'test', 'tearDown'])
 
 
+
 class TestGarbageCollection(GCMixin, unittest.TestCase):
+
     def test_collectCalled(self):
         """
         test gc.collect is called before and after each test.
@@ -611,7 +642,9 @@ class TestGarbageCollection(GCMixin, unittest.TestCase):
              'collect', 'test2', 'tearDownClass', 'collect'])
 
 
+
 class TestUnhandledDeferred(unittest.TestCase):
+
     def setUp(self):
         from twisted.trial.test import weird
         # test_unhandledDeferred creates a cycle. we need explicit control of gc
@@ -651,11 +684,11 @@ class TestUnhandledDeferred(unittest.TestCase):
         self.flushLoggedErrors()
 
 
+
 class TestAddCleanup(unittest.TestCase):
     """
     Test the addCleanup method of TestCase.
     """
-
 
     class MockTest(unittest.TestCase):
         def setUp(self):

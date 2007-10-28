@@ -1,16 +1,14 @@
 # -*- test-case-name: twisted.test.test_util -*-
-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-from __future__ import nested_scopes, generators
-
-__version__ = '$Revision: 1.51 $'[11:-2]
-
 import os, sys, hmac, errno, new, inspect
-
 from UserDict import UserDict
+
+from zope.interface import directlyProvides
+
+from twisted.python.reflect import qual
+
 
 class InsensitiveDict:
     """Dictionary, that has case-insensitive keys.
@@ -564,7 +562,7 @@ def dsu(list, key):
 try:
     import pwd, grp
     from os import setgroups, getgroups
-    
+
     def _setgroups_until_success(l):
         while(1):
             # NASTY NASTY HACK (but glibc does it so it must be okay):
@@ -589,7 +587,7 @@ try:
             else:
                 # Success, yay!
                 return
-            
+
     def initgroups(uid, primaryGid):
         """Initializes the group access list.
 
@@ -600,14 +598,14 @@ try:
         If the given user is a member of more than C{NGROUPS}, arbitrary
         groups will be silently discarded to bring the number below that
         limit.
-        """       
+        """
         try:
             # Try to get the maximum number of groups
             max_groups = os.sysconf("SC_NGROUPS_MAX")
         except:
             # No predefined limit
             max_groups = 0
-        
+
         username = pwd.getpwuid(uid)[0]
         l = []
         if primaryGid is not None:
@@ -628,7 +626,7 @@ try:
                         raise
             else:
                 raise
-                                    
+
 
 except:
     def initgroups(uid, primaryGid):
@@ -833,6 +831,57 @@ def nameToLabel(mname):
     return ' '.join(labelList)
 
 
+
+def _makeProxyProperty(attributeName):
+    """
+    Return a property which will proxy access, setting, and deletion to the
+    C{original} attribute of the object that it is being accessed from.
+    """
+    def get(self):
+        return getattr(self.original, attributeName)
+
+    def set(self, value):
+        setattr(self.original, attributeName, value)
+
+    def del_(self):
+        delattr(self.original, attributeName)
+
+    return property(get, set, del_)
+
+
+
+def proxyForInterface(iface):
+    """
+    Create a class which proxies all method calls which adhere to an interface
+    to another provider of that interface.
+
+    This function is intended for creating specialized proxies. The typical way
+    to use it is by subclassing the result::
+
+      class MySpecializedProxy(proxyForInterface(IFoo)):
+          def someInterfaceMethod(self, arg):
+              if arg == 3:
+                  return 3
+              return self.original.someInterfaceMethod(arg)
+
+    @param iface: The Interface to which the resulting object will conform, and
+        which the wrapped object must provide.
+
+    @return: A class whose constructor takes the original object as its only
+        argument. Constructing the class creates the proxy.
+    """
+    def __init__(self, original):
+        self.original = original
+    contents = {"__init__": __init__}
+    for name, description in iface.namesAndDescriptions():
+        contents[name] = _makeProxyProperty(name)
+
+    proxy = type("(Proxy for %s)" % (qual(iface),), (object,), contents)
+    directlyProvides(proxy, iface)
+    return proxy
+
+
+
 __all__ = [
     "uniquify", "padTo", "getPluginDirs", "addPluginDir", "sibpath",
     "getPassword", "dict", "println", "keyed_md5", "makeStatBar",
@@ -840,4 +889,5 @@ __all__ = [
     "raises", "IntervalDifferential", "FancyStrMixin", "FancyEqMixin",
     "dsu", "switchUID", "SubclassableCStringIO", "moduleMovedForSplit",
     "unsignedID", "mergeFunctionMetadata", "nameToLabel",
+    "proxyForInterface",
 ]

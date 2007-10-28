@@ -44,7 +44,7 @@ class CapturingReporter(object):
     separator = None
     testsRun = None
 
-    def __init__(self, tbformat=None, args=None, realtime=None):
+    def __init__(self, *a, **kw):
         """
         Create a capturing reporter.
         """
@@ -174,6 +174,20 @@ class TestTrialRunner(unittest.TestCase):
 
 
 
+class TrialRunnerWithUncleanWarningsReporter(TestTrialRunner):
+    """
+    Tests for the TrialRunner's interaction with an unclean-error suppressing
+    reporter.
+    """
+
+    def setUp(self):
+        self.stream = StringIO.StringIO()
+        self.runner = runner.TrialRunner(CapturingReporter, stream=self.stream,
+                                         uncleanWarnings=True)
+        self.test = TestTrialRunner('test_empty')
+
+
+
 class DryRunMixin(object):
     def setUp(self):
         self.log = []
@@ -218,7 +232,6 @@ class DryRunMixin(object):
 
 
 
-
 class DryRunTest(DryRunMixin, unittest.TestCase):
     """
     Check that 'dry run' mode works well with Trial tests.
@@ -246,7 +259,6 @@ class PyUnitDryRunTest(DryRunMixin, unittest.TestCase):
 
 
 class TestRunner(unittest.TestCase):
-
     def setUp(self):
         self.config = trial.Options()
         # whitebox hack a reporter in, because plugins are CACHED and will
@@ -289,10 +301,12 @@ class TestRunner(unittest.TestCase):
     def parseOptions(self, args):
         self.config.parseOptions(args)
 
+
     def getRunner(self):
         r = trial._makeRunner(self.config)
         self.addCleanup(r._tearDownLogFile)
         return r
+
 
     def test_runner_can_get_reporter(self):
         self.parseOptions([])
@@ -303,11 +317,37 @@ class TestRunner(unittest.TestCase):
         finally:
             my_runner._tearDownLogFile()
 
+
     def test_runner_get_result(self):
         self.parseOptions([])
         my_runner = self.getRunner()
         result = my_runner._makeResult()
         self.assertEqual(result.__class__, self.config['reporter'])
+
+
+    def test_uncleanWarningsOffByDefault(self):
+        """
+        By default Trial sets the 'uncleanWarnings' option on the runner to
+        False. This means that dirty reactor errors will be reported as
+        errors. See L{test_reporter.TestDirtyReactor}.
+        """
+        self.parseOptions([])
+        runner = self.getRunner()
+        self.assertNotIsInstance(runner._makeResult(),
+                                 reporter.UncleanWarningsReporterWrapper)
+
+
+    def test_getsUncleanWarnings(self):
+        """
+        Specifying '--unclean-warnings' on the trial command line will cause
+        reporters to be wrapped in a device which converts unclean errors to
+        warnings.  See L{test_reporter.TestDirtyReactor} for implications.
+        """
+        self.parseOptions(['--unclean-warnings'])
+        runner = self.getRunner()
+        self.assertIsInstance(runner._makeResult(),
+                              reporter.UncleanWarningsReporterWrapper)
+
 
     def test_runner_working_directory(self):
         self.parseOptions(['--temp-directory', 'some_path'])
@@ -316,6 +356,7 @@ class TestRunner(unittest.TestCase):
             self.assertEquals(runner.workingDirectory, 'some_path')
         finally:
             runner._tearDownLogFile()
+
 
     def test_runner_normal(self):
         self.parseOptions(['--temp-directory', self.mktemp(),
@@ -326,6 +367,7 @@ class TestRunner(unittest.TestCase):
         suite = loader.loadByName('twisted.trial.test.sample', True)
         result = my_runner.run(suite)
         self.assertEqual(self.standardReport, result._calls)
+
 
     def test_runner_debug(self):
         self.parseOptions(['--reporter', 'capturing',
@@ -367,18 +409,44 @@ class TestUntilFailure(unittest.TestCase):
     def setUp(self):
         TestUntilFailure.FailAfter.count = []
         self.test = TestUntilFailure.FailAfter('test_foo')
+        self.stream = StringIO.StringIO()
+        self.runner = runner.TrialRunner(reporter.Reporter, stream=self.stream)
 
     def test_runUntilFailure(self):
         """
         Test that the runUntilFailure method of the runner actually fail after
         a few runs.
         """
-        stream = StringIO.StringIO()
-        trialRunner = runner.TrialRunner(reporter.Reporter, stream=stream)
-        result = trialRunner.runUntilFailure(self.test)
+        result = self.runner.runUntilFailure(self.test)
         self.failUnlessEqual(result.testsRun, 1)
         self.failIf(result.wasSuccessful())
-        self.failUnlessEqual(len(result.failures), 1)
+        self.assertEquals(self._getFailures(result), 1)
+
+    def _getFailures(self, result):
+        """
+        Get the number of failures that were reported to a result.
+        """
+        return len(result.failures)
+
+
+
+class UncleanUntilFailureTests(TestUntilFailure):
+    """
+    Test that the run-until-failure feature works correctly with the unclean
+    error suppressor.
+    """
+
+    def setUp(self):
+        TestUntilFailure.setUp(self)
+        self.runner = runner.TrialRunner(reporter.Reporter, stream=self.stream,
+                                         uncleanWarnings=True)
+
+    def _getFailures(self, result):
+        """
+        Get the number of failures that were reported to a result that
+        is wrapped in an UncleanFailureWrapper.
+        """
+        return len(result.original.failures)
 
 
 
