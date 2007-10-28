@@ -1,6 +1,4 @@
 # -*- test-case-name: twisted.test.test_modules -*-
-# Copyright (c) 2006-2007 Twisted Matrix Laboratories.
-# See LICENSE for details.
 
 """
 This module aims to provide a unified, object-oriented view of Python's
@@ -417,17 +415,15 @@ class PythonModule(_ModuleIteratorHelper):
         if not self.isPackage():
             return
         if self.isLoaded():
-            load = self.load()
-            if hasattr(load, '__path__'):
-                for fn in load.__path__:
-                    if fn == self.parentPath.path:
-                        # this should _really_ exist.
-                        assert self.parentPath.exists()
-                        yield self.parentPath
-                    else:
-                        smp = self.pathEntry.pythonPath._smartPath(fn)
-                        if smp.exists():
-                            yield smp
+            for fn in self.load().__path__:
+                if fn == self.parentPath.path:
+                    # this should _really_ exist.
+                    assert self.parentPath.exists()
+                    yield self.parentPath
+                else:
+                    smp = self.pathEntry.pythonPath._smartPath(fn)
+                    if smp.exists():
+                        yield smp
         else:
             yield self.parentPath
 
