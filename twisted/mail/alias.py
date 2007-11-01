@@ -1,10 +1,11 @@
 # -*- test-case-name: twisted.mail.test.test_mail -*-
 #
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""Support for aliases(5) configuration files
+"""
+Support for aliases(5) configuration files
 
 API Stability: Unstable
 
@@ -20,6 +21,7 @@ import os
 import tempfile
 
 from twisted.mail import smtp
+from twisted.internet import reactor
 from twisted.internet import protocol
 from twisted.internet import defer
 from twisted.internet import error
@@ -99,10 +101,10 @@ class AliasBase:
     def __init__(self, domains, original):
         self.domains = domains
         self.original = smtp.Address(original)
-    
+
     def domain(self):
         return self.domains[self.original.domain]
-    
+
     def resolve(self, aliasmap, memo=None):
         if memo is None:
             memo = {}
@@ -110,7 +112,7 @@ class AliasBase:
             return None
         memo[str(self)] = None
         return self.createMessageReceiver()
-    
+
 class AddressAlias(AliasBase):
     """The simplest alias, translating one email address into another."""
 
@@ -122,10 +124,10 @@ class AddressAlias(AliasBase):
 
     def __str__(self):
         return '<Address %s>' % (self.alias,)
-    
+
     def createMessageReceiver(self):
         return self.domain().startMessage(str(self.alias))
-    
+
     def resolve(self, aliasmap, memo=None):
         if memo is None:
             memo = {}
@@ -142,27 +144,27 @@ class AddressAlias(AliasBase):
 
 class FileWrapper:
     implements(smtp.IMessage)
-    
+
     def __init__(self, filename):
         self.fp = tempfile.TemporaryFile()
         self.finalname = filename
-    
+
     def lineReceived(self, line):
         self.fp.write(line + '\n')
-    
+
     def eomReceived(self):
         self.fp.seek(0, 0)
         try:
             f = file(self.finalname, 'a')
         except:
             return defer.fail(failure.Failure())
-        
+
         f.write(self.fp.read())
         self.fp.close()
         f.close()
-        
+
         return defer.succeed(self.finalname)
-    
+
     def connectionLost(self):
         self.fp.close()
         self.fp = None
@@ -181,44 +183,44 @@ class FileAlias(AliasBase):
 
     def __str__(self):
         return '<File %s>' % (self.filename,)
-    
+
     def createMessageReceiver(self):
         return FileWrapper(self.filename)
 
 class MessageWrapper:
     implements(smtp.IMessage)
-    
+
     done = False
-    
+
     def __init__(self, protocol, process=None):
         self.processName = process
         self.protocol = protocol
         self.completion = defer.Deferred()
         self.protocol.onEnd = self.completion
         self.completion.addCallback(self._processEnded)
-    
+
     def _processEnded(self, result, err=0):
         self.done = True
         if err:
             raise result.value
-    
+
     def lineReceived(self, line):
         if self.done:
             return
         self.protocol.transport.write(line + '\n')
-    
+
     def eomReceived(self):
         if not self.done:
             self.protocol.transport.loseConnection()
             self.completion.setTimeout(60)
         return self.completion
-    
+
     def connectionLost(self):
         # Heh heh
         pass
-    
+
     def __str__(self):
-        return '<ProcessWrapper %s>' % (self.processName,) 
+        return '<ProcessWrapper %s>' % (self.processName,)
 
 class ProcessAliasProtocol(protocol.ProcessProtocol):
     def processEnded(self, reason):
@@ -227,8 +229,12 @@ class ProcessAliasProtocol(protocol.ProcessProtocol):
         else:
             self.onEnd.errback(reason)
 
+
+
 class ProcessAlias(AliasBase):
-    """An alias for a program."""
+    """
+    An alias for a program.
+    """
 
     implements(IAlias)
 
@@ -236,16 +242,33 @@ class ProcessAlias(AliasBase):
         AliasBase.__init__(self, *args)
         self.path = path.split()
         self.program = self.path[0]
-    
+
+
     def __str__(self):
+        """
+        Build a string representation containing the path.
+        """
         return '<Process %s>' % (self.path,)
-    
+
+
+    def spawnProcess(self, proto, program, path):
+        """
+        Wrapper around C{reactor.spawnProcess}, to be customized for tests
+        purpose.
+        """
+        return reactor.spawnProcess(proto, program, path)
+
+
     def createMessageReceiver(self):
-        from twisted.internet import reactor
+        """
+        Create a message receiver by launching a process.
+        """
         p = ProcessAliasProtocol()
         m = MessageWrapper(p, self.program)
-        fd = reactor.spawnProcess(p, self.program, self.path)
+        fd = self.spawnProcess(p, self.program, self.path)
         return m
+
+
 
 class MultiWrapper:
     """Wrapper to deliver a single message to multiple recipients"""
@@ -254,11 +277,11 @@ class MultiWrapper:
 
     def __init__(self, objs):
         self.objs = objs
-    
+
     def lineReceived(self, line):
         for o in self.objs:
             o.lineReceived(line)
-    
+
     def eomReceived(self):
         return defer.DeferredList([
             o.eomReceived() for o in self.objs
@@ -267,14 +290,23 @@ class MultiWrapper:
     def connectionLost(self):
         for o in self.objs:
             o.connectionLost()
-    
+
     def __str__(self):
         return '<GroupWrapper %r>' % (map(str, self.objs),)
 
+
+
 class AliasGroup(AliasBase):
-    """An alias which points to more than one recipient"""
+    """
+    An alias which points to more than one recipient.
+
+    @ivar processAliasFactory: a factory for resolving process aliases.
+    @type processAliasFactory: C{class}
+    """
 
     implements(IAlias)
+
+    processAliasFactory = ProcessAlias
 
     def __init__(self, items, *args):
         AliasBase.__init__(self, *args)
@@ -290,7 +322,7 @@ class AliasGroup(AliasBase):
                     addr = ' '.join([l.strip() for l in f])
                     items.extend(addr.split(','))
             elif addr.startswith('|'):
-                self.aliases.append(ProcessAlias(addr[1:], *args))
+                self.aliases.append(self.processAliasFactory(addr[1:], *args))
             elif addr.startswith('/'):
                 if os.path.isdir(addr):
                     log.err("Directory delivery not supported")
@@ -301,10 +333,10 @@ class AliasGroup(AliasBase):
 
     def __len__(self):
         return len(self.aliases)
-    
+
     def __str__(self):
         return '<AliasGroup [%s]>' % (', '.join(map(str, self.aliases)))
-    
+
     def createMessageReceiver(self):
         return MultiWrapper([a.createMessageReceiver() for a in self.aliases])
 
@@ -315,4 +347,4 @@ class AliasGroup(AliasBase):
         for a in self.aliases:
             r.append(a.resolve(aliasmap, memo))
         return MultiWrapper(filter(None, r))
-    
+

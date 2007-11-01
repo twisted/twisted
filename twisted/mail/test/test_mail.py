@@ -1236,10 +1236,37 @@ class AliasTestCase(unittest.TestCase):
         self.assertEquals([L[:-1] for L in lines], self.lines)
 
 
+
 class DummyProcess(object):
     __slots__ = ['onEnd']
 
+
+
+class MockProcessAlias(mail.alias.ProcessAlias):
+    """
+    A alias processor that doesn't actually launch processes.
+    """
+
+    def spawnProcess(self, proto, program, path):
+        """
+        Don't spawn a process.
+        """
+
+
+
+class MockAliasGroup(mail.alias.AliasGroup):
+    """
+    An alias group using C{MockProcessAlias}.
+    """
+    processAliasFactory = MockProcessAlias
+
+
+
 class ProcessAliasTestCase(unittest.TestCase):
+    """
+    Tests for alias resolution.
+    """
+
     lines = [
         'First line',
         'Next line',
@@ -1263,24 +1290,39 @@ class ProcessAliasTestCase(unittest.TestCase):
         smtp.DNSNAME = self.DNSNAME
 
 
-    def testProcessAlias(self):
+    def test_processAlias(self):
+        """
+        Standard call to C{mail.alias.ProcessAlias}: check that the specified
+        script is called, and that the input is correctly transferred to it.
+        """
         path = util.sibpath(__file__, 'process.alias.sh')
         a = mail.alias.ProcessAlias(path, None, None)
         m = a.createMessageReceiver()
 
         for l in self.lines:
             m.lineReceived(l)
-        return m.eomReceived().addCallback(self._cbProcessAlias)
 
-    def _cbProcessAlias(self, ignored):
-        lines = file('process.alias.out').readlines()
-        self.assertEquals([L[:-1] for L in lines], self.lines)
+        def _cbProcessAlias(ignored):
+            lines = file('process.alias.out').readlines()
+            self.assertEquals([L[:-1] for L in lines], self.lines)
 
-    def testAliasResolution(self):
+        return m.eomReceived().addCallback(_cbProcessAlias)
+
+
+    def test_aliasResolution(self):
+        """
+        Check that the C{resolve} method of alias processors produce the correct
+        set of objects:
+            - direct alias with L{mail.alias.AddressAlias} if a simple input is passed
+            - aliases in a file with L{mail.alias.FileWrapper} if an input in the format
+              '/file' is given
+            - aliases resulting of a process call wrapped by L{mail.alias.MessageWrapper}
+              if the format is '|process'
+        """
         aliases = {}
         domain = {'': TestDomain(aliases, ['user1', 'user2', 'user3'])}
-        A1 = mail.alias.AliasGroup(['user1', '|echo', '/file'], domain, 'alias1')
-        A2 = mail.alias.AliasGroup(['user2', 'user3'], domain, 'alias2')
+        A1 = MockAliasGroup(['user1', '|echo', '/file'], domain, 'alias1')
+        A2 = MockAliasGroup(['user2', 'user3'], domain, 'alias2')
         A3 = mail.alias.AddressAlias('alias1', domain, 'alias3')
         aliases.update({
             'alias1': A1,
@@ -1288,7 +1330,8 @@ class ProcessAliasTestCase(unittest.TestCase):
             'alias3': A3,
         })
 
-        r1 = map(str, A1.resolve(aliases).objs)
+        res1 = A1.resolve(aliases)
+        r1 = map(str, res1.objs)
         r1.sort()
         expected = map(str, [
             mail.alias.AddressAlias('user1', None, None),
@@ -1298,7 +1341,8 @@ class ProcessAliasTestCase(unittest.TestCase):
         expected.sort()
         self.assertEquals(r1, expected)
 
-        r2 = map(str, A2.resolve(aliases).objs)
+        res2 = A2.resolve(aliases)
+        r2 = map(str, res2.objs)
         r2.sort()
         expected = map(str, [
             mail.alias.AddressAlias('user2', None, None),
@@ -1307,7 +1351,8 @@ class ProcessAliasTestCase(unittest.TestCase):
         expected.sort()
         self.assertEquals(r2, expected)
 
-        r3 = map(str, A3.resolve(aliases).objs)
+        res3 = A3.resolve(aliases)
+        r3 = map(str, res3.objs)
         r3.sort()
         expected = map(str, [
             mail.alias.AddressAlias('user1', None, None),
@@ -1317,7 +1362,11 @@ class ProcessAliasTestCase(unittest.TestCase):
         expected.sort()
         self.assertEquals(r3, expected)
 
-    def testCyclicAlias(self):
+
+    def test_cyclicAlias(self):
+        """
+        Check that a cycle in alias resolution is correctly handled.
+        """
         aliases = {}
         domain = {'': TestDomain(aliases, [])}
         A1 = mail.alias.AddressAlias('alias2', domain, 'alias1')
@@ -1333,17 +1382,24 @@ class ProcessAliasTestCase(unittest.TestCase):
         self.assertEquals(aliases['alias2'].resolve(aliases), None)
         self.assertEquals(aliases['alias3'].resolve(aliases), None)
 
-        A4 = mail.alias.AliasGroup(['|echo', 'alias1'], domain, 'alias4')
+        A4 = MockAliasGroup(['|echo', 'alias1'], domain, 'alias4')
         aliases['alias4'] = A4
 
-        r = map(str, A4.resolve(aliases).objs)
+        res = A4.resolve(aliases)
+        r = map(str, res.objs)
         r.sort()
         expected = map(str, [
             mail.alias.MessageWrapper(DummyProcess(), 'echo')
         ])
+        expected.sort()
+        self.assertEquals(r, expected)
+
+
 
 if interfaces.IReactorProcess(reactor, None) is None:
     ProcessAliasTestCase = "IReactorProcess not supported"
+
+
 
 class TestDomain:
     def __init__(self, aliases, users):
