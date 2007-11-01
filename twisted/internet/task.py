@@ -33,13 +33,17 @@ class LoopingCall:
         L{twisted.internet.reactor}. Feel free to set this to
         something else, but it probably ought to be set *before*
         calling L{start}.
+
+    @type _lastTime: C{float}
+    @ivar _lastTime: The time at which this instance most recently scheduled
+        itself to run.
     """
 
     call = None
     running = False
     deferred = None
     interval = None
-    count = None
+    _lastTime = 0.0
     starttime = None
 
     def __init__(self, f, *a, **kw):
@@ -72,7 +76,7 @@ class LoopingCall:
         self.running = True
         d = self.deferred = defer.Deferred()
         self.starttime = self.clock.seconds()
-        self.count = 0
+        self._lastTime = self.starttime
         self.interval = interval
         if now:
             self()
@@ -110,20 +114,29 @@ class LoopingCall:
         d.addCallback(cb)
         d.addErrback(eb)
 
+
     def _reschedule(self):
+        """
+        Schedule the next iteration of this looping call.
+        """
         if self.interval == 0:
             self.call = self.clock.callLater(0, self)
             return
 
-        fromNow = self.starttime - self.clock.seconds()
+        currentTime = self.clock.seconds()
+        # Find how long is left until the interval comes around again.
+        untilNextTime = (self._lastTime - currentTime) % self.interval
+        # Make sure it is in the future, in case more than one interval worth
+        # of time passed since the previous call was made.
+        nextTime = max(
+            self._lastTime + self.interval, currentTime + untilNextTime)
+        # If the interval falls on the current time exactly, skip it and
+        # schedule the call for the next interval.
+        if nextTime == currentTime:
+            nextTime += self.interval
+        self._lastTime = nextTime
+        self.call = self.clock.callLater(nextTime - currentTime, self)
 
-        while self.running:
-            self.count += 1
-            fromStart = self.count * self.interval
-            delay = fromNow + fromStart
-            if delay > 0:
-                self.call = self.clock.callLater(delay, self)
-                return
 
     def __repr__(self):
         if hasattr(self.f, 'func_name'):

@@ -142,13 +142,88 @@ class ClockTestCase(unittest.TestCase):
 
 
 class LoopTestCase(unittest.TestCase):
-
+    """
+    Tests for L{task.LoopingCall} based on a fake L{IReactorTime}
+    implementation.
+    """
     def test_defaultClock(self):
         """
         L{LoopingCall}'s default clock should be the reactor.
         """
         call = task.LoopingCall(lambda: None)
         self.assertEqual(call.clock, reactor)
+
+
+    def test_callbackTimeSkips(self):
+        """
+        When more time than the defined interval passes during the execution
+        of a callback, L{LoopingCall} should schedule the next call for the
+        next interval which is still in the future.
+        """
+        times = []
+        callDuration = None
+        clock = task.Clock()
+        def aCallback():
+            times.append(clock.seconds())
+            clock.advance(callDuration)
+        call = task.LoopingCall(aCallback)
+        call.clock = clock
+
+        callDuration = 2
+        call.start(0.5)
+        self.assertEqual(times, [0])
+        self.assertEqual(clock.seconds(), 2)
+
+        # An iteration should have occurred at 2, but since 2 is the present
+        # and not the future, it is skipped.
+        clock.advance(0)
+        self.assertEqual(times, [0])
+
+        # 2.5 is in the future, and is not skipped.
+        callDuration = 1
+        clock.advance(0.5)
+        self.assertEqual(times, [0, 2.5])
+        self.assertEqual(clock.seconds(), 3.5)
+
+        # Another iteration should have occurred, but it is again the
+        # present and not the future, so it is skipped as well.
+        clock.advance(0)
+        self.assertEqual(times, [0, 2.5])
+
+        # 4 is in the future, and is not skipped.
+        callDuration = 0
+        clock.advance(0.5)
+        self.assertEqual(times, [0, 2.5, 4])
+        self.assertEqual(clock.seconds(), 4)
+
+
+    def test_reactorTimeSkips(self):
+        """
+        When more time than the defined interval passes between when
+        L{LoopingCall} schedules itself to run again and when it actually
+        runs again, it should schedule the next call for the next interval
+        which is still in the future.
+        """
+        times = []
+        clock = task.Clock()
+        def aCallback():
+            times.append(clock.seconds())
+
+        call = task.LoopingCall(aCallback)
+        call.clock = clock
+
+        call.start(0.5)
+        self.assertEqual(times, [0])
+
+        clock.advance(2)
+        self.assertEqual(times, [0, 2])
+
+        clock.advance(1)
+        self.assertEqual(times, [0, 2, 3])
+
+        clock.advance(0)
+        self.assertEqual(times, [0, 2, 3])
+
 
     def testBasicFunction(self):
         # Arrange to have time advanced enough so that our function is
@@ -197,7 +272,7 @@ class LoopTestCase(unittest.TestCase):
         L = []
         lc = TestableLoopingCall(clock, L.append, None)
         d = lc.start(0.1, now=False)
-        
+
         theResult = []
         def saveResult(result):
             theResult.append(result)
