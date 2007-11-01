@@ -363,6 +363,66 @@ class DeferredTestCase(unittest.TestCase):
         return d
 
 
+    def test_reentrantRunCallbacks(self):
+        """
+        A callback added to a L{Deferred} by a callback on that L{Deferred}
+        should be added to the end of the callback chain.
+        """
+        deferred = defer.Deferred()
+        called = []
+        def callback3(result):
+            called.append(3)
+        def callback2(result):
+            called.append(2)
+        def callback1(result):
+            called.append(1)
+            deferred.addCallback(callback3)
+        deferred.addCallback(callback1)
+        deferred.addCallback(callback2)
+        deferred.callback(None)
+        self.assertEqual(called, [1, 2, 3])
+
+
+    def test_nonReentrantCallbacks(self):
+        """
+        A callback added to a L{Deferred} by a callback on that L{Deferred}
+        should not be executed until the running callback returns.
+        """
+        deferred = defer.Deferred()
+        called = []
+        def callback2(result):
+            called.append(2)
+        def callback1(result):
+            called.append(1)
+            deferred.addCallback(callback2)
+            self.assertEquals(called, [1])
+        deferred.addCallback(callback1)
+        deferred.callback(None)
+        self.assertEqual(called, [1, 2])
+
+
+    def test_reentrantRunCallbacksWithFailure(self):
+        """
+        After an exception is raised by a callback which was added to a
+        L{Deferred} by a callback on that L{Deferred}, the L{Deferred} should
+        call the first errback with a L{Failure} wrapping that exception.
+        """
+        exceptionMessage = "callback raised exception"
+        deferred = defer.Deferred()
+        def callback2(result):
+            raise Exception(exceptionMessage)
+        def callback1(result):
+            deferred.addCallback(callback2)
+        deferred.addCallback(callback1)
+        deferred.callback(None)
+        self.assertFailure(deferred, Exception)
+        def cbFailed(exception):
+            self.assertEqual(exception.args, (exceptionMessage,))
+        deferred.addCallback(cbFailed)
+        return deferred
+
+
+
 class AlreadyCalledTestCase(unittest.TestCase):
     def setUp(self):
         self._deferredWasDebugging = defer.getDebugging()

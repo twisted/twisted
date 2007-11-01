@@ -155,6 +155,11 @@ class Deferred:
     timeoutCall = None
     _debugInfo = None
 
+    # Are we currently running a user-installed callback?  Meant to prevent
+    # recursive running of callbacks when a reentrant call to add a callback is
+    # used.
+    _runningCallbacks = False
+
     # Keep this class attribute for now, for compatibility with code that
     # sets it directly.
     debug = False
@@ -304,26 +309,31 @@ class Deferred:
         self._runCallbacks()
 
     def _runCallbacks(self):
+        if self._runningCallbacks:
+            # Don't recursively run callbacks
+            return
         if not self.paused:
-            cb = self.callbacks
-            self.callbacks = []
-            while cb:
-                item = cb.pop(0)
+            while self.callbacks:
+                item = self.callbacks.pop(0)
                 callback, args, kw = item[
                     isinstance(self.result, failure.Failure)]
                 args = args or ()
                 kw = kw or {}
                 try:
-                    self.result = callback(self.result, *args, **kw)
+                    self._runningCallbacks = True
+                    try:
+                        self.result = callback(self.result, *args, **kw)
+                    finally:
+                        self._runningCallbacks = False
                     if isinstance(self.result, Deferred):
-                        self.callbacks = cb
-
                         # note: this will cause _runCallbacks to be called
-                        # "recursively" sometimes... this shouldn't cause any
-                        # problems, since all the state has been set back to
-                        # the way it's supposed to be, but it is useful to know
-                        # in case something goes wrong.  deferreds really ought
-                        # not to return themselves from their callbacks.
+                        # recursively if self.result already has a result.
+                        # This shouldn't cause any problems, since there is no
+                        # relevant state in this stack frame at this point.
+                        # The recursive call will continue to process
+                        # self.callbacks until it is empty, then return here,
+                        # where there is no more work to be done, so this call
+                        # will return as well.
                         self.pause()
                         self.result.addBoth(self._continue)
                         break
