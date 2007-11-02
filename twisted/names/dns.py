@@ -1078,26 +1078,40 @@ class DNSMixin(object):
         from twisted.internet import reactor
         return reactor.callLater(period, func, *args)
 
-    def _query(self, queries, timeout, id):
+    def _query(self, queries, timeout, id, writeMessage):
         """
         Send out a message with the given queries.
-
-        @type address: C{tuple} of C{str} and C{int}
-        @param address: The address to which to send the query
 
         @type queries: C{list} of C{Query} instances
         @param queries: The queries to transmit
 
+        @type timeout: C{int} or C{float}
+        @param timeout: How long to wait before giving up
+
+        @type id: C{int}
+        @param id: Unique key for this request
+
+        @type writeMessage: C{callable}
+        @param writeMessage: One-parameter callback which writes the message
+
         @rtype: C{Deferred}
+        @return: a C{Deferred} which will be fired with the result of the
+            query, or errbacked with any errors that could happen (exceptions
+            during writing of the query, timeout errors, ...).
         """
         m = Message(id, recDes=1)
         m.queries = queries
+
+        try:
+            writeMessage(m)
+        except:
+            return defer.fail()
 
         resultDeferred = defer.Deferred()
         cancelCall = self.callLater(timeout, self._clearFailed, resultDeferred, id)
         self.liveMessages[id] = (resultDeferred, cancelCall)
 
-        return resultDeferred, m
+        return resultDeferred
 
     def _clearFailed(self, deferred, id):
         """
@@ -1206,10 +1220,10 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
         else:
             self.resends[id] = 1
 
-        d, m = self._query(queries, timeout, id)
+        def writeMessage(m):
+            self.writeMessage(m, address)
 
-        self.writeMessage(m, address)
-        return d
+        return self._query(queries, timeout, id, writeMessage)
 
 
 class DNSProtocol(DNSMixin, protocol.Protocol):
@@ -1276,7 +1290,5 @@ class DNSProtocol(DNSMixin, protocol.Protocol):
         @rtype: C{Deferred}
         """
         id = self.pickID()
-        d, m = self._query(queries, timeout, id)
-        self.writeMessage(m)
-        return d
+        return self._query(queries, timeout, id, self.writeMessage)
 

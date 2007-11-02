@@ -153,68 +153,99 @@ class MessageTestCase(unittest.TestCase):
         self.assertEquals(msg2.answers[0].payload.payload, bytes)
 
 
+
 class TestController(object):
     """
     Pretend to be a DNS query processor for a DNSDatagramProtocol.
+
+    @ivar messages: the list of received messages.
+    @type messages: C{list} of (msg, protocol, address)
     """
+
     def __init__(self):
+        """
+        Initialize the controller: create a list of messages.
+        """
         self.messages = []
 
 
     def messageReceived(self, msg, proto, addr):
+        """
+        Save the message so that it can be checked during the tests.
+        """
         self.messages.append((msg, proto, addr))
+
 
 
 class DatagramProtocolTestCase(unittest.TestCase):
     """
-    Test various aspects of DNSDatagramProtocol.
+    Test various aspects of L{dns.DNSDatagramProtocol}.
     """
+
+    def setUp(self):
+        """
+        Create a L{dns.DNSDatagramProtocol} with a deterministic clock.
+        """
+        self.clock = task.Clock()
+        self.controller = TestController()
+        self.proto = dns.DNSDatagramProtocol(self.controller)
+        transport = proto_helpers.FakeDatagramTransport()
+        self.proto.makeConnection(transport)
+        self.proto.callLater = self.clock.callLater
+
 
     def test_truncatedPacket(self):
         """
         Test that when a short datagram is received, datagramReceived does
         not raise an exception while processing it.
         """
-        controller = TestController()
-        proto = dns.DNSDatagramProtocol(controller)
-        proto.datagramReceived('', address.IPv4Address('UDP', '127.0.0.1', 12345))
-        self.assertEquals(controller.messages, [])
+        self.proto.datagramReceived('',
+            address.IPv4Address('UDP', '127.0.0.1', 12345))
+        self.assertEquals(self.controller.messages, [])
+
 
     def test_simpleQuery(self):
         """
         Test content received after a query.
         """
-        controller = TestController()
-        proto = dns.DNSDatagramProtocol(controller)
-        transport = proto_helpers.FakeDatagramTransport()
-        proto.makeConnection(transport)
-        d = proto.query(('127.0.0.1', 21345), [dns.Query('foo')])
-        self.assertEquals(len(proto.liveMessages.keys()), 1)
+        d = self.proto.query(('127.0.0.1', 21345), [dns.Query('foo')])
+        self.assertEquals(len(self.proto.liveMessages.keys()), 1)
         m = dns.Message()
-        m.id = proto.liveMessages.items()[0][0]
+        m.id = self.proto.liveMessages.items()[0][0]
         m.answers = [dns.RRHeader(payload=dns.Record_A(address='1.2.3.4'))]
         called = False
         def cb(result):
             self.assertEquals(result.answers[0].payload.dottedQuad(), '1.2.3.4')
         d.addCallback(cb)
-        proto.datagramReceived(m.toStr(), ('127.0.0.1', 21345))
+        self.proto.datagramReceived(m.toStr(), ('127.0.0.1', 21345))
         return d
+
 
     def test_queryTimeout(self):
         """
         Test that query timeouts after some seconds.
         """
-        clock = task.Clock()
-        controller = TestController()
-        proto = dns.DNSDatagramProtocol(controller)
-        proto.makeConnection(proto_helpers.FakeDatagramTransport())
-        proto.callLater = clock.callLater
-        d = proto.query(('127.0.0.1', 21345), [dns.Query('foo')])
-        self.assertEquals(len(proto.liveMessages), 1)
-        clock.advance(10)
+        d = self.proto.query(('127.0.0.1', 21345), [dns.Query('foo')])
+        self.assertEquals(len(self.proto.liveMessages), 1)
+        self.clock.advance(10)
         self.assertFailure(d, dns.DNSQueryTimeoutError)
-        self.assertEquals(len(proto.liveMessages), 0)
+        self.assertEquals(len(self.proto.liveMessages), 0)
         return d
+
+
+    def test_writeError(self):
+        """
+        Exceptions raised by the transport's write method should be turned into
+        C{Failure}s passed to errbacks of the C{Deferred} returned by
+        L{DNSDatagramProtocol.query}.
+        """
+        def writeError(message, addr):
+            raise RuntimeError("bar")
+        self.proto.transport.write = writeError
+
+        d = self.proto.query(('127.0.0.1', 21345), [dns.Query('foo')])
+        return self.assertFailure(d, RuntimeError)
+
 
 
 class TestTCPController(TestController):
@@ -225,38 +256,43 @@ class TestTCPController(TestController):
         pass
 
 
+
 class DNSProtocolTestCase(unittest.TestCase):
     """
-    Test various aspects of DNSProtocol.
+    Test various aspects of L{dns.DNSProtocol}.
     """
+
+    def setUp(self):
+        """
+        Create a L{dns.DNSProtocol} with a deterministic clock.
+        """
+        self.clock = task.Clock()
+        controller = TestTCPController()
+        self.proto = dns.DNSProtocol(controller)
+        self.proto.makeConnection(proto_helpers.StringTransport())
+        self.proto.callLater = self.clock.callLater
+
 
     def test_queryTimeout(self):
         """
         Test that query timeouts after some seconds.
         """
-        clock = task.Clock()
-        controller = TestTCPController()
-        proto = dns.DNSProtocol(controller)
-        proto.makeConnection(proto_helpers.StringTransport())
-        proto.callLater = clock.callLater
-        d = proto.query([dns.Query('foo')])
-        self.assertEquals(len(proto.liveMessages), 1)
-        clock.advance(60)
+        d = self.proto.query([dns.Query('foo')])
+        self.assertEquals(len(self.proto.liveMessages), 1)
+        self.clock.advance(60)
         self.assertFailure(d, dns.DNSQueryTimeoutError)
-        self.assertEquals(len(proto.liveMessages), 0)
+        self.assertEquals(len(self.proto.liveMessages), 0)
         return d
+
 
     def test_simpleQuery(self):
         """
         Test content received after a query.
         """
-        controller = TestTCPController()
-        proto = dns.DNSProtocol(controller)
-        proto.makeConnection(proto_helpers.StringTransport())
-        d = proto.query([dns.Query('foo')])
-        self.assertEquals(len(proto.liveMessages.keys()), 1)
+        d = self.proto.query([dns.Query('foo')])
+        self.assertEquals(len(self.proto.liveMessages.keys()), 1)
         m = dns.Message()
-        m.id = proto.liveMessages.items()[0][0]
+        m.id = self.proto.liveMessages.items()[0][0]
         m.answers = [dns.RRHeader(payload=dns.Record_A(address='1.2.3.4'))]
         called = False
         def cb(result):
@@ -264,6 +300,22 @@ class DNSProtocolTestCase(unittest.TestCase):
         d.addCallback(cb)
         s = m.toStr()
         s = struct.pack('!H', len(s)) + s
-        proto.dataReceived(s)
+        self.proto.dataReceived(s)
         return d
+
+
+    def test_writeError(self):
+        """
+        Exceptions raised by the transport's write method should be turned into
+        C{Failure}s passed to errbacks of the C{Deferred} returned by
+        L{DNSProtocol.query}.
+        """
+        def writeError(message):
+            raise RuntimeError("bar")
+        self.proto.transport.write = writeError
+
+        d = self.proto.query([dns.Query('foo')])
+        return self.assertFailure(d, RuntimeError)
+
+
 
