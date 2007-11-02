@@ -13,6 +13,7 @@ from twisted.internet.protocol import Protocol
 from twisted.internet.stdio import StandardIO
 from twisted.internet import reactor
 
+from twisted.test.test_stdio import UNIQUE_LAST_WRITE_STRING
 
 class LastWriteChild(Protocol):
     def __init__(self, reactor):
@@ -20,7 +21,7 @@ class LastWriteChild(Protocol):
 
 
     def connectionMade(self):
-        self.transport.write('x')
+        self.transport.write(UNIQUE_LAST_WRITE_STRING)
         self.transport.loseConnection()
 
 

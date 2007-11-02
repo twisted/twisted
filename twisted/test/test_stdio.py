@@ -8,6 +8,14 @@ from twisted.python import filepath
 from twisted.internet import error, defer, protocol, reactor
 
 
+# A short string which is intended to appear here and nowhere else,
+# particularly not in any random garbage output CPython unavoidable
+# generates (such as in warning text and so forth).  This is searched
+# for in the output from stdio_test_lastwrite.py and if it is found at
+# the end, the functionality works.
+UNIQUE_LAST_WRITE_STRING = 'xyz123abc Twisted is great!'
+
+
 class StandardIOTestProcessProtocol(protocol.ProcessProtocol):
     """
     Test helper for collecting output from a child process and notifying
@@ -141,9 +149,11 @@ class StandardInputOutputTestCase(unittest.TestCase):
         def processEnded(reason):
             """
             Asserts that the parent received the bytes written by the child
-            after the child received "\x1c".
+            immediately after the child starts.
             """
-            self.assertEqual(p.data[1], 'x')
+            self.assertTrue(
+                p.data[1].endswith(UNIQUE_LAST_WRITE_STRING),
+                "Received %r from child, did not find expected bytes.")
             reason.trap(error.ProcessDone)
         return self._requireFailure(p.onCompletion, processEnded)
 
