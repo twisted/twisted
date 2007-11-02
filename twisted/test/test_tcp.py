@@ -1,4 +1,3 @@
-# -*- test-case-name: twisted.test.test_tcp -*-
 # Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -1533,6 +1532,40 @@ class HalfCloseBuggyApplicationTests(unittest.TestCase):
         """
         self.clientProtocol.writeConnectionLost = self.aBug
         return self._notificationRaisesTest()
+
+
+
+class LogTestCase(unittest.TestCase):
+    """
+    Test logging facility of TCP base classes.
+    """
+
+    def test_logstrClientSetup(self):
+        """
+        Check that the log customization of the client transport happens
+        once the client is connected.
+        """
+        server = MyServerFactory()
+
+        client = MyClientFactory()
+        client.protocolConnectionMade = defer.Deferred()
+
+        port = reactor.listenTCP(0, server, interface='127.0.0.1')
+        self.addCleanup(port.stopListening)
+
+        connector = reactor.connectTCP(
+            port.getHost().host, port.getHost().port, client)
+        self.addCleanup(connector.disconnect)
+
+        # It should still have the default value
+        self.assertEquals(connector.transport.logstr,
+                          "Uninitialized")
+
+        def cb(ign):
+            self.assertEquals(connector.transport.logstr,
+                              "MyProtocol,client")
+        client.protocolConnectionMade.addCallback(cb)
+        return client.protocolConnectionMade
 
 
 

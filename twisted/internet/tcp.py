@@ -1,10 +1,9 @@
 # -*- test-case-name: twisted.test.test_tcp -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-
-"""Various asynchronous TCP/IP classes.
+"""
+Various asynchronous TCP/IP classes.
 
 End users shouldn't use this module directly - use the reactor APIs instead.
 
@@ -14,12 +13,9 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 
 # System Imports
 import os
-import stat
 import types
-import exceptions
 import socket
 import sys
-import select
 import operator
 import warnings
 
@@ -34,7 +30,7 @@ try:
 except ImportError:
     SSL = None
 
-from twisted.python.runtime import platform, platformType
+from twisted.python.runtime import platformType
 
 
 if platformType == 'win32':
@@ -76,17 +72,13 @@ else:
 from errno import errorcode
 
 # Twisted Imports
-from twisted.internet import protocol, defer, base, address
-from twisted.persisted import styles
+from twisted.internet import defer, base, address
 from twisted.python import log, failure, reflect
 from twisted.python.util import unsignedID
 from twisted.internet.error import CannotListenError
+from twisted.internet import abstract, main, interfaces, error
 
-# Sibling Imports
-import abstract
-import main
-import interfaces
-import error
+
 
 class _SocketCloser:
     _socketShutdownMethod = 'shutdown'
@@ -113,7 +105,7 @@ class _TLSMixin:
     writeBlockedOnRead = 0
     readBlockedOnWrite = 0
     _userWantRead = _userWantWrite = True
-    
+
     def getPeerCertificate(self):
         return self.socket.get_peer_certificate()
 
@@ -147,7 +139,7 @@ class _TLSMixin:
             return self._postLoseConnection()
         if self._writeDisconnected:
             return self._closeWriteConnection()
-        
+
         if self.readBlockedOnWrite:
             self.readBlockedOnWrite = 0
             self._resetReadWrite()
@@ -189,10 +181,10 @@ class _TLSMixin:
     _first=False
     def _sendCloseAlert(self):
         # Okay, *THIS* is a bit complicated.
-        
+
         # Basically, the issue is, OpenSSL seems to not actually return
         # errors from SSL_shutdown. Therefore, the only way to
-        # determine if the close notification has been sent is by 
+        # determine if the close notification has been sent is by
         # SSL_shutdown returning "done". However, it will not claim it's
         # done until it's both sent *and* received a shutdown notification.
 
@@ -241,10 +233,10 @@ class _TLSMixin:
 
     def _closeWriteConnection(self):
         result = self._sendCloseAlert()
-        
+
         if result is main.CONNECTION_DONE:
             return Connection._closeWriteConnection(self)
-        
+
         return result
 
     def startReading(self):
@@ -274,7 +266,7 @@ class _TLSMixin:
             self.startWriting()
         else:
             self.stopWriting()
-        
+
         if self._userWantRead:
             self.startReading()
         else:
@@ -288,10 +280,14 @@ def _getTLSClass(klass, _existing={}):
     return _existing[klass]
 
 class Connection(abstract.FileDescriptor, _SocketCloser):
-    """I am the superclass of all socket-based FileDescriptors.
+    """
+    Superclass of all socket-based FileDescriptors.
 
     This is an abstract superclass of all objects which represent a TCP/IP
     connection based socket.
+
+    @ivar logstr: prefix used when logging events related to this connection.
+    @type logstr: C{str}
     """
 
     implements(interfaces.ITCPTransport, interfaces.ISystemHandle)
@@ -341,7 +337,7 @@ class Connection(abstract.FileDescriptor, _SocketCloser):
     def getHandle(self):
         """Return the socket for this connection."""
         return self.socket
-    
+
     def doRead(self):
         """Calls self.protocol.dataReceived with all available data.
 
@@ -391,7 +387,7 @@ class Connection(abstract.FileDescriptor, _SocketCloser):
             except:
                 f = failure.Failure()
                 log.err()
-                self.connectionLost(f)                
+                self.connectionLost(f)
 
     def readConnectionLost(self, reason):
         p = interfaces.IHalfCloseableProtocol(self.protocol, None)
@@ -403,7 +399,7 @@ class Connection(abstract.FileDescriptor, _SocketCloser):
                 self.connectionLost(failure.Failure())
         else:
             self.connectionLost(reason)
-    
+
     def connectionLost(self, reason):
         """See abstract.FileDescriptor.connectionLost().
         """
@@ -472,10 +468,10 @@ class BaseClient(Connection):
         cleans everything it can: call connectionFailed, stop read and write,
         delete socket related members.
         """
-        if (self.connected or self.disconnected or 
+        if (self.connected or self.disconnected or
             not hasattr(self, "connector")):
             return
-        
+
         self.connector.connectionFailed(failure.Failure(err))
         if hasattr(self, "reactor"):
             # this doesn't happen if we failed in __init__
@@ -565,8 +561,8 @@ class BaseClient(Connection):
     def _connectDone(self):
         self.protocol = self.connector.buildProtocol(self.getPeer())
         self.connected = 1
+        self.logstr = self.protocol.__class__.__name__ + ",client"
         self.protocol.makeConnection(self)
-        self.logstr = self.protocol.__class__.__name__+",client"
         self.startReading()
 
     def connectionLost(self, reason):
