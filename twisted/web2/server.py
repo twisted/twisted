@@ -1,15 +1,13 @@
 # -*- test-case-name: twisted.web2.test.test_server -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-"""This is a web-sever which integrates with the twisted.internet
+"""
+This is a web-server which integrates with the twisted.internet
 infrastructure.
 """
 
 # System Imports
-import cStringIO as StringIO
-
 import cgi, time, urlparse
 from urllib import quote, unquote
 from urlparse import urlsplit
@@ -60,13 +58,31 @@ def doTrace(request):
 
     return http.Response(
         responsecode.OK,
-        {'content-type': http_headers.MimeType('message', 'http')}, 
+        {'content-type': http_headers.MimeType('message', 'http')},
         txt)
 
-def parsePOSTData(request):
+
+def parsePOSTData(request, maxMem=100*1024, maxFields=1024,
+                  maxSize=10*1024*1024):
+    """
+    Parse data of a POST request.
+
+    @param request: the request to parse.
+    @type request: L{twisted.web2.http.Request}.
+    @param maxMem: maximum memory used during the parsing of the data.
+    @type maxMem: C{int}
+    @param maxFields: maximum number of form fields allowed.
+    @type maxFields: C{int}
+    @param maxSize: maximum size of file upload allowed.
+    @type maxSize: C{int}
+
+    @return: a deferred that will fire when the parsing is done. The deferred
+        itself doesn't hold a return value, the request is modified directly.
+    @rtype: C{defer.Deferred}
+    """
     if request.stream.length == 0:
         return defer.succeed(None)
-    
+
     parser = None
     ctype = request.headers.getHeader('content-type')
 
@@ -84,21 +100,33 @@ def parsePOSTData(request):
 
     def error(f):
         f.trap(fileupload.MimeFormatError)
-        raise http.HTTPError(responsecode.BAD_REQUEST)
-    
-    if ctype.mediaType == 'application' and ctype.mediaSubtype == 'x-www-form-urlencoded':
+        raise http.HTTPError(
+            http.StatusResponse(responsecode.BAD_REQUEST, str(f.value)))
+
+    if (ctype.mediaType == 'application'
+        and ctype.mediaSubtype == 'x-www-form-urlencoded'):
         d = fileupload.parse_urlencoded(request.stream)
         d.addCallbacks(updateArgs, error)
         return d
-    elif ctype.mediaType == 'multipart' and ctype.mediaSubtype == 'form-data':
+    elif (ctype.mediaType == 'multipart'
+          and ctype.mediaSubtype == 'form-data'):
         boundary = ctype.params.get('boundary')
         if boundary is None:
-            return failure.Failure(fileupload.MimeFormatError("Boundary not specified in Content-Type."))
-        d = fileupload.parseMultipartFormData(request.stream, boundary)
+            return defer.fail(http.HTTPError(
+                    http.StatusResponse(
+                        responsecode.BAD_REQUEST,
+                        "Boundary not specified in Content-Type.")))
+        d = fileupload.parseMultipartFormData(request.stream, boundary,
+                                              maxMem, maxFields, maxSize)
         d.addCallbacks(updateArgsAndFiles, error)
         return d
     else:
-        raise http.HTTPError(responsecode.BAD_REQUEST)
+        return defer.fail(http.HTTPError(
+            http.StatusResponse(
+                responsecode.BAD_REQUEST,
+                "Invalid content-type: %s/%s" % (
+                    ctype.mediaType, ctype.mediaSubtype))))
+
 
 class StopTraversal(object):
     """
@@ -114,17 +142,17 @@ class Request(http.Request):
     site
 
     remoteAddr
-    
+
     scheme
     host
     port
     path
     params
     querystring
-    
+
     args
     files
-    
+
     prepath
     postpath
 
@@ -136,12 +164,12 @@ class Request(http.Request):
 
     """
     implements(iweb.IRequest)
-    
+
     site = None
     _initialprepath = None
     responseFilters = [rangefilter, preconditionfilter,
                        error.defaultErrorHandler, defaultHeadersFilter]
-    
+
     def __init__(self, *args, **kw):
         if kw.has_key('site'):
             self.site = kw['site']
@@ -168,7 +196,7 @@ class Request(http.Request):
         the url that are not specified, use the value from the
         request. The arguments have the same meaning as the same named
         attributes of Request."""
-        
+
         if scheme is None: scheme = self.scheme
         if host is None: host = self.host
         if port is None: port = self.port
@@ -176,12 +204,12 @@ class Request(http.Request):
         if params is None: params = self.params
         if querystring is None: query = self.querystring
         if fragment is None: fragment = ''
-        
+
         if port == http.defaultPortForScheme.get(scheme, 0):
             hostport = host
         else:
             hostport = host + ':' + str(port)
-        
+
         return urlparse.urlunparse((
             scheme, hostport, path,
             params, querystring, fragment))
@@ -207,14 +235,14 @@ class Request(http.Request):
             self.args = cgi.parse_qs(self.querystring, True)
         else:
             self.args = {}
-        
+
         path = map(unquote, self.path[1:].split('/'))
         if self._initialprepath:
             # We were given an initial prepath -- this is for supporting
             # CGI-ish applications where part of the path has already
             # been processed
             prepath = map(unquote, self._initialprepath[1:].split('/'))
-            
+
             if path[:len(prepath)] == prepath:
                 self.prepath = prepath
                 self.postpath = path[len(prepath):]
@@ -230,7 +258,7 @@ class Request(http.Request):
         hostaddr, secure = self.chanRequest.getHostInfo()
         if not self.scheme:
             self.scheme = ('http', 'https')[secure]
-            
+
         if self.host:
             self.host, self.port = http.splitHostPort(self.scheme, self.host)
         else:
@@ -262,7 +290,7 @@ class Request(http.Request):
         except:
             failedDeferred = self._processingFailed(failure.Failure())
             return
-        
+
         d = defer.Deferred()
         d.addCallback(self._getChild, self.site.resource, self.postpath)
         d.addCallback(lambda res, req: res.renderHTTP(req), self)
@@ -275,14 +303,14 @@ class Request(http.Request):
         resource lookup procedure. "OPTIONS *" is handled here, for
         example. This would also be the place to do any CONNECT
         processing."""
-        
+
         if self.method == "OPTIONS" and self.uri == "*":
             response = http.Response(responsecode.OK)
             response.headers.setHeader('allow', ('GET', 'HEAD', 'OPTIONS', 'TRACE'))
             return response
         # This is where CONNECT would go if we wanted it
         return None
-    
+
     def _getChild(self, _, res, path, updatepaths=True):
         """Call res.locateChild, and pass the result on to _handleSegment."""
 
@@ -372,7 +400,7 @@ class Request(http.Request):
         if resource is None:
             raise NoURLForResourceError(resource)
         return resource
-        
+
     def locateResource(self, url):
         """
         Looks up the resource with the given URL.
@@ -392,7 +420,7 @@ class Request(http.Request):
         # Parse the URL
         #
         (scheme, host, path, query, fragment) = urlsplit(url)
-    
+
         if query or fragment:
             raise http.HTTPError(http.StatusResponse(
                 responsecode.BAD_REQUEST,
@@ -471,20 +499,20 @@ class Request(http.Request):
                 handler = iweb.ICanHandleException(self, self)
                 return handler.renderHTTP_exception(self, reason)
             d = defer.maybeDeferred(_processingFailed_inner, reason)
-        
+
         d.addCallback(self._cbFinishRender)
         d.addErrback(self._processingReallyFailed, reason)
         return d
-    
+
     def _processingReallyFailed(self, reason, origReason):
         log.msg("Exception rendering error page:", isErr=1)
         log.err(reason)
         log.msg("Original exception:", isErr=1)
         log.err(origReason)
-        
+
         body = ("<html><head><title>Internal Server Error</title></head>"
                 "<body><h1>Internal Server Error</h1>An error occurred rendering the requested page. Additionally, an error occured rendering the error page.</body></html>")
-        
+
         response = http.Response(
             responsecode.INTERNAL_SERVER_ERROR,
             {'content-type': http_headers.MimeType('text','html')},
@@ -520,10 +548,10 @@ class Request(http.Request):
     def renderHTTP_exception(self, req, reason):
         log.msg("Exception rendering:", isErr=1)
         log.err(reason)
-        
+
         body = ("<html><head><title>Internal Server Error</title></head>"
                 "<body><h1>Internal Server Error</h1>An error occurred rendering the requested page. More information is available in the server log.</body></html>")
-        
+
         return http.Response(
             responsecode.INTERNAL_SERVER_ERROR,
             {'content-type': http_headers.MimeType('text','html')},

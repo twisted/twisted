@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.web2.test.test_server -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -57,7 +57,7 @@ class RenderMixin(object):
         This implementation will dispatch the given C{request} to another method
         of C{self} named C{http_}METHOD, where METHOD is the HTTP method used by
         C{request} (eg. C{http_GET}, C{http_POST}, etc.).
-        
+
         Generally, a subclass should implement those methods instead of
         overriding this one.
 
@@ -111,7 +111,7 @@ class RenderMixin(object):
         @return: an object adaptable to L{iweb.IResponse}.
         """
         return self.http_GET(request)
-    
+
     def http_GET(self, request):
         """
         Respond to a GET request.
@@ -144,7 +144,7 @@ class Resource(RenderMixin):
     implements(iweb.IResource)
 
     addSlash = False
-    
+
     def locateChild(self, request, segments):
         """
         Locates a child resource of this resource.
@@ -155,7 +155,7 @@ class Resource(RenderMixin):
         sequence, and a list of remaining segments.
         """
         w = getattr(self, 'child_%s' % (segments[0], ), None)
-        
+
         if w:
             r = iweb.IResource(w, None)
             if r:
@@ -167,9 +167,9 @@ class Resource(RenderMixin):
             r = factory(request, segments[0])
             if r:
                 return r, segments[1:]
-     
+
         return None, []
-    
+
     def child_(self, request):
         """
         This method locates a child with a trailing C{"/"} in the URL.
@@ -178,7 +178,7 @@ class Resource(RenderMixin):
         if self.addSlash and len(request.postpath) == 1:
             return self
         return None
-        
+
     def putChild(self, path, child):
         """
         Register a static child.
@@ -193,29 +193,43 @@ class Resource(RenderMixin):
         @param child: an object adaptable to L{iweb.IResource}.
         """
         setattr(self, 'child_%s' % (path, ), child)
-    
+
     def http_GET(self, request):
         if self.addSlash and request.prepath[-1] != '':
             # If this is a directory-ish resource...
             return http.RedirectResponse(request.unparseURL(path=request.path+'/'))
-            
+
         return super(Resource, self).http_GET(request)
 
 
 class PostableResource(Resource):
     """
     A L{Resource} capable of handling the POST request method.
+
+    @cvar maxMem: maximum memory used during the parsing of the data.
+    @type maxMem: C{int}
+    @cvar maxFields: maximum number of form fields allowed.
+    @type maxFields: C{int}
+    @cvar maxSize: maximum size of the whole post allowed.
+    @type maxSize: C{int}
     """
+    maxMem = 100 * 1024
+    maxFields = 1024
+    maxSize = 10 * 1024 * 1024
+
     def http_POST(self, request):
         """
         Respond to a POST request.
         Reads and parses the incoming body data then calls L{render}.
+
         @param request: the request to process.
         @return: an object adaptable to L{iweb.IResponse}.
         """
-        return server.parsePOSTData(request).addCallback(
-            lambda res: self.render(request))
-        
+        return server.parsePOSTData(request,
+            self.maxMem, self.maxFields, self.maxSize
+            ).addCallback(lambda res: self.render(request))
+
+
 class LeafResource(RenderMixin):
     """
     A L{Resource} with no children.
@@ -251,7 +265,7 @@ class WrapperResource(object):
     before request processing on the contained L{Resource}.
     """
     implements(iweb.IResource)
-    
+
     def __init__(self, resource):
         self.resource=resource
 
@@ -264,7 +278,7 @@ class WrapperResource(object):
             C{locateChild} are chained onto the deferred as callbacks.
         """
         raise NotImplementedError()
-    
+
     def locateChild(self, request, segments):
         x = self.hook(request)
         if x is not None:
@@ -276,6 +290,6 @@ class WrapperResource(object):
         if x is not None:
             return x.addCallback(lambda data: self.resource)
         return self.resource
-    
+
 
 __all__ = ['RenderMixin', 'Resource', 'PostableResource', 'LeafResource', 'WrapperResource']

@@ -1,3 +1,6 @@
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 """
 A test harness for the twisted.web2 server.
 """
@@ -7,8 +10,9 @@ from zope.interface import implements
 from twisted.python import components
 from twisted.web2 import http, http_headers, iweb, server
 from twisted.web2 import resource, stream, compat
-from twisted.trial import unittest, util
-from twisted.internet import reactor, defer, address, error as ti_error
+from twisted.trial import unittest
+from twisted.internet import reactor, defer, address
+
 
 
 class NotResource(object):
@@ -132,18 +136,17 @@ class AdaptionTestCase(unittest.TestCase):
 
 
 
-
 class SimpleRequest(server.Request):
     """I can be used in cases where a Request object is necessary
     but it is benificial to bypass the chanRequest
     """
 
     clientproto = (1,1)
-    
+
     def __init__(self, site, method, uri, headers=None, content=None):
         if not headers:
             headers = http_headers.Headers(headers)
-            
+
         super(SimpleRequest, self).__init__(
             site=site,
             chanRequest=None,
@@ -170,7 +173,7 @@ class TestChanRequest:
     hostInfo = address.IPv4Address('TCP', 'host', 80), False
     remoteHost = address.IPv4Address('TCP', 'remotehost', 34567)
 
-    
+
     def __init__(self, site, method, prepath, uri, length=None,
                  headers=None, version=(1,1), content=None):
         self.site = site
@@ -190,11 +193,11 @@ class TestChanRequest:
                                       self.headers,
                                       site=self.site,
                                       prepathuri=self.prepath)
-        
+
         if content is not None:
             self.request.handleContentChunk(content)
             self.request.handleContentComplete()
-            
+
         self.code = None
         self.responseHeaders = None
         self.data = ''
@@ -202,11 +205,11 @@ class TestChanRequest:
 
     def writeIntermediateResponse(code, headers=None):
         pass
-    
+
     def writeHeaders(self, code, headers):
         self.responseHeaders = headers
         self.code = code
-        
+
     def write(self, data):
         self.data += data
 
@@ -217,7 +220,7 @@ class TestChanRequest:
 
     def abortConnection(self):
         self.finish(failed=True)
-        
+
     def registerProducer(self, producer, streaming):
         pass
 
@@ -229,14 +232,14 @@ class TestChanRequest:
 
     def getRemoteHost(self):
         return self.remoteHost
-    
+
 
 class BaseTestResource(resource.Resource):
     responseCode = 200
     responseText = 'This is a fake resource.'
     responseHeaders = {}
     addSlash = False
-    
+
     def __init__(self, children=[]):
         """
         @type children: C{list} of C{tuple}
@@ -252,17 +255,19 @@ class BaseTestResource(resource.Resource):
     def responseStream(self):
         return stream.MemoryStream(self.responseText)
 
+
+
 _unset = object()
 class BaseCase(unittest.TestCase):
     """
     Base class for test cases that involve testing the result
     of arbitrary HTTP(S) queries.
     """
-    
+
     method = 'GET'
     version = (1, 1)
     wait_timeout = 5.0
-    
+
     def chanrequest(self, root, uri, length, headers, method, version, prepath, content):
         site = server.Site(root)
         return TestChanRequest(site, method, prepath, uri, length, headers, version, content)
@@ -276,7 +281,7 @@ class BaseCase(unittest.TestCase):
                 length = len(content)
             else:
                 length = 0
-            
+
         if method is None:
             method = self.method
         if version is None:
@@ -299,7 +304,7 @@ class BaseCase(unittest.TestCase):
         """
         d = self.getResponseFor(*request_data)
         d.addCallback(self._cbGotResponse, expected_response, failure)
-        
+
         return d
 
     def _cbGotResponse(self, (code, headers, data, failed), expected_response, expectedfailure=False):
@@ -310,6 +315,8 @@ class BaseCase(unittest.TestCase):
         for key, value in expected_headers.iteritems():
             self.assertEquals(headers.getHeader(key), value)
         self.assertEquals(failed, expectedfailure)
+
+
 
 class SampleWebTest(BaseCase):
     class SampleTestResource(BaseTestResource):
@@ -376,13 +383,13 @@ class SampleWebTest(BaseCase):
         return self.assertResponse(
             (redirectResource, 'http://localhost/'),
             (301, {'location': 'https://localhost/foo?bar=baz'}, None))
-    
+
 
 class URLParsingTest(BaseCase):
     class TestResource(resource.LeafResource):
         def render(self, req):
             return http.Response(stream="Host:%s, Path:%s"%(req.host, req.path))
-            
+
     def setUp(self):
         self.root = self.TestResource()
 
@@ -407,6 +414,8 @@ class URLParsingTest(BaseCase):
             (self.root, 'http://host//path'),
             (200, {}, 'Host:host, Path://path'))
 
+
+
 class TestDeferredRendering(BaseCase):
     class ResourceWithDeferreds(BaseTestResource):
         addSlash=True
@@ -421,7 +430,7 @@ class TestDeferredRendering(BaseCase):
             d = defer.Deferred()
             reactor.callLater(0, d.callback, BaseTestResource())
             return d
-        
+
     def test_deferredRootResource(self):
         return self.assertResponse(
             (self.ResourceWithDeferreds(), 'http://host/'),
@@ -431,6 +440,8 @@ class TestDeferredRendering(BaseCase):
         return self.assertResponse(
             (self.ResourceWithDeferreds(), 'http://host/deferred'),
             (200, {}, 'This is a fake resource.'))
+
+
 
 class RedirectResourceTest(BaseCase):
     def html(url):
@@ -476,6 +487,7 @@ class RedirectResourceTest(BaseCase):
         return defer.DeferredList(ds, fireOnOneErrback=True)
 
 
+
 class EmptyResource(resource.Resource):
     def __init__(self, test):
         self.test = test
@@ -483,6 +495,7 @@ class EmptyResource(resource.Resource):
     def render(self, request):
         self.test.assertEquals(request.urlForResource(self), self.expectedURI)
         return 201
+
 
 
 class RememberURIs(BaseCase):
@@ -624,3 +637,242 @@ class RememberURIs(BaseCase):
         d = request.locateResource("/foo")
         d.addCallback(gotResource)
         return d
+
+
+
+class ParsePostDataTests(unittest.TestCase):
+    """
+    Tests for L{server.parsePOSTData}.
+    """
+
+    def test_noData(self):
+        """
+        Parsing a request without data should succeed but should not fill the
+        C{args} and C{files} attributes of the request.
+        """
+        root = resource.Resource()
+        request = SimpleRequest(server.Site(root), "GET", "/")
+        def cb(ign):
+            self.assertEquals(request.args, {})
+            self.assertEquals(request.files, {})
+        return server.parsePOSTData(request).addCallback(cb)
+
+
+    def test_noContentType(self):
+        """
+        Parsing a request without content-type should succeed but should not
+        fill the C{args} and C{files} attributes of the request.
+        """
+        root = resource.Resource()
+        request = SimpleRequest(server.Site(root), "GET", "/", content="foo")
+        def cb(ign):
+            self.assertEquals(request.args, {})
+            self.assertEquals(request.files, {})
+        return server.parsePOSTData(request).addCallback(cb)
+
+
+    def test_urlencoded(self):
+        """
+        Test parsing data in urlencoded format: it should end in the C{args}
+        attribute.
+        """
+        ctype = http_headers.MimeType('application', 'x-www-form-urlencoded')
+        content = "key=value&multiple=two+words&multiple=more%20words"
+        root = resource.Resource()
+        request = SimpleRequest(server.Site(root), "GET", "/",
+                http_headers.Headers({'content-type': ctype}), content)
+        def cb(ign):
+            self.assertEquals(request.files, {})
+            self.assertEquals(request.args,
+                {'multiple': ['two words', 'more words'], 'key': ['value']})
+        return server.parsePOSTData(request).addCallback(cb)
+
+
+    def test_multipart(self):
+        """
+        Test parsing data in multipart format: it should fill the C{files}
+        attribute.
+        """
+        ctype = http_headers.MimeType('multipart', 'form-data',
+                                      (('boundary', '---weeboundary'),))
+        content="""-----weeboundary\r
+Content-Disposition: form-data; name="FileNameOne"; filename="myfilename"\r
+Content-Type: text/html\r
+\r
+my great content wooo\r
+-----weeboundary--\r
+"""
+        root = resource.Resource()
+        request = SimpleRequest(server.Site(root), "GET", "/",
+                http_headers.Headers({'content-type': ctype}), content)
+        def cb(ign):
+            self.assertEquals(request.args, {})
+            self.assertEquals(request.files.keys(), ['FileNameOne'])
+            self.assertEquals(request.files.values()[0][0][:2],
+                  ('myfilename', http_headers.MimeType('text', 'html', {})))
+            f = request.files.values()[0][0][2]
+            self.assertEquals(f.read(), "my great content wooo")
+        return server.parsePOSTData(request).addCallback(cb)
+
+
+    def test_multipartWithNoBoundary(self):
+        """
+        If the boundary type is not specified, parsing should fail with a
+        C{http.HTTPError}.
+        """
+        ctype = http_headers.MimeType('multipart', 'form-data')
+        content="""-----weeboundary\r
+Content-Disposition: form-data; name="FileNameOne"; filename="myfilename"\r
+Content-Type: text/html\r
+\r
+my great content wooo\r
+-----weeboundary--\r
+"""
+        root = resource.Resource()
+        request = SimpleRequest(server.Site(root), "GET", "/",
+                http_headers.Headers({'content-type': ctype}), content)
+        return self.assertFailure(server.parsePOSTData(request),
+            http.HTTPError)
+
+
+    def test_wrongContentType(self):
+        """
+        Check that a content-type not handled raise a C{http.HTTPError}.
+        """
+        ctype = http_headers.MimeType('application', 'foobar')
+        content = "key=value&multiple=two+words&multiple=more%20words"
+        root = resource.Resource()
+        request = SimpleRequest(server.Site(root), "GET", "/",
+                http_headers.Headers({'content-type': ctype}), content)
+        return self.assertFailure(server.parsePOSTData(request),
+            http.HTTPError)
+
+
+    def test_mimeParsingError(self):
+        """
+        A malformed content should result in a C{http.HTTPError}.
+        
+        The tested content has an invalid closing boundary.
+        """
+        ctype = http_headers.MimeType('multipart', 'form-data',
+                                      (('boundary', '---weeboundary'),))
+        content="""-----weeboundary\r
+Content-Disposition: form-data; name="FileNameOne"; filename="myfilename"\r
+Content-Type: text/html\r
+\r
+my great content wooo\r
+-----weeoundary--\r
+"""
+        root = resource.Resource()
+        request = SimpleRequest(server.Site(root), "GET", "/",
+                http_headers.Headers({'content-type': ctype}), content)
+        return self.assertFailure(server.parsePOSTData(request),
+            http.HTTPError)
+
+
+    def test_multipartMaxMem(self):
+        """
+        Check that the C{maxMem} parameter makes the parsing raise an
+        exception if the value is reached.
+        """
+        ctype = http_headers.MimeType('multipart', 'form-data',
+                                      (('boundary', '---weeboundary'),))
+        content="""-----weeboundary\r
+Content-Disposition: form-data; name="FileNameOne"\r
+Content-Type: text/html\r
+\r
+my great content wooo
+and even more and more\r
+-----weeboundary--\r
+"""
+        root = resource.Resource()
+        request = SimpleRequest(server.Site(root), "GET", "/",
+                http_headers.Headers({'content-type': ctype}), content)
+        def cb(res):
+            self.assertEquals(res.response.description,
+                "Maximum length of 10 bytes exceeded.")
+        return self.assertFailure(server.parsePOSTData(request, maxMem=10),
+            http.HTTPError).addCallback(cb)
+
+
+    def test_multipartMaxSize(self):
+        """
+        Check that the C{maxSize} parameter makes the parsing raise an
+        exception if the data is too big.
+        """
+        ctype = http_headers.MimeType('multipart', 'form-data',
+                                      (('boundary', '---weeboundary'),))
+        content="""-----weeboundary\r
+Content-Disposition: form-data; name="FileNameOne"; filename="myfilename"\r
+Content-Type: text/html\r
+\r
+my great content wooo
+and even more and more\r
+-----weeboundary--\r
+"""
+        root = resource.Resource()
+        request = SimpleRequest(server.Site(root), "GET", "/",
+                http_headers.Headers({'content-type': ctype}), content)
+        def cb(res):
+            self.assertEquals(res.response.description,
+                "Maximum length of 10 bytes exceeded.")
+        return self.assertFailure(server.parsePOSTData(request, maxSize=10),
+            http.HTTPError).addCallback(cb)
+
+
+    def test_maxFields(self):
+        """
+        Check that the C{maxSize} parameter makes the parsing raise an
+        exception if the data contains too many fields.
+        """
+        ctype = http_headers.MimeType('multipart', 'form-data',
+                                      (('boundary', '---xyz'),))
+        content = """-----xyz\r
+Content-Disposition: form-data; name="foo"\r
+\r
+Foo Bar\r
+-----xyz\r
+Content-Disposition: form-data; name="foo"\r
+\r
+Baz\r
+-----xyz\r
+Content-Disposition: form-data; name="file"; filename="filename"\r
+Content-Type: text/html\r
+\r
+blah\r
+-----xyz\r
+Content-Disposition: form-data; name="file"; filename="filename"\r
+Content-Type: text/plain\r
+\r
+bleh\r
+-----xyz--\r
+"""
+        root = resource.Resource()
+        request = SimpleRequest(server.Site(root), "GET", "/",
+                http_headers.Headers({'content-type': ctype}), content)
+        def cb(res):
+            self.assertEquals(res.response.description,
+                "Maximum number of fields 3 exceeded")
+        return self.assertFailure(server.parsePOSTData(request, maxFields=3),
+            http.HTTPError).addCallback(cb)
+
+
+    def test_otherErrors(self):
+        """
+        Test that errors durign parsing other than C{MimeFormatError} are
+        propagated.
+        """
+        ctype = http_headers.MimeType('multipart', 'form-data',
+                                      (('boundary', '---weeboundary'),))
+        # XXX: maybe this is not a good example
+        # parseContentDispositionFormData could handle this problem
+        content="""-----weeboundary\r
+Content-Disposition: form-data; name="FileNameOne"; filename="myfilename and invalid data \r
+-----weeboundary--\r
+"""
+        root = resource.Resource()
+        request = SimpleRequest(server.Site(root), "GET", "/",
+                http_headers.Headers({'content-type': ctype}), content)
+        return self.assertFailure(server.parsePOSTData(request),
+            ValueError)
+
