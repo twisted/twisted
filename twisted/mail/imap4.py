@@ -1632,13 +1632,24 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         try:
             id, msg = results.next()
         except StopIteration:
-            # All results have been processed, deliver completion notification.
-            self.sendPositiveResponse(tag, 'FETCH completed')
-
             # The idle timeout was suspended while we delivered results,
             # restore it now.
             self.setTimeout(self._oldTimeout)
             del self._oldTimeout
+
+            # All results have been processed, deliver completion notification.
+
+            # It's important to run this *after* resetting the timeout to "rig
+            # a race" in some test code. writing to the transport will
+            # synchronously call test code, which synchronously loses the
+            # connection, calling our connectionLost method, which cancels the
+            # timeout. We want to make sure that timeout is cancelled *after*
+            # we reset it above, so that the final state is no timed
+            # calls. This avoids reactor uncleanliness errors in the test
+            # suite.
+            # XXX: Perhaps loopback should be fixed to not call the user code
+            # synchronously in transport.write?
+            self.sendPositiveResponse(tag, 'FETCH completed')
 
             # Instance state is now consistent again (ie, it is as though
             # the fetch command never ran), so allow any pending blocked

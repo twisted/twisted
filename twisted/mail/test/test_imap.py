@@ -2805,7 +2805,12 @@ class SlowMailbox(SimpleMailbox):
         return d
 
 class Timeout(IMAP4HelperMixin, unittest.TestCase):
-    def testServerTimeout(self):
+
+    def test_serverTimeout(self):
+        """
+        The *client* has a timeout mechanism which will close connections that
+        are inactive for a period.
+        """
         self.server.timeoutTest = True
         self.client.timeout = 5 #seconds
         self.selectedArgs = None
@@ -2823,7 +2828,10 @@ class Timeout(IMAP4HelperMixin, unittest.TestCase):
         d.addErrback(self._ebGeneral)
         return defer.gatherResults([d, self.loopback()])
 
-    def testLongFetchDoesntTimeout(self):
+    def test_longFetchDoesntTimeout(self):
+        """
+        The connecection timeout does not take effect during fetches.
+        """
         SimpleServer.theAccount.mailboxFactory = SlowMailbox
         SimpleServer.theAccount.addMailbox('mailbox-test')
 
@@ -2848,7 +2856,11 @@ class Timeout(IMAP4HelperMixin, unittest.TestCase):
         d = defer.gatherResults([d1, self.loopback()])
         return d.addCallback(lambda _: self.failUnless(self.stillConnected))
 
-    def testIdleClientDoesDisconnect(self):
+    def test_idleClientDoesDisconnect(self):
+        """
+        The *server* has a timeout mechanism which will close connections that
+        are inactive for a period.
+        """
         from twisted.test.time_helpers import Clock
         c = Clock()
         c.install()
