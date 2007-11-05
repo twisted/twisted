@@ -596,28 +596,84 @@ class ProducerTestCase(unittest.TestCase):
         self.failIf(p.paused)
 
 
+
+class TestableProxyClientFactory(portforward.ProxyClientFactory):
+    """
+    Test proxy client factory that keeps the last created protocol instance.
+
+    @ivar protoInstance: the last instance of the protocol.
+    @type protoInstance: L{portforward.ProxyClient}
+    """
+
+    def buildProtocol(self, addr):
+        """
+        Create the protocol instance and keeps track of it.
+        """
+        proto = portforward.ProxyClientFactory.buildProtocol(self, addr)
+        self.protoInstance = proto
+        return proto
+
+
+
+class TestableProxyFactory(portforward.ProxyFactory):
+    """
+    Test proxy factory that keeps the last created protocol instance.
+
+    @ivar protoInstance: the last instance of the protocol.
+    @type protoInstance: L{portforward.ProxyServer}
+
+    @ivar clientFactoryInstance: client factory used by C{protoInstance} to
+        create forward connections.
+    @type clientFactoryInstance: L{TestableProxyClientFactory}
+    """
+
+    def buildProtocol(self, addr):
+        """
+        Create the protocol instance, keeps track of it, and makes it use
+        C{clientFactoryInstance} as client factory.
+        """
+        proto = portforward.ProxyFactory.buildProtocol(self, addr)
+        self.clientFactoryInstance = TestableProxyClientFactory()
+        # Force the use of this specific instance
+        proto.clientProtocolFactory = lambda: self.clientFactoryInstance
+        self.protoInstance = proto
+        return proto
+
+
+
 class Portforwarding(unittest.TestCase):
     """
     Test port forwarding.
     """
+
     def setUp(self):
         self.serverProtocol = wire.Echo()
         self.clientProtocol = protocol.Protocol()
         self.openPorts = []
 
+
     def tearDown(self):
         try:
+            self.proxyServerFactory.protoInstance.transport.loseConnection()
+        except AttributeError:
+            pass
+        try:
+            self.proxyServerFactory.clientFactoryInstance.protoInstance.transport.loseConnection()
+        except AttributeError:
+            pass
+        try:
             self.clientProtocol.transport.loseConnection()
-        except:
+        except AttributeError:
             pass
         try:
             self.serverProtocol.transport.loseConnection()
-        except:
+        except AttributeError:
             pass
         return defer.gatherResults(
             [defer.maybeDeferred(p.stopListening) for p in self.openPorts])
 
-    def testPortforward(self):
+
+    def test_portforward(self):
         """
         Test port forwarding through Echo protocol.
         """
@@ -626,10 +682,9 @@ class Portforwarding(unittest.TestCase):
         realServerPort = reactor.listenTCP(0, realServerFactory,
                                            interface='127.0.0.1')
         self.openPorts.append(realServerPort)
-
-        proxyServerFactory = portforward.ProxyFactory('127.0.0.1',
+        self.proxyServerFactory = TestableProxyFactory('127.0.0.1',
                                 realServerPort.getHost().port)
-        proxyServerPort = reactor.listenTCP(0, proxyServerFactory,
+        proxyServerPort = reactor.listenTCP(0, self.proxyServerFactory,
                                             interface='127.0.0.1')
         self.openPorts.append(proxyServerPort)
 
@@ -661,6 +716,7 @@ class StringTransportTestCase(unittest.TestCase):
     """
     Test L{proto_helpers.StringTransport} helper behaviour.
     """
+
     def test_noUnicode(self):
         """
         Test that L{proto_helpers.StringTransport} doesn't accept unicode data.
