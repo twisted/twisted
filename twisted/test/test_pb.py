@@ -402,6 +402,37 @@ class NewStyleTestCase(unittest.TestCase):
 
 
 
+class ConnectionNotifyServerFactory(pb.PBServerFactory):
+    """
+    A server factory which stores the last connection and fires a
+    L{defer.Deferred} on connection made. This factory can handle only one
+    client connection.
+
+    @ivar protocolInstance: the last protocol instance.
+    @type protocolInstance: C{pb.Broker}
+
+    @ivar connectionMade: the deferred fired upon connection.
+    @type connectionMade: C{defer.Deferred}
+    """
+    protocolInstance = None
+
+    def __init__(self, root):
+        """
+        Initialize the factory.
+        """
+        pb.PBServerFactory.__init__(self, root)
+        self.connectionMade = defer.Deferred()
+
+
+    def clientConnectionMade(self, protocol):
+        """
+        Store the protocol and fire the connection deferred.
+        """
+        self.protocolInstance = protocol
+        self.connectionMade.callback(None)
+
+
+
 class NewStyleCachedTestCase(unittest.TestCase):
     def setUp(self):
         """
@@ -411,19 +442,22 @@ class NewStyleCachedTestCase(unittest.TestCase):
         self.orig = NewStyleCacheCopy()
         self.orig.s = "value"
         self.server = reactor.listenTCP(0,
-            pb.PBServerFactory(CachedReturner(self.orig)))
+            ConnectionNotifyServerFactory(CachedReturner(self.orig)))
         clientFactory = pb.PBClientFactory()
         reactor.connectTCP("localhost", self.server.getHost().port,
                            clientFactory)
         def gotRoot(ref):
             self.ref = ref
-        return clientFactory.getRootObject().addCallback(gotRoot)
+        d1 = clientFactory.getRootObject().addCallback(gotRoot)
+        d2 = self.server.factory.connectionMade
+        return defer.gatherResults([d1, d2])
 
 
     def tearDown(self):
         """
         Close client and server connections.
         """
+        self.server.factory.protocolInstance.transport.loseConnection()
         self.ref.broker.transport.loseConnection()
         return self.server.stopListening()
 
