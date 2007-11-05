@@ -1022,7 +1022,8 @@ def challenge():
 
 
 class PBClientFactory(protocol.ClientFactory):
-    """Client factory for PB brokers.
+    """
+    Client factory for PB brokers.
 
     As with all client factories, use with reactor.connectTCP/SSL/etc..
     getPerspective and getRootObject can be called either before or
@@ -1030,10 +1031,31 @@ class PBClientFactory(protocol.ClientFactory):
     """
 
     protocol = Broker
-    unsafeTracebacks = 0
+    unsafeTracebacks = False
 
-    def __init__(self):
+    def __init__(self, unsafeTracebacks=False, security=globalSecurity):
+        """
+        @param unsafeTracebacks: if set, tracebacks for exceptions will be sent
+            over the wire.
+        @type unsafeTracebacks: C{bool}
+
+        @param security: security options used by the broker, default to
+            C{globalSecurity}.
+        @type security: L{twisted.spread.jelly.SecurityOptions}
+        """
+        self.unsafeTracebacks = unsafeTracebacks
+        self.security = security
         self._reset()
+
+
+    def buildProtocol(self, addr):
+        """
+        Build the broker instance, passing the security options to it.
+        """
+        p = self.protocol(isClient=True, security=self.security)
+        p.factory = self
+        return p
+
 
     def _reset(self):
         self.rootObjectRequests = [] # list of deferred
@@ -1142,35 +1164,51 @@ class PBClientFactory(protocol.ClientFactory):
 
 
 class PBServerFactory(protocol.ServerFactory):
-    """Server factory for perspective broker.
+    """
+    Server factory for perspective broker.
 
     Login is done using a Portal object, whose realm is expected to return
     avatars implementing IPerspective. The credential checkers in the portal
     should accept IUsernameHashedPassword or IUsernameMD5Password.
 
-    Alternatively, any object implementing or adaptable to IPBRoot can
-    be used instead of a portal to provide the root object of the PB
-    server.
+    Alternatively, any object providing or adaptable to L{IPBRoot} can be
+    used instead of a portal to provide the root object of the PB server.
     """
 
-    unsafeTracebacks = 0
+    unsafeTracebacks = False
 
     # object broker factory
     protocol = Broker
 
-    def __init__(self, root, unsafeTracebacks=False):
+    def __init__(self, root, unsafeTracebacks=False, security=globalSecurity):
+        """
+        @param root: factory providing the root Referenceable used by the broker.
+        @type root: object providing or adaptable to L{IPBRoot}.
+
+        @param unsafeTracebacks: if set, tracebacks for exceptions will be sent
+            over the wire.
+        @type unsafeTracebacks: C{bool}
+
+        @param security: security options used by the broker, default to
+            C{globalSecurity}.
+        @type security: L{twisted.spread.jelly.SecurityOptions}
+        """
         self.root = IPBRoot(root)
         self.unsafeTracebacks = unsafeTracebacks
+        self.security = security
+
 
     def buildProtocol(self, addr):
-        """Return a Broker attached to me (as the service provider).
         """
-        proto = self.protocol(0)
+        Return a Broker attached to the factory (as the service provider).
+        """
+        proto = self.protocol(isClient=False, security=self.security)
         proto.factory = self
         proto.setNameForLocal("root", self.root.rootObject(proto))
         return proto
 
     def clientConnectionMade(self, protocol):
+        # XXX does this method make any sense?
         pass
 
 

@@ -19,7 +19,7 @@ from zope.interface import implements, Interface
 
 from twisted.trial import unittest
 
-from twisted.spread import pb, util, publish
+from twisted.spread import pb, util, publish, jelly
 from twisted.internet import protocol, main, reactor, defer
 from twisted.internet.defer import Deferred, gatherResults
 from twisted.python import failure, log
@@ -1455,7 +1455,6 @@ class Forwarded:
         Set a local flag to test afterwards. This should not be called as it's
         not in the interface.
         """
-        print "HERE"
         self.unforwarded = True
 
     def forwardDeferred(self):
@@ -1526,3 +1525,52 @@ class SpreadUtilTestCase(unittest.TestCase):
         l = []
         rr.addCallback(l.append)
         self.assertEqual(l[0], 1)
+
+
+
+class PBWithSecurityOptionsTest(unittest.TestCase):
+    """
+    Test security customization.
+    """
+
+    def test_clientDefaultSecurityOptions(self):
+        """
+        By default, client broker should use C{jelly.globalSecurity} as
+        security settings.
+        """
+        factory = pb.PBClientFactory()
+        broker = factory.buildProtocol(None)
+        self.assertIdentical(broker.security, jelly.globalSecurity)
+
+
+    def test_serverDefaultSecurityOptions(self):
+        """
+        By default, server broker should use C{jelly.globalSecurity} as
+        security settings.
+        """
+        factory = pb.PBServerFactory(Echoer())
+        broker = factory.buildProtocol(None)
+        self.assertIdentical(broker.security, jelly.globalSecurity)
+
+
+    def test_clientSecurityCustomization(self):
+        """
+        Check that the security settings are passed from the client factory to
+        the broker object.
+        """
+        security = jelly.SecurityOptions()
+        factory = pb.PBClientFactory(security=security)
+        broker = factory.buildProtocol(None)
+        self.assertIdentical(broker.security, security)
+
+
+    def test_serverSecurityCustomization(self):
+        """
+        Check that the security settings are passed from the server factory to
+        the broker object.
+        """
+        security = jelly.SecurityOptions()
+        factory = pb.PBServerFactory(Echoer(), security=security)
+        broker = factory.buildProtocol(None)
+        self.assertIdentical(broker.security, security)
+
