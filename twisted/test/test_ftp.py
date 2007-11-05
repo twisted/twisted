@@ -11,12 +11,16 @@ Maintainer: U{Andrew Bennetts<mailto:spiv@twistedmatrix.com>}
 import os.path
 from StringIO import StringIO
 import shutil
+import errno
+
+from zope.interface import implements
 
 from twisted.trial import unittest
 from twisted.protocols import basic
 from twisted.internet import reactor, protocol, defer, error
+from twisted.internet.interfaces import IConsumer
 from twisted.cred import portal, checkers, credentials
-from twisted.python import failure
+from twisted.python import failure, filepath
 from twisted.test import proto_helpers
 
 from twisted.protocols import ftp, loopback
@@ -26,7 +30,6 @@ class NonClosingStringIO(StringIO):
         pass
 
 StringIOWithoutClosing = NonClosingStringIO
-
 
 
 
@@ -1577,17 +1580,670 @@ class PathHandling(unittest.TestCase):
             self.assertRaises(ftp.InvalidPath, ftp.toSegments, ['x'], inp)
 
 
-class FTPShellTestCase(unittest.TestCase):
+
+class ErrnoToFailureTestCase(unittest.TestCase):
     """
-    Test functionnalities for FTP shells classes.
+    Tests for L{ftp.errnoToFailure} errno checking.
     """
+
+    def test_notFound(self):
+        """
+        C{errno.ENOENT} should be translated to L{ftp.FileNotFoundError}.
+        """
+        d = ftp.errnoToFailure(errno.ENOENT, "foo")
+        return self.assertFailure(d, ftp.FileNotFoundError)
+
+
+    def test_permissionDenied(self):
+        """
+        C{errno.EPERM} should be translated to L{ftp.PermissionDeniedError}.
+        """
+        d = ftp.errnoToFailure(errno.EPERM, "foo")
+        return self.assertFailure(d, ftp.PermissionDeniedError)
+
+
+    def test_accessDenied(self):
+        """
+        C{errno.EACCES} should be translated to L{ftp.PermissionDeniedError}.
+        """
+        d = ftp.errnoToFailure(errno.EACCES, "foo")
+        return self.assertFailure(d, ftp.PermissionDeniedError)
+
+
+    def test_notDirectory(self):
+        """
+        C{errno.ENOTDIR} should be translated to L{ftp.IsNotADirectoryError}.
+        """
+        d = ftp.errnoToFailure(errno.ENOTDIR, "foo")
+        return self.assertFailure(d, ftp.IsNotADirectoryError)
+
+
+    def test_fileExists(self):
+        """
+        C{errno.EEXIST} should be translated to L{ftp.FileExistsError}.
+        """
+        d = ftp.errnoToFailure(errno.EEXIST, "foo")
+        return self.assertFailure(d, ftp.FileExistsError)
+
+
+    def test_isDirectory(self):
+        """
+        C{errno.EISDIR} should be translated to L{ftp.IsADirectoryError}.
+        """
+        d = ftp.errnoToFailure(errno.EISDIR, "foo")
+        return self.assertFailure(d, ftp.IsADirectoryError)
+
+
+    def test_passThrough(self):
+        """
+        If an unknown errno is passed to L{ftp.errnoToFailure}, it should let
+        the originating exception pass through.
+        """
+        try:
+            raise RuntimeError("bar")
+        except:
+            d = ftp.errnoToFailure(-1, "foo")
+            return self.assertFailure(d, RuntimeError)
+
+
+
+class AnonymousFTPShellTestCase(unittest.TestCase):
+    """
+    Test anynomous shell properties.
+    """
+
     def test_anonymousWrite(self):
         """
         Check that L{ftp.FTPAnonymousShell} returns an error when trying to
         open it in write mode.
         """
         shell = ftp.FTPAnonymousShell('')
-        d = shell.openForWriting('foo')
+        d = shell.openForWriting(('foo',))
         self.assertFailure(d, ftp.PermissionDeniedError)
         return d
+
+
+
+class IFTPShellTestsMixin:
+    """
+    Generic tests for the C{IFTPShell} interface.
+    """
+
+    def directoryExists(self, path):
+        """
+        Test if the directory exists at C{path}.
+
+        @param path: the relative path to check.
+        @type path: C{str}.
+
+        @return: C{True} if C{path} exists and is a directory, C{False} if
+            it's not the case
+        @rtype: C{bool}
+        """
+        raise NotImplementedError()
+
+
+    def createDirectory(self, path):
+        """
+        Create a directory in C{path}.
+
+        @param path: the relative path of the directory to create, with one
+            segment.
+        @type path: C{str}
+        """
+        raise NotImplementedError()
+
+
+    def fileExists(self, path):
+        """
+        Test if the file exists at C{path}.
+
+        @param path: the relative path to check.
+        @type path: C{str}.
+
+        @return: C{True} if C{path} exists and is a file, C{False} if it's not
+            the case.
+        @rtype: C{bool}
+        """
+        raise NotImplementedError()
+
+
+    def createFile(self, path, fileContent=''):
+        """
+        Create a file named C{path} with some content.
+
+        @param path: the relative path of the file to create, without
+            directory.
+        @type path: C{str}
+
+        @param fileContent: the content of the file.
+        @type fileContent: C{str}
+        """
+        raise NotImplementedError()
+
+
+    def test_createDirectory(self):
+        """
+        C{directoryExists} should report correctly about directory existence,
+        and C{createDirectory} should create a directory detectable by
+        C{directoryExists}.
+        """
+        self.assertFalse(self.directoryExists('bar'))
+        self.createDirectory('bar')
+        self.assertTrue(self.directoryExists('bar'))
+
+
+    def test_createFile(self):
+        """
+        C{fileExists} should report correctly about file existence, and
+        C{createFile} should create a file detectable by C{fileExists}.
+        """
+        self.assertFalse(self.fileExists('file.txt'))
+        self.createFile('file.txt')
+        self.assertTrue(self.fileExists('file.txt'))
+
+
+    def test_makeDirectory(self):
+        """
+        Create a directory and check it ends in the filesystem.
+        """
+        d = self.shell.makeDirectory(('foo',))
+        def cb(result):
+            self.assertTrue(self.directoryExists('foo'))
+        return d.addCallback(cb)
+
+
+    def test_makeDirectoryError(self):
+        """
+        Creating a directory that already exists should fail with a
+        C{ftp.FileExistsError}.
+        """
+        self.createDirectory('foo')
+        d = self.shell.makeDirectory(('foo',))
+        return self.assertFailure(d, ftp.FileExistsError)
+
+
+    def test_removeDirectory(self):
+        """
+        Try to remove a directory and check it's removed from the filesystem.
+        """
+        self.createDirectory('bar')
+        d = self.shell.removeDirectory(('bar',))
+        def cb(result):
+            self.assertFalse(self.directoryExists('bar'))
+        return d.addCallback(cb)
+
+
+    def test_removeDirectoryOnFile(self):
+        """
+        removeDirectory should not work in file and fail with a
+        C{ftp.IsNotADirectoryError}.
+        """
+        self.createFile('file.txt')
+        d = self.shell.removeDirectory(('file.txt',))
+        return self.assertFailure(d, ftp.IsNotADirectoryError)
+
+
+    def test_removeNotExistingDirectory(self):
+        """
+        Removing directory that doesn't exist should fail with a
+        C{ftp.FileNotFoundError}.
+        """
+        d = self.shell.removeDirectory(('bar',))
+        return self.assertFailure(d, ftp.FileNotFoundError)
+
+
+    def test_removeFile(self):
+        """
+        Try to remove a file and check it's removed from the filesystem.
+        """
+        self.createFile('file.txt')
+        d = self.shell.removeFile(('file.txt',))
+        def cb(res):
+            self.assertFalse(self.fileExists('file.txt'))
+        d.addCallback(cb)
+        return d
+
+
+    def test_removeFileOnDirectory(self):
+        """
+        removeFile should not work on directory.
+        """
+        self.createDirectory('ned')
+        d = self.shell.removeFile(('ned',))
+        return self.assertFailure(d, ftp.IsADirectoryError)
+
+
+    def test_removeNotExistingFile(self):
+        """
+        Try to remove a non existent file, and check it raises a
+        L{ivfs.NotFoundError}.
+        """
+        d = self.shell.removeFile(('foo',))
+        return self.assertFailure(d, ftp.FileNotFoundError)
+
+
+    def test_list(self):
+        """
+        Check the output of the list method.
+        """
+        self.createDirectory('ned')
+        self.createFile('file.txt')
+        d = self.shell.list(('.',))
+        def cb(l):
+            l.sort()
+            self.assertEquals(l,
+                [('file.txt', []), ('ned', [])])
+        return d.addCallback(cb)
+
+
+    def test_listWithStat(self):
+        """
+        Check the output of list with asked stats.
+        """
+        self.createDirectory('ned')
+        self.createFile('file.txt')
+        d = self.shell.list(('.',), ('size', 'permissions',))
+        def cb(l):
+            l.sort()
+            self.assertEquals(len(l), 2)
+            self.assertEquals(l[0][0], 'file.txt')
+            self.assertEquals(l[1][0], 'ned')
+            # Size and permissions are reported differently between platforms
+            # so just check they are present
+            self.assertEquals(len(l[0][1]), 2)
+            self.assertEquals(len(l[1][1]), 2)
+        return d.addCallback(cb)
+
+
+    def test_listWithInvalidStat(self):
+        """
+        Querying an invalid stat should result to a C{AttributeError}.
+        """
+        self.createDirectory('ned')
+        d = self.shell.list(('.',), ('size', 'whateverstat',))
+        return self.assertFailure(d, AttributeError)
+
+
+    def test_listFile(self):
+        """
+        Check the output of the list method on a file.
+        """
+        self.createFile('file.txt')
+        d = self.shell.list(('file.txt',))
+        def cb(l):
+            l.sort()
+            self.assertEquals(l,
+                [('file.txt', [])])
+        return d.addCallback(cb)
+
+
+    def test_listNotExistingDirectory(self):
+        """
+        list on a directory that doesn't exist should fail with a
+        L{ftp.FileNotFoundError}.
+        """
+        d = self.shell.list(('foo',))
+        return self.assertFailure(d, ftp.FileNotFoundError)
+
+
+    def test_access(self):
+        """
+        Try to access a resource.
+        """
+        self.createDirectory('ned')
+        d = self.shell.access(('ned',))
+        return d
+
+
+    def test_accessNotFound(self):
+        """
+        access should fail on a resource that doesn't exist.
+        """
+        d = self.shell.access(('foo',))
+        return self.assertFailure(d, ftp.FileNotFoundError)
+
+
+    def test_openForReading(self):
+        """
+        Check that openForReading returns an object providing C{ftp.IReadFile}.
+        """
+        self.createFile('file.txt')
+        d = self.shell.openForReading(('file.txt',))
+        def cb(res):
+            self.assertTrue(ftp.IReadFile.providedBy(res))
+        d.addCallback(cb)
+        return d
+
+
+    def test_openForReadingNotFound(self):
+        """
+        openForReading should fail with a C{ftp.FileNotFoundError} on a file
+        that doesn't exist.
+        """
+        d = self.shell.openForReading(('ned',))
+        return self.assertFailure(d, ftp.FileNotFoundError)
+
+
+    def test_openForReadingOnDirectory(self):
+        """
+        openForReading should not work on directory.
+        """
+        self.createDirectory('ned')
+        d = self.shell.openForReading(('ned',))
+        return self.assertFailure(d, ftp.IsADirectoryError)
+
+
+    def test_openForWriting(self):
+        """
+        Check that openForWriting returns an object providing C{ftp.IWriteFile}.
+        """
+        d = self.shell.openForWriting(('foo',))
+        def cb(res):
+            self.assertTrue(ftp.IWriteFile.providedBy(res))
+        d.addCallback(cb)
+        return d
+
+
+    def test_openForWritingExistingDirectory(self):
+        """
+        openForWriting should not be able to open a directory that already
+        exists.
+        """
+        self.createDirectory('ned')
+        d = self.shell.openForWriting(('ned',))
+        return self.assertFailure(d, ftp.IsADirectoryError)
+
+
+    def test_openForWritingInNotExistingDirectory(self):
+        """
+        openForWring should fail with a L{ftp.FileNotFoundError} if you specify
+        a file in a directory that doesn't exist.
+        """
+        self.createDirectory('ned')
+        d = self.shell.openForWriting(('ned', 'idonotexist', 'foo'))
+        return self.assertFailure(d, ftp.FileNotFoundError)
+
+
+    def test_statFile(self):
+        """
+        Check the output of the stat method on a file.
+        """
+        fileContent = 'wobble\n'
+        self.createFile('file.txt', fileContent)
+        d = self.shell.stat(('file.txt',), ('size', 'directory'))
+        def cb(res):
+            self.assertEquals(res[0], len(fileContent))
+            self.assertFalse(res[1])
+        d.addCallback(cb)
+        return d
+
+
+    def test_statDirectory(self):
+        """
+        Check the output of the stat method on a directory.
+        """
+        self.createDirectory('ned')
+        d = self.shell.stat(('ned',), ('size', 'directory'))
+        def cb(res):
+            self.assertTrue(res[1])
+        d.addCallback(cb)
+        return d
+
+
+    def test_statOwnerGroup(self):
+        """
+        Check the owner and groups stats.
+        """
+        self.createDirectory('ned')
+        d = self.shell.stat(('ned',), ('owner', 'group'))
+        def cb(res):
+            self.assertEquals(len(res), 2)
+        d.addCallback(cb)
+        return d
+
+
+    def test_statNotExisting(self):
+        """
+        stat should fail with L{ftp.FileNotFoundError} on a file that doesn't
+        exist.
+        """
+        d = self.shell.stat(('foo',), ('size', 'directory'))
+        return self.assertFailure(d, ftp.FileNotFoundError)
+
+
+    def test_invalidStat(self):
+        """
+        Querying an invalid stat should result to a C{AttributeError}.
+        """
+        self.createDirectory('ned')
+        d = self.shell.stat(('ned',), ('size', 'whateverstat'))
+        return self.assertFailure(d, AttributeError)
+
+
+    def test_rename(self):
+        """
+        Try to rename a directory.
+        """
+        self.createDirectory('ned')
+        d = self.shell.rename(('ned',), ('foo',))
+        def cb(res):
+            self.assertTrue(self.directoryExists('foo'))
+            self.assertFalse(self.directoryExists('ned'))
+        return d.addCallback(cb)
+
+
+    def test_renameNotExisting(self):
+        """
+        Renaming a directory that doesn't exist should fail with
+        L{ftp.FileNotFoundError}.
+        """
+        d = self.shell.rename(('foo',), ('bar',))
+        return self.assertFailure(d, ftp.FileNotFoundError)
+
+
+
+class FTPShellTestCase(unittest.TestCase, IFTPShellTestsMixin):
+    """
+    Tests for the C{ftp.FTPShell} object.
+    """
+
+    def setUp(self):
+        """
+        Create a root directory and instantiate a shell.
+        """
+        self.root = filepath.FilePath(self.mktemp())
+        self.root.createDirectory()
+        self.shell = ftp.FTPShell(self.root)
+
+
+    def directoryExists(self, path):
+        """
+        Test if the directory exists at C{path}.
+        """
+        return self.root.child(path).isdir()
+
+
+    def createDirectory(self, path):
+        """
+        Create a directory in C{path}.
+        """
+        return self.root.child(path).createDirectory()
+
+
+    def fileExists(self, path):
+        """
+        Test if the file exists at C{path}.
+        """
+        return self.root.child(path).isfile()
+
+
+    def createFile(self, path, fileContent=''):
+        """
+        Create a file named C{path} with some content.
+        """
+        return self.root.child(path).setContent(fileContent)
+
+
+
+class TestConsumer(object):
+    """
+    A simple consumer for tests. It only works with non-streaming producers.
+
+    @ivar producer: an object providing
+        L{twisted.internet.interfaces.IPullProducer}.
+    """
+
+    implements(IConsumer)
+    producer = None
+
+    def registerProducer(self, producer, streaming):
+        """
+        Simple register of producer, checks that no register has happened
+        before.
+        """
+        assert self.producer is None
+        assert not streaming
+        self.buffer = []
+        self.producer = producer
+        self.producer.resumeProducing()
+
+
+    def unregisterProducer(self):
+        """
+        Unregister the producer, it should be done after a register.
+        """
+        assert self.producer is not None
+        self.producer = None
+
+
+    def write(self, data):
+        """
+        Save the data received.
+        """
+        self.buffer.append(data)
+        self.producer.resumeProducing()
+
+
+
+class TestProducer(object):
+    """
+    A dumb producer.
+    """
+
+    def __init__(self, toProduce, consumer):
+        """
+        @param toProduce: data to write
+        @type toProduce: C{str}
+        @param consumer: the consumer of data.
+        @type consumer: C{IConsumer}
+        """
+        self.toProduce = toProduce
+        self.consumer = consumer
+
+
+    def start(self):
+        """
+        Send the data to consume.
+        """
+        self.consumer.write(self.toProduce)
+
+
+
+class IReadWriteTestsMixin:
+    """
+    Generic tests for the C{IReadFile} and C{IWriteFile} interfaces.
+    """
+
+    def getFileReader(self, content):
+        """
+        Return an object providing C{IReadFile}, ready to send data C{content}.
+        """
+        raise NotImplementedError()
+
+
+    def getFileWriter(self):
+        """
+        Return an object providing C{IWriteFile}, ready to receive data.
+        """
+        raise NotImplementedError()
+
+
+    def getFileContent(self):
+        """
+        Return the content of the file used.
+        """
+        raise NotImplementedError()
+
+
+    def test_read(self):
+        """
+        Test L{ftp.IReadFile}: the implementation should have a send method
+        returning a C{Deferred} which fires when all the data has been sent
+        to the consumer, and the data should be correctly send to the consumer.
+        """
+        content = 'wobble\n'
+        consumer = TestConsumer()
+        def cbGet(reader):
+            return reader.send(consumer).addCallback(cbSend)
+        def cbSend(res):
+            self.assertEquals("".join(consumer.buffer), content)
+        return self.getFileReader(content).addCallback(cbGet)
+
+
+    def test_write(self):
+        """
+        Test L{ftp.IWriteFile}: the implementation should have a receive method
+        returning a C{Deferred} with fires with a consumer ready to receive
+        data to be written.
+        """
+        content = 'elbbow\n'
+        def cbGet(writer):
+            return writer.receive().addCallback(cbReceive)
+        def cbReceive(consumer):
+            producer = TestProducer(content, consumer)
+            consumer.registerProducer(None, True)
+            producer.start()
+            consumer.unregisterProducer()
+            self.assertEquals(self.getFileContent(), content)
+        return self.getFileWriter().addCallback(cbGet)
+
+
+
+class FTPReadWriteTestCase(unittest.TestCase, IReadWriteTestsMixin):
+    """
+    Tests for C{ftp._FileReader} and C{ftp._FileWriter}, the objects returned
+    by the shell in C{openForReading}/C{openForWriting}.
+    """
+
+    def setUp(self):
+        """
+        Create a temporary file used later.
+        """
+        self.root = filepath.FilePath(self.mktemp())
+        self.root.createDirectory()
+        self.shell = ftp.FTPShell(self.root)
+        self.filename = "file.txt"
+
+
+    def getFileReader(self, content):
+        """
+        Return a C{ftp._FileReader} instance with a file opened for reading.
+        """
+        self.root.child(self.filename).setContent(content)
+        return self.shell.openForReading((self.filename,))
+
+
+    def getFileWriter(self):
+        """
+        Return a C{ftp._FileWriter} instance with a file opened for writing.
+        """
+        return self.shell.openForWriting((self.filename,))
+
+
+    def getFileContent(self):
+        """
+        Return the content of the temporary file.
+        """
+        return self.root.child(self.filename).getContent()
 
