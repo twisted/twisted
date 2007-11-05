@@ -66,7 +66,7 @@ class MyProtocol(protocol.Protocol):
             self.factory.protocolConnectionMade is not None):
             d = self.factory.protocolConnectionMade
             self.factory.protocolConnectionMade = None
-            d.callback(None)
+            d.callback(self)
 
     def dataReceived(self, data):
         self.data += data
@@ -90,7 +90,7 @@ class MyProtocolFactoryMixin(object):
     @type protocolConnectionMade: L{NoneType} or L{defer.Deferred}
     @ivar protocolConnectionMade: When an instance of L{MyProtocol} is
         connected, if this is not C{None}, the L{Deferred} will be called
-        back and the attribute set to C{None}.
+        back with the protocol instance and the attribute set to C{None}.
 
     @type protocolConnectionLost: L{NoneType} or L{defer.Deferred}
     @ivar protocolConnectionLost: When an instance of L{MyProtocol} is
@@ -216,6 +216,32 @@ class ListeningTestCase(PortCleanerUpper):
             self.failIf(repr(p).find(portNo) != -1)
         d = defer.maybeDeferred(p.stopListening)
         return d.addCallback(stoppedListening)
+
+
+    def test_serverRepr(self):
+        """
+        Check that the repr string of the server transport get the good port
+        number if the server listens on 0.
+        """
+        server = MyServerFactory()
+        serverConnMade = server.protocolConnectionMade = defer.Deferred()
+        port = reactor.listenTCP(0, server)
+        self.addCleanup(port.stopListening)
+
+        client = MyClientFactory()
+        clientConnMade = client.protocolConnectionMade = defer.Deferred()
+        connector = reactor.connectTCP("127.0.0.1",
+                                       port.getHost().port, client)
+        self.addCleanup(connector.disconnect)
+        def check((serverProto, clientProto)):
+            portNumber = port.getHost().port
+            self.assertEquals(repr(serverProto.transport),
+                              "<MyProtocol #0 on %s>" % (portNumber,))
+            serverProto.transport.loseConnection()
+            clientProto.transport.loseConnection()
+        return defer.gatherResults([serverConnMade, clientConnMade]
+            ).addCallback(check)
+
 
 
 def callWithSpew(f):

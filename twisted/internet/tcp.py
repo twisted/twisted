@@ -618,16 +618,18 @@ class Client(BaseClient):
 
 
 class Server(Connection):
-    """Serverside socket-stream connection class.
+    """
+    Serverside socket-stream connection class.
 
-    I am a serverside network connection transport; a socket which came from an
-    accept() on a server.
+    This is a serverside network connection transport; a socket which came from
+    an accept() on a server.
     """
 
     def __init__(self, sock, protocol, client, server, sessionno):
-        """Server(sock, protocol, client, server, sessionno)
+        """
+        Server(sock, protocol, client, server, sessionno)
 
-        Initialize me with a socket, a protocol, a descriptor for my peer (a
+        Initialize it with a socket, a protocol, a descriptor for my peer (a
         tuple of host, port describing the other end of the connection), an
         instance of Port, and a session number.
         """
@@ -636,8 +638,12 @@ class Server(Connection):
         self.client = client
         self.sessionno = sessionno
         self.hostname = client[0]
-        self.logstr = "%s,%s,%s" % (self.protocol.__class__.__name__, sessionno, self.hostname)
-        self.repstr = "<%s #%s on %s>" % (self.protocol.__class__.__name__, self.sessionno, self.server.port)
+        self.logstr = "%s,%s,%s" % (self.protocol.__class__.__name__,
+                                    sessionno,
+                                    self.hostname)
+        self.repstr = "<%s #%s on %s>" % (self.protocol.__class__.__name__,
+                                          self.sessionno,
+                                          self.server._realPortNumber)
         self.startReading()
         self.connected = 1
 
