@@ -1,7 +1,8 @@
 # Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import StringIO, sys, sets
+import StringIO, sys, sets, types
+
 from twisted.trial import unittest, runner
 from twisted.scripts import trial
 from twisted.python import util
@@ -265,4 +266,84 @@ class TestModuleTest(unittest.TestCase):
                          sibpath('scripttest.py'), sibpath('test_foo.bat')]:
             self.failIf(trial.isTestFile(filename),
                         "%r should *not* be a test file" % (filename,))
+
+
+class WithoutModuleTests(unittest.TestCase):
+    """
+    Test the C{without-module} flag.
+    """
+
+    def setUp(self):
+        """
+        Create a L{trial.Options} object to be used in the tests, and save
+        C{sys.modules}.
+        """
+        self.config = trial.Options()
+        self.savedModules = dict(sys.modules)
+
+
+    def tearDown(self):
+        """
+        Restore C{sys.modules}.
+        """
+        for module in ('imaplib', 'smtplib'):
+            if module in self.savedModules:
+                sys.modules[module] = self.savedModules[module]
+            else:
+                sys.modules.pop(module, None)
+
+
+    def _checkSMTP(self):
+        """
+        Try to import the C{smtplib} module, and return it.
+        """
+        import smtplib
+        return smtplib
+
+
+    def _checkIMAP(self):
+        """
+        Try to import the C{imaplib} module, and return it.
+        """
+        import imaplib
+        return imaplib
+
+
+    def test_disableOneModule(self):
+        """
+        Check that after disabling a module, it can't be imported anymore.
+        """
+        self.config.parseOptions(["--without-module", "smtplib"])
+        self.assertRaises(ImportError, self._checkSMTP)
+        # Restore sys.modules
+        del sys.modules["smtplib"]
+        # Then the function should succeed
+        self.assertIsInstance(self._checkSMTP(), types.ModuleType)
+
+
+    def test_disableMultipleModules(self):
+        """
+        Check that several modules can be disabled at once.
+        """
+        self.config.parseOptions(["--without-module", "smtplib,imaplib"])
+        self.assertRaises(ImportError, self._checkSMTP)
+        self.assertRaises(ImportError, self._checkIMAP)
+        # Restore sys.modules
+        del sys.modules["smtplib"]
+        del sys.modules["imaplib"]
+        # Then the functions should succeed
+        self.assertIsInstance(self._checkSMTP(), types.ModuleType)
+        self.assertIsInstance(self._checkIMAP(), types.ModuleType)
+
+
+    def test_disableAlreadyImportedModule(self):
+        """
+        Disabling an already imported module should produce a warning.
+        """
+        self.assertIsInstance(self._checkSMTP(), types.ModuleType)
+        self.assertWarns(RuntimeWarning,
+                "Module 'smtplib' already imported, disabling anyway.",
+                trial.__file__,
+                self.config.parseOptions, ["--without-module", "smtplib"])
+        self.assertRaises(ImportError, self._checkSMTP)
 

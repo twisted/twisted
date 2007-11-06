@@ -4,7 +4,7 @@
 # See LICENSE for details.
 
 
-import sys, os, random, gc, time, sets
+import sys, os, random, gc, time, sets, warnings
 
 from twisted.internet import defer
 from twisted.application import app
@@ -258,6 +258,17 @@ class Options(usage.Options, app.ReactorSelectionMixin):
             elif self['random'] == 0:
                 self['random'] = long(time.time() * 100)
 
+    def opt_without_module(self, option):
+        """
+        Fake the lack of the specified modules, separated with commas.
+        """
+        for module in option.split(","):
+            if module in sys.modules:
+                warnings.warn("Module '%s' already imported, "
+                              "disabling anyway." % (module,),
+                              category=RuntimeWarning)
+            sys.modules[module] = None
+
     def parseArgs(self, *args):
         self['tests'].update(args)
         if self.extra is not None:
@@ -280,7 +291,7 @@ class Options(usage.Options, app.ReactorSelectionMixin):
         # t.i.reactor and causing the default to be installed.
         self['reporter'] = self._loadReporterByName(self['reporter'])
 
-        if not self.has_key('tbformat'):
+        if 'tbformat' not in self:
             self['tbformat'] = 'default'
         if self['nopm']:
             if not self['debug']:
