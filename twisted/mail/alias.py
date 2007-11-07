@@ -24,7 +24,6 @@ from twisted.mail import smtp
 from twisted.internet import reactor
 from twisted.internet import protocol
 from twisted.internet import defer
-from twisted.internet import error
 from twisted.python import failure
 from twisted.python import log
 from zope.interface import implements, Interface
@@ -187,56 +186,142 @@ class FileAlias(AliasBase):
     def createMessageReceiver(self):
         return FileWrapper(self.filename)
 
+
+
+class ProcessAliasTimeout(Exception):
+    """
+    A timeout occurred while processing aliases.
+    """
+
+
+
 class MessageWrapper:
+    """
+    A message receiver which delivers content to a child process.
+
+    @type completionTimeout: C{int} or C{float}
+    @ivar completionTimeout: The number of seconds to wait for the child
+        process to exit before reporting the delivery as a failure.
+
+    @type _timeoutCallID: C{NoneType} or L{IDelayedCall}
+    @ivar _timeoutCallID: The call used to time out delivery, started when the
+        connection to the child process is closed.
+
+    @type done: C{bool}
+    @ivar done: Flag indicating whether the child process has exited or not.
+
+    @ivar reactor: An L{IReactorTime} provider which will be used to schedule
+        timeouts.
+    """
     implements(smtp.IMessage)
 
     done = False
 
-    def __init__(self, protocol, process=None):
+    completionTimeout = 60
+    _timeoutCallID = None
+
+    reactor = reactor
+
+    def __init__(self, protocol, process=None, reactor=None):
         self.processName = process
         self.protocol = protocol
         self.completion = defer.Deferred()
         self.protocol.onEnd = self.completion
-        self.completion.addCallback(self._processEnded)
+        self.completion.addBoth(self._processEnded)
 
-    def _processEnded(self, result, err=0):
+        if reactor is not None:
+            self.reactor = reactor
+
+
+    def _processEnded(self, result):
+        """
+        Record process termination and cancel the timeout call if it is active.
+        """
         self.done = True
-        if err:
-            raise result.value
+        if self._timeoutCallID is not None:
+            # eomReceived was called, we're actually waiting for the process to
+            # exit.
+            self._timeoutCallID.cancel()
+            self._timeoutCallID = None
+        else:
+            # eomReceived was not called, this is unexpected, propagate the
+            # error.
+            return result
+
 
     def lineReceived(self, line):
         if self.done:
             return
         self.protocol.transport.write(line + '\n')
 
+
     def eomReceived(self):
+        """
+        Disconnect from the child process, set up a timeout to wait for it to
+        exit, and return a Deferred which will be called back when the child
+        process exits.
+        """
         if not self.done:
             self.protocol.transport.loseConnection()
-            self.completion.setTimeout(60)
+            self._timeoutCallID = self.reactor.callLater(
+                self.completionTimeout, self._completionCancel)
         return self.completion
+
+
+    def _completionCancel(self):
+        """
+        Handle the expiration of the timeout for the child process to exit by
+        terminating the child process forcefully and issuing a failure to the
+        completion deferred returned by L{eomReceived}.
+        """
+        self._timeoutCallID = None
+        self.protocol.transport.signalProcess('KILL')
+        exc = ProcessAliasTimeout(
+            "No answer after %s seconds" % (self.completionTimeout,))
+        self.protocol.onEnd = None
+        self.completion.errback(failure.Failure(exc))
+
 
     def connectionLost(self):
         # Heh heh
         pass
 
+
     def __str__(self):
         return '<ProcessWrapper %s>' % (self.processName,)
 
+
+
 class ProcessAliasProtocol(protocol.ProcessProtocol):
+    """
+    Trivial process protocol which will callback a Deferred when the associated
+    process ends.
+
+    @ivar onEnd: If not C{None}, a L{Deferred} which will be called back with
+        the failure passed to C{processEnded}, when C{processEnded} is called.
+    """
+
+    onEnd = None
+
     def processEnded(self, reason):
-        if reason.check(error.ProcessDone):
-            self.onEnd.callback("Complete")
-        else:
+        """
+        Call back C{onEnd} if it is set.
+        """
+        if self.onEnd is not None:
             self.onEnd.errback(reason)
 
 
 
 class ProcessAlias(AliasBase):
     """
-    An alias for a program.
-    """
+    An alias which is handled by the execution of a particular program.
 
+    @ivar reactor: An L{IReactorProcess} and L{IReactorTime} provider which
+        will be used to create and timeout the alias child process.
+    """
     implements(IAlias)
+
+    reactor = reactor
 
     def __init__(self, path, *args):
         AliasBase.__init__(self, *args)
@@ -256,7 +341,7 @@ class ProcessAlias(AliasBase):
         Wrapper around C{reactor.spawnProcess}, to be customized for tests
         purpose.
         """
-        return reactor.spawnProcess(proto, program, path)
+        return self.reactor.spawnProcess(proto, program, path)
 
 
     def createMessageReceiver(self):
@@ -264,14 +349,16 @@ class ProcessAlias(AliasBase):
         Create a message receiver by launching a process.
         """
         p = ProcessAliasProtocol()
-        m = MessageWrapper(p, self.program)
+        m = MessageWrapper(p, self.program, self.reactor)
         fd = self.spawnProcess(p, self.program, self.path)
         return m
 
 
 
 class MultiWrapper:
-    """Wrapper to deliver a single message to multiple recipients"""
+    """
+    Wrapper to deliver a single message to multiple recipients.
+    """
 
     implements(smtp.IMessage)
 

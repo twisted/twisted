@@ -13,6 +13,7 @@ import pickle
 import StringIO
 import rfc822
 import tempfile
+import signal
 
 from zope.interface import Interface, implements
 
@@ -25,7 +26,9 @@ from twisted.internet import defer
 from twisted.internet.defer import Deferred
 from twisted.internet import reactor
 from twisted.internet import interfaces
+from twisted.internet import task
 from twisted.internet.error import DNSLookupError, CannotListenError
+from twisted.internet.error import ProcessDone, ProcessTerminated
 from twisted.internet import address
 from twisted.python import failure
 from twisted.python import util
@@ -1262,6 +1265,31 @@ class MockAliasGroup(mail.alias.AliasGroup):
 
 
 
+class StubProcess(object):
+    """
+    Fake implementation of L{IProcessTransport}.
+
+    @ivar signals: A list of all the signals which have been sent to this fake
+        process.
+    """
+    def __init__(self):
+        self.signals = []
+
+
+    def loseConnection(self):
+        """
+        No-op implementation of disconnection.
+        """
+
+
+    def signalProcess(self, signal):
+        """
+        Record a signal sent to this process for later inspection.
+        """
+        self.signals.append(signal)
+
+
+
 class ProcessAliasTestCase(unittest.TestCase):
     """
     Tests for alias resolution.
@@ -1274,6 +1302,53 @@ class ProcessAliasTestCase(unittest.TestCase):
         'After a blank line',
         'Last line'
     ]
+
+    def exitStatus(self, code):
+        """
+        Construct a status from the given exit code.
+
+        @type code: L{int} between 0 and 255 inclusive.
+        @param code: The exit status which the code will represent.
+
+        @rtype: L{int}
+        @return: A status integer for the given exit code.
+        """
+        # /* Macros for constructing status values.  */
+        # #define __W_EXITCODE(ret, sig)  ((ret) << 8 | (sig))
+        status = (code << 8) | 0
+
+        # Sanity check
+        self.assertTrue(os.WIFEXITED(status))
+        self.assertEqual(os.WEXITSTATUS(status), code)
+        self.assertFalse(os.WIFSIGNALED(status))
+
+        return status
+
+
+    def signalStatus(self, signal):
+        """
+        Construct a status from the given signal.
+
+        @type signal: L{int} between 0 and 255 inclusive.
+        @param signal: The signal number which the status will represent.
+
+        @rtype: L{int}
+        @return: A status integer for the given signal.
+        """
+        # /* If WIFSIGNALED(STATUS), the terminating signal.  */
+        # #define __WTERMSIG(status)      ((status) & 0x7f)
+        # /* Nonzero if STATUS indicates termination by a signal.  */
+        # #define __WIFSIGNALED(status) \
+        #    (((signed char) (((status) & 0x7f) + 1) >> 1) > 0)
+        status = signal
+
+        # Sanity check
+        self.assertTrue(os.WIFSIGNALED(status))
+        self.assertEqual(os.WTERMSIG(status), signal)
+        self.assertFalse(os.WIFEXITED(status))
+
+        return status
+
 
     def setUp(self):
         """
@@ -1307,6 +1382,79 @@ class ProcessAliasTestCase(unittest.TestCase):
             self.assertEquals([L[:-1] for L in lines], self.lines)
 
         return m.eomReceived().addCallback(_cbProcessAlias)
+
+
+    def test_processAliasTimeout(self):
+        """
+        If the alias child process does not exit within a particular period of
+        time, the L{Deferred} returned by L{MessageWrapper.eomReceived} should
+        fail with L{ProcessAliasTimeout} and send the I{KILL} signal to the
+        child process..
+        """
+        reactor = task.Clock()
+        transport = StubProcess()
+        proto = mail.alias.ProcessAliasProtocol()
+        proto.makeConnection(transport)
+
+        receiver = mail.alias.MessageWrapper(proto, None, reactor)
+        d = receiver.eomReceived()
+        reactor.advance(receiver.completionTimeout)
+        def timedOut(ignored):
+            self.assertEqual(transport.signals, ['KILL'])
+            # Now that it has been killed, disconnect the protocol associated
+            # with it.
+            proto.processEnded(
+                ProcessTerminated(self.signalStatus(signal.SIGKILL)))
+        self.assertFailure(d, mail.alias.ProcessAliasTimeout)
+        d.addCallback(timedOut)
+        return d
+
+
+    def test_earlyProcessTermination(self):
+        """
+        If the process associated with an L{mail.alias.MessageWrapper} exits
+        before I{eomReceived} is called, the L{Deferred} returned by
+        I{eomReceived} should fail.
+        """
+        transport = StubProcess()
+        protocol = mail.alias.ProcessAliasProtocol()
+        protocol.makeConnection(transport)
+        receiver = mail.alias.MessageWrapper(protocol, None, None)
+        protocol.processEnded(failure.Failure(ProcessDone(0)))
+        return self.assertFailure(receiver.eomReceived(), ProcessDone)
+
+
+    def _terminationTest(self, status):
+        """
+        Verify that if the process associated with an
+        L{mail.alias.MessageWrapper} exits with the given status, the
+        L{Deferred} returned by I{eomReceived} fails with L{ProcessTerminated}.
+        """
+        transport = StubProcess()
+        protocol = mail.alias.ProcessAliasProtocol()
+        protocol.makeConnection(transport)
+        receiver = mail.alias.MessageWrapper(protocol, None, None)
+        protocol.processEnded(
+            failure.Failure(ProcessTerminated(status)))
+        return self.assertFailure(receiver.eomReceived(), ProcessTerminated)
+
+
+    def test_errorProcessTermination(self):
+        """
+        If the process associated with an L{mail.alias.MessageWrapper} exits
+        with a non-zero exit code, the L{Deferred} returned by I{eomReceived}
+        should fail.
+        """
+        return self._terminationTest(self.exitStatus(1))
+
+
+    def test_signalProcessTermination(self):
+        """
+        If the process associated with an L{mail.alias.MessageWrapper} exits
+        because it received a signal, the L{Deferred} returned by
+        I{eomReceived} should fail.
+        """
+        return self._terminationTest(self.signalStatus(signal.SIGHUP))
 
 
     def test_aliasResolution(self):
