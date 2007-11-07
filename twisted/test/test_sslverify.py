@@ -1,19 +1,24 @@
 # Copyright 2005 Divmod, Inc.  See LICENSE file for details
+# Copyright (c) 2007 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 import itertools
 
-from OpenSSL import SSL
-from OpenSSL.crypto import PKey, X509, X509Req
-from OpenSSL.crypto import TYPE_RSA
+try:
+    from OpenSSL import SSL
+    from OpenSSL.crypto import PKey, X509, X509Req
+    from OpenSSL.crypto import TYPE_RSA
+    from twisted.internet import _sslverify as sslverify
+except ImportError:
+    pass
 
 from twisted.trial import unittest
 from twisted.internet import protocol, defer, reactor
-from twisted.python import log
 from twisted.python.reflect import objgrep, isSame
+from twisted.python import log
 
-from twisted.internet import _sslverify as sslverify
-
-from twisted.internet.error import CertificateError
+from twisted.internet.error import CertificateError, ConnectionLost
+from twisted.internet import interfaces
 
 
 # A couple of static PEM-format certificates to be used by various tests.
@@ -64,7 +69,7 @@ A_PEER_CERTIFICATE_PEM = """
 counter = itertools.count().next
 def makeCertificate(**kw):
     keypair = PKey()
-    keypair.generate_key(TYPE_RSA, 1024)
+    keypair.generate_key(TYPE_RSA, 512)
 
     certificate = X509()
     certificate.gmtime_adj_notBefore(0)
@@ -79,29 +84,6 @@ def makeCertificate(**kw):
 
     return keypair, certificate
 
-def otherMakeCertificate(**kw):
-    keypair = PKey()
-    keypair.generate_key(TYPE_RSA, 1024)
-
-    req = X509Req()
-    subj = req.get_subject()
-    for (k, v) in kw.items():
-        setattr(subj, k, v)
-
-    req.set_pubkey(keypair)
-    req.sign(keypair, "md5")
-
-    cert = X509()
-    cert.set_serial_number(counter())
-    cert.gmtime_adj_notBefore(0)
-    cert.gmtime_adj_notAfter(60 * 60 * 24 * 365) # One year
-
-    cert.set_issuer(req.get_subject())
-    cert.set_subject(req.get_subject())
-    cert.set_pubkey(req.get_pubkey())
-    cert.sign(keypair, "md5")
-
-    return keypair, cert
 
 
 class DataCallbackProtocol(protocol.Protocol):
@@ -128,7 +110,15 @@ class OpenSSLOptions(unittest.TestCase):
     serverPort = clientConn = None
     onServerLost = onClientLost = None
 
-    def setUpClass(self):
+    sKey = None
+    sCert = None
+    cKey = None
+    cCert = None
+
+    def setUp(self):
+        """
+        Create class variables of client and server certificates.
+        """
         self.sKey, self.sCert = makeCertificate(
             O="Server Test Certificate",
             CN="server")
@@ -169,21 +159,28 @@ class OpenSSLOptions(unittest.TestCase):
         clientFactory.onLost = onClientLost
 
         self.serverPort = reactor.listenSSL(0, serverFactory, serverCertOpts)
-        self.clientConn = reactor.connectSSL('127.0.0.1', self.serverPort.getHost().port,
-                                             clientFactory, clientCertOpts)
+        self.clientConn = reactor.connectSSL('127.0.0.1',
+                self.serverPort.getHost().port, clientFactory, clientCertOpts)
 
-    def testAbbreviatingDistinguishedNames(self):
-        self.assertEquals(sslverify.DN(CN='a', OU='hello'),
-                          sslverify.DistinguishedName(commonName='a', organizationalUnitName='hello'))
-        self.assertNotEquals(sslverify.DN(CN='a', OU='hello'),
-                             sslverify.DN(CN='a', OU='hello', emailAddress='xxx'))
+    def test_abbreviatingDistinguishedNames(self):
+        """
+        Check that abbreviations used in certificates correctly map to
+        complete names.
+        """
+        self.assertEquals(
+                sslverify.DN(CN='a', OU='hello'),
+                sslverify.DistinguishedName(commonName='a',
+                                            organizationalUnitName='hello'))
+        self.assertNotEquals(
+                sslverify.DN(CN='a', OU='hello'),
+                sslverify.DN(CN='a', OU='hello', emailAddress='xxx'))
         dn = sslverify.DN(CN='abcdefg')
         self.assertRaises(AttributeError, setattr, dn, 'Cn', 'x')
         self.assertEquals(dn.CN, dn.commonName)
         dn.CN = 'bcdefga'
         self.assertEquals(dn.CN, dn.commonName)
 
-    
+
     def testInspectDistinguishedName(self):
         n = sslverify.DN(commonName='common name',
                          organizationName='organization name',
@@ -228,29 +225,29 @@ class OpenSSLOptions(unittest.TestCase):
         certificate.
         """
         c = sslverify.Certificate.loadPEM(A_HOST_CERTIFICATE_PEM)
-	self.assertEqual(
-	    c.inspect().split('\n'),
-	    ["Certificate For Subject:",
-	     "  Organizational Unit Name: Security",
-	     "         Organization Name: Twisted Matrix Labs",
-	     "               Common Name: example.twistedmatrix.com",
-	     "    State Or Province Name: Massachusetts",
-	     "              Country Name: US",
-	     "             Email Address: nobody@twistedmatrix.com",
-	     "             Locality Name: Boston",
-	     "",
-	     "Issuer:",
-	     "  Organizational Unit Name: Security",
-	     "         Organization Name: Twisted Matrix Labs",
-	     "               Common Name: example.twistedmatrix.com",
-	     "    State Or Province Name: Massachusetts",
-	     "              Country Name: US",
-	     "             Email Address: nobody@twistedmatrix.com",
-	     "             Locality Name: Boston",
-	     "",
-	     "Serial Number: 12345",
-	     "Digest: C4:96:11:00:30:C3:EC:EE:A3:55:AA:ED:8C:84:85:18",
-	     "Public Key with Hash: ff33994c80812aa95a79cdb85362d054"])
+        self.assertEqual(
+            c.inspect().split('\n'),
+            ["Certificate For Subject:",
+             "  Organizational Unit Name: Security",
+             "         Organization Name: Twisted Matrix Labs",
+             "               Common Name: example.twistedmatrix.com",
+             "    State Or Province Name: Massachusetts",
+             "              Country Name: US",
+             "             Email Address: nobody@twistedmatrix.com",
+             "             Locality Name: Boston",
+             "",
+             "Issuer:",
+             "  Organizational Unit Name: Security",
+             "         Organization Name: Twisted Matrix Labs",
+             "               Common Name: example.twistedmatrix.com",
+             "    State Or Province Name: Massachusetts",
+             "              Country Name: US",
+             "             Email Address: nobody@twistedmatrix.com",
+             "             Locality Name: Boston",
+             "",
+             "Serial Number: 12345",
+             "Digest: C4:96:11:00:30:C3:EC:EE:A3:55:AA:ED:8C:84:85:18",
+             "Public Key with Hash: ff33994c80812aa95a79cdb85362d054"])
 
 
     def test_certificateOptionsSerialization(self):
@@ -271,9 +268,10 @@ class OpenSSLOptions(unittest.TestCase):
             fixBrokenPeers=True)
         context = firstOpts.getContext()
         state = firstOpts.__getstate__()
-        
+
         # The context shouldn't be in the state to serialize
-        self.failIf(objgrep(state, context, isSame), objgrep(state, context, isSame))
+        self.failIf(objgrep(state, context, isSame),
+                    objgrep(state, context, isSame))
 
         opts = sslverify.OpenSSLCertificateOptions()
         opts.__setstate__(state)
@@ -288,86 +286,115 @@ class OpenSSLOptions(unittest.TestCase):
         self.assertEqual(opts.enableSingleUseKeys, False)
         self.assertEqual(opts.enableSessions, False)
         self.assertEqual(opts.fixBrokenPeers, True)
-        
 
-    def testAllowedAnonymousClientConnection(self):
+
+    def test_allowedAnonymousClientConnection(self):
+        """
+        Check that anonymous connections are allowed when certificates aren't
+        required on the server.
+        """
         onData = defer.Deferred()
-        self.loopback(sslverify.OpenSSLCertificateOptions(privateKey=self.sKey, certificate=self.sCert, requireCertificate=False),
-                      sslverify.OpenSSLCertificateOptions(requireCertificate=False),
+        self.loopback(sslverify.OpenSSLCertificateOptions(privateKey=self.sKey,
+                            certificate=self.sCert, requireCertificate=False),
+                      sslverify.OpenSSLCertificateOptions(
+                          requireCertificate=False),
                       onData=onData)
 
         return onData.addCallback(
             lambda result: self.assertEquals(result, WritingProtocol.byte))
 
-    def testRefusedAnonymousClientConnection(self):
+    def test_refusedAnonymousClientConnection(self):
+        """
+        Check that anonymous connections are refused when certificates are
+        required on the server.
+        """
         onServerLost = defer.Deferred()
         onClientLost = defer.Deferred()
-        self.loopback(sslverify.OpenSSLCertificateOptions(privateKey=self.sKey, certificate=self.sCert, verify=True, caCerts=[self.sCert], requireCertificate=True),
-                      sslverify.OpenSSLCertificateOptions(requireCertificate=False),
+        self.loopback(sslverify.OpenSSLCertificateOptions(privateKey=self.sKey,
+                            certificate=self.sCert, verify=True,
+                            caCerts=[self.sCert], requireCertificate=True),
+                      sslverify.OpenSSLCertificateOptions(
+                          requireCertificate=False),
                       onServerLost=onServerLost,
                       onClientLost=onClientLost)
 
-        d = defer.DeferredList([onClientLost, onServerLost], consumeErrors=True)
+        d = defer.DeferredList([onClientLost, onServerLost],
+                               consumeErrors=True)
 
 
         def afterLost(((cSuccess, cResult), (sSuccess, sResult))):
 
             self.failIf(cSuccess)
             self.failIf(sSuccess)
-
-            # XXX Twisted doesn't report SSL errors as SSL errors, but in the
-            # future it will.
-
-            # cResult.trap(SSL.Error)
-            # sResult.trap(SSL.Error)
-
-            # Twisted trunk will do the correct thing here, and not log any
-            # errors.  Twisted 2.1 will do the wrong thing.  We're flushing
-            # errors until the buildbot is updated to a reasonable facsimilie
-            # of 2.2.
-            log.flushErrors(SSL.Error)
+            # Win32 fails to report the SSL Error, and report a connection lost
+            # instead: there is a race condition so that's not totally
+            # surprising (see ticket #2877 in the tracker)
+            cResult.trap(SSL.Error, ConnectionLost)
+            sResult.trap(SSL.Error)
 
         return d.addCallback(afterLost)
 
-    def testFailedCertificateVerification(self):
+    def test_failedCertificateVerification(self):
+        """
+        Check that connecting with a certificate not accepted by the server CA
+        fails.
+        """
         onServerLost = defer.Deferred()
         onClientLost = defer.Deferred()
-        self.loopback(sslverify.OpenSSLCertificateOptions(privateKey=self.sKey, certificate=self.sCert, verify=False, requireCertificate=False),
-                      sslverify.OpenSSLCertificateOptions(verify=True, requireCertificate=False, caCerts=[self.cCert]),
+        self.loopback(sslverify.OpenSSLCertificateOptions(privateKey=self.sKey,
+                            certificate=self.sCert, verify=False,
+                            requireCertificate=False),
+                      sslverify.OpenSSLCertificateOptions(verify=True,
+                            requireCertificate=False, caCerts=[self.cCert]),
                       onServerLost=onServerLost,
                       onClientLost=onClientLost)
 
-        d = defer.DeferredList([onClientLost, onServerLost], consumeErrors=True)
+        d = defer.DeferredList([onClientLost, onServerLost],
+                               consumeErrors=True)
         def afterLost(((cSuccess, cResult), (sSuccess, sResult))):
 
             self.failIf(cSuccess)
             self.failIf(sSuccess)
 
-            # Twisted trunk will do the correct thing here, and not log any
-            # errors.  Twisted 2.1 will do the wrong thing.  We're flushing
-            # errors until the buildbot is updated to a reasonable facsimilie
-            # of 2.2.
-            log.flushErrors(SSL.Error)
-
         return d.addCallback(afterLost)
 
-    def testSuccessfulCertificateVerification(self):
+    def test_successfulCertificateVerification(self):
+        """
+        Test a successful connection with client certificate validation on
+        server side.
+        """
         onData = defer.Deferred()
-        self.loopback(sslverify.OpenSSLCertificateOptions(privateKey=self.sKey, certificate=self.sCert, verify=False, requireCertificate=False),
-                      sslverify.OpenSSLCertificateOptions(verify=True, requireCertificate=True, caCerts=[self.sCert]),
+        self.loopback(sslverify.OpenSSLCertificateOptions(privateKey=self.sKey,
+                            certificate=self.sCert, verify=False,
+                            requireCertificate=False),
+                      sslverify.OpenSSLCertificateOptions(verify=True,
+                            requireCertificate=True, caCerts=[self.sCert]),
                       onData=onData)
 
-        return onData.addCallback(lambda result: self.assertEquals(result, WritingProtocol.byte))
+        return onData.addCallback(
+                lambda result: self.assertEquals(result, WritingProtocol.byte))
 
-    def testSuccessfulSymmetricSelfSignedCertificateVerification(self):
+    def test_successfulSymmetricSelfSignedCertificateVerification(self):
+        """
+        Test a successful connection with validation on both server and client
+        sides.
+        """
         onData = defer.Deferred()
-        self.loopback(sslverify.OpenSSLCertificateOptions(privateKey=self.sKey, certificate=self.sCert, verify=True, requireCertificate=True, caCerts=[self.cCert]),
-                      sslverify.OpenSSLCertificateOptions(privateKey=self.cKey, certificate=self.cCert, verify=True, requireCertificate=True, caCerts=[self.sCert]),
+        self.loopback(sslverify.OpenSSLCertificateOptions(privateKey=self.sKey,
+                            certificate=self.sCert, verify=True,
+                            requireCertificate=True, caCerts=[self.cCert]),
+                      sslverify.OpenSSLCertificateOptions(privateKey=self.cKey,
+                            certificate=self.cCert, verify=True,
+                            requireCertificate=True, caCerts=[self.sCert]),
                       onData=onData)
 
-        return onData.addCallback(lambda result: self.assertEquals(result, WritingProtocol.byte))
+        return onData.addCallback(
+                lambda result: self.assertEquals(result, WritingProtocol.byte))
 
-    def testVerification(self):
+    def test_verification(self):
+        """
+        Check certificates verification building custom certificates data.
+        """
         clientDN = sslverify.DistinguishedName(commonName='client')
         clientKey = sslverify.KeyPair.generate()
         clientCertReq = clientKey.certificateRequest(clientDN)
@@ -376,35 +403,23 @@ class OpenSSLOptions(unittest.TestCase):
         serverKey = sslverify.KeyPair.generate()
         serverCertReq = serverKey.certificateRequest(serverDN)
 
-        ##
         clientSelfCertReq = clientKey.certificateRequest(clientDN)
-        clientSelfCertData = clientKey.signCertificateRequest(clientDN, clientSelfCertReq,
-                                                              lambda dn: True,
-                                                              132)
+        clientSelfCertData = clientKey.signCertificateRequest(
+                clientDN, clientSelfCertReq, lambda dn: True, 132)
         clientSelfCert = clientKey.newCertificate(clientSelfCertData)
-        ##
 
-        ##
         serverSelfCertReq = serverKey.certificateRequest(serverDN)
-        serverSelfCertData = serverKey.signCertificateRequest(serverDN, serverSelfCertReq,
-                                                              lambda dn: True,
-                                                              516)
+        serverSelfCertData = serverKey.signCertificateRequest(
+                serverDN, serverSelfCertReq, lambda dn: True, 516)
         serverSelfCert = serverKey.newCertificate(serverSelfCertData)
-        ##
 
-        ##
-        clientCertData = serverKey.signCertificateRequest(serverDN, clientCertReq,
-                                                          lambda dn: True,
-                                                          7)
+        clientCertData = serverKey.signCertificateRequest(
+                serverDN, clientCertReq, lambda dn: True, 7)
         clientCert = clientKey.newCertificate(clientCertData)
-        ##
 
-        ##
-        serverCertData = clientKey.signCertificateRequest(clientDN, serverCertReq,
-                                                          lambda dn: True,
-                                                          42)
+        serverCertData = clientKey.signCertificateRequest(
+                clientDN, serverCertReq, lambda dn: True, 42)
         serverCert = serverKey.newCertificate(serverCertData)
-        ##
 
         onData = defer.Deferred()
 
@@ -415,7 +430,14 @@ class OpenSSLOptions(unittest.TestCase):
                       clientOpts,
                       onData=onData)
 
-        return onData.addCallback(lambda result: self.assertEquals(result, WritingProtocol.byte))
+        return onData.addCallback(
+                lambda result: self.assertEquals(result, WritingProtocol.byte))
+
+
+
+if interfaces.IReactorSSL(reactor, None) is None:
+    OpenSSLOptions.skip = "Reactor does not support SSL, cannot run SSL tests"
+
 
 
 class _NotSSLTransport:
@@ -488,8 +510,8 @@ class Constructors(unittest.TestCase):
 
     def test_hostFromSSLTransport(self):
         """
-        Verify that hostFromTransport successfully creates the correct certificate
-        if passed a valid SSL transport.
+        Verify that hostFromTransport successfully creates the correct
+        certificate if passed a valid SSL transport.
         """
         self.assertEqual(
             sslverify.Certificate.hostFromTransport(
@@ -498,10 +520,15 @@ class Constructors(unittest.TestCase):
 
     def test_peerFromSSLTransport(self):
         """
-        Verify that peerFromTransport successfully creates the correct certificate
-        if passed a valid SSL transport.
+        Verify that peerFromTransport successfully creates the correct
+        certificate if passed a valid SSL transport.
         """
         self.assertEqual(
             sslverify.Certificate.peerFromTransport(
                 _ActualSSLTransport()).serialNumber(),
             12346)
+
+
+
+if interfaces.IReactorSSL(reactor, None) is None:
+    Constructors.skip = "Reactor does not support SSL, cannot run SSL tests"
