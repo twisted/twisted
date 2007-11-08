@@ -452,7 +452,9 @@ class ProcessProtocol(BaseProtocol):
 
 
 class AbstractDatagramProtocol:
-    """Abstract protocol for datagram-oriented transports, e.g. IP, ICMP, ARP, UDP."""
+    """
+    Abstract protocol for datagram-oriented transports, e.g. IP, ICMP, ARP, UDP.
+    """
 
     transport = None
     numPorts = 0
@@ -518,7 +520,14 @@ class AbstractDatagramProtocol:
 
 
 class DatagramProtocol(AbstractDatagramProtocol):
-    """Protocol for datagram-oriented transport, e.g. UDP."""
+    """
+    Protocol for datagram-oriented transport, e.g. UDP.
+
+    @type transport: C{NoneType} or
+        L{IUDPTransport<twisted.internet.interfaces.IUDPTransport>} provider
+    @ivar transport: The transport with which this protocol is associated,
+        if it is associated with one.
+    """
 
     def connectionRefused(self):
         """Called due to error from write in connected mode.
