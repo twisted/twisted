@@ -1,20 +1,17 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 Test cases for twisted.mail.smtp module.
 """
 
-import time
 from zope.interface import implements
 
 from twisted.trial import unittest, util
-from twisted import protocols
-from twisted import internet
-from twisted.protocols import loopback
+from twisted.protocols import basic, loopback
 from twisted.mail import smtp
-from twisted.internet import defer, protocol, reactor, interfaces, address, error
+from twisted.internet import defer, protocol, reactor, interfaces
+from twisted.internet import address, error, task
 from twisted.test.test_protocols import StringIOWithoutClosing
 from twisted.test.proto_helpers import StringTransport
 
@@ -97,7 +94,7 @@ Someone set up us the bomb!\015
         self.factory.domains = {}
         self.factory.domains['baz.com'] = DummyDomain(['foo'])
         self.output = StringIOWithoutClosing()
-        self.transport = internet.protocol.FileWrapper(self.output)
+        self.transport = protocol.FileWrapper(self.output)
 
     def testMessages(self):
         from twisted.mail import protocols
@@ -118,7 +115,7 @@ Someone set up us the bomb!\015
         if self.mbox != self.factory.domains['baz.com'].messages:
             raise AssertionError(self.factory.domains['baz.com'].messages)
         protocol.setTimeout(None)
-        
+
     testMessages.suppress = [util.suppress(message='DomainSMTP', category=DeprecationWarning)]
 
 mail = '''\
@@ -177,7 +174,7 @@ class LoopbackESMTPTestCase(LoopbackTestCase, unittest.TestCase):
     clientClass = MyESMTPClient
 
 
-class FakeSMTPServer(protocols.basic.LineReceiver):
+class FakeSMTPServer(basic.LineReceiver):
 
     clientData = [
         '220 hello', '250 nice to meet you',
@@ -481,7 +478,7 @@ class EmptyLineTestCase(unittest.TestCase):
     def testEmptyLineSyntaxError(self):
         proto = smtp.SMTP()
         output = StringIOWithoutClosing()
-        transport = internet.protocol.FileWrapper(output)
+        transport = protocol.FileWrapper(output)
         proto.makeConnection(transport)
         proto.lineReceived('')
         proto.setTimeout(None)
@@ -491,23 +488,40 @@ class EmptyLineTestCase(unittest.TestCase):
         self.failUnless(out[0].startswith('220'))
         self.assertEquals(out[1], "500 Error: bad syntax")
 
-class TimeoutTestCase(unittest.TestCase, LoopbackMixin):
-    def _timeoutTest(self, onDone, clientFactory):
-        before = time.time()
 
+
+class TimeoutTestCase(unittest.TestCase, LoopbackMixin):
+    """
+    Check that SMTP client factories correctly use the timeout.
+    """
+
+    def _timeoutTest(self, onDone, clientFactory):
+        """
+        Connect the clientFactory, and check the timeout on the request.
+        """
+        clock = task.Clock()
         client = clientFactory.buildProtocol(
             address.IPv4Address('TCP', 'example.net', 25))
-        server = protocol.Protocol()
+        client.callLater = clock.callLater
+        t = StringTransport()
+        client.makeConnection(t)
+        t.protocol = client
+        def check(ign):
+            self.assertEquals(clock.seconds(), 0.5)
+        d = self.assertFailure(onDone, smtp.SMTPTimeoutError
+            ).addCallback(check)
+        # The first call should not trigger the timeout
+        clock.advance(0.1)
+        # But this one should
+        clock.advance(0.4)
+        return d
 
-        def check(ignored):
-            after = time.time()
-            self.failIf(after - before > 1.0)
-            return self.assertFailure(onDone, smtp.SMTPTimeoutError)
-            
-        return self.loopback(client, server).addCallback(check)
 
-
-    def testSMTPClient(self):
+    def test_SMTPClient(self):
+        """
+        Test timeout for L{smtp.SMTPSenderFactory}: the response L{Deferred}
+        should be errback with a L{smtp.SMTPTimeoutError}.
+        """
         onDone = defer.Deferred()
         clientFactory = smtp.SMTPSenderFactory(
             'source@address', 'recipient@address',
@@ -516,7 +530,11 @@ class TimeoutTestCase(unittest.TestCase, LoopbackMixin):
         return self._timeoutTest(onDone, clientFactory)
 
 
-    def testESMTPClient(self):
+    def test_ESMTPClient(self):
+        """
+        Test timeout for L{smtp.ESMTPSenderFactory}: the response L{Deferred}
+        should be errback with a L{smtp.SMTPTimeoutError}.
+        """
         onDone = defer.Deferred()
         clientFactory = smtp.ESMTPSenderFactory(
             'username', 'password',
