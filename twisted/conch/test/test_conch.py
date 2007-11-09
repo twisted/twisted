@@ -16,8 +16,8 @@ from twisted.trial import unittest
 
 from twisted.conch.test.test_ssh import ConchTestRealm
 
-from twisted.conch.test.test_keys import publicRSA_openssh, privateRSA_openssh
-from twisted.conch.test.test_keys import publicDSA_openssh, privateDSA_openssh
+from twisted.conch.test.keydata import publicRSA_openssh, privateRSA_openssh
+from twisted.conch.test.keydata import publicDSA_openssh, privateDSA_openssh
 
 
 

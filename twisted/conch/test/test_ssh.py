@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.conch.test.test_ssh -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 try:
@@ -9,6 +9,8 @@ except ImportError:
 
 from twisted.conch.ssh import common, session, forwarding
 from twisted.conch import avatar, error
+from twisted.conch.test.keydata import publicRSA_openssh, privateRSA_openssh
+from twisted.conch.test.keydata import publicDSA_openssh, privateDSA_openssh
 from twisted.cred import portal
 from twisted.internet import defer, protocol, reactor
 from twisted.internet.error import ProcessTerminated
@@ -230,10 +232,6 @@ if Crypto: # stuff that needs PyCrypto to even import
     from twisted.conch import checkers
     from twisted.conch.ssh import channel, connection, factory, keys
     from twisted.conch.ssh import transport, userauth
-
-    from test_keys import publicRSA_openssh, privateRSA_openssh
-    from test_keys import publicDSA_openssh, privateDSA_openssh
-
 
     class UtilityTestCase(unittest.TestCase):
         def testCounter(self):
