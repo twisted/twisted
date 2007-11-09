@@ -12,6 +12,7 @@ import sys
 import signal
 import StringIO
 import errno
+import gc
 try:
     import fcntl
 except ImportError:
@@ -1028,6 +1029,10 @@ class MockOS(object):
     @ivar WNOHANG: dumb value faking C{os.WNOHANG}.
     @type WNOHANG: C{int}
 
+    @ivar raiseFork: if not C{None}, subsequent calls to fork will raise this
+        object.
+    @type raiseFork: C{NoneType} or C{Exception}
+
     @ivar raiseExec: if set, subsequent calls to execvpe will raise an error.
     @type raiseExec: C{bool}
 
@@ -1036,6 +1041,7 @@ class MockOS(object):
 
     @ivar actions: hold names of some actions executed by the object, in order
         of execution.
+
     @type actions: C{list} of C{str}
 
     @ivar closed: keep track of the file descriptor closed.
@@ -1062,6 +1068,7 @@ class MockOS(object):
     fdio = None
     child = True
     raiseWaitPid = None
+    raiseFork = None
     waitChild = None
 
     def __init__(self):
@@ -1101,8 +1108,10 @@ class MockOS(object):
         Fake C{os.fork}. Save the action in C{self.actions}, and return 0 if
         C{self.child} is set, or a dumb number.
         """
-        self.actions.append('fork')
-        if self.child:
+        self.actions.append(('fork', gc.isenabled()))
+        if self.raiseFork is not None:
+            raise self.raiseFork
+        elif self.child:
             # Child result is 0
             return 0
         else:
@@ -1249,7 +1258,7 @@ class MockOS(object):
 
     def setreuid(self, val1, val2):
         """
-        Override C{os.setreuid}. Do nothing.
+        Override C{os.setreuid}.  Save the action.
         """
         self.actions.append(('setreuid', val1, val2))
 
@@ -1309,6 +1318,10 @@ class MockProcessTestCase(unittest.TestCase):
         Replace L{process} os, fcntl, sys, switchUID modules with the mock
         class L{MockOS}.
         """
+        if gc.isenabled():
+            self.addCleanup(gc.enable)
+        else:
+            self.addCleanup(gc.disable)
         self.mockos = MockOS()
         self.oldos = os
         self.oldfcntl = fcntl
@@ -1343,6 +1356,8 @@ class MockProcessTestCase(unittest.TestCase):
         Test a classic spawnProcess. Check the path of the client code:
         fork, exec, exit.
         """
+        gc.enable()
+
         cmd = '/mock/ouch'
 
         d = defer.Deferred()
@@ -1352,15 +1367,20 @@ class MockProcessTestCase(unittest.TestCase):
                                  usePTY=False)
         except SystemError:
             self.assert_(self.mockos.exited)
-            self.assertEquals(self.mockos.actions, ["fork", "exec", "exit"])
+            self.assertEquals(
+                self.mockos.actions, [("fork", False), "exec", "exit"])
         else:
             self.fail("Should not be here")
 
+        # It should leave the garbage collector disabled.
+        self.assertFalse(gc.isenabled())
 
-    def test_mockForkInParent(self):
+
+    def _mockForkInParentTest(self):
         """
-        Test a classic spawnProcess. Check the path of the parent code:
-        fork, waitpid, and check fds closed.
+        Assert that in the main process, spawnProcess disables the garbage
+        collector, calls fork, closes the pipe file descriptors it created for
+        the child process, and calls waitpid.
         """
         self.mockos.child = False
         cmd = '/mock/ouch'
@@ -1371,7 +1391,31 @@ class MockProcessTestCase(unittest.TestCase):
                              usePTY=False)
         # It should close the first read pipe, and the 2 last write pipes
         self.assertEqual(self.mockos.closed, [-1, -4, -6])
-        self.assertEquals(self.mockos.actions, ["fork", "waitpid"])
+        self.assertEquals(self.mockos.actions, [("fork", False), "waitpid"])
+
+
+    def test_mockForkInParentGarbageCollectorEnabled(self):
+        """
+        The garbage collector should be enabled when L{reactor.spawnProcess}
+        returns if it was initially enabled.
+
+        @see L{_mockForkInParentTest}
+        """
+        gc.enable()
+        self._mockForkInParentTest()
+        self.assertTrue(gc.isenabled())
+
+
+    def test_mockForkInParentGarbageCollectorDisabled(self):
+        """
+        The garbage collector should be disabled when L{reactor.spawnProcess}
+        returns if it was initially disabled.
+
+        @see L{_mockForkInParentTest}
+        """
+        gc.disable()
+        self._mockForkInParentTest()
+        self.assertFalse(gc.isenabled())
 
 
     def test_mockForkTTY(self):
@@ -1388,12 +1432,45 @@ class MockProcessTestCase(unittest.TestCase):
                                  usePTY=True)
         except SystemError:
             self.assert_(self.mockos.exited)
-            self.assertEquals(self.mockos.actions, ["fork", "exec", "exit"])
+            self.assertEquals(
+                self.mockos.actions, [("fork", False), "exec", "exit"])
         else:
             self.fail("Should not be here")
 
 
-    def test_mockWithError(self):
+    def _mockWithForkError(self):
+        """
+        Assert that if the fork call fails, no other process setup calls are
+        made and that spawnProcess raises the exception fork raised.
+        """
+        self.mockos.raiseFork = OSError(errno.EAGAIN, None)
+        protocol = TrivialProcessProtocol(None)
+        self.assertRaises(OSError, reactor.spawnProcess, protocol, None)
+        self.assertEqual(self.mockos.actions, [("fork", False)])
+
+
+    def test_mockWithForkErrorGarbageCollectorEnabled(self):
+        """
+        The garbage collector should be enabled when L{reactor.spawnProcess}
+        raises because L{os.fork} raised, if it was initially enabled.
+        """
+        gc.enable()
+        self._mockWithForkError()
+        self.assertTrue(gc.isenabled())
+
+
+    def test_mockWithForkErrorGarbageCollectorDisabled(self):
+        """
+        The garbage collector should be disabled when
+        L{reactor.spawnProcess} raises because L{os.fork} raised, if it was
+        initially disabled.
+        """
+        gc.disable()
+        self._mockWithForkError()
+        self.assertFalse(gc.isenabled())
+
+
+    def test_mockWithExecError(self):
         """
         Spawn a process but simulate an error during execution in the client
         path: C{os.execvpe} raises an error. It should close all the standard
@@ -1409,7 +1486,8 @@ class MockProcessTestCase(unittest.TestCase):
                                  usePTY=False)
         except SystemError:
             self.assert_(self.mockos.exited)
-            self.assertEquals(self.mockos.actions, ["fork", "exec", "exit"])
+            self.assertEquals(
+                self.mockos.actions, [("fork", False), "exec", "exit"])
             # Check that fd have been closed
             self.assertIn(0, self.mockos.closed)
             self.assertIn(1, self.mockos.closed)
@@ -1435,7 +1513,7 @@ class MockProcessTestCase(unittest.TestCase):
         except SystemError:
             self.assert_(self.mockos.exited)
             self.assertEquals(self.mockos.actions,
-                [('setuid', 0), ('setgid', 0), 'fork',
+                [('setuid', 0), ('setgid', 0), ('fork', False),
                   ('switchuid', 8080, 1234), 'exec', 'exit'])
         else:
             self.fail("Should not be here")
@@ -1454,8 +1532,8 @@ class MockProcessTestCase(unittest.TestCase):
         reactor.spawnProcess(p, cmd, ['ouch'], env=None,
                              usePTY=False, uid=8080)
         self.assertEquals(self.mockos.actions,
-            [('setuid', 0), ('setgid', 0), 'fork', ('setregid', 1235, 1234),
-             ('setreuid', 1237, 1236), 'waitpid'])
+            [('setuid', 0), ('setgid', 0), ('fork', False),
+             ('setregid', 1235, 1234), ('setreuid', 1237, 1236), 'waitpid'])
 
 
     def test_mockPTYSetUid(self):
@@ -1474,7 +1552,7 @@ class MockProcessTestCase(unittest.TestCase):
         except SystemError:
             self.assert_(self.mockos.exited)
             self.assertEquals(self.mockos.actions,
-                [('setuid', 0), ('setgid', 0), 'fork',
+                [('setuid', 0), ('setgid', 0), ('fork', False),
                   ('switchuid', 8081, 1234), 'exec', 'exit'])
         else:
             self.fail("Should not be here")
@@ -1498,11 +1576,11 @@ class MockProcessTestCase(unittest.TestCase):
         finally:
             process.PTYProcess = oldPTYProcess
         self.assertEquals(self.mockos.actions,
-            [('setuid', 0), ('setgid', 0), 'fork', ('setregid', 1235, 1234),
-             ('setreuid', 1237, 1236), 'waitpid'])
+            [('setuid', 0), ('setgid', 0), ('fork', False),
+             ('setregid', 1235, 1234), ('setreuid', 1237, 1236), 'waitpid'])
 
 
-    def test_mockErrorInReapProcess(self):
+    def test_mockWithWaitError(self):
         """
         Test that reapProcess logs errors raised.
         """
@@ -1514,7 +1592,7 @@ class MockProcessTestCase(unittest.TestCase):
         p = TrivialProcessProtocol(d)
         proc = reactor.spawnProcess(p, cmd, ['ouch'], env=None,
                              usePTY=False)
-        self.assertEquals(self.mockos.actions, ["fork", "waitpid"])
+        self.assertEquals(self.mockos.actions, [("fork", False), "waitpid"])
 
         self.mockos.raiseWaitPid = OSError()
         proc.reapProcess()
@@ -1536,7 +1614,7 @@ class MockProcessTestCase(unittest.TestCase):
         p = TrivialProcessProtocol(d)
         proc = reactor.spawnProcess(p, cmd, ['ouch'], env=None,
                                     usePTY=False)
-        self.assertEquals(self.mockos.actions, ["fork", "waitpid"])
+        self.assertEquals(self.mockos.actions, [("fork", False), "waitpid"])
 
         self.mockos.raiseWaitPid = OSError()
         self.mockos.raiseWaitPid.errno = errno.ECHILD
@@ -1838,4 +1916,3 @@ if not interfaces.IReactorProcess(reactor, None):
 
 if process is None:
     MockProcessTestCase.skip = skipMessage
-

@@ -1,8 +1,6 @@
 # -*- test-case-name: twisted.test.test_process -*-
-
 # Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 UNIX Process management.
@@ -13,7 +11,7 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
 # System Imports
-import os, sys, traceback, select, signal, errno
+import gc, os, sys, traceback, select, signal, errno
 
 try:
     import pty
@@ -368,44 +366,55 @@ class _BaseProcess(styles.Ephemeral, object):
             os.setuid(0)
             os.setgid(0)
 
-        self.pid = os.fork()
-        if self.pid == 0: # pid is 0 in the child process
-            # do not put *ANY* code outside the try block. The child process
-            # must either exec or _exit. If it gets outside this block (due
-            # to an exception that is not handled here, but which might be
-            # handled higher up), there will be two copies of the parent
-            # running in parallel, doing all kinds of damage.
+        collectorEnabled = gc.isenabled()
+        gc.disable()
+        try:
+            self.pid = os.fork()
+        except:
+            # Still in the parent process
+            if collectorEnabled:
+                gc.enable()
+            raise
+        else:
+            if self.pid == 0: # pid is 0 in the child process
+                # do not put *ANY* code outside the try block. The child process
+                # must either exec or _exit. If it gets outside this block (due
+                # to an exception that is not handled here, but which might be
+                # handled higher up), there will be two copies of the parent
+                # running in parallel, doing all kinds of damage.
 
-            # After each change to this code, review it to make sure there
-            # are no exit paths.
-            try:
-                # Stop debugging. If I am, I don't care anymore.
-                sys.settrace(None)
-                self._setupChild(**kwargs)
-                self._execChild(path, settingUID, uid, gid,
-                                executable, args, environment)
-            except:
-                # If there are errors, bail and try to write something
-                # descriptive to stderr.
-                # XXX: The parent's stderr isn't necessarily fd 2 anymore, or
-                #      even still available
-                # XXXX: however even libc assumes write(2, err) is a useful
-                #       thing to attempt
+                # After each change to this code, review it to make sure there
+                # are no exit paths.
                 try:
-                    stderr = os.fdopen(2, 'w')
-                    stderr.write("Upon execvpe %s %s in environment %s\n:" %
-                                 (executable, str(args),
-                                  "id %s" % id(environment)))
-                    traceback.print_exc(file=stderr)
-                    stderr.flush()
-                    for fd in range(3):
-                        os.close(fd)
+                    # Stop debugging. If I am, I don't care anymore.
+                    sys.settrace(None)
+                    self._setupChild(**kwargs)
+                    self._execChild(path, settingUID, uid, gid,
+                                    executable, args, environment)
                 except:
-                    pass # make *sure* the child terminates
-            # Did you read the comment about not adding code here?
-            os._exit(1)
+                    # If there are errors, bail and try to write something
+                    # descriptive to stderr.
+                    # XXX: The parent's stderr isn't necessarily fd 2 anymore, or
+                    #      even still available
+                    # XXXX: however even libc assumes write(2, err) is a useful
+                    #       thing to attempt
+                    try:
+                        stderr = os.fdopen(2, 'w')
+                        stderr.write("Upon execvpe %s %s in environment %s\n:" %
+                                     (executable, str(args),
+                                      "id %s" % id(environment)))
+                        traceback.print_exc(file=stderr)
+                        stderr.flush()
+                        for fd in range(3):
+                            os.close(fd)
+                    except:
+                        pass # make *sure* the child terminates
+                # Did you read the comment about not adding code here?
+                os._exit(1)
 
         # we are now in parent process
+        if collectorEnabled:
+            gc.enable()
         self.status = -1 # this records the exit status of the child
         if settingUID:
             os.setregid(currgid, curegid)
