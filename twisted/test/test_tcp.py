@@ -7,10 +7,10 @@ Generic TCP tests.
 
 import socket, random, errno
 
+
 from zope.interface import implements
 
 from twisted.trial import unittest
-
 from twisted.python.log import msg
 from twisted.internet import protocol, reactor, defer, interfaces
 from twisted.internet import error
@@ -33,6 +33,80 @@ def loopUntil(predicate, interval=0):
     d2 = call.start(interval)
     d2.addErrback(d.errback)
     return d
+
+
+class DisconnectionNotificationProtocol(policies.ProtocolWrapper):
+    def connectionLost(self, reason):
+        self.wrappedProtocol.connectionLost(reason)
+        self.factory.onDisconnect.callback(None)
+
+
+class DisconnectionNotificationFactory(policies.WrappingFactory):
+    protocol = DisconnectionNotificationProtocol
+
+    def __init__(self, wrappedFactory, onDisconnect):
+        policies.WrappingFactory.__init__(self, wrappedFactory)
+        self.onDisconnect = onDisconnect
+
+
+class SocketFailureTestCase(unittest.TestCase):
+    """
+    This case covers cirmcumstances under which the underlying socket
+    experiences some failure.  In particular, it tries to exercise each
+    exception which can be raised.
+    """
+
+    class SelfSocketClosingProtocol(protocol.Protocol):
+        """
+        Mundane protocol class which does nothing but demolish its own
+        transport in a very illegal manner as soon as a connection is
+        established.
+        """
+        def connectionMade(self):
+            self.transport.getHandle().close()
+
+
+    def _testClosedSocket(self, serverProto, clientProto):
+        """
+        When a Python socket is explicitly closed, its methods are replaced
+        with dummy methods which raise L{socket.error}.  Generally, one
+        should *not* go around closing sockets like this.  However, the
+        reactor should try not to totally freak out if you.
+        """
+        serverDisconnect = defer.Deferred()
+        serverFactory = protocol.ServerFactory()
+        serverFactory.protocol = serverProto
+        p = reactor.listenTCP(
+            0,
+            DisconnectionNotificationFactory(serverFactory, serverDisconnect),
+            interface='127.0.0.1')
+
+        clientDisconnect = defer.Deferred()
+        clientFactory = protocol.ClientFactory()
+        clientFactory.protocol = clientProto
+        c = reactor.connectTCP(
+            p.getHost().host,
+            p.getHost().port,
+            DisconnectionNotificationFactory(clientFactory, clientDisconnect))
+
+        d = defer.DeferredList(
+            [serverDisconnect, clientDisconnect],
+            fireOnOneErrback=True)
+        d.addCallback(lambda ign: p.stopListening())
+        return d
+
+
+    def testServerClosedSocket(self):
+        return self._testClosedSocket(
+            self.SelfSocketClosingProtocol,
+            protocol.Protocol)
+
+
+    def testClientClosedSocket(self):
+        return self._testClosedSocket(
+            protocol.Protocol,
+            self.SelfSocketClosingProtocol)
+
 
 
 class ClosingProtocol(protocol.Protocol):

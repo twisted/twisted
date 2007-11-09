@@ -118,7 +118,11 @@ class Gtk2Reactor(posixbase.PosixReactorBase):
 
     def addReader(self, reader):
         if reader not in self._reads:
-            self._reads[reader] = self.input_add(reader, INFLAGS, self.callback)
+            try:
+                self._reads[reader] = self.input_add(reader, INFLAGS, self.callback)
+            except Exception, e:
+                self._disconnectSelectable(reader, e, False)
+
 
     def addWriter(self, writer):
         if writer not in self._writes:

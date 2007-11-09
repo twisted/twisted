@@ -43,6 +43,9 @@ class ConnectedSocket(log.Logger, styles.Ephemeral, object):
         self.read_op = ReadFileOp(self)
         self.write_op = WriteFileOp(self) # XXX: these two should be specified like before, with a class field
 
+    def getHandle(self):
+        return self.socket
+
     def addBufferCallback(self, handler, event):
         self.bufferEvents[event].add(handler)
 

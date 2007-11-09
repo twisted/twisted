@@ -13,7 +13,7 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 
 from time import sleep
 import sys
-import select
+import select, socket
 from errno import EINTR, EBADF
 
 from zope.interface import implements
@@ -114,7 +114,7 @@ class SelectReactor(posixbase.PosixReactorBase):
                 # result) was passed
                 log.err()
                 self._preenDescriptors()
-            except (select.error, IOError), se:
+            except (socket.error, select.error, IOError), se: # XXX I forget why I added IOError here
                 # select(2) encountered an error
                 if se.args[0] in (0, 2):
                     # windows does this if it got an empty list
@@ -132,7 +132,7 @@ class SelectReactor(posixbase.PosixReactorBase):
         _drdw = self._doReadOrWrite
         _logrun = log.callWithLogger
         for selectables, method, fdset in ((r, "doRead", self._reads),
-                                           (w,"doWrite", self._writes)):
+                                           (w, "doWrite", self._writes)):
             for selectable in selectables:
                 # if this was disconnected in another thread, kill it.
                 # ^^^^ --- what the !@#*?  serious!  -exarkun
@@ -146,14 +146,21 @@ class SelectReactor(posixbase.PosixReactorBase):
     def _doReadOrWrite(self, selectable, method, dict):
         try:
             why = getattr(selectable, method)()
-            handfn = getattr(selectable, 'fileno', None)
-            if not handfn:
-                why = _NO_FILENO
-            elif handfn() == -1:
-                why = _NO_FILEDESC
         except:
             why = sys.exc_info()[1]
             log.err()
+        else:
+            handfn = getattr(selectable, 'fileno', None)
+            if not handfn:
+                why = _NO_FILENO
+            else:
+                try:
+                    if handfn() == -1:
+                        why = _NO_FILEDESC
+                except (socket.error, IOError), se:
+                    if se.args[0] == EBADF:
+                        self._preenDescriptors()
+                    why = se
         if why:
             self._disconnectSelectable(selectable, why, method=="doRead")
 
@@ -163,11 +170,13 @@ class SelectReactor(posixbase.PosixReactorBase):
         """
         self._reads[reader] = 1
 
+
     def addWriter(self, writer):
         """
         Add a FileDescriptor for notification of data available to write.
         """
         self._writes[writer] = 1
+
 
     def removeReader(self, reader):
         """
@@ -176,12 +185,14 @@ class SelectReactor(posixbase.PosixReactorBase):
         if reader in self._reads:
             del self._reads[reader]
 
+
     def removeWriter(self, writer):
         """
         Remove a Selectable for notification of data available to write.
         """
         if writer in self._writes:
             del self._writes[writer]
+
 
     def removeAll(self):
         return self._removeAll(self._reads, self._writes)

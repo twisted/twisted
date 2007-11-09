@@ -110,13 +110,19 @@ class PollReactor(posixbase.PosixReactorBase):
             self._updateRegistration(fd)
 
     def addReader(self, reader):
-        """Add a FileDescriptor for notification of data available to read.
         """
-        fd = reader.fileno()
-        if fd not in self._reads:
-            self._selectables[fd] = reader
-            self._reads[fd] =  1
-            self._updateRegistration(fd)
+        Add a FileDescriptor for notification of data available to read.
+        """
+        try:
+            fd = reader.fileno()
+        except Exception, e:
+            self._disconnectSelectable(reader, e, False)
+        else:
+            if fd not in self._reads:
+                self._selectables[fd] = reader
+                self._reads[fd] =  1
+                self._updateRegistration(fd)
+
 
     def addWriter(self, writer):
         """Add a FileDescriptor for notification of data available to write.

@@ -648,7 +648,6 @@ class Server(Connection):
         self.repstr = "<%s #%s on %s>" % (self.protocol.__class__.__name__,
                                           self.sessionno,
                                           self.server._realPortNumber)
-        self.startReading()
         self.connected = 1
 
     def __repr__(self):
@@ -817,6 +816,7 @@ class Port(base.BasePort, _SocketCloser):
                 transport = self.transport(skt, protocol, addr, self, s)
                 transport = self._preMakeConnection(transport)
                 protocol.makeConnection(transport)
+                transport.startReading()
             else:
                 self.numberAccepts = self.numberAccepts+20
         except:

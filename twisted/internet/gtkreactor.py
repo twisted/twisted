@@ -64,7 +64,11 @@ class GtkReactor(posixbase.PosixReactorBase):
 
     def addReader(self, reader):
         if reader not in self._reads:
-            self._reads[reader] = gtk.input_add(reader, gtk.GDK.INPUT_READ, self.callback)
+            try:
+                self._reads[reader] = gtk.input_add(reader, gtk.GDK.INPUT_READ, self.callback)
+            except Exception, e:
+                self._disconnectSelectable(reader, e, False)
+
 
     def addWriter(self, writer):
         if writer not in self._writes:

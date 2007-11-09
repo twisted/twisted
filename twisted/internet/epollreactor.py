@@ -21,10 +21,13 @@ import sys, errno
 # Twisted imports
 from twisted.python import _epoll
 from twisted.python import log
+from twisted.python.failure import Failure
 from twisted.internet import posixbase, error
 from twisted.internet.main import CONNECTION_LOST
 
+
 _POLL_DISCONNECTED = (_epoll.HUP | _epoll.ERR)
+
 
 class EPollReactor(posixbase.PosixReactorBase):
     """
@@ -66,6 +69,21 @@ class EPollReactor(posixbase.PosixReactorBase):
         posixbase.PosixReactorBase.__init__(self)
 
 
+    def _findFileDescriptor(self, selectable):
+        for fd, fdes in self._selectables.items():
+            if selectable is fdes:
+                return fd
+        raise ValueError
+
+
+    def _forgetFileDescriptor(self, fd):
+        for mapping in [self._reads, self._writes, self._selectables]:
+            try:
+                del mapping[fd]
+            except KeyError:
+                pass
+
+
     def _add(self, xer, primary, other, selectables, event, antievent):
         """
         Private method for adding a descriptor from the event loop.
@@ -73,21 +91,31 @@ class EPollReactor(posixbase.PosixReactorBase):
         It takes care of adding it if  new or modifying it if already added
         for another state (read -> read/write for example).
         """
-        fd = xer.fileno()
-        if fd not in primary:
-            cmd = _epoll.CTL_ADD
-            flags = event
-            if fd in other:
-                flags |= antievent
-                cmd = _epoll.CTL_MOD
-            primary[fd] = 1
-            selectables[fd] = xer
-            # epoll_ctl can raise all kinds of IOErrors, and every one
-            # indicates a bug either in the reactor or application-code.
-            # Let them all through so someone sees a traceback and fixes
-            # something.  We'll do the same thing for every other call to
-            # this method in this file.
-            self._poller._control(cmd, fd, flags)
+        try:
+            fd = xer.fileno()
+        except Exception, e:
+            try:
+                fd = self._findFileDescriptor(xer)
+            except ValueError:
+                pass
+            else:
+                self._forgetFileDescriptor(fd)
+            xer.connectionLost(Failure(e))
+        else:
+            if fd not in primary:
+                cmd = _epoll.CTL_ADD
+                flags = event
+                if fd in other:
+                    flags |= antievent
+                    cmd = _epoll.CTL_MOD
+                primary[fd] = 1
+                selectables[fd] = xer
+                # epoll_ctl can raise all kinds of IOErrors, and every one
+                # indicates a bug either in the reactor or application-code.
+                # Let them all through so someone sees a traceback and fixes
+                # something.  We'll do the same thing for every other call to
+                # this method in this file.
+                self._poller._control(cmd, fd, flags)
 
 
     def addReader(self, reader):
@@ -111,24 +139,27 @@ class EPollReactor(posixbase.PosixReactorBase):
         It does the inverse job of _add, and also add a check in case of the fd
         has gone away.
         """
-        fd = xer.fileno()
-        if fd == -1:
-            for fd, fdes in selectables.items():
-                if xer is fdes:
-                    break
+        try:
+            fd = xer.fileno()
+        except Exception, e:
+            try:
+                fd = self._findFileDescriptor(xer)
+            except ValueError:
+                pass
             else:
-                return
-        if fd in primary:
-            cmd = _epoll.CTL_DEL
-            flags = event
-            if fd in other:
-                flags = antievent
-                cmd = _epoll.CTL_MOD
-            else:
-                del selectables[fd]
-            del primary[fd]
-            # See comment above _control call in _add.
-            self._poller._control(cmd, fd, flags)
+                self._forgetFileDescriptor(fd)
+        else:
+            if fd in primary:
+                cmd = _epoll.CTL_DEL
+                flags = event
+                if fd in other:
+                    flags = antievent
+                    cmd = _epoll.CTL_MOD
+                else:
+                    del selectables[fd]
+                del primary[fd]
+                # See comment above _control call in _add.
+                self._poller._control(cmd, fd, flags)
 
 
     def removeReader(self, reader):
