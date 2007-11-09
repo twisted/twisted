@@ -67,6 +67,7 @@ from twisted.python.components import registerAdapter
 from twisted.python.filepath import FilePath, UnlistableError
 from twisted.python.zippath import ZipArchive
 from twisted.python.reflect import namedAny
+from twisted.python.runtime import platform
 
 _nothing = object()
 
@@ -76,6 +77,11 @@ if OPTIMIZED_MODE:
     PYTHON_EXTENSIONS.append('.pyo')
 else:
     PYTHON_EXTENSIONS.append('.pyc')
+
+if platform.getType() == 'win32':
+    DYNAMIC_PYTHON_EXTENSIONS = ['.pyd', '.dll']
+else:
+    DYNAMIC_PYTHON_EXTENSIONS = ['.so']
 
 def _isPythonIdentifier(string):
     """
@@ -134,7 +140,7 @@ class _ModuleIteratorHelper:
             for potentialTopLevel in children:
                 ext = potentialTopLevel.splitext()[1]
                 potentialBasename = potentialTopLevel.basename()[:-len(ext)]
-                if ext in PYTHON_EXTENSIONS:
+                if ext in PYTHON_EXTENSIONS or ext in DYNAMIC_PYTHON_EXTENSIONS:
                     # TODO: this should be a little choosier about which path entry
                     # it selects first, and it should do all the .so checking and
                     # crud

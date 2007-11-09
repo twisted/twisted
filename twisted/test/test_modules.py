@@ -208,6 +208,25 @@ class BasicTests(PySpaceTestCase):
             sys.path.remove(mypath.path)
 
 
+    def test_loadDynamicModules(self):
+        """
+        Check that L{modules.getModule} is able to find and load dynamic
+        modules (modules with .so or .pyd extension).
+        """
+        toImport = False
+        if "datetime" in sys.modules:
+            toImport = True
+            del sys.modules["datetime"]
+        try:
+            mod = modules.getModule('datetime')
+            mod.load()
+            self.assertIn("datetime", sys.modules)
+        finally:
+            if toImport:
+                # Put it back in sys.modules
+                import datetime
+
+
 
 class PathModificationTest(PySpaceTestCase):
     """
