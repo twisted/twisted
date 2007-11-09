@@ -52,6 +52,8 @@ if platformType == 'win32':
     ENOMEM = object()
     EAGAIN = EWOULDBLOCK
     from errno import WSAECONNRESET as ECONNABORTED
+    
+    from twisted.python.win32 import formatError as strerror    
 else:
     from errno import EPERM
     from errno import EINVAL
@@ -68,6 +70,8 @@ else:
     from errno import ENOMEM
     from errno import EAGAIN
     from errno import ECONNABORTED
+    
+    from os import strerror
 
 from errno import errorcode
 
@@ -520,7 +524,7 @@ class BaseClient(Connection):
 
         err = self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
         if err:
-            self.failIfNotConnected(error.getConnectError((err, os.strerror(err))))
+            self.failIfNotConnected(error.getConnectError((err, strerror(err))))
             return
 
 
@@ -546,7 +550,7 @@ class BaseClient(Connection):
                 self.startWriting()
                 return
             else:
-                self.failIfNotConnected(error.getConnectError((connectResult, os.strerror(connectResult))))
+                self.failIfNotConnected(error.getConnectError((connectResult, strerror(connectResult))))
                 return
 
         # If I have reached this point without raising or returning, that means
