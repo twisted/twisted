@@ -426,17 +426,6 @@ class SASLResponderTestCase(_BaseResponderTestCase, unittest.TestCase):
         self.assertIdentical(f.get('authzid'), None)
 
 
-    def test_authzid(self):
-        """
-        Authzid in response if specified.
-        """
-        responder = digest.SASLDigestResponder(
-            username="chris", password="secret", authzid="paul")
-        chalType, unparsed = responder.getResponse(chal1, uri="/")
-        f = digest.parseResponse(unparsed)
-        self.assertEquals(f.get('authzid'), "paul")
-
-
     def test_latinUsernameAndPassword(self):
         """
         Username/password with iso-8859-1 characters and charset=utf-8 param.

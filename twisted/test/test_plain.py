@@ -23,22 +23,6 @@ class CredentialsTestCase(unittest.TestCase):
         self.assertFalse(c.checkPassword("secreta"))
 
 
-    def test_noAuthzid(self):
-        """
-        Check credentials without an authzid.
-        """
-        c = plain.PlainCredentials("chris", "secret", "")
-        self.assertIdentical(c.authzid, None)
-
-
-    def test_authzid(self):
-        """
-        Check credentials with a provided authzid.
-        """
-        c = plain.PlainCredentials("chris", "secret", "paul")
-        self.assertEquals(c.authzid, "paul")
-
-
 
 class ResponderTestCase(unittest.TestCase):
     """
@@ -70,10 +54,9 @@ class ResponderTestCase(unittest.TestCase):
         """
         Generate responses with non-empty authzid.
         """
-        r = plain.SASLPlainResponder(username="chris", password="secret",
-            authzid="paul")
+        r = plain.SASLPlainResponder(username="chris", password="secret")
         self._check_responses(r,
-            "imap/elwood.innosoft.com", "paul\0chris\0secret")
+            "imap/elwood.innosoft.com", "\0chris\0secret")
 
 
     def test_nonASCII(self):
@@ -81,9 +64,9 @@ class ResponderTestCase(unittest.TestCase):
         Generate responses for non-ASCII username/password/authzid.
         """
         r = plain.SASLPlainResponder(username=u'andr\xe9',
-            password=u'h\xe9h\xe9', authzid=u"gis\xe8le")
+            password=u'h\xe9h\xe9')
         self._check_responses(r, "imap/elwood.innosoft.com",
-            "gis\xc3\xa8le\0andr\xc3\xa9\0h\xc3\xa9h\xc3\xa9")
+            "\0andr\xc3\xa9\0h\xc3\xa9h\xc3\xa9")
 
 
 
@@ -143,7 +126,7 @@ class ChallengerTestCase(unittest.TestCase):
         """
         c = plain.SASLPlainChallenger()
         self.assertRaises(sasl.InvalidResponse,
-            c.processResponse, "andr\xe9\0chris\0secret")
+            c.processResponse, "\0andr\xe9\0secret")
 
 
     def test_UTF8Response(self):
@@ -152,10 +135,9 @@ class ChallengerTestCase(unittest.TestCase):
         """
         c = plain.SASLPlainChallenger()
         cred = c.processResponse(
-            "gis\xc3\xa8le\0andr\xc3\xa9\0h\xc3\xa9h\xc3\xa9")
+            "\0andr\xc3\xa9\0h\xc3\xa9h\xc3\xa9")
         self.assertEquals(cred.username, u'andr\xe9')
         self.assertTrue(cred.checkPassword(u'h\xe9h\xe9'))
-        self.assertEquals(cred.authzid, u"gis\xe8le")
 
 
     def test_emptyAuthzid(self):
@@ -166,5 +148,4 @@ class ChallengerTestCase(unittest.TestCase):
         cred = c.processResponse("\0chris\0secret")
         self.assertEquals(cred.username, "chris")
         self.assertTrue(cred.checkPassword("secret"))
-        self.assertIdentical(cred.authzid, None)
 

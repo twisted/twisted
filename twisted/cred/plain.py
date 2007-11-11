@@ -21,21 +21,16 @@ class PlainCredentials(object):
 
     implements(credentials.IUsernamePassword, sasl.ISASLCredentials)
 
-    def __init__(self, username, password, authzid=None):
+    def __init__(self, username, password):
         """
         @param username: the login of the user.
         @type username: C{unicode}
 
         @param password: the password of the user.
         @type password: C{unicode}
-
-        @param authzid: optional authentication ID.
-        @type authzid: C{unicode}
         """
         self.username = username
         self.password = password
-        # Convert empty string to None
-        self.authzid = authzid or None
 
 
     def checkPassword(self, password):
@@ -58,7 +53,7 @@ class SASLPlainResponder(object):
 
     charset = 'utf-8'
 
-    def __init__(self, username, password, authzid=None):
+    def __init__(self, username, password):
         """
         Construct a digest responder. You can pass an optional default realm
         (e.g. a domain name for the username) which will be used if the server
@@ -69,13 +64,9 @@ class SASLPlainResponder(object):
 
         @param password: password to authenticate with.
         @type password: C{unicode}.
-
-        @param authzid: optional authorization ID.
-        @type authzid: C{unicode}.
         """
         self.username = username
         self.password = password
-        self.authzid = authzid
 
 
     def getInitialResponse(self, uri):
@@ -103,7 +94,7 @@ class SASLPlainResponder(object):
         # XXX add support for authentication without authzid?
         # (seen in twisted.mail.smtp)
         resp = "\0".join(map(lambda s: s.encode(self.charset),
-            [self.authzid or "", self.username, self.password]))
+            ["", self.username, self.password]))
         return resp
 
 
@@ -135,7 +126,7 @@ class SASLPlainChallenger(object):
         except UnicodeDecodeError:
             raise sasl.InvalidResponse(
                 "Cannot decode SASL PLAIN response to %s." % self.charset)
-        return PlainCredentials(username, password, authzid)
+        return PlainCredentials(username, password)
 
 
     def getChallenge(self):

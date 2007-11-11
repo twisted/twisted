@@ -12,6 +12,7 @@ from zope.interface import Interface
 from twisted.cred import credentials, error
 
 
+
 class SASLError(error.LoginFailed):
     """
     A generic SASL error.
@@ -48,22 +49,7 @@ class UnexpectedFinalChallenge(InvalidChallenge):
 
 
 
-class IAuthzID(Interface):
-    """
-    Encapsulate an authorization ID.
-
-    This credential is used when an authentication mechanism optionally
-    provides an authorization ID as part as the authentication process.
-    This authorization ID can be checked and used so as to decide which
-    identity is requested.
-
-    @type authzid: C{str} or None
-    @ivar authzid: optional authorization ID.
-    """
-
-
-
-class ISASLCredentials(credentials.IUsernameHashedPassword, IAuthzID):
+class ISASLCredentials(credentials.IUsernameHashedPassword):
     """
     An SASL credential.
     """
