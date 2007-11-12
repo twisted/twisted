@@ -24,9 +24,28 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 
 from twisted.internet import gtk2reactor
 
-__all__ = ['install']
+
+
+class Glib2Reactor(gtk2reactor.Gtk2Reactor):
+    """
+    The reactor using the glib mainloop.
+    """
+
+    def __init__(self):
+        """
+        Override init to set the C{useGtk} flag.
+        """
+        gtk2reactor.Gtk2Reactor.__init__(self, useGtk=False)
+
+
 
 def install():
-    """Configure the twisted mainloop to be run inside the glib mainloop.
     """
-    return gtk2reactor.install(False)
+    Configure the twisted mainloop to be run inside the glib mainloop.
+    """
+    reactor = Glib2Reactor()
+    from twisted.internet.main import installReactor
+    installReactor(reactor)
+    
+__all__ = ['install']
+
