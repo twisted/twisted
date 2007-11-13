@@ -978,11 +978,15 @@ class TestCase(_Assertions):
         """
         Visit this test case. Call C{visitor} with C{self} as a parameter.
 
+        Deprecated in Twisted 2.6.
+
         @param visitor: A callable which expects a single parameter: a test
         case.
 
         @return: None
         """
+        warnings.warn("Test visitors deprecated in Twisted 2.6",
+                      category=DeprecationWarning)
         visitor(self)
 
 

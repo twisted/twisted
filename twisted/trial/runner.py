@@ -109,10 +109,14 @@ def suiteVisit(suite, visitor):
     """
     Visit each test in C{suite} with C{visitor}.
 
+    Deprecated in Twisted 2.6.
+
     @param visitor: A callable which takes a single argument, the L{TestCase}
     instance to visit.
     @return: None
     """
+    warnings.warn("Test visitors deprecated in Twisted 2.6",
+                  category=DeprecationWarning)
     for case in suite._tests:
         visit = getattr(case, 'visit', None)
         if visit is not None:
@@ -253,7 +257,11 @@ class PyUnitTestCase(object):
         """
         Call the given visitor with the original, standard library, test case
         that C{self} wraps. See L{unittest.TestCase.visit}.
+
+        Deprecated in Twisted 2.6.
         """
+        warnings.warn("Test visitors deprecated in Twisted 2.6",
+                      category=DeprecationWarning)
         visitor(self._test)
 
 
