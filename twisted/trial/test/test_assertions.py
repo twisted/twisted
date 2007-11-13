@@ -2,6 +2,7 @@
 # See LICENSE for details
 
 import StringIO, warnings
+from pprint import pformat
 
 from twisted.python import reflect, failure
 from twisted.python.util import dsu
@@ -84,7 +85,8 @@ class TestAssertions(unittest.TestCase):
         try:
             self.failUnlessEqual(first, second)
         except self.failureException, e:
-            expected = '%r != %r' % (first, second)
+            expected = 'not equal:\na = %s\nb = %s\n' % (
+                pformat(first), pformat(second))
             if str(e) != expected:
                 self.fail("Expected: %r; Got: %s" % (expected, str(e)))
         else:
@@ -105,6 +107,29 @@ class TestAssertions(unittest.TestCase):
         self._testEqualPair(x, z)
         self._testUnequalPair(x, y)
         self._testUnequalPair(y, z)
+
+    def test_failUnlessEqualMessage(self):
+        """
+        When a message is passed to L{assertEqual}, it is included in the
+        error message.
+        """
+        exception = self.assertRaises(
+            self.failureException, self.assertEqual,
+            'foo', 'bar', 'message')
+        self.assertEqual(
+            str(exception),
+            "message\nnot equal:\na = 'foo'\nb = 'bar'\n")
+
+
+    def test_failUnlessEqualNoneMessage(self):
+        """
+        If a message is specified as C{None}, it is not included in the error
+        message of L{assertEqual}.
+        """
+        exception = self.assertRaises(
+            self.failureException, self.assertEqual, 'foo', 'bar', None)
+        self.assertEqual(str(exception), "not equal:\na = 'foo'\nb = 'bar'\n")
+
 
     def test_failUnlessEqual_incomparable(self):
         apple = MockEquality('apple')

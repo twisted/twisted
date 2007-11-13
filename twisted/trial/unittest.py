@@ -162,13 +162,21 @@ class _Assertions(pyunit.TestCase, object):
                                         % (exception.__name__, result))
     assertRaises = failUnlessRaises
 
-    def failUnlessEqual(self, first, second, msg=None):
-        """fail the test if C{first} and C{second} are not equal
-        @param msg: if msg is None, then the failure message will be '%r != %r'
-        % (first, second)
+    def failUnlessEqual(self, first, second, msg=''):
+        """
+        Fail the test if C{first} and C{second} are not equal.
+
+        @param msg: A string describing the failure that's included in the
+            exception.
         """
         if not first == second:
-            raise self.failureException(msg or '%r != %r' % (first, second))
+            if msg is None:
+                msg = ''
+            if len(msg) > 0:
+                msg += '\n'
+            raise self.failureException(
+                '%snot equal:\na = %s\nb = %s\n'
+                % (msg, pformat(first), pformat(second)))
         return first
     assertEqual = assertEquals = failUnlessEquals = failUnlessEqual
 
