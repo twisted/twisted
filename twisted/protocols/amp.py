@@ -712,9 +712,9 @@ class _AmpParserBase(_DispatchMixin):
         Mutate the given box to give it any additional keys (_command, _ask)
         required for the command and request/response machinery, then send it.
 
-        Returns a Deferred which fires with the response C{amp.Box} when it
-        is received, or fails with a C{amp.RemoteAmpError} if an error is
-        received.
+        If requiresAnswer is True, returns a C{Deferred} which fires when a
+        response is received. The C{Deferred} is fired with an C{amp.Box} on
+        success, or with an C{amp.RemoteAmpError} if an error is received.
 
         If the Deferred fails and the error is not handled by the caller of
         this method, the failure will be logged and the connection dropped.
@@ -748,7 +748,7 @@ class _AmpParserBase(_DispatchMixin):
 
     def callRemoteString(self, command, requiresAnswer=True, **kw):
         """
-        This is a low-level API, designed only for opitmizing simple messages
+        This is a low-level API, designed only for optimizing simple messages
         for which the overhead of parsing is too great.
 
         @param command: a str naming the command.
