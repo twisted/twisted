@@ -665,6 +665,7 @@ class TestCase(_Assertions):
             result.upDownError('setUp', failure, warn=False, printStatus=False)
             if failure.check(KeyboardInterrupt):
                 result.stop()
+        return self.deferRunCleanups(None, result)
 
     def deferTestMethod(self, ignored, result):
         d = self._run(self._testMethodName, result)

@@ -691,9 +691,17 @@ class TestAddCleanup(unittest.TestCase):
     """
 
     class MockTest(unittest.TestCase):
+
         def setUp(self):
-            unittest.TestCase.setUp(self)
             self.log = ['setUp']
+
+        def brokenSetUp(self):
+            self.log = ['setUp']
+            raise RuntimeError("Deliberate failure")
+
+        def skippingSetUp(self):
+            self.log = ['setUp']
+            raise unittest.SkipTest("Don't do this")
 
         def append(self, thing):
             self.log.append(thing)
@@ -711,10 +719,32 @@ class TestAddCleanup(unittest.TestCase):
         self.test = TestAddCleanup.MockTest()
 
 
+    def test_addCleanupCalledIfSetUpFails(self):
+        """
+        Callables added with C{addCleanup} are run even if setUp fails.
+        """
+        self.test.setUp = self.test.brokenSetUp
+        self.test.addCleanup(self.test.append, 'foo')
+        self.test.run(self.result)
+        self.assertEqual(['setUp', 'foo'], self.test.log)
+
+
+    def test_addCleanupCalledIfSetUpSkips(self):
+        """
+        Callables added with C{addCleanup} are run even if setUp raises
+        L{SkipTest}. This allows test authors to reliably provide clean up
+        code using C{addCleanup}.
+        """
+        self.test.setUp = self.test.skippingSetUp
+        self.test.addCleanup(self.test.append, 'foo')
+        self.test.run(self.result)
+        self.assertEqual(['setUp', 'foo'], self.test.log)
+
+
     def test_addCleanupCalledInReverseOrder(self):
         """
-        Callables added with addCleanup should be called after tearDown in
-        reverse order of addition.
+        Callables added with C{addCleanup} should be called before C{tearDown}
+        in reverse order of addition.
         """
         self.test.addCleanup(self.test.append, "foo")
         self.test.addCleanup(self.test.append, 'bar')
@@ -725,8 +755,9 @@ class TestAddCleanup(unittest.TestCase):
 
     def test_addCleanupWaitsForDeferreds(self):
         """
-        If an added callable returns a Deferred, then the test should wait
-        until that Deferred has fired before running the next cleanup method.
+        If an added callable returns a L{Deferred}, then the test should wait
+        until that L{Deferred} has fired before running the next cleanup
+        method.
         """
         def cleanup(message):
             d = defer.Deferred()
@@ -756,8 +787,8 @@ class TestAddCleanup(unittest.TestCase):
 
     def test_cleanupsContinueRunningAfterError(self):
         """
-        If a cleanup raises an error then that does not stop the other cleanups
-        from being run.
+        If a cleanup raises an error then that does not stop the other
+        cleanups from being run.
         """
         self.test.addCleanup(self.test.append, 'foo')
         self.test.addCleanup(self.test.fail, 'bar')
