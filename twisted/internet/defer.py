@@ -16,7 +16,7 @@ import traceback
 import warnings
 
 # Twisted imports
-from twisted.python import log, failure
+from twisted.python import log, failure, lockfile
 from twisted.python.util import unsignedID, mergeFunctionMetadata
 
 class AlreadyCalledError(Exception):
@@ -1005,10 +1005,107 @@ class DeferredQueue(object):
             raise QueueUnderflow()
 
 
+class AlreadyTryingToLockError(Exception):
+    """
+    Raised when DeferredFilesystemLock.deferUntilLocked is called twice on a
+    single DeferredFilesystemLock.
+    """
+
+
+class DeferredFilesystemLock(lockfile.FilesystemLock):
+    """
+    A FilesystemLock that allows for a deferred to be fired when the lock is
+    acquired.
+
+    @ivar _scheduler: The object in charge of scheduling retries. In this
+        implementation this is parameterized for testing.
+
+    @ivar _interval: The retry interval for an L{IReactorTime} based scheduler.
+
+    @ivar _tryLockCall: A L{DelayedCall} based on _interval that will managex
+        the next retry for aquiring the lock.
+
+    @ivar _timeoutCall: A L{DelayedCall} based on deferUntilLocked's timeout
+        argument.  This is in charge of timing out our attempt to acquire the
+        lock.
+    """
+    _interval = 1
+    _tryLockCall = None
+    _timeoutCall = None
+
+    def __init__(self, name, scheduler=None):
+        """
+        @param name: The name of the lock to acquire
+        @param scheduler: An object which provides L{IReactorTime}
+        """
+        lockfile.FilesystemLock.__init__(self, name)
+
+        if scheduler is None:
+            from twisted.internet import reactor
+            scheduler = reactor
+
+        self._scheduler = scheduler
+
+    def deferUntilLocked(self, timeout=None):
+        """
+        Wait until we acquire this lock.  This method is not safe for
+        concurrent use.
+
+        @type timeout: C{float} or C{int}
+        @param timeout: the number of seconds after which to time out if the
+            lock has not been acquired.
+
+        @return: a deferred which will callback when the lock is acquired, or
+            errback with a L{TimeoutError} after timing out or an
+            L{AlreadyTryingToLockError} if the L{deferUntilLocked} has already
+            been called and not successfully locked the file.
+        """
+        if self._tryLockCall is not None:
+            return fail(
+                AlreadyTryingToLockError(
+                    "deferUntilLocked isn't safe for concurrent use."))
+
+        d = Deferred()
+
+        def _cancelLock():
+            self._tryLockCall.cancel()
+            self._tryLockCall = None
+            self._timeoutCall = None
+
+            if self.lock():
+                d.callback(None)
+            else:
+                d.errback(failure.Failure(
+                        TimeoutError("Timed out aquiring lock: %s after %fs" % (
+                                self.name,
+                                timeout))))
+
+        def _tryLock():
+            if self.lock():
+                if self._timeoutCall is not None:
+                    self._timeoutCall.cancel()
+                    self._timeoutCall = None
+
+                self._tryLockCall = None
+
+                d.callback(None)
+            else:
+                if timeout is not None and self._timeoutCall is None:
+                    self._timeoutCall = self._scheduler.callLater(
+                        timeout, _cancelLock)
+
+                self._tryLockCall = self._scheduler.callLater(
+                    self._interval, _tryLock)
+
+        _tryLock()
+
+        return d
+
 
 __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
            "AlreadyCalledError", "TimeoutError", "gatherResults",
            "maybeDeferred",
            "waitForDeferred", "deferredGenerator", "inlineCallbacks",
            "DeferredLock", "DeferredSemaphore", "DeferredQueue",
+           "DeferredFilesystemLock", "AlreadyTryingToLockError",
           ]

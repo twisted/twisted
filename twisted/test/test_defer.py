@@ -13,6 +13,7 @@ from twisted.trial import unittest, util
 from twisted.internet import reactor, defer
 from twisted.python import failure, log
 
+from twisted.internet.task import Clock
 
 class GenericError(Exception):
     pass
@@ -770,3 +771,105 @@ class OtherPrimitives(unittest.TestCase):
 
         queue = defer.DeferredQueue(backlog=0)
         self.assertRaises(defer.QueueUnderflow, queue.get)
+
+
+
+class DeferredFilesystemLockTestCase(unittest.TestCase):
+    """
+    Test the behavior of L{DeferredFilesystemLock}
+    """
+    def setUp(self):
+        self.clock = Clock()
+        self.lock = defer.DeferredFilesystemLock(self.mktemp(),
+                                                 scheduler=self.clock)
+
+
+    def test_waitUntilLockedWithNoLock(self):
+        """
+        Test that the lock can be acquired when no lock is held
+        """
+        d = self.lock.deferUntilLocked(timeout=1)
+
+        return d
+
+
+    def test_waitUntilLockedWithTimeoutLocked(self):
+        """
+        Test that the lock can not be acquired when the lock is held
+        for longer than the timeout.
+        """
+        self.failUnless(self.lock.lock())
+
+        d = self.lock.deferUntilLocked(timeout=5.5)
+        self.assertFailure(d, defer.TimeoutError)
+
+        self.clock.pump([1]*10)
+
+        return d
+
+
+    def test_waitUntilLockedWithTimeoutUnlocked(self):
+        """
+        Test that a lock can be acquired while a lock is held
+        but the lock is unlocked before our timeout.
+        """
+        def onTimeout(f):
+            f.trap(defer.TimeoutError)
+            self.fail("Should not have timed out")
+
+        self.failUnless(self.lock.lock())
+
+        self.clock.callLater(1, self.lock.unlock)
+        d = self.lock.deferUntilLocked(timeout=10)
+        d.addErrback(onTimeout)
+
+        self.clock.pump([1]*10)
+
+        return d
+
+
+    def test_defaultScheduler(self):
+        """
+        Test that the default scheduler is set up properly.
+        """
+        lock = defer.DeferredFilesystemLock(self.mktemp())
+
+        self.assertEquals(lock._scheduler, reactor)
+
+
+    def test_concurrentUsage(self):
+        """
+        Test that an appropriate exception is raised when attempting
+        to use deferUntilLocked concurrently.
+        """
+        self.lock.lock()
+        self.clock.callLater(1, self.lock.unlock)
+
+        d = self.lock.deferUntilLocked()
+        d2 = self.lock.deferUntilLocked()
+
+        self.assertFailure(d2, defer.AlreadyTryingToLockError)
+
+        self.clock.advance(1)
+
+        return d
+
+
+    def test_multipleUsages(self):
+        """
+        Test that a DeferredFilesystemLock can be used multiple times
+        """
+        def lockAquired(ign):
+            self.lock.unlock()
+            d = self.lock.deferUntilLocked()
+            return d
+
+        self.lock.lock()
+        self.clock.callLater(1, self.lock.unlock)
+
+        d = self.lock.deferUntilLocked()
+        d.addCallback(lockAquired)
+
+        self.clock.advance(1)
+
+        return d
