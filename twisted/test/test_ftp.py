@@ -1939,9 +1939,12 @@ class IFTPShellTestsMixin:
         Check that openForWriting returns an object providing C{ftp.IWriteFile}.
         """
         d = self.shell.openForWriting(('foo',))
-        def cb(res):
+        def cb1(res):
             self.assertTrue(ftp.IWriteFile.providedBy(res))
-        d.addCallback(cb)
+            return res.receive().addCallback(cb2)
+        def cb2(res):
+            self.assertTrue(IConsumer.providedBy(res))
+        d.addCallback(cb1)
         return d
 
 
@@ -2103,7 +2106,6 @@ class TestConsumer(object):
         before.
         """
         assert self.producer is None
-        assert not streaming
         self.buffer = []
         self.producer = producer
         self.producer.resumeProducing()

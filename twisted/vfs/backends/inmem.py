@@ -1,18 +1,25 @@
-# Copyright (c) 2001-2006 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-"""In-memory VFS backend."""
+"""
+In-memory VFS backend.
+"""
 
-import cStringIO
+import os
+
+from cStringIO import StringIO
 
 from zope.interface import implements
 
 from twisted.vfs import ivfs, pathutils
 
-__all__ = ['FakeDirectory', 'FakeFile']
 
-class _FakeNode:
-    """Base class.  Don't instantiate directly."""
+
+class _FakeNode(object):
+    """
+    Base class.  Don't instantiate directly.
+    """
+
     def create(self):
         self.parent._children[self.name] = self
 
@@ -25,15 +32,18 @@ class _FakeNode:
         if newParent.exists(pathutils.basename(newName)):
             raise ivfs.VFSError(
                 "Cannot rename over the top of an existing directory")
-            
+
         del self.parent._children[self.name]
         self.name = pathutils.basename(pathutils.basename(newName))
         newParent._children[self.name] = self
         self.parent = newParent
 
 
+
 class FakeDirectory(_FakeNode):
-    """In-memory directory."""
+    """
+    In-memory directory.
+    """
 
     implements(ivfs.IFileSystemContainer)
 
@@ -63,8 +73,13 @@ class FakeDirectory(_FakeNode):
         }
 
     def createFile(self, childName, exclusive=False):
-        if exclusive and self.exists(childName):
-            raise ivfs.AlreadyExistsError(childName)
+        if self.exists(childName):
+            if exclusive:
+                raise ivfs.AlreadyExistsError(childName)
+            child = self.child(childName)
+            if not ivfs.IFileSystemLeaf.providedBy(child):
+                raise IOError("Directory existing with name %s" % (childName,))
+            return child
         child = FakeFile(childName, self)
         child.create()
         return child
@@ -77,21 +92,27 @@ class FakeDirectory(_FakeNode):
         return child
 
     def exists(self, childName):
-        return self._children.has_key(childName)
+        return childName in self._children
+
 
 
 class FakeFile(_FakeNode):
-    """In-memory file."""
+    """
+    In-memory file.
+    """
 
     implements(ivfs.IFileSystemLeaf)
 
     def __init__(self, name=None, parent=None, data=''):
-        self.data = cStringIO.StringIO()
+        self.data = StringIO()
         self.data.write(data)
         self.parent = parent
         self.name = name
 
     def open(self, flags):
+        if flags & os.O_TRUNC:
+            self.data.seek(0)
+            self.data.truncate()
         return self
 
     def getMetadata(self):
@@ -116,4 +137,7 @@ class FakeFile(_FakeNode):
         print "this might break and if it does we should fix the caller"
         return []
 
+
+
+__all__ = ['FakeDirectory', 'FakeFile']
 

@@ -565,20 +565,34 @@ class ASCIIConsumerWrapper(object):
         return self.cons.write(bytes.replace(os.linesep, "\r\n"))
 
 
+
 class FileConsumer(object):
+    """
+    A consumer for FTP input that writes data to a file.
+
+    @ivar fObj: a file object opened for writing, used to write data received.
+    @type fObj: C{file}
+    """
+
+    implements(interfaces.IConsumer)
+
     def __init__(self, fObj):
         self.fObj = fObj
+
 
     def registerProducer(self, producer, streaming):
         self.producer = producer
         assert streaming
 
+
     def unregisterProducer(self):
         self.producer = None
         self.fObj.close()
 
+
     def write(self, bytes):
         self.fObj.write(bytes)
+
 
 
 class FTPOverflowProtocol(basic.LineReceiver):
