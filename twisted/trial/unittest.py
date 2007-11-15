@@ -14,7 +14,7 @@ import os, warnings, sys, tempfile, sets, gc
 from pprint import pformat
 
 from twisted.internet import defer, utils
-from twisted.python import failure, log
+from twisted.python import failure, log, monkey
 from twisted.trial import itrial, util
 
 pyunit = __import__('unittest')
@@ -849,6 +849,27 @@ class TestCase(_Assertions):
             f, args, kwargs = self._cleanups.pop()
             callables.append(_makeFunction(f, args, kwargs))
         return util._runSequentially(callables)
+
+
+    def patch(self, obj, attribute, value):
+        """
+        Monkey patch an object for the duration of the test.
+
+        The monkey patch will be reverted at the end of the test using the
+        L{addCleanup} mechanism.
+
+        The L{MonkeyPatcher} is returned so that users can restore and
+        re-apply the monkey patch within their tests.
+
+        @param obj: The object to monkey patch.
+        @param attribute: The name of the attribute to change.
+        @param value: The value to set the attribute to.
+        @return: A L{monkey.MonkeyPatcher} object.
+        """
+        monkeyPatch = monkey.MonkeyPatcher((obj, attribute, value))
+        monkeyPatch.patch()
+        self.addCleanup(monkeyPatch.restore)
+        return monkeyPatch
 
 
     def runTest(self):

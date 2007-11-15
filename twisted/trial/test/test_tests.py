@@ -817,3 +817,69 @@ class TestAddCleanup(unittest.TestCase):
         self.assertEqual(test2, self.test)
         self.assertEqual(error1.getErrorMessage(), 'bar')
         self.assertEqual(error2.getErrorMessage(), 'foo')
+
+
+
+class TestMonkeyPatchSupport(unittest.TestCase):
+    """
+    Tests for the patch() helper method in L{unittest.TestCase}.
+    """
+
+
+    def setUp(self):
+        self.originalValue = 'original'
+        self.patchedValue = 'patched'
+        self.objectToPatch = self.originalValue
+        self.test = unittest.TestCase()
+
+
+    def test_patch(self):
+        """
+        Calling C{patch()} on a test monkey patches the specified object and
+        attribute.
+        """
+        self.test.patch(self, 'objectToPatch', self.patchedValue)
+        self.assertEqual(self.objectToPatch, self.patchedValue)
+
+
+    def test_patchRestoredAfterRun(self):
+        """
+        Any monkey patches introduced by a test using C{patch()} are reverted
+        after the test has run.
+        """
+        self.test.patch(self, 'objectToPatch', self.patchedValue)
+        self.test.run(reporter.Reporter())
+        self.assertEqual(self.objectToPatch, self.originalValue)
+
+
+    def test_revertDuringTest(self):
+        """
+        C{patch()} return a L{monkey.MonkeyPatcher} object that can be used to
+        restore the original values before the end of the test.
+        """
+        patch = self.test.patch(self, 'objectToPatch', self.patchedValue)
+        patch.restore()
+        self.assertEqual(self.objectToPatch, self.originalValue)
+
+
+    def test_revertAndRepatch(self):
+        """
+        The returned L{monkey.MonkeyPatcher} object can re-apply the patch
+        during the test run.
+        """
+        patch = self.test.patch(self, 'objectToPatch', self.patchedValue)
+        patch.restore()
+        patch.patch()
+        self.assertEqual(self.objectToPatch, self.patchedValue)
+
+
+    def test_successivePatches(self):
+        """
+        Successive patches are applied and reverted just like a single patch.
+        """
+        self.test.patch(self, 'objectToPatch', self.patchedValue)
+        self.assertEqual(self.objectToPatch, self.patchedValue)
+        self.test.patch(self, 'objectToPatch', 'second value')
+        self.assertEqual(self.objectToPatch, 'second value')
+        self.test.run(reporter.Reporter())
+        self.assertEqual(self.objectToPatch, self.originalValue)
