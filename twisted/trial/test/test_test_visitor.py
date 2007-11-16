@@ -78,4 +78,5 @@ class TestTestVisitor(unittest.TestCase):
                 pass
         test = PyunitCase('test_foo')
         TestSuite([test]).visit(self.visitor)
-        self.assertEqual(self.visitor.calls, [test])
+        self.assertEqual(
+            [call.id() for call in self.visitor.calls], [test.id()])

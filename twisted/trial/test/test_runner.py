@@ -9,7 +9,7 @@ import StringIO
 from zope.interface import implements
 
 from twisted.trial.itrial import IReporter
-from twisted.trial import unittest, runner, reporter
+from twisted.trial import unittest, runner, reporter, util
 from twisted.python import failure, log, reflect
 from twisted.scripts import trial
 from twisted.plugins import twisted_trial
@@ -189,6 +189,12 @@ class TrialRunnerWithUncleanWarningsReporter(TestTrialRunner):
 
 
 class DryRunMixin(object):
+
+    suppress = [util.suppress(
+        category=DeprecationWarning,
+        message="Test visitors deprecated in Twisted 2.6")]
+
+
     def setUp(self):
         self.log = []
         self.stream = StringIO.StringIO()

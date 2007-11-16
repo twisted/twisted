@@ -10,18 +10,19 @@ Maintainer: Jonathan Lange <jml@twistedmatrix.com>
 """
 
 
+import doctest
 import os, warnings, sys, tempfile, sets, gc
 from pprint import pformat
 
 from twisted.internet import defer, utils
-from twisted.python import failure, log, monkey
+from twisted.python import components, failure, log, monkey
+from twisted.python.util import proxyForInterface
 from twisted.trial import itrial, util
 
 pyunit = __import__('unittest')
 
-import zope.interface as zi
+from zope.interface import implements
 
-zi.classImplements(pyunit.TestCase, itrial.ITestCase)
 
 
 class SkipTest(Exception):
@@ -532,7 +533,7 @@ class TestCase(_Assertions):
     information.
     """
 
-    zi.implements(itrial.ITestCase)
+    implements(itrial.ITestCase)
     failureException = FailTest
 
     def __init__(self, methodName='runTest'):
@@ -1158,6 +1159,126 @@ class PyUnitResultAdapter(object):
     def upDownError(self, method, error, warn, printStatus):
         pass
 
+
+
+class TestResultDecorator(proxyForInterface(itrial.IReporter)):
+    """
+    Base class for TestResult decorators.
+    """
+
+
+
+class _AdaptedReporter(TestResultDecorator):
+    """
+    TestResult decorator that makes sure that addError only gets tests that
+    have been adapted with a particular test adapter.
+    """
+
+    def __init__(self, original, testAdapter):
+        """
+        Construct an L{_AdaptedReporter}.
+
+        @param original: An {itrial.IReporter}.
+        @param testAdapter: A callable that returns an L{itrial.ITestCase}.
+        """
+        TestResultDecorator.__init__(self, original)
+        self.testAdapter = testAdapter
+
+    def addError(self, test, error):
+        """
+        See L{itrial.IReporter}.
+        """
+        test = self.testAdapter(test)
+        return self.original.addError(test, error)
+
+
+
+class _PyUnitTestCaseAdapter(proxyForInterface(itrial.ITestCase)):
+    """
+    Adapt from pyunit.TestCase to ITestCase.
+    """
+
+    implements(itrial.ITestCase)
+
+
+    def __call__(self, result):
+        """
+        Run the test. See `itrial.ITestCase` for more information.
+        """
+        return self.run(result)
+
+
+    def run(self, result):
+        """
+        Run the test.
+
+        This wraps the result object with a decorator that ensures that the
+        result only gets tests wrapped with this adapter.
+        """
+        return self.original.run(_AdaptedReporter(result, self.__class__))
+
+
+    def visit(self, visitor):
+        """
+        Deprecated in Twisted 2.6.
+        """
+        warnings.warn("Test visitors deprecated in Twisted 2.6",
+                      category=DeprecationWarning)
+        visitor(self)
+
+
+
+class _BrokenIDTestCaseAdapter(_PyUnitTestCaseAdapter):
+    """
+    Adapter for pyunit-style C{TestCase} subclasses that have undesirable id()
+    methods. That is L{pyunit.FunctionTestCase} and L{pyunit.DocTestCase}.
+    """
+
+    def id(self):
+        """
+        Return the fully-qualified Python name of the doctest.
+        """
+        return self.original.shortDescription()
+
+
+
+components.registerAdapter(
+    _PyUnitTestCaseAdapter, pyunit.TestCase, itrial.ITestCase)
+
+
+components.registerAdapter(
+    _BrokenIDTestCaseAdapter, pyunit.FunctionTestCase, itrial.ITestCase)
+
+
+_docTestCase = getattr(doctest, 'DocTestCase', None)
+if _docTestCase:
+    components.registerAdapter(
+        _BrokenIDTestCaseAdapter, _docTestCase, itrial.ITestCase)
+
+
+def _iterateTests(testSuiteOrCase):
+    """
+    Iterate through all of the test cases in C{testSuiteOrCase}.
+    """
+    try:
+        suite = iter(testSuiteOrCase)
+    except TypeError:
+        yield testSuiteOrCase
+    else:
+        for test in suite:
+            for subtest in _iterateTests(test):
+                yield subtest
+
+
+
+# Support for Python 2.3
+try:
+    iter(pyunit.TestSuite())
+except TypeError:
+    # Python 2.3's TestSuite doesn't support iteration. Let's monkey patch it!
+    def __iter__(self):
+        return iter(self._tests)
+    pyunit.TestSuite.__iter__ = __iter__
 
 
 

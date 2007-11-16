@@ -9,13 +9,49 @@ import traceback
 
 from zope.interface import implements
 
+from twisted.python import reflect
 from twisted.python.failure import Failure
+from twisted.trial import util
 from twisted.trial.unittest import TestCase, PyUnitResultAdapter
-from twisted.trial.itrial import IReporter
+from twisted.trial.itrial import IReporter, ITestCase
 from twisted.trial.test import erroneous
 
 pyunit = __import__('unittest')
 
+
+class TestPyUnitTestCase(TestCase):
+
+    class PyUnitTest(pyunit.TestCase):
+
+        def test_pass(self):
+            pass
+
+
+    def setUp(self):
+        self.original = self.PyUnitTest('test_pass')
+        self.test = ITestCase(self.original)
+
+
+    def test_visit(self):
+        """
+        Trial assumes that test cases implement visit().
+        """
+        log = []
+        def visitor(test):
+            log.append(test)
+        self.test.visit(visitor)
+        self.assertEqual(log, [self.test])
+    test_visit.suppress = [
+        util.suppress(category=DeprecationWarning,
+                      message="Test visitors deprecated in Twisted 2.6")]
+
+
+    def test_callable(self):
+        """
+        Tests must be callable in order to be used with Python's unittest.py.
+        """
+        self.assertTrue(callable(self.test),
+                        "%r is not callable." % (self.test,))
 
 
 class TestPyUnitResult(TestCase):

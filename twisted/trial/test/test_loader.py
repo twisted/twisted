@@ -11,16 +11,14 @@ from twisted.python.modules import getModule
 
 
 
-# XXX - this is used in test_script, perhaps it should be in a utility module
-def testNames(test):
+def testNames(tests):
     """
     Return the id of each test within the given test suite or case.
     """
-    testIDs = []
-    def visit(test):
-        testIDs.append(test.id())
-    test.visit(visit)
-    return testIDs
+    names = []
+    for test in unittest._iterateTests(tests):
+        names.append(test.id())
+    return names
 
 
 
@@ -140,7 +138,10 @@ class FileTest(packages.SysPathManglingTest):
         finally:
             shutil.rmtree(path)
 
+
+
 class LoaderTest(packages.SysPathManglingTest):
+
     def setUp(self):
         self.loader = runner.TestLoader()
         packages.SysPathManglingTest.setUp(self)
@@ -218,9 +219,8 @@ class LoaderTest(packages.SysPathManglingTest):
         """
         import sample
         suite = self.loader.loadClass(sample.FooTest)
-        def visitor(case):
-            self.assertEqual(case.forceGarbageCollection, False)
-        suite.visit(visitor)
+        for test in unittest._iterateTests(suite):
+            self.assertEqual(test.forceGarbageCollection, False)
 
 
     def test_loadWithForcedGarbageCollectionClass(self):
@@ -232,9 +232,8 @@ class LoaderTest(packages.SysPathManglingTest):
         import sample
         self.loader.forceGarbageCollection = True
         suite = self.loader.loadClass(sample.FooTest)
-        def visitor(case):
-            self.assertEqual(case.forceGarbageCollection, True)
-        suite.visit(visitor)
+        for test in unittest._iterateTests(suite):
+            self.assertEqual(test.forceGarbageCollection, True)
 
 
     def test_loadNonClass(self):
@@ -437,9 +436,6 @@ class PackageOrderingTest(packages.SysPathManglingTest):
         packages.SysPathManglingTest.setUp(self, parent)
         self.mangleSysPath(self.oldPath + [self.topDir])
 
-    def visitCase(self, case):
-        self.resultingTests.append(case)
-
     def _trialSortAlgorithm(self, sorter):
         """
         Right now, halfway by accident, trial sorts like this:
@@ -492,7 +488,7 @@ class PackageOrderingTest(packages.SysPathManglingTest):
         import uberpackage
         self.loader.sorter = sorter
         suite = self.loader.loadPackage(uberpackage, recurse=True)
-        suite.visit(self.visitCase)
+        self.resultingTests = list(unittest._iterateTests(suite))
         manifest = list(self._trialSortAlgorithm(sorter))
         for number, (manifestTest, actualTest) in enumerate(
             zip(manifest, self.resultingTests)):

@@ -147,8 +147,7 @@ class TestErrorReporting(StringTest):
                         "Couldn't match 'Failure in example: ' "
                         "or 'Failed example: '")
         expect = [self.doubleSeparator,
-                  re.compile(r'\[(ERROR|FAIL)\]: .*[Dd]octest.*'
-                             + re.escape(path))]
+                  re.compile(r'\[(ERROR|FAIL)\]: .*' + re.escape(path))]
         self.stringComparison(expect, output.splitlines())
 
     def testHiddenException(self):

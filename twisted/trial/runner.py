@@ -122,7 +122,7 @@ def suiteVisit(suite, visitor):
         if visit is not None:
             visit(visitor)
         elif isinstance(case, pyunit.TestCase):
-            case = PyUnitTestCase(case)
+            case = ITestCase(case)
             case.visit(visitor)
         elif isinstance(case, pyunit.TestSuite):
             suiteVisit(case, visitor)
@@ -207,20 +207,26 @@ class LoggedSuite(TestSuite):
 
 class DocTestSuite(TestSuite):
     """
+    DEPRECATED in Twisted 2.6.
+
     Behaves like doctest.DocTestSuite, but decorates individual TestCases so
     they support visit and so that id() behaviour is meaningful and consistent
     between Python versions.
     """
 
     def __init__(self, testModule):
+        warnings.warn("DocTestSuite is deprecated in Twisted 2.6.",
+                      category=DeprecationWarning, stacklevel=3)
         TestSuite.__init__(self)
         suite = doctest.DocTestSuite(testModule)
         for test in suite._tests: #yay encapsulation
-            self.addTest(DocTestCase(test))
+            self.addTest(ITestCase(test))
 
 
 class PyUnitTestCase(object):
     """
+    DEPRECATED in Twisted 2.6.
+
     This class decorates the pyunit.TestCase class, mainly to work around the
     differences between unittest in Python 2.3, 2.4, and 2.5. These
     differences are::
@@ -234,6 +240,8 @@ class PyUnitTestCase(object):
     """
 
     def __init__(self, test):
+        warnings.warn("Deprecated in Twisted 2.6.",
+                      category=DeprecationWarning)
         self._test = test
         test.id = self.id
 
@@ -269,7 +277,12 @@ class PyUnitTestCase(object):
         return getattr(self._test, name)
 
 
+
 class DocTestCase(PyUnitTestCase):
+    """
+    DEPRECATED in Twisted 2.6.
+    """
+
     def id(self):
         """
         In Python 2.4, doctests have correct id() behaviour. In Python 2.3,
@@ -340,13 +353,8 @@ def isTestCase(obj):
     otherwise. Used to find all the tests in a module.
     """
     try:
-        return ITestCase.implementedBy(obj)
+        return issubclass(obj, pyunit.TestCase)
     except TypeError:
-        return False
-    except AttributeError:
-        # Working around a bug in zope.interface 3.1.0; this isn't the user's
-        # fault, so we won't emit a warning.
-        # See http://www.zope.org/Collectors/Zope3-dev/470.
         return False
 
 
@@ -542,7 +550,7 @@ class TestLoader(object):
         return self._makeCase(method.im_class, method.__name__)
 
     def _makeCase(self, klass, methodName):
-        test = klass(methodName)
+        test = ITestCase(klass(methodName))
         test.forceGarbageCollection = self.forceGarbageCollection
         return test
 
@@ -602,7 +610,12 @@ class TestLoader(object):
         if not inspect.ismodule(module):
             warnings.warn("trial only supports doctesting modules")
             return
-        return DocTestSuite(module)
+        # XXX: We are going to change this to use the decorating system.
+        doctests = doctest.DocTestSuite(module)
+        suite = self.suiteFactory()
+        for test in doctests._tests:
+            suite.addTest(ITestCase(test))
+        return suite
 
     def loadAnything(self, thing, recurse=False):
         """

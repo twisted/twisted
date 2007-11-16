@@ -883,3 +883,47 @@ class TestMonkeyPatchSupport(unittest.TestCase):
         self.assertEqual(self.objectToPatch, 'second value')
         self.test.run(reporter.Reporter())
         self.assertEqual(self.objectToPatch, self.originalValue)
+
+
+
+class TestIterateTests(unittest.TestCase):
+    """
+    L{_iterateTests} returns a list of all test cases in a test suite or test
+    case.
+    """
+
+    def test_iterateTestCase(self):
+        """
+        L{_iterateTests} on a single test case returns a list containing that
+        test case.
+        """
+        test = unittest.TestCase()
+        self.assertEqual([test], list(unittest._iterateTests(test)))
+
+
+    def test_iterateSingletonTestSuite(self):
+        """
+        L{_iterateTests} on a test suite that contains a single test case
+        returns a list containing that test case.
+        """
+        test = unittest.TestCase()
+        suite = runner.TestSuite([test])
+        self.assertEqual([test], list(unittest._iterateTests(suite)))
+
+
+    def test_iterateNestedTestSuite(self):
+        """
+        L{_iterateTests} returns tests that are in nested test suites.
+        """
+        test = unittest.TestCase()
+        suite = runner.TestSuite([runner.TestSuite([test])])
+        self.assertEqual([test], list(unittest._iterateTests(suite)))
+
+
+    def test_iterateIsLeftToRightDepthFirst(self):
+        """
+        L{_iterateTests} returns tests in left-to-right, depth-first order.
+        """
+        test = unittest.TestCase()
+        suite = runner.TestSuite([runner.TestSuite([test]), self])
+        self.assertEqual([test, self], list(unittest._iterateTests(suite)))
