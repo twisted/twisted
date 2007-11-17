@@ -184,19 +184,13 @@ parse_int_prefixed(BinData, List) ->
             List;
         <<Prefix:16, RemainData/binary>> ->
             BinaryLength = length(binary_to_list(RemainData)),
-            TooShort = if
-                BinaryLength < Prefix ->
-                    true;
-                true ->
-                    false
-            end,
-            case TooShort of
-                true ->
-                    error;
-                false ->
+            case BinaryLength of
+                Prefix ->
                     {ReadData, Remain} = split_binary(RemainData, Prefix),
                     NewList = lists:append(List, [binary_to_list(ReadData)]),
-                    parse_int_prefixed(Remain, NewList)
+                    parse_int_prefixed(Remain, NewList);
+                _ -> 
+                    error
             end;
         _ ->
             error
