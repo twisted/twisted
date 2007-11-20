@@ -100,7 +100,7 @@ class TestErrorReporting(StringTest):
 
     def getOutput(self, suite):
         result = self.getResult(suite)
-        result.printErrors()
+        result.done()
         return self.output.getvalue()
 
     def getResult(self, suite):
@@ -316,10 +316,15 @@ class PyunitTestNames(unittest.TestCase):
         output = result.getDescription(self.test)
         self.failUnlessEqual(output, 'test_foo')
 
+
     def test_minimalReporter(self):
+        """
+        The summary of L{reporter.MinimalReporter} is a simple list of
+        numbers, indicating how many tests ran, how many failed etc.
+        """
         result = reporter.MinimalReporter(self.stream)
         self.test.run(result)
-        result.printSummary()
+        result._printSummary()
         output = self.stream.getvalue().strip().split(' ')
         self.failUnlessEqual(output[1:], ['1', '1', '0', '0', '0'])
 
@@ -452,35 +457,57 @@ class SkipTest(unittest.TestCase):
         self.result.addSkip(self.test, 'some reason')
         self.failUnlessEqual(True, self.result.wasSuccessful())
 
+
     def test_summary(self):
+        """
+        The summary of a successful run with skips indicates that the test
+        suite passed and includes the number of skips.
+        """
         self.result.addSkip(self.test, 'some reason')
-        self.result.printSummary()
-        output = self.stream.getvalue()
+        self.result.done()
+        output = self.stream.getvalue().splitlines()[-1]
         prefix = 'PASSED '
         self.failUnless(output.startswith(prefix))
         self.failUnlessEqual(output[len(prefix):].strip(), '(skips=1)')
 
+
     def test_basicErrors(self):
+        """
+        The output at the end of a test run with skips includes the reasons
+        for skipping those tests.
+        """
         self.result.addSkip(self.test, 'some reason')
-        self.result.printErrors()
-        output = self.stream.getvalue().splitlines()[-1]
+        self.result.done()
+        output = self.stream.getvalue().splitlines()[4]
         self.failUnlessEqual(output.strip(), 'some reason')
 
+
     def test_booleanSkip(self):
+        """
+        Tests can be skipped without specifying a reason by setting the 'skip'
+        attribute to True. When this happens, the test output includes 'True'
+        as the reason.
+        """
         self.result.addSkip(self.test, True)
-        self.result.printErrors()
-        output = self.stream.getvalue().splitlines()[-1]
-        self.failUnlessEqual(output.strip(), 'True')
+        self.result.done()
+        output = self.stream.getvalue().splitlines()[4]
+        self.failUnlessEqual(output, 'True')
+
 
     def test_exceptionSkip(self):
+        """
+        Skips can be raised as errors. When this happens, the error is
+        included in the summary at the end of the test suite.
+        """
         try:
             1/0
         except Exception, e:
             error = e
         self.result.addSkip(self.test, error)
-        self.result.printErrors()
-        output = '\n'.join(self.stream.getvalue().splitlines()[3:]).strip()
+        self.result.done()
+        output = '\n'.join(self.stream.getvalue().splitlines()[3:5]).strip()
         self.failUnlessEqual(output, str(e))
+
 
 
 class UncleanWarningSkipTest(SkipTest):
@@ -564,8 +591,8 @@ class TodoTest(unittest.TestCase):
         """
         self.result.addExpectedFailure(self.test, Failure(Exception()),
                                        makeTodo('some reason'))
-        self.result.printSummary()
-        output = self.stream.getvalue()
+        self.result.done()
+        output = self.stream.getvalue().splitlines()[-1]
         prefix = 'PASSED '
         self.failUnless(output.startswith(prefix))
         self.assertEqual(output[len(prefix):].strip(),
@@ -579,9 +606,9 @@ class TodoTest(unittest.TestCase):
         """
         self.result.addExpectedFailure(self.test, Failure(Exception()),
                                        makeTodo('some reason'))
-        self.result.printErrors()
-        output = self.stream.getvalue().splitlines()[-3]
-        self.assertEqual(output.strip(), "Reason: 'some reason'")
+        self.result.done()
+        output = self.stream.getvalue().splitlines()[4].strip()
+        self.assertEqual(output, "Reason: 'some reason'")
 
 
     def test_booleanTodo(self):
@@ -591,7 +618,7 @@ class TodoTest(unittest.TestCase):
         """
         self.result.addExpectedFailure(self.test, Failure(Exception()),
                                        makeTodo(True))
-        self.assertRaises(Exception, self.result.printErrors)
+        self.assertRaises(Exception, self.result.done)
 
 
     def test_exceptionTodo(self):
@@ -605,7 +632,7 @@ class TodoTest(unittest.TestCase):
             error = e
         self.result.addExpectedFailure(self.test, Failure(error),
                                        makeTodo("todo!"))
-        self.result.printErrors()
+        self.result.done()
         output = '\n'.join(self.stream.getvalue().splitlines()[3:]).strip()
         self.assertTrue(str(e) in output)
 
@@ -687,6 +714,7 @@ class TestTreeReporter(unittest.TestCase):
         util.suppress(category=reporter.BrokenTestCaseWarning),
         util.suppress(category=DeprecationWarning))
 
+
     def test_upDownError(self):
         """
         Run upDownError and check that the output is correct and colored
@@ -696,6 +724,11 @@ class TestTreeReporter(unittest.TestCase):
         color, text = self.log[0]
         self.assertEqual(color.strip(), self.result.ERROR)
         self.assertEqual(text.strip(), 'method')
+    test_upDownError = suppressWarnings(
+        test_upDownError,
+        util.suppress(category=DeprecationWarning,
+                      message="upDownError is deprecated in Twisted 2.6."))
+
 
     def test_summaryColoredSuccess(self):
         """
@@ -703,9 +736,10 @@ class TestTreeReporter(unittest.TestCase):
         and be colored properly.
         """
         self.result.addSuccess(self.test)
-        self.result.printSummary()
+        self.result.done()
         self.assertEquals(self.log[1], (self.result.SUCCESS, 'PASSED'))
-        self.assertEquals(self.stream.getvalue().strip(), "(successes=1)")
+        self.assertEquals(
+            self.stream.getvalue().splitlines()[-1].strip(), "(successes=1)")
 
     def test_summaryColoredFailure(self):
         """
@@ -716,9 +750,10 @@ class TestTreeReporter(unittest.TestCase):
             raise RuntimeError('foo')
         except RuntimeError, excValue:
             self.result.addError(self, sys.exc_info())
-        self.result.printSummary()
+        self.result.done()
         self.assertEquals(self.log[1], (self.result.FAILURE, 'FAILED'))
-        self.assertEquals(self.stream.getvalue().strip(), "(errors=1)")
+        self.assertEquals(
+            self.stream.getvalue().splitlines()[-1].strip(), "(errors=1)")
 
 
 class TestReporter(unittest.TestCase):
@@ -749,11 +784,90 @@ class TestReporter(unittest.TestCase):
         Test that the reporter safely writes to its stream.
         """
         result = self.resultFactory(stream=BrokenStream(self.stream))
-        result.writeln("Hello")
+        result._writeln("Hello")
         self.assertEqual(self.stream.getvalue(), 'Hello\n')
         self.stream.truncate(0)
-        result.writeln("Hello %s!", 'World')
+        result._writeln("Hello %s!", 'World')
         self.assertEqual(self.stream.getvalue(), 'Hello World!\n')
+
+
+
+    def test_printErrorsDeprecated(self):
+        """
+        L{IReporter.printErrors} was deprecated in Twisted 2.6.
+        """
+        def f():
+            self.result.printErrors()
+        self.assertWarns(
+            DeprecationWarning, "printErrors is deprecated in Twisted 2.6.",
+            __file__, f)
+
+
+    def test_printSummaryDeprecated(self):
+        """
+        L{IReporter.printSummary} was deprecated in Twisted 2.6.
+        """
+        def f():
+            self.result.printSummary()
+        self.assertWarns(
+            DeprecationWarning, "printSummary is deprecated in Twisted 2.6.",
+            __file__, f)
+
+
+    def test_writeDeprecated(self):
+        """
+        L{IReporter.write} was deprecated in Twisted 2.6.
+        """
+        def f():
+            self.result.write("")
+        self.assertWarns(
+            DeprecationWarning, "write is deprecated in Twisted 2.6.",
+            __file__, f)
+
+
+    def test_writelnDeprecated(self):
+        """
+        L{IReporter.writeln} was deprecated in Twisted 2.6.
+        """
+        def f():
+            self.result.writeln("")
+        self.assertWarns(
+            DeprecationWarning, "writeln is deprecated in Twisted 2.6.",
+            __file__, f)
+
+
+    def test_separatorDeprecated(self):
+        """
+        L{IReporter.separator} was deprecated in Twisted 2.6.
+        """
+        def f():
+            return self.result.separator
+        self.assertWarns(
+            DeprecationWarning, "separator is deprecated in Twisted 2.6.",
+            __file__, f)
+
+
+    def test_streamDeprecated(self):
+        """
+        L{IReporter.stream} was deprecated in Twisted 2.6.
+        """
+        def f():
+            return self.result.stream
+        self.assertWarns(
+            DeprecationWarning, "stream is deprecated in Twisted 2.6.",
+            __file__, f)
+
+
+    def test_upDownErrorDeprecated(self):
+        """
+        L{IReporter.upDownError} was deprecated in Twisted 2.6.
+        """
+        def f():
+            self.result.upDownError(None, None, None, None)
+        self.assertWarns(
+            DeprecationWarning, "upDownError is deprecated in Twisted 2.6.",
+            __file__, f)
+
 
 
 class TestSafeStream(unittest.TestCase):

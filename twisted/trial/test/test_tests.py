@@ -433,57 +433,53 @@ class TestCleanup(unittest.TestCase):
 
 
 
-class BogusReporter(reporter.Reporter):
-    def __init__(self):
-        super(BogusReporter, self).__init__(StringIO.StringIO(), 'default',
-                                            False)
-
-
-    def upDownError(self, method, error, warn, printStatus):
-        super(BogusReporter, self).upDownError(method, error, False,
-                                               printStatus)
-        self.udeMethod = method
-
-
-
 class FixtureTest(unittest.TestCase):
+    """
+    Tests for broken fixture helper methods (e.g. setUp, tearDown).
+    """
+
     def setUp(self):
-        self.reporter = BogusReporter()
+        self.reporter = reporter.Reporter()
         self.loader = runner.TestLoader()
 
 
     def testBrokenSetUp(self):
+        """
+        When setUp fails, the error is recorded in the result object.
+        """
         self.loader.loadClass(erroneous.TestFailureInSetUp).run(self.reporter)
-        imi = self.reporter.udeMethod
-        self.assertEqual(imi, 'setUp')
         self.assert_(len(self.reporter.errors) > 0)
         self.assert_(isinstance(self.reporter.errors[0][1].value,
                                 erroneous.FoolishError))
 
 
     def testBrokenTearDown(self):
+        """
+        When tearDown fails, the error is recorded in the result object.
+        """
         suite = self.loader.loadClass(erroneous.TestFailureInTearDown)
         suite.run(self.reporter)
-        imi = self.reporter.udeMethod
-        self.assertEqual(imi, 'tearDown')
         errors = self.reporter.errors
         self.assert_(len(errors) > 0)
         self.assert_(isinstance(errors[0][1].value, erroneous.FoolishError))
 
 
     def testBrokenSetUpClass(self):
+        """
+        When setUpClass fails, an error is recorded in the result object.
+        """
         suite = self.loader.loadClass(erroneous.TestFailureInSetUpClass)
         suite.run(self.reporter)
-        imi = self.reporter.udeMethod
-        self.assertEqual(imi, 'setUpClass')
         self.assert_(self.reporter.errors)
 
 
     def testBrokenTearDownClass(self):
+        """
+        When setUpClass fails, an error is recorded in the result object.
+        """
         suite = self.loader.loadClass(erroneous.TestFailureInTearDownClass)
         suite.run(self.reporter)
-        imi = self.reporter.udeMethod
-        self.assertEqual(imi, 'tearDownClass')
+        self.assert_(self.reporter.errors)
 
 
 

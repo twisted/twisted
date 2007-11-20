@@ -159,7 +159,8 @@ class TestResult(pyunit.TestResult, object):
         self.successes += 1
 
     def upDownError(self, method, error, warn, printStatus):
-        pass
+        warnings.warn("upDownError is deprecated in Twisted 2.6.",
+                      category=DeprecationWarning, stacklevel=3)
 
     def cleanupErrors(self, errs):
         """Report an error that occurred during the cleanup between tests.
@@ -175,6 +176,12 @@ class TestResult(pyunit.TestResult, object):
     def endSuite(self, name):
         warnings.warn("endSuite deprecated in Twisted 2.6",
                       category=DeprecationWarning, stacklevel=2)
+
+
+    def done(self):
+        """
+        The test suite has finished running.
+        """
 
 
 
@@ -202,45 +209,118 @@ class UncleanWarningsReporterWrapper(proxyForInterface(itrial.IReporter)):
 
 
 class Reporter(TestResult):
+    """
+    A basic L{TestResult} with support for writing to a stream.
+    """
+
     implements(itrial.IReporter)
 
-    separator = '-' * 79
-    doubleSeparator = '=' * 79
+    _separator = '-' * 79
+    _doubleSeparator = '=' * 79
 
     def __init__(self, stream=sys.stdout, tbformat='default', realtime=False):
         super(Reporter, self).__init__()
-        self.stream = SafeStream(stream)
+        self._stream = SafeStream(stream)
         self.tbformat = tbformat
         self.realtime = realtime
+        # The time when the first test was started.
+        self._startTime = None
+
+
+    def stream(self):
+        warnings.warn("stream is deprecated in Twisted 2.6.",
+                      category=DeprecationWarning, stacklevel=4)
+        return self._stream
+    stream = property(stream)
+
+
+    def separator(self):
+        warnings.warn("separator is deprecated in Twisted 2.6.",
+                      category=DeprecationWarning, stacklevel=4)
+        return self._separator
+    separator = property(separator)
+
 
     def startTest(self, test):
+        """
+        Called when a test begins to run. Records the time when it was first
+        called.
+
+        @param test: L{ITestCase}
+        """
         super(Reporter, self).startTest(test)
+        if self._startTime is None:
+            self._startTime = time.time()
+
 
     def addFailure(self, test, fail):
+        """
+        Called when a test fails. If L{realtime} is set, then it prints the
+        error to the stream.
+
+        @param test: L{ITestCase} that failed.
+        @param fail: L{failure.Failure} containing the error.
+        """
         super(Reporter, self).addFailure(test, fail)
         if self.realtime:
             fail = self.failures[-1][1] # guarantee it's a Failure
-            self.write(self._formatFailureTraceback(fail))
+            self._write(self._formatFailureTraceback(fail))
+
 
     def addError(self, test, error):
+        """
+        Called when a test raises an error. If L{realtime} is set, then it
+        prints the error to the stream.
+
+        @param test: L{ITestCase} that raised the error.
+        @param error: L{failure.Failure} containing the error.
+        """
         error = self._getFailure(error)
         super(Reporter, self).addError(test, error)
         if self.realtime:
             error = self.errors[-1][1] # guarantee it's a Failure
-            self.write(self._formatFailureTraceback(error))
+            self._write(self._formatFailureTraceback(error))
+
 
     def write(self, format, *args):
+        warnings.warn("write is deprecated in Twisted 2.6.",
+                      category=DeprecationWarning, stacklevel=2)
+        self._write(format, *args)
+
+
+    def _write(self, format, *args):
+        """
+        Safely write to the reporter's stream.
+
+        @param format: A format string to write.
+        @param *args: The arguments for the format string.
+        """
         s = str(format)
         assert isinstance(s, type(''))
         if args:
-            self.stream.write(s % args)
+            self._stream.write(s % args)
         else:
-            self.stream.write(s)
-        untilConcludes(self.stream.flush)
+            self._stream.write(s)
+        untilConcludes(self._stream.flush)
+
 
     def writeln(self, format, *args):
-        self.write(format, *args)
-        self.write('\n')
+        warnings.warn("writeln is deprecated in Twisted 2.6.",
+                      category=DeprecationWarning, stacklevel=2)
+        self._writeln(format, *args)
+
+
+    def _writeln(self, format, *args):
+        """
+        Safely write a line to the reporter's stream. Newline is appended to
+        the format string.
+
+        @param format: A format string to write.
+        @param *args: The arguments for the format string.
+        """
+        self._write(format, *args)
+        self._write('\n')
+
 
     def upDownError(self, method, error, warn, printStatus):
         super(Reporter, self).upDownError(method, error, warn, printStatus)
@@ -251,11 +331,13 @@ class Reporter(TestResult):
                    % (method, tbStr))
             warnings.warn(msg, BrokenTestCaseWarning, stacklevel=2)
 
+
     def cleanupErrors(self, errs):
         super(Reporter, self).cleanupErrors(errs)
         warnings.warn("%s\n%s" % ("REACTOR UNCLEAN! traceback(s) follow: ",
                                   self._formatFailureTraceback(errs)),
                       BrokenTestCaseWarning)
+
 
     def _trimFrames(self, frames):
         # when a method fails synchronously, the stack looks like this:
@@ -305,6 +387,7 @@ class Reporter(TestResult):
 
         return newFrames
 
+
     def _formatFailureTraceback(self, fail):
         if isinstance(fail, str):
             return fail.rstrip() + '\n'
@@ -313,16 +396,27 @@ class Reporter(TestResult):
         fail.frames = frames
         return result
 
+
     def _printResults(self, flavour, errors, formatter):
+        """
+        Print a group of errors to the stream.
+
+        @param flavour: A string indicating the kind of error (e.g. 'TODO').
+        @param errors: A list of errors, often L{failure.Failure}s, but
+            sometimes 'todo' errors.
+        @param formatter: A callable that knows how to format the errors.
+        """
         for content in errors:
-            self.writeln(self.doubleSeparator)
-            self.writeln('%s: %s' % (flavour, content[0].id()))
-            self.writeln('')
-            self.write(formatter(*(content[1:])))
+            self._writeln(self._doubleSeparator)
+            self._writeln('%s: %s' % (flavour, content[0].id()))
+            self._writeln('')
+            self._write(formatter(*(content[1:])))
+
 
     def _printExpectedFailure(self, error, todo):
         return 'Reason: %r\n%s' % (todo.reason,
                                    self._formatFailureTraceback(error))
+
 
     def _printUnexpectedSuccess(self, todo):
         ret = 'Reason: %r\n' % (todo.reason,)
@@ -330,10 +424,21 @@ class Reporter(TestResult):
             ret += 'Expected errors: %s\n' % (', '.join(todo.errors),)
         return ret
 
+
     def printErrors(self):
-        """Print all of the non-success results in full to the stream.
         """
-        self.write('\n')
+        Print all of the non-success results in full to the stream.
+        """
+        warnings.warn("printErrors is deprecated in Twisted 2.6.",
+                      category=DeprecationWarning, stacklevel=2)
+        self._printErrors()
+
+
+    def _printErrors(self):
+        """
+        Print all of the non-success results to the stream in full.
+        """
+        self._write('\n')
         self._printResults('[SKIPPED]', self.skips, lambda x : '%s\n' % x)
         self._printResults('[TODO]', self.expectedFailures,
                            self._printExpectedFailure)
@@ -343,6 +448,7 @@ class Reporter(TestResult):
                            self._formatFailureTraceback)
         self._printResults('[SUCCESS!?!]', self.unexpectedSuccesses,
                            self._printUnexpectedSuccess)
+
 
     def _getSummary(self):
         """
@@ -359,7 +465,17 @@ class Reporter(TestResult):
         summary = (summaries and ' ('+', '.join(summaries)+')') or ''
         return summary
 
+
     def printSummary(self):
+        """
+        Print a line summarising the test results to the stream.
+        """
+        warnings.warn("printSummary is deprecated in Twisted 2.6.",
+                      category=DeprecationWarning, stacklevel=2)
+        self._printSummary()
+
+
+    def _printSummary(self):
         """
         Print a line summarising the test results to the stream.
         """
@@ -368,29 +484,55 @@ class Reporter(TestResult):
             status = "PASSED"
         else:
             status = "FAILED"
-        self.write("%s%s\n", status, summary)
+        self._write("%s%s\n", status, summary)
+
+
+    def done(self):
+        """
+        Summarize the result of the test run.
+
+        The summary includes a report of all of the errors, todos, skips and
+        so forth that occurred during the run. It also includes the number of
+        tests that were run and how long it took to run them (not including
+        load time).
+
+        Expects that L{_printErrors}, L{_writeln}, L{_write}, L{_printSummary}
+        and L{_separator} are all implemented.
+        """
+        self._printErrors()
+        self._writeln(self._separator)
+        if self._startTime is not None:
+            self._writeln('Ran %d tests in %.3fs', self.testsRun,
+                          time.time() - self._startTime)
+        self._write('\n')
+        self._printSummary()
+
 
 
 class MinimalReporter(Reporter):
-    """A minimalist reporter that prints only a summary of the test result,
-    in the form of (timeTaken, #tests, #tests, #errors, #failures, #skips).
+    """
+    A minimalist reporter that prints only a summary of the test result, in
+    the form of (timeTaken, #tests, #tests, #errors, #failures, #skips).
     """
 
-    _runStarted = None
+    def _printErrors(self):
+        """
+        Don't print a detailed summary of errors. We only care about the
+        counts.
+        """
 
-    def startTest(self, test):
-        super(MinimalReporter, self).startTest(test)
-        if self._runStarted is None:
-            self._runStarted = self._getTime()
 
-    def printErrors(self):
-        pass
-
-    def printSummary(self):
+    def _printSummary(self):
+        """
+        Print out a one-line summary of the form:
+        '%(runtime) %(number_of_tests) %(number_of_tests) %(num_errors)
+        %(num_failures) %(num_skips)'
+        """
         numTests = self.testsRun
-        t = (self._runStarted - self._getTime(), numTests, numTests,
+        t = (self._startTime - self._getTime(), numTests, numTests,
              len(self.errors), len(self.failures), len(self.skips))
-        self.writeln(' '.join(map(str, t)))
+        self._writeln(' '.join(map(str, t)))
+
 
 
 class TextReporter(Reporter):
@@ -401,27 +543,33 @@ class TextReporter(Reporter):
 
     def addSuccess(self, test):
         super(TextReporter, self).addSuccess(test)
-        self.write('.')
+        self._write('.')
+
 
     def addError(self, *args):
         super(TextReporter, self).addError(*args)
-        self.write('E')
+        self._write('E')
+
 
     def addFailure(self, *args):
         super(TextReporter, self).addFailure(*args)
-        self.write('F')
+        self._write('F')
+
 
     def addSkip(self, *args):
         super(TextReporter, self).addSkip(*args)
-        self.write('S')
+        self._write('S')
+
 
     def addExpectedFailure(self, *args):
         super(TextReporter, self).addExpectedFailure(*args)
-        self.write('T')
+        self._write('T')
+
 
     def addUnexpectedSuccess(self, *args):
         super(TextReporter, self).addUnexpectedSuccess(*args)
-        self.write('!')
+        self._write('!')
+
 
 
 class VerboseTextReporter(Reporter):
@@ -435,46 +583,60 @@ class VerboseTextReporter(Reporter):
     # This is actually the bwverbose option
 
     def startTest(self, tm):
-        self.write('%s ... ', tm.id())
+        self._write('%s ... ', tm.id())
         super(VerboseTextReporter, self).startTest(tm)
+
 
     def addSuccess(self, test):
         super(VerboseTextReporter, self).addSuccess(test)
-        self.write('[OK]')
+        self._write('[OK]')
+
 
     def addError(self, *args):
         super(VerboseTextReporter, self).addError(*args)
-        self.write('[ERROR]')
+        self._write('[ERROR]')
+
 
     def addFailure(self, *args):
         super(VerboseTextReporter, self).addFailure(*args)
-        self.write('[FAILURE]')
+        self._write('[FAILURE]')
+
 
     def addSkip(self, *args):
         super(VerboseTextReporter, self).addSkip(*args)
-        self.write('[SKIPPED]')
+        self._write('[SKIPPED]')
+
 
     def addExpectedFailure(self, *args):
         super(VerboseTextReporter, self).addExpectedFailure(*args)
-        self.write('[TODO]')
+        self._write('[TODO]')
+
 
     def addUnexpectedSuccess(self, *args):
         super(VerboseTextReporter, self).addUnexpectedSuccess(*args)
-        self.write('[SUCCESS!?!]')
+        self._write('[SUCCESS!?!]')
+
 
     def stopTest(self, test):
         super(VerboseTextReporter, self).stopTest(test)
-        self.write('\n')
+        self._write('\n')
+
 
 
 class TimingTextReporter(VerboseTextReporter):
-    """Prints out each test as it is running, followed by the time taken for each
+    """
+    Prints out each test as it is running, followed by the time taken for each
     test to run.
     """
 
     def stopTest(self, method):
+        """
+        Mark the test as stopped, and write the time it took to run the test
+        to the stream.
+        """
         super(TimingTextReporter, self).stopTest(method)
-        self.write("(%.03f secs)\n" % self._lastTime)
+        self._write("(%.03f secs)\n" % self._lastTime)
+
 
 
 class _AnsiColorizer(object):
@@ -586,8 +748,10 @@ class _NullColorizer(object):
         self.stream.write(text)
 
 
+
 class TreeReporter(Reporter):
-    """Print out the tests in the form a tree.
+    """
+    Print out the tests in the form a tree.
 
     Tests are indented according to which class and module they belong.
     Results are printed in ANSI color.
@@ -645,23 +809,31 @@ class TreeReporter(Reporter):
         super(TreeReporter, self).addUnexpectedSuccess(*args)
         self.endLine('[SUCCESS!?!]', self.TODONE)
 
-    def write(self, format, *args):
+    def _write(self, format, *args):
         if args:
             format = format % args
         self.currentLine = format
-        super(TreeReporter, self).write(self.currentLine)
+        super(TreeReporter, self)._write(self.currentLine)
+
 
     def _testPrelude(self, test):
+        """
+        Write the name of the test to the stream, indenting it appropriately.
+
+        If the test is the first test in a new 'branch' of the tree, also
+        write all of the parents in that branch.
+        """
         segments = [test.__class__.__module__, test.__class__.__name__]
         indentLevel = 0
         for seg in segments:
             if indentLevel < len(self._lastTest):
                 if seg != self._lastTest[indentLevel]:
-                    self.write('%s%s\n' % (self.indent * indentLevel, seg))
+                    self._write('%s%s\n' % (self.indent * indentLevel, seg))
             else:
-                self.write('%s%s\n' % (self.indent * indentLevel, seg))
+                self._write('%s%s\n' % (self.indent * indentLevel, seg))
             indentLevel += 1
         self._lastTest = segments
+
 
     def cleanupErrors(self, errs):
         self._colorizer.write('    cleanup errors', self.ERROR)
@@ -674,19 +846,31 @@ class TreeReporter(Reporter):
             self.endLine('[ERROR]', self.ERROR)
         super(TreeReporter, self).upDownError(method, error, warn, printStatus)
 
-    def startTest(self, method):
-        self._testPrelude(method)
-        self.write('%s%s ... ' % (self.indent * (len(self._lastTest)),
-                                  self.getDescription(method)))
-        super(TreeReporter, self).startTest(method)
+    def startTest(self, test):
+        """
+        Called when C{test} starts. Writes the tests name to the stream using
+        a tree format.
+        """
+        self._testPrelude(test)
+        self._write('%s%s ... ' % (self.indent * (len(self._lastTest)),
+                                   self.getDescription(test)))
+        super(TreeReporter, self).startTest(test)
+
 
     def endLine(self, message, color):
-        spaces = ' ' * (self.columns - len(self.currentLine) - len(message))
-        super(TreeReporter, self).write(spaces)
-        self._colorizer.write(message, color)
-        super(TreeReporter, self).write("\n")
+        """
+        Print 'message' in the given color.
 
-    def printSummary(self):
+        @param message: A string message, usually '[OK]' or something similar.
+        @param color: A string color, 'red', 'green' and so forth.
+        """
+        spaces = ' ' * (self.columns - len(self.currentLine) - len(message))
+        super(TreeReporter, self)._write(spaces)
+        self._colorizer.write(message, color)
+        super(TreeReporter, self)._write("\n")
+
+
+    def _printSummary(self):
         """
         Print a line summarising the test results to the stream, and color the
         status result.
@@ -699,5 +883,4 @@ class TreeReporter(Reporter):
             status = "FAILED"
             color = self.FAILURE
         self._colorizer.write(status, color)
-        self.write("%s\n", summary)
-
+        self._write("%s\n", summary)

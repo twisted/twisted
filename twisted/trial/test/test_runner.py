@@ -75,37 +75,14 @@ class CapturingReporter(object):
         self._calls.append('cleanupError')
 
 
-    def upDownError(self, userMeth, warn=True, printStatus=True):
-        """called when an error occurs in a setUp* or tearDown* method
-        @param warn: indicates whether or not the reporter should emit a
-                     warning about the error
-        @type warn: Boolean
-        @param printStatus: indicates whether or not the reporter should
-                            print the name of the method and the status
-                            message appropriate for the type of error
-        @type printStatus: Boolean
-        """
-        self._calls.append('upDownError')
-
-
     def addSuccess(self, test):
         self._calls.append('addSuccess')
 
 
-    def printErrors(self):
-        pass
-
-
-    def printSummary(self):
-        pass
-
-
-    def write(self, *args, **kw):
-        pass
-
-
-    def writeln(self, *args, **kw):
-        pass
+    def done(self):
+        """
+        Do nothing. These tests don't care about done.
+        """
 
 
 
@@ -310,6 +287,7 @@ class TestRunner(unittest.TestCase):
 
     def getRunner(self):
         r = trial._makeRunner(self.config)
+        r.stream = StringIO.StringIO()
         self.addCleanup(r._tearDownLogFile)
         return r
 
@@ -644,3 +622,48 @@ class DestructiveTestSuiteTestCase(unittest.TestCase):
         suite.run(result)
         self.assertEquals(suite.countTestCases(), 0)
 
+
+
+class TestRunnerDeprecation(unittest.TestCase):
+
+    class FakeReporter(reporter.Reporter):
+        """
+        Fake reporter that does *not* implement done() but *does* implement
+        printErrors, separator, printSummary, stream, write and writeln
+        without deprecations.
+        """
+
+        done = None
+        separator = None
+        stream = None
+
+        def printErrors(self, *args):
+            pass
+
+        def printSummary(self, *args):
+            pass
+
+        def write(self, *args):
+            pass
+
+        def writeln(self, *args):
+            pass
+
+
+    def test_reporterDeprecations(self):
+        """
+        The runner emits a warning if it is using a result that doesn't
+        implement 'done'.
+        """
+        trialRunner = runner.TrialRunner(None)
+        result = self.FakeReporter()
+        trialRunner._makeResult = lambda: result
+        def f():
+            # We have to use a pyunit test, otherwise we'll get deprecation
+            # warnings about using iterate() in a test.
+            trialRunner.run(pyunit.TestCase('id'))
+        self.assertWarns(
+            DeprecationWarning,
+            "%s should implement done() but doesn't. Falling back to "
+            "printErrors() and friends." % reflect.qual(result.__class__),
+            __file__, f)

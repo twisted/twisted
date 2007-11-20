@@ -58,7 +58,9 @@ class IReporter(zi.Interface):
     I report results from a run of a test suite.
     """
 
-    stream = zi.Attribute("The io-stream that this reporter will write to")
+    stream = zi.Attribute(
+        "Deprecated in Twisted 2.6. "
+        "The io-stream that this reporter will write to")
     tbformat = zi.Attribute("Either 'default', 'brief', or 'verbose'")
     args = zi.Attribute(
         "Additional string argument passed from the command line")
@@ -67,7 +69,8 @@ class IReporter(zi.Interface):
         A boolean indicating that this reporter would like the test run to stop.
         """)
     separator = Attribute(
-        """A value which will occasionally be passed to the L{write} method.""")
+        "Deprecated in Twisted 2.6. "
+        "A value which will occasionally be passed to the L{write} method.")
     testsRun = Attribute(
         """
         The number of tests that seem to have been run according to this
@@ -93,7 +96,7 @@ class IReporter(zi.Interface):
 
     def startSuite(name):
         """
-        DEPRECATED in Twisted 2.6.
+        Deprecated in Twisted 2.6.
 
         Suites which wish to appear in reporter output should call this
         before running their tests.
@@ -102,7 +105,7 @@ class IReporter(zi.Interface):
 
     def endSuite(name):
         """
-        DEPRECATED in Twisted 2.6.
+        Deprecated in Twisted 2.6.
 
         Called at the end of a suite, if and only if that suite has called
         C{startSuite}.
@@ -111,7 +114,7 @@ class IReporter(zi.Interface):
 
     def cleanupErrors(errs):
         """
-        DEPRECATED in Twisted 2.6.
+        Deprecated in Twisted 2.6.
 
         Called when the reactor has been left in a 'dirty' state
 
@@ -121,6 +124,8 @@ class IReporter(zi.Interface):
 
     def upDownError(userMeth, warn=True, printStatus=True):
         """
+        Deprecated in Twisted 2.6.
+
         Called when an error occurs in a setUp* or tearDown* method
 
         @param warn: indicates whether or not the reporter should emit a
@@ -197,12 +202,16 @@ class IReporter(zi.Interface):
 
     def printSummary():
         """
+        Deprecated in Twisted 2.6, use L{done} instead.
+
         Present a summary of the test results.
         """
 
 
     def printErrors():
         """
+        Deprecated in Twisted 2.6, use L{done} instead.
+
         Present the errors that have occured during the test run. This method
         will be called after all tests have been run.
         """
@@ -210,12 +219,16 @@ class IReporter(zi.Interface):
 
     def write(string):
         """
+        Deprecated in Twisted 2.6, use L{done} instead.
+
         Display a string to the user, without appending a new line.
         """
 
 
     def writeln(string):
         """
+        Deprecated in Twisted 2.6, use L{done} instead.
+
         Display a string to the user, appending a new line.
         """
 
@@ -223,4 +236,15 @@ class IReporter(zi.Interface):
         """
         Return a boolean indicating whether all test results that were reported
         to this reporter were successful or not.
+        """
+
+
+    def done():
+        """
+        Called when the test run is complete.
+
+        This gives the result object an opportunity to display a summary of
+        information to the user. Once you have called C{done} on an
+        L{IReporter} object, you should assume that the L{IReporter} object is
+        no longer usable.
         """

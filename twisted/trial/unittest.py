@@ -646,8 +646,6 @@ class TestCase(_Assertions):
         elif error.check(KeyboardInterrupt):
             result.stop()
         else:
-            result.upDownError('setUpClass', error, warn=True,
-                               printStatus=True)
             result.addError(self, error)
             self.__class__._instancesRun.remove(self)
 
@@ -663,7 +661,6 @@ class TestCase(_Assertions):
             result.addSkip(self, self._getReason(failure))
         else:
             result.addError(self, failure)
-            result.upDownError('setUp', failure, warn=False, printStatus=False)
             if failure.check(KeyboardInterrupt):
                 result.stop()
         return self.deferRunCleanups(None, result)
@@ -709,7 +706,6 @@ class TestCase(_Assertions):
         result.addError(self, failure)
         if failure.check(KeyboardInterrupt):
             result.stop()
-        result.upDownError('tearDown', failure, warn=False, printStatus=True)
         self._passed = False
 
     def deferRunCleanups(self, ignored, result):
@@ -737,7 +733,7 @@ class TestCase(_Assertions):
     def _ebTearDownClass(self, error, result):
         if error.check(KeyboardInterrupt):
             result.stop()
-        result.upDownError('tearDownClass', error, warn=True, printStatus=True)
+        result.addError(self, error)
 
     def _cleanUp(self, result):
         try:

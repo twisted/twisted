@@ -822,7 +822,6 @@ class TrialRunner(object):
         # present
         suite = TrialSuite([test])
         startTime = time.time()
-        result.write("Running %d tests.\n", suite.countTestCases())
         if self.mode == self.DRY_RUN:
             suite.visit(DryRunVisitor(result).markSuccessful)
         elif self.mode == self.DEBUG:
@@ -844,12 +843,20 @@ class TrialRunner(object):
                 self._tearDownLogFile()
                 os.chdir(oldDir)
         endTime = time.time()
-        result.printErrors()
-        result.writeln(result.separator)
-        result.writeln('Ran %d tests in %.3fs', result.testsRun,
-                       endTime - startTime)
-        result.write('\n')
-        result.printSummary()
+        done = getattr(result, 'done', None)
+        if done is None:
+            warnings.warn(
+                "%s should implement done() but doesn't. Falling back to "
+                "printErrors() and friends." % reflect.qual(result.__class__),
+                category=DeprecationWarning, stacklevel=2)
+            result.printErrors()
+            result.writeln(result.separator)
+            result.writeln('Ran %d tests in %.3fs', result.testsRun,
+                           endTime - startTime)
+            result.write('\n')
+            result.printSummary()
+        else:
+            result.done()
         return result
 
     def runUntilFailure(self, test):
