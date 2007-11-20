@@ -71,7 +71,8 @@ class Version(object):
         if not isinstance(other, self.__class__):
             return NotImplemented
         if self.package != other.package:
-            raise IncomparableVersions()
+            raise IncomparableVersions("%r != %r"
+                                       % (self.package, other.package))
         return cmp((self.major,
                     self.minor,
                     self.micro),
