@@ -55,6 +55,7 @@ class StringTransport:
             self.hostAddr = hostAddress
         if peerAddress is not None:
             self.peerAddr = peerAddress
+        self.connected = True
 
     def clear(self):
         self.io = StringIO()
@@ -86,5 +87,7 @@ class StringTransport:
 
 class StringTransportWithDisconnection(StringTransport):
     def loseConnection(self):
-        self.protocol.connectionLost(error.ConnectionDone("Bye."))
+        if self.connected:
+            self.connected = False
+            self.protocol.connectionLost(error.ConnectionDone("Bye."))
 
