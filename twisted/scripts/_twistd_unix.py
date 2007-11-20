@@ -12,6 +12,8 @@ from twisted import copyright
 
 import os, errno, sys
 
+
+
 class ServerOptions(app.ServerOptions):
     synopsis = "Usage: twistd [options]"
 
@@ -257,6 +259,4 @@ class UnixApplicationRunner(app.ApplicationRunner):
         startApplication(self.config, self.application)
         app.runReactorWithLogging(self.config, self.oldstdout, self.oldstderr)
         removePID(self.config['pidfile'])
-        app.reportProfile(self.config['report-profile'],
-                          service.IProcess(self.application).processName)
         log.msg("Server Shut Down.")

@@ -2,7 +2,7 @@
 # Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import sys, os, pdb, getpass, traceback, signal
+import sys, os, pdb, getpass, traceback, signal, warnings
 
 from twisted.python import runtime, log, usage, failure, util, logfile
 from twisted.persisted import sob
@@ -262,17 +262,15 @@ Please read the 'Using Application' HOWTO for details.
         sys.exit('\n' + s + '\n')
     return application
 
+
+
 def reportProfile(report_profile, name):
-    if not report_profile:
-        return
-    if name:
-        from twisted.python.dxprofile import report
-        log.msg("Sending DXP stats...")
-        report(report_profile, name)
-        log.msg("DXP stats sent.")
-    else:
-        log.err("--report-profile specified but application has no "
-                "name (--appname unspecified)")
+    """
+    DEPRECATED since Twisted 2.6. This does nothing.
+    """
+    warnings.warn("reportProfile is deprecated and a no-op since Twisted 2.6.",
+                  category=DeprecationWarning)
+
 
 
 def _reactorZshAction():
@@ -389,6 +387,16 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
         except ImportError:
             return
         threading.settrace(util.spewer)
+
+
+    def opt_report_profile(self, value):
+        """
+        DEPRECATED.
+
+        Manage --report-profile option, which does nothing currently.
+        """
+        warnings.warn("--report-profile option is deprecated and a no-op "
+                      "since Twisted 2.6.", category=DeprecationWarning)
 
 
     def parseOptions(self, options=None):

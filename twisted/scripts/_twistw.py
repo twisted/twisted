@@ -84,7 +84,5 @@ class WindowsApplicationRunner(app.ApplicationRunner):
         app.startApplication(self.application, not self.config['no_save'])
         app.startApplication(internet.TimerService(0.1, lambda:None), 0)
         app.runReactorWithLogging(self.config, self.oldstdout, self.oldstderr)
-        app.reportProfile(self.config['report-profile'],
-                          service.IProcess(self.application).processName)
         log.msg("Server Shut Down.")
 

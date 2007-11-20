@@ -1,8 +1,9 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
+DEPRECATED since Twisted 2.6.
+
 Utility functions for reporting bytecode frequencies to Skip Montanaro's
 stat collector.
 
@@ -10,10 +11,17 @@ This module requires a version of Python build with DYNAMIC_EXCUTION_PROFILE,
 and optionally DXPAIRS, defined to be useful.
 """
 
-import sys, types, xmlrpclib
+import sys, types, xmlrpclib, warnings
+
+
+warnings.warn("twisted.python.dxprofile is deprecated since Twisted 2.6.",
+              category=DeprecationWarning)
+
 
 def rle(iterable):
-    """Run length encode a list"""
+    """
+    Run length encode a list.
+    """
     iterable = iter(iterable)
     runlen = 1
     result = []
@@ -35,6 +43,7 @@ def rle(iterable):
         previous = rle(previous)
     result.append([previous, runlen])
     return result
+
 
 
 def report(email, appname):

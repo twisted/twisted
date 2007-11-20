@@ -797,3 +797,17 @@ class PluggableReactorTestCase(unittest.TestCase):
         result.addCallback(_checkOutput)
         return result
 
+
+
+class ReportProfileTestCase(unittest.TestCase):
+    """
+    Tests for L{app.reportProfile}.
+    """
+
+    def test_deprecation(self):
+        """
+        Check that L{app.reportProfile} prints a warning and does nothing else.
+        """
+        self.assertWarns(DeprecationWarning,
+            "reportProfile is deprecated and a no-op since Twisted 2.6.",
+            app.__file__, app.reportProfile, None, None)

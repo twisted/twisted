@@ -68,6 +68,17 @@ class ServerOptionsTest(unittest.TestCase):
         self.assertEquals(config['no_save'], False)
 
 
+    def test_reportProfileDeprecation(self):
+        """
+        Check that the --report-profile option prints a C{DeprecationWarning}.
+        """
+        config = twistd.ServerOptions()
+        self.assertWarns(
+            DeprecationWarning, "--report-profile option is deprecated and "
+            "a no-op since Twisted 2.6.", app.__file__,
+            config.parseOptions, ["--report-profile", "foo"])
+
+
 
 class TapFileTest(unittest.TestCase):
     """
