@@ -33,6 +33,8 @@ from twisted.python.reflect import namedAny
 from twisted.python import log
 from twisted.python.modules import getModule
 
+
+
 class IPlugin(Interface):
     """
     Interface that must be implemented by all plugins.
@@ -42,17 +44,7 @@ class IPlugin(Interface):
     application-specific interface.
     """
 
-class ITestPlugin(Interface):
-    """
-    A plugin for use by the plugin system's unit tests.
 
-    Do not use this.
-    """
-
-class ITestPlugin2(Interface):
-    """
-    See L{ITestPlugin}.
-    """
 
 class CachedPlugin(object):
     def __init__(self, dropin, name, description, provided):
