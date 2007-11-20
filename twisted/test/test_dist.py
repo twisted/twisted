@@ -1,11 +1,3 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
-# See LICENSE for details.
-
-"""
-Tests for parts of our release automation system.
-"""
-
-
 import os
 
 from twisted.trial import unittest
@@ -15,10 +7,6 @@ from twisted.python import dist
 
 
 class GetVersionTest(unittest.TestCase):
-    """
-    Tests for L{dist.getVersion}.
-    """
-
     def setUp(self):
         self.dirname = self.mktemp()
         os.mkdir(self.dirname)

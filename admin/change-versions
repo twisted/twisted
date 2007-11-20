@@ -1,0 +1,101 @@
+#!/usr/bin/env python
+# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+This program allows you to edit a bunch of crap in the SVN Twisted
+tree to insert new version numbers easily.
+"""
+
+### Twisted Preamble
+# This makes sure that users don't have to set up their environment
+# specially in order to run these programs from bin/.
+import sys, os, string
+if string.find(os.path.abspath(sys.argv[0]), os.sep+'Twisted') != -1:
+    sys.path.insert(0, os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]), os.pardir, os.pardir)))
+sys.path.insert(0, os.curdir)
+### end of preamble
+
+try:
+    # For platforms where this isn't automatic
+    import readline
+except:
+    pass
+
+from twisted.python import release
+from os.path import join as opj
+
+
+
+def main():
+    projects = release.gatherCurrentInfo()
+    print "== Current Versions =="
+    for proj in projects:
+        print "%s %s" % (proj.name.capitalize(), proj.currentVersionStr)
+    print
+    
+    # Get input
+    print "type 'done' when done"
+    for project in projects:
+        try:
+            input = release.inputNewVersion(project)
+            if input is not None:
+                project.newVersion = input
+            
+        except release.Done:
+            break
+
+## We need to update README files and project _version.py files with
+## version numbers. The _version.py files are easy; we can just
+## rewrite them entirely, since they're only meant to contain the
+## version assignment.
+
+## The README files need to be string-replaced on special tags, like
+## SVN-Trunk (for project-specific README files), Proj-SVN-Trunk (for
+## Sumo README file).
+
+
+    print "Modifying files..."
+    fatRepl = {}
+    for project in projects:
+        key = "%s %s" % (project.fullyQualifiedName(), 
+                         project.currentVersionStr)
+
+        if project.newVersion:
+            val = '.'.join(map(str, project.newVersion))
+        else:
+            val = project.currentVersionStr
+
+        val = "%s %s" % (project.fullyQualifiedName(), val)
+
+        fatRepl[key] = val
+    fatRepl = dict([(k, v) for k, v in fatRepl.items() if v != None])
+
+    print "|| Modifying Sumo README.", fatRepl
+    release.replaceInFile('README', fatRepl)
+
+    if '--sumo-only' in sys.argv:
+        return
+
+    for project in projects:
+        print "|| Modifying %s's files." % project.pkgname
+        if project.newVersion:
+            release.replaceProjectVersion(project.versionfile,
+                                          project.newVersion)
+        readmefile = opj(project.dir, 'topfiles/README')
+        if os.path.exists(readmefile):
+            print "|| >> Modifying:", readmefile
+            if project.newVersion:
+                verstr = '.'.join(map(str, project.newVersion))
+            else:
+                verstr = project.currentVersionStr
+
+            key = "%s %s" % (project.fullyQualifiedName(), 
+                             project.currentVersionStr)
+
+            val = "%s %s" % (project.fullyQualifiedName(),
+                             verstr)
+            release.replaceInFile(readmefile, {key: val})
+
+if __name__=='__main__':
+    main()
