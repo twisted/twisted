@@ -261,6 +261,18 @@ class ResponseParseTestCase(TestCase):
         self._roundTrip(f)
 
 
+    def test_parseError(self):
+        """
+        Test the various cases where L{digest.parseResponse} can raise a
+        C{TypeError} or a C{ValueError}.
+        """
+        self.assertRaises(TypeError, digest.parseResponse, None)
+        self.assertRaises(ValueError, digest.parseResponse, "foo")
+        self.assertRaises(ValueError, digest.parseResponse, 'foo="bar')
+        self.assertRaises(ValueError, digest.parseResponse, "foo=bar,")
+        self.assertRaises(ValueError, digest.parseResponse, "=bar")
+
+
 
 class HTTPMechanismTestCase(TestCase):
     """

@@ -41,7 +41,12 @@ _unquotedFields = set(["algorithm", "nc", "stale", "response", "rspauth"])
 def _parseDigest(digestString):
     """
     Parses a digest challenge or response.
+
+    @raise TypeError: if C{digestString} is not a string.
+    @raise ValueError: if C{digestString} is malformed.
     """
+    if not isinstance(digestString, str):
+        raise TypeError("Wrong type %s, expecting string" % (type(digestString,)))
     s = digestString
     paramDict = {}
     cur = 0
@@ -50,6 +55,8 @@ def _parseDigest(digestString):
         # Parse a param. We can't just split on commas, before there can be
         # some commas inside (quoted) param values, e.g.: qop="auth,auth-int"
         middle = s.index("=", cur)
+        if cur == middle:
+            raise ValueError("Empty key")
         name = s[cur:middle].lstrip()
         middle += 1
         if s[middle] == '"':
@@ -610,7 +617,7 @@ class BaseDigestResponder(object):
         self.lastMechanism = None
 
 
-    def getResponse(self, challenge, uri, method=None, body=None):
+    def _getResponse(self, challenge, uri, method, body):
         """
         Process a server challenge.
         Returns a tuple of the challenge type and the response to be sent
@@ -739,9 +746,8 @@ class SASLDigestResponder(BaseDigestResponder):
         return None
 
 
-    # Override method to have the correct signature (without optional arguments)
     def getResponse(self, challenge, uri):
-        return BaseDigestResponder.getResponse(self, challenge, uri)
+        return BaseDigestResponder._getResponse(self, challenge, uri, None, None)
 
 
 
@@ -750,6 +756,9 @@ class HTTPDigestResponder(BaseDigestResponder):
     An HTTP Digest authentication responder.
     """
     mechanismClass = HTTPDigestMechanism
+
+    def getResponse(self, challenge, uri, method=None, body=None):
+        return BaseDigestResponder._getResponse(self, challenge, uri, method, body)
 
 
 
