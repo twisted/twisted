@@ -11,64 +11,28 @@ from twisted.internet import task
 from twisted.trial import unittest
 from twisted.cred import sasl, digest
 
-# XXX see http://jakarta.apache.org/commons/httpclient/xref-test/org/apache/commons/httpclient/auth/TestDigestAuth.html
-# for inspiration?
-
-
-# From http://tools.ietf.org/html/rfc2617#section-3.5
-quotedWWWChallenge = """realm="testrealm@host.com", \
-qop="auth,auth-int", \
-nonce="dcd98b7102dd2f0e8b11d0f600bfb0c093", \
-opaque="5ccc069c403ebaf9f0171e9517f40e41" """
-
-mixquotedWWWChallenge = """realm="testrealm@host.com",\
-nonce="00e2855b3f047bfd3297e720498e4571",opaque="00e04875776e15b",\
-stale=true , algorithm=MD5 """
-
 # an SASL challenge with qop=auth
-chal1 = """realm="elwood.innosoft.com",nonce="OA6MG9tEQGm2hh",qop="auth",\
+chal1 = """realm="elwood.innosoft.com",nonce="OA6MG9tEQGm2hh",qop="auth",
 algorithm=md5-sess,charset=utf-8"""
 
-resp1 = """charset=utf-8,username="chris",realm="elwood.innosoft.com",\
-nonce="OA6MG9tEQGm2hh",nc=00000001,cnonce="OA6MHXh6VqTrRk",\
-digest-uri="imap/elwood.innosoft.com",\
+resp1 = """charset=utf-8,username="chris",realm="elwood.innosoft.com",
+nonce="OA6MG9tEQGm2hh",nc=00000001,cnonce="OA6MHXh6VqTrRk",
+digest-uri="imap/elwood.innosoft.com",
 response=d388dad90d4bbd760a152321f2143af7,qop=auth"""
 
 final1 = """rspauth=ea40f60335c427b5527b84dbabcdfffd"""
 
 # an HTTP challenge with qop=auth
-chal2 = """realm="testrealm@host.com",\
+chal2 = """realm="testrealm@host.com",
 qop="auth,auth-int",
 nonce="dcd98b7102dd2f0e8b11d0f600bfb0c093",
-opaque="5ccc069c403ebaf9f0171e9517f40e41"\
+opaque="5ccc069c403ebaf9f0171e9517f40e41"
 """
-
-resp2 = """username="Mufasa", \
-realm="testrealm@host.com", \
-nonce="dcd98b7102dd2f0e8b11d0f600bfb0c093",\
-uri="/dir/index.html", \
-qop=auth,\
-nc=00000001, \
-cnonce="0a4f113b", \
-response="6629fae49393a05397450978507c4ef1", \
-opaque="5ccc069c403ebaf9f0171e9517f40e41"\
-"""
-
-# a SIP challenge without qop
-chal3 = """realm="domain.tld",nonce="0115a73e3d7bbad83eb238c35e2756fa",\
-opaque="00e04875776e15b" """
 
 # an SASL challenge with qop=auth-int
 # inspired from http://www.sendmail.org/~ca/email/authrealms.html
-chal4 = """nonce="AJRUc5Jx0UQbv5SJ9FoyUnaZpqZIHDhLTU+Awn/K0Uw=",\
+chal4 = """nonce="AJRUc5Jx0UQbv5SJ9FoyUnaZpqZIHDhLTU+Awn/K0Uw=",
 qop="auth-int,auth-conf",charset=utf-8,algorithm=md5-sess"""
-
-resp4 = """username="test",realm="wiz.example.com",\
-nonce="AJRUc5Jx0UQbv5SJ9FoyUnaZpqZIHDhLTU+Awn/K0Uw=",\
-cnonce="AJRUc5Jx0UQbv5SJ9FoyUnaZpqZIHDhLTU+Awn/K0Uw=",\
-nc=00000001,qop=auth-int,charset=utf-8,\
-digest-uri="smtp/localhost.sendmail.com.",\
-response=0e7cfcae717eeac972fc9d5606a1083d"""
 
 
 
@@ -113,6 +77,12 @@ class ChallengeParseTestCase(unittest.TestCase):
         """
         Various levels of quoting.
         """
+        # From http://tools.ietf.org/html/rfc2617#section-3.5
+        quotedWWWChallenge = """realm="testrealm@host.com",
+        qop="auth,auth-int",
+        nonce="dcd98b7102dd2f0e8b11d0f600bfb0c093",
+        opaque="5ccc069c403ebaf9f0171e9517f40e41" """
+
         f = digest.parseChallenge(quotedWWWChallenge)
         self.assertEquals(f, {
             'realm': "testrealm@host.com",
@@ -128,6 +98,10 @@ class ChallengeParseTestCase(unittest.TestCase):
         """
         Various levels of quoting (2).
         """
+        mixquotedWWWChallenge = """realm="testrealm@host.com",
+        nonce="00e2855b3f047bfd3297e720498e4571",opaque="00e04875776e15b",
+        stale=true , algorithm=MD5 """
+
         f = digest.parseChallenge(mixquotedWWWChallenge)
         self.assertEquals(f, {
             'realm': "testrealm@host.com",
@@ -248,6 +222,17 @@ class ResponseParseTestCase(unittest.TestCase):
         """
         A real HTTP response.
         """
+        resp2 = """username="Mufasa",
+        realm="testrealm@host.com",
+        nonce="dcd98b7102dd2f0e8b11d0f600bfb0c093",
+        uri="/dir/index.html",
+        qop=auth,
+        nc=00000001,
+        cnonce="0a4f113b",
+        response="6629fae49393a05397450978507c4ef1",
+        opaque="5ccc069c403ebaf9f0171e9517f40e41"
+        """
+
         f = digest.parseResponse(resp2)
         self.assertEquals(f, {
             'username': "Mufasa",
@@ -386,6 +371,10 @@ class HTTPResponderTestCase(_BaseResponderTestCase, unittest.TestCase):
         """
         Support for RFC 2069 servers (no qop).
         """
+        # a SIP challenge without qop
+        chal3 = """realm="domain.tld",nonce="0115a73e3d7bbad83eb238c35e2756fa",
+        opaque="00e04875776e15b" """
+
         checkDict = {
             'charset': None,
             'uri': "sip:domain.tld",

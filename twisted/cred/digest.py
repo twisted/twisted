@@ -342,7 +342,7 @@ class IDigestMechanism(Interface):
 
 class BaseDigestMechanism(object):
     """
-    Base class for all authentication mechanim using digest.
+    Base class for all authentication mechanisms using digest.
     """
 
     def __init__(self, username, uri, fields, algorithm=None):
@@ -361,19 +361,19 @@ class BaseDigestMechanism(object):
         """
         self.charset = 'charset' in fields and 'utf-8' or 'iso-8859-1'
         if isinstance(username, str):
-            self.username = self.decode(username)
+            self.username = username.decode(self.charset)
         else:
             self.username = username
         self.uri = uri
 
         self.nonce = fields.get('nonce')
         self.realm = fields.get('realm')
-        self.algorithm = algorithm or self._guessAlgorithm(fields)
+        self.algorithm = algorithm or self.guessAlgorithm(fields)
 
         self.lastDigestHash = None
 
 
-    def _guessAlgorithm(self, fields):
+    def guessAlgorithm(self, fields):
         """
         Specify an algorithm for this mecanism, using the C{fields} if
         necessary.
@@ -450,19 +450,6 @@ class BaseDigestMechanism(object):
         return s.encode(self.charset)
 
 
-    def decode(self, s):
-        """
-        Decode the given (bytes) string according to the stored
-        charset parameter.
-
-        @param s: string to be decoded.
-        @type s: C{str}.
-        @return: decoded string.
-        @rtype: C{unicode}.
-        """
-        return s.decode(self.charset)
-
-
     def specialEncode(self, *strings):
         """
         Apply the special encoding algorithm as defined in RFC 2831 to the
@@ -495,7 +482,7 @@ class SASLDigestMechanism(BaseDigestMechanism):
     implements(IDigestMechanism)
     digestURIFieldName = "digest-uri"
 
-    def _guessAlgorithm(self, fields):
+    def guessAlgorithm(self, fields):
         """
         The digest algorith is fixed to C{md5-sess}.
         """
@@ -510,7 +497,7 @@ class HTTPDigestMechanism(BaseDigestMechanism):
     implements(IDigestMechanism)
     digestURIFieldName = "uri"
 
-    def _guessAlgorithm(self, fields):
+    def guessAlgorithm(self, fields):
         """
         Get the algorithm for the C{fields}, with default to C{md5}.
         """
