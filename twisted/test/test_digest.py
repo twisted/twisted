@@ -7,8 +7,8 @@ Test cases for twisted.cred.digest
 
 import time
 
-from twisted.internet import task
-from twisted.trial import unittest
+from twisted.internet.task import Clock
+from twisted.trial.unittest import TestCase
 from twisted.cred import sasl, digest
 
 # an SASL challenge with qop=auth
@@ -36,7 +36,7 @@ qop="auth-int,auth-conf",charset=utf-8,algorithm=md5-sess"""
 
 
 
-class UtilitiesTestCase(unittest.TestCase):
+class UtilitiesTestCase(TestCase):
     """
     Tests for utility functions of digest.
     """
@@ -59,7 +59,20 @@ class UtilitiesTestCase(unittest.TestCase):
             'nonce', 'cnonce'), 'ebbc0ff9a121dbb6789bbe5f82174fa0')
 
 
-class ChallengeParseTestCase(unittest.TestCase):
+    def test_calcHA1AuthzID(self):
+        """
+        L{digest.calcHA1} should hash with C{pszAuthzID} if specified: it
+        should produce a hash different from the standard case.
+        """
+        ha1 = digest.calcHA1('md5-sess', 'user', 'realm',
+            'password', 'nonce', 'cnonce', pszAuthzID='admin')
+        self.assertEquals(ha1, '7daf427ab9b61ba037cdefd23139d76c')
+        self.assertNotEquals(ha1, digest.calcHA1('md5-sess', 'user', 'realm',
+            'password', 'nonce', 'cnonce'))
+
+
+
+class ChallengeParseTestCase(TestCase):
     """
     Test cases for the parseChallenge function.
     """
@@ -185,7 +198,7 @@ class ChallengeParseTestCase(unittest.TestCase):
 
 
 
-class ResponseParseTestCase(unittest.TestCase):
+class ResponseParseTestCase(TestCase):
     """
     Test cases for the parseResponse function.
     """
@@ -249,7 +262,7 @@ class ResponseParseTestCase(unittest.TestCase):
 
 
 
-class HTTPMechanismTestCase(unittest.TestCase):
+class HTTPMechanismTestCase(TestCase):
     """
     Test cases for the HTTPDigestMechanism class.
     """
@@ -266,7 +279,7 @@ class HTTPMechanismTestCase(unittest.TestCase):
 
 
 
-class SASLMechanismTestCase(unittest.TestCase):
+class SASLMechanismTestCase(TestCase):
     """
     Test cases for the SASLDigestMechanism class.
     """
@@ -314,7 +327,7 @@ class _BaseResponderTestCase(object):
 
 
 
-class HTTPResponderTestCase(_BaseResponderTestCase, unittest.TestCase):
+class HTTPResponderTestCase(_BaseResponderTestCase, TestCase):
     """
     Test cases for the HTTPDigestResponder class.
     """
@@ -399,7 +412,7 @@ class HTTPResponderTestCase(_BaseResponderTestCase, unittest.TestCase):
 
 
 
-class SASLResponderTestCase(_BaseResponderTestCase, unittest.TestCase):
+class SASLResponderTestCase(_BaseResponderTestCase, TestCase):
     """
     Test cases for the SASLDigestResponder class.
     """
@@ -565,6 +578,15 @@ class SASLResponderTestCase(_BaseResponderTestCase, unittest.TestCase):
             chal4, uri="smtp/localhost.sendmail.com.")
 
 
+    def test_initialResponse(self):
+        """
+        L{digest.SASLDigestResponder.getInitialResponse} shouldn't produce
+        any result.
+        """
+        responder = digest.SASLDigestResponder(username="chris",
+            password="secret", realm="example.org")
+        self.assertIdentical(responder.getInitialResponse(None), None)
+
 
 #
 # Test challengers
@@ -577,7 +599,7 @@ class StaticTimeSASLChallenger(digest.SASLDigestChallenger):
 
     def __init__(self, *args, **kargs):
         digest.SASLDigestChallenger.__init__(self, *args, **kargs)
-        self._clock = task.Clock()
+        self._clock = Clock()
         self._callLater = self._clock.callLater
 
 
@@ -593,7 +615,7 @@ class StaticTimeHTTPChallenger(digest.HTTPDigestChallenger):
 
     def __init__(self, *args, **kargs):
         digest.HTTPDigestChallenger.__init__(self, *args, **kargs)
-        self._clock = task.Clock()
+        self._clock = Clock()
         self._callLater = self._clock.callLater
 
 
@@ -793,8 +815,21 @@ class _BaseChallengerTestCase(object):
         self.assertEquals(str(error), message)
 
 
+    def test_responseWithStale(self):
+        """
+        Check that the responder C{getResponse} produces a C{ChallengeType}
+        of type L{sasl.ChallengeRenewal}.
+        """
+        chal = """nonce="AJRUc5Jx0UQbv5SJ9FoyUnaZpqZIHDhLTU+Awn/K0Uw=",
+qop="auth-int,auth-conf",charset=utf-8,algorithm=md5-sess,realm=example.com,
+stale=true"""
+        r = self.responderClass("chris", "password")
+        chalType, resp = r.getResponse(chal, "/")
+        self.assertIsInstance(chalType, sasl.ChallengeRenewal)
 
-class SASLChallengerTestCase(unittest.TestCase, _BaseChallengerTestCase):
+
+
+class SASLChallengerTestCase(TestCase, _BaseChallengerTestCase):
     """
     Test cases for the SASLDigestChallenger class.
     """
@@ -1013,7 +1048,7 @@ response=84352483446ab9f2f5d59465891ebcdd"""
 
 
 
-class HTTPChallengerTestCase(unittest.TestCase, _BaseChallengerTestCase):
+class HTTPChallengerTestCase(TestCase, _BaseChallengerTestCase):
     """
     Test cases for the HTTPDigestChallenger class.
     """
@@ -1091,4 +1126,22 @@ class HTTPChallengerTestCase(unittest.TestCase, _BaseChallengerTestCase):
         credentials = c.processResponse(resp, method, body)
         self.assertTrue(credentials.checkPassword("secret"))
         self.assertFalse(credentials.checkPassword("secreta"))
+
+    def test_getSuccessfulChallengeWithoutQop(self):
+        """
+        L{digest.HTTPDigestMechanism.getSuccessfulChallenge} should return
+        C{None} if there is not qop specified.
+        """
+        resp = """charset=utf-8,username="chris",realm="elwood.innosoft.com",
+nonce="OA6MG9tEQGm2hh",
+digest-uri="imap/elwood.innosoft.com",
+response=d388dad90d4bbd760a152321f2143af7"""
+        rspauth="ea40f60335c427b5527b84dbabcdfffd"
+        f = digest.parseResponse(resp)
+        c = self.challengerClass(f['realm'])
+        mech = digest.HTTPDigestMechanism(f['username'],
+            "imap/elwood.innosoft.com", f)
+        mech.setClientParams(None, None, None)
+        cred = digest.DigestedCredentials(mech, f['response'])
+        self.assertIdentical(c.getSuccessfulChallenge(resp1, cred), None)
 

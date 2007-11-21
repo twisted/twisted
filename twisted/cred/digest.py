@@ -886,7 +886,7 @@ class BaseDigestChallenger(object):
         if not cred.mechanism.qop:
             # No rspauth for RFC 2069, don't bother with nextnonce et al.
             return None
-        f = { 'rspauth': cred.rspauth }
+        f = {'rspauth': cred.rspauth}
         return unparseChallenge(**f)
 
 
