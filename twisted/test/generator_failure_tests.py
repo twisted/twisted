@@ -46,6 +46,15 @@ class TwoPointFiveFailureTests(TestCase):
         )
 
 
+    def _throwIntoGenerator(self, f, g):
+        try:
+            f.throwExceptionIntoGenerator(g)
+        except StopIteration:
+            pass
+        else:
+            self.fail("throwExceptionIntoGenerator should have raised "
+                      "StopIteration")
+
     def test_throwExceptionIntoGenerator(self):
         """
         It should be possible to throw the exception that a Failure
@@ -62,13 +71,7 @@ class TwoPointFiveFailureTests(TestCase):
         g = generator()
         f = getDivisionFailure()
         g.next()
-        try:
-            f.throwExceptionIntoGenerator(g)
-        except StopIteration:
-            pass
-        else:
-            self.fail("throwExceptionIntoGenerator should have raised "
-                      "StopIteration")
+        self._throwIntoGenerator(f, g)
 
         self.assertEquals(stuff[0][0], ZeroDivisionError)
         self.assertTrue(isinstance(stuff[0][1], ZeroDivisionError))
@@ -96,12 +99,7 @@ class TwoPointFiveFailureTests(TestCase):
 
         g = generator()
         g.next()
-        try:
-            f.throwExceptionIntoGenerator(g)
-        except StopIteration:
-            pass
-        else:
-            self.fail("generator didn't stop")
+        self._throwIntoGenerator(f, g)
 
         self.assertEqual(foundFailures, [f])
 
@@ -127,12 +125,45 @@ class TwoPointFiveFailureTests(TestCase):
                 self.fail("No exception sent to generator")
         g = generator()
         g.next()
-        try:
-            f.throwExceptionIntoGenerator(g)
-        except StopIteration:
-            pass
-        else:
-            self.fail("generator didn't stop")
+        self._throwIntoGenerator(f, g)
 
         self.assertEqual(len(newFailures), 1)
         self.assertEqual(newFailures[0].getTraceback(), f.getTraceback())
+
+    def test_ambiguousFailureInGenerator(self):
+        """
+        When a generator reraises a different exception,
+        L{Failure._findFailure} inside the generator should find the reraised
+        exception rather than original one.
+        """
+        def generator():
+            try:
+                try:
+                    yield
+                except:
+                    [][1]
+            except:
+                self.assertIsInstance(Failure().value, IndexError)
+        g = generator()
+        g.next()
+        f = getDivisionFailure()
+        self._throwIntoGenerator(f, g)
+
+    def test_ambiguousFailureFromGenerator(self):
+        """
+        When a generator reraises a different exception,
+        L{Failure._findFailure} above the generator should find the reraised
+        exception rather than original one.
+        """
+        def generator():
+            try:
+                yield
+            except:
+                [][1]
+        g = generator()
+        g.next()
+        f = getDivisionFailure()
+        try:
+            self._throwIntoGenerator(f, g)
+        except:
+            self.assertIsInstance(Failure().value, IndexError)

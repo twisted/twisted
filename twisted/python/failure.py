@@ -14,6 +14,7 @@ See L{Failure}.
 import sys
 import linecache
 import inspect
+import opcode
 from cStringIO import StringIO
 
 from twisted.python import reflect
@@ -128,6 +129,11 @@ class Failure:
 
     pickled = 0
     stack = None
+
+    # The opcode of "yield" in Python bytecode. We need this in _findFailure in
+    # order to identify whether an exception was thrown by a
+    # throwExceptionIntoGenerator.
+    _yieldOpcode = chr(opcode.opmap["YIELD_VALUE"])
 
     def __init__(self, exc_value=None, exc_type=None, exc_tb=None):
         """Initialize me with an explanation of the error.
@@ -332,11 +338,13 @@ class Failure:
         if not tb:
             return
 
-        second_last_tb = None
-        last_tb = tb
-        while last_tb.tb_next:
-            second_last_tb = last_tb
-            last_tb = last_tb.tb_next
+        secondLastTb = None
+        lastTb = tb
+        while lastTb.tb_next:
+            secondLastTb = lastTb
+            lastTb = lastTb.tb_next
+
+        lastFrame = lastTb.tb_frame
 
         # NOTE: f_locals.get('self') is used rather than
         # f_locals['self'] because psyco frames do not contain
@@ -345,19 +353,24 @@ class Failure:
         # the tracebacks) here when it is used is not that big a deal.
 
         # handle raiseException-originated exceptions
-        frame = last_tb.tb_frame
-        if frame.f_code is cls.raiseException.func_code:
-            return frame.f_locals.get('self')
+        if lastFrame.f_code is cls.raiseException.func_code:
+            return lastFrame.f_locals.get('self')
 
         # handle throwExceptionIntoGenerator-originated exceptions
         # this is tricky, and differs if the exception was caught
         # inside the generator, or above it:
 
+        # it is only really originating from
+        # throwExceptionIntoGenerator if the bottom of the traceback
+        # is a yield.
+        if lastFrame.f_code.co_code[lastTb.tb_lasti] != cls._yieldOpcode:
+            return
+
         # if the exception was caught above the generator.throw
         # (outside the generator), it will appear in the tb (as the
         # second last item):
-        if second_last_tb:
-            frame = second_last_tb.tb_frame
+        if secondLastTb:
+            frame = secondLastTb.tb_frame
             if frame.f_code is cls.throwExceptionIntoGenerator.func_code:
                 return frame.f_locals.get('self')
 
@@ -482,7 +495,7 @@ class Failure:
         # postamble, if any
         if not detail == 'brief':
             # Unfortunately, self.type will not be a class object if this
-            # Failure was created implicitly from a string exception. 
+            # Failure was created implicitly from a string exception.
             # qual() doesn't make any sense on a string, so check for this
             # case here and just write out the string if that's what we
             # have.
