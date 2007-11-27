@@ -345,7 +345,7 @@ class SSHServerTransport(SSHTransportBase):
             h.update(sharedSecret)
             exchangeHash = h.digest()
             self.sendPacket(MSG_KEXDH_REPLY, NS(self.factory.publicKeys[self.keyAlg])+ \
-                           MP(f)+NS(keys.signData(self.factory.privateKeys[self.keyAlg], exchangeHash)))
+                           MP(f)+NS(keys.Key(self.factory.privateKeys[self.keyAlg]).sign(exchangeHash)))
             self._keySetup(sharedSecret, exchangeHash)
         elif self.kexAlg == 'diffie-hellman-group-exchange-sha1':
             self.kexAlg = 'diffie-hellman-group-exchange-sha1-old'
@@ -510,7 +510,6 @@ class SSHClientTransport(SSHTransportBase):
             self.sendPacket(MSG_KEX_DH_GEX_INIT, MP(self.DHpubKey))
 
     def _continueGEX_GROUP(self, ignored, pubKey, f, signature):
-        serverKey = keys.getPublicKeyObject(pubKey)
         sharedSecret = _MPpow(f, self.x, DH_PRIME)
         h = sha.new()
         h.update(NS(self.ourVersionString))
@@ -522,7 +521,7 @@ class SSHClientTransport(SSHTransportBase):
         h.update(MP(f))
         h.update(sharedSecret)
         exchangeHash = h.digest()
-        if not keys.verifySignature(serverKey, signature, exchangeHash):
+        if not keys.Key.fromString(pubKey).verify(signature, exchangeHash):
             self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, 'bad signature')
             return
         self._keySetup(sharedSecret, exchangeHash)
