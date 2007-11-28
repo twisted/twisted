@@ -831,25 +831,6 @@ def nameToLabel(mname):
     return ' '.join(labelList)
 
 
-
-def _makeProxyProperty(attributeName):
-    """
-    Return a property which will proxy access, setting, and deletion to the
-    C{original} attribute of the object that it is being accessed from.
-    """
-    def get(self):
-        return getattr(self.original, attributeName)
-
-    def set(self, value):
-        setattr(self.original, attributeName, value)
-
-    def del_(self):
-        delattr(self.original, attributeName)
-
-    return property(get, set, del_)
-
-
-
 def proxyForInterface(iface):
     """
     Create a class which proxies all method calls which adhere to an interface
@@ -873,12 +854,73 @@ def proxyForInterface(iface):
     def __init__(self, original):
         self.original = original
     contents = {"__init__": __init__}
-    for name, description in iface.namesAndDescriptions():
-        contents[name] = _makeProxyProperty(name)
-
+    for name in iface:
+        contents[name] = _ProxyDescriptor(name)
     proxy = type("(Proxy for %s)" % (qual(iface),), (object,), contents)
     directlyProvides(proxy, iface)
     return proxy
+
+
+
+class _ProxiedClassMethod(object):
+    """
+    A proxied class method.
+
+    @ivar methodName: the name of the method which this should invoke when
+    called.
+    """
+    def __init__(self, methodName):
+        self.methodName = methodName
+
+
+    def __call__(self, oself, *args, **kw):
+        """
+        Invoke the specified L{methodName} method of the C{original} attribute
+        for proxyForInterface.
+
+        @param oself: an instance of a L{proxyForInterface} object.
+
+        @return: the result of the underlying method.
+        """
+        actualMethod = getattr(oself.original, self.methodName)
+        return actualMethod(*args, **kw)
+
+
+
+class _ProxyDescriptor(object):
+    """
+    A descriptor which will proxy attribute access, mutation, and
+    deletion to the L{original} attribute of the object it is being accessed
+    from.
+
+    @ivar attributeName: the name of the attribute which this descriptor will
+    retrieve from instances' C{original} attribute.
+    """
+    def __init__(self, attributeName):
+        self.attributeName = attributeName
+
+
+    def __get__(self, oself, type=None):
+        """
+        Retrieve the C{self.attributeName} property from L{oself}
+        """
+        if oself is None:
+            return _ProxiedClassMethod(self.attributeName)
+        return getattr(oself.original, self.attributeName)
+
+
+    def __set__(self, oself, value):
+        """
+        Set the C{self.attributeName} property of L{oself}.
+        """
+        setattr(oself.original, self.attributeName, value)
+
+
+    def __delete__(self, oself):
+        """
+        Delete the C{self.attributeName} property of L{oself}.
+        """
+        delattr(oself.original, self.attributeName)
 
 
 

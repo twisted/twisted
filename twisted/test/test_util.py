@@ -350,10 +350,21 @@ class IProxiedInterface(Interface):
     ifaceAttribute = Attribute("""
         An example declared attribute, which should be proxied.""")
 
-    def yay():
+    def yay(*a, **kw):
         """
         A sample method which should be proxied.
         """
+
+class IProxiedSubInterface(IProxiedInterface):
+    """
+    An interface that derives from another for use with L{proxyForInterface}.
+    """
+
+    def boo(self):
+        """
+        A different sample method which should be proxied.
+        """
+
 
 
 class Yayable(object):
@@ -367,13 +378,36 @@ class Yayable(object):
 
     def __init__(self):
         self.yays = 0
+        self.yayArgs = []
 
-    def yay(self):
+    def yay(self, *a, **kw):
         """
         Increment C{self.yays}.
         """
         self.yays += 1
+        self.yayArgs.append((a, kw))
         return self.yays
+
+
+class Booable(object):
+    """
+    An implementation of IProxiedSubInterface
+    """
+    implements(IProxiedSubInterface)
+    yayed = False
+    booed = False
+    def yay(self):
+        """
+        Mark the fact that 'yay' has been called.
+        """
+        self.yayed = True
+
+
+    def boo(self):
+        """
+        Mark the fact that 'boo' has been called.1
+        """
+        self.booed = True
 
 
 
@@ -527,3 +561,74 @@ class ProxyForInterfaceTests(unittest.TestCase):
         """
         proxy = proxyForInterface(IProxiedInterface)
         self.assertTrue(IProxiedInterface.providedBy(proxy))
+
+
+    def test_proxyDescriptorGet(self):
+        """
+        _ProxyDescriptor's __get__ method should return the appropriate
+        attribute of its argument's 'original' attribute if it is invoked with
+        an object.  If it is invoked with None, it should return a false
+        class-method emulator instead.
+
+        For some reason, Python's documentation recommends to define
+        descriptors' __get__ methods with the 'type' parameter as optional,
+        despite the fact that Python itself never actually calls the descriptor
+        that way.  This is probably do to support 'foo.__get__(bar)' as an
+        idiom.  Let's make sure that the behavior is correct.  Since we don't
+        actually use the 'type' argument at all, this test calls it the
+        idiomatic way to ensure that signature works; test_proxyInheritance
+        verifies the how-Python-actually-calls-it signature.
+        """
+        class Sample:
+            called = False
+            def hello(self):
+                self.called = True
+        fakeProxy = Sample()
+        testObject = Sample()
+        fakeProxy.original = testObject
+        pd = util._ProxyDescriptor("hello")
+        self.assertEquals(pd.__get__(fakeProxy), testObject.hello)
+        fakeClassMethod = pd.__get__(None)
+        fakeClassMethod(fakeProxy)
+        self.failUnless(testObject.called)
+
+
+    def test_proxyInheritance(self):
+        """
+        Subclasses of the class returned from L{proxyForInterface} should be
+        able to upcall methods by reference to their superclass, as any normal
+        Python class can.
+        """
+        class YayableWrapper(proxyForInterface(IProxiedInterface)):
+            """
+            This class does not override any functionality.
+            """
+
+        class EnhancedWrapper(YayableWrapper):
+            """
+            This class overrides the 'yay' method.
+            """
+            wrappedYays = 1
+            def yay(self, *a, **k):
+                self.wrappedYays += 1
+                return YayableWrapper.yay(self, *a, **k) + 7
+
+        yayable = Yayable()
+        wrapper = EnhancedWrapper(yayable)
+        self.assertEquals(wrapper.yay(3, 4, x=5, y=6), 8)
+        self.assertEquals(yayable.yayArgs,
+                          [((3, 4), dict(x=5, y=6))])
+
+
+    def test_interfaceInheritance(self):
+        """
+        Proxies of subinterfaces generated with proxyForInterface should allow
+        access to attributes of both the child and the base interfaces.
+        """
+        proxyClass = proxyForInterface(IProxiedSubInterface)
+        booable = Booable()
+        proxy = proxyClass(booable)
+        proxy.yay()
+        proxy.boo()
+        self.failUnless(booable.yayed)
+        self.failUnless(booable.booed)
