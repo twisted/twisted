@@ -16,8 +16,9 @@ import time
 import warnings
 
 from twisted.python import reflect, log
+from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
-from twisted.python.util import untilConcludes, proxyForInterface
+from twisted.python.util import untilConcludes
 from twisted.trial import itrial, util
 
 from zope.interface import implements

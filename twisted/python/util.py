@@ -1,13 +1,9 @@
-# -*- test-case-name: twisted.test.test_util -*-
+# -*- test-case-name: twisted.python.test.test_util -*-
 # Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import os, sys, hmac, errno, new, inspect
 from UserDict import UserDict
-
-from zope.interface import directlyProvides
-
-from twisted.python.reflect import qual
 
 
 class InsensitiveDict:
@@ -831,98 +827,6 @@ def nameToLabel(mname):
     return ' '.join(labelList)
 
 
-def proxyForInterface(iface):
-    """
-    Create a class which proxies all method calls which adhere to an interface
-    to another provider of that interface.
-
-    This function is intended for creating specialized proxies. The typical way
-    to use it is by subclassing the result::
-
-      class MySpecializedProxy(proxyForInterface(IFoo)):
-          def someInterfaceMethod(self, arg):
-              if arg == 3:
-                  return 3
-              return self.original.someInterfaceMethod(arg)
-
-    @param iface: The Interface to which the resulting object will conform, and
-        which the wrapped object must provide.
-
-    @return: A class whose constructor takes the original object as its only
-        argument. Constructing the class creates the proxy.
-    """
-    def __init__(self, original):
-        self.original = original
-    contents = {"__init__": __init__}
-    for name in iface:
-        contents[name] = _ProxyDescriptor(name)
-    proxy = type("(Proxy for %s)" % (qual(iface),), (object,), contents)
-    directlyProvides(proxy, iface)
-    return proxy
-
-
-
-class _ProxiedClassMethod(object):
-    """
-    A proxied class method.
-
-    @ivar methodName: the name of the method which this should invoke when
-    called.
-    """
-    def __init__(self, methodName):
-        self.methodName = methodName
-
-
-    def __call__(self, oself, *args, **kw):
-        """
-        Invoke the specified L{methodName} method of the C{original} attribute
-        for proxyForInterface.
-
-        @param oself: an instance of a L{proxyForInterface} object.
-
-        @return: the result of the underlying method.
-        """
-        actualMethod = getattr(oself.original, self.methodName)
-        return actualMethod(*args, **kw)
-
-
-
-class _ProxyDescriptor(object):
-    """
-    A descriptor which will proxy attribute access, mutation, and
-    deletion to the L{original} attribute of the object it is being accessed
-    from.
-
-    @ivar attributeName: the name of the attribute which this descriptor will
-    retrieve from instances' C{original} attribute.
-    """
-    def __init__(self, attributeName):
-        self.attributeName = attributeName
-
-
-    def __get__(self, oself, type=None):
-        """
-        Retrieve the C{self.attributeName} property from L{oself}
-        """
-        if oself is None:
-            return _ProxiedClassMethod(self.attributeName)
-        return getattr(oself.original, self.attributeName)
-
-
-    def __set__(self, oself, value):
-        """
-        Set the C{self.attributeName} property of L{oself}.
-        """
-        setattr(oself.original, self.attributeName, value)
-
-
-    def __delete__(self, oself):
-        """
-        Delete the C{self.attributeName} property of L{oself}.
-        """
-        delattr(oself.original, self.attributeName)
-
-
 
 __all__ = [
     "uniquify", "padTo", "getPluginDirs", "addPluginDir", "sibpath",
@@ -931,5 +835,4 @@ __all__ = [
     "raises", "IntervalDifferential", "FancyStrMixin", "FancyEqMixin",
     "dsu", "switchUID", "SubclassableCStringIO", "moduleMovedForSplit",
     "unsignedID", "mergeFunctionMetadata", "nameToLabel",
-    "proxyForInterface",
 ]

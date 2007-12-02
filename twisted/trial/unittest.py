@@ -16,7 +16,6 @@ from pprint import pformat
 
 from twisted.internet import defer, utils
 from twisted.python import components, failure, log, monkey
-from twisted.python.util import proxyForInterface
 from twisted.trial import itrial, util
 
 pyunit = __import__('unittest')
@@ -1157,7 +1156,7 @@ class PyUnitResultAdapter(object):
 
 
 
-class TestResultDecorator(proxyForInterface(itrial.IReporter)):
+class TestResultDecorator(components.proxyForInterface(itrial.IReporter)):
     """
     Base class for TestResult decorators.
     """
@@ -1189,7 +1188,7 @@ class _AdaptedReporter(TestResultDecorator):
 
 
 
-class _PyUnitTestCaseAdapter(proxyForInterface(itrial.ITestCase)):
+class _PyUnitTestCaseAdapter(components.proxyForInterface(itrial.ITestCase)):
     """
     Adapt from pyunit.TestCase to ITestCase.
     """
