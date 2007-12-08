@@ -64,6 +64,28 @@ class IMAP4UTF7TestCase(unittest.TestCase):
          '~peter/mail/&ZeVnLIqe-/&U,BTFw-'], # example from RFC 2060
     ]
 
+    def test_encodeWithErrors(self):
+        """
+        Specifying an error policy to C{unicode.encode} with the
+        I{imap4-utf-7} codec should produce the same result as not
+        specifying the error policy.
+        """
+        text = u'Hello world'
+        self.assertEqual(
+            text.encode('imap4-utf-7', 'strict'),
+            text.encode('imap4-utf-7'))
+
+
+    def test_decodeWithErrors(self):
+        """
+        Similar to L{test_encodeWithErrors}, but for C{str.decode}.
+        """
+        bytes = 'Hello world'
+        self.assertEqual(
+            bytes.decode('imap4-utf-7', 'strict'),
+            bytes.decode('imap4-utf-7'))
+
+
     def testEncode(self):
         for (input, output) in self.tests:
             self.assertEquals(input.encode('imap4-utf-7'), output)

@@ -5383,7 +5383,19 @@ def modified_unbase64(s):
     s_utf7 = '+' + s.replace(',', '/') + '-'
     return s_utf7.decode('utf-7')
 
-def encoder(s):
+def encoder(s, errors=None):
+    """
+    Encode the given C{unicode} string using the IMAP4 specific variation of
+    UTF-7.
+
+    @type s: C{unicode}
+    @param s: The text to encode.
+
+    @param errors: Policy for handling encoding errors.  Currently ignored.
+
+    @return: C{tuple} of a C{str} giving the encoded bytes and an C{int}
+        giving the number of code units consumed from the input.
+    """
     r = []
     _in = []
     for c in s:
@@ -5403,7 +5415,19 @@ def encoder(s):
         r.extend(['&', modified_base64(''.join(_in)), '-'])
     return (''.join(r), len(s))
 
-def decoder(s):
+def decoder(s, errors=None):
+    """
+    Decode the given C{str} using the IMAP4 specific variation of UTF-7.
+
+    @type s: C{str}
+    @param s: The bytes to decode.
+
+    @param errors: Policy for handling decoding errors.  Currently ignored.
+
+    @return: a C{tuple} of a C{unicode} string giving the text which was
+        decoded and an C{int} giving the number of bytes consumed from the
+        input.
+    """
     r = []
     decode = []
     for c in s:
