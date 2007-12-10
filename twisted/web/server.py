@@ -341,11 +341,11 @@ class Request(pb.Copyable, http.Request, components.Componentized):
             hostport = ''
         else:
             hostport = ':%d' % port
-        return quote('http%s://%s%s/%s' % (
+        return 'http%s://%s%s/%s' % (
             self.isSecure() and 's' or '',
             self.getRequestHostname(),
             hostport,
-            string.join(prepath, '/')), "/:")
+            '/'.join([quote(segment, safe='') for segment in prepath]))
 
     def prePathURL(self):
         return self._prePathURL(self.prepath)

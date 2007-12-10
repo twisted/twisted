@@ -402,6 +402,20 @@ class TestRequest(unittest.TestCase):
         request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
         self.assertEqual(request.prePathURL(), 'https://foo.com:81/foo/bar')
 
+
+    def test_prePathURLQuoting(self):
+        """
+        L{Request.prePathURL} quotes special characters in the URL segments to
+        preserve the original meaning.
+        """
+        d = DummyChannel()
+        request = server.Request(d, 1)
+        request.setHost('example.com', 80)
+        request.gotLength(0)
+        request.requestReceived('GET', '/foo%2Fbar', 'HTTP/1.0')
+        self.assertEqual(request.prePathURL(), 'http://example.com/foo%2Fbar')
+
+
     def testNotifyFinishConnectionLost(self):
         d = DummyChannel()
         d.transport = DummyChannel.TCP()
