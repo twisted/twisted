@@ -426,26 +426,17 @@ class RRHeader:
 
     __repr__ = __str__
 
-
-
 class SimpleRecord(tputil.FancyStrMixin, tputil.FancyEqMixin):
     """
     A Resource Record which consists of a single RFC 1035 domain-name.
-
-    @type name: L{Name}
-    @ivar name: The name associated with this record.
-
-    @type ttl: C{int}
-    @ivar ttl: The maximum number of seconds which this record should be
-        cached.
     """
+    TYPE = None
+
     implements(IEncodable, IRecord)
+    name = None
 
     showAttributes = (('name', 'name', '%s'), 'ttl')
     compareAttributes = ('name', 'ttl')
-
-    TYPE = None
-    name = None
 
     def __init__(self, name='', ttl=None):
         self.name = Name(name)
@@ -467,115 +458,39 @@ class SimpleRecord(tputil.FancyStrMixin, tputil.FancyEqMixin):
 
 # Kinds of RRs - oh my!
 class Record_NS(SimpleRecord):
-    """
-    An authoritative nameserver.
-    """
     TYPE = NS
 
-
-
-class Record_MD(SimpleRecord):
-    """
-    A mail destination.
-
-    This record type is obsolete.
-
-    @see L{Record_MX}
-    """
+class Record_MD(SimpleRecord):       # OBSOLETE
     TYPE = MD
 
-
-
-class Record_MF(SimpleRecord):
-    """
-    A mail forwarder.
-
-    This record type is obsolete.
-
-    @see L{Record_MX}
-    """
+class Record_MF(SimpleRecord):       # OBSOLETE
     TYPE = MF
 
-
-
 class Record_CNAME(SimpleRecord):
-    """
-    The canonical name for an alias.
-    """
     TYPE = CNAME
 
-
-
-class Record_MB(SimpleRecord):
-    """
-    A mailbox domain name.
-
-    This is an experimental record type.
-    """
+class Record_MB(SimpleRecord):       # EXPERIMENTAL
     TYPE = MB
 
-
-
-class Record_MG(SimpleRecord):
-    """
-    A mail group member.
-
-    This is an experimental record type.
-    """
+class Record_MG(SimpleRecord):       # EXPERIMENTAL
     TYPE = MG
 
-
-
-class Record_MR(SimpleRecord):
-    """
-    A mail rename domain name.
-
-    This is an experimental record type.
-    """
+class Record_MR(SimpleRecord):       # EXPERIMENTAL
     TYPE = MR
 
-
-
 class Record_PTR(SimpleRecord):
-    """
-    A domain name pointer.
-    """
     TYPE = PTR
 
-
-
 class Record_DNAME(SimpleRecord):
-    """
-    A non-terminal DNS name redirection.
-
-    This record type provides the capability to map an entire subtree of the
-    DNS name space to another domain.  It differs from the CNAME record which
-    maps a single node of the name space.
-
-    @see U{http://www.faqs.org/rfcs/rfc2672.html}
-    """
     TYPE = DNAME
 
-
-
 class Record_A(tputil.FancyEqMixin):
-    """
-    An IPv4 host address.
-
-    @type address: C{str}
-    @ivar address: The packed network-order representation of the IPv4 address
-        associated with this record.
-
-    @type ttl: C{int}
-    @ivar ttl: The maximum number of seconds which this record should be
-        cached.
-    """
     implements(IEncodable, IRecord)
-
-    compareAttributes = ('address', 'ttl')
 
     TYPE = A
     address = None
+
+    compareAttributes = ('address', 'ttl')
 
     def __init__(self, address='0.0.0.0', ttl=None):
         address = socket.inet_aton(address)
@@ -603,46 +518,7 @@ class Record_A(tputil.FancyEqMixin):
         return socket.inet_ntoa(self.address)
 
 
-
 class Record_SOA(tputil.FancyEqMixin, tputil.FancyStrMixin):
-    """
-    Marks the start of a zone of authority.
-
-    This record describes parameters which are shared by all records within a
-    particular zone.
-
-    @type mname: L{Name}
-    @ivar mname: The domain-name of the name server that was the original or
-        primary source of data for this zone.
-
-    @type rname: L{Name}
-    @ivar rname: A domain-name which specifies the mailbox of the person
-        responsible for this zone.
-
-    @type serial: C{int}
-    @ivar serial: The unsigned 32 bit version number of the original copy of
-        the zone.  Zone transfers preserve this value.  This value wraps and
-        should be compared using sequence space arithmetic.
-
-    @type refresh: C{int}
-    @ivar refresh: A 32 bit time interval before the zone should be refreshed.
-
-    @type minimum: C{int}
-    @ivar minimum: The unsigned 32 bit minimum TTL field that should be
-        exported with any RR from this zone.
-
-    @type expire: C{int}
-    @ivar expire: A 32 bit time value that specifies the upper limit on the
-        time interval that can elapse before the zone is no longer
-        authoritative.
-
-    @type retry: C{int}
-    @ivar retry: A 32 bit time interval that should elapse before a failed
-        refresh should be retried.
-
-    @type ttl: C{int}
-    @ivar ttl: The default TTL to use for records served from this zone.
-    """
     implements(IEncodable, IRecord)
 
     compareAttributes = ('serial', 'mname', 'rname', 'refresh', 'expire', 'retry', 'ttl')
@@ -685,19 +561,8 @@ class Record_SOA(tputil.FancyEqMixin, tputil.FancyStrMixin):
         ))
 
 
-
 class Record_NULL:                   # EXPERIMENTAL
-    """
-    A null record.
-
-    This is an experimental record type.
-
-    @type ttl: C{int}
-    @ivar ttl: The maximum number of seconds which this record should be
-        cached.
-    """
     implements(IEncodable, IRecord)
-
     TYPE = NULL
 
     def __init__(self, payload=None, ttl=None):
@@ -717,35 +582,12 @@ class Record_NULL:                   # EXPERIMENTAL
         return hash(self.payload)
 
 
-
 class Record_WKS(tputil.FancyEqMixin, tputil.FancyStrMixin):                    # OBSOLETE
-    """
-    A well known service description.
-
-    This record type is obsolete.  See L{Record_SRV}.
-
-    @type address: C{str}
-    @ivar address: The packed network-order representation of the IPv4 address
-        associated with this record.
-
-    @type protocol: C{int}
-    @ivar protocol: The 8 bit IP protocol number for which this service map is
-        relevant.
-
-    @type map: C{str}
-    @ivar map: A bitvector indicating the services available at the specified
-        address.
-
-    @type ttl: C{int}
-    @ivar ttl: The maximum number of seconds which this record should be
-        cached.
-    """
     implements(IEncodable, IRecord)
+    TYPE = WKS
 
     compareAttributes = ('address', 'protocol', 'map', 'ttl')
     showAttributes = ('address', 'protocol', 'ttl')
-
-    TYPE = WKS
 
     def __init__(self, address='0.0.0.0', protocol=0, map='', ttl=None):
         self.address = socket.inet_aton(address)
@@ -769,23 +611,7 @@ class Record_WKS(tputil.FancyEqMixin, tputil.FancyStrMixin):                    
         return hash((self.address, self.protocol, self.map))
 
 
-
 class Record_AAAA(tputil.FancyEqMixin):               # OBSOLETE (or headed there)
-    """
-    An IPv6 host address.
-
-    This record type is obsolete.
-
-    @type address: C{str}
-    @ivar address: The packed network-order representation of the IPv6 address
-        associated with this record.
-
-    @type ttl: C{int}
-    @ivar ttl: The maximum number of seconds which this record should be
-        cached.
-
-    @see L{Record_A6}
-    """
     implements(IEncodable, IRecord)
     TYPE = AAAA
 
@@ -812,30 +638,7 @@ class Record_AAAA(tputil.FancyEqMixin):               # OBSOLETE (or headed ther
         return '<AAAA %s ttl=%s>' % (socket.inet_ntop(AF_INET6, self.address), self.ttl)
 
 
-
 class Record_A6:
-    """
-    An IPv6 address.
-
-    @type prefixLen: C{int}
-    @ivar prefixLen: The length of the suffix.
-
-    @type suffix: C{str}
-    @ivar suffix: An IPv6 address suffix in network order.
-
-    @type prefix: L{Name}
-    @ivar prefix: If specified, a name which will be used as a prefix for other
-        A6 records.
-
-    @type bytes: C{int}
-    @ivar bytes: The length of the prefix.
-
-    @type ttl: C{int}
-    @ivar ttl: The maximum number of seconds which this record should be
-        cached.
-
-    @see U{http://www.faqs.org/rfcs/rfc2874.html}
-    """
     implements(IEncodable, IRecord)
     TYPE = A6
 
@@ -886,41 +689,7 @@ class Record_A6:
         )
 
 
-
-class Record_SRV(tputil.FancyEqMixin, tputil.FancyStrMixin):
-    """
-    The location of the server(s) for a specific protocol and domain.
-
-    This is an experimental record type.
-
-    @type priority: C{int}
-    @ivar priority: The priority of this target host.  A client MUST attempt to
-        contact the target host with the lowest-numbered priority it can reach;
-        target hosts with the same priority SHOULD be tried in an order defined
-        by the weight field.
-
-    @type weight: C{int}
-    @ivar weight: Specifies a relative weight for entries with the same
-        priority. Larger weights SHOULD be given a proportionately higher
-        probability of being selected.
-
-    @type port: C{int}
-    @ivar port: The port on this target host of this service.
-
-    @type target: L{Name}
-    @ivar target: The domain name of the target host.  There MUST be one or
-        more address records for this name, the name MUST NOT be an alias (in
-        the sense of RFC 1034 or RFC 2181).  Implementors are urged, but not
-        required, to return the address record(s) in the Additional Data
-        section.  Unless and until permitted by future standards action, name
-        compression is not to be used for this field.
-
-    @type ttl: C{int}
-    @ivar ttl: The maximum number of seconds which this record should be
-        cached.
-
-    @see U{http://www.faqs.org/rfcs/rfc2782.html}
-    """
+class Record_SRV(tputil.FancyEqMixin, tputil.FancyStrMixin):                # EXPERIMENTAL
     implements(IEncodable, IRecord)
     TYPE = SRV
 
@@ -954,25 +723,6 @@ class Record_SRV(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
 
 class Record_AFSDB(tputil.FancyStrMixin, tputil.FancyEqMixin):
-    """
-    Map from a domain name to the name of an AFS cell database server.
-
-    @type subtype: C{int}
-    @ivar subtype: In the case of subtype 1, the host has an AFS version 3.0
-        Volume Location Server for the named AFS cell.  In the case of subtype
-        2, the host has an authenticated name server holding the cell-root
-        directory node for the named DCE/NCA cell.
-
-    @type hostname: L{Name}
-    @ivar hostname: The domain name of a host that has a server for the cell
-        named by this record.
-
-    @type ttl: C{int}
-    @ivar ttl: The maximum number of seconds which this record should be
-        cached.
-
-    @see U{http://www.faqs.org/rfcs/rfc1183.html}
-    """
     implements(IEncodable, IRecord)
     TYPE = AFSDB
 
@@ -1002,23 +752,6 @@ class Record_AFSDB(tputil.FancyStrMixin, tputil.FancyEqMixin):
 
 
 class Record_RP(tputil.FancyEqMixin, tputil.FancyStrMixin):
-    """
-    The responsible person for a domain.
-
-    @type mbox: L{Name}
-    @ivar mbox: A domain name that specifies the mailbox for the responsible
-        person.
-
-    @type txt: L{Name}
-    @ivar txt: A domain name for which TXT RR's exist (indirection through
-        which allows information sharing about the contents of this RP record).
-
-    @type ttl: C{int}
-    @ivar ttl: The maximum number of seconds which this record should be
-        cached.
-
-    @see U{http://www.faqs.org/rfcs/rfc1183.html}
-    """
     implements(IEncodable, IRecord)
     TYPE = RP
 
@@ -1049,19 +782,6 @@ class Record_RP(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
 
 class Record_HINFO(tputil.FancyStrMixin):
-    """
-    Host information.
-
-    @type cpu: C{str}
-    @ivar cpu: Specifies the CPU type.
-
-    @type os: C{str}
-    @ivar os: Specifies the OS.
-
-    @type ttl: C{int}
-    @ivar ttl: The maximum number of seconds which this record should be
-        cached.
-    """
     implements(IEncodable, IRecord)
     TYPE = HINFO
 
@@ -1097,27 +817,7 @@ class Record_HINFO(tputil.FancyStrMixin):
 
 
 
-class Record_MINFO(tputil.FancyEqMixin, tputil.FancyStrMixin):
-    """
-    Mailbox or mail list information.
-
-    This is an experimental record type.
-
-    @type rmailbx: L{Name}
-    @ivar rmailbx: A domain-name which specifies a mailbox which is responsible
-        for the mailing list or mailbox.  If this domain name names the root,
-        the owner of the MINFO RR is responsible for itself.
-
-    @type emailbx: L{Name}
-    @ivar emailbx: A domain-name which specifies a mailbox which is to receive
-        error messages related to the mailing list or mailbox specified by the
-        owner of the MINFO record.  If this domain name names the root, errors
-        should be returned to the sender of the message.
-
-    @type ttl: C{int}
-    @ivar ttl: The maximum number of seconds which this record should be
-        cached.
-    """
+class Record_MINFO(tputil.FancyEqMixin, tputil.FancyStrMixin):                 # EXPERIMENTAL
     implements(IEncodable, IRecord)
     TYPE = MINFO
 
@@ -1149,23 +849,7 @@ class Record_MINFO(tputil.FancyEqMixin, tputil.FancyStrMixin):
         return hash((self.rmailbx, self.emailbx))
 
 
-
 class Record_MX(tputil.FancyStrMixin, tputil.FancyEqMixin):
-    """
-    Mail exchange.
-
-    @type preference: C{int}
-    @ivar preference: Specifies the preference given to this RR among others at
-        the same owner.  Lower values are preferred.
-
-    @type name: L{Name}
-    @ivar name: A domain-name which specifies a host willing to act as a mail
-        exchange.
-
-    @type ttl: C{int}
-    @ivar ttl: The maximum number of seconds which this record should be
-        cached.
-    """
     implements(IEncodable, IRecord)
     TYPE = MX
 
@@ -1199,12 +883,6 @@ class Record_MX(tputil.FancyStrMixin, tputil.FancyEqMixin):
 
 # Oh god, Record_TXT how I hate thee.
 class Record_TXT(tputil.FancyEqMixin, tputil.FancyStrMixin):
-    """
-    Freeform text.
-
-    @type data: C{list} of C{str}
-    @ivar data: Freeform text which makes up this record.
-    """
     implements(IEncodable, IRecord)
 
     TYPE = TXT
