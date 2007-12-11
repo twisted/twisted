@@ -137,7 +137,9 @@ my_domain_com = NoFileAuthority(
 
 
 class ServerDNSTestCase(unittest.TestCase):
-    """Test cases for DNS server and client."""
+    """
+    Test cases for DNS server and client.
+    """
 
     def setUp(self):
         self.factory = server.DNSServerFactory([
@@ -159,8 +161,11 @@ class ServerDNSTestCase(unittest.TestCase):
 
         self.resolver = client.Resolver(servers=[('127.0.0.1', port)])
 
+
     def tearDown(self):
-        """Asynchronously disconnect listenerTCP, listenerUDP and resolver"""
+        """
+        Asynchronously disconnect listenerTCP, listenerUDP and resolver.
+        """
         d1 = self.listenerTCP.loseConnection()
         d2 = defer.maybeDeferred(self.listenerUDP.stopListening)
         d = defer.gatherResults([d1, d2])
@@ -172,6 +177,7 @@ class ServerDNSTestCase(unittest.TestCase):
             self.listenerUDP.disconnected
             and self.listenerTCP.disconnected))
         return d
+
 
     def namesTest(self, d, r):
         self.response = None
@@ -386,6 +392,59 @@ class ServerDNSTestCase(unittest.TestCase):
             self.resolver.lookupAddress("anothertest-domain.com"),
             [dns.Record_A('1.2.3.4', ttl=19283784)]
         )
+
+
+
+class DNSServerFactoryTests(unittest.TestCase):
+    """
+    Tests for L{server.DNSServerFactory}.
+    """
+    def _messageReceivedTest(self, methodName, message):
+        """
+        Assert that the named method is called with the given message when
+        it is passed to L{DNSServerFactory.messageReceived}.
+        """
+        # Make it appear to have some queries so that
+        # DNSServerFactory.allowQuery allows it.
+        message.queries = [None]
+
+        receivedMessages = []
+        def fakeHandler(message, protocol, address):
+            receivedMessages.append((message, protocol, address))
+
+        class FakeProtocol(object):
+            def writeMessage(self, message):
+                pass
+
+        protocol = FakeProtocol()
+        factory = server.DNSServerFactory(None)
+        setattr(factory, methodName, fakeHandler)
+        factory.messageReceived(message, protocol)
+        self.assertEqual(receivedMessages, [(message, protocol, None)])
+
+
+    def test_notifyMessageReceived(self):
+        """
+        L{DNSServerFactory.messageReceived} passes messages with an opcode
+        of C{OP_NOTIFY} on to L{DNSServerFactory.handleNotify}.
+        """
+        # RFC 1996, section 4.5
+        opCode = 4
+        self._messageReceivedTest('handleNotify', Message(opCode=opCode))
+
+
+    def test_updateMessageReceived(self):
+        """
+        L{DNSServerFactory.messageReceived} passes messages with an opcode
+        of C{OP_UPDATE} on to L{DNSServerFactory.handleOther}.
+
+        This may change if the implementation ever covers update messages.
+        """
+        # RFC 2136, section 1.3
+        opCode = 5
+        self._messageReceivedTest('handleOther', Message(opCode=opCode))
+
+
 
 class HelperTestCase(unittest.TestCase):
     def testSerialGenerator(self):
@@ -645,7 +704,7 @@ class FilterAnswersTests(unittest.TestCase):
         return self._rcodeTest(EREFUSED, DNSQueryRefusedError)
 
 
-    def test_refusedError(self):
+    def test_refusedErrorUnknown(self):
         """
         Like L{test_formatError} but for an unrecognized error code and
         L{DNSUnknownError}.
