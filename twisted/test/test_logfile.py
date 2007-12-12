@@ -1,19 +1,44 @@
 # Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from twisted.trial import unittest
+"""
+Tests for L{logfile}.
+"""
 
-# system imports
-import os, shutil, time, stat
+import os, shutil, time, stat, gzip, bz2
 
-# twisted imports
+from twisted.trial.unittest import TestCase
+
 from twisted.python import logfile, runtime
 
 
-class LogFileTestCase(unittest.TestCase):
+
+class FileExistsTestCase(TestCase):
+    """
+    A TestCase with 2 methods to test the existence of files.
+    """
+
+    def assertExists(self, path):
+        """
+        Check if given path exists.
+        """
+        return self.assertTrue(os.path.exists(path), "%s doesn't exist" % (path,))
+
+
+    def assertNotExists(self, path):
+        """
+        Check if given path doesn't exist.
+        """
+        return self.assertFalse(os.path.exists(path), "%s exists" % (path,))
+
+
+
+class LogFileTestCase(FileExistsTestCase):
     """
     Test the rotating log file.
     """
+    logFileFactory = logfile.LogFile
+    extension = ""
 
     def setUp(self):
         self.dir = self.mktemp()
@@ -21,13 +46,15 @@ class LogFileTestCase(unittest.TestCase):
         self.name = "test.log"
         self.path = os.path.join(self.dir, self.name)
 
+
     def tearDown(self):
         # Restore back write rights if necessary
         os.chmod(self.path, 0666)
         shutil.rmtree(self.dir)
 
-    def testWriting(self):
-        log = logfile.LogFile(self.name, self.dir)
+
+    def test_writing(self):
+        log = self.logFileFactory(self.name, self.dir)
         log.write("123")
         log.write("456")
         log.flush()
@@ -38,37 +65,41 @@ class LogFileTestCase(unittest.TestCase):
         self.assertEquals(f.read(), "1234567890")
         f.close()
 
-    def testRotation(self):
+
+    def test_rotation(self):
         # this logfile should rotate every 10 bytes
-        log = logfile.LogFile(self.name, self.dir, rotateLength=10)
+        log = self.logFileFactory(self.name, self.dir, rotateLength=10)
 
         # test automatic rotation
         log.write("123")
         log.write("4567890")
         log.write("1" * 11)
-        self.assert_(os.path.exists("%s.1" % self.path))
-        self.assert_(not os.path.exists("%s.2" % self.path))
+        self.assertExists("%s.1%s" % (self.path, self.extension))
+        self.assertEquals(log.getLog(1).readLines(), ['1234567890'])
+        self.assertNotExists("%s.2%s" % (self.path, self.extension))
         log.write('')
-        self.assert_(os.path.exists("%s.1" % self.path))
-        self.assert_(os.path.exists("%s.2" % self.path))
-        self.assert_(not os.path.exists("%s.3" % self.path))
+        self.assertExists("%s.1%s" % (self.path, self.extension))
+        self.assertExists("%s.2%s" % (self.path, self.extension))
+        self.assertEquals(log.getLog(1).readLines(), ['1' * 11])
+        self.assertNotExists("%s.3%s" % (self.path, self.extension))
         log.write("3")
-        self.assert_(not os.path.exists("%s.3" % self.path))
+        self.assertNotExists("%s.3%s" % (self.path, self.extension))
 
         # test manual rotation
         log.rotate()
-        self.assert_(os.path.exists("%s.3" % self.path))
-        self.assert_(not os.path.exists("%s.4" % self.path))
+        self.assertExists("%s.3%s" % (self.path, self.extension))
+        self.assertNotExists("%s.4%s" % (self.path, self.extension))
         log.close()
 
         self.assertEquals(log.listLogs(), [1, 2, 3])
 
-    def testAppend(self):
-        log = logfile.LogFile(self.name, self.dir)
+
+    def test_append(self):
+        log = self.logFileFactory(self.name, self.dir)
         log.write("0123456789")
         log.close()
 
-        log = logfile.LogFile(self.name, self.dir)
+        log = self.logFileFactory(self.name, self.dir)
         self.assertEquals(log.size, 10)
         self.assertEquals(log._file.tell(), log.size)
         log.write("abc")
@@ -79,8 +110,9 @@ class LogFileTestCase(unittest.TestCase):
         self.assertEquals(f.read(), "0123456789abc")
         log.close()
 
-    def testLogReader(self):
-        log = logfile.LogFile(self.name, self.dir)
+
+    def test_logReader(self):
+        log = self.logFileFactory(self.name, self.dir)
         log.write("abc\n")
         log.write("def\n")
         log.rotate()
@@ -116,23 +148,25 @@ class LogFileTestCase(unittest.TestCase):
         self.assertEquals(reader.readLines(), [])
         reader.close()
 
-    def testModePreservation(self):
+
+    def test_modePreservation(self):
         """
         Check rotated files have same permissions as original.
         """
         f = open(self.path, "w").close()
         os.chmod(self.path, 0707)
         mode = os.stat(self.path)[stat.ST_MODE]
-        log = logfile.LogFile(self.name, self.dir)
+        log = self.logFileFactory(self.name, self.dir)
         log.write("abc")
         log.rotate()
         self.assertEquals(mode, os.stat(self.path)[stat.ST_MODE])
 
-    def testNoPermission(self):
+
+    def test_noPermission(self):
         """
         Check it keeps working when permission on dir changes.
         """
-        log = logfile.LogFile(self.name, self.dir)
+        log = self.logFileFactory(self.name, self.dir)
         log.write("abc")
 
         # change permissions so rotation would fail
@@ -142,7 +176,7 @@ class LogFileTestCase(unittest.TestCase):
             # if this succeeds, chmod doesn't restrict us, so we can't
             # do the test
             try:
-                f = open(os.path.join(self.dir,"xxx"), "w")
+                f = open(os.path.join(self.dir, "xxx"), "w")
             except (OSError, IOError):
                 pass
             else:
@@ -165,57 +199,61 @@ class LogFileTestCase(unittest.TestCase):
             # assertion was raised.
             os.chmod(self.dir, 0777)
 
+
     def test_maxNumberOfLog(self):
         """
         Test it respect the limit on the number of files when maxRotatedFiles
         is not None.
         """
-        log = logfile.LogFile(self.name, self.dir, rotateLength=10,
+        log = self.logFileFactory(self.name, self.dir, rotateLength=10,
                               maxRotatedFiles=3)
         log.write("1" * 11)
         log.write("2" * 11)
-        self.failUnless(os.path.exists("%s.1" % self.path))
+        self.assertExists("%s.1%s" % (self.path, self.extension))
 
         log.write("3" * 11)
-        self.failUnless(os.path.exists("%s.2" % self.path))
+        self.assertExists("%s.2%s" % (self.path, self.extension))
 
         log.write("4" * 11)
-        self.failUnless(os.path.exists("%s.3" % self.path))
-        self.assertEquals(file("%s.3" % self.path).read(), "1" * 11)
+        self.assertExists("%s.3%s" % (self.path, self.extension))
+        self.assertEquals(log.getLog(3).readLines(), ["1" * 11])
 
         log.write("5" * 11)
-        self.assertEquals(file("%s.3" % self.path).read(), "2" * 11)
-        self.failUnless(not os.path.exists("%s.4" % self.path))
+        self.assertEquals(log.getLog(3).readLines(), ["2" * 11])
+        self.assertNotExists("%s.4%s" % (self.path, self.extension))
+
 
     def test_fromFullPath(self):
         """
         Test the fromFullPath method.
         """
-        log1 = logfile.LogFile(self.name, self.dir, 10, defaultMode=0777)
-        log2 = logfile.LogFile.fromFullPath(self.path, 10, defaultMode=0777)
+        log1 = self.logFileFactory(self.name, self.dir, 10, defaultMode=0777)
+        log2 = self.logFileFactory.fromFullPath(self.path, 10, defaultMode=0777)
         self.assertEquals(log1.name, log2.name)
         self.assertEquals(os.path.abspath(log1.path), log2.path)
         self.assertEquals(log1.rotateLength, log2.rotateLength)
         self.assertEquals(log1.defaultMode, log2.defaultMode)
 
+
     def test_defaultPermissions(self):
         """
-        Test the default permission of the log file: if the file exist, it
+        Test the default permission of the log file: if the file exists, it
         should keep the permission.
         """
         f = file(self.path, "w")
         os.chmod(self.path, 0707)
         currentMode = stat.S_IMODE(os.stat(self.path)[stat.ST_MODE])
         f.close()
-        log1 = logfile.LogFile(self.name, self.dir)
+        log1 = self.logFileFactory(self.name, self.dir)
         self.assertEquals(stat.S_IMODE(os.stat(self.path)[stat.ST_MODE]),
                           currentMode)
+
 
     def test_specifiedPermissions(self):
         """
         Test specifying the permissions used on the log file.
         """
-        log1 = logfile.LogFile(self.name, self.dir, defaultMode=0066)
+        log1 = self.logFileFactory(self.name, self.dir, defaultMode=0066)
         mode = stat.S_IMODE(os.stat(self.path)[stat.ST_MODE])
         if runtime.platform.isWindows():
             # The only thing we can get here is global read-only
@@ -224,23 +262,52 @@ class LogFileTestCase(unittest.TestCase):
             self.assertEquals(mode, 0066)
 
 
-class RiggedDailyLogFile(logfile.DailyLogFile):
+
+class GzipLogFileTestCase(LogFileTestCase):
+    """
+    Test the gzip-compressed rotating log file.
+    """
+    logFileFactory = logfile.GzipLogFile
+    extension = ".gz"
+
+
+
+class Bz2LogFileTestCase(LogFileTestCase):
+    """
+    Test the bz2-compressed rotating log file.
+    """
+    logFileFactory = logfile.Bz2LogFile
+    extension = ".bz2"
+
+
+
+def RiggedDailyLogFile(baseClass):
     _clock = 0.0
 
     def _openFile(self):
-        logfile.DailyLogFile._openFile(self)
+        baseClass._openFile(self)
         # rig the date to match _clock, not mtime
         self.lastDate = self.toDate()
+
 
     def toDate(self, *args):
         if args:
             return time.gmtime(*args)[:3]
         return time.gmtime(self._clock)[:3]
 
-class DailyLogFileTestCase(unittest.TestCase):
+
+    logFileClass = type("RiggedDailyLogFile", (baseClass, object),
+            {"_openFile": _openFile, "toDate": toDate, "_clock": _clock})
+    return logFileClass
+
+
+
+class DailyLogFileTestCase(FileExistsTestCase):
     """
     Test rotating log file.
     """
+    logFileFactory = RiggedDailyLogFile(logfile.DailyLogFile)
+    extension = ""
 
     def setUp(self):
         self.dir = self.mktemp()
@@ -248,12 +315,13 @@ class DailyLogFileTestCase(unittest.TestCase):
         self.name = "testdaily.log"
         self.path = os.path.join(self.dir, self.name)
 
+
     def tearDown(self):
         shutil.rmtree(self.dir)
-        pass
 
-    def testWriting(self):
-        log = RiggedDailyLogFile(self.name, self.dir)
+
+    def test_writing(self):
+        log = self.logFileFactory(self.name, self.dir)
         log.write("123")
         log.write("456")
         log.flush()
@@ -264,9 +332,10 @@ class DailyLogFileTestCase(unittest.TestCase):
         self.assertEquals(f.read(), "1234567890")
         f.close()
 
-    def testRotation(self):
+
+    def test_rotation(self):
         # this logfile should rotate every 10 bytes
-        log = RiggedDailyLogFile(self.name, self.dir)
+        log = self.logFileFactory(self.name, self.dir)
         days = [(self.path + '.' + log.suffix(day * 86400)) for day in range(3)]
 
         # test automatic rotation
@@ -276,14 +345,35 @@ class DailyLogFileTestCase(unittest.TestCase):
         log.write("4567890")
         log._clock = 86400  # 1970/01/02 00:00.00
         log.write("1" * 11)
-        self.assert_(os.path.exists(days[0]))
-        self.assert_(not os.path.exists(days[1]))
+        self.assertExists(days[0] + self.extension)
+        self.assertEquals(log.getLog(0).readLines(), ["1234567890"])
+        self.assertNotExists(days[1] + self.extension)
         log._clock = 172800 # 1970/01/03 00:00.00
         log.write('')
-        self.assert_(os.path.exists(days[0]))
-        self.assert_(os.path.exists(days[1]))
-        self.assert_(not os.path.exists(days[2]))
+        self.assertExists(days[0] + self.extension)
+        self.assertEquals(log.getLog(0).readLines(), ["1234567890"])
+        self.assertExists(days[1] + self.extension)
+        self.assertEquals(log.getLog(86400).readLines(), ["1" * 11])
+        self.assertNotExists(days[2] + self.extension)
         log._clock = 259199 # 1970/01/03 23:59.59
         log.write("3")
-        self.assert_(not os.path.exists(days[2]))
+        self.assertNotExists(days[2] + self.extension)
+
+
+
+class GzipDailyLogFileTestCase(DailyLogFileTestCase):
+    """
+    Test rotating a gzip log file.
+    """
+    logFileFactory = RiggedDailyLogFile(logfile.GzipDailyLogFile)
+    extension = ".gz"
+
+
+
+class Bz2DailyLogFileTestCase(DailyLogFileTestCase):
+    """
+    Test rotating a bz2 log file.
+    """
+    logFileFactory = RiggedDailyLogFile(logfile.Bz2DailyLogFile)
+    extension = ".bz2"
 
