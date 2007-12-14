@@ -138,7 +138,7 @@ class _Assertions(pyunit.TestCase, object):
 
     def failUnlessRaises(self, exception, f, *args, **kwargs):
         """fails the test unless calling the function C{f} with the given C{args}
-        and C{kwargs} does not raise C{exception}. The failure will report the
+        and C{kwargs} raises C{exception}. The failure will report the
         traceback and call stack of the unexpected exception.
 
         @param exception: exception type that is to be expected
