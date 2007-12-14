@@ -52,6 +52,7 @@ class GzipLogReader(LogReader):
         self._file = gzip.GzipFile(name, "r")
 
 
+
 class Bz2LogReader(LogReader):
     """
     Read from a bz2 compressed log file.
@@ -272,11 +273,13 @@ class LogFile(BaseLogFile):
                 newExtension = self.extensionFormat % (i + 1,)
                 os.rename("%s.%s" % (self.path, extension),
                           "%s.%s" % (self.path, newExtension))
+        self._endRotate("%s.1" % (self.path,))
+
+
+    def _endRotate(self, path):
         self._file.close()
-        newPath = "%s.1" % (self.path,)
-        os.rename(self.path, newPath)
+        os.rename(self.path, path)
         self._openFile()
-        return newPath
 
 
     def listLogs(self):
@@ -304,49 +307,58 @@ threadable.synchronize(LogFile)
 
 
 
-def CompressorHelper(baseClass, compressorClass, compressExtension):
+def CompressorHelper(baseClass, compressorClass, compressExtension, openMode):
     """
     A helper to compress log files.
     """
 
-    def rotate(self):
+    def _openFile(self):
         """
-        Do the rotation and compress the rotated log file.
+        Open the compressed version of the log file along with the log file.
         """
-        newPath = baseClass.rotate(self)
-        if newPath is None:
-            return
-        # XXX: this can take some time, maybe we should defer it, but it
-        # becomes hard to test
-        self._compress(newPath)
+        baseClass._openFile(self)
+        self._compressedFile = compressorClass(
+            "%s%s" % (self.path, compressExtension), openMode)
 
 
-    def _compress(self, path, chunk=8192):
+    def write(self, data):
         """
-        Compress logfile.
+        Write to the both log files at the same time.
         """
-        compressedFile = compressorClass("%s%s" %
-            (path, compressExtension), "wb")
-        newfp = open(path)
+        baseClass.write(self, data)
+        self._compressedFile.write(data)
 
-        data = newfp.read(chunk)
-        compressedFile.write(data)
-        while len(data) == chunk:
-            data = newfp.read(chunk)
-            compressedFile.write(data)
 
-        compressedFile.close()
-        newfp.close()
-        os.remove(path)
+    def close(self):
+        """
+        Close both log files.
+        """
+        baseClass.close(self)
+        self._compressedFile.close()
+
+
+    def _endRotate(self, path):
+        """
+        Override the last step of rotate to rename the compressed log file
+        instead of the normal version.
+        """
+        self._file.close()
+        self._compressedFile.close()
+        os.remove(self.path)
+        os.rename("%s%s" % (self.path, compressExtension),
+                  "%s%s" % (path, compressExtension))
+        self._openFile()
+
 
     compressor = type("CompressorHelper", (baseClass, object),
-            {"rotate": rotate, "_compress": _compress,
+            {"_endRotate": _endRotate, "_openFile": _openFile, "write": write,
+             "close": close,
              "rotateExtension": compressExtension})
     return compressor
 
 
 
-class GzipLogFile(CompressorHelper(LogFile, gzip.GzipFile, ".gz")):
+class GzipLogFile(CompressorHelper(LogFile, gzip.GzipFile, ".gz", "ab")):
     """
     A gzip compressed log file.
     """
@@ -356,7 +368,7 @@ class GzipLogFile(CompressorHelper(LogFile, gzip.GzipFile, ".gz")):
 
 
 
-class Bz2LogFile(CompressorHelper(LogFile, bz2.BZ2File, ".bz2")):
+class Bz2LogFile(CompressorHelper(LogFile, bz2.BZ2File, ".bz2", "wb")):
     """
     A bz2 compressed log file.
     """
@@ -444,10 +456,16 @@ class DailyLogFile(BaseLogFile):
         newPath = "%s.%s" % (self.path, self.suffix(self.lastDate))
         if os.path.exists(newPath):
             return
+        self._endRotate(newPath)
+
+
+    def _endRotate(self, path):
+        """
+        Last step of rotation: close, rename, reopen.
+        """
         self._file.close()
-        os.rename(self.path, newPath)
+        os.rename(self.path, path)
         self._openFile()
-        return newPath
 
 
     def __getstate__(self):
@@ -459,7 +477,7 @@ threadable.synchronize(DailyLogFile)
 
 
 
-class GzipDailyLogFile(CompressorHelper(DailyLogFile, gzip.GzipFile, ".gz")):
+class GzipDailyLogFile(CompressorHelper(DailyLogFile, gzip.GzipFile, ".gz", "ab")):
     """
     A gzip compressed dailylog file.
     """
@@ -469,7 +487,7 @@ class GzipDailyLogFile(CompressorHelper(DailyLogFile, gzip.GzipFile, ".gz")):
 
 
 
-class Bz2DailyLogFile(CompressorHelper(DailyLogFile, bz2.BZ2File, ".bz2")):
+class Bz2DailyLogFile(CompressorHelper(DailyLogFile, bz2.BZ2File, ".bz2", "wb")):
     """
     A bz2 compressed dailylog file.
     """

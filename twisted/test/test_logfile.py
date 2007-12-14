@@ -7,7 +7,7 @@ Tests for L{logfile}.
 
 import os, shutil, time, stat, gzip, bz2
 
-from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import TestCase, SkipTest
 
 from twisted.python import logfile, runtime
 
@@ -48,12 +48,16 @@ class LogFileTestCase(FileExistsTestCase):
 
 
     def tearDown(self):
-        # Restore back write rights if necessary
-        os.chmod(self.path, 0666)
+        if os.path.exists(self.path):
+            # Restore back write rights if necessary
+            os.chmod(self.path, 0666)
         shutil.rmtree(self.dir)
 
 
     def test_writing(self):
+        """
+        Check that writing on the logfile write data on the filesystem.
+        """
         log = self.logFileFactory(self.name, self.dir)
         log.write("123")
         log.write("456")
@@ -67,6 +71,9 @@ class LogFileTestCase(FileExistsTestCase):
 
 
     def test_rotation(self):
+        """
+        Test rotation of log files.
+        """
         # this logfile should rotate every 10 bytes
         log = self.logFileFactory(self.name, self.dir, rotateLength=10)
 
@@ -262,6 +269,26 @@ class LogFileTestCase(FileExistsTestCase):
             self.assertEquals(mode, 0066)
 
 
+    def test_reopen(self):
+        """
+        Open a logfile, write to it, close it, reopen it, and check that it
+        didn't remove previous data.
+        """
+        log = self.logFileFactory(self.name, self.dir)
+
+        log.write("1234567890")
+        log.close()
+        self.assertTrue(log.closed)
+
+        log = self.logFileFactory(self.name, self.dir)
+        log.write("1" * 11)
+        log.flush()
+        self.assertEquals(log.getCurrentLog().readLines(), ["1234567890" + "1" * 11])
+
+        log.rotate()
+        self.assertEquals(log.getLog(1).readLines(), ["1234567890" + "1" * 11])
+
+
 
 class GzipLogFileTestCase(LogFileTestCase):
     """
@@ -278,6 +305,13 @@ class Bz2LogFileTestCase(LogFileTestCase):
     """
     logFileFactory = logfile.Bz2LogFile
     extension = ".bz2"
+
+    def test_reopen(self):
+        """
+        BZ2 doesn't support reopen for now.
+        """
+        # XXX this should be a todo
+        raise SkipTest("BZ2File doesn't support updating")
 
 
 
