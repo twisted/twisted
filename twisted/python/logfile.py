@@ -310,6 +310,14 @@ def CompressorHelper(baseClass, compressorClass, compressExtension):
     A helper to compress log files.
     """
 
+    def callInThread(self, method, *args, **kwargs):
+        """
+        Wrapper around L{reactor.callInThread}, to be overriden in tests.
+        """
+        from twisted.internet import reactor
+        return reactor.callInThread(method, *args, **kwargs)
+
+
     def rotate(self):
         """
         Do the rotation and compress the rotated log file.
@@ -317,32 +325,35 @@ def CompressorHelper(baseClass, compressorClass, compressExtension):
         newPath = baseClass.rotate(self)
         if newPath is None:
             return
-        # XXX: this can take some time, maybe we should defer it, but it
-        # becomes hard to test
-        self._compress(newPath)
+        self.callInThread(self._compress, newPath)
 
 
     def _compress(self, path, chunk=8192):
         """
         Compress logfile.
         """
-        compressedFile = compressorClass("%s%s" %
-            (path, compressExtension), "wb")
-        newfp = open(path)
+        try:
+            compressedFile = compressorClass("%s%s" %
+                (path, compressExtension), "wb")
+            newfp = open(path)
 
-        data = newfp.read(chunk)
-        compressedFile.write(data)
-        while len(data) == chunk:
             data = newfp.read(chunk)
             compressedFile.write(data)
+            while len(data) == chunk:
+                data = newfp.read(chunk)
+                compressedFile.write(data)
 
-        compressedFile.close()
-        newfp.close()
-        os.remove(path)
+            compressedFile.close()
+            newfp.close()
+            os.remove(path)
+        except:
+            from twisted.python import log
+            log.err()
 
     compressor = type("CompressorHelper", (baseClass, object),
             {"rotate": rotate, "_compress": _compress,
-             "rotateExtension": compressExtension})
+             "rotateExtension": compressExtension,
+             "callInThread": callInThread})
     return compressor
 
 

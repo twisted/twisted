@@ -10,6 +10,7 @@ import os, shutil, time, stat, gzip, bz2
 from twisted.trial.unittest import TestCase
 
 from twisted.python import logfile, runtime
+from twisted.internet.threads import deferToThread
 
 
 
@@ -291,12 +292,100 @@ class LogFileTestCase(FileExistsTestCase):
 
 
 
+class TestableGzipLogFile(logfile.GzipLogFile):
+    """
+    A gzip compressed log file that can be tested.
+    """
+
+    def callInThread(self, method, *args, **kwargs):
+        """
+        Do not call in thread, call synchronously instead.
+        """
+        return method(*args, **kwargs)
+
+
+
+class TestableWithThreadsGzipLogFile(logfile.GzipLogFile):
+    """
+    A gzip compressed log file that can be tested, with threads.
+    """
+
+    def __init__(self, *args, **kwargs):
+        logfile.GzipLogFile.__init__(self, *args, **kwargs)
+        self.deferreds = []
+
+
+    def callInThread(self, method, *args, **kwargs):
+        """
+        Use deferToThread to call C{method} in a thread, and store the
+        resulting deferred.
+        """
+        d = deferToThread(method, *args, **kwargs)
+        self.deferreds.append(d)
+
+
+
 class GzipLogFileTestCase(LogFileTestCase):
     """
     Test the gzip-compressed rotating log file.
     """
-    logFileFactory = logfile.GzipLogFile
+    logFileFactory = TestableGzipLogFile
     extension = ".gz"
+
+    def test_withThreads(self):
+        """
+        Check that L{logfile.GzipLogFile} has the same behavior with and
+        withtout threads.
+        """
+        log = TestableWithThreadsGzipLogFile(self.name, self.dir,
+                                             rotateLength=10)
+
+        log.write("123")
+        log.write("4567890")
+        log.write("1" * 11)
+        d = log.deferreds.pop(0)
+        def check(ign):
+            self.assertExists("%s.1%s" % (self.path, self.extension))
+        d.addCallback(check)
+        return d
+
+
+    def test_errorReportInCompress(self):
+        """
+        Check that the L{logfile.GzipLogFile._compress} method reports errors
+        using C{log.err}, but doesn't fail.
+        """
+        log = TestableWithThreadsGzipLogFile(self.name, self.dir,
+                                             rotateLength=10)
+
+        def fakeRemove(path):
+            raise RuntimeError("Urg")
+        self.patch(os, "remove", fakeRemove)
+
+        log.write("123")
+        log.write("4567890")
+        log.write("1" * 11)
+        d = log.deferreds.pop(0)
+        def check(ign):
+            errs = self.flushLoggedErrors()
+            self.assertEquals(len(errs), 1)
+            errs[0].trap(RuntimeError)
+            self.assertEquals(str(errs[0].value), "Urg")
+        d.addCallback(check)
+        return d
+
+
+
+class TestableBz2LogFile(logfile.Bz2LogFile):
+    """
+    A bz2 compressed log file that can be tested.
+    """
+
+    def callInThread(self, method, *args, **kwargs):
+        """
+        Do not call in thread, call synchronously instead.
+        """
+        return method(*args, **kwargs)
 
 
 
@@ -304,13 +393,20 @@ class Bz2LogFileTestCase(LogFileTestCase):
     """
     Test the bz2-compressed rotating log file.
     """
-    logFileFactory = logfile.Bz2LogFile
+    logFileFactory = TestableBz2LogFile
     extension = ".bz2"
 
 
 
 def RiggedDailyLogFile(baseClass):
     _clock = 0.0
+
+    def callInThread(self, method, *args, **kwargs):
+        """
+        Do not call in thread, call synchronously instead.
+        """
+        return method(*args, **kwargs)
+
 
     def _openFile(self):
         baseClass._openFile(self)
@@ -325,7 +421,8 @@ def RiggedDailyLogFile(baseClass):
 
 
     logFileClass = type("RiggedDailyLogFile", (baseClass, object),
-            {"_openFile": _openFile, "toDate": toDate, "_clock": _clock})
+            {"_openFile": _openFile, "toDate": toDate, "_clock": _clock,
+             "callInThread": callInThread})
     return logFileClass
 
 
