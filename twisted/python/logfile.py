@@ -195,9 +195,19 @@ class LogFile(BaseLogFile):
     A log file that can be rotated.
 
     A rotateLength of None disables automatic log rotation.
+
+    @cvar logReaderFactory: factory for log readers.
+    @type logReaderFactory: C{class}
+
+    @cvar rotateExtension: the extension appended to rotated files.
+    @type rotateExtension: C{str}
+
+    @cvar counterIndex: the index in the log name where the counter is located,
+        when the name is splitted with "."
+    @type counterIndex: C{int}
     """
     logReaderFactory = LogReader
-    extensionFormat = "%d"
+    rotateExtension = ""
     counterIndex = -1
 
     def __init__(self, name, directory, rotateLength=1000000, defaultMode=None,
@@ -239,8 +249,7 @@ class LogFile(BaseLogFile):
         """
         Given an integer, return a LogReader for an old log file.
         """
-        extension = self.extensionFormat % (identifier,)
-        filename = "%s.%s" % (self.path, extension)
+        filename = "%s.%d%s" % (self.path, identifier, self.rotateExtension)
         if not os.path.exists(filename):
             raise ValueError("no such logfile exists")
         return self.logReaderFactory(filename)
@@ -266,11 +275,11 @@ class LogFile(BaseLogFile):
         logs = self.listLogs()
         logs.reverse()
         for i in logs:
-            extension = self.extensionFormat % (i,)
+            extension = "%d%s" % (i, self.rotateExtension)
             if self.maxRotatedFiles is not None and i >= self.maxRotatedFiles:
                 os.remove("%s.%s" % (self.path, extension))
             else:
-                newExtension = self.extensionFormat % (i + 1,)
+                newExtension = "%d%s" % (i + 1, self.rotateExtension)
                 os.rename("%s.%s" % (self.path, extension),
                           "%s.%s" % (self.path, newExtension))
         self._file.close()
@@ -305,7 +314,7 @@ threadable.synchronize(LogFile)
 
 
 
-def CompressorHelper(baseClass, compressorClass, compressExtension):
+def CompressorHelper(baseClass, compressorClass):
     """
     A helper to compress log files.
     """
@@ -334,7 +343,7 @@ def CompressorHelper(baseClass, compressorClass, compressExtension):
         """
         try:
             compressedFile = compressorClass("%s%s" %
-                (path, compressExtension), "wb")
+                (path, self.rotateExtension), "wb")
             newfp = open(path)
 
             data = newfp.read(chunk)
@@ -352,29 +361,28 @@ def CompressorHelper(baseClass, compressorClass, compressExtension):
 
     compressor = type("CompressorHelper", (baseClass, object),
             {"rotate": rotate, "_compress": _compress,
-             "rotateExtension": compressExtension,
              "callInThread": callInThread})
     return compressor
 
 
 
-class GzipLogFile(CompressorHelper(LogFile, gzip.GzipFile, ".gz")):
+class GzipLogFile(CompressorHelper(LogFile, gzip.GzipFile)):
     """
     A gzip compressed log file.
     """
     logReaderFactory = GzipLogReader
-    extensionFormat = "%d.gz"
     counterIndex = -2
+    rotateExtension = ".gz"
 
 
 
-class Bz2LogFile(CompressorHelper(LogFile, bz2.BZ2File, ".bz2")):
+class Bz2LogFile(CompressorHelper(LogFile, bz2.BZ2File)):
     """
     A bz2 compressed log file.
     """
     logReaderFactory = Bz2LogReader
-    extensionFormat = "%d.bz2"
     counterIndex = -2
+    rotateExtension = ".bz2"
 
 
 
@@ -471,21 +479,19 @@ threadable.synchronize(DailyLogFile)
 
 
 
-class GzipDailyLogFile(CompressorHelper(DailyLogFile, gzip.GzipFile, ".gz")):
+class GzipDailyLogFile(CompressorHelper(DailyLogFile, gzip.GzipFile)):
     """
     A gzip compressed dailylog file.
     """
     logReaderFactory = GzipLogReader
-    extensionFormat = "%d.gz"
-    counterIndex = -2
+    rotateExtension = ".gz"
 
 
 
-class Bz2DailyLogFile(CompressorHelper(DailyLogFile, bz2.BZ2File, ".bz2")):
+class Bz2DailyLogFile(CompressorHelper(DailyLogFile, bz2.BZ2File)):
     """
     A bz2 compressed dailylog file.
     """
     logReaderFactory = Bz2LogReader
-    extensionFormat = "%d.bz2"
-    counterIndex = -2
+    rotateExtension = ".bz2"
 
