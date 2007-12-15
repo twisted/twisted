@@ -7,10 +7,10 @@
 import errno, sys, os, re, StringIO
 from twisted.internet.utils import suppressWarnings
 from twisted.python.failure import Failure
-from twisted.trial import unittest, runner, reporter, util
+from twisted.trial import itrial, unittest, runner, reporter, util
 from twisted.trial.reporter import UncleanWarningsReporterWrapper
 from twisted.trial.test import erroneous
-from twisted.trial.unittest import makeTodo
+from twisted.trial.unittest import makeTodo, SkipTest, Todo
 
 
 class BrokenStream(object):
@@ -137,7 +137,8 @@ class TestErrorReporting(StringTest):
 
     def testDoctestError(self):
         from twisted.trial.test import erroneous
-        suite = self.loader.loadDoctests(erroneous)
+        suite = unittest.decorate(
+            self.loader.loadDoctests(erroneous), itrial.ITestCase)
         output = self.getOutput(suite)
         path = 'twisted.trial.test.erroneous.unexpectedException'
         for substring in ['1/0', 'ZeroDivisionError',
@@ -433,7 +434,7 @@ class TrialTestNames(unittest.TestCase):
         self.failUnlessEqual(output, "test_foo")
 
 
-class SkipTest(unittest.TestCase):
+class TestSkip(unittest.TestCase):
     """
     Tests for L{reporter.Reporter}'s handling of skips.
     """
@@ -509,14 +510,13 @@ class SkipTest(unittest.TestCase):
         self.failUnlessEqual(output, str(e))
 
 
-
-class UncleanWarningSkipTest(SkipTest):
+class UncleanWarningSkipTest(TestSkip):
     """
     Tests for skips on a L{reporter.Reporter} wrapped by an
     L{UncleanWarningsReporterWrapper}.
     """
     def setUp(self):
-        SkipTest.setUp(self)
+        TestSkip.setUp(self)
         self.result = UncleanWarningsReporterWrapper(self.result)
 
     def _getSkips(self, result):
@@ -885,3 +885,129 @@ class TestSafeStream(unittest.TestCase):
 
 class TestTimingReporter(TestReporter):
     resultFactory = reporter.TimingTextReporter
+
+
+
+class LoggingReporter(reporter.Reporter):
+    """
+    Simple reporter that stores the last test that was passed to it.
+    """
+
+    def __init__(self, *args, **kwargs):
+        reporter.Reporter.__init__(self, *args, **kwargs)
+        self.test = None
+
+    def addError(self, test, error):
+        self.test = test
+
+    def addExpectedFailure(self, test, failure, todo):
+        self.test = test
+
+    def addFailure(self, test, failure):
+        self.test = test
+
+    def addSkip(self, test, skip):
+        self.test = test
+
+    def addUnexpectedSuccess(self, test, todo):
+        self.test = test
+
+    def startTest(self, test):
+        self.test = test
+
+    def stopTest(self, test):
+        self.test = test
+
+
+
+class TestAdaptedReporter(unittest.TestCase):
+    """
+    L{reporter._AdaptedReporter} is a reporter wrapper that wraps all of the
+    tests it receives before passing them on to the original reporter.
+    """
+
+    def setUp(self):
+        self.wrappedResult = self.getWrappedResult()
+
+
+    def _testAdapter(self, test):
+        return test.id()
+
+
+    def assertWrapped(self, wrappedResult, test):
+        self.assertEqual(wrappedResult.original.test, self._testAdapter(test))
+
+
+    def getFailure(self, exceptionInstance):
+        """
+        Return a L{Failure} from raising the given exception.
+
+        @param exceptionInstance: The exception to raise.
+        @return: L{Failure}
+        """
+        try:
+            raise exceptionInstance
+        except:
+            return Failure()
+
+
+    def getWrappedResult(self):
+        result = LoggingReporter()
+        return reporter._AdaptedReporter(result, self._testAdapter)
+
+
+    def test_addError(self):
+        """
+        C{addError} wraps its test with the provided adapter.
+        """
+        self.wrappedResult.addError(self, self.getFailure(RuntimeError()))
+        self.assertWrapped(self.wrappedResult, self)
+
+
+    def test_addFailure(self):
+        """
+        C{addFailure} wraps its test with the provided adapter.
+        """
+        self.wrappedResult.addFailure(self, self.getFailure(AssertionError()))
+        self.assertWrapped(self.wrappedResult, self)
+
+
+    def test_addSkip(self):
+        """
+        C{addSkip} wraps its test with the provided adapter.
+        """
+        self.wrappedResult.addSkip(self, self.getFailure(SkipTest('no reason')))
+        self.assertWrapped(self.wrappedResult, self)
+
+
+    def test_startTest(self):
+        """
+        C{startTest} wraps its test with the provided adapter.
+        """
+        self.wrappedResult.startTest(self)
+        self.assertWrapped(self.wrappedResult, self)
+
+
+    def test_stopTest(self):
+        """
+        C{stopTest} wraps its test with the provided adapter.
+        """
+        self.wrappedResult.stopTest(self)
+        self.assertWrapped(self.wrappedResult, self)
+
+
+    def test_addExpectedFailure(self):
+        """
+        C{addExpectedFailure} wraps its test with the provided adapter.
+        """
+        self.wrappedResult.addExpectedFailure(
+            self, self.getFailure(RuntimeError()), Todo("no reason"))
+        self.assertWrapped(self.wrappedResult, self)
+
+
+    def test_addUnexpectedSuccess(self):
+        """
+        C{addUnexpectedSuccess} wraps its test with the provided adapter.
+        """
+        self.wrappedResult.addUnexpectedSuccess(self, Todo("no reason"))
+        self.assertWrapped(self.wrappedResult, self)

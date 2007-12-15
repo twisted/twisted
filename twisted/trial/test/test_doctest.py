@@ -5,7 +5,7 @@
 Test twisted's doctest support.
 """
 
-from twisted.trial import runner, unittest, reporter
+from twisted.trial import itrial, runner, unittest, reporter
 from twisted.trial.test import mockdoctest
 
 
@@ -24,7 +24,7 @@ class TestRunners(unittest.TestCase):
         suite = loader.loadDoctests(mockdoctest)
         idPrefix = 'twisted.trial.test.mockdoctest.Counter'
         for test in suite._tests:
-            self.assertIn(idPrefix, test.id())
+            self.assertIn(idPrefix, itrial.ITestCase(test).id())
 
 
     def makeDocSuite(self, module):

@@ -10,6 +10,7 @@ import gc, StringIO, sys, weakref
 from twisted.internet import defer, reactor
 from twisted.trial import unittest, runner, reporter, util
 from twisted.trial.test import erroneous, suppression
+from twisted.trial.test.test_reporter import LoggingReporter
 
 
 class ResultsTestMixin:
@@ -814,6 +815,128 @@ class TestAddCleanup(unittest.TestCase):
         self.assertEqual(error1.getErrorMessage(), 'bar')
         self.assertEqual(error2.getErrorMessage(), 'foo')
 
+
+
+class TestTestDecorator(unittest.TestCase):
+    """
+    Tests for our test decoration features.
+    """
+
+
+    def assertTestsEqual(self, observed, expected):
+        """
+        Assert that the given decorated tests are equal.
+        """
+        self.assertEqual(observed.__class__, expected.__class__,
+                         "Different class")
+        self.assertIdentical(observed.original, expected.original)
+
+
+    def assertSuitesEqual(self, observed, expected):
+        """
+        Assert that the given test suites with decorated tests are equal.
+        """
+        self.assertEqual(observed.__class__, expected.__class__,
+                         "Different class")
+        self.assertEqual(len(observed._tests), len(expected._tests),
+                         "Different number of tests.")
+        for observedTest, expectedTest in zip(observed._tests,
+                                              expected._tests):
+            if getattr(observedTest, '_tests', None) is not None:
+                self.assertSuitesEqual(observedTest, expectedTest)
+            else:
+                self.assertTestsEqual(observedTest, expectedTest)
+
+
+    def test_usesAdaptedReporterWithRun(self):
+        """
+        For decorated tests, C{run} uses a result adapter that preserves the
+        test decoration for calls to C{addError}, C{startTest} and the like.
+
+        See L{reporter._AdaptedReporter}.
+        """
+        test = unittest.TestCase()
+        decoratedTest = unittest.TestDecorator(test)
+        result = LoggingReporter()
+        decoratedTest.run(result)
+        self.assertTestsEqual(result.test, decoratedTest)
+
+
+    def test_usesAdaptedReporterWithCall(self):
+        """
+        For decorated tests, C{__call__} uses a result adapter that preserves
+        the test decoration for calls to C{addError}, C{startTest} and the
+        like.
+
+        See L{reporter._AdaptedReporter}.
+        """
+        test = unittest.TestCase()
+        decoratedTest = unittest.TestDecorator(test)
+        result = LoggingReporter()
+        decoratedTest(result)
+        self.assertTestsEqual(result.test, decoratedTest)
+
+
+    def test_decorateSingleTest(self):
+        """
+        Calling L{decorate} on a single test case returns the test case
+        decorated with the provided decorator.
+        """
+        test = unittest.TestCase()
+        decoratedTest = unittest.decorate(test, unittest.TestDecorator)
+        self.assertTestsEqual(unittest.TestDecorator(test), decoratedTest)
+
+
+    def test_decorateTestSuite(self):
+        """
+        Calling L{decorate} on a test suite will return a test suite with
+        each test decorated with the provided decorator.
+        """
+        test = unittest.TestCase()
+        suite = unittest.TestSuite([test])
+        decoratedTest = unittest.decorate(suite, unittest.TestDecorator)
+        self.assertSuitesEqual(
+            decoratedTest, unittest.TestSuite([unittest.TestDecorator(test)]))
+
+
+    def test_decorateNestedTestSuite(self):
+        """
+        Calling L{decorate} on a test suite with nested suites will return a
+        test suite that maintains the same structure, but with all tests
+        decorated.
+        """
+        test = unittest.TestCase()
+        suite = unittest.TestSuite([unittest.TestSuite([test])])
+        decoratedTest = unittest.decorate(suite, unittest.TestDecorator)
+        expected = unittest.TestSuite(
+            [unittest.TestSuite([unittest.TestDecorator(test)])])
+        self.assertSuitesEqual(decoratedTest, expected)
+
+
+    def test_decorateDecoratedSuite(self):
+        """
+        Calling L{decorate} on a test suite with already-decorated tests
+        decorates all of the tests in the suite again.
+        """
+        test = unittest.TestCase()
+        decoratedTest = unittest.decorate(test, unittest.TestDecorator)
+        redecoratedTest = unittest.decorate(decoratedTest,
+                                            unittest.TestDecorator)
+        self.assertTestsEqual(redecoratedTest,
+                              unittest.TestDecorator(decoratedTest))
+
+
+    def test_decoratePreservesSuite(self):
+        """
+        Tests can be in non-standard suites. L{decorate} preserves the
+        non-standard suites when it decorates the tests.
+        """
+        test = unittest.TestCase()
+        suite = runner.DestructiveTestSuite([test])
+        decorated = unittest.decorate(suite, unittest.TestDecorator)
+        self.assertSuitesEqual(
+            decorated,
+            runner.DestructiveTestSuite([unittest.TestDecorator(test)]))
 
 
 class TestMonkeyPatchSupport(unittest.TestCase):
