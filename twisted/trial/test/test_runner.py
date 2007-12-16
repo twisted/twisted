@@ -8,7 +8,7 @@
 import StringIO
 from zope.interface import implements
 
-from twisted.trial.itrial import IReporter, ITestCase
+from twisted.trial.itrial import IReporter
 from twisted.trial import unittest, runner, reporter, util
 from twisted.python import failure, log, reflect
 from twisted.scripts import trial
@@ -496,13 +496,6 @@ class TestTestHolder(unittest.TestCase):
         """
         self.assertEqual(self.holder.id(), self.description)
         self.assertEqual(self.holder.shortDescription(), self.description)
-
-
-    def test_holderImplementsITestCase(self):
-        """
-        L{runner.TestHolder} implements L{ITestCase}.
-        """
-        self.assertIdentical(self.holder, ITestCase(self.holder))
 
 
 

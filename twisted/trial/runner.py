@@ -23,11 +23,6 @@ from twisted.trial import util, unittest
 from twisted.trial.itrial import ITestCase
 from twisted.trial.reporter import UncleanWarningsReporterWrapper
 
-# These are imported so that they remain in the public API for t.trial.runner
-from twisted.trial.unittest import suiteVisit, TestSuite
-
-from zope.interface import implements
-
 pyunit = __import__('unittest')
 
 
@@ -108,6 +103,56 @@ def _resolveDirectory(fn):
         else:
             raise ValueError('%r is not a package directory' % (fn,))
     return fn
+
+
+def suiteVisit(suite, visitor):
+    """
+    Visit each test in C{suite} with C{visitor}.
+
+    Deprecated in Twisted 2.6.
+
+    @param visitor: A callable which takes a single argument, the L{TestCase}
+    instance to visit.
+    @return: None
+    """
+    warnings.warn("Test visitors deprecated in Twisted 2.6",
+                  category=DeprecationWarning)
+    for case in suite._tests:
+        visit = getattr(case, 'visit', None)
+        if visit is not None:
+            visit(visitor)
+        elif isinstance(case, pyunit.TestCase):
+            case = ITestCase(case)
+            case.visit(visitor)
+        elif isinstance(case, pyunit.TestSuite):
+            suiteVisit(case, visitor)
+        else:
+            case.visit(visitor)
+
+
+
+class TestSuite(pyunit.TestSuite):
+    """
+    Extend the standard library's C{TestSuite} with support for the visitor
+    pattern and a consistently overrideable C{run} method.
+    """
+
+    visit = suiteVisit
+
+    def __call__(self, result):
+        return self.run(result)
+
+    def run(self, result):
+        """
+        Call C{run} on every member of the suite.
+        """
+        # we implement this because Python 2.3 unittest defines this code
+        # in __call__, whereas 2.4 defines the code in run.
+        for test in self._tests:
+            if result.shouldStop:
+                break
+            test(result)
+        return result
 
 
 
@@ -320,8 +365,6 @@ class TestHolder(object):
     is concerned, this looks exactly like a unit test.
     """
 
-    implements(ITestCase)
-
     def __init__(self, description):
         """
         @param description: A string to be displayed L{TestResult}.
@@ -507,7 +550,7 @@ class TestLoader(object):
         return self._makeCase(method.im_class, method.__name__)
 
     def _makeCase(self, klass, methodName):
-        test = klass(methodName)
+        test = ITestCase(klass(methodName))
         test.forceGarbageCollection = self.forceGarbageCollection
         return test
 
@@ -567,7 +610,12 @@ class TestLoader(object):
         if not inspect.ismodule(module):
             warnings.warn("trial only supports doctesting modules")
             return
-        return doctest.DocTestSuite(module)
+        # XXX: We are going to change this to use the decorating system.
+        doctests = doctest.DocTestSuite(module)
+        suite = self.suiteFactory()
+        for test in doctests._tests:
+            suite.addTest(ITestCase(test))
+        return suite
 
     def loadAnything(self, thing, recurse=False):
         """
@@ -772,7 +820,6 @@ class TrialRunner(object):
         # decorate the suite with reactor cleanup and log starting
         # This should move out of the runner and be presumed to be
         # present
-        test = unittest.decorate(test, ITestCase)
         suite = TrialSuite([test])
         startTime = time.time()
         if self.mode == self.DRY_RUN:

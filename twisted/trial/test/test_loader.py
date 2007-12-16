@@ -6,7 +6,6 @@ import shutil
 from twisted.python import util
 from twisted.trial.test import packages
 from twisted.trial import runner, reporter, unittest
-from twisted.trial.itrial import ITestCase
 
 from twisted.python.modules import getModule
 
@@ -167,6 +166,7 @@ class LoaderTest(packages.SysPathManglingTest):
 
     def test_loadFailingMethod(self):
         # test added for issue1353
+        from twisted.trial import reporter
         import erroneous
         suite = self.loader.loadMethod(erroneous.TestRegularFail.test_fail)
         result = reporter.TestResult()
@@ -488,9 +488,6 @@ class PackageOrderingTest(packages.SysPathManglingTest):
         import uberpackage
         self.loader.sorter = sorter
         suite = self.loader.loadPackage(uberpackage, recurse=True)
-        # XXX: Work around strange, unexplained Zope crap.
-        # jml, 2007-11-15.
-        suite = unittest.decorate(suite, ITestCase)
         self.resultingTests = list(unittest._iterateTests(suite))
         manifest = list(self._trialSortAlgorithm(sorter))
         for number, (manifestTest, actualTest) in enumerate(
