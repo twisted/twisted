@@ -757,3 +757,88 @@ class EntropyTestCase(unittest.TestCase):
             "twisted.python.randbytes.secureRandom instead.",
             __file__, wrapper)
 
+
+
+class MPTestCase(unittest.TestCase):
+    """
+    Tests for L{common.getMP}.
+
+    @cvar getMP: a method providing a MP parser.
+    @type getMP: C{callable}
+    """
+    getMP = staticmethod(common.getMP)
+
+    if not Crypto:
+        skip = "can't run w/o PyCrypto"
+
+
+    def test_getMP(self):
+        """
+        L{common.getMP} should parse the a multiple precision integer from a
+        string: a 4-byte length followed by length bytes of the integer.
+        """
+        self.assertEquals(
+            self.getMP('\x00\x00\x00\x04\x00\x00\x00\x01'),
+            (1, ''))
+
+
+    def test_getMPBigInteger(self):
+        """
+        L{common.getMP} should be able to parse a big enough integer
+        (that doesn't fit on one byte).
+        """
+        self.assertEquals(
+            self.getMP('\x00\x00\x00\x04\x01\x02\x03\x04'),
+            (16909060, ''))
+
+
+    def test_multipleGetMP(self):
+        """
+        L{common.getMP} has the ability to parse multiple integer in the same
+        string.
+        """
+        self.assertEquals(
+            self.getMP('\x00\x00\x00\x04\x00\x00\x00\x01'
+                       '\x00\x00\x00\x04\x00\x00\x00\x02', 2),
+            (1, 2, ''))
+
+
+    def test_getMPRemainingData(self):
+        """
+        When more data than needed is sent to L{common.getMP}, it should return
+        the remaining data.
+        """
+        self.assertEquals(
+            self.getMP('\x00\x00\x00\x04\x00\x00\x00\x01foo'),
+            (1, 'foo'))
+
+
+    def test_notEnoughData(self):
+        """
+        When the string passed to L{common.getMP} doesn't even make 5 bytes,
+        it should raise a L{struct.error}.
+        """
+        self.assertRaises(struct.error, self.getMP, '\x02\x00')
+
+
+
+class PyMPTestCase(MPTestCase):
+    """
+    Tests for the python implementation of L{common.getMP}.
+    """
+    getMP = staticmethod(common.getMP_py)
+
+
+
+class GMPYMPTestCase(MPTestCase):
+    """
+    Tests for the gmpy implementation of L{common.getMP}.
+    """
+    getMP = staticmethod(common._fastgetMP)
+
+
+
+try:
+    import gmpy
+except ImportError:
+    GMPYMPTestCase.skip = "gmpy not available"

@@ -101,10 +101,10 @@ def _fastgetMP(data, count=1):
     mp = []
     c = 0
     for i in range(count):
-        l = struct.unpack('!L', data[c:c+4])[0]
-        mp.append(long(gmpy.mpz(data[c+4:c+l+4][::-1]+'\x00')))
-        c += l + 4
-    return mp + (data[c+4+l:],)
+        length = struct.unpack('!L', data[c:c+4])[0]
+        mp.append(long(gmpy.mpz(data[c + 4:c + 4 + length][::-1] + '\x00', 256)))
+        c += length + 4
+    return tuple(mp) + (data[c:],)
 
 def _fastMP(i):
     i2 = gmpy.mpz(i).binary()[::-1]
