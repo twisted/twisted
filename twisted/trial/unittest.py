@@ -16,7 +16,7 @@ from pprint import pformat
 
 from twisted.internet import defer, utils
 from twisted.python import components, failure, log, monkey
-from twisted.trial import itrial, util
+from twisted.trial import itrial, reporter, util
 
 pyunit = __import__('unittest')
 
@@ -1156,41 +1156,60 @@ class PyUnitResultAdapter(object):
 
 
 
-class TestResultDecorator(components.proxyForInterface(itrial.IReporter)):
+def suiteVisit(suite, visitor):
     """
-    Base class for TestResult decorators.
+    Visit each test in C{suite} with C{visitor}.
+
+    Deprecated in Twisted 2.6.
+
+    @param visitor: A callable which takes a single argument, the L{TestCase}
+    instance to visit.
+    @return: None
     """
+    warnings.warn("Test visitors deprecated in Twisted 2.6",
+                  category=DeprecationWarning)
+    for case in suite._tests:
+        visit = getattr(case, 'visit', None)
+        if visit is not None:
+            visit(visitor)
+        elif isinstance(case, pyunit.TestCase):
+            case = itrial.ITestCase(case)
+            case.visit(visitor)
+        elif isinstance(case, pyunit.TestSuite):
+            suiteVisit(case, visitor)
+        else:
+            case.visit(visitor)
 
 
 
-class _AdaptedReporter(TestResultDecorator):
+class TestSuite(pyunit.TestSuite):
     """
-    TestResult decorator that makes sure that addError only gets tests that
-    have been adapted with a particular test adapter.
+    Extend the standard library's C{TestSuite} with support for the visitor
+    pattern and a consistently overrideable C{run} method.
     """
 
-    def __init__(self, original, testAdapter):
+    visit = suiteVisit
+
+    def __call__(self, result):
+        return self.run(result)
+
+    def run(self, result):
         """
-        Construct an L{_AdaptedReporter}.
-
-        @param original: An {itrial.IReporter}.
-        @param testAdapter: A callable that returns an L{itrial.ITestCase}.
+        Call C{run} on every member of the suite.
         """
-        TestResultDecorator.__init__(self, original)
-        self.testAdapter = testAdapter
-
-    def addError(self, test, error):
-        """
-        See L{itrial.IReporter}.
-        """
-        test = self.testAdapter(test)
-        return self.original.addError(test, error)
+        # we implement this because Python 2.3 unittest defines this code
+        # in __call__, whereas 2.4 defines the code in run.
+        for test in self._tests:
+            if result.shouldStop:
+                break
+            test(result)
+        return result
 
 
 
-class _PyUnitTestCaseAdapter(components.proxyForInterface(itrial.ITestCase)):
+class TestDecorator(components.proxyForInterface(itrial.ITestCase)):
     """
-    Adapt from pyunit.TestCase to ITestCase.
+    Decorator for test cases.
     """
 
     implements(itrial.ITestCase)
@@ -1198,19 +1217,53 @@ class _PyUnitTestCaseAdapter(components.proxyForInterface(itrial.ITestCase)):
 
     def __call__(self, result):
         """
-        Run the test. See `itrial.ITestCase` for more information.
+        Run the unit test.
+
+        @param result: A TestResult object.
         """
         return self.run(result)
 
 
     def run(self, result):
         """
-        Run the test.
+        Run the unit test.
 
-        This wraps the result object with a decorator that ensures that the
-        result only gets tests wrapped with this adapter.
+        @param result: A TestResult object.
         """
-        return self.original.run(_AdaptedReporter(result, self.__class__))
+        return self.original.run(
+            reporter._AdaptedReporter(result, self.__class__))
+
+
+
+def decorate(test, decorator):
+    """
+    Decorate all test cases in C{test} with C{decorator}.
+
+    C{test} can be a test case or a test suite. If it is a test suite, then
+    the structure of the suite is preserved.
+
+    L{decorate} tries to preserve the class of the test suites it finds. To do
+    so, it reconstructs the suites and then adds the decorated tests.
+    L{decorate} assumes that suites passed to it can be constructed with no
+    parameters.
+    """
+
+    try:
+        tests = iter(test)
+    except TypeError:
+        return decorator(test)
+
+    suite = test.__class__()
+    for case in tests:
+        suite.addTest(decorate(case, decorator))
+    return suite
+
+
+
+class _PyUnitTestCaseAdapter(TestDecorator):
+    """
+    Adapt from pyunit.TestCase to ITestCase.
+    """
 
 
     def visit(self, visitor):

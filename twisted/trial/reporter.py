@@ -186,7 +186,16 @@ class TestResult(pyunit.TestResult, object):
 
 
 
-class UncleanWarningsReporterWrapper(proxyForInterface(itrial.IReporter)):
+class TestResultDecorator(proxyForInterface(itrial.IReporter)):
+    """
+    Base class for TestResult decorators.
+    """
+
+    implements(itrial.IReporter)
+
+
+
+class UncleanWarningsReporterWrapper(TestResultDecorator):
     """
     A wrapper for a reporter that converts L{util.DirtyReactorError}s
     to warnings.
@@ -206,6 +215,78 @@ class UncleanWarningsReporterWrapper(proxyForInterface(itrial.IReporter)):
             warnings.warn(error.getErrorMessage())
         else:
             self.original.addError(test, error)
+
+
+
+class _AdaptedReporter(TestResultDecorator):
+    """
+    TestResult decorator that makes sure that addError only gets tests that
+    have been adapted with a particular test adapter.
+    """
+
+    def __init__(self, original, testAdapter):
+        """
+        Construct an L{_AdaptedReporter}.
+
+        @param original: An {itrial.IReporter}.
+        @param testAdapter: A callable that returns an L{itrial.ITestCase}.
+        """
+        TestResultDecorator.__init__(self, original)
+        self.testAdapter = testAdapter
+
+
+    def addError(self, test, error):
+        """
+        See L{itrial.IReporter}.
+        """
+        test = self.testAdapter(test)
+        return self.original.addError(test, error)
+
+
+    def addExpectedFailure(self, test, failure, todo):
+        """
+        See L{itrial.IReporter}.
+        """
+        return self.original.addExpectedFailure(
+            self.testAdapter(test), failure, todo)
+
+
+    def addFailure(self, test, failure):
+        """
+        See L{itrial.IReporter}.
+        """
+        test = self.testAdapter(test)
+        return self.original.addFailure(test, failure)
+
+
+    def addSkip(self, test, skip):
+        """
+        See L{itrial.IReporter}.
+        """
+        test = self.testAdapter(test)
+        return self.original.addSkip(test, skip)
+
+
+    def addUnexpectedSuccess(self, test, todo):
+        """
+        See L{itrial.IReporter}.
+        """
+        test = self.testAdapter(test)
+        return self.original.addUnexpectedSuccess(test, todo)
+
+
+    def startTest(self, test):
+        """
+        See L{itrial.IReporter}.
+        """
+        return self.original.startTest(self.testAdapter(test))
+
+
+    def stopTest(self, test):
+        """
+        See L{itrial.IReporter}.
+        """
+        return self.original.stopTest(self.testAdapter(test))
 
 
 
@@ -824,7 +905,8 @@ class TreeReporter(Reporter):
         If the test is the first test in a new 'branch' of the tree, also
         write all of the parents in that branch.
         """
-        segments = [test.__class__.__module__, test.__class__.__name__]
+        segments = test.id().split('.')
+        segments = ['.'.join(segments[:-2]), segments[-2]]
         indentLevel = 0
         for seg in segments:
             if indentLevel < len(self._lastTest):
