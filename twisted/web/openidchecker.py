@@ -75,7 +75,7 @@ class OpenIDChecker(object):
     # XXX This line is untested
     credentialInterfaces = [IOpenIDCredentials]
 
-    def __init__(self, myURL, callbackURL, store):
+    def __init__(self, myURL, callbackURL, store, asynchronize=deferToThread):
         """
         @param myURL: The URL that this site is hosted at. This will be used to
             identify this site to the OpenID provider and end-user.
@@ -84,10 +84,13 @@ class OpenIDChecker(object):
             directed to redirect the user to this URL in order to complete the
             authentication procedure.
         @param store: A python-openid Store. See L{openid.store}.
+        @param asynchronize: A callable which takes a blocking function and
+            argumenst and makes it magically non-blocking.
         """
         self._myURL = myURL
         self._callbackURL = callbackURL
         self._store = store
+        self._asynchronize = asynchronize
 
     def requestAvatarId(self, credentials):
         """
@@ -128,7 +131,7 @@ class OpenIDChecker(object):
             credentials.request.finish()
 
         # XXX: Timeouts
-        authRequest = deferToThread(consumer.begin, credentials.openID)
+        authRequest = self._asynchronize(consumer.begin, credentials.openID)
         authRequest.addCallback(redirect)
         authRequest.addErrback(errorDuringBegin)
         authRequest.addCallback(waitForCallback)

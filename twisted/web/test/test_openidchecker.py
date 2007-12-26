@@ -1,5 +1,6 @@
 from twisted.trial.unittest import TestCase
 from twisted.internet.defer import Deferred, maybeDeferred, gatherResults
+from twisted.internet.threads import deferToThread
 from twisted.internet.task import LoopingCall, Clock
 from twisted.cred.error import UnauthorizedLogin
 from twisted.web.server import Request, Site, Session
@@ -11,22 +12,6 @@ from twisted.web.openidchecker import (OpenIDChecker, OpenIDCredentials,
 
 from openid.consumer.consumer import SUCCESS
 from openid.store.memstore import MemoryStore
-
-
-def replaceFunction(mocker, originalName, replacement):
-    """
-    Given the FQPN of the original function, replace it with C{replacement}.
-
-    @param mocker: The mocker
-    @param originalName: The name of the original function, like
-        C{twisted.internet.threads.deferToThread}.
-    @param replacement: The function to replace it with.
-    """
-    originalMock = mocker.replace(originalName, passthrough=False)
-    originalMock(ARGS, KWARGS)
-    mocker.call(replacement)
-    mocker.count(0, None) # allow any number of calls to the function
-
 
 
 class DummySession(Session):
@@ -68,8 +53,6 @@ class DummyRequest(Request):
 class OpenIDCheckerTest(MockerTestCase, TestCase):
     def setUp(self):
         self.oidStore = MemoryStore()
-        replaceFunction(self.mocker,
-                        "twisted.internet.threads.deferToThread", maybeDeferred)
         # Some handy sample data
         self.openID = "http://radix.example/"
         self.realm = "http://unittest.local/"
@@ -91,6 +74,14 @@ class OpenIDCheckerTest(MockerTestCase, TestCase):
         secondConsumer.complete(completeArgument, returnURL)
         self.mocker.result(completeResult)
 
+    def test_defaultAsynchronize(self):
+        """
+        The default asynchronizer should be L{deferToThread}, so that
+        authenticating with python-openid does not block the reactor.
+        """
+        checker = OpenIDChecker("foo", "bar", None)
+        self.assertIdentical(checker._asynchronize, deferToThread)
+
     def test_success(self):
         request = DummyRequest()
         class Response(object):
@@ -102,17 +93,18 @@ class OpenIDCheckerTest(MockerTestCase, TestCase):
                           {"WHAT": "foo"}, completeResult)
         self.mocker.replay()
 
-        checker = OpenIDChecker(self.realm, self.returnURL, self.oidStore)
+        checker = OpenIDChecker(self.realm, self.returnURL, self.oidStore,
+                                asynchronize=maybeDeferred)
         credentials = OpenIDCredentials(request, self.openID, self.destination)
         result = checker.requestAvatarId(credentials)
 
         def pingBack(providerURL):
             self.assertEquals(providerURL, self.openIDProviderURL)
-            response_request = DummyRequest()
-            response_request.session = request.session
-            response_request.args = {"WHAT": ["foo"]}
+            responseRequest = DummyRequest()
+            responseRequest.session = request.session
+            responseRequest.args = {"WHAT": ["foo"]}
             resource = OpenIDCallbackHandler(self.oidStore, checker)
-            resource.render_GET(response_request)
+            resource.render_GET(responseRequest)
 
         request.redirectDeferred.addCallback(pingBack)
         result.addCallback(self.assertEquals, self.openID)
@@ -124,7 +116,8 @@ class OpenIDCheckerTest(MockerTestCase, TestCase):
         UnauthorizedLogin will be fired.
         """
         request = DummyRequest()
-        checker = OpenIDChecker(self.realm, self.returnURL, self.oidStore)
+        checker = OpenIDChecker(self.realm, self.returnURL, self.oidStore,
+                                asynchronize=maybeDeferred)
         credentials = OpenIDCredentials(request, self.openID, self.destination)
 
         consumerFactory = self.mocker.replace(
