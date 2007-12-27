@@ -48,7 +48,6 @@ class OpenIDAuthStart(Resource):
 
     def render_POST(self, request):
         openid = request.args["openid"][0]
-        print "authenticating", openid
         credentials = OpenIDCredentials(request, openid, "UNUSED")
         # Calling login will basically take control of the request, so we
         # shouldn't do anything else with it.

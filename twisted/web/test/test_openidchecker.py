@@ -7,7 +7,7 @@ from twisted.web.server import Request, Site, Session
 from twisted.web.resource import Resource
 
 from twisted.web.openidchecker import (OpenIDChecker, OpenIDCredentials,
-                                       OpenIDCallbackHandler, IOpenIDSessionTag)
+                                       OpenIDCallbackHandler)
 
 from openid.consumer.consumer import SUCCESS, Consumer
 from openid.store.memstore import MemoryStore
@@ -51,34 +51,113 @@ class DummyRequest(Request):
 
 
 
+class StoreMismatchError(Exception):
+    """
+    Raised when you haven't got your stores straight.
+    """
+
+
+
+class FakeConsumerFactory(object):
+    """
+    A configurable fake implementation of L{Consumer}'s interface.
+
+    @ivar redirects: A list of two-tuples of realm and callback URL. This will
+        be populated by calls to C{redirectURL} on the auth request.
+    @ivar completions: A list of two-tuples of arguments and callback URL. This
+        will be populated by calls to C{complete} on the consumer.
+    """
+
+    def __init__(self, store):
+        """
+        @param store: Only used for assertion purposes. The store passed to
+            L{__call__} must be the same as this store.
+        """
+        self.identities = {}
+        self.brokenIdentities = set()
+        self.store = store
+        self.redirects = []
+        self.completions = []
+
+
+    def addSuccessfulIdentity(self, identity, provider):
+        """
+        Add an identity for which authentication will be successful.
+        """
+        self.identities[identity] = provider
+
+
+    def addBrokenIdentity(self, identity):
+        """
+        Add an identity for which looking up the provider will raise an
+        exception.
+        """
+        self.brokenIdentities.add(identity)
+
+
+    def __call__(self, session, store):
+        """
+        Instantiate and return a L{FakeConsumer} which will act in the
+        configured way.
+
+        If the passed store is not the same as the preconfigured one,
+        L{StoreMismatchError} will be raised.
+        """
+        if store is not self.store:
+            raise StoreMismatchError(
+                "%r is not the same store as the configured %r"
+                % (store, self.store))
+        return FakeConsumer(self, session, store)
+
+
+
 class FakeConsumer(object):
 
-    def __init__(self, session, store):
+    def __init__(self, consumerFactory, session, store):
+        self.consumerFactory = consumerFactory
         self.session = session
         self.store = store
 
+
     def begin(self, openid):
+        if openid in self.consumerFactory.brokenIdentities:
+            1 / 0
         self.session["openid"] = openid
-        return FakeAuthRequest()
+        return FakeAuthRequest(self.consumerFactory, openid)
+
 
     def complete(self, args, callbackURL):
+        self.consumerFactory.completions.append((args, callbackURL))
         self.completePostData = args
         self.callbackURL = callbackURL
-        return Response(SUCCESS, self.session["openid"])
-
-
-
-class BrokenBeginConsumer(FakeConsumer):
-    def begin(self, openid):
-        1 / 0
+        openid = self.session["openid"]
+        if openid in self.consumerFactory.identities:
+            return Response(SUCCESS, self.session["openid"])
 
 
 
 class FakeAuthRequest(object):
-    def redirectURL(self, myURL, callbackURL):
-        self.myURL = myURL
-        self.callbackURL = callbackURL
-        return "URL"
+    """
+    An L{AuthRequest}-like object.
+    """
+
+    def __init__(self, consumerFactory, openid):
+        """
+        @param consumerFactory: The L{FakeConsumerFactory} to record input URLs
+            to.
+        """
+        self.consumerFactory = consumerFactory
+        self.openid = openid
+
+
+    def redirectURL(self, realm, callbackURL):
+        """
+        Record the arguments to the consumer factory's C{redirects} list, and
+        return the provider URL that was associated with the identity with the
+        consumer factory's C{addSuccessfulIdentity}.
+        """
+        self.consumerFactory.redirects.append((realm, callbackURL))
+        return self.consumerFactory.identities[self.openid]
 
 
 
@@ -97,21 +176,8 @@ class OpenIDCheckerTest(TestCase):
         self.realm = "http://unittest.local/"
         self.returnURL = "http://unittest.local/return/"
         self.destination = "http://unittest.local/destination/"
-        self.openIDProviderURL = "http://unittest.provider/"
+        self.openIDProvider = "http//openid.provider/"
 
-#     def mockConsumer(self, sessionData, openID, realm, returnURL,
-#                      openIDProviderURL, completeArgument, completeResult):
-#         consumerFactory = self.mocker.replace(
-#             "openid.consumer.consumer.Consumer", passthrough=False)
-#         consumerMock = consumerFactory(ANY, self.oidStore)
-
-#         authRequest = consumerMock.begin(openID)
-#         authRequest.redirectURL(realm, returnURL)
-#         self.mocker.result(openIDProviderURL)
-
-#         secondConsumer = consumerFactory(ANY, self.oidStore)
-#         secondConsumer.complete(completeArgument, returnURL)
-#         self.mocker.result(completeResult)
 
     def test_defaultAsynchronize(self):
         """
@@ -120,6 +186,7 @@ class OpenIDCheckerTest(TestCase):
         """
         checker = OpenIDChecker("foo", "bar", None)
         self.assertIdentical(checker._asynchronize, deferToThread)
+
 
     def test_defaultConsumerFactory(self):
         """
@@ -130,34 +197,49 @@ class OpenIDCheckerTest(TestCase):
         checker = OpenIDChecker("foo", "bar", None)
         self.assertIdentical(checker._consumerFactory, Consumer)
 
+
     def test_success(self):
         request = DummyRequest()
-
-
-#         self.mockConsumer({}, self.openID, self.realm,
-#                           self.returnURL, self.openIDProviderURL,
-#                           {"WHAT": "foo"}, completeResult)
-#         self.mocker.replay()
+        factory = FakeConsumerFactory(self.oidStore)
+        factory.addSuccessfulIdentity(self.openID, self.openIDProvider)
 
         checker = OpenIDChecker(self.realm, self.returnURL, self.oidStore,
                                 asynchronize=maybeDeferred,
-                                consumerFactory=FakeConsumer)
+                                consumerFactory=factory)
         credentials = OpenIDCredentials(request, self.openID, self.destination)
         result = checker.requestAvatarId(credentials)
 
-        def pingBack(providerURL):
-            self.assertEquals(providerURL, "URL")
+        def pingBack(redirectedURL):
+            """
+            The redirect to the provider has been done. Simulate the user being
+            redirected back.
+            """
+            # Did the checker pass the correct arguments to redirectURL?
+            self.assertEquals(factory.redirects,
+                              [(self.realm, self.returnURL)])
+            # Did the checker redirect to the URL returned from redirectURL?
+            self.assertEquals(redirectedURL, self.openIDProvider)
+
+            # Now let's trigger the callback handler.
             responseRequest = DummyRequest()
             responseRequest.session = request.session
             responseRequest.args = {"WHAT": ["foo"]}
             resource = OpenIDCallbackHandler(
                 self.oidStore, checker,
-                consumerFactory=FakeConsumer)
-            resource.render_GET(responseRequest)
+                consumerFactory=factory)
+            # XXX Assert something about render_GET result
+            result = resource.render_GET(responseRequest)
+            # Did the callback handler pass reasonable arguments to complete?
+            self.assertEquals(factory.completions, [({"WHAT": "foo"},
+                                                     self.returnURL)])
 
         request.redirectDeferred.addCallback(pingBack)
+
+        # The avatar ID is the OpenID.
         result.addCallback(self.assertEquals, self.openID)
+
         return gatherResults([result, request.redirectDeferred])
+
 
     def test_openIDLookupError(self):
         """
@@ -165,9 +247,11 @@ class OpenIDCheckerTest(TestCase):
         UnauthorizedLogin will be fired.
         """
         request = DummyRequest()
+        factory = FakeConsumerFactory(self.oidStore)
+        factory.addBrokenIdentity(self.openID)
         checker = OpenIDChecker(self.realm, self.returnURL, self.oidStore,
                                 asynchronize=maybeDeferred,
-                                consumerFactory=BrokenBeginConsumer)
+                                consumerFactory=factory)
         credentials = OpenIDCredentials(request, self.openID, self.destination)
 
         result = checker.requestAvatarId(credentials)
