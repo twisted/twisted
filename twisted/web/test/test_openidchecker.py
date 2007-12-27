@@ -227,11 +227,14 @@ class OpenIDCheckerTest(TestCase):
             resource = OpenIDCallbackHandler(
                 self.oidStore, checker,
                 consumerFactory=factory)
-            # XXX Assert something about render_GET result
-            result = resource.render_GET(responseRequest)
+            resource.render_GET(responseRequest)
             # Did the callback handler pass reasonable arguments to complete?
             self.assertEquals(factory.completions, [({"WHAT": "foo"},
                                                      self.returnURL)])
+            # The callback handler should redirect the request to the
+            # destination as specified by the credentials.
+            return responseRequest.redirectDeferred.addCallback(
+                self.assertEquals, self.destination)
 
         request.redirectDeferred.addCallback(pingBack)
 

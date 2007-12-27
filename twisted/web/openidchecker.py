@@ -34,16 +34,29 @@ class IOpenIDCredentials(ICredentials):
         authentication succeeds.
         """)
 
-class IOpenIDSessionTag(Interface):
+
+
+class IOpenIDSession(Interface):
     """
-    An empty interface that will point to a dict object associated with a
-    session.
+    A session tag that will point to the python-openid session data.
     """
 
-class IOpenIDSessionResultTag(Interface):
+
+
+class IRequestAvatarIDDeferred(Interface):
     """
-    An empty interface that will point to a Deferred object.
+    A session tag that will point to the Deferred object that was returned from
+    L{OpenIDCredentials.requestAvatarId}.
     """
+
+
+
+class IDestinationURL(Interface):
+    """
+    A session tag that will point to the URL that the user should *ultimately*
+    be redirected to.
+    """
+
 
 
 class OpenIDCredentials(object):
@@ -60,6 +73,7 @@ class OpenIDCredentials(object):
         """
         self.request = request
         self.openID = openID
+        self.destinationURL = destinationURL
 
 
 class OpenIDChecker(object):
@@ -105,7 +119,7 @@ class OpenIDChecker(object):
         @type credentials: L{IOpenIDCredentials}
         """
         session = {}
-        credentials.request.getSession().setComponent(IOpenIDSessionTag,
+        credentials.request.getSession().setComponent(IOpenIDSession,
                                                       session)
         consumer = self._consumerFactory(session, self._store)
 
@@ -126,8 +140,9 @@ class OpenIDChecker(object):
             The Deferred will fire with the OpenID.
             """
             avatarID = Deferred()
-            credentials.request.getSession().setComponent(
-                IOpenIDSessionResultTag, avatarID)
+            session = credentials.request.getSession()
+            session.setComponent(IRequestAvatarIDDeferred, avatarID)
+            session.setComponent(IDestinationURL, credentials.destinationURL)
             return avatarID
 
         def redirect(authRequest):
@@ -169,13 +184,14 @@ class OpenIDCallbackHandler(Resource):
         args = {}
         for k, v in request.args.items():
             args[k] = v[0]
-        sessionData = request.getSession(IOpenIDSessionTag)
+        sessionData = request.getSession(IOpenIDSession)
         consumer = self._consumerFactory(sessionData, self._store)
         result = consumer.complete(args, self._checker._callbackURL)
-        d = request.getSession(IOpenIDSessionResultTag)
+        d = request.getSession(IRequestAvatarIDDeferred)
         if result.status == SUCCESS:
             d.callback(result.identity_url)
         else:
             d.errback(UnauthorizedLogin())
-        # XXX add redirect to credentials.destinationURL
+        destination = request.getSession(IDestinationURL)
+        request.redirect(destination)
 
