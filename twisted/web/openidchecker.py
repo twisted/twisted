@@ -101,9 +101,9 @@ class OpenIDChecker(object):
             authentication procedure.
         @param store: A python-openid Store. See L{openid.store}.
         @param asynchronize: A callable which takes a blocking function and
-            argumenst and makes it magically non-blocking. Only pass in unit
+            argumenst and makes it magically non-blocking. Only specify in unit
             tests.
-        @param consumerFactory: A thing like L{Consumer}. Only pass in unit
+        @param consumerFactory: A thing like L{Consumer}. Only specify in unit
             tests.
         """
         self._myURL = myURL
@@ -112,9 +112,15 @@ class OpenIDChecker(object):
         self._asynchronize = asynchronize
         self._consumerFactory = consumerFactory
 
+
     def requestAvatarId(self, credentials):
         """
         Kick off the OpenID authentication process.
+
+        This method will redirect and finish the request associated with the
+        OpenID credentials. That means you should return
+        L{twisted.web.server.NOT_DONE_YET} from your C{render} method that
+        calls C{portal.login}.
 
         @type credentials: L{IOpenIDCredentials}
         """
@@ -146,9 +152,12 @@ class OpenIDChecker(object):
             return avatarID
 
         def redirect(authRequest):
+            """
+            Redirect the request to the OpenID provider.
+            """
             url = authRequest.redirectURL(self._myURL, self._callbackURL)
             credentials.request.redirect(url)
-            # UNTESTED!
+            # XXX UNTESTED!
             credentials.request.finish()
 
         # XXX: Timeouts
