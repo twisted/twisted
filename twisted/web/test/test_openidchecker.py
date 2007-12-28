@@ -36,11 +36,16 @@ class DummySession(Session):
 class DummyRequest(Request):
     """
     A request which can be used for testing.
+
+    @ivar redirectDeferred: A Deferred which will be fired back when this
+        request is redirected.
+    @ivar finishDeferred: '' '' '' '' '' '' '' '' '' '' '' finished.
     """
 
     def __init__(self):
         Request.__init__(self, None, True)
         self.redirectDeferred = Deferred()
+        self.finishDeferred = Deferred()
         self.sitepath = []
         self.site = Site(Resource())
         self.site.sessionFactory = DummySession
@@ -48,6 +53,9 @@ class DummyRequest(Request):
 
     def redirect(self, url):
         self.redirectDeferred.callback(url)
+
+    def finish(self):
+        self.finishDeferred.callback(None)
 
 
 
@@ -241,7 +249,11 @@ class OpenIDCheckerTest(TestCase):
         # The avatar ID is the OpenID.
         result.addCallback(self.assertEquals, self.openID)
 
-        return gatherResults([result, request.redirectDeferred])
+        # The login() Defered must fire, the request must be redirected, and
+        # the request must finish:
+        return gatherResults([result,
+                              request.redirectDeferred,
+                              request.finishDeferred])
 
 
     def test_openIDLookupError(self):
