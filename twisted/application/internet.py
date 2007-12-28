@@ -1,11 +1,10 @@
 # -*- test-case-name: twisted.test.test_application,twisted.test.test_cooperator -*-
 
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
-
-"""Reactor-based Services
+"""
+Reactor-based Services
 
 Here are services to run clients, servers and periodic services using
 the reactor.
@@ -47,30 +46,52 @@ class _VolatileDataService(service.Service):
     def __getstate__(self):
         d = service.Service.__getstate__(self)
         for attr in self.volatile:
-            if d.has_key(attr):
+            if attr in d:
                 del d[attr]
         return d
 
-class _AbstractServer(_VolatileDataService):
 
-    privileged = True
+
+class _AbstractServer(_VolatileDataService):
+    """
+    @cvar volatile: list of attribute to remove from pickling.
+    @type volatile: C{list}
+
+    @ivar method: the type of method to call on the reactor, one of B{TCP},
+        B{UDP}, B{SSL} or B{UNIX}.
+    @type method: C{str}
+
+    @ivar reactor: the current running reactor.
+    @type reactor: a provider of C{IReactorTCP}, C{IReactorUDP},
+        C{IReactorSSL} or C{IReactorUnix}.
+
+    @ivar _port: instance of port set when the service is started.
+    @type _port: a provider of C{IListeningPort}.
+    """
+
     volatile = ['_port']
     method = None
+    reactor = None
 
     _port = None
 
     def __init__(self, *args, **kwargs):
         self.args = args
+        if 'reactor' in kwargs:
+            self.reactor = kwargs.pop("reactor")
         self.kwargs = kwargs
+
 
     def privilegedStartService(self):
         service.Service.privilegedStartService(self)
         self._port = self._getPort()
 
+
     def startService(self):
         service.Service.startService(self)
         if self._port is None:
             self._port = self._getPort()
+
 
     def stopService(self):
         service.Service.stopService(self)
@@ -81,24 +102,56 @@ class _AbstractServer(_VolatileDataService):
             del self._port
             return d
 
+
     def _getPort(self):
-        from twisted.internet import reactor
-        return getattr(reactor, 'listen'+self.method)(*self.args, **self.kwargs)
+        """
+        Wrapper around the appropriate listen method of the reactor.
+
+        @return: the port object returned by the listen method.
+        @rtype: an object providing L{IListeningPort}.
+        """
+        if self.reactor is None:
+            from twisted.internet import reactor
+        else:
+            reactor = self.reactor
+        return getattr(reactor, 'listen%s' % (self.method,))(
+            *self.args, **self.kwargs)
+
+
 
 class _AbstractClient(_VolatileDataService):
+    """
+    @cvar volatile: list of attribute to remove from pickling.
+    @type volatile: C{list}
 
+    @ivar method: the type of method to call on the reactor, one of B{TCP},
+        B{UDP}, B{SSL} or B{UNIX}.
+    @type method: C{str}
+
+    @ivar reactor: the current running reactor.
+    @type reactor: a provider of C{IReactorTCP}, C{IReactorUDP},
+        C{IReactorSSL} or C{IReactorUnix}.
+
+    @ivar _connection: instance of connection set when the service is started.
+    @type _connection: a provider of C{IConnector}.
+    """
     volatile = ['_connection']
     method = None
+    reactor = None
 
     _connection = None
 
     def __init__(self, *args, **kwargs):
         self.args = args
+        if 'reactor' in kwargs:
+            self.reactor = kwargs.pop("reactor")
         self.kwargs = kwargs
+
 
     def startService(self):
         service.Service.startService(self)
         self._connection = self._getConnection()
+
 
     def stopService(self):
         service.Service.stopService(self)
@@ -106,10 +159,20 @@ class _AbstractClient(_VolatileDataService):
             self._connection.disconnect()
             del self._connection
 
+
     def _getConnection(self):
-        from twisted.internet import reactor
-        return getattr(reactor, 'connect'+self.method)(*self.args,
-                                                       **self.kwargs)
+        """
+        Wrapper around the appropriate connect method of the reactor.
+
+        @return: the port object returned by the connect method.
+        @rtype: an object providing L{IConnector}.
+        """
+        if self.reactor is None:
+            from twisted.internet import reactor
+        else:
+            reactor = self.reactor
+        return getattr(reactor, 'connect%s' % (self.method,))(
+            *self.args, **self.kwargs)
 
 
 

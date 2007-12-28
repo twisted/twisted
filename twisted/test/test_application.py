@@ -532,6 +532,84 @@ class TestInternet2(unittest.TestCase):
                 self.assertEqual(service.IService(o), o)
 
 
+    def test_reactorParametrizationInServer(self):
+        """
+        L{internet._AbstractServer} supports a C{reactor} keyword argument
+        that can be used to parametrize the reactor used to listen for
+        connections.
+        """
+        listen = []
+        class FakeReactor(object):
+            def listenTCP(self, portNumber, factory):
+                listen.append((portNumber, factory))
+        reactor = FakeReactor()
+
+        factory = object()
+        t = internet.TCPServer(1234, factory, reactor=reactor)
+        t.startService()
+        self.assertEquals(listen, [(1234, factory)])
+
+
+    def test_reactorParametrizationInClient(self):
+        """
+        L{internet._AbstractClient} supports a C{reactor} keyword arguments
+        that can be used to parametrize the reactor used to create new client
+        connections.
+        """
+        connect = []
+        class FakeReactor(object):
+            def connectTCP(self, ip, portNumber, factory):
+                connect.append((ip, portNumber, factory))
+        reactor = FakeReactor()
+
+        factory = object()
+        t = internet.TCPClient('127.0.0.1', 1234, factory, reactor=reactor)
+        t.startService()
+        self.assertEquals(connect, [('127.0.0.1', 1234, factory)])
+
+
+    def test_reactorParametrizationInServerMultipleStart(self):
+        """
+        Like L{test_reactorParametrizationInServer}, but stop and restart the
+        service and check that the given reactor is still used.
+        """
+        listen = []
+        class FakeReactor(object):
+            def listenTCP(self, portNumber, factory):
+                listen.append((portNumber, factory))
+        reactor = FakeReactor()
+
+        factory = object()
+        t = internet.TCPServer(1234, factory, reactor=reactor)
+        t.startService()
+        self.assertEquals(listen, [(1234, factory)])
+        t.stopService()
+        t.startService()
+        self.assertEquals(listen, [(1234, factory), (1234, factory)])
+
+
+    def test_reactorParametrizationInClientMultipleStart(self):
+        """
+        Like L{test_reactorParametrizationInClient}, but stop and restart the
+        service and check that the given reactor is still used.
+        """
+        connect = []
+        class FakeReactor(object):
+            def connectTCP(self, ip, portNumber, factory):
+                connect.append((ip, portNumber, factory))
+        reactor = FakeReactor()
+
+        factory = object()
+        t = internet.TCPClient('127.0.0.1', 1234, factory, reactor=reactor)
+        t.startService()
+        self.assertEquals(connect, [('127.0.0.1', 1234, factory)])
+        t.stopService()
+        t.startService()
+        self.assertEquals(connect, [('127.0.0.1', 1234, factory),
+                                    ('127.0.0.1', 1234, factory)])
+
+
+
 class TestTimerBasic(unittest.TestCase):
 
     def testTimerRuns(self):
