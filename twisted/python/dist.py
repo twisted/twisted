@@ -7,7 +7,6 @@ Maintainer: U{Christopher Armstrong<mailto:radix@twistedmatrix.com>}
 """
 
 import sys, os
-from distutils import sysconfig
 from distutils.command import build_scripts, install_data, build_ext, build_py
 from distutils.errors import CompileError
 from distutils import core
@@ -310,4 +309,6 @@ class build_ext_twisted(build_ext.build_ext):
         """
         self.compiler.announce("checking for %s ..." % header_name, 0)
         return self._compile_helper("#include <%s>\n" % header_name)
+
+
 

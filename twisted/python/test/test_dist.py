@@ -8,13 +8,13 @@ Tests for parts of our release automation system.
 
 import os
 
-from twisted.trial import unittest
+from twisted.trial.unittest import TestCase
 
 from twisted.python import dist
 
 
 
-class GetVersionTest(unittest.TestCase):
+class GetVersionTest(TestCase):
     """
     Tests for L{dist.getVersion}.
     """
@@ -51,7 +51,7 @@ version = versions.Version("twisted.blat", 9, 8, 10)
         self.assertEquals(dist.getVersion("blat", base=self.dirname), "9.8.10")
 
 
-class GetScriptsTest(unittest.TestCase):
+class GetScriptsTest(TestCase):
 
     def test_scriptsInSVN(self):
         """

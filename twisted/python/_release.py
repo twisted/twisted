@@ -17,7 +17,9 @@ import twisted
 from twisted.python.filepath import FilePath
 from twisted.python.versions import Version
 
-
+# This import is an example of why you shouldn't use this module unless you're
+# radix
+from twisted.lore.scripts import lore
 
 # The offset between a year and the corresponding major version number.
 VERSION_OFFSET = 2000
@@ -164,3 +166,108 @@ def replaceInFile(filename, oldToNew):
     f.close()
     os.rename(filename+'.new', filename)
     os.unlink(filename+'.bak')
+
+
+
+class NoDocumentsFound(Exception):
+    """
+    Raised when no input documents are found.
+    """
+
+
+class DocBuilder(object):
+    """
+    Generate documentation for projects.
+    """
+
+    def build(self, version, resourceDir, docDir, template, deleteInput=False):
+        """
+        Build the documentation in C{docDir} with Lore.
+
+        Input files ending in .xhtml will be considered. Output will written as
+        .html files.
+
+        @param version: the version of the documentation to pass to lore.
+        @type version: C{str}
+
+        @param resourceDir: The directory which contains the toplevel index and
+            stylesheet file for this section of documentation.
+        @type resourceDir: L{FilePath}
+
+        @param docDir: The directory of the documentation.
+        @type docDir: L{FilePath}
+
+        @param template: The template used to generate the documentation.
+        @type template: L{FilePath}
+
+        @param deleteInput: If True, the input documents will be deleted after
+            their output is generated.
+        @type deleteInput: C{bool}
+
+        @raise NoDocumentsFound: When there are no .xhtml files in the given
+            C{docDir}.
+        """
+        linkrel = self.getLinkrel(resourceDir, docDir)
+        options = lore.Options()
+        inputFiles = docDir.globChildren("*.xhtml")
+        filenames = [x.path for x in inputFiles]
+        if not filenames:
+            raise NoDocumentsFound("No input documents found in %s" % (docDir,))
+        arguments = ["--null",
+                     "--config", "template=%s" % (template.path,),
+                     "--config", "ext=.html",
+                     "--config", "version=%s" % (version,),
+                     "--linkrel", linkrel] + filenames
+        options.parseOptions(arguments)
+        lore.runGivenOptions(options)
+        if deleteInput:
+            for inputFile in inputFiles:
+                inputFile.remove()
+
+
+    def getLinkrel(self, resourceDir, docDir):
+        """
+        Calculate a value appropriate for Lore's --linkrel option.
+
+        Lore's --linkrel option defines how to 'find' documents that are
+        linked to from TEMPLATE files (NOT document bodies). That is, it's a
+        prefix for links ('a' and 'link') in the template.
+
+        @param resourceDir: The directory which contains the toplevel index and
+            stylesheet file for this section of documentation.
+        @type resourceDir: L{FilePath}
+
+        @param docDir: The directory containing documents that must link to
+            C{resourceDir}.
+        @type docDir: L{FilePath}
+        """
+        if resourceDir != docDir:
+            return '/'.join(filePathDelta(docDir, resourceDir)) + "/"
+        else:
+            return ""
+
+
+
+def filePathDelta(origin, destination):
+    """
+    Return a list of strings that represent C{destination} as a path relative
+    to C{origin}.
+
+    It is assumed that both paths represent directories, not files. That is to
+    say, the delta of FilePath /foo/bar to FilePath /foo/baz will be C{../baz},
+    not C{baz}.
+
+    @type origin: L{FilePath}
+    @param origin: The origin of the relative path.
+
+    @type destination: L{FilePath}
+    @param destination: The destination of the relative path.
+    """
+    commonItems = 0
+    path1 = origin.path.split(os.sep)
+    path2 = destination.path.split(os.sep)
+    for elem1, elem2 in zip(path1, path2):
+        if elem1 == elem2:
+            commonItems += 1
+    path = [".."] * (len(path1) - commonItems)
+    return path + path2[commonItems:]

@@ -1,6 +1,6 @@
 import operator
 import os
-from twisted.trial import unittest
+from twisted.trial.unittest import TestCase
 
 from datetime import date
 
@@ -8,13 +8,16 @@ from twisted.internet import reactor
 from twisted.python import release, log
 from twisted.python.filepath import FilePath
 from twisted.python.util import dsu
-from twisted.python._release import _changeVersionInFile, getNextVersion, \
-    findTwistedProjects, replaceInFile, replaceProjectVersion, \
-    updateTwistedVersionInformation, Project, VERSION_OFFSET
 from twisted.python.versions import Version
+from twisted.python._release import _changeVersionInFile, getNextVersion
+from twisted.python._release import findTwistedProjects, replaceInFile
+from twisted.python._release import replaceProjectVersion
+from twisted.python._release import updateTwistedVersionInformation, Project
+from twisted.python._release import VERSION_OFFSET, DocBuilder
+from twisted.python._release import NoDocumentsFound, filePathDelta
 
 
-class ChangeVersionTest(unittest.TestCase):
+class ChangeVersionTest(TestCase):
     """
     Twisted has the ability to change versions.
     """
@@ -81,7 +84,7 @@ class ChangeVersionTest(unittest.TestCase):
 
 
 
-class ProjectTest(unittest.TestCase):
+class ProjectTest(TestCase):
     """
     There is a first-class representation of a project.
     """
@@ -210,7 +213,7 @@ class ProjectTest(unittest.TestCase):
 
 
 
-class UtilityTest(unittest.TestCase):
+class UtilityTest(TestCase):
     """
     Tests for various utility functions for releasing.
     """
@@ -254,7 +257,7 @@ class UtilityTest(unittest.TestCase):
 
 
 
-class VersionWritingTest(unittest.TestCase):
+class VersionWritingTest(TestCase):
     """
     Tests for L{replaceProjectVersion}.
     """
@@ -270,5 +273,240 @@ class VersionWritingTest(unittest.TestCase):
         ns = {'__name___': 'twisted.test_project'}
         execfile("test_project", ns)
         self.assertEquals(ns["version"].base(), "0.82.7")
+
+
+class DocBuilderTestCase(TestCase):
+    """
+    Tests for L{DocBuilder}.
+
+    Note for future maintainers: The exact byte equality assertions throughout
+    this suite may need to be updated due to minor differences in lore. They
+    should not be taken to mean that Lore must maintain the same byte format
+    forever. Feel free to update the tests when Lore changes, but please be
+    careful.
+    """
+
+    template = '''
+    <html>
+    <head><title>Yo:</title></head>
+    <body>
+    <div class="body" />
+    <a href="index.html">Index</a>
+    <span class="version">Version: </span>
+    </body>
+    </html>
+    '''
+
+
+    def setUp(self):
+        """
+        Set up a few instance variables that will be useful.
+
+        @ivar builder: A plain L{DocBuilder}.
+        @ivar docCounter: An integer to be used as a counter by the
+            C{getArbitrary...} methods.
+        @ivar howtoDir: A L{FilePath} representing a directory to be used for
+            containing Lore documents.
+        @ivar templateFile: A L{FilePath} representing a file with
+            C{self.template} as its content.
+        """
+        self.builder = DocBuilder()
+        self.docCounter = 0
+        self.howtoDir = FilePath(self.mktemp())
+        self.howtoDir.createDirectory()
+        self.templateFile = self.howtoDir.child("template.tpl")
+        self.templateFile.setContent(self.template)
+
+
+    def getArbitraryLoreInput(self):
+        """
+        Get an arbitrary, unique (for this test case) string of lore input.
+        """
+        template = (
+            '<html><head><title>Hi! %(count)s</title></head>'
+            '<body>Hi! %(count)s</body></html>')
+        return template % {"count": self.docCounter}
+
+
+    def getArbitraryLoreInputAndOutput(self, version):
+        """
+        Get an input document along with expected output for lore run on that
+        output document, assuming an appropriately-specified C{self.template}.
+
+        @return: A two-tuple of input and expected output.
+        @rtype: C{(str, str)}.
+        """
+        self.docCounter += 1
+        return (self.getArbitraryLoreInput(),
+                '<?xml version="1.0"?>'
+                '<html><head><title>Yo:Hi! %(count)s</title></head>'
+                '<body><div class="content">Hi! %(count)s</div>'
+                '<a href="index.html">Index</a>'
+                '<span class="version">Version: %(version)s</span>'
+                '</body></html>'
+                % {"count": self.docCounter, "version": version})
+
+
+    def test_build(self):
+        """
+        The L{DocBuilder} runs lore on all .xhtml files within a directory.
+        """
+        version = "1.2.3"
+        input1, output1 = self.getArbitraryLoreInputAndOutput(version)
+        input2, output2 = self.getArbitraryLoreInputAndOutput(version)
+
+        self.howtoDir.child("one.xhtml").setContent(input1)
+        self.howtoDir.child("two.xhtml").setContent(input2)
+
+        self.builder.build(version, self.howtoDir, self.howtoDir,
+                           self.templateFile)
+        out1 = self.howtoDir.child('one.html')
+        out2 = self.howtoDir.child('two.html')
+        self.assertEquals(out1.getContent(), output1)
+        self.assertEquals(out2.getContent(), output2)
+
+
+    def test_noDocumentsFound(self):
+        """
+        The C{build} method raises L{NoDocumentsFound} if there are no
+        .xhtml files in the given directory.
+        """
+        self.assertRaises(
+            NoDocumentsFound,
+            self.builder.build, "1.2.3", self.howtoDir, self.howtoDir,
+            self.templateFile)
+
+
+    def test_parentDocumentLinking(self):
+        """
+        The L{DocBuilder} generates correct links from documents to
+        template-generated links like stylesheets and index backreferences.
+        """
+        input = self.getArbitraryLoreInput()
+        tutoDir = self.howtoDir.child("tutorial")
+        tutoDir.createDirectory()
+        tutoDir.child("child.xhtml").setContent(input)
+        self.builder.build("1.2.3", self.howtoDir, tutoDir, self.templateFile)
+        outFile = tutoDir.child('child.html')
+        self.assertIn('<a href="../index.html">Index</a>',
+                      outFile.getContent())
+
+
+    def test_siblingDirectoryDocumentLinking(self):
+        """
+        It is necessary to generate documentation in a directory foo/bar where
+        stylesheet and indexes are located in foo/baz. Such resources should be
+        appropriately linked to.
+        """
+        input = self.getArbitraryLoreInput()
+        resourceDir = self.howtoDir.child("resources")
+        docDir = self.howtoDir.child("docs")
+        docDir.createDirectory()
+        docDir.child("child.xhtml").setContent(input)
+        self.builder.build("1.2.3", resourceDir, docDir, self.templateFile)
+        outFile = docDir.child('child.html')
+        self.assertIn('<a href="../resources/index.html">Index</a>',
+                      outFile.getContent())
+
+
+    def test_deleteInput(self):
+        """
+        L{DocBuilder.build} can be instructed to delete the input files after
+        generating the output based on them.
+        """
+        input1 = self.getArbitraryLoreInput()
+        self.howtoDir.child("one.xhtml").setContent(input1)
+        self.builder.build("whatever", self.howtoDir, self.howtoDir,
+                           self.templateFile, deleteInput=True)
+        self.assertTrue(self.howtoDir.child('one.html').exists())
+        self.assertFalse(self.howtoDir.child('one.xhtml').exists())
+
+
+    def test_doNotDeleteInput(self):
+        """
+        Input will not be deleted by default.
+        """
+        input1 = self.getArbitraryLoreInput()
+        self.howtoDir.child("one.xhtml").setContent(input1)
+        self.builder.build("whatever", self.howtoDir, self.howtoDir,
+                           self.templateFile)
+        self.assertTrue(self.howtoDir.child('one.html').exists())
+        self.assertTrue(self.howtoDir.child('one.xhtml').exists())
+
+
+    def test_getLinkrelToSameDirectory(self):
+        """
+        If the doc and resource directories are the same, the linkrel should be
+        an empty string.
+        """
+        linkrel = self.builder.getLinkrel(FilePath("/foo/bar"),
+                                          FilePath("/foo/bar"))
+        self.assertEquals(linkrel, "")
+
+
+    def test_getLinkrelToParentDirectory(self):
+        """
+        If the doc directory is a child of the resource directory, the linkrel
+        should make use of '..'.
+        """
+        linkrel = self.builder.getLinkrel(FilePath("/foo"),
+                                          FilePath("/foo/bar"))
+        self.assertEquals(linkrel, "../")
+
+
+    def test_getLinkrelToSibling(self):
+        """
+        If the doc directory is a sibling of the resource directory, the
+        linkrel should make use of '..' and a named segment.
+        """
+        linkrel = self.builder.getLinkrel(FilePath("/foo/howto"),
+                                          FilePath("/foo/examples"))
+        self.assertEquals(linkrel, "../howto/")
+
+
+    def test_getLinkrelToUncle(self):
+        """
+        If the doc directory is a sibling of the parent of the resource
+        directory, the linkrel should make use of multiple '..'s and a named
+        segment.
+        """
+        linkrel = self.builder.getLinkrel(FilePath("/foo/howto"),
+                                          FilePath("/foo/examples/quotes"))
+        self.assertEquals(linkrel, "../../howto/")
+
+
+
+class FilePathDeltaTest(TestCase):
+    """
+    Tests for L{filePathDelta}.
+    """
+
+    def test_filePathDeltaSubdir(self):
+        """
+        L{filePathDelta} can create a simple relative path to a child path.
+        """
+        self.assertEquals(filePathDelta(FilePath("/foo/bar"),
+                                        FilePath("/foo/bar/baz")),
+                          ["baz"])
+
+
+    def test_filePathDeltaSiblingDir(self):
+        """
+        L{filePathDelta} can traverse upwards to create relative paths to
+        siblings.
+        """
+        self.assertEquals(filePathDelta(FilePath("/foo/bar"),
+                                        FilePath("/foo/baz")),
+                          ["..", "baz"])
+
+
+    def test_filePathNoCommonElements(self):
+        """
+        L{filePathDelta} can create relative paths to totally unrelated paths
+        for maximum portability.
+        """
+        self.assertEquals(filePathDelta(FilePath("/foo/bar"),
+                                        FilePath("/baz/quux")),
+                          ["..", "..", "baz", "quux"])
 
 
