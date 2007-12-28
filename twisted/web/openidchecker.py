@@ -157,7 +157,6 @@ class OpenIDChecker(object):
             """
             url = authRequest.redirectURL(self._myURL, self._callbackURL)
             credentials.request.redirect(url)
-            # XXX UNTESTED!
             credentials.request.finish()
 
         # XXX: Timeouts

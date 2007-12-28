@@ -221,12 +221,9 @@ class OpenIDCheckerTest(TestCase):
         self.destination = "http://unittest.local/destination/"
         self.provider = "http//openid.provider/"
         self.factory = FakeConsumerFactory(self.oidStore)
-
-
-    def getChecker(self):
-        return OpenIDChecker(self.realm, self.returnURL, self.oidStore,
-                                asynchronize=maybeDeferred,
-                                consumerFactory=self.factory)
+        self.checker = OpenIDChecker(self.realm, self.returnURL, self.oidStore,
+                                     asynchronize=maybeDeferred,
+                                     consumerFactory=self.factory)
 
 
     def setupRequestForCallback(self, request):
@@ -280,9 +277,8 @@ class OpenIDCheckerTest(TestCase):
         request = DummyRequest()
         self.factory.addSuccessfulIdentity(self.openID, self.provider)
 
-        checker = self.getChecker()
         credentials = OpenIDCredentials(request, self.openID, self.destination)
-        result = checker.requestAvatarId(credentials)
+        result = self.checker.requestAvatarId(credentials)
 
         def pingBack(redirectedURL):
             """
@@ -299,7 +295,7 @@ class OpenIDCheckerTest(TestCase):
             responseRequest = DummyRequest()
             responseRequest.session = request.session
             responseRequest.args = {"WHAT": ["foo"]}
-            resource = OpenIDCallbackHandler(self.oidStore, checker,
+            resource = OpenIDCallbackHandler(self.oidStore, self.checker,
                                              consumerFactory=self.factory)
             resource.render_GET(responseRequest)
             # Did the callback handler pass reasonable arguments to complete?
@@ -330,9 +326,8 @@ class OpenIDCheckerTest(TestCase):
         request = DummyRequest()
         self.factory.addSuccessfulIdentity(self.openID, self.provider)
 
-        checker = self.getChecker()
         credentials = OpenIDCredentials(request, self.openID, self.destination)
-        result = checker.requestAvatarId(credentials)
+        result = self.checker.requestAvatarId(credentials)
         def redirected(result):
             self.assertEquals(result, self.provider)
             # The session data here comes from the fake consumer's begin().
@@ -360,9 +355,7 @@ class OpenIDCheckerTest(TestCase):
 
         avatarIDDeferred = self.setupRequestForCallback(request)
 
-        checker = self.getChecker()
-
-        resource = OpenIDCallbackHandler(self.oidStore, checker,
+        resource = OpenIDCallbackHandler(self.oidStore, self.checker,
                                          consumerFactory=self.factory)
         resource.render_GET(request)
 
@@ -389,8 +382,7 @@ class OpenIDCheckerTest(TestCase):
         self.factory.addFailedIdentity(self.openID, self.provider)
         request = DummyRequest()
         avatarIDDeferred = self.setupRequestForCallback(request)
-        checker = self.getChecker()
-        resource = OpenIDCallbackHandler(self.oidStore, checker,
+        resource = OpenIDCallbackHandler(self.oidStore, self.checker,
                                          consumerFactory=self.factory)
         resource.render_GET(request)
         self.assertFailure(avatarIDDeferred, UnauthorizedLogin)
@@ -404,10 +396,9 @@ class OpenIDCheckerTest(TestCase):
         """
         request = DummyRequest()
         self.factory.addBrokenIdentity(self.openID)
-        checker = self.getChecker()
         credentials = OpenIDCredentials(request, self.openID, self.destination)
 
-        result = checker.requestAvatarId(credentials)
+        result = self.checker.requestAvatarId(credentials)
         self.assertFailure(result, UnauthorizedLogin)
         result.addCallback(
             lambda ignored: self.flushLoggedErrors(ZeroDivisionError))
