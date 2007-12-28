@@ -367,18 +367,26 @@ class TestInternet2(unittest.TestCase):
         factory.d.addCallback(lambda x : TestEcho.d)
         return factory.d
 
-    def testUDP(self):
+
+    def test_UDP(self):
+        """
+        Test L{internet.UDPServer} with a random port: starting the service
+        should give it valid port, and stopService should free it so that we
+        can start a server on the same port again.
+        """
         if not interfaces.IReactorUDP(reactor, None):
-            raise unittest.SkipTest, "This reactor does not support UDP sockets"
+            raise unittest.SkipTest("This reactor does not support UDP sockets")
         p = protocol.DatagramProtocol()
-        t = internet.TCPServer(0, p)
+        t = internet.UDPServer(0, p)
         t.startService()
         num = t._port.getHost().port
+        self.assertNotEquals(num, 0)
         def onStop(ignored):
-            t = internet.TCPServer(num, p)
+            t = internet.UDPServer(num, p)
             t.startService()
             return t.stopService()
         return defer.maybeDeferred(t.stopService).addCallback(onStop)
+
 
     def testPrivileged(self):
         factory = protocol.ServerFactory()
