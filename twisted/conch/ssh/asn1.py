@@ -50,7 +50,7 @@ def pack(data):
                 partData = '\x00' + partData
             partType = INTEGER
         else:
-            raise 'unknown type %s' % type(part)
+            raise ValueError('unknown type %s' % type(part))
 
         ret += chr(partType)
         if len(partData) > 127:

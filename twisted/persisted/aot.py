@@ -331,7 +331,7 @@ class AOTUnjellier:
                 im_name = ao.name
                 im_class = reflect.namedObject(ao.klass)
                 im_self = self.unjellyAO(ao.instance)
-                if im_class.__dict__.has_key(im_name):
+                if im_name in im_class.__dict__:
                     if im_self is None:
                         return getattr(im_class, im_name)
                     elif isinstance(im_self, crefutil.NotKnown):
@@ -341,7 +341,7 @@ class AOTUnjellier:
                                                   im_self,
                                                   im_class)
                 else:
-                    raise "instance method changed"
+                    raise TypeError("instance method changed")
 
             elif c is Instance:
                 klass = reflect.namedObject(ao.klass)
@@ -545,7 +545,7 @@ class AOTJellier:
                                        self.jellyToAO(state)))
                 
             else:
-                raise "Unsupported type: %s" % objType.__name__
+                raise TypeError("Unsupported type: %s" % objType.__name__)
 
         del self.stack[-1]
         return retval

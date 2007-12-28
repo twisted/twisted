@@ -88,7 +88,7 @@ class _DictKeyAndValue:
         self.dict = dict
     def __setitem__(self, n, obj):
         if n not in (1, 0):
-            raise AssertionError("DictKeyAndValue should only ever be called with 0 or 1")
+            raise RuntimeError("DictKeyAndValue should only ever be called with 0 or 1")
         if n: # value
             self.value = obj
         else:
@@ -119,7 +119,7 @@ class _Defer(Deferred, NotKnown):
 
     def __setitem__(self, n, obj):
         if self.wasset:
-            raise 'waht!?', n, obj
+            raise RuntimeError('setitem should only be called once, setting %r to %r' % (n, obj))
         else:
             self.wasset = 1
         self.callback(obj)
