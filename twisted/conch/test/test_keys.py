@@ -7,7 +7,7 @@ try:
 except ImportError:
     Crypto = None
 else:
-    from twisted.conch.ssh import keys, common, sexpy, asn1
+    from twisted.conch.ssh import keys, common, sexpy
 
 from twisted.conch.test import keydata
 from twisted.python import randbytes
@@ -386,13 +386,6 @@ class HelpersTestCase(unittest.TestCase):
         self.assertEquals(keys.objectType(keys.Key.fromString(
             keydata.privateDSA_openssh).keyObject), 'ssh-dss')
         self.assertRaises(keys.BadKeyError, keys.objectType, None)
-
-    def test_asn1PackError(self):
-        """
-        L{asn1.pack} should raise a C{ValueError} when given a type not
-        handled.
-        """
-        self.assertRaises(ValueError, asn1.pack, [object()])
 
     def test_printKey(self):
         """

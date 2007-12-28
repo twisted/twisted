@@ -1,5 +1,4 @@
-# -*- test-case-name: twisted.conch.test.test_scripts -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 #
@@ -251,7 +250,7 @@ frame = None
 
 def deferredAskFrame(question, echo):
     if frame.callback:
-        raise ValueError("can't ask 2 questions at once!")
+        raise "can't ask 2 questions at once!"
     d = defer.Deferred()
     resp = []
     def gotChar(ch, resp=resp):

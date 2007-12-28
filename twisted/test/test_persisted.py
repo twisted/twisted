@@ -19,7 +19,7 @@ except ImportError:
     import StringIO
 
 # Twisted Imports
-from twisted.persisted import styles, aot, crefutil
+from twisted.persisted import styles, aot
 
 
 class VersionTestCase(unittest.TestCase):
@@ -255,47 +255,6 @@ else:
             im_ = marmalade.unjellyFromXML(marmalade.jellyToXML(b)).a.bmethod
             self.assertEquals(im_.im_class, im_.im_self.__class__)
 
-
-        def test_methodNotSelfIdentity(self):
-            """
-            If a class change after an instance has been created,
-            L{marmalade.unjellyFromXML} shoud raise a C{TypeError} when trying
-            to unjelly the instance.
-            """
-            a = A()
-            b = B()
-            a.bmethod = b.bmethod
-            b.a = a
-            savedbmethod = B.bmethod
-            del B.bmethod
-            try:
-                self.assertRaises(TypeError, marmalade.unjellyFromXML,
-                                  marmalade.jellyToXML(b))
-            finally:
-                B.bmethod = savedbmethod
-
-
-        def test_unjellyWrongRole(self):
-            """
-            When trying to unjelly a dictionnary dump, C{role} attributes
-            should have the C{key}. Otherwise, L{marmalade.unjellyFromXML}
-            should raise a C{TypeError}.
-            """
-            data = marmalade.jellyToXML({"a": 1})
-            data = data.replace('role="key"', 'role="foo"')
-            self.assertRaises(TypeError, marmalade.unjellyFromXML, data)
-
-
-        def test_unjellyUnknownNodeType(self):
-            """
-            L{marmalade.unjellyFromXML} should raise a C{TypeError} when trying
-            to unjelly an unknown type.
-            """
-            data = marmalade.jellyToXML({})
-            data = data.replace('dictionary', 'unknowntype')
-            self.assertRaises(TypeError, marmalade.unjellyFromXML, data)
-
-
         def testBasicIdentity(self):
             # Anyone wanting to make this datastructure more complex, and thus this
             # test more comprehensive, is welcome to do so.
@@ -372,38 +331,6 @@ class AOTTestCase(unittest.TestCase):
         im_ = aot.unjellyFromSource(aot.jellyToSource(b)).a.bmethod
         self.assertEquals(im_.im_class, im_.im_self.__class__)
 
-
-    def test_methodNotSelfIdentity(self):
-        """
-        If a class change after an instance has been created,
-        L{aot.unjellyFromSource} shoud raise a C{TypeError} when trying to
-        unjelly the instance.
-        """
-        a = A()
-        b = B()
-        a.bmethod = b.bmethod
-        b.a = a
-        savedbmethod = B.bmethod
-        del B.bmethod
-        try:
-            self.assertRaises(TypeError, aot.unjellyFromSource,
-                              aot.jellyToSource(b))
-        finally:
-            B.bmethod = savedbmethod
-
-
-    def test_unsupportedType(self):
-        """
-        L{aot.jellyToSource} should raise a C{TypeError} when trying to jelly
-        an unknown type.
-        """
-        try:
-            set
-        except:
-            from sets import Set as set
-        self.assertRaises(TypeError, aot.jellyToSource, set())
-
-
     def testBasicIdentity(self):
         # Anyone wanting to make this datastructure more complex, and thus this
         # test more comprehensive, is welcome to do so.
@@ -445,30 +372,6 @@ class AOTTestCase(unittest.TestCase):
         assert oj.a is oj
         assert oj.a.b is oj.b
         assert oj.c is not oj.c.c
-
-
-class CrefUtilTestCase(unittest.TestCase):
-    """
-    Tests for L{crefutil}.
-    """
-
-    def test_dictUnknownKey(self):
-        """
-        L{crefutil._DictKeyAndValue} only support keys C{0} and C{1}.
-        """
-        d = crefutil._DictKeyAndValue({})
-        self.assertRaises(RuntimeError, d.__setitem__, 2, 3)
-
-
-    def test_deferSetMultipleTimes(self):
-        """
-        L{crefutil._Defer} can be assigned a key only one time.
-        """
-        d = crefutil._Defer()
-        d[0] = 1
-        self.assertRaises(RuntimeError, d.__setitem__, 0, 1)
-
-
 
 testCases = [VersionTestCase, EphemeralTestCase, PicklingTestCase]
 

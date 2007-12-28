@@ -121,8 +121,7 @@ class PreconditionTestCase(unittest.TestCase):
 
     def testIfModifiedSince(self):
         if time.time() < 946771200:
-            self.fail(RuntimeError("Your computer's clock is way wrong, "
-                                   "this test will be invalid."))
+            raise "Your computer's clock is way wrong, this test will be invalid."
 
         request = http.Request(None, "GET", "/", "HTTP/1.1", 0, http_headers.Headers())
         out_headers = http_headers.Headers()

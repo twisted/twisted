@@ -717,15 +717,14 @@ class _Unjellier:
         return Unpersistable(rest[0])
 
     def _unjelly_method(self, rest):
-        """
-        (internal) unjelly a method
-        """
+        ''' (internal) unjelly a method
+        '''
         im_name = rest[0]
         im_self = self.unjelly(rest[1])
         im_class = self.unjelly(rest[2])
         if type(im_class) is not types.ClassType:
             raise InsecureJelly("Method found with non-class class.")
-        if im_name in im_class.__dict__:
+        if im_class.__dict__.has_key(im_name):
             if im_self is None:
                 im = getattr(im_class, im_name)
             elif isinstance(im_self, NotKnown):
@@ -735,7 +734,7 @@ class _Unjellier:
                                     im_self,
                                     im_class)
         else:
-            raise TypeError('instance method changed')
+            raise 'instance method changed'
         return im
 
 

@@ -165,7 +165,7 @@ class DOMUnjellier:
                                             im_self,
                                             im_class)
             else:
-                raise TypeError("instance method changed")
+                raise "instance method changed"
         elif node.tagName == "tuple":
             l = []
             tupFunc = tuple
@@ -191,7 +191,7 @@ class DOMUnjellier:
                     if keyMode:
                         kvd = _DictKeyAndValue(d)
                         if not subnode.getAttribute("role") == "key":
-                            raise TypeError("Unjellying Error: key role not set")
+                            raise "Unjellying Error: key role not set"
                         self.unjellyInto(kvd, 0, subnode)
                     else:
                         self.unjellyInto(kvd, 1, subnode)
@@ -224,7 +224,7 @@ class DOMUnjellier:
                 lambda result, _l: apply(_l, result), nodefunc)
             retval = loaddef
         else:
-            raise TypeError("Unsupported Node Type: %s" % str(node.tagName))
+            raise "Unsupported Node Type: %s" % str(node.tagName)
         if node.hasAttribute("reference"):
             refkey = node.getAttribute("reference")
             ref = self.references.get(refkey)
@@ -364,7 +364,7 @@ class DOMJellier:
                     n = self.jellyToNode(state)
                     node.appendChild(n)
             else:
-                raise TypeError("Unsupported type: %s" % objType.__name__)
+                raise "Unsupported type: %s" % objType.__name__
         return node
 
     def jelly(self, obj):

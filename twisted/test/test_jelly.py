@@ -85,24 +85,6 @@ class JellyTestCase(unittest.TestCase):
         self.assertEquals(im_.im_class, im_.im_self.__class__)
 
 
-    def test_methodsNotSelfIdentity(self):
-        """
-        If a class change after an instance has been created, L{jelly.unjelly}
-        shoud raise a C{TypeError} when trying to unjelly the instance.
-        """
-        a = A()
-        b = B()
-        c = C()
-        a.bmethod = c.cmethod
-        b.a = a
-        savecmethod = C.cmethod
-        del C.cmethod
-        try:
-            self.assertRaises(TypeError, jelly.unjelly, jelly.jelly(b))
-        finally:
-            C.cmethod = savecmethod
-
-
     def testNewStyle(self):
         n = NewStyle()
         n.x = 1

@@ -216,14 +216,6 @@ class XPathTest(unittest.TestCase):
                                                      self.bar5, self.bar6,
                                                      self.bar7])
 
-    def test_anyLocationQueryForString(self):
-        """
-        L{XPathQuery.queryForString} should raise a L{NotImplementedError}
-        for any location.
-        """
-        xp = XPathQuery("//bar")
-        self.assertRaises(NotImplementedError, xp.queryForString, None)
-
     def test_andOperator(self):
         """
         Test boolean and operator in condition.
