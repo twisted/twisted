@@ -7,7 +7,10 @@ from twisted.web.server import Request, Site, Session
 from twisted.web.resource import Resource
 
 from twisted.web.openidchecker import (OpenIDChecker, OpenIDCredentials,
-                                       OpenIDCallbackHandler)
+                                       OpenIDCallbackHandler,
+                                       IOpenIDSession,
+                                       IRequestAvatarIDDeferred,
+                                       IDestinationURL)
 
 from openid.consumer.consumer import SUCCESS, Consumer
 from openid.store.memstore import MemoryStore
@@ -184,7 +187,8 @@ class OpenIDCheckerTest(TestCase):
         self.realm = "http://unittest.local/"
         self.returnURL = "http://unittest.local/return/"
         self.destination = "http://unittest.local/destination/"
-        self.openIDProvider = "http//openid.provider/"
+        self.provider = "http//openid.provider/"
+        self.factory = FakeConsumerFactory(self.oidStore)
 
 
     def test_defaultAsynchronize(self):
@@ -207,13 +211,25 @@ class OpenIDCheckerTest(TestCase):
 
 
     def test_success(self):
+        """
+        When requestAvatarId is called, it
+
+        1. redirects the user to the openID provider based on interaction with
+           the Consumer object
+        2. returns a Deferred which will be fired when the user is redirected
+           back to an L{OpenIDCallbackHandler},
+        3. fire said deferred with the identity URL as the result, if the
+           authentication was successful.
+
+        This is the integration test between the L{OpenIDChecker} and
+        L{OpenIDCallbackHandler}.
+        """
         request = DummyRequest()
-        factory = FakeConsumerFactory(self.oidStore)
-        factory.addSuccessfulIdentity(self.openID, self.openIDProvider)
+        self.factory.addSuccessfulIdentity(self.openID, self.provider)
 
         checker = OpenIDChecker(self.realm, self.returnURL, self.oidStore,
                                 asynchronize=maybeDeferred,
-                                consumerFactory=factory)
+                                consumerFactory=self.factory)
         credentials = OpenIDCredentials(request, self.openID, self.destination)
         result = checker.requestAvatarId(credentials)
 
@@ -223,10 +239,10 @@ class OpenIDCheckerTest(TestCase):
             redirected back.
             """
             # Did the checker pass the correct arguments to redirectURL?
-            self.assertEquals(factory.redirects,
+            self.assertEquals(self.factory.redirects,
                               [(self.realm, self.returnURL)])
             # Did the checker redirect to the URL returned from redirectURL?
-            self.assertEquals(redirectedURL, self.openIDProvider)
+            self.assertEquals(redirectedURL, self.provider)
 
             # Now let's trigger the callback handler.
             responseRequest = DummyRequest()
@@ -234,11 +250,11 @@ class OpenIDCheckerTest(TestCase):
             responseRequest.args = {"WHAT": ["foo"]}
             resource = OpenIDCallbackHandler(
                 self.oidStore, checker,
-                consumerFactory=factory)
+                consumerFactory=self.factory)
             resource.render_GET(responseRequest)
             # Did the callback handler pass reasonable arguments to complete?
-            self.assertEquals(factory.completions, [({"WHAT": "foo"},
-                                                     self.returnURL)])
+            self.assertEquals(self.factory.completions,
+                              [({"WHAT": "foo"}, self.returnURL)])
             # The callback handler should redirect the request to the
             # destination as specified by the credentials.
             return responseRequest.redirectDeferred.addCallback(
@@ -255,6 +271,79 @@ class OpenIDCheckerTest(TestCase):
                               request.redirectDeferred,
                               request.finishDeferred])
 
+    def test_beginAuthentication(self):
+        """
+        When requestAvatarId is called, the user will be redirected to the
+        OpenID provider and session data will be set up to allow the callback
+        handler to later finish the authentication.
+        """
+        request = DummyRequest()
+        self.factory.addSuccessfulIdentity(self.openID, self.provider)
+
+        checker = OpenIDChecker(self.realm, self.returnURL, self.oidStore,
+                                asynchronize=maybeDeferred,
+                                consumerFactory=self.factory)
+        credentials = OpenIDCredentials(request, self.openID, self.destination)
+        result = checker.requestAvatarId(credentials)
+        def redirected(result):
+            self.assertEquals(result, self.provider)
+            # The session data here comes from the fake consumer's begin().
+            self.assertEquals(request.getSession(IOpenIDSession),
+                              {"openid": self.openID})
+            self.assertEquals(request.getSession(IDestinationURL),
+                              self.destination)
+            deferred = request.getSession(IRequestAvatarIDDeferred)
+            self.assertTrue(isinstance(deferred, Deferred))
+
+        request.redirectDeferred.addCallback(redirected)
+
+
+    def test_callbackHandler(self):
+        """
+        When the callback handler is triggered, the Deferred which was returned
+        from requestAvatarId (and placed in the session) will be fired and user
+        will be redirected to the destination URL as specified by the
+        credentials.
+        """
+        self.factory.addSuccessfulIdentity(self.openID, self.provider)
+
+        request = DummyRequest()
+        request.args = {"WHAT": ["foo"]}
+
+        sessionData = {}
+        avatarIDDeferred = Deferred()
+
+        session = request.getSession()
+        session.setComponent(IOpenIDSession, sessionData)
+        session.setComponent(IRequestAvatarIDDeferred, avatarIDDeferred)
+        session.setComponent(IDestinationURL, self.destination)
+
+        # Do a begin() on our fake consumer to set up some data which the
+        # complete() that OpenIDCallbackHandler does will need.
+        self.factory(sessionData, self.oidStore).begin(self.openID)
+
+        checker = OpenIDChecker(self.realm, self.returnURL, self.oidStore,
+                                asynchronize=maybeDeferred,
+                                consumerFactory=self.factory)
+
+        resource = OpenIDCallbackHandler(self.oidStore, checker,
+                                         consumerFactory=self.factory)
+        resource.render_GET(request)
+
+        # Did the callback handler pass reasonable arguments to complete?
+        self.assertEquals(self.factory.completions,
+                          [({"WHAT": "foo"}, self.returnURL)])
+
+        # Did the callback handler fire the avatarId deferred with the identity
+        # URL?
+        avatarIDDeferred.addCallback(self.assertEquals, self.openID)
+
+        # Did the callback handler redirect the user to the ultimate
+        # destination?
+        request.redirectDeferred.addCallback(self.assertEquals,
+                                             self.destination)
+        return gatherResults([avatarIDDeferred, request.redirectDeferred])
+
 
     def test_openIDLookupError(self):
         """
@@ -262,11 +351,10 @@ class OpenIDCheckerTest(TestCase):
         UnauthorizedLogin will be fired.
         """
         request = DummyRequest()
-        factory = FakeConsumerFactory(self.oidStore)
-        factory.addBrokenIdentity(self.openID)
+        self.factory.addBrokenIdentity(self.openID)
         checker = OpenIDChecker(self.realm, self.returnURL, self.oidStore,
                                 asynchronize=maybeDeferred,
-                                consumerFactory=factory)
+                                consumerFactory=self.factory)
         credentials = OpenIDCredentials(request, self.openID, self.destination)
 
         result = checker.requestAvatarId(credentials)
