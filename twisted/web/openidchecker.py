@@ -199,8 +199,8 @@ class OpenIDCallbackHandler(Resource):
         d = request.getSession(IRequestAvatarIDDeferred)
         if result.status == SUCCESS:
             d.callback(result.identity_url)
-#         else:
-#             d.errback(UnauthorizedLogin())
+        else:
+            d.errback(UnauthorizedLogin())
         destination = request.getSession(IDestinationURL)
         request.redirect(destination)
 

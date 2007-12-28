@@ -12,7 +12,7 @@ from twisted.web.openidchecker import (OpenIDChecker, OpenIDCredentials,
                                        IRequestAvatarIDDeferred,
                                        IDestinationURL)
 
-from openid.consumer.consumer import SUCCESS, Consumer
+from openid.consumer.consumer import SUCCESS, FAILURE, Consumer
 from openid.store.memstore import MemoryStore
 
 
@@ -49,6 +49,7 @@ class DummyRequest(Request):
         Request.__init__(self, None, True)
         self.redirectDeferred = Deferred()
         self.finishDeferred = Deferred()
+        self.args = {}
         self.sitepath = []
         self.site = Site(Resource())
         self.site.sessionFactory = DummySession
@@ -85,6 +86,7 @@ class FakeConsumerFactory(object):
             L{__call__} must be the same as this store.
         """
         self.identities = {}
+        self.failedIdentities = {}
         self.brokenIdentities = set()
         self.store = store
         self.redirects = []
@@ -96,6 +98,13 @@ class FakeConsumerFactory(object):
         Add an identity for which authentication will be successful.
         """
         self.identities[identity] = provider
+
+
+    def addFailedIdentity(self, identity, provider):
+        """
+        Add an identity for which authentication should fail.
+        """
+        self.failedIdentities[identity] = provider
 
 
     def addBrokenIdentity(self, identity):
@@ -123,6 +132,9 @@ class FakeConsumerFactory(object):
 
 
 class FakeConsumer(object):
+    """
+    An object which looks a lot like L{Consumer}.
+    """
 
     def __init__(self, consumerFactory, session, store):
         self.consumerFactory = consumerFactory
@@ -131,6 +143,12 @@ class FakeConsumer(object):
 
 
     def begin(self, openid):
+        """
+        - Set up session state so that L{complete} can be called later and
+          return a L{FakeAuthRequest}, OR
+        - raise a ZeroDivisionError if the specified C{openid} was configured
+          for brokenness with L{FakeConsumerFactory.addBrokenIdentity}.
+        """
         if openid in self.consumerFactory.brokenIdentities:
             1 / 0
         self.session["openid"] = openid
@@ -138,12 +156,17 @@ class FakeConsumer(object):
 
 
     def complete(self, args, callbackURL):
+        """
+        Record arguments to the consumer factory's C{completions} list, and
+        return a L{Response} with data appropriate for the way this openid was
+        configured on the L{FakeConsumerFactory}.
+        """
         self.consumerFactory.completions.append((args, callbackURL))
-        self.completePostData = args
-        self.callbackURL = callbackURL
         openid = self.session["openid"]
         if openid in self.consumerFactory.identities:
             return Response(SUCCESS, self.session["openid"])
+        if openid in self.consumerFactory.failedIdentities:
+            return Response(FAILURE, self.session["openid"])
 
 
 
@@ -173,6 +196,12 @@ class FakeAuthRequest(object):
 
 
 class Response(object):
+    """
+    A thing that looks like an openid response.
+
+    @ivar status: The status.
+    @ivar identity_url: The identity URL.
+    """
     def __init__(self, status, identityURL):
         self.status = status
         self.identity_url = identityURL
@@ -180,6 +209,9 @@ class Response(object):
 
 
 class OpenIDCheckerTest(TestCase):
+    """
+    Tests for L{twisted.web.openidchecker}.
+    """
     def setUp(self):
         self.oidStore = MemoryStore()
         # Some handy sample data
@@ -189,6 +221,27 @@ class OpenIDCheckerTest(TestCase):
         self.destination = "http://unittest.local/destination/"
         self.provider = "http//openid.provider/"
         self.factory = FakeConsumerFactory(self.oidStore)
+
+
+    def getChecker(self):
+        return OpenIDChecker(self.realm, self.returnURL, self.oidStore,
+                                asynchronize=maybeDeferred,
+                                consumerFactory=self.factory)
+
+
+    def setupRequestForCallback(self, request):
+        sessionData = {}
+        avatarIDDeferred = Deferred()
+
+        session = request.getSession()
+        session.setComponent(IOpenIDSession, sessionData)
+        session.setComponent(IRequestAvatarIDDeferred, avatarIDDeferred)
+        session.setComponent(IDestinationURL, self.destination)
+
+        # Do a begin() on our fake consumer to set up some data which the
+        # complete() that OpenIDCallbackHandler does will need.
+        self.factory(sessionData, self.oidStore).begin(self.openID)
+        return avatarIDDeferred
 
 
     def test_defaultAsynchronize(self):
@@ -203,7 +256,7 @@ class OpenIDCheckerTest(TestCase):
     def test_defaultConsumerFactory(self):
         """
         The default consumer factory should be
-        L{openid.consumer.consumer.Consumer}, so that we actually authenticate
+        L{Consumer}, so that we actually authenticate
         for real.
         """
         checker = OpenIDChecker("foo", "bar", None)
@@ -227,9 +280,7 @@ class OpenIDCheckerTest(TestCase):
         request = DummyRequest()
         self.factory.addSuccessfulIdentity(self.openID, self.provider)
 
-        checker = OpenIDChecker(self.realm, self.returnURL, self.oidStore,
-                                asynchronize=maybeDeferred,
-                                consumerFactory=self.factory)
+        checker = self.getChecker()
         credentials = OpenIDCredentials(request, self.openID, self.destination)
         result = checker.requestAvatarId(credentials)
 
@@ -248,9 +299,8 @@ class OpenIDCheckerTest(TestCase):
             responseRequest = DummyRequest()
             responseRequest.session = request.session
             responseRequest.args = {"WHAT": ["foo"]}
-            resource = OpenIDCallbackHandler(
-                self.oidStore, checker,
-                consumerFactory=self.factory)
+            resource = OpenIDCallbackHandler(self.oidStore, checker,
+                                             consumerFactory=self.factory)
             resource.render_GET(responseRequest)
             # Did the callback handler pass reasonable arguments to complete?
             self.assertEquals(self.factory.completions,
@@ -280,9 +330,7 @@ class OpenIDCheckerTest(TestCase):
         request = DummyRequest()
         self.factory.addSuccessfulIdentity(self.openID, self.provider)
 
-        checker = OpenIDChecker(self.realm, self.returnURL, self.oidStore,
-                                asynchronize=maybeDeferred,
-                                consumerFactory=self.factory)
+        checker = self.getChecker()
         credentials = OpenIDCredentials(request, self.openID, self.destination)
         result = checker.requestAvatarId(credentials)
         def redirected(result):
@@ -310,21 +358,9 @@ class OpenIDCheckerTest(TestCase):
         request = DummyRequest()
         request.args = {"WHAT": ["foo"]}
 
-        sessionData = {}
-        avatarIDDeferred = Deferred()
+        avatarIDDeferred = self.setupRequestForCallback(request)
 
-        session = request.getSession()
-        session.setComponent(IOpenIDSession, sessionData)
-        session.setComponent(IRequestAvatarIDDeferred, avatarIDDeferred)
-        session.setComponent(IDestinationURL, self.destination)
-
-        # Do a begin() on our fake consumer to set up some data which the
-        # complete() that OpenIDCallbackHandler does will need.
-        self.factory(sessionData, self.oidStore).begin(self.openID)
-
-        checker = OpenIDChecker(self.realm, self.returnURL, self.oidStore,
-                                asynchronize=maybeDeferred,
-                                consumerFactory=self.factory)
+        checker = self.getChecker()
 
         resource = OpenIDCallbackHandler(self.oidStore, checker,
                                          consumerFactory=self.factory)
@@ -345,6 +381,22 @@ class OpenIDCheckerTest(TestCase):
         return gatherResults([avatarIDDeferred, request.redirectDeferred])
 
 
+    def test_badAuthentication(self):
+        """
+        If any result status other than SUCCESS is returned from the consumer
+        library, the authentication should fail.
+        """
+        self.factory.addFailedIdentity(self.openID, self.provider)
+        request = DummyRequest()
+        avatarIDDeferred = self.setupRequestForCallback(request)
+        checker = self.getChecker()
+        resource = OpenIDCallbackHandler(self.oidStore, checker,
+                                         consumerFactory=self.factory)
+        resource.render_GET(request)
+        self.assertFailure(avatarIDDeferred, UnauthorizedLogin)
+        return avatarIDDeferred
+
+
     def test_openIDLookupError(self):
         """
         If an error occurs trying to find a user's OpenID provider,
@@ -352,9 +404,7 @@ class OpenIDCheckerTest(TestCase):
         """
         request = DummyRequest()
         self.factory.addBrokenIdentity(self.openID)
-        checker = OpenIDChecker(self.realm, self.returnURL, self.oidStore,
-                                asynchronize=maybeDeferred,
-                                consumerFactory=self.factory)
+        checker = self.getChecker()
         credentials = OpenIDCredentials(request, self.openID, self.destination)
 
         result = checker.requestAvatarId(credentials)
