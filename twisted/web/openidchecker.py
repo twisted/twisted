@@ -125,8 +125,7 @@ class OpenIDChecker(object):
         @type credentials: L{IOpenIDCredentials}
         """
         session = {}
-        credentials.request.getSession().setComponent(IOpenIDSession,
-                                                      session)
+        credentials.request.getSession().setComponent(IOpenIDSession, session)
         consumer = self._consumerFactory(session, self._store)
 
         def errorDuringBegin(failure):

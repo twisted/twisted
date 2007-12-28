@@ -86,25 +86,17 @@ class FakeConsumerFactory(object):
             L{__call__} must be the same as this store.
         """
         self.identities = {}
-        self.failedIdentities = {}
         self.brokenIdentities = set()
         self.store = store
         self.redirects = []
         self.completions = []
 
 
-    def addSuccessfulIdentity(self, identity, provider):
+    def addIdentity(self, identity, provider, status):
         """
         Add an identity for which authentication will be successful.
         """
-        self.identities[identity] = provider
-
-
-    def addFailedIdentity(self, identity, provider):
-        """
-        Add an identity for which authentication should fail.
-        """
-        self.failedIdentities[identity] = provider
+        self.identities[identity] = (provider, status)
 
 
     def addBrokenIdentity(self, identity):
@@ -164,9 +156,8 @@ class FakeConsumer(object):
         self.consumerFactory.completions.append((args, callbackURL))
         openid = self.session["openid"]
         if openid in self.consumerFactory.identities:
-            return Response(SUCCESS, self.session["openid"])
-        if openid in self.consumerFactory.failedIdentities:
-            return Response(FAILURE, self.session["openid"])
+            status = self.consumerFactory.identities[openid][1]
+            return Response(status, self.session["openid"])
 
 
 
@@ -188,10 +179,10 @@ class FakeAuthRequest(object):
         """
         Record the arguments to the consumer factory's C{redirects} list, and
         return the provider URL that was associated with the identity with the
-        consumer factory's C{addSuccessfulIdentity}.
+        consumer factory's C{addItentity}.
         """
         self.consumerFactory.redirects.append((realm, callbackURL))
-        return self.consumerFactory.identities[self.openid]
+        return self.consumerFactory.identities[self.openid][0]
 
 
 
@@ -275,7 +266,7 @@ class OpenIDCheckerTest(TestCase):
         L{OpenIDCallbackHandler}.
         """
         request = DummyRequest()
-        self.factory.addSuccessfulIdentity(self.openID, self.provider)
+        self.factory.addIdentity(self.openID, self.provider, SUCCESS)
 
         credentials = OpenIDCredentials(request, self.openID, self.destination)
         result = self.checker.requestAvatarId(credentials)
@@ -324,7 +315,7 @@ class OpenIDCheckerTest(TestCase):
         handler to later finish the authentication.
         """
         request = DummyRequest()
-        self.factory.addSuccessfulIdentity(self.openID, self.provider)
+        self.factory.addIdentity(self.openID, self.provider, SUCCESS)
 
         credentials = OpenIDCredentials(request, self.openID, self.destination)
         result = self.checker.requestAvatarId(credentials)
@@ -348,7 +339,7 @@ class OpenIDCheckerTest(TestCase):
         will be redirected to the destination URL as specified by the
         credentials.
         """
-        self.factory.addSuccessfulIdentity(self.openID, self.provider)
+        self.factory.addIdentity(self.openID, self.provider, SUCCESS)
 
         request = DummyRequest()
         request.args = {"WHAT": ["foo"]}
@@ -374,12 +365,12 @@ class OpenIDCheckerTest(TestCase):
         return gatherResults([avatarIDDeferred, request.redirectDeferred])
 
 
-    def test_badAuthentication(self):
+    def test_failedAuthentication(self):
         """
         If any result status other than SUCCESS is returned from the consumer
         library, the authentication should fail.
         """
-        self.factory.addFailedIdentity(self.openID, self.provider)
+        self.factory.addIdentity(self.openID, self.provider, FAILURE)
         request = DummyRequest()
         avatarIDDeferred = self.setupRequestForCallback(request)
         resource = OpenIDCallbackHandler(self.oidStore, self.checker,
@@ -405,6 +396,3 @@ class OpenIDCheckerTest(TestCase):
         return result
 
     # XXX Test timeouts
-    # XXX Test a FailureResponse
-    # XXX Test a CancelResponse
-    # XXX Test a SetupNeededResponse
