@@ -250,6 +250,7 @@ class ProxyClientFactoryTestCase(TestCase):
                 "HTTP/1.0 501 Gateway error\r\n"
                 "Content-Type: text/html\r\n\r\n"
                 "<H1>Could not connect</H1>")
+        self.assertIsInstance(channel.lostReason, ConnectionDone)
 
 
     def test_buildProtocol(self):

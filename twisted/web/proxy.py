@@ -106,6 +106,7 @@ class ProxyClientFactory(ClientFactory):
         self.father.transport.write("Content-Type: text/html\r\n")
         self.father.transport.write("\r\n")
         self.father.transport.write('''<H1>Could not connect</H1>''')
+        self.father.transport.loseConnection()
 
 
 
