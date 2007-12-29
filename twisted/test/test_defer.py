@@ -333,13 +333,25 @@ class DeferredTestCase(unittest.TestCase):
         # get rid of error
         dl[1].addErrback(lambda e: 1)
 
-    def testMaybeDeferred(self):
+
+    def test_maybeDeferredSync(self):
+        """
+        L{defer.maybeDeferred} should retrieve the result of a synchronous
+        function and pass it to its resulting L{defer.Deferred}.
+        """
         S, E = [], []
         d = defer.maybeDeferred((lambda x: x + 5), 10)
         d.addCallbacks(S.append, E.append)
         self.assertEquals(E, [])
         self.assertEquals(S, [15])
+        return d
 
+
+    def test_maybeDeferredSyncError(self):
+        """
+        L{defer.maybeDeferred} should catch exception raised by a synchronous
+        function and errback its resulting L{defer.Deferred} with it.
+        """
         S, E = [], []
         try:
             '10' + 5
@@ -350,18 +362,30 @@ class DeferredTestCase(unittest.TestCase):
         self.assertEquals(S, [])
         self.assertEquals(len(E), 1)
         self.assertEquals(str(E[0].value), expected)
-
-        d = defer.Deferred()
-        reactor.callLater(0.2, d.callback, 'Success')
-        d.addCallback(self.assertEquals, 'Success')
-        d.addCallback(self._testMaybeError)
         return d
 
-    def _testMaybeError(self, ignored):
+
+    def test_maybeDeferredAsync(self):
+        """
+        L{defer.maybeDeferred} should let L{defer.Deferred} instance pass by
+        so that original result is the same.
+        """
         d = defer.Deferred()
-        reactor.callLater(0.2, d.errback, failure.Failure(RuntimeError()))
-        self.assertFailure(d, RuntimeError)
-        return d
+        d2 = defer.maybeDeferred(lambda: d)
+        d.callback('Success')
+        return d2.addCallback(self.assertEquals, 'Success')
+
+
+    def test_maybeDeferredAsyncError(self):
+        """
+        L{defer.maybeDeferred} should let L{defer.Deferred} instance pass by
+        so that L{failure.Failure} returned by the original instance is the
+        same.
+        """
+        d = defer.Deferred()
+        d2 = defer.maybeDeferred(lambda: d)
+        d.errback(failure.Failure(RuntimeError()))
+        return self.assertFailure(d2, RuntimeError)
 
 
     def test_reentrantRunCallbacks(self):
