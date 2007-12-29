@@ -5,7 +5,17 @@
 Tests for L{logfile}.
 """
 
-import os, shutil, time, stat, gzip, bz2
+import os, shutil, time, stat
+
+try:
+    import gzip
+except ImportError:
+    gzip = None
+
+try:
+    import bz2
+except ImportError:
+    bz2 = None
 
 from twisted.trial.unittest import TestCase
 
@@ -374,6 +384,9 @@ class GzipLogFileTestCase(LogFileTestCase):
         d.addCallback(check)
         return d
 
+if gzip is None:
+    GzipLogFileTestCase.skip = "gzip not available"
+
 
 
 class TestableBz2LogFile(logfile.Bz2LogFile):
@@ -395,6 +408,9 @@ class Bz2LogFileTestCase(LogFileTestCase):
     """
     logFileFactory = TestableBz2LogFile
     extension = ".bz2"
+
+if bz2 is None:
+    Bz2LogFileTestCase.skip = "bz2 not available"
 
 
 
@@ -493,6 +509,9 @@ class GzipDailyLogFileTestCase(DailyLogFileTestCase):
     logFileFactory = RiggedDailyLogFile(logfile.GzipDailyLogFile)
     extension = ".gz"
 
+if gzip is None:
+    GzipDailyLogFileTestCase.skip = "gzip not available"
+
 
 
 class Bz2DailyLogFileTestCase(DailyLogFileTestCase):
@@ -501,4 +520,7 @@ class Bz2DailyLogFileTestCase(DailyLogFileTestCase):
     """
     logFileFactory = RiggedDailyLogFile(logfile.Bz2DailyLogFile)
     extension = ".bz2"
+
+if bz2 is None:
+    Bz2DailyLogFileTestCase.skip = "bz2 not available"
 

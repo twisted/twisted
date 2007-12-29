@@ -8,7 +8,17 @@ A rotating, browsable log file.
 """
 
 # System Imports
-import os, glob, time, stat, gzip, bz2
+import os, glob, time, stat
+
+try:
+    from gzip import GzipFile
+except ImportError:
+    GzipFile = None
+
+try:
+    from bz2 import BZ2File
+except ImportError:
+    BZ2File = None
 
 from twisted.python import threadable
 
@@ -49,7 +59,7 @@ class GzipLogReader(LogReader):
     """
 
     def __init__(self, name):
-        self._file = gzip.GzipFile(name, "r")
+        self._file = GzipFile(name, "r")
 
 
 
@@ -59,7 +69,7 @@ class Bz2LogReader(LogReader):
     """
 
     def __init__(self, name):
-        self._file = bz2.BZ2File(name, "r")
+        self._file = BZ2File(name, "r")
 
 
 
@@ -366,7 +376,7 @@ def CompressorHelper(baseClass, compressorClass):
 
 
 
-class GzipLogFile(CompressorHelper(LogFile, gzip.GzipFile)):
+class GzipLogFile(CompressorHelper(LogFile, GzipFile)):
     """
     A gzip compressed log file.
     """
@@ -376,7 +386,7 @@ class GzipLogFile(CompressorHelper(LogFile, gzip.GzipFile)):
 
 
 
-class Bz2LogFile(CompressorHelper(LogFile, bz2.BZ2File)):
+class Bz2LogFile(CompressorHelper(LogFile, BZ2File)):
     """
     A bz2 compressed log file.
     """
@@ -479,7 +489,7 @@ threadable.synchronize(DailyLogFile)
 
 
 
-class GzipDailyLogFile(CompressorHelper(DailyLogFile, gzip.GzipFile)):
+class GzipDailyLogFile(CompressorHelper(DailyLogFile, GzipFile)):
     """
     A gzip compressed dailylog file.
     """
@@ -488,7 +498,7 @@ class GzipDailyLogFile(CompressorHelper(DailyLogFile, gzip.GzipFile)):
 
 
 
-class Bz2DailyLogFile(CompressorHelper(DailyLogFile, bz2.BZ2File)):
+class Bz2DailyLogFile(CompressorHelper(DailyLogFile, BZ2File)):
     """
     A bz2 compressed dailylog file.
     """
