@@ -509,10 +509,6 @@ class TestCase(_Assertions):
     rather than an exception. All of the assertion methods raise this if the
     assertion fails.
 
-    @ivar forceGarbageCollection: If set to True, C{gc.collect()} will be
-    called before and after the test. Otherwise, garbage collection will
-    happen in whatever way Python sees fit.
-
     @ivar skip: C{None} or a string explaining why this test is to be
     skipped. If defined, the test will not be run. Instead, it will be
     reported to the result object as 'skipped' (if the C{TestResult} supports
@@ -557,7 +553,6 @@ class TestCase(_Assertions):
                 self._initInstances()
             self.__class__._instances.add(self)
         self._passed = False
-        self.forceGarbageCollection = False
         self._cleanups = []
 
     def _initInstances(cls):
@@ -736,8 +731,6 @@ class TestCase(_Assertions):
 
     def _cleanUp(self, result):
         try:
-            if self.forceGarbageCollection:
-                gc.collect()
             clean = util._Janitor(self, result).postCaseCleanup()
             if not clean:
                 self._passed = False
@@ -908,8 +901,6 @@ class TestCase(_Assertions):
             self.__class__._instancesRun.add(self)
         self._deprecateReactor(reactor)
         try:
-            if self.forceGarbageCollection:
-                gc.collect()
             if first:
                 d = self.deferSetUpClass(result)
             else:
@@ -1286,8 +1277,29 @@ class _BrokenIDTestCaseAdapter(_PyUnitTestCaseAdapter):
         """
         Return the fully-qualified Python name of the doctest.
         """
-        return self.original.shortDescription()
+        testID = self.original.shortDescription()
+        if testID is not None:
+            return testID
+        return self.original.id()
 
+
+
+class _ForceGarbageCollectionDecorator(TestDecorator):
+    """
+    Forces garbage collection to be run before and after the test. Any errors
+    logged during the post-test collection are added to the test result as
+    errors.
+    """
+
+    def run(self, result):
+        gc.collect()
+        TestDecorator.run(self, result)
+        _logObserver._add()
+        gc.collect()
+        for error in _logObserver.getErrors():
+            result.addError(self, error)
+        _logObserver.flushErrors()
+        _logObserver._remove()
 
 
 components.registerAdapter(

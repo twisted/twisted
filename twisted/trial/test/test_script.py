@@ -1,6 +1,7 @@
 # Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+import gc
 import StringIO, sys, sets, types
 
 from twisted.trial import unittest, runner
@@ -9,6 +10,8 @@ from twisted.python import util
 
 from twisted.trial.test.test_loader import testNames
 
+pyunit = __import__('unittest')
+
 
 def sibpath(filename):
     """For finding files in twisted/trial/test"""
@@ -16,26 +19,63 @@ def sibpath(filename):
 
 
 
-class TestGarbageCollect(unittest.TestCase):
+class ForceGarbageCollection(unittest.TestCase):
+    """
+    Tests for the --force-gc option.
+    """
+
     def setUp(self):
         self.config = trial.Options()
+        self.log = []
+        self.patch(gc, 'collect', self.collect)
+        test = pyunit.FunctionTestCase(self.simpleTest)
+        self.test = runner.TestSuite([test, test])
 
-    def test_forcedGc(self):
+
+    def simpleTest(self):
         """
-        Passing the '--force-gc' option to the trial script should set the
-        appropriate flag in the test loader.
+        A simple test method that records that it was run.
+        """
+        self.log.append('test')
+
+
+    def collect(self):
+        """
+        A replacement for gc.collect that logs calls to itself.
+        """
+        self.log.append('collect')
+
+
+    def makeRunner(self):
+        """
+        Return a L{runner.TrialRunner} object that is safe to use in tests.
+        """
+        runner = trial._makeRunner(self.config)
+        runner.stream = StringIO.StringIO()
+        return runner
+
+
+    def test_forceGc(self):
+        """
+        Passing the --force-gc option to the trial script forces the garbage
+        collector to run before and after each test.
         """
         self.config['force-gc'] = True
-        loader = trial._getLoader(self.config)
-        self.assertEqual(True, loader.forceGarbageCollection)
+        self.config.postOptions()
+        runner = self.makeRunner()
+        runner.run(self.test)
+        self.assertEqual(self.log, ['collect', 'test', 'collect',
+                                    'collect', 'test', 'collect'])
 
-    def test_unforcedGc(self):
+
+    def test_unforceGc(self):
         """
-        The test loader should only enable forced garbage collection if the
-        option is passed to the trial script.
+        By default, no garbage collection is forced.
         """
-        loader = trial._getLoader(self.config)
-        self.assertEqual(False, loader.forceGarbageCollection)
+        self.config.postOptions()
+        runner = self.makeRunner()
+        runner.run(self.test)
+        self.assertEqual(self.log, ['test', 'test'])
 
 
 

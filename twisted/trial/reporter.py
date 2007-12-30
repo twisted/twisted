@@ -898,15 +898,29 @@ class TreeReporter(Reporter):
         super(TreeReporter, self)._write(self.currentLine)
 
 
-    def _testPrelude(self, test):
+    def _getPreludeSegments(self, testID):
+        """
+        Return a list of all non-leaf segments to display in the tree.
+
+        Normally this is the module and class name.
+        """
+        segments = testID.split('.')[:-1]
+        if len(segments) == 0:
+            return segments
+        segments = [
+            seg for seg in '.'.join(segments[:-1]), segments[-1]
+            if len(seg) > 0]
+        return segments
+
+
+    def _testPrelude(self, testID):
         """
         Write the name of the test to the stream, indenting it appropriately.
 
         If the test is the first test in a new 'branch' of the tree, also
         write all of the parents in that branch.
         """
-        segments = test.id().split('.')
-        segments = ['.'.join(segments[:-2]), segments[-2]]
+        segments = self._getPreludeSegments(testID)
         indentLevel = 0
         for seg in segments:
             if indentLevel < len(self._lastTest):
@@ -934,7 +948,7 @@ class TreeReporter(Reporter):
         Called when C{test} starts. Writes the tests name to the stream using
         a tree format.
         """
-        self._testPrelude(test)
+        self._testPrelude(test.id())
         self._write('%s%s ... ' % (self.indent * (len(self._lastTest)),
                                    self.getDescription(test)))
         super(TreeReporter, self).startTest(test)

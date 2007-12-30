@@ -191,51 +191,6 @@ class LoaderTest(packages.SysPathManglingTest):
                              [test._testMethodName for test in suite._tests])
 
 
-    def test_loadWithoutForcedGarbageCollection(self):
-        """
-        Tests loaded by default should not be set to force garbage collection.
-        This test checks 'loadMethod'.
-        """
-        import sample
-        test = self.loader.loadMethod(sample.FooTest.test_foo)
-        self.assertEqual(test.forceGarbageCollection, False)
-
-    def test_loadWithForcedGarbageCollection(self):
-        """
-        If the loader is set to force garbage collection, any tests it loads
-        should also be set to force garbage collection. This test checks
-        'loadMethod'.
-        """
-        import sample
-        self.loader.forceGarbageCollection = True
-        test = self.loader.loadMethod(sample.FooTest.test_foo)
-        self.assertEqual(test.forceGarbageCollection, True)
-
-
-    def test_loadWithoutForcedGarbageCollectionClass(self):
-        """
-        Tests loaded by default should not be set to force garbage collection.
-        This test checks 'loadClass'.
-        """
-        import sample
-        suite = self.loader.loadClass(sample.FooTest)
-        for test in unittest._iterateTests(suite):
-            self.assertEqual(test.forceGarbageCollection, False)
-
-
-    def test_loadWithForcedGarbageCollectionClass(self):
-        """
-        If the loader is set to force garbage collection, any tests it loads
-        should also be set to force garbage collection. This test checks
-        'loadClass'.
-        """
-        import sample
-        self.loader.forceGarbageCollection = True
-        suite = self.loader.loadClass(sample.FooTest)
-        for test in unittest._iterateTests(suite):
-            self.assertEqual(test.forceGarbageCollection, True)
-
-
     def test_loadNonClass(self):
         import sample
         self.failUnlessRaises(TypeError, self.loader.loadClass, sample)

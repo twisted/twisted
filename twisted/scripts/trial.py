@@ -321,8 +321,6 @@ def _getLoader(config):
         randomer.seed(config['random'])
         loader.sorter = lambda x : randomer.random()
         print 'Running tests shuffled with seed %d\n' % config['random']
-    if config['force-gc']:
-        loader.forceGarbageCollection = True
     if not config['until-failure']:
         loader.suiteFactory = runner.DestructiveTestSuite
     return loader
@@ -341,7 +339,8 @@ def _makeRunner(config):
                               tracebackFormat=config['tbformat'],
                               realTimeErrors=config['rterrors'],
                               uncleanWarnings=config['unclean-warnings'],
-                              workingDirectory=config['temp-directory'])
+                              workingDirectory=config['temp-directory'],
+                              forceGarbageCollection=config['force-gc'])
 
 
 def run():

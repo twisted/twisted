@@ -613,7 +613,7 @@ class TestGarbageCollection(GCMixin, unittest.TestCase):
         test gc.collect is called before and after each test.
         """
         test = TestGarbageCollection.BasicTest('test_foo')
-        test.forceGarbageCollection = True
+        test = unittest._ForceGarbageCollectionDecorator(test)
         result = reporter.TestResult()
         test.run(result)
         self.failUnlessEqual(
@@ -624,11 +624,11 @@ class TestGarbageCollection(GCMixin, unittest.TestCase):
         """
         test gc.collect is called after tearDownClass.
         """
-        tests = [TestGarbageCollection.ClassTest('test_1'),
-                 TestGarbageCollection.ClassTest('test_2')]
-        for t in tests:
-            t.forceGarbageCollection = True
-        test = runner.TestSuite(tests)
+        test = unittest.TestSuite(
+            [TestGarbageCollection.ClassTest('test_1'),
+             TestGarbageCollection.ClassTest('test_2')])
+        test = unittest.decorate(
+            test, unittest._ForceGarbageCollectionDecorator)
         result = reporter.TestResult()
         test.run(result)
         # check that collect gets called after individual tests, and
@@ -646,8 +646,8 @@ class TestUnhandledDeferred(unittest.TestCase):
         from twisted.trial.test import weird
         # test_unhandledDeferred creates a cycle. we need explicit control of gc
         gc.disable()
-        self.test1 = weird.TestBleeding('test_unhandledDeferred')
-        self.test1.forceGarbageCollection = True
+        self.test1 = unittest._ForceGarbageCollectionDecorator(
+            weird.TestBleeding('test_unhandledDeferred'))
 
     def test_isReported(self):
         """

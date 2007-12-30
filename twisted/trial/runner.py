@@ -411,7 +411,6 @@ class TestLoader(object):
         self.suiteFactory = TestSuite
         self.sorter = name
         self._importErrors = []
-        self.forceGarbageCollection = False
 
     def sort(self, xs):
         """
@@ -507,9 +506,7 @@ class TestLoader(object):
         return self._makeCase(method.im_class, method.__name__)
 
     def _makeCase(self, klass, methodName):
-        test = klass(methodName)
-        test.forceGarbageCollection = self.forceGarbageCollection
-        return test
+        return klass(methodName)
 
     def loadPackage(self, package, recurse=False):
         """
@@ -716,7 +713,8 @@ class TrialRunner(object):
                  tracebackFormat='default',
                  realTimeErrors=False,
                  uncleanWarnings=False,
-                 workingDirectory=None):
+                 workingDirectory=None,
+                 forceGarbageCollection=False):
         self.reporterFactory = reporterFactory
         self.logfile = logfile
         self.mode = mode
@@ -729,6 +727,7 @@ class TrialRunner(object):
         self._logFileObserver = None
         self._logFileObject = None
         self._logWarnings = False
+        self._forceGarbageCollection = forceGarbageCollection
         if profile:
             self.run = util.profiled(self.run, 'profile.data')
 
@@ -769,10 +768,13 @@ class TrialRunner(object):
         Run the test or suite and return a result object.
         """
         result = self._makeResult()
+        test = unittest.decorate(test, ITestCase)
+        if self._forceGarbageCollection:
+            test = unittest.decorate(
+                test, unittest._ForceGarbageCollectionDecorator)
         # decorate the suite with reactor cleanup and log starting
         # This should move out of the runner and be presumed to be
         # present
-        test = unittest.decorate(test, ITestCase)
         suite = TrialSuite([test])
         startTime = time.time()
         if self.mode == self.DRY_RUN:

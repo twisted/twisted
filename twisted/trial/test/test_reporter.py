@@ -741,6 +741,7 @@ class TestTreeReporter(unittest.TestCase):
         self.assertEquals(
             self.stream.getvalue().splitlines()[-1].strip(), "(successes=1)")
 
+
     def test_summaryColoredFailure(self):
         """
         The summary in case of failure should have a good count of errors
@@ -754,6 +755,23 @@ class TestTreeReporter(unittest.TestCase):
         self.assertEquals(self.log[1], (self.result.FAILURE, 'FAILED'))
         self.assertEquals(
             self.stream.getvalue().splitlines()[-1].strip(), "(errors=1)")
+
+
+    def test_getPrelude(self):
+        """
+        The tree needs to get the segments of the test ID that correspond
+        to the module and class that it belongs to.
+        """
+        self.assertEqual(
+            ['foo.bar', 'baz'],
+            self.result._getPreludeSegments('foo.bar.baz.qux'))
+        self.assertEqual(
+            ['foo', 'bar'],
+            self.result._getPreludeSegments('foo.bar.baz'))
+        self.assertEqual(
+            ['foo'],
+            self.result._getPreludeSegments('foo.bar'))
+        self.assertEqual([], self.result._getPreludeSegments('foo'))
 
 
 class TestReporter(unittest.TestCase):
