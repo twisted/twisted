@@ -3,6 +3,7 @@
 # See LICENSE for details.
 
 from twisted.python import filepath
+from twisted.python.failure import Failure
 from twisted.protocols import amp
 from twisted.test import iosim
 from twisted.trial import unittest
@@ -372,10 +373,499 @@ class ParsingTest(unittest.TestCase):
             p.flush()
             self.assertEquals(s.boxes[-1], jb)
 
+
+
+class FakeLocator(object):
+    """
+    This is a fake implementation of the interface implied by
+    L{CommandLocator}.
+    """
+    def __init__(self):
+        """
+        Remember the given keyword arguments as a set of responders.
+        """
+        self.commands = {}
+
+
+    def locateResponder(self, commandName):
+        """
+        Look up and return a function passed as a keyword argument of the given
+        name to the constructor.
+        """
+        return self.commands[commandName]
+
+
+class FakeSender:
+    """
+    This is a fake implementation of the 'box sender' interface implied by
+    L{AMP}.
+    """
+    def __init__(self):
+        """
+        Create a fake sender and initialize the list of received boxes and
+        unhandled errors.
+        """
+        self.sentBoxes = []
+        self.unhandledErrors = []
+        self.expectedErrors = 0
+
+
+    def expectError(self):
+        """
+        Expect one error, so that the test doesn't fail.
+        """
+        self.expectedErrors += 1
+
+
+    def sendBox(self, box):
+        """
+        Accept a box, but don't do anything.
+        """
+        self.sentBoxes.append(box)
+
+
+    def unhandledError(self, failure):
+        """
+        Deal with failures by instantly re-raising them for easier debugging.
+        """
+        self.expectedErrors -= 1
+        if self.expectedErrors < 0:
+            failure.raiseException()
+        else:
+            self.unhandledErrors.append(failure)
+
+
+
+class CommandDispatchTests(unittest.TestCase):
+    """
+    The AMP CommandDispatcher class dispatches converts AMP boxes into commands
+    and responses using Command.responder decorator.
+
+    Note: Originally, AMP's factoring was such that many tests for this
+    functionality are now implemented as full round-trip tests in L{AMPTest}.
+    Future tests should be written at this level instead, to ensure API
+    compatibility and to provide more granular, readable units of test
+    coverage.
+    """
+
+    def setUp(self):
+        """
+        Create a dispatcher to use.
+        """
+        self.locator = FakeLocator()
+        self.sender = FakeSender()
+        self.dispatcher = amp.BoxDispatcher(self.locator)
+        self.dispatcher.startReceivingBoxes(self.sender)
+
+
+    def test_receivedAsk(self):
+        """
+        L{CommandDispatcher.ampBoxReceived} should locate the appropriate
+        command in its responder lookup, based on the '_ask' key.
+        """
+        received = []
+        def thunk(box):
+            received.append(box)
+            return amp.Box({"hello": "goodbye"})
+        input = amp.Box(_command="hello",
+                        _ask="test-command-id",
+                        hello="world")
+        self.locator.commands['hello'] = thunk
+        self.dispatcher.ampBoxReceived(input)
+        self.assertEquals(received, [input])
+
+
+    def test_sendUnhandledError(self):
+        """
+        L{CommandDispatcher} should relay its unhandled errors in responding to
+        boxes to its boxSender.
+        """
+        err = RuntimeError("something went wrong, oh no")
+        self.sender.expectError()
+        self.dispatcher.unhandledError(Failure(err))
+        self.assertEqual(len(self.sender.unhandledErrors), 1)
+        self.assertEqual(self.sender.unhandledErrors[0].value, err)
+
+
+    def test_unhandledSerializationError(self):
+        """
+        Errors during serialization ought to be relayed to the sender's
+        unhandledError method.
+        """
+        err = RuntimeError("something undefined went wrong")
+        def thunk(result):
+            class BrokenBox(amp.Box):
+                def _sendTo(self, proto):
+                    raise err
+            return BrokenBox()
+        self.locator.commands['hello'] = thunk
+        input = amp.Box(_command="hello",
+                        _ask="test-command-id",
+                        hello="world")
+        self.sender.expectError()
+        self.dispatcher.ampBoxReceived(input)
+        self.assertEquals(len(self.sender.unhandledErrors), 1)
+        self.assertEquals(self.sender.unhandledErrors[0].value, err)
+
+
+    def test_callRemote(self):
+        """
+        L{CommandDispatcher.callRemote} should emit a properly formatted '_ask'
+        box to its boxSender and record an outstanding L{Deferred}.  When a
+        corresponding '_answer' packet is received, the L{Deferred} should be
+        fired, and the results translated via the given L{Command}'s response
+        de-serialization.
+        """
+        D = self.dispatcher.callRemote(Hello, hello='world')
+        self.assertEquals(self.sender.sentBoxes,
+                          [amp.AmpBox(_command="hello",
+                                      _ask="1",
+                                      hello="world")])
+        answers = []
+        D.addCallback(answers.append)
+        self.assertEquals(answers, [])
+        self.dispatcher.ampBoxReceived(amp.AmpBox({'hello': "yay",
+                                                   'print': "ignored",
+                                                   '_answer': "1"}))
+        self.assertEquals(answers, [dict(hello="yay",
+                                         Print=u"ignored")])
+
+
+class SimpleGreeting(amp.Command):
+    """
+    A very simple greeting command that uses a few basic argument types.
+    """
+    commandName = 'simple'
+    arguments = [('greeting', amp.Unicode()),
+                 ('cookie', amp.Integer())]
+    response = [('cookieplus', amp.Integer())]
+
+
+class TestLocator(amp.CommandLocator):
+    """
+    A locator which implements a responder to a 'hello' command.
+    """
+    def __init__(self):
+        self.greetings = []
+
+
+    def greetingResponder(self, greeting, cookie):
+        self.greetings.append((greeting, cookie))
+        return dict(cookieplus=cookie + 3)
+    greetingResponder = SimpleGreeting.responder(greetingResponder)
+
+
+
+class OverrideLocatorAMP(amp.AMP):
+    def __init__(self):
+        amp.AMP.__init__(self)
+        self.customResponder = object()
+        self.expectations = {"custom": self.customResponder}
+        self.greetings = []
+
+
+    def lookupFunction(self, name):
+        """
+        Override the deprecated lookupFunction function.
+        """
+        if name in self.expectations:
+            result = self.expectations[name]
+            return result
+        else:
+            return super(OverrideLocatorAMP, self).lookupFunction(name)
+
+
+    def greetingResponder(self, greeting, cookie):
+        self.greetings.append((greeting, cookie))
+        return dict(cookieplus=cookie + 3)
+    greetingResponder = SimpleGreeting.responder(greetingResponder)
+
+
+
+
+class CommandLocatorTests(unittest.TestCase):
+    """
+    The CommandLocator should enable users to specify responders to commands as
+    functions that take structured objects, annotated with metadata.
+    """
+
+    def test_responderDecorator(self):
+        """
+        A method on a L{CommandLocator} subclass decorated with a L{Command}
+        subclass's L{responder} decorator should be returned from
+        locateResponder, wrapped in logic to serialize and deserialize its
+        arguments.
+        """
+        locator = TestLocator()
+        responderCallable = locator.locateResponder("simple")
+        result = responderCallable(amp.Box(greeting="ni hao", cookie="5"))
+        def done(values):
+            self.assertEquals(values, amp.AmpBox(cookieplus='8'))
+        return result.addCallback(done)
+
+
+    def test_lookupFunctionDeprecatedOverride(self):
+        """
+        Subclasses which override locateResponder under its old name,
+        lookupFunction, should have the override invoked instead.  (This tests
+        an AMP subclass, because in the version of the code that could invoke
+        this deprecated code path, there was no L{CommandLocator}.)
+        """
+        locator = OverrideLocatorAMP()
+        customResponderObject = self.assertWarns(
+            PendingDeprecationWarning,
+            "Override locateResponder, not lookupFunction.",
+            __file__, lambda : locator.locateResponder("custom"))
+        self.assertEquals(locator.customResponder, customResponderObject)
+        # Make sure upcalling works too
+        normalResponderObject = self.assertWarns(
+            PendingDeprecationWarning,
+            "Override locateResponder, not lookupFunction.",
+            __file__, lambda : locator.locateResponder("simple"))
+        result = normalResponderObject(amp.Box(greeting="ni hao", cookie="5"))
+        def done(values):
+            self.assertEquals(values, amp.AmpBox(cookieplus='8'))
+        return result.addCallback(done)
+
+
+    def test_lookupFunctionDeprecatedInvoke(self):
+        """
+        Invoking locateResponder under its old name, lookupFunction, should
+        emit a deprecation warning, but do the same thing.
+        """
+        locator = TestLocator()
+        responderCallable = self.assertWarns(
+            PendingDeprecationWarning,
+            "Call locateResponder, not lookupFunction.", __file__,
+            lambda : locator.lookupFunction("simple"))
+        result = responderCallable(amp.Box(greeting="ni hao", cookie="5"))
+        def done(values):
+            self.assertEquals(values, amp.AmpBox(cookieplus='8'))
+        return result.addCallback(done)
+
+
+
 SWITCH_CLIENT_DATA = 'Success!'
 SWITCH_SERVER_DATA = 'No, really.  Success.'
 
+
+class BinaryProtocolTests(unittest.TestCase):
+    """
+    Tests for L{amp.BinaryBoxProtocol}.
+    """
+
+    def setUp(self):
+        """
+        Keep track of all boxes received by this test in its capacity as an
+        L{IBoxReceiver} implementor.
+        """
+        self.boxes = []
+        self.data = []
+
+
+    def startReceivingBoxes(self, sender):
+        """
+        Implement L{IBoxReceiver.startReceivingBoxes} to do nothing.
+        """
+
+
+    def ampBoxReceived(self, box):
+        """
+        A box was received by the protocol.
+        """
+        self.boxes.append(box)
+
+    stopReason = None
+    def stopReceivingBoxes(self, reason):
+        """
+        Record the reason that we stopped receiving boxes.
+        """
+        self.stopReason = reason
+
+
+    # fake ITransport
+    def getPeer(self):
+        return 'no peer'
+
+
+    def getHost(self):
+        return 'no host'
+
+
+    def write(self, data):
+        self.data.append(data)
+
+
+    def test_receiveBoxStateMachine(self):
+        """
+        When a binary box protocol receives:
+            * a key
+            * a value
+            * an empty string
+        it should emit a box and send it to its boxReceiver.
+        """
+        a = amp.BinaryBoxProtocol(self)
+        a.stringReceived("hello")
+        a.stringReceived("world")
+        a.stringReceived("")
+        self.assertEquals(self.boxes, [amp.AmpBox(hello="world")])
+
+
+    def test_receiveBoxData(self):
+        """
+        When a binary box protocol receives the serialized form of an AMP box,
+        it should emit a similar box to its boxReceiver.
+        """
+        a = amp.BinaryBoxProtocol(self)
+        a.dataReceived(amp.Box({"testKey": "valueTest",
+                                "anotherKey": "anotherValue"}).serialize())
+        self.assertEquals(self.boxes,
+                          [amp.Box({"testKey": "valueTest",
+                                    "anotherKey": "anotherValue"})])
+
+
+    def test_sendBox(self):
+        """
+        When a binary box protocol sends a box, it should emit the serialized
+        bytes of that box to its transport.
+        """
+        a = amp.BinaryBoxProtocol(self)
+        a.makeConnection(self)
+        aBox = amp.Box({"testKey": "valueTest",
+                        "someData": "hello"})
+        a.makeConnection(self)
+        a.sendBox(aBox)
+        self.assertEquals(''.join(self.data), aBox.serialize())
+
+
+    def test_connectionLostStopSendingBoxes(self):
+        """
+        When a binary box protocol loses its connection, it should notify its
+        box receiver that it has stopped receiving boxes.
+        """
+        a = amp.BinaryBoxProtocol(self)
+        a.makeConnection(self)
+        aBox = amp.Box({"sample": "data"})
+        a.makeConnection(self)
+        connectionFailure = Failure(RuntimeError())
+        a.connectionLost(connectionFailure)
+        self.assertIdentical(self.stopReason, connectionFailure)
+
+
+    def test_protocolSwitch(self):
+        """
+        L{BinaryBoxProtocol} has the capacity to switch to a different protocol
+        on a box boundary.  When a protocol is in the process of switching, it
+        cannot receive traffic.
+        """
+        otherProto = TestProto(None, "outgoing data")
+        test = self
+        class SwitchyReceiver:
+            switched = False
+            def startReceivingBoxes(self, sender):
+                pass
+            def ampBoxReceived(self, box):
+                test.assertFalse(self.switched,
+                                 "Should only receive one box!")
+                self.switched = True
+                a._lockForSwitch()
+                a._switchTo(otherProto)
+        a = amp.BinaryBoxProtocol(SwitchyReceiver())
+        anyOldBox = amp.Box({"include": "lots",
+                             "of": "data"})
+        a.makeConnection(self)
+        # Include a 0-length box at the beginning of the next protocol's data,
+        # to make sure that AMP doesn't eat the data or try to deliver extra
+        # boxes either...
+        moreThanOneBox = anyOldBox.serialize() + "\x00\x00Hello, world!"
+        a.dataReceived(moreThanOneBox)
+        self.assertIdentical(otherProto.transport, self)
+        self.assertEquals("".join(otherProto.data), "\x00\x00Hello, world!")
+        self.assertEquals(self.data, ["outgoing data"])
+        a.dataReceived("more data")
+        self.assertEquals("".join(otherProto.data),
+                          "\x00\x00Hello, world!more data")
+        self.assertRaises(amp.ProtocolSwitched, a.sendBox, anyOldBox)
+
+
+    def test_protocolSwitchInvalidStates(self):
+        """
+        In order to make sure the protocol never gets any invalid data sent
+        into the middle of a box, it must be locked for switching before it is
+        switched.  It can only be unlocked if the switch failed, and attempting
+        to send a box while it is locked should raise an exception.
+        """
+        a = amp.BinaryBoxProtocol(self)
+        a.makeConnection(self)
+        sampleBox = amp.Box({"some": "data"})
+        a._lockForSwitch()
+        self.assertRaises(amp.ProtocolSwitched, a.sendBox, sampleBox)
+        a._unlockFromSwitch()
+        a.sendBox(sampleBox)
+        self.assertEquals(''.join(self.data), sampleBox.serialize())
+        a._lockForSwitch()
+        otherProto = TestProto(None, "outgoing data")
+        a._switchTo(otherProto)
+        self.assertRaises(amp.ProtocolSwitched, a._unlockFromSwitch)
+
+
+    def test_protocolSwitchLoseConnection(self):
+        """
+        When the protocol is switched, it should notify its nested protocol of
+        disconnection.
+        """
+        class Loser(protocol.Protocol):
+            reason = None
+            def connectionLost(self, reason):
+                self.reason = reason
+        connectionLoser = Loser()
+        a = amp.BinaryBoxProtocol(self)
+        a.makeConnection(self)
+        a._lockForSwitch()
+        a._switchTo(connectionLoser)
+        connectionFailure = Failure(RuntimeError())
+        a.connectionLost(connectionFailure)
+        self.assertEquals(connectionLoser.reason, connectionFailure)
+
+
+    def test_protocolSwitchLoseClientConnection(self):
+        """
+        When the protocol is switched, it should notify its nested client
+        protocol factory of disconnection.
+        """
+        class ClientLoser:
+            reason = None
+            def clientConnectionLost(self, connector, reason):
+                self.reason = reason
+        a = amp.BinaryBoxProtocol(self)
+        connectionLoser = protocol.Protocol()
+        clientLoser = ClientLoser()
+        a.makeConnection(self)
+        a._lockForSwitch()
+        a._switchTo(connectionLoser, clientLoser)
+        connectionFailure = Failure(RuntimeError())
+        a.connectionLost(connectionFailure)
+        self.assertEquals(clientLoser.reason, connectionFailure)
+
+
+
 class AMPTest(unittest.TestCase):
+
+    def test_interfaceDeclarations(self):
+        """
+        The classes in the amp module ought to implement the interfaces that
+        are declared for their benefit.
+        """
+        for interface, implementation in [(amp.IBoxSender, amp.BinaryBoxProtocol),
+                                          (amp.IBoxReceiver, amp.BoxDispatcher),
+                                          (amp.IResponderLocator, amp.CommandLocator),
+                                          (amp.IResponderLocator, amp.SimpleStringLocator),
+                                          (amp.IBoxSender, amp.AMP),
+                                          (amp.IBoxReceiver, amp.AMP),
+                                          (amp.IResponderLocator, amp.AMP)]:
+            self.failUnless(interface.implementedBy(implementation),
+                            "%s does not implements(%s)" % (implementation, interface))
+
 
     def test_helloWorld(self):
         """
@@ -735,8 +1225,29 @@ class AMPTest(unittest.TestCase):
         self.assertRaises(amp.InvalidSignature, Hello)
 
 
+    def test_doubleProtocolSwitch(self):
+        """
+        As a debugging aid, a protocol system should raise a
+        L{ProtocolSwitched} exception when asked to switch a protocol that is
+        already switched.
+        """
+        serverDeferred = defer.Deferred()
+        serverProto = SimpleSymmetricCommandProtocol(serverDeferred)
+        clientDeferred = defer.Deferred()
+        clientProto = SimpleSymmetricCommandProtocol(clientDeferred)
+        c, s, p = connectedServerAndClient(ServerClass=lambda: serverProto,
+                                           ClientClass=lambda: clientProto)
+        def switched(result):
+            self.assertRaises(amp.ProtocolSwitched, c.switchToTestProtocol)
+            self.testSucceeded = True
+        c.switchToTestProtocol().addCallback(switched)
+        p.flush()
+        self.failUnless(self.testSucceeded)
+
+
     def test_protocolSwitch(self, switcher=SimpleSymmetricCommandProtocol,
-                            spuriousTraffic=False):
+                            spuriousTraffic=False,
+                            spuriousError=False):
         """
         Verify that it is possible to switch to another protocol mid-connection and
         send data to it successfully.
@@ -777,7 +1288,12 @@ class AMPTest(unittest.TestCase):
         if spuriousTraffic:
             # switch is done here; do this here to make sure that if we're
             # going to corrupt the connection, we do it before it's closed.
-            s.waiting.callback({})
+            if spuriousError:
+                s.waiting.errback(amp.RemoteAmpError(
+                        "SPURIOUS",
+                        "Here's some traffic in the form of an error."))
+            else:
+                s.waiting.callback({})
             p.flush()
         c.transport.loseConnection() # close it
         p.flush()
@@ -790,6 +1306,7 @@ class AMPTest(unittest.TestCase):
         the command that does the switch is deferred.
         """
         return self.test_protocolSwitch(switcher=DeferredSymmetricCommandProtocol)
+
 
     def test_protocolSwitchFail(self, switcher=SimpleSymmetricCommandProtocol):
         """
@@ -824,6 +1341,15 @@ class AMPTest(unittest.TestCase):
         return self.test_protocolSwitch(spuriousTraffic=True)
 
 
+    def test_errorAfterSwitch(self):
+        """
+        Returning an error after a protocol switch should record the underlying
+        error.
+        """
+        return self.test_protocolSwitch(spuriousTraffic=True,
+                                        spuriousError=True)
+
+
     def test_quitBoxQuits(self):
         """
         Verify that commands with a responseType of QuitBox will in fact
@@ -844,7 +1370,6 @@ class AMPTest(unittest.TestCase):
         self.assertEquals(L.pop()['goodbye'], GOODBYE)
         c.sendHello(HELLO).addErrback(L.append)
         L.pop().trap(error.ConnectionDone)
-
 
 
     def test_basicLiteralEmit(self):
@@ -987,6 +1512,7 @@ class TLSTest(unittest.TestCase):
         p.flush()
         self.assertEqual(L[0], {'pinged': True})
 
+
     def test_startTooManyTimes(self):
         """
         Verify that the protocol will complain if we attempt to renegotiate TLS,
@@ -999,7 +1525,6 @@ class TLSTest(unittest.TestCase):
         okc = OKCert()
         svr.certFactory = lambda : okc
 
-        # print c, c.transport
         cli.callRemote(amp.StartTLS,
                        tls_localCertificate=okc,
                        tls_verifyAuthorities=[PretendRemoteCertificateAuthority()])
@@ -1011,6 +1536,7 @@ class TLSTest(unittest.TestCase):
             amp.StartTLS,
             tls_localCertificate=okc,
             tls_verifyAuthorities=[PretendRemoteCertificateAuthority()])
+
 
     def test_negotiationFailed(self):
         """
@@ -1034,6 +1560,7 @@ class TLSTest(unittest.TestCase):
         d = cli.callRemote(SecuredPing)
         p.flush()
         self.assertFailure(d, iosim.OpenSSLVerifyError)
+
 
     def test_negotiationFailedByClosing(self):
         """
@@ -1527,7 +2054,7 @@ class CommandTestCase(unittest.TestCase):
         C{parseArguments} method to get the arguments.
         """
         protocol = NoNetworkProtocol()
-        responder = protocol.lookupFunction(MagicSchemaCommand.commandName)
+        responder = protocol.locateResponder(MagicSchemaCommand.commandName)
         argument = object()
         response = responder(dict(weird=argument))
         response.addCallback(

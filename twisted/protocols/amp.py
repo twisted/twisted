@@ -156,17 +156,19 @@ has several features:
 
 __metaclass__ = type
 
-import types
+import types, warnings
 
 from cStringIO import StringIO
 from struct import pack
+
+from zope.interface import Interface, implements
 
 from twisted.python.reflect import accumulateClassDict
 from twisted.python.failure import Failure
 from twisted.python import log, filepath
 
 from twisted.internet.main import CONNECTION_LOST
-from twisted.internet.error import PeerVerifyError
+from twisted.internet.error import PeerVerifyError, ConnectionLost
 from twisted.internet.defer import Deferred, maybeDeferred, fail
 from twisted.protocols.basic import Int16StringReceiver, StatefulStringProtocol
 
@@ -188,6 +190,82 @@ UNHANDLED_ERROR_CODE = 'UNHANDLED'
 
 MAX_KEY_LENGTH = 0xff
 MAX_VALUE_LENGTH = 0xffff
+
+
+class IBoxSender(Interface):
+    """
+    A transport which can send L{AmpBox} objects.
+    """
+
+    def sendBox(box):
+        """
+        Send an L{AmpBox}.
+
+        @raise ProtocolSwitched: if the underlying protocol has been
+        switched.
+
+        @raise ConnectionLost: if the underlying connection has already been
+        lost.
+        """
+
+    def unhandledError(failure):
+        """
+        An unhandled error occurred in response to a box.  Log it
+        appropriately.
+
+        @param failure: a L{Failure} describing the error that occurred.
+        """
+
+
+
+class IBoxReceiver(Interface):
+    """
+    An application object which can receive L{AmpBox} objects and dispatch them
+    appropriately.
+    """
+
+    def startReceivingBoxes(boxSender):
+        """
+        The L{ampBoxReceived} method will start being called; boxes may be
+        responded to by responding to the given L{IBoxSender}.
+
+        @param boxSender: an L{IBoxSender} provider.
+        """
+
+
+    def ampBoxReceived(box):
+        """
+        A box was received from the transport; dispatch it appropriately.
+        """
+
+
+    def stopReceivingBoxes(reason):
+        """
+        No further boxes will be received on this connection.
+
+        @type reason: L{Failure}
+        """
+
+
+
+class IResponderLocator(Interface):
+    """
+    An application object which can look up appropriate responder methods for
+    AMP commands.
+    """
+
+    def locateResponder(self, name):
+        """
+        Locate a responder method appropriate for the named command.
+
+        @param name: the wire-level name (commandName) of the AMP command to be
+        responded to.
+
+        @return: a 1-argument callable that takes an L{AmpBox} with argument
+        values for the given command, and returns an L{AmpBox} containing
+        argument values for the named command, or a L{Deferred} that fires the
+        same.
+        """
 
 
 
@@ -401,7 +479,7 @@ class AmpBox(dict):
 
         @param proto: an AMP instance.
         """
-        proto._sendBox(self)
+        proto.sendBox(self)
 
     def __repr__(self):
         return 'AmpBox(%s)' % (dict.__repr__(self),)
@@ -427,6 +505,8 @@ class QuitBox(AmpBox):
         """
         super(QuitBox, self)._sendTo(proto)
         proto.transport.loseConnection()
+
+
 
 class _SwitchBox(AmpBox):
     """
@@ -458,176 +538,64 @@ class _SwitchBox(AmpBox):
         over the new protocol.
         """
         super(_SwitchBox, self)._sendTo(proto)
+        proto._lockForSwitch()
         proto._switchTo(self.innerProto)
 
 
 
-class _DispatchMixin:
+class BoxDispatcher:
     """
-    I help AMP dispatch commands based on strings.
+    A L{BoxDispatcher} dispatches '_ask', '_answer', and '_error' L{AmpBox}es,
+    both incoming and outgoing, to their appropriate destinations.
+
+    Outgoing commands are converted into L{Deferred}s and outgoing boxes, and
+    associated tracking state to fire those L{Deferred} when '_answer' boxes
+    come back.  Incoming '_answer' and '_error' boxes are converted into
+    callbacks and errbacks on those L{Deferred}s, respectively.
+
+    Incoming '_ask' boxes are converted into method calls on a supplied method
+    locator.
+
+    @ivar _outstandingRequests: a dictionary mapping request IDs to
+    L{Deferred}s which were returned for those requests.
+
+    @ivar locator: an object with a L{locateResponder} method that locates a
+    responder function that takes a Box and returns a result (either a Box or a
+    Deferred which fires one).
+
+    @ivar boxSender: an object which can send boxes, via the L{_sendBox}
+    method, such as an L{AMP} instance.
+    @type boxSender: L{IBoxSender}
     """
 
-    baseDispatchPrefix = 'amp_'
-
-    def _wrapWithSerialization(self, aCallable, command):
-        """
-        Wrap aCallable with its command's argument de-serialization
-        and result serialization logic.
-
-        @param aCallable: a callable with a 'command' attribute, designed to be
-        called with keyword arguments.
-
-        @param command: the command class whose serialization to use.
-
-        @return: a 1-arg callable which, when invoked with an AmpBox, will
-        deserialize the argument list and invoke appropriate user code for the
-        callable's command, returning a Deferred which fires with the result or
-        fails with an error.
-        """
-        def doit(box):
-            kw = command.parseArguments(box, self)
-            def checkKnownErrors(error):
-                key = error.trap(*command.allErrors)
-                code = command.allErrors[key]
-                desc = str(error.value)
-                return Failure(RemoteAmpError(
-                        code, desc, key in command.fatalErrors, local=error))
-            def makeResponseFor(objects):
-                try:
-                    return command.makeResponse(objects, self)
-                except:
-                    # let's helpfully log this.
-                    originalFailure = Failure()
-                    raise BadLocalReturn(
-                        "%r returned %r and %r could not serialize it" % (
-                            aCallable,
-                            objects,
-                            command),
-                        originalFailure)
-            return maybeDeferred(aCallable, **kw).addCallback(
-                makeResponseFor).addErrback(
-                checkKnownErrors)
-        return doit
-
-
-    def lookupFunction(self, name):
-        """
-        Return a callable to invoke when executing the named command.
-
-        @param name: the normalized name (from the wire) of the command.
-
-        @return: a function that takes one argument (a Box) and returns a box,
-        for handling the command identified by the given name.
-        """
-        # Try to find a high-level method to invoke, and if we can't find one,
-        # fall back to a low-level one.
-        cd = self._commandDispatch
-        if name in cd:
-            commandClass, responderFunc = cd[name]
-            responderMethod = types.MethodType(responderFunc, self, self.__class__)
-            return self._wrapWithSerialization(responderMethod, commandClass)
-
-        # Fall back to simplistic command dispatching - this uses only strings,
-        # not encoded/decoded values.
-        fName = self.baseDispatchPrefix + (name.upper())
-        return getattr(self, fName, None)
-
-
-    def dispatchCommand(self, box):
-        """
-        A box with a _command key was received.
-
-        Dispatch it to a local handler call it.
-
-        @param proto: an AMP instance.
-        @param box: an AmpBox to be dispatched.
-        """
-        cmd = box[COMMAND]
-        fObj = self.lookupFunction(cmd)
-        if fObj is None:
-            return fail(RemoteAmpError(
-                    UNHANDLED_ERROR_CODE,
-                    "Unhandled Command: %r" % (cmd,),
-                    False,
-                    local=Failure(UnhandledCommand())))
-        return maybeDeferred(fObj, box)
-
-
-
-PYTHON_KEYWORDS = [
-    'and', 'del', 'for', 'is', 'raise', 'assert', 'elif', 'from', 'lambda',
-    'return', 'break', 'else', 'global', 'not', 'try', 'class', 'except',
-    'if', 'or', 'while', 'continue', 'exec', 'import', 'pass', 'yield',
-    'def', 'finally', 'in', 'print']
-
-def _wireNameToPythonIdentifier(key):
-    """
-    (Private) Normalize an argument name from the wire for use with Python
-    code.  If the return value is going to be a python keyword it will be
-    capitalized.  If it contains any dashes they will be replaced with
-    underscores.
-
-    The rationale behind this method is that AMP should be an inherently
-    multi-language protocol, so message keys may contain all manner of bizarre
-    bytes.  This is not a complete solution; there are still forms of arguments
-    that this implementation will be unable to parse.  However, Python
-    identifiers share a huge raft of properties with identifiers from many
-    other languages, so this is a 'good enough' effort for now.  We deal
-    explicitly with dashes because that is the most likely departure: Lisps
-    commonly use dashes to separate method names, so protocols initially
-    implemented in a lisp amp dialect may use dashes in argument or command
-    names.
-
-    @param key: a str, looking something like 'foo-bar-baz' or 'from'
-
-    @return: a str which is a valid python identifier, looking something like
-    'foo_bar_baz' or 'From'.
-    """
-    lkey = key.replace("-", "_")
-    if lkey in PYTHON_KEYWORDS:
-        return lkey.title()
-    return lkey
-
-
-
-class _AmpParserBase(_DispatchMixin):
-    """
-    Base class for parsing AMP boxes.
-    """
-    def __init__(self):
-        """
-        Create an _AmpParserBase, initializing request-response tracking state.
-        """
-        self._outstandingRequests = {}
-
-
-    def _puke(self, failure):
-        """
-        This is a terminal callback called after application code has had a
-        chance to quash any errors.
-        """
-        log.msg("Amp server or network failure "
-                "unhandled by client application:")
-        log.err(failure)
-        log.msg(
-            "Dropping connection!  "
-            "To avoid, add errbacks to ALL remote commands!")
-        if self.transport is not None:
-            self.transport.loseConnection()
-
-    _counter = 0L
-
-
-    def _nextTag(self):
-        """
-        Generate protocol-local serial numbers for _ask keys.
-
-        @return: a string that has not yet been used on this connection.
-        """
-        self._counter += 1
-        return '%x' % (self._counter,)
+    implements(IBoxReceiver)
 
     _failAllReason = None
+    _outstandingRequests = None
+    _counter = 0L
+    boxSender = None
+
+    def __init__(self, locator):
+        self._outstandingRequests = {}
+        self.locator = locator
+
+
+    def startReceivingBoxes(self, boxSender):
+        """
+        The given boxSender is going to start calling boxReceived on this
+        L{BoxDispatcher}.
+
+        @param boxSender: The L{IBoxSender} to send command responses to.
+        """
+        self.boxSender = boxSender
+
+
+    def stopReceivingBoxes(self, reason):
+        """
+        No further boxes will be received here.  Terminate all currently
+        oustanding command deferreds with the given reason.
+        """
+        self.failAllOutgoing(reason)
 
 
     def failAllOutgoing(self, reason):
@@ -643,66 +611,14 @@ class _AmpParserBase(_DispatchMixin):
             value.errback(reason)
 
 
-    def ampBoxReceived(self, box):
+    def _nextTag(self):
         """
-        An AmpBox was received.  Respond to it according to its contents.
+        Generate protocol-local serial numbers for _ask keys.
 
-        @param box: an AmpBox
+        @return: a string that has not yet been used on this connection.
         """
-        if ANSWER in box:
-            question = self._outstandingRequests.pop(box[ANSWER])
-            question.addErrback(self._puke)
-            question.callback(box)
-        elif ERROR in box:
-            question = self._outstandingRequests.pop(box[ERROR])
-            question.addErrback(self._puke)
-            # protocol-recognized errors
-            errorCode = box[ERROR_CODE]
-            description = box[ERROR_DESCRIPTION]
-            if errorCode in PROTOCOL_ERRORS:
-                exc = PROTOCOL_ERRORS[errorCode](errorCode, description)
-            else:
-                exc = RemoteAmpError(errorCode, description)
-            question.errback(Failure(exc))
-        elif COMMAND in box:
-            cmd = box[COMMAND]
-            def sendAnswer(answerBox):
-                if ASK not in box:
-                    return
-                if self.transport is None:
-                    return
-                if self._locked:
-                    return
-                answerBox[ANSWER] = box[ASK]
-                answerBox._sendTo(self)
-            def sendError(error):
-                if ASK not in box:
-                    return error
-                if error.check(RemoteAmpError):
-                    code = error.value.errorCode
-                    desc = error.value.description
-                    if error.value.fatal:
-                        errorBox = QuitBox()
-                    else:
-                        errorBox = AmpBox()
-                else:
-                    errorBox = QuitBox()
-                    log.err(error) # here is where server-side logging happens
-                                   # if the error isn't handled
-                    code = UNKNOWN_ERROR_CODE
-                    desc = "Unknown Error"
-                errorBox[ERROR] = box[ASK]
-                errorBox[ERROR_DESCRIPTION] = desc
-                errorBox[ERROR_CODE] = code
-                if self.transport is not None:
-                    errorBox._sendTo(self)
-                return None # intentionally stop the error here: don't log the
-                            # traceback if it's handled, do log it (earlier) if
-                            # it isn't
-            self.dispatchCommand(box).addCallbacks(
-                sendAnswer, sendError).addErrback(self._puke)
-        else:
-            raise NoEmptyBoxes(box)
+        self._counter += 1
+        return '%x' % (self._counter,)
 
 
     def _sendBoxCommand(self, command, box, requiresAnswer=True):
@@ -729,20 +645,20 @@ class _AmpParserBase(_DispatchMixin):
 
         @return: a Deferred which fires the AmpBox that holds the response to
         this command, or None, as specified by requiresAnswer.
+
+        @raise ProtocolSwitched: if the protocol has been switched.
         """
-        if self._locked:
-            raise ProtocolSwitched(
-                "This connection has switched: no AMP traffic allowed.")
         if self._failAllReason is not None:
             return fail(self._failAllReason)
         box[COMMAND] = command
         tag = self._nextTag()
         if requiresAnswer:
             box[ASK] = tag
+        box._sendTo(self.boxSender)
+        if requiresAnswer:
             result = self._outstandingRequests[tag] = Deferred()
         else:
             result = None
-        box._sendTo(self)
         return result
 
 
@@ -806,6 +722,320 @@ class _AmpParserBase(_DispatchMixin):
         co = commandType(*a, **kw)
         return co._doCommand(self)
 
+
+    def unhandledError(self, failure):
+        """
+        This is a terminal callback called after application code has had a
+        chance to quash any errors.
+        """
+        return self.boxSender.unhandledError(failure)
+
+
+    def _answerReceived(self, box):
+        """
+        An AMP box was received that answered a command previously sent with
+        L{callRemote}.
+
+        @param box: an AmpBox with a value for its L{ANSWER} key.
+        """
+        question = self._outstandingRequests.pop(box[ANSWER])
+        question.addErrback(self.unhandledError)
+        question.callback(box)
+
+
+    def _errorReceived(self, box):
+        """
+        An AMP box was received that answered a command previously sent with
+        L{callRemote}, with an error.
+
+        @param box: an L{AmpBox} with a value for its L{ERROR}, L{ERROR_CODE},
+        and L{ERROR_DESCRIPTION} keys.
+        """
+        question = self._outstandingRequests.pop(box[ERROR])
+        question.addErrback(self.unhandledError)
+        errorCode = box[ERROR_CODE]
+        description = box[ERROR_DESCRIPTION]
+        if errorCode in PROTOCOL_ERRORS:
+            exc = PROTOCOL_ERRORS[errorCode](errorCode, description)
+        else:
+            exc = RemoteAmpError(errorCode, description)
+        question.errback(Failure(exc))
+
+
+    def _commandReceived(self, box):
+        """
+        @param box: an L{AmpBox} with a value for its L{COMMAND} and L{ASK}
+        keys.
+        """
+        cmd = box[COMMAND]
+        def formatAnswer(answerBox):
+            answerBox[ANSWER] = box[ASK]
+            return answerBox
+        def formatError(error):
+            if error.check(RemoteAmpError):
+                code = error.value.errorCode
+                desc = error.value.description
+                if error.value.fatal:
+                    errorBox = QuitBox()
+                else:
+                    errorBox = AmpBox()
+            else:
+                errorBox = QuitBox()
+                log.err(error) # here is where server-side logging happens
+                               # if the error isn't handled
+                code = UNKNOWN_ERROR_CODE
+                desc = "Unknown Error"
+            errorBox[ERROR] = box[ASK]
+            errorBox[ERROR_DESCRIPTION] = desc
+            errorBox[ERROR_CODE] = code
+            return errorBox
+        deferred = self.dispatchCommand(box)
+        if ASK in box:
+            deferred.addCallbacks(formatAnswer, formatError)
+            deferred.addCallback(self._safeEmit)
+        deferred.addErrback(self.unhandledError)
+
+
+    def ampBoxReceived(self, box):
+        """
+        An AmpBox was received, representing a command, or an answer to a
+        previously issued command (either successful or erroneous).  Respond to
+        it according to its contents.
+
+        @param box: an AmpBox
+
+        @raise NoEmptyBoxes: when a box is received that does not contain an
+        '_answer', '_command' / '_ask', or '_error' key; i.e. one which does not
+        fit into the command / response protocol defined by AMP.
+        """
+        if ANSWER in box:
+            self._answerReceived(box)
+        elif ERROR in box:
+            self._errorReceived(box)
+        elif COMMAND in box:
+            self._commandReceived(box)
+        else:
+            raise NoEmptyBoxes(box)
+
+
+    def _safeEmit(self, aBox):
+        """
+        Emit a box, ignoring L{ProtocolSwitched} and L{ConnectionLost} errors
+        which cannot be usefully handled.
+        """
+        try:
+            aBox._sendTo(self.boxSender)
+        except (ProtocolSwitched, ConnectionLost):
+            pass
+
+
+    def dispatchCommand(self, box):
+        """
+        A box with a _command key was received.
+
+        Dispatch it to a local handler call it.
+
+        @param proto: an AMP instance.
+        @param box: an AmpBox to be dispatched.
+        """
+        cmd = box[COMMAND]
+        responder = self.locator.locateResponder(cmd)
+        if responder is None:
+            return fail(RemoteAmpError(
+                    UNHANDLED_ERROR_CODE,
+                    "Unhandled Command: %r" % (cmd,),
+                    False,
+                    local=Failure(UnhandledCommand())))
+        return maybeDeferred(responder, box)
+
+
+
+class CommandLocator:
+    """
+    A L{CommandLocator} is a collection of responders to AMP L{Command}s, with
+    the help of the L{Command.responder} decorator.
+    """
+
+    class __metaclass__(type):
+        """
+        This metaclass keeps track of all of the Command.responder-decorated
+        methods defined since the last CommandLocator subclass was defined.  It
+        assumes (usually correctly, but unfortunately not necessarily so) that
+        those commands responders were all declared as methods of the class
+        being defined.  Note that this list can be incorrect if users use the
+        Command.responder decorator outside the context of a CommandLocator
+        class declaration.
+
+        The Command.responder decorator explicitly cooperates with this
+        metaclass.
+        """
+
+        _currentClassCommands = []
+        def __new__(cls, name, bases, attrs):
+            commands = cls._currentClassCommands[:]
+            cls._currentClassCommands[:] = []
+            cd = attrs['_commandDispatch'] = {}
+            for base in bases:
+                cls._grabFromBase(cd, base)
+            for commandClass, responderFunc in commands:
+                cd[commandClass.commandName] = (commandClass, responderFunc)
+            subcls = type.__new__(cls, name, bases, attrs)
+            if (bases and (
+                    subcls.lookupFunction != CommandLocator.lookupFunction)):
+                def locateResponder(self, name):
+                    warnings.warn(
+                        "Override locateResponder, not lookupFunction.",
+                        category=PendingDeprecationWarning,
+                        stacklevel=2)
+                    return self.lookupFunction(name)
+                subcls.locateResponder = locateResponder
+            return subcls
+
+        def _grabFromBase(cls, cd, base):
+            if hasattr(base, "_commandDispatch"):
+                cd.update(base._commandDispatch)
+                for subbase in base.__bases__:
+                    cls._grabFromBase(cd, subbase)
+        _grabFromBase = classmethod(_grabFromBase)
+
+    implements(IResponderLocator)
+
+
+    def _wrapWithSerialization(self, aCallable, command):
+        """
+        Wrap aCallable with its command's argument de-serialization
+        and result serialization logic.
+
+        @param aCallable: a callable with a 'command' attribute, designed to be
+        called with keyword arguments.
+
+        @param command: the command class whose serialization to use.
+
+        @return: a 1-arg callable which, when invoked with an AmpBox, will
+        deserialize the argument list and invoke appropriate user code for the
+        callable's command, returning a Deferred which fires with the result or
+        fails with an error.
+        """
+        def doit(box):
+            kw = command.parseArguments(box, self)
+            def checkKnownErrors(error):
+                key = error.trap(*command.allErrors)
+                code = command.allErrors[key]
+                desc = str(error.value)
+                return Failure(RemoteAmpError(
+                        code, desc, key in command.fatalErrors, local=error))
+            def makeResponseFor(objects):
+                try:
+                    return command.makeResponse(objects, self)
+                except:
+                    # let's helpfully log this.
+                    originalFailure = Failure()
+                    raise BadLocalReturn(
+                        "%r returned %r and %r could not serialize it" % (
+                            aCallable,
+                            objects,
+                            command),
+                        originalFailure)
+            return maybeDeferred(aCallable, **kw).addCallback(
+                makeResponseFor).addErrback(
+                checkKnownErrors)
+        return doit
+
+
+    def lookupFunction(self, name):
+        """
+        Deprecated synonym for L{locateResponder}
+        """
+        if self.__class__.lookupFunction != CommandLocator.lookupFunction:
+            return CommandLocator.locateResponder(self, name)
+        else:
+            warnings.warn("Call locateResponder, not lookupFunction.",
+                          category=PendingDeprecationWarning,
+                          stacklevel=2)
+        return self.locateResponder(name)
+
+
+    def locateResponder(self, name):
+        """
+        Locate a callable to invoke when executing the named command.
+
+        @param name: the normalized name (from the wire) of the command.
+
+        @return: a 1-argument function that takes a Box and returns a box or a
+        Deferred which fires a Box, for handling the command identified by the
+        given name, or None, if no appropriate responder can be found.
+        """
+        # Try to find a high-level method to invoke, and if we can't find one,
+        # fall back to a low-level one.
+        cd = self._commandDispatch
+        if name in cd:
+            commandClass, responderFunc = cd[name]
+            responderMethod = types.MethodType(
+                responderFunc, self, self.__class__)
+            return self._wrapWithSerialization(responderMethod, commandClass)
+
+
+
+class SimpleStringLocator(object):
+    """
+    Implement the L{locateResponder} method to do simple, string-based
+    dispatch.
+    """
+
+    implements(IResponderLocator)
+
+    baseDispatchPrefix = 'amp_'
+
+    def locateResponder(self, name):
+        """
+        Locate a callable to invoke when executing the named command.
+
+        @return: a function with the name C{"amp_" + name} on L{self}, or None
+        if no such function exists.  This function will then be called with the
+        L{AmpBox} itself as an argument.
+
+        @param name: the normalized name (from the wire) of the command.
+        """
+        fName = self.baseDispatchPrefix + (name.upper())
+        return getattr(self, fName, None)
+
+
+
+PYTHON_KEYWORDS = [
+    'and', 'del', 'for', 'is', 'raise', 'assert', 'elif', 'from', 'lambda',
+    'return', 'break', 'else', 'global', 'not', 'try', 'class', 'except',
+    'if', 'or', 'while', 'continue', 'exec', 'import', 'pass', 'yield',
+    'def', 'finally', 'in', 'print']
+
+
+
+def _wireNameToPythonIdentifier(key):
+    """
+    (Private) Normalize an argument name from the wire for use with Python
+    code.  If the return value is going to be a python keyword it will be
+    capitalized.  If it contains any dashes they will be replaced with
+    underscores.
+
+    The rationale behind this method is that AMP should be an inherently
+    multi-language protocol, so message keys may contain all manner of bizarre
+    bytes.  This is not a complete solution; there are still forms of arguments
+    that this implementation will be unable to parse.  However, Python
+    identifiers share a huge raft of properties with identifiers from many
+    other languages, so this is a 'good enough' effort for now.  We deal
+    explicitly with dashes because that is the most likely departure: Lisps
+    commonly use dashes to separate method names, so protocols initially
+    implemented in a lisp amp dialect may use dashes in argument or command
+    names.
+
+    @param key: a str, looking something like 'foo-bar-baz' or 'from'
+
+    @return: a str which is a valid python identifier, looking something like
+    'foo_bar_baz' or 'From'.
+    """
+    lkey = key.replace("-", "_")
+    if lkey in PYTHON_KEYWORDS:
+        return lkey.title()
+    return lkey
 
 
 
@@ -1076,8 +1306,6 @@ class AmpList(Argument):
                     objects, self.subargs, Box(), proto
                     ).serialize() for objects in inObject])
 
-_RESPONDER_METACLASS_HELPER = []
-
 class Command:
     """
     Subclass me to specify an AMP Command.
@@ -1275,7 +1503,7 @@ class Command:
 
         @return: the methodfunc parameter.
         """
-        _RESPONDER_METACLASS_HELPER.append((cls, methodfunc))
+        CommandLocator._currentClassCommands.append((cls, methodfunc))
         return methodfunc
     responder = classmethod(responder)
 
@@ -1500,14 +1728,14 @@ class ProtocolSwitchCommand(Command):
         an error is received, switch back.
         """
         d = super(ProtocolSwitchCommand, self)._doCommand(proto)
-        proto._lock()
+        proto._lockForSwitch()
         def switchNow(ign):
             innerProto = self.protoToSwitchToFactory.buildProtocol(
                 proto.transport.getPeer())
             proto._switchTo(innerProto, self.protoToSwitchToFactory)
             return ign
         def handle(ign):
-            proto._locked = False
+            proto._unlockFromSwitch()
             self.protoToSwitchToFactory.clientConnectionFailed(
                 None, Failure(CONNECTION_LOST))
             return ign
@@ -1515,143 +1743,213 @@ class ProtocolSwitchCommand(Command):
 
 
 
-class AMP(StatefulStringProtocol, Int16StringReceiver,
-          _AmpParserBase):
+class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver):
     """
-    This protocol is an AMP connection.  See the module docstring for protocol
-    details.
+    A protocol for receving L{Box}es - key/value pairs - via length-prefixed
+    strings.  A box is composed of:
+
+        - any number of key-value pairs, described by:
+            - a 2-byte network-endian packed key length (of which the first
+              byte must be null, and the second must be non-null: i.e. the
+              value of the length must be 1-255)
+            - a key, comprised of that many bytes
+            - a 2-byte network-endian unsigned value length (up to the maximum
+              of 65535)
+            - a value, comprised of that many bytes
+        - 2 null bytes
+
+    In other words, an even number of strings prefixed with packed unsigned
+    16-bit integers, and then a 0-length string to indicate the end of the box.
+
+    This protocol also implements 2 extra private bits of functionality related
+    to the byte boundaries between messages; it can start TLS between two given
+    boxes or switch to an entirely different protocol.  However, due to some
+    tricky elements of the implementation, the public interface to this
+    functionality is L{ProtocolSwitchCommand} and L{StartTLS}.
+
+    @ivar boxReceiver: an L{IBoxReceiver} provider, whose L{ampBoxReceived}
+    method will be invoked for each L{Box} that is received.
     """
 
-    class __metaclass__(type):
-        """
-        Metaclass hack to record decorators.
-        """
-        def __new__(cls, name, bases, attrs):
-            rmh = _RESPONDER_METACLASS_HELPER[:]
-            _RESPONDER_METACLASS_HELPER[:] = []
-            cd = attrs['_commandDispatch'] = {}
-            for base in bases:
-                cls._grabFromBase(cd, base)
-            for commandClass, responderFunc in rmh:
-                cd[commandClass.commandName] = (commandClass, responderFunc)
-            return type.__new__(cls, name, bases, attrs)
+    implements(IBoxSender)
 
-        def _grabFromBase(cls, cd, base):
-            if hasattr(base, "_commandDispatch"):
-                cd.update(base._commandDispatch)
-                for subbase in base.__bases__:
-                    cls._grabFromBase(cd, subbase)
-        _grabFromBase = classmethod(_grabFromBase)
-
-    protocolName = 'amp-base'
+    _justStartedTLS = False
+    _startingTLSBuffer = None
+    _locked = False
+    _currentKey = None
+    _currentBox = None
 
     hostCertificate = None
-
-
-    def __repr__(self):
-        """
-        A verbose string representation which gives us information about this AMP
-        connection.
-        """
-        return '<%s %s at 0x%x>' % (
-            self.__class__.__name__,
-            self.innerProtocol, id(self))
-
-    _locked = False
-
-
-    def _lock(self):
-        """
-        Lock this Amp instance so that no further Amp traffic may be sent.
-        This is used when sending a request to switch underlying protocols.
-        You probably want to subclass ProtocolSwitchCommand rather than calling
-        this directly.
-        """
-        self._locked = True
-
+    noPeerCertificate = False   # for tests
     innerProtocol = None
+    innerProtocolClientFactory = None
+
+    _sslVerifyProblems = ()
+    # ^ Later this will become a mutable list - we can't get the handle during
+    # connection shutdown thanks to the fact that Twisted destroys the socket
+    # on our transport before notifying us of a lost connection (which I guess
+    # is reasonable - the socket is dead by then) See a few lines below in
+    # startTLS for details.  --glyph
+
+
+    def __init__(self, boxReceiver):
+        self.boxReceiver = boxReceiver
 
 
     def _switchTo(self, newProto, clientFactory=None):
         """
-        Switch this Amp instance to a new protocol.  You need to do this
-        'simultaneously' on both ends of a connection; the easiest way to do
-        this is to use a subclass of ProtocolSwitchCommand.
+        Switch this BinaryBoxProtocol's transport to a new protocol.  You need
+        to do this 'simultaneously' on both ends of a connection; the easiest
+        way to do this is to use a subclass of ProtocolSwitchCommand.
 
-        @param newProto: the new protocol instance.
+        @param newProto: the new protocol instance to switch to.
 
-        @param clientFactory: the ClientFactory to send notifications to.
+        @param clientFactory: the ClientFactory to send the
+        L{clientConnectionLost} notification to.
         """
-        self._locked = True
-        assert self.innerProtocol is None, \
-            "Protocol can only be safely switched once."
         # All the data that Int16Receiver has not yet dealt with belongs to our
         # new protocol: luckily it's keeping that in a handy (although
         # ostensibly internal) variable for us:
         newProtoData = self.recvd
-        self.recvd = ''         # We're quite possibly in the middle of a
-                                # 'dataReceived' loop in Int16StringReceiver:
-                                # let's make sure that the next iteration, the
-                                # loop will break and not attempt to look at
-                                # something that isn't a length prefix.
-
+        # We're quite possibly in the middle of a 'dataReceived' loop in
+        # Int16StringReceiver: let's make sure that the next iteration, the
+        # loop will break and not attempt to look at something that isn't a
+        # length prefix.
+        self.recvd = ''
+        # Finally, do the actual work of setting up the protocol and delivering
+        # its first chunk of data, if one is available.
         self.innerProtocol = newProto
         self.innerProtocolClientFactory = clientFactory
         newProto.makeConnection(self.transport)
         newProto.dataReceived(newProtoData)
-    innerProtocolClientFactory = None
 
 
-    def _sendBox(self, completeBox):
+    def sendBox(self, box):
         """
         Send a amp.Box to my peer.
 
         Note: transport.write is never called outside of this method.
 
-        @param completeBox: an AmpBox.
-        """
-        assert not self._locked # this is taken care of everywhere a packet
-                                # might be emitted.
-        if self._startingTLSBuffer is not None:
-            self._startingTLSBuffer.append(completeBox)
-        else:
-            self.transport.write(completeBox.serialize())
+        @param box: an AmpBox.
 
-    _outstandingRequests = None
-    _justStartedTLS = False
+        @raise ProtocolSwitched: if the protocol has previously been switched.
+
+        @raise ConnectionLost: if the connection has previously been lost.
+        """
+        if self._locked:
+            raise ProtocolSwitched(
+                "This connection has switched: no AMP traffic allowed.")
+        if self.transport is None:
+            raise ConnectionLost()
+        if self._startingTLSBuffer is not None:
+            self._startingTLSBuffer.append(box)
+        else:
+            self.transport.write(box.serialize())
 
 
     def makeConnection(self, transport):
         """
-        When a connection is first established, AMP clients send a greeting but
-        servers do not.
+        Notify L{boxReceiver} that it is about to receive boxes from this
+        protocol by invoking L{startReceivingBoxes}.
         """
-        self._transportPeer = transport.getPeer()
-        self._transportHost = transport.getHost()
-        log.msg("%s connection established (HOST:%s PEER:%s)" % (
-                self.__class__.__name__,
-                self._transportHost,
-                self._transportPeer))
-        self._outstandingRequests = {}
-        self._requestBuffer = []
-        self._sslVerifyProblems = ()
-        # ^ Later this will become a mutable list - we can't get the handle
-        # during connection shutdown thanks to the fact that Twisted destroys
-        # the socket on our transport before notifying us of a lost connection
-        # (which I guess is reasonable - the socket is dead by then) See a few
-        # lines below in startTLS for details.  --glyph
+        self.boxReceiver.startReceivingBoxes(self)
         Int16StringReceiver.makeConnection(self, transport)
 
-    _startingTLSBuffer = None
 
-    noPeerCertificate = False   # for tests
+    def dataReceived(self, data):
+        """
+        Either parse incoming data as L{AmpBox}es or relay it to our nested
+        protocol.
+        """
+        if self._justStartedTLS:
+            self._justStartedTLS = False
+        # If we already have an inner protocol, then we don't deliver data to
+        # the protocol parser any more; we just hand it off.
+        if self.innerProtocol is not None:
+            self.innerProtocol.dataReceived(data)
+            return
+        return Int16StringReceiver.dataReceived(self, data)
 
 
-    def _getPeerCertificate(self):
-        if self.noPeerCertificate:
-            return None
-        return Certificate.peerFromTransport(self.transport)
-    peerCertificate = property(_getPeerCertificate)
+    def connectionLost(self, reason):
+        """
+        The connection was lost; notify any nested protocol.
+        """
+        if self.innerProtocol is not None:
+            self.innerProtocol.connectionLost(reason)
+            if self.innerProtocolClientFactory is not None:
+                self.innerProtocolClientFactory.clientConnectionLost(None, reason)
+        # XXX this may be a slight oversimplification, but I believe that if
+        # there are pending SSL errors, they _are_ the reason that the
+        # connection was lost.  a totally correct implementation of this would
+        # set up a simple state machine to track whether any bytes were
+        # received after startTLS was called.  --glyph
+        problems = self._sslVerifyProblems
+        if problems:
+            failReason = Failure(problems[0])
+        elif self._justStartedTLS:
+            # We just started TLS and haven't received any data.  This means
+            # the other connection didn't like our cert (although they may not
+            # have told us why - later Twisted should make 'reason' into a TLS
+            # error.)
+            failReason = PeerVerifyError(
+                "Peer rejected our certificate for an unknown reason.")
+        else:
+            failReason = reason
+        self.boxReceiver.stopReceivingBoxes(failReason)
+
+
+
+    def proto_init(self, string):
+        """
+        String received in the 'init' state.
+        """
+        self._currentBox = AmpBox()
+        return self.proto_key(string)
+
+
+    def proto_key(self, string):
+        """
+        String received in the 'key' state.  If the key is empty, a complete
+        box has been received.
+        """
+        if string:
+            self._currentKey = string
+            return 'value'
+        else:
+            self.boxReceiver.ampBoxReceived(self._currentBox)
+            self._currentBox = None
+            return 'init'
+
+
+    def proto_value(self, string):
+        """
+        String received in the 'value' state.
+        """
+        self._currentBox[self._currentKey] = string
+        self._currentKey = None
+        return 'key'
+
+
+    def _lockForSwitch(self):
+        """
+        Lock this binary protocol so that no further boxes may be sent.  This
+        is used when sending a request to switch underlying protocols.  You
+        probably want to subclass ProtocolSwitchCommand rather than calling
+        this directly.
+        """
+        self._locked = True
+
+
+    def _unlockFromSwitch(self):
+        """
+        Unlock this locked binary protocol so that further boxes may be sent
+        again.  This is used after an attempt to switch protocols has failed
+        for some reason.
+        """
+        if self.innerProtocol is not None:
+            raise ProtocolSwitched("Protocol already switched.  Cannot unlock.")
+        self._locked = False
 
 
     def _prepareTLS(self, certificate, verifyAuthorities):
@@ -1693,7 +1991,29 @@ class AMP(StatefulStringProtocol, Int16StringReceiver,
         if stlsb is not None:
             self._startingTLSBuffer = None
             for box in stlsb:
-                self._sendBox(box)
+                self.sendBox(box)
+
+
+    def _getPeerCertificate(self):
+        if self.noPeerCertificate:
+            return None
+        return Certificate.peerFromTransport(self.transport)
+    peerCertificate = property(_getPeerCertificate)
+
+
+    def unhandledError(self, failure):
+        """
+        The buck stops here.  This error was completely unhandled, time to
+        terminate the connection.
+        """
+        log.msg("Amp server or network failure "
+                "unhandled by client application:")
+        log.err(failure)
+        log.msg(
+            "Dropping connection!  "
+            "To avoid, add errbacks to ALL remote commands!")
+        if self.transport is not None:
+            self.transport.loseConnection()
 
 
     def _defaultStartTLSResponder(self):
@@ -1710,101 +2030,93 @@ class AMP(StatefulStringProtocol, Int16StringReceiver,
     StartTLS.responder(_defaultStartTLSResponder)
 
 
+
+class AMP(BinaryBoxProtocol, BoxDispatcher,
+          CommandLocator, SimpleStringLocator):
+    """
+    This protocol is an AMP connection.  See the module docstring for protocol
+    details.
+    """
+
+    _ampInitialized = False
+
+    def __init__(self, boxReceiver=None, locator=None):
+        # For backwards compatibility.  When AMP did not separate parsing logic
+        # (L{BinaryBoxProtocol}), request-response logic (L{BoxDispatcher}) and
+        # command routing (L{CommandLocator}), it did not have a constructor.
+        # Now it does, so old subclasses might have defined their own that did
+        # not upcall.  If this flag isn't set, we'll call the constructor in
+        # makeConnection before anything actually happens.
+        self._ampInitialized = True
+        if boxReceiver is None:
+            boxReceiver = self
+        if locator is None:
+            locator = self
+        boxSender = self
+        BoxDispatcher.__init__(self, locator)
+        BinaryBoxProtocol.__init__(self, boxReceiver)
+
+
+    def locateResponder(self, name):
+        """
+        Unify the implementations of L{CommandLocator} and
+        L{SimpleStringLocator} to perform both kinds of dispatch, preferring
+        L{CommandLocator}.
+        """
+        firstResponder = CommandLocator.locateResponder(self, name)
+        if firstResponder is not None:
+            return firstResponder
+        secondResponder = SimpleStringLocator.locateResponder(self, name)
+        return secondResponder
+
+
+    def __repr__(self):
+        """
+        A verbose string representation which gives us information about this
+        AMP connection.
+        """
+        return '<%s %s at 0x%x>' % (
+            self.__class__.__name__,
+            self.innerProtocol, id(self))
+
+
+    def makeConnection(self, transport):
+        """
+        Emit a helpful log message when the connection is made.
+        """
+        if not self._ampInitialized:
+            # See comment in the constructor re: backward compatibility.  I
+            # should probably emit a deprecation warning here.
+            AMP.__init__(self)
+        # Save these so we can emit a similar log message in L{connectionLost}.
+        self._transportPeer = transport.getPeer()
+        self._transportHost = transport.getHost()
+        log.msg("%s connection established (HOST:%s PEER:%s)" % (
+                self.__class__.__name__,
+                self._transportHost,
+                self._transportPeer))
+        BinaryBoxProtocol.makeConnection(self, transport)
+
+
     def connectionLost(self, reason):
         """
-        Terminate all outstanding request deferreds, and notify nested protocol
-        that the connection has terminated.
+        Emit a helpful log message when the connection is lost.
         """
         log.msg("%s connection lost (HOST:%s PEER:%s)" %
                 (self.__class__.__name__,
                  self._transportHost,
                  self._transportPeer))
-        # XXX this may be a slight oversimplification, but I believe that if
-        # there are pending SSL errors, they _are_ the reason that the
-        # connection was lost.  a totally correct implementation of this would
-        # set up a simple state machine to track whether any bytes were
-        # received after startTLS was called.  --glyph
-        problems = self._sslVerifyProblems
-        if problems:
-            failReason = Failure(problems[0])
-        elif self._justStartedTLS:
-            # We just started TLS and haven't received any data.  This means
-            # the other connection didn't like our cert (although they may not
-            # have told us why - later Twisted should make 'reason' into a TLS
-            # error.)
-            failReason = PeerVerifyError(
-                "Peer rejected our certificate for an unknown reason.")
-        else:
-            failReason = reason
-        self.failAllOutgoing(failReason)
-        if self.innerProtocol is not None:
-            self.innerProtocol.connectionLost(reason)
-            if self.innerProtocolClientFactory is not None:
-                self.innerProtocolClientFactory.clientConnectionLost(None, reason)
+        BinaryBoxProtocol.connectionLost(self, reason)
         self.transport = None
 
 
-    def dataReceived(self, data):
-        """
-        Either parse incoming data as AMP packets or relay it to our nested
-        protocol.
-        """
-        # If we successfully receive any data after TLS has been started, that
-        # means the connection was secured properly.  Make a note of that fact.
-        if self._justStartedTLS:
-            self._justStartedTLS = False
 
-        # If we already have an inner protocol, then we don't deliver data to
-        # the protocol parser any more; we just hand it off.
-        if self.innerProtocol is not None:
-            self.innerProtocol.dataReceived(data)
-            return
-        return Int16StringReceiver.dataReceived(self, data)
-
-    _currentKey = None
-    _currentBox = None
-
-
-    def proto_init(self, string):
-        """
-        String received in the 'init' state.
-        """
-        self._currentBox = AmpBox()
-        return self.proto_key(string)
-
-
-    def proto_key(self, string):
-        """
-        String received in the 'key' state.  If the key is empty, a complete
-        box has been received.
-        """
-        if string:
-            self._currentKey = string
-            return 'value'
-        else:
-            self.ampBoxReceived(self._currentBox)
-            self._currentBox = None
-            return 'init'
-
-
-    def proto_value(self, string):
-        """
-        String received in the 'value' state.
-        """
-        self._currentBox[self._currentKey] = string
-        self._currentKey = None
-        return 'key'
-
-
-
-class _ParserHelper(AMP):
+class _ParserHelper:
     """
-    Utility subclass to help with string parsing.
+    A box receiver which records all boxes received.
     """
     def __init__(self):
-        AMP.__init__(self)
         self.boxes = []
-        self.results = Deferred()
 
 
     def getPeer(self):
@@ -1815,6 +2127,12 @@ class _ParserHelper(AMP):
         return 'string'
 
     disconnecting = False
+
+
+    def startReceivingBoxes(self, sender):
+        """
+        No initialization is required.
+        """
 
 
     def ampBoxReceived(self, box):
@@ -1830,10 +2148,11 @@ class _ParserHelper(AMP):
 
         @return: a list of AmpBoxes encoded in the given file.
         """
-        p = cls()
-        p.makeConnection(p)
-        p.dataReceived(fileObj.read())
-        return p.boxes
+        parserHelper = cls()
+        bbp = BinaryBoxProtocol(boxReceiver=parserHelper)
+        bbp.makeConnection(parserHelper)
+        bbp.dataReceived(fileObj.read())
+        return parserHelper.boxes
     parse = classmethod(parse)
 
 
