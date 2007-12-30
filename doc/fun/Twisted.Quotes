@@ -5625,3 +5625,8 @@ How do I use it?
 <exarkun> it's a living language man, you gotta keep evolving it!
 <therve> yay! evolvulation!
 %
+<MFen> wtf python ignores -Wignore on its own warnings
+<glyph> MFen: you think that's air you're breathing?
+<glyph> MFen: I mean, are you sure that python is emitting warnings, and not just writing to stderr in C?
+<MFen> glyph: how can you warn when you cannot.. speak? 2> /dev/null
+%
