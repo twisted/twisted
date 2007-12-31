@@ -55,7 +55,7 @@ class LogReader:
 
 class GzipLogReader(LogReader):
     """
-    Read from a gz compressed log file.
+    Read from a gzip compressed log file.
     """
 
     def __init__(self, name):
@@ -85,9 +85,14 @@ class BaseLogFile:
         Create a log file.
 
         @param name: name of the file
+        @type name: C{str}
+
         @param directory: directory holding the file
+        @type directory: C{str}
+
         @param defaultMode: permissions used to create the file. Default to
-        current permissions of the file if the file exists.
+            current permissions of the file if the file exists.
+        @type defaultMode: C{int}
         """
         self.directory = directory
         assert os.path.isdir(self.directory)
@@ -277,8 +282,12 @@ class LogFile(BaseLogFile):
         """
         Rotate the file and create a new one.
 
-        If it's not possible to open new logfile, this will fail silently,
-        and continue logging to old logfile.
+        If it's not possible to open new logfile, this will fail silently, and
+        continue logging to old logfile.
+
+        @return: the name of the archived log file, or C{None} if it didn't
+            manage to rotate.
+        @rtype: C{str} or C{NoneType}
         """
         if not self._isAccessible():
             return
@@ -327,6 +336,17 @@ threadable.synchronize(LogFile)
 def CompressorHelper(baseClass, compressorClass):
     """
     A helper to compress log files.
+
+    @param baseClass: parent class writing to the log file. It should provide a
+        C{rotate} method.
+    @type baseClass: C{class}
+
+    @param compressorClass: class offering a file-like interface to create
+        compressed files.
+    @type compressorClass: C{class}
+
+    @return: a child class of C{baseClass} with compressing facility.
+    @rtype: C{class}
     """
 
     def callInThread(self, method, *args, **kwargs):
@@ -345,21 +365,29 @@ def CompressorHelper(baseClass, compressorClass):
         if newPath is None:
             return
         self.callInThread(self._compress, newPath)
+        return newPath
 
 
-    def _compress(self, path, chunk=8192):
+    def _compress(self, path, chunkSize=8192):
         """
-        Compress logfile.
+        Compress logfile. Warning, this is a blocking method.
+
+        @param path: the file to compress.
+        @type path: C{str}
+
+        @param chunkSize: size of a chunk read on the file to compress, in
+            bytes.
+        @type: chunkSize: C{int}
         """
         try:
             compressedFile = compressorClass("%s%s" %
                 (path, self.rotateExtension), "wb")
             newfp = open(path)
 
-            data = newfp.read(chunk)
+            data = newfp.read(chunkSize)
             compressedFile.write(data)
-            while len(data) == chunk:
-                data = newfp.read(chunk)
+            while len(data) == chunkSize:
+                data = newfp.read(chunkSize)
                 compressedFile.write(data)
 
             compressedFile.close()
@@ -399,6 +427,12 @@ class Bz2LogFile(CompressorHelper(LogFile, BZ2File)):
 class DailyLogFile(BaseLogFile):
     """
     A log file that is rotated daily (at or after midnight localtime).
+
+    @cvar logReaderFactory: factory for log readers.
+    @type logReaderFactory: C{class}
+
+    @cvar rotateExtension: the extension appended to rotated files.
+    @type rotateExtension: C{str}
     """
     logReaderFactory = LogReader
     rotateExtension = ""
@@ -417,11 +451,11 @@ class DailyLogFile(BaseLogFile):
 
     def toDate(self, *args):
         """
-        Convert a unixtime to (year, month, day) localtime tuple,
-        or return the current (year, month, day) localtime tuple.
+        Convert a unixtime to (year, month, day) localtime tuple, or return the
+        current (year, month, day) localtime tuple.
 
-        This function primarily exists so you may overload it with
-        gmtime, or some cruft to make unit testing possible.
+        This function primarily exists so you may overload it with gmtime, or
+        some cruft to make unit testing possible.
         """
         # primarily so this can be unit tested easily
         return time.localtime(*args)[:3]
@@ -466,8 +500,12 @@ class DailyLogFile(BaseLogFile):
         """
         Rotate the file and create a new one.
 
-        If it's not possible to open new logfile, this will fail silently,
-        and continue logging to old logfile.
+        If it's not possible to open new logfile, this will fail silently, and
+        continue logging to old logfile.
+
+        @return: the name of the archived log file, or C{None} if it didn't
+            manage to rotate.
+        @rtype: C{str} or C{NoneType}
         """
         if not self._isAccessible():
             return
