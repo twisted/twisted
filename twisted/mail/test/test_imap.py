@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.mail.test.test_imap -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -24,6 +24,7 @@ from twisted.internet import defer
 from twisted.internet import error
 from twisted.internet import reactor
 from twisted.internet import interfaces
+from twisted.internet.task import Clock
 from twisted.trial import unittest
 from twisted.python import util
 from twisted.python import failure
@@ -2818,12 +2819,15 @@ class TLSTestCase(IMAP4HelperMixin, unittest.TestCase):
 
 class SlowMailbox(SimpleMailbox):
     howSlow = 2
+    callLater = None
+    fetchDeferred = None
 
     # Not a very nice implementation of fetch(), but it'll
     # do for the purposes of testing.
     def fetch(self, messages, uid):
         d = defer.Deferred()
-        reactor.callLater(self.howSlow, d.callback, ())
+        self.callLater(self.howSlow, d.callback, ())
+        self.fetchDeferred.callback(None)
         return d
 
 class Timeout(IMAP4HelperMixin, unittest.TestCase):
@@ -2833,12 +2837,15 @@ class Timeout(IMAP4HelperMixin, unittest.TestCase):
         The *client* has a timeout mechanism which will close connections that
         are inactive for a period.
         """
+        c = Clock()
         self.server.timeoutTest = True
         self.client.timeout = 5 #seconds
+        self.client.callLater = c.callLater
         self.selectedArgs = None
 
         def login():
             d = self.client.login('testuser', 'password-test')
+            c.advance(5)
             d.addErrback(timedOut)
             return d
 
@@ -2850,24 +2857,35 @@ class Timeout(IMAP4HelperMixin, unittest.TestCase):
         d.addErrback(self._ebGeneral)
         return defer.gatherResults([d, self.loopback()])
 
+
     def test_longFetchDoesntTimeout(self):
         """
-        The connecection timeout does not take effect during fetches.
+        The connection timeout does not take effect during fetches.
         """
+        c = Clock()
+        SlowMailbox.callLater = c.callLater
+        SlowMailbox.fetchDeferred = defer.Deferred()
+        self.server.callLater = c.callLater
         SimpleServer.theAccount.mailboxFactory = SlowMailbox
         SimpleServer.theAccount.addMailbox('mailbox-test')
 
-        self.server.setTimeout(0.1)
-        self.stillConnected = False
-
+        self.server.setTimeout(1)
+        
         def login():
             return self.client.login('testuser', 'password-test')
         def select():
+            self.server.setTimeout(1)
             return self.client.select('mailbox-test')
         def fetch():
             return self.client.fetchUID('1:*')
         def stillConnected():
-            self.stillConnected = not self.server.transport.disconnecting
+            self.assertNotEquals(self.server.state, 'timeout')
+
+        def cbAdvance(ignored):
+            for i in xrange(4):
+                c.advance(.5)
+
+        SlowMailbox.fetchDeferred.addCallback(cbAdvance)
 
         d1 = self.connected.addCallback(strip(login))
         d1.addCallback(strip(select))
@@ -2876,36 +2894,33 @@ class Timeout(IMAP4HelperMixin, unittest.TestCase):
         d1.addCallback(self._cbStopClient)
         d1.addErrback(self._ebGeneral)
         d = defer.gatherResults([d1, self.loopback()])
-        return d.addCallback(lambda _: self.failUnless(self.stillConnected))
+        return d
+
 
     def test_idleClientDoesDisconnect(self):
         """
         The *server* has a timeout mechanism which will close connections that
         are inactive for a period.
         """
-        from twisted.test.time_helpers import Clock
         c = Clock()
-        c.install()
-        try:
-            # Hook up our server protocol
-            transport = StringTransportWithDisconnection()
-            transport.protocol = self.server
-            self.server.makeConnection(transport)
+        # Hook up our server protocol
+        transport = StringTransportWithDisconnection()
+        transport.protocol = self.server
+        self.server.callLater = c.callLater
+        self.server.makeConnection(transport)
 
-            # Make sure we can notice when the connection goes away
-            lost = []
-            connLost = self.server.connectionLost
-            self.server.connectionLost = lambda reason: (lost.append(None), connLost(reason))[1]
+        # Make sure we can notice when the connection goes away
+        lost = []
+        connLost = self.server.connectionLost
+        self.server.connectionLost = lambda reason: (lost.append(None), connLost(reason))[1]
 
-            # 2/3rds of the idle timeout elapses...
-            c.pump(reactor, [0.0] + [self.server.timeOut / 3.0] * 2)
-            self.failIf(lost, lost)
+        # 2/3rds of the idle timeout elapses...
+        c.pump([0.0] + [self.server.timeOut / 3.0] * 2)
+        self.failIf(lost, lost)
 
-            # Now some more
-            c.pump(reactor, [0.0, self.server.timeOut / 2.0])
-            self.failUnless(lost)
-        finally:
-            c.uninstall()
+        # Now some more
+        c.pump([0.0, self.server.timeOut / 2.0])
+        self.failUnless(lost)
 
 
 

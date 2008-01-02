@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.mail.test.test_imap -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -1615,6 +1615,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def do_FETCH(self, tag, messages, query, uid=0):
         if query:
+            self._oldTimeout = self.setTimeout(None)
             maybeDeferred(self.mbox.fetch, messages, uid=uid
                 ).addCallback(iter
                 ).addCallback(self.__cbFetch, tag, query, uid
@@ -1628,7 +1629,6 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def __cbFetch(self, results, tag, query, uid):
         if self.blocked is None:
             self.blocked = []
-            self._oldTimeout = self.setTimeout(None)
         try:
             id, msg = results.next()
         except StopIteration:
@@ -1813,6 +1813,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         return self._scheduler(spew())
 
     def __ebFetch(self, failure, tag):
+        self.setTimeout(self._oldTimeout)
+        del self._oldTimeout
         log.err(failure)
         self.sendBadResponse(tag, 'FETCH failed: ' + str(failure.value))
 
