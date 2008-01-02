@@ -349,29 +349,82 @@ def namedObject(name):
 
 namedClass = namedObject # backwards compat
 
+
+
+class _NoModuleFound(Exception):
+    """
+    No module was found because none exists.
+    """
+
+
+
+def _importAndCheckStack(importName):
+    """
+    Import the given name as a module, then walk the stack to determine whether
+    the failure was the module not existing, or some code in the module (for
+    example a dependent import) failing.  This can be helpful to determine
+    whether any actual application code was run.  For example, to distiguish
+    administrative error (entering the wrong module name), from programmer
+    error (writing buggy code in a module that fails to import).
+
+    @raise Exception: if something bad happens.  This can be any type of
+    exception, since nobody knows what loading some arbitrary code might do.
+
+    @raise _NoModuleFound: if no module was found.
+    """
+    try:
+        try:
+            return __import__(importName)
+        except ImportError:
+            excType, excValue, excTraceback = sys.exc_info()
+            while excTraceback:
+                execName = excTraceback.tb_frame.f_globals["__name__"]
+                if (execName is None or # python 2.4+, post-cleanup
+                    execName == importName): # python 2.3, no cleanup
+                    raise excType, excValue, excTraceback
+                excTraceback = excTraceback.tb_next
+            raise _NoModuleFound()
+    except:
+        # Necessary for cleaning up modules in 2.3.
+        sys.modules.pop(importName, None)
+        raise
+
+
+
 def namedAny(name):
-    """Get a fully named package, module, module-global object, or attribute.
+    """
+    Retrieve a Python object from the global Python module namespace, by its
+    fully qualified name.  The first part of the name, that describes a module,
+    will be discovered and imported.
+
+    @param name: the fully qualified name of a Python object, which is a
+    dot-separated list of python objects accessible via a name.  This includes
+    packages, modules, and any Python object which has attributes.  For
+    example, a fully-qualified name of this object is
+    'twisted.python.reflect.namedAny'.
+
+    @type name: L{str}
+
+    @return: the Python object identified by 'name'.
+
+    @raise ValueError: if the top level dotted name that is passed is not a
+    valid Python identifier, or the top level dotted name that is passed is not
+    a valid python module.
+
+    @raise AttributeError: if an attribute of an object along the way cannot be
+    accessed, or a module along the way is not found.
+
+    @raise ImportError: if any module involved cannot be imported for some
+    reason.
     """
     names = name.split('.')
     topLevelPackage = None
     moduleNames = names[:]
     while not topLevelPackage:
+        trialname = '.'.join(moduleNames)
         try:
-            trialname = '.'.join(moduleNames)
-            topLevelPackage = __import__(trialname)
-        except ImportError:
-            # if the ImportError happened in the module being imported,
-            # this is a failure that should be handed to our caller.
-            # count stack frames to tell the difference.
-            exc_info = sys.exc_info()
-            if len(traceback.extract_tb(exc_info[2])) > 1:
-                try:
-                    # Clean up garbage left in sys.modules.
-                    del sys.modules[trialname]
-                except KeyError:
-                    # Python 2.4 has fixed this.  Yay!
-                    pass
-                raise exc_info[0], exc_info[1], exc_info[2]
+            topLevelPackage = _importAndCheckStack(trialname)
+        except _NoModuleFound:
             moduleNames.pop()
 
     obj = topLevelPackage

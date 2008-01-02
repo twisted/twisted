@@ -1,5 +1,4 @@
-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -8,15 +7,18 @@ Test cases for twisted.reflect module.
 """
 
 import weakref, os
-
-# Twisted Imports
-from twisted.trial import unittest
-from twisted.python import reflect
+from ihooks import ModuleImporter
 
 try:
     from collections import deque
 except ImportError:
     deque = None
+
+# Twisted Imports
+from twisted.trial import unittest
+from twisted.python import reflect
+
+
 
 class SettableTest(unittest.TestCase):
     def setUp(self):
@@ -68,61 +70,124 @@ class AccessorTest(unittest.TestCase):
 
 
 class LookupsTestCase(unittest.TestCase):
-    """Test lookup methods."""
+    """
+    Tests for L{namedClass}, L{namedModule}, and L{namedAny}.
+    """
 
-    def testClassLookup(self):
-        self.assertEquals(reflect.namedClass("twisted.python.reflect.Summer"), reflect.Summer)
+    def test_namedClassLookup(self):
+        """
+        L{namedClass} should return the class object for the name it is passed.
+        """
+        self.assertIdentical(
+            reflect.namedClass("twisted.python.reflect.Summer"),
+            reflect.Summer)
 
-    def testModuleLookup(self):
-        self.assertEquals(reflect.namedModule("twisted.python.reflect"), reflect)
 
-class LookupsTestCaseII(unittest.TestCase):
-    def testPackageLookup(self):
+    def test_namedModuleLookup(self):
+        """
+        L{namedModule} should return the module object for the name it is
+        passed.
+        """
+        self.assertIdentical(
+            reflect.namedModule("twisted.python.reflect"), reflect)
+
+
+    def test_namedAnyPackageLookup(self):
+        """
+        L{namedAny} should return the package object for the name it is passed.
+        """
         import twisted.python
-        self.failUnlessIdentical(reflect.namedAny("twisted.python"),
-                                 twisted.python)
+        self.assertIdentical(
+            reflect.namedAny("twisted.python"), twisted.python)
 
-    def testModuleLookup(self):
-        self.failUnlessIdentical(reflect.namedAny("twisted.python.reflect"),
-                                 reflect)
+    def test_namedAnyModuleLookup(self):
+        """
+        L{namedAny} should return the module object for the name it is passed.
+        """
+        self.assertIdentical(
+            reflect.namedAny("twisted.python.reflect"), reflect)
 
-    def testClassLookup(self):
-        self.failUnlessIdentical(reflect.namedAny("twisted.python."
-                                                  "reflect.Summer"),
-                                 reflect.Summer)
 
-    def testAttributeLookup(self):
-        # Note - not failUnlessIdentical because unbound method lookup
-        # creates a new object every time.  This is a foolishness of
-        # Python's object implementation, not a bug in Twisted.
-        self.failUnlessEqual(reflect.namedAny("twisted.python."
-                                              "reflect.Summer.reallySet"),
-                             reflect.Summer.reallySet)
+    def test_namedAnyClassLookup(self):
+        """
+        L{namedAny} should return the class object for the name it is passed.
+        """
+        self.assertIdentical(
+            reflect.namedAny("twisted.python.reflect.Summer"), reflect.Summer)
 
-    def testSecondAttributeLookup(self):
-        self.failUnlessIdentical(reflect.namedAny("twisted.python."
-                                                  "reflect.Summer."
-                                                  "reallySet.__doc__"),
-                                 reflect.Summer.reallySet.__doc__)
 
-    def testExceptionHandling(self):
-        # If the namedAny causes a module to be imported, errors in the
-        # import should not be masked.
+    def test_namedAnyAttributeLookup(self):
+        """
+        L{namedAny} should return the object an attribute of a non-module,
+        non-package object is bound to for the name it is passed.
+        """
+        # Note - not assertEqual because unbound method lookup creates a new
+        # object every time.  This is a foolishness of Python's object
+        # implementation, not a bug in Twisted.
+        self.assertEqual(
+            reflect.namedAny("twisted.python.reflect.Summer.reallySet"),
+            reflect.Summer.reallySet)
+
+
+    def test_namedAnySecondAttributeLookup(self):
+        """
+        L{namedAny} should return the object an attribute of an object which
+        itself was an attribute of a non-module, non-package object is bound to
+        for the name it is passed.
+        """
+        self.assertIdentical(
+            reflect.namedAny(
+                "twisted.python.reflect.Summer.reallySet.__doc__"),
+            reflect.Summer.reallySet.__doc__)
+
+
+    def test_importExceptions(self):
+        """
+        Exceptions raised by modules which L{namedAny} causes to be imported
+        should pass through L{namedAny} to the caller.
+        """
+        self.assertRaises(
+            ZeroDivisionError,
+            reflect.namedAny, "twisted.test.reflect_helper_ZDE")
+        # Make sure that this behavior is *consistent* for 2.3, where there is
+        # no post-failed-import cleanup
         self.assertRaises(
             ZeroDivisionError,
             reflect.namedAny, "twisted.test.reflect_helper_ZDE")
         self.assertRaises(
             ValueError,
             reflect.namedAny, "twisted.test.reflect_helper_VE")
+        # Modules which themselves raise ImportError when imported should result in an ImportError
+        self.assertRaises(
+            ImportError,
+            reflect.namedAny, "twisted.test.reflect_helper_IE")
 
-        # And attributes that don't exist should raise an AttributeError
+
+    def test_attributeExceptions(self):
+        """
+        If segments on the end of a fully-qualified Python name represents
+        attributes which aren't actually present on the object represented by
+        the earlier segments, L{namedAny} should raise an L{AttributeError}.
+        """
         self.assertRaises(
             AttributeError,
             reflect.namedAny, "twisted.nosuchmoduleintheworld")
+        # ImportError behaves somewhat differently between "import
+        # extant.nonextant" and "import extant.nonextant.nonextant", so test
+        # the latter as well.
+        self.assertRaises(
+            AttributeError,
+            reflect.namedAny, "twisted.nosuch.modulein.theworld")
         self.assertRaises(
             AttributeError,
             reflect.namedAny, "twisted.python.reflect.Summer.nosuchattributeintheworld")
 
+
+    def test_invalidNames(self):
+        """
+        Passing a name which isn't a fully-qualified Python name to L{namedAny}
+        should result in a L{ValueError}.
+        """
         # Finally, invalid module names should raise a ValueError
         self.assertRaises(
             ValueError,
@@ -133,9 +198,37 @@ class LookupsTestCaseII(unittest.TestCase):
         self.assertRaises(
             ValueError,
             reflect.namedAny, "@#$@(#.!@(#!@#")
+        # This case is kind of stupid and is mostly a historical accident.
         self.assertRaises(
             ValueError,
             reflect.namedAny, "tcelfer.nohtyp.detsiwt")
+
+
+
+class ImportHooksLookupTests(LookupsTestCase):
+    """
+    Tests for lookup methods in the presence of L{ihooks}-style import hooks.
+    Runs all of the tests from L{LookupsTestCase} after installing a custom
+    import hook.
+    """
+    def setUp(self):
+        """
+        Perturb the normal import behavior subtly by installing an import
+        hook.  No custom behavior is provided, but this adds some extra
+        frames to the call stack, which L{namedAny} must be able to account
+        for.
+        """
+        self.importer = ModuleImporter()
+        self.importer.install()
+
+
+    def tearDown(self):
+        """
+        Uninstall the custom import hook.
+        """
+        self.importer.uninstall()
+
+
 
 class ObjectGrep(unittest.TestCase):
     def test_dictionary(self):
