@@ -1,5 +1,5 @@
 # test-case-name: twisted.names.test.test_dns
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -14,10 +14,13 @@ except ImportError:
 import struct
 
 from twisted.internet import address, task
+from twisted.internet.error import CannotListenError
 from twisted.trial import unittest
 from twisted.names import dns
 
 from twisted.test import proto_helpers
+
+
 
 class RoundtripDNSTestCase(unittest.TestCase):
     """Encoding and then decoding various objects."""
@@ -245,6 +248,22 @@ class DatagramProtocolTestCase(unittest.TestCase):
 
         d = self.proto.query(('127.0.0.1', 21345), [dns.Query('foo')])
         return self.assertFailure(d, RuntimeError)
+
+
+    def test_listenError(self):
+        """
+        Exception L{CannotListenError} raised by C{listenUDP} should be turned
+        into a C{Failure} passed to errback of the C{Deferred} returned by
+        L{DNSDatagramProtocol.query}.
+        """
+        def startListeningError():
+            raise CannotListenError(None, None, None)
+        self.proto.startListening = startListeningError
+        # Clean up transport so that the protocol calls startListening again
+        self.proto.transport = None
+
+        d = self.proto.query(('127.0.0.1', 21345), [dns.Query('foo')])
+        return self.assertFailure(d, CannotListenError)
 
 
 

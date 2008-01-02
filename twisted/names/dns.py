@@ -33,6 +33,7 @@ from zope.interface import implements, Interface
 
 # Twisted imports
 from twisted.internet import protocol, defer
+from twisted.internet.error import CannotListenError
 from twisted.python import log, failure
 from twisted.python import util as tputil
 from twisted.python import randbytes
@@ -1538,7 +1539,10 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
         """
         if not self.transport:
             # XXX transport might not get created automatically, use callLater?
-            self.startListening()
+            try:
+                self.startListening()
+            except CannotListenError:
+                return defer.fail()
 
         if id is None:
             id = self.pickID()
