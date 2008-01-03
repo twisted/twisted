@@ -137,8 +137,8 @@ class MyServiceMaker(object):
         """
         return internet.TCPServer(int(options["port"]), MyFactory())
 
-# Now construct an object which *provides* the relevant interfaces
 
+# Now construct an object which *provides* the relevant interfaces
 # The name of this variable is irrelevant, as long as there is *some*
 # name bound to a provider of IPlugin and IServiceMaker.
 
@@ -155,12 +155,102 @@ serviceMaker = MyServiceMaker()
   with that factory.
 </p>
 
+<h2>Using cred with your TAP</h2>
+
+<p>
+  Twisted ships with a robust authentication framework to use with
+  your application. If your server needs authentication functionality,
+  and you haven't read about <a href="cred.xhtml">twisted.cred</a>
+  yet, read up on it first.
+</p>
+
+<p>
+  If you are building a twistd plugin and you want to support a wide
+  variety of authentication patterns, Twisted provides an easy-to-use
+  mixin for your Options subclass:
+  <code class="API" base="twisted.cred">strcred.AuthOptionMixin</code>.
+  The following code is an example of using this mixin:
+</p>
+
+<pre class="python">
+from twisted.cred import credentials, portal, strcred
+from twisted.python import usage
+from twisted.plugin import IPlugin
+from twisted.application.service import IServiceMaker
+from myserver import myservice
+
+class ServerOptions(usage.Options, strcred.AuthOptionMixin):
+    # This part is optional; it tells AuthOptionMixin what
+    # kinds of credential interfaces the user can give us.
+    supportedInterfaces = (credentials.IUsernamePassword,)
+
+    optParameters = [
+        ["port", "p", 1234, "Server port number"],
+        ["host", "h", "localhost", "Server hostname"]]
+
+class MyServerServiceMaker(object):
+    implements(IServiceMaker, IPlugin)
+    tapname = "myserver"
+    description = "This server does nothing productive."
+    options = ServerOptions
+
+    def makeService(self, options):
+        """Construct a service object."""
+        # The realm is a custom object that your server defines.
+        realm = myservice.MyServerRealm(options["host"])
+
+        # The portal is something Cred can provide, as long as
+        # you have a list of checkers that you'll support. This
+        # list is provided my AuthOptionMixin.
+        portal = portal.Portal(realm, options["credCheckers"])
+
+        # OR, if you know you might get multiple interfaces, and
+        # only want to give your application one of them, you
+        # also have that option with AuthOptionMixin:
+        interface = credentials.IUsernamePassword
+        portal = portal.Portal(realm, options["credInterfaces"][interface])
+
+        # The protocol factory is, like the realm, something you implement.
+        factory = myservice.ServerFactory(realm, portal)
+
+        # Finally, return a service that will listen for connections.
+        return internet.TCPServer(int(options["port"]), factory)
+
+
+# As in our example above, we have to construct an object that
+# provides the IPlugin and IServiceMaker interfaces.
+
+serviceMaker = MyServerServiceMaker()
+</pre>
+
+<p>
+  Now that you have your TAP configured to support any authentication
+  we can throw at it, you're ready to use it. Here is an example of
+  starting your server using the /etc/passwd file for
+  authentication. (Clearly, this won't work on servers with shadow
+  passwords.)
+</p>
+
+<pre class="shell">
+$ twistd myserver --auth passwd:/etc/passwd
+</pre>
+
+<p>
+  For a full list of cred plugins supported, see <code
+  class="API">twisted.plugins</code>, or use the command-line help:
+</p>
+
+<pre class="shell">
+$ twistd myserver --help-auth
+$ twistd myserver --help-auth-type passwd
+</pre>
 
 <h2>Conclusion</h2>
 
 <p>You should now be able to</p>
 <ul>
   <li>Create a twistd plugin</li>
+  <li>Incorporate authentication into your plugin</li>
   <li>Use it from your development environment</li>
   <li>Install it correctly and use it in deployment</li>
 </ul>

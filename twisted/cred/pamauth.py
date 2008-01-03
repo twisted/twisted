@@ -1,22 +1,20 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
-
-"""Support for asynchronously authenticating using PAM.
+"""
+Support for asynchronously authenticating using PAM.
 """
 
-from __future__ import nested_scopes
 
 import PAM
 
 import getpass, threading, os
 
-from twisted.internet import reactor
 from twisted.internet import threads, defer
 
 def pamAuthenticateThread(service, user, conv):
     def _conv(items):
+        from twisted.internet import reactor
         try:
             d = conv(items)
         except:

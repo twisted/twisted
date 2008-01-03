@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.test.test_newcred-*-
 
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -10,16 +10,21 @@ import hmac
 import time
 import random
 
+
+
 class ICredentials(Interface):
-    """I check credentials.
+    """
+    I check credentials.
 
     Implementors _must_ specify which sub-interfaces of ICredentials
     to which it conforms, using zope.interface.implements().
     """
 
 
+
 class IUsernameHashedPassword(ICredentials):
-    """I encapsulate a username and a hashed password.
+    """
+    I encapsulate a username and a hashed password.
 
     This credential is used when a hashed password is received from the
     party requesting authentication.  CredentialCheckers which check this
@@ -42,8 +47,10 @@ class IUsernameHashedPassword(ICredentials):
         """
 
 
+
 class IUsernamePassword(ICredentials):
-    """I encapsulate a username and a plaintext password.
+    """
+    I encapsulate a username and a plaintext password.
 
     This encapsulates the case where the password received over the network
     has been hashed with the identity function (That is, not at all).  The
@@ -69,9 +76,12 @@ class IUsernamePassword(ICredentials):
         """
 
 
+
 class IAnonymous(ICredentials):
-    """I am an explicitly anonymous request for access.
     """
+    I am an explicitly anonymous request for access.
+    """
+
 
 
 class CramMD5Credentials:
@@ -134,22 +144,26 @@ class Anonymous:
     implements(IAnonymous)
 
 
+
 class ISSHPrivateKey(ICredentials):
-    """I encapsulate an SSH public key to be checked against a users private
+    """
+    I encapsulate an SSH public key to be checked against a users private
     key.
-    
+
     @ivar username: Duh?
-   
+
     @ivar algName: The algorithm name for the blob.
 
     @ivar blob: The public key blob as sent by the client.
-    
+
     @ivar sigData: The data the signature was made from.
-    
+
     @ivar signature: The signed data.  This is checked to verify that the user
     owns the private key.
-
     """
+
+
+
 class SSHPrivateKey:
     implements(ISSHPrivateKey)
     def __init__(self, username, algName, blob, sigData, signature):
@@ -158,15 +172,15 @@ class SSHPrivateKey:
         self.blob = blob
         self.sigData = sigData
         self.signature = signature
-        
+
 
 class IPluggableAuthenticationModules(ICredentials):
     """I encapsulate the authentication of a user via PAM (Pluggable
     Authentication Modules.  I use PyPAM (available from
     http://www.tummy.com/Software/PyPam/index.html).
-    
+
     @ivar username: The username for the user being logged in.
-    
+
     @ivar pamConversion: A function that is called with a list of tuples
     (message, messageType).  See the PAM documentation
     for the meaning of messageType.  The function
@@ -177,8 +191,8 @@ class IPluggableAuthenticationModules(ICredentials):
 
 class PluggableAuthenticationModules:
     implements(IPluggableAuthenticationModules)
-    
+
     def __init__(self, username, pamConversion):
         self.username = username
         self.pamConversion = pamConversion
-        
+

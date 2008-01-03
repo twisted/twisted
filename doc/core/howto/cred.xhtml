@@ -52,30 +52,30 @@ processed:</p>
     <h2>Cred objects</h2>
     <h3>The Portal</h3>
 <p>This is the the core of login, the point of integration between all the objects
-in the cred system.  There is one 
-concrete implementation of Portal, and no interface - it does a very 
+in the cred system.  There is one
+concrete implementation of Portal, and no interface - it does a very
 simple task.  A <code class="API" base="twisted.cred.portal">Portal</code>
-associates one (1) Realm with a collection of 
+associates one (1) Realm with a collection of
 CredentialChecker instances.  (More on those later.)</p>
 
-<p>If you are writing a protocol that needs to authenticate against 
-something, you will need a reference to a Portal, and to nothing else.  
+<p>If you are writing a protocol that needs to authenticate against
+something, you will need a reference to a Portal, and to nothing else.
 This has only 2 methods -</p>
 
 <ul>
 <li><code class="API" base="twisted.cred.portal.Portal">login</code><code>(credentials, mind, *interfaces)</code>
 
-<p>The docstring is quite expansive (see <code class="API">twisted.cred.portal</code>), but in 
-brief, this is what you call when you need to call in order to connect 
-a user to the system.  Typically you only pass in one interface, and the mind is 
+<p>The docstring is quite expansive (see <code class="API">twisted.cred.portal</code>), but in
+brief, this is what you call when you need to call in order to connect
+a user to the system.  Typically you only pass in one interface, and the mind is
 <code class="python">None</code>. The interfaces are the possible interfaces the returned
-avatar is expected to implement, in order of preference. 
+avatar is expected to implement, in order of preference.
 The result is a deferred which fires a tuple of:</p>
     <ul>
-	<li>interface the avatar implements (which was one of the interfaces passed in the *interfaces 
+	<li>interface the avatar implements (which was one of the interfaces passed in the *interfaces
 tuple)</li>
 	<li>an object that implements that interface (an avatar)</li>
-    <li>logout, a 0-argument callable which disconnects the connection that was 
+    <li>logout, a 0-argument callable which disconnects the connection that was
 established by this call to login</li>
     </ul>
 <p>The logout method has to be called when the avatar is logged out. For POP3 this means
@@ -90,30 +90,30 @@ that the checker is able to check.</p>
     <h3>The CredentialChecker</h3>
 <p>This is an object implementing <code class="API"
 base="twisted.cred.checkers">ICredentialsChecker</code> which resolves some
-Credentials to an avatar ID.  
-Some examples of CredentialChecker implementations would be: 
-InMemoryUsernamePassword, ApacheStyleHTAccessFile, 
-UNIXPasswordDatabase, SSHPublicKeyDatabase.  A credential checker 
-stipulates some requirements of the credentials it can check by 
-specifying a credentialInterfaces attribute, which is a list of 
-interfaces.  Credentials passed to its requestAvatarId method must 
+Credentials to an avatar ID.
+Some examples of CredentialChecker implementations would be:
+InMemoryUsernamePassword, ApacheStyleHTAccessFile,
+UNIXPasswordDatabase, SSHPublicKeyDatabase.  A credential checker
+stipulates some requirements of the credentials it can check by
+specifying a credentialInterfaces attribute, which is a list of
+interfaces.  Credentials passed to its requestAvatarId method must
 implement one of those interfaces.</p>
 
-<p>For the most part, these things will just check usernames and passwords 
-and produce the username as the result, but hopefully we will be seeing 
-some public-key, challenge-response, and certificate based credential 
+<p>For the most part, these things will just check usernames and passwords
+and produce the username as the result, but hopefully we will be seeing
+some public-key, challenge-response, and certificate based credential
 checker mechanisms soon.</p>
 
-<p>A credential checker should raise an error if it cannot authenticate 
+<p>A credential checker should raise an error if it cannot authenticate
 the user, and return <code class="API">twisted.cred.checkers.ANONYMOUS</code>
 for anonymous access.</p>
 
     <h3>The Credentials</h3>
-<p>Oddly enough, this represents some credentials that the user presents.  
-Usually this will just be a small static blob of data, but in some 
-cases it will actually be an object connected to a network protocol.  
-For example, a username/password pair is static, but a 
-challenge/response server is an active state-machine that will require 
+<p>Oddly enough, this represents some credentials that the user presents.
+Usually this will just be a small static blob of data, but in some
+cases it will actually be an object connected to a network protocol.
+For example, a username/password pair is static, but a
+challenge/response server is an active state-machine that will require
 several method calls in order to determine a result.</p>
 
 <p>Twisted comes with a number of credentials interfaces and implementations
@@ -122,7 +122,7 @@ such as <code class="API" base="twisted.cred.credentials">IUsernamePassword</cod
 and <code class="API" base="twisted.cred.credentials">IUsernameHashedPassword</code>.</p>
 
     <h3>The Realm</h3>
-<p>A realm is an interface which connects your universe of <q>business 
+<p>A realm is an interface which connects your universe of <q>business
 objects</q> to the authentication system.</p>
 
 <p><code class="API" base="twisted.cred.portal">IRealm</code> is another one-method interface:</p>
@@ -130,23 +130,23 @@ objects</q> to the authentication system.</p>
 <ul>
 <li><code class="API" base="twisted.cred.portal.IRealm">requestAvatar</code><code>(avatarId, mind, *interfaces)</code>
 
-<p>This method will typically be called from 'Portal.login'.  The avatarId 
+<p>This method will typically be called from 'Portal.login'.  The avatarId
 is the one returned by a CredentialChecker.</p>
 
 <div class="note">Note that <code>avatarId</code> must always be a string. In
 particular, do not use unicode strings. If internationalized support is needed,
 it is recommended to use UTF-8, and take care of decoding in the realm.  </div>
 
-<p>The important thing to realize about this method is that if it is being 
-called, <em>the user has already authenticated</em>.  Therefore, if possible, 
-the Realm should create a new user if one does not already exist 
-whenever possible.  Of course, sometimes this will be impossible 
-without more information, and that is the case that the interfaces 
+<p>The important thing to realize about this method is that if it is being
+called, <em>the user has already authenticated</em>.  Therefore, if possible,
+the Realm should create a new user if one does not already exist
+whenever possible.  Of course, sometimes this will be impossible
+without more information, and that is the case that the interfaces
 argument is for.</p>
 </li>
 </ul>
 
-<p>Since requestAvatar should be called from a Deferred callback, it may 
+<p>Since requestAvatar should be called from a Deferred callback, it may
 return a Deferred or a synchronous result.</p>
 
     <h3>The Avatar</h3>
@@ -168,27 +168,27 @@ relayed to an authenticated client are passed through a 'mind'. In addition, it
 allows passing more information to the realm during login in addition to the
 avatar ID.</p>
 
-<p>The name may seem rather unusual, but considering that a Mind is 
+<p>The name may seem rather unusual, but considering that a Mind is
 representative of the entity on the <q>other end</q> of a network connection
-that is both receiving updates and issuing commands, I believe it is 
+that is both receiving updates and issuing commands, I believe it is
 appropriate.</p>
 
-<p>Although many protocols will not use this, it serves an important role. 
-  It is provided as an argument both to the Portal and to the Realm, 
-although a CredentialChecker should interact with a client program 
+<p>Although many protocols will not use this, it serves an important role.
+  It is provided as an argument both to the Portal and to the Realm,
+although a CredentialChecker should interact with a client program
 exclusively through a Credentials instance.</p>
 
-<p>Unlike the original Perspective Broker <q>client object</q>, a Mind's 
-implementation is most often dictated by the protocol that is 
-connecting rather than the Realm.  A Realm which requires a particular 
-interface to issue notifications will need to wrap the Protocol's mind 
-implementation with an adapter in order to get one that conforms to its 
-expected interface - however, Perspective Broker will likely continue 
-to use the model where the client object has a pre-specified remote 
+<p>Unlike the original Perspective Broker <q>client object</q>, a Mind's
+implementation is most often dictated by the protocol that is
+connecting rather than the Realm.  A Realm which requires a particular
+interface to issue notifications will need to wrap the Protocol's mind
+implementation with an adapter in order to get one that conforms to its
+expected interface - however, Perspective Broker will likely continue
+to use the model where the client object has a pre-specified remote
 interface.</p>
 
-<p>(If you don't quite understand this, it's fine.  It's hard to explain, 
-and it's not used in simple usages of cred, so feel free to pass None 
+<p>(If you don't quite understand this, it's fine.  It's hard to explain,
+and it's not used in simple usages of cred, so feel free to pass None
 until you find yourself requiring something like this.)</p>
 
     <h2>Responsibilities</h2>
@@ -296,7 +296,7 @@ class SimpleRealm:
     def requestAvatar(self, avatarId, mind, *interfaces):
         if pb.IPerspective in interfaces:
             avatar = SimplePerspective()
-            return pb.IPerspective, avatar, avatar.logout 
+            return pb.IPerspective, avatar, avatar.logout
         else:
             raise NotImplementedError("no interface")
 </pre>
@@ -322,5 +322,122 @@ portal.registerChecker(checker)
 reactor.listenTCP(9986, pb.PBServerFactory(portal))
 reactor.run()
 </pre>
+
+   <h2>Cred plugins</h2>
+
+   <h3>Authentication with cred plugins</h3>
+
+<p> Cred offers a plugin architecture for authentication methods. The
+primary API for this architecture is the command-line; the plugins are
+meant to be specified by the end-user when deploying a TAP (twistd
+plugin).</p>
+
+<p> For more information on writing a twistd plugin and using cred
+plugins for your application, please refer to the <a
+href="tap.xhtml">Writing a twistd plugin</a> document.</p>
+
+   <h3>Building a cred plugin</h3>
+
+<p> To build a plugin for cred, you should first define an <code
+class="python">authType</code>, a short one-word string that defines
+your plugin to the command-line. Once you have this, the convention is
+to create a file named <code>cred_(authtype).py</code> in the
+<code class="API">twisted.plugins</code> module path. </p>
+
+<p> Below is an example file structure for an application that defines
+such a plugin: </p>
+
+<ul>
+<li>MyApplication/
+  <ul>
+  <li>setup.py</li>
+  <li>myapp/
+    <ul>
+    <li>__init__.py</li>
+    <li>cred.py</li>
+    <li>server.py</li>
+    </ul>
+  </li>
+  <li>twisted/
+    <ul>
+    <li>__init__.py</li>
+    <li>plugins/
+      <ul>
+      <li>__init__.py</li>
+      <li>cred_special.py</li>
+      </ul>
+    </li>
+    </ul>
+  </li>
+  </ul>
+</li>
+</ul>
+
+<p>
+Once you have created this structure within your application, you can
+create the code for your cred plugin by building a factory class which
+implements <code class="API" base="twisted.cred.checkers">ICheckerFactory</code>.
+These factory classes should not consist of a tremendous amount of
+code. Most of the real application logic should reside in the cred
+checker itself. (For help on building those, scroll up.)
+</p>
+
+<p>
+The core purpose of the CheckerFactory is to translate an <code
+class="python">argstring</code>, which is passed on the command line,
+into a suitable set of initialization parameters for a Checker
+class. In most cases this should be little more than constructing a
+dictionary or a tuple of arguments, then passing them along to a new
+checker instance.
+</p>
+
+<pre class="python">
+from twisted import plugin
+from twisted.cred import checkers
+from zope.interface import implements
+from myapp.cred import SpecialChecker
+
+class SpecialCheckerFactory(object):
+    """
+    A checker factory for a specialized (fictional) API.
+    """
+    # The class needs to implement both of these interfaces
+    # for the plugin system to find our factory.
+    implements(checkers.ICheckerFactory, plugin.IPlugin)
+
+    # This tells AuthOptionsMixin how to find this factory.
+    authType = "special"
+
+    # This is a one-line explanation of what arguments, if any,
+    # your particular cred plugin requires at the command-line.
+    argStringFormat = "A colon-separated key=value list."
+
+    # This help text can be multiple lines. It will be displayed
+    # when someone uses the "--help-auth-type special" command.
+    authHelp = """Some help text goes here ..."""
+
+    # This will be called once per command-line.
+    def generateChecker(self, argstring=""):
+        argdict = dict((x.split('=') for x in argstring.split(':')))
+        return SpecialChecker(**dict)
+
+# We need to instantiate our class for the plugin to work.
+theSpecialCheckerFactory = SpecialCheckerFactory()
+</pre>
+
+<p> For more information on how your plugin can be used in your
+application (and by other application developers), please see the <a
+href="tap.xhtml">Writing a twistd plugin</a> document.</p>
+
+<h2>Conclusion</h2>
+
+<p>After reading through this tutorial, you should be able to
+</p>
+<ul>
+<li>Understand how the cred architecture applies to your application</li>
+<li>Integrate your application with cred's object model</li>
+<li>Deploy an application that uses cred for authentication</li>
+<li>Allow your users to use command-line authentication plugins</li>
+</ul>
 
 </body></html>

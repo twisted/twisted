@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.words.test -*-
+# -*- test-case-name: twisted.words.test.test_tap -*-
 # Copyright (c) 2001-2005 Twisted Matrix Laboratories.
 # See LICENSE for details.
 """
@@ -13,12 +13,11 @@ from twisted.python import usage
 from twisted import plugin
 
 from twisted.words import iwords, service
-from twisted.cred import checkers, portal
+from twisted.cred import checkers, credentials, portal, strcred
 
-class Options(usage.Options):
+class Options(usage.Options, strcred.AuthOptionMixin):
+    supportedInterfaces = [credentials.IUsernamePassword]
     optParameters = [
-        ('passwd', None, None,
-         'Name of a passwd-style password file. (REQUIRED)'),
         ('hostname', None, socket.gethostname(),
          'Name of this server; purely an informative')]
 
@@ -36,23 +35,22 @@ class Options(usage.Options):
     def __init__(self, *a, **kw):
         usage.Options.__init__(self, *a, **kw)
         self['groups'] = []
-        self['checkers'] = None
-
 
     def opt_group(self, name):
         """Specify a group which should exist
         """
         self['groups'].append(name.decode(sys.stdin.encoding))
 
+    def opt_passwd(self, filename):
+        """
+        Name of a passwd-style file. (This is for
+        backwards-compatibility only; you should use the --auth
+        command instead.)
+        """
+        self.addChecker(checkers.FilePasswordDB(filename))
 
 def makeService(config):
-    if config['passwd']:
-        credCheckers = [checkers.FilePasswordDB(config['passwd'], cache=True)]
-    elif config['checkers']:
-        credCheckers = config['checkers']
-    else:
-        credCheckers = []
-
+    credCheckers = config.get('credCheckers', [])
     wordsRealm = service.InMemoryWordsRealm(config['hostname'])
     wordsPortal = portal.Portal(wordsRealm, credCheckers)
 
