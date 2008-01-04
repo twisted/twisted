@@ -253,7 +253,15 @@ class ReverseProxyResource(Resource):
 
 
     def render(self, request):
-        request.received_headers['host'] = self.host
+        """
+        Render a request by forwarding it to the proxied server.
+        """
+        # RFC 2616 tells us that we can omit the port if it's the default port,
+        # but we have to provide it otherwise
+        if self.port == 80:
+            request.received_headers['host'] = self.host
+        else:
+            request.received_headers['host'] = "%s:%d" % (self.host, self.port)
         request.content.seek(0, 0)
         qs = urlparse.urlparse(request.uri)[4]
         if qs:

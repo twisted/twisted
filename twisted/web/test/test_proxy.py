@@ -74,6 +74,7 @@ class ReverseProxyResourceTestCase(TestCase):
         factory = reactor.connect[0][2]
         self.assertIsInstance(factory, ProxyClientFactory)
         self.assertEquals(factory.rest, expectedURI)
+        self.assertEquals(factory.headers["host"], "127.0.0.1:1234")
 
 
     def test_render(self):
