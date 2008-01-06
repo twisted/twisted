@@ -1,12 +1,12 @@
 # -*- test-case-name: twisted.test.test_compat -*-
 #
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
 """
-Compatability module to provide backwards compatability
-for useful Python features.
+Compatibility module to provide backwards compatibility for useful Python
+features.
 
 This is mainly for use of internal Twisted code. We encourage you to use
 the latest version of Python directly from your code, if possible.
@@ -153,3 +153,16 @@ except AttributeError:
         def __call__(self, obj):
             return getattr(obj, self.name)
     operator.attrgetter = attrgetter
+
+
+try:
+    set = set
+except NameError:
+    from sets import Set as set
+
+
+try:
+    frozenset = frozenset
+except NameError:
+    from sets import ImmutableSet as frozenset
+

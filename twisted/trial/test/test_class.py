@@ -1,4 +1,7 @@
-import sets
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+from twisted.python.compat import set
 from twisted.trial import unittest, reporter, runner
 
 _setUpClassRuns = 0
@@ -144,8 +147,8 @@ class FactoryCounting(unittest.TestCase):
     def _reset(self):
         self.factory._setUpClassRun = self.factory._tearDownClassRun = 0
         self.subFactory._setUpClassRun = self.subFactory._tearDownClassRun = 0
-        self.factory._instances = sets.Set()
-        self.factory._instancesRun = sets.Set()
+        self.factory._instances = set()
+        self.factory._instancesRun = set()
 
     def test_createAndRun(self):
         test = self.factory('test_1')

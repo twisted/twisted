@@ -4,13 +4,14 @@
 # See LICENSE for details.
 
 
-import sys, os, random, gc, time, sets, warnings
+import sys, os, random, gc, time, warnings
 
 from twisted.internet import defer
 from twisted.application import app
 from twisted.python import usage, reflect, failure
 from twisted import plugin
 from twisted.python.util import spewer
+from twisted.python.compat import set
 from twisted.trial import runner, itrial, reporter
 
 
@@ -133,7 +134,7 @@ class Options(usage.Options, app.ReactorSelectionMixin):
     tracer = None
 
     def __init__(self):
-        self['tests'] = sets.Set()
+        self['tests'] = set()
         usage.Options.__init__(self)
 
     def opt_coverage(self):

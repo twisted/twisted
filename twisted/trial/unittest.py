@@ -11,11 +11,13 @@ Maintainer: Jonathan Lange <jml@twistedmatrix.com>
 
 
 import doctest
-import os, warnings, sys, tempfile, sets, gc
+import os, warnings, sys, tempfile, gc
 from pprint import pformat
 
 from twisted.internet import defer, utils
 from twisted.python import components, failure, log, monkey
+from twisted.python.compat import set
+
 from twisted.trial import itrial, reporter, util
 
 pyunit = __import__('unittest')
@@ -556,8 +558,8 @@ class TestCase(_Assertions):
         self._cleanups = []
 
     def _initInstances(cls):
-        cls._instances = sets.Set()
-        cls._instancesRun = sets.Set()
+        cls._instances = set()
+        cls._instancesRun = set()
     _initInstances = classmethod(_initInstances)
 
     def _isFirst(self):

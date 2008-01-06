@@ -1,13 +1,13 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-from sets import Set
 import warnings
 
 from twisted.internet import interfaces, defer, main
 from twisted.persisted import styles
 from twisted.python import log, failure
+from twisted.python.compat import set
 
 from ops import ReadFileOp, WriteFileOp
 from util import StateEventMachineType
@@ -36,7 +36,7 @@ class ConnectedSocket(log.Logger, styles.Ephemeral, object):
         self.writebuf = []
         self.readbuf = reactor.AllocateReadBuffer(self.bufferSize)
         self.reactor = reactor
-        self.bufferEvents = {"buffer full": Set(), "buffer empty": Set()}
+        self.bufferEvents = {"buffer full": set(), "buffer empty": set()}
         self.offset = 0
         self.writeBufferedSize = 0
         self.producerBuffer = []

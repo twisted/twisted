@@ -47,18 +47,18 @@
 
     <p>Run the unit tests tests before you check anything in.</p>
 
-    <p>Let me repeat that, for emphasis: <em>run the unit tests before you 
-       check <strong>anything</strong> in</em>.  Code which breaks 
+    <p>Let me repeat that, for emphasis: <em>run the unit tests before you
+       check <strong>anything</strong> in</em>.  Code which breaks
     functionality is unfortunate and unavoidable.  The acceptance tests
     are highly nonportable and sometimes a pain to run, so this is pardonable.
-    Code which breaks the unit tests in a way that you could have prevented 
-    by running them yourself, however, may be grounds for anything from 
-    merciless taunting through revertion of the breakage to revocation 
+    Code which breaks the unit tests in a way that you could have prevented
+    by running them yourself, however, may be grounds for anything from
+    merciless taunting through revertion of the breakage to revocation
     of SVN commit privileges.</p>
 
-    <p>It is strongly suggested that developers learn to use Emacs, and use 
-    the <code>twisted-dev.el</code> file included in the TwistedEmacs 
-    package to bind the F9 key to <q>run unit tests</q> and bang on it 
+    <p>It is strongly suggested that developers learn to use Emacs, and use
+    the <code>twisted-dev.el</code> file included in the TwistedEmacs
+    package to bind the F9 key to <q>run unit tests</q> and bang on it
     frequently.  Support for other editors is unavailable at this time
     but we would love to provide it.</p>
 
@@ -209,7 +209,7 @@ class MyClass(object):
       character. This will prevent IM-Python from regarding sample
       code as real functions, methods, and classes.</li>
     </ul>
-     
+
 
     <p>For example,</p>
 <pre class="python">
@@ -233,7 +233,7 @@ def foo2bar(f):
 
     """
     # Optionally, actual code can go here.
-       
+
 </pre>
     <h2>Scripts</h2>
 
@@ -241,15 +241,15 @@ def foo2bar(f):
     to run from the command-line, the following things must be done:</p>
 
     <ol>
-      <li>Write a module in <code class="API">twisted.scripts</code> 
-      which contains a callable global named <code>run</code>. This 
-      will be called by the command line part with no arguments (it 
-      will usually read <code>sys.argv</code>). Feel free to write more 
-      functions or classes in this module, if you feel they are useful 
+      <li>Write a module in <code class="API">twisted.scripts</code>
+      which contains a callable global named <code>run</code>. This
+      will be called by the command line part with no arguments (it
+      will usually read <code>sys.argv</code>). Feel free to write more
+      functions or classes in this module, if you feel they are useful
       to others.</li>
 
       <li>Write a file in <code class="shell">bin/</code> which contains the
-          Twisted running-from-SVN header, and ending with 
+          Twisted running-from-SVN header, and ending with
 
 <pre class="python">
 from twisted.scripts.yourmodule import run
@@ -285,6 +285,18 @@ except ImportError:
     Use the &quot;as&quot; syntax of the import statement as well, to set
     the name of the extension module to the name of the Python module.</p>
 
+    <p>Some modules don't exist across all supported Python versions. For
+    example, Python 2.3's <code>sets</code> module was deprecated in Python 2.6
+    in favor of the <code>set</code> and <code>frozenset</code> builtins. When
+    you need to use sets or frozensets in your code, please use
+    <code class="API">twisted.compat.set</code> and
+    <code class="API">twisted.compat.frozenset</code>. There are some
+    differences between <code>sets.Set</code> and <code>set</code>, that are
+    explained in the
+    <a href="http://www.python.org/dev/peps/pep-0218/">set PEP</a>. Please be
+    sure to not rely on the behavior of one or the other implementation.
+    </p>
+
     <h2>ChangeLog</h2>
 
     <p>All changes that will affect the way end-users see Twisted should come
@@ -292,7 +304,7 @@ except ImportError:
 
     <p>The correct format for the ChangeLog is GNU changelog format.  There is
     an emacs mode for editing this, use <code>M-x add-change-log-entry</code>.
-    If you are, for whatever absurd reason, using an editor other than emacs 
+    If you are, for whatever absurd reason, using an editor other than emacs
     to edit Twisted, you can use Moshe Zadka's helpfully provided
     <code>admin/change</code> script to add a properly-formatted entry.</p>
 
@@ -317,7 +329,7 @@ except ImportError:
 
       <li>main.MainGadget</li>
     </ul>
-    
+
     <p>An effort should be made to prevent class names from clashing
     with each other between modules, to reduce the need for
     qualification when importing. For example, a Service subclass
@@ -327,13 +339,13 @@ except ImportError:
     modules are volatile <em>(see above)</em> the classes may be
     imported directly into the user's namespace and not cause
     confusion.</p>
-     
+
 
     <h2>Methods</h2>
 
     <p>Methods should be in mixed case, with the first letter lower
     case, each word separated by having its first letter
-    capitalized. For example, <code>someMethodName</code>, 
+    capitalized. For example, <code>someMethodName</code>,
     <code>method</code>.</p>
 
     <p>Sometimes, a class will dispatch to a specialized sort of
@@ -461,7 +473,7 @@ def callRemote(self, _name, *args, **kw):
       interface and will certainly be removed in a future
       release.</li>
     </ul>
-     
+
 
     <h2>Database</h2>
 
@@ -522,7 +534,7 @@ def callRemote(self, _name, *args, **kw):
     considered complete another Twisted developer may review it and if no
     problems are found, it may be merged into trunk (TODO: Describe this
     more thoroughly (Divmod wiki has <a
-    href="http://divmod.org/trac/wiki/BranchBasedDevelopment">a start</a>)). 
+    href="http://divmod.org/trac/wiki/BranchBasedDevelopment">a start</a>)).
     Branches <strong>must</strong> be used for major development.  Branches
     should be managed using <a
     href="http://divmod.org/trac/wiki/DivmodCombinator">Combinator</a> (but
@@ -535,8 +547,8 @@ def callRemote(self, _name, *args, **kw):
     <li>
 
     <p>Do not set the <code class="shell">svn:ignore</code> property on any
-    file or directory.  What you wish to ignore, others may wish to examine. 
-    What others may wish you ignore, <em>you</em> may wish you examine. 
+    file or directory.  What you wish to ignore, others may wish to examine.
+    What others may wish you ignore, <em>you</em> may wish you examine.
     <code class="shell"> svn:ignore </code> will affect everyone who uses
     the repository, and so it is not the right mechanism to express personal
     preferences.</p>

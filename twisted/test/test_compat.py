@@ -1,10 +1,18 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
+"""
+Tests for L{twisted.python.compat}.
+"""
+
+import types, socket
+
 from twisted.trial import unittest
 
-import os, sys, types, socket
+from twisted.python.compat import set, frozenset
+
+
 
 class IterableCounter:
     def __init__(self, lim=0):
@@ -29,14 +37,6 @@ class CompatTestCase(unittest.TestCase):
         self.assertNotEquals(d1, d2)
         d2 = dict(d1.items())
         self.assertEquals(d1, d2)
-
-#        d2 = dict(a='c')
-#        self.assertEquals(d1, d2)
-#        d2 = dict(d1, b='c')
-#        d3 = dict(d1.items(), b='c')
-#        d1['b'] = 'c'
-#        self.assertEquals(d1, d2)
-#        self.assertEquals(d1, d3)
 
     def testBool(self):
         self.assertEquals(bool('hi'), True)
@@ -150,3 +150,43 @@ class CompatTestCase(unittest.TestCase):
                         '1234:1.2.3.4:1234:1234:1234:1234:1234:1234',
                         '1.2.3.4']:
             self.assertRaises(ValueError, f, badaddr)
+
+    def test_set(self):
+        """
+        L{set} should behave like the expected set interface.
+        """
+        a = set()
+        a.add('b')
+        a.add('c')
+        a.add('a')
+        b = list(a)
+        b.sort()
+        self.assertEquals(b, ['a', 'b', 'c'])
+        a.remove('b')
+        b = list(a)
+        b.sort()
+        self.assertEquals(b, ['a', 'c'])
+
+        a.discard('d')
+
+        b = set(['r', 's'])
+        d = a.union(b)
+        b = list(d)
+        b.sort()
+        self.assertEquals(b, ['a', 'c', 'r', 's'])
+
+
+    def test_frozenset(self):
+        """
+        L{frozenset} should behave like the expected frozenset interface.
+        """
+        a = frozenset(['a', 'b'])
+        self.assertRaises(AttributeError, getattr, a, "add")
+        self.assertEquals(list(a), ['a', 'b'])
+
+        b = frozenset(['r', 's'])
+        d = a.union(b)
+        b = list(d)
+        b.sort()
+        self.assertEquals(b, ['a', 'b', 'r', 's'])
+

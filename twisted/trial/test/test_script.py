@@ -2,11 +2,12 @@
 # See LICENSE for details.
 
 import gc
-import StringIO, sys, sets, types
+import StringIO, sys, types
 
 from twisted.trial import unittest, runner
 from twisted.scripts import trial
 from twisted.python import util
+from twisted.python.compat import set
 
 from twisted.trial.test.test_loader import testNames
 
@@ -294,9 +295,9 @@ class TestModuleTest(unittest.TestCase):
 
     def test_getTestModules_multiple(self):
         modules = trial.getTestModules(sibpath('scripttest.py'))
-        self.failUnlessEqual(sets.Set(modules),
-                             sets.Set(['twisted.trial.test.test_test_visitor',
-                                       'twisted.trial.test.test_class']))
+        self.failUnlessEqual(set(modules),
+                             set(['twisted.trial.test.test_test_visitor',
+                                  'twisted.trial.test.test_class']))
 
     def test_looksLikeTestModule(self):
         for filename in ['test_script.py', 'twisted/trial/test/test_script.py']:

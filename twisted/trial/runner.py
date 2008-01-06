@@ -11,12 +11,13 @@ Maintainer: Jonathan Lange <jml@twistedmatrix.com>
 """
 
 
-import pdb, shutil, sets
+import pdb, shutil
 import os, types, warnings, sys, inspect, imp
 import random, doctest, time
 
 from twisted.python import reflect, log, failure, modules
 from twisted.python.util import dsu
+from twisted.python.compat import set
 
 from twisted.internet import defer, interfaces
 from twisted.trial import util, unittest
@@ -622,7 +623,7 @@ class TestLoader(object):
             except:
                 errors.append(ErrorHolder(name, failure.Failure()))
         suites = [self.loadAnything(thing, recurse)
-                  for thing in sets.Set(things)]
+                  for thing in set(things)]
         suites.extend(errors)
         return self.suiteFactory(suites)
 
