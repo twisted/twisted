@@ -1,6 +1,11 @@
 # -*- test-case-name: twisted.conch.test.test_recvline -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
+
+"""
+Tests for L{twisted.conch.recvline} and fixtures for testing related
+functionality.
+"""
 
 import sys, os
 
@@ -497,7 +502,9 @@ class _StdioMixin(_BaseMixin):
         # handle bytes we send to the child process.
         exe = sys.executable
         module = stdio.__file__
-        args = ["python2.3", module, reflect.qual(self.serverProtocol)]
+        if module.endswith('.pyc') or module.endswith('.pyo'):
+            module = module[:-1]
+        args = [exe, module, reflect.qual(self.serverProtocol)]
         env = {"PYTHONPATH": os.pathsep.join(sys.path)}
 
         from twisted.internet import reactor
