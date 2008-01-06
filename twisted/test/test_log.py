@@ -168,7 +168,7 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
         originalTimezone = os.environ.get('TZ', None)
         try:
             # Test something west of UTC
-            os.environ['TZ'] = 'US/Eastern'
+            os.environ['TZ'] = 'America/New_York'
             time.tzset()
             self.assertEqual(
                 self.flo.getTimezoneOffset(utcDaylightTimestamp),
