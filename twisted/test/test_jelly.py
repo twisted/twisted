@@ -1,21 +1,30 @@
-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""Test cases for 'jelly' object serialization.
+"""
+Test cases for L{jelly} object serialization.
 """
 
 import datetime, types
+
+try:
+    import decimal
+except ImportError:
+    decimal = None
 
 from twisted.spread import jelly, pb
 
 from twisted.trial import unittest
 
+
+
 class TestNode(object, jelly.Jellyable):
-    """An object to test jellyfying of new style class isntances.
+    """
+    An object to test jellyfying of new style class instances.
     """
     classAttr = 4
+
     def __init__(self, parent=None):
         if parent:
             self.id = parent.id + 1
@@ -73,7 +82,10 @@ class NewStyle(object):
 
 class JellyTestCase(unittest.TestCase):
     """
-    testcases for `jelly' module serialization.
+    Testcases for L{jelly} module serialization.
+
+    @cvar decimalData: serialized version of decimal data, to be used in tests.
+    @type decimalData: C{list}
     """
 
     def testMethodSelfIdentity(self):
@@ -105,6 +117,89 @@ class JellyTestCase(unittest.TestCase):
         output = jelly.unjelly(c)
         self.assertEquals(input, output)
         self.assertNotIdentical(input, output)
+
+
+    def test_decimal(self):
+        """
+        Jellying L{decimal.Decimal} instances and then unjellying the result
+        should produce objects which represent the values of the original
+        inputs.
+        """
+        inputList = [decimal.Decimal('9.95'),
+                     decimal.Decimal(0),
+                     decimal.Decimal(123456),
+                     decimal.Decimal('-78.901')]
+        c = jelly.jelly(inputList)
+        output = jelly.unjelly(c)
+        self.assertEquals(inputList, output)
+        self.assertNotIdentical(inputList, output)
+
+
+    decimalData = ['list', ['decimal', 995, -2], ['decimal', 0, 0],
+                           ['decimal', 123456, 0], ['decimal', -78901, -3]]
+
+
+    def test_decimalUnjelly(self):
+        """
+        Unjellying the s-expressions produced by jelly for L{decimal.Decimal}
+        instances should result in L{decimal.Decimal} instances with the values
+        represented by the s-expressions.
+
+        This test also verifies that C{self.decimalData} contains valid jellied
+        data.  This is important since L{test_decimalMissing} re-uses
+        C{self.decimalData} and is expected to be unable to produce
+        L{decimal.Decimal} instances even though the s-expression correctly
+        represents a list of them.
+        """
+        expected = [decimal.Decimal('9.95'),
+                    decimal.Decimal(0),
+                    decimal.Decimal(123456),
+                    decimal.Decimal('-78.901')]
+        output = jelly.unjelly(self.decimalData)
+        self.assertEquals(output, expected)
+
+
+    def test_decimalMissing(self):
+        """
+        If decimal is unavailable on the unjelly side, L{jelly.unjelly} should
+        gracefully return L{jelly.Unpersistable} objects.
+        """
+        self.patch(jelly, 'decimal', None)
+        output = jelly.unjelly(self.decimalData)
+        self.assertEquals(len(output), 4)
+        for i in range(4):
+            self.assertIsInstance(output[i], jelly.Unpersistable)
+        self.assertEquals(output[0].reason,
+            "Could not unpersist decimal: 9.95")
+        self.assertEquals(output[1].reason,
+            "Could not unpersist decimal: 0")
+        self.assertEquals(output[2].reason,
+            "Could not unpersist decimal: 123456")
+        self.assertEquals(output[3].reason,
+            "Could not unpersist decimal: -78.901")
+
+
+    def test_decimalSecurity(self):
+        """
+        By default, decimal objects should be allowed by
+        L{jelly.SecurityOptions}. If not allowed, L{jelly.unjelly} should raise
+        L{jelly.InsecureJelly} when trying to unjelly it.
+        """
+        inputList = [decimal.Decimal('9.95')]
+        c = jelly.jelly(inputList)
+        taster = jelly.SecurityOptions()
+        taster.allowBasicTypes()
+        # By default, it should succeed
+        jelly.unjelly(c, taster)
+        taster.allowedTypes.pop("decimal")
+        # But it should raise an exception when disallowed
+        self.assertRaises(jelly.InsecureJelly, jelly.unjelly, c, taster)
+
+    if decimal is None:
+        skipReason = "decimal not available"
+        test_decimal.skip = skipReason
+        test_decimalUnjelly.skip = skipReason
+        test_decimalSecurity.skip = skipReason
 
 
     def testSimple(self):
@@ -186,7 +281,7 @@ class JellyTestCase(unittest.TestCase):
         items = [afunc, [1, 2, 3], not bool(1), bool(1), 'test', 20.3, (1,2,3), None, A, unittest, {'a':1}, A.amethod]
         for i in items:
             self.assertEquals(i, jelly.unjelly(jelly.jelly(i)))
-    
+
 
     def testSetState(self):
         global TupleState

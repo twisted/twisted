@@ -1,10 +1,11 @@
 # -*- test-case-name: twisted.test.test_jelly -*-
 
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""S-expression-based persistence of python objects.
+"""
+S-expression-based persistence of python objects.
 
 Stability: semi-stable
 
@@ -80,6 +81,11 @@ import copy
 
 import datetime
 from types import BooleanType
+
+try:
+    import decimal
+except ImportError:
+    decimal = None
 
 from new import instance
 from new import instancemethod
@@ -251,19 +257,24 @@ def setInstanceState(inst, unjellier, jellyList):
         inst.__dict__ = state
     return inst
 
+
+
 class Unpersistable:
     """
     This is an instance of a class that comes back when something couldn't be
-    persisted.
+    unpersisted.
     """
+
     def __init__(self, reason):
         """
-        Initialize an unpersistable object with a descriptive `reason' string.
+        Initialize an unpersistable object with a descriptive C{reason} string.
         """
         self.reason = reason
 
+
     def __repr__(self):
         return "Unpersistable(%s)" % repr(self.reason)
+
 
 
 class Jellyable:
@@ -454,6 +465,8 @@ class _Jellier:
                 return ['timedelta', '%s %s %s' % (obj.days, obj.seconds, obj.microseconds)]
             elif objType is ClassType or issubclass(objType, type):
                 return ['class', qual(obj)]
+            elif decimal is not None and objType is decimal.Decimal:
+                return self.jelly_decimal(obj)
             else:
                 preRef = self._checkMutable(obj)
                 if preRef:
@@ -498,6 +511,24 @@ class _Jellier:
                                     (obj.__class__, obj))
             raise InsecureJelly("Type not allowed for object: %s %s" %
                                 (objType, obj))
+
+
+    def jelly_decimal(self, d):
+        """
+        Jelly a decimal object.
+
+        @param d: a decimal object to serialize.
+        @type d: C{decimal.Decimal}
+
+        @return: jelly for the decimal object.
+        @rtype: C{list}
+        """
+        sign, guts, exponent = d.as_tuple()
+        value = reduce(lambda left, right: left * 10 + right, guts)
+        if sign:
+            value = -value
+        return ['decimal', value, exponent]
+
 
     def unpersistable(self, reason, sxp=None):
         '''(internal)
@@ -583,14 +614,33 @@ class _Unjellier:
         if UnicodeType:
             return unicode(exp[0], "UTF-8")
         else:
-            return Unpersistable(exp[0])
+            return Unpersistable("Could not unpersist unicode: %s" % (exp[0],))
+
+
+    def _unjelly_decimal(self, exp):
+        """
+        Unjelly decimal objects, if decimal is available. If not, return a
+        L{Unpersistable} object instead.
+        """
+        if decimal is None:
+            return Unpersistable(
+                "Could not unpersist decimal: %s" % (exp[0] * (10**exp[1]),))
+        value = exp[0]
+        exponent = exp[1]
+        if value < 0:
+            sign = 1
+        else:
+            sign = 0
+        guts = decimal.Decimal(value).as_tuple()[1]
+        return decimal.Decimal((sign, guts, exponent))
+
 
     def _unjelly_boolean(self, exp):
         if BooleanType:
             assert exp[0] in ('true', 'false')
             return exp[0] == 'true'
         else:
-            return Unpersistable(exp[0])
+            return Unpersistable("Could not unpersist boolean: %s" % (exp[0],))
 
     def _unjelly_datetime(self, exp):
         return datetime.datetime(*map(int, exp[0].split()))
@@ -696,7 +746,7 @@ class _Unjellier:
             pload = self.persistentLoad(rest[0], self)
             return pload
         else:
-            return Unpersistable("persistent callback not found")
+            return Unpersistable("Persistent callback not found")
 
     def _unjelly_instance(self, rest):
         clz = self.unjelly(rest[0])
@@ -714,7 +764,7 @@ class _Unjellier:
         return inst
 
     def _unjelly_unpersistable(self, rest):
-        return Unpersistable(rest[0])
+        return Unpersistable("Unpersistable data: %s" % (rest[0],))
 
     def _unjelly_method(self, rest):
         ''' (internal) unjelly a method
@@ -815,6 +865,8 @@ class SecurityOptions:
                              "NoneType": 1}
         if hasattr(types, 'UnicodeType'):
             self.allowedTypes['unicode'] = 1
+        if decimal is not None:
+            self.allowedTypes['decimal'] = 1
         self.allowedModules = {}
         self.allowedClasses = {}
 
