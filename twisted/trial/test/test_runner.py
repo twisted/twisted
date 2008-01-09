@@ -430,7 +430,7 @@ class UncleanUntilFailureTests(TestUntilFailure):
         Get the number of failures that were reported to a result that
         is wrapped in an UncleanFailureWrapper.
         """
-        return len(result.original.failures)
+        return len(result._originalReporter.failures)
 
 
 

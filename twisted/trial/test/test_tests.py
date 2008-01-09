@@ -829,7 +829,7 @@ class TestTestDecorator(unittest.TestCase):
         """
         self.assertEqual(observed.__class__, expected.__class__,
                          "Different class")
-        self.assertIdentical(observed.original, expected.original)
+        self.assertIdentical(observed._originalTest, expected._originalTest)
 
 
     def assertSuitesEqual(self, observed, expected):

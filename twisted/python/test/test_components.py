@@ -1,8 +1,10 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""Test cases for Twisted component architecture."""
+"""
+Test cases for Twisted component architecture.
+"""
 
 from zope.interface import Interface, implements, Attribute
 
@@ -215,7 +217,7 @@ class DoubleXAdapter:
 components.registerAdapter(DoubleXAdapter, IAttrX, IAttrXX)
 
 class TestMetaInterface(unittest.TestCase):
-    
+
     def testBasic(self):
         n = MetaNumber(1)
         self.assertEquals(IMeta(n).add(1), 2)
@@ -667,7 +669,7 @@ class ProxyForInterfaceTests(unittest.TestCase):
         fakeProxy = Sample()
         testObject = Sample()
         fakeProxy.original = testObject
-        pd = components._ProxyDescriptor("hello")
+        pd = components._ProxyDescriptor("hello", "original")
         self.assertEquals(pd.__get__(fakeProxy), testObject.hello)
         fakeClassMethod = pd.__get__(None)
         fakeClassMethod(fakeProxy)
@@ -713,3 +715,27 @@ class ProxyForInterfaceTests(unittest.TestCase):
         proxy.boo()
         self.failUnless(booable.yayed)
         self.failUnless(booable.booed)
+
+
+    def test_attributeCustomization(self):
+        """
+        The original attribute name can be customized via the
+        C{originalAttribute} argument of L{proxyForInterface}: the attribute
+        should change, but the methods of the original object should still be
+        callable, and the attributes still accessible.
+        """
+        yayable = Yayable()
+        yayable.ifaceAttribute = object()
+        proxy = proxyForInterface(
+            IProxiedInterface, originalAttribute='foo')(yayable)
+        self.assertIdentical(proxy.foo, yayable)
+
+        # Check the behavior
+        self.assertEquals(proxy.yay(), 1)
+        self.assertIdentical(proxy.ifaceAttribute, yayable.ifaceAttribute)
+        thingy = object()
+        proxy.ifaceAttribute = thingy
+        self.assertIdentical(yayable.ifaceAttribute, thingy)
+        del proxy.ifaceAttribute
+        self.assertFalse(hasattr(yayable, 'ifaceAttribute'))
+

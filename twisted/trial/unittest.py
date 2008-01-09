@@ -1200,9 +1200,13 @@ class TestSuite(pyunit.TestSuite):
 
 
 
-class TestDecorator(components.proxyForInterface(itrial.ITestCase)):
+class TestDecorator(components.proxyForInterface(itrial.ITestCase,
+                                                 "_originalTest")):
     """
     Decorator for test cases.
+
+    @param _originalTest: The wrapped instance of test.
+    @type _originalTest: A provider of L{itrial.ITestCase}
     """
 
     implements(itrial.ITestCase)
@@ -1223,7 +1227,7 @@ class TestDecorator(components.proxyForInterface(itrial.ITestCase)):
 
         @param result: A TestResult object.
         """
-        return self.original.run(
+        return self._originalTest.run(
             reporter._AdaptedReporter(result, self.__class__))
 
 
@@ -1279,10 +1283,10 @@ class _BrokenIDTestCaseAdapter(_PyUnitTestCaseAdapter):
         """
         Return the fully-qualified Python name of the doctest.
         """
-        testID = self.original.shortDescription()
+        testID = self._originalTest.shortDescription()
         if testID is not None:
             return testID
-        return self.original.id()
+        return self._originalTest.id()
 
 
 

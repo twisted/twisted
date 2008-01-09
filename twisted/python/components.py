@@ -1,10 +1,11 @@
 # -*- test-case-name: twisted.python.test.test_components -*-
 
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""Component architecture for Twisted, based on Zope3 components.
+"""
+Component architecture for Twisted, based on Zope3 components.
 
 Using the Zope3 API directly is strongly recommended. Everything
 you need is in the top-level of the zope.interface package, e.g.::
@@ -247,7 +248,7 @@ class Componentized(styles.Versioned):
                 (self.locateAdapterClass(self.__class__, iface, None)
                  == component.__class__)):
                 self._adapterCache[reflect.qual(iface)] = component
-        
+
     def unsetComponent(self, interfaceClass):
         """Remove my component specified by the given interface class."""
         del self._adapterCache[reflect.qual(interfaceClass)]
@@ -265,7 +266,7 @@ class Componentized(styles.Versioned):
                 del self._adapterCache[k]
                 l.append(reflect.namedObject(k))
         return l
-    
+
     def getComponent(self, interface, default=None):
         """Create or retrieve an adapter for the given interface.
 
@@ -316,7 +317,7 @@ class ReprableComponentized(Componentized):
 
 
 
-def proxyForInterface(iface):
+def proxyForInterface(iface, originalAttribute='original'):
     """
     Create a class which proxies all method calls which adhere to an interface
     to another provider of that interface.
@@ -333,14 +334,18 @@ def proxyForInterface(iface):
     @param iface: The Interface to which the resulting object will conform, and
         which the wrapped object must provide.
 
+    @param originalAttribute: name of the attribute used to save the original
+        object in the resulting class. Default to C{original}.
+    @type originalAttribute: C{str}
+
     @return: A class whose constructor takes the original object as its only
         argument. Constructing the class creates the proxy.
     """
     def __init__(self, original):
-        self.original = original
+        setattr(self, originalAttribute, original)
     contents = {"__init__": __init__}
     for name in iface:
-        contents[name] = _ProxyDescriptor(name)
+        contents[name] = _ProxyDescriptor(name, originalAttribute)
     proxy = type("(Proxy for %s)"
                  % (reflect.qual(iface),), (object,), contents)
     directlyProvides(proxy, iface)
@@ -353,10 +358,16 @@ class _ProxiedClassMethod(object):
     A proxied class method.
 
     @ivar methodName: the name of the method which this should invoke when
-    called.
+        called.
+    @type methodName: C{str}
+
+    @ivar originalAttribute: name of the attribute of the proxy where the
+        original object is stored.
+    @type orginalAttribute: C{str}
     """
-    def __init__(self, methodName):
+    def __init__(self, methodName, originalAttribute):
         self.methodName = methodName
+        self.originalAttribute = originalAttribute
 
 
     def __call__(self, oself, *args, **kw):
@@ -368,7 +379,8 @@ class _ProxiedClassMethod(object):
 
         @return: the result of the underlying method.
         """
-        actualMethod = getattr(oself.original, self.methodName)
+        original = getattr(oself, self.originalAttribute)
+        actualMethod = getattr(original, self.methodName)
         return actualMethod(*args, **kw)
 
 
@@ -380,33 +392,43 @@ class _ProxyDescriptor(object):
     from.
 
     @ivar attributeName: the name of the attribute which this descriptor will
-    retrieve from instances' C{original} attribute.
+        retrieve from instances' C{original} attribute.
+    @type attributeName: C{str}
+
+    @ivar originalAttribute: name of the attribute of the proxy where the
+        original object is stored.
+    @type orginalAttribute: C{str}
     """
-    def __init__(self, attributeName):
+    def __init__(self, attributeName, originalAttribute):
         self.attributeName = attributeName
+        self.originalAttribute = originalAttribute
 
 
     def __get__(self, oself, type=None):
         """
-        Retrieve the C{self.attributeName} property from L{oself}
+        Retrieve the C{self.attributeName} property from L{oself}.
         """
         if oself is None:
-            return _ProxiedClassMethod(self.attributeName)
-        return getattr(oself.original, self.attributeName)
+            return _ProxiedClassMethod(self.attributeName,
+                                       self.originalAttribute)
+        original = getattr(oself, self.originalAttribute)
+        return getattr(original, self.attributeName)
 
 
     def __set__(self, oself, value):
         """
         Set the C{self.attributeName} property of L{oself}.
         """
-        setattr(oself.original, self.attributeName, value)
+        original = getattr(oself, self.originalAttribute)
+        setattr(original, self.attributeName, value)
 
 
     def __delete__(self, oself):
         """
         Delete the C{self.attributeName} property of L{oself}.
         """
-        delattr(oself.original, self.attributeName)
+        original = getattr(oself, self.originalAttribute)
+        delattr(original, self.attributeName)
 
 
 

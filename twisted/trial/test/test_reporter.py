@@ -379,7 +379,7 @@ class TestDirtyReactor(unittest.TestCase):
         self.assertWarns(UserWarning, self.dirtyError.getErrorMessage(),
                          reporter.__file__,
                          result.addError, self.test, self.dirtyError)
-        self.assertEquals(result.original.errors, [])
+        self.assertEquals(result._originalReporter.errors, [])
 
 
     def test_dealsWithThreeTuples(self):
@@ -394,10 +394,10 @@ class TestDirtyReactor(unittest.TestCase):
             reporter.Reporter(stream=self.output))
         result.addError(self.test,
                         (self.dirtyError.type, self.dirtyError.value, None))
-        self.assertEqual(len(result.original.errors), 1)
-        self.assertEquals(result.original.errors[0][1].type,
+        self.assertEqual(len(result._originalReporter.errors), 1)
+        self.assertEquals(result._originalReporter.errors[0][1].type,
                           self.dirtyError.type)
-        self.assertEquals(result.original.errors[0][1].value,
+        self.assertEquals(result._originalReporter.errors[0][1].value,
                           self.dirtyError.value)
 
 
@@ -524,7 +524,7 @@ class UncleanWarningSkipTest(TestSkip):
         Get the number of skips that happened to a reporter inside of an
         unclean warnings reporter wrapper.
         """
-        return len(result.original.skips)
+        return len(result._originalReporter.skips)
 
 
 
@@ -653,7 +653,7 @@ class UncleanWarningTodoTest(TodoTest):
         Get the number of todos that happened to a reporter inside of an
         unclean warnings reporter wrapper.
         """
-        return len(result.original.expectedFailures)
+        return len(result._originalReporter.expectedFailures)
 
 
     def _getUnexpectedSuccesses(self, result):
@@ -661,7 +661,7 @@ class UncleanWarningTodoTest(TodoTest):
         Get the number of unexpected successes that happened to a reporter
         inside of an unclean warnings reporter wrapper.
         """
-        return len(result.original.unexpectedSuccesses)
+        return len(result._originalReporter.unexpectedSuccesses)
 
 
 
@@ -953,7 +953,7 @@ class TestAdaptedReporter(unittest.TestCase):
 
 
     def assertWrapped(self, wrappedResult, test):
-        self.assertEqual(wrappedResult.original.test, self._testAdapter(test))
+        self.assertEqual(wrappedResult._originalReporter.test, self._testAdapter(test))
 
 
     def getFailure(self, exceptionInstance):

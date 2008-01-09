@@ -186,9 +186,13 @@ class TestResult(pyunit.TestResult, object):
 
 
 
-class TestResultDecorator(proxyForInterface(itrial.IReporter)):
+class TestResultDecorator(proxyForInterface(itrial.IReporter,
+                                            "_originalReporter")):
     """
     Base class for TestResult decorators.
+
+    @ivar _originalReporter: The wrapped instance of reporter.
+    @type _originalReporter: A provider of L{itrial.IReporter}
     """
 
     implements(itrial.IReporter)
@@ -199,8 +203,6 @@ class UncleanWarningsReporterWrapper(TestResultDecorator):
     """
     A wrapper for a reporter that converts L{util.DirtyReactorError}s
     to warnings.
-
-    @ivar original: The original reporter.
     """
     implements(itrial.IReporter)
 
@@ -214,7 +216,7 @@ class UncleanWarningsReporterWrapper(TestResultDecorator):
             and error.check(util.DirtyReactorAggregateError)):
             warnings.warn(error.getErrorMessage())
         else:
-            self.original.addError(test, error)
+            self._originalReporter.addError(test, error)
 
 
 
@@ -240,14 +242,14 @@ class _AdaptedReporter(TestResultDecorator):
         See L{itrial.IReporter}.
         """
         test = self.testAdapter(test)
-        return self.original.addError(test, error)
+        return self._originalReporter.addError(test, error)
 
 
     def addExpectedFailure(self, test, failure, todo):
         """
         See L{itrial.IReporter}.
         """
-        return self.original.addExpectedFailure(
+        return self._originalReporter.addExpectedFailure(
             self.testAdapter(test), failure, todo)
 
 
@@ -256,7 +258,7 @@ class _AdaptedReporter(TestResultDecorator):
         See L{itrial.IReporter}.
         """
         test = self.testAdapter(test)
-        return self.original.addFailure(test, failure)
+        return self._originalReporter.addFailure(test, failure)
 
 
     def addSkip(self, test, skip):
@@ -264,7 +266,7 @@ class _AdaptedReporter(TestResultDecorator):
         See L{itrial.IReporter}.
         """
         test = self.testAdapter(test)
-        return self.original.addSkip(test, skip)
+        return self._originalReporter.addSkip(test, skip)
 
 
     def addUnexpectedSuccess(self, test, todo):
@@ -272,21 +274,21 @@ class _AdaptedReporter(TestResultDecorator):
         See L{itrial.IReporter}.
         """
         test = self.testAdapter(test)
-        return self.original.addUnexpectedSuccess(test, todo)
+        return self._originalReporter.addUnexpectedSuccess(test, todo)
 
 
     def startTest(self, test):
         """
         See L{itrial.IReporter}.
         """
-        return self.original.startTest(self.testAdapter(test))
+        return self._originalReporter.startTest(self.testAdapter(test))
 
 
     def stopTest(self, test):
         """
         See L{itrial.IReporter}.
         """
-        return self.original.stopTest(self.testAdapter(test))
+        return self._originalReporter.stopTest(self.testAdapter(test))
 
 
 
