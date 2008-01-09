@@ -1,4 +1,5 @@
 ##
+# Copyright (c) 2007 Twisted Matrix Laboratories.
 # Copyright (c) 2005 Apple Computer, Inc. All rights reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -7,10 +8,10 @@
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -39,7 +40,7 @@ __all__ = [
     "WebDAVEmptyElement",
     "WebDAVTextElement",
     "WebDAVDateTimeElement",
-    "DateTimeHeaderElement",    
+    "DateTimeHeaderElement",
 ]
 
 import string
@@ -146,7 +147,7 @@ class WebDAVElement (object):
                 else:
                     log.msg("Attribute %s is unexpected and therefore ignored in %s element"
                             % (name, self.sname()))
-    
+
             for name, required in self.allowed_attributes.items():
                 if required and name not in my_attributes:
                     raise ValueError("Attribute %s is required in %s element"
@@ -323,11 +324,11 @@ class WebDAVOneShotElement (WebDAVElement):
 
         if clazz not in WebDAVOneShotElement.__singletons:
             WebDAVOneShotElement.__singletons[clazz] = {
-                child: WebDAVElement.__new__(clazz, children)
+                child: WebDAVElement.__new__(clazz)
             }
         elif child not in WebDAVOneShotElement.__singletons[clazz]:
             WebDAVOneShotElement.__singletons[clazz][child] = (
-                WebDAVElement.__new__(clazz, children)
+                WebDAVElement.__new__(clazz)
             )
 
         return WebDAVOneShotElement.__singletons[clazz][child]
@@ -351,7 +352,7 @@ class WebDAVEmptyElement (WebDAVElement):
         assert not args
 
         if kwargs:
-            return WebDAVElement.__new__(clazz, **kwargs)
+            return WebDAVElement.__new__(clazz)
         else:
             if clazz not in WebDAVEmptyElement.__singletons:
                 WebDAVEmptyElement.__singletons[clazz] = (WebDAVElement.__new__(clazz))
@@ -360,6 +361,17 @@ class WebDAVEmptyElement (WebDAVElement):
     allowed_children = {}
 
     children = ()
+
+
+    def __hash__(self):
+        """
+        Define a hash method, so that an empty element can serve as dictionary
+        keys. It's mainly useful to define singletons with
+        L{WebDAVOneShotElement}.
+        """
+        return hash((self.name, self.namespace))
+
+
 
 class WebDAVTextElement (WebDAVElement):
     """
