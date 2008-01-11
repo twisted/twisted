@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.test.test_logfile -*-
 
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -349,12 +349,15 @@ def CompressorHelper(baseClass, compressorClass):
     @rtype: C{class}
     """
 
-    def callInThread(self, method, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         """
-        Wrapper around L{reactor.callInThread}, to be overriden in tests.
+        @param callInThread: callable that executes the compression outside the
+            main loop. You'll generally want to pass
+            L{twisted.internet.reactor.callInThread}.
+        @type callInThread: C{callable}
         """
-        from twisted.internet import reactor
-        return reactor.callInThread(method, *args, **kwargs)
+        self.callInThread = kwargs.pop("callInThread")
+        baseClass.__init__(self, *args, **kwargs)
 
 
     def rotate(self):
@@ -379,27 +382,23 @@ def CompressorHelper(baseClass, compressorClass):
             bytes.
         @type: chunkSize: C{int}
         """
-        try:
-            compressedFile = compressorClass("%s%s" %
-                (path, self.rotateExtension), "wb")
-            newfp = open(path)
+        compressedFile = compressorClass("%s%s" %
+            (path, self.rotateExtension), "wb")
+        newfp = open(path)
 
+        data = newfp.read(chunkSize)
+        compressedFile.write(data)
+        while len(data) == chunkSize:
             data = newfp.read(chunkSize)
             compressedFile.write(data)
-            while len(data) == chunkSize:
-                data = newfp.read(chunkSize)
-                compressedFile.write(data)
 
-            compressedFile.close()
-            newfp.close()
-            os.remove(path)
-        except:
-            from twisted.python import log
-            log.err()
+        compressedFile.close()
+        newfp.close()
+        os.remove(path)
 
     compressor = type("CompressorHelper", (baseClass, object),
             {"rotate": rotate, "_compress": _compress,
-             "callInThread": callInThread})
+             "__init__": __init__})
     return compressor
 
 

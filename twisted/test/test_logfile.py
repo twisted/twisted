@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -119,7 +119,7 @@ class LogFileTestCase(FileExistsTestCase):
         didn't remove previous data.
         """
         log = self.logFileFactory(self.name, self.dir)
- 
+
         log.write("1234567890")
         log.close()
         self.assertTrue(log.closed)
@@ -127,7 +127,8 @@ class LogFileTestCase(FileExistsTestCase):
         log = self.logFileFactory(self.name, self.dir)
         log.write("1" * 11)
         log.flush()
-        self.assertEquals(log.getCurrentLog().readLines(), ["1234567890" + "1" * 11])
+        self.assertEquals(log.getCurrentLog().readLines(),
+                          ["1234567890" + "1" * 11])
 
         log.rotate()
         self.assertEquals(log.getLog(1).readLines(), ["1234567890" + "1" * 11])
@@ -307,6 +308,11 @@ class TestableGzipLogFile(logfile.GzipLogFile):
     A gzip compressed log file that can be tested.
     """
 
+    def __init__(self, *args, **kwargs):
+        kwargs["callInThread"] = self.callInThread
+        logfile.GzipLogFile.__init__(self, *args, **kwargs)
+
+
     def callInThread(self, method, *args, **kwargs):
         """
         Do not call in thread, call synchronously instead.
@@ -320,11 +326,6 @@ class TestableWithThreadsGzipLogFile(logfile.GzipLogFile):
     A gzip compressed log file that can be tested, with threads.
     """
 
-    def __init__(self, *args, **kwargs):
-        logfile.GzipLogFile.__init__(self, *args, **kwargs)
-        self.deferreds = []
-
-
     def callInThread(self, method, *args, **kwargs):
         """
         Use deferToThread to call C{method} in a thread, and store the
@@ -332,6 +333,12 @@ class TestableWithThreadsGzipLogFile(logfile.GzipLogFile):
         """
         d = deferToThread(method, *args, **kwargs)
         self.deferreds.append(d)
+
+
+    def __init__(self, *args, **kwargs):
+        kwargs["callInThread"] = self.callInThread
+        logfile.GzipLogFile.__init__(self, *args, **kwargs)
+        self.deferreds = []
 
 
 
@@ -344,8 +351,8 @@ class GzipLogFileTestCase(LogFileTestCase):
 
     def test_withThreads(self):
         """
-        Check that L{logfile.GzipLogFile} has the same behavior with and
-        withtout threads.
+        Check that L{logfile.GzipLogFile} has the same behavior with real
+        threads.
         """
         log = TestableWithThreadsGzipLogFile(self.name, self.dir,
                                              rotateLength=10)
@@ -362,8 +369,8 @@ class GzipLogFileTestCase(LogFileTestCase):
 
     def test_errorReportInCompress(self):
         """
-        Check that the L{logfile.GzipLogFile._compress} method reports errors
-        using C{log.err}, but doesn't fail.
+        L{logfile.GzipLogFile._compress} should let exceptions pass through,
+        so that the resulting L{Deferred} used in the test fails.
         """
         log = TestableWithThreadsGzipLogFile(self.name, self.dir,
                                              rotateLength=10)
@@ -376,13 +383,7 @@ class GzipLogFileTestCase(LogFileTestCase):
         log.write("4567890")
         log.write("1" * 11)
         d = log.deferreds.pop(0)
-        def check(ign):
-            errs = self.flushLoggedErrors()
-            self.assertEquals(len(errs), 1)
-            errs[0].trap(RuntimeError)
-            self.assertEquals(str(errs[0].value), "Urg")
-        d.addCallback(check)
-        return d
+        return self.assertFailure(d, RuntimeError)
 
 if gzip is None:
     GzipLogFileTestCase.skip = "gzip not available"
@@ -393,6 +394,11 @@ class TestableBz2LogFile(logfile.Bz2LogFile):
     """
     A bz2 compressed log file that can be tested.
     """
+
+    def __init__(self, *args, **kwargs):
+        kwargs["callInThread"] = self.callInThread
+        logfile.Bz2LogFile.__init__(self, *args, **kwargs)
+
 
     def callInThread(self, method, *args, **kwargs):
         """
@@ -417,11 +423,17 @@ if bz2 is None:
 def RiggedDailyLogFile(baseClass):
     _clock = 0.0
 
-    def callInThread(self, method, *args, **kwargs):
+    def callInThread(method, *args, **kwargs):
         """
         Do not call in thread, call synchronously instead.
         """
         return method(*args, **kwargs)
+
+
+    def __init__(self, *args, **kwargs):
+        if baseClass is not logfile.DailyLogFile:
+            kwargs["callInThread"] = callInThread
+        baseClass.__init__(self, *args, **kwargs)
 
 
     def _openFile(self):
@@ -438,7 +450,7 @@ def RiggedDailyLogFile(baseClass):
 
     logFileClass = type("RiggedDailyLogFile", (baseClass, object),
             {"_openFile": _openFile, "toDate": toDate, "_clock": _clock,
-             "callInThread": callInThread})
+             "__init__": __init__})
     return logFileClass
 
 
