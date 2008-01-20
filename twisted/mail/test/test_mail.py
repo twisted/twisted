@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -42,7 +42,7 @@ import twisted.mail.protocols
 import twisted.mail.alias
 
 from twisted.names.error import DNSNameError
-from twisted.names.dns import Record_MX
+from twisted.names.dns import RRHeader, Record_CNAME, Record_MX
 
 from twisted import cred
 import twisted.cred.credentials
@@ -876,12 +876,26 @@ def tearDownDNS(self):
     return defer.DeferredList(dl)
 
 class MXTestCase(unittest.TestCase):
+    """
+    Tests for L{mail.relaymanager.MXCalculator}.
+    """
     def setUp(self):
         setUpDNS(self)
-        self.mx = mail.relaymanager.MXCalculator(self.resolver)
+        self.clock = task.Clock()
+        self.mx = mail.relaymanager.MXCalculator(self.resolver, self.clock)
 
     def tearDown(self):
         return tearDownDNS(self)
+
+
+    def test_defaultClock(self):
+        """
+        L{MXCalculator}'s default clock is C{twisted.internet.reactor}.
+        """
+        self.assertIdentical(
+            mail.relaymanager.MXCalculator(self.resolver).clock,
+            reactor)
+
 
     def testSimpleSuccess(self):
         self.auth.addresses['test.domain'] = ['the.email.test.domain']
@@ -897,6 +911,141 @@ class MXTestCase(unittest.TestCase):
 
     def testSimpleFailureWithFallback(self):
         return self.assertFailure(self.mx.getMX('test.domain'), DNSLookupError)
+
+
+    def _exchangeTest(self, domain, records, correctMailExchange):
+        """
+        Issue an MX request for the given domain and arrange for it to be
+        responded to with the given records.  Verify that the resulting mail
+        exchange is the indicated host.
+
+        @type domain: C{str}
+        @type records: C{list} of L{RRHeader}
+        @type correctMailExchange: C{str}
+        @rtype: L{Deferred}
+        """
+        class DummyResolver(object):
+            def lookupMailExchange(self, name):
+                if name == domain:
+                    return defer.succeed((
+                            records,
+                            [],
+                            []))
+                return defer.fail(DNSNameError(domain))
+
+        self.mx.resolver = DummyResolver()
+        d = self.mx.getMX(domain)
+        def gotMailExchange(record):
+            self.assertEqual(str(record.name), correctMailExchange)
+        d.addCallback(gotMailExchange)
+        return d
+
+
+    def test_mailExchangePreference(self):
+        """
+        The MX record with the lowest preference is returned by
+        L{MXCalculator.getMX}.
+        """
+        domain = "example.com"
+        good = "good.example.com"
+        bad = "bad.example.com"
+
+        records = [
+            RRHeader(name=domain,
+                     type=Record_MX.TYPE,
+                     payload=Record_MX(1, bad)),
+            RRHeader(name=domain,
+                     type=Record_MX.TYPE,
+                     payload=Record_MX(0, good)),
+            RRHeader(name=domain,
+                     type=Record_MX.TYPE,
+                     payload=Record_MX(2, bad))]
+        return self._exchangeTest(domain, records, good)
+
+
+    def test_badExchangeExcluded(self):
+        """
+        L{MXCalculator.getMX} returns the MX record with the lowest preference
+        which is not also marked as bad.
+        """
+        domain = "example.com"
+        good = "good.example.com"
+        bad = "bad.example.com"
+
+        records = [
+            RRHeader(name=domain,
+                     type=Record_MX.TYPE,
+                     payload=Record_MX(0, bad)),
+            RRHeader(name=domain,
+                     type=Record_MX.TYPE,
+                     payload=Record_MX(1, good))]
+        self.mx.markBad(bad)
+        return self._exchangeTest(domain, records, good)
+
+
+    def test_fallbackForAllBadExchanges(self):
+        """
+        L{MXCalculator.getMX} returns the MX record with the lowest preference
+        if all the MX records in the response have been marked bad.
+        """
+        domain = "example.com"
+        bad = "bad.example.com"
+        worse = "worse.example.com"
+
+        records = [
+            RRHeader(name=domain,
+                     type=Record_MX.TYPE,
+                     payload=Record_MX(0, bad)),
+            RRHeader(name=domain,
+                     type=Record_MX.TYPE,
+                     payload=Record_MX(1, worse))]
+        self.mx.markBad(bad)
+        self.mx.markBad(worse)
+        return self._exchangeTest(domain, records, bad)
+
+
+    def test_badExchangeExpires(self):
+        """
+        L{MXCalculator.getMX} returns the MX record with the lowest preference
+        if it was last marked bad longer than L{MXCalculator.timeOutBadMX}
+        seconds ago.
+        """
+        domain = "example.com"
+        good = "good.example.com"
+        previouslyBad = "bad.example.com"
+
+        records = [
+            RRHeader(name=domain,
+                     type=Record_MX.TYPE,
+                     payload=Record_MX(0, previouslyBad)),
+            RRHeader(name=domain,
+                     type=Record_MX.TYPE,
+                     payload=Record_MX(1, good))]
+        self.mx.markBad(previouslyBad)
+        self.clock.advance(self.mx.timeOutBadMX)
+        return self._exchangeTest(domain, records, previouslyBad)
+
+
+    def test_goodExchangeUsed(self):
+        """
+        L{MXCalculator.getMX} returns the MX record with the lowest preference
+        if it was marked good after it was marked bad.
+        """
+        domain = "example.com"
+        good = "good.example.com"
+        previouslyBad = "bad.example.com"
+
+        records = [
+            RRHeader(name=domain,
+                     type=Record_MX.TYPE,
+                     payload=Record_MX(0, previouslyBad)),
+            RRHeader(name=domain,
+                     type=Record_MX.TYPE,
+                     payload=Record_MX(1, good))]
+        self.mx.markBad(previouslyBad)
+        self.mx.markGood(previouslyBad)
+        self.clock.advance(self.mx.timeOutBadMX)
+        return self._exchangeTest(domain, records, previouslyBad)
 
 
     def test_successWithoutResults(self):
@@ -956,6 +1105,136 @@ class MXTestCase(unittest.TestCase):
         self.mx.resolver = DummyResolver()
         d = self.mx.getMX("domain")
         d.addCallback(self.assertEqual, Record_MX(name="1.2.3.4"))
+        return d
+
+
+    def test_cnameWithoutGlueRecords(self):
+        """
+        If an MX lookup returns a single CNAME record as a result, MXCalculator
+        will perform an MX lookup for the canonical name indicated and return
+        the MX record which results.
+        """
+        alias = "alias.example.com"
+        canonical = "canonical.example.com"
+        exchange = "mail.example.com"
+
+        class DummyResolver(object):
+            """
+            Fake resolver which will return a CNAME for an MX lookup of a name
+            which is an alias and an MX for an MX lookup of the canonical name.
+            """
+            def lookupMailExchange(self, domain):
+                if domain == alias:
+                    return defer.succeed((
+                            [RRHeader(name=domain,
+                                      type=Record_CNAME.TYPE,
+                                      payload=Record_CNAME(canonical))],
+                            [], []))
+                elif domain == canonical:
+                    return defer.succeed((
+                            [RRHeader(name=domain,
+                                      type=Record_MX.TYPE,
+                                      payload=Record_MX(0, exchange))],
+                            [], []))
+                else:
+                    return defer.fail(DNSNameError(domain))
+
+        self.mx.resolver = DummyResolver()
+        d = self.mx.getMX(alias)
+        d.addCallback(self.assertEqual, Record_MX(name=exchange))
+        return d
+
+
+    def test_cnameChain(self):
+        """
+        If L{MXCalculator.getMX} encounters a CNAME chain which is longer than
+        the length specified, the returned L{Deferred} should errback with
+        L{CanonicalNameChainTooLong}.
+        """
+        class DummyResolver(object):
+            """
+            Fake resolver which generates a CNAME chain of infinite length in
+            response to MX lookups.
+            """
+            chainCounter = 0
+
+            def lookupMailExchange(self, domain):
+                self.chainCounter += 1
+                name = 'x-%d.example.com' % (self.chainCounter,)
+                return defer.succeed((
+                        [RRHeader(name=domain,
+                                  type=Record_CNAME.TYPE,
+                                  payload=Record_CNAME(name))],
+                        [], []))
+
+        cnameLimit = 3
+        self.mx.resolver = DummyResolver()
+        d = self.mx.getMX("mail.example.com", cnameLimit)
+        self.assertFailure(
+            d, twisted.mail.relaymanager.CanonicalNameChainTooLong)
+        def cbChainTooLong(error):
+            self.assertEqual(error.args[0], Record_CNAME("x-%d.example.com" % (cnameLimit + 1,)))
+            self.assertEqual(self.mx.resolver.chainCounter, cnameLimit + 1)
+        d.addCallback(cbChainTooLong)
+        return d
+
+
+    def test_cnameWithGlueRecords(self):
+        """
+        If an MX lookup returns a CNAME and the MX record for the CNAME, the
+        L{Deferred} returned by L{MXCalculator.getMX} should be called back
+        with the name from the MX record without further lookups being
+        attempted.
+        """
+        lookedUp = []
+        alias = "alias.example.com"
+        canonical = "canonical.example.com"
+        exchange = "mail.example.com"
+
+        class DummyResolver(object):
+            def lookupMailExchange(self, domain):
+                if domain != alias or lookedUp:
+                    # Don't give back any results for anything except the alias
+                    # or on any request after the first.
+                    return ([], [], [])
+                return defer.succeed((
+                        [RRHeader(name=alias,
+                                  type=Record_CNAME.TYPE,
+                                  payload=Record_CNAME(canonical)),
+                         RRHeader(name=canonical,
+                                  type=Record_MX.TYPE,
+                                  payload=Record_MX(name=exchange))],
+                        [], []))
+
+        self.mx.resolver = DummyResolver()
+        d = self.mx.getMX(alias)
+        d.addCallback(self.assertEqual, Record_MX(name=exchange))
+        return d
+
+
+    def test_cnameLoopWithGlueRecords(self):
+        """
+        If an MX lookup returns two CNAME records which point to each other,
+        the loop should be detected and the L{Deferred} returned by
+        L{MXCalculator.getMX} should be errbacked with L{CanonicalNameLoop}.
+        """
+        firstAlias = "cname1.example.com"
+        secondAlias = "cname2.example.com"
+
+        class DummyResolver(object):
+            def lookupMailExchange(self, domain):
+                return defer.succeed((
+                        [RRHeader(name=firstAlias,
+                                  type=Record_CNAME.TYPE,
+                                  payload=Record_CNAME(secondAlias)),
+                         RRHeader(name=secondAlias,
+                                  type=Record_CNAME.TYPE,
+                                  payload=Record_CNAME(firstAlias))],
+                        [], []))
+
+        self.mx.resolver = DummyResolver()
+        d = self.mx.getMX(firstAlias)
+        self.assertFailure(d, twisted.mail.relaymanager.CanonicalNameLoop)
         return d
 
 

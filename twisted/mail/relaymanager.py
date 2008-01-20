@@ -1,7 +1,6 @@
 # -*- test-case-name: twisted.mail.test.test_mail -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 Infrastructure for relaying mail through smart host
@@ -12,7 +11,7 @@ internet send all e-mail to a single computer, usually the ISP's though
 sometimes other schemes, such as SMTP-after-POP, are used. This computer
 is supposedly permanently up and traceable, and will do the work of
 figuring out MXs and connecting to them. This kind of configuration
-is usually termed "smart host", since the host we are connecting to 
+is usually termed "smart host", since the host we are connecting to
 is "smart" (and will find MXs and connect to them) rather then just
 accepting mail for a small set of domains.
 
@@ -24,9 +23,14 @@ import rfc822
 import os
 import time
 
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
 from twisted.python import log
-from twisted.python import util
 from twisted.python.failure import Failure
+from twisted.python.compat import set
 from twisted.mail import relay
 from twisted.mail import bounce
 from twisted.internet import protocol
@@ -34,11 +38,6 @@ from twisted.internet.defer import Deferred, DeferredList
 from twisted.internet.error import DNSLookupError
 from twisted.mail import smtp
 from twisted.application import internet
-
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
 
 class ManagedRelayerMixin:
     """SMTP Relayer which notifies a manager
@@ -58,7 +57,7 @@ class ManagedRelayerMixin:
         message = self.names[0]
         if code in smtp.SUCCESS:
             self.manager.notifySuccess(self.factory, message)
-        else: 
+        else:
             self.manager.notifyFailure(self.factory, message)
         del self.messages[0]
         del self.names[0]
@@ -119,12 +118,12 @@ class SMTPManagedRelayerFactory(protocol.ClientFactory):
 
 class ESMTPManagedRelayerFactory(SMTPManagedRelayerFactory):
     protocol = ESMTPManagedRelayer
-    
+
     def __init__(self, messages, manager, secret, contextFactory, *args, **kw):
         self.secret = secret
         self.contextFactory = contextFactory
         SMTPManagedRelayerFactory.__init__(self, messages, manager, *args, **kw)
-    
+
     def buildProtocol(self, addr):
         s = self.secret and self.secret(addr)
         protocol = self.protocol(self.messages, self.manager, s,
@@ -134,19 +133,19 @@ class ESMTPManagedRelayerFactory(SMTPManagedRelayerFactory):
 
 class Queue:
     """A queue of ougoing emails."""
-    
+
     noisy = True
-    
+
     def __init__(self, directory):
         self.directory = directory
         self._init()
-    
+
     def _init(self):
         self.n = 0
         self.waiting = {}
         self.relayed = {}
         self.readDirectory()
-    
+
     def __getstate__(self):
         """(internal) delete volatile state"""
         return {'directory' : self.directory}
@@ -160,7 +159,7 @@ class Queue:
         """Read the messages directory.
 
         look for new messages.
-        """ 
+        """
         for message in os.listdir(self.directory):
             # Skip non data files
             if message[-2:]!='-D':
@@ -218,7 +217,7 @@ class Queue:
         tempFilename = os.path.join(self.directory, fname+'-C')
         finalFilename = os.path.join(self.directory, fname+'-D')
         messageFile = open(tempFilename, 'wb')
-        
+
         from twisted.mail.mail import FileMessage
         return headerFile,FileMessage(messageFile, tempFilename, finalFilename)
 
@@ -323,7 +322,7 @@ class SmartHostSMTPRelayingManager:
     more relayers if the need arises.
 
     Someone should press .checkState periodically
-    
+
     @ivar fArgs: Additional positional arguments used to instantiate
     C{factory}.
 
@@ -333,9 +332,9 @@ class SmartHostSMTPRelayingManager:
     @ivar factory: A callable which returns a ClientFactory suitable for
     making SMTP connections.
     """
-    
+
     factory = SMTPManagedRelayerFactory
-    
+
     PORT = 25
 
     mxcalc = None
@@ -384,18 +383,18 @@ class SmartHostSMTPRelayingManager:
         @return: None or a Deferred which fires when all of the SMTP clients
         started by this call have disconnected.
         """
-        self.queue.readDirectory() 
+        self.queue.readDirectory()
         if (len(self.managed) >= self.maxConnections):
             return
         if  not self.queue.hasWaiting():
             return
 
         return self._checkStateMX()
-    
+
     def _checkStateMX(self):
         nextMessages = self.queue.getWaiting()
         nextMessages.reverse()
-        
+
         exchanges = {}
         for msg in nextMessages:
             from_, to = self.queue.getEnvelope(msg)
@@ -405,15 +404,15 @@ class SmartHostSMTPRelayingManager:
                 log.err("Illegal message destination: " + to)
                 continue
             domain = parts[1]
-            
+
             self.queue.setRelaying(msg)
             exchanges.setdefault(domain, []).append(self.queue.getPath(msg))
             if len(exchanges) >= (self.maxConnections - len(self.managed)):
                 break
-        
+
         if self.mxcalc is None:
             self.mxcalc = MXCalculator()
-        
+
         relays = []
         for (domain, msgs) in exchanges.iteritems():
             manager = _AttemptManager(self)
@@ -432,7 +431,7 @@ class SmartHostSMTPRelayingManager:
     def _cbExchange(self, address, port, factory):
         from twisted.internet import reactor
         reactor.connectTCP(address, port, factory)
-    
+
     def _ebExchange(self, failure, factory, domain):
         log.err('Error setting up managed relay factory for ' + domain)
         log.err(failure)
@@ -451,28 +450,56 @@ def _checkState(manager):
 def RelayStateHelper(manager, delay):
     return internet.TimerService(delay, _checkState, manager)
 
+
+
+class CanonicalNameLoop(Exception):
+    """
+    When trying to look up the MX record for a host, a set of CNAME records was
+    found which form a cycle and resolution was abandoned.
+    """
+
+
+class CanonicalNameChainTooLong(Exception):
+    """
+    When trying to look up the MX record for a host, too many CNAME records
+    which point to other CNAME records were encountered and resolution was
+    abandoned.
+    """
+
+
 class MXCalculator:
+    """
+    A utility for looking up mail exchange hosts and tracking whether they are
+    working or not.
+
+    @ivar clock: L{IReactorTime} provider which will be used to decide when to
+        retry mail exchanges which have not been working.
+    """
     timeOutBadMX = 60 * 60 # One hour
     fallbackToDomain = True
 
-    def __init__(self, resolver = None):
+    def __init__(self, resolver=None, clock=None):
         self.badMXs = {}
         if resolver is None:
             from twisted.names.client import createResolver
             resolver = createResolver()
         self.resolver = resolver
+        if clock is None:
+            from twisted.internet import reactor as clock
+        self.clock = clock
+
 
     def markBad(self, mx):
         """Indicate a given mx host is not currently functioning.
-        
+
         @type mx: C{str}
         @param mx: The hostname of the host which is down.
         """
-        self.badMXs[str(mx)] = time.time() + self.timeOutBadMX
+        self.badMXs[str(mx)] = self.clock.seconds() + self.timeOutBadMX
 
     def markGood(self, mx):
         """Indicate a given mx host is back online.
-        
+
         @type mx: C{str}
         @param mx: The hostname of the host which is up.
         """
@@ -481,38 +508,106 @@ class MXCalculator:
         except KeyError:
             pass
 
-    def getMX(self, domain):
-        return self.resolver.lookupMailExchange(domain
-        ).addCallback(self._filterRecords
-        ).addCallback(self._cbMX, domain
-        ).addErrback(self._ebMX, domain
-        )
+    def getMX(self, domain, maximumCanonicalChainLength=3):
+        """
+        Find an MX record for the given domain.
+
+        @type domain: C{str}
+        @param domain: The domain name for which to look up an MX record.
+
+        @type maximumCanonicalChainLength: C{int}
+        @param maximumCanonicalChainLength: The maximum number of unique CNAME
+            records to follow while looking up the MX record.
+
+        @return: A L{Deferred} which is called back with a string giving the
+            name in the found MX record or which is errbacked if no MX record
+            can be found.
+        """
+        mailExchangeDeferred = self.resolver.lookupMailExchange(domain)
+        mailExchangeDeferred.addCallback(self._filterRecords)
+        mailExchangeDeferred.addCallback(
+            self._cbMX, domain, maximumCanonicalChainLength)
+        mailExchangeDeferred.addErrback(self._ebMX, domain)
+        return mailExchangeDeferred
+
 
     def _filterRecords(self, records):
-        answers = records[0]
-        return [a.payload for a in answers]
+        """
+        Convert a DNS response (a three-tuple of lists of RRHeaders) into a
+        mapping from record names to lists of corresponding record payloads.
+        """
+        recordBag = {}
+        for answer in records[0]:
+            recordBag.setdefault(str(answer.name), []).append(answer.payload)
+        return recordBag
 
-    def _cbMX(self, answers, domain):
+
+    def _cbMX(self, answers, domain, cnamesLeft):
+        """
+        Try to find the MX host from the given DNS information.
+
+        This will attempt to resolve CNAME results.  It can recognize loops
+        and will give up on non-cyclic chains after a specified number of
+        lookups.
+        """
         # Do this import here so that relaymanager.py doesn't depend on
         # twisted.names, only MXCalculator will.
-        from twisted.names.error import DNSNameError
+        from twisted.names import dns, error
 
-        answers = util.dsu(answers, lambda e: e.preference)
-        for answer in answers:
-            host = str(answer.name)
-            if host not in self.badMXs:
-                return answer
-            t = time.time() - self.badMXs[host]
-            if t > 0:
-                del self.badMXs[host]
-                return answer
-        if answers:
-            return answers[0]
-        # Treat no answers the same as an error - jump to the errback to try
-        # to look up an A record.  This provides behavior described as a
-        # special case in RFC 974 in the section headed I{Interpreting the
-        # List of MX RRs}.
-        return Failure(DNSNameError("No MX records for %r" % (domain,)))
+        seenAliases = set()
+        exchanges = []
+        # Examine the answers for the domain we asked about
+        pertinentRecords = answers.get(domain, [])
+        while pertinentRecords:
+            record = pertinentRecords.pop()
+
+            # If it's a CNAME, we'll need to do some more processing
+            if record.TYPE == dns.CNAME:
+
+                # Remember that this name was an alias.
+                seenAliases.add(domain)
+
+                canonicalName = str(record.name)
+                # See if we have some local records which might be relevant.
+                if canonicalName in answers:
+
+                    # Make sure it isn't a loop contained entirely within the
+                    # results we have here.
+                    if canonicalName in seenAliases:
+                        return Failure(CanonicalNameLoop(record))
+
+                    pertinentRecords = answers[canonicalName]
+                    exchanges = []
+                else:
+                    if cnamesLeft:
+                        # Request more information from the server.
+                        return self.getMX(canonicalName, cnamesLeft - 1)
+                    else:
+                        # Give up.
+                        return Failure(CanonicalNameChainTooLong(record))
+
+            # If it's an MX, collect it.
+            if record.TYPE == dns.MX:
+                exchanges.append((record.preference, record))
+
+        if exchanges:
+            exchanges.sort()
+            for (preference, record) in exchanges:
+                host = str(record.name)
+                if host not in self.badMXs:
+                    return record
+                t = self.clock.seconds() - self.badMXs[host]
+                if t >= 0:
+                    del self.badMXs[host]
+                    return record
+            return exchanges[0][1]
+        else:
+            # Treat no answers the same as an error - jump to the errback to try
+            # to look up an A record.  This provides behavior described as a
+            # special case in RFC 974 in the section headed I{Interpreting the
+            # List of MX RRs}.
+            return Failure(
+                error.DNSNameError("No MX records for %r" % (domain,)))
 
 
     def _ebMX(self, failure, domain):
