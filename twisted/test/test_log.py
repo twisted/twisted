@@ -111,22 +111,40 @@ class EvilReprStr(EvilStr, EvilRepr):
 
 class LogPublisherTestCaseMixin:
     def setUp(self):
-        # Fuck you Python.
-        reload(sys)
-        self._origEncoding = sys.getdefaultencoding()
-        sys.setdefaultencoding('ascii')
-
+        """
+        Add a log observer which records log events in C{self.out}.  Also,
+        make sure the default string encoding is ASCII so that
+        L{testSingleUnicode} can test the behavior of logging unencodable
+        unicode messages.
+        """
         self.out = FakeFile()
         self.lp = log.LogPublisher()
         self.flo = log.FileLogObserver(self.out)
         self.lp.addObserver(self.flo.emit)
 
+        try:
+            str(u'\N{VULGAR FRACTION ONE HALF}')
+        except UnicodeEncodeError:
+            # This is the behavior we want - don't change anything.
+            self._origEncoding = None
+        else:
+            reload(sys)
+            self._origEncoding = sys.getdefaultencoding()
+            sys.setdefaultencoding('ascii')
+
+
     def tearDown(self):
+        """
+        Verify that everything written to the fake file C{self.out} was a
+        C{str}.  Also, restore the default string encoding to its previous
+        setting, if it was modified by L{setUp}.
+        """
         for chunk in self.out:
             self.failUnless(isinstance(chunk, str), "%r was not a string" % (chunk,))
-        # Fuck you very much.
-        sys.setdefaultencoding(self._origEncoding)
-        del sys.setdefaultencoding
+
+        if self._origEncoding is not None:
+            sys.setdefaultencoding(self._origEncoding)
+            del sys.setdefaultencoding
 
 
 
