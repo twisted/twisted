@@ -496,6 +496,36 @@ class TelnetTransportTestCase(unittest.TestCase):
         return defer.gatherResults([d1, d2, d3])
 
 
+class TestTelnet(telnet.Telnet):
+    """
+    A trivial extension of the telnet protocol class useful to unit tests.
+    """
+    def __init__(self):
+        telnet.Telnet.__init__(self)
+        self.events = []
+
+
+    def applicationDataReceived(self, bytes):
+        """
+        Record the given data in C{self.events}.
+        """
+        self.events.append(('bytes', bytes))
+
+
+    def unhandledCommand(self, command, bytes):
+        """
+        Record the given command in C{self.events}.
+        """
+        self.events.append(('command', command, bytes))
+
+
+    def unhandledSubnegotiation(self, command, bytes):
+        """
+        Record the given subnegotiation command in C{self.events}.
+        """
+        self.events.append(('negotiate', command, bytes))
+
+
 
 class TelnetTests(unittest.TestCase):
     """
@@ -508,7 +538,7 @@ class TelnetTests(unittest.TestCase):
         """
         Create an unconnected L{telnet.Telnet} to be used by tests.
         """
-        self.protocol = telnet.Telnet()
+        self.protocol = TestTelnet()
 
 
     def test_enableLocal(self):
@@ -545,3 +575,98 @@ class TelnetTests(unittest.TestCase):
         override disableRemote.
         """
         self.assertRaises(NotImplementedError, self.protocol.disableRemote, '\0')
+
+
+    def _deliver(self, bytes, *expected):
+        """
+        Pass the given bytes to the protocol's C{dataReceived} method and
+        assert that the given events occur.
+        """
+        received = self.protocol.events = []
+        self.protocol.dataReceived(bytes)
+        self.assertEqual(received, list(expected))
+
+
+    def test_oneApplicationDataByte(self):
+        """
+        One application-data byte in the default state gets delivered right
+        away.
+        """
+        self._deliver('a', ('bytes', 'a'))
+
+
+    def test_twoApplicationDataBytes(self):
+        """
+        Two application-data bytes in the default state get delivered
+        together.
+        """
+        self._deliver('bc', ('bytes', 'bc'))
+
+
+    def test_threeApplicationDataBytes(self):
+        """
+        Three application-data bytes followed by a control byte get
+        delivered, but the control byte doesn't.
+        """
+        self._deliver('def' + telnet.IAC, ('bytes', 'def'))
+
+
+    def test_escapedControl(self):
+        """
+        IAC in the escaped state gets delivered and so does another
+        application-data byte following it.
+        """
+        self._deliver(telnet.IAC)
+        self._deliver(telnet.IAC + 'g', ('bytes', telnet.IAC + 'g'))
+
+
+    def test_carriageReturn(self):
+        """
+        A carriage return only puts the protocol into the newline state.  A
+        linefeed in the newline state causes just the newline to be
+        delivered.  A nul in the newline state causes a carriage return to
+        be delivered.  Anything else causes a carriage return and that thing
+        to be delivered.
+        """
+        self._deliver('\r')
+        self._deliver('\n', ('bytes', '\n'))
+        self._deliver('\r\n', ('bytes', '\n'))
+
+        self._deliver('\r')
+        self._deliver('\0', ('bytes', '\r'))
+        self._deliver('\r\0', ('bytes', '\r'))
+
+        self._deliver('\r')
+        self._deliver('a', ('bytes', '\ra'))
+        self._deliver('\ra', ('bytes', '\ra'))
+
+
+    def test_applicationDataBeforeSimpleCommand(self):
+        """
+        Application bytes received before a command are delivered before the
+        command is processed.
+        """
+        self._deliver(
+            'x' + telnet.IAC + telnet.NOP,
+            ('bytes', 'x'), ('command', telnet.NOP, None))
+
+
+    def test_applicationDataBeforeCommand(self):
+        """
+        Application bytes received before a WILL/WONT/DO/DONT are delivered
+        before the command is processed.
+        """
+        self.protocol.commandMap = {}
+        self._deliver(
+            'y' + telnet.IAC + telnet.WILL + '\x00',
+            ('bytes', 'y'), ('command', telnet.WILL, '\x00'))
+
+
+    def test_applicationDataBeforeSubnegotiation(self):
+        """
+        Application bytes received before a subnegotiation command are
+        delivered before the negotiation is processed.
+        """
+        self._deliver(
+            'z' + telnet.IAC + telnet.SB + 'Qx' + telnet.IAC + telnet.SE,
+            ('bytes', 'z'), ('negotiate', 'Q', ['x']))

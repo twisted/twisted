@@ -434,7 +434,8 @@ class Telnet(protocol.Protocol):
         self._write(IAC + SB + bytes + IAC + SE)
 
     def dataReceived(self, data):
-        # Most grossly inefficient implementation ever
+        appDataBuffer = []
+
         for b in data:
             if self.state == 'data':
                 if b == IAC:
@@ -442,16 +443,19 @@ class Telnet(protocol.Protocol):
                 elif b == '\r':
                     self.state = 'newline'
                 else:
-                    self.applicationDataReceived(b)
+                    appDataBuffer.append(b)
             elif self.state == 'escaped':
                 if b == IAC:
-                    self.applicationDataReceived(b)
+                    appDataBuffer.append(b)
                     self.state = 'data'
                 elif b == SB:
                     self.state = 'subnegotiation'
                     self.commands = []
                 elif b in (NOP, DM, BRK, IP, AO, AYT, EC, EL, GA):
                     self.state = 'data'
+                    if appDataBuffer:
+                        self.applicationDataReceived(''.join(appDataBuffer))
+                        del appDataBuffer[:]
                     self.commandReceived(b, None)
                 elif b in (WILL, WONT, DO, DONT):
                     self.state = 'command'
@@ -462,14 +466,17 @@ class Telnet(protocol.Protocol):
                 self.state = 'data'
                 command = self.command
                 del self.command
+                if appDataBuffer:
+                    self.applicationDataReceived(''.join(appDataBuffer))
+                    del appDataBuffer[:]
                 self.commandReceived(command, b)
             elif self.state == 'newline':
                 if b == '\n':
-                    self.applicationDataReceived('\n')
+                    appDataBuffer.append('\n')
                 elif b == '\0':
-                    self.applicationDataReceived('\r')
+                    appDataBuffer.append('\r')
                 else:
-                    self.applicationDataReceived('\r' + b)
+                    appDataBuffer.append('\r' + b)
                 self.state = 'data'
             elif self.state == 'subnegotiation':
                 if b == IAC:
@@ -481,12 +488,19 @@ class Telnet(protocol.Protocol):
                     self.state = 'data'
                     commands = self.commands
                     del self.commands
+                    if appDataBuffer:
+                        self.applicationDataReceived(''.join(appDataBuffer))
+                        del appDataBuffer[:]
                     self.negotiate(commands)
                 else:
                     self.state = 'subnegotiation'
                     self.commands.append(b)
             else:
                 raise ValueError("How'd you do this?")
+
+        if appDataBuffer:
+            self.applicationDataReceived(''.join(appDataBuffer))
+
 
     def connectionLost(self, reason):
         for state in self.options.values():
