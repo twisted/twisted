@@ -15,4 +15,4 @@ for development with Twisted.  Use it with this in mind.
 __version__ = 'SVN-Trunk'
 
 import warnings
-warnings.warn("twisted.flow is unmaintained.", PendingDeprecationWarning, 2)
+warnings.warn("twisted.flow is unmaintained.", DeprecationWarning, 2)
