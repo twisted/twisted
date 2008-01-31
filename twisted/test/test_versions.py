@@ -3,11 +3,15 @@
 
 from cStringIO import StringIO
 
-from twisted.python.versions import Version, IncomparableVersions
+from twisted.python.versions import getVersionString, IncomparableVersions
+from twisted.python.versions import Version
 
 from twisted.trial import unittest
 
+
+
 class VersionsTest(unittest.TestCase):
+
     def testVersionComparison(self):
         va = Version("dummy", 1, 0, 0)
         vb = Version("dummy", 0, 1, 0)
@@ -76,3 +80,12 @@ class VersionsTest(unittest.TestCase):
         version = Version("dummy", 1, 0, 0)
         self.assertEquals(version._parseSVNEntries(StringIO('I like puppies')), 
                           "Unknown")
+
+
+    def test_getVersionString(self):
+        """
+        L{getVersionString} returns a string with the package name and the
+        short version number.
+        """
+        self.assertEqual(
+            'Twisted 8.0.0', getVersionString(Version('Twisted', 8, 0, 0)))

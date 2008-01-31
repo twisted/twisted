@@ -17,6 +17,8 @@ from pprint import pformat
 from twisted.internet import defer, utils
 from twisted.python import components, failure, log, monkey
 from twisted.python.compat import set
+from twisted.python import deprecate
+from twisted.python.deprecate import getDeprecationWarningString
 
 from twisted.trial import itrial, reporter, util
 
@@ -827,6 +829,46 @@ class TestCase(_Assertions):
         self._cleanups.append((f, args, kwargs))
 
 
+    def _captureDeprecationWarnings(self, f, *args, **kwargs):
+        """
+        Call C{f} and capture all deprecation warnings.
+        """
+        warnings = []
+        def accumulateDeprecations(message, category, stacklevel):
+            self.assertEqual(DeprecationWarning, category)
+            self.assertEqual(stacklevel, 2)
+            warnings.append(message)
+
+        originalMethod = deprecate.getWarningMethod()
+        deprecate.setWarningMethod(accumulateDeprecations)
+        try:
+            result = f(*args, **kwargs)
+        finally:
+            deprecate.setWarningMethod(originalMethod)
+        return (warnings, result)
+
+
+    def callDeprecated(self, version, f, *args, **kwargs):
+        """
+        Call a function that was deprecated at a specific version.
+
+        @param version: The version that the function was deprecated in.
+        @param f: The deprecated function to call.
+        @return: Whatever the function returns.
+        """
+        warnings, result = self._captureDeprecationWarnings(
+            f, *args, **kwargs)
+
+        if len(warnings) == 0:
+            self.fail('%r is not deprecated.' % (f,))
+
+        observedWarning = warnings[0]
+        expectedWarning = getDeprecationWarningString(f, version)
+        self.assertEqual(expectedWarning, observedWarning)
+
+        return result
+
+
     def _runCleanups(self):
         """
         Run the cleanups added with L{addCleanup} in order.
@@ -1354,7 +1396,7 @@ class _SubTestCase(TestCase):
 
 _inst = _SubTestCase()
 
-def deprecate(name):
+def _deprecate(name):
     """
     Internal method used to deprecate top-level assertions. Do not use this.
     """
@@ -1381,7 +1423,7 @@ _assertions = ['fail', 'failUnlessEqual', 'failIfEqual', 'failIfEquals',
 
 
 for methodName in _assertions:
-    globals()[methodName] = deprecate(methodName)
+    globals()[methodName] = _deprecate(methodName)
 
 
 __all__ = ['TestCase', 'wait', 'FailTest', 'SkipTest']

@@ -122,3 +122,14 @@ class Version(object):
         if ver is None:
             return ''
         return ' (SVN r%s)' % (ver,)
+
+
+
+def getVersionString(version):
+    """
+    Get a friendly string for the given version object.
+
+    @param version: A L{Version} object.
+    @return: A string containing the package and short version number.
+    """
+    return '%s %s' % (version.package, version.short())

@@ -61,25 +61,6 @@ class UtilTestCase(unittest.TestCase):
         finally:
             del util.id
 
-    def testFunctionMetaMerge(self):
-        o = object()
-        p = object()
-        def foo():
-            return o
-        def bar(x, y, (a, b), c=10, *d, **e):
-            return p
-        baz = util.mergeFunctionMetadata(foo, bar)
-        self.assertIdentical(baz(1, 2, (3, 4), quux=10), p)
-
-        # Now one without a closure
-        def foo2(o=o):
-            return o
-        def bar2(x, y, (a, b), c=10, p=p, *d, **e):
-            return p
-        baz2 = util.mergeFunctionMetadata(foo2, bar2)
-        self.assertIdentical(baz2(1, 2, (3, 4), quux=10), p)
-
-
     def testNameToLabel(self):
         """
         Test the various kinds of inputs L{nameToLabel} supports.
@@ -96,6 +77,86 @@ class UtilTestCase(unittest.TestCase):
             self.assertEquals(
                 got, out,
                 "nameToLabel(%r) == %r != %r" % (inp, got, out))
+
+
+
+class TestMergeFunctionMetadata(unittest.TestCase):
+    """
+    Tests for L{mergeFunctionMetadata}.
+    """
+
+    def test_mergedFunctionBehavesLikeMergeTarget(self):
+        """
+        After merging C{foo}'s data into C{bar}, the returned function behaves
+        as if it is C{bar}.
+        """
+        foo_object = object()
+        bar_object = object()
+
+        def foo():
+            return foo_object
+
+        def bar(x, y, (a, b), c=10, *d, **e):
+            return bar_object
+
+        baz = util.mergeFunctionMetadata(foo, bar)
+        self.assertIdentical(baz(1, 2, (3, 4), quux=10), bar_object)
+
+
+    def test_docstringIsMerged(self):
+        """
+        Merging C{foo} into C{bar} returns a function with C{foo}'s docstring.
+        """
+
+        def foo():
+            """
+            This is foo.
+            """
+
+        def bar():
+            """
+            This is bar.
+            """
+
+        baz = util.mergeFunctionMetadata(foo, bar)
+        self.assertEqual(baz.__doc__, foo.__doc__)
+
+
+    def test_nameIsMerged(self):
+        """
+        Merging C{foo} into C{bar} returns a function with C{foo}'s name.
+        """
+
+        def foo():
+            pass
+
+        def bar():
+            pass
+
+        baz = util.mergeFunctionMetadata(foo, bar)
+        self.assertEqual(baz.__name__, foo.__name__)
+
+
+    def test_instanceDictionaryIsMerged(self):
+        """
+        Merging C{foo} into C{bar} returns a function with C{bar}'s
+        dictionary, updated by C{foo}'s.
+        """
+
+        def foo():
+            pass
+        foo.a = 1
+        foo.b = 2
+
+        def bar():
+            pass
+        bar.b = 3
+        bar.c = 4
+
+        baz = util.mergeFunctionMetadata(foo, bar)
+        self.assertEqual(foo.a, baz.a)
+        self.assertEqual(foo.b, baz.b)
+        self.assertEqual(bar.c, baz.c)
 
 
 
