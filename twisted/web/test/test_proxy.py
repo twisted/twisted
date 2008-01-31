@@ -108,6 +108,15 @@ class ReverseProxyResourceTestCase(TestCase):
         self.assertEquals(child.host, "127.0.0.1")
 
 
+    def test_getChildWithSpecial(self):
+        """
+        The L{ReverseProxyResource} return by C{getChild} has a path which has
+        already been quoted.
+        """
+        resource = ReverseProxyResource("127.0.0.1", 1234, "/path")
+        child = resource.getChild(' /%', None)
+        self.assertEqual(child.path, "/path/%20%2F%25")
+
 
 
 class DummyParent(object):
@@ -396,4 +405,3 @@ class ReverseProxyRequestTestCase(TestCase):
         factory = reactor.connect[0][2]
         self.assertIsInstance(factory, ProxyClientFactory)
         self.assertEquals(factory.headers, {'host': 'example.com'})
-

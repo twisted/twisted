@@ -20,6 +20,7 @@ ReverseProxy is used on the server end.
 """
 
 import urlparse
+from urllib import quote as urlquote
 
 from twisted.internet import reactor
 from twisted.internet.protocol import ClientFactory
@@ -237,7 +238,9 @@ class ReverseProxyResource(Resource):
         @param path: the base path to fetch data from. Note that you shouldn't
             put any trailing slashes in it, it will be added automatically in
             request. For example, if you put B{/foo}, a request on B{/bar} will
-            be proxied to B{/foo/bar}.
+            be proxied to B{/foo/bar}.  Any required encoding of special
+            characters (such as " " or "/") should have been done already.
+
         @type path: C{str}
         """
         Resource.__init__(self)
@@ -248,8 +251,13 @@ class ReverseProxyResource(Resource):
 
 
     def getChild(self, path, request):
+        """
+        Create and return a proxy resource with the same proxy configuration
+        as this one, except that its path also contains the segment given by
+        C{path} at the end.
+        """
         return ReverseProxyResource(
-            self.host, self.port, self.path + '/' + path)
+            self.host, self.port, self.path + '/' + urlquote(path, safe=""))
 
 
     def render(self, request):
