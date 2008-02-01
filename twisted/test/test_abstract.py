@@ -1,4 +1,4 @@
-# Copyright (c) 2007 Twisted Matrix Laboratories.
+# Copyright (c) 2007-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -8,6 +8,7 @@ Tests for generic file descriptor based reactor support code.
 from twisted.trial.unittest import TestCase
 
 from twisted.internet.abstract import isIPAddress
+from twisted.internet.abstract import isIPv6Address
 
 
 class AddressTests(TestCase):
@@ -81,3 +82,30 @@ class AddressTests(TestCase):
         self.assertFalse(isIPAddress('0.0.256.0'))
         self.assertFalse(isIPAddress('0.0.0.256'))
         self.assertFalse(isIPAddress('256.256.256.256'))
+
+
+
+class IPv6AddressTests(TestCase):
+    """
+    Tests for IPv6 addresses.
+    """
+
+    def test_hexadecimalColoned(self):
+        """
+        L{isIPv6Address} should return C{True} for any valid colon-separated
+        hexadecimal representation of an IPv6 address.
+        """
+        self.assertTrue(isIPv6Address('::1'))
+        self.assertTrue(isIPv6Address('fe80::215:cbfe:feac:8888'))
+        self.assertTrue(isIPv6Address('fe80::215:cbfe:feac:8888'))
+        self.assertTrue(isIPv6Address('fe80:5:5:5:215:cbfe:feac:8888'))
+
+
+    def test_illegalHexadecimalColoned(self):
+        """
+        L{isIPv6Address} should return C{False} for any invalid colon-separated
+        hexadecimal representation of an IPv6 address.
+        """
+        self.assertFalse(isIPv6Address(':1::2'))
+        self.assertFalse(isIPv6Address('fe80:5:5:5:215:cbfe:feac:8888:5'))
+        self.assertFalse(isIPv6Address('g::h'))

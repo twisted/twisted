@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.test.test_internet -*-
 #
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -22,6 +22,7 @@ from zope.interface import implements, classImplements
 
 from twisted.internet.interfaces import IReactorUNIX, IReactorUNIXDatagram
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL, IReactorArbitrary
+from twisted.internet.interfaces import IReactorTCP6
 from twisted.internet.interfaces import IReactorProcess, IReactorMulticast
 from twisted.internet.interfaces import IHalfCloseableDescriptor
 from twisted.internet import error
@@ -167,7 +168,8 @@ class PosixReactorBase(ReactorBase):
     """
     A basis for reactors that use file descriptors.
     """
-    implements(IReactorArbitrary, IReactorTCP, IReactorUDP, IReactorMulticast)
+    implements(IReactorArbitrary, IReactorTCP, IReactorTCP6, IReactorUDP,
+               IReactorMulticast)
 
     def __init__(self):
         ReactorBase.__init__(self)
@@ -480,6 +482,28 @@ class PosixReactorBase(ReactorBase):
         c = tcp.Connector(host, port, factory, timeout, bindAddress, self)
         c.connect()
         return c
+
+    # IReactorTCP6
+
+    def listenTCP6(self, port, factory, backlog=50, interface=''):
+        """
+        @see: twisted.internet.interfaces.IReactorTCP.listenTCP6
+        """
+        p = tcp.Port6(port, factory, backlog, interface, self)
+        p.startListening()
+        return p
+
+
+    def connectTCP6(self, host, port, factory, timeout=30, bindAddress=None,
+                    flowinfo=0, scopeid=0):
+        """
+        @see: twisted.internet.interfaces.IReactorTCP.connectTCP6
+        """
+        c = tcp.Connector6(host, port, factory, timeout, bindAddress, self,
+                           flowinfo, scopeid)
+        c.connect()
+        return c
+
 
     # IReactorSSL (sometimes, not implemented)
 

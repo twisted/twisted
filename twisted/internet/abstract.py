@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_abstract -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -9,6 +9,8 @@ API Stability: stable
 
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
+
+import socket
 
 from zope.interface import implements
 
@@ -364,6 +366,19 @@ def isIPAddress(addr):
                     return False
         return True
     return False
+
+
+def isIPv6Address(ip):
+    """
+    Return True iff ip is a valid bare IPv6 address.
+
+    Return False for 'enhanced' IPv6 addresses like '::1%lo' and '::1/128'
+    """
+    try:
+        socket.inet_pton(socket.AF_INET6, ip)
+    except (ValueError, socket.error):
+        return False
+    return True
 
 
 __all__ = ["FileDescriptor"]

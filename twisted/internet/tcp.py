@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_tcp -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -52,8 +52,8 @@ if platformType == 'win32':
     ENOMEM = object()
     EAGAIN = EWOULDBLOCK
     from errno import WSAECONNRESET as ECONNABORTED
-    
-    from twisted.python.win32 import formatError as strerror    
+
+    from twisted.python.win32 import formatError as strerror
 else:
     from errno import EPERM
     from errno import EINVAL
@@ -70,7 +70,7 @@ else:
     from errno import ENOMEM
     from errno import EAGAIN
     from errno import ECONNABORTED
-    
+
     from os import strerror
 
 from errno import errorcode
@@ -102,6 +102,8 @@ class _SocketCloser:
             skt.close()
         except socket.error:
             pass
+
+
 
 class _TLSMixin:
     _socketShutdownMethod = 'sock_shutdown'
@@ -276,12 +278,16 @@ class _TLSMixin:
         else:
             self.stopReading()
 
+
+
 def _getTLSClass(klass, _existing={}):
     if klass not in _existing:
         class TLSConnection(_TLSMixin, klass):
             implements(interfaces.ISSLTransport)
         _existing[klass] = TLSConnection
     return _existing[klass]
+
+
 
 class Connection(abstract.FileDescriptor, _SocketCloser):
     """
@@ -438,6 +444,8 @@ class Connection(abstract.FileDescriptor, _SocketCloser):
 if SSL:
     classImplements(Connection, interfaces.ITLSTransport)
 
+
+
 class BaseClient(Connection):
     """A base class for client TCP (and similiar) sockets.
     """
@@ -577,6 +585,7 @@ class BaseClient(Connection):
             self.connector.connectionLost(reason)
 
 
+
 class Client(BaseClient):
     """A TCP client."""
 
@@ -619,6 +628,7 @@ class Client(BaseClient):
     def __repr__(self):
         s = '<%s to %s at %x>' % (self.__class__, self.addr, unsignedID(self))
         return s
+
 
 
 class Server(Connection):
@@ -677,6 +687,8 @@ class Server(Connection):
         This indicates the client's address.
         """
         return address.IPv4Address('TCP', *(self.client + ('INET',)))
+
+
 
 class Port(base.BasePort, _SocketCloser):
     """I am a TCP server port, listening for connections.
@@ -875,6 +887,8 @@ class Port(base.BasePort, _SocketCloser):
         """
         return address.IPv4Address('TCP', *(self.socket.getsockname() + ('INET',)))
 
+
+
 class Connector(base.BaseConnector):
     def __init__(self, host, port, factory, timeout, bindAddress, reactor=None):
         self.host = host
@@ -892,3 +906,160 @@ class Connector(base.BaseConnector):
 
     def getDestination(self):
         return address.IPv4Address('TCP', self.host, self.port, 'INET')
+
+
+
+class Client6(Client):
+    """
+    A TCP6 client.
+    """
+    addressFamily = socket.AF_INET6
+
+    def __init__(self, host, port, bindAddress, connector, reactor=None,
+                 flowinfo=0, scopeid=0):
+        Client.__init__(self, host, port, bindAddress, connector, reactor)
+        self.addr = (host, port, flowinfo, scopeid)
+
+
+    def resolveAddress(self):
+        """
+        Lookup the IPv6 address for self.addr[0] if necessary, then set
+        self.realAddress to that IPv6 address.
+        """
+        if abstract.isIPv6Address(self.addr[0]):
+            self._setRealAddress(self.addr[0])
+        else:
+            d = self.reactor.resolve(self.addr[0])
+            d.addCallbacks(self._setRealAddress, self.failIfNotConnected)
+
+
+    def _setRealAddress(self, address):
+        """
+        Set self.realAddress[0] to address.  Set the remaining parts of
+        self.realAddress to the corresponding parts of self.addr.
+        """
+        self.realAddress = (address, self.addr[1], self.addr[2], self.addr[3])
+        self.doConnect()
+
+
+    def getHost(self):
+        """
+        Returns an IPv6Address.
+
+        This indicates the address from which I am connecting.
+        """
+        return address.IPv6Address('TCP', *(self.socket.getsockname()))
+
+
+    def getPeer(self):
+        """
+        Returns an IPv6Address.
+
+        This indicates the address that I am connected to.
+        """
+        return address.IPv6Address('TCP', *(self.addr))
+
+
+    def __repr__(self):
+        s = '<%s to %s at %x>' % (self.__class__, self.addr, unsignedID(self))
+        return s
+
+
+
+class Server6(Server):
+    """
+    IPv6 serverside socket-stream connection class.
+
+    This is a serverside network connection transport; a socket which came from
+    an accept() on a server.
+    """
+
+    def getHost(self):
+        """
+        Returns an IPv6Address.
+
+        This indicates the server's address.
+        """
+        return address.IPv6Address('TCP', *(self.socket.getsockname()))
+
+
+    def getPeer(self):
+        """
+        Returns an IPv6Address.
+
+        This indicates the client's address.
+        """
+        return address.IPv6Address('TCP', *(self.client))
+
+
+
+class Connector6(base.BaseConnector):
+    """
+    IPv6 implementation of connector.
+
+    @ivar flowinfo: An integer representing the sockaddr-in6 flowinfo.
+    @ivar scopeid: An integer representing the sockaddr-in6 scopeid.
+    """
+
+    def __init__(self, host, port, factory, timeout, bindAddress,
+                 reactor=None, flowinfo=0, scopeid=0):
+        self.host = host
+        if isinstance(port, (str, unicode)):
+            try:
+                port = socket.getservbyname(port, 'tcp')
+            except socket.error, e:
+                raise error.ServiceNameUnknownError(string="%s (%r)" % (e, port))
+        self.port = port
+        self.bindAddress = bindAddress
+        self.flowinfo = flowinfo
+        self.scopeid = scopeid
+        base.BaseConnector.__init__(self, factory, timeout, reactor)
+
+
+    def _makeTransport(self):
+        """
+        Build and return a TCP6 client for the connector's transport.
+        """
+        return Client6(self.host, self.port, self.bindAddress, self,
+                      self.reactor, self.flowinfo, self.scopeid)
+
+
+    def getDestination(self):
+        """
+        @see: L{twisted.internet.interfaces.IConnector.getDestination}.
+        """
+        return address.IPv6Address('TCP', self.host, self.port, self.flowinfo,
+                                   self.scopeid)
+
+
+
+class Port6(Port):
+    """
+    A TCP server port, listening for connections over IPv6.
+
+    When a connection is accepted, it will call my factory's buildProtocol with
+    the incoming connection as an argument, according to the specification
+    described in L{twisted.internet.interfaces.IProtocolFactory}.
+
+    If you wish to change the sort of transport that will be used, the
+    `transport' attribute will be called with the signature expected for
+    Server.__init__, so it can be replaced.
+    """
+    addressFamily = socket.AF_INET6
+    transport = Server6
+
+
+    def _buildAddr(self, (host, port, flowinfo, scopeid)):
+        """
+        Build and return an IPv6Address from the passed sockaddr-in6 tuple.
+        """
+        return address.IPv6Address('TCP', host, port, flowinfo, scopeid)
+
+
+    def getHost(self):
+        """
+        Returns an IPv6Address.
+
+        This indicates the server's address.
+        """
+        return address.IPv6Address('TCP', *(self.socket.getsockname()))

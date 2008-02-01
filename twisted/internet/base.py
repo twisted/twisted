@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_internet -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -194,6 +194,20 @@ class DelayedCall(styles.Ephemeral):
         return "".join(L)
 
 
+
+def getHostByName(name):
+    """
+    Call socket.getaddrinfo, using the args and return value type of
+    socket.gethostbyname.
+    """
+    lst = socket.getaddrinfo(name, None)
+    res = lst[0]
+    (family, socktype, proto, canonname, sockaddr) = res
+    address = sockaddr[0]
+    return address
+
+
+
 class ThreadedResolver:
     implements(IResolverSimple)
 
@@ -224,13 +238,15 @@ class ThreadedResolver:
             else:
                 userDeferred.callback(result)
 
+
+
     def getHostByName(self, name, timeout = (1, 3, 11, 45)):
         if timeout:
             timeoutDelay = reduce(operator.add, timeout)
         else:
             timeoutDelay = 60
         userDeferred = defer.Deferred()
-        lookupDeferred = threads.deferToThread(socket.gethostbyname, name)
+        lookupDeferred = threads.deferToThread(getHostByName, name)
         cancelCall = self.reactor.callLater(
             timeoutDelay, self._cleanup, name, lookupDeferred)
         self._runningQueries[lookupDeferred] = (userDeferred, cancelCall)
@@ -242,7 +258,7 @@ class BlockingResolver:
 
     def getHostByName(self, name, timeout = (1, 3, 11, 45)):
         try:
-            address = socket.gethostbyname(name)
+            address = getHostByName(name)
         except socket.error:
             msg = "address %r not found" % (name,)
             err = error.DNSLookupError(msg)

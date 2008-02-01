@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.test.test_factories -*-
 #
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -137,7 +137,7 @@ class _InstanceFactory(ClientFactory):
     """Factory used by ClientCreator."""
 
     noisy = False
-    
+
     def __init__(self, reactor, instance, deferred):
         self.reactor = reactor
         self.instance = instance
@@ -145,7 +145,7 @@ class _InstanceFactory(ClientFactory):
 
     def __repr__(self):
         return "<ClientCreator factory: %r>" % (self.instance, )
-    
+
     def buildProtocol(self, addr):
         self.reactor.callLater(0, self.deferred.callback, self.instance)
         del self.deferred
@@ -156,13 +156,14 @@ class _InstanceFactory(ClientFactory):
         del self.deferred
 
 
+
 class ClientCreator:
     """Client connections that do not require a factory.
 
     The various connect* methods create a protocol instance using the given
     protocol class and arguments, and connect it, returning a Deferred of the
     resulting protocol instance.
-    
+
     Useful for cases when we don't really need a factory.  Mainly this
     is when there is no shared state between protocol instances, and no need
     to reconnect.
@@ -174,6 +175,7 @@ class ClientCreator:
         self.args = args
         self.kwargs = kwargs
 
+
     def connectTCP(self, host, port, timeout=30, bindAddress=None):
         """Connect to remote host, return Deferred of resulting protocol instance."""
         d = defer.Deferred()
@@ -181,19 +183,35 @@ class ClientCreator:
         self.reactor.connectTCP(host, port, f, timeout=timeout, bindAddress=bindAddress)
         return d
 
+
+    def connectTCP6(self, host, port, timeout=30, bindAddress=None):
+        """
+        Connect to remote host, return Deferred of resulting protocol instance.
+        @see: twisted.internet.interfaces.IReactorTCP6.connectTCP6
+        """
+        d = defer.Deferred()
+        f = _InstanceFactory(self.reactor, self.protocolClass(*self.args,
+                                                    **self.kwargs), d)
+        self.reactor.connectTCP6(host, port, f, timeout=timeout,
+                                 bindAddress=bindAddress)
+        return d
+
+
     def connectUNIX(self, address, timeout = 30, checkPID=0):
         """Connect to Unix socket, return Deferred of resulting protocol instance."""
         d = defer.Deferred()
         f = _InstanceFactory(self.reactor, self.protocolClass(*self.args, **self.kwargs), d)
         self.reactor.connectUNIX(address, f, timeout = timeout, checkPID=checkPID)
         return d
-    
+
+
     def connectSSL(self, host, port, contextFactory, timeout=30, bindAddress=None):
         """Connect to SSL server, return Deferred of resulting protocol instance."""
         d = defer.Deferred()
         f = _InstanceFactory(self.reactor, self.protocolClass(*self.args, **self.kwargs), d)
         self.reactor.connectSSL(host, port, f, contextFactory, timeout=timeout, bindAddress=bindAddress)
         return d
+
 
 
 class ReconnectingClientFactory(ClientFactory):
@@ -630,12 +648,12 @@ class FileWrapper:
     def pauseProducing(self):
         # Never sends data anyways
         pass
-    
+
     def stopProducing(self):
         self.loseConnection()
-        
 
-__all__ = ["Factory", "ClientFactory", "ReconnectingClientFactory", "connectionDone", 
+
+__all__ = ["Factory", "ClientFactory", "ReconnectingClientFactory", "connectionDone",
            "Protocol", "ProcessProtocol", "FileWrapper", "ServerFactory",
            "AbstractDatagramProtocol", "DatagramProtocol", "ConnectedDatagramProtocol",
            "ClientCreator"]
