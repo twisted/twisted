@@ -86,8 +86,10 @@ class PlatformAssumptionsTestCase(TestCase):
         client = self.socket()
         client.setblocking(False)
 
-        # Non-blocking connect is supposed to fail
-        self.assertEqual(client.connect_ex(('127.0.0.1', serverPortNumber)), EINPROGRESS)
+        # Non-blocking connect is supposed to fail, but this is not true
+        # everywhere (e.g. freeBSD)
+        self.assertIn(client.connect_ex(('127.0.0.1', serverPortNumber)),
+                      (0, EINPROGRESS))
 
         # Make sure that the accept call fails in the way we expect.
         exc = self.assertRaises(socket.error, port.accept)
