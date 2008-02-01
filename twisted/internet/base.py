@@ -248,7 +248,7 @@ class ThreadedResolver:
         else:
             timeoutDelay = 60
         userDeferred = defer.Deferred()
-        lookupDeferred = threads.deferToThread(getHostByName, name)
+        lookupDeferred = threads.deferToThread(getHostByName, name, family)
         cancelCall = self.reactor.callLater(
             timeoutDelay, self._cleanup, name, lookupDeferred)
         self._runningQueries[lookupDeferred] = (userDeferred, cancelCall)
