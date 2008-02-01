@@ -195,16 +195,17 @@ class DelayedCall(styles.Ephemeral):
 
 
 
-def getHostByName(name):
+def getHostByName(name, family):
     """
     Call socket.getaddrinfo, using the args and return value type of
     socket.gethostbyname.
     """
     lst = socket.getaddrinfo(name, None)
-    res = lst[0]
-    (family, socktype, proto, canonname, sockaddr) = res
-    address = sockaddr[0]
-    return address
+    for res in lst:
+        (gotFamily, socktype, proto, canonname, sockaddr) = res
+        if gotFamily == family:
+            address = sockaddr[0]
+            return address
 
 
 
@@ -240,7 +241,8 @@ class ThreadedResolver:
 
 
 
-    def getHostByName(self, name, timeout = (1, 3, 11, 45)):
+    def getHostByName(self, name, timeout=(1, 3, 11, 45),
+                      family=socket.AF_INET):
         if timeout:
             timeoutDelay = reduce(operator.add, timeout)
         else:
@@ -256,9 +258,10 @@ class ThreadedResolver:
 class BlockingResolver:
     implements(IResolverSimple)
 
-    def getHostByName(self, name, timeout = (1, 3, 11, 45)):
+    def getHostByName(self, name, timeout=(1, 3, 11, 45),
+                      family=socket.AF_INET):
         try:
-            address = getHostByName(name)
+            address = getHostByName(name, family)
         except socket.error:
             msg = "address %r not found" % (name,)
             err = error.DNSLookupError(msg)
@@ -476,15 +479,28 @@ class ReactorBase(object):
     def removeAll(self):
         raise NotImplementedError
 
+
     def resolve(self, name, timeout = (1, 3, 11, 45)):
-        """Return a Deferred that will resolve a hostname.
+        """
+        Return a Deferred that will resolve a hostname.
         """
         if not name:
-            # XXX - This is *less than* '::', and will screw up IPv6 servers
             return defer.succeed('0.0.0.0')
         if abstract.isIPAddress(name):
             return defer.succeed(name)
         return self.resolver.getHostByName(name, timeout)
+
+
+    def resolve6(self, name, timeout = (1, 3, 11, 45)):
+        """
+        Return a Deferred that will resolve a hostname to an IPv6 address.
+        """
+        if not name:
+            return defer.succeed('::')
+        if abstract.isIPv6Address(name):
+            return defer.succeed(name)
+        return self.resolver.getHostByName(name, timeout, socket.AF_INET6)
+
 
     # Installation.
 

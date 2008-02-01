@@ -929,7 +929,7 @@ class Client6(Client):
         if abstract.isIPv6Address(self.addr[0]):
             self._setRealAddress(self.addr[0])
         else:
-            d = self.reactor.resolve(self.addr[0])
+            d = self.reactor.resolve6(self.addr[0])
             d.addCallbacks(self._setRealAddress, self.failIfNotConnected)
 
 
