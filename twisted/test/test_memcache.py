@@ -22,8 +22,8 @@ class MemCacheTestCase(TestCase):
 
     def setUp(self):
         """
-        Create a memcache client, connect it to a string protoco, and make it
-        use a determinitic clock.
+        Create a memcache client, connect it to a string protocol, and make it
+        use a deterministic clock.
         """
         self.proto = MemCacheProtocol()
         self.clock = Clock()
@@ -344,7 +344,9 @@ class MemCacheTestCase(TestCase):
         d1 = self.assertFailure(self.proto.set("a" * 500, "bar"), ClientError)
         d2 = self.assertFailure(self.proto.increment("a" * 500), ClientError)
         d3 = self.assertFailure(self.proto.get("a" * 500), ClientError)
-        return gatherResults([d1, d2, d3])
+        d4 = self.assertFailure(self.proto.append("a" * 500, "bar"), ClientError)
+        d5 = self.assertFailure(self.proto.prepend("a" * 500, "bar"), ClientError)
+        return gatherResults([d1, d2, d3, d4, d5])
 
 
     def test_invalidCommand(self):
@@ -353,7 +355,7 @@ class MemCacheTestCase(TestCase):
         server answers with an B{ERROR} token, and the command should fail with
         L{NoSuchCommand}.
         """
-        d = self.proto._set("egg", "foo", "bar", 0, 0)
+        d = self.proto._set("egg", "foo", "bar", 0, 0, "")
         self.assertEquals(self.transport.value(), "egg foo 0 0 3\r\nbar\r\n")
         self.assertFailure(d, NoSuchCommand)
         self.proto.dataReceived("ERROR\r\n")
@@ -404,7 +406,9 @@ class MemCacheTestCase(TestCase):
         d2 = self.assertFailure(self.proto.increment(u"egg"), ClientError)
         d3 = self.assertFailure(self.proto.get(1), ClientError)
         d4 = self.assertFailure(self.proto.delete(u"bar"), ClientError)
-        return gatherResults([d1, d2, d3, d4])
+        d5 = self.assertFailure(self.proto.append(u"foo", "bar"), ClientError)
+        d6 = self.assertFailure(self.proto.prepend(u"foo", "bar"), ClientError)
+        return gatherResults([d1, d2, d3, d4, d5, d6])
 
 
     def test_unicodeValue(self):
@@ -448,3 +452,59 @@ class MemCacheTestCase(TestCase):
         self.proto.dataReceived("\r\n")
         return d
 
+
+    def test_append(self):
+        """
+        L{MemCacheProtocol.append} behaves like a L{MemCacheProtocol.set}
+        method: it should return a L{Deferred} which is called back with
+        C{True} when the operation succeeds.
+        """
+        return self._test(self.proto.append("foo", "bar"),
+            "append foo 0 0 3\r\nbar\r\n", "STORED\r\n", True)
+
+
+    def test_prepend(self):
+        """
+        L{MemCacheProtocol.prepend} behaves like a L{MemCacheProtocol.set}
+        method: it should return a L{Deferred} which is called back with
+        C{True} when the operation succeeds.
+        """
+        return self._test(self.proto.prepend("foo", "bar"),
+            "prepend foo 0 0 3\r\nbar\r\n", "STORED\r\n", True)
+
+
+    def test_gets(self):
+        """
+        L{MemCacheProtocol.get} should handle an additional cas result when
+        C{withIdentifier} is C{True} and forward it in the resulting
+        L{Deferred}.
+        """
+        return self._test(self.proto.get("foo", True), "gets foo\r\n",
+            "VALUE foo 0 3 1234\r\nbar\r\nEND\r\n", (0, "1234", "bar"))
+
+
+    def test_emptyGets(self):
+        """
+        Test getting a non-available key with gets: it should succeed but
+        return C{None} as value, C{0} as flag and an empty cas value.
+        """
+        return self._test(self.proto.get("foo", True), "gets foo\r\n",
+            "END\r\n", (0, "", None))
+
+
+    def test_checkAndSet(self):
+        """
+        L{MemCacheProtocol.checkAndSet} passes an additional cas identifier that the
+        server should handle to check if the data has to be updated.
+        """
+        return self._test(self.proto.checkAndSet("foo", "bar", cas="1234"),
+            "cas foo 0 0 3 1234\r\nbar\r\n", "STORED\r\n", True)
+
+
+    def test_casUnknowKey(self):
+        """
+        When L{MemCacheProtocol.checkAndSet} response is C{EXISTS}, the resulting
+        L{Deferred} should fire with C{False}.
+        """
+        return self._test(self.proto.checkAndSet("foo", "bar", cas="1234"),
+            "cas foo 0 0 3 1234\r\nbar\r\n", "EXISTS\r\n", False)

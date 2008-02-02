@@ -208,6 +208,8 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         cmd = self._current.popleft()
         if cmd.command == "get":
             cmd.success((cmd.flags, cmd.value))
+        elif cmd.command == "gets":
+            cmd.success((cmd.flags, cmd.cas, cmd.value))
         elif cmd.command == "stats":
             cmd.success(cmd.values)
 
@@ -223,15 +225,20 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         """
         Prepare the reading a value after a get.
         """
-        key, flags, length = line.split()
+        cmd = self._current[0]
+        if cmd.command == "get":
+            key, flags, length = line.split()
+            cas = ""
+        else:
+            key, flags, length, cas = line.split()
         self._lenExpected = int(length)
         self._getBuffer = []
         self._bufferLength = 0
-        cmd = self._current[0]
         if cmd.key != key:
             raise RuntimeError("Unexpected commands answer.")
         cmd.flags = int(flags)
         cmd.length = self._lenExpected
+        cmd.cas = cas
         self.setRawMode()
 
 
@@ -290,6 +297,13 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         The last command has been completed.
         """
         self._current.popleft().success(True)
+
+
+    def cmd_EXISTS(self):
+        """
+        A C{checkAndSet} update has failed.
+        """
+        self._current.popleft().success(False)
 
 
     def lineReceived(self, line):
@@ -392,11 +406,11 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             when the key will be deleted from the store.
         @type expireTime: C{int}
 
-        @return: a deferred that will fire with C{True} if the operations has
+        @return: a deferred that will fire with C{True} if the operation has
             succeeded, and C{False} with the key didn't previously exist.
         @rtype: L{Deferred}
         """
-        return self._set("replace", key, val, flags, expireTime)
+        return self._set("replace", key, val, flags, expireTime, "")
 
 
     def add(self, key, val, flags=0, expireTime=0):
@@ -416,18 +430,18 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             when the key will be deleted from the store.
         @type expireTime: C{int}
 
-        @return: a deferred that will fire with C{True} if the operations has
+        @return: a deferred that will fire with C{True} if the operation has
             succeeded, and C{False} with the key already exists.
         @rtype: L{Deferred}
         """
-        return self._set("add", key, val, flags, expireTime)
+        return self._set("add", key, val, flags, expireTime, "")
 
 
     def set(self, key, val, flags=0, expireTime=0):
         """
         Set the given C{key}.
 
-        @param key: the key to replace.
+        @param key: the key to set.
         @type key: C{str}
 
         @param val: the value associated with the key.
@@ -440,14 +454,43 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             when the key will be deleted from the store.
         @type expireTime: C{int}
 
-        @return: a deferred that will fire with C{True} if the operations has
+        @return: a deferred that will fire with C{True} if the operation has
             succeeded.
         @rtype: L{Deferred}
         """
-        return self._set("set", key, val, flags, expireTime)
+        return self._set("set", key, val, flags, expireTime, "")
 
 
-    def _set(self, cmd, key, val, flags, expireTime):
+    def checkAndSet(self, key, val, cas, flags=0, expireTime=0):
+        """
+        Change the content of C{key} only if the C{cas} value matches the
+        current one associated with the key. Use this to store a value which
+        hasn't been modified since last time you fetched it.
+
+        @param key: The key to set.
+        @type key: C{str}
+
+        @param val: The value associated with the key.
+        @type val: C{str}
+
+        @param cas: Unique 64-bit value returned by previous call of C{get}.
+        @type cas: C{str}
+
+        @param flags: The flags to store with the key.
+        @type flags: C{int}
+
+        @param expireTime: If different from 0, the relative time in seconds
+            when the key will be deleted from the store.
+        @type expireTime: C{int}
+
+        @return: A deferred that will fire with C{True} if the operation has
+            succeeded, C{False} otherwise.
+        @rtype: L{Deferred}
+        """
+        return self._set("cas", key, val, flags, expireTime, cas)
+
+
+    def _set(self, cmd, key, val, flags, expireTime, cas):
         """
         Internal wrapper for setting values.
         """
@@ -460,8 +503,11 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             return fail(ClientError(
                 "Invalid type for value: %s, expecting a string" %
                 (type(val),)))
+        if cas:
+            cas = " " + cas
         length = len(val)
-        fullcmd = "%s %s %d %d %d" % (cmd, key, flags, expireTime, length)
+        fullcmd = "%s %s %d %d %d%s" % (
+            cmd, key, flags, expireTime, length, cas)
         self.sendLine(fullcmd)
         self.sendLine(val)
         cmdObj = Command(cmd, key=key, flags=flags, length=length)
@@ -469,14 +515,62 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         return cmdObj._deferred
 
 
-    def get(self, key):
+    def append(self, key, val):
         """
-        Get the given C{key}. It doesn't support multiple keys.
+        Append given data to the value of an existing key.
 
-        @param key: the key to retrieve.
+        @param key: The key to modify.
         @type key: C{str}
 
-        @return: a deferred that will fire with the tuple (flags, value).
+        @param val: The value to append to the current value associated with
+            the key.
+        @type val: C{str}
+
+        @return: A deferred that will fire with C{True} if the operation has
+            succeeded, C{False} otherwise.
+        @rtype: L{Deferred}
+        """
+        # Even if flags and expTime values are ignored, we have to pass them
+        return self._set("append", key, val, 0, 0, "")
+
+
+    def prepend(self, key, val):
+        """
+        Prepend given data to the value of an existing key.
+
+        @param key: The key to modify.
+        @type key: C{str}
+
+        @param val: The value to prepend to the current value associated with
+            the key.
+        @type val: C{str}
+
+        @return: A deferred that will fire with C{True} if the operation has
+            succeeded, C{False} otherwise.
+        @rtype: L{Deferred}
+        """
+        # Even if flags and expTime values are ignored, we have to pass them
+        return self._set("prepend", key, val, 0, 0, "")
+
+
+    def get(self, key, withIdentifier=False):
+        """
+        Get the given C{key}. It doesn't support multiple keys. If
+        C{withIdentifier} is set to C{True}, the command issued is a C{gets},
+        that will return the current identifier associated with the value. This
+        identifier has to be used when issuing C{checkAndSet} update later,
+        using the corresponding method.
+
+        @param key: The key to retrieve.
+        @type key: C{str}
+
+        @param withIdentifier: If set to C{True}, retrieve the current
+            identifier along with the value and the flags.
+        @type withIdentifier: C{bool}
+
+        @return: A deferred that will fire with the tuple (flags, value) if
+            C{withIdentifier} is C{False}, or (flags, cas identifier, value)
+            if C{True}.
         @rtype: L{Deferred}
         """
         if not isinstance(key, str):
@@ -484,9 +578,13 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
                 "Invalid type for key: %s, expecting a string" % (type(key),)))
         if len(key) > self.MAX_KEY_LENGTH:
             return fail(ClientError("Key too long"))
-        fullcmd = "get %s" % key
+        if withIdentifier:
+            cmd = "gets"
+        else:
+            cmd = "get"
+        fullcmd = "%s %s" % (cmd, key)
         self.sendLine(fullcmd)
-        cmdObj = Command("get", key=key, value=None, flags=0)
+        cmdObj = Command(cmd, key=key, value=None, flags=0, cas="")
         self._current.append(cmdObj)
         return cmdObj._deferred
 
