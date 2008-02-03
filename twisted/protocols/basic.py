@@ -1,13 +1,10 @@
 # -*- test-case-name: twisted.test.test_protocols -*-
-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
 """
 Basic protocols, such as line-oriented, netstring, and int prefixed strings.
-
-API Stability: semi-stable.
 
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
@@ -16,10 +13,11 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 import re
 import struct
 
+from zope.interface import implements
+
 # Twisted imports
 from twisted.internet import protocol, defer, interfaces, error
 from twisted.python import log
-from zope.interface import implements
 
 LENGTH, DATA, COMMA = range(3)
 NUMBER = re.compile('(\d*)(:?)')
@@ -390,11 +388,16 @@ class Int8StringReceiver(IntNStringReceiver):
 
 
 class StatefulStringProtocol:
-    """A stateful string protocol.
+    """
+    A stateful string protocol.
 
     This is a mixin for string protocols (Int32StringReceiver,
     NetstringReceiver) which translates stringReceived into a callback
-    (prefixed with 'proto_') depending on state."""
+    (prefixed with 'proto_') depending on state.
+    
+    The state 'done' is special; if a proto_* method returns it, the
+    connection will be closed immediately.
+    """
 
     state = 'init'
 
