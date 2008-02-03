@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_twistd -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import warnings
@@ -18,7 +18,7 @@ class ServerOptions(app.ServerOptions):
     synopsis = "Usage: twistd [options]"
 
     optFlags = [['nodaemon','n',  "don't daemonize"],
-                ['quiet', 'q', "No-op for backwards compatability."],
+                ['quiet', 'q', "No-op for backwards compatibility."],
                 ['originalname', None, "Don't try to change the process name"],
                 ['syslog', None,   "Log to syslog, not to file"],
                 ['euid', '',
@@ -257,6 +257,7 @@ class UnixApplicationRunner(app.ApplicationRunner):
         clean up PID files and such.
         """
         startApplication(self.config, self.application)
-        app.runReactorWithLogging(self.config, self.oldstdout, self.oldstderr)
+        app.runReactorWithLogging(self.config, self.oldstdout, self.oldstderr,
+                                  self.profiler)
         removePID(self.config['pidfile'])
         log.msg("Server Shut Down.")
