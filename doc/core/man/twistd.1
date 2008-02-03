@@ -11,16 +11,10 @@ Read an twisted.application.service.Application out of a file and runs it.
 Don't daemonize (stay in foreground)
 .TP
 \fB\-q\fR, \fB\--quiet\fR 
-No-op for backwards compatibility.
+be a little more quiet
 .TP
-\fB\-p\fR, \fB\--profile\fR \fI<profile output>\fR
-Run the application under the profiler, dumping results to the specified file.
-.TP
-\fB\--profiler\fR \fI<profiler name>\fR
-Specify the profiler to use, default to the 'hotshot' profiler.
-.TP
-\fB--savestats\fR
-Save the Stats object rather than the text output of the profiler.
+\fB\-p\fR, \fB\--profile\fR 
+Run profiler
 .TP
 \fB\-b\fR, \fB\--debug\fR 
 Run the application in the Python Debugger (implies nodaemon option).
@@ -87,7 +81,7 @@ Written by Moshe Zadka, based on twistd's help messages
 .SH "REPORTING BUGS"
 To report a bug, visit \fIhttp://twistedmatrix.com/bugs/\fR
 .SH COPYRIGHT
-Copyright \(co 2001-2008 Twisted Matrix Laboratories.
+Copyright \(co 2003 Matthew W. Lefkowitz
 .br
 This is free software; see the source for copying conditions.  There is NO
 warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
