@@ -1,28 +1,51 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.lore.test.test_man2lore -*-
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
-"""man2lore: Converts man page source (i.e. groff) into lore-compatible html.
+
+"""
+man2lore: Converts man page source (i.e. groff) into lore-compatible html.
 
 This is nasty and hackish (and doesn't support lots of real groff), but is good
 enough for converting fairly simple man pages.
 """
-from __future__ import nested_scopes
 
 import re, os
+
 quoteRE = re.compile('"(.*?)"')
+
+
 
 def escape(text):
     text = text.replace('<', '&lt;').replace('>', '&gt;')
     text = quoteRE.sub('<q>\\1</q>', text)
     return text
 
+
+
 def stripQuotes(s):
     if s[0] == s[-1] == '"':
         s = s[1:-1]
     return s
 
-class ManConverter:
+
+
+class ManConverter(object):
+    """
+    Convert a man page to the Lore format.
+
+    @ivar tp: State variable for handling text inside a C{TP} token. It can
+        take values from 0 to 3:
+            - 0: when outside of a C{TP} token.
+            - 1: once a C{TP} token has been encountered. If the previous value
+              was 0, a definition list is started. Then, at the first line of
+              text, a definition term is started.
+            - 2: when the first line after the C{TP} token has been handled.
+              The definition term is closed, and a definition is started with
+              the next line of text.
+            - 3: when the first line as definition data has been handled.
+    @type tp: C{int}
+    """
     state = 'regular'
     name = None
     tp = 0
@@ -43,6 +66,7 @@ class ManConverter:
         self.closeTags()
         self.write('</body>\n</html>\n')
 
+
     def lineReceived(self, line):
         if line[0] == '.':
             f = getattr(self, 'macro_' + line[1:3].rstrip().upper(), None)
@@ -50,6 +74,7 @@ class ManConverter:
                 f(line[3:].strip())
         else:
             self.text(line)
+
 
     def continueReceived(self, cont):
         if not cont:
@@ -60,6 +85,7 @@ class ManConverter:
                 f(cont[2:].strip())
         else:
             self.text(cont)
+
 
     def closeTags(self):
         if self.state != 'regular':
@@ -74,10 +100,12 @@ class ManConverter:
             self.write('</p>\n\n')
             self.para = 0
 
+
     def paraCheck(self):
         if not self.tp and not self.para:
             self.write('<p>')
             self.para = 1
+
 
     def macro_TH(self, line):
         self.write('<html><head>\n')
@@ -86,9 +114,10 @@ class ManConverter:
         self.write('<title>%s.%s</title>' % (title, manSection))
         self.write('</head>\n<body>\n\n')
         self.write('<h1>%s.%s</h1>\n\n' % (title, manSection))
-    
+
     macro_DT = macro_TH
-    
+
+
     def macro_SH(self, line):
         self.closeTags()
         self.write('<h2>')
@@ -98,15 +127,18 @@ class ManConverter:
         self.closeTags()
         self.write('</h2>\n\n')
 
+
     def macro_B(self, line):
         words = line.split()
         words[0] = '\\fB' + words[0] + '\\fR '
         self.text(' '.join(words))
 
+
     def macro_NM(self, line):
         if not self.name:
            self.name = line
         self.text(self.name + ' ')
+
 
     def macro_NS(self, line):
         parts = line.split(' Ns ')
@@ -118,61 +150,82 @@ class ManConverter:
             else:
                 self.continueReceived(l)
 
+
     def macro_OO(self, line):
         self.text('[')
         self.continueReceived(line)
 
+
     def macro_OC(self, line):
         self.text(']')
         self.continueReceived(line)
+
 
     def macro_OP(self, line):
         self.text('[')
         self.continueReceived(line)
         self.text(']')
 
+
     def macro_FL(self, line):
         parts = line.split()
         self.text('\\fB-%s\\fR' % parts[0])
         self.continueReceived(' '.join(parts[1:]))
+
 
     def macro_AR(self, line):
         parts = line.split()
         self.text('\\fI %s\\fR' % parts[0])
         self.continueReceived(' '.join(parts[1:]))
 
+
     def macro_PP(self, line):
         self.closeTags()
 
+
     def macro_TP(self, line):
+        """
+        Handle C{TP} token: start a definition list if it's first token, or
+        close previous definition data.
+        """
         if self.tp == 3:
             self.write('</dd>\n\n')
-        self.tp = 1
+            self.tp = 1
+        else:
+            self.tp = 1
+            self.write('<dl>')
+            self.dl = 1
+
 
     def macro_BL(self, line):
-        #assert self.tp == 0, self.tp
         self.write('<dl>')
         self.tp = 1
+
 
     def macro_EL(self, line):
         if self.tp == 3:
             self.write('</dd>')
             self.tp = 1
-        #assert self.tp == 1, self.tp
         self.write('</dl>\n\n')
         self.tp = 0
+
 
     def macro_IT(self, line):
         if self.tp == 3:
             self.write('</dd>')
             self.tp = 1
-        #assert self.tp == 1, (self.tp, line)
         self.write('\n<dt>')
         self.continueReceived(line)
         self.write('</dt>')
         self.tp = 2
 
+
     def text(self, line):
+        """
+        Handle a line of text without detected token.
+        """
+        if self.tp == 1:
+            self.write('<dt>')
         if self.tp == 2:
             self.write('<dd>')
         self.paraCheck()
@@ -195,8 +248,13 @@ class ManConverter:
             else:
                 self.write(escape(bit))
 
-        if self.tp == 2:
+        if self.tp == 1:
+            self.write('</dt>')
+            self.tp = 2
+        elif self.tp == 2:
             self.tp = 3
+
+
 
 class ProcessingFunctionFactory:
 
@@ -205,7 +263,10 @@ class ProcessingFunctionFactory:
         return lambda file,_: ManConverter().convert(open(file),
                                     open(os.path.splitext(file)[0]+ext, 'w'))
 
+
+
 factory = ProcessingFunctionFactory()
+
 
 if __name__ == '__main__':
     import sys
