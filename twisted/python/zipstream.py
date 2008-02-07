@@ -1,120 +1,214 @@
-"""An extremely asynch approach to unzipping files.  This allows you
-to unzip a little bit of a file at a time, which means it can
-integrate nicely with a reactor.
+# -*- test-case-name: twisted.python.test.test_zipstream -*-
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 """
+An incremental approach to unzipping files.  This allows you to unzip a little
+bit of a file at a time, which means you can report progress as a file unzips.
+"""
 
-from __future__ import generators
-
+import warnings
 import zipfile
 import os.path
-import binascii
 import zlib
 import struct
 
+_fileHeaderSize = struct.calcsize(zipfile.structFileHeader)
+
 class ChunkingZipFile(zipfile.ZipFile):
-    """A ZipFile object which, with readfile(), also gives you access
-    to a filelike object for each entry.
     """
+    A ZipFile object which, with readfile(), also gives you access to a
+    filelike object for each entry.
+    """
+
     def readfile(self, name):
-        """Return file-like object for name."""
+        """
+        Return file-like object for name.
+        """
         if self.mode not in ("r", "a"):
-            raise RuntimeError, 'read() requires mode "r" or "a"'
+            raise RuntimeError('read() requires mode "r" or "a"')
         if not self.fp:
-            raise RuntimeError, \
-                  "Attempt to read ZIP archive that was already closed"
+            raise RuntimeError(
+                "Attempt to read ZIP archive that was already closed")
         zinfo = self.getinfo(name)
 
         self.fp.seek(zinfo.header_offset, 0)
 
-        # Skip the file header:
-        fheader = self.fp.read(30)
+        fheader = self.fp.read(_fileHeaderSize)
         if fheader[0:4] != zipfile.stringFileHeader:
-            raise zipfile.BadZipfile, "Bad magic number for file header"
+            raise zipfile.BadZipfile("Bad magic number for file header")
 
         fheader = struct.unpack(zipfile.structFileHeader, fheader)
         fname = self.fp.read(fheader[zipfile._FH_FILENAME_LENGTH])
+
         if fheader[zipfile._FH_EXTRA_FIELD_LENGTH]:
             self.fp.read(fheader[zipfile._FH_EXTRA_FIELD_LENGTH])
 
         if fname != zinfo.orig_filename:
-            raise zipfile.BadZipfile, \
-                      'File name in directory "%s" and header "%s" differ.' % (
-                          zinfo.orig_filename, fname)
+            raise zipfile.BadZipfile(
+                'File name in directory "%s" and header "%s" differ.' % (
+                    zinfo.orig_filename, fname))
 
         if zinfo.compress_type == zipfile.ZIP_STORED:
-            return ZipFileEntry(self.fp, zinfo.compress_size)
+            return ZipFileEntry(self, zinfo.compress_size)
         elif zinfo.compress_type == zipfile.ZIP_DEFLATED:
-            if not zlib:
-                raise RuntimeError, \
-                      "De-compression requires the (missing) zlib module"
-            return DeflatedZipFileEntry(self.fp, zinfo.compress_size)
+            return DeflatedZipFileEntry(self, zinfo.compress_size)
         else:
-            raise zipfile.BadZipfile, \
-                  "Unsupported compression method %d for file %s" % \
-            (zinfo.compress_type, name)
-    
-    def read(self, name):
-        """Return file bytes (as a string) for name."""
-        f = self.readfile(name)
-        zinfo = self.getinfo(name)
-        bytes = f.read()
-        crc = binascii.crc32(bytes)
-        if crc != zinfo.CRC:
-            raise zipfile.BadZipfile, "Bad CRC-32 for file %s" % name
-        return bytes        
+            raise zipfile.BadZipfile(
+                "Unsupported compression method %d for file %s" %
+                    (zinfo.compress_type, name))
 
 
-class ZipFileEntry:
-    """File-like object used to read an uncompressed entry in a ZipFile"""
-    
-    def __init__(self, fp, length):
-        self.fp = fp
-        self.readBytes = 0
+
+class _FileEntry(object):
+    """
+    Abstract superclass of both compressed and uncompressed variants of
+    file-like objects within a zip archive.
+
+    @ivar chunkingZipFile: a chunking zip file.
+    @type chunkingZipFile: L{ChunkingZipFile}
+
+    @ivar length: The number of bytes within the zip file that represent this
+    file.  (This is the size on disk, not the number of decompressed bytes
+    which will result from reading it.)
+
+    @ivar fp: the underlying file object (that contains pkzip data).  Do not
+    touch this, please.  It will quite likely move or go away.
+
+    @ivar closed: File-like 'closed' attribute; True before this file has been
+    closed, False after.
+    @type closed: L{bool}
+
+    @ivar finished: An older, broken synonym for 'closed'.  Do not touch this,
+    please.
+    @type finished: L{int}
+    """
+    def __init__(self, chunkingZipFile, length):
+        """
+        Create a L{_FileEntry} from a L{ChunkingZipFile}.
+        """
+        self.chunkingZipFile = chunkingZipFile
+        self.fp = self.chunkingZipFile.fp
         self.length = length
         self.finished = 0
-        
+        self.closed = False
+
+
+    def isatty(self):
+        """
+        Returns false because zip files should not be ttys
+        """
+        return False
+
+
+    def close(self):
+        """
+        Close self (file-like object)
+        """
+        self.closed = True
+        self.finished = 1
+        del self.fp
+
+
+    def readline(self):
+        """
+        Read a line.
+        """
+        bytes = ""
+        for byte in iter(lambda : self.read(1), ""):
+            bytes += byte
+            if byte == "\n":
+                break
+        return bytes
+
+
+    def next(self):
+        """
+        Implement next as file does (like readline, except raises StopIteration
+        at EOF)
+        """
+        nextline = self.readline()
+        if nextline:
+            return nextline
+        raise StopIteration()
+
+
+    def readlines(self):
+        """
+        Returns a list of all the lines
+        """
+        return list(self)
+
+
+    def xreadlines(self):
+        """
+        Returns an iterator (so self)
+        """
+        return self
+
+
+    def __iter__(self):
+        """
+        Returns an iterator (so self)
+        """
+        return self
+
+
+
+class ZipFileEntry(_FileEntry):
+    """
+    File-like object used to read an uncompressed entry in a ZipFile
+    """
+
+    def __init__(self, chunkingZipFile, length):
+        _FileEntry.__init__(self, chunkingZipFile, length)
+        self.readBytes = 0
+
+
     def tell(self):
         return self.readBytes
-    
+
+
     def read(self, n=None):
         if n is None:
             n = self.length - self.readBytes
         if n == 0 or self.finished:
             return ''
-        
-        data = self.fp.read(min(n, self.length - self.readBytes))
+        data = self.chunkingZipFile.fp.read(
+            min(n, self.length - self.readBytes))
         self.readBytes += len(data)
         if self.readBytes == self.length or len(data) <  n:
             self.finished = 1
         return data
 
-    def close(self):
-        self.finished = 1
-        del self.fp
 
 
-class DeflatedZipFileEntry:
-    """File-like object used to read a deflated entry in a ZipFile"""
-    
-    def __init__(self, fp, length):
-        self.fp = fp
+class DeflatedZipFileEntry(_FileEntry):
+    """
+    File-like object used to read a deflated entry in a ZipFile
+    """
+
+    def __init__(self, chunkingZipFile, length):
+        _FileEntry.__init__(self, chunkingZipFile, length)
         self.returnedBytes = 0
         self.readBytes = 0
         self.decomp = zlib.decompressobj(-15)
         self.buffer = ""
-        self.length = length
-        self.finished = 0
-        
+
+
     def tell(self):
         return self.returnedBytes
-    
+
+
     def read(self, n=None):
         if self.finished:
             return ""
         if n is None:
             result = [self.buffer,]
-            result.append(self.decomp.decompress(self.fp.read(self.length - self.readBytes)))
+            result.append(
+                self.decomp.decompress(
+                    self.chunkingZipFile.fp.read(
+                        self.length - self.readBytes)))
             result.append(self.decomp.decompress("Z"))
             result.append(self.decomp.flush())
             self.buffer = ""
@@ -124,10 +218,13 @@ class DeflatedZipFileEntry:
             return result
         else:
             while len(self.buffer) < n:
-                data = self.fp.read(min(n, 1024, self.length - self.readBytes))
+                data = self.chunkingZipFile.fp.read(
+                    min(n, 1024, self.length - self.readBytes))
                 self.readBytes += len(data)
                 if not data:
-                    result = self.buffer + self.decomp.decompress("Z") + self.decomp.flush()
+                    result = (self.buffer
+                              + self.decomp.decompress("Z")
+                              + self.decomp.flush())
                     self.finished = 1
                     self.buffer = ""
                     self.returnedBytes += len(result)
@@ -138,14 +235,13 @@ class DeflatedZipFileEntry:
             self.buffer = self.buffer[n:]
             self.returnedBytes += len(result)
             return result
-    
-    def close(self):
-        self.finished = 1
-        del self.fp
+
 
 
 def unzip(filename, directory=".", overwrite=0):
-    """Unzip the file
+    """
+    Unzip the file
+
     @param filename: the name of the zip file
     @param directory: the directory into which the files will be
     extracted
@@ -156,106 +252,126 @@ def unzip(filename, directory=".", overwrite=0):
     for i in unzipIter(filename, directory, overwrite):
         pass
 
-DIR_BIT=16
+DIR_BIT = 16
+
 def unzipIter(filename, directory='.', overwrite=0):
-    """Return a generator for the zipfile.  This implementation will
-    yield after every file.
+    """
+    Return a generator for the zipfile.  This implementation will yield
+    after every file.
 
     The value it yields is the number of files left to unzip.
     """
-    zf=zipfile.ZipFile(filename, 'r')
-    names=zf.namelist()
-    if not os.path.exists(directory): os.makedirs(directory)
-    remaining=countZipFileEntries(filename)
+    zf = zipfile.ZipFile(filename, 'r')
+    names = zf.namelist()
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    remaining = len(zf.namelist())
     for entry in names:
-        remaining=remaining - 1
-        isdir=zf.getinfo(entry).external_attr & DIR_BIT
-        f=os.path.join(directory, entry)
+        remaining -= 1
+        isdir = zf.getinfo(entry).external_attr & DIR_BIT
+        f = os.path.join(directory, entry)
         if isdir:
             # overwrite flag only applies to files
-            if not os.path.exists(f): os.makedirs(f)
+            if not os.path.exists(f):
+                os.makedirs(f)
         else:
             # create the directory the file will be in first,
             # since we can't guarantee it exists
-            fdir=os.path.split(f)[0]
+            fdir = os.path.split(f)[0]
             if not os.path.exists(fdir):
                 os.makedirs(f)
             if overwrite or not os.path.exists(f):
-                outfile=file(f, 'wb')
+                outfile = file(f, 'wb')
                 outfile.write(zf.read(entry))
                 outfile.close()
         yield remaining
 
+
 def countZipFileChunks(filename, chunksize):
-    """Predict the number of chunks that will be extracted from the
-    entire zipfile, given chunksize blocks.
     """
-    totalchunks=0
-    zf=ChunkingZipFile(filename)
+    Predict the number of chunks that will be extracted from the entire
+    zipfile, given chunksize blocks.
+    """
+    totalchunks = 0
+    zf = ChunkingZipFile(filename)
     for info in zf.infolist():
-        totalchunks=totalchunks+countFileChunks(info, chunksize)
+        totalchunks += countFileChunks(info, chunksize)
     return totalchunks
 
+
 def countFileChunks(zipinfo, chunksize):
-    size=zipinfo.file_size
-    count=size/chunksize
-    if size%chunksize > 0:
-        count=count+1
-    # each file counts as at least one chunk
+    """
+    Count the number of chunks that will result from the given L{ZipInfo}.
+
+    @param zipinfo: a L{zipfile.ZipInfo} instance describing an entry in a zip
+    archive to be counted.
+
+    @return: the number of chunks present in the zip file.  (Even an empty file
+    counts as one chunk.)
+    @rtype: L{int}
+    """
+    count, extra = divmod(zipinfo.file_size, chunksize)
+    if extra > 0:
+        count += 1
     return count or 1
-    
+
+
 def countZipFileEntries(filename):
-    zf=zipfile.ZipFile(filename)
+    """
+    Count the number of entries in a zip archive.  (Don't use this function.)
+
+    @param filename: The filename of a zip archive.
+    @type filename: L{str}
+    """
+    warnings.warn("countZipFileEntries is deprecated.",
+                  DeprecationWarning, 2)
+    zf = zipfile.ZipFile(filename)
     return len(zf.namelist())
+
 
 def unzipIterChunky(filename, directory='.', overwrite=0,
                     chunksize=4096):
-    """Return a generator for the zipfile.  This implementation will
-    yield after every chunksize uncompressed bytes, or at the end of a
-    file, whichever comes first.
+    """
+    Return a generator for the zipfile.  This implementation will yield after
+    every chunksize uncompressed bytes, or at the end of a file, whichever
+    comes first.
 
     The value it yields is the number of chunks left to unzip.
     """
-    czf=ChunkingZipFile(filename, 'r')
-    if not os.path.exists(directory): os.makedirs(directory)
-    remaining=countZipFileChunks(filename, chunksize)
-    names=czf.namelist()
-    infos=czf.infolist()
-    
+    czf = ChunkingZipFile(filename, 'r')
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    remaining = countZipFileChunks(filename, chunksize)
+    names = czf.namelist()
+    infos = czf.infolist()
+
     for entry, info in zip(names, infos):
-        isdir=info.external_attr & DIR_BIT
-        f=os.path.join(directory, entry)
+        isdir = info.external_attr & DIR_BIT
+        f = os.path.join(directory, entry)
         if isdir:
             # overwrite flag only applies to files
-            if not os.path.exists(f): os.makedirs(f)
-            remaining=remaining-1
-            assert remaining>=0
+            if not os.path.exists(f):
+                os.makedirs(f)
+            remaining -= 1
             yield remaining
         else:
             # create the directory the file will be in first,
             # since we can't guarantee it exists
-            fdir=os.path.split(f)[0]
+            fdir = os.path.split(f)[0]
             if not os.path.exists(fdir):
                 os.makedirs(f)
             if overwrite or not os.path.exists(f):
-                outfile=file(f, 'wb')
-                fp=czf.readfile(entry)
-                if info.file_size==0:
-                    remaining=remaining-1
-                    assert remaining>=0
+                outfile = file(f, 'wb')
+                fp = czf.readfile(entry)
+                if info.file_size == 0:
+                    remaining -= 1
                     yield remaining
-                fread=fp.read
-                ftell=fp.tell
-                owrite=outfile.write
-                size=info.file_size
-                while ftell() < size:
-                    hunk=fread(chunksize)
-                    owrite(hunk)
-                    remaining=remaining-1
-                    assert remaining>=0
+                while fp.tell() < info.file_size:
+                    hunk = fp.read(chunksize)
+                    outfile.write(hunk)
+                    remaining -= 1
                     yield remaining
                 outfile.close()
             else:
-                remaining=remaining-countFileChunks(info, chunksize)
-                assert remaining>=0
+                remaining -= countFileChunks(info, chunksize)
                 yield remaining
