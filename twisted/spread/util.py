@@ -157,8 +157,8 @@ class FilePager(Pager):
 
     def __init__(self, collector, fd, callback=None, *args, **kw):
         self.chunks = []
-        Pager.__init__(self, collector, callback, *args, **kw)
         self.startProducing(fd)
+        Pager.__init__(self, collector, callback, *args, **kw)
 
     def startProducing(self, fd):
         self.deferred = basic.FileSender().beginFileTransfer(fd, self)
