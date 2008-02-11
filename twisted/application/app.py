@@ -1,5 +1,5 @@
-# -*- test-case-name: twisted.test.test_application -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.test.test_application,twisted.test.test_twistd -*-
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import sys, os, pdb, getpass, traceback, signal, warnings
@@ -15,65 +15,170 @@ from twisted.application.reactors import installReactor
 from twisted.application.reactors import NoSuchReactor
 
 
-def runWithProfiler(reactor, config):
-    """Run reactor under standard profiler."""
-    try:
-        import profile
-    except ImportError, e:
-        s = "Failed to import module profile: %s" % e
+
+class _BasicProfiler(object):
+    """
+    @ivar saveStats: if C{True}, save the stats information instead of the
+        human readable format
+    @type saveStats: C{bool}
+
+    @ivar profileOutput: the name of the file use to print profile data.
+    @type profileOutput: C{str}
+    """
+
+    def __init__(self, profileOutput, saveStats):
+        self.profileOutput = profileOutput
+        self.saveStats = saveStats
+
+
+    def _reportImportError(self, module, e):
+        """
+        Helper method to report an import error with a profile module. This
+        has to be explicit because some of these modules are removed by
+        distributions due to them being non-free.
+        """
+        s = "Failed to import module %s: %s" % (module, e)
         s += """
 This is most likely caused by your operating system not including
-profile.py due to it being non-free. Either do not use the option
---profile, or install profile.py; your operating system vendor
+the module due to it being non-free. Either do not use the option
+--profile, or install the module; your operating system vendor
 may provide it in a separate package.
 """
-        traceback.print_exc(file=log.logfile)
-        log.msg(s)
-        log.deferr()
-        sys.exit('\n' + s + '\n')
+        raise SystemExit(s)
 
-    p = profile.Profile()
-    p.runcall(reactor.run)
-    if config['savestats']:
-        p.dump_stats(config['profile'])
-    else:
-        # XXX - omfg python sucks
-        tmp, sys.stdout = sys.stdout, open(config['profile'], 'a')
-        p.print_stats()
-        sys.stdout, tmp = tmp, sys.stdout
-        tmp.close()
+
+
+class ProfileRunner(_BasicProfiler):
+    """
+    Runner for the standard profile module.
+    """
+
+    def run(self, reactor):
+        """
+        Run reactor under the standard profiler.
+        """
+        try:
+            import profile
+        except ImportError, e:
+            self._reportImportError("profile", e)
+
+        p = profile.Profile()
+        p.runcall(reactor.run)
+        if self.saveStats:
+            p.dump_stats(self.profileOutput)
+        else:
+            tmp, sys.stdout = sys.stdout, open(self.profileOutput, 'a')
+            try:
+                p.print_stats()
+            finally:
+                sys.stdout, tmp = tmp, sys.stdout
+                tmp.close()
+
+
+
+class HotshotRunner(_BasicProfiler):
+    """
+    Runner for the hotshot profile module.
+    """
+
+    def run(self, reactor):
+        """
+        Run reactor under the hotshot profiler.
+        """
+        try:
+            import hotshot.stats
+        except (ImportError, SystemExit), e:
+            # Certain versions of Debian (and Debian derivatives) raise
+            # SystemExit when importing hotshot if the "non-free" profiler
+            # module is not installed.  Someone eventually recognized this
+            # as a bug and changed the Debian packaged Python to raise
+            # ImportError instead.  Handle both exception types here in
+            # order to support the versions of Debian which have this
+            # behavior.  The bug report which prompted the introduction of
+            # this highly undesirable behavior should be available online at
+            # <http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=334067>. 
+            # There seems to be no corresponding bug report which resulted
+            # in the behavior being removed. -exarkun
+            self._reportImportError("hotshot", e)
+
+        # this writes stats straight out
+        p = hotshot.Profile(self.profileOutput)
+        p.runcall(reactor.run)
+        if self.saveStats:
+            # stats are automatically written to file, nothing to do
+            return
+        else:
+            s = hotshot.stats.load(self.profileOutput)
+            s.strip_dirs()
+            s.sort_stats(-1)
+            if getattr(s, 'stream', None) is not None:
+                # Python 2.5 and above supports a stream attribute
+                s.stream = open(self.profileOutput, 'w')
+                s.print_stats()
+                s.stream.close()
+            else:
+                # But we have to use a trick for Python < 2.5
+                tmp, sys.stdout = sys.stdout, open(self.profileOutput, 'w')
+                try:
+                    s.print_stats()
+                finally:
+                    sys.stdout, tmp = tmp, sys.stdout
+                    tmp.close()
+
+
+
+class AppProfiler(object):
+    """
+    Class which selects a specific profile runner based on configuration
+    options.
+
+    @ivar profiler: the name of the selected profiler.
+    @type profiler: C{str}
+    """
+    profilers = {"profile": ProfileRunner, "hotshot": HotshotRunner}
+
+    def __init__(self, options):
+        saveStats = options.get("savestats", False)
+        profileOutput = options.get("profile", None)
+        self.profiler = options.get("profiler", None)
+        if options.get("nothotshot", False):
+            warnings.warn("The --nothotshot option is deprecated. Please "
+                          "specify the profiler name using the --profiler "
+                          "option", category=DeprecationWarning)
+            self.profiler = "profile"
+        if self.profiler in self.profilers:
+            profiler = self.profilers[self.profiler](profileOutput, saveStats)
+            self.run = profiler.run
+        else:
+            raise SystemExit("Unsupported profiler name: %s" % (self.profiler,))
+
+
+
+def runWithProfiler(reactor, config):
+    """
+    DEPRECATED in Twisted 2.6.
+
+    Run reactor under standard profiler.
+    """
+    warnings.warn("runWithProfiler is deprecated since Twisted 2.6. "
+                  "Use ProfileRunner instead.", DeprecationWarning, 2)
+    item = AppProfiler(config)
+    return item.run(reactor)
+
+
 
 def runWithHotshot(reactor, config):
-    """Run reactor under hotshot profiler."""
-    try:
-        import hotshot.stats
-    except ImportError, e:
-        s = "Failed to import module hotshot: %s" % e
-        s += """
-This is most likely caused by your operating system not including
-profile.py due to it being non-free. Either do not use the option
---profile, or install profile.py; your operating system vendor
-may provide it in a separate package.
-"""
-        traceback.print_exc(file=log.logfile)
-        log.msg(s)
-        log.deferr()
-        sys.exit('\n' + s + '\n')
+    """
+    DEPRECATED in Twisted 2.6.
 
-    # this writes stats straight out
-    p = hotshot.Profile(config["profile"])
-    p.runcall(reactor.run)
-    if config["savestats"]:
-        # stats are automatically written to file, nothing to do
-        return
-    else:
-        s = hotshot.stats.load(config["profile"])
-        s.strip_dirs()
-        s.sort_stats(-1)
-        tmp, sys.stdout = sys.stdout, open(config['profile'], 'w')
-        s.print_stats()
-        sys.stdout, tmp = tmp, sys.stdout
-        tmp.close()
+    Run reactor under hotshot profiler.
+    """
+    warnings.warn("runWithHotshot is deprecated since Twisted 2.6. "
+                  "Use HotshotRunner instead.", DeprecationWarning, 2)
+    item = AppProfiler(config)
+    return item.run(reactor)
+
+
 
 def fixPdb():
     def do_stop(self, arg):
@@ -93,14 +198,36 @@ def fixPdb():
     pdb.Pdb.do_stop = do_stop
     pdb.Pdb.help_stop = help_stop
 
-def runReactorWithLogging(config, oldstdout, oldstderr):
+
+
+def runReactorWithLogging(config, oldstdout, oldstderr, profiler=None):
+    """
+    Start the reactor, using profiling if specified by the configuration, and
+    log any error happening in the process.
+
+    @param config: configuration of the twistd application.
+    @type config: L{ServerOptions}
+
+    @param oldstdout: initial value of C{sys.stdout}.
+    @type oldstdout: C{file}
+
+    @param oldstderr: initial value of C{sys.stderr}.
+    @type oldstderr: C{file}
+
+    @param profiler: object used to run the reactor with profiling.
+    @type profiler: L{AppProfiler}
+    """
     from twisted.internet import reactor
     try:
         if config['profile']:
-            if not config['nothotshot']:
-                runWithHotshot(reactor, config)
+            if profiler is not None:
+                profiler.run(reactor)
             else:
-                runWithProfiler(reactor, config)
+                # Backward compatible code
+                if not config['nothotshot']:
+                    runWithHotshot(reactor, config)
+                else:
+                    runWithProfiler(reactor, config)
         elif config['debug']:
             sys.stdout = oldstdout
             sys.stderr = oldstderr
@@ -118,6 +245,7 @@ def runReactorWithLogging(config, oldstdout, oldstderr):
             file = open("TWISTD-CRASH.log",'a')
         traceback.print_exc(file=file)
         file.flush()
+
 
 
 def getPassphrase(needed):
@@ -145,11 +273,20 @@ class ApplicationRunner(object):
     after starting the application.
 
     @ivar config: The config object, which provides a dict-like interface.
+
     @ivar application: Available in postApplication, but not
-    preApplication. This is the application object.
+       preApplication. This is the application object.
+
+    @ivar profilerFactory: Factory for creating a profiler object, able to
+        profile the application if options are set accordingly.
+
+    @ivar profiler: Instance provided by C{profilerFactory}.
     """
+    profilerFactory = AppProfiler
+
     def __init__(self, config):
         self.config = config
+        self.profiler = self.profilerFactory(config)
 
 
     def run(self):
@@ -174,7 +311,7 @@ class ApplicationRunner(object):
         This should set up any state necessary before loading and
         running the Application.
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
 
     def startLogging(self, observer):
@@ -193,7 +330,7 @@ class ApplicationRunner(object):
         Create a log observer to be added to the logging system before running
         this application.
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
 
     def postApplication(self):
@@ -329,12 +466,15 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
                 ['encrypted', 'e',
                  "The specified tap/aos/xml file is encrypted."],
                 ['nothotshot', None,
-                 "Don't use the 'hotshot' profiler even if it's available."]]
+                 "DEPRECATED. Don't use the 'hotshot' profiler even if "
+                 "it's available."]]
 
     optParameters = [['logfile','l', None,
                       "log to a specified file, - for stdout"],
                      ['profile', 'p', None,
                       "Run in profile mode, dumping results to specified file"],
+                     ['profiler', None, "hotshot",
+                      "Name of the profiler to use, 'hotshot' or 'profile'."],
                      ['file','f','twistd.tap',
                       "read the given .tap file"],
                      ['python','y', None,
