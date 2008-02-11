@@ -812,11 +812,11 @@ class TimeTestCase(unittest.TestCase):
 
             clock.pump(reactor, [0, 1])
 
-            self.assertEquals(callbackTimes[0], 3)
+            self.assertEquals(callbackTimes[0], 3*10**9)
             self.assertEquals(callbackTimes[1], None)
 
             clock.pump(reactor, [0, 3])
-            self.assertEquals(callbackTimes[1], 6)
+            self.assertEquals(callbackTimes[1], 6*10**9)
         finally:
             clock.uninstall()
 
@@ -872,8 +872,7 @@ class TimeTestCase(unittest.TestCase):
         reactor.callLater(0.2, d.callback, None)
         return d
 
-    testCallLaterOrder.todo = "See bug 1396"
-    testCallLaterOrder.skip = "Trial bug, todo doesn't work! See bug 1397"
+    
     def testCallLaterOrder2(self):
         # This time destroy the clock resolution so that it fails reliably
         # even on systems that don't have a crappy clock resolution.
@@ -881,19 +880,15 @@ class TimeTestCase(unittest.TestCase):
         def seconds():
             return int(time.time())
 
-        base_original = base.seconds
-        runtime_original = runtime.seconds
-        base.seconds = seconds
-        runtime.seconds = seconds
+        from twisted.python import runtime
+        runtime_original = runtime.platform.seconds
+        runtime.platform.seconds = seconds
 
         def cleanup(x):
-            runtime.seconds = runtime_original
-            base.seconds = base_original
+            runtime.platform.seconds = runtime_original
             return x
         return maybeDeferred(self.testCallLaterOrder).addBoth(cleanup)
 
-    testCallLaterOrder2.todo = "See bug 1396"
-    testCallLaterOrder2.skip = "Trial bug, todo doesn't work! See bug 1397"
 
     def testDelayedCallStringification(self):
         # Mostly just make sure str() isn't going to raise anything for

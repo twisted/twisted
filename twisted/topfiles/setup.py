@@ -32,7 +32,12 @@ def detectExtensions(builder):
         return []
 
     # Extension modules to build.
-    exts = []
+    exts = [
+        Extension("twisted.python._posix_clock",
+                  ["twisted/python/_posix_clock.c"],
+                  define_macros=builder.define_macros,
+                  libraries=['rt']),
+        ]
 
     # urllib.unquote accelerator
     exts.append( Extension("twisted.protocols._c_urlarg",

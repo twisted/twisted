@@ -24,22 +24,77 @@ knownPlatforms = {
     'org.python.modules.os': 'java',
     }
 
-_timeFunctions = {
-    #'win32': time.clock,
-    'win32': time.time,
-    }
+try:
+    import _posix_clock
+    # Make sure the monotonic clock source exists
+    _posix_clock.gettime(_posix_clock.CLOCK_MONOTONIC)
+except:
+    _posix_clock = None
 
 class Platform:
     """Gives us information about the platform we're running on"""
 
     type = knownPlatforms.get(os.name)
-    seconds = staticmethod(_timeFunctions.get(type, time.time))
+    seconds = time.time
 
+    _lastTicks = 0
+    _offset = 0
+    
     def __init__(self, name=None):
         if name is not None:
             self.type = knownPlatforms.get(name)
-            self.seconds = _timeFunctions.get(self.type, time.time)
+
+    def monotonicTicks(self):
+        """Returns the current number of nanoseconds as an integer
+        since some undefined epoch. The only hard requirement is that
+        the number returned from this function is always strictly
+        greater than any other number returned by it.
+        
+        Additionally, it is very good if time never skips around (such
+        as by the user setting their system clock).
+
+        This default implementation doesn't have that property, as it
+        is based upon the system clock, which can be set forward and
+        backward in time. An implementation based upon
+        clock_gettime(CLOCK_MONOTONIC) is used when available.
+        """
+        
+        cur = int(self.seconds() * 1000000000) + self._offset
+        if self._lastTicks >= cur:
+            if self._lastTicks < cur + 10000000: # 0.01s
+                # Just pretend epsilon more time has gone by.
+                cur = self._lastTicks + 1
+            else:
+                # If lastSeconds is much larger than cur time, clock
+                # must've moved backwards! Adjust the offset to keep
+                # monotonicity.
+                self._offset += self._lastTicks - cur
+        
+        self._lastTicks = cur
+        return cur
     
+    if _posix_clock:
+        def monotonicTicks2(self):
+            cur = _posix_clock.gettime(_posix_clock.CLOCK_MONOTONIC)
+            if self._lastTicks >= cur:
+                cur += 1
+            self._lastTicks = cur
+            return cur
+        
+        monotonicTicks2.__doc__=monotonicTicks.__doc__
+        monotonicTicks=monotonicTicks2
+        del monotonicTicks2
+
+    def ticksToTime(self, ticks):
+        """Returns the time (as returned by time.time) that
+        corresponds to the given ticks value. If the time epoch
+        changes via the user setting their system time,
+        the time value of given ticks may or may not also change.
+        """
+        curticks = self.monotonicTicks()
+        curtime = time.time()
+        return (ticks - curticks)/1000000000. + curtime
+        
     def isKnown(self):
         """Do we know about this platform?"""
         return self.type != None
@@ -80,3 +135,5 @@ class Platform:
 platform = Platform()
 platformType = platform.getType()
 seconds = platform.seconds
+monotonicTicks = platform.monotonicTicks
+ticksToTime = platform.ticksToTime

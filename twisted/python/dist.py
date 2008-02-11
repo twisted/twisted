@@ -8,7 +8,7 @@ Maintainer: U{Christopher Armstrong<mailto:radix@twistedmatrix.com>}
 
 import sys, os
 from distutils.command import build_scripts, install_data, build_ext, build_py
-from distutils.errors import CompileError
+from distutils.errors import CompileError, CCompilerError
 from distutils import core
 
 twisted_subprojects = ["conch", "flow", "lore", "mail", "names",
@@ -281,6 +281,12 @@ class build_ext_twisted(build_ext.build_ext):
         self.extensions = self.detectExtensions() or []
         build_ext.build_ext.build_extensions(self)
 
+    def build_extension(self, ext):
+        try:
+            return build_ext.build_ext.build_extension(self, ext)
+        except CCompilerError:
+            sys.stderr.write("NOTE: failed to compile optional extension %s\n" % ext.name)
+        
     def _remove_conftest(self):
         for filename in ("conftest.c", "conftest.o", "conftest.obj"):
             try:

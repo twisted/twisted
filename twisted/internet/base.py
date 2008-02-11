@@ -31,6 +31,8 @@ from twisted.internet.interfaces import IConnector, IDelayedCall
 from twisted.internet import main, error, abstract, defer, threads
 from twisted.python import log, failure, reflect
 from twisted.python.runtime import seconds as runtimeSeconds, platform
+from twisted.python import log, failure, reflect, components
+from twisted.python.runtime import monotonicTicks, platform, ticksToTime
 from twisted.internet.defer import Deferred, DeferredList
 from twisted.persisted import styles
 
@@ -81,7 +83,7 @@ class DelayedCall(styles.Ephemeral):
         @return: The number of seconds after the epoch at which this call is
         scheduled to be made.
         """
-        return self.time + self.delayed_time
+        return ticksToTime(self.time + self.delayed_time)
 
     def cancel(self):
         """Unschedule this call
@@ -117,7 +119,7 @@ class DelayedCall(styles.Ephemeral):
         elif self.called:
             raise error.AlreadyCalled
         else:
-            newTime = self.seconds() + secondsFromNow
+            newTime = monotonicTicks() + int(secondsFromNow * 1000000000)
             if newTime < self.time:
                 self.delayed_time = 0
                 self.time = newTime
@@ -140,7 +142,7 @@ class DelayedCall(styles.Ephemeral):
         elif self.called:
             raise error.AlreadyCalled
         else:
-            self.delayed_time += secondsLater
+            self.delayed_time += int(secondsLater * 1000000000)
             if self.delayed_time < 0:
                 self.activate_delay()
                 self.resetter(self)
@@ -176,7 +178,7 @@ class DelayedCall(styles.Ephemeral):
 
         now = self.seconds()
         L = ["<DelayedCall %s [%ss] called=%s cancelled=%s" % (
-                id(self), self.time - now, self.called, self.cancelled)]
+                id(self), (self.time - monotonicTicks()) / 1000000000., self.called, self.cancelled)]
         if func is not None:
             L.extend((" ", func, "("))
             if self.args:
@@ -585,7 +587,7 @@ class ReactorBase(object):
         assert callable(_f), "%s is not callable" % _f
         assert sys.maxint >= _seconds >= 0, \
                "%s is not greater than or equal to 0 seconds" % (_seconds,)
-        tple = DelayedCall(self.seconds() + _seconds, _f, args, kw,
+        tple = DelayedCall(monotonicTicks() + int(_seconds * 1000000000), _f, args, kw,
                            self._cancelCallLater,
                            self._moveCallLaterSooner,
                            seconds=self.seconds)
@@ -646,7 +648,7 @@ class ReactorBase(object):
         if not self._pendingTimedCalls:
             return None
 
-        return max(0, self._pendingTimedCalls[0].time - self.seconds())
+        return max(0, (self._pendingTimedCalls[0].time - monotonicTicks()) / 1000000000.)
 
     def runUntilCurrent(self):
         """Run all pending timed calls.
@@ -673,7 +675,7 @@ class ReactorBase(object):
         # insert new delayed calls now
         self._insertNewDelayedCalls()
 
-        now = self.seconds()
+        now = monotonicTicks()
         while self._pendingTimedCalls and (self._pendingTimedCalls[0].time <= now):
             call = heappop(self._pendingTimedCalls)
             if call.cancelled:

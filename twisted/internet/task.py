@@ -14,6 +14,7 @@ __metaclass__ = type
 
 import time
 
+from twisted.python.runtime import monotonicTicks
 from twisted.python import reflect
 
 from twisted.internet import base, defer
@@ -75,7 +76,7 @@ class LoopingCall:
             raise ValueError, "interval must be >= 0"
         self.running = True
         d = self.deferred = defer.Deferred()
-        self.starttime = self.clock.seconds()
+        self.starttime = monotonicTicks() / 1000000000.
         self._lastTime = self.starttime
         self.interval = interval
         if now:
@@ -123,6 +124,7 @@ class LoopingCall:
             self.call = self.clock.callLater(0, self)
             return
 
+        #fromNow = self.starttime - monotonicTicks() / 1000000000.
         currentTime = self.clock.seconds()
         # Find how long is left until the interval comes around again.
         untilNextTime = (self._lastTime - currentTime) % self.interval
