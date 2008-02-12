@@ -1,14 +1,9 @@
 # -*- test-case-name: twisted.web.test.test_webclient -*-
-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
-#
 
 """
 HTTP client.
-
-API Stability: stable
 """
 
 import os, types
@@ -31,7 +26,7 @@ class PartialDownloadError(error.Error):
 class HTTPPageGetter(http.HTTPClient):
 
     quietLoss = 0
-    followRedirect = 1 
+    followRedirect = 1
     failed = 0
 
     def connectionMade(self):
@@ -41,7 +36,7 @@ class HTTPPageGetter(http.HTTPClient):
         self.sendHeader('User-Agent', self.factory.agent)
         if self.factory.cookies:
             l=[]
-            for cookie, cookval in self.factory.cookies.items():  
+            for cookie, cookval in self.factory.cookies.items():
                 l.append('%s=%s' % (cookie, cookval))
             self.sendHeader('Cookie', '; '.join(l))
         data = getattr(self.factory, 'postdata', None)
@@ -53,7 +48,7 @@ class HTTPPageGetter(http.HTTPClient):
                 self.sendHeader(key, value)
         self.endHeaders()
         self.headers = {}
-        
+
         if data is not None:
             self.transport.write(data)
 
@@ -90,14 +85,14 @@ class HTTPPageGetter(http.HTTPClient):
             scheme, host, port, path = \
                 _parse(url, defaultPort=self.transport.getPeer().port)
             self.factory.setURL(url)
-    
+
             if self.factory.scheme == 'https':
                 from twisted.internet import ssl
                 contextFactory = ssl.ClientContextFactory()
-                reactor.connectSSL(self.factory.host, self.factory.port, 
+                reactor.connectSSL(self.factory.host, self.factory.port,
                                    self.factory, contextFactory)
             else:
-                reactor.connectTCP(self.factory.host, self.factory.port, 
+                reactor.connectTCP(self.factory.host, self.factory.port,
                                    self.factory)
         else:
             self.handleStatusDefault()
@@ -118,7 +113,7 @@ class HTTPPageGetter(http.HTTPClient):
         if not self.quietLoss:
             http.HTTPClient.connectionLost(self, reason)
             self.factory.noPage(reason)
-    
+
     def handleResponse(self, response):
         if self.quietLoss:
             return
@@ -127,6 +122,10 @@ class HTTPPageGetter(http.HTTPClient):
                 failure.Failure(
                     error.Error(
                         self.status, self.message, response)))
+        if self.factory.method.upper() == 'HEAD':
+            # Callback with empty string, since there is never a response
+            # body for HEAD requests.
+            self.factory.page('')
         elif self.length != None and self.length != 0:
             self.factory.noPage(failure.Failure(
                 PartialDownloadError(self.status, self.message, response)))
@@ -154,7 +153,7 @@ class HTTPPageDownloader(HTTPPageGetter):
 
     def handleStatus_206(self):
         self.handleStatus_200(partialContent=1)
-    
+
     def handleResponsePart(self, data):
         if self.transmittingPage:
             self.factory.pagePart(data)
@@ -230,7 +229,7 @@ class HTTPClientFactory(protocol.ClientFactory):
 
     def __repr__(self):
         return "<%s: %s>" % (self.__class__.__name__, self.url)
-    
+
     def setURL(self, url):
         self.url = url
         scheme, host, port, path = _parse(url)
@@ -283,7 +282,7 @@ class HTTPClientFactory(protocol.ClientFactory):
 
 class HTTPDownloader(HTTPClientFactory):
     """Download to a file."""
-    
+
     protocol = HTTPPageDownloader
     value = None
 
@@ -312,7 +311,7 @@ class HTTPDownloader(HTTPClientFactory):
             contentRange = headers.get("content-range", None)
             if not contentRange:
                 # server doesn't support partial requests, oh well
-                self.requestedPartial = 0 
+                self.requestedPartial = 0
                 return
             start, end, realLength = http.parseContentRange(contentRange[0])
             if start != self.requestedPartial:
@@ -420,7 +419,7 @@ def downloadPage(url, file, contextFactory=None, *args, **kwargs):
     """Download a web page to a file.
 
     @param file: path to file on filesystem, or file-like object.
-    
+
     See HTTPDownloader to see what extra args can be passed.
     """
     scheme, host, port, path = _parse(url)

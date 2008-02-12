@@ -1,23 +1,23 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
 Tests for L{twisted.web.client}.
 """
 
+import os
+
 from urlparse import urlparse
 
 from twisted.trial import unittest
 from twisted.web import server, static, client, error, util, resource
 from twisted.internet import reactor, defer, interfaces
-from twisted.python.util import sibpath
+from twisted.python.filepath import FilePath
 
 try:
     from twisted.internet import ssl
 except:
     ssl = None
-
-import os
 
 serverCallID = None
 
@@ -55,7 +55,7 @@ class NoLengthResource(resource.Resource):
 
     def render(self, request):
         return "nolength"
-    
+
 class HostHeaderResource(resource.Resource):
 
     def render(self, request):
@@ -123,12 +123,9 @@ class WebClientTestCase(unittest.TestCase):
         return reactor.listenTCP(0, site, interface="127.0.0.1")
 
     def setUp(self):
-        name = str(id(self)) + "_webclient"
-        if not os.path.exists(name):
-            os.mkdir(name)
-            f = open(os.path.join(name, "file"), "wb")
-            f.write("0123456789")
-            f.close()
+        name = self.mktemp()
+        os.mkdir(name)
+        FilePath(name).child("file").setContent("0123456789")
         r = static.File(name)
         r.putChild("redirect", util.Redirect("/file"))
         r.putChild("wait", LongTimeTakingResource())
@@ -161,16 +158,37 @@ class WebClientTestCase(unittest.TestCase):
         d = self.assertFailure(d, client.PartialDownloadError)
         d.addCallback(lambda exc: self.assertEquals(exc.response, "abc"))
         return d
-    
+
     def testHostHeader(self):
         # if we pass Host header explicitly, it should be used, otherwise
         # it should extract from url
         return defer.gatherResults([
             client.getPage(self.getURL("host")).addCallback(self.assertEquals, "127.0.0.1"),
             client.getPage(self.getURL("host"), headers={"Host": "www.example.com"}).addCallback(self.assertEquals, "www.example.com")])
-    
-    def testGetPage(self):
-        return client.getPage(self.getURL("file")).addCallback(self.assertEquals, "0123456789")
+
+
+    def test_getPage(self):
+        """
+        L{client.getPage} returns a L{Deferred} which is called back with
+        the body of the response if the default method B{GET} is used.
+        """
+        d = client.getPage(self.getURL("file"))
+        d.addCallback(self.assertEquals, "0123456789")
+        return d
+
+
+    def test_getPageHead(self):
+        """
+        L{client.getPage} returns a L{Deferred} which is called back with
+        the empty string if the method is C{HEAD} and there is a successful
+        response code.
+        """
+        def getPage(method):
+            return client.getPage(self.getURL("file"), method=method)
+        return defer.gatherResults([
+            getPage("head").addCallback(self.assertEqual, ""),
+            getPage("HEAD").addCallback(self.assertEqual, "")])
+
 
     def testTimeoutNotTriggering(self):
         # Test that when the timeout doesn't trigger, things work as expected.
@@ -194,11 +212,11 @@ class WebClientTestCase(unittest.TestCase):
             d.addCallback(self._cbDownloadPageTest, data, name)
             downloads.append(d)
         return defer.gatherResults(downloads)
-    
+
     def _cbDownloadPageTest(self, ignored, data, name):
         bytes = file(name, "rb").read()
         self.assertEquals(bytes, data)
- 
+
     def testDownloadPageError1(self):
         class errorfile:
             def write(self, data):
@@ -253,24 +271,24 @@ class WebClientTestCase(unittest.TestCase):
 
     def testDownloadServerError(self):
         return self._downloadTest(lambda url: client.downloadPage(self.getURL(url), url.split('?')[0]))
-        
+
     def testFactoryInfo(self):
         url = self.getURL('file')
         scheme, host, port, path = client._parse(url)
         factory = client.HTTPClientFactory(url)
         reactor.connectTCP(host, port, factory)
         return factory.deferred.addCallback(self._cbFactoryInfo, factory)
-    
+
     def _cbFactoryInfo(self, ignoredResult, factory):
         self.assertEquals(factory.status, '200')
         self.assert_(factory.version.startswith('HTTP/'))
         self.assertEquals(factory.message, 'OK')
         self.assertEquals(factory.response_headers['content-length'][0], '10')
-        
+
 
     def testRedirect(self):
         return client.getPage(self.getURL("redirect")).addCallback(self._cbRedirect)
-    
+
     def _cbRedirect(self, pageData):
         self.assertEquals(pageData, "0123456789")
         d = self.assertFailure(
@@ -278,7 +296,7 @@ class WebClientTestCase(unittest.TestCase):
             error.PageRedirect)
         d.addCallback(self._cbCheckLocation)
         return d
-    
+
     def _cbCheckLocation(self, exc):
         self.assertEquals(exc.location, "/file")
 
@@ -287,21 +305,21 @@ class WebClientTestCase(unittest.TestCase):
         f = open(name, "wb")
         f.write("abcd")
         f.close()
-        
+
         downloads = []
         partialDownload = [(True, "abcd456789"),
                            (True, "abcd456789"),
                            (False, "0123456789")]
-        
+
         d = defer.succeed(None)
         for (partial, expectedData) in partialDownload:
             d.addCallback(self._cbRunPartial, name, partial)
             d.addCallback(self._cbPartialTest, expectedData, name)
-        
+
         return d
 
     testPartial.skip = "Cannot test until webserver can serve partial data properly"
-    
+
     def _cbRunPartial(self, ignored, name, partial):
         return client.downloadPage(self.getURL("file"), name, supportPartial=partial)
 
@@ -314,8 +332,8 @@ class WebClientSSLTestCase(WebClientTestCase):
         from twisted import test
         return reactor.listenSSL(0, site,
                                  contextFactory=ssl.DefaultOpenSSLContextFactory(
-            sibpath(test.__file__, 'server.pem'),
-            sibpath(test.__file__, 'server.pem'),
+            FilePath(test.__file__).sibling('server.pem').path,
+            FilePath(test.__file__).sibling('server.pem').path,
             ),
                                  interface="127.0.0.1")
 
@@ -347,8 +365,8 @@ class WebClientRedirectBetweenSSLandPlainText(unittest.TestCase):
         from twisted import test
         self.tlsPort = reactor.listenSSL(0, tlsSite,
                                          contextFactory=ssl.DefaultOpenSSLContextFactory(
-            sibpath(test.__file__, 'server.pem'),
-            sibpath(test.__file__, 'server.pem'),
+            FilePath(test.__file__).sibling('server.pem').path,
+            FilePath(test.__file__).sibling('server.pem').path,
             ),
                                          interface="127.0.0.1")
         self.plainPort = reactor.listenTCP(0, plainSite, interface="127.0.0.1")
@@ -455,4 +473,3 @@ if ssl is None or not hasattr(ssl, 'DefaultOpenSSLContextFactory'):
 if not interfaces.IReactorSSL(reactor, None):
     for case in [WebClientSSLTestCase, WebClientRedirectBetweenSSLandPlainText]:
         case.skip = "Reactor doesn't support SSL"
-
