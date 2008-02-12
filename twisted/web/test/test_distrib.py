@@ -1,10 +1,15 @@
-import sys
+# Copyright (c) 2008 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Tests for L{twisted.web.distrib}.
+"""
 
 from twisted.trial import unittest
 from twisted.web import http, distrib, client, resource, static, server
-from twisted.internet import reactor, base, defer
+from twisted.internet import reactor, defer
 from twisted.spread import pb
-from twisted.python import log, util as tputil
+from twisted.python import log
 
 class MySite(server.Site):
     def stopFactory(self):

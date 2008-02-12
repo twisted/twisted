@@ -1,12 +1,11 @@
-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-"""I am the support module for creating web servers with 'mktap'
+"""
+Support for creating a service which runs a web server.
 """
 
-import string, os
+import os
 
 # Twisted Imports
 from twisted.web import server, static, twcgi, script, demo, distrib, trp
@@ -52,7 +51,7 @@ twisted.web.demo in it."""
         self['indexes'].append(indexName)
 
     opt_i = opt_index
-        
+
     def opt_user(self):
         """Makes a server with ~/public_html and ~/.twistd-web-pb support for
         users.
@@ -94,7 +93,7 @@ twisted.web.demo in it."""
                "a future release. Please use --path.")
         self.opt_path(path)
     opt_s = opt_static
-    
+
     def opt_class(self, className):
         """Create a Resource subclass with a zero-argument constructor.
         """
@@ -145,6 +144,19 @@ twisted.web.demo in it."""
                 raise usage.UsageError("SSL support not installed")
 
 
+
+def makePersonalServerFactory(site):
+    """
+    Create and return a factory which will respond to I{distrib} requests
+    against the given site.
+
+    @type site: L{twisted.web.server.Site}
+    @rtype: L{twisted.internet.protocol.Factory}
+    """
+    return pb.PBServerFactory(distrib.ResourcePublisher(site))
+
+
+
 def makeService(config):
     s = service.MultiService()
     if config['root']:
@@ -157,23 +169,21 @@ def makeService(config):
 
     if isinstance(root, static.File):
         root.registry.setComponent(interfaces.IServiceCollection, s)
-   
+
     if config['logfile']:
         site = server.Site(root, logPath=config['logfile'])
     else:
         site = server.Site(root)
 
     site.displayTracebacks = not config["notracebacks"]
-    
-    if config['personal']:
-        import pwd,os
 
-        pw_name, pw_passwd, pw_uid, pw_gid, pw_gecos, pw_dir, pw_shell \
-                 = pwd.getpwuid(os.getuid())
-        i = internet.UNIXServer(os.path.join(pw_dir,
-                                   distrib.UserDirectory.userSocketName),
-                      pb.BrokerFactory(distrib.ResourcePublisher(site)))
-        i.setServiceParent(s)
+    if config['personal']:
+        import pwd
+        name, passwd, uid, gid, gecos, dir, shell = pwd.getpwuid(os.getuid())
+        personal = internet.UNIXServer(
+            os.path.join(dir, distrib.UserDirectory.userSocketName),
+            makePersonalServerFactory(site))
+        personal.setServiceParent(s)
     else:
         if config['https']:
             from twisted.internet.ssl import DefaultOpenSSLContextFactory
@@ -182,7 +192,7 @@ def makeService(config):
                                                        config['certificate']))
             i.setServiceParent(s)
         strports.service(config['port'], site).setServiceParent(s)
-    
+
     flashport = config.get('flashconduit', None)
     if flashport:
         from twisted.web.woven.flashconduit import FlashConduitFactory
