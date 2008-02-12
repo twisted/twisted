@@ -1,15 +1,14 @@
 # -*- test-case-name: twisted.test.test_factories -*-
 #
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""Standard implementations of Twisted protocol-related interfaces.
+"""
+Standard implementations of Twisted protocol-related interfaces.
 
 Start here if you are looking to write a new protocol implementation for
 Twisted.  The Protocol class contains some introductory material.
-
-API Stability: stable, other than ClientCreator.
 
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
@@ -137,7 +136,7 @@ class _InstanceFactory(ClientFactory):
     """Factory used by ClientCreator."""
 
     noisy = False
-    
+
     def __init__(self, reactor, instance, deferred):
         self.reactor = reactor
         self.instance = instance
@@ -145,7 +144,7 @@ class _InstanceFactory(ClientFactory):
 
     def __repr__(self):
         return "<ClientCreator factory: %r>" % (self.instance, )
-    
+
     def buildProtocol(self, addr):
         self.reactor.callLater(0, self.deferred.callback, self.instance)
         del self.deferred
@@ -162,7 +161,7 @@ class ClientCreator:
     The various connect* methods create a protocol instance using the given
     protocol class and arguments, and connect it, returning a Deferred of the
     resulting protocol instance.
-    
+
     Useful for cases when we don't really need a factory.  Mainly this
     is when there is no shared state between protocol instances, and no need
     to reconnect.
@@ -187,7 +186,7 @@ class ClientCreator:
         f = _InstanceFactory(self.reactor, self.protocolClass(*self.args, **self.kwargs), d)
         self.reactor.connectUNIX(address, f, timeout = timeout, checkPID=checkPID)
         return d
-    
+
     def connectSSL(self, host, port, contextFactory, timeout=30, bindAddress=None):
         """Connect to SSL server, return Deferred of resulting protocol instance."""
         d = defer.Deferred()
@@ -296,6 +295,22 @@ class ReconnectingClientFactory(ClientFactory):
         self.retries = 0
         self._callID = None
         self.continueTrying = 1
+
+
+    def __getstate__(self):
+        """
+        Remove all of the state which is mutated by connection attempts and
+        failures, returning just the state which describes how reconnections
+        should be attempted.  This will make the unserialized instance
+        behave just as this one did when it was first instantiated.
+        """
+        state = self.__dict__.copy()
+        for key in ['connector', 'retries', 'delay',
+                    'continueTrying', '_callID']:
+            if key in state:
+                del state[key]
+        return state
+
 
 
 class ServerFactory(Factory):
@@ -630,12 +645,12 @@ class FileWrapper:
     def pauseProducing(self):
         # Never sends data anyways
         pass
-    
+
     def stopProducing(self):
         self.loseConnection()
-        
 
-__all__ = ["Factory", "ClientFactory", "ReconnectingClientFactory", "connectionDone", 
+
+__all__ = ["Factory", "ClientFactory", "ReconnectingClientFactory", "connectionDone",
            "Protocol", "ProcessProtocol", "FileWrapper", "ServerFactory",
            "AbstractDatagramProtocol", "DatagramProtocol", "ConnectedDatagramProtocol",
            "ClientCreator"]
