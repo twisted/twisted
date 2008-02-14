@@ -534,21 +534,27 @@ class FancyStrMixin:
         return ''.join(r)
     __repr__ = __str__
 
+
+
 class FancyEqMixin:
     compareAttributes = ()
     def __eq__(self, other):
         if not self.compareAttributes:
             return self is other
-        #XXX Maybe get rid of this, and rather use hasattr()s
-        if not isinstance(other, self.__class__):
-            return False
-        for attr in self.compareAttributes:
-            if not getattr(self, attr) == getattr(other, attr):
-                return False
-        return True
+        if isinstance(self, other.__class__):
+            return (
+                [getattr(self, name) for name in self.compareAttributes] ==
+                [getattr(other, name) for name in self.compareAttributes])
+        return NotImplemented
+
 
     def __ne__(self, other):
-        return not self.__eq__(other)
+        result = self.__eq__(other)
+        if result is NotImplemented:
+            return result
+        return not result
+
+
 
 def dsu(list, key):
     L2 = [(key(e), i, e) for (i, e) in zip(range(len(list)), list)]
