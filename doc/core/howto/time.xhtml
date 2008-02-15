@@ -21,7 +21,29 @@ def f(s):
 
 reactor.callLater(3.5, f, "hello, world")
 
-# f() will only be called if the event loop was started:
+# f() will only be called if the event loop is started.
+reactor.run()
+</pre>
+
+    <p>If the result of the function is important or if it may be necessary
+    to handle exceptions it raises, then the <code
+    class="API">twisted.internet.task.deferLater</code> utility conveniently
+    takes care of creating a <code class="API"
+    base="twisted.internet.defer">Deferred</code> and setting up a delayed
+    call:</p>
+<pre class="python">
+from twisted.internet import task
+from twisted.internet import reactor
+
+def f(s):
+    return "This will run 3.5 seconds after it was scheduled: %s" % s
+
+d = task.deferLater(reactor, 3.5, f, "hello, world")
+def called(result):
+    print result
+d.addCallback(called)
+
+# f() will only be called if the event loop is started.
 reactor.run()
 </pre>
 
@@ -30,6 +52,7 @@ reactor.run()
     class="API">twisted.internet.task.LoopingCall</code>:</p>
 <pre class="python">
 from twisted.internet import task
+from twisted.internet import reactor
 
 def runEverySecond():
     print "a second has passed"

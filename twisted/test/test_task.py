@@ -407,3 +407,43 @@ class ReactorLoopTestCase(unittest.TestCase):
         clock.pump(timings)
         self.failIf(clock.calls)
         return d
+
+
+
+class DeferLaterTests(unittest.TestCase):
+    """
+    Tests for L{task.deferLater}.
+    """
+    def test_callback(self):
+        """
+        The L{Deferred} returned by L{task.deferLater} is called back after
+        the specified delay with the result of the function passed in.
+        """
+        results = []
+        flag = object()
+        def callable(foo, bar):
+            results.append((foo, bar))
+            return flag
+
+        clock = task.Clock()
+        d = task.deferLater(clock, 3, callable, 'foo', bar='bar')
+        d.addCallback(self.assertIdentical, flag)
+        clock.advance(2)
+        self.assertEqual(results, [])
+        clock.advance(1)
+        self.assertEqual(results, [('foo', 'bar')])
+        return d
+
+
+    def test_errback(self):
+        """
+        The L{Deferred} returned by L{task.deferLater} is errbacked if the
+        supplied function raises an exception.
+        """
+        def callable():
+            raise TestException()
+
+        clock = task.Clock()
+        d = task.deferLater(clock, 1, callable)
+        clock.advance(1)
+        return self.assertFailure(d, TestException)

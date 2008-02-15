@@ -372,6 +372,34 @@ class Clock:
             self.advance(amount)
 
 
+def deferLater(clock, delay, callable, *args, **kw):
+    """
+    Call the given function after a certain period of time has passed.
+
+    @type clock: L{IReactorTime} provider
+    @param clock: The object which will be used to schedule the delayed
+        call.
+
+    @type delay: C{float} or C{int}
+    @param delay: The number of seconds to wait before calling the function.
+
+    @param callable: The object to call after the delay.
+
+    @param *args: The positional arguments to pass to C{callable}.
+
+    @param **kw: The keyword arguments to pass to C{callable}.
+
+    @rtype: L{defer.Deferred}
+
+    @return: A deferred that fires with the result of the callable when the
+        specified time has elapsed.
+    """
+    d = defer.Deferred()
+    d.addCallback(lambda ignored: callable(*args, **kw))
+    clock.callLater(delay, d.callback, None)
+    return d
+
+
 
 __all__ = [
     'LoopingCall',
@@ -379,4 +407,6 @@ __all__ = [
     'Clock',
 
     'SchedulerStopped', 'Cooperator', 'coiterate',
+
+    'deferLater',
     ]

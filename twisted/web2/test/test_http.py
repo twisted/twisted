@@ -14,11 +14,7 @@ from twisted.internet import defer
 from twisted.internet.defer import waitForDeferred, deferredGenerator
 from twisted.protocols import loopback
 from twisted.python import util, runtime
-
-def deferLater(secs):
-    d = defer.Deferred()
-    reactor.callLater(secs, d.callback, None)
-    return d
+from twisted.internet.task import deferLater
 
 class PreconditionTestCase(unittest.TestCase):
     def checkPreconditions(self, request, response, expectedResult, expectedCode,
@@ -734,7 +730,7 @@ class CoreHTTPTestCase(HTTPTests):
     def testTimeout_immediate(self):
         # timeout 0 => timeout on first iterate call
         cxn = self.connect(inputTimeOut = 0)
-        return deferLater(0).addCallback(lambda x: self.assertDone(cxn))
+        return deferLater(reactor, 0, self.assertDone, cxn)
 
     def testTimeout_inRequest(self):
         cxn = self.connect(inputTimeOut = 0.3)
@@ -742,7 +738,7 @@ class CoreHTTPTestCase(HTTPTests):
         data = ""
 
         cxn.client.write("GET / HTTP/1.1\r\n")
-        return deferLater(0.5).addCallback(lambda x: self.assertDone(cxn))
+        return deferLater(reactor, 0.5, self.assertDone, cxn)
 
     def testTimeout_betweenRequests(self):
         cxn = self.connect(betweenRequestsTimeOut = 0.3)
@@ -762,7 +758,7 @@ class CoreHTTPTestCase(HTTPTests):
         data += "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"
 
         self.compareResult(cxn, cmds, data)
-        return deferLater(0.5).addCallback(lambda x: self.assertDone(cxn)) # Wait for timeout
+        return deferLater(reactor, 0.5, self.assertDone, cxn) # Wait for timeout
 
     def testConnectionCloseRequested(self):
         cxn = self.connect()

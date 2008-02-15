@@ -251,21 +251,18 @@
     documentation the most common example is where a function is needed to
     generate a Deferred and fire it after some time has passed. An example
     might be this, where <code class="API"
-    base="twisted.internet.reactor">callLater</code> is used to simulate the
-    delayed firing of a Deferred:</p>
+    base="twisted.internet.task">deferLater</code> is used to fire a callback
+    after a period of time:</p>
 
     <pre class="python">
-    from twisted.internet import defer, reactor
+    from twisted.internet import task, reactor
     
     def getDummyDeferred():
         """
-        Dummy method which generates a Deferred and simulates it being fired
-        some time later
+        Dummy method which returns a deferred that will fire in 5 seconds with
+        a result
         """
-        deferred = defer.Deferred()
-        # simulate the deferred firing 5 seconds from now using callLater
-        reactor.callLater(5, deferred.callback, "RESULT")
-        return deferred
+        return task.deferLater(reactor, 5, lambda x: "RESULT")
     </pre>
 
     <p>As in the above example, it is imperative to clearly mark that the
