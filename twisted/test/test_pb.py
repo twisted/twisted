@@ -787,6 +787,7 @@ class FilePagerizer(pb.Referenceable):
         self.args = self.kw = None
 
 
+
 class PagingTestCase(unittest.TestCase):
     """
     Test pb objects sending data by pages.
@@ -821,6 +822,7 @@ class PagingTestCase(unittest.TestCase):
         self.assertEquals(callbackKeyword, {'value': 10},
                           "Completed callback not invoked")
 
+
     def test_pagingWithoutCallback(self):
         """
         Test L{util.StringPager} without a callback.
@@ -834,6 +836,30 @@ class PagingTestCase(unittest.TestCase):
             pump.pump()
         self.assertEquals(''.join(l[0]), bigString,
                           "Pages received not equal to pages sent!")
+
+
+    def test_emptyFilePaging(self):
+        """
+        Test L{util.FilePager}, sending an empty file.
+        """
+        filenameEmpty = self.mktemp()
+        fd = file(filenameEmpty, 'w')
+        fd.close()
+        c, s, pump = connectedServerAndClient()
+        pagerizer = FilePagerizer(filenameEmpty, None)
+        s.setNameForLocal("bar", pagerizer)
+        x = c.remoteForName("bar")
+        l = []
+        util.getAllPages(x, "getPages").addCallback(l.append)
+        ttl = 10
+        while not l and ttl > 0:
+            pump.pump()
+            ttl -= 1
+        if not ttl:
+            self.fail('getAllPages timed out')
+        self.assertEquals(''.join(l[0]), '',
+                          "Pages received not equal to pages sent!")
+
 
     def test_filePagingWithCallback(self):
         """
@@ -857,6 +883,7 @@ class PagingTestCase(unittest.TestCase):
                           "Completed callback not invoked")
         self.assertEquals(pagerizer.pager.chunks, [])
 
+
     def test_filePagingWithoutCallback(self):
         """
         Test L{util.FilePager} without a callback.
@@ -872,6 +899,7 @@ class PagingTestCase(unittest.TestCase):
         self.assertEquals(''.join(l[0]), bigString,
                           "Pages received not equal to pages sent!")
         self.assertEquals(pagerizer.pager.chunks, [])
+
 
 
 class DumbPublishable(publish.Publishable):
