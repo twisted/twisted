@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.python.test.test_release -*-
-# Copyright (c) 2007 Twisted Matrix Laboratories.
+# Copyright (c) 2007-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -12,9 +12,6 @@ else, do not use it. The interface and behaviour will change without notice.
 from datetime import date
 import os
 
-import twisted
-
-from twisted.python.filepath import FilePath
 from twisted.python.versions import Version
 
 # This import is an example of why you shouldn't use this module unless you're
@@ -59,9 +56,9 @@ class Project(object):
     """
     A representation of a project that has a version.
 
-    @ivar directory: A L{FilePath} pointing to the base directory of a
-        Twisted-style Python package. The package should contain a
-        C{_version.py} file and a C{topfiles} directory that contains a
+    @ivar directory: A L{twisted.python.filepath.FilePath} pointing to the base
+        directory of a Twisted-style Python package. The package should contain
+        a C{_version.py} file and a C{topfiles} directory that contains a
         C{README} file.
     """
 
@@ -103,7 +100,7 @@ def findTwistedProjects(baseDirectory):
     """
     Find all Twisted-style projects beneath a base directory.
 
-    @param baseDirectory: A L{FilePath} to look inside.
+    @param baseDirectory: A L{twisted.python.filepath.FilePath} to look inside.
     @return: A list of L{Project}.
     """
     projects = []
@@ -192,13 +189,13 @@ class DocBuilder(object):
 
         @param resourceDir: The directory which contains the toplevel index and
             stylesheet file for this section of documentation.
-        @type resourceDir: L{FilePath}
+        @type resourceDir: L{twisted.python.filepath.FilePath}
 
         @param docDir: The directory of the documentation.
-        @type docDir: L{FilePath}
+        @type docDir: L{twisted.python.filepath.FilePath}
 
         @param template: The template used to generate the documentation.
-        @type template: L{FilePath}
+        @type template: L{twisted.python.filepath.FilePath}
 
         @param deleteInput: If True, the input documents will be deleted after
             their output is generated.
@@ -235,16 +232,48 @@ class DocBuilder(object):
 
         @param resourceDir: The directory which contains the toplevel index and
             stylesheet file for this section of documentation.
-        @type resourceDir: L{FilePath}
+        @type resourceDir: L{twisted.python.filepath.FilePath}
 
         @param docDir: The directory containing documents that must link to
             C{resourceDir}.
-        @type docDir: L{FilePath}
+        @type docDir: L{twisted.python.filepath.FilePath}
         """
         if resourceDir != docDir:
             return '/'.join(filePathDelta(docDir, resourceDir)) + "/"
         else:
             return ""
+
+
+
+class ManBuilder(object):
+    """
+    Generate man pages of the different existing scripts.
+    """
+
+    def build(self, manDir):
+        """
+        Generate Lore input files from the man pages in C{manDir}.
+
+        Input files ending in .1 will be considered. Output will written as
+        -man.xhtml files.
+
+        @param manDir: The directory of the man pages.
+        @type manDir: L{twisted.python.filepath.FilePath}
+
+        @raise NoDocumentsFound: When there are no .1 files in the given
+            C{manDir}.
+        """
+        options = lore.Options()
+        inputFiles = manDir.globChildren("*.1")
+        filenames = [x.path for x in inputFiles]
+        if not filenames:
+            raise NoDocumentsFound("No manual pages found in %s" % (manDir,))
+        arguments = ["--null",
+                     "--input", "man",
+                     "--output", "lore",
+                     "--config", "ext=-man.xhtml"] + filenames
+        options.parseOptions(arguments)
+        lore.runGivenOptions(options)
 
 
 
@@ -254,13 +283,14 @@ def filePathDelta(origin, destination):
     to C{origin}.
 
     It is assumed that both paths represent directories, not files. That is to
-    say, the delta of FilePath /foo/bar to FilePath /foo/baz will be C{../baz},
+    say, the delta of L{twisted.python.filepath.FilePath} /foo/bar to
+    L{twisted.python.filepath.FilePath} /foo/baz will be C{../baz},
     not C{baz}.
 
-    @type origin: L{FilePath}
+    @type origin: L{twisted.python.filepath.FilePath}
     @param origin: The origin of the relative path.
 
-    @type destination: L{FilePath}
+    @type destination: L{twisted.python.filepath.FilePath}
     @param destination: The destination of the relative path.
     """
     commonItems = 0

@@ -1,11 +1,17 @@
+# Copyright (c) 2007-2008 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Tests for L{twisted.python.release} and L{twisted.python._release}.
+"""
+
 import operator
 import os
 from twisted.trial.unittest import TestCase
 
 from datetime import date
 
-from twisted.internet import reactor
-from twisted.python import release, log
+from twisted.python import release
 from twisted.python.filepath import FilePath
 from twisted.python.util import dsu
 from twisted.python.versions import Version
@@ -13,7 +19,7 @@ from twisted.python._release import _changeVersionInFile, getNextVersion
 from twisted.python._release import findTwistedProjects, replaceInFile
 from twisted.python._release import replaceProjectVersion
 from twisted.python._release import updateTwistedVersionInformation, Project
-from twisted.python._release import VERSION_OFFSET, DocBuilder
+from twisted.python._release import VERSION_OFFSET, DocBuilder, ManBuilder
 from twisted.python._release import NoDocumentsFound, filePathDelta
 
 
@@ -473,6 +479,95 @@ class DocBuilderTestCase(TestCase):
         linkrel = self.builder.getLinkrel(FilePath("/foo/howto"),
                                           FilePath("/foo/examples/quotes"))
         self.assertEquals(linkrel, "../../howto/")
+
+
+
+class ManBuilderTestCase(TestCase):
+    """
+    Tests for L{ManBuilder}.
+    """
+
+    def setUp(self):
+        """
+        Set up a few instance variables that will be useful.
+
+        @ivar builder: A plain L{ManBuilder}.
+        @ivar manDir: A L{FilePath} representing a directory to be used for
+            containing man pages.
+        """
+        self.builder = ManBuilder()
+        self.manDir = FilePath(self.mktemp())
+        self.manDir.createDirectory()
+
+
+    def getArbitraryManInput(self):
+        """
+        Get an arbitrary man page content.
+        """
+        return """.TH MANHOLE "1" "August 2001" "" ""
+.SH NAME
+manhole \- Connect to a Twisted Manhole service
+.SH SYNOPSIS
+.B manhole
+.SH DESCRIPTION
+manhole is a GTK interface to Twisted Manhole services. You can execute python
+code as if at an interactive Python console inside a running Twisted process
+with this."""
+
+
+    def test_noDocumentsFound(self):
+        """
+        L{ManBuilder.build} raises L{NoDocumentsFound} if there are no
+        .1 files in the given directory.
+        """
+        self.assertRaises(NoDocumentsFound, self.builder.build, self.manDir)
+
+
+    def test_build(self):
+        """
+        Check that L{ManBuilder.build} find the man page in the directory, and
+        successfully produce a Lore content.
+        """
+        manContent = self.getArbitraryManInput()
+        self.manDir.child('test1.1').setContent(manContent)
+        self.builder.build(self.manDir)
+        output = self.manDir.child('test1-man.xhtml').getContent()
+        self.assertEquals(output, "<html><head>\n<title>MANHOLE.1</title>"
+            "</head>\n<body>\n\n<h1>MANHOLE.1</h1>\n\n<h2>NAME</h2>\n\n"
+            "<p>manhole - Connect to a Twisted Manhole service\n</p>\n\n"
+            "<h2>SYNOPSIS</h2>\n\n<p><strong>manhole</strong> </p>\n\n"
+            "<h2>DESCRIPTION</h2>\n\n<p>manhole is a GTK interface to Twisted "
+            "Manhole services. You can execute python\ncode as if at an "
+            "interactive Python console inside a running Twisted process\nwith"
+            " this.</p>\n\n</body>\n</html>\n")
+
+
+    def test_toHTML(self):
+        """
+        Check that the content output by C{build} is compatible as input of
+        L{DocBuilder.build}.
+        """
+        manContent = self.getArbitraryManInput()
+        self.manDir.child('test1.1').setContent(manContent)
+        self.builder.build(self.manDir)
+
+        templateFile = self.manDir.child("template.tpl")
+        templateFile.setContent(DocBuilderTestCase.template)
+        docBuilder = DocBuilder()
+        docBuilder.build("1.2.3", self.manDir, self.manDir,
+                         templateFile)
+        output = self.manDir.child('test1-man.html').getContent()
+        self.assertEquals(output, '<?xml version="1.0"?><html><head>'
+            '<title>Yo:MANHOLE.1</title></head><body><div class="content">'
+            '<span></span><h2>NAME<a name="auto0"></a></h2><p>manhole - '
+            'Connect to a Twisted Manhole service\n</p><h2>SYNOPSIS<a '
+            'name="auto1"></a></h2><p><strong>manhole</strong></p><h2>'
+            'DESCRIPTION<a name="auto2"></a></h2><p>manhole is a GTK '
+            'interface to Twisted Manhole services. You can execute '
+            'python\ncode as if at an interactive Python console inside a '
+            'running Twisted process\nwith this.</p></div><a '
+            'href="index.html">Index</a><span class="version">Version: '
+            '1.2.3</span></body></html>')
 
 
 
