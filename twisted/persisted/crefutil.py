@@ -1,8 +1,7 @@
 # -*- test-case-name: twisted.test.test_persisted -*-
 
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 
 """
@@ -41,9 +40,22 @@ class NotKnown:
         assert 0, "I am not to be used as a dictionary key."
 
 
-class _Tuple(NotKnown):
-    def __init__(self, l):
+
+class _Container(NotKnown):
+    """
+    Helper class to resolve circular references on container objects.
+    """
+
+    def __init__(self, l, containerType):
+        """
+        @param l: The list of object which may contain some not yet referenced
+        objects.
+
+        @param containerType: A type of container objects (e.g., C{tuple} or
+            C{set}).
+        """
         NotKnown.__init__(self)
+        self.containerType = containerType
         self.l = l
         self.locs = range(len(l))
         for idx in xrange(len(l)):
@@ -52,14 +64,36 @@ class _Tuple(NotKnown):
             else:
                 l[idx].addDependant(self, idx)
         if not self.locs:
-            self.resolveDependants(tuple(self.l))
+            self.resolveDependants(self.containerType(self.l))
+
 
     def __setitem__(self, n, obj):
+        """
+        Change the value of one contained objects, and resolve references if
+        all objects have been referenced.
+        """
         self.l[n] = obj
         if not isinstance(obj, NotKnown):
             self.locs.remove(n)
             if not self.locs:
-                self.resolveDependants(tuple(self.l))
+                self.resolveDependants(self.containerType(self.l))
+
+
+
+class _Tuple(_Container):
+    """
+    Manage tuple containing circular references. Deprecated: use C{_Container}
+    instead.
+    """
+
+    def __init__(self, l):
+        """
+        @param l: The list of object which may contain some not yet referenced
+        objects.
+        """
+        _Container.__init__(self, l, tuple)
+
+
 
 class _InstanceMethod(NotKnown):
     def __init__(self, im_name, im_self, im_class):
