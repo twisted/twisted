@@ -1,12 +1,14 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+Tests for error handling in PB.
+"""
 
 from twisted.trial import unittest
 
 from twisted.spread import pb, flavors
 from twisted.internet import reactor, defer
-from twisted.internet.defer import fail
 from twisted.python import log
 
 ##
@@ -80,6 +82,14 @@ class SimpleRoot(pb.Root):
         Fail synchronously with a pb.Error exception.
         """
         raise SynchronousError("remote synchronous error")
+
+    def remote_unknownError(self):
+        """
+        Fail with error that is not known to client.
+        """
+        class UnknownError(pb.Error):
+            pass
+        raise UnknownError("I'm not known to client!")
 
     def remote_jelly(self):
         self.raiseJelly()
@@ -249,6 +259,31 @@ class PBFailureTest(PBConnTestCase):
             self.failUnless(isinstance(fail.value, fail.type))
             return 430
         return self._testImpl('deferredJelly', 430, failureDeferredJelly)
+
+
+    def test_unjellyableFailure(self):
+        """
+        An non-jellyable L{pb.Error} subclass raised by a remote method is
+        turned into a Failure with a type set to the FQPN of the exception
+        type.
+        """
+        def failureUnjellyable(fail):
+            self.assertEqual(
+                fail.type, 'twisted.test.test_pbfailure.SynchronousError')
+            return 431
+        return self._testImpl('synchronousError', 431, failureUnjellyable)
+
+
+    def test_unknownFailure(self):
+        """
+        Test that an exception which is a subclass of L{pb.Error} but not
+        known on the client side has its type set properly.
+        """
+        def failureUnknown(fail):
+            self.assertEqual(
+                fail.type, 'twisted.test.test_pbfailure.UnknownError')
+            return 4310
+        return self._testImpl('unknownError', 4310, failureUnknown)
 
 
     def test_securityFailure(self):

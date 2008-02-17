@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_pb -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -68,8 +68,10 @@ import random
 import new
 import types
 
+from zope.interface import implements, Interface
+
 # Twisted Imports
-from twisted.python import log, failure
+from twisted.python import log, failure, reflect
 from twisted.internet import defer, protocol
 from twisted.cred.portal import Portal
 from twisted.cred.credentials import IAnonymous, ICredentials
@@ -77,9 +79,6 @@ from twisted.cred.credentials import IUsernameHashedPassword, Anonymous
 from twisted.persisted import styles
 from twisted.python.components import registerAdapter
 
-from zope.interface import implements, Interface
-
-# Sibling Imports
 from twisted.spread.interfaces import IJellyable, IUnjellyable
 from twisted.spread.jelly import jelly, unjelly, globalSecurity
 from twisted.spread import banana
@@ -412,7 +411,10 @@ class CopyableFailure(failure.Failure, Copyable):
     unsafeTracebacks = 0
 
     def getStateToCopy(self):
-        #state = self.__getstate__()
+        """
+        Collect state related to the exception which occurred, discarding
+        state which cannot reasonably be serialized.
+        """
         state = self.__dict__.copy()
         state['tb'] = None
         state['frames'] = []
@@ -421,7 +423,7 @@ class CopyableFailure(failure.Failure, Copyable):
             state['value'] = failure2Copyable(self.value, self.unsafeTracebacks)
         else:
             state['value'] = str(self.value) # Exception instance
-        state['type'] = str(self.type) # Exception class
+        state['type'] = reflect.qual(self.type) # Exception class
         if self.unsafeTracebacks:
             io = StringIO.StringIO()
             self.printTraceback(io)
@@ -429,6 +431,7 @@ class CopyableFailure(failure.Failure, Copyable):
         else:
             state['traceback'] = 'Traceback unavailable\n'
         return state
+
 
 class CopiedFailure(RemoteCopy, failure.Failure):
     def printTraceback(self, file=None, elideFrameworkCode=0, detail='default'):
