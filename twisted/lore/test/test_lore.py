@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 # IMPORTANT:
@@ -44,12 +44,19 @@
 # __ put all of our test files someplace neat and tidy
 #
 
+"""
+Tests for L{twisted.lore}.
+"""
+
 import os, shutil
 from os.path import join
-
+from types import MethodType
 from StringIO import StringIO
 
 from twisted.trial import unittest
+
+from twisted.python import plugin as oldplugin
+from twisted import plugin as newplugin
 
 from twisted.lore import tree, process, htmlbook, default
 from twisted.lore.default import factory
@@ -62,6 +69,8 @@ from twisted.python.util import sibpath
 from twisted.lore.scripts import lore
 
 from twisted.web import microdom, domhelpers
+
+from twisted.lore.test import dummy_generator
 
 
 def sp(originalFileName):
@@ -795,3 +804,35 @@ class ScriptTests(unittest.TestCase, TempFileMixin):
             join(tmp, "lore_numbering_test.tns"))
         self.assertEqualFiles1("sections_not_numbered_out2.html",
             join(tmp, "lore_numbering_test2.tns"))
+
+
+    def test_getProcessor(self):
+        """
+        L{twisted.lore.scripts.lore.getProcessor} returns the C{generate}
+        method of the processor identified by the given configuration.
+        """
+        oldPlugins = ()
+        newPlugins = ()
+        def fakeOldGetPlugIns(plugInType, foo=None, bar=None):
+            return oldPlugins
+        self.patch(oldplugin, "_getPlugIns", fakeOldGetPlugIns)
+        def fakeNewGetPlugins(interface):
+            return newPlugins
+        self.patch(newplugin, "getPlugins", fakeNewGetPlugins)
+
+        config = dict(ext="html")
+        output = "quux"
+
+        # If no old plugins or new plugins are found, the input type should be
+        # treated as the fully-qualified Python name and have an output
+        # generator loaded from it and returned.
+        processor = lore.getProcessor(
+            "twisted.lore.test.dummy_generator", output, config)
+
+        self.assertIsInstance(processor, MethodType)
+        generator = processor.im_self
+        self.assertIsInstance(generator, dummy_generator.DummyGenerator)
+        self.assertIdentical(generator.initConfig, config)
+        self.assertIdentical(generator.callConfig, config)
+        self.assertEqual(generator.output, output)
+
