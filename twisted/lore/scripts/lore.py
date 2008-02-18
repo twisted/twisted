@@ -9,8 +9,9 @@ import sys
 
 from zope.interface import Interface, Attribute
 
-from twisted.lore import process, numberer, htmlbook
+from twisted.lore import process, htmlbook
 from twisted.lore.indexer import Indexer, TableOfContents
+from twisted.lore.numberer import Numberer
 
 from twisted.python import usage, plugin as oldplugin, reflect
 from twisted import plugin as newplugin
@@ -193,7 +194,8 @@ def runGivenOptions(opt):
         indexer.setIndexFilename(None)
 
     ## TODO: get numberSections from book, if any
-    numberer.setNumberSections(opt['number'])
+    numberer = Numberer()
+    numberer.numberSections = opt['number']
 
     walker.generate(book, indexer, toc)
 

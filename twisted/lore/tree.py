@@ -14,7 +14,7 @@ from twisted.python import htmlizer, text
 from twisted.python.util import InsensitiveDict
 from twisted.web import microdom, domhelpers
 
-from twisted.lore import process, latex, numberer
+from twisted.lore import process, latex
 
 
 # relative links to html files
@@ -661,14 +661,12 @@ def setTitle(template, title, chapterNumber):
     @param chapterNumber: The chapter number of this content in an overall
     document.  If not applicable, any C{False} value will result in this
     information being omitted.
-
-    @return: C{None}
     """
     for nodeList in (domhelpers.findNodesNamed(template, "title"),
                      domhelpers.findElementsWithAttribute(template, "class",
                                                           'title')):
         if nodeList:
-            if numberer.getNumberSections() and chapterNumber:
+            if chapterNumber:
                 nodeList[0].appendChild(microdom.Text('%s. ' % chapterNumber))
             nodeList[0].childNodes.extend(title)
 
