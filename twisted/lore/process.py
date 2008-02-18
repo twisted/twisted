@@ -9,7 +9,6 @@ and function docstrings for details.
 
 import sys
 import os
-import tempfile
 
 
 class NoProcessorError(Exception):
