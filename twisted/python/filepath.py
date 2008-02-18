@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_paths -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -437,13 +437,22 @@ class FilePath(_PathHelper):
 
 
     def exists(self):
+        """
+        Check if the C{path} exists.
+
+        @return: C{True} if the stats of C{path} can be retrieved successfully,
+            C{False} in the other cases.
+        @rtype: C{bool}
+        """
         if self.statinfo:
             return True
-        elif self.statinfo is None:
-            self.restat(False)
-            return self.exists()
         else:
-            return False
+            self.restat(False)
+            if self.statinfo:
+                return True
+            else:
+                return False
+
 
     def isdir(self):
         st = self.statinfo
@@ -498,8 +507,14 @@ class FilePath(_PathHelper):
             os.remove(self.path)
         self.restat(False)
 
+
     def makedirs(self):
+        """
+        Create all directories not yet existing in C{path} segments, using
+        C{os.makedirs}.
+        """
         return os.makedirs(self.path)
+
 
     def globChildren(self, pattern):
         """

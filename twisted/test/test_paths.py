@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -409,8 +409,12 @@ class FilePathTestCase(AbstractFilePathTestCase):
         oldPaths.sort()
         self.assertEquals(newPaths, oldPaths)
 
-    def testCrossMountMoveTo(self):
+
+    def test_crossMountMoveTo(self):
         """
+        C{moveTo} should be able to handle C{EXDEV} error raised by
+        C{os.rename} when trying to move a file on a different mounted
+        filesystem.
         """
         # Bit of a whitebox test - force os.rename, which moveTo tries
         # before falling back to a slower method, to fail, forcing moveTo to
@@ -432,6 +436,7 @@ class FilePathTestCase(AbstractFilePathTestCase):
             self.failUnless(len(invokedWith) >= 2)
         finally:
             os.rename = originalRename
+
 
     def testOpen(self):
         # Opening a file for reading when it does not already exist is an error
@@ -520,6 +525,19 @@ class FilePathTestCase(AbstractFilePathTestCase):
         existent = nonexistent
         del nonexistent
         self.assertRaises((OSError, IOError), existent.open)
+
+
+    def test_existsCache(self):
+        """
+        Check that C{filepath.FilePath.exists} correctly restat the object if
+        an operation has occurred in the mean time.
+        """
+        fp = filepath.FilePath(self.mktemp())
+        self.assertEquals(fp.exists(), False)
+
+        fp.makedirs()
+        self.assertEquals(fp.exists(), True)
+
 
 
 from twisted.python import urlpath
