@@ -6,6 +6,11 @@
 APIs for assigning numbers to sections of a document.
 """
 
+from twisted.python.versions import Version
+from twisted.python.deprecate import deprecated
+
+_unreleasedVersion = Version('Twisted', 8, 0, 0)
+_unreleasedDeprecation = deprecated(_unreleasedVersion)
 
 class Numberer(object):
     """
@@ -65,15 +70,18 @@ def resetFilenum():
 def setFilenum(arg):
     global filenum
     filenum = arg
+setFilenum = _unreleasedDeprecation(setFilenum)
 
 def getFilenum():
     global filenum
     return filenum
+getFilenum = _unreleasedDeprecation(getFilenum)
 
 def getNextFilenum():
     global filenum
     filenum += 1
     return filenum
+getNextFilenum = _unreleasedDeprecation(getNextFilenum)
 
 def setNumberSections(arg):
     global numberSections

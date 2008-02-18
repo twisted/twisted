@@ -7,7 +7,9 @@ Tests for L{twisted.lore.numberer}.
 
 from twisted.trial.unittest import TestCase
 
-from twisted.lore.numberer import Numberer, reset, getFilenum
+from twisted.lore.numberer import Numberer
+from twisted.lore.numberer import reset, getFilenum, setFilenum, getNextFilenum
+from twisted.lore.numberer import _unreleasedVersion
 
 
 class NumbererTests(TestCase):
@@ -78,3 +80,23 @@ class GlobalTests(TestCase):
         self.assertEqual(
             self.callDeprecated(_unreleasedVersion, getFilenum),
             0)
+
+
+    def test_setFilenum(self):
+        """
+        L{setFilenum} sets the current file number.
+        """
+        self.callDeprecated(_unreleasedVersion, setFilenum, 7)
+        self.assertEqual(
+            self.callDeprecated(_unreleasedVersion, getFilenum),
+            7)
+
+
+    def test_getNextFilenum(self):
+        """
+        Each call to L{getNextFilenum} returns the next larger integer.
+        """
+        for number in range(1, 4):
+            self.assertEqual(
+                self.callDeprecated(_unreleasedVersion, getNextFilenum),
+                number)
