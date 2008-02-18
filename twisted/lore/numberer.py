@@ -82,6 +82,7 @@ reset = _unreleasedDeprecation(reset)
 
 def resetFilenum():
     setFilenum(0)
+resetFilenum = _unreleasedDeprecation(resetFilenum)
 
 def setFilenum(arg):
     global filenum
@@ -108,3 +109,6 @@ def getNumberSections():
     global numberSections
     return numberSections
 getNumberSections = _unreleasedDeprecation(getNumberSections)
+
+
+__all__ = ['Numberer']

@@ -8,8 +8,9 @@ Tests for L{twisted.lore.numberer}.
 from twisted.trial.unittest import TestCase
 
 from twisted.lore.numberer import Numberer
-from twisted.lore.numberer import reset, getFilenum, setFilenum, getNextFilenum
 from twisted.lore.numberer import getNumberSections, setNumberSections
+from twisted.lore.numberer import reset, getFilenum, setFilenum, getNextFilenum
+from twisted.lore.numberer import resetFilenum
 from twisted.lore.numberer import _unreleasedVersion
 
 
@@ -142,6 +143,17 @@ class GlobalTests(TestCase):
         self.callDeprecated(_unreleasedVersion, setNumberSections, False)
         self.assertFalse(
             self.callDeprecated(_unreleasedVersion, getNumberSections))
+
+
+    def test_resetFilenum(self):
+        """
+        L{resetFilenum} sets the current file number back to C{0}.
+        """
+        self.callDeprecated(_unreleasedVersion, setFilenum, 13)
+        self.callDeprecated(_unreleasedVersion, resetFilenum)
+        self.assertEqual(
+            self.callDeprecated(_unreleasedVersion, getFilenum),
+            0)
 
 
     def test_reset(self):
