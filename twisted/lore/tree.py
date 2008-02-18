@@ -1,13 +1,21 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.lore.test.test_lore -*-
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+A collection of document manipulation functions.
+
+This is most of the implementation of the HTML output plugin for lore.
+"""
 
 import re, os, cStringIO, time, cgi, string, urlparse
-from twisted import copyright
+
 from twisted.python import htmlizer, text
-from twisted.web import microdom, domhelpers
-import process, latex, indexer, numberer, htmlbook
 from twisted.python.util import InsensitiveDict
+from twisted.web import microdom, domhelpers
+
+from twisted.lore import process, latex, numberer
+
 
 # relative links to html files
 def fixLinks(document, ext):
@@ -109,8 +117,8 @@ def fixAPI(document, url):
     for node in domhelpers.findElementsWithAttribute(document, "class", "API"):
         fullname = _getAPI(node)
         node2 = microdom.Element('a', {'href': url%fullname, 'title': fullname})
-        node2.childNodes = node.childNodes
-        node.childNodes = [node2]
+        node2.childNodes = node.childNodes ## does this give the right parentNode?
+        node.childNodes = [node2] ## check other direct references to childNodes, too
         node.removeAttribute('base')
 
 
@@ -187,6 +195,19 @@ def addPyListings(document, dir):
         _replaceWithListing(node, val, filename, "py-listing")
 
 
+def _toTree(html):
+    """
+    Take html text C{html} and convert it to a C{microdom} tree.
+    This is an internal helper method; do not call it.
+
+    @type html: C{str}
+    @param html: The text to parse
+
+    @rtype: C{microdom.Element}
+    @return: The root of the C{microdom} parse tree
+    """
+    return microdom.parseString(html).documentElement
+
 
 def _replaceWithListing(node, val, filename, class_):
     captionTitle = domhelpers.getNodeText(node)
@@ -195,7 +216,7 @@ def _replaceWithListing(node, val, filename, class_):
     text = ('<div class="%s">%s<div class="caption">%s - '
             '<a href="%s"><span class="filename">%s</span></a></div></div>' %
             (class_, val, captionTitle, filename, filename))
-    newnode = microdom.parseString(text).documentElement
+    newnode = _toTree(text)
     node.parentNode.replaceChild(newnode, node)
 
 
@@ -254,9 +275,13 @@ def addPlainListings(document, dir):
 
 
 
+contentsHeaderLevels = '23'
+
 def getHeaders(document):
     """
     Return all H2 and H3 nodes in the given document.
+    Depends on value of contentsHeaderLevels, which is '23' by default.
+    Changing it to '234', for example,  would include H4 nodes as well.
 
     @type document: A DOM Node or Document
 
@@ -264,7 +289,7 @@ def getHeaders(document):
     """
     return domhelpers.findElements(
         document,
-        lambda n, m=re.compile('h[23]$').match: m(n.nodeName))
+        lambda n, m=re.compile('h[' + contentsHeaderLevels + ']$').match: m(n.nodeName))
 
 
 
@@ -287,13 +312,12 @@ def generateToC(document):
         toc += domhelpers.getNodeText(element)
         toc += '</a></li>\n'
         level = elementLevel
-        anchor = microdom.parseString('<a name="auto%d" />' % id).documentElement
-        element.childNodes.append(anchor)
+        anchor = _toTree('<a name="auto%d" />' % id)
+        element.appendChild(anchor)
         id += 1
     toc += '</ul>\n' * level
     toc += '</ol>\n'
-    return microdom.parseString(toc).documentElement
-
+    return _toTree(toc)
 
 
 def putInToC(document, toc):
@@ -308,7 +332,7 @@ def putInToC(document, toc):
     """
     tocOrig = domhelpers.findElementsWithAttribute(document, 'class', 'toc')
     if tocOrig:
-        tocOrig= tocOrig[0]
+        tocOrig = tocOrig[0]
         tocOrig.childNodes = [toc]
 
 
@@ -355,22 +379,22 @@ def footnotes(document):
     footnoteElement = microdom.Element('ol')
     id = 1
     for footnote in footnotes:
-        href = microdom.parseString('<a href="#footnote-%(id)d">'
+        href = _toTree('<a href="#footnote-%(id)d">'
                                     '<super>%(id)d</super></a>'
-                                    % vars()).documentElement
+                                    % vars())
         text = ' '.join(domhelpers.getNodeText(footnote).split())
         href.setAttribute('title', text)
         target = microdom.Element('a', attributes={'name': 'footnote-%d' % id})
         target.childNodes = [footnote]
         footnoteContent = microdom.Element('li')
         footnoteContent.childNodes = [target]
-        footnoteElement.childNodes.append(footnoteContent)
+        footnoteElement.appendChild(footnoteContent)
         footnote.parentNode.replaceChild(href, footnote)
         id += 1
     body = domhelpers.findNodesNamed(document, "body")[0]
-    header = microdom.parseString('<h2>Footnotes</h2>').documentElement
-    body.childNodes.append(header)
-    body.childNodes.append(footnoteElement)
+    header = _toTree('<h2>Footnotes</h2>')
+    body.appendChild(header)
+    body.appendChild(footnoteElement)
 
 
 
@@ -390,7 +414,7 @@ def notes(document):
     @return: C{None}
     """
     notes = domhelpers.findElementsWithAttribute(document, "class", "note")
-    notePrefix = microdom.parseString('<strong>Note: </strong>').documentElement
+    notePrefix = _toTree('<strong>Note: </strong>')
     for note in notes:
         note.childNodes.insert(0, notePrefix)
 
@@ -474,7 +498,10 @@ def getSectionNumber(header):
     """
     if not header:
         return None
-    return header.childNodes[0].value.strip()
+    try:
+        return header.childNodes[0].value.strip()
+    except AttributeError, e: # temporary fix; just uses the chapter number; want whole header text
+        return None
 
 
 
@@ -499,7 +526,7 @@ def getSectionReference(entry):
 
 
 
-def index(document, filename, chapterReference):
+def index(document, filename, chapterReference, indexer=None):
     """
     Extract index entries from the given document and store them for later use
     and insert named anchors so that the index can link back to those entries.
@@ -531,7 +558,10 @@ def index(document, filename, chapterReference):
             ref = getSectionReference(entry) or chapterReference
         else:
             ref = 'link'
-        indexer.addEntry(filename, anchor, entry.attributes['value'], ref)
+
+        if indexer is not None:
+            indexer.addEntry(filename, anchor, entry.attributes['value'], ref)
+
         # does nodeName even affect anything?
         entry.nodeName = entry.tagName = entry.endTagName = 'a'
         entry.attributes = InsensitiveDict({'name': anchor})
@@ -551,7 +581,7 @@ def setIndexLink(template, indexFilename):
 
     @type indexFilename: C{str}
     @param indexFilename: The address of the index document to which to link.
-    If any C{False} value, this function will remove all index-link nodes.
+    If None, this function will remove all index-link nodes.
 
     @return: C{None}
     """
@@ -639,7 +669,7 @@ def setTitle(template, title, chapterNumber):
                                                           'title')):
         if nodeList:
             if numberer.getNumberSections() and chapterNumber:
-                nodeList[0].childNodes.append(microdom.Text('%s. ' % chapterNumber))
+                nodeList[0].appendChild(microdom.Text('%s. ' % chapterNumber))
             nodeList[0].childNodes.extend(title)
 
 
@@ -676,7 +706,7 @@ def setAuthors(template, authors):
         else:
             text += anchor + ','
 
-    childNodes = microdom.parseString('<span>' + text +'</span>').childNodes
+    childNodes = _toTree('<span>' + text +'</span>').childNodes
 
     for node in domhelpers.findElementsWithAttribute(template,
                                                      "class", 'authors'):
@@ -728,7 +758,7 @@ def getOutputFileName(originalFileName, outputExtension, index=None):
 
 
 
-def munge(document, template, linkrel, dir, fullpath, ext, url, config, outfileGenerator=getOutputFileName):
+def doDocument(document, template, linkrel, dir, fullpath, ext, url, config, outfileGenerator=getOutputFileName, book=None, indexer=None, contents=None, outputFilename=None):
     """
     Mutate C{template} until it resembles C{document}.
 
@@ -778,6 +808,16 @@ def munge(document, template, linkrel, dir, fullpath, ext, url, config, outfileG
 
     @return: C{None}
     """
+    if indexer is None:
+        from twisted.lore.indexer import Indexer
+        indexer = Indexer()
+    if contents is None:
+        from twisted.lore.indexer import TableOfContents
+        contents = TableOfContents()
+    # XXX Deprecate outfileGenerator
+    if outputFilename is None and fullpath is not None:
+        outputFilename = outfileGenerator(os.path.split(fullpath)[1], ext)
+
     fixRelativeLinks(template, linkrel)
     addMtime(template, fullpath)
     removeH1(document)
@@ -788,7 +828,8 @@ def munge(document, template, linkrel, dir, fullpath, ext, url, config, outfileG
     addPyListings(document, dir)
     addHTMLListings(document, dir)
     addPlainListings(document, dir)
-    putInToC(template, generateToC(document))
+    toc = generateToC(document)
+    putInToC(template, toc)
     footnotes(document)
     notes(document)
 
@@ -796,13 +837,19 @@ def munge(document, template, linkrel, dir, fullpath, ext, url, config, outfileG
     setVersion(template, config.get('version', ''))
 
     # Insert the document into the template
-    chapterNumber = htmlbook.getNumber(fullpath)
+    chapterNumber = None
+    reference = None
+    if book is not None:
+        chapterNumber = book.getNumber(fullpath)
+        reference = book.getReference(fullpath)
+
     title = domhelpers.findNodesNamed(document, 'title')[0].childNodes
     setTitle(template, title, chapterNumber)
     if numberer.getNumberSections() and chapterNumber:
         numberDocument(document, chapterNumber)
-    index(document, outfileGenerator(os.path.split(fullpath)[1], ext),
-          htmlbook.getReference(fullpath))
+    index(document, outputFilename, reference, indexer)
+    if contents is not None:
+        contents.addChapterTableOfContents(toc, title, outputFilename, reference)
 
     authors = domhelpers.findNodesNamed(document, 'link')
     authors = [(node.getAttribute('title',''), node.getAttribute('href', ''))
@@ -814,6 +861,7 @@ def munge(document, template, linkrel, dir, fullpath, ext, url, config, outfileG
                                                               "body")[0]
     tmplbody.childNodes = body.childNodes
     tmplbody.setAttribute("class", "content")
+munge = doDocument
 
 
 def parseFileAndReport(filename):
@@ -849,9 +897,13 @@ def makeSureDirectoryExists(filename):
     if (not os.path.exists(dirname)):
         os.makedirs(dirname)
 
-def doFile(filename, linkrel, ext, url, templ, options={}, outfileGenerator=getOutputFileName):
+
+
+def doFile(filename, linkrel, ext, url, templ, options={},
+           outfileGenerator=getOutputFileName, book=None,
+           indexer=None, toc=None, outputFilename=None):
     """
-    Process the input document at C{filename} and write an output document.
+    Process the input document in C{filename} and write an output document.
 
     @type filename: C{str}
     @param filename: The path to the input file which will be processed.
@@ -892,10 +944,13 @@ def doFile(filename, linkrel, ext, url, templ, options={}, outfileGenerator=getO
 
     @return: C{None}
     """
+    # XXX Deprecate outfileGenerator
+    if outputFilename is None:
+        outputFilename = outfileGenerator(filename, ext)
     doc = parseFileAndReport(filename)
     clonedNode = templ.cloneNode(1)
-    munge(doc, clonedNode, linkrel, os.path.dirname(filename), filename, ext,
-          url, options, outfileGenerator)
-    newFilename = outfileGenerator(filename, ext)
-    makeSureDirectoryExists(newFilename)
-    clonedNode.writexml(open(newFilename, 'wb'))
+    doDocument(
+        doc, clonedNode, linkrel, os.path.dirname(filename), filename,
+        ext, url, options, None, book, indexer, toc, outputFilename)
+    makeSureDirectoryExists(outputFilename)
+    clonedNode.writexml(file(outputFilename, 'wb'))

@@ -1,0 +1,9 @@
+
+* make toc.generateTableOfContents return a lore input document
+* process indexer and toc documents re-using existing processing code
+* roll up some mountains of parameters into an object with some attributes, I hope
+* write unit tests
+* write documentation
+* deprecate bad APIs
+* unglobalize numberer
+* unglobalize book
