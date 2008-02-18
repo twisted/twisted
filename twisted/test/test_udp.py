@@ -1,8 +1,11 @@
 # -*- test-case-name: twisted.test.test_udp -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
+"""
+Tests for implementations of L{IReactorUDP} and L{IReactorMulticast}.
+"""
+
 from twisted.trial import unittest, util
 
 from twisted.internet.defer import Deferred, gatherResults, maybeDeferred
@@ -108,30 +111,7 @@ class BadClient(protocol.DatagramProtocol):
 
 
 
-class PortCleanerUpper(unittest.TestCase):
-    callToLoseCnx = 'loseConnection'
-    def setUp(self):
-        self.ports = []
-
-    def tearDown(self):
-        return self.cleanPorts(*self.ports)
-
-    def _addPorts(self, *ports):
-        for p in ports:
-            self.ports.append(p)
-
-    def cleanPorts(self, *ports):
-        for p in ports:
-            if not hasattr(p, 'disconnected'):
-                raise RuntimeError(
-                    "You handed something to cleanPorts that"
-                    " doesn't have a disconnected attribute, dummy!")
-        ds = [ defer.maybeDeferred(getattr(p, self.callToLoseCnx))
-               for p in ports if not p.disconnected ]
-        return defer.gatherResults(ds)
-
-
-class OldConnectedUDPTestCase(PortCleanerUpper):
+class OldConnectedUDPTestCase(unittest.TestCase):
     def testStartStop(self):
         client = Client()
         d = client.startedDeferred = defer.Deferred()

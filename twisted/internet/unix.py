@@ -13,14 +13,15 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 
 # System imports
 import os, stat, socket
-from errno import *
+from errno import EINTR, EMSGSIZE, EAGAIN, EWOULDBLOCK, ECONNREFUSED
+
 from zope.interface import implements, implementsOnly, implementedBy
 
 if not hasattr(socket, 'AF_UNIX'):
-    raise ImportError, "UNIX sockets not supported on this platform"
+    raise ImportError("UNIX sockets not supported on this platform")
 
 # Twisted imports
-from twisted.internet import base, tcp, udp, error, interfaces, protocol, address, defer
+from twisted.internet import base, tcp, udp, error, interfaces, protocol, address
 from twisted.internet.error import CannotListenError
 from twisted.python import lockfile, log, reflect, failure
 
@@ -49,10 +50,11 @@ class Port(tcp.Port):
         self.wantPID = wantPID
 
     def __repr__(self):
+        factoryName = reflect.qual(self.factory.__class__)
         if hasattr(self, 'socket'):
-            return '<%s on %r>' % (self.factory.__class__, self.port)
+            return '<%s on %r>' % (factoryName, self.port)
         else:
-            return '<%s (not listening)>' % (self.factory.__class__,)
+            return '<%s (not listening)>' % (factoryName,)
 
     def _buildAddr(self, name):
         return address.UNIXAddress(name)
@@ -162,10 +164,11 @@ class DatagramPort(udp.Port):
 
 
     def __repr__(self):
+        protocolName = reflect.qual(self.protocol.__class__,)
         if hasattr(self, 'socket'):
-            return '<%s on %r>' % (self.protocol.__class__, self.port)
+            return '<%s on %r>' % (protocolName, self.port)
         else:
-            return '<%s (not listening)>' % (self.protocol.__class__,)
+            return '<%s (not listening)>' % (protocolName,)
 
 
     def _bindSocket(self):

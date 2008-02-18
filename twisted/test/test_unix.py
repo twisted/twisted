@@ -1,64 +1,18 @@
-# -*- test-case-name: twisted.test.test_unix -*-
-# Copyright (c) 2001-2004,2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+Tests for implementations of L{IReactorUNIX} and L{IReactorUNIXDatagram}.
+"""
 
-import stat, os, sys
+import stat, os, sys, types
 import socket
 
 from twisted.internet import interfaces, reactor, protocol, error, address, defer, utils
 from twisted.python import lockfile
 from twisted.trial import unittest
 
-
-class MyProtocol(protocol.Protocol):
-    made = closed = failed = 0
-    data = ""
-    def connectionMade(self):
-        self.deferred.callback(None)
-
-    def dataReceived(self, data):
-        self.data += data
-
-    def connectionLost(self, reason):
-        self.closed = 1
-
-class TestClientFactory(protocol.ClientFactory):
-    protocol = None
-
-    def __init__(self, testcase, name):
-        self.testcase = testcase
-        self.name = name
-        self.deferred = defer.Deferred()
-
-    def buildProtocol(self, addr):
-        self.testcase.assertEquals(address.UNIXAddress(self.name), addr)
-        self.protocol = MyProtocol()
-        self.protocol.deferred = self.deferred
-        return self.protocol
-
-class Factory(protocol.Factory):
-    protocol = stopped = None
-
-    def __init__(self, testcase, name, peername=''):
-        self.testcase = testcase
-        self.name = name
-        self.peername = peername
-        self.deferred = defer.Deferred()
-
-    def stopFactory(self):
-        self.stopped = True
-
-    def buildProtocol(self, addr):
-        # os.path.samefile fails on ('', '')
-        if self.peername or addr.name:
-            self.testcase.assertEquals(address.UNIXAddress(self.peername), addr,
-                                       '%r != %r' % (self.peername, addr.name))
-        else:
-            self.testcase.assertEquals(self.peername, addr.name)
-        self.protocol = p = MyProtocol()
-        self.protocol.deferred = self.deferred
-        return p
+from twisted.test.test_tcp import MyServerFactory, MyClientFactory
 
 
 class FailedConnectionClientFactory(protocol.ClientFactory):
@@ -69,101 +23,135 @@ class FailedConnectionClientFactory(protocol.ClientFactory):
         self.onFail.errback(reason)
 
 
-class PortCleanerUpper(unittest.TestCase):
-    callToLoseCnx = 'loseConnection'
-    def setUp(self):
-        self.ports = []
 
-    def tearDown(self):
-        return self.cleanPorts(*self.ports)
-
-    def _addPorts(self, *ports):
-        for p in ports:
-            self.ports.append(p)
-
-    def cleanPorts(self, *ports):
-        ds = [ defer.maybeDeferred(p.loseConnection)
-               for p in ports if p.connected ]
-        return defer.gatherResults(ds)
-
-
-class UnixSocketTestCase(PortCleanerUpper):
-    """Test unix sockets."""
-
-    def testPeerBind(self):
-        """assert the remote endpoint (getPeer) on the receiving end matches
-           the local endpoint (bind) on the connecting end, for unix sockets"""
+class UnixSocketTestCase(unittest.TestCase):
+    """
+    Test unix sockets.
+    """
+    def test_peerBind(self):
+        """
+        The address passed to the server factory's C{buildProtocol} method and
+        the address returned by the connected protocol's transport's C{getPeer}
+        method match the address the client socket is bound to.
+        """
         filename = self.mktemp()
         peername = self.mktemp()
-        f = Factory(self, filename, peername=peername)
-        l = reactor.listenUNIX(filename, f)
-        self._sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self._sock.bind(peername)
-        self._sock.connect(filename)
-        d = f.deferred
-        def done(x):
-            self._addPorts(l)
-            self._sock.close()
-            del self._sock
-            return x
-        d.addBoth(done)
+        serverFactory = MyServerFactory()
+        connMade = serverFactory.protocolConnectionMade = defer.Deferred()
+        unixPort = reactor.listenUNIX(filename, serverFactory)
+        self.addCleanup(unixPort.stopListening)
+        unixSocket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.addCleanup(unixSocket.close)
+        unixSocket.bind(peername)
+        unixSocket.connect(filename)
+        def cbConnMade(proto):
+            expected = address.UNIXAddress(peername)
+            self.assertEqual(serverFactory.peerAddresses, [expected])
+            self.assertEqual(proto.transport.getPeer(), expected)
+        connMade.addCallback(cbConnMade)
+        return connMade
+
+
+    def test_dumber(self):
+        """
+        L{IReactorUNIX.connectUNIX} can be used to connect a client to a server
+        started with L{IReactorUNIX.listenUNIX}.
+        """
+        filename = self.mktemp()
+        serverFactory = MyServerFactory()
+        serverConnMade = defer.Deferred()
+        serverFactory.protocolConnectionMade = serverConnMade
+        unixPort = reactor.listenUNIX(filename, serverFactory)
+        self.addCleanup(unixPort.stopListening)
+        clientFactory = MyClientFactory()
+        clientConnMade = defer.Deferred()
+        clientFactory.protocolConnectionMade = clientConnMade
+        c = reactor.connectUNIX(filename, clientFactory)
+        d = defer.gatherResults([serverConnMade, clientConnMade])
+        def allConnected((serverProtocol, clientProtocol)):
+
+            # Incidental assertion which may or may not be redundant with some
+            # other test.  This probably deserves its own test method.
+            self.assertEqual(clientFactory.peerAddresses,
+                             [address.UNIXAddress(filename)])
+
+            clientProtocol.transport.loseConnection()
+            serverProtocol.transport.loseConnection()
+        d.addCallback(allConnected)
         return d
 
-    def testDumber(self):
-        filename = self.mktemp()
-        f = Factory(self, filename)
-        l = reactor.listenUNIX(filename, f)
-        tcf = TestClientFactory(self, filename)
-        c = reactor.connectUNIX(filename, tcf)
-        d = defer.gatherResults([f.deferred, tcf.deferred])
-        d.addCallback(lambda x : self._addPorts(l, c.transport,
-                                                tcf.protocol.transport,
-                                                f.protocol.transport))
-        return d
 
-    def testMode(self):
+    def test_mode(self):
+        """
+        The UNIX socket created by L{IReactorUNIX.listenUNIX} is created with
+        the mode specified.
+        """
+        mode = 0600
         filename = self.mktemp()
-        f = Factory(self, filename)
-        l = reactor.listenUNIX(filename, f, mode = 0600)
-        self.assertEquals(stat.S_IMODE(os.stat(filename)[0]), 0600)
-        tcf = TestClientFactory(self, filename)
-        c = reactor.connectUNIX(filename, tcf)
-        self._addPorts(l, c.transport)
+        serverFactory = MyServerFactory()
+        unixPort = reactor.listenUNIX(filename, serverFactory, mode=mode)
+        self.addCleanup(unixPort.stopListening)
+        self.assertEquals(stat.S_IMODE(os.stat(filename).st_mode), mode)
 
 
-    def testPIDFile(self):
+    def test_pidFile(self):
+        """
+        A lockfile is created and locked when L{IReactorUNIX.listenUNIX} is
+        called and released when the Deferred returned by the L{IListeningPort}
+        provider's C{stopListening} method is called back.
+        """
         filename = self.mktemp()
-        f = Factory(self, filename)
-        l = reactor.listenUNIX(filename, f, mode = 0600, wantPID=1)
-        self.failUnless(lockfile.isLocked(filename + ".lock"))
-        tcf = TestClientFactory(self, filename)
-        c = reactor.connectUNIX(filename, tcf, checkPID=1)
-        d = defer.gatherResults([f.deferred, tcf.deferred])
-        def _portStuff(ignored):
-            self._addPorts(l, c.transport, tcf.protocol.transport,
-                           f.protocol.transport)
-            return self.cleanPorts(*self.ports)
+        serverFactory = MyServerFactory()
+        serverConnMade = defer.Deferred()
+        serverFactory.protocolConnectionMade = serverConnMade
+        unixPort = reactor.listenUNIX(filename, serverFactory, wantPID=True)
+        self.assertTrue(lockfile.isLocked(filename + ".lock"))
+
+        # XXX This part would test something about the checkPID parameter, but
+        # it doesn't actually.  It should be rewritten to test the several
+        # different possible behaviors.  -exarkun
+        clientFactory = MyClientFactory()
+        clientConnMade = defer.Deferred()
+        clientFactory.protocolConnectionMade = clientConnMade
+        c = reactor.connectUNIX(filename, clientFactory, checkPID=1)
+
+        d = defer.gatherResults([serverConnMade, clientConnMade])
+        def _portStuff((serverProtocol, clientProto)):
+
+            # Incidental assertion which may or may not be redundant with some
+            # other test.  This probably deserves its own test method.
+            self.assertEqual(clientFactory.peerAddresses,
+                             [address.UNIXAddress(filename)])
+
+            clientProto.transport.loseConnection()
+            serverProtocol.transport.loseConnection()
+            return unixPort.stopListening()
+        d.addCallback(_portStuff)
+
         def _check(ignored):
             self.failIf(lockfile.isLocked(filename + ".lock"), 'locked')
-        d.addCallback(_portStuff)
         d.addCallback(_check)
         return d
 
 
-    def testSocketLocking(self):
+    def test_socketLocking(self):
+        """
+        L{IReactorUNIX.listenUNIX} raises L{error.CannotListenError} if passed
+        the name of a file on which a server is already listening.
+        """
         filename = self.mktemp()
-        f = Factory(self, filename)
-        l = reactor.listenUNIX(filename, f, wantPID=True)
+        serverFactory = MyServerFactory()
+        unixPort = reactor.listenUNIX(filename, serverFactory, wantPID=True)
 
         self.assertRaises(
             error.CannotListenError,
-            reactor.listenUNIX, filename, f, wantPID=True)
+            reactor.listenUNIX, filename, serverFactory, wantPID=True)
 
         def stoppedListening(ign):
-            l = reactor.listenUNIX(filename, f, wantPID=True)
-            return l.stopListening()
+            unixPort = reactor.listenUNIX(filename, serverFactory, wantPID=True)
+            return unixPort.stopListening()
 
-        return l.stopListening().addCallback(stoppedListening)
+        return unixPort.stopListening().addCallback(stoppedListening)
 
 
     def _uncleanSocketTest(self, callback):
@@ -177,15 +165,26 @@ class UnixSocketTestCase(PortCleanerUpper):
         return d
 
 
-    def testUncleanServerSocketLocking(self):
+    def test_uncleanServerSocketLocking(self):
+        """
+        If passed C{True} for the C{wantPID} parameter, a server can be started
+        listening with L{IReactorUNIX.listenUNIX} when passed the name of a
+        file on which a previous server which has not exited cleanly has been
+        listening using the C{wantPID} option.
+        """
         def ranStupidChild(ign):
             # If this next call succeeds, our lock handling is correct.
-            p = reactor.listenUNIX(self.filename, Factory(self, self.filename), wantPID=True)
+            p = reactor.listenUNIX(self.filename, MyServerFactory(), wantPID=True)
             return p.stopListening()
         return self._uncleanSocketTest(ranStupidChild)
 
 
-    def testUncleanSocketLockingFromThePerspectiveOfAClientConnectingToTheDeadServerSocket(self):
+    def test_connectToUncleanServer(self):
+        """
+        If passed C{True} for the C{checkPID} parameter, a client connection
+        attempt made with L{IReactorUNIX.connectUNIX} fails with
+        L{error.BadFileError}.
+        """
         def ranStupidChild(ign):
             d = defer.Deferred()
             f = FailedConnectionClientFactory(d)
@@ -194,16 +193,69 @@ class UnixSocketTestCase(PortCleanerUpper):
         return self._uncleanSocketTest(ranStupidChild)
 
 
-    def testRepr(self):
+    def _reprTest(self, serverFactory, factoryName):
+        """
+        Test the C{__str__} and C{__repr__} implementations of a UNIX port when
+        used with the given factory.
+        """
         filename = self.mktemp()
-        f = Factory(self, filename)
-        p = reactor.listenUNIX(filename, f)
-        self.failIf(str(p).find(filename) == -1)
+        unixPort = reactor.listenUNIX(filename, serverFactory)
 
+        connectedString = "<%s on %r>" % (factoryName, filename)
+        self.assertEqual(repr(unixPort), connectedString)
+        self.assertEqual(str(unixPort), connectedString)
+
+        d = defer.maybeDeferred(unixPort.stopListening)
         def stoppedListening(ign):
-            self.failIf(str(p).find(filename) != -1)
+            unconnectedString = "<%s (not listening)>" % (factoryName,)
+            self.assertEqual(repr(unixPort), unconnectedString)
+            self.assertEqual(str(unixPort), unconnectedString)
+        d.addCallback(stoppedListening)
+        return d
 
-        return defer.maybeDeferred(p.stopListening).addCallback(stoppedListening)
+
+    def test_reprWithClassicFactory(self):
+        """
+        The two string representations of the L{IListeningPort} returned by
+        L{IReactorUNIX.listenUNIX} contains the name of the classic factory
+        class being used and the filename on which the port is listening or
+        indicates that the port is not listening.
+        """
+        class ClassicFactory:
+            def doStart(self):
+                pass
+
+            def doStop(self):
+                pass
+
+        # Sanity check
+        self.assertIsInstance(ClassicFactory, types.ClassType)
+
+        return self._reprTest(
+            ClassicFactory(), "twisted.test.test_unix.ClassicFactory")
+
+
+    def test_reprWithNewStyleFactory(self):
+        """
+        The two string representations of the L{IListeningPort} returned by
+        L{IReactorUNIX.listenUNIX} contains the name of the new-style factory
+        class being used and the filename on which the port is listening or
+        indicates that the port is not listening.
+        """
+        class NewStyleFactory(object):
+            def doStart(self):
+                pass
+
+            def doStop(self):
+                pass
+
+        # Sanity check
+        self.assertIsInstance(NewStyleFactory, type)
+
+        return self._reprTest(
+            NewStyleFactory(), "twisted.test.test_unix.NewStyleFactory")
+
+
 
 class ClientProto(protocol.ConnectedDatagramProtocol):
     started = stopped = False
@@ -245,15 +297,25 @@ class ServerProto(protocol.DatagramProtocol):
         self.gotwhat = data
         self.deferredGotWhat.callback(None)
 
-class DatagramUnixSocketTestCase(PortCleanerUpper):
-    """Test datagram UNIX sockets."""
-    def testExchange(self):
+
+
+class DatagramUnixSocketTestCase(unittest.TestCase):
+    """
+    Test datagram UNIX sockets.
+    """
+    def test_exchange(self):
+        """
+        Test that a datagram can be sent to and received by a server and vice
+        versa.
+        """
         clientaddr = self.mktemp()
         serveraddr = self.mktemp()
         sp = ServerProto()
         cp = ClientProto()
         s = reactor.listenUNIXDatagram(serveraddr, sp)
-        c = reactor.connectUNIXDatagram(serveraddr, cp, bindAddress = clientaddr)
+        self.addCleanup(s.stopListening)
+        c = reactor.connectUNIXDatagram(serveraddr, cp, bindAddress=clientaddr)
+        self.addCleanup(c.stopListening)
 
         d = defer.gatherResults([sp.deferredStarted, cp.deferredStarted])
         def write(ignored):
@@ -261,42 +323,93 @@ class DatagramUnixSocketTestCase(PortCleanerUpper):
             return defer.gatherResults([sp.deferredGotWhat,
                                         cp.deferredGotBack])
 
-        def cleanup(ignored):
-            d1 = defer.maybeDeferred(s.stopListening)
-            d1.addCallback(lambda x : os.unlink(clientaddr))
-            d2 = defer.maybeDeferred(c.stopListening)
-            d2.addCallback(lambda x : os.unlink(serveraddr))
-            return defer.gatherResults([d1, d2])
-
         def _cbTestExchange(ignored):
             self.failUnlessEqual("hi", sp.gotwhat)
             self.failUnlessEqual(clientaddr, sp.gotfrom)
             self.failUnlessEqual("hi back", cp.gotback)
 
         d.addCallback(write)
-        d.addCallback(cleanup)
         d.addCallback(_cbTestExchange)
         return d
 
-    def testCannotListen(self):
+
+    def test_cannotListen(self):
+        """
+        L{IReactorUNIXDatagram.listenUNIXDatagram} raises
+        L{error.CannotListenError} if the unix socket specified is already in
+        use.
+        """
         addr = self.mktemp()
         p = ServerProto()
         s = reactor.listenUNIXDatagram(addr, p)
         self.failUnlessRaises(error.CannotListenError, reactor.listenUNIXDatagram, addr, p)
         s.stopListening()
         os.unlink(addr)
+
     # test connecting to bound and connected (somewhere else) address
 
-    def testRepr(self):
+    def _reprTest(self, serverProto, protocolName):
+        """
+        Test the C{__str__} and C{__repr__} implementations of a UNIX datagram
+        port when used with the given protocol.
+        """
         filename = self.mktemp()
-        f = ServerProto()
-        p = reactor.listenUNIXDatagram(filename, f)
-        self.failIf(str(p).find(filename) == -1)
+        unixPort = reactor.listenUNIXDatagram(filename, serverProto)
 
+        connectedString = "<%s on %r>" % (protocolName, filename)
+        self.assertEqual(repr(unixPort), connectedString)
+        self.assertEqual(str(unixPort), connectedString)
+
+        stopDeferred = defer.maybeDeferred(unixPort.stopListening)
         def stoppedListening(ign):
-            self.failIf(str(p).find(filename) != -1)
+            unconnectedString = "<%s (not listening)>" % (protocolName,)
+            self.assertEqual(repr(unixPort), unconnectedString)
+            self.assertEqual(str(unixPort), unconnectedString)
+        stopDeferred.addCallback(stoppedListening)
+        return stopDeferred
 
-        return defer.maybeDeferred(p.stopListening).addCallback(stoppedListening)
+
+    def test_reprWithClassicProtocol(self):
+        """
+        The two string representations of the L{IListeningPort} returned by
+        L{IReactorUNIXDatagram.listenUNIXDatagram} contains the name of the
+        classic protocol class being used and the filename on which the port is
+        listening or indicates that the port is not listening.
+        """
+        class ClassicProtocol:
+            def makeConnection(self, transport):
+                pass
+
+            def doStop(self):
+                pass
+
+        # Sanity check
+        self.assertIsInstance(ClassicProtocol, types.ClassType)
+
+        return self._reprTest(
+            ClassicProtocol(), "twisted.test.test_unix.ClassicProtocol")
+
+
+    def test_reprWithNewStyleProtocol(self):
+        """
+        The two string representations of the L{IListeningPort} returned by
+        L{IReactorUNIXDatagram.listenUNIXDatagram} contains the name of the
+        new-style protocol class being used and the filename on which the port
+        is listening or indicates that the port is not listening.
+        """
+        class NewStyleProtocol(object):
+            def makeConnection(self, transport):
+                pass
+
+            def doStop(self):
+                pass
+
+        # Sanity check
+        self.assertIsInstance(NewStyleProtocol, type)
+
+        return self._reprTest(
+            NewStyleProtocol(), "twisted.test.test_unix.NewStyleProtocol")
+
 
 
 if not interfaces.IReactorUNIX(reactor, None):
