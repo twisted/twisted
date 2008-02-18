@@ -83,10 +83,14 @@ def filenameGenerator2(originalFileName, outputExtension):
 DONTCARE = object()
 
 
-class TestFactory(unittest.TestCase):
-
-    file = sp('simple.html')
-    linkrel = ""
+class TempFileMixin:
+    def makeTemp(self, *filenames):
+        tmp = self.mktemp()
+        os.mkdir(tmp)
+        for filename in filenames:
+            tmpFile = join(tmp, filename)
+            shutil.copyfile(sp(filename), tmpFile)
+        return tmp
 
 
     def assertEqualFiles1(self, exp, act):
@@ -119,15 +123,6 @@ class TestFactory(unittest.TestCase):
         self.assertEquals(expected, actual)
 
 
-    def makeTemp(self, *filenames):
-        tmp = self.mktemp()
-        os.mkdir(tmp)
-        for filename in filenames:
-            tmpFile = join(tmp, filename)
-            shutil.copyfile(sp(filename), tmpFile)
-        return tmp
-
-
     def assertIsTextNode(self, node, contents=None, parent=DONTCARE):
         """
         Check that C{node} is an instance of C{microdom.Text} and
@@ -141,6 +136,12 @@ class TestFactory(unittest.TestCase):
         if parent is not DONTCARE:
             self.assertEquals(parent, node.parentNode)
 
+
+
+class TestFactory(unittest.TestCase, TempFileMixin):
+
+    file = sp('simple.html')
+    linkrel = ""
 
     def test_processingFunctionFactory(self):
         htmlGenerator = factory.generate_html(options)
@@ -492,6 +493,147 @@ class TestFactory(unittest.TestCase):
                 self.assertEquals(dct[k], expected[k])
 
 
+    def test_setIndexLink(self):
+        """
+        Tests to make sure that index links are processed when an index page
+        exists and removed when there is not.
+        """
+        templ = microdom.parse(open(d['template']))
+        indexFilename = 'theIndexFile'
+        numLinks = len(domhelpers.findElementsWithAttribute(templ,
+                                                            "class",
+                                                            "index-link"))
+
+        # if our testing template has no index-link nodes, complain about it
+        self.assertNotEquals(
+            [],
+            domhelpers.findElementsWithAttribute(templ,
+                                                 "class",
+                                                 "index-link"))
+
+        tree.setIndexLink(templ, indexFilename)
+
+        self.assertEquals(
+            [],
+            domhelpers.findElementsWithAttribute(templ,
+                                                 "class",
+                                                 "index-link"))
+
+        indexLinks = domhelpers.findElementsWithAttribute(templ,
+                                                          "href",
+                                                          indexFilename)
+        self.assertTrue(len(indexLinks) >= numLinks)
+
+        templ = microdom.parse(open(d['template']))
+        self.assertNotEquals(
+            [],
+            domhelpers.findElementsWithAttribute(templ,
+                                                 "class",
+                                                 "index-link"))
+        indexFilename = None
+
+        tree.setIndexLink(templ, indexFilename)
+
+        self.assertEquals(
+            [],
+            domhelpers.findElementsWithAttribute(templ,
+                                                 "class",
+                                                 "index-link"))
+
+
+
+class LatexSpitterTestCase(unittest.TestCase):
+    """
+    Tests for the Latex output plugin.
+    """
+
+    def test_indexedSpan(self):
+        """
+        Test processing of a span tag with an index class results in a latex
+        \\index directive the correct value.
+        """
+        root = microdom.parseString('<span class="index" value="name" />')
+        dom = root.documentElement
+        out = StringIO()
+        spitter = LatexSpitter(out.write)
+        spitter.visitNode(dom)
+        self.assertEqual(out.getvalue(), u'\\index{name}\n')
+
+
+
+class TableOfContentsTests(unittest.TestCase):
+    """
+    Tests for L{TableOfContents}.
+    """
+    def test_emptyCreation(self):
+        """
+        L{TableOfContents} should have an empty C{toc} list immediately after
+        instantiation.
+        """
+        contents = TableOfContents()
+        self.assertEqual(contents.toc, [])
+
+
+    def test_addChapterTableOfContents(self):
+        """
+        L{TableOfContents.addChapterTableOfContents} should create a new
+        L{TocEntry} and append it to the C{toc} list.
+        """
+        tree = object()
+        title = object()
+        outfile = object()
+        reference = object()
+        contents = TableOfContents()
+        contents.addChapterTableOfContents(tree, title, outfile, reference)
+        self.assertEqual(len(contents.toc), 1)
+        self.assertTrue(isinstance(contents.toc[0], TocEntry))
+        self.assertIdentical(contents.toc[0].tree, tree)
+        self.assertIdentical(contents.toc[0].title, title)
+        self.assertIdentical(contents.toc[0].outfile, outfile)
+        self.assertIdentical(contents.toc[0].reference, reference)
+
+
+    def test_clearTableOfContents(self):
+        """
+        L{TableOfContents.clearTableOfContents} should empty the C{toc} list.
+        """
+        contents = TableOfContents()
+        contents.addChapterTableOfContents(None, None, None, None)
+        contents.clearTableOfContents()
+        self.assertEqual(contents.toc, [])
+
+
+    def test_toDocument(self):
+        """
+        L{TableOfContents.toDocument} should return a copy of
+        L{TableOfContents._baseDocument} with content appended to the body
+        node.
+        """
+        tree = microdom.Element('div')
+        tree.setAttribute('chapter', 'content')
+        title = u'toDocument test'
+        outfile = u'some filename'
+        reference = u"6"
+        contents = TableOfContents()
+        contents._baseDocument = microdom.Document()
+        contents._baseDocument.appendChild(
+            contents._baseDocument.createElement('body'))
+        contents.addChapterTableOfContents(tree, title, outfile, reference)
+        result = contents.toDocument()
+        [body] = domhelpers.findElementsWithAttribute(result, 'class', 'body')
+        (heading, content) = body.childNodes
+        self.assertEqual(heading.tagName, 'span')
+        self.assertEqual(heading.childNodes[0].nodeValue, reference)
+        self.assertEqual(heading.childNodes[1].tagName, 'a')
+        self.assertEqual(heading.childNodes[1].getAttribute('href'), outfile)
+        self.assertIdentical(content, tree)
+
+
+
+class ScriptTests(unittest.TestCase, TempFileMixin):
+    """
+    Tests for L{twisted.lore.scripts.lore}.
+    """
     def test_runningLore(self):
         options = lore.Options()
         tmp = self.makeTemp('lore_index_test.xhtml')
@@ -653,139 +795,3 @@ class TestFactory(unittest.TestCase):
             join(tmp, "lore_numbering_test.tns"))
         self.assertEqualFiles1("sections_not_numbered_out2.html",
             join(tmp, "lore_numbering_test2.tns"))
-
-
-    def test_setIndexLink(self):
-        """
-        Tests to make sure that index links are processed when an index page
-        exists and removed when there is not.
-        """
-        templ = microdom.parse(open(d['template']))
-        indexFilename = 'theIndexFile'
-        numLinks = len(domhelpers.findElementsWithAttribute(templ,
-                                                            "class",
-                                                            "index-link"))
-
-        # if our testing template has no index-link nodes, complain about it
-        self.assertNotEquals(
-            [],
-            domhelpers.findElementsWithAttribute(templ,
-                                                 "class",
-                                                 "index-link"))
-
-        tree.setIndexLink(templ, indexFilename)
-
-        self.assertEquals(
-            [],
-            domhelpers.findElementsWithAttribute(templ,
-                                                 "class",
-                                                 "index-link"))
-
-        indexLinks = domhelpers.findElementsWithAttribute(templ,
-                                                          "href",
-                                                          indexFilename)
-        self.assertTrue(len(indexLinks) >= numLinks)
-
-        templ = microdom.parse(open(d['template']))
-        self.assertNotEquals(
-            [],
-            domhelpers.findElementsWithAttribute(templ,
-                                                 "class",
-                                                 "index-link"))
-        indexFilename = None
-
-        tree.setIndexLink(templ, indexFilename)
-
-        self.assertEquals(
-            [],
-            domhelpers.findElementsWithAttribute(templ,
-                                                 "class",
-                                                 "index-link"))
-
-
-
-class LatexSpitterTestCase(unittest.TestCase):
-    """
-    Tests for the Latex output plugin.
-    """
-
-    def test_indexedSpan(self):
-        """
-        Test processing of a span tag with an index class results in a latex
-        \\index directive the correct value.
-        """
-        root = microdom.parseString('<span class="index" value="name" />')
-        dom = root.documentElement
-        out = StringIO()
-        spitter = LatexSpitter(out.write)
-        spitter.visitNode(dom)
-        self.assertEqual(out.getvalue(), u'\\index{name}\n')
-
-
-
-class TableOfContentsTests(unittest.TestCase):
-    """
-    Tests for L{TableOfContents}.
-    """
-    def test_emptyCreation(self):
-        """
-        L{TableOfContents} should have an empty C{toc} list immediately after
-        instantiation.
-        """
-        contents = TableOfContents()
-        self.assertEqual(contents.toc, [])
-
-
-    def test_addChapterTableOfContents(self):
-        """
-        L{TableOfContents.addChapterTableOfContents} should create a new
-        L{TocEntry} and append it to the C{toc} list.
-        """
-        tree = object()
-        title = object()
-        outfile = object()
-        reference = object()
-        contents = TableOfContents()
-        contents.addChapterTableOfContents(tree, title, outfile, reference)
-        self.assertEqual(len(contents.toc), 1)
-        self.assertTrue(isinstance(contents.toc[0], TocEntry))
-        self.assertIdentical(contents.toc[0].tree, tree)
-        self.assertIdentical(contents.toc[0].title, title)
-        self.assertIdentical(contents.toc[0].outfile, outfile)
-        self.assertIdentical(contents.toc[0].reference, reference)
-
-
-    def test_clearTableOfContents(self):
-        """
-        L{TableOfContents.clearTableOfContents} should empty the C{toc} list.
-        """
-        contents = TableOfContents()
-        contents.addChapterTableOfContents(None, None, None, None)
-        contents.clearTableOfContents()
-        self.assertEqual(contents.toc, [])
-
-
-    def test_toDocument(self):
-        """
-        L{TableOfContents.toDocument} should return a copy of
-        L{TableOfContents._baseDocument} with content appended to the body
-        node.
-        """
-        tree = microdom.Element('div')
-        tree.setAttribute('chapter', 'content')
-        title = u'toDocument test'
-        outfile = u'some filename'
-        reference = u"6"
-        contents = TableOfContents()
-        contents._baseDocument = microdom.Document()
-        contents._baseDocument.appendChild(
-            contents._baseDocument.createElement('body'))
-        contents.addChapterTableOfContents(tree, title, outfile, reference)
-        result = contents.toDocument()
-        [body] = domhelpers.findElementsWithAttribute(result, 'class', 'body')
-        (heading, content) = body.childNodes
-        self.assertEqual(heading.tagName, 'span')
-        self.assertEqual(heading.childNodes[0].nodeValue, reference)
-        self.assertEqual(heading.childNodes[1].tagName, 'a')
-        self.assertEqual(heading.childNodes[1].getAttribute('href'), outfile)
-        self.assertIdentical(content, tree)
