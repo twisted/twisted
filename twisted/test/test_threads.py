@@ -114,7 +114,7 @@ class ReactorThreadsTestCase(unittest.TestCase):
         def cb1(ign):
             def threadedFunc():
                 try:
-                    r = threads.blockingCallFromThread(reactorFunc)
+                    r = threads.blockingCallFromThread(reactor, reactorFunc)
                 except Exception, e:
                     errors.append(e)
                 else:

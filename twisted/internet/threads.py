@@ -59,12 +59,14 @@ def callMultipleInThread(tupleList):
     reactor.callInThread(_runMultiple, tupleList)
 
 
-def blockingCallFromThread(f, *a, **kw):
+def blockingCallFromThread(reactor, f, *a, **kw):
     """
     Run a function in the reactor from a thread, and wait for the result
-    synchronously, i.e. until the callback chain returned by the function get a
-    result.
+    synchronously, i.e. until the callback chain returned by the function
+    get a result.
 
+    @param reactor: The L{IReactorThreads} provider which will be used to
+        schedule the function call.
     @param f: the callable to run in the reactor thread
     @type f: any callable.
     @param a: the arguments to pass to C{f}.
@@ -73,7 +75,6 @@ def blockingCallFromThread(f, *a, **kw):
     @return: the result of the callback chain.
     @raise: any error raised during the callback chain.
     """
-    from twisted.internet import reactor
     queue = Queue.Queue()
     def _callFromThread():
         result = defer.maybeDeferred(f, *a, **kw)

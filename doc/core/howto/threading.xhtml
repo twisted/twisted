@@ -109,7 +109,7 @@ from twisted.web.error import Error
 def inThread():
     try:
         result = threads.blockingCallFromThread(
-            getPage, "http://twistedmatrix.com/")
+            reactor, getPage, "http://twistedmatrix.com/")
     except Error, exc:
         print exc
     else:

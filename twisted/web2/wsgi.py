@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.web2.test.test_wsgi -*-
 # Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -9,6 +10,7 @@ import os, threading
 from zope.interface import implements
 
 from twisted.internet import defer, threads
+from twisted.internet import reactor
 from twisted.python import log, failure
 from twisted.web2 import http
 from twisted.web2 import iweb
@@ -38,7 +40,6 @@ class WSGIResource(object):
         self.application = application
 
     def renderHTTP(self, req):
-        from twisted.internet import reactor
         # Do stuff with WSGIHandler.
         handler = WSGIHandler(self.application, req)
         # Get deferred
@@ -70,7 +71,8 @@ class InputStream(object):
         # Called in application thread
         if size < 0:
             size = None
-        return threads.blockingCallFromThread(self.stream.readExactly, size)
+        return threads.blockingCallFromThread(
+            reactor, self.stream.readExactly, size)
 
     def readline(self, size=None):
         """
@@ -92,7 +94,7 @@ class InputStream(object):
             size = None
 
         return threads.blockingCallFromThread(
-            self.stream.readline, '\n', size=size)
+            reactor, self.stream.readline, '\n', size=size)
 
     def readlines(self, hint=None):
         """
@@ -183,7 +185,6 @@ class WSGIHandler(object):
 
 
     def run(self):
-        from twisted.internet import reactor
         # Called in application thread
         try:
             result = self.application(self.environment, self.startWSGIResponse)
@@ -206,7 +207,6 @@ class WSGIHandler(object):
 
     def write(self, output):
         # Called in application thread
-        from twisted.internet import reactor
         if self.response is None:
             raise RuntimeError(
                 "Application didn't call startResponse before writing data!")
@@ -232,7 +232,6 @@ class WSGIHandler(object):
 
     def writeAll(self, result):
         # Called in application thread
-        from twisted.internet import reactor
         if not self.headersSent:
             if self.response is None:
                 raise RuntimeError(
@@ -257,7 +256,6 @@ class WSGIHandler(object):
     def handleResult(self, result):
         # Called in application thread
         try:
-            from twisted.internet import reactor
             if (isinstance(result, FileWrapper) and
                    hasattr(result.filelike, 'fileno') and
                    not self.headersSent):
