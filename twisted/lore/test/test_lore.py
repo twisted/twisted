@@ -51,7 +51,7 @@ from StringIO import StringIO
 
 from twisted.trial import unittest
 
-from twisted.lore import tree, process, numberer, htmlbook, default
+from twisted.lore import tree, process, htmlbook, default
 from twisted.lore.default import factory
 from twisted.lore.latex import LatexSpitter
 from twisted.lore.indexer import Indexer, _stripTag, sortingKeyed, getTemplateFilenameOrDefault
@@ -140,10 +140,6 @@ class TestFactory(unittest.TestCase):
         # Sentinel value, since we might want to check for None
         if parent is not DONTCARE:
             self.assertEquals(parent, node.parentNode)
-
-
-    def setUp(self):
-        numberer.reset()
 
 
     def test_processingFunctionFactory(self):

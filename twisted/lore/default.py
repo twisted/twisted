@@ -36,7 +36,7 @@ class HTMLGenerator(object):
             raise process.NoProcessorError(str(e))
 
 
-    def generate(self, file, linkrel, book=None, indexer=None, toc=None, outputFilename=None):
+    def generate(self, file, linkrel, book=None, indexer=None, toc=None, numberer=None, outputFilename=None):
         """
         Load and parse the Lore input document in the given file, transform it
         according to the given options, generate an output document, and write
@@ -52,6 +52,9 @@ class HTMLGenerator(object):
 
         @type book: L{Book}
         @param book: An object representing a larger document being generated.
+
+        @type numberer: L{twisted.lore.numberer.Numberer}
+        @param numberer: An object responsible for numbering sections.
 
         @type indexer: L{Indexer}
         @param indexer: An object representing an index for a larger document
@@ -73,7 +76,7 @@ class HTMLGenerator(object):
         return tree.doFile(
             file, linkrel, self._options['ext'], self._options['baseurl'],
             templateDocument, self._options, self._filenameGenerator,
-            book, indexer, toc, outputFilename)
+            book, indexer, toc, outputFilename, numberer)
 
 
     def generateIndex(self, book, indexer, linkrel):

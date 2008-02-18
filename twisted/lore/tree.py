@@ -756,7 +756,7 @@ def getOutputFileName(originalFileName, outputExtension, index=None):
 
 
 
-def doDocument(document, template, linkrel, dir, fullpath, ext, url, config, outfileGenerator=getOutputFileName, book=None, indexer=None, contents=None, outputFilename=None):
+def doDocument(document, template, linkrel, dir, fullpath, ext, url, config, outfileGenerator=getOutputFileName, book=None, indexer=None, contents=None, outputFilename=None, numberer=None):
     """
     Mutate C{template} until it resembles C{document}.
 
@@ -842,8 +842,11 @@ def doDocument(document, template, linkrel, dir, fullpath, ext, url, config, out
         reference = book.getReference(fullpath)
 
     title = domhelpers.findNodesNamed(document, 'title')[0].childNodes
-    setTitle(template, title, chapterNumber)
-    if numberer.getNumberSections() and chapterNumber:
+    if numberer and numberer.numberSections:
+        setTitle(template, title, chapterNumber)
+    else:
+        setTitle(template, title, None)
+    if numberer and numberer.numberSections and chapterNumber:
         numberDocument(document, chapterNumber)
     index(document, outputFilename, reference, indexer)
     if contents is not None:
@@ -899,7 +902,8 @@ def makeSureDirectoryExists(filename):
 
 def doFile(filename, linkrel, ext, url, templ, options={},
            outfileGenerator=getOutputFileName, book=None,
-           indexer=None, toc=None, outputFilename=None):
+           indexer=None, toc=None, outputFilename=None,
+           numberer=None):
     """
     Process the input document in C{filename} and write an output document.
 
@@ -949,6 +953,7 @@ def doFile(filename, linkrel, ext, url, templ, options={},
     clonedNode = templ.cloneNode(1)
     doDocument(
         doc, clonedNode, linkrel, os.path.dirname(filename), filename,
-        ext, url, options, None, book, indexer, toc, outputFilename)
+        ext, url, options, None, book, indexer, toc, outputFilename,
+        numberer)
     makeSureDirectoryExists(outputFilename)
     clonedNode.writexml(file(outputFilename, 'wb'))

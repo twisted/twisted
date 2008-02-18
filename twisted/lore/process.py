@@ -85,7 +85,7 @@ class Walker:
                 self.walked.append((linkrel, fullpath))
 
 
-    def generate(self, book=None, indexer=None, toc=None):
+    def generate(self, book=None, indexer=None, toc=None, numberer=None):
         """
         Process all of the input documents previously discovered by L{walkdir}.
 
@@ -111,7 +111,7 @@ class Walker:
             fname = os.path.splitext(fullpath)[0]
             self.percentdone((float(i) / len(self.walked)), fname)
             try:
-                self.generator.generate(fullpath, linkrel, book, indexer, toc)
+                self.generator.generate(fullpath, linkrel, book, indexer, toc, numberer)
             except ProcessingFailure, e:
                 self.failures.append((fullpath, e))
         if book is not None:

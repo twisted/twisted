@@ -197,7 +197,7 @@ def runGivenOptions(opt):
     numberer = Numberer()
     numberer.numberSections = opt['number']
 
-    walker.generate(book, indexer, toc)
+    walker.generate(book, indexer, toc, numberer)
 
     if walker.failures:
         for (file, errors) in walker.failures:
