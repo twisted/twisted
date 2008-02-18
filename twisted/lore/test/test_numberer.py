@@ -9,6 +9,7 @@ from twisted.trial.unittest import TestCase
 
 from twisted.lore.numberer import Numberer
 from twisted.lore.numberer import reset, getFilenum, setFilenum, getNextFilenum
+from twisted.lore.numberer import getNumberSections, setNumberSections
 from twisted.lore.numberer import _unreleasedVersion
 
 
@@ -24,6 +25,14 @@ class NumbererTests(TestCase):
         """
         numberer = Numberer()
         self.assertEqual(numberer.getFileNumber(), 0)
+
+
+    def test_initialNumberSections(self):
+        """
+        L{Numberer.numberSections} is initially C{False}.
+        """
+        numberer = Numberer()
+        self.assertFalse(numberer.numberSections)
 
 
     def test_setFileNumber(self):
@@ -58,6 +67,19 @@ class NumbererTests(TestCase):
         self.assertEqual(numberer.getFileNumber(), 0)
 
 
+    def test_reset(self):
+        """
+        L{Numberer.reset} sets the file counter back to C{0} and
+        C{numberSections} to C{False}.
+        """
+        numberer = Numberer()
+        numberer.setFileNumber(5)
+        numberer.numberSections = True
+        numberer.reset()
+        self.assertEqual(numberer.getFileNumber(), 0)
+        self.assertFalse(numberer.numberSections)
+
+
 
 class GlobalTests(TestCase):
     """
@@ -68,7 +90,7 @@ class GlobalTests(TestCase):
         Reset the global numberer state.  This relies on L{reset} working
         correctly.
         """
-        reset()
+        self.callDeprecated(_unreleasedVersion, reset)
 
     tearDown = setUp
 
@@ -100,3 +122,38 @@ class GlobalTests(TestCase):
             self.assertEqual(
                 self.callDeprecated(_unreleasedVersion, getNextFilenum),
                 number)
+
+
+    def test_getNumberSections(self):
+        """
+        L{getNumberSections} initially returns C{False}.
+        """
+        self.assertFalse(
+            self.callDeprecated(_unreleasedVersion, getNumberSections))
+
+
+    def test_setNumberSections(self):
+        """
+        L{setNumberSections} changes the return value of L{getNumberSections}.
+        """
+        self.callDeprecated(_unreleasedVersion, setNumberSections, True)
+        self.assertTrue(
+            self.callDeprecated(_unreleasedVersion, getNumberSections))
+        self.callDeprecated(_unreleasedVersion, setNumberSections, False)
+        self.assertFalse(
+            self.callDeprecated(_unreleasedVersion, getNumberSections))
+
+
+    def test_reset(self):
+        """
+        L{reset} changes the current file number back to C{0} and section
+        numbering to C{False}.
+        """
+        self.callDeprecated(_unreleasedVersion, setFilenum, 20)
+        self.callDeprecated(_unreleasedVersion, setNumberSections, True)
+        self.callDeprecated(_unreleasedVersion, reset)
+        self.assertEqual(
+            self.callDeprecated(_unreleasedVersion, getFilenum),
+            0)
+        self.assertFalse(
+            self.callDeprecated(_unreleasedVersion, getNumberSections))

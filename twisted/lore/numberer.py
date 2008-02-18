@@ -20,9 +20,14 @@ class Numberer(object):
     @type _filenum: C{int}
     @ivar _filenum: The I{current} file number.  This is one less than the
         value which will be returned by L{getNextFileNumber}.
+
+    @type numberSections: C{bool}
+    @ivar numberSections: A flag indicating whether sections should be
+        numbered.
     """
     def __init__(self):
         self._filenum = 0
+        self.numberSections = False
 
 
     def getNextFileNumber(self):
@@ -54,15 +59,26 @@ class Numberer(object):
 
     def resetFileNumber(self):
         """
-        Set everything back to its initial state.
+        Set the file number back to its initial state.
         """
         self._filenum = 0
 
 
+    def reset(self):
+        """
+        Set everything back to its initial state.
+        """
+        self.resetFileNumber()
+        self.numberSections = False
+
+
+filenum = 0
+numberSections = False
 
 def reset():
     resetFilenum()
     setNumberSections(False)
+reset = _unreleasedDeprecation(reset)
 
 def resetFilenum():
     setFilenum(0)
@@ -86,9 +102,9 @@ getNextFilenum = _unreleasedDeprecation(getNextFilenum)
 def setNumberSections(arg):
     global numberSections
     numberSections = arg
+setNumberSections = _unreleasedDeprecation(setNumberSections)
 
 def getNumberSections():
     global numberSections
     return numberSections
-
-reset()
+getNumberSections = _unreleasedDeprecation(getNumberSections)
