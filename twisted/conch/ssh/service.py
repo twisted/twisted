@@ -1,9 +1,8 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-# 
-
-"""The parent class for all the SSH services.  Currently implemented services are: ssh-userauth and ssh-connection.
+"""The parent class for all the SSH services.  Currently implemented services
+are ssh-userauth and ssh-connection.
 
 This module is unstable.
 
@@ -30,18 +29,21 @@ class SSHService(log.Logger):
         """
 
     def logPrefix(self):
-        return "SSHService %s on %s" % (self.name, self.transport.transport.logPrefix())
+        return "SSHService %s on %s" % (self.name,
+                self.transport.transport.logPrefix())
 
-    def packetReceived(self, messageType, packet):
+    def packetReceived(self, messageNum, packet):
         """
-        called when we receieve a packet on the transport
+        called when we receive a packet on the transport
         """
         #print self.protocolMessages
-        f = getattr(self,'ssh_%s' % self.protocolMessages[messageType][4:], None)
-        if f:
-            f(packet)            
-        else:                     
-            log.msg("couldn't handle", messageType)
-            log.msg(repr(packet[1:]))
-            self.transport.sendUnimplemented()
+        if messageNum in self.protocolMessages:
+            messageType = self.protocolMessages[messageNum]
+            f = getattr(self,'ssh_%s' % messageType[4:],
+                        None)
+            if f is not None:
+                return f(packet)
+        log.msg("couldn't handle %r" % messageNum)
+        log.msg(repr(packet))
+        self.transport.sendUnimplemented()
 
