@@ -1,4 +1,5 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.conch.test.test_channel -*-
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 #
@@ -10,12 +11,50 @@ This module is unstable.
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """
 
-from twisted.python import log, context
+from twisted.python import log
+from twisted.internet import interfaces
+from zope.interface import implements
+
 
 class SSHChannel(log.Logger):
+    """
+    A class that represents a multiplexed channel over an SSH connection.
+    The channel has a local window which is the maximum amount of data it will
+    receive, and a remote which is the maximum amount of data the remote side
+    will accept.  There is also a maximum packet size for any individual data
+    packet going each way.
+
+    @ivar name: the name of the channel.
+    @type name: C{str}
+    @ivar localWindowSize: the maximum size of the local window in bytes.
+    @type localWindowSize: C{int}
+    @ivar localWindowLeft: how many bytes are left in the local window.
+    @type localWindowLeft: C{int}
+    @ivar localMaxPacket: the maximum size of packet we will accept in bytes.
+    @type localMaxPacket: C{int}
+    @ivar remoteWindowLeft: how many bytes are left in the remote window.
+    @type remoteWindowLeft: C{int}
+    @ivar remoteMaxPacket: the maximum size of a packet the remote side will
+        accept in bytes.
+    @type remoteMaxPacket: C{int}
+    @ivar conn: the connection this channel is multiplexed through.
+    @type conn: L{SSHConnection}
+    @ivar data: any data to send to the other size when the channel is
+        requested.
+    @type data: C{str}
+    @ivar avatar: an avatar for the logged-in user (if a server channel)
+    @ivar localClosed: True if we aren't accepting more data.
+    @type localClosed: C{bool}
+    @ivar remoteClosed: True if the other size isn't accepting more data.
+    @type remoteClosed: C{bool}
+    """
+
+    implements(interfaces.ITransport)
+
     name = None # only needed for client channels
-    def __init__(self, localWindow = 0, localMaxPacket = 0, 
-                       remoteWindow = 0, remoteMaxPacket = 0, 
+
+    def __init__(self, localWindow = 0, localMaxPacket = 0,
+                       remoteWindow = 0, remoteMaxPacket = 0,
                        conn = None, data=None, avatar = None):
         self.localWindowSize = localWindow or 131072
         self.localWindowLeft = self.localWindowSize
@@ -35,11 +74,13 @@ class SSHChannel(log.Logger):
         self.id = None # gets set later by SSHConnection
 
     def __str__(self):
-        return '%s (lw %i rw %i)' % (self.name, self.localWindowLeft, self.remoteWindowLeft)
+        return '<SSHChannel %s (lw %i rw %i)>' % (self.name,
+                self.localWindowLeft, self.remoteWindowLeft)
 
     def logPrefix(self):
         id = (self.id is not None and str(self.id)) or "unknown"
-        return "SSHChannel %s (%s) on %s" % (self.name, id, self.conn.logPrefix())
+        return "SSHChannel %s (%s) on %s" % (self.name, id,
+                self.conn.logPrefix())
 
     def channelOpen(self, specificData):
         """
@@ -68,7 +109,7 @@ class SSHChannel(log.Logger):
         """
         self.remoteWindowLeft = self.remoteWindowLeft+bytes
         if not self.areWriting and not self.closing:
-            self.areWriting = 0
+            self.areWriting = True
             self.startWriting()
         if self.buf:
             b = self.buf
@@ -77,8 +118,8 @@ class SSHChannel(log.Logger):
         if self.extBuf:
             b = self.extBuf
             self.extBuf = []
-            for i in b:
-                self.writeExtended(*i)
+            for (type, data) in b:
+                self.writeExtended(type, data)
 
     def requestReceived(self, requestType, data):
         """
@@ -139,17 +180,18 @@ class SSHChannel(log.Logger):
     def write(self, data):
         """
         Write some data to the channel.  If there is not enough remote window
-        available, buffer until it is.
+        available, buffer until it is.  Otherwise, split the data into
+        packets of length remoteMaxPacket and send them.
 
         @type data: C{str}
         """
-        #if not data: return
         if self.buf:
             self.buf += data
             return
         top = len(data)
         if top > self.remoteWindowLeft:
-            data, self.buf = data[:self.remoteWindowLeft], data[self.remoteWindowLeft:]
+            data, self.buf = (data[:self.remoteWindowLeft],
+                data[self.remoteWindowLeft:])
             self.areWriting = 0
             self.stopWriting()
             top = self.remoteWindowLeft
@@ -158,38 +200,38 @@ class SSHChannel(log.Logger):
         r = range(0, top, rmp)
         for offset in r:
             write(self, data[offset: offset+rmp])
-        self.remoteWindowLeft-=top
+        self.remoteWindowLeft -= top
         if self.closing and not self.buf:
             self.loseConnection() # try again
 
     def writeExtended(self, dataType, data):
         """
         Send extended data to this channel.  If there is not enough remote
-        window available, buffer until there is.
+        window available, buffer until there is.  Otherwise, split the data
+        into packets of length remoteMaxPacket and send them.
 
         @type dataType: C{int}
         @type data:     C{str}
         """
         if self.extBuf:
             if self.extBuf[-1][0] == dataType:
-                self.extBuf[-1][1]+=data
+                self.extBuf[-1][1] += data
             else:
                 self.extBuf.append([dataType, data])
             return
         if len(data) > self.remoteWindowLeft:
-            data, self.extBuf = data[:self.remoteWindowLeft], \
-                                [[dataType, data[self.remoteWindowLeft:]]]
+            data, self.extBuf = (data[:self.remoteWindowLeft],
+                                [[dataType, data[self.remoteWindowLeft:]]])
             self.areWriting = 0
             self.stopWriting()
-        if not data: return
         while len(data) > self.remoteMaxPacket:
-            self.conn.sendExtendedData(self, dataType, 
+            self.conn.sendExtendedData(self, dataType,
                                              data[:self.remoteMaxPacket])
             data = data[self.remoteMaxPacket:]
-            self.remoteWindowLeft-=self.remoteMaxPacket
+            self.remoteWindowLeft -= self.remoteMaxPacket
         if data:
             self.conn.sendExtendedData(self, dataType, data)
-            self.remoteWindowLeft-=len(data)
+            self.remoteWindowLeft -= len(data)
         if self.closing:
             self.loseConnection() # try again
 
@@ -204,7 +246,8 @@ class SSHChannel(log.Logger):
 
     def loseConnection(self):
         """
-        Close the channel.
+        Close the channel if there is no buferred data.  Otherwise, note the
+        request and return.
         """
         self.closing = 1
         if not self.buf and not self.extBuf:
