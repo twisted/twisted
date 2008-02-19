@@ -96,7 +96,7 @@ class HotshotRunner(_BasicProfiler):
             # order to support the versions of Debian which have this
             # behavior.  The bug report which prompted the introduction of
             # this highly undesirable behavior should be available online at
-            # <http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=334067>. 
+            # <http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=334067>.
             # There seems to be no corresponding bug report which resulted
             # in the behavior being removed. -exarkun
             self._reportImportError("hotshot", e)
@@ -127,6 +127,34 @@ class HotshotRunner(_BasicProfiler):
 
 
 
+class CProfileRunner(_BasicProfiler):
+    """
+    Runner for the cProfile module.
+    """
+
+    def run(self, reactor):
+        """
+        Run reactor under the cProfile profiler.
+        """
+        try:
+            import cProfile, pstats
+        except ImportError, e:
+            self._reportImportError("cProfile", e)
+
+        p = cProfile.Profile()
+        p.runcall(reactor.run)
+        if self.saveStats:
+            p.dump_stats(self.profileOutput)
+        else:
+            stream = open(self.profileOutput, 'w')
+            s = pstats.Stats(p, stream=stream)
+            s.strip_dirs()
+            s.sort_stats(-1)
+            s.print_stats()
+            stream.close()
+
+
+
 class AppProfiler(object):
     """
     Class which selects a specific profile runner based on configuration
@@ -135,7 +163,8 @@ class AppProfiler(object):
     @ivar profiler: the name of the selected profiler.
     @type profiler: C{str}
     """
-    profilers = {"profile": ProfileRunner, "hotshot": HotshotRunner}
+    profilers = {"profile": ProfileRunner, "hotshot": HotshotRunner,
+                 "cProfile": CProfileRunner}
 
     def __init__(self, options):
         saveStats = options.get("savestats", False)

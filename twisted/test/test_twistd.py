@@ -25,6 +25,12 @@ except (ImportError, SystemExit):
     # this module in twisted.application.app for more details.
     hotshot = None
 
+try:
+    import cProfile
+    import pstats
+except ImportError:
+    cProfile = None
+
 
 
 class MockServiceMaker(object):
@@ -58,6 +64,7 @@ class CrippledApplicationRunner(twistd._SomeApplicationRunner):
 
     def startLogging(self, observer):
         pass
+
 
 
 class ServerOptionsTest(unittest.TestCase):
@@ -439,6 +446,70 @@ class AppProfilingTestCase(unittest.TestCase):
 
     if hotshot is None:
         test_hotshotPrintStatsError.skip = "hotshot module not available"
+
+
+    def test_cProfile(self):
+        """
+        L{app.CProfileRunner.run} should call the C{run} method of the
+        reactor and save profile data in the specified file.
+        """
+        config = twistd.ServerOptions()
+        config["profile"] = self.mktemp()
+        config["profiler"] = "cProfile"
+        profiler = app.AppProfiler(config)
+        reactor = DummyReactor()
+
+        profiler.run(reactor)
+
+        self.assertTrue(reactor.called)
+        data = file(config["profile"]).read()
+        self.assertIn("run", data)
+        self.assertIn("function calls", data)
+
+    if cProfile is None:
+        test_cProfile.skip = "cProfile module not available"
+
+
+    def test_cProfileSaveStats(self):
+        """
+        With the C{savestats} option specified,
+        L{app.CProfileRunner.run} should save the raw stats object
+        instead of a summary output.
+        """
+        config = twistd.ServerOptions()
+        config["profile"] = self.mktemp()
+        config["profiler"] = "cProfile"
+        config["savestats"] = True
+        profiler = app.AppProfiler(config)
+        reactor = DummyReactor()
+
+        profiler.run(reactor)
+
+        self.assertTrue(reactor.called)
+        data = file(config["profile"]).read()
+        self.assertIn("run", data)
+
+    if cProfile is None:
+        test_cProfileSaveStats.skip = "cProfile module not available"
+
+
+    def test_withoutCProfile(self):
+        """
+        When the C{cProfile} module is not present,
+        L{app.CProfileRunner.run} should raise a C{SystemExit}
+        exception and log the C{ImportError}.
+        """
+        savedModules = sys.modules.copy()
+        sys.modules["cProfile"] = None
+
+        config = twistd.ServerOptions()
+        config["profiler"] = "cProfile"
+        profiler = app.AppProfiler(config)
+        try:
+            self.assertRaises(SystemExit, profiler.run, None)
+        finally:
+            sys.modules.clear()
+            sys.modules.update(savedModules)
 
 
     def test_unknownProfiler(self):
