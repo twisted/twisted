@@ -14,9 +14,12 @@ __metaclass__ = type
 
 import time
 
+from zope.interface import implements
+
 from twisted.python import reflect
 
 from twisted.internet import base, defer
+from twisted.internet.interfaces import IReactorTime
 
 
 class LoopingCall:
@@ -315,6 +318,8 @@ class Clock:
     L{IReactorTime.callLater}.  This is commonly useful for writing
     deterministic unit tests for code which schedules events using this API.
     """
+    implements(IReactorTime)
+
     rightNow = 0.0
 
     def __init__(self):
@@ -345,6 +350,11 @@ class Clock:
         self.calls.sort(lambda a, b: cmp(a.getTime(), b.getTime()))
         return dc
 
+    def getDelayedCalls(self):
+        """
+        See L{twisted.internet.interfaces.IReactorTime.getDelayedCalls}
+        """
+        return self.calls
 
     def advance(self, amount):
         """

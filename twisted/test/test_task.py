@@ -1,6 +1,8 @@
 # Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from twisted.python.compat import set
+
 from twisted.trial import unittest
 
 from twisted.internet import interfaces, task, reactor, defer, error
@@ -66,6 +68,7 @@ class ClockTestCase(unittest.TestCase):
         call1 = c.callLater(10, lambda a, b: None, 1, b=2)
         call2 = c.callLater(1, lambda a, b: None, 3, b=4)
         self.failIf(call1 is call2)
+
 
     def testAdvance(self):
         """
@@ -139,6 +142,33 @@ class ClockTestCase(unittest.TestCase):
         c.advance(3)
         self.assertEquals(events, [(1, 2)])
 
+
+    def test_getDelayedCalls(self):
+        """
+        Test that we can get a list of all delayed calls
+        """
+        c = task.Clock()
+        call = c.callLater(1, lambda x: None)
+        call2 = c.callLater(2, lambda x: None)
+
+        calls = c.getDelayedCalls()
+
+        self.assertEquals(set([call, call2]), set(calls))
+
+
+    def test_getDelayedCallsEmpty(self):
+        """
+        Test that we get an empty list from getDelayedCalls on a newly
+        constructed Clock.
+        """
+        c = task.Clock()
+        self.assertEquals(c.getDelayedCalls(), [])
+
+
+    def test_providesIReactorTime(self):
+        c = task.Clock()
+        self.failUnless(interfaces.IReactorTime.providedBy(c),
+                        "Clock does not provide IReactorTime")
 
 
 class LoopTestCase(unittest.TestCase):
