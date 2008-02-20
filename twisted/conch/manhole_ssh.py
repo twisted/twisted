@@ -122,7 +122,7 @@ class ConchFactory(factory.SSHFactory):
     publicKey = 'ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAGEArzJx8OYOnJmzf4tfBEvLi8DVPrJ3/c9k2I/Az64fxjHf9imyRJbixtQhlH9lfNjUIx+4LmrJH5QNRsFporcHDKOTwTTYLh5KmRpslkYHRivcJSkbh/C+BR3utDS555mV'
 
     publicKeys = {
-        'ssh-rsa' : keys.Key.fromString(publicKey).blob()
+        'ssh-rsa' : keys.Key.fromString(publicKey)
     }
     del publicKey
 
@@ -139,7 +139,7 @@ pSTqy7c3a2AScC/YyOwkDaICHnnD3XyjMwIxALRzl0tQEKMXs6hH8ToUdlLROCrP
 EhQ0wahUTCk1gKA4uPD6TMTChavbh4K63OvbKg==
 -----END RSA PRIVATE KEY-----"""
     privateKeys = {
-        'ssh-rsa' : keys.Key.fromString(privateKey).keyObject
+        'ssh-rsa' : keys.Key.fromString(privateKey)
     }
     del privateKey
 

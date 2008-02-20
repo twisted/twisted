@@ -10,10 +10,11 @@ except:
     Crypto = None
 
 from twisted.cred import portal
-from twisted.internet import reactor, defer, protocol, error
+from twisted.internet import reactor, defer, protocol
+from twisted.internet.error import ProcessExitedAlready
 from twisted.python import log, runtime
 from twisted.trial import unittest
-
+from twisted.conch.error import ConchError
 from twisted.conch.test.test_ssh import ConchTestRealm
 
 from twisted.conch.test.keydata import publicRSA_openssh, privateRSA_openssh
@@ -64,10 +65,15 @@ class ConchTestOpenSSHProcess(protocol.ProcessProtocol):
 
 
     def processEnded(self, reason):
+        """
+        Called when the process has ended.
+
+        @param reason: a Failure giving the reason for the process' end.
+        """
         if reason.value.exitCode != 0:
             self._getDeferred().errback(
-                self.failureException("exit code was not 0: %s"
-                                      % reason.value.exitCode))
+                ConchError("exit code was not 0: %s" %
+                                 reason.value.exitCode))
         else:
             buf = self.buf.replace('\r\n', '\n')
             self._getDeferred().callback(buf)
@@ -146,7 +152,7 @@ class ConchTestForwardingProcess(protocol.ProcessProtocol):
     def _reallyDie(self):
         try:
             self.transport.signalProcess('KILL')
-        except error.ProcessExitedAlready:
+        except ProcessExitedAlready:
             pass
 
 
@@ -196,7 +202,6 @@ class ConchTestForwardingPort(protocol.Protocol):
 
 if Crypto:
     from twisted.conch.client import options, default, connect
-    from twisted.conch.error import ConchError
     from twisted.conch.ssh import forwarding
     from twisted.conch.ssh import connection
 
