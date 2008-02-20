@@ -1,167 +1,76 @@
-# -*- test-case-name: twisted.conch.test.test_transport -*-
+# -*- test-case-name: twisted.conch.test.test_conch -*-
 #
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-"""
-The lowest level SSH protocol.  This handles the key negotiation, the
-encryption and the compression.  The transport layer is described in
-RFC 4253.
+# 
+
+"""The lowest level SSH protocol.  This handles the key negotiation, the encryption and the compression.
 
 This module is unstable.
 
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """
 
+from __future__ import nested_scopes
+
 # base library imports
 import struct
 import md5
 import sha
 import zlib
+import math # for math.log
 import array
 
 # external library imports
 from Crypto import Util
 from Crypto.Cipher import XOR
+from Crypto.PublicKey import RSA
+from Crypto.Util import randpool
 
 # twisted imports
-from twisted.internet import protocol, defer
 from twisted.conch import error
+from twisted.internet import protocol, defer
 from twisted.python import log, randbytes
 
-# sibling imports
-from twisted.conch.ssh import keys
-from twisted.conch.ssh.common import NS, getNS, MP, getMP, _MPpow, ffs
-
+# sibling importsa
+from common import NS, getNS, MP, getMP, _MPpow, ffs # ease of use
+import keys
 
 
 class SSHTransportBase(protocol.Protocol):
-    """
-    Protocol supporting basic SSH functionality: sending/receiving packets
-    and message dispatch.  To connect to or run a server, you must use
-    SSHClientTransport or SSHServerTransport.
-
-    @ivar protocolVersion: A string representing the version of the SSH
-        protocol we support.  Currently defaults to '2.0'.
-
-    @ivar version: A string representing the version of the server or client.
-        Currently defaults to 'Twisted'.
-
-    @ivar comment: An optional string giving more information about the
-        server or client.
-
-    @ivar supportedCiphers: A list of strings representing the encryption
-        algorithms supported, in order from most-preferred to least.
-
-    @ivar supportedMACs: A list of strings representing the message
-        authentication codes (hashes) supported, in order from most-preferred
-        to least.  Both this and supportedCiphers can include 'none' to use
-        no encryption or authentication, but that must be done manually,
-
-    @ivar supportedKeyExchanges: A list of strings representing the
-        key exchanges supported, in order from most-preferred to least.
-
-    @ivar supportedPublicKeys:  A list of strings representing the
-        public key types supported, in order from most-preferred to least.
-
-    @ivar supportedCompressions: A list of strings representing compression
-        types supported, from most-preferred to least.
-
-    @ivar supportedLanguages: A list of strings representing languages
-        supported, from most-preferred to least.
-
-    @ivar isClient: A boolean indicating whether this is a client or server.
-
-    @ivar gotVersion: A boolean indicating whether we have receieved the
-        version string from the other side.
-
-    @ivar buf: Data we've received but hasn't been parsed into a packet.
-
-    @ivar outgoingPacketSequence: the sequence number of the next packet we
-        will send.
-
-    @ivar incomingPacketSequence: the sequence number of the next packet we
-        are expecting from the other side.
-
-    @ivar outgoingCompression: an object supporting the .compress(str) and
-        .flush() methods, or None if there is no outgoing compression.  Used to
-        compress outgoing data.
-
-    @ivar outgoingCompressionType: A string representing the outgoing
-        compression type.
-
-    @ivar incomingCompression: an object supporting the .decompress(str)
-        method, or None if there is no incoming compression.  Used to
-        decompress incoming data.
-
-    @ivar incomingCompressionType: A string representing the incoming
-        compression type.
-
-    @ivar ourVersionString: the version string that we sent to the other side.
-        Used in the key exchange.
-
-    @ivar otherVersionString: the version string sent by the other side.  Used
-        in the key exchange.
-
-    @ivar ourKexInitPayload: the MSG_KEXINIT payload we sent.  Used in the key
-        exchange.
-
-    @ivar otherKexInitPayload: the MSG_KEXINIT payload we received.  Used in
-        the key exchange
-
-    @ivar sessionID: a string that is unique to this SSH session.  Created as
-        part of the key exchange, sessionID is used to generate the various
-        encryption and authentication keys.
-
-    @ivar service: an SSHService instance, or None.  If it's set to an object,
-        it's the currently running service.
-
-    @ivar kexAlg: the agreed-upon key exchange algorithm.
-
-    @ivar keyAlg: the agreed-upon public key type for the key exchange.
-
-    @ivar currentEncryptions: an SSHCiphers instance.  It represents the
-        current encryption and authentication options for the transport.
-
-    @ivar nextEncryptions: an SSHCiphers instance.  Held here until the
-        MSG_NEWKEYS messages are exchanged, when nextEncryptions is
-        transitioned to currentEncryptions.
-
-    @ivar first: the first bytes of the next packet.  In order to avoid
-        decrypting data twice, the first bytes are decrypted and stored until
-        the whole packet is available.
-
-    """
-
-
     protocolVersion = '2.0'
     version = 'Twisted'
     comment = ''
-    ourVersionString = ('SSH-' + protocolVersion + '-' + version + ' '
-            + comment).strip()
-    supportedCiphers = ['aes256-ctr', 'aes256-cbc', 'aes192-ctr', 'aes192-cbc',
-                        'aes128-ctr', 'aes128-cbc', 'cast128-ctr',
-                        'cast128-cbc', 'blowfish-ctr', 'blowfish-cbc',
-                        '3des-ctr', '3des-cbc'] # ,'none']
+    ourVersionString = ('SSH-'+protocolVersion+'-'+version+' '+comment).strip()
+
+    supportedCiphers = ['aes256-ctr', 'aes256-cbc', 'aes192-ctr', 'aes192-cbc', 
+                        'aes128-ctr', 'aes128-cbc', 'cast128-ctr', 
+                        'cast128-cbc', 'blowfish-ctr', 'blowfish', 'idea-ctr'
+                        'idea-cbc', '3des-ctr', '3des-cbc'] # ,'none']
     supportedMACs = ['hmac-sha1', 'hmac-md5'] # , 'none']
+    
     # both of the above support 'none', but for security are disabled by
     # default.  to enable them, subclass this class and add it, or do:
     #   SSHTransportBase.supportedCiphers.append('none')
-    supportedKeyExchanges = ['diffie-hellman-group-exchange-sha1',
+
+    supportedKeyExchanges = ['diffie-hellman-group-exchange-sha1', 
                              'diffie-hellman-group1-sha1']
     supportedPublicKeys = ['ssh-rsa', 'ssh-dss']
     supportedCompressions = ['none', 'zlib']
     supportedLanguages = ()
-    isClient = False
-    gotVersion = False
+
+    gotVersion = 0
+    ignoreNextPacket = 0
     buf = ''
     outgoingPacketSequence = 0
     incomingPacketSequence = 0
+    currentEncryptions = None
     outgoingCompression = None
     incomingCompression = None
     sessionID = None
+    isAuthorized = 0
     service = None
-
 
     def connectionLost(self, reason):
         if self.service:
@@ -170,388 +79,359 @@ class SSHTransportBase(protocol.Protocol):
             self.logoutFunction()
         log.msg('connection lost')
 
-
     def connectionMade(self):
-        """
-        Called when the connection is made to the other side.  We sent our
-        version and the MSG_KEXINIT packet.
-        """
-        self.transport.write('%s\r\n' % (self.ourVersionString,))
-        self.currentEncryptions = SSHCiphers('none', 'none', 'none', 'none')
-        self.currentEncryptions.setKeys('', '', '', '', '', '')
+        self.transport.write('%s\r\n'%(self.ourVersionString))
         self.sendKexInit()
 
-
     def sendKexInit(self):
-        self.ourKexInitPayload = (chr(MSG_KEXINIT) +
-               randbytes.secureRandom(16) +
-               NS(','.join(self.supportedKeyExchanges)) +
-               NS(','.join(self.supportedPublicKeys)) +
-               NS(','.join(self.supportedCiphers)) +
-               NS(','.join(self.supportedCiphers)) +
-               NS(','.join(self.supportedMACs)) +
-               NS(','.join(self.supportedMACs)) +
-               NS(','.join(self.supportedCompressions)) +
-               NS(','.join(self.supportedCompressions)) +
-               NS(','.join(self.supportedLanguages)) +
-               NS(','.join(self.supportedLanguages)) +
-               '\000' + '\000\000\000\000')
+        self.ourKexInitPayload = chr(MSG_KEXINIT)+randbytes.secureRandom(16)+ \
+                       NS(','.join(self.supportedKeyExchanges))+ \
+                       NS(','.join(self.supportedPublicKeys))+ \
+                       NS(','.join(self.supportedCiphers))+ \
+                       NS(','.join(self.supportedCiphers))+ \
+                       NS(','.join(self.supportedMACs))+ \
+                       NS(','.join(self.supportedMACs))+ \
+                       NS(','.join(self.supportedCompressions))+ \
+                       NS(','.join(self.supportedCompressions))+ \
+                       NS(','.join(self.supportedLanguages))+ \
+                       NS(','.join(self.supportedLanguages))+ \
+                       '\000'+'\000\000\000\000'
         self.sendPacket(MSG_KEXINIT, self.ourKexInitPayload[1:])
 
-
     def sendPacket(self, messageType, payload):
-        """
-        Sends a packet.  If it's been set up, compress the data, encrypt it,
-        and authenticate it before sending.
-
-        @param messageType: The type of the packet; generally one of the
-                            MSG_* values.
-        @type messageType: C{int}
-        @param payload: The payload for the message.
-        @type payload: C{str}
-        """
-        payload = chr(messageType) + payload
+        payload = chr(messageType)+payload
         if self.outgoingCompression:
-            payload = (self.outgoingCompression.compress(payload)
-                       + self.outgoingCompression.flush(2))
-        bs = self.currentEncryptions.encBlockSize
-        # 4 for the packet length and 1 for the padding length
-        totalSize = 5 + len(payload)
-        lenPad = bs - (totalSize % bs)
+            payload = self.outgoingCompression.compress(payload) + self.outgoingCompression.flush(2)
+        if self.currentEncryptions:
+            bs = self.currentEncryptions.enc_block_size
+        else:
+            bs = 8
+        totalSize = 5+len(payload)
+        lenPad = bs-(totalSize%bs)
         if lenPad < 4:
-            lenPad = lenPad + bs
-        packet = (struct.pack('!LB',
-                              totalSize + lenPad - 4, lenPad) +
-                  payload + randbytes.secureRandom(lenPad))
-        encPacket = (
-            self.currentEncryptions.encrypt(packet) +
-            self.currentEncryptions.makeMAC(
-                self.outgoingPacketSequence, packet))
+            lenPad = lenPad+bs
+        packet = struct.pack('!LB', totalSize+lenPad-4, lenPad)+ \
+                payload+randbytes.secureRandom(lenPad)
+        assert len(packet)%bs == 0, '%s extra bytes in packet'%(len(packet)%bs)
+        if self.currentEncryptions:
+            encPacket = self.currentEncryptions.encrypt(packet) + self.currentEncryptions.makeMAC(self.outgoingPacketSequence, packet)
+        else:
+            encPacket = packet
         self.transport.write(encPacket)
-        self.outgoingPacketSequence += 1
-
+        self.outgoingPacketSequence+=1
 
     def getPacket(self):
-        """
-        Try to return a decrypted, authenticated, and decompressed packet
-        out of the buffer.  If there is not enough data, return None.
-
-        @rtype: C{str}/C{None}
-        """
-        bs = self.currentEncryptions.decBlockSize
-        ms = self.currentEncryptions.verifyDigestSize
+        bs = self.currentEncryptions and self.currentEncryptions.dec_block_size or 8
+        ms = self.currentEncryptions and self.currentEncryptions.verify_digest_size or 0
         if len(self.buf) < bs: return # not enough data
         if not hasattr(self, 'first'):
-            first = self.currentEncryptions.decrypt(self.buf[:bs])
+            if self.currentEncryptions:
+                first = self.currentEncryptions.decrypt(self.buf[: bs])
+            else:
+                first = self.buf[: bs]
         else:
             first = self.first
             del self.first
-        packetLen, paddingLen = struct.unpack('!LB', first[:5])
+        packetLen, randomLen = struct.unpack('!LB', first[: 5])
         if packetLen > 1048576: # 1024 ** 2
-            self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR,
-                                'bad packet length %s' % packetLen)
+            self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR, 'bad packet length %s'%packetLen)
             return
-        if len(self.buf) < packetLen + 4 + ms:
+        if len(self.buf) < packetLen+4+ms:
             self.first = first
             return # not enough packet
-        if(packetLen + 4) % bs != 0:
-            self.sendDisconnect(
-                DISCONNECT_PROTOCOL_ERROR,
-                'bad packet mod (%i%%%i == %i)' % (packetLen + 4, bs,
-                                                   (packetLen + 4) % bs))
+        if(packetLen+4)%bs != 0:
+            self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR, 'bad packet mod (%s%%%s == %s'%(packetLen+4, bs, (packetLen+4)%bs))
             return
-        encData, self.buf = self.buf[:4 + packetLen], self.buf[4 + packetLen:]
-        packet = first + self.currentEncryptions.decrypt(encData[bs:])
-        if len(packet) != 4 + packetLen:
-            self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR,
-                                'bad decryption')
+        encData, self.buf = self.buf[: 4+packetLen], self.buf[4+packetLen:]
+        if self.currentEncryptions:
+            packet = first+self.currentEncryptions.decrypt(encData[bs:])
+        else:
+            packet = encData
+        if len(packet) != 4+packetLen:
+            self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR, 'bad packet length')
             return
-        if ms:
-            macData, self.buf = self.buf[:ms], self.buf[ms:]
-            if not self.currentEncryptions.verify(self.incomingPacketSequence,
-                                                  packet, macData):
+        if ms: 
+            macData, self.buf = self.buf[:ms],  self.buf[ms:]
+            if not self.currentEncryptions.verify(self.incomingPacketSequence, packet, macData):
                 self.sendDisconnect(DISCONNECT_MAC_ERROR, 'bad MAC')
                 return
-        payload = packet[5:-paddingLen]
+        payload = packet[5: 4+packetLen-randomLen]
         if self.incomingCompression:
             try:
                 payload = self.incomingCompression.decompress(payload)
-            except: # bare except, because who knows what kind of errors
-                    # decompression can raise
-                log.err()
-                self.sendDisconnect(DISCONNECT_COMPRESSION_ERROR,
-                                    'compression error')
+            except zlib.error:
+                self.sendDisconnect(DISCONNECT_COMPRESSION_ERROR, 'compression error')
                 return
-        self.incomingPacketSequence += 1
+        self.incomingPacketSequence+=1
         return payload
 
-
     def dataReceived(self, data):
-        """
-        First, check for the version string (SSH-2.0-*).  After that has been
-        received, this method adds data to the buffer, and pulls out any
-        packets.
-
-        @type data: C{str}
-        """
-        self.buf = self.buf + data
+        self.buf = self.buf+data
         if not self.gotVersion:
-            if self.buf.find('\n', self.buf.find('SSH-')) == -1:
-                return
-            lines = self.buf.split('\n')
-            for p in lines:
-                if p.startswith('SSH-'):
-                    self.gotVersion = True
+            parts = self.buf.split('\n')
+            for p in parts:
+                if p[: 4] == 'SSH-':
+                    self.gotVersion = 1
                     self.otherVersionString = p.strip()
-                    if p.split('-')[1] not in ('1.99', '2.0'): # bad version
-                        self.sendDisconnect(
-                            DISCONNECT_PROTOCOL_VERSION_NOT_SUPPORTED,
-                            'bad version ' + p.split('-')[1])
+                    if p.split('-')[1]not in('1.99', '2.0'): # bad version
+                        self.sendDisconnect(DISCONNECT_PROTOCOL_VERSION_NOT_SUPPORTED, 'bad version %s'%p.split('-')[1])
                         return
-                    i = lines.index(p)
-                    self.buf = '\n'.join(lines[i + 1:])
+                    i = parts.index(p)
+                    self.buf = '\n'.join(parts[i+1:])
         packet = self.getPacket()
         while packet:
             messageNum = ord(packet[0])
-            self.dispatchMessage(messageNum, packet[1:])
+            if messageNum < 50:
+                messageType = messages[messageNum][4:]
+                f = getattr(self, 'ssh_%s'%messageType, None)
+                if f:
+                    f(packet[1:])
+                else:
+                    log.msg("couldn't handle %s"%messageType)
+                    log.msg(repr(packet[1:]))
+                    self.sendUnimplemented()
+            elif self.service:
+                log.callWithLogger(self.service, self.service.packetReceived,
+                                                 ord(packet[0]), packet[1:])
+            else:
+                log.msg("couldn't handle %s"%messageNum)
+                log.msg(repr(packet[1:]))
+                self.sendUnimplemented()
             packet = self.getPacket()
 
-
-    def dispatchMessage(self, messageNum, payload):
-        """
-        Send a received message to the appropriate method.
-
-        @type messageNum: C{int}
-        @type payload: c{str}
-        """
-        if messageNum < 50 and messageNum in messages:
-            messageType = messages[messageNum][4:]
-            f = getattr(self, 'ssh_%s' % messageType, None)
-            if f is not None:
-                f(payload)
-            else:
-                log.msg("couldn't handle %s" % messageType)
-                log.msg(repr(payload))
-                self.sendUnimplemented()
-        elif self.service:
-            log.callWithLogger(self.service, self.service.packetReceived,
-                               messageNum, payload)
-        else:
-            log.msg("couldn't handle %s" % messageNum)
-            log.msg(repr(payload))
-            self.sendUnimplemented()
-
-
-    def ssh_KEXINIT(self, packet):
-        """
-        Called when we receive a MSG_KEXINIT message.  Payload::
-            bytes[16] cookie
-            string keyExchangeAlgorithms
-            string keyAlgorithms
-            string incomingEncryptions
-            string outgoingEncryptions
-            string incomingAuthentications
-            string outgoingAuthentications
-            string incomingCompressions
-            string outgoingCompressions
-            string incomingLanguages
-            string outgoingLanguages
-            bool firstPacketFollows
-            unit32 0 (reserved)
-
-        Starts setting up the key exchange, keys, encryptions, and
-        authentications.  Extended by ssh_KEXINIT in SSHServerTransport and
-        SSHClientTransport.
-        """
-        self.otherKexInitPayload = chr(MSG_KEXINIT) + packet
-        #cookie = packet[: 16] # taking this is useless
-        k = getNS(packet[16:], 10)
-        strings, rest = k[:-1], k[-1]
-        (kexAlgs, keyAlgs, encCS, encSC, macCS, macSC, compCS, compSC, langCS,
-         langSC) = [s.split(',') for s in strings]
-        # these are the server directions
-        outs = [encSC, macSC, compSC]
-        ins = [encCS, macSC, compCS]
-        if self.isClient:
-            outs, ins = ins, outs # switch directions
-        server = (self.supportedKeyExchanges, self.supportedPublicKeys,
-                self.supportedCiphers, self.supportedCiphers,
-                self.supportedMACs, self.supportedMACs,
-                self.supportedCompressions, self.supportedCompressions)
-        client = (kexAlgs, keyAlgs, outs[0], ins[0], outs[1], ins[1],
-                outs[2], ins[2])
-        if self.isClient:
-            server, client = client, server
-        self.kexAlg = ffs(client[0], server[0])
-        self.keyAlg = ffs(client[1], server[1])
-        self.nextEncryptions = SSHCiphers(
-            ffs(client[2], server[2]),
-            ffs(client[3], server[3]),
-            ffs(client[4], server[4]),
-            ffs(client[5], server[5]))
-        self.outgoingCompressionType = ffs(client[6], server[6])
-        self.incomingCompressionType = ffs(client[7], server[7])
-        if None in (self.kexAlg, self.keyAlg, self.outgoingCompressionType,
-                    self.incomingCompressionType):
-            self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED,
-                                "couldn't match all kex parts")
-            return
-        if None in self.nextEncryptions.__dict__.values():
-            self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED,
-                                "couldn't match all kex parts")
-            return
-        log.msg('kex alg, key alg: %s %s' % (self.kexAlg, self.keyAlg))
-        log.msg('outgoing: %s %s %s' % (self.nextEncryptions.outCipType,
-                                        self.nextEncryptions.outMACType,
-                                        self.outgoingCompressionType))
-        log.msg('incoming: %s %s %s' % (self.nextEncryptions.inCipType,
-                                        self.nextEncryptions.inMACType,
-                                        self.incomingCompressionType))
-        return kexAlgs, keyAlgs, rest # for SSHServerTransport to use
-
-
     def ssh_DISCONNECT(self, packet):
-        """
-        Called when we receive a MSG_DISCONNECT message.  Payload::
-            long code
-            string description
-
-        This means that the other side has disconnected.  Pass the message up
-        and disconnect ourselves.
-        """
         reasonCode = struct.unpack('>L', packet[: 4])[0]
         description, foo = getNS(packet[4:])
         self.receiveError(reasonCode, description)
         self.transport.loseConnection()
 
-
-    def ssh_IGNORE(self, packet):
-        """
-        Called when we receieve a MSG_IGNORE message.  No payload.
-        This means nothing; we simply return.
-        """
-
+    def ssh_IGNORE(self, packet): pass
 
     def ssh_UNIMPLEMENTED(self, packet):
-        """
-        Called when we receieve a MSG_UNIMPLEMENTED message.  Payload::
-            long packet
-
-        This means that the other side did not implement one of our packets.
-        """
-        seqnum, = struct.unpack('>L', packet)
+        seqnum = struct.unpack('>L', packet)
         self.receiveUnimplemented(seqnum)
 
-
     def ssh_DEBUG(self, packet):
-        """
-        Called when we receieve a MSG_DEBUG message.  Payload::
-            bool alwaysDisplay
-            string message
-            string language
-
-        This means the other side has passed along some debugging info.
-        """
-        alwaysDisplay = bool(packet[0])
-        message, lang, foo = getNS(packet[1:], 2)
+        alwaysDisplay = ord(packet[0])
+        message, lang, foo = getNS(packet, 2)
         self.receiveDebug(alwaysDisplay, message, lang)
 
-
     def setService(self, service):
-        """
-        Set our service to service and start it running.  If we were
-        running a service previously, stop it first.
-
-        @type service: C{SSHService}
-        """
-        log.msg('starting service %s' % service.name)
+        log.msg('starting service %s'%service.name)
         if self.service:
             self.service.serviceStopped()
         self.service = service
         service.transport = self
         self.service.serviceStarted()
 
-
-    def sendDebug(self, message, alwaysDisplay=False, language=''):
-        """
-        Send a debug message to the other side.
-
-        @param message: the message to send.
-        @type message: C{str}
-        @param alwaysDisplay: if True, tell the other side to always
-                              display this message.
-        @type alwaysDisplay: C{bool}
-        @param language: optionally, the language the message is in.
-        @type language: C{str}
-        """
-        self.sendPacket(MSG_DEBUG, chr(alwaysDisplay) + NS(message) +
-                        NS(language))
-
+    def sendDebug(self, message, alwaysDisplay = 0, language = ''):
+        self.sendPacket(MSG_DEBUG, chr(alwaysDisplay)+NS(message)+NS(language))
 
     def sendIgnore(self, message):
-        """
-        Send a message that will be ignored by the other side.  This is
-        useful to fool attacks based on guessing packet sizes in the
-        encrypted stream.
-
-        @param message: data to send with the message
-        @type message: C{str}
-        """
         self.sendPacket(MSG_IGNORE, NS(message))
 
-
     def sendUnimplemented(self):
-        """
-        Send a message to the other side that the last packet was not
-        understood.
-        """
         seqnum = self.incomingPacketSequence
         self.sendPacket(MSG_UNIMPLEMENTED, struct.pack('!L', seqnum))
 
-
     def sendDisconnect(self, reason, desc):
-        """
-        Send a disconnect message to the other side and then disconnect.
-
-        @param reason: the reason for the disconnect.  Should be one of the
-                       DISCONNECT_* values.
-        @type reason: C{int}
-        @param desc: a descrption of the reason for the disconnection.
-        @type desc: C{str}
-        """
-        self.sendPacket(
-            MSG_DISCONNECT, struct.pack('>L', reason) + NS(desc) + NS(''))
-        log.msg('Disconnecting with error, code %s\nreason: %s' % (reason,
-                                                                   desc))
+        self.sendPacket(MSG_DISCONNECT, struct.pack('>L', reason)+NS(desc)+NS(''))
+        log.msg('Disconnecting with error, code %s\nreason: %s'%(reason, desc))
         self.transport.loseConnection()
 
+    # client methods
+    def receiveError(self, reasonCode, description):
+        log.msg('Got remote error, code %s\nreason: %s'%(reasonCode, description))
 
-    def _getKey(self, c, sharedSecret, exchangeHash):
+    def receiveUnimplemented(self, seqnum):
+        log.msg('other side unimplemented packet #%s'%seqnum)
+
+    def receiveDebug(self, alwaysDisplay, message, lang):
+        if alwaysDisplay:
+            log.msg('Remote Debug Message:', message)
+
+    def isEncrypted(self, direction = "out"):
+        """direction must be in ["out", "in", "both"]
         """
-        Get one of the keys for authentication/encryption.
+        if self.currentEncryptions == None:
+            return 0
+        elif direction == "out":
+            return bool(self.currentEncryptions.enc_block_size)
+        elif direction == "in":
+            return bool(self.currentEncryptions.dec_block_size)
+        elif direction == "both":
+            return self.isEncrypted("in") and self.isEncrypted("out")
+        else:
+            raise TypeError, 'direction must be "out", "in", or "both"'
 
-        @type c: C{str}
-        @type sharedSecret: C{str}
-        @type exchangeHash: C{str}
+    def isVerified(self, direction = "out"):
+        """direction must be in ["out", "in", "both"]
         """
-        k1 = sha.new(sharedSecret + exchangeHash + c + self.sessionID)
-        k1 = k1.digest()
-        k2 = sha.new(sharedSecret + exchangeHash + k1).digest()
-        return k1 + k2
+        if self.currentEncryptions == None:
+            return 0
+        elif direction == "out":
+            return self.currentEncryptions.outMAC != None
+        elif direction == "in":
+            return self.currentEncryptions.outCMAC != None
+        elif direction == "both":
+            return self.isVerified("in")and self.isVerified("out")
+        else:
+            raise TypeError, 'direction must be "out", "in", or "both"'
 
+    def loseConnection(self):
+        self.sendDisconnect(DISCONNECT_CONNECTION_LOST, "user closed connection")
+
+class SSHServerTransport(SSHTransportBase):
+    isClient = 0
+    def ssh_KEXINIT(self, packet):
+        self.clientKexInitPayload = chr(MSG_KEXINIT)+packet
+        #cookie = packet[: 16] # taking this is useless
+        k = getNS(packet[16:], 10)
+        strings, rest = k[:-1], k[-1]
+        kexAlgs, keyAlgs, encCS, encSC, macCS, macSC, compCS, compSC, langCS, langSC =  \
+           [s.split(',')for s in strings]
+        if ord(rest[0]): # first_kex_packet_follows
+            if kexAlgs[0] != self.supportedKeyExchanges[0]or \
+               keyAlgs[0] != self.supportedPublicKeys[0]or \
+               not ffs(encSC, self.supportedCiphers)or \
+               not ffs(encCS, self.supportedCiphers)or \
+               not ffs(macSC, self.supportedMACs)or \
+               not ffs(macCS, self.supportedMACs)or \
+               not ffs(compCS, self.supportedCompressions)or \
+               not ffs(compSC, self.supportedCompressions):
+                self.ignoreNextPacket = 1 # guess was wrong
+        self.kexAlg = ffs(kexAlgs, self.supportedKeyExchanges)
+        self.keyAlg = ffs(keyAlgs, self.supportedPublicKeys)
+        self.nextEncryptions = SSHCiphers(
+        ffs(encSC, self.supportedCiphers), 
+            ffs(encCS, self.supportedCiphers), 
+            ffs(macSC, self.supportedMACs), 
+            ffs(macCS, self.supportedMACs), 
+         )
+        self.outgoingCompressionType = ffs(compSC, self.supportedCompressions)
+        self.incomingCompressionType = ffs(compCS, self.supportedCompressions)
+        if None in(self.kexAlg, self.keyAlg, self.outgoingCompressionType, self.incomingCompressionType):
+            self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, "couldn't match all kex parts")
+            return
+        if None in self.nextEncryptions.__dict__.values():
+            self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, "couldn't match all kex parts")
+            return
+        log.msg('kex alg, key alg: %s %s'%(self.kexAlg, self.keyAlg))
+        log.msg('server->client: %s %s %s'%(self.nextEncryptions.outCipType, 
+                                            self.nextEncryptions.outMacType, 
+                                            self.outgoingCompressionType))
+        log.msg('client->server: %s %s %s'%(self.nextEncryptions.inCipType, 
+                                            self.nextEncryptions.inMacType, 
+                                            self.incomingCompressionType))
+
+
+    def ssh_KEX_DH_GEX_REQUEST_OLD(self, packet):
+        if self.ignoreNextPacket:
+            self.ignoreNextPacket = 0
+            return
+        if self.kexAlg == 'diffie-hellman-group1-sha1': # this is really KEXDH_INIT
+            clientDHPubKey, foo = getMP(packet)
+            y = Util.number.getRandomNumber(16, randbytes.secureRandom)
+            f = pow(DH_GENERATOR, y, DH_PRIME)
+            sharedSecret = _MPpow(clientDHPubKey, y, DH_PRIME)
+            h = sha.new()
+            h.update(NS(self.otherVersionString))
+            h.update(NS(self.ourVersionString))
+            h.update(NS(self.clientKexInitPayload))
+            h.update(NS(self.ourKexInitPayload))
+            h.update(NS(self.factory.publicKeys[self.keyAlg]))
+            h.update(MP(clientDHPubKey))
+            h.update(MP(f))
+            h.update(sharedSecret)
+            exchangeHash = h.digest()
+            self.sendPacket(MSG_KEXDH_REPLY, NS(self.factory.publicKeys[self.keyAlg])+ \
+                           MP(f)+NS(keys.Key(self.factory.privateKeys[self.keyAlg]).sign(exchangeHash)))
+            self._keySetup(sharedSecret, exchangeHash)
+        elif self.kexAlg == 'diffie-hellman-group-exchange-sha1':
+            self.kexAlg = 'diffie-hellman-group-exchange-sha1-old'
+            self.ideal = struct.unpack('>L', packet)[0]
+            self.g, self.p = self.factory.getDHPrime(self.ideal)
+            self.sendPacket(MSG_KEX_DH_GEX_GROUP, MP(self.p)+MP(self.g))
+        else:
+            raise error.ConchError('bad kexalg: %s'%self.kexAlg)
+
+    def ssh_KEX_DH_GEX_REQUEST(self, packet):
+        if self.ignoreNextPacket:
+            self.ignoreNextPacket = 0
+            return
+        self.min, self.ideal, self.max = struct.unpack('>3L', packet)
+        self.g, self.p = self.factory.getDHPrime(self.ideal)
+        self.sendPacket(MSG_KEX_DH_GEX_GROUP, MP(self.p)+MP(self.g))
+
+    def ssh_KEX_DH_GEX_INIT(self, packet):
+        clientDHPubKey, foo = getMP(packet)
+
+        # if y < 1024, openssh will reject us: "bad server public DH value".
+        # y<1024 means f will be short, and of the form 2^y, so an observer
+        # could trivially derive our secret y from f. Openssh detects this
+        # and complains, so avoid creating such values by requiring y to be
+        # larger than ln2(self.p)
+
+        # TODO: we should also look at the value they send to us and reject
+        # insecure values of f (if g==2 and f has a single '1' bit while the
+        # rest are '0's, then they must have used a small y also).
+
+        # TODO: This could be computed when self.p is set up
+        #  or do as openssh does and scan f for a single '1' bit instead
+
+        minimum = long(math.floor(math.log(self.p) / math.log(2)) + 1)
+        tries = 0
+        pSize = Util.number.size(self.p)
+        y = Util.number.getRandomNumber(pSize, randbytes.secureRandom)
+        while tries < 10 and y < minimum:
+            tries += 1
+            y = Util.number.getRandomNumber(pSize, randbytes.secureRandom)
+        assert(y >= minimum) # TODO: test_conch just hangs if this is hit
+        # the chance of it being hit are really really low
+
+        f = pow(self.g, y, self.p)
+        sharedSecret = _MPpow(clientDHPubKey, y, self.p)
+        h = sha.new()
+        h.update(NS(self.otherVersionString))
+        h.update(NS(self.ourVersionString))
+        h.update(NS(self.clientKexInitPayload))
+        h.update(NS(self.ourKexInitPayload))
+        h.update(NS(self.factory.publicKeys[self.keyAlg]))
+        if self.kexAlg == 'diffie-hellman-group-exchange-sha1':
+            h.update(struct.pack('>3L', self.min, self.ideal, self.max))
+        else:
+            h.update(struct.pack('>L', self.ideal))
+        h.update(MP(self.p))
+        h.update(MP(self.g))
+        h.update(MP(clientDHPubKey))
+        h.update(MP(f))
+        h.update(sharedSecret)
+        exchangeHash = h.digest()
+        self.sendPacket(MSG_KEX_DH_GEX_REPLY, NS(self.factory.publicKeys[self.keyAlg])+ \
+                       MP(f)+NS(keys.signData(self.factory.privateKeys[self.keyAlg], exchangeHash)))
+        self._keySetup(sharedSecret, exchangeHash)
+
+    def ssh_NEWKEYS(self, packet):
+        if packet != '':
+            self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR, "NEWKEYS takes no data")
+        self.currentEncryptions = self.nextEncryptions
+        if self.outgoingCompressionType == 'zlib':
+            self.outgoingCompression = zlib.compressobj(6)
+            #self.outgoingCompression.compress = lambda x: self.outgoingCompression.compress(x) + self.outgoingCompression.flush(zlib.Z_SYNC_FLUSH)
+        if self.incomingCompressionType == 'zlib':
+            self.incomingCompression = zlib.decompressobj()
+
+    def ssh_SERVICE_REQUEST(self, packet):
+        service, rest = getNS(packet)
+        cls = self.factory.getService(self, service)
+        if not cls:
+            self.sendDisconnect(DISCONNECT_SERVICE_NOT_AVAILABLE, "don't have service %s"%service)
+            return
+        else:
+            self.sendPacket(MSG_SERVICE_ACCEPT, NS(service))
+            self.setService(cls())
 
     def _keySetup(self, sharedSecret, exchangeHash):
-        """
-        Set up the keys for the connection and sends MSG_NEWKEYS when
-        finished,
-
-        @param sharedSecret: a secret string agreed upon using a Diffie-
-                             Hellman exchange, so it is only shared between
-                             the server and the client.
-        @type sharedSecret: C{str}
-        @param exchangeHash: A hash of various data known by both sides.
-        @type exchangeHash: C{str}
-        """
         if not self.sessionID:
             self.sessionID = exchangeHash
         initIVCS = self._getKey('A', sharedSecret, exchangeHash)
@@ -560,528 +440,160 @@ class SSHTransportBase(protocol.Protocol):
         encKeySC = self._getKey('D', sharedSecret, exchangeHash)
         integKeyCS = self._getKey('E', sharedSecret, exchangeHash)
         integKeySC = self._getKey('F', sharedSecret, exchangeHash)
-        outs = [initIVSC, encKeySC, integKeySC]
-        ins = [initIVCS, encKeyCS, integKeyCS]
-        if self.isClient: # reverse for the client
-            log.msg('REVERSE')
-            outs, ins = ins, outs
-        self.nextEncryptions.setKeys(outs[0], outs[1], ins[0], ins[1],
-                                     outs[2], ins[2])
+        self.nextEncryptions.setKeys(initIVSC, encKeySC, initIVCS, encKeyCS, integKeySC, integKeyCS)
         self.sendPacket(MSG_NEWKEYS, '')
 
-
-    def isEncrypted(self, direction="out"):
-        """
-        Return True if the connection is encrypted in the given direction.
-        Direction must be one of ["out", "in", "both"].
-        """
-        if direction == "out":
-            return self.currentEncryptions.outCipType != 'none'
-        elif direction == "in":
-            return self.currentEncryptions.inCipType != 'none'
-        elif direction == "both":
-            return self.isEncrypted("in") and self.isEncrypted("out")
-        else:
-            raise TypeError('direction must be "out", "in", or "both"')
-
-
-    def isVerified(self, direction="out"):
-        """
-        Return True if the connecction is verified/authenticated in the
-        given direction.  Direction must be one of ["out", "in", "both"].
-        """
-        if direction == "out":
-            return self.currentEncryptions.outMACType != 'none'
-        elif direction == "in":
-            return self.currentEncryptions.inMACType != 'none'
-        elif direction == "both":
-            return self.isVerified("in")and self.isVerified("out")
-        else:
-            raise TypeError('direction must be "out", "in", or "both"')
-
-
-    def loseConnection(self):
-        """
-        Lose the connection to the other side, sending a
-        DISCONNECT_CONNECTION_LOST message.
-        """
-        self.sendDisconnect(DISCONNECT_CONNECTION_LOST,
-                            "user closed connection")
-
-
-    # client methods
-    def receiveError(self, reasonCode, description):
-        """
-        Called when we receive a disconnect error message from the other
-        side.
-
-        @param reasonCode: the reason for the disconnect, one of the
-                           DISCONNECT_ values.
-        @type reasonCode: C{int}
-        @param description: a human-readable description of the
-                            disconnection.
-        @type description: C{str}
-        """
-        log.msg('Got remote error, code %s\nreason: %s' % (reasonCode,
-                                                           description))
-
-
-    def receiveUnimplemented(self, seqnum):
-        """
-        Called when we receive an unimplemented packet message from the other
-        side.
-
-        @param seqnum: the sequence number that was not understood.
-        @type seqnum: C{int}
-        """
-        log.msg('other side unimplemented packet #%s' % seqnum)
-
-
-    def receiveDebug(self, alwaysDisplay, message, lang):
-        """
-        Called when we receive a debug message from the other side.
-
-        @param alwaysDisplay: if True, this message should always be
-                              displayed.
-        @type alwaysDisplay: C{bool}
-        @param message: the debug message
-        @type message: C{str}
-        @param lang: optionally the language the message is in.
-        @type lang: C{str}
-        """
-        if alwaysDisplay:
-            log.msg('Remote Debug Message: %s' % message)
-
-
-
-class SSHServerTransport(SSHTransportBase):
-    """
-    SSHServerTransport implements the server side of the SSH protocol.
-
-    @ivar isClient: since we are never the client, this is always False.
-
-    @ivar ignoreNextPacket: if True, ignore the next key exchange packet.  This
-        is set when the client sends a guessed key exchange packet but with
-        an incorrect guess.
-
-    @ivar dhGexRequest: the KEX_DH_GEX_REQUEST(_OLD) that the client sent.
-        The key generation needs this to be stored.
-
-    @ivar g: the Diffie-Hellman group generator.
-
-    @ivar p: the Diffie-Hellman group prime.
-    """
-    isClient = False
-    ignoreNextPacket = 0
-
-
-    def ssh_KEXINIT(self, packet):
-        """
-        Called when we receive a MSG_KEXINIT message.  For a description
-        of the packet, see SSHTransportBase.ssh_KEXINIT().  Additionally,
-        this method checks if a guessed key exchange packet was sent.  If
-        it was sent, and it guessed incorrectly, the next key exchange
-        packet MUST be ignored.
-        """
-        retval = SSHTransportBase.ssh_KEXINIT(self, packet)
-        if not retval: # disconnected
-            return
-        else:
-            kexAlgs, keyAlgs, rest = retval
-        if ord(rest[0]): # first_kex_packet_follows
-            if (kexAlgs[0] != self.supportedKeyExchanges[0] or
-                keyAlgs[0] != self.supportedPublicKeys[0]):
-                self.ignoreNextPacket = True # guess was wrong
-
-
-    def ssh_KEX_DH_GEX_REQUEST_OLD(self, packet):
-        """
-        This represents two different key exchange methods that share the
-        same integer value.
-
-        KEXDH_INIT (for diffie-hellman-group1-sha1 exchanges) payload::
-
-                integer e (the client's Diffie-Hellman public key)
-
-            We send the KEXDH_REPLY with our host key and signature.
-
-        KEX_DH_GEX_REQUEST_OLD (for diffie-hellman-group-exchange-sha1)
-        payload::
-
-                integer ideal (ideal size for the Diffie-Hellman prime)
-
-            We send the KEX_DH_GEX_GROUP message with the group that is
-            closest in size to ideal.
-
-        If we were told to ignore the next key exchange packet by
-        ssh_KEXINIT, drop it on the floor and return.
-        """
-        if self.ignoreNextPacket:
-            self.ignoreNextPacket = 0
-            return
-        if self.kexAlg == 'diffie-hellman-group1-sha1':
-            # this is really KEXDH_INIT
-            clientDHpublicKey, foo = getMP(packet)
-            y = Util.number.getRandomNumber(512, randbytes.secureRandom)
-            serverDHpublicKey = _MPpow(DH_GENERATOR, y, DH_PRIME)
-            sharedSecret = _MPpow(clientDHpublicKey, y, DH_PRIME)
-            h = sha.new()
-            h.update(NS(self.otherVersionString))
-            h.update(NS(self.ourVersionString))
-            h.update(NS(self.otherKexInitPayload))
-            h.update(NS(self.ourKexInitPayload))
-            h.update(NS(self.factory.publicKeys[self.keyAlg].blob()))
-            h.update(MP(clientDHpublicKey))
-            h.update(serverDHpublicKey)
-            h.update(sharedSecret)
-            exchangeHash = h.digest()
-            self.sendPacket(
-                MSG_KEXDH_REPLY,
-                NS(self.factory.publicKeys[self.keyAlg].blob()) +
-                serverDHpublicKey +
-                NS(self.factory.privateKeys[self.keyAlg].sign(exchangeHash)))
-            self._keySetup(sharedSecret, exchangeHash)
-        elif self.kexAlg == 'diffie-hellman-group-exchange-sha1':
-            self.dhGexRequest = packet
-            ideal = struct.unpack('>L', packet)[0]
-            self.g, self.p = self.factory.getDHPrime(ideal)
-            self.sendPacket(MSG_KEX_DH_GEX_GROUP, MP(self.p) + MP(self.g))
-        else:
-            raise error.ConchError('bad kexalg: %s' % self.kexAlg)
-
-
-    def ssh_KEX_DH_GEX_REQUEST(self, packet):
-        """
-        Called when we receive a MSG_KEX_DH_GEX_REQUEST message.  Payload::
-            integer minimum
-            integer ideal
-            integer maximum
-
-        The client is asking for a Diffie-Hellman group between minimum and
-        maximum size, and close to ideal if possible.  We reply with a
-        MSG_KEX_DH_GEX_GROUP message.
-
-        If we were told to ignore the next key exchange packekt by
-        ssh_KEXINIT, drop it on the floor and return.
-        """
-        if self.ignoreNextPacket:
-            self.ignoreNextPacket = 0
-            return
-        self.dhGexRequest = packet
-        min, ideal, max = struct.unpack('>3L', packet)
-        self.g, self.p = self.factory.getDHPrime(ideal)
-        self.sendPacket(MSG_KEX_DH_GEX_GROUP, MP(self.p) + MP(self.g))
-
-
-    def ssh_KEX_DH_GEX_INIT(self, packet):
-        """
-        Called when we get a MSG_KEX_DH_GEX_INIT message.  Payload::
-            integer e (client DH public key)
-
-        We send the MSG_KEX_DH_GEX_REPLY message with our host key and
-        signature.
-        """
-        clientDHpublicKey, foo = getMP(packet)
-        # TODO: we should also look at the value they send to us and reject
-        # insecure values of f (if g==2 and f has a single '1' bit while the
-        # rest are '0's, then they must have used a small y also).
-
-        # TODO: This could be computed when self.p is set up
-        #  or do as openssh does and scan f for a single '1' bit instead
-
-        pSize = Util.number.size(self.p)
-        y = Util.number.getRandomNumber(pSize, randbytes.secureRandom)
-
-        serverDHpublicKey = _MPpow(self.g, y, self.p)
-        sharedSecret = _MPpow(clientDHpublicKey, y, self.p)
-        h = sha.new()
-        h.update(NS(self.otherVersionString))
-        h.update(NS(self.ourVersionString))
-        h.update(NS(self.otherKexInitPayload))
-        h.update(NS(self.ourKexInitPayload))
-        h.update(NS(self.factory.publicKeys[self.keyAlg].blob()))
-        h.update(self.dhGexRequest)
-        h.update(MP(self.p))
-        h.update(MP(self.g))
-        h.update(MP(clientDHpublicKey))
-        h.update(serverDHpublicKey)
-        h.update(sharedSecret)
-        exchangeHash = h.digest()
-        self.sendPacket(
-            MSG_KEX_DH_GEX_REPLY,
-            NS(self.factory.publicKeys[self.keyAlg].blob()) +
-            serverDHpublicKey +
-            NS(self.factory.privateKeys[self.keyAlg].sign(exchangeHash)))
-        self._keySetup(sharedSecret, exchangeHash)
-
-
-    def ssh_NEWKEYS(self, packet):
-        """
-        Called when we get a MSG_NEWKEYS message.  No payload.
-        When we get this, the keys have been set on both sides, and we
-        start using them to encrypt and authenticate the connection.
-        """
-        log.msg('NEW KEYS')
-        if packet != '':
-            self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR,
-                                "NEWKEYS takes no data")
-            return
-        self.currentEncryptions = self.nextEncryptions
-        if self.outgoingCompressionType == 'zlib':
-            self.outgoingCompression = zlib.compressobj(6)
-        if self.incomingCompressionType == 'zlib':
-            self.incomingCompression = zlib.decompressobj()
-
-
-    def ssh_SERVICE_REQUEST(self, packet):
-        """
-        Called when we get a MSG_SERVICE_REQUEST message.  Payload::
-            string serviceName
-
-        The client has requested a service.  If we can start the service,
-        start it; otherwise, disconnect with
-        DISCONNECT_SERVICE_NOT_AVAILABLE.
-        """
-        service, rest = getNS(packet)
-        cls = self.factory.getService(self, service)
-        if not cls:
-            self.sendDisconnect(DISCONNECT_SERVICE_NOT_AVAILABLE,
-                                "don't have service %s" % service)
-            return
-        else:
-            self.sendPacket(MSG_SERVICE_ACCEPT, NS(service))
-            self.setService(cls())
-
-
+    def _getKey(self, c, sharedSecret, exchangeHash):
+        k1 = sha.new(sharedSecret+exchangeHash+c+self.sessionID).digest()
+        k2 = sha.new(sharedSecret+exchangeHash+k1).digest()
+        return k1+k2
 
 class SSHClientTransport(SSHTransportBase):
-    """
-    SSHClientTransport implements the client side of the SSH protocol.
-
-    @ivar isClient: since we are always the client, this is always True.
-
-    @ivar _gotNewKeys: if we receive a MSG_NEWKEYS message before we are
-        ready to transition to the new keys, this is set to True so we
-        can transition when the keys are ready locally.
-
-    @ivar x: our Diffie-Hellman private key.
-
-    @ivar e: our Diffie-Hellman public key.
-
-    @ivar g: the Diffie-Hellman group generator.
-
-    @ivar p: the Diffie-Hellman group prime
-
-    @ivar instance: the SSHService object we are requesting.
-    """
-    isClient = True
-
+    isClient = 1
 
     def connectionMade(self):
-        """
-        Called when the connection is started with the server.  Just sets
-        up a private instance variable.
-        """
         SSHTransportBase.connectionMade(self)
         self._gotNewKeys = 0
 
-
     def ssh_KEXINIT(self, packet):
-        """
-        Called when we receive a MSG_KEXINIT message.  For a description
-        of the packet, see SSHTransportBase.ssh_KEXINIT().  Additionally,
-        this method sends the first key exchange packet.  If the agreed-upon
-        exchange is diffie-hellman-group1-sha1, generate a public key
-        and send it in a MSG_KEXDH_INIT message.  If the exchange is
-        diffie-hellman-group-exchange-sha1, ask for a 2048 bit group with a
-        MSG_KEX_DH_GEX_REQUEST_OLD message.
-        """
-        if SSHTransportBase.ssh_KEXINIT(self, packet) is None:
-            return # we disconnected
+        self.serverKexInitPayload = chr(MSG_KEXINIT)+packet
+        #cookie = packet[: 16] # taking this is unimportant
+        k = getNS(packet[16:], 10)
+        strings, rest = k[:-1], k[-1]
+        kexAlgs, keyAlgs, encCS, encSC, macCS, macSC, compCS, compSC, langCS, langSC =  \
+           [s.split(',')for s in strings]
+        self.kexAlg = ffs(self.supportedKeyExchanges, kexAlgs)
+        self.keyAlg = ffs(self.supportedPublicKeys, keyAlgs)
+        self.nextEncryptions = SSHCiphers(
+        ffs(self.supportedCiphers, encCS), 
+            ffs(self.supportedCiphers, encSC), 
+            ffs(self.supportedMACs, macCS), 
+            ffs(self.supportedMACs, macSC), 
+         )
+        self.outgoingCompressionType = ffs(self.supportedCompressions, compCS)
+        self.incomingCompressionType = ffs(self.supportedCompressions, compSC)
+        if None in(self.kexAlg, self.keyAlg, self.outgoingCompressionType, self.incomingCompressionType):
+            self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, "couldn't match all kex parts")
+            return
+        if None in self.nextEncryptions.__dict__.values():
+            self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, "couldn't match all kex parts")
+            return
+        log.msg('kex alg, key alg: %s %s'%(self.kexAlg, self.keyAlg))
+        log.msg('client->server: %s %s %s'%(self.nextEncryptions.outCipType, 
+                                            self.nextEncryptions.outMacType, 
+                                            self.outgoingCompressionType))
+        log.msg('server->client: %s %s %s'%(self.nextEncryptions.inCipType, 
+                                            self.nextEncryptions.inMacType, 
+                                            self.incomingCompressionType))
+
         if self.kexAlg == 'diffie-hellman-group1-sha1':
             self.x = Util.number.getRandomNumber(512, randbytes.secureRandom)
-            self.e = _MPpow(DH_GENERATOR, self.x, DH_PRIME)
-            self.sendPacket(MSG_KEXDH_INIT, self.e)
-        elif self.kexAlg == 'diffie-hellman-group-exchange-sha1':
-            self.sendPacket(MSG_KEX_DH_GEX_REQUEST_OLD, '\x00\x00\x08\x00')
+            self.DHpubKey = pow(DH_GENERATOR, self.x, DH_PRIME)
+            self.sendPacket(MSG_KEXDH_INIT, MP(self.DHpubKey))
         else:
-            raise error.ConchError("somehow, the kexAlg has been set "
-                                   "to something we don't support")
-
+            self.sendPacket(MSG_KEX_DH_GEX_REQUEST_OLD, '\x00\x00\x08\x00')
 
     def ssh_KEX_DH_GEX_GROUP(self, packet):
-        """
-        This handles two different message which share an integer value.
-        If the key exchange is diffie-hellman-group1-sha1, this is
-        MSG_KEXDH_REPLY.  Payload::
-            string serverHostKey
-            integer f (server Diffie-Hellman public key)
-            string signature
-
-        We verify the host key by calling verifyHostKey, then continue in
-        _continueKEXDH_REPLY.
-
-        If the key exchange is diffie-hellman-group-exchange-sha1, this is
-        MSG_KEX_DH_GEX_GROUP.  Payload::
-            string g (group generator)
-            string p (group prime)
-
-        We generate a Diffie-Hellman public key and send it in a
-        MSG_KEX_DH_GEX_INIT message.
-        """
         if self.kexAlg == 'diffie-hellman-group1-sha1':
-            # actually MSG_KEXDH_REPLY
             pubKey, packet = getNS(packet)
             f, packet = getMP(packet)
             signature, packet = getNS(packet)
-            fingerprint = ':'.join([ch.encode('hex') for ch in
-                                    md5.new(pubKey).digest()])
+            fingerprint = ':'.join(map(lambda c: '%02x'%ord(c), md5.new(pubKey).digest()))
             d = self.verifyHostKey(pubKey, fingerprint)
-            d.addCallback(self._continueKEXDH_REPLY, pubKey, f, signature)
-            d.addErrback(
-                lambda unused: self.sendDisconnect(
-                    DISCONNECT_HOST_KEY_NOT_VERIFIABLE, 'bad host key'))
-            return d
+            d.addCallback(self._continueGEX_GROUP, pubKey, f, signature)
+            d.addErrback(lambda unused,self=self:self.sendDisconnect(DISCONNECT_HOST_KEY_NOT_VERIFIABLE, 'bad host key'))
         else:
             self.p, rest = getMP(packet)
             self.g, rest = getMP(rest)
-            self.x = Util.number.getRandomNumber(320, randbytes.secureRandom)
-            self.e = _MPpow(self.g, self.x, self.p)
-            self.sendPacket(MSG_KEX_DH_GEX_INIT, self.e)
+            self.x = getMP('\x00\x00\x00\x40'+randbytes.secureRandom(64))[0]
+            self.DHpubKey = pow(self.g, self.x, self.p)
+            self.sendPacket(MSG_KEX_DH_GEX_INIT, MP(self.DHpubKey))
 
-
-    def _continueKEXDH_REPLY(self, ignored, pubKey, f, signature):
-        """
-        The host key has been verified, so we generate the keys.
-
-        @param pubKey: the public key blob for the server's public key.
-        @type pubKey: C{str}
-        @param f: the server's Diffie-Hellman public key.
-        @type f: C{long}
-        @param signature: the server's signature, verifying that it has the
-            correct private key.
-        @type signature: C{str}
-        """
-        serverKey = keys.Key.fromString(pubKey)
+    def _continueGEX_GROUP(self, ignored, pubKey, f, signature):
         sharedSecret = _MPpow(f, self.x, DH_PRIME)
         h = sha.new()
         h.update(NS(self.ourVersionString))
         h.update(NS(self.otherVersionString))
         h.update(NS(self.ourKexInitPayload))
-        h.update(NS(self.otherKexInitPayload))
+        h.update(NS(self.serverKexInitPayload))
         h.update(NS(pubKey))
-        h.update(self.e)
+        h.update(MP(self.DHpubKey))
         h.update(MP(f))
         h.update(sharedSecret)
         exchangeHash = h.digest()
-        if not serverKey.verify(signature, exchangeHash):
-            self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED,
-                                'bad signature')
+        if not keys.Key.fromString(pubKey).verify(signature, exchangeHash):
+            self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, 'bad signature')
             return
         self._keySetup(sharedSecret, exchangeHash)
 
-
     def ssh_KEX_DH_GEX_REPLY(self, packet):
-        """
-        Called when we receieve a MSG_KEX_DH_GEX_REPLY message.  Payload::
-            string server host key
-            integer f (server DH public key)
-
-        We verify the host key by calling verifyHostKey, then continue in
-        _continueGEX_REPLY.
-        """
         pubKey, packet = getNS(packet)
         f, packet = getMP(packet)
         signature, packet = getNS(packet)
-        fingerprint = ':'.join(map(lambda c: '%02x'%ord(c),
-            md5.new(pubKey).digest()))
+        fingerprint = ':'.join(map(lambda c: '%02x'%ord(c), md5.new(pubKey).digest()))
         d = self.verifyHostKey(pubKey, fingerprint)
         d.addCallback(self._continueGEX_REPLY, pubKey, f, signature)
-        d.addErrback(
-            lambda unused: self.sendDisconnect(
-                DISCONNECT_HOST_KEY_NOT_VERIFIABLE, 'bad host key'))
-        return d
-
+        d.addErrback(lambda unused, self=self: self.sendDisconnect(DISCONNECT_HOST_KEY_NOT_VERIFIABLE, 'bad host key'))
 
     def _continueGEX_REPLY(self, ignored, pubKey, f, signature):
-        """
-        The host key has been verified, so we generate the keys.
-
-        @param pubKey: the public key blob for the server's public key.
-        @type pubKey: C{str}
-        @param f: the server's Diffie-Hellman public key.
-        @type f: C{long}
-        @param signature: the server's signature, verifying that it has the
-            correct private key.
-        @type signature: C{str}
-        """
-        serverKey = keys.Key.fromString(pubKey)
+        serverKey = keys.getPublicKeyObject(pubKey)
         sharedSecret = _MPpow(f, self.x, self.p)
         h = sha.new()
         h.update(NS(self.ourVersionString))
         h.update(NS(self.otherVersionString))
         h.update(NS(self.ourKexInitPayload))
-        h.update(NS(self.otherKexInitPayload))
+        h.update(NS(self.serverKexInitPayload))
         h.update(NS(pubKey))
         h.update('\x00\x00\x08\x00')
         h.update(MP(self.p))
         h.update(MP(self.g))
-        h.update(self.e)
+        h.update(MP(self.DHpubKey))
         h.update(MP(f))
         h.update(sharedSecret)
         exchangeHash = h.digest()
-        if not serverKey.verify(signature, exchangeHash):
-            self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED,
-                                'bad signature')
+        if not keys.verifySignature(serverKey, signature, exchangeHash):
+            self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, 'bad signature')
             return
         self._keySetup(sharedSecret, exchangeHash)
 
-
     def _keySetup(self, sharedSecret, exchangeHash):
-        """
-        See SSHTransportBase._keySetup().
-        """
-        SSHTransportBase._keySetup(self, sharedSecret, exchangeHash)
+        if not self.sessionID:
+            self.sessionID = exchangeHash
+        initIVCS = self._getKey('A', sharedSecret, exchangeHash)
+        initIVSC = self._getKey('B', sharedSecret, exchangeHash)
+        encKeyCS = self._getKey('C', sharedSecret, exchangeHash)
+        encKeySC = self._getKey('D', sharedSecret, exchangeHash)
+        integKeyCS = self._getKey('E', sharedSecret, exchangeHash)
+        integKeySC = self._getKey('F', sharedSecret, exchangeHash)
+        self.nextEncryptions.setKeys(initIVCS, encKeyCS, initIVSC, encKeySC, integKeyCS, integKeySC)
+        self.sendPacket(MSG_NEWKEYS, '')
         if self._gotNewKeys:
             self.ssh_NEWKEYS('')
 
+    def _getKey(self, c, sharedSecret, exchangeHash):
+        k1 = sha.new(sharedSecret+exchangeHash+c+self.sessionID).digest()
+        k2 = sha.new(sharedSecret+exchangeHash+k1).digest()
+        return k1+k2
 
     def ssh_NEWKEYS(self, packet):
-        """
-        Called when we receieve a MSG_NEWKEYS message.  No payload.
-        If we've finished setting up our own keys, start using them.
-        Otherwise, remeber that we've receieved this message.
-        """
         if packet != '':
-            self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR,
-                                "NEWKEYS takes no data")
-            return
-        if not self.nextEncryptions.encBlockSize:
+            self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR, "NEWKEYS takes no data")
+        if not self.nextEncryptions.enc_block_size:
             self._gotNewKeys = 1
             return
-        log.msg('NEW KEYS')
         self.currentEncryptions = self.nextEncryptions
         if self.outgoingCompressionType == 'zlib':
             self.outgoingCompression = zlib.compressobj(6)
+            #self.outgoingCompression.compress = lambda x: self.outgoingCompression.compress(x) + self.outgoingCompression.flush(zlib.Z_SYNC_FLUSH)
         if self.incomingCompressionType == 'zlib':
             self.incomingCompression = zlib.decompressobj()
         self.connectionSecure()
 
-
     def ssh_SERVICE_ACCEPT(self, packet):
-        """
-        Called when we receieve a MSG_SERVICE_ACCEPT message.  Payload::
-            string service name
-
-        Start the service we requested.
-        """
         name = getNS(packet)[0]
         if name != self.instance.name:
-            self.sendDisconnect(
-                DISCONNECT_PROTOCOL_ERROR,
-                "received accept for service we did not request")
+            self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR, "received accept for service we did not request")
         self.setService(self.instance)
-
 
     def requestService(self, instance):
         """
@@ -1092,242 +604,133 @@ class SSHClientTransport(SSHTransportBase):
         self.sendPacket(MSG_SERVICE_REQUEST, NS(instance.name))
         self.instance = instance
 
-
     # client methods
     def verifyHostKey(self, hostKey, fingerprint):
-        """
-        Returns a Deferred that gets a callback if it is a valid key, or
+        """Returns a Deferred that gets a callback if it is a valid key, or
         an errback if not.
 
         @type hostKey:      C{str}
         @type fingerprint:  C{str}
-        @rtype:             L{twisted.internet.defer.Deferred}
+        @rtype:             L{Deferred}
         """
-        # return if it's good
-        return defer.fail(NotImplementedError())
-
+        # return  if it's good
+        return defer.fail(NotImplementedError)
 
     def connectionSecure(self):
         """
-        Called when the encryption has been set up.  Generally,
+        Called when the encryption has been set up.  Generally, 
         requestService() is called to run another service over the transport.
         """
-        raise NotImplementedError()
-
-
+        raise NotImplementedError
 
 class _DummyCipher:
-    """
-    A cipher for the none encryption method.
-
-    @ivar block_size: the block size of the encryption.  In the case of the
-    none cipher, this is 8 bytes.
-    """
-    block_size = 8
-
-
+    block_size = 1
+    
     def encrypt(self, x):
         return x
-
-
+    
     decrypt = encrypt
 
-
 class SSHCiphers:
-    """
-    SSHCiphers represents all the encryption operations that need to occur
-    to encrypt and authenticate the SSH connection.
-
-    @cvar cipherMap: A dictionary mapping SSH encryption names to 3-tuples of
-                     (<Crypto.Cipher.* name>, <block size>, <counter mode>)
-    @cvar macMap: A dictionary mapping SSH MAC names to hash modules.
-
-    @ivar outCipType: the string type of the outgoing cipher.
-    @ivar inCipType: the string type of the incoming cipher.
-    @ivar outMACType: the string type of the incoming MAC.
-    @ivar inMACType: the string type of the incoming MAC.
-    @ivar encBlockSize: the block size of the outgoing cipher.
-    @ivar decBlockSize: the block size of the incoming cipher.
-    @ivar verifyDigestSize: the size of the incoming MAC.
-    @ivar outMAC: a tuple of (<hash module>, <inner key>, <outer key>,
-        <digest size>) representing the outgoing MAC.
-    @ivar inMAc: see outMAC, but for the incoming MAC.
-    """
-
-
     cipherMap = {
-        '3des-cbc':('DES3', 24, 0),
-        'blowfish-cbc':('Blowfish', 16,0 ),
-        'aes256-cbc':('AES', 32, 0),
-        'aes192-cbc':('AES', 24, 0),
-        'aes128-cbc':('AES', 16, 0),
-        'cast128-cbc':('CAST', 16, 0),
+        '3des-cbc':('DES3', 24, 0), 
+        'blowfish-cbc':('Blowfish', 16,0 ), 
+        'aes256-cbc':('AES', 32, 0), 
+        'aes192-cbc':('AES', 24, 0), 
+        'aes128-cbc':('AES', 16, 0), 
+        'arcfour':('ARC4', 16, 0), 
+        'idea-cbc':('IDEA', 16, 0), 
+        'cast128-cbc':('CAST', 16, 0), 
         'aes128-ctr':('AES', 16, 1),
         'aes192-ctr':('AES', 24, 1),
         'aes256-ctr':('AES', 32, 1),
         '3des-ctr':('DES3', 24, 1),
         'blowfish-ctr':('Blowfish', 16, 1),
+        'idea-ctr':('IDEA', 16, 1),
         'cast128-ctr':('CAST', 16, 1),
         'none':(None, 0, 0),
     }
     macMap = {
-        'hmac-sha1': sha,
-        'hmac-md5': md5,
+        'hmac-sha1': 'sha', 
+        'hmac-md5': 'md5',
         'none':None
      }
-
 
     def __init__(self, outCip, inCip, outMac, inMac):
         self.outCipType = outCip
         self.inCipType = inCip
-        self.outMACType = outMac
-        self.inMACType = inMac
-        self.encBlockSize = 0
-        self.decBlockSize = 0
-        self.verifyDigestSize = 0
-        self.outMAC = (None, '', '', 0)
-        self.inMAC = (None, '', '', 0)
-
+        self.outMacType = outMac
+        self.inMacType = inMac
+        self.enc_block_size = 0
+        self.dec_block_size = 0
 
     def setKeys(self, outIV, outKey, inIV, inKey, outInteg, inInteg):
-        """
-        Set up the ciphers and hashes using the given keys,
-
-        @param outIV: the outgoing initialization vector
-        @param outKey: the outgoing encryption key
-        @param inIV: the incoming initialization vector
-        @param inKey: the incoming encryption key
-        @param outInteg: the outgoing integrity key
-        @param inInteg: the incoming integrity key.
-        """
         o = self._getCipher(self.outCipType, outIV, outKey)
         self.encrypt = o.encrypt
-        self.encBlockSize = o.block_size
+        self.enc_block_size = o.block_size
         o = self._getCipher(self.inCipType, inIV, inKey)
         self.decrypt = o.decrypt
-        self.decBlockSize = o.block_size
-        self.outMAC = self._getMAC(self.outMACType, outInteg)
-        self.inMAC = self._getMAC(self.inMACType, inInteg)
-        if self.inMAC:
-            self.verifyDigestSize = self.inMAC[3]
-
+        self.dec_block_size = o.block_size
+        self.outMAC = self._getMAC(self.outMacType, outInteg)
+        self.inMAC = self._getMAC(self.inMacType, inInteg)
+        self.verify_digest_size = self.inMAC[3]
 
     def _getCipher(self, cip, iv, key):
-        """
-        Creates an initialized cipher object.
-
-        @param cip: the name of the cipher: maps into Crypto.Cipher.*
-        @param iv: the initialzation vector
-        @param key: the encryption key
-        """
         modName, keySize, counterMode = self.cipherMap[cip]
         if not modName: # no cipher
             return _DummyCipher()
         mod = __import__('Crypto.Cipher.%s'%modName, {}, {}, 'x')
         if counterMode:
-            return mod.new(key[:keySize], mod.MODE_CTR, iv[:mod.block_size],
-                           counter=_Counter(iv, mod.block_size))
+            return mod.new(key[:keySize], mod.MODE_CTR, iv[:mod.block_size], counter=_Counter(iv, mod.block_size))
         else:
-            return mod.new(key[:keySize], mod.MODE_CBC, iv[:mod.block_size])
-
+            return mod.new(key[: keySize], mod.MODE_CBC, iv[: mod.block_size])
 
     def _getMAC(self, mac, key):
-        """
-        Gets a 4-tuple representing the message authentication code.
-        (<hash module>, <inner hash value>, <outer hash value>,
-        <digest size>)
-
-        @param mac: a key mapping into macMap
-        @type mac: C{str}
-        @param key: the MAC key.
-        @type key: C{str}
-        """
-        mod = self.macMap[mac]
-        if not mod:
-            return (None, '', '', 0)
-        #if not hasattr(mod, 'digest_size'):
-        #     ds = len(mod.new().digest())
-        #else:
-        ds = mod.digest_size
-        key = key[:ds] + '\x00' * (64 - ds)
+        modName = self.macMap[mac]
+        if not modName:
+            return None
+        mod = __import__(modName, {}, {}, '')
+        if not hasattr(mod, 'digest_size'):
+            ds = len(mod.new().digest())
+        else:
+            ds = mod.digest_size
+        key = key[: ds]+'\x00'*(64-ds)
         i = XOR.new('\x36').encrypt(key)
         o = XOR.new('\x5c').encrypt(key)
-        return mod, i, o, ds
-
+        return mod, i,o, ds
 
     def encrypt(self, blocks):
-        """
-        Encrypt blocks.  Overridden by the encrypt method of a
-        Crypto.Cipher.* object in setKeys().
-
-        @type blocks: C{str}
-        """
-        raise NotImplementedError()
-
+        return blocks
 
     def decrypt(self, blocks):
-        """
-        Decrypt blocks.  See encrypt().
-
-        @type blocks: C{str}
-        """
-        raise NotImplementedError()
-
+        return blocks
 
     def makeMAC(self, seqid, data):
-        """
-        Create a message authentication code (MAC) for the given packet using
-        the outgoing MAC values.
-
-        @param seqid: the sequence ID of the outgoing packet
-        @type seqid: C{int}
-        @param data: the data to create a MAC for
-        @type data: C{str}
-        @rtype: C{str}
-        """
-        if not self.outMAC[0]:
-            return ''
-        data = struct.pack('>L', seqid) + data
+        if not self.outMAC: return ''
+        data = struct.pack('>L', seqid)+data
         mod, i, o, ds = self.outMAC
-        inner = mod.new(i + data)
-        outer = mod.new(o + inner.digest())
+        inner = mod.new(i+data)
+        outer = mod.new(o+inner.digest())
         return outer.digest()
 
-
     def verify(self, seqid, data, mac):
-        """
-        Verify an incoming MAC using the incoming MAC values.  Return True
-        if the MAC is valid.
-
-        @param seqid: the sequence ID of the incoming packet
-        @type seqid: C{int}
-        @param data: the packet data to verify
-        @type data: C{str}
-        @param mac: the MAC sent with the packet
-        @type mac: C{str}
-        @rtype: C{bool}
-        """
-        if not self.inMAC[0]:
+        if not self.inMAC:
             return mac == ''
-        data = struct.pack('>L', seqid) + data
-        mod, i, o, ds = self.inMAC
-        inner = mod.new(i + data)
-        outer = mod.new(o + inner.digest())
+        data = struct.pack('>L', seqid)+data
+        mod, i,o, ds = self.inMAC
+        inner = mod.new(i+data)
+        outer = mod.new(o+inner.digest())
         return mac == outer.digest()
-
-
 
 class _Counter:
     """
     Stateful counter which returns results packed in a byte string
     """
-
-
     def __init__(self, initialVector, blockSize):
         """
         @type initialVector: C{str}
-        @param initialVector: A byte string representing the initial counter
-                              value.
+        @param initialVector: A byte string representing the initial counter value.
+
         @type blockSize: C{int}
         @param blockSize: The length of the output buffer, as well as the
         number of bytes at the beginning of C{initialVector} to consider.
@@ -1358,15 +761,21 @@ class _Counter:
 
 
 
-# Diffie-Hellman primes from Oakley Group 2 [RFC 2409]
-DH_PRIME = long('17976931348623159077083915679378745319786029604875601170644'
-'442368419718021615851936894783379586492554150218056548598050364644054819923'
-'910005079287700335581663922955313623907650873575991482257486257500742530207'
-'744771258955095793777842444242661733472762929938766870920560605027081084290'
-'7692932019128194467627007L')
+def buffer_dump(b, title = None):
+    r = title or ''
+    while b:
+        c, b = b[: 16], b[16:]
+        while c:
+            a, c = c[: 2], c[2:]
+            if len(a) == 2:
+                r = r+'%02x%02x '%(ord(a[0]), ord(a[1]))
+            else:
+                r = r+'%02x'%ord(a[0])
+        r = r+'\n'
+    return r
+
+DH_PRIME = 179769313486231590770839156793787453197860296048756011706444423684197180216158519368947833795864925541502180565485980503646440548199239100050792877003355816639229553136239076508735759914822574862575007425302077447712589550957937778424442426617334727629299387668709205606050270810842907692932019128194467627007L
 DH_GENERATOR = 2L
-
-
 
 MSG_DISCONNECT = 1
 MSG_IGNORE = 2
@@ -1384,8 +793,6 @@ MSG_KEX_DH_GEX_GROUP = 31
 MSG_KEX_DH_GEX_INIT = 32
 MSG_KEX_DH_GEX_REPLY = 33
 
-
-
 DISCONNECT_HOST_NOT_ALLOWED_TO_CONNECT = 1
 DISCONNECT_PROTOCOL_ERROR = 2
 DISCONNECT_KEY_EXCHANGE_FAILED = 3
@@ -1402,9 +809,8 @@ DISCONNECT_AUTH_CANCELLED_BY_USER = 13
 DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE = 14
 DISCONNECT_ILLEGAL_USER_NAME = 15
 
-
-
 messages = {}
 for name, value in globals().items():
     if name.startswith('MSG_'):
         messages[value] = name
+

@@ -13,7 +13,7 @@ from twisted.cred import portal
 from twisted.internet import reactor, defer, protocol, error
 from twisted.python import log, runtime
 from twisted.trial import unittest
-from twisted.conch import error
+
 from twisted.conch.test.test_ssh import ConchTestRealm
 
 from twisted.conch.test.keydata import publicRSA_openssh, privateRSA_openssh
@@ -64,15 +64,10 @@ class ConchTestOpenSSHProcess(protocol.ProcessProtocol):
 
 
     def processEnded(self, reason):
-        """
-        Called when the process has ended.
-
-        @param reason: a Failure giving the reason for the process' end.
-        """
         if reason.value.exitCode != 0:
             self._getDeferred().errback(
-                error.ConchError("exit code was not 0: %s" %
-                                 reason.value.exitCode))
+                self.failureException("exit code was not 0: %s"
+                                      % reason.value.exitCode))
         else:
             buf = self.buf.replace('\r\n', '\n')
             self._getDeferred().callback(buf)

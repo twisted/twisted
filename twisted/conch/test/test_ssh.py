@@ -726,7 +726,7 @@ class TestSSHFactory(unittest.TestCase):
     def testMultipleFactories(self):
         f1 = factory.SSHFactory()
         f2 = factory.SSHFactory()
-        gpk = lambda: {'ssh-rsa' : keys.Key(None)}
+        gpk = lambda: {'ssh-rsa' : "don't use"}
         f1.getPrimes = lambda: None
         f2.getPrimes = lambda: {1:(2,3)}
         f1.getPublicKeys = f2.getPublicKeys = gpk

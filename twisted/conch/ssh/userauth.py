@@ -94,18 +94,19 @@ class SSHUserAuthServer(service.SSHService):
         return d
 
     def _cbFinishedAuth(self, (interface, avatar, logout)):
-        self.transport.avatar = avatar
-        self.transport.logoutFunction = logout
-        service = self.transport.factory.getService(self.transport,
+        self.transport.isAuthorized = True
+        service = self.transport.factory.getService(self.transport, 
                 self.nextService)
         if not service:
-            raise error.ConchError('could not get next service: %s'
+            raise error.ConchError('could not get next service: %s' 
                                   % self.nextService)
         log.msg('%s authenticated with %s' % (self.user, self.method))
         if self.cancelLoginTimeout:
             self.cancelLoginTimeout.cancel()
             self.cancelLoginTimeout = None
         self.transport.sendPacket(MSG_USERAUTH_SUCCESS, '')
+        self.transport.avatar = avatar
+        self.transport.logoutFunction = logout
         self.transport.setService(service())
 
     def _ebMaybeBadAuth(self, reason):
