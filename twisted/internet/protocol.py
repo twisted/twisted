@@ -430,8 +430,11 @@ components.registerAdapter(ConsumerToProtocolAdapter, interfaces.IConsumer,
                            interfaces.IProtocol)
 
 class ProcessProtocol(BaseProtocol):
-    """Processes have some additional methods besides receiving data.
     """
+    Base process protocol implementation which does simple dispatching for
+    stdin, stdout, and stderr file descriptors.
+    """
+    implements(interfaces.IProcessProtocol)
 
     def childDataReceived(self, childFD, data):
         if childFD == 1:
@@ -439,10 +442,18 @@ class ProcessProtocol(BaseProtocol):
         elif childFD == 2:
             self.errReceived(data)
 
+
     def outReceived(self, data):
-        """Some data was received from stdout."""
+        """
+        Some data was received from stdout.
+        """
+
+
     def errReceived(self, data):
-        """Some data was received from stderr."""
+        """
+        Some data was received from stderr.
+        """
+
 
     def childConnectionLost(self, childFD):
         if childFD == 0:
@@ -452,15 +463,28 @@ class ProcessProtocol(BaseProtocol):
         elif childFD == 2:
             self.errConnectionLost()
 
+
     def inConnectionLost(self):
-        """This will be called when stdin is closed."""
+        """
+        This will be called when stdin is closed.
+        """
+
+
     def outConnectionLost(self):
-        """This will be called when stdout is closed."""
+        """
+        This will be called when stdout is closed.
+        """
+
+
     def errConnectionLost(self):
-        """This will be called when stderr is closed."""
+        """
+        This will be called when stderr is closed.
+        """
+
 
     def processEnded(self, reason):
-        """This will be called when the subprocess is finished.
+        """
+        This will be called when the subprocess is finished.
 
         @type reason: L{twisted.python.failure.Failure}
         """

@@ -1,11 +1,9 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""Interface documentation.
-
-API Stability: stable, other than IReactorUDP (semi-stable) and
-IReactorMulticast (unstable).
+"""
+Interface documentation.
 
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
@@ -369,8 +367,9 @@ class IReactorProcess(Interface):
         """
         Spawn a process, with a process protocol.
 
-        @param processProtocol: a L{twisted.internet.protocol.ProcessProtocol}
-            instance
+        @type processProtocol: L{IProcessProtocol} provider
+        @param processProtocol: An object which will be notified of all
+            events related to the created process.
 
         @param executable: the file name to spawn - the full path should be
                            used.
@@ -409,7 +408,7 @@ class IReactorProcess(Interface):
                          attached to the child at that file descriptor: the
                          child will be able to write to that file descriptor
                          and the parent will receive read notification via the
-                         L{IProcessTransport.childDataReceived} callback.  This
+                         L{IProcessProtocol.childDataReceived} callback.  This
                          is useful for the child's stdout and stderr.
 
                          If it is the string 'w', similar setup to the previous
@@ -1003,6 +1002,57 @@ class IProtocol(Interface):
         stops blocking and a socket has been received.  If you need to
         send any greeting or initial message, do it here.
         """
+
+
+class IProcessProtocol(Interface):
+    """
+    Interface for process-related event handlers.
+    """
+
+    def makeConnection(process):
+        """
+        Called when the process has been created.
+
+        @type process: L{IProcessTransport} provider
+        @param process: An object representing the process which has been
+            created and associated with this protocol.
+        """
+
+
+    def childDataReceived(childFD, data):
+        """
+        Called when data arrives from the child process.
+
+        @type childFD: C{int}
+        @param childFD: The file descriptor from which the data was
+            received.
+
+        @type data: C{str}
+        @param data: The data read from the child's file descriptor.
+        """
+
+
+    def childConnectionLost(childFD):
+        """
+        Called when a file descriptor associated with the child process is
+        closed.
+
+        @type childFD: C{int}
+        @param childFD: The file descriptor which was closed.
+        """
+
+
+    def processEnded(reason):
+        """
+        Called when the child process exits.
+
+        @type reason: L{twisted.python.failure.Failure}
+        @param reason: A failure giving the reason the child process
+            terminated.  The type of exception for this failure is either
+            L{twisted.internet.error.ProcessDone} or
+            L{twisted.internet.error.ProcessTerminated}.
+        """
+
 
 
 class IHalfCloseableProtocol(Interface):

@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -18,8 +18,8 @@ try:
 except ImportError:
     fcntl = None
 
+from zope.interface.verify import verifyObject
 
-# Twisted Imports
 from twisted.internet import reactor, protocol, error, interfaces, defer
 from twisted.trial import unittest
 from twisted.python import util, runtime, procutils
@@ -58,6 +58,13 @@ class ProcessProtocolTests(unittest.TestCase):
     Tests for behavior provided by the process protocol base class,
     L{protocol.ProcessProtocol}.
     """
+    def test_interface(self):
+        """
+        L{ProcessProtocol} implements L{IProcessProtocol}.
+        """
+        verifyObject(interfaces.IProcessProtocol, protocol.ProcessProtocol())
+
+
     def test_outReceived(self):
         """
         Verify that when stdout is delivered to
