@@ -1,9 +1,21 @@
 # -*- test-case-name: twisted.test.test_enterprise -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-import types
+import warnings, types
+
+from twisted.python.versions import Version, getVersionString
+from twisted.python.deprecate import deprecated
+
+# Common deprecation decorator used for all deprecations.
+_unreleasedVersion = Version("Twisted", 2, 6, 0)
+_unreleasedDeprecation = deprecated(_unreleasedVersion)
+
+warnings.warn(
+    "twisted.enterprise.util is deprecated since %s." % (
+        getVersionString(_unreleasedVersion),),
+    category=DeprecationWarning)
 
 NOQUOTE = 1
 USEQUOTE = 2
@@ -34,6 +46,8 @@ dbTypeMap = {
 class DBError(Exception):
     pass
 
+
+
 ### Utility functions
 
 def getKeyColumn(rowClass, name):
@@ -42,11 +56,14 @@ def getKeyColumn(rowClass, name):
         if lcname == keyColumn.lower():
             return name
     return None
+getKeyColumn = _unreleasedDeprecation(getKeyColumn)
+
 
 def safe(text):
     """Make a string safe to include in an SQL statement
     """
     return text.replace("'", "''").replace("\\", "\\\\")
+
 
 def quote(value, typeCode, string_escaper=safe):
     """Add quotes for text types and no quotes for integer types.
@@ -83,6 +100,11 @@ def quote(value, typeCode, string_escaper=safe):
                not isinstance(value, types.UnicodeType):
             value = str(value)
         return "'%s'" % string_escaper(value)
+quote = _unreleasedDeprecation(quote)
+
+# Do this one here to let quote get an undeprecated version for internal
+# use.
+safe = _unreleasedDeprecation(safe)
 
 def makeKW(rowClass, args):
     """Utility method to construct a dictionary for the attributes
@@ -96,6 +118,8 @@ def makeKW(rowClass, args):
                 kw[attr] = args[i]
                 break
     return kw
+makeKW = _unreleasedDeprecation(makeKW)
+
 
 def defaultFactoryMethod(rowClass, data, kw):
     """Used by loadObjects to create rowObject instances.
@@ -103,6 +127,7 @@ def defaultFactoryMethod(rowClass, data, kw):
     newObject = rowClass()
     newObject.__dict__.update(kw)
     return newObject
+defaultFactoryMethod = _unreleasedDeprecation(defaultFactoryMethod)
 
 ### utility classes
 

@@ -1,8 +1,9 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-"""General tests for twisted.enterprise."""
+"""
+General tests for twisted.enterprise.
+"""
 
 from twisted.trial import unittest
 
@@ -18,4 +19,22 @@ class QuotingTestCase(unittest.TestCase):
             (12, "text", "'12'"),
             (u"123'456", "text", u"'123''456'")
             ]:
-            self.assertEquals(util.quote(value, typ), expected)
+            self.assertEquals(
+                self.callDeprecated(util._unreleasedVersion, util.quote, value, typ),
+                expected)
+
+
+    def test_safeDeprecation(self):
+        """
+        L{safe} is deprecated.
+        """
+        self.callDeprecated(util._unreleasedVersion, util.safe, "foo")
+
+
+    def test_getKeyColumnDeprecation(self):
+        """
+        L{getKeyColumn} is deprecated.
+        """
+        class Row(object):
+            rowKeyColumns = ()
+        self.callDeprecated(util._unreleasedVersion, util.getKeyColumn, Row, "foo")
