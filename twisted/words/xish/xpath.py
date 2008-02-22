@@ -253,7 +253,8 @@ class _AnyLocation:
             return False
 
     def queryForString(self, elem, resultbuf):
-        raise "UnsupportedOperation"
+        raise NotImplementedError(
+            "queryForString is not implemented for any location")
 
     def queryForNodes(self, elem, resultlist):
         # First check to see if _this_ element is a root

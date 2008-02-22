@@ -934,7 +934,7 @@ class _Unjellier:
                                     im_self,
                                     im_class)
         else:
-            raise 'instance method changed'
+            raise TypeError('instance method changed')
         return im
 
 

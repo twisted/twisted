@@ -319,8 +319,6 @@ def copy(source_filepath, destination_filepath, destination_uri, depth):
             "The requested resource exists but is not backed by a regular file."
         ))
 
-    raise AssertionError("We shouldn't be here.")
-
 copy = deferredGenerator(copy)
 
 def move(source_filepath, source_uri, destination_filepath, destination_uri, depth):

@@ -156,7 +156,7 @@ class BounceTestCase(unittest.TestCase):
         )
 
     def testMessage(self):
-        self.assertRaises(AssertionError, self.domain.startMessage, "whomever")
+        self.assertRaises(NotImplementedError, self.domain.startMessage, "whomever")
 
     def testAddUser(self):
         self.domain.addUser("bob", "password")

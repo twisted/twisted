@@ -17,7 +17,7 @@ class KeyFactory:
         next = self.current + 1
         self.current = next
         if self.current >= self.pool:
-            raise "Key factory key pool exceeded."
+            raise ValueError("Key factory key pool exceeded.")
         return next
 
 def myRowFactory(rowClass, data, kw):

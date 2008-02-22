@@ -196,7 +196,11 @@ class BounceDomain:
         pass
 
     def startMessage(self, user):
-        raise AssertionError, "No code should ever call this method for any reason"
+        """
+        No code should ever call this function.
+        """
+        raise NotImplementedError(
+                "No code should ever call this method for any reason")
 
     def getCredentialsCheckers(self):
         return []
