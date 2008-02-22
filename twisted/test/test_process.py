@@ -1629,6 +1629,34 @@ class MockProcessTestCase(unittest.TestCase):
         proc.reapProcess()
 
 
+    def test_reapAllProcesses(self):
+        """
+        L{process.reapAllProcesses} should call C{waitpid} until all the
+        registered processes are reaped, or that C{waitpid} returns nothing.
+        """
+        self.mockos.child = False
+        d = defer.Deferred()
+        p = TrivialProcessProtocol(d)
+        cmd = '/mock/ouch'
+        self.mockos.waitChild = (0, 0)
+        proc = reactor.spawnProcess(p, cmd, ['ouch'], env=None,
+                                    usePTY=False)
+        self.assertEquals(self.mockos.actions, [("fork", False), "waitpid"])
+
+        self.mockos.waitChild = (21, 2)
+        process.reapAllProcesses()
+
+        # A new call to waitpid should have happened
+        self.assertEquals(self.mockos.actions, [("fork", False), "waitpid",
+            "waitpid"])
+        process.reapAllProcesses()
+
+        # Nothing should have happened
+        self.assertEquals(self.mockos.actions, [("fork", False), "waitpid",
+            "waitpid"])
+
+
+
 class PosixProcessTestCase(unittest.TestCase, PosixProcessBase):
     # add three non-pty test cases
 

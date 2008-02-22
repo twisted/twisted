@@ -35,12 +35,34 @@ ProcessExitedAlready = error.ProcessExitedAlready
 
 reapProcessHandlers = {}
 
+
+
 def reapAllProcesses():
     """
     Reap all registered processes.
     """
-    for process in reapProcessHandlers.values():
-        process.reapProcess()
+    pid = -1
+    while pid and reapProcessHandlers:
+        try:
+            pid, status = os.waitpid(-1, os.WNOHANG)
+        except OSError, e:
+            if e.errno == errno.ECHILD:
+                # no child process
+                break
+            else:
+                raise
+        except:
+            log.msg('Failed to reap child processes')
+            log.err()
+            break
+        if pid:
+            if pid not in reapProcessHandlers:
+                log.msg('Tried to reap unregistered process pid: %d' % (pid,))
+            else:
+                process = reapProcessHandlers[pid]
+                process.processEnded(status)
+                unregisterReapProcessHandler(pid, process)
+
 
 
 def registerReapProcessHandler(pid, process):
