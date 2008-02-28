@@ -102,7 +102,6 @@ def deprecated(version):
         _appendToDocstring(deprecatedFunction,
                            _getDeprecationDocstring(version))
         deprecatedFunction.deprecatedVersion = version
-        deprecatedFunction.__module__ = function.__module__
         return deprecatedFunction
 
     return deprecationDecorator

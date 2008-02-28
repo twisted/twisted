@@ -794,6 +794,7 @@ def mergeFunctionMetadata(f, g):
         merged.__dict__.update(f.__dict__)
     except (TypeError, AttributeError):
         pass
+    merged.__module__ = f.__module__
     return merged
 
 

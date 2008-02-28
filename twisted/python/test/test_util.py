@@ -103,6 +103,22 @@ class TestMergeFunctionMetadata(unittest.TestCase):
         self.assertIdentical(baz(1, 2, (3, 4), quux=10), bar_object)
 
 
+    def test_moduleIsMerged(self):
+        """
+        Merging C{foo} into C{bar} returns a function with C{foo}'s
+        C{__module__}.
+        """
+        def foo():
+            pass
+
+        def bar():
+            pass
+        bar.__module__ = 'somewhere.else'
+
+        baz = util.mergeFunctionMetadata(foo, bar)
+        self.assertEqual(baz.__module__, foo.__module__)
+
+
     def test_docstringIsMerged(self):
         """
         Merging C{foo} into C{bar} returns a function with C{foo}'s docstring.
