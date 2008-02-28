@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -21,6 +21,7 @@ from twisted.trial import unittest
 
 from twisted.spread import pb, util, publish, jelly
 from twisted.internet import protocol, main, reactor, defer
+from twisted.internet.error import ConnectionRefusedError
 from twisted.internet.defer import Deferred, gatherResults
 from twisted.python import failure, log
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
@@ -1200,6 +1201,22 @@ class NewCredTestCase(unittest.TestCase):
         serverProto = self.factory.buildProtocol(('127.0.0.1', 12345))
         serverProto.makeConnection(protocol.FileWrapper(StringIO()))
         serverProto.connectionLost(failure.Failure(main.CONNECTION_DONE))
+
+
+    def test_loginConnectionRefused(self):
+        """
+        L{PBClientFactory.login} returns a L{Deferred} which is errbacked
+        with the L{ConnectionRefusedError} if the underlying connection is
+        refused.
+        """
+        clientFactory = pb.PBClientFactory()
+        loginDeferred = clientFactory.login(
+            credentials.UsernamePassword("foo", "bar"))
+        clientFactory.clientConnectionFailed(
+            None,
+            failure.Failure(
+                ConnectionRefusedError("Test simulated refused connection")))
+        return self.assertFailure(loginDeferred, ConnectionRefusedError)
 
 
     def test_loginLogout(self):
