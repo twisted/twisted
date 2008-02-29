@@ -1,5 +1,5 @@
-# -*- test-case-name: twisted.test.test_versions -*-
-# Copyright (c) 2006 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.python.test.test_versions -*-
+# Copyright (c) 2006-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -30,13 +30,13 @@ class Version(object):
 
     def short(self):
         """
-        Return a string in canonical short version format, 
+        Return a string in canonical short version format,
         <major>.<minor>.<micro>[+rSVNVer].
         """
         s = self.base()
         svnver = self._getSVNVersion()
         if svnver:
-            s += '+r'+svnver
+            s += '+r' + str(svnver)
         return s
 
     def base(self):
@@ -81,40 +81,63 @@ class Version(object):
                     other.micro))
 
 
-    def _parseSVNEntries(self, entriesFile):
+    def _parseSVNEntries_4(self, entriesFile):
         """
-        Given a readable file object which represents a .svn/entries
-        file, return the revision as a string. If the file cannot be
-        parsed, return the string "Unknown".
+        Given a readable file object which represents a .svn/entries file in
+        format version 4, return the revision as a string.  We do this by
+        reading first XML element in the document that has a 'revision'
+        attribute.
         """
-        try:
-            from xml.dom.minidom import parse
-            doc = parse(entriesFile).documentElement
-            for node in doc.childNodes:
-                if hasattr(node, 'getAttribute'):
-                    rev = node.getAttribute('revision')
-                    if rev is not None:
-                        return rev.encode('ascii')
-        except:
-            return "Unknown"
-        
+        from xml.dom.minidom import parse
+        doc = parse(entriesFile).documentElement
+        for node in doc.childNodes:
+            if hasattr(node, 'getAttribute'):
+                rev = node.getAttribute('revision')
+                if rev is not None:
+                    return rev.encode('ascii')
+
+
+    def _parseSVNEntries_8(self, entriesFile):
+        """
+        Given a readable file object which represents a .svn/entries file in
+        format version 8, return the revision as a string.
+        """
+        entriesFile.readline()
+        entriesFile.readline()
+        entriesFile.readline()
+        return entriesFile.readline().strip()
+
 
     def _getSVNVersion(self):
         """
         Figure out the SVN revision number based on the existance of
-        twisted/.svn/entries, and its contents. This requires parsing the
-        entries file and reading the first XML tag in the xml document that has
-        a revision="" attribute.
+        <package>/.svn/entries, and its contents. This requires discovering the
+        format version from the 'format' file and parsing the entries file
+        accordingly.
 
         @return: None or string containing SVN Revision number.
         """
         mod = sys.modules.get(self.package)
         if mod:
-            ent = os.path.join(os.path.dirname(mod.__file__),
-                               '.svn',
-                               'entries')
-            if os.path.exists(ent):
-                return self._parseSVNEntries(open(ent))
+            svn = os.path.join(os.path.dirname(mod.__file__), '.svn')
+            formatFile = os.path.join(svn, 'format')
+            if not os.path.exists(formatFile):
+                return None
+            format = file(formatFile).read().strip()
+            ent = os.path.join(svn, 'entries')
+            if not os.path.exists(ent):
+                return None
+            parser = getattr(self, '_parseSVNEntries_' + format, None)
+            if parser is None:
+                return 'Unknown'
+            entries = file(ent)
+            try:
+                try:
+                    return parser(entries)
+                finally:
+                    entries.close()
+            except:
+                return 'Unknown'
 
 
     def _formatSVNVersion(self):
