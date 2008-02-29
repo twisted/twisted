@@ -147,6 +147,15 @@ class Win32Reactor(posixbase.PosixReactorBase):
         """
         return self._removeAll(self._reads, self._writes)
 
+
+    def getReaders(self):
+        return self._reads.keys()
+
+
+    def getWriters(self):
+        return self._writes.keys()
+
+
     def doWaitForMultipleEvents(self, timeout):
         log.msg(channel='system', event='iteration', reactor=self)
         if timeout is None:

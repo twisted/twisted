@@ -63,14 +63,15 @@ You're going to need to patch PyKqueue::
 
 """
 
-# System imports
 import errno, sys
 
-# PyKQueue imports
+from zope.interface import implements
+
 from kqsyscall import EVFILT_READ, EVFILT_WRITE, EV_DELETE, EV_ADD
 from kqsyscall import kqueue, kevent
 
-# Twisted imports
+from twisted.internet.interfaces import IReactorFDSet
+
 from twisted.python import log, failure
 from twisted.internet import main, posixbase
 
@@ -99,6 +100,8 @@ class KQueueReactor(posixbase.PosixReactorBase):
         dispatched to the corresponding L{FileDescriptor} instances in
         C{_selectables}.
     """
+    implements(IReactorFDSet)
+
     def __init__(self):
         """
         Initialize kqueue object, file descriptor tracking dictionaries, and the
@@ -167,6 +170,15 @@ class KQueueReactor(posixbase.PosixReactorBase):
         if self.waker is not None:
             self.addReader(self.waker)
         return result
+
+
+    def getReaders(self):
+        return [self._selectables[fd] for fd in self._reads]
+
+
+    def getWriters(self):
+        return [self._selectables[fd] for fd in self._writes]
+
 
     def doKEvent(self, timeout):
         """Poll the kqueue for new events."""

@@ -15,14 +15,17 @@ API Stability: stable
 Maintainer: U{Jp Calderone <mailto:exarkun@twistedmatrix.com>}
 """
 
-# System imports
 import sys, errno
 
-# Twisted imports
+from zope.interface import implements
+
+from twisted.internet.interfaces import IReactorFDSet
+
 from twisted.python import _epoll
 from twisted.python import log
 from twisted.internet import posixbase, error
 from twisted.internet.main import CONNECTION_LOST
+
 
 _POLL_DISCONNECTED = (_epoll.HUP | _epoll.ERR)
 
@@ -51,6 +54,7 @@ class EPollReactor(posixbase.PosixReactorBase):
         be dispatched to the corresponding L{FileDescriptor} instances in
         C{_selectables}.
     """
+    implements(IReactorFDSet)
 
     def __init__(self):
         """
@@ -170,6 +174,15 @@ class EPollReactor(posixbase.PosixReactorBase):
             self._reads[fd] = 1
             self._selectables[fd] = self.waker
         return result
+
+
+    def getReaders(self):
+        return [self._selectables[fd] for fd in self._reads]
+
+
+    def getWriters(self):
+        return [self._selectables[fd] for fd in self._writes]
+
 
     def doPoll(self, timeout):
         """

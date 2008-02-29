@@ -974,34 +974,27 @@ class WriteDataTestCase(unittest.TestCase):
             """
             def connectionMade(self):
                 msg('UnreadingWriter.connectionMade')
-                # Okay, not immediately - see #1780
-                def pause():
-                    msg('UnreadingWriter.connectionMade pause')
-                    self.transport.pauseProducing()
-                    msg('UnreadingWriter.connectionMade paused transport')
-                    clientPaused.callback(None)
-                    msg('clientPaused called back')
-                    def write(ignored):
-                        msg('UnreadingWriter.connectionMade write')
-                        # This needs to be enough bytes to spill over into the
-                        # userspace Twisted send buffer - if it all fits into
-                        # the kernel, Twisted won't even poll for OUT events,
-                        # which means it won't poll for any events at all, so
-                        # the disconnection is never noticed.  This is due to
-                        # #1662.  When #1662 is fixed, this test will likely
-                        # need to be adjusted, otherwise connection lost
-                        # notification will happen too soon and the test will
-                        # probably begin to fail with ConnectionDone instead of
-                        # ConnectionLost (in any case, it will no longer be
-                        # entirely correct).
-                        producer = Infinite(self.transport)
-                        msg('UnreadingWriter.connectionMade write created producer')
-                        self.transport.registerProducer(producer, False)
-                        msg('UnreadingWriter.connectionMade write registered producer')
-                    serverLost.addCallback(write)
-                msg('UnreadingWriter.connectionMade scheduling pause')
-                reactor.callLater(0, pause)
-                msg('UnreadingWriter.connectionMade did callLater')
+                self.transport.pauseProducing()
+                clientPaused.callback(None)
+                msg('clientPaused called back')
+                def write(ignored):
+                    msg('UnreadingWriter.connectionMade write')
+                    # This needs to be enough bytes to spill over into the
+                    # userspace Twisted send buffer - if it all fits into
+                    # the kernel, Twisted won't even poll for OUT events,
+                    # which means it won't poll for any events at all, so
+                    # the disconnection is never noticed.  This is due to
+                    # #1662.  When #1662 is fixed, this test will likely
+                    # need to be adjusted, otherwise connection lost
+                    # notification will happen too soon and the test will
+                    # probably begin to fail with ConnectionDone instead of
+                    # ConnectionLost (in any case, it will no longer be
+                    # entirely correct).
+                    producer = Infinite(self.transport)
+                    msg('UnreadingWriter.connectionMade write created producer')
+                    self.transport.registerProducer(producer, False)
+                    msg('UnreadingWriter.connectionMade write registered producer')
+                serverLost.addCallback(write)
 
         # Create the client and initiate the connection
         client = MyClientFactory()
@@ -1662,6 +1655,52 @@ class LogTestCase(unittest.TestCase):
         client.protocolConnectionMade.addCallback(cb)
         return client.protocolConnectionMade
 
+
+
+class PauseProducingTestCase(unittest.TestCase):
+    """
+    Test some behaviors of pausing the production of a transport.
+    """
+
+    def test_pauseProducingInConnectionMade(self):
+        """
+        In C{connectionMade} of a client protocol, C{pauseProducing} used to be
+        ignored: this test is here to ensure it's not ignored.
+        """
+        server = MyServerFactory()
+
+        client = MyClientFactory()
+        client.protocolConnectionMade = defer.Deferred()
+
+        port = reactor.listenTCP(0, server, interface='127.0.0.1')
+        self.addCleanup(port.stopListening)
+
+        connector = reactor.connectTCP(
+            port.getHost().host, port.getHost().port, client)
+        self.addCleanup(connector.disconnect)
+
+        def checkInConnectionMade(proto):
+            tr = proto.transport
+            # The transport should already be monitored
+            self.assertIn(tr, reactor.getReaders() +
+                              reactor.getWriters())
+            proto.transport.pauseProducing()
+            self.assertNotIn(tr, reactor.getReaders() +
+                                 reactor.getWriters())
+            d = defer.Deferred()
+            d.addCallback(checkAfterConnectionMade)
+            reactor.callLater(0, d.callback, proto)
+            return d
+        def checkAfterConnectionMade(proto):
+            tr = proto.transport
+            # The transport should still not be monitored
+            self.assertNotIn(tr, reactor.getReaders() +
+                                 reactor.getWriters())
+        client.protocolConnectionMade.addCallback(checkInConnectionMade)
+        return client.protocolConnectionMade
+
+    if not interfaces.IReactorFDSet.providedBy(reactor):
+        test_pauseProducingInConnectionMade.skip = "Reactor not providing IReactorFDSet"
 
 
 try:

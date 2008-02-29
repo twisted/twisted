@@ -460,6 +460,15 @@ class ReactorBase(object):
     def removeAll(self):
         raise NotImplementedError
 
+
+    def getReaders(self):
+        raise NotImplementedError()
+
+
+    def getWriters(self):
+        raise NotImplementedError()
+
+
     def resolve(self, name, timeout = (1, 3, 11, 45)):
         """Return a Deferred that will resolve a hostname.
         """
@@ -647,6 +656,7 @@ class ReactorBase(object):
             return None
 
         return max(0, self._pendingTimedCalls[0].time - self.seconds())
+
 
     def runUntilCurrent(self):
         """Run all pending timed calls.

@@ -566,8 +566,8 @@ class BaseClient(Connection):
         self.protocol = self.connector.buildProtocol(self.getPeer())
         self.connected = 1
         self.logstr = self.protocol.__class__.__name__ + ",client"
-        self.protocol.makeConnection(self)
         self.startReading()
+        self.protocol.makeConnection(self)
 
     def connectionLost(self, reason):
         if not self.connected:

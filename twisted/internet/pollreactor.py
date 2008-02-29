@@ -200,6 +200,15 @@ class PollReactor(posixbase.PosixReactorBase):
             self._disconnectSelectable(selectable, why, inRead)
 
 
+    def getReaders(self):
+        return [self._selectables[fd] for fd in self._reads]
+
+
+    def getWriters(self):
+        return [self._selectables[fd] for fd in self._writes]
+
+
+
 def install():
     """Install the poll() reactor."""
     p = PollReactor()

@@ -328,6 +328,15 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
     def removeAll(self):
         return self._removeAll(self.reads, self.writes)
 
+
+    def getReaders(self):
+        return self.reads.keys()
+
+
+    def getWriters(self):
+        return self.writes.keys()
+
+
     def run(self, installSignalHandlers=1):
         self.startRunning(installSignalHandlers=installSignalHandlers)
         self.mainLoop()

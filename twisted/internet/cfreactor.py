@@ -34,7 +34,10 @@ import traceback
 
 import cfsupport as cf
 
+from zope.interface import implements
+
 from twisted.python import log, threadable, failure
+from twisted.internet.interfaces import IReactorFDSet
 from twisted.internet import posixbase, error
 from weakref import WeakKeyDictionary
 from Foundation import NSRunLoop
@@ -167,6 +170,7 @@ class SelectableSocketWrapper(object):
         return hash(self.fd)
 
 class CFReactor(posixbase.PosixReactorBase):
+    implements(IReactorFDSet)
     # how long to poll if we're don't care about signals
     longIntervalOfTime = 60.0 
 
@@ -213,6 +217,15 @@ class CFReactor(posixbase.PosixReactorBase):
         if wrapped is not None:
             del self.writers[writer]
             wrapped.stopWriting()
+
+
+    def getReaders(self):
+        return self.readers.keys()
+
+
+    def getWriters(self):
+        return self.writers.keys()
+
 
     def removeAll(self):
         r = self.readers.keys()

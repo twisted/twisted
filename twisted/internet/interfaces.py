@@ -751,6 +751,27 @@ class IReactorFDSet(Interface):
         """
 
 
+    def getReaders():
+        """
+        Return the list of file descriptors currently monitored for input
+        events by the reactor.
+
+        @return: the list of file descriptors monitored for input events.
+        @rtype: C{list} of C{IReadDescriptor}
+        """
+
+
+    def getWriters():
+        """
+        Return the list file descriptors currently monitored for output events
+        by the reactor.
+
+        @return: the list of file descriptors monitored for output events.
+        @rtype: C{list} of C{IWriteDescriptor}
+        """
+
+
+
 class IListeningPort(Interface):
     """A listening port.
     """

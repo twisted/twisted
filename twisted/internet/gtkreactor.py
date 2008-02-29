@@ -70,6 +70,15 @@ class GtkReactor(posixbase.PosixReactorBase):
         if writer not in self._writes:
             self._writes[writer] = gtk.input_add(writer, gtk.GDK.INPUT_WRITE, self.callback)
 
+
+    def getReaders(self):
+        return self._reads.keys()
+
+
+    def getWriters(self):
+        return self._writes.keys()
+
+
     def removeAll(self):
         return self._removeAll(self._reads, self._writes)
 
