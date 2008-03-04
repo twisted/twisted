@@ -4,9 +4,8 @@
 
 #
 
-"""Handling of RSA and DSA keys.
-
-This module is unstable.
+"""
+Handling of RSA and DSA keys.
 
 Maintainer: U{Paul Swartz}
 """

@@ -3,9 +3,8 @@
 
 # 
 
-"""Parsing for the moduli file, which contains Diffie-Hellman prime groups.
-
-This module is unstable.
+"""
+Parsing for the moduli file, which contains Diffie-Hellman prime groups.
 
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """

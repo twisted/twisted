@@ -6,9 +6,8 @@
 
 from __future__ import generators
 
-"""Threaded select reactor
-
-API Stability: unstable
+"""
+Threaded select reactor
 
 Maintainer: U{Bob Ippolito<mailto:bob@redivi.com>}
 

@@ -8,8 +8,6 @@ News server backend implementations
 
 Maintainer: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 
-Stability: semi-stable
-
 Future Plans: A PyFramer-based backend and a new backend interface that is
 less NNTP specific
 """

@@ -6,8 +6,6 @@
 
 """
 Utility functions for dealing with POSIX file descriptors.
-
-API Stability: stable
 """
 
 import sys

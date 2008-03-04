@@ -18,8 +18,6 @@ wxPython's methods.
 On Windows the Twisted event loop might block when dialogs are open
 or menus are selected.
 
-API Stability: stable
-
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 

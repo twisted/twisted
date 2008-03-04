@@ -3,12 +3,9 @@
 
 
 """
-
 Persistently cached objects for PB.
 
 Maintainer: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
-
-Stability: semi-stable
 
 Future Plans: None known.
 """

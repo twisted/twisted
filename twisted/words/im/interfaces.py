@@ -1,7 +1,6 @@
 # -*- Python -*-
-"""Pan-protocol chat client.
-
-Stability: incendiary, work in progress.
+"""
+Pan-protocol chat client.
 """
 from zope.interface import Interface
 

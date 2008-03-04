@@ -6,8 +6,6 @@
 """
 DNS protocol implementation.
 
-API Stability: Unstable
-
 Future Plans:
     - Get rid of some toplevels, maybe.
     - Put in a better lookupRecordType implementation.

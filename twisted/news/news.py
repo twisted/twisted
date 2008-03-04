@@ -4,8 +4,6 @@
 
 """
 Maintainer: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
-
-Stability: semi-stable
 """
 
 from twisted.news import nntp

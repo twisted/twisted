@@ -4,11 +4,10 @@
 # See LICENSE for details.
 
 
-"""Twisted Python Roots: an abstract hierarchy representation for Twisted.
+"""
+Twisted Python Roots: an abstract hierarchy representation for Twisted.
 
 Maintainer: Glyph Lefkowitz
-
-Stability: Unstable
 
 Future Plans: Removing distinction between 'static' and 'dynamic' entities,
 which never made much sense anyway and bloats the API horribly.  This probably

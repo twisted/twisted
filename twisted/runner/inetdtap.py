@@ -3,9 +3,8 @@
 
 # 
 
-"""Twisted inetd TAP support
-
-Stability: semi-stable
+"""
+Twisted inetd TAP support
 
 Maintainer: U{Andrew Bennetts<mailto:spiv@twistedmatrix.com>}
 

@@ -10,8 +10,6 @@ This module implements a zsh code generator which generates completion code for
 commands that use twisted.python.usage. This is the stuff that makes pressing
 Tab at the command line work.
 
-API Stability: Unstable
-
 Maintainer: Eric Mangold
 
 To build completion functions for your own commands, and not Twisted commands,

@@ -6,8 +6,6 @@
 """
 Common functions for the SSH classes.
 
-This module is unstable.
-
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """
 

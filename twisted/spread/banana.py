@@ -6,8 +6,6 @@
 
 """Banana -- s-exp based protocol.
 
-Stability: semi-stable
-
 Future Plans: This module is almost entirely stable.  The same caveat applies
 to it as applies to L{twisted.spread.jelly}, however.  Read its future plans
 for more details.

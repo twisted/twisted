@@ -4,12 +4,14 @@
 
 
 """
-Implements a AOL Instant Messenger TOC server and client, using the Twisted framework.
+Implements a AOL Instant Messenger TOC server and client, using the Twisted
+framework.
 
 TODO:
-info,dir: see how gaim connects for this...it may never work if it tries to connect to the aim server automatically
+info,dir: see how gaim connects for this...it may never work if it tries to
+connect to the aim server automatically
 
-This module is stable, but deprecated.
+This module is deprecated.
 
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """

@@ -3,9 +3,8 @@
 
 # 
 
-"""A basic ASN.1 parser to parse private SSH keys.
-
-This module is unstable.
+"""
+A basic ASN.1 parser to parse private SSH keys.
 
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """

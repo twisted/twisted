@@ -310,7 +310,6 @@ class SpewingFactory(WrappingFactory):
 
 
 class LimitConnectionsByPeer(WrappingFactory):
-    """Stability: Unstable"""
 
     maxConnectionsPerPeer = 5
 
@@ -333,9 +332,8 @@ class LimitConnectionsByPeer(WrappingFactory):
 
 
 class LimitTotalConnectionsFactory(ServerFactory):
-    """Factory that limits the number of simultaneous connections.
-
-    API Stability: Unstable
+    """
+    Factory that limits the number of simultaneous connections.
 
     @type connectionCount: C{int}
     @ivar connectionCount: number of current connections.
@@ -378,8 +376,6 @@ class LimitTotalConnectionsFactory(ServerFactory):
 class TimeoutProtocol(ProtocolWrapper):
     """
     Protocol that automatically disconnects when the connection is idle.
-
-    Stability: Unstable
     """
 
     def __init__(self, factory, wrappedProtocol, timeoutPeriod):
@@ -467,8 +463,6 @@ class TimeoutProtocol(ProtocolWrapper):
 class TimeoutFactory(WrappingFactory):
     """
     Factory for TimeoutWrapper.
-
-    Stability: Unstable
     """
     protocol = TimeoutProtocol
 

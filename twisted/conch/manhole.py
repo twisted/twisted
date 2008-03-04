@@ -10,8 +10,6 @@ interactively from a Twisted application.  Also included is syntax coloring
 code with support for VT102 terminals, control code handling (^C, ^D, ^Q),
 and reasonable handling of Deferreds.
 
-API Stability: Unstable
-
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 """
 

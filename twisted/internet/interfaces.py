@@ -919,8 +919,6 @@ class IConsumer(Interface):
 
 class IFinishableConsumer(IConsumer):
     """A Consumer for producers that finish.
-
-    This interface is semi-stable.
     """
     def finish():
         """The producer has finished producing."""
@@ -947,8 +945,6 @@ class IPushProducer(IProducer):
     it has been paused. A paused push producer will resume producing
     after its resumeProducing() method is called.   For a push producer
     which is not pauseable, these functions may be noops.
-
-    This interface is semi-stable.
     """
 
     def pauseProducing():
@@ -968,8 +964,6 @@ class IPullProducer(IProducer):
     """
     A pull producer, also known as a non-streaming producer, is
     expected to produce data each time resumeProducing() is called.
-
-    This interface is semi-stable.
     """
 
     def resumeProducing():

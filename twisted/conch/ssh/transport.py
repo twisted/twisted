@@ -8,8 +8,6 @@ The lowest level SSH protocol.  This handles the key negotiation, the
 encryption and the compression.  The transport layer is described in
 RFC 4253.
 
-This module is unstable.
-
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """
 

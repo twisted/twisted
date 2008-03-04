@@ -2,7 +2,8 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-"""Character attribute manipulation API
+"""
+Character attribute manipulation API
 
 This module provides a domain-specific language (using Python syntax)
 for the creation of text with additional display attributes associated
@@ -47,8 +48,6 @@ off an attribute when an enclosing expression would otherwise have
 caused it to be on.  For example::
 
  | A.underline[A.fg.red[\"Hello\", -A.underline[\" world\"]]]
-
-API Stability: Unstable
 
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 """

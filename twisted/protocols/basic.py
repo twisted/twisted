@@ -426,8 +426,6 @@ class FileSender:
     This is a helper for protocols that, at some point, will take a
     file-like object, read its contents, and write them out to the network,
     optionally performing some transformation on the bytes in between.
-
-    This API is unstable.
     """
     implements(interfaces.IProducer)
 

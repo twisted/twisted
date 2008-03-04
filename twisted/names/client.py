@@ -6,8 +6,6 @@
 """
 Asynchronous client DNS
 
-API Stability: Unstable
-
 The functions exposed in this module can be used for asynchronous name
 resolution and dns queries.
 

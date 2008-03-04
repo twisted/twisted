@@ -2,9 +2,8 @@
 # See LICENSE for details.
 
 # 
-"""Parser for inetd.conf files
-
-Stability: stable
+"""
+Parser for inetd.conf files
 
 Maintainer: U{Andrew Bennetts<mailto:spiv@twistedmatrix.com>}
 

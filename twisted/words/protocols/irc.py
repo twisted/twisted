@@ -5,8 +5,6 @@
 
 """Internet Relay Chat Protocol for client and server.
 
-Stability: semi-stable.
-
 Future Plans
 ============
 

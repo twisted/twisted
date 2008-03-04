@@ -1,7 +1,7 @@
 """
 A release-automation toolkit.
 
-API Stability: Unstable. Don't use it outside of Twisted.
+Don't use this outside of Twisted.
 
 Maintainer: U{Christopher Armstrong<mailto:radix@twistedmatrix.com>}
 """

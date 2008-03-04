@@ -3,10 +3,8 @@
 # Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-"""Support for results that aren't immediately available.
-
-API Stability: stable
+"""
+Support for results that aren't immediately available.
 
 Maintainer: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
@@ -625,8 +623,6 @@ def _deferGenerator(g, deferred):
 
 def deferredGenerator(f):
     """
-    API Stability: stable
-
     Maintainer: U{Christopher Armstrong<mailto:radix@twistedmatrix.com>}
 
     deferredGenerator and waitForDeferred help you write Deferred-using code
@@ -777,8 +773,6 @@ def _inlineCallbacks(result, g, deferred):
 
 def inlineCallbacks(f):
     """
-    API Stability: semi-stable
-
     Maintainer: U{Christopher Armstrong<mailto:radix@twistedmatrix.com>}
 
     WARNING: this function will not work in Python 2.4 and earlier!
@@ -866,9 +860,8 @@ class _ConcurrencyPrimitive(object):
 
 
 class DeferredLock(_ConcurrencyPrimitive):
-    """A lock for event driven systems.
-
-    API stability: Unstable
+    """
+    A lock for event driven systems.
 
     @ivar locked: True when this Lock has been acquired, false at all
     other times.  Do not change this value, but it is useful to
@@ -905,9 +898,8 @@ class DeferredLock(_ConcurrencyPrimitive):
             d.callback(self)
 
 class DeferredSemaphore(_ConcurrencyPrimitive):
-    """A semaphore for event driven systems.
-
-    API stability: Unstable
+    """
+    A semaphore for event driven systems.
     """
 
     def __init__(self, tokens):
@@ -951,9 +943,8 @@ class QueueUnderflow(Exception):
 
 
 class DeferredQueue(object):
-    """An event driven queue.
-
-    API stability: Unstable
+    """
+    An event driven queue.
 
     Objects may be added as usual to this queue.  When an attempt is
     made to retrieve an object when the queue is empty, a Deferred is

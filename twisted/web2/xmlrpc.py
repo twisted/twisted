@@ -4,9 +4,8 @@
 # See LICENSE for details.
 
 
-"""A generic resource for publishing objects via XML-RPC.
-
-API Stability: semi-stable
+"""
+A generic resource for publishing objects via XML-RPC.
 
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """

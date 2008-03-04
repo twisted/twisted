@@ -2,9 +2,8 @@
 # See LICENSE for details.
 
 
-"""This module integrates Tkinter with twisted.internet's mainloop.
-
-API Stability: semi-stable
+"""
+This module integrates Tkinter with twisted.internet's mainloop.
 
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 

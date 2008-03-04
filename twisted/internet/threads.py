@@ -6,8 +6,6 @@ Extended thread dispatching support.
 
 For basic support see reactor threading API docs.
 
-API Stability: stable
-
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 

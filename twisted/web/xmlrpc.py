@@ -10,8 +10,6 @@ A generic resource for publishing objects via XML-RPC.
 Requires xmlrpclib (comes standard with Python 2.2 and later, otherwise can be
 downloaded from http://www.pythonware.com/products/xmlrpc/).
 
-API Stability: semi-stable
-
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 from __future__ import nested_scopes

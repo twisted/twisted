@@ -4,12 +4,11 @@
 # See LICENSE for details.
 
 
-"""Post-office Protocol version 3
+"""
+Post-office Protocol version 3
 
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
-
-API Stability: Unstable
 """
 
 import string

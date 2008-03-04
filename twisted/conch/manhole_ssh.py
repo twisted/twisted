@@ -2,9 +2,8 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-"""insults/SSH integration support.
-
-API Stability: Unstable
+"""
+insults/SSH integration support.
 
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 """

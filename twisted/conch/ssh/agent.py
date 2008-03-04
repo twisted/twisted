@@ -5,8 +5,6 @@
 """
 Implements the old SSHv1 key agent protocol.
 
-This module is unstable.
-
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """
 

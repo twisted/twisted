@@ -1,10 +1,9 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-"""The parent class for all the SSH services.  Currently implemented services
+"""
+The parent class for all the SSH services.  Currently implemented services
 are ssh-userauth and ssh-connection.
-
-This module is unstable.
 
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """

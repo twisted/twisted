@@ -9,8 +9,6 @@ Perspective Broker
 \"This isn\'t a professional opinion, but it's probably got enough
 internet to kill you.\" --glyph
 
-Stability: semi-stable
-
 Future Plans: The connection APIs will be extended with support for
 URLs, that will be able to extend resource location and discovery
 conversations and specify different authentication mechanisms besides

@@ -2,9 +2,8 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-"""Partial in-memory terminal emulator
-
-API Stability: Unstable
+"""
+Partial in-memory terminal emulator
 
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 """

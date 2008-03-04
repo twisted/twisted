@@ -10,8 +10,6 @@ listeners or connectors are added)::
     from twisted.internet import epollreactor
     epollreactor.install()
 
-API Stability: stable
-
 Maintainer: U{Jp Calderone <mailto:exarkun@twistedmatrix.com>}
 """
 

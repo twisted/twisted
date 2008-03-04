@@ -3,9 +3,8 @@
 # See LICENSE for details.
 
 #
-"""Save and load Small OBjects to and from files, using various formats.
-
-API Stability: unstable
+"""
+Save and load Small OBjects to and from files, using various formats.
 
 Maintainer: U{Moshe Zadka<mailto:moshez@twistedmatrix.com>}
 """

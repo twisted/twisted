@@ -7,8 +7,6 @@
 
 """
 Defines classes that handle the results of tests.
-
-API Stability: Unstable
 """
 
 import sys, os

@@ -7,8 +7,6 @@
 """
 Support for aliases(5) configuration files
 
-API Stability: Unstable
-
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 
 TODO::

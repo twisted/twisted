@@ -3,9 +3,8 @@
 # See LICENSE for details.
 
 
-"""An implementation of the OSCAR protocol, which AIM and ICQ use to communcate.
-
-This module is unstable.
+"""
+An implementation of the OSCAR protocol, which AIM and ICQ use to communcate.
 
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """

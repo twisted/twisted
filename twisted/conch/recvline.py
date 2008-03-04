@@ -2,9 +2,8 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-"""Basic line editing support.
-
-API Stability: Unstable
+"""
+Basic line editing support.
 
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 """

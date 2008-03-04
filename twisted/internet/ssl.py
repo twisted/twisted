@@ -3,7 +3,8 @@
 # See LICENSE for details.
 
 
-"""SSL transport. Requires PyOpenSSL (http://pyopenssl.sf.net).
+"""
+SSL transport. Requires PyOpenSSL (http://pyopenssl.sf.net).
 
 SSL connections require a ContextFactory so they can create SSL contexts.
 End users should only use the ContextFactory classes directly - for SSL
@@ -13,8 +14,6 @@ in IReactorSSL.
 All server context factories should inherit from ContextFactory, and all
 client context factories should inherit from ClientContextFactory. At the
 moment this is not enforced, but in the future it might be.
-
-API Stability: stable
 
 Future Plans:
     - split module so reactor-specific classes are in a separate module

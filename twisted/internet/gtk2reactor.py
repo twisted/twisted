@@ -3,7 +3,8 @@
 
 
 """
-This module provides support for Twisted to interact with the glib/gtk2 mainloop.
+This module provides support for Twisted to interact with the glib/gtk2
+mainloop.
 
 In order to use this support, simply do the following::
 
@@ -16,8 +17,6 @@ intended to be called directly.
 When installing the reactor, you can choose whether to use the glib
 event loop or the GTK+ event loop which is based on it but adds GUI
 integration.
-
-API Stability: stable
 
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """

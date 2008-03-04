@@ -3,9 +3,8 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-"""Standard input/out/err support.
-
-API Stability: unstable (pending deprecation in favor of a reactor-based API)
+"""
+Standard input/out/err support.
 
 This module exposes one name, StandardIO, which is a factory that takes an
 IProtocol provider as an argument.  It connects that protocol to standard input

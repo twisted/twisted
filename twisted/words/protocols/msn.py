@@ -7,8 +7,6 @@
 """
 MSNP8 Protocol (client only) - semi-experimental
 
-Stability: unstable.
-
 This module provides support for clients using the MSN Protocol (MSNP8).
 There are basically 3 servers involved in any MSN session:
 

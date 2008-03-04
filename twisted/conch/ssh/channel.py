@@ -3,10 +3,9 @@
 # See LICENSE for details.
 
 #
-"""The parent class for all the SSH Channels.  Currently implemented channels
+"""
+The parent class for all the SSH Channels.  Currently implemented channels
 are session. direct-tcp, and forwarded-tcp.
-
-This module is unstable.
 
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """

@@ -8,8 +8,6 @@ An FTP protocol implementation
 @author: U{Itamar Shtull-Trauring<mailto:itamarst@twistedmatrix.com>}
 @author: U{Jp Calderone<mailto:exarkun@divmod.com>}
 @author: U{Andrew Bennetts<mailto:spiv@twistedmatrix.com>}
-
-API stability: FTPClient is stable, FTP and FTPFactory (server) is unstable.
 """
 
 # System Imports
@@ -2182,8 +2180,6 @@ class FTPClient(FTPClientBasic):
     A Twisted FTP Client
 
     Supports active and passive transfers.
-
-    This class is semi-stable.
 
     @ivar passive: See description in __init__.
     """

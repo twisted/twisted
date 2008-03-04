@@ -6,8 +6,6 @@
 """
 An IMAP4 protocol implementation
 
-API Stability: Semi-stable
-
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 
 To do::

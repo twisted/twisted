@@ -6,8 +6,6 @@
 """
 A collection of utility functions and classes, used internally by Trial.
 
-API Stability: Unstable
-
 This code is for Trial's internal use.  Do NOT use this code if you are writing
 tests.  It is subject to change at the Trial maintainer's whim.  There is
 nothing here in this module for you to use unless you are maintaining Trial.

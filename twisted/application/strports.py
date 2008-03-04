@@ -4,7 +4,8 @@
 # See LICENSE for details.
 
 #
-"""Port description language
+"""
+Port description language
 
 This module implements a description mini-language for ports, and provides
 functions to parse it and to use it to directly construct appropriate
@@ -29,8 +30,6 @@ Here are some examples::
  >>> p=listen("unix:/var/run/finger:mode=660", FingerFactory())
 
 See specific function documentation for more information.
-
-API Stability: unstable
 
 Maintainer: U{Moshe Zadka<mailto:moshez@twistedmatrix.com>}
 """

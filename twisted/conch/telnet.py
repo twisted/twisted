@@ -5,8 +5,6 @@
 """
 Telnet protocol implementation.
 
-API Stability: Unstable
-
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 """
 

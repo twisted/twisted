@@ -5,8 +5,6 @@
 """
 VT102 and VT220 terminal manipulation.
 
-API Stability: Unstable
-
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 """
 

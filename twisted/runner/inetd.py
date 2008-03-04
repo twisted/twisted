@@ -3,9 +3,8 @@
 
 # 
 
-"""Twisted inetd.
-
-Stability: semi-stable
+"""
+Twisted inetd.
 
 Maintainer: U{Andrew Bennetts<mailto:spiv@twistedmatrix.com>}
 

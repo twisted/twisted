@@ -3,9 +3,8 @@
 # See LICENSE for details.
 
 
-"""Lock files.
-
-Currently in a state of flux, API is unstable.
+"""
+Lock files.
 """
 
 __metaclass__ = type

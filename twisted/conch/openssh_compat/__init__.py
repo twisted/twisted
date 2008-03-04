@@ -3,9 +3,8 @@
 
 # 
 
-"""Support for OpenSSH configuration files.
-
-This module is unstable.
+"""
+Support for OpenSSH configuration files.
 
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """

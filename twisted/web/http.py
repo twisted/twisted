@@ -9,8 +9,6 @@ HyperText Transfer Protocol implementation.
 
 This is used by twisted.web.
 
-API Stability: stable
-
 Future Plans:
  - HTTP client support will at some point be refactored to support HTTP/1.1.
  - Accept chunked data from clients in server.

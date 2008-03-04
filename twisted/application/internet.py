@@ -29,8 +29,6 @@ For example, the following service starts a web server on port 8080:
 C{TCPServer(8080, server.Site(r))}.  See the documentation for the
 reactor.listen/connect* methods for more information.
 
-API Stability: unstable
-
 Maintainer: U{Moshe Zadka<mailto:moshez@twistedmatrix.com>}
 """
 

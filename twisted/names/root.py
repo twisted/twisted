@@ -7,8 +7,6 @@
 Resolver implementation for querying successive authoritative servers to
 lookup a record, starting from the root nameservers.
 
-API Stability: Unstable
-
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 
 todo::

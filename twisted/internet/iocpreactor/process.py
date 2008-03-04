@@ -1,9 +1,8 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-"""Support for IReactorProcess for the IOCP proactor.
-
-API Stability: unstable
+"""
+Support for IReactorProcess for the IOCP proactor.
 
 Maintainer: U{Justin Johnson<mailto:justinjohnson@gmail.com>}
 

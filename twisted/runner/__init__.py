@@ -1,6 +1,5 @@
-"""Twisted runer: run and monitor processes
-
-Stability: semi-stable
+"""
+Twisted runer: run and monitor processes
 
 Maintainer: U{Andrew Bennetts<mailto:spiv@twistedmatrix.com>}
 

@@ -2,9 +2,8 @@
 # See LICENSE for details.
 
 
-"""Exceptions and errors for use in twisted.internet modules.
-
-API Stability: semi-stable
+"""
+Exceptions and errors for use in twisted.internet modules.
 
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """

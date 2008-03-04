@@ -3,8 +3,6 @@
 """
 Simple insults-based widget library
 
-API Stability: 0
-
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 """
 

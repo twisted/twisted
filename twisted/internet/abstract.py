@@ -3,9 +3,8 @@
 # See LICENSE for details.
 
 
-"""Support for generic select()able objects.
-
-API Stability: stable
+"""
+Support for generic select()able objects.
 
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """

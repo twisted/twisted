@@ -2,8 +2,6 @@
 
 """Standard input/out/err support.
 
-API Stability: unstable (pending deprecation in favor of a reactor-based API)
-
 Future Plans::
 
     support for stderr, perhaps

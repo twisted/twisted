@@ -1,9 +1,8 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-"""TAP plugin for creating telnet- and ssh-accessible manhole servers.
-
-API Stability: Unstable
+"""
+TAP plugin for creating telnet- and ssh-accessible manhole servers.
 
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 """

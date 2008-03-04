@@ -391,9 +391,6 @@ class Protocol(BaseProtocol):
 
 
 class ProtocolToConsumerAdapter(components.Adapter):
-    """
-    This class is unstable.
-    """
     implements(interfaces.IConsumer)
 
     def write(self, data):
@@ -409,9 +406,6 @@ components.registerAdapter(ProtocolToConsumerAdapter, interfaces.IProtocol,
                            interfaces.IConsumer)
 
 class ConsumerToProtocolAdapter(components.Adapter):
-    """
-    This class is unstable.
-    """
     implements(interfaces.IProtocol)
 
     def dataReceived(self, data):

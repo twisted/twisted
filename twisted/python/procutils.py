@@ -1,11 +1,8 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-# 
-
-"""Utilities for dealing with processes.
-
-API Stability: Unstable
+"""
+Utilities for dealing with processes.
 """
 
 import os

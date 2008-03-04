@@ -5,9 +5,8 @@
 # See LICENSE for details.
 
 
-"""Deprecated module that used to contain SelectReactor and PosixReactorBase
-
-API Stability: stable
+"""
+Deprecated module that used to contain SelectReactor and PosixReactorBase
 
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """

@@ -2,9 +2,8 @@
 # See LICENSE for details.
 
 
-"""This module integrates PyUI with twisted.internet's mainloop.
-
-API Stability: unstable
+"""
+This module integrates PyUI with twisted.internet's mainloop.
 
 Maintainer: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 

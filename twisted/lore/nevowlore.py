@@ -14,8 +14,6 @@ Do something like::
 
   lore -inevow --config pageclass=some.module.SomePageSubclass [other-opts]
 
-API Stability: unstable
-
 Maintainer: U{Christopher Armstrong<mailto:radix@twistedmatrix.com>}
 
 """

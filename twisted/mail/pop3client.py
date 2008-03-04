@@ -2,13 +2,12 @@
 # Copyright (c) 2001-2004 Divmod Inc.
 # See LICENSE for details.
 
-"""POP3 client protocol implementation
+"""
+POP3 client protocol implementation
 
 Don't use this module directly.  Use twisted.mail.pop3 instead.
 
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
-
-API Stability: Unstable
 """
 
 import re, md5

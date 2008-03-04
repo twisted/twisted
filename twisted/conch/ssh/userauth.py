@@ -3,10 +3,9 @@
 
 # 
 
-"""Implementation of the ssh-userauth service.
+"""
+Implementation of the ssh-userauth service.
 Currently implemented authentication types are public-key and password.
-
-This module is unstable.
 
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """

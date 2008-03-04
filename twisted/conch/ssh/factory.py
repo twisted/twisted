@@ -1,10 +1,9 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-"""A Factory for SSH servers, along with an OpenSSHFactory to use the same
+"""
+A Factory for SSH servers, along with an OpenSSHFactory to use the same
 data sources as OpenSSH.
-
-This module is unstable.
 
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """

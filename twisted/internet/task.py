@@ -2,10 +2,8 @@
 # Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-"""Scheduling utility methods and classes.
-
-API Stability: Unstable
+"""
+Scheduling utility methods and classes.
 
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 """

@@ -3,11 +3,10 @@
 # See LICENSE for details.
 
 
-"""SOAP support for twisted.web.
+"""
+SOAP support for twisted.web.
 
 Requires SOAPpy 0.10.1 or later.
-
-API Stability: unstable
 
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 

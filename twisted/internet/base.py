@@ -6,8 +6,6 @@
 """
 Very basic functionality for a Reactor implementation.
 
-API Stability: stable
-
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 

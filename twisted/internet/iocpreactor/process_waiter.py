@@ -1,10 +1,9 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-"""Support for waiting for processes using 63 waits per thread
+"""
+Support for waiting for processes using 63 waits per thread
 to avoid Windows limitations to *WaitForMultipleObjects*.
-
-API Stability: unstable
 
 Maintainer: U{Justin Johnson<mailto:justinjohnson@gmail.com>}
 """

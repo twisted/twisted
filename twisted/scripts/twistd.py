@@ -1,9 +1,6 @@
 """
 The Twisted Daemon: platform-independent interface.
 
-Stability: Unstable. Please contact the maintainer if you need any
-improvements.
-
 @author: U{Christopher Armstrong<mailto:radix@twistedmatrix.com>}
 """
 

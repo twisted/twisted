@@ -4,11 +4,10 @@
 # See LICENSE for details.
 
 
-"""Various asynchronous UDP classes.
+"""
+Various asynchronous UDP classes.
 
 Please do not use this module directly.
-
-API Stability: semi-stable
 
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """

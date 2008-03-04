@@ -3,10 +3,9 @@
 
 # 
 
-"""This module contains the implementation of the TCP forwarding, which allows
+"""
+This module contains the implementation of the TCP forwarding, which allows
 clients and servers to forward arbitrary TCP data across the connection.
-
-This module is unstable.
 
 Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
 """

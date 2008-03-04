@@ -6,8 +6,6 @@
 """
 Select reactor
 
-API Stability: stable
-
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 

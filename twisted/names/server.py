@@ -6,8 +6,6 @@
 """
 Async DNS server
 
-API Stability: Unstable
-
 Future plans:
     - Better config file format maybe
     - Make sure to differentiate between different classes
