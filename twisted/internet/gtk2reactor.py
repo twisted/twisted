@@ -1,4 +1,5 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.internet.test.test_gtk2reactor -*-
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -65,8 +66,8 @@ class Gtk2Reactor(posixbase.PosixReactorBase):
     """
     GTK+-2 event loop reactor.
 
-    @ivar _reads: A dictionary mapping L{FileDescriptor} instances to gtk INPUT_READ
-        watch handles.
+    @ivar _reads: A dictionary mapping L{FileDescriptor} instances to gtk
+        INPUT_READ watch handles.
 
     @ivar _writes: A dictionary mapping L{FileDescriptor} instances to gtk
         INTPUT_WRITE watch handles.
@@ -181,7 +182,8 @@ class Gtk2Reactor(posixbase.PosixReactorBase):
     def run(self, installSignalHandlers=1):
         self.startRunning(installSignalHandlers=installSignalHandlers)
         gobject.timeout_add(0, self.simulate)
-        self.__run()
+        if self.running:
+            self.__run()
 
     def _doReadOrWrite(self, source, condition, faildict={
         error.ConnectionDone: failure.Failure(error.ConnectionDone()),
