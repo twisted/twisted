@@ -1,6 +1,7 @@
 # -*- test-case-name: twisted.conch.test.test_filetransfer -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE file for details.
+
 
 import os
 import struct
@@ -246,6 +247,30 @@ class TestOurServerOurClient(SFTPTestBase):
 
         d.addCallback(_getAttrs)
         return d
+
+
+    def test_openFileExtendedAttributes(self):
+        """
+        Check that L{filetransfer.FileTransferClient.openFile} can send
+        extended attributes, that should be extracted server side. By default,
+        they are ignored, so we just verify they are correctly parsed.
+        """
+        oldOpenFile = self.server.client.openFile
+        savedAttributes = {}
+        def openFile(filename, flags, attrs):
+            savedAttributes.update(attrs)
+            oldOpenFile(filename, flags, attrs)
+        self.server.client.openFile = openFile
+
+        d = self.client.openFile("testfile1", filetransfer.FXF_READ |
+                filetransfer.FXF_WRITE, {"ext_foo": "bar"})
+        self._emptyBuffers()
+
+        def check(ign):
+            self.assertEquals(savedAttributes, {"ext_foo": "bar"})
+
+        return d.addCallback(check)
+
 
     def testRemoveFile(self):
         d = self.client.getAttrs("testRemoveFile")
