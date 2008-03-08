@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.conch.test.test_keys -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 try:
@@ -524,6 +524,9 @@ class KeyTestCase(unittest.TestCase):
         self.assertEquals(keys.Key.fromString(
             keydata.privateRSA_openssh_encrypted,
             passphrase='encrypted'),
+            keys.Key.fromString(keydata.privateRSA_openssh))
+        self.assertEquals(keys.Key.fromString(
+            keydata.privateRSA_openssh_alternate),
             keys.Key.fromString(keydata.privateRSA_openssh))
         self._testPublicPrivateFromString(keydata.publicDSA_openssh,
                 keydata.privateDSA_openssh, 'DSA', keydata.DSAData)

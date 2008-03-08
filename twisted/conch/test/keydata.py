@@ -1,3 +1,7 @@
+# -*- test-case-name: twisted.conch.test.test_keys -*-
+# Copyright (c) 2007-2008 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 """
 Data used by test_keys as well as others.
 """
@@ -45,6 +49,20 @@ DZttmYJeEfiFBBavVYIF1dOlZT0G8jMCMBc7sOSZodFnAiryP+Qg9otSBjJ3bQML
 pSTqy7c3a2AScC/YyOwkDaICHnnD3XyjMwIxALRzl0tQEKMXs6hH8ToUdlLROCrP
 EhQ0wahUTCk1gKA4uPD6TMTChavbh4K63OvbKg==
 -----END RSA PRIVATE KEY-----"""
+
+# some versions of OpenSSH generate these (slightly different keys)
+privateRSA_openssh_alternate = """-----BEGIN RSA PRIVATE KEY-----
+MIIBzjCCAcgCAQACYQCvMnHw5g6cmbN/i18ES8uLwNU+snf9z2TYj8DPrh/GMd/2
+KbJEluLG1CGUf2V82NQjH7guaskflA1GwWmitwcMo5PBNNguHkqZGmyWRgdGK9wl
+KRuH8L4FHe60NLnnmZUCASMCYG4ftVWX6+1n7SuZbuzB7ahNUtbz1mUGBN/lVJ/M
+iQA8m2eH7GWgq81vZZCKl5BNxiGPqI3YWYZDtYGxtNdfLCIKYcElikcStJr4ehEc
+SqiLdcSRCTu+BMpF2VeKDSfLIwIxANyfa9mYIVYRjelfA50K05NuE3dBPIVPAHD9
+BVT/vD0Jv4P2l39kEJEE/qJnR1RCawIxAMtKS9BAR+hFUvfHrwwgbUMNtjmU+dql
+5QMGdoMk64ihVaKo3hI7d0mSiqlx0gKT/wIwS6Rffc3CSWUatmm4GJX/Zb9XIZK1
+qgx1Lg2bbZmCXhH4hQQWr1WCBdXTpWU9BvIzAjAXO7DkmaHRZwIq8j/kIPaLUgYy
+d20DC6Uk6su3N2tgEnAv2MjsJA2iAh55w918ozMCMQC0c5dLUBCjF7OoR/E6FHZS
+0TgqzxIUNMGoVEwpNYCgOLjw+kzEwoWr24eCutzr2yowAA==
+------END RSA PRIVATE KEY------"""
 
 privateRSA_openssh_encrypted = """-----BEGIN RSA PRIVATE KEY-----
 Proc-Type: 4,ENCRYPTED
@@ -152,5 +170,5 @@ privateDSA_agentv3 = ("\x00\x00\x00\x07ssh-dss\x00\x00\x00A\x00\x86\xf0L\xe4"
 __all__ = ['DSAData', 'RSAData', 'privateDSA_agentv3', 'privateDSA_lsh',
         'privateDSA_openssh', 'privateRSA_agentv3', 'privateRSA_lsh',
         'privateRSA_openssh', 'publicDSA_lsh', 'publicDSA_openssh',
-        'publicRSA_lsh', 'publicRSA_openssh']
+        'publicRSA_lsh', 'publicRSA_openssh', 'privateRSA_openssh_alternate']
 

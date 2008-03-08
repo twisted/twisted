@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.conch.test.test_keys -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 #
@@ -20,8 +20,8 @@ from Crypto.Cipher import DES3
 from Crypto.PublicKey import RSA, DSA
 from Crypto import Util
 
-#twisted
-from twisted.python import log, randbytes
+# twisted
+from twisted.python import randbytes
 
 # sibling imports
 from twisted.conch.ssh import asn1, common, sexpy
@@ -181,13 +181,15 @@ class Key(object):
         except Exception, e:
             raise BadKeyError, 'something wrong with decode'
         if kind == 'RSA':
+            if len(decodedKey) == 2: # alternate RSA key
+                decodedKey = decodedKey[0]
             n, e, d, p, q = decodedKey[1:6]
             if p > q: # make p smaller than q
                 p, q = q, p
             return Class(RSA.construct((n, e, d, p, q)))
         elif kind == 'DSA':
             p, q, g, y, x = decodedKey[1: 6]
-        return Class(DSA.construct((y, g, p, q, x)))
+            return Class(DSA.construct((y, g, p, q, x)))
     _fromString_PRIVATE_OPENSSH = classmethod(_fromString_PRIVATE_OPENSSH)
 
     def _fromString_PUBLIC_LSH(Class, data):
