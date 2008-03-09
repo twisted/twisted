@@ -1,8 +1,8 @@
 # -*- test-case-name: twisted.conch.test.test_cftp -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE file for details.
 
-import sys, os, tempfile
+import sys, os
 
 try:
     import Crypto
@@ -13,6 +13,7 @@ try:
     from twisted.conch import unix
     from twisted.conch.scripts import cftp
     from twisted.conch.client import connect, default, options
+    from twisted.conch.test.test_filetransfer import FileTransferForTestAvatar
 except ImportError:
     unix = None
     try:
@@ -490,7 +491,7 @@ class TestOurServerBatchFile(CFTPClientTestBase):
         return self.stopServer()
 
     def _getBatchOutput(self, f):
-        fn = tempfile.mktemp()
+        fn = self.mktemp()
         open(fn, 'w').write(f)
         l = []
         port = self.server.getHost().port
@@ -604,7 +605,7 @@ class TestOurServerUnixClient(CFTPClientTestBase):
         return d
 
     def _getBatchOutput(self, f):
-        fn = tempfile.mktemp()
+        fn = self.mktemp()
         open(fn, 'w').write(f)
         port = self.server.getHost().port
         cmds = ('-p %i -l testuser '
@@ -642,7 +643,67 @@ exit
         return d
 
 
+
+class TestOurServerSftpClient(CFTPClientTestBase):
+    """
+    Test the sftp server against sftp command line client.
+    """
+
+    def setUpClass(self):
+        if hasattr(self, 'skip'):
+            return
+        CFTPClientTestBase.setUpClass(self)
+
+
+    def setUp(self):
+        CFTPClientTestBase.setUp(self)
+        return self.startServer()
+
+
+    def tearDown(self):
+        return self.stopServer()
+
+
+    def test_extendedAttributes(self):
+        """
+        Test the return of extended attributes by the server: the sftp client
+        should ignore them, but still be able to parse the response correctly.
+
+        This test is mainly here to check that
+        L{filetransfer.FILEXFER_ATTR_EXTENDED} has the correct value.
+        """
+        fn = self.mktemp()
+        open(fn, 'w').write("ls .\nexit")
+        port = self.server.getHost().port
+
+        oldGetAttr = FileTransferForTestAvatar._getAttrs
+        def _getAttrs(self, s):
+            attrs = oldGetAttr(self, s)
+            attrs["ext_foo"] = "bar"
+            return attrs
+
+        self.patch(FileTransferForTestAvatar, "_getAttrs", _getAttrs)
+
+        self.server.factory.expectedLoseConnection = True
+        cmds = ('-o', 'IdentityFile=dsa_test',
+                '-o', 'UserKnownHostsFile=kh_test',
+                '-o', 'Port=%i' % (port,), '-b', fn, 'testuser@127.0.0.1')
+        d = getProcessOutputAndValue("sftp", cmds)
+        def check(result):
+            self.assertEquals(result[2], 0)
+            for i in ['testDirectory', 'testRemoveFile',
+                      'testRenameFile', 'testfile1']:
+                self.assertIn(i, result[0])
+        return d.addCallback(check)
+
+
+
 if not unix or not Crypto or not interfaces.IReactorProcess(reactor, None):
     TestOurServerCmdLineClient.skip = "don't run w/o spawnprocess or PyCrypto"
     TestOurServerBatchFile.skip = "don't run w/o spawnProcess or PyCrypto"
     TestOurServerUnixClient.skip = "don't run w/o spawnProcess or PyCrypto"
+    TestOurServerSftpClient.skip = "don't run w/o spawnProcess or PyCrypto"
+else:
+    from twisted.python.procutils import which
+    if not which('sftp'):
+        TestOurServerSftpClient.skip = "no sftp command-line client available"
