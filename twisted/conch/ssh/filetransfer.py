@@ -1,9 +1,8 @@
 # -*- test-case-name: twisted.conch.test.test_filetransfer -*-
 #
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
 
 import struct, errno
 
@@ -14,6 +13,8 @@ from common import NS, getNS
 from twisted.conch.interfaces import ISFTPServer, ISFTPFile
 
 from zope import interface
+
+
 
 class FileTransferBase(protocol.Protocol):
 
@@ -79,7 +80,7 @@ class FileTransferBase(protocol.Protocol):
             attrs['mtime'] = mtime
             data = data[8:]
         if flags & FILEXFER_ATTR_EXTENDED == FILEXFER_ATTR_EXTENDED:
-            extended_count ,= struct.unpack('!L', data[4:])
+            extended_count ,= struct.unpack('!L', data[:4])
             data = data[4:]
             for i in xrange(extended_count):
                 extended_type, data = getNS(data)
@@ -309,7 +310,7 @@ class FileTransferServer(FileTransferBase):
             data += NS(filename)
             data += NS(longname)
             data += self._packAttributes(attrs)
-        self.sendPacket(FXP_NAME, requestId + 
+        self.sendPacket(FXP_NAME, requestId +
                         struct.pack('!L', len(result))+data)
 
     def packet_STAT(self, data, followLinks = 1):
@@ -330,7 +331,7 @@ class FileTransferServer(FileTransferBase):
         handle, data = getNS(data)
         assert data == '', 'still have data in FSTAT: %s' % repr(data)
         if handle not in self.openFiles:
-            self._ebStatus(failure.Failure(KeyError('%s not in self.openFiles' 
+            self._ebStatus(failure.Failure(KeyError('%s not in self.openFiles'
                                         % handle)), requestId)
         else:
             fileObj = self.openFiles[handle]
@@ -538,7 +539,7 @@ class FileTransferClient(FileTransferBase):
         """
         Make a directory.
 
-        This method returns a Deferred that is called back when it is 
+        This method returns a Deferred that is called back when it is
         created.
 
         @param path: the name of the directory to create as a string.
@@ -565,7 +566,7 @@ class FileTransferClient(FileTransferBase):
         """
         Open a directory for scanning.
 
-        This method returns a Deferred that is called back with an iterable 
+        This method returns a Deferred that is called back with an iterable
         object that has a close() method.
 
         The close() method is called when the client is finished reading
@@ -573,7 +574,7 @@ class FileTransferClient(FileTransferBase):
         be used.
 
         The iterable returns triples of the form (filename, longname, attrs)
-        or a Deferred that returns the same.  The sequence must support 
+        or a Deferred that returns the same.  The sequence must support
         __getitem__, but otherwise may be any 'sequence-like' object.
 
         filename is the name of the file relative to the directory.
@@ -852,7 +853,7 @@ FILEXFER_ATTR_SIZE        = 0x00000001
 FILEXFER_ATTR_OWNERGROUP  = 0x00000002
 FILEXFER_ATTR_PERMISSIONS = 0x00000004
 FILEXFER_ATTR_ACMODTIME   = 0x00000009
-FILEXFER_ATTR_EXTENDED    = 0x+80000000
+FILEXFER_ATTR_EXTENDED    = 0x80000000L
 
 FILEXFER_TYPE_REGULAR        = 1
 FILEXFER_TYPE_DIRECTORY      = 2

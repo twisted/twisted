@@ -1,6 +1,7 @@
 # -*- test-case-name: twisted.conch.test.test_filetransfer -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE file for details.
+
 
 import os
 import struct
@@ -21,7 +22,7 @@ except ImportError:
 
 from twisted.conch import avatar
 from twisted.conch.ssh import common, connection, filetransfer, session
-from twisted.internet import defer, reactor
+from twisted.internet import defer
 from twisted.protocols import loopback
 from twisted.python import components
 
@@ -130,13 +131,12 @@ class TestOurServerOurClient(SFTPTestBase):
 
         self._emptyBuffers()
 
+
     def _emptyBuffers(self):
         while self.serverTransport.buffer or self.clientTransport.buffer:
             self.serverTransport.clearBuffer()
             self.clientTransport.clearBuffer()
 
-    def _delayedEmptyBuffers(self):
-        reactor.callLater(0.1, self._emptyBuffers)
 
     def testServerVersion(self):
         self.failUnlessEqual(self._serverVersion, 3)
@@ -246,6 +246,28 @@ class TestOurServerOurClient(SFTPTestBase):
 
         d.addCallback(_getAttrs)
         return d
+
+
+    def test_openFileExtendedAttributes(self):
+        """
+        Check that L{filetransfer.FileTransferClient.openFile} can send
+        extended attributes, that should be extracted server side. By default,
+        they are ignored, so we just verify they are correctly parsed.
+        """
+        savedAttributes = {}
+        def openFile(filename, flags, attrs):
+            savedAttributes.update(attrs)
+        self.server.client.openFile = openFile
+
+        d = self.client.openFile("testfile1", filetransfer.FXF_READ |
+                filetransfer.FXF_WRITE, {"ext_foo": "bar"})
+        self._emptyBuffers()
+
+        def check(ign):
+            self.assertEquals(savedAttributes, {"ext_foo": "bar"})
+
+        return d.addCallback(check)
+
 
     def testRemoveFile(self):
         d = self.client.getAttrs("testRemoveFile")
