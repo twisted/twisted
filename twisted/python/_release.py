@@ -11,8 +11,17 @@ else, do not use it. The interface and behaviour will change without notice.
 
 from datetime import date
 import os
+from tempfile import mkdtemp
+
+# Popen4 isn't available on Windows.  BookBuilder won't work on Windows, but
+# we don't care. -exarkun
+try:
+    from popen2 import Popen4
+except ImportError:
+    Popen4 = None
 
 from twisted.python.versions import Version
+from twisted.python.filepath import FilePath
 
 # This import is an example of why you shouldn't use this module unless you're
 # radix
@@ -20,6 +29,22 @@ from twisted.lore.scripts import lore
 
 # The offset between a year and the corresponding major version number.
 VERSION_OFFSET = 2000
+
+
+class CommandFailed(Exception):
+    """
+    Raised when a child process exits unsuccessfully.
+
+    @type exitCode: C{int}
+    @ivar exitCode: The exit code for the child process.
+
+    @type output: C{str}
+    @ivar output: The bytes read from stdout and stderr of the child process.
+    """
+    def __init__(self, exitCode, output):
+        Exception.__init__(self, exitCode, output)
+        self.exitCode = exitCode
+        self.output = output
 
 
 def _changeVersionInFile(old, new, filename):
@@ -172,9 +197,27 @@ class NoDocumentsFound(Exception):
     """
 
 
-class DocBuilder(object):
+
+class LoreBuilderMixin(object):
     """
-    Generate documentation for projects.
+    Base class for builders which invoke lore.
+    """
+    def lore(self, arguments):
+        """
+        Run lore with the given arguments.
+
+        @param arguments: A C{list} of C{str} giving command line arguments to
+            lore which should be used.
+        """
+        options = lore.Options()
+        options.parseOptions(["--null"] + arguments)
+        lore.runGivenOptions(options)
+
+
+
+class DocBuilder(LoreBuilderMixin):
+    """
+    Generate HTML documentation for projects.
     """
 
     def build(self, version, resourceDir, docDir, template, deleteInput=False):
@@ -205,18 +248,15 @@ class DocBuilder(object):
             C{docDir}.
         """
         linkrel = self.getLinkrel(resourceDir, docDir)
-        options = lore.Options()
         inputFiles = docDir.globChildren("*.xhtml")
         filenames = [x.path for x in inputFiles]
         if not filenames:
             raise NoDocumentsFound("No input documents found in %s" % (docDir,))
-        arguments = ["--null",
-                     "--config", "template=%s" % (template.path,),
+        arguments = ["--config", "template=%s" % (template.path,),
                      "--config", "ext=.html",
                      "--config", "version=%s" % (version,),
                      "--linkrel", linkrel] + filenames
-        options.parseOptions(arguments)
-        lore.runGivenOptions(options)
+        self.lore(arguments)
         if deleteInput:
             for inputFile in inputFiles:
                 inputFile.remove()
@@ -245,7 +285,7 @@ class DocBuilder(object):
 
 
 
-class ManBuilder(object):
+class ManBuilder(LoreBuilderMixin):
     """
     Generate man pages of the different existing scripts.
     """
@@ -263,17 +303,139 @@ class ManBuilder(object):
         @raise NoDocumentsFound: When there are no .1 files in the given
             C{manDir}.
         """
-        options = lore.Options()
         inputFiles = manDir.globChildren("*.1")
         filenames = [x.path for x in inputFiles]
         if not filenames:
             raise NoDocumentsFound("No manual pages found in %s" % (manDir,))
-        arguments = ["--null",
-                     "--input", "man",
+        arguments = ["--input", "man",
                      "--output", "lore",
                      "--config", "ext=-man.xhtml"] + filenames
-        options.parseOptions(arguments)
-        lore.runGivenOptions(options)
+        self.lore(arguments)
+
+
+
+class BookBuilder(LoreBuilderMixin):
+    """
+    Generate the LaTeX and PDF documentation.
+    """
+    def run(self, command):
+        """
+        Execute a command in a child process and return the output.
+
+        @type command C{str}
+        @param command: The shell command to run.
+
+        @raise L{RuntimeError}: If the child process exits with an error.
+        """
+        process = Popen4(command)
+        stdout = process.fromchild.read()
+        exitCode = process.wait()
+        if os.WIFSIGNALED(exitCode) or os.WEXITSTATUS(exitCode):
+            raise CommandFailed(exitCode, stdout)
+        return stdout
+
+
+    def buildTeX(self, howtoDir):
+        """
+        Build LaTex files for lore input files in the given directory.
+
+        Input files ending in .xhtml will be considered. Output will written as
+        .tex files.
+
+        @type howtoDir: L{FilePath}
+        @param howtoDir: A directory containing lore input files.
+
+        @raise ValueError: If C{howtoDir} does not exist.
+        """
+        if not howtoDir.exists():
+            raise ValueError("%r does not exist." % (howtoDir.path,))
+        self.lore(
+            ["--output", "latex",
+             "--config", "section"] +
+            [child.path for child in howtoDir.globChildren("*.xhtml")])
+
+
+    def buildPDF(self, bookPath, inputDirectory, outputPath):
+        """
+        Build a PDF from the given a LaTeX book document.
+
+        @type bookPath: L{FilePath}
+        @param bookPath: The location of a LaTeX document defining a book.
+
+        @type inputDirectory: L{FilePath}
+        @param inputDirectory: The directory which the inputs of the book are
+            relative to.
+
+        @type outputPath: L{FilePath}
+        @param outputPath: The location to which to write the resulting book.
+        """
+        if not bookPath.basename().endswith(".tex"):
+            raise ValueError("Book filename must end with .tex")
+
+        workPath = FilePath(mkdtemp())
+        try:
+            startDir = os.getcwd()
+            try:
+                os.chdir(inputDirectory.path)
+
+                texToDVI = (
+                    "latex -interaction=nonstopmode "
+                    "-output-directory=%s %s") % (
+                    workPath.path, bookPath.path)
+
+                # What I tell you three times is true!
+                # The first two invocations of latex on the book file allows it
+                # correctly create page numbers for in-text references.  Why this is
+                # the case, I could not tell you. -exarkun
+                for i in range(3):
+                    self.run(texToDVI)
+
+                bookBaseWithoutExtension = bookPath.basename()[:-4]
+                dviPath = workPath.child(bookBaseWithoutExtension + ".dvi")
+                psPath = workPath.child(bookBaseWithoutExtension + ".ps")
+                pdfPath = workPath.child(bookBaseWithoutExtension + ".pdf")
+                self.run(
+                    "dvips -o %(postscript)s -t letter -Ppdf %(dvi)s" % {
+                        'postscript': psPath.path,
+                        'dvi': dviPath.path})
+                self.run("ps2pdf13 %(postscript)s %(pdf)s" % {
+                        'postscript': psPath.path,
+                        'pdf': pdfPath.path})
+                pdfPath.moveTo(outputPath)
+                workPath.remove()
+            finally:
+                os.chdir(startDir)
+        except:
+            workPath.moveTo(bookPath.parent().child(workPath.basename()))
+            raise
+
+
+    def build(self, baseDirectory, inputDirectories, bookPath, outputPath):
+        """
+        Build a PDF book from the given TeX book definition and directories
+        containing lore inputs.
+
+        @type baseDirectory: L{FilePath}
+        @param baseDirectory: The directory which the inputs of the book are
+            relative to.
+
+        @type inputDirectories: C{list} of L{FilePath}
+        @param inputDirectories: The paths which contain lore inputs to be
+            converted to LaTeX.
+
+        @type bookPath: L{FilePath}
+        @param bookPath: The location of a LaTeX document defining a book.
+
+        @type outputPath: L{FilePath}
+        @param outputPath: The location to which to write the resulting book.
+        """
+        for inputDir in inputDirectories:
+            self.buildTeX(inputDir)
+        self.buildPDF(bookPath, baseDirectory, outputPath)
+        for inputDirectory in inputDirectories:
+            for child in inputDirectory.children():
+                if child.splitext()[1] == ".tex" and child != bookPath:
+                    child.remove()
 
 
 

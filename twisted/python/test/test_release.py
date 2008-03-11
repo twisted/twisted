@@ -5,12 +5,17 @@
 Tests for L{twisted.python.release} and L{twisted.python._release}.
 """
 
+import warnings
 import operator
-import os
-from twisted.trial.unittest import TestCase
+import os, sys, signal
+from StringIO import StringIO
 
 from datetime import date
 
+from twisted.trial.unittest import TestCase
+
+from twisted.python.compat import set
+from twisted.python.procutils import which
 from twisted.python import release
 from twisted.python.filepath import FilePath
 from twisted.python.util import dsu
@@ -21,6 +26,7 @@ from twisted.python._release import replaceProjectVersion
 from twisted.python._release import updateTwistedVersionInformation, Project
 from twisted.python._release import VERSION_OFFSET, DocBuilder, ManBuilder
 from twisted.python._release import NoDocumentsFound, filePathDelta
+from twisted.python._release import CommandFailed, BookBuilder
 
 
 class ChangeVersionTest(TestCase):
@@ -281,7 +287,43 @@ class VersionWritingTest(TestCase):
         self.assertEquals(ns["version"].base(), "0.82.7")
 
 
-class DocBuilderTestCase(TestCase):
+class BuilderTestsMixin:
+    def getArbitraryLoreInput(self, counter):
+        """
+        Get an arbitrary, unique (for this test case) string of lore input.
+        """
+        template = (
+            '<html><head><title>Hi! Title: %(count)s</title></head>'
+            '<body>Hi! %(count)s</body></html>')
+        return template % {"count": counter}
+
+
+    def getArbitraryOutput(self, version, counter):
+        """
+        Get the correct output for the arbitrary input returned by
+        L{getArbitraryLoreInput} for the given parameters.  Override this in a
+        subclass.
+        """
+        raise NotImplementedError("%s did not implement getArbitraryOutput" % (
+                self.__class__,))
+
+
+    def getArbitraryLoreInputAndOutput(self, version):
+        """
+        Get an input document along with expected output for lore run on that
+        output document, assuming an appropriately-specified C{self.template}.
+
+        @return: A two-tuple of input and expected output.
+        @rtype: C{(str, str)}.
+        """
+        self.docCounter += 1
+        return (self.getArbitraryLoreInput(self.docCounter),
+                self.getArbitraryOutput(version, self.docCounter))
+
+
+
+
+class DocBuilderTestCase(TestCase, BuilderTestsMixin):
     """
     Tests for L{DocBuilder}.
 
@@ -324,33 +366,19 @@ class DocBuilderTestCase(TestCase):
         self.templateFile.setContent(self.template)
 
 
-    def getArbitraryLoreInput(self):
+    def getArbitraryOutput(self, version, counter):
         """
-        Get an arbitrary, unique (for this test case) string of lore input.
+        Get the correct HTML output for the arbitrary input returned by
+        L{getArbitraryLoreInput} for the given parameters.
         """
-        template = (
-            '<html><head><title>Hi! %(count)s</title></head>'
-            '<body>Hi! %(count)s</body></html>')
-        return template % {"count": self.docCounter}
-
-
-    def getArbitraryLoreInputAndOutput(self, version):
-        """
-        Get an input document along with expected output for lore run on that
-        output document, assuming an appropriately-specified C{self.template}.
-
-        @return: A two-tuple of input and expected output.
-        @rtype: C{(str, str)}.
-        """
-        self.docCounter += 1
-        return (self.getArbitraryLoreInput(),
-                '<?xml version="1.0"?>'
-                '<html><head><title>Yo:Hi! %(count)s</title></head>'
-                '<body><div class="content">Hi! %(count)s</div>'
-                '<a href="index.html">Index</a>'
-                '<span class="version">Version: %(version)s</span>'
-                '</body></html>'
-                % {"count": self.docCounter, "version": version})
+        return (
+            '<?xml version="1.0"?>'
+            '<html><head><title>Yo:Hi! Title: %(count)s</title></head>'
+            '<body><div class="content">Hi! %(count)s</div>'
+            '<a href="index.html">Index</a>'
+            '<span class="version">Version: %(version)s</span>'
+            '</body></html>'
+            % {"count": counter, "version": version})
 
 
     def test_build(self):
@@ -388,7 +416,7 @@ class DocBuilderTestCase(TestCase):
         The L{DocBuilder} generates correct links from documents to
         template-generated links like stylesheets and index backreferences.
         """
-        input = self.getArbitraryLoreInput()
+        input = self.getArbitraryLoreInput(0)
         tutoDir = self.howtoDir.child("tutorial")
         tutoDir.createDirectory()
         tutoDir.child("child.xhtml").setContent(input)
@@ -404,7 +432,7 @@ class DocBuilderTestCase(TestCase):
         stylesheet and indexes are located in foo/baz. Such resources should be
         appropriately linked to.
         """
-        input = self.getArbitraryLoreInput()
+        input = self.getArbitraryLoreInput(0)
         resourceDir = self.howtoDir.child("resources")
         docDir = self.howtoDir.child("docs")
         docDir.createDirectory()
@@ -420,7 +448,7 @@ class DocBuilderTestCase(TestCase):
         L{DocBuilder.build} can be instructed to delete the input files after
         generating the output based on them.
         """
-        input1 = self.getArbitraryLoreInput()
+        input1 = self.getArbitraryLoreInput(0)
         self.howtoDir.child("one.xhtml").setContent(input1)
         self.builder.build("whatever", self.howtoDir, self.howtoDir,
                            self.templateFile, deleteInput=True)
@@ -432,7 +460,7 @@ class DocBuilderTestCase(TestCase):
         """
         Input will not be deleted by default.
         """
-        input1 = self.getArbitraryLoreInput()
+        input1 = self.getArbitraryLoreInput(0)
         self.howtoDir.child("one.xhtml").setContent(input1)
         self.builder.build("whatever", self.howtoDir, self.howtoDir,
                            self.templateFile)
@@ -571,6 +599,329 @@ with this."""
             'running Twisted process\nwith this.</p></div><a '
             'href="index.html">Index</a><span class="version">Version: '
             '1.2.3</span></body></html>')
+
+
+
+class BookBuilderTests(TestCase, BuilderTestsMixin):
+    """
+    Tests for L{BookBuilder}.
+    """
+    if not (which("latex") and which("dvips") and which("ps2pdf13")):
+        skip = "Book Builder tests require latex."
+    try:
+        from popen2 import Popen4
+    except ImportError:
+        skip = "Book Builder requires popen2.Popen4."
+    else:
+        del Popen4
+
+    def setUp(self):
+        """
+        Make a directory into which to place temporary files.
+        """
+        self.docCounter = 0
+        self.howtoDir = FilePath(self.mktemp())
+        self.howtoDir.makedirs()
+
+
+    def getArbitraryOutput(self, version, counter):
+        """
+        Create and return a C{str} containing the LaTeX document which is
+        expected as the output for processing the result of the document
+        returned by C{self.getArbitraryLoreInput(counter)}.
+        """
+        path = self.howtoDir.child("%d.xhtml" % (counter,)).path
+        path = path[len(os.getcwd()) + 1:]
+        return (
+            r'\section{Hi! Title: %(count)s\label{%(path)s}}'
+            '\n'
+            r'Hi! %(count)s') % {'count': counter, 'path': path}
+
+
+    def test_runSuccess(self):
+        """
+        L{BookBuilder.run} executes the command it is passed and returns a
+        string giving the stdout and stderr of the command if it completes
+        successfully.
+        """
+        builder = BookBuilder()
+        self.assertEqual(builder.run("echo hi; echo bye 1>&2"), "hi\nbye\n")
+
+
+    def test_runFailed(self):
+        """
+        L{BookBuilder.run} executes the command it is passed and raises
+        L{CommandFailed} if it completes unsuccessfully.
+        """
+        builder = BookBuilder()
+        exc = self.assertRaises(CommandFailed, builder.run, "echo hi; false")
+        self.assertNotEqual(os.WEXITSTATUS(exc.exitCode), 0)
+        self.assertEqual(exc.output, "hi\n")
+
+
+    def test_runSignaled(self):
+        """
+        L{BookBuilder.run} executes the command it is passed and raises
+        L{CommandFailed} if it exits due to a signal.
+        """
+        builder = BookBuilder()
+        exc = self.assertRaises(
+            # This is only a little bit too tricky.
+            CommandFailed, builder.run, "echo hi; exec kill -9 $$")
+        self.assertTrue(os.WIFSIGNALED(exc.exitCode))
+        self.assertEqual(os.WTERMSIG(exc.exitCode), signal.SIGKILL)
+        self.assertEqual(exc.output, "hi\n")
+
+
+    def test_buildTeX(self):
+        """
+        L{BookBuilder.buildTeX} writes intermediate TeX files for all lore
+        input files in a directory.
+        """
+        version = "3.2.1"
+        input1, output1 = self.getArbitraryLoreInputAndOutput(version)
+        input2, output2 = self.getArbitraryLoreInputAndOutput(version)
+
+        # Filenames are chosen by getArbitraryOutput to match the counter used
+        # by getArbitraryLoreInputAndOutput.
+        self.howtoDir.child("1.xhtml").setContent(input1)
+        self.howtoDir.child("2.xhtml").setContent(input2)
+
+        builder = BookBuilder()
+        builder.buildTeX(self.howtoDir)
+        self.assertEqual(self.howtoDir.child("1.tex").getContent(), output1)
+        self.assertEqual(self.howtoDir.child("2.tex").getContent(), output2)
+
+
+    def test_buildTeXRejectsInvalidDirectory(self):
+        """
+        L{BookBuilder.buildTeX} raises L{ValueError} if passed a directory
+        which does not exist.
+        """
+        builder = BookBuilder()
+        self.assertRaises(
+            ValueError, builder.buildTeX, self.howtoDir.temporarySibling())
+
+
+    def test_buildTeXOnlyBuildsXHTML(self):
+        """
+        L{BookBuilder.buildTeX} ignores files which which don't end with
+        ".xhtml".
+        """
+        # Hopefully ">" is always a parse error from microdom!
+        self.howtoDir.child("not-input.dat").setContent(">")
+        self.test_buildTeX()
+
+
+    def test_stdout(self):
+        """
+        L{BookBuilder.buildTeX} does not write to stdout.
+        """
+        stdout = StringIO()
+        self.patch(sys, 'stdout', stdout)
+
+        # Suppress warnings so that if there are any old-style plugins that
+        # lore queries for don't confuse the assertion below.  See #3070.
+        self.patch(warnings, 'warn', lambda *a, **kw: None)
+        self.test_buildTeX()
+        self.assertEqual(stdout.getvalue(), '')
+
+
+    def test_buildPDFRejectsInvalidBookFilename(self):
+        """
+        L{BookBuilder.buildPDF} raises L{ValueError} if the book filename does
+        not end with ".tex".
+        """
+        builder = BookBuilder()
+        self.assertRaises(
+            ValueError,
+            builder.buildPDF,
+            FilePath(self.mktemp()).child("foo"),
+            None,
+            None)
+
+
+    def _setupTeXFiles(self):
+        sections = range(3)
+        self._setupTeXSections(sections)
+        return self._setupTeXBook(sections)
+
+
+    def _setupTeXSections(self, sections):
+        for texSectionNumber in sections:
+            texPath = self.howtoDir.child("%d.tex" % (texSectionNumber,))
+            texPath.setContent(self.getArbitraryOutput(
+                    "1.2.3", texSectionNumber))
+
+
+    def _setupTeXBook(self, sections):
+        bookTeX = self.howtoDir.child("book.tex")
+        bookTeX.setContent(
+            r"\documentclass{book}" "\n"
+            r"\begin{document}" "\n" +
+            "\n".join([r"\input{%d.tex}" % (n,) for n in sections]) +
+            r"\end{document}" "\n")
+        return bookTeX
+
+
+    def test_buildPDF(self):
+        """
+        L{BookBuilder.buildPDF} creates a PDF given an index tex file and a
+        directory containing .tex files.
+        """
+        bookPath = self._setupTeXFiles()
+        outputPath = FilePath(self.mktemp())
+
+        builder = BookBuilder()
+        builder.buildPDF(bookPath, self.howtoDir, outputPath)
+
+        self.assertTrue(outputPath.exists())
+
+
+    def test_buildPDFLongPath(self):
+        """
+        L{BookBuilder.buildPDF} succeeds even if the paths it is operating on
+        are very long.
+
+        C{ps2pdf13} seems to have problems when path names are long.  This test
+        verifies that even if inputs have long paths, generation still
+        succeeds.
+        """
+        # Make it long.
+        self.howtoDir = self.howtoDir.child("x" * 128).child("x" * 128).child("x" * 128)
+        self.howtoDir.makedirs()
+
+        # This will use the above long path.
+        bookPath = self._setupTeXFiles()
+        outputPath = FilePath(self.mktemp())
+
+        builder = BookBuilder()
+        builder.buildPDF(bookPath, self.howtoDir, outputPath)
+
+        self.assertTrue(outputPath.exists())
+
+
+    def test_buildPDFRunsLaTeXThreeTimes(self):
+        """
+        L{BookBuilder.buildPDF} runs C{latex} three times.
+        """
+        class InspectableBookBuilder(BookBuilder):
+            def __init__(self):
+                BookBuilder.__init__(self)
+                self.commands = []
+
+            def run(self, command):
+                """
+                Record the command and then execute it.
+                """
+                self.commands.append(command)
+                return BookBuilder.run(self, command)
+
+        bookPath = self._setupTeXFiles()
+        outputPath = FilePath(self.mktemp())
+
+        builder = InspectableBookBuilder()
+        builder.buildPDF(bookPath, self.howtoDir, outputPath)
+
+        # These string comparisons are very fragile.  It would be better to
+        # have a test which asserted the correctness of the contents of the
+        # output files.  I don't know how one could do that, though. -exarkun
+        latex1, latex2, latex3, dvips, ps2pdf13 = builder.commands
+        self.assertEqual(latex1, latex2)
+        self.assertEqual(latex2, latex3)
+        self.assertTrue(
+            latex1.startswith("latex "),
+            "LaTeX command %r does not start with 'latex '" % (latex1,))
+        self.assertTrue(
+            latex1.endswith(" " + bookPath.path),
+            "LaTeX command %r does not end with the book path (%r)." % (
+                latex1, bookPath.path))
+
+        self.assertTrue(
+            dvips.startswith("dvips "),
+            "dvips command %r does not start with 'dvips '" % (dvips,))
+        self.assertTrue(
+            ps2pdf13.startswith("ps2pdf13 "),
+            "ps2pdf13 command %r does not start with 'ps2pdf13 '" % (
+                ps2pdf13,))
+
+
+    def test_noSideEffects(self):
+        """
+        The working directory is the same before and after a call to
+        L{BookBuilder.buildPDF}.  Also the contents of the directory containing
+        the input book are the same before and after the call.
+        """
+        startDir = os.getcwd()
+        bookTeX = self._setupTeXFiles()
+        startTeXSiblings = bookTeX.parent().children()
+        startHowtoChildren = self.howtoDir.children()
+
+        builder = BookBuilder()
+        builder.buildPDF(bookTeX, self.howtoDir, FilePath(self.mktemp()))
+
+        self.assertEqual(startDir, os.getcwd())
+        self.assertEqual(startTeXSiblings, bookTeX.parent().children())
+        self.assertEqual(startHowtoChildren, self.howtoDir.children())
+
+
+    def test_failedCommandProvidesOutput(self):
+        """
+        If a subprocess fails, L{BookBuilder.buildPDF} raises L{CommandFailed}
+        with the subprocess's output and leaves the temporary directory as a
+        sibling of the book path.
+        """
+        bookTeX = FilePath(self.mktemp() + ".tex")
+        builder = BookBuilder()
+        inputState = bookTeX.parent().children()
+        exc = self.assertRaises(
+            CommandFailed,
+            builder.buildPDF,
+            bookTeX, self.howtoDir, FilePath(self.mktemp()))
+        self.assertTrue(exc.output)
+        newOutputState = set(bookTeX.parent().children()) - set(inputState)
+        self.assertEqual(len(newOutputState), 1)
+        workPath = newOutputState.pop()
+        self.assertTrue(
+            workPath.isdir(),
+            "Expected work path %r was not a directory." % (workPath.path,))
+
+
+    def test_build(self):
+        """
+        L{BookBuilder.build} generates a pdf book file from some lore input
+        files.
+        """
+        sections = range(1, 4)
+        for sectionNumber in sections:
+            self.howtoDir.child("%d.xhtml" % (sectionNumber,)).setContent(
+                self.getArbitraryLoreInput(sectionNumber))
+        bookTeX = self._setupTeXBook(sections)
+        bookPDF = FilePath(self.mktemp())
+
+        builder = BookBuilder()
+        builder.build(self.howtoDir, [self.howtoDir], bookTeX, bookPDF)
+
+        self.assertTrue(bookPDF.exists())
+
+
+    def test_buildRemovesTemporaryLaTeXFiles(self):
+        """
+        L{BookBuilder.build} removes the intermediate LaTeX files it creates.
+        """
+        sections = range(1, 4)
+        for sectionNumber in sections:
+            self.howtoDir.child("%d.xhtml" % (sectionNumber,)).setContent(
+                self.getArbitraryLoreInput(sectionNumber))
+        bookTeX = self._setupTeXBook(sections)
+        bookPDF = FilePath(self.mktemp())
+
+        builder = BookBuilder()
+        builder.build(self.howtoDir, [self.howtoDir], bookTeX, bookPDF)
+
+        self.assertEqual(
+            set(self.howtoDir.listdir()),
+            set([bookTeX.basename()] + ["%d.xhtml" % (n,) for n in sections]))
 
 
 
