@@ -1161,16 +1161,15 @@ class NewCredTestCase(unittest.TestCase):
             def clientConnectionLost(self, connector, reason):
                 reconnecting = not self.reconnectedAlready
                 self.reconnectedAlready = True
-                connector.connect()
+                if reconnecting:
+                    connector.connect()
                 return pb.PBClientFactory.clientConnectionLost(
                     self, connector, reason, reconnecting)
 
         factory, rootObjDeferred = self.getFactoryAndRootObject(ReconnectOnce)
 
         def gotRootObject(rootObj):
-            self.failUnless(
-                isinstance(rootObj, pb.RemoteReference),
-                "%r is not a RemoteReference" % (rootObj,))
+            self.assertIsInstance(rootObj, pb.RemoteReference)
 
             d = defer.Deferred()
             rootObj.notifyOnDisconnect(d.callback)
@@ -1180,9 +1179,7 @@ class NewCredTestCase(unittest.TestCase):
                 d = factory.getRootObject()
 
                 def gotAnotherRootObject(anotherRootObj):
-                    self.failUnless(
-                        isinstance(rootObj, pb.RemoteReference),
-                        "%r is not a RemoteReference" % (rootObj,))
+                    self.assertIsInstance(anotherRootObj, pb.RemoteReference)
 
                     d = defer.Deferred()
                     anotherRootObj.notifyOnDisconnect(d.callback)
