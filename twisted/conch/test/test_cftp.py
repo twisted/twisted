@@ -163,11 +163,18 @@ class SFTPTestProcess(protocol.ProcessProtocol):
 
 
 class CFTPClientTestBase(SFTPTestBase):
-    def setUpClass(self):
-        open('dsa_test.pub','w').write(test_ssh.publicDSA_openssh)
-        open('dsa_test','w').write(test_ssh.privateDSA_openssh)
+    def setUp(self):
+        f = open('dsa_test.pub','w')
+        f.write(test_ssh.publicDSA_openssh)
+        f.close()
+        f = open('dsa_test','w')
+        f.write(test_ssh.privateDSA_openssh)
+        f.close()
         os.chmod('dsa_test', 33152)
-        open('kh_test','w').write('127.0.0.1 '+test_ssh.publicRSA_openssh)
+        f = open('kh_test','w')
+        f.write('127.0.0.1 ' + test_ssh.publicRSA_openssh)
+        f.close()
+        return SFTPTestBase.setUp(self)
 
     def startServer(self):
         realm = FileTransferTestRealm(self.testDir)
@@ -189,19 +196,17 @@ class CFTPClientTestBase(SFTPTestBase):
     def _cbStopServer(self, ignored):
         return defer.maybeDeferred(self.server.stopListening)
 
-    def tearDownClass(self):
+    def tearDown(self):
         for f in ['dsa_test.pub', 'dsa_test', 'kh_test']:
             try:
                 os.remove(f)
             except:
                 pass
+        return SFTPTestBase.tearDown(self)
+
 
 
 class TestOurServerCmdLineClient(CFTPClientTestBase):
-    def setUpClass(self):
-        if hasattr(self, 'skip'):
-           return
-        CFTPClientTestBase.setUpClass(self)
 
     def setUp(self):
         CFTPClientTestBase.setUp(self)
@@ -227,11 +232,6 @@ class TestOurServerCmdLineClient(CFTPClientTestBase):
         reactor.spawnProcess(self.processProtocol, sys.executable, cmds,
                              env=env)
         return d
-
-    def tearDownClass(self):
-        if hasattr(self, 'skip'):
-            return
-        CFTPClientTestBase.tearDownClass(self)
 
     def tearDown(self):
         d = self.stopServer()
@@ -281,7 +281,7 @@ class TestOurServerCmdLineClient(CFTPClientTestBase):
         this output changes appropriately with 'chmod'.
         """
         def _check(results):
-            log.flushErrors()
+            self.flushLoggedErrors()
             self.assertTrue(results[0].startswith('-rw-r--r--'))
             self.assertEqual(results[1], '')
             self.assertTrue(results[2].startswith('----------'), results[2])
@@ -421,7 +421,7 @@ class TestOurServerCmdLineClient(CFTPClientTestBase):
         'ls'. Check that removing the new file succeeds without output.
         """
         def _check(results):
-            log.flushErrors()
+            self.flushLoggedErrors()
             self.assertEqual(results[0], '')
             self.assertTrue(results[1].startswith('l'), 'link failed')
             return self.runCommand('rm testLink')
@@ -570,13 +570,10 @@ exit
         return d
 
 
-class TestOurServerUnixClient(CFTPClientTestBase):
-    def setUpClass(self):
-        if hasattr(self, 'skip'):
-            return
-        CFTPClientTestBase.setUpClass(self)
+class TestOurServerUnixClient(test_conch._UnixFixHome, CFTPClientTestBase):
 
     def setUp(self):
+        test_conch._UnixFixHome.setUp(self)
         CFTPClientTestBase.setUp(self)
         self.startServer()
         cmd1 = ('-p %i -l testuser '
@@ -600,9 +597,13 @@ class TestOurServerUnixClient(CFTPClientTestBase):
         return connect.connect(o['host'], int(o['port']), o, vhk, uao)
 
     def tearDown(self):
+        CFTPClientTestBase.tearDown(self)
         d = defer.maybeDeferred(self.conn.transport.loseConnection)
         d.addCallback(lambda x : self.stopServer())
-        return d
+        def clean(ign):
+            test_conch._UnixFixHome.tearDown(self)
+            return ign
+        return defer.gatherResults([d, self.conn.stopDeferred]).addBoth(clean)
 
     def _getBatchOutput(self, f):
         fn = self.mktemp()
@@ -648,12 +649,6 @@ class TestOurServerSftpClient(CFTPClientTestBase):
     """
     Test the sftp server against sftp command line client.
     """
-
-    def setUpClass(self):
-        if hasattr(self, 'skip'):
-            return
-        CFTPClientTestBase.setUpClass(self)
-
 
     def setUp(self):
         CFTPClientTestBase.setUp(self)
