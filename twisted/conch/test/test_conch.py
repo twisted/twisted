@@ -1,8 +1,8 @@
 # -*- test-case-name: twisted.conch.test.test_conch -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import os, sys, tempfile
+import os, sys
 
 try:
     import Crypto
@@ -13,7 +13,6 @@ from twisted.cred import portal
 from twisted.internet import reactor, defer, protocol
 from twisted.internet.error import ProcessExitedAlready
 from twisted.python import log, runtime
-from twisted.python.filepath import FilePath
 from twisted.trial import unittest
 from twisted.conch.error import ConchError
 from twisted.conch.test.test_ssh import ConchTestRealm
@@ -220,10 +219,7 @@ if Crypto:
                 self.spawn = None
             self.connected = 0
             self.remoteForwards = {}
-            self.stopDeferred = defer.Deferred()
 
-        def serviceStopped(self):
-            self.stopDeferred.callback(None)
 
         def serviceStarted(self):
             if self.spawn:
@@ -489,50 +485,17 @@ class CmdLineClientTestCase(ForwardingTestBase, unittest.TestCase):
 
 
 
-class _UnixFixHome(object):
-    """
-    Mixin class to fix the HOME environment variable to something usable.
-    """
-
-    def setUp(self):
-        path = self.mktemp()
-        self.home = FilePath(path)
-        if len(self.home.path) >= 75:
-            # UNIX_MAX_PATH is 108, and the socket file is generally of length
-            # 30, so we can't rely on mktemp...
-            self.home = FilePath("_tmp")
-        if len(self.home.path) >= 75:
-            # OK here we have even a bigger problem...
-            self.home = FilePath(tempfile.mkdtemp())
-        else:
-            self.home.makedirs()
-        self.savedEnviron = os.environ.copy()
-        os.environ["HOME"] = self.home.path
-
-
-    def tearDown(self):
-        os.environ.clear()
-        os.environ.update(self.savedEnviron)
-        self.home.remove()
-
-
-
-class UnixClientTestCase(_UnixFixHome, ForwardingTestBase, unittest.TestCase):
+class UnixClientTestCase(ForwardingTestBase, unittest.TestCase):
     def setUp(self):
         if runtime.platformType == 'win32':
             raise unittest.SkipTest("can't run cmdline client on win32")
         ForwardingTestBase.setUp(self)
-        _UnixFixHome.setUp(self)
 
 
     def tearDown(self):
-        d1 = ForwardingTestBase.tearDown(self)
-        d2 = defer.maybeDeferred(self.conn.transport.transport.loseConnection)
-        d3 = self.conn.stopDeferred
-        def clean(ign):
-            _UnixFixHome.tearDown(self)
-            return ign
-        return defer.gatherResults([d1, d2, d3]).addBoth(clean)
+        ForwardingTestBase.tearDown(self)
+        return defer.maybeDeferred(
+            self.conn.transport.transport.loseConnection)
 
 
     def makeOptions(self):
@@ -575,20 +538,3 @@ class UnixClientTestCase(_UnixFixHome, ForwardingTestBase, unittest.TestCase):
         d = connect.connect(options['host'], port, options,
                             default.verifyHostKey, authClient)
         return d.addCallback(lambda x : process.deferred)
-
-
-    def test_noHome(self):
-        """
-        When setting the HOME environment variable to a path that doesn't
-        exist, L{connect.connect} should forward the failure, and the created
-        process should fail with a L{ConchError}.
-        """
-        path = self.mktemp()
-        # We override the HOME variable, and let tearDown restore the initial
-        # value
-        os.environ['HOME'] = path
-        process = ConchTestOpenSSHProcess()
-        d = self.execute('echo goodbye', process)
-        def cb(ign):
-            return self.assertFailure(process.deferred, ConchError)
-        return self.assertFailure(d, OSError).addCallback(cb)
