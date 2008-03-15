@@ -26,7 +26,10 @@ from twisted.python.filepath import FilePath
 
 # This import is an example of why you shouldn't use this module unless you're
 # radix
-from twisted.lore.scripts import lore
+try:
+    from twisted.lore.scripts import lore
+except ImportError:
+    pass
 
 # The offset between a year and the corresponding major version number.
 VERSION_OFFSET = 2000
@@ -477,6 +480,13 @@ class DistributionBuilder(object):
     from twisted.python.dist import twisted_subprojects as subprojects
 
     def __init__(self, rootDirectory):
+        """
+        Create a distribution builder.
+
+        @param rootDirectory: root of a Twisted export which will populate
+            subsequent tarballs.
+        @type rootDirectory: L{FilePath}.
+        """
         self.rootDirectory = rootDirectory
 
 
@@ -620,12 +630,12 @@ class DistributionBuilder(object):
             ).child("howto").child("template.tpl")
 
         if docPath.isdir():
-            manBuilder = ManBuilder()
-            docBuilder = DocBuilder()
             manPath = docPath.child("man")
             if manPath.isdir():
+                manBuilder = ManBuilder()
                 manBuilder.build(manPath)
 
+            docBuilder = DocBuilder()
             for child in docPath.walk():
                 if child.isdir():
                     try:

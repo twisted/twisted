@@ -30,6 +30,11 @@ from twisted.python._release import NoDocumentsFound, filePathDelta
 from twisted.python._release import CommandFailed, BookBuilder
 from twisted.python._release import DistributionBuilder
 
+try:
+    from twisted.lore.scripts import lore
+except ImportError:
+    lore = None
+
 
 
 class ChangeVersionTest(TestCase):
@@ -1248,3 +1253,10 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
         - should have assertions that no blacklisted subprojects are included?
         - be careful with plugins
 """
+
+if lore is None:
+    skipMessage = "Lore is not present."
+    BookBuilderTests.skip = skipMessage
+    DocBuilderTestCase.skip = skipMessage
+    ManBuilderTestCase.skip = skipMessage
+    DistributionBuilderTests.skip = skipMessage
