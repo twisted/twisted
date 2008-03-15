@@ -605,31 +605,17 @@ class DistributionBuilder(object):
             if manPath.isdir():
                 manBuilder.build(manPath)
 
-            try:
-                docBuilder.build(
-                    version,
-                    docPath.child("howto"),
-                    docPath,
-                    templatePath,
-                    True)
-            except NoDocumentsFound:
-                pass # :-(
-            for loreDir in docPath.children():
-                if loreDir.isdir():
+            for child in docPath.walk():
+                if child.isdir():
                     try:
                         docBuilder.build(
                             version,
-                            # XXX this should really just be docPath, and every
-                            # project should have an index there.
                             docPath.child("howto"),
-                            loreDir,
-                            # XXX template should be in a project-agnostic
-                            # location, not doc/core/howto.
+                            child,
                             templatePath,
-                            True
-                            )
+                            True)
                     except NoDocumentsFound:
-                        pass
+                        pass # :-(
             tarball.add(docPath.path, buildPath("doc"))
 
         return tarball
