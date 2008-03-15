@@ -532,7 +532,9 @@ class DistributionBuilder(object):
         output = FilePath("%s.tar.bz2" % (releaseName,))
         tarball = tarfile.TarFile.open(outputFile.path, 'w:bz2')
         tarball.add(self.rootDirectory.path, arcname=releaseName)
+        tarball.close()
         return output
+
 
     def buildCore(self, version, outputFile):
         """
@@ -580,9 +582,10 @@ class DistributionBuilder(object):
 
         tarball.add(self.rootDirectory.child("twisted").child("topfiles").path,
                     releaseName)
-
+        tarball.close()
 
         return outputFile
+
 
     def _createBasicSubprojectTarball(self, projectName, releaseName, version, outputFile):
         buildPath = lambda *args:  '/'.join((releaseName,) + args)
@@ -663,7 +666,6 @@ class DistributionBuilder(object):
         binPath = self.rootDirectory.child("bin").child(projectName)
         if binPath.isdir():
             tarball.add(binPath.path, buildPath("bin"))
+        tarball.close()
 
         return outputFile
-
-
