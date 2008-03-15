@@ -6,7 +6,6 @@ Tests for L{twisted.python.release} and L{twisted.python._release}.
 """
 
 import warnings
-import copy
 import operator
 import os, sys, signal
 from StringIO import StringIO
@@ -19,7 +18,6 @@ from twisted.trial.unittest import TestCase
 from twisted.python.compat import set
 from twisted.python.procutils import which
 from twisted.python import release
-from twisted.trial.unittest import TestCase
 from twisted.python.filepath import FilePath
 from twisted.python.util import dsu
 from twisted.python.versions import Version
@@ -293,43 +291,7 @@ class VersionWritingTest(TestCase):
 
 
 
-class BuilderTestsMixin:
-    def getArbitraryLoreInput(self, counter):
-        """
-        Get an arbitrary, unique (for this test case) string of lore input.
-        """
-        template = (
-            '<html><head><title>Hi! Title: %(count)s</title></head>'
-            '<body>Hi! %(count)s</body></html>')
-        return template % {"count": counter}
-
-
-    def getArbitraryOutput(self, version, counter):
-        """
-        Get the correct output for the arbitrary input returned by
-        L{getArbitraryLoreInput} for the given parameters.  Override this in a
-        subclass.
-        """
-        raise NotImplementedError("%s did not implement getArbitraryOutput" % (
-                self.__class__,))
-
-
-    def getArbitraryLoreInputAndOutput(self, version):
-        """
-        Get an input document along with expected output for lore run on that
-        output document, assuming an appropriately-specified C{self.template}.
-
-        @return: A two-tuple of input and expected output.
-        @rtype: C{(str, str)}.
-        """
-        self.docCounter += 1
-        return (self.getArbitraryLoreInput(self.docCounter),
-                self.getArbitraryOutput(version, self.docCounter))
-
-
-
-class LoreDataBase(object):
-
+class BuilderTestsMixin(object):
     template = '''
     <html>
     <head><title>Yo:</title></head>
@@ -345,21 +307,90 @@ class LoreDataBase(object):
         self.docCounter = 0
 
 
-    def getArbitraryOutput(self, version, counter):
+    def getArbitraryOutput(self, version, counter, prefix=""):
         """
         Get the correct HTML output for the arbitrary input returned by
         L{getArbitraryLoreInput} for the given parameters.
         """
         document = ('<?xml version="1.0"?><html><head>'
-                   '<title>Yo:Hi! Title: %(count)s</title></head>'
-                   '<body><div class="content">Hi! %(count)s</div>'
-                   '<a href="index.html">''Index</a>'
-                   '<span class="version">Version: 1.2.3</span></body></html>')
-        return document % {"count": self.docCounter}
+                    '<title>Yo:Hi! Title: %(count)s</title></head>'
+                    '<body><div class="content">Hi! %(count)s</div>'
+                    '<a href="%(prefix)sindex.html">''Index</a>'
+                    '<span class="version">Version: %(version)s</span>'
+                    '</body></html>')
+        return document % {"count": self.docCounter, "prefix": prefix,
+                           "version": version}
+
+
+    def getArbitraryLoreInput(self, counter):
+        """
+        Get an arbitrary, unique (for this test case) string of lore input.
+        """
+        template = (
+            '<html><head><title>Hi! Title: %(count)s</title></head>'
+            '<body>Hi! %(count)s</body></html>')
+        return template % {"count": counter}
+
+
+    def getArbitraryLoreInputAndOutput(self, version, prefix=""):
+        """
+        Get an input document along with expected output for lore run on that
+        output document, assuming an appropriately-specified C{self.template}.
+
+        @param prefix: The prefix to include in the link to the index.
+
+        @return: A two-tuple of input and expected output.
+        @rtype: C{(str, str)}.
+        """
+        self.docCounter += 1
+        return (self.getArbitraryLoreInput(self.docCounter),
+                self.getArbitraryOutput(version, self.docCounter,
+                                        prefix=prefix))
+
+
+    def getArbitraryManInput(self):
+        """
+        Get an arbitrary man page content.
+        """
+        return """.TH MANHOLE "1" "August 2001" "" ""
+.SH NAME
+manhole \- Connect to a Twisted Manhole service
+.SH SYNOPSIS
+.B manhole
+.SH DESCRIPTION
+manhole is a GTK interface to Twisted Manhole services. You can execute python
+code as if at an interactive Python console inside a running Twisted process
+with this."""
+
+
+    def getArbitraryManLoreOutput(self):
+        return ("<html><head>\n<title>MANHOLE.1</title>"
+            "</head>\n<body>\n\n<h1>MANHOLE.1</h1>\n\n<h2>NAME</h2>\n\n"
+            "<p>manhole - Connect to a Twisted Manhole service\n</p>\n\n"
+            "<h2>SYNOPSIS</h2>\n\n<p><strong>manhole</strong> </p>\n\n"
+            "<h2>DESCRIPTION</h2>\n\n<p>manhole is a GTK interface to Twisted "
+            "Manhole services. You can execute python\ncode as if at an "
+            "interactive Python console inside a running Twisted process\nwith"
+            " this.</p>\n\n</body>\n</html>\n")
+
+
+    def getArbitraryManHTMLOutput(self, version, prefix=""):
+        return ('<?xml version="1.0"?><html><head>'
+            '<title>Yo:MANHOLE.1</title></head><body><div class="content">'
+            '<span></span><h2>NAME<a name="auto0"></a></h2><p>manhole - '
+            'Connect to a Twisted Manhole service\n</p><h2>SYNOPSIS<a '
+            'name="auto1"></a></h2><p><strong>manhole</strong></p><h2>'
+            'DESCRIPTION<a name="auto2"></a></h2><p>manhole is a GTK '
+            'interface to Twisted Manhole services. You can execute '
+            'python\ncode as if at an interactive Python console inside a '
+            'running Twisted process\nwith this.</p></div><a '
+            'href="%sindex.html">Index</a><span class="version">Version: '
+            '%s</span></body></html>' % (prefix, version))
 
 
 
-class DocBuilderTestCase(TestCase, LoreDataBase, BuilderTestsMixin):
+
+class DocBuilderTestCase(TestCase, BuilderTestsMixin):
     """
     Tests for L{DocBuilder}.
 
@@ -382,7 +413,7 @@ class DocBuilderTestCase(TestCase, LoreDataBase, BuilderTestsMixin):
         @ivar templateFile: A L{FilePath} representing a file with
             C{self.template} as its content.
         """
-        LoreDataBase.setUp(self)
+        BuilderTestsMixin.setUp(self)
         self.builder = DocBuilder()
         self.howtoDir = FilePath(self.mktemp())
         self.howtoDir.createDirectory()
@@ -519,7 +550,7 @@ class DocBuilderTestCase(TestCase, LoreDataBase, BuilderTestsMixin):
 
 
 
-class ManBuilderTestCase(TestCase):
+class ManBuilderTestCase(TestCase, BuilderTestsMixin):
     """
     Tests for L{ManBuilder}.
     """
@@ -532,24 +563,10 @@ class ManBuilderTestCase(TestCase):
         @ivar manDir: A L{FilePath} representing a directory to be used for
             containing man pages.
         """
+        BuilderTestsMixin.setUp(self)
         self.builder = ManBuilder()
         self.manDir = FilePath(self.mktemp())
         self.manDir.createDirectory()
-
-
-    def getArbitraryManInput(self):
-        """
-        Get an arbitrary man page content.
-        """
-        return """.TH MANHOLE "1" "August 2001" "" ""
-.SH NAME
-manhole \- Connect to a Twisted Manhole service
-.SH SYNOPSIS
-.B manhole
-.SH DESCRIPTION
-manhole is a GTK interface to Twisted Manhole services. You can execute python
-code as if at an interactive Python console inside a running Twisted process
-with this."""
 
 
     def test_noDocumentsFound(self):
@@ -569,14 +586,7 @@ with this."""
         self.manDir.child('test1.1').setContent(manContent)
         self.builder.build(self.manDir)
         output = self.manDir.child('test1-man.xhtml').getContent()
-        expected = ("<html><head>\n<title>MANHOLE.1</title>"
-            "</head>\n<body>\n\n<h1>MANHOLE.1</h1>\n\n<h2>NAME</h2>\n\n"
-            "<p>manhole - Connect to a Twisted Manhole service\n</p>\n\n"
-            "<h2>SYNOPSIS</h2>\n\n<p><strong>manhole</strong> </p>\n\n"
-            "<h2>DESCRIPTION</h2>\n\n<p>manhole is a GTK interface to Twisted "
-            "Manhole services. You can execute python\ncode as if at an "
-            "interactive Python console inside a running Twisted process\nwith"
-            " this.</p>\n\n</body>\n</html>\n")
+        expected = self.getArbitraryManLoreOutput()
         # No-op on *nix, fix for windows
         expected = expected.replace('\n', os.linesep)
         self.assertEquals(output, expected)
@@ -633,7 +643,7 @@ class BookBuilderTests(TestCase, BuilderTestsMixin):
         self.howtoDir.makedirs()
 
 
-    def getArbitraryOutput(self, version, counter):
+    def getArbitraryOutput(self, version, counter, prefix=""):
         """
         Create and return a C{str} containing the LaTeX document which is
         expected as the output for processing the result of the document
@@ -1016,14 +1026,10 @@ class CompressorTestCase(TestCase):
 
 
 
-class DistributionBuilderTests(TestCase, LoreDataBase, BuilderTestsMixin):
+class DistributionBuilderTests(BuilderTestsMixin, TestCase):
     """
     Tests for L{DistributionBuilder}.
     """
-
-    def setUp(self):
-        LoreDataBase.setUp(self)
-
 
     def createStructure(self, root, dirDict):
         for x in dirDict:
@@ -1044,7 +1050,8 @@ class DistributionBuilderTests(TestCase, LoreDataBase, BuilderTestsMixin):
                                 % (child.path,))
                 self.assertStructure(child, dirDict[x])
             else:
-                self.assertEquals(child.getContent(), dirDict[x])
+                a = child.getContent()
+                self.assertEquals(a, dirDict[x], child.path)
             children.remove(x)
         if children:
             self.fail("There were extra children in %s: %s"
@@ -1162,18 +1169,25 @@ class DistributionBuilderTests(TestCase, LoreDataBase, BuilderTestsMixin):
         When building a subproject release, documentation should be lored.
         """
         loreInput, loreOutput = self.getArbitraryLoreInputAndOutput("0.3.0")
+        manInput = self.getArbitraryManInput()
+        manOutput = self.getArbitraryManHTMLOutput("0.3.0", "../howto/")
         structure = {
             "LICENSE": "copyright!",
             "twisted": {"web": {"__init__.py": "import WEB",
                                 "topfiles": {"setup.py": "import WEBINST"}}},
-            "doc": {"web": {"howto": {"index.xhtml": loreInput}},
-                    "core": {"howto": {"template.tpl": self.template}}}}
+            "doc": {"web": {"howto": {"index.xhtml": loreInput},
+                            "man": {"twistd.1": manInput}},
+                    "core": {"howto": {"template.tpl": self.template}}
+                    }
+            }
 
         outStructure = {
             "LICENSE": "copyright!",
             "setup.py": "import WEBINST",
             "twisted": {"web": {"__init__.py": "import WEB"}},
-            "doc": {"howto": {"index.html": loreOutput}}}
+            "doc": {"howto": {"index.html": loreOutput},
+                    "man": {"twistd.1": manInput,
+                            "twistd-man.html": manOutput}}}
 
         rootDir = FilePath(self.mktemp())
         rootDir.createDirectory()
@@ -1181,47 +1195,87 @@ class DistributionBuilderTests(TestCase, LoreDataBase, BuilderTestsMixin):
 
         webDist = FilePath(self.mktemp())
         builder = DistributionBuilder(rootDir)
-        builder.buildSubProject("web", "1.2.3", webDist)
+        builder.buildSubProject("web", "0.3.0", webDist)
 
         extracted = FilePath(self.mktemp())
         extracted.createDirectory()
         tarFile = tarfile.TarFile.open(webDist.path, "r:bz2")
         tarFile.extractall(path=extracted.path)
-        self.assertStructure(extracted.child("TwistedWeb-1.2.3"), outStructure)
+        self.assertStructure(extracted.child("TwistedWeb-0.3.0"), outStructure)
 
 
-#     def setupProjDocs(self, projname, directory):
-#         """
-#         Create some test documentation in C{doc/<projname>/howto}.
-#         """
-#         howtoDir = directory.child("doc").child(projname).child("howto")
-#         howtoDir.makedirs()
-#         input, output = self.getArbitraryLoreInputAndOutput("version!")
-#         howtoDir.child("index.xhtml").setContent(input)
-#         return {"index.xhtml": output}
+    def test_coreProjectLayout(self):
+        """
+        """
+        indexInput, indexOutput = self.getArbitraryLoreInputAndOutput(
+            "8.0.0", prefix="howto/")
+        howtoInput, howtoOutput = self.getArbitraryLoreInputAndOutput("8.0.0")
+        specInput, specOutput = self.getArbitraryLoreInputAndOutput(
+            "8.0.0", prefix="../howto/")
+        upgradeInput, upgradeOutput = self.getArbitraryLoreInputAndOutput(
+            "8.0.0", prefix="../howto/")
+        tutorialInput, tutorialOutput = self.getArbitraryLoreInputAndOutput(
+            "8.0.0", prefix="../")
 
+        structure = {
+            "LICENSE": "copyright!",
+            "twisted": {"__init__.py": "twisted",
+                        "python": {"__init__.py": "python",
+                                   "roots.py": "roots!"},
+                        "conch": {"__init__.py": "conch",
+                                  "unrelated.py": "import conch"},
+                        "plugin.py": "plugin",
+                        "plugins": {"twisted_web.py": "webplug",
+                                    "twisted_whatever.py": "include!",
+                                    "cred.py": "include!"},
+                        "topfiles": {"setup.py": "import CORE",
+                                     "README": "core readme"}},
+            "doc": {"core": {"howto": {"template.tpl": self.template,
+                                       "index.xhtml": howtoInput,
+                                       "tutorial":
+                                           {"index.xhtml": tutorialInput}},
+                             "specifications": {"index.xhtml": specInput},
+                             "upgrades": {"index.xhtml": upgradeInput},
+                             "examples": {"foo.py": "foo.py"},
+                             "index.xhtml": indexInput},
+                    "web": {"howto": {"index.xhtml": "webindex"}}},
+            "bin": {"twistd": "TWISTD",
+                    "web": {"websetroot": "websetroot"}}
+            }
 
-#     def assertProjDocsBuilt(self, tarfile, projname, output):
-#         """
-#         """
+        outStructure = {
+            "LICENSE": "copyright!",
+            "setup.py": "import CORE",
+            "README": "core readme",
+            "twisted": {"__init__.py": "twisted",
+                        "python": {"__init__.py": "python",
+                                   "roots.py": "roots!"},
+                        "plugin.py": "plugin",
+                        "plugins": {"twisted_whatever.py": "include!",
+                                    "cred.py": "include!"}},
+            "doc": {"howto": {"template.tpl": self.template,
+                              "index.html": howtoOutput,
+                              "tutorial": {"index.html": tutorialOutput}},
+                    "specifications": {"index.html": specOutput},
+                    "upgrades": {"index.html": upgradeOutput},
+                    "examples": {"foo.py": "foo.py"},
+                    "index.html": indexOutput},
+            "bin": {"twistd": "TWISTD"},
+            }
 
+        rootDir = FilePath(self.mktemp())
+        rootDir.createDirectory()
+        self.createStructure(rootDir, structure)
 
+        coreDist = FilePath(self.mktemp())
+        builder = DistributionBuilder(rootDir)
+        builder.buildCore("8.0.0", coreDist)
 
-#     def test_twistedHasBuiltDocumentation(self):
-#         """
-#         Core documentation should be built in Twisted.
-#         """
-#         rootDir = FilePath(self.mktemp())
-#         rootDir.createDirectory()
-
-#         outputs = self.setupCoreDocs(rootDir)
-
-#         builder = DistributionBuilder(rootDir)
-#         twistedDist = builder.buildTwisted("8.0.0")
-
-#         tarFile = tarfile.TarFile.open(twistedDist.path, "r:bz2")
-
-#         self.assertCoreDocsBuilt(tarFile)
+        extracted = FilePath(self.mktemp())
+        extracted.createDirectory()
+        tarFile = tarfile.TarFile.open(coreDist.path, "r:bz2")
+        tarFile.extractall(path=extracted.path)
+        self.assertStructure(extracted.child("TwistedCore-8.0.0"), outStructure)
 
 
 """
