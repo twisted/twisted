@@ -471,7 +471,7 @@ class DistributionBuilder(object):
     """
     A builder of Twisted distributions.
 
-    This knows how to tarballs for Twisted and all of its subprojects.
+    This knows how to build tarballs for Twisted and all of its subprojects.
     """
 
     from twisted.python.dist import twisted_subprojects as subprojects
@@ -521,7 +521,7 @@ class DistributionBuilder(object):
         @rtype: L{FilePath}.
         """
         releaseName = "TwistedCore-%s" % (version,)
-        buildPath = lambda *args:  '/'.join((releaseName,) + args)
+        buildPath = lambda *args: '/'.join((releaseName,) + args)
         tarball = self._createBasicSubprojectTarball(
             "core", releaseName, version, outputFile)
 
@@ -551,42 +551,6 @@ class DistributionBuilder(object):
         return outputFile
 
 
-    def _createBasicSubprojectTarball(self, projectName, releaseName, version, outputFile):
-        buildPath = lambda *args:  '/'.join((releaseName,) + args)
-
-        dirProto = mkdtemp()
-
-        tarball = tarfile.TarFile.open(outputFile.path, 'w:bz2')
-        tarball.add(dirProto, buildPath("twisted"))
-
-        tarball.add(self.rootDirectory.child("LICENSE").path,
-                    buildPath("LICENSE"))
-
-        docPath = self.rootDirectory.child("doc").child(projectName)
-        templatePath = self.rootDirectory.child("doc").child("core").child("howto").child("template.tpl")
-
-        if docPath.isdir():
-            manBuilder = ManBuilder()
-            docBuilder = DocBuilder()
-            manPath = docPath.child("man")
-            if manPath.isdir():
-                manBuilder.build(manPath)
-
-            for child in docPath.walk():
-                if child.isdir():
-                    try:
-                        docBuilder.build(
-                            version,
-                            docPath.child("howto"),
-                            child,
-                            templatePath,
-                            True)
-                    except NoDocumentsFound:
-                        pass # :-(
-            tarball.add(docPath.path, buildPath("doc"))
-
-        return tarball
-
     def buildSubProject(self, projectName, version, outputFile):
         """
         Build a subproject distribution.
@@ -602,7 +566,7 @@ class DistributionBuilder(object):
         @rtype: L{FilePath}.
         """
         releaseName = "Twisted%s-%s" % (projectName.capitalize(), version)
-        buildPath = lambda *args:  '/'.join((releaseName,) + args)
+        buildPath = lambda *args: '/'.join((releaseName,) + args)
         subProjectDir = self.rootDirectory.child("twisted").child(projectName)
 
         tarball = self._createBasicSubprojectTarball(
@@ -633,3 +597,46 @@ class DistributionBuilder(object):
         tarball.close()
 
         return outputFile
+
+
+    def _createBasicSubprojectTarball(self, projectName, releaseName, version,
+            outputFile):
+        """
+        Helper method to create and fill a tarball with things common between
+        subprojects and core.
+        """
+        buildPath = lambda *args: '/'.join((releaseName,) + args)
+
+        dirProto = mkdtemp()
+
+        tarball = tarfile.TarFile.open(outputFile.path, 'w:bz2')
+        tarball.add(dirProto, buildPath("twisted"))
+
+        tarball.add(self.rootDirectory.child("LICENSE").path,
+                    buildPath("LICENSE"))
+
+        docPath = self.rootDirectory.child("doc").child(projectName)
+        templatePath = self.rootDirectory.child("doc").child("core"
+            ).child("howto").child("template.tpl")
+
+        if docPath.isdir():
+            manBuilder = ManBuilder()
+            docBuilder = DocBuilder()
+            manPath = docPath.child("man")
+            if manPath.isdir():
+                manBuilder.build(manPath)
+
+            for child in docPath.walk():
+                if child.isdir():
+                    try:
+                        docBuilder.build(
+                            version,
+                            docPath.child("howto"),
+                            child,
+                            templatePath,
+                            True)
+                    except NoDocumentsFound:
+                        pass # :-(
+            tarball.add(docPath.path, buildPath("doc"))
+
+        return tarball

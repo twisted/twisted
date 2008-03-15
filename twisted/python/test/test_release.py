@@ -1037,7 +1037,7 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
 
     def test_subProjectLayout(self):
         """
-        The subproject tarball includes files like so!
+        The subproject tarball includes files like so:
 
         1. twisted/<subproject>/topfiles defines the files that will be in the
            top level in the tarball, except LICENSE, which comes from the real
@@ -1163,6 +1163,11 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
 
     def test_coreProjectLayout(self):
         """
+        The core tarball looks a lot like a subproject tarball, except:
+
+        - it includes all Python packages except the ones of subprojects
+        - it includes all plugins except the ones of subprojects
+        - it includes all scripts except the ones of subprojects
         """
         indexInput, indexOutput = self.getArbitraryLoreInputAndOutput(
             "8.0.0", prefix="howto/")
