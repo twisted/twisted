@@ -6,9 +6,11 @@ Tests for L{twisted.python.release} and L{twisted.python._release}.
 """
 
 import warnings
+import copy
 import operator
 import os, sys, signal
 from StringIO import StringIO
+import tarfile
 
 from datetime import date
 
@@ -17,6 +19,7 @@ from twisted.trial.unittest import TestCase
 from twisted.python.compat import set
 from twisted.python.procutils import which
 from twisted.python import release
+from twisted.trial.unittest import TestCase
 from twisted.python.filepath import FilePath
 from twisted.python.util import dsu
 from twisted.python.versions import Version
@@ -27,6 +30,8 @@ from twisted.python._release import updateTwistedVersionInformation, Project
 from twisted.python._release import VERSION_OFFSET, DocBuilder, ManBuilder
 from twisted.python._release import NoDocumentsFound, filePathDelta
 from twisted.python._release import CommandFailed, BookBuilder
+from twisted.python._release import Compressor, DistributionBuilder
+
 
 
 class ChangeVersionTest(TestCase):
@@ -287,6 +292,7 @@ class VersionWritingTest(TestCase):
         self.assertEquals(ns["version"].base(), "0.82.7")
 
 
+
 class BuilderTestsMixin:
     def getArbitraryLoreInput(self, counter):
         """
@@ -322,17 +328,7 @@ class BuilderTestsMixin:
 
 
 
-
-class DocBuilderTestCase(TestCase, BuilderTestsMixin):
-    """
-    Tests for L{DocBuilder}.
-
-    Note for future maintainers: The exact byte equality assertions throughout
-    this suite may need to be updated due to minor differences in lore. They
-    should not be taken to mean that Lore must maintain the same byte format
-    forever. Feel free to update the tests when Lore changes, but please be
-    careful.
-    """
+class LoreDataBase(object):
 
     template = '''
     <html>
@@ -345,6 +341,34 @@ class DocBuilderTestCase(TestCase, BuilderTestsMixin):
     </html>
     '''
 
+    def setUp(self):
+        self.docCounter = 0
+
+
+    def getArbitraryOutput(self, version, counter):
+        """
+        Get the correct HTML output for the arbitrary input returned by
+        L{getArbitraryLoreInput} for the given parameters.
+        """
+        document = ('<?xml version="1.0"?><html><head>'
+                   '<title>Yo:Hi! Title: %(count)s</title></head>'
+                   '<body><div class="content">Hi! %(count)s</div>'
+                   '<a href="index.html">''Index</a>'
+                   '<span class="version">Version: 1.2.3</span></body></html>')
+        return document % {"count": self.docCounter}
+
+
+
+class DocBuilderTestCase(TestCase, LoreDataBase, BuilderTestsMixin):
+    """
+    Tests for L{DocBuilder}.
+
+    Note for future maintainers: The exact byte equality assertions throughout
+    this suite may need to be updated due to minor differences in lore. They
+    should not be taken to mean that Lore must maintain the same byte format
+    forever. Feel free to update the tests when Lore changes, but please be
+    careful.
+    """
 
     def setUp(self):
         """
@@ -358,27 +382,12 @@ class DocBuilderTestCase(TestCase, BuilderTestsMixin):
         @ivar templateFile: A L{FilePath} representing a file with
             C{self.template} as its content.
         """
+        LoreDataBase.setUp(self)
         self.builder = DocBuilder()
-        self.docCounter = 0
         self.howtoDir = FilePath(self.mktemp())
         self.howtoDir.createDirectory()
         self.templateFile = self.howtoDir.child("template.tpl")
         self.templateFile.setContent(self.template)
-
-
-    def getArbitraryOutput(self, version, counter):
-        """
-        Get the correct HTML output for the arbitrary input returned by
-        L{getArbitraryLoreInput} for the given parameters.
-        """
-        return (
-            '<?xml version="1.0"?>'
-            '<html><head><title>Yo:Hi! Title: %(count)s</title></head>'
-            '<body><div class="content">Hi! %(count)s</div>'
-            '<a href="index.html">Index</a>'
-            '<span class="version">Version: %(version)s</span>'
-            '</body></html>'
-            % {"count": counter, "version": version})
 
 
     def test_build(self):
@@ -959,3 +968,266 @@ class FilePathDeltaTest(TestCase):
                           ["..", "..", "baz", "quux"])
 
 
+
+class CompressorTestCase(TestCase):
+    """
+    Tests for L{Compressor}.
+    """
+
+    def setUp(self):
+        self.compressor = Compressor()
+
+
+    def test_tar(self):
+        """
+        Calling L{Compressor.tar} creates a tar file containing the contents of
+        the given directory, compressed.
+        """
+        testDir = FilePath(self.mktemp())
+        testDir.createDirectory()
+        testFile = testDir.child("file.txt")
+        testFile.setContent("some data")
+
+        outputFile = self.compressor.tar(testDir)
+
+        self.assertEquals(outputFile.basename(),
+                          testDir.basename() + '.tar.bz2')
+
+        tarFile = tarfile.TarFile.open(outputFile.path, 'r:bz2')
+        files = tarFile.getnames()
+        files.sort()
+        self.assertEquals(files, [testDir.basename() + os.path.sep,
+            testDir.basename() + os.path.sep + testFile.basename()])
+
+
+    def test_tarWithSpecifiedFilename(self):
+        """
+        L{Compressor.tar} allows specifying the output filename.
+        """
+        testDir = FilePath(self.mktemp())
+        testDir.createDirectory()
+        testFile = testDir.child("file.txt")
+        testFile.setContent("some data")
+
+        destFile = FilePath(self.mktemp())
+
+        outputFile = self.compressor.tar(testDir, destFile)
+        self.assertEquals(outputFile.path, destFile.path)
+
+
+
+class DistributionBuilderTests(TestCase, LoreDataBase, BuilderTestsMixin):
+    """
+    Tests for L{DistributionBuilder}.
+    """
+
+    def setUp(self):
+        LoreDataBase.setUp(self)
+
+
+    def createStructure(self, root, dirDict):
+        for x in dirDict:
+            child = root.child(x)
+            if isinstance(dirDict[x], dict):
+                child.createDirectory()
+                self.createStructure(child, dirDict[x])
+            else:
+                child.setContent(dirDict[x])
+
+
+    def assertStructure(self, root, dirDict):
+        children = [x.basename() for x in root.children()]
+        for x in dirDict:
+            child = root.child(x)
+            if isinstance(dirDict[x], dict):
+                self.assertTrue(child.isdir(), "%s is not a dir!"
+                                % (child.path,))
+                self.assertStructure(child, dirDict[x])
+            else:
+                self.assertEquals(child.getContent(), dirDict[x])
+            children.remove(x)
+        if children:
+            self.fail("There were extra children in %s: %s"
+                      % (root.path, children))
+
+
+    def test_twistedLayout(self):
+        """
+        The Twisted tarball contains files that are in the top level of the
+        source directory.
+        """
+        rootDir = FilePath(self.mktemp())
+        rootDir.createDirectory()
+        structure = {"README": "HI!@",
+                     "setup.py": "import this",
+                     "twisted": {"__init__.py": "import this"}}
+        self.createStructure(rootDir, structure)
+
+        twistedDist = FilePath(self.mktemp())
+        builder = DistributionBuilder(rootDir)
+        builder.buildTwisted("8.0.0", twistedDist)
+        tarFile = tarfile.TarFile.open(twistedDist.path, "r:bz2")
+
+        extracted = FilePath(self.mktemp())
+        extracted.createDirectory()
+        tarFile.extractall(path=extracted.path)
+        self.assertStructure(extracted.child("Twisted-8.0.0"), structure)
+
+
+    def test_subProjectLayout(self):
+        """
+        The subproject tarball includes files like so!
+
+        1. twisted/<subproject>/topfiles defines the files that will be in the
+           top level in the tarball, except LICENSE, which comes from the real
+           top-level directory.
+        2. twisted/<subproject> is included, but without the topfiles entry
+           in that directory. No other twisted subpackages are included.
+        3. twisted/plugins/twisted_<subproject>.py is included, but nothing
+           else in plugins is.
+        """
+        structure = {
+            "README": "HI!@",
+            "unrelated": "x",
+            "LICENSE": "copyright!",
+            "setup.py": "import toplevel",
+            "bin": {"web": {"websetroot": "SET ROOT"},
+                    "words": {"im": "#!im"}},
+            "twisted":
+                {"web":
+                     {"__init__.py": "import WEB",
+                      "topfiles": {"setup.py": "import WEBINSTALL",
+                                   "README": "WEB!"}},
+                 "words": {"__init__.py": "import WORDS"},
+                 "plugins": {"twisted_web.py": "import WEBPLUG",
+                             "twisted_words.py": "import WORDPLUG"}}}
+
+        outStructure = {
+            "README": "WEB!",
+            "LICENSE": "copyright!",
+            "setup.py": "import WEBINSTALL",
+            "bin": {"websetroot": "SET ROOT"},
+            "twisted": {"web": {"__init__.py": "import WEB"},
+                        "plugins": {"twisted_web.py": "import WEBPLUG"}}}
+
+        rootDir = FilePath(self.mktemp())
+        rootDir.createDirectory()
+        self.createStructure(rootDir, structure)
+
+        webDist = FilePath(self.mktemp())
+        builder = DistributionBuilder(rootDir)
+        builder.buildSubProject("web", "0.3.0", webDist)
+
+        extracted = FilePath(self.mktemp())
+        extracted.createDirectory()
+        tarFile = tarfile.TarFile.open(webDist.path, "r:bz2")
+        tarFile.extractall(path=extracted.path)
+        self.assertStructure(extracted.child("TwistedWeb-0.3.0"), outStructure)
+
+
+    def test_minimalSubProjectLayout(self):
+        """
+        buildSubProject should work with minimal subprojects.
+        """
+        structure = {
+            "LICENSE": "copyright!",
+            "bin": {},
+            "twisted":
+                {"web": {"__init__.py": "import WEB",
+                         "topfiles": {"setup.py": "import WEBINSTALL"}},
+                 "plugins": {}}}
+
+        outStructure = {
+            "setup.py": "import WEBINSTALL",
+            "LICENSE": "copyright!",
+            "twisted": {"web": {"__init__.py": "import WEB"}}}
+
+        rootDir = FilePath(self.mktemp())
+        rootDir.createDirectory()
+        self.createStructure(rootDir, structure)
+
+        webDist = FilePath(self.mktemp())
+        builder = DistributionBuilder(rootDir)
+        builder.buildSubProject("web", "0.3.0", webDist)
+
+        extracted = FilePath(self.mktemp())
+        extracted.createDirectory()
+        tarFile = tarfile.TarFile.open(webDist.path, "r:bz2")
+        tarFile.extractall(path=extracted.path)
+        self.assertStructure(extracted.child("TwistedWeb-0.3.0"), outStructure)
+
+
+    def test_subProjectDocBuilding(self):
+        """
+        When building a subproject release, documentation should be lored.
+        """
+        loreInput, loreOutput = self.getArbitraryLoreInputAndOutput("0.3.0")
+        structure = {
+            "LICENSE": "copyright!",
+            "twisted": {"web": {"__init__.py": "import WEB",
+                                "topfiles": {"setup.py": "import WEBINST"}}},
+            "doc": {"web": {"howto": {"index.xhtml": loreInput}},
+                    "core": {"howto": {"template.tpl": self.template}}}}
+
+        outStructure = {
+            "LICENSE": "copyright!",
+            "setup.py": "import WEBINST",
+            "twisted": {"web": {"__init__.py": "import WEB"}},
+            "doc": {"howto": {"index.html": loreOutput}}}
+
+        rootDir = FilePath(self.mktemp())
+        rootDir.createDirectory()
+        self.createStructure(rootDir, structure)
+
+        webDist = FilePath(self.mktemp())
+        builder = DistributionBuilder(rootDir)
+        builder.buildSubProject("web", "1.2.3", webDist)
+
+        extracted = FilePath(self.mktemp())
+        extracted.createDirectory()
+        tarFile = tarfile.TarFile.open(webDist.path, "r:bz2")
+        tarFile.extractall(path=extracted.path)
+        self.assertStructure(extracted.child("TwistedWeb-1.2.3"), outStructure)
+
+
+#     def setupProjDocs(self, projname, directory):
+#         """
+#         Create some test documentation in C{doc/<projname>/howto}.
+#         """
+#         howtoDir = directory.child("doc").child(projname).child("howto")
+#         howtoDir.makedirs()
+#         input, output = self.getArbitraryLoreInputAndOutput("version!")
+#         howtoDir.child("index.xhtml").setContent(input)
+#         return {"index.xhtml": output}
+
+
+#     def assertProjDocsBuilt(self, tarfile, projname, output):
+#         """
+#         """
+
+
+
+#     def test_twistedHasBuiltDocumentation(self):
+#         """
+#         Core documentation should be built in Twisted.
+#         """
+#         rootDir = FilePath(self.mktemp())
+#         rootDir.createDirectory()
+
+#         outputs = self.setupCoreDocs(rootDir)
+
+#         builder = DistributionBuilder(rootDir)
+#         twistedDist = builder.buildTwisted("8.0.0")
+
+#         tarFile = tarfile.TarFile.open(twistedDist.path, "r:bz2")
+
+#         self.assertCoreDocsBuilt(tarFile)
+
+
+"""
+        - should build docs for all subprojects
+        - should contain all files in an export?
+        - should have assertions that all subprojects are included?
+        - should have assertions that no blacklisted subprojects are included?
+        - be careful with plugins
+"""
