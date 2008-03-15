@@ -1077,7 +1077,8 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
 
         extracted = FilePath(self.mktemp())
         extracted.createDirectory()
-        tarFile.extractall(path=extracted.path)
+        for info in tarFile:
+            tarFile.extract(info, path=extracted.path)
         self.assertStructure(extracted.child("Twisted-8.0.0"), structure)
 
 
@@ -1128,7 +1129,8 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
         extracted = FilePath(self.mktemp())
         extracted.createDirectory()
         tarFile = tarfile.TarFile.open(webDist.path, "r:bz2")
-        tarFile.extractall(path=extracted.path)
+        for info in tarFile:
+            tarFile.extract(info, path=extracted.path)
         self.assertStructure(extracted.child("TwistedWeb-0.3.0"), outStructure)
 
 
@@ -1160,7 +1162,8 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
         extracted = FilePath(self.mktemp())
         extracted.createDirectory()
         tarFile = tarfile.TarFile.open(webDist.path, "r:bz2")
-        tarFile.extractall(path=extracted.path)
+        for info in tarFile:
+            tarFile.extract(info, path=extracted.path)
         self.assertStructure(extracted.child("TwistedWeb-0.3.0"), outStructure)
 
 
@@ -1200,7 +1203,8 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
         extracted = FilePath(self.mktemp())
         extracted.createDirectory()
         tarFile = tarfile.TarFile.open(webDist.path, "r:bz2")
-        tarFile.extractall(path=extracted.path)
+        for info in tarFile:
+            tarFile.extract(info, path=extracted.path)
         self.assertStructure(extracted.child("TwistedWeb-0.3.0"), outStructure)
 
 
@@ -1274,7 +1278,8 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
         extracted = FilePath(self.mktemp())
         extracted.createDirectory()
         tarFile = tarfile.TarFile.open(coreDist.path, "r:bz2")
-        tarFile.extractall(path=extracted.path)
+        for info in tarFile:
+            tarFile.extract(info, path=extracted.path)
         self.assertStructure(extracted.child("TwistedCore-8.0.0"), outStructure)
 
 
