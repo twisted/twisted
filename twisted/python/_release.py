@@ -467,42 +467,6 @@ def filePathDelta(origin, destination):
 
 
 
-class Compressor(object):
-    """
-    Compress directories.
-    """
-
-    def tar(self, directory, outputFile=None):
-        """
-        Create a tar file at C{outputFile} containing C{directory}.
-
-        @param directory: the directory to compress.
-        @type directory: L{FilePath}
-
-        @param outputFile: (optional) the new file to create. If not specified,
-            default to C{<directory-name>.tar.bz2} in the current directory.
-        @type outputFile: L{FilePath} or C{NoneType}
-
-        @return: the created file
-        @rtype: L{FilePath}
-        """
-        if not directory.isdir():
-            raise ValueError("%s is not a valid directory" % (directory,))
-        if outputFile is None:
-            filename = "%s.tar.bz2" % (directory.basename(),)
-            outputFile = FilePath(os.path.abspath(filename))
-        currentDir = os.getcwd()
-        os.chdir(directory.parent().path)
-        try:
-            out = tarfile.TarFile.open(outputFile.path, 'w:bz2')
-            out.add(directory.basename())
-            out.close()
-        finally:
-            os.chdir(currentDir)
-        return outputFile
-
-
-
 class DistributionBuilder(object):
     """
     A builder of Twisted distributions.

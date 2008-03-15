@@ -28,7 +28,7 @@ from twisted.python._release import updateTwistedVersionInformation, Project
 from twisted.python._release import VERSION_OFFSET, DocBuilder, ManBuilder
 from twisted.python._release import NoDocumentsFound, filePathDelta
 from twisted.python._release import CommandFailed, BookBuilder
-from twisted.python._release import Compressor, DistributionBuilder
+from twisted.python._release import DistributionBuilder
 
 
 
@@ -976,53 +976,6 @@ class FilePathDeltaTest(TestCase):
         self.assertEquals(filePathDelta(FilePath("/foo/bar"),
                                         FilePath("/baz/quux")),
                           ["..", "..", "baz", "quux"])
-
-
-
-class CompressorTestCase(TestCase):
-    """
-    Tests for L{Compressor}.
-    """
-
-    def setUp(self):
-        self.compressor = Compressor()
-
-
-    def test_tar(self):
-        """
-        Calling L{Compressor.tar} creates a tar file containing the contents of
-        the given directory, compressed.
-        """
-        testDir = FilePath(self.mktemp())
-        testDir.createDirectory()
-        testFile = testDir.child("file.txt")
-        testFile.setContent("some data")
-
-        outputFile = self.compressor.tar(testDir)
-
-        self.assertEquals(outputFile.basename(),
-                          testDir.basename() + '.tar.bz2')
-
-        tarFile = tarfile.TarFile.open(outputFile.path, 'r:bz2')
-        files = tarFile.getnames()
-        files.sort()
-        self.assertEquals(files, [testDir.basename() + os.path.sep,
-            testDir.basename() + os.path.sep + testFile.basename()])
-
-
-    def test_tarWithSpecifiedFilename(self):
-        """
-        L{Compressor.tar} allows specifying the output filename.
-        """
-        testDir = FilePath(self.mktemp())
-        testDir.createDirectory()
-        testFile = testDir.child("file.txt")
-        testFile.setContent("some data")
-
-        destFile = FilePath(self.mktemp())
-
-        outputFile = self.compressor.tar(testDir, destFile)
-        self.assertEquals(outputFile.path, destFile.path)
 
 
 
