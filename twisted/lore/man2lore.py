@@ -214,10 +214,7 @@ class ManConverter(object):
         if self.tp == 3:
             self.write('</dd>')
             self.tp = 1
-        self.write('\n<dt>')
         self.continueReceived(line)
-        self.write('</dt>')
-        self.tp = 2
 
 
     def text(self, line):

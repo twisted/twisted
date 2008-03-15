@@ -118,3 +118,24 @@ class ManConverterTestCase(TestCase):
                   "<dd>Another option\non two lines\n</dd>\n\n</dl>\n\n"
                   "</body>\n</html>\n")
         self.assertConvert(inputLines, output)
+
+
+    def test_ITLegacyManagement(self):
+        """
+        Test management of BL/IT/EL used in some man pages.
+        """
+        inputLines = ['.TH BAR "1" "Oct 2007" "" ""',
+                ".SH HEADER",
+                ".BL",
+                ".IT An option",
+                "on two lines",
+                ".IT",
+                "Another option",
+                "on two lines",
+                ".EL"
+                ]
+        output = ("<html><head>\n<title>BAR.1</title></head>\n<body>\n\n"
+                  "<h1>BAR.1</h1>\n\n<h2>HEADER</h2>\n\n<dl>"
+                  "<dt>on two lines\n</dt><dd>Another option\non two lines\n"
+                  "</dd></dl>\n\n</body>\n</html>\n")
+        self.assertConvert(inputLines, output)
