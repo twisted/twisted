@@ -492,11 +492,13 @@ class DistributionBuilder(object):
         self.docBuilder = DocBuilder()
 
 
-    def _buildDocInDir(self, child, version, howtoPath, templatePath):
+    def _buildDocInDir(self, child, version, howtoPath):
         """
         Generate documentation in given path, building man pages first if
         necessary and swallowing errors.
         """
+        templatePath = self.rootDirectory.child("doc").child("core"
+            ).child("howto").child("template.tpl")
         if child.basename() == "man":
             self.manBuilder.build(child)
         if child.isdir():
@@ -525,15 +527,13 @@ class DistributionBuilder(object):
         tarball = tarfile.TarFile.open(outputFile.path, 'w:bz2')
 
         docPath = self.rootDirectory.child("doc")
-        templatePath = self.rootDirectory.child("doc").child("core"
-            ).child("howto").child("template.tpl")
 
         if docPath.isdir():
             for subProjectDir in docPath.children():
                 if subProjectDir.isdir():
                     for child in subProjectDir.walk():
                         self._buildDocInDir(child, version,
-                            subProjectDir.child("howto"), templatePath)
+                            subProjectDir.child("howto"))
 
         tarball.add(self.rootDirectory.path, releaseName)
 
@@ -649,22 +649,16 @@ class DistributionBuilder(object):
         """
         buildPath = lambda *args: '/'.join((releaseName,) + args)
 
-        dirProto = mkdtemp()
-
         tarball = tarfile.TarFile.open(outputFile.path, 'w:bz2')
-        tarball.add(dirProto, buildPath("twisted"))
 
         tarball.add(self.rootDirectory.child("LICENSE").path,
                     buildPath("LICENSE"))
 
         docPath = self.rootDirectory.child("doc").child(projectName)
-        templatePath = self.rootDirectory.child("doc").child("core"
-            ).child("howto").child("template.tpl")
 
         if docPath.isdir():
             for child in docPath.walk():
-                self._buildDocInDir(child, version, docPath.child("howto"),
-                    templatePath)
+                self._buildDocInDir(child, version, docPath.child("howto"))
             tarball.add(docPath.path, buildPath("doc"))
 
         return tarball
