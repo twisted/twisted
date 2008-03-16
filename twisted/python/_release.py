@@ -518,14 +518,14 @@ class DistributionBuilder(object):
                 pass
 
 
-    def buildTwisted(self, version, outputFile):
+    def buildTwisted(self, version, outputDir):
         """
-        Build the main Twisted distribution.
+        Build the main Twisted distribution in C{Twisted-<version>.tar.bz2}.
 
         @type version: C{str}
         @param version: The version of Twisted to build.
-        @type outputFile: L{FilePath}
-        @param outputFile: The location at which to create the tarball.
+        @type outputDir: L{FilePath}
+        @param outputDir: The directory in which to create the tarball.
 
         @return: The tarball file.
         @rtype: L{FilePath}.
@@ -533,6 +533,7 @@ class DistributionBuilder(object):
         releaseName = "Twisted-%s" % (version,)
         buildPath = lambda *args: '/'.join((releaseName,) + args)
 
+        outputFile = outputDir.child(releaseName + ".tar.bz2")
         tarball = tarfile.TarFile.open(outputFile.path, 'w:bz2')
 
         docPath = self.rootDirectory.child("doc")
@@ -551,9 +552,9 @@ class DistributionBuilder(object):
         return outputFile
 
 
-    def buildCore(self, version, outputFile):
+    def buildCore(self, version, outputDir):
         """
-        Build a core distribution.
+        Build a core distribution in C{TwistedCore-<version>.tar.bz2}.
 
         This is very similar to L{buildSubProject}, but core tarballs and the
         input are laid out slightly differently.
@@ -565,13 +566,14 @@ class DistributionBuilder(object):
 
         @type version: C{str}
         @param version: The version of Twisted to build.
-        @type outputFile: L{FilePath}
-        @param outputFile: The location at which to create the tarball.
+        @type outputDir: L{FilePath}
+        @param outputDir: The directory in which to create the tarball.
 
         @return: The tarball file.
         @rtype: L{FilePath}.
         """
         releaseName = "TwistedCore-%s" % (version,)
+        outputFile = outputDir.child(releaseName + ".tar.bz2")
         buildPath = lambda *args: '/'.join((releaseName,) + args)
         tarball = self._createBasicSubprojectTarball(
             "core", version, outputFile)
@@ -602,21 +604,23 @@ class DistributionBuilder(object):
         return outputFile
 
 
-    def buildSubProject(self, projectName, version, outputFile):
+    def buildSubProject(self, projectName, version, outputDir):
         """
-        Build a subproject distribution.
+        Build a subproject distribution in
+        C{Twisted<Projectname>-<version>.tar.bz2}.
 
         @type projectName: C{str}
         @param projectName: The lowercase name of the subproject to build.
         @type version: C{str}
         @param version: The version of Twisted to build.
-        @type outputFile: L{FilePath}
-        @param outputFile: The location at which to create the tarball.
+        @type outputDir: L{FilePath}
+        @param outputDir: The directory in which to create the tarball.
 
         @return: The tarball file.
         @rtype: L{FilePath}.
         """
         releaseName = "Twisted%s-%s" % (projectName.capitalize(), version)
+        outputFile = outputDir.child(releaseName + ".tar.bz2")
         buildPath = lambda *args: '/'.join((releaseName,) + args)
         subProjectDir = self.rootDirectory.child("twisted").child(projectName)
 
