@@ -1029,6 +1029,16 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
     Tests for L{DistributionBuilder}.
     """
 
+    def setUp(self):
+        BuilderTestsMixin.setUp(self)
+
+        self.rootDir = FilePath(self.mktemp())
+        self.rootDir.createDirectory()
+
+        outputDir = FilePath(self.mktemp())
+        outputDir.createDirectory()
+        self.builder = DistributionBuilder(self.rootDir, outputDir)
+
     def createStructure(self, root, dirDict):
         """
         Create a set of directories and files given a dict defining their
@@ -1050,6 +1060,25 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
                 self.createStructure(child, dirDict[x])
             else:
                 child.setContent(dirDict[x])
+
+
+    def assertExtractedStructure(self, outputFile, dirDict):
+        """
+        Assert that a tarfile content is equivalent to one described by a dict.
+
+        @param outputFile: The tar file built by L{DistributionBuilder}.
+        @type outputFile: L{FilePath}.
+        @param dirDict: The dict that should describe the contents of the
+            directory. It should be the same structure as the C{dirDict}
+            parameter to L{createStructure}.
+        @type dirDict: C{dict}
+        """
+        tarFile = tarfile.TarFile.open(outputFile.path, "r:bz2")
+        extracted = FilePath(self.mktemp())
+        extracted.createDirectory()
+        for info in tarFile:
+            tarFile.extract(info, path=extracted.path)
+        self.assertStructure(extracted.children()[0], dirDict)
 
 
     def assertStructure(self, root, dirDict):
@@ -1084,24 +1113,14 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
         The Twisted tarball contains files that are in the top level of the
         source directory.
         """
-        rootDir = FilePath(self.mktemp())
-        rootDir.createDirectory()
         structure = {"README": "HI!@",
                      "setup.py": "import this",
                      "twisted": {"__init__.py": "import this"}}
-        self.createStructure(rootDir, structure)
+        self.createStructure(self.rootDir, structure)
 
-        outputDir = FilePath(self.mktemp())
-        outputDir.createDirectory()
-        builder = DistributionBuilder(rootDir)
-        outputFile = builder.buildTwisted("8.0.0", outputDir)
-        tarFile = tarfile.TarFile.open(outputFile.path, "r:bz2")
+        outputFile = self.builder.buildTwisted("8.0.0")
 
-        extracted = FilePath(self.mktemp())
-        extracted.createDirectory()
-        for info in tarFile:
-            tarFile.extract(info, path=extracted.path)
-        self.assertStructure(extracted.child("Twisted-8.0.0"), structure)
+        self.assertExtractedStructure(outputFile, structure)
 
 
     def test_twistedDistribution(self):
@@ -1160,21 +1179,11 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
                                      "twistd-man.html": manOutput1},
                              "index.html": coreIndexOutput}}}
 
-        rootDir = FilePath(self.mktemp())
-        rootDir.createDirectory()
-        self.createStructure(rootDir, structure)
+        self.createStructure(self.rootDir, structure)
 
-        outputDir = FilePath(self.mktemp())
-        outputDir.createDirectory()
-        builder = DistributionBuilder(rootDir)
-        outputFile = builder.buildTwisted("10.0.0", outputDir)
+        outputFile = self.builder.buildTwisted("10.0.0")
 
-        extracted = FilePath(self.mktemp())
-        extracted.createDirectory()
-        tarFile = tarfile.TarFile.open(outputFile.path, "r:bz2")
-        for info in tarFile:
-            tarFile.extract(info, path=extracted.path)
-        self.assertStructure(extracted.child("Twisted-10.0.0"), outStructure)
+        self.assertExtractedStructure(outputFile, outStructure)
 
 
     def test_subProjectLayout(self):
@@ -1213,21 +1222,11 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
             "twisted": {"web": {"__init__.py": "import WEB"},
                         "plugins": {"twisted_web.py": "import WEBPLUG"}}}
 
-        rootDir = FilePath(self.mktemp())
-        rootDir.createDirectory()
-        self.createStructure(rootDir, structure)
+        self.createStructure(self.rootDir, structure)
 
-        outputDir = FilePath(self.mktemp())
-        outputDir.createDirectory()
-        builder = DistributionBuilder(rootDir)
-        outputFile = builder.buildSubProject("web", "0.3.0", outputDir)
+        outputFile = self.builder.buildSubProject("web", "0.3.0")
 
-        extracted = FilePath(self.mktemp())
-        extracted.createDirectory()
-        tarFile = tarfile.TarFile.open(outputFile.path, "r:bz2")
-        for info in tarFile:
-            tarFile.extract(info, path=extracted.path)
-        self.assertStructure(extracted.child("TwistedWeb-0.3.0"), outStructure)
+        self.assertExtractedStructure(outputFile, outStructure)
 
 
     def test_minimalSubProjectLayout(self):
@@ -1247,21 +1246,11 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
             "LICENSE": "copyright!",
             "twisted": {"web": {"__init__.py": "import WEB"}}}
 
-        rootDir = FilePath(self.mktemp())
-        rootDir.createDirectory()
-        self.createStructure(rootDir, structure)
+        self.createStructure(self.rootDir, structure)
 
-        outputDir = FilePath(self.mktemp())
-        outputDir.createDirectory()
-        builder = DistributionBuilder(rootDir)
-        outputFile = builder.buildSubProject("web", "0.3.0", outputDir)
+        outputFile = self.builder.buildSubProject("web", "0.3.0")
 
-        extracted = FilePath(self.mktemp())
-        extracted.createDirectory()
-        tarFile = tarfile.TarFile.open(outputFile.path, "r:bz2")
-        for info in tarFile:
-            tarFile.extract(info, path=extracted.path)
-        self.assertStructure(extracted.child("TwistedWeb-0.3.0"), outStructure)
+        self.assertExtractedStructure(outputFile, outStructure)
 
 
     def test_subProjectDocBuilding(self):
@@ -1290,21 +1279,11 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
                     "man": {"twistd.1": manInput,
                             "twistd-man.html": manOutput}}}
 
-        rootDir = FilePath(self.mktemp())
-        rootDir.createDirectory()
-        self.createStructure(rootDir, structure)
+        self.createStructure(self.rootDir, structure)
 
-        outputDir = FilePath(self.mktemp())
-        outputDir.createDirectory()
-        builder = DistributionBuilder(rootDir)
-        outputFile = builder.buildSubProject("web", "0.3.0", outputDir)
+        outputFile = self.builder.buildSubProject("web", "0.3.0")
 
-        extracted = FilePath(self.mktemp())
-        extracted.createDirectory()
-        tarFile = tarfile.TarFile.open(outputFile.path, "r:bz2")
-        for info in tarFile:
-            tarFile.extract(info, path=extracted.path)
-        self.assertStructure(extracted.child("TwistedWeb-0.3.0"), outStructure)
+        self.assertExtractedStructure(outputFile, outStructure)
 
 
     def test_coreProjectLayout(self):
@@ -1372,21 +1351,11 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
             "bin": {"twistd": "TWISTD"},
             }
 
-        rootDir = FilePath(self.mktemp())
-        rootDir.createDirectory()
-        self.createStructure(rootDir, structure)
+        self.createStructure(self.rootDir, structure)
 
-        outputDir = FilePath(self.mktemp())
-        outputDir.createDirectory()
-        builder = DistributionBuilder(rootDir)
-        outputFile = builder.buildCore("8.0.0", outputDir)
+        outputFile = self.builder.buildCore("8.0.0")
 
-        extracted = FilePath(self.mktemp())
-        extracted.createDirectory()
-        tarFile = tarfile.TarFile.open(outputFile.path, "r:bz2")
-        for info in tarFile:
-            tarFile.extract(info, path=extracted.path)
-        self.assertStructure(extracted.child("TwistedCore-8.0.0"), outStructure)
+        self.assertExtractedStructure(outputFile, outStructure)
 
 
 
