@@ -1039,6 +1039,7 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
         outputDir.createDirectory()
         self.builder = DistributionBuilder(self.rootDir, outputDir)
 
+
     def createStructure(self, root, dirDict):
         """
         Create a set of directories and files given a dict defining their
@@ -1289,7 +1290,7 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
     def test_coreProjectLayout(self):
         """
         The core tarball looks a lot like a subproject tarball, except it
-        deosn't include:
+        doesn't include:
 
         - Python packages from other subprojects
         - plugins from other subprojects
