@@ -1521,39 +1521,15 @@ generator_entity_headers = {
     'Last-Modified':(generateDateTime, singleHeader),
     }
 
-parser_dav_headers = {
-    'DAV'         : (tokenize, list),
-    'Depth'       : (last, parseDepth),
-    'Destination' : (last,), # TODO: URI object?
-   #'If'          : (),
-   #'Lock-Token'  : (),
-    'Overwrite'   : (last, parseOverWrite),
-   #'Status-URI'  : (),
-   #'Timeout'     : (),
-}
-
-generator_dav_headers = {
-    'DAV'         : (generateList, singleHeader),
-    'Depth'       : (singleHeader),
-    'Destination' : (singleHeader),
-   #'If'          : (),
-   #'Lock-Token'  : (),
-    'Overwrite'   : (),
-   #'Status-URI'  : (),
-   #'Timeout'     : (),
-}
-
 DefaultHTTPHandler.updateParsers(parser_general_headers)
 DefaultHTTPHandler.updateParsers(parser_request_headers)
 DefaultHTTPHandler.updateParsers(parser_response_headers)
 DefaultHTTPHandler.updateParsers(parser_entity_headers)
-DefaultHTTPHandler.updateParsers(parser_dav_headers)
 
 DefaultHTTPHandler.updateGenerators(generator_general_headers)
 DefaultHTTPHandler.updateGenerators(generator_request_headers)
 DefaultHTTPHandler.updateGenerators(generator_response_headers)
 DefaultHTTPHandler.updateGenerators(generator_entity_headers)
-DefaultHTTPHandler.updateGenerators(generator_dav_headers)
 
 
 # casemappingify(DefaultHTTPParsers)

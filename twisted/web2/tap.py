@@ -7,7 +7,6 @@ from twisted.scripts.mktap import IServiceMaker
 from twisted.plugin import IPlugin
 
 from twisted.web2 import static, iweb, log, server, channel, vhost
-from twisted.web2.dav import static as dav_static
 
 class Options(usage.Options):
     optParameters = [["port", "p", "8080",
@@ -34,10 +33,6 @@ Basic Examples:
 To serve a static directory or file:
 
     mktap web2 --path=/tmp/
-
-To serve a dav collection:
-
-    mktap web2 --dav=/tmp/
 
 To serve a dynamic resource:
 
@@ -191,34 +186,6 @@ Or to serve a specific host name as a dynamic resource:
         classObj = reflect.namedClass(className)
         self['root'].addHost(domain, iweb.IResource(classObj()))
 
-    def opt_vhost_dav(self, virtualHost):
-        """Specify a virtual host in the form of domain=path,
-        to have path served as a DAV collection at the root of
-        domain
-        """
-                
-        if (self['root'] and not \
-            isinstance(self['root'], vhost.NameVirtualHost)):
-
-            raise usage.UsageError("You can only use --vhost-static alone "
-                                   "or with --vhost-class and --vhost-path")
-
-        domain, path = virtualHost.split('=', 1)
-
-        if not self['root']:
-            self['root'] = vhost.NameVirtualHost()
-
-        self['root'].addHost(domain, dav_static.DAVFile(os.path.abspath(path)))
-
-    def opt_dav(self, path):
-        """A path that will be used to serve the root resource as a DAV Collection.
-        """
-
-        if self['root']:
-            raise usage.UsageError("You may only have one root resource")
-        
-        self['root'] = dav_static.DAVFile(os.path.abspath(path))
-    
     def postOptions(self):
         if self['https']:
             try:

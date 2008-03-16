@@ -84,23 +84,6 @@
     <p>It's important to keep in mind that this class will be created
       with no arguments passed to the constructor.</p>
 
-    <h3>The one line WebDAV configuration</h3>
-    <p>Creating a WebDAV server is as easy as serving a static
-      directory.  In fact you could say it's even easier, because there
-      is one character less to type.</p>
-
-    <p>But before I tell you how to do it, a word of warning:  This is
-      a fully writeable webdav server with absolutely no protections
-      of any kind, no HTTP Authentication, no DAV ACLs, just a directory
-      on your hard disk that you're presenting to the world to be
-      written by whomever should stumble across it.  In other words,
-      don't do this on a publically accessible system.  It's simply
-      here for you to fool around with in the privacy of your own home.</p>
-   
-    <pre class="shell">
-% mktap web2 --dav /some/path
-    </pre>
-
     <h2>Virtual Hosts</h2>
 
     <p>Now for something a little different, and a little more
