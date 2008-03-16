@@ -492,18 +492,27 @@ class DistributionBuilder(object):
         self.docBuilder = DocBuilder()
 
 
-    def _buildDocInDir(self, child, version, howtoPath):
+    def _buildDocInDir(self, path, version, howtoPath):
         """
-        Generate documentation in given path, building man pages first if
-        necessary and swallowing errors.
+        Generate documentation in the given path, building man pages first if
+        necessary and swallowing errors (so that directories without lore
+        documentation in them are ignored).
+
+        @param path: The path containing documentation to build.
+        @type path: L{FilePath}
+        @param version: The version of the projcet to include in all generated
+            pages.
+        @type version: C{str}
+        @param howtoPath: The "resource path" as L{DocBuilder} describes it.
+        @type howtoPath: L{FilePath}
         """
         templatePath = self.rootDirectory.child("doc").child("core"
             ).child("howto").child("template.tpl")
-        if child.basename() == "man":
-            self.manBuilder.build(child)
-        if child.isdir():
+        if path.basename() == "man":
+            self.manBuilder.build(path)
+        if path.isdir():
             try:
-                self.docBuilder.build(version, howtoPath, child,
+                self.docBuilder.build(version, howtoPath, path,
                     templatePath, True)
             except NoDocumentsFound:
                 pass
@@ -565,7 +574,7 @@ class DistributionBuilder(object):
         releaseName = "TwistedCore-%s" % (version,)
         buildPath = lambda *args: '/'.join((releaseName,) + args)
         tarball = self._createBasicSubprojectTarball(
-            "core", releaseName, version, outputFile)
+            "core", version, outputFile)
 
         # Include the bin directory for the subproject.
         for path in self.rootDirectory.child("bin").children():
@@ -611,8 +620,8 @@ class DistributionBuilder(object):
         buildPath = lambda *args: '/'.join((releaseName,) + args)
         subProjectDir = self.rootDirectory.child("twisted").child(projectName)
 
-        tarball = self._createBasicSubprojectTarball(
-            projectName, releaseName, version, outputFile)
+        tarball = self._createBasicSubprojectTarball(projectName, version,
+                                                     outputFile)
 
         tarball.add(subProjectDir.child("topfiles").path, releaseName)
 
@@ -641,12 +650,19 @@ class DistributionBuilder(object):
         return outputFile
 
 
-    def _createBasicSubprojectTarball(self, projectName, releaseName, version,
-            outputFile):
+    def _createBasicSubprojectTarball(self, projectName, version, outputFile):
         """
         Helper method to create and fill a tarball with things common between
         subprojects and core.
+
+        @param projectName: The subproject's name.
+        @type projectName: C{str}
+        @param version: The version of the release.
+        @type version: C{str}
+        @param outputFile: The location of the tar file to create.
+        @type outputFile: L{FilePath}
         """
+        releaseName = "Twisted%s-%s" % (projectName.capitalize(), version)
         buildPath = lambda *args: '/'.join((releaseName,) + args)
 
         tarball = tarfile.TarFile.open(outputFile.path, 'w:bz2')
