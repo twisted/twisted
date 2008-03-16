@@ -297,6 +297,18 @@ class VersionWritingTest(TestCase):
 
 
 class BuilderTestsMixin(object):
+    """
+    A mixin class which provides various methods for creating sample Lore input
+    and output.
+
+    @cvar template: The lore template that will be used to prepare sample
+    output.
+    @type template: C{str}
+
+    @ivar docCounter: A counter which is incremented every time input is
+        generated and which is included in the documents.
+    @type docCounter: C{int}
+    """
     template = '''
     <html>
     <head><title>Yo:</title></head>
@@ -309,6 +321,9 @@ class BuilderTestsMixin(object):
     '''
 
     def setUp(self):
+        """
+        Initialize the doc counter which ensures documents are unique.
+        """
         self.docCounter = 0
 
 
@@ -316,6 +331,11 @@ class BuilderTestsMixin(object):
         """
         Get the correct HTML output for the arbitrary input returned by
         L{getArbitraryLoreInput} for the given parameters.
+
+        @param version: The version string to include in the output.
+        @type version: C{str}
+        @param counter: A counter to include in the output.
+        @type counter: C{int}
         """
         document = ('<?xml version="1.0"?><html><head>'
                     '<title>Yo:Hi! Title: %(count)s</title></head>'
@@ -323,13 +343,16 @@ class BuilderTestsMixin(object):
                     '<a href="%(prefix)sindex.html">''Index</a>'
                     '<span class="version">Version: %(version)s</span>'
                     '</body></html>')
-        return document % {"count": self.docCounter, "prefix": prefix,
+        return document % {"count": counter, "prefix": prefix,
                            "version": version}
 
 
     def getArbitraryLoreInput(self, counter):
         """
         Get an arbitrary, unique (for this test case) string of lore input.
+
+        @param counter: A counter to include in the input.
+        @type counter: C{int}
         """
         template = (
             '<html><head><title>Hi! Title: %(count)s</title></head>'
@@ -342,7 +365,10 @@ class BuilderTestsMixin(object):
         Get an input document along with expected output for lore run on that
         output document, assuming an appropriately-specified C{self.template}.
 
+        @param version: A version string to include in the input and output.
+        @type version: C{str}
         @param prefix: The prefix to include in the link to the index.
+        @type prefix: C{str}
 
         @return: A two-tuple of input and expected output.
         @rtype: C{(str, str)}.
@@ -369,6 +395,10 @@ with this."""
 
 
     def getArbitraryManLoreOutput(self):
+        """
+        Get an arbitrary lore input document which represents man-to-lore
+        output based on the man page returned from L{getArbitraryManInput}
+        """
         return ("<html><head>\n<title>MANHOLE.1</title>"
             "</head>\n<body>\n\n<h1>MANHOLE.1</h1>\n\n<h2>NAME</h2>\n\n"
             "<p>manhole - Connect to a Twisted Manhole service\n</p>\n\n"
@@ -380,6 +410,16 @@ with this."""
 
 
     def getArbitraryManHTMLOutput(self, version, prefix=""):
+        """
+        Get an arbitrary lore output document which represents the lore HTML
+        output based on the input document returned from
+        L{getArbitraryManLoreOutput}.
+
+        @param version: A version string to include in the document.
+        @type version: C{str}
+        @param prefix: The prefix to include in the link to the index.
+        @type prefix: C{str}
+        """
         return ('<?xml version="1.0"?><html><head>'
             '<title>Yo:MANHOLE.1</title></head><body><div class="content">'
             '<span></span><h2>NAME<a name="auto0"></a></h2><p>manhole - '
