@@ -1039,6 +1039,77 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
             tarFile.extract(info, path=extracted.path)
         self.assertStructure(extracted.child("Twisted-8.0.0"), structure)
 
+    def test_twistedDistribution(self):
+        """
+        The Twisted tarball contains EVERYTHING, but with built documentation.
+        """
+        loreInput, loreOutput = self.getArbitraryLoreInputAndOutput("10.0.0")
+        manInput1 = self.getArbitraryManInput()
+        manOutput1 = self.getArbitraryManHTMLOutput("10.0.0", "../howto/")
+        manInput2 = self.getArbitraryManInput()
+        manOutput2 = self.getArbitraryManHTMLOutput("10.0.0", "../howto/")
+        coreIndexInput, coreIndexOutput = self.getArbitraryLoreInputAndOutput(
+            "10.0.0", prefix="howto/")
+
+        structure = {
+            "README": "Twisted",
+            "unrelated": "x",
+            "LICENSE": "copyright!",
+            "setup.py": "import toplevel",
+            "bin": {"web": {"websetroot": "SET ROOT"},
+                    "twistd": "TWISTD"},
+            "twisted":
+                {"web":
+                     {"__init__.py": "import WEB",
+                      "topfiles": {"setup.py": "import WEBINSTALL",
+                                   "README": "WEB!"}},
+                 "words": {"__init__.py": "import WORDS"},
+                 "plugins": {"twisted_web.py": "import WEBPLUG",
+                             "twisted_words.py": "import WORDPLUG"}},
+            "doc": {"web": {"howto": {"index.xhtml": loreInput},
+                            "man": {"websetroot.1": manInput2}},
+                    "core": {"howto": {"template.tpl": self.template},
+                             "man": {"twistd.1": manInput1},
+                             "index.xhtml": coreIndexInput}}}
+
+        outStructure = {
+            "README": "Twisted",
+            "unrelated": "x",
+            "LICENSE": "copyright!",
+            "setup.py": "import toplevel",
+            "bin": {"web": {"websetroot": "SET ROOT"},
+                    "twistd": "TWISTD"},
+            "twisted":
+                {"web": {"__init__.py": "import WEB",
+                         "topfiles": {"setup.py": "import WEBINSTALL",
+                                      "README": "WEB!"}},
+                 "words": {"__init__.py": "import WORDS"},
+                 "plugins": {"twisted_web.py": "import WEBPLUG",
+                             "twisted_words.py": "import WORDPLUG"}},
+            "doc": {"web": {"howto": {"index.html": loreOutput},
+                            "man": {"websetroot.1": manInput2,
+                                    "websetroot-man.html": manOutput2}},
+                    "core": {"howto": {"template.tpl": self.template},
+                             "man": {"twistd.1": manInput1,
+                                     "twistd-man.html": manOutput1},
+                             "index.html": coreIndexOutput}}}
+
+        rootDir = FilePath(self.mktemp())
+        rootDir.createDirectory()
+        self.createStructure(rootDir, structure)
+
+        dist = FilePath(self.mktemp())
+        builder = DistributionBuilder(rootDir)
+        builder.buildTwisted("10.0.0", dist)
+
+        extracted = FilePath(self.mktemp())
+        extracted.createDirectory()
+        tarFile = tarfile.TarFile.open(dist.path, "r:bz2")
+        for info in tarFile:
+            tarFile.extract(info, path=extracted.path)
+        self.assertStructure(extracted.child("Twisted-10.0.0"), outStructure)
+
+
 
     def test_subProjectLayout(self):
         """
@@ -1246,13 +1317,6 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
         self.assertStructure(extracted.child("TwistedCore-8.0.0"), outStructure)
 
 
-"""
-        - should build docs for all subprojects
-        - should contain all files in an export?
-        - should have assertions that all subprojects are included?
-        - should have assertions that no blacklisted subprojects are included?
-        - be careful with plugins
-"""
 
 if lore is None:
     skipMessage = "Lore is not present."

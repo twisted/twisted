@@ -503,11 +503,38 @@ class DistributionBuilder(object):
         @rtype: L{FilePath}.
         """
         releaseName = "Twisted-%s" % (version,)
-        output = FilePath("%s.tar.bz2" % (releaseName,))
+        buildPath = lambda *args: '/'.join((releaseName,) + args)
+
         tarball = tarfile.TarFile.open(outputFile.path, 'w:bz2')
-        tarball.add(self.rootDirectory.path, arcname=releaseName)
+
+        docPath = self.rootDirectory.child("doc")
+        templatePath = self.rootDirectory.child("doc").child("core"
+            ).child("howto").child("template.tpl")
+
+        if docPath.isdir():
+            manBuilder = ManBuilder()
+            docBuilder = DocBuilder()
+            for subProjectDir in docPath.children():
+                if subProjectDir.isdir():
+                    for child in subProjectDir.walk():
+                        if child.isdir():
+                            if child.basename() == "man":
+                                manBuilder.build(child)
+                            try:
+                                docBuilder.build(
+                                    version,
+                                    subProjectDir.child("howto"),
+                                    child,
+                                    templatePath,
+                                    True)
+                            except NoDocumentsFound:
+                                pass # :-(
+
+        tarball.add(self.rootDirectory.path, releaseName)
+
         tarball.close()
-        return output
+
+        return outputFile
 
 
     def buildCore(self, version, outputFile):
