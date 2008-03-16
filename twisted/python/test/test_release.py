@@ -990,6 +990,19 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
     """
 
     def createStructure(self, root, dirDict):
+        """
+        Create a set of directories and files given a dict defining their
+        structure.
+
+        @param root: The directory in which to create the structure.
+        @type root: L{FilePath}
+
+        @param dirDict: The dict defining the structure. Keys should be strings
+            naming files, values should be strings describing file contents OR
+            dicts describing subdirectories. For example: C{{"foofile":
+            "foocontents", "bardir": {"barfile": "barcontents"}}}
+        @type dirDict: C{dict}
+        """
         for x in dirDict:
             child = root.child(x)
             if isinstance(dirDict[x], dict):
@@ -1000,6 +1013,16 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
 
 
     def assertStructure(self, root, dirDict):
+        """
+        Assert that a directory is equivalent to one described by a dict.
+
+        @param root: The filesystem directory to compare.
+        @type root: L{FilePath}
+        @param dirDict: The dict that should describe the contents of the
+            directory. It should be the same structure as the C{dirDict}
+            parameter to L{createStructure}.
+        @type dirDict: C{dict}
+        """
         children = [x.basename() for x in root.children()]
         for x in dirDict:
             child = root.child(x)
@@ -1042,7 +1065,8 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
 
     def test_twistedDistribution(self):
         """
-        The Twisted tarball contains EVERYTHING, but with built documentation.
+        The Twisted tarball contains everything in the source checkout, with
+        built documentation.
         """
         loreInput, loreOutput = self.getArbitraryLoreInputAndOutput("10.0.0")
         manInput1 = self.getArbitraryManInput()
@@ -1198,7 +1222,8 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
 
     def test_subProjectDocBuilding(self):
         """
-        When building a subproject release, documentation should be lored.
+        When building a subproject release, documentation should be built with
+        lore.
         """
         loreInput, loreOutput = self.getArbitraryLoreInputAndOutput("0.3.0")
         manInput = self.getArbitraryManInput()
@@ -1239,11 +1264,12 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
 
     def test_coreProjectLayout(self):
         """
-        The core tarball looks a lot like a subproject tarball, except:
+        The core tarball looks a lot like a subproject tarball, except it
+        deosn't include:
 
-        - it includes all Python packages except the ones of subprojects
-        - it includes all plugins except the ones of subprojects
-        - it includes all scripts except the ones of subprojects
+        - Python packages from other subprojects
+        - plugins from other subprojects
+        - scripts from other subprojects
         """
         indexInput, indexOutput = self.getArbitraryLoreInputAndOutput(
             "8.0.0", prefix="howto/")
