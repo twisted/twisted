@@ -488,6 +488,23 @@ class DistributionBuilder(object):
         @type rootDirectory: L{FilePath}.
         """
         self.rootDirectory = rootDirectory
+        self.manBuilder = ManBuilder()
+        self.docBuilder = DocBuilder()
+
+
+    def _buildDocInDir(self, child, version, howtoPath, templatePath):
+        """
+        Generate documentation in given path, building man pages first if
+        necessary and swallowing errors.
+        """
+        if child.basename() == "man":
+            self.manBuilder.build(child)
+        if child.isdir():
+            try:
+                self.docBuilder.build(version, howtoPath, child,
+                    templatePath, True)
+            except NoDocumentsFound:
+                pass
 
 
     def buildTwisted(self, version, outputFile):
@@ -512,23 +529,11 @@ class DistributionBuilder(object):
             ).child("howto").child("template.tpl")
 
         if docPath.isdir():
-            manBuilder = ManBuilder()
-            docBuilder = DocBuilder()
             for subProjectDir in docPath.children():
                 if subProjectDir.isdir():
                     for child in subProjectDir.walk():
-                        if child.isdir():
-                            if child.basename() == "man":
-                                manBuilder.build(child)
-                            try:
-                                docBuilder.build(
-                                    version,
-                                    subProjectDir.child("howto"),
-                                    child,
-                                    templatePath,
-                                    True)
-                            except NoDocumentsFound:
-                                pass # :-(
+                        self._buildDocInDir(child, version,
+                            subProjectDir.child("howto"), templatePath)
 
         tarball.add(self.rootDirectory.path, releaseName)
 
@@ -657,23 +662,9 @@ class DistributionBuilder(object):
             ).child("howto").child("template.tpl")
 
         if docPath.isdir():
-            manPath = docPath.child("man")
-            if manPath.isdir():
-                manBuilder = ManBuilder()
-                manBuilder.build(manPath)
-
-            docBuilder = DocBuilder()
             for child in docPath.walk():
-                if child.isdir():
-                    try:
-                        docBuilder.build(
-                            version,
-                            docPath.child("howto"),
-                            child,
-                            templatePath,
-                            True)
-                    except NoDocumentsFound:
-                        pass # :-(
+                self._buildDocInDir(child, version, docPath.child("howto"),
+                    templatePath)
             tarball.add(docPath.path, buildPath("doc"))
 
         return tarball

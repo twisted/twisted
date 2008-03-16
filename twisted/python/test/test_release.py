@@ -1039,6 +1039,7 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
             tarFile.extract(info, path=extracted.path)
         self.assertStructure(extracted.child("Twisted-8.0.0"), structure)
 
+
     def test_twistedDistribution(self):
         """
         The Twisted tarball contains EVERYTHING, but with built documentation.
@@ -1108,7 +1109,6 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
         for info in tarFile:
             tarFile.extract(info, path=extracted.path)
         self.assertStructure(extracted.child("Twisted-10.0.0"), outStructure)
-
 
 
     def test_subProjectLayout(self):
