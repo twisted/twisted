@@ -503,7 +503,7 @@ class DistributionBuilder(object):
 
         @param path: The path containing documentation to build.
         @type path: L{FilePath}
-        @param version: The version of the projcet to include in all generated
+        @param version: The version of the project to include in all generated
             pages.
         @type version: C{str}
         @param howtoPath: The "resource path" as L{DocBuilder} describes it.
