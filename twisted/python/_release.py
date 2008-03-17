@@ -12,6 +12,7 @@ else, do not use it. The interface and behaviour will change without notice.
 from datetime import date
 import os
 from tempfile import mkdtemp
+import tarfile
 
 # Popen4 isn't available on Windows.  BookBuilder won't work on Windows, but
 # we don't care. -exarkun
@@ -25,7 +26,10 @@ from twisted.python.filepath import FilePath
 
 # This import is an example of why you shouldn't use this module unless you're
 # radix
-from twisted.lore.scripts import lore
+try:
+    from twisted.lore.scripts import lore
+except ImportError:
+    pass
 
 # The offset between a year and the corresponding major version number.
 VERSION_OFFSET = 2000
@@ -463,3 +467,250 @@ def filePathDelta(origin, destination):
             commonItems += 1
     path = [".."] * (len(path1) - commonItems)
     return path + path2[commonItems:]
+
+
+
+class DistributionBuilder(object):
+    """
+    A builder of Twisted distributions.
+
+    This knows how to build tarballs for Twisted and all of its subprojects.
+    """
+
+    from twisted.python.dist import twisted_subprojects as subprojects
+    blacklist = ["vfs", "web2"]
+
+    def __init__(self, rootDirectory, outputDirectory):
+        """
+        Create a distribution builder.
+
+        @param rootDirectory: root of a Twisted export which will populate
+            subsequent tarballs.
+        @type rootDirectory: L{FilePath}.
+        @param outputDirectory: The directory in which to create the tarballs.
+        @type outputDirectory: L{FilePath}
+        """
+        self.rootDirectory = rootDirectory
+        self.outputDirectory = outputDirectory
+        self.manBuilder = ManBuilder()
+        self.docBuilder = DocBuilder()
+
+
+    def _buildDocInDir(self, path, version, howtoPath):
+        """
+        Generate documentation in the given path, building man pages first if
+        necessary and swallowing errors (so that directories without lore
+        documentation in them are ignored).
+
+        @param path: The path containing documentation to build.
+        @type path: L{FilePath}
+        @param version: The version of the project to include in all generated
+            pages.
+        @type version: C{str}
+        @param howtoPath: The "resource path" as L{DocBuilder} describes it.
+        @type howtoPath: L{FilePath}
+        """
+        templatePath = self.rootDirectory.child("doc").child("core"
+            ).child("howto").child("template.tpl")
+        if path.basename() == "man":
+            self.manBuilder.build(path)
+        if path.isdir():
+            try:
+                self.docBuilder.build(version, howtoPath, path,
+                    templatePath, True)
+            except NoDocumentsFound:
+                pass
+
+
+    def buildTwisted(self, version):
+        """
+        Build the main Twisted distribution in C{Twisted-<version>.tar.bz2}.
+
+        @type version: C{str}
+        @param version: The version of Twisted to build.
+
+        @return: The tarball file.
+        @rtype: L{FilePath}.
+        """
+        releaseName = "Twisted-%s" % (version,)
+        buildPath = lambda *args: '/'.join((releaseName,) + args)
+
+        outputFile = self.outputDirectory.child(releaseName + ".tar.bz2")
+        tarball = tarfile.TarFile.open(outputFile.path, 'w:bz2')
+
+        docPath = self.rootDirectory.child("doc")
+
+        # Generate docs!
+        if docPath.isdir():
+            for subProjectDir in docPath.children():
+                if (subProjectDir.isdir()
+                    and subProjectDir.basename() not in self.blacklist):
+                    for child in subProjectDir.walk():
+                        self._buildDocInDir(child, version,
+                            subProjectDir.child("howto"))
+
+        # Now, this part is nasty.  We need to exclude blacklisted subprojects
+        # from the main Twisted distribution. This means we need to exclude
+        # their bin directories, their documentation directories, their
+        # plugins, and their python packages. Given that there's no "add all
+        # but exclude these particular paths" functionality in tarfile, we have
+        # to walk through all these directories and add things that *aren't*
+        # part of the blacklisted projects.
+
+        for binthing in self.rootDirectory.child("bin").children():
+            if binthing.basename() not in self.blacklist:
+                tarball.add(binthing.path,
+                            buildPath("bin", binthing.basename()))
+
+        bad_plugins = ["twisted_%s.py" % (blacklisted,)
+                       for blacklisted in self.blacklist]
+
+        for submodule in self.rootDirectory.child("twisted").children():
+            if submodule.basename() == "plugins":
+                for plugin in submodule.children():
+                    if plugin.basename() not in bad_plugins:
+                        tarball.add(plugin.path, buildPath("twisted", "plugins",
+                                                           plugin.basename()))
+            elif submodule.basename() not in self.blacklist:
+                tarball.add(submodule.path, buildPath("twisted",
+                                                      submodule.basename()))
+
+        for docDir in self.rootDirectory.child("doc").children():
+            if docDir.basename() not in self.blacklist:
+                tarball.add(docDir.path, buildPath("doc", docDir.basename()))
+
+        for toplevel in self.rootDirectory.children():
+            if not toplevel.isdir():
+                tarball.add(toplevel.path, buildPath(toplevel.basename()))
+
+        tarball.close()
+
+        return outputFile
+
+
+    def buildCore(self, version):
+        """
+        Build a core distribution in C{TwistedCore-<version>.tar.bz2}.
+
+        This is very similar to L{buildSubProject}, but core tarballs and the
+        input are laid out slightly differently.
+
+        - scripts are in the top level of the C{bin} directory.
+        - code is included directly from the C{twisted} directory, excluding
+          subprojects.
+        - all plugins except the subproject plugins are included.
+
+        @type version: C{str}
+        @param version: The version of Twisted to build.
+
+        @return: The tarball file.
+        @rtype: L{FilePath}.
+        """
+        releaseName = "TwistedCore-%s" % (version,)
+        outputFile = self.outputDirectory.child(releaseName + ".tar.bz2")
+        buildPath = lambda *args: '/'.join((releaseName,) + args)
+        tarball = self._createBasicSubprojectTarball(
+            "core", version, outputFile)
+
+        # Include the bin directory for the subproject.
+        for path in self.rootDirectory.child("bin").children():
+            if not path.isdir():
+                tarball.add(path.path, buildPath("bin", path.basename()))
+
+        # Include all files within twisted/ that aren't part of a subproject.
+        for path in self.rootDirectory.child("twisted").children():
+            if path.basename() == "plugins":
+                for plugin in path.children():
+                    for subproject in self.subprojects:
+                        if plugin.basename() == "twisted_%s.py" % (subproject,):
+                            break
+                    else:
+                        tarball.add(plugin.path,
+                                    buildPath("twisted", "plugins",
+                                              plugin.basename()))
+            elif not path.basename() in self.subprojects + ["topfiles"]:
+                tarball.add(path.path, buildPath("twisted", path.basename()))
+
+        tarball.add(self.rootDirectory.child("twisted").child("topfiles").path,
+                    releaseName)
+        tarball.close()
+
+        return outputFile
+
+
+    def buildSubProject(self, projectName, version):
+        """
+        Build a subproject distribution in
+        C{Twisted<Projectname>-<version>.tar.bz2}.
+
+        @type projectName: C{str}
+        @param projectName: The lowercase name of the subproject to build.
+        @type version: C{str}
+        @param version: The version of Twisted to build.
+
+        @return: The tarball file.
+        @rtype: L{FilePath}.
+        """
+        releaseName = "Twisted%s-%s" % (projectName.capitalize(), version)
+        outputFile = self.outputDirectory.child(releaseName + ".tar.bz2")
+        buildPath = lambda *args: '/'.join((releaseName,) + args)
+        subProjectDir = self.rootDirectory.child("twisted").child(projectName)
+
+        tarball = self._createBasicSubprojectTarball(projectName, version,
+                                                     outputFile)
+
+        tarball.add(subProjectDir.child("topfiles").path, releaseName)
+
+        # Include all files in the subproject package except for topfiles.
+        for child in subProjectDir.children():
+            name = child.basename()
+            if name != "topfiles":
+                tarball.add(
+                    child.path,
+                    buildPath("twisted", projectName, name))
+
+        pluginsDir = self.rootDirectory.child("twisted").child("plugins")
+        # Include the plugin for the subproject.
+        pluginFileName = "twisted_%s.py" % (projectName,)
+        pluginFile = pluginsDir.child(pluginFileName)
+        if pluginFile.exists():
+            tarball.add(pluginFile.path,
+                        buildPath("twisted", "plugins", pluginFileName))
+
+        # Include the bin directory for the subproject.
+        binPath = self.rootDirectory.child("bin").child(projectName)
+        if binPath.isdir():
+            tarball.add(binPath.path, buildPath("bin"))
+        tarball.close()
+
+        return outputFile
+
+
+    def _createBasicSubprojectTarball(self, projectName, version, outputFile):
+        """
+        Helper method to create and fill a tarball with things common between
+        subprojects and core.
+
+        @param projectName: The subproject's name.
+        @type projectName: C{str}
+        @param version: The version of the release.
+        @type version: C{str}
+        @param outputFile: The location of the tar file to create.
+        @type outputFile: L{FilePath}
+        """
+        releaseName = "Twisted%s-%s" % (projectName.capitalize(), version)
+        buildPath = lambda *args: '/'.join((releaseName,) + args)
+
+        tarball = tarfile.TarFile.open(outputFile.path, 'w:bz2')
+
+        tarball.add(self.rootDirectory.child("LICENSE").path,
+                    buildPath("LICENSE"))
+
+        docPath = self.rootDirectory.child("doc").child(projectName)
+
+        if docPath.isdir():
+            for child in docPath.walk():
+                self._buildDocInDir(child, version, docPath.child("howto"))
+            tarball.add(docPath.path, buildPath("doc"))
+
+        return tarball
