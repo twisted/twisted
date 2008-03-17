@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.web2.test.test_server -*-
+# -*- test-case-name: twisted.web2.test.test_server,twisted.web2.test.test_resource -*-
 # Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -74,7 +74,7 @@ class RenderMixin(object):
         @param request: the request to process.
         @return: an object adaptable to L{iweb.IResponse}.
         """
-        method = getattr(self, 'http_' + request.method, None)
+        method = getattr(self, "http_" + request.method, None)
         if not method:
             response = http.Response(responsecode.NOT_ALLOWED)
             response.headers.setHeader("allow", self.allowedMethods())
@@ -84,7 +84,7 @@ class RenderMixin(object):
         if d is None:
             return method(request)
         else:
-            return d.addCallback(method)
+            return d.addCallback(lambda _: method(request))
 
     def http_OPTIONS(self, request):
         """
