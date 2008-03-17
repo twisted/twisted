@@ -183,6 +183,22 @@ class ManConverter(object):
         self.closeTags()
 
 
+    def macro_IC(self, line):
+        cmd = line.split(' ', 1)[0]
+        args = line[line.index(cmd) + len(cmd):]
+        args = args.split(' ')
+        text = cmd
+        while args:
+            arg = args.pop(0)
+            if arg.lower() == "ar":
+                text += " \\fU%s\\fR" % (args.pop(0),)
+            elif arg.lower() == "op":
+                ign = args.pop(0)
+                text += " [\\fU%s\\fR]" % (args.pop(0),)
+
+        self.text(text)
+
+
     def macro_TP(self, line):
         """
         Handle C{TP} token: start a definition list if it's first token, or
@@ -240,6 +256,11 @@ class ManConverter(object):
                 self.write('</%s>' % self.state)
                 self.write(escape(bit[2:]))
                 self.state = 'regular'
+            elif bit[:2] == 'fU':
+                # fU doesn't really exist, but it helps us to manage underlined
+                # text.
+                self.write('<u>' + escape(bit[2:]))
+                self.state = 'u'
             elif bit[:3] == '(co':
                 self.write('&copy;' + escape(bit[3:]))
             else:

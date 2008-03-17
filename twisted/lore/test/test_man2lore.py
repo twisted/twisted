@@ -139,3 +139,24 @@ class ManConverterTestCase(TestCase):
                   "<dt>on two lines\n</dt><dd>Another option\non two lines\n"
                   "</dd></dl>\n\n</body>\n</html>\n")
         self.assertConvert(inputLines, output)
+
+
+    def test_interactiveCommand(self):
+        """
+        Test management of interactive command tag.
+        """
+        inputLines = ['.TH BAR "1" "Oct 2007" "" ""',
+                ".SH HEADER",
+                ".BL",
+                ".IT IC foo AR bar",
+                "option 1",
+                ".IT IC egg AR spam OP AR stuff",
+                "option 2",
+                ".EL"
+                ]
+        output = ("<html><head>\n<title>BAR.1</title></head>\n<body>\n\n"
+                  "<h1>BAR.1</h1>\n\n<h2>HEADER</h2>\n\n<dl>"
+                  "<dt>foo <u>bar</u></dt><dd>option 1\n</dd><dt>egg "
+                  "<u>spam</u> [<u>stuff</u>]</dt><dd>option 2\n</dd></dl>"
+                  "\n\n</body>\n</html>\n")
+        self.assertConvert(inputLines, output)
