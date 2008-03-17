@@ -478,6 +478,7 @@ class DistributionBuilder(object):
     """
 
     from twisted.python.dist import twisted_subprojects as subprojects
+    blacklist = ["vfs", "web2"]
 
     def __init__(self, rootDirectory, outputDirectory):
         """
@@ -539,14 +540,48 @@ class DistributionBuilder(object):
 
         docPath = self.rootDirectory.child("doc")
 
+        # Generate docs!
         if docPath.isdir():
             for subProjectDir in docPath.children():
-                if subProjectDir.isdir():
+                if (subProjectDir.isdir()
+                    and subProjectDir.basename() not in self.blacklist):
                     for child in subProjectDir.walk():
                         self._buildDocInDir(child, version,
                             subProjectDir.child("howto"))
 
-        tarball.add(self.rootDirectory.path, releaseName)
+        # Now, this part is nasty.  We need to exclude blacklisted subprojects
+        # from the main Twisted distribution. This means we need to exclude
+        # their bin directories, their documentation directories, their
+        # plugins, and their python packages. Given that there's no "add all
+        # but exclude these particular paths" functionality in tarfile, we have
+        # to walk through all these directories and add things that *aren't*
+        # part of the blacklisted projects.
+
+        for binthing in self.rootDirectory.child("bin").children():
+            if binthing.basename() not in self.blacklist:
+                tarball.add(binthing.path,
+                            buildPath("bin", binthing.basename()))
+
+        bad_plugins = ["twisted_%s.py" % (blacklisted,)
+                       for blacklisted in self.blacklist]
+
+        for submodule in self.rootDirectory.child("twisted").children():
+            if submodule.basename() == "plugins":
+                for plugin in submodule.children():
+                    if plugin.basename() not in bad_plugins:
+                        tarball.add(plugin.path, buildPath("twisted", "plugins",
+                                                           plugin.basename()))
+            elif submodule.basename() not in self.blacklist:
+                tarball.add(submodule.path, buildPath("twisted",
+                                                      submodule.basename()))
+
+        for docDir in self.rootDirectory.child("doc").children():
+            if docDir.basename() not in self.blacklist:
+                tarball.add(docDir.path, buildPath("doc", docDir.basename()))
+
+        for toplevel in self.rootDirectory.children():
+            if not toplevel.isdir():
+                tarball.add(toplevel.path, buildPath(toplevel.basename()))
 
         tarball.close()
 

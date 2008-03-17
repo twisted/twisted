@@ -1109,21 +1109,6 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
                       % (root.path, children))
 
 
-    def test_twistedLayout(self):
-        """
-        The Twisted tarball contains files that are in the top level of the
-        source directory.
-        """
-        structure = {"README": "HI!@",
-                     "setup.py": "import this",
-                     "twisted": {"__init__.py": "import this"}}
-        self.createStructure(self.rootDir, structure)
-
-        outputFile = self.builder.buildTwisted("8.0.0")
-
-        self.assertExtractedStructure(outputFile, structure)
-
-
     def test_twistedDistribution(self):
         """
         The Twisted tarball contains everything in the source checkout, with
@@ -1180,6 +1165,58 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
                                      "twistd-man.html": manOutput1},
                              "index.html": coreIndexOutput}}}
 
+        self.createStructure(self.rootDir, structure)
+
+        outputFile = self.builder.buildTwisted("10.0.0")
+
+        self.assertExtractedStructure(outputFile, outStructure)
+
+    def test_twistedDistributionExcludesWeb2AndVFS(self):
+        """
+        The main Twisted distribution does not include web2 or vfs.
+        """
+        loreInput, loreOutput = self.getArbitraryLoreInputAndOutput("10.0.0")
+        coreIndexInput, coreIndexOutput = self.getArbitraryLoreInputAndOutput(
+            "10.0.0", prefix="howto/")
+
+        structure = {
+            "README": "Twisted",
+            "unrelated": "x",
+            "LICENSE": "copyright!",
+            "setup.py": "import toplevel",
+            "bin": {"web2": {"websetroot": "SET ROOT"},
+                    "vfs": {"vfsitup": "hee hee"},
+                    "twistd": "TWISTD"},
+            "twisted":
+                {"web2":
+                     {"__init__.py": "import WEB",
+                      "topfiles": {"setup.py": "import WEBINSTALL",
+                                   "README": "WEB!"}},
+                 "vfs":
+                     {"__init__.py": "import VFS",
+                      "blah blah": "blah blah"},
+                 "words": {"__init__.py": "import WORDS"},
+                 "plugins": {"twisted_web.py": "import WEBPLUG",
+                             "twisted_words.py": "import WORDPLUG",
+                             "twisted_web2.py": "import WEB2",
+                             "twisted_vfs.py": "import VFS"}},
+            "doc": {"web2": {"excluded!": "yay"},
+                    "vfs": {"unrelated": "whatever"},
+                    "core": {"howto": {"template.tpl": self.template},
+                             "index.xhtml": coreIndexInput}}}
+
+        outStructure = {
+            "README": "Twisted",
+            "unrelated": "x",
+            "LICENSE": "copyright!",
+            "setup.py": "import toplevel",
+            "bin": {"twistd": "TWISTD"},
+            "twisted":
+                {"words": {"__init__.py": "import WORDS"},
+                 "plugins": {"twisted_web.py": "import WEBPLUG",
+                             "twisted_words.py": "import WORDPLUG"}},
+            "doc": {"core": {"howto": {"template.tpl": self.template},
+                             "index.html": coreIndexOutput}}}
         self.createStructure(self.rootDir, structure)
 
         outputFile = self.builder.buildTwisted("10.0.0")
