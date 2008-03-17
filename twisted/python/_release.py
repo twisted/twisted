@@ -51,6 +51,7 @@ class CommandFailed(Exception):
         self.output = output
 
 
+
 def _changeVersionInFile(old, new, filename):
     """
     Replace the C{old} version number with the C{new} one in the given
@@ -118,7 +119,7 @@ class Project(object):
         oldVersion = self.getVersion()
         replaceProjectVersion(oldVersion.package,
                               self.directory.child("_version.py").path,
-                              (version.major, version.minor, version.micro))
+                              version)
         _changeVersionInFile(
             oldVersion, version,
             self.directory.child("topfiles").child("README").path)
@@ -162,17 +163,21 @@ def replaceProjectVersion(name, filename, newversion):
     sets the version to the given version number.
 
     @param filename: A filename which is most likely a "_version.py"
-    under some Twisted project.
-    @param newversion: A sequence of three numbers.
+        under some Twisted project.
+    @param newversion: A version object.
     """
     # XXX - this should be moved to Project and renamed to writeVersionFile.
     # jml, 2007-11-15.
     f = open(filename, 'w')
+    if newversion.prerelease is not None:
+        prerelease = ", prerelease=%r" % (newversion.prerelease,)
+    else:
+        prerelease = ""
     f.write('''\
 # This is an auto-generated file. Do not edit it.
 from twisted.python import versions
-version = versions.Version(%r, %s, %s, %s)
-''' % ((name,) + tuple(newversion)))
+version = versions.Version(%r, %s, %s, %s%s)
+''' % (name, newversion.major, newversion.minor, newversion.micro, prerelease))
     f.close()
 
 
