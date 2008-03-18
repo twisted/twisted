@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
+
 
 """
 Distutils installer for Twisted.
 """
+
 import os, sys
 
 if sys.version_info < (2,3):
@@ -19,6 +21,8 @@ if os.path.exists('twisted'):
     sys.path.insert(0, '.') # eek! need this to import twisted. sorry.
 from twisted import copyright
 from twisted.python import dist, util
+
+
 
 def detectExtensions(builder):
     """
@@ -64,9 +68,14 @@ def detectExtensions(builder):
 
 
 
-## setup args ##
+# Figure out which plugins to include: all plugins except subproject ones
+subProjectsPlugins = ['twisted_%s.py' % subProject
+                      for subProject in dist.twisted_subprojects]
+plugins = os.listdir(os.path.join(
+    os.path.dirname(os.path.abspath(copyright.__file__)), 'plugins'))
+plugins = [plugin[:-3] for plugin in plugins if plugin.endswith('.py') and
+           plugin not in subProjectsPlugins]
 
-def dict(**kw): return kw
 
 
 setup_args = dict(
@@ -91,9 +100,7 @@ netnews, IRC, RDBMSs, desktop environments, and your toaster.
 
     # build stuff
     packages=dist.getPackages('twisted', ignore=dist.twisted_subprojects + ['plugins']),
-    plugins=['__init__', 'notestplugin', 'testplugin', 'twisted_ftp', 'twisted_inet',
-             'twisted_manhole', 'twisted_portforward', 'twisted_socks', 'twisted_telnet',
-             'twisted_trial', 'twisted_reactors'],
+    plugins=plugins,
     data_files=dist.getDataFiles('twisted', ignore=dist.twisted_subprojects),
     detectExtensions=detectExtensions,
     scripts= [
@@ -106,4 +113,3 @@ netnews, IRC, RDBMSs, desktop environments, and your toaster.
 
 if __name__ == '__main__':
     dist.setup(**setup_args)
-
