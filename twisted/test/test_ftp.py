@@ -280,7 +280,9 @@ class BasicFTPServerTestCase(FTPServerTestCase):
 
     def testPASV(self):
         # Login
-        yield defer.waitForDeferred(self._anonymousLogin())
+        wfd = defer.waitForDeferred(self._anonymousLogin())
+        yield wfd
+        wfd.getResult()
 
         # Issue a PASV command, and extract the host and port from the response
         pasvCmd = defer.waitForDeferred(self.client.queueStringCommand('PASV'))
@@ -292,7 +294,7 @@ class BasicFTPServerTestCase(FTPServerTestCase):
         self.assertEqual(port, self.serverProtocol.dtpPort.getHost().port)
 
         # Semi-reasonable way to force cleanup
-        self.serverProtocol.connectionLost(error.ConnectionDone())
+        self.serverProtocol.transport.loseConnection()
     testPASV = defer.deferredGenerator(testPASV)
 
     def testSYST(self):

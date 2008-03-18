@@ -7,7 +7,7 @@ from twisted.python.failure import Failure
 from twisted.protocols import amp
 from twisted.test import iosim
 from twisted.trial import unittest
-from twisted.internet import protocol, defer, error
+from twisted.internet import protocol, defer, error, reactor, interfaces
 
 
 class TestProto(protocol.Protocol):
@@ -2105,3 +2105,11 @@ class CommandTestCase(unittest.TestCase):
                              ({"weird": argument}, client))
         response.addCallback(gotResponse)
         return response
+
+if not interfaces.IReactorSSL.providedBy(reactor):
+    skipMsg = 'This test case requires SSL support in the reactor'
+    TLSTest.skip = skipMsg
+    LiveFireTLSTestCase.skip = skipMsg
+    PlainVanillaLiveFire.skip = skipMsg
+    WithServerTLSVerification.skip = skipMsg
+

@@ -19,6 +19,7 @@ from twisted.internet.tcp import ECONNABORTED, ENOMEM, ENFILE, EMFILE, ENOBUFS, 
 from twisted.internet.protocol import ServerFactory
 from twisted.python.runtime import platform
 from twisted.internet.defer import maybeDeferred, gatherResults
+from twisted.internet import reactor, interfaces
 
 
 class PlatformAssumptionsTestCase(TestCase):
@@ -231,3 +232,9 @@ class SelectReactorTestCase(TestCase):
         return self._acceptFailureTest(ENOMEM)
     if platform.getType() == 'win32':
         test_noMemoryFromAccept.skip = "Windows accept(2) cannot generate ENOMEM"
+
+if not interfaces.IReactorFDSet.providedBy(reactor):
+    skipMsg = 'This test only applies to reactors that implement IReactorFDset'
+    PlatformAssumptionsTestCase.skip = skipMsg
+    SelectReactorTestCase.skip = skipMsg
+

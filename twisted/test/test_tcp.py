@@ -896,6 +896,13 @@ class WriteDataTestCase(unittest.TestCase):
         # being added to exercise the other reactors, for which the behavior
         # was also untested but at least works correctly (now).  See #2833
         # for information on the status of gtkreactor.
+        if reactor.__class__.__name__ == 'IOCPReactor':
+            raise unittest.SkipTest(
+                "iocpreactor does not, in fact, stop reading immediately after "
+                "pauseProducing is called. This results in a bonus disconnection "
+                "notification. Under some circumstances, it might be possible to "
+                "not receive this notifications (specifically, pauseProducing, "
+                "deliver some data, proceed with this test).")
         if reactor.__class__.__name__ == 'GtkReactor':
             raise unittest.SkipTest(
                 "gtkreactor does not implement unclean disconnection "

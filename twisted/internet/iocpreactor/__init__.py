@@ -1,2 +1,2 @@
-from proactor import install
+from twisted.internet.iocpreactor.reactor import install
 

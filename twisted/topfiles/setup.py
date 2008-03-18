@@ -54,9 +54,10 @@ def detectExtensions(builder):
                       define_macros=builder.define_macros))
 
     if sys.platform == 'win32':
-        exts.append( Extension("twisted.internet.iocpreactor._iocp",
-                                ["twisted/internet/iocpreactor/_iocp.c"],
-                                libraries=["ws2_32", "mswsock"],
+        exts.append( Extension("twisted.internet.iocpreactor.iocpsupport",
+                                ["twisted/internet/iocpreactor/iocpsupport/iocpsupport.c",
+                                 "twisted/internet/iocpreactor/iocpsupport/winsock_pointers.c"],
+                                libraries=["ws2_32"],
                                 define_macros=builder.define_macros))
 
     if builder._check_header("sys/epoll.h"):
