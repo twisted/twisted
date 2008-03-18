@@ -145,7 +145,7 @@ class ProjectTest(TestCase):
         directory.child('topfiles').child('README').setContent(version.base())
         replaceProjectVersion(
             version.package, directory.child('_version.py').path,
-            (version.major, version.minor, version.micro))
+            version)
         return Project(directory)
 
 
@@ -289,10 +289,23 @@ class VersionWritingTest(TestCase):
         number.
         """
         replaceProjectVersion("twisted.test_project",
-                              "test_project", [0, 82, 7])
+                              "test_project", Version("whatever", 0, 82, 7))
         ns = {'__name___': 'twisted.test_project'}
         execfile("test_project", ns)
         self.assertEquals(ns["version"].base(), "0.82.7")
+
+
+    def test_replaceProjectVersionWithPrerelease(self):
+        """
+        L{replaceProjectVersion} will write a Version instantiation that
+        includes a prerelease parameter if necessary.
+        """
+        replaceProjectVersion("twisted.test_project",
+                              "test_project", Version("whatever", 0, 82, 7,
+                                                      prerelease=8))
+        ns = {'__name___': 'twisted.test_project'}
+        execfile("test_project", ns)
+        self.assertEquals(ns["version"].base(), "0.82.7pre8")
 
 
 

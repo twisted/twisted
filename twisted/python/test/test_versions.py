@@ -5,7 +5,7 @@ import sys
 from cStringIO import StringIO
 
 from twisted.python.versions import getVersionString, IncomparableVersions
-from twisted.python.versions import Version
+from twisted.python.versions import Version, _inf
 from twisted.python.filepath import FilePath
 
 from twisted.trial import unittest
@@ -43,7 +43,10 @@ svn+ssh://svn.twistedmatrix.com/svn/Twisted/trunk
 
 class VersionsTest(unittest.TestCase):
 
-    def testVersionComparison(self):
+    def test_versionComparison(self):
+        """
+        Versions can be compared for equality and order.
+        """
         va = Version("dummy", 1, 0, 0)
         vb = Version("dummy", 0, 1, 0)
         self.failUnless(va > vb)
@@ -63,21 +66,82 @@ class VersionsTest(unittest.TestCase):
         self.failIf(vb != Version("dummy", 0, 1, 0))
         self.failIf(vb != vb)
 
+
+    def test_comparingPrereleasesWithReleases(self):
+        """
+        Prereleases are always less than versions without prereleases.
+        """
+        va = Version("whatever", 1, 0, 0, prerelease=1)
+        vb = Version("whatever", 1, 0, 0)
+        self.assertTrue(va < vb)
+        self.assertFalse(va > vb)
+        self.assertNotEquals(vb, va)
+
+
+    def test_comparingPrereleases(self):
+        """
+        The value specified as the prerelease is used in version comparisons.
+        """
+        va = Version("whatever", 1, 0, 0, prerelease=1)
+        vb = Version("whatever", 1, 0, 0, prerelease=2)
+        self.assertTrue(va < vb)
+        self.assertFalse(va > vb)
+        self.assertNotEqual(va, vb)
+
+
+    def test_infComparison(self):
+        """
+        L{_inf} is equal to L{_inf}.
+
+        This is a regression test.
+        """
+        self.assertEquals(_inf, _inf)
+
+
     def testDontAllowBuggyComparisons(self):
         self.assertRaises(IncomparableVersions,
                           cmp,
                           Version("dummy", 1, 0, 0),
                           Version("dumym", 1, 0, 0))
 
-    def testRepr(self):
-        repr(Version("dummy", 1, 2, 3))
 
-    def testStr(self):
-        str(Version("dummy", 1, 2, 3))
+    def test_repr(self):
+        """
+        Calling C{repr} on a version returns a human-readable string
+        representation of the version.
+        """
+        self.assertEquals(repr(Version("dummy", 1, 2, 3)),
+                          "Version('dummy', 1, 2, 3)")
+
+
+    def test_reprWithPrerelease(self):
+        """
+        Calling C{repr} on a version with a prerelease returns a human-readable
+        string representation of the version including the prerelease.
+        """
+        self.assertEquals(repr(Version("dummy", 1, 2, 3, prerelease=4)),
+                          "Version('dummy', 1, 2, 3, prerelease=4)")
+
+
+    def test_str(self):
+        """
+        Calling C{str} on a version returns a human-readable string
+        representation of the version.
+        """
+        self.assertEquals(str(Version("dummy", 1, 2, 3)),
+                          "[dummy, version 1.2.3]")
+
+
+    def test_strWithPrerelease(self):
+        """
+        Calling C{str} on a version with a prerelease includes the prerelease.
+        """
+        self.assertEquals(str(Version("dummy", 1, 0, 0, prerelease=1)),
+                          "[dummy, version 1.0.0pre1]")
+
 
     def testShort(self):
-        self.assertEquals(Version('dummy', 1, 2, 3).short(),
-                          '1.2.3')
+        self.assertEquals(Version('dummy', 1, 2, 3).short(), '1.2.3')
 
 
     def test_goodSVNEntries_4(self):
@@ -105,6 +169,30 @@ class VersionsTest(unittest.TestCase):
         """
         self.assertEqual(
             'Twisted 8.0.0', getVersionString(Version('Twisted', 8, 0, 0)))
+
+
+    def test_getVersionStringWithPrerelease(self):
+        """
+        L{getVersionString} includes the prerelease, if any.
+        """
+        self.assertEqual(
+            getVersionString(Version("whatever", 8, 0, 0, prerelease=1)),
+            "whatever 8.0.0pre1")
+
+
+    def test_base(self):
+        """
+        The L{base} method returns a very simple representation of the version.
+        """
+        self.assertEquals(Version("foo", 1, 0, 0).base(), "1.0.0")
+
+
+    def test_baseWithPrerelease(self):
+        """
+        The base version includes 'preX' for versions with prereleases.
+        """
+        self.assertEquals(Version("foo", 1, 0, 0, prerelease=8).base(),
+                          "1.0.0pre8")
 
 
 
