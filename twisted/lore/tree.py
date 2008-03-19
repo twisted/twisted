@@ -331,6 +331,29 @@ def removeH1(document):
     for node in h1:
         node.parentNode.replaceChild(empty, node)
 
+def svg(document):
+    """
+    Find tags of the form: <span class="svg" source="path/to/some/file.svg" />
+    and convert them to <svg xmlns="http://www.w3.org/2000/svg">*svg source from file*</svg>.
+    Find svg images in the given document, and make them look right.
+    """
+    svgs = domhelpers.findElementsWithAttribute(document, "class",
+                                                "svg")
+    if not svgs:
+        return
+    for svg in svgs:
+        filename = svg.getAttribute('source')
+        if filename is None:
+            raise process.ProcessingFailure(
+                "%s:%s svg class is missing source attribute." % svg._markpos
+                )
+        f=open(filename)
+        svg.tagName = 'svg'
+        svg.endTagName = 'svg'
+        content = _toTree(f.read())
+        svg.appendChild(content)
+        svg.setAttribute('xmlns','http://www.w3.org/2000/svg')
+        svg.removeAttribute('source')
 
 
 def footnotes(document):
@@ -791,6 +814,7 @@ def munge(document, template, linkrel, dir, fullpath, ext, url, config, outfileG
     putInToC(template, generateToC(document))
     footnotes(document)
     notes(document)
+    svg(document)
 
     setIndexLink(template, indexer.getIndexFilename())
     setVersion(template, config.get('version', ''))
