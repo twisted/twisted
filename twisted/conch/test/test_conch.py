@@ -17,6 +17,7 @@ from twisted.python.filepath import FilePath
 from twisted.trial import unittest
 from twisted.conch.error import ConchError
 from twisted.conch.test.test_ssh import ConchTestRealm
+from twisted.python.procutils import which
 
 from twisted.conch.test.keydata import publicRSA_openssh, privateRSA_openssh
 from twisted.conch.test.keydata import publicDSA_openssh, privateDSA_openssh
@@ -414,19 +415,6 @@ class ForwardingTestBase:
 
 class OpenSSHClientTestCase(ForwardingTestBase, unittest.TestCase):
 
-    def _findSSH(self):
-        """
-        Find an installed executable on the system called 'ssh' and return
-        the absolute path to it.
-        """
-        # XXX - if we are going to search for installed binaries, then
-        # we should do it by examining the PATH environment variable.
-        for path in ['/usr', '', '/usr/local']:
-            # XXX - should also check that its executable
-            if os.path.exists(path + '/bin/ssh'):
-                return path + '/bin/ssh'
-
-
     def execute(self, remoteCommand, process, sshArgs=''):
         """
         Connects to the SSH server started in L{ForwardingTestBase.setUp} by
@@ -453,11 +441,8 @@ class OpenSSHClientTestCase(ForwardingTestBase, unittest.TestCase):
                    '-i dsa_test ') + sshArgs + \
                    ' 127.0.0.1 ' + remoteCommand
         port = self.conchServer.getHost().port
-        sshPath = self._findSSH()
-        if not sshPath:
-            raise unittest.SkipTest('skipping test, cannot find ssh')
         cmds = (cmdline % port).split()
-        reactor.spawnProcess(process, sshPath, cmds)
+        reactor.spawnProcess(process, "ssh", cmds)
         return process.deferred
 
 
@@ -602,3 +587,8 @@ class UnixClientTestCase(_UnixFixHome, ForwardingTestBase, unittest.TestCase):
         def cb(ign):
             return self.assertFailure(process.deferred, ConchError)
         return self.assertFailure(d, OSError).addCallback(cb)
+
+
+
+if not which('ssh'):
+    OpenSSHClientTestCase.skip = "no ssh command-line client available"
