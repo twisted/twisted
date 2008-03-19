@@ -350,7 +350,7 @@ def svg(document):
         f=open(filename)
         svg.tagName = 'svg'
         svg.endTagName = 'svg'
-        content = _toTree(f.read())
+        content = microdom.parseString(f.read()).documentElement()
         svg.appendChild(content)
         svg.setAttribute('xmlns','http://www.w3.org/2000/svg')
         svg.removeAttribute('source')
