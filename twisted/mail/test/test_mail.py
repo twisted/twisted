@@ -31,7 +31,7 @@ from twisted.internet.error import DNSLookupError, CannotListenError
 from twisted.internet.error import ProcessDone, ProcessTerminated
 from twisted.internet import address
 from twisted.python import failure
-from twisted.python import util
+from twisted.python.filepath import FilePath
 
 from twisted import mail
 import twisted.mail.mail
@@ -1649,8 +1649,15 @@ class ProcessAliasTestCase(unittest.TestCase):
         Standard call to C{mail.alias.ProcessAlias}: check that the specified
         script is called, and that the input is correctly transferred to it.
         """
-        path = util.sibpath(__file__, 'process.alias.sh')
-        a = mail.alias.ProcessAlias(path, None, None)
+        sh = FilePath(self.mktemp())
+        sh.setContent("""#!/bin/sh
+
+rm -f process.alias.out
+while read i; do
+    echo $i >> process.alias.out
+done""")
+        os.chmod(sh.path, 0700)
+        a = mail.alias.ProcessAlias(sh.path, None, None)
         m = a.createMessageReceiver()
 
         for l in self.lines:
