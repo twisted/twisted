@@ -14,64 +14,41 @@ if sys.version_info < (2,3):
     print >>sys.stderr, "You must use at least Python 2.3 for Twisted"
     sys.exit(3)
 
-import distutils
-from distutils.core import Extension
-
 if os.path.exists('twisted'):
     sys.path.insert(0, '.') # eek! need this to import twisted. sorry.
 from twisted import copyright
-from twisted.python import dist, util
+from twisted.python.dist import setup, ConditionalExtension as Extension
+from twisted.python.dist import getPackages, getDataFiles, getScripts
+from twisted.python.dist import twisted_subprojects
 
 
 
-def detectExtensions(builder):
-    """
-    Determine which extension modules we should build on this system.
-    """
-    print ("Checking if C extensions can be compiled, don't be alarmed if "
-           "a few compile errors are printed.")
+extensions = [
+    Extension("twisted.protocols._c_urlarg",
+              ["twisted/protocols/_c_urlarg.c"]),
 
-    if not builder._compile_helper("#define X 1\n"):
-        print "Compiler not found, skipping C extensions."
-        return []
+    Extension("twisted.python._epoll",
+              ["twisted/python/_epoll.c"],
+              condition=lambda builder: builder._check_header("sys/epoll.h")),
 
-    # Extension modules to build.
-    exts = []
+    Extension("twisted.internet.iocpreactor.iocpsupport",
+              ["twisted/internet/iocpreactor/iocpsupport/iocpsupport.c",
+               "twisted/internet/iocpreactor/iocpsupport/winsock_pointers.c"],
+              libraries=["ws2_32"],
+              condition=lambda builder: sys.platform == "win32"),
 
-    # urllib.unquote accelerator
-    exts.append( Extension("twisted.protocols._c_urlarg",
-                            ["twisted/protocols/_c_urlarg.c"],
-                            define_macros=builder.define_macros) )
-
-    if sys.platform == 'darwin':
-        exts.append(
-            Extension("twisted.internet.cfsupport",
-                      ["twisted/internet/cfsupport/cfsupport.c"],
-                      extra_compile_args=['-w'],
-                      extra_link_args=['-framework','CoreFoundation',
-                                       '-framework','CoreServices',
-                                       '-framework','Carbon'],
-                      define_macros=builder.define_macros))
-
-    if sys.platform == 'win32':
-        exts.append( Extension("twisted.internet.iocpreactor.iocpsupport",
-                                ["twisted/internet/iocpreactor/iocpsupport/iocpsupport.c",
-                                 "twisted/internet/iocpreactor/iocpsupport/winsock_pointers.c"],
-                                libraries=["ws2_32"],
-                                define_macros=builder.define_macros))
-
-    if builder._check_header("sys/epoll.h"):
-        exts.append( Extension("twisted.python._epoll",
-                                ["twisted/python/_epoll.c"],
-                                define_macros=builder.define_macros))
-
-    return exts
-
-
+    Extension("twisted.internet.cfsupport",
+              ["twisted/internet/cfsupport/cfsupport.c"],
+              extra_compile_args=['-w'],
+              extra_link_args=['-framework','CoreFoundation',
+                               '-framework','CoreServices',
+                               '-framework','Carbon'],
+              condition=lambda builder: sys.platform == "darwin"),
+]
 
 # Figure out which plugins to include: all plugins except subproject ones
 subProjectsPlugins = ['twisted_%s.py' % subProject
-                      for subProject in dist.twisted_subprojects]
+                      for subProject in twisted_subprojects]
 plugins = os.listdir(os.path.join(
     os.path.dirname(os.path.abspath(copyright.__file__)), 'plugins'))
 plugins = [plugin[:-3] for plugin in plugins if plugin.endswith('.py') and
@@ -81,9 +58,9 @@ plugins = [plugin[:-3] for plugin in plugins if plugin.endswith('.py') and
 
 setup_args = dict(
     # metadata
-    name="Twisted",
+    name="Twisted Core",
     version=copyright.version,
-    description="An asynchronous networking framework written in Python",
+    description="The core parts of the Twisted networking framework",
     author="Twisted Matrix Laboratories",
     author_email="twisted-python@twistedmatrix.com",
     maintainer="Glyph Lefkowitz",
@@ -91,26 +68,27 @@ setup_args = dict(
     url="http://twistedmatrix.com/",
     license="MIT",
     long_description="""\
-An extensible framework for Python programming, with special focus
-on event-based network programming and multiprotocol integration.
-
-It is expected that one day the project will expanded to the point
-that the framework will seamlessly integrate with mail, web, DNS,
-netnews, IRC, RDBMSs, desktop environments, and your toaster.
+This is the core of Twisted, including:
+ * Networking support (twisted.internet)
+ * Trial, the unit testing framework (twisted.trial)
+ * AMP, the Asynchronous Messaging Protocol (twisted.protocols.amp)
+ * Twisted Spread, a remote object system (twisted.spread)
+ * Utility code (twisted.python)
+ * Basic abstractions that multiple subprojects use
+   (twisted.cred, twisted.application, twisted.plugin)
+ * Database connectivity support (twisted.enterprise)
+ * A few basic protocols and protocol abstractions (twisted.protocols)
 """,
 
     # build stuff
-    packages=dist.getPackages('twisted', ignore=dist.twisted_subprojects + ['plugins']),
+    packages=getPackages('twisted',
+                         ignore=twisted_subprojects + ['plugins']),
     plugins=plugins,
-    data_files=dist.getDataFiles('twisted', ignore=dist.twisted_subprojects),
-    detectExtensions=detectExtensions,
-    scripts= [
-        'bin/manhole', 'bin/mktap', 'bin/twistd',
-        'bin/tap2deb', 'bin/tap2rpm', 'bin/tapconvert',
-        'bin/trial',
-    ],
+    data_files=getDataFiles('twisted', ignore=twisted_subprojects),
+    conditionalExtensions=extensions,
+    scripts = getScripts(""),
 )
 
 
 if __name__ == '__main__':
-    dist.setup(**setup_args)
+    setup(**setup_args)
