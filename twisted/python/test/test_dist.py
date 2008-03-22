@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -8,51 +8,9 @@ Tests for parts of our release automation system.
 
 import os
 
-from distutils.core import Distribution
-
 from twisted.trial.unittest import TestCase
 
 from twisted.python import dist
-from twisted.python.dist import get_setup_args, ConditionalExtension
-from twisted.python.filepath import FilePath
-
-
-class SetupTest(TestCase):
-    """
-    Tests for L{get_setup_args}.
-    """
-    def test_conditionalExtensions(self):
-        """
-        Passing C{conditionalExtensions} as a list of L{ConditionalExtension}
-        objects to get_setup_args inserts a custom build_ext into the result
-        which knows how to check whether they should be 
-        """
-        good_ext = ConditionalExtension("whatever", ["whatever.c"],
-                                        condition=lambda b: True)
-        bad_ext = ConditionalExtension("whatever", ["whatever.c"],
-                                        condition=lambda b: False)
-        args = get_setup_args(conditionalExtensions=[good_ext, bad_ext])
-        # ext_modules should be set even though it's not used.  See comment
-        # in get_setup_args
-        self.assertEquals(args["ext_modules"], [good_ext, bad_ext])
-        cmdclass = args["cmdclass"]
-        build_ext = cmdclass["build_ext"]
-        builder = build_ext(Distribution())
-        builder.prepare_extensions()
-        self.assertEquals(builder.extensions, [good_ext])
-
-
-    def test_win32Definition(self):
-        """
-        When building on Windows NT, the WIN32 macro will be defined as 1.
-        """
-        ext = ConditionalExtension("whatever", ["whatever.c"],
-                                   define_macros=[("whatever", 2)])
-        args = get_setup_args(conditionalExtensions=[ext])
-        builder = args["cmdclass"]["build_ext"](Distribution())
-        self.patch(os, "name", "nt")
-        builder.prepare_extensions()
-        self.assertEquals(ext.define_macros, [("whatever", 2), ("WIN32", 1)])
 
 
 
@@ -140,25 +98,6 @@ class GetScriptsTest(TestCase):
         os.mkdir(os.path.join(basedir, 'bin', 'otherproj'))
         scripts = dist.getScripts('noscripts', basedir=basedir)
         self.assertEquals(scripts, [])
-
-
-    def test_getScriptsTopLevel(self):
-        """
-        Passing the empty string to getScripts returns scripts that are (only)
-        in the top level bin directory.
-        """
-        basedir = FilePath(self.mktemp())
-        basedir.createDirectory()
-        bindir = basedir.child("bin")
-        bindir.createDirectory()
-        included = bindir.child("included")
-        included.setContent("yay included")
-        subdir = bindir.child("subdir")
-        subdir.createDirectory()
-        subdir.child("not-included").setContent("not included")
-
-        scripts = dist.getScripts("", basedir=basedir.path)
-        self.assertEquals(scripts, [included.path])
 
 
     def test_noScriptsInSubproject(self):
