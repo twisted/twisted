@@ -6,51 +6,62 @@ http://twistedmatrix.com/trac/ticket/<number>
 
 Features
 --------
- - The main Twisted distribution is now easy_installable (#1286, #3110)
+
  - The IOCP reactor has had many changes and is now greatly improved
    (#1760, #3055)
+ - The main Twisted distribution is now easy_installable (#1286, #3110)
+ - twistd can now profile with cProfile (#2469)
+ - twisted.internet.defer contains a DeferredFilesystemLock which gives a
+   Deferred interface to lock file acquisition (#2180)
  - twisted.python.modules is a new system for representing and manipulating
    module paths (i.e. sys.path) (#1951)
- - Log files now include seconds in the timestamps (#867)
+ - twisted.internet.fdesc now contains a writeToFD function, along with other
+   minor fixes (#2419)
+ - twisted.python.usage now allows optional type enforcement (#739)
+ - The reactor now has a blockingCallFromThread method for non-reactor threads
+   to use to wait for a reactor-scheduled call to return a result (#1042, #3030)
+ - Exceptions raised inside of inlineCallbacks-using functions now have a
+   better chance of coming with a meaningful traceback (#2639, #2803)
+ - twisted.python.randbytes now contains code for generating secure random
+   bytes (#2685)
+ - The classes in twisted.application.internet now accept a reactor parameter
+   for specifying the reactor to use for underlying calls to allow for better
+   testability (#2937)
+ - LoopingCall now allows you to specify the reactor to use to schedule new
+   calls, allowing much better testing techniques (#2633, #2634)
+ - twisted.internet.task.deferLater is a new API for scheduling calls and
+   getting deferreds which are fired with their results (#1875)
  - objgrep now knows how to search through deque objects (#2323)
- - It is now possible to limit the number of log files to create during log
-   rotation (#1095)
- - twisted.python.lockfile contains a DeferredFilesystemLock which gives a
-   Deferred interface to lock file acquisition (#2180)
  - twisted.python.log now contains a Twisted log observer which can forward
    messages to the Python logging system (#1351)
- - Trial reporting to core unittest TestResult objects has been improved (#2495)
- - There is now an example cred checker that uses a database via adbapi (#460)
- - twisted.internet.fdesc now contains a writeToFD function in twisted, along
-   with other minor fixes (#2419)
+ - Log files now include seconds in the timestamps (#867)
+ - It is now possible to limit the number of log files to create during log
+   rotation (#1095)
  - The interface required by the log context system is now documented as
    ILoggingContext, and abstract.FileDescriptor now declares that it implements
    it (#1272)
+ - There is now an example cred checker that uses a database via adbapi (#460)
  - The epoll reactor is now documented in the choosing-reactors howto (#2539)
- - twisted.python.usage now allows optional type enforcement (#739)
- - LoopingCall now allows you to specify the reactor to use to schedule new
-   calls, allowing much better testing techniques (#2633, #2634)
- - Trial's TestCase now has an addCleanup method which allows easy setup of
-   tear-down code (#2610, #2899)
+ - There were improvements to the client howto (#222)
  - Int8Receiver was added (#2315)
  - Various refactorings to AMP introduced better testability and public
    interfaces (#2657, #2667, #2656, #2664, #2810)
- - TestCase now has an assertWarns method which allows testing that functions
-   emit warnings (#2626, #2703)
- - The reactor now has a blockingCallFromThread method for non-reactor threads
-   to use to wait for a reactor-scheduled call to return a result (#1042, #3030)
- - There were improvements to the client howto (#222)
  - twisted.protocol.policies.TrafficLoggingFactory now has a resetCounter
    method (#2757)
- - Exceptions raised inside of inlineCallbacks-using functions now have a
-   better chance of coming with a meaningful traceback (#2639, #2803)
- - Trial's TestCase now has an assertIsInstance method (#2749)
- - PB now supports anonymous login (#439, #2312)
- - Trial's memory footprint and speed are greatly improved (#2275)
  - The FTP client can be told which port range within which to bind passive
    transfer ports (#1904)
- - twisted.python.randbytes now contains code for generating secure random
-   bytes (#2685)
+ - twisted.protocols.memcache contains a new asynchronous memcache client
+   (#2506, #2957)
+ - PB now supports anonymous login (#439, #2312)
+ - twisted.spread.jelly now supports decimal objects (#2920)
+ - twisted.spread.jelly now supports all forms of sets (#2958)
+ - There is now an interface describing the API that process protocols must
+   provide (#3020)
+ - Trial reporting to core unittest TestResult objects has been improved (#2495)
+ - Trial's TestCase now has an addCleanup method which allows easy setup of
+   tear-down code (#2610, #2899)
+ - Trial's TestCase now has an assertIsInstance method (#2749)
+ - Trial's memory footprint and speed are greatly improved (#2275)
  - At the end of trial runs, "PASSED" and "FAILED" messages are now colorized
    (#2856)
  - Tests which leave global state around in the reactor will now fail in
@@ -62,24 +73,13 @@ Features
    formatting (#2893)
  - Trial now has methods for monkey-patching (#2598)
  - Trial now has an ITestCase (#2898, #1950)
- - twisted.protocols.memcache contains a new asynchronous memcache client
-   (#2506, #2957)
  - The trial reporter API now has a 'done' method which is called at the end of
    a test run (#2883)
- - The classes in twisted.application.internet now accept a reactor parameter
-   for specifying the reactor to use for underlying calls to allow for better
-   testability (#2937)
+ - TestCase now has an assertWarns method which allows testing that functions
+   emit warnings (#2626, #2703)
  - There are now no string exceptions in the entire Twisted code base (#2063)
  - There is now a system for specifying credentials checkers with a string
    (#2570)
- - twisted.spread.jelly now supports decimal objects (#2920)
- - twisted.spread.jelly now supports all forms of sets (#2958)
- - twisted.internet.task.deferLater is a new API for scheduling calls and
-   getting deferreds which are fired with their results (#1875)
- - twistd can now profile with cProfile (#2469)
- - There is now an interface describing the API that process protocols must
-   provide (#3020)
-
 
 Fixes
 -----
@@ -164,7 +164,6 @@ Deprecations and removals
  - The --report-profile option to twistd and twisted.python.dxprofile are
    deprecated (#2908)
  - The upDownError method of Trial reporters is deprecated (#2883)
-
 
 Other
 -----
