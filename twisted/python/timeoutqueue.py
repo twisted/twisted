@@ -24,7 +24,7 @@ class TimeoutQueue(Queue.Queue):
     """
 
     def __init__(self, max=0):
-        warnings.warn("timeoutqueue is deprecated since Twisted 2.6",
+        warnings.warn("timeoutqueue is deprecated since Twisted 8.0",
                       category=DeprecationWarning, stacklevel=2)
         Queue.Queue.__init__(self, max)
 

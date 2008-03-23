@@ -10,12 +10,12 @@ from twisted.python.deprecate import deprecated
 from twisted.enterprise.adbapi import _safe
 
 # Common deprecation decorator used for all deprecations.
-_unreleasedVersion = Version("Twisted", 2, 6, 0)
-_unreleasedDeprecation = deprecated(_unreleasedVersion)
+_deprecatedVersion = Version("Twisted", 8, 0, 0)
+_releasedDeprecation = deprecated(_deprecatedVersion)
 
 warnings.warn(
     "twisted.enterprise.util is deprecated since %s." % (
-        getVersionString(_unreleasedVersion),),
+        getVersionString(_deprecatedVersion),),
     category=DeprecationWarning)
 
 NOQUOTE = 1
@@ -57,7 +57,7 @@ def getKeyColumn(rowClass, name):
         if lcname == keyColumn.lower():
             return name
     return None
-getKeyColumn = _unreleasedDeprecation(getKeyColumn)
+getKeyColumn = _releasedDeprecation(getKeyColumn)
 
 
 
@@ -96,7 +96,7 @@ def quote(value, typeCode, string_escaper=_safe):
                not isinstance(value, types.UnicodeType):
             value = str(value)
         return "'%s'" % string_escaper(value)
-quote = _unreleasedDeprecation(quote)
+quote = _releasedDeprecation(quote)
 
 
 def safe(text):
@@ -105,7 +105,7 @@ def safe(text):
     """
     return _safe(text)
 
-safe = _unreleasedDeprecation(safe)
+safe = _releasedDeprecation(safe)
 
 
 def makeKW(rowClass, args):
@@ -120,7 +120,7 @@ def makeKW(rowClass, args):
                 kw[attr] = args[i]
                 break
     return kw
-makeKW = _unreleasedDeprecation(makeKW)
+makeKW = _releasedDeprecation(makeKW)
 
 
 def defaultFactoryMethod(rowClass, data, kw):
@@ -129,7 +129,7 @@ def defaultFactoryMethod(rowClass, data, kw):
     newObject = rowClass()
     newObject.__dict__.update(kw)
     return newObject
-defaultFactoryMethod = _unreleasedDeprecation(defaultFactoryMethod)
+defaultFactoryMethod = _releasedDeprecation(defaultFactoryMethod)
 
 ### utility classes
 

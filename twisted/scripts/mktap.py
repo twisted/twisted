@@ -17,11 +17,11 @@ IServiceMaker = service.IServiceMaker
 import warnings
 
 warnings.warn(
-    "mktap is obsolete as of Twisted 2.5, and will be officially deprecated "
-    "in Twisted 2.6. Use Twisted Application Plugins with the "
+    "mktap is obsolete as of Twisted 2.5, and officially deprecated "
+    "in Twisted 8.0. Use Twisted Application Plugins with the "
     "'twistd' command  directly, as described in "
     "'Writing a Twisted Application Plugin for twistd' chapter of the "
-    "Developer Guide.", PendingDeprecationWarning)
+    "Developer Guide.", DeprecationWarning)
 
 try:
     import pwd, grp

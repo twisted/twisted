@@ -1,3 +1,20 @@
+8.0.0pre2 (2008-03-17)
+======================
+
+Fixes
+-----
+ - Change twisted.lore.tree.setIndexLin so that it removes node with index-link
+   class when the specified index filename is None. (#812)
+ - Fix the conversion of the list of options in man pages to Lore format.
+   (#3017)
+ - Fix conch man pages generation. (#3075)
+ - Fix management of the interactive command tag in man2lore. (#3076)
+
+Misc
+----
+ - #2847
+
+
 0.3.0 (2007-01-06)
 ==================
 

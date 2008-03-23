@@ -20,7 +20,8 @@ class QuotingTestCase(unittest.TestCase):
             (u"123'456", "text", u"'123''456'")
             ]:
             self.assertEquals(
-                self.callDeprecated(util._unreleasedVersion, util.quote, value, typ),
+                self.callDeprecated(util._deprecatedVersion, util.quote, value,
+                                    typ),
                 expected)
 
 
@@ -28,7 +29,7 @@ class QuotingTestCase(unittest.TestCase):
         """
         L{safe} is deprecated.
         """
-        self.callDeprecated(util._unreleasedVersion, util.safe, "foo")
+        self.callDeprecated(util._deprecatedVersion, util.safe, "foo")
 
 
     def test_getKeyColumnDeprecation(self):
@@ -37,4 +38,4 @@ class QuotingTestCase(unittest.TestCase):
         """
         class Row(object):
             rowKeyColumns = ()
-        self.callDeprecated(util._unreleasedVersion, util.getKeyColumn, Row, "foo")
+        self.callDeprecated(util._deprecatedVersion, util.getKeyColumn, Row, "foo")

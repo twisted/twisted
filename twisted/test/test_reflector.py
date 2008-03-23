@@ -101,12 +101,12 @@ def rowMatches(row, values):
 
 
 rowObjectSuppression = suppressWarning(
-    message="twisted.enterprise.row is deprecated since Twisted 2.6",
+    message="twisted.enterprise.row is deprecated since Twisted 8.0",
     category=DeprecationWarning)
 
 
 reflectorSuppression = suppressWarning(
-    message="twisted.enterprise.reflector is deprecated since Twisted 2.6",
+    message="twisted.enterprise.reflector is deprecated since Twisted 8.0",
     category=DeprecationWarning)
 
 
@@ -364,7 +364,7 @@ class DeprecationTestCase(unittest.TestCase):
         def wrapper():
             return TestRow()
         self.assertWarns(DeprecationWarning,
-            "twisted.enterprise.row is deprecated since Twisted 2.6",
+            "twisted.enterprise.row is deprecated since Twisted 8.0",
             __file__,
             wrapper)
 
@@ -376,7 +376,7 @@ class DeprecationTestCase(unittest.TestCase):
             return SQLReflector(None, ())
         from twisted.enterprise import sqlreflector
         self.assertWarns(DeprecationWarning,
-            "twisted.enterprise.reflector is deprecated since Twisted 2.6",
+            "twisted.enterprise.reflector is deprecated since Twisted 8.0",
             sqlreflector.__file__,
             wrapper)
 

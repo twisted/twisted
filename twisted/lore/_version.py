@@ -1,3 +1,3 @@
-# This is an auto-generated file. Use admin/change-versions to update.
+# This is an auto-generated file. Do not edit it.
 from twisted.python import versions
-version = versions.Version('twisted.lore', 0, 3, 0)
+version = versions.Version('twisted.lore', 8, 0, 0, prerelease=2)

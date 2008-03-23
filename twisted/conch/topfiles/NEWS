@@ -1,3 +1,42 @@
+8.0.0pre2 (2008-03-17)
+======================
+
+Features
+--------
+ - Add DEC private mode manipulation methods to ITerminalTransport. (#2403)
+ - Add seconds to default log format in ISO8601 date time format. (#867)
+
+Fixes
+-----
+ - Parameterize the scheduler function used by the insults TopWindow widget.
+   This change breaks backwards compatibility in the TopWindow initializer.
+   (#2413)
+ - Notify subsystems, like SFTP, of connection close. (#2421)
+ - Change the process file descriptor "connection lost" code to reverse the
+   setNonBlocking operation done during initialization. (#2371)
+ - Change ConsoleManhole to wait for connectionLost notification before
+   stopping the reactor. (#2123, #2371)
+ - Make SSHUserAuthServer.ssh_USERAUTH_REQUEST return a Deferred. (#2528)
+ - Manhole's initializer calls its parent class's initializer with its
+   namespace argument. (#2587)
+ - Handle ^C during input line continuation in manhole by updating the prompt
+   and line buffer correctly. (#2663)
+ - Make twisted.conch.telnet.Telnet by default reject all attempts to enable
+   options. (#1967)
+ - Reduce the number of calls into application code to deliver application-level
+   data in twisted.conch.telnet.Telnet.dataReceived (#2107)
+ - Fix definition and management of extended attributes in conch file transfer.
+   (#3010)
+ - Fix parsing of OpenSSH-generated RSA keys with differing ASN.1 packing style.
+   (#3008)
+ - Fix handling of missing $HOME in twisted.conch.client.unix. (#3061)
+
+Misc
+----
+ - #2267, #2378, #2604, #2707, #2341, #2685, #2679, #2912, #2977, #2678, #2709
+   #2063, #2847
+
+
 0.8.0 (2007-01-06)
 ==================
 

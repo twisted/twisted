@@ -53,7 +53,7 @@ class RowObject:
         """
         DEPRECATED.
         """
-        warnings.warn("twisted.enterprise.row is deprecated since Twisted 2.6",
+        warnings.warn("twisted.enterprise.row is deprecated since Twisted 8.0",
                       category=DeprecationWarning, stacklevel=2)
 
     def assignKeyAttr(self, attrName, value):
