@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_adbapi -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -9,7 +9,8 @@ An asynchronous mapping to U{DB-API 2.0<http://www.python.org/topics/database/Da
 
 from twisted.internet import defer, threads
 from twisted.python import reflect, log
-from twisted.enterprise.util import safe # backwards compat
+from twisted.python.deprecate import deprecated
+from twisted.python.versions import Version
 
 
 class ConnectionLost(Exception):
@@ -412,4 +413,28 @@ class ConnectionPool:
         return d
 
 
-__all__ = ['Transaction', 'ConnectionPool']
+
+# Common deprecation decorator used for all deprecations.
+_unreleasedVersion = Version("Twisted", 2, 6, 0)
+_unreleasedDeprecation = deprecated(_unreleasedVersion)
+
+
+
+def _safe(text):
+    """
+    Something really stupid that replaces quotes with escaped quotes.
+    """
+    return text.replace("'", "''").replace("\\", "\\\\")
+
+
+
+def safe(text):
+    """
+    Make a string safe to include in an SQL statement.
+    """
+    return _safe(text)
+
+safe = _unreleasedDeprecation(safe)
+
+
+__all__ = ['Transaction', 'ConnectionPool', 'safe']

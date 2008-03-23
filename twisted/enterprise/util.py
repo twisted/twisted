@@ -7,6 +7,7 @@ import warnings, types
 
 from twisted.python.versions import Version, getVersionString
 from twisted.python.deprecate import deprecated
+from twisted.enterprise.adbapi import _safe
 
 # Common deprecation decorator used for all deprecations.
 _unreleasedVersion = Version("Twisted", 2, 6, 0)
@@ -59,13 +60,8 @@ def getKeyColumn(rowClass, name):
 getKeyColumn = _unreleasedDeprecation(getKeyColumn)
 
 
-def safe(text):
-    """Make a string safe to include in an SQL statement
-    """
-    return text.replace("'", "''").replace("\\", "\\\\")
 
-
-def quote(value, typeCode, string_escaper=safe):
+def quote(value, typeCode, string_escaper=_safe):
     """Add quotes for text types and no quotes for integer types.
     NOTE: uses Postgresql type codes.
     """
@@ -102,9 +98,15 @@ def quote(value, typeCode, string_escaper=safe):
         return "'%s'" % string_escaper(value)
 quote = _unreleasedDeprecation(quote)
 
-# Do this one here to let quote get an undeprecated version for internal
-# use.
+
+def safe(text):
+    """
+    Make a string safe to include in an SQL statement.
+    """
+    return _safe(text)
+
 safe = _unreleasedDeprecation(safe)
+
 
 def makeKW(rowClass, args):
     """Utility method to construct a dictionary for the attributes
