@@ -4,7 +4,6 @@
 Features
 --------
  - Add DEC private mode manipulation methods to ITerminalTransport. (#2403)
- - Add seconds to default log format in ISO8601 date time format. (#867)
 
 Fixes
 -----
