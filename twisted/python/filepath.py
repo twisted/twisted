@@ -499,7 +499,13 @@ class FilePath(_PathHelper):
         utime(self.path, None)
 
     def remove(self):
-        if self.isdir():
+        """
+        Removes the file or directory that is represented by self.  If
+        C{self.path} is a directory, recursively remove all its children
+        before removing the directory.  If it's a file or link, just delete
+        it.
+        """
+        if self.isdir() and not self.islink():
             for child in self.children():
                 child.remove()
             os.rmdir(self.path)

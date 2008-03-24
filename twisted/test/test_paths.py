@@ -386,6 +386,23 @@ class FilePathTestCase(AbstractFilePathTestCase):
         self.path.remove()
         self.failIf(self.path.exists())
 
+
+    def test_removeWithSymlink(self):
+        """
+        For a path which is a symbolic link, L{FilePath.remove} just deletes
+        the link, not the target.
+        """
+        link = self.path.child("sub1.link")
+        # setUp creates the sub1 child
+        os.symlink(self.path.child("sub1").path, link.path)
+        link.remove()
+        self.assertFalse(link.exists())
+        self.assertTrue(self.path.child("sub1").exists())
+
+    if getattr(os, 'symlink', None) is None:
+        test_removeWithSymlink.skip = "Platform doesn't support symbolic links"
+
+
     def testCopyTo(self):
         self.assertRaises((OSError, IOError), self.path.copyTo, self.path.child('file1'))
         oldPaths = list(self.path.walk()) # Record initial state
