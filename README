@@ -1,4 +1,4 @@
-Twisted 8.0.0pre2
+Twisted 8.0.0
 
 Quote of the Release:
 
@@ -7,15 +7,15 @@ Quote of the Release:
           PERSISTENCE?
 
 
-For information on what's new in Twisted 8.0.0pre2, see the NEWS file that
+For information on what's new in Twisted 8.0.0, see the NEWS file that
 comes with the distribution.
 
 What is this?
 =============
 
   Twisted is an event-based framework for internet applications which works on
-  Python 2.3.x and 2.4.x.  The following are some of the modules included with
-  Twisted::
+  Python 2.3, 2.4, and 2.5.  The following are some of the modules included
+  with Twisted::
 
   - twisted.application
     A "Service" system that allows you to organize your application in
