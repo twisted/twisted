@@ -1,4 +1,4 @@
-Copyright (c) 2001-2006
+Copyright (c) 2001-2008
 Allen Short
 Andrew Bennetts
 Apple Computer, Inc.
@@ -15,7 +15,7 @@ Jason A. Mobarak
 Jonathan Lange
 Jonathan D. Simms
 Jp Calderone
-Jürgen Hermann
+JÃ¼rgen Hermann
 Kevin Turner
 Mary Gardiner
 Matthew Lefkowitz
@@ -26,6 +26,10 @@ Pavel Pergamenshchik
 Ralph Meijer
 Sean Riley
 Travis B. Hartwell
+Thomas Herve
+Eyal Lotem
+Antoine Pitrou
+Andy Gayton
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
