@@ -1,7 +1,16 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-8.0.1 (2008-03-17)
+8.0.1 (2008-03-26)
+==================
+
+Fixes
+-----
+ - README no longer refers to obsolete trial command line option
+ - twistd no longer causes a bizarre DeprecationWarning about mktap
+
+
+8.0.0 (2008-03-17)
 ==================
 
 Features
