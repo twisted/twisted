@@ -576,8 +576,8 @@ class ReactorBase(object):
         if self.running:
             warnings.warn(
                     "Reactor already running! This behavior is deprecated "
-                    "since Twisted 2.6, it will raise an exception starting "
-                    "Twisted 2.7", category=DeprecationWarning, stacklevel=3)
+                    "since Twisted 8.0",
+                    category=DeprecationWarning, stacklevel=3)
         self.running = True
         threadable.registerAsIOThread()
         self.fireSystemEvent('startup')

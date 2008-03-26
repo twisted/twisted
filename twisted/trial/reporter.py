@@ -158,22 +158,22 @@ class TestResult(pyunit.TestResult, object):
         self.successes += 1
 
     def upDownError(self, method, error, warn, printStatus):
-        warnings.warn("upDownError is deprecated in Twisted 2.6.",
+        warnings.warn("upDownError is deprecated in Twisted 8.0.",
                       category=DeprecationWarning, stacklevel=3)
 
     def cleanupErrors(self, errs):
         """Report an error that occurred during the cleanup between tests.
         """
         warnings.warn("Cleanup errors are actual errors. Use addError. "
-                      "Deprecated in Twisted 2.6",
+                      "Deprecated in Twisted 8.0",
                       category=DeprecationWarning, stacklevel=2)
 
     def startSuite(self, name):
-        warnings.warn("startSuite deprecated in Twisted 2.6",
+        warnings.warn("startSuite deprecated in Twisted 8.0",
                       category=DeprecationWarning, stacklevel=2)
 
     def endSuite(self, name):
-        warnings.warn("endSuite deprecated in Twisted 2.6",
+        warnings.warn("endSuite deprecated in Twisted 8.0",
                       category=DeprecationWarning, stacklevel=2)
 
 
@@ -310,14 +310,14 @@ class Reporter(TestResult):
 
 
     def stream(self):
-        warnings.warn("stream is deprecated in Twisted 2.6.",
+        warnings.warn("stream is deprecated in Twisted 8.0.",
                       category=DeprecationWarning, stacklevel=4)
         return self._stream
     stream = property(stream)
 
 
     def separator(self):
-        warnings.warn("separator is deprecated in Twisted 2.6.",
+        warnings.warn("separator is deprecated in Twisted 8.0.",
                       category=DeprecationWarning, stacklevel=4)
         return self._separator
     separator = property(separator)
@@ -365,7 +365,7 @@ class Reporter(TestResult):
 
 
     def write(self, format, *args):
-        warnings.warn("write is deprecated in Twisted 2.6.",
+        warnings.warn("write is deprecated in Twisted 8.0.",
                       category=DeprecationWarning, stacklevel=2)
         self._write(format, *args)
 
@@ -387,7 +387,7 @@ class Reporter(TestResult):
 
 
     def writeln(self, format, *args):
-        warnings.warn("writeln is deprecated in Twisted 2.6.",
+        warnings.warn("writeln is deprecated in Twisted 8.0.",
                       category=DeprecationWarning, stacklevel=2)
         self._writeln(format, *args)
 
@@ -511,7 +511,7 @@ class Reporter(TestResult):
         """
         Print all of the non-success results in full to the stream.
         """
-        warnings.warn("printErrors is deprecated in Twisted 2.6.",
+        warnings.warn("printErrors is deprecated in Twisted 8.0.",
                       category=DeprecationWarning, stacklevel=2)
         self._printErrors()
 
@@ -552,7 +552,7 @@ class Reporter(TestResult):
         """
         Print a line summarising the test results to the stream.
         """
-        warnings.warn("printSummary is deprecated in Twisted 2.6.",
+        warnings.warn("printSummary is deprecated in Twisted 8.0.",
                       category=DeprecationWarning, stacklevel=2)
         self._printSummary()
 

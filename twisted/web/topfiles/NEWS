@@ -1,3 +1,32 @@
+8.0.0 (2008-03-17)
+==================
+
+Features
+--------
+ - Add support to twisted.web.client.getPage for the HTTP HEAD method. (#2750)
+
+Fixes
+-----
+ - Set content-type in xmlrpc responses to "text/xml" (#2430)
+ - Add more error checking in the xmlrpc.XMLRPC render method, and enforce
+   POST requests. (#2505)
+ - Reject unicode input to twisted.web.client._parse to reject invalid
+   unicode URLs early. (#2628)
+ - Correctly re-quote URL path segments when generating an URL string to
+   return from Request.prePathURL. (#2934)
+ - Make twisted.web.proxy.ProxyClientFactory close the connection when
+   reporting a 501 error. (#1089)
+ - Fix twisted.web.proxy.ReverseProxyResource to specify the port in the
+   host header if different from 80. (#1117)
+ - Change twisted.web.proxy.ReverseProxyResource so that it correctly encodes
+   the request URI it sends on to the server for which it is a proxy. (#3013)
+ - Make "twistd web --personal" use PBServerFactory (#2681)
+
+Misc
+----
+ - #1996, #2382, #2211, #2633, #2634, #2640, #2752, #238, #2905
+
+
 0.7.0 (2007-01-02)
 ==================
 

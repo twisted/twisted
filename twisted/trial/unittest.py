@@ -761,8 +761,8 @@ class TestCase(_Assertions):
         method issues a deprecation warning and calls the original.
         """
         def _(*a, **kw):
-            warnings.warn("reactor.%s cannot be used inside unit tests. By "
-                          "Twisted 2.7, using %s will fail the test and may "
+            warnings.warn("reactor.%s cannot be used inside unit tests. "
+                          "In the future, using %s will fail the test and may "
                           "crash or hang the test run."
                           % (name, name),
                           stacklevel=2, category=DeprecationWarning)
@@ -1031,14 +1031,14 @@ class TestCase(_Assertions):
         """
         Visit this test case. Call C{visitor} with C{self} as a parameter.
 
-        Deprecated in Twisted 2.6.
+        Deprecated in Twisted 8.0.
 
         @param visitor: A callable which expects a single parameter: a test
         case.
 
         @return: None
         """
-        warnings.warn("Test visitors deprecated in Twisted 2.6",
+        warnings.warn("Test visitors deprecated in Twisted 8.0",
                       category=DeprecationWarning)
         visitor(self)
 
@@ -1195,13 +1195,13 @@ def suiteVisit(suite, visitor):
     """
     Visit each test in C{suite} with C{visitor}.
 
-    Deprecated in Twisted 2.6.
+    Deprecated in Twisted 8.0.
 
     @param visitor: A callable which takes a single argument, the L{TestCase}
     instance to visit.
     @return: None
     """
-    warnings.warn("Test visitors deprecated in Twisted 2.6",
+    warnings.warn("Test visitors deprecated in Twisted 8.0",
                   category=DeprecationWarning)
     for case in suite._tests:
         visit = getattr(case, 'visit', None)
@@ -1307,9 +1307,9 @@ class _PyUnitTestCaseAdapter(TestDecorator):
 
     def visit(self, visitor):
         """
-        Deprecated in Twisted 2.6.
+        Deprecated in Twisted 8.0.
         """
-        warnings.warn("Test visitors deprecated in Twisted 2.6",
+        warnings.warn("Test visitors deprecated in Twisted 8.0",
                       category=DeprecationWarning)
         visitor(self)
 

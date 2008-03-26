@@ -727,7 +727,7 @@ class TestTreeReporter(unittest.TestCase):
     test_upDownError = suppressWarnings(
         test_upDownError,
         util.suppress(category=DeprecationWarning,
-                      message="upDownError is deprecated in Twisted 2.6."))
+                      message="upDownError is deprecated in Twisted 8.0."))
 
 
     def test_summaryColoredSuccess(self):
@@ -812,78 +812,78 @@ class TestReporter(unittest.TestCase):
 
     def test_printErrorsDeprecated(self):
         """
-        L{IReporter.printErrors} was deprecated in Twisted 2.6.
+        L{IReporter.printErrors} was deprecated in Twisted 8.0.
         """
         def f():
             self.result.printErrors()
         self.assertWarns(
-            DeprecationWarning, "printErrors is deprecated in Twisted 2.6.",
+            DeprecationWarning, "printErrors is deprecated in Twisted 8.0.",
             __file__, f)
 
 
     def test_printSummaryDeprecated(self):
         """
-        L{IReporter.printSummary} was deprecated in Twisted 2.6.
+        L{IReporter.printSummary} was deprecated in Twisted 8.0.
         """
         def f():
             self.result.printSummary()
         self.assertWarns(
-            DeprecationWarning, "printSummary is deprecated in Twisted 2.6.",
+            DeprecationWarning, "printSummary is deprecated in Twisted 8.0.",
             __file__, f)
 
 
     def test_writeDeprecated(self):
         """
-        L{IReporter.write} was deprecated in Twisted 2.6.
+        L{IReporter.write} was deprecated in Twisted 8.0.
         """
         def f():
             self.result.write("")
         self.assertWarns(
-            DeprecationWarning, "write is deprecated in Twisted 2.6.",
+            DeprecationWarning, "write is deprecated in Twisted 8.0.",
             __file__, f)
 
 
     def test_writelnDeprecated(self):
         """
-        L{IReporter.writeln} was deprecated in Twisted 2.6.
+        L{IReporter.writeln} was deprecated in Twisted 8.0.
         """
         def f():
             self.result.writeln("")
         self.assertWarns(
-            DeprecationWarning, "writeln is deprecated in Twisted 2.6.",
+            DeprecationWarning, "writeln is deprecated in Twisted 8.0.",
             __file__, f)
 
 
     def test_separatorDeprecated(self):
         """
-        L{IReporter.separator} was deprecated in Twisted 2.6.
+        L{IReporter.separator} was deprecated in Twisted 8.0.
         """
         def f():
             return self.result.separator
         self.assertWarns(
-            DeprecationWarning, "separator is deprecated in Twisted 2.6.",
+            DeprecationWarning, "separator is deprecated in Twisted 8.0.",
             __file__, f)
 
 
     def test_streamDeprecated(self):
         """
-        L{IReporter.stream} was deprecated in Twisted 2.6.
+        L{IReporter.stream} was deprecated in Twisted 8.0.
         """
         def f():
             return self.result.stream
         self.assertWarns(
-            DeprecationWarning, "stream is deprecated in Twisted 2.6.",
+            DeprecationWarning, "stream is deprecated in Twisted 8.0.",
             __file__, f)
 
 
     def test_upDownErrorDeprecated(self):
         """
-        L{IReporter.upDownError} was deprecated in Twisted 2.6.
+        L{IReporter.upDownError} was deprecated in Twisted 8.0.
         """
         def f():
             self.result.upDownError(None, None, None, None)
         self.assertWarns(
-            DeprecationWarning, "upDownError is deprecated in Twisted 2.6.",
+            DeprecationWarning, "upDownError is deprecated in Twisted 8.0.",
             __file__, f)
 
 

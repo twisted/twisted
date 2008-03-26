@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 """
-DEPRECATED since Twisted 2.6.
+DEPRECATED since Twisted 8.0.
 
 Utility functions for reporting bytecode frequencies to Skip Montanaro's
 stat collector.
@@ -14,7 +14,7 @@ and optionally DXPAIRS, defined to be useful.
 import sys, types, xmlrpclib, warnings
 
 
-warnings.warn("twisted.python.dxprofile is deprecated since Twisted 2.6.",
+warnings.warn("twisted.python.dxprofile is deprecated since Twisted 8.0.",
               category=DeprecationWarning)
 
 

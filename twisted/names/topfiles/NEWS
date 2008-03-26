@@ -1,3 +1,23 @@
+8.0.0 (2008-03-17)
+==================
+
+Fixes
+-----
+
+ - Refactor DNSDatagramProtocol and DNSProtocol to use same base class (#2414)
+ - Change Resolver to query specified nameservers in specified order, instead
+   of reverse order. (#2290)
+ - Make SRVConnector work with bad results and NXDOMAIN responses.
+   (#1908, #2777)
+ - Handle write errors happening in dns queries, to have correct deferred
+   failures. (#2492)
+ - Fix the value of OP_NOTIFY and add a definition for OP_UPDATE. (#2945)
+
+Misc
+----
+ - #2685, #2936, #2581, #2847
+
+
 0.4.0 (2007-01-06)
 ==================
 

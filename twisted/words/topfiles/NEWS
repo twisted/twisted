@@ -1,3 +1,32 @@
+8.0.0 (2008-03-17)
+==================
+
+Features
+--------
+ - Provide function for creating XMPP response stanzas. (#2614, #2614)
+ - Log exceptions raised in Xish observers. (#2616)
+ - Add 'and' and 'or' operators for Xish XPath expressions. (#2502)
+ - Make JIDs hashable. (#2770)
+
+Fixes
+-----
+ - Respect the hostname and servername parameters to IRCClient.register. (#1649)
+ - Make EventDispatcher remove empty callback lists. (#1652)
+ - Use legacy base64 API to support Python 2.3 (#2461)
+ - Fix support of DIGEST-MD5 challenge parsing with multi-valued directives.
+   (#2606)
+ - Fix reuse of dict of prefixes in domish.Element.toXml (#2609)
+ - Properly process XMPP stream headers (#2615)
+ - Use proper namespace for XMPP stream errors. (#2630)
+ - Properly parse XMPP stream errors. (#2771)
+ - Fix toResponse for XMPP stanzas without an id attribute. (#2773)
+ - Move XMPP stream header procesing to authenticators. (#2772)
+
+Misc
+----
+ - #2617, #2640, #2741, #2063, #2570, #2847
+
+
 0.5.0 (2007-01-06)
 ==================
 

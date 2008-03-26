@@ -185,11 +185,11 @@ class AppProfiler(object):
 
 def runWithProfiler(reactor, config):
     """
-    DEPRECATED in Twisted 2.6.
+    DEPRECATED in Twisted 8.0.
 
     Run reactor under standard profiler.
     """
-    warnings.warn("runWithProfiler is deprecated since Twisted 2.6. "
+    warnings.warn("runWithProfiler is deprecated since Twisted 8.0. "
                   "Use ProfileRunner instead.", DeprecationWarning, 2)
     item = AppProfiler(config)
     return item.run(reactor)
@@ -198,11 +198,11 @@ def runWithProfiler(reactor, config):
 
 def runWithHotshot(reactor, config):
     """
-    DEPRECATED in Twisted 2.6.
+    DEPRECATED in Twisted 8.0.
 
     Run reactor under hotshot profiler.
     """
-    warnings.warn("runWithHotshot is deprecated since Twisted 2.6. "
+    warnings.warn("runWithHotshot is deprecated since Twisted 8.0. "
                   "Use HotshotRunner instead.", DeprecationWarning, 2)
     item = AppProfiler(config)
     return item.run(reactor)
@@ -432,9 +432,9 @@ Please read the 'Using Application' HOWTO for details.
 
 def reportProfile(report_profile, name):
     """
-    DEPRECATED since Twisted 2.6. This does nothing.
+    DEPRECATED since Twisted 8.0. This does nothing.
     """
-    warnings.warn("reportProfile is deprecated and a no-op since Twisted 2.6.",
+    warnings.warn("reportProfile is deprecated and a no-op since Twisted 8.0.",
                   category=DeprecationWarning)
 
 
@@ -565,7 +565,7 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
         Manage --report-profile option, which does nothing currently.
         """
         warnings.warn("--report-profile option is deprecated and a no-op "
-                      "since Twisted 2.6.", category=DeprecationWarning)
+                      "since Twisted 8.0.", category=DeprecationWarning)
 
 
     def parseOptions(self, options=None):

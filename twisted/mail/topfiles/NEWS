@@ -1,3 +1,27 @@
+8.0.0 (2008-03-17)
+==================
+
+Features
+--------
+ - Support CAPABILITY responses that include atoms of the form "FOO" and
+   "FOO=BAR" in IMAP4 (#2695)
+ - Parameterize error handling behavior of imap4.encoder and imap4.decoder.
+   (#2929)
+
+Fixes
+-----
+ - Handle empty passwords in SMTP auth. (#2521)
+ - Fix IMAP4Client's parsing of literals which are not preceeded by whitespace.
+   (#2700)
+ - Handle MX lookup suceeding without answers. (#2807)
+ - Fix issues with aliases(5) process support. (#2729)
+
+Misc
+----
+ - #2371, #2123, #2378, #739, #2640, #2746, #1917, #2266, #2864, #2832, #2063,
+   #2865, #2847
+
+
 0.4.0 (2007-01-06)
 ==================
 

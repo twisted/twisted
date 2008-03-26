@@ -32,7 +32,7 @@ class TestRunners(unittest.TestCase):
         Return a L{runner.DocTestSuite} for the doctests in C{module}.
         """
         return self.assertWarns(
-            DeprecationWarning, "DocTestSuite is deprecated in Twisted 2.6.",
+            DeprecationWarning, "DocTestSuite is deprecated in Twisted 8.0.",
             __file__, runner.DocTestSuite, mockdoctest)
 
 

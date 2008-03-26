@@ -27,7 +27,7 @@ DEFAULT_TIMEOUT_DURATION = 120.0
 
 class FailureError(Exception):
     """
-    DEPRECATED in Twisted 2.6. This exception is never raised by Trial.
+    DEPRECATED in Twisted 8.0. This exception is never raised by Trial.
 
     Wraps around a Failure so it can get re-raised as an Exception.
     """
@@ -40,7 +40,7 @@ class FailureError(Exception):
 
 class DirtyReactorWarning(Warning):
     """
-    DEPRECATED in Twisted 2.6.
+    DEPRECATED in Twisted 8.0.
 
     This warning is not used by Trial any more.
     """
@@ -49,7 +49,7 @@ class DirtyReactorWarning(Warning):
 
 class DirtyReactorError(Exception):
     """
-    DEPRECATED in Twisted 2.6. This is not used by Trial any more.
+    DEPRECATED in Twisted 8.0. This is not used by Trial any more.
     """
 
     def __init__(self, msg):
@@ -64,7 +64,7 @@ class DirtyReactorError(Exception):
 
 class PendingTimedCallsError(DirtyReactorError):
     """
-    DEPRECATED in Twisted 2.6. This is not used by Trial any more.
+    DEPRECATED in Twisted 8.0. This is not used by Trial any more.
     """
 
     def _getMessage(self, msg):

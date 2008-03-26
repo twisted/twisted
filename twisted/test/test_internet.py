@@ -1069,7 +1069,7 @@ class ReactorBaseTestCase(unittest.TestCase):
         self.reactor.startRunning()
         self.assertWarns(DeprecationWarning,
             "Reactor already running! This behavior is deprecated since "
-            "Twisted 2.6, it will raise an exception starting Twisted 2.7",
+            "Twisted 8.0",
             __file__,
             self.reactor.startRunning)
 

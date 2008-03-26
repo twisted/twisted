@@ -163,7 +163,7 @@ class LoggedSuite(TestSuite):
 
 class DocTestSuite(TestSuite):
     """
-    DEPRECATED in Twisted 2.6.
+    DEPRECATED in Twisted 8.0.
 
     Behaves like doctest.DocTestSuite, but decorates individual TestCases so
     they support visit and so that id() behaviour is meaningful and consistent
@@ -171,7 +171,7 @@ class DocTestSuite(TestSuite):
     """
 
     def __init__(self, testModule):
-        warnings.warn("DocTestSuite is deprecated in Twisted 2.6.",
+        warnings.warn("DocTestSuite is deprecated in Twisted 8.0.",
                       category=DeprecationWarning, stacklevel=3)
         TestSuite.__init__(self)
         suite = doctest.DocTestSuite(testModule)
@@ -181,7 +181,7 @@ class DocTestSuite(TestSuite):
 
 class PyUnitTestCase(object):
     """
-    DEPRECATED in Twisted 2.6.
+    DEPRECATED in Twisted 8.0.
 
     This class decorates the pyunit.TestCase class, mainly to work around the
     differences between unittest in Python 2.3, 2.4, and 2.5. These
@@ -196,7 +196,7 @@ class PyUnitTestCase(object):
     """
 
     def __init__(self, test):
-        warnings.warn("Deprecated in Twisted 2.6.",
+        warnings.warn("Deprecated in Twisted 8.0.",
                       category=DeprecationWarning)
         self._test = test
         test.id = self.id
@@ -222,9 +222,9 @@ class PyUnitTestCase(object):
         Call the given visitor with the original, standard library, test case
         that C{self} wraps. See L{unittest.TestCase.visit}.
 
-        Deprecated in Twisted 2.6.
+        Deprecated in Twisted 8.0.
         """
-        warnings.warn("Test visitors deprecated in Twisted 2.6",
+        warnings.warn("Test visitors deprecated in Twisted 8.0",
                       category=DeprecationWarning)
         visitor(self._test)
 
@@ -236,7 +236,7 @@ class PyUnitTestCase(object):
 
 class DocTestCase(PyUnitTestCase):
     """
-    DEPRECATED in Twisted 2.6.
+    DEPRECATED in Twisted 8.0.
     """
 
     def id(self):

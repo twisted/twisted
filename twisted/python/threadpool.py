@@ -108,7 +108,7 @@ class ThreadPool:
 
         Dispatch a function to be a run in a thread.
         """
-        warnings.warn("dispatch() is deprecated since Twisted 2.6, "
+        warnings.warn("dispatch() is deprecated since Twisted 8.0, "
                       "use callInThread() instead",
                       DeprecationWarning, stacklevel=2)
         self.callInThread(func, *args, **kw)
@@ -139,7 +139,7 @@ class ThreadPool:
         The callback function will be called in the thread - make sure it is
         thread-safe.
         """
-        warnings.warn("dispatchWithCallback() is deprecated since Twisted 2.6, "
+        warnings.warn("dispatchWithCallback() is deprecated since Twisted 8.0, "
                       "use twisted.internet.threads.deferToThread() instead.",
                       DeprecationWarning, stacklevel=2)
         self.callInThread(

@@ -22,9 +22,10 @@ class Reflector:
         @param rowClasses: a list of row class objects that describe the
             database schema.
         """
-        warnings.warn("twisted.enterprise.reflector is deprecated since Twisted 2.6",
-                      category=DeprecationWarning, stacklevel=2)
-        self.rowCache = weakref.WeakValueDictionary() # does not hold references to cached rows.
+        warnings.warn("twisted.enterprise.reflector is deprecated since "
+                      "Twisted 8.0", category=DeprecationWarning, stacklevel=2)
+        # does not hold references to cached rows.
+        self.rowCache = weakref.WeakValueDictionary()
         self.rowClasses = rowClasses
         self.schema = {}
         self._populate()

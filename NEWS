@@ -1,0 +1,361 @@
+Ticket numbers in this file can be looked up by visiting
+http://twistedmatrix.com/trac/ticket/<number>
+
+Core 8.0.1 (2008-03-26)
+=======================
+
+Fixes
+-----
+ - README no longer refers to obsolete trial command line option
+ - twistd no longer causes a bizarre DeprecationWarning about mktap
+
+
+Core 8.0.0 (2008-03-17)
+=======================
+
+Features
+--------
+
+ - The IOCP reactor has had many changes and is now greatly improved
+   (#1760, #3055)
+ - The main Twisted distribution is now easy_installable (#1286, #3110)
+ - twistd can now profile with cProfile (#2469)
+ - twisted.internet.defer contains a DeferredFilesystemLock which gives a
+   Deferred interface to lock file acquisition (#2180)
+ - twisted.python.modules is a new system for representing and manipulating
+   module paths (i.e. sys.path) (#1951)
+ - twisted.internet.fdesc now contains a writeToFD function, along with other
+   minor fixes (#2419)
+ - twisted.python.usage now allows optional type enforcement (#739)
+ - The reactor now has a blockingCallFromThread method for non-reactor threads
+   to use to wait for a reactor-scheduled call to return a result (#1042, #3030)
+ - Exceptions raised inside of inlineCallbacks-using functions now have a
+   better chance of coming with a meaningful traceback (#2639, #2803)
+ - twisted.python.randbytes now contains code for generating secure random
+   bytes (#2685)
+ - The classes in twisted.application.internet now accept a reactor parameter
+   for specifying the reactor to use for underlying calls to allow for better
+   testability (#2937)
+ - LoopingCall now allows you to specify the reactor to use to schedule new
+   calls, allowing much better testing techniques (#2633, #2634)
+ - twisted.internet.task.deferLater is a new API for scheduling calls and
+   getting deferreds which are fired with their results (#1875)
+ - objgrep now knows how to search through deque objects (#2323)
+ - twisted.python.log now contains a Twisted log observer which can forward
+   messages to the Python logging system (#1351)
+ - Log files now include seconds in the timestamps (#867)
+ - It is now possible to limit the number of log files to create during log
+   rotation (#1095)
+ - The interface required by the log context system is now documented as
+   ILoggingContext, and abstract.FileDescriptor now declares that it implements
+   it (#1272)
+ - There is now an example cred checker that uses a database via adbapi (#460)
+ - The epoll reactor is now documented in the choosing-reactors howto (#2539)
+ - There were improvements to the client howto (#222)
+ - Int8Receiver was added (#2315)
+ - Various refactorings to AMP introduced better testability and public
+   interfaces (#2657, #2667, #2656, #2664, #2810)
+ - twisted.protocol.policies.TrafficLoggingFactory now has a resetCounter
+   method (#2757)
+ - The FTP client can be told which port range within which to bind passive
+   transfer ports (#1904)
+ - twisted.protocols.memcache contains a new asynchronous memcache client
+   (#2506, #2957)
+ - PB now supports anonymous login (#439, #2312)
+ - twisted.spread.jelly now supports decimal objects (#2920)
+ - twisted.spread.jelly now supports all forms of sets (#2958)
+ - There is now an interface describing the API that process protocols must
+   provide (#3020)
+ - Trial reporting to core unittest TestResult objects has been improved (#2495)
+ - Trial's TestCase now has an addCleanup method which allows easy setup of
+   tear-down code (#2610, #2899)
+ - Trial's TestCase now has an assertIsInstance method (#2749)
+ - Trial's memory footprint and speed are greatly improved (#2275)
+ - At the end of trial runs, "PASSED" and "FAILED" messages are now colorized
+   (#2856)
+ - Tests which leave global state around in the reactor will now fail in
+   trial. A new option, --unclean-warnings, will convert these errors back into
+   warnings (#2091)
+ - Trial now has a --without-module command line for testing code in an
+   environment that lacks a particular Python module (#1795)
+ - Error reporting of failed assertEquals assertions now has much nicer
+   formatting (#2893)
+ - Trial now has methods for monkey-patching (#2598)
+ - Trial now has an ITestCase (#2898, #1950)
+ - The trial reporter API now has a 'done' method which is called at the end of
+   a test run (#2883)
+ - TestCase now has an assertWarns method which allows testing that functions
+   emit warnings (#2626, #2703)
+ - There are now no string exceptions in the entire Twisted code base (#2063)
+ - There is now a system for specifying credentials checkers with a string
+   (#2570)
+
+Fixes
+-----
+
+ - Some tests which were asserting the value of stderr have been changed
+   because Python uncontrollably writes bytes to stderr (#2405)
+ - Log files handle time zones with DST better (#2404)
+ - Subprocesses using PTYs on OS X that are handled by Twisted will now be able
+   to more reliably write the final bytes before they exit, allowing Twisted
+   code to more reliably receive them (#2371, #2858)
+ - Trial unit test reporting has been improved (#1901)
+ - The kqueue reactor handles connection failures better (#2172)
+ - It's now possible to run "trial foo/bar/" without an exception: trailing
+   slashes no longer cause problems (#2005)
+ - cred portals now better deal with implementations of inherited interfaces
+   (#2523)
+ - FTP error handling has been improved (#1160, 1107)
+ - Trial behaves better with respect to file locking on Windows (#2482)
+ - The FTP server now gives a better error when STOR is attempted during an
+   anonymous session (#1575)
+ - Trial now behaves better with tests that use the reactor's threadpool (#1832)
+ - twisted.python.reload now behaves better with new-style objects (#2297)
+ - LogFile's defaultMode parameter is now better implemented, preventing
+   potential security exploits (#2586)
+ - A minor obscure leak in thread pools was corrected (#1134)
+ - twisted.internet.task.Clock now returns the correct DelayedCall from
+   callLater, instead of returning the one scheduled for the furthest in the
+   future (#2691)
+ - twisted.spread.util.FilePager no longer unnecessarily buffers data in
+   memory (#1843, 2321)
+ - Asking for twistd or trial to use an unavailable reactor no longer prints a
+   traceback (#2457)
+ - System event triggers have fewer obscure bugs (#2509)
+ - Plugin discovery code is much better behaved, allowing multiple
+   installations of a package with plugins (#2339, #2769)
+ - Process and PTYProcess have been merged and some minor bugs have been fixed
+   (#2341)
+ - The reactor has less global state (#2545)
+ - Failure can now correctly represent and format errors caused by string
+   exceptions (#2830)
+ - The epoll reactor now has better error handling which now avoids the bug
+   causing 100% CPU usage in some cases (#2809)
+ - Errors raised during trial setUp or tearDown methods are now handled better
+   (#2837)
+ - A problem when deferred callbacks add new callbacks to the deferred that
+   they are a callback of was fixed (#2849)
+ - Log messages that are emitted during connectionMade now have the protocol
+   prefix correctly set (#2813)
+ - The string representation of a TCP Server connection now contains the actual
+   port that it's bound to when it was configured to listen on port 0 (#2826)
+ - There is better reporting of error codes for TCP failures on Windows (#2425)
+ - Process spawning has been made slightly more robust by disabling garbage
+   collection temporarily immediately after forking so that finalizers cannot
+   be executed in an unexpected environment (#2483)
+ - namedAny now detects import errors better (#698)
+ - Many fixes and improvements to the twisted.python.zipstream module have
+   been made (#2996)
+ - FilePager no longer blows up on empty files (#3023)
+ - twisted.python.util.FancyEqMixin has been improved to cooperate with objects
+   of other types (#2944)
+ - twisted.python.FilePath.exists now restats to prevent incorrect result
+   (#2896)
+ - twisted.python.util.mergeFunctionMetadata now also merges the __module__
+   attribute (#3049)
+ - It is now possible to call transport.pauseProducing within connectionMade on
+   TCP transports without it being ignored (#1780)
+ - twisted.python.versions now understands new SVN metadata format for fetching
+   the SVN revision number (#3058)
+ - It's now possible to use reactor.callWhenRunning(reactor.stop) on gtk2 and
+   glib2 reactors (#3011)
+
+Deprecations and removals
+-------------------------
+ - twisted.python.timeoutqueue is now deprecated (#2536)
+ - twisted.enterprise.row and twisted.enterprise.reflector are now deprecated
+   (#2387)
+ - twisted.enterprise.util is now deprecated (#3022)
+ - The dispatch and dispatchWithCallback methods of ThreadPool are now
+   deprecated (#2684)
+ - Starting the same reactor multiple times is now deprecated (#1785)
+ - The visit method of various test classes in trial has been deprecated (#2897)
+ - The --report-profile option to twistd and twisted.python.dxprofile are
+   deprecated (#2908)
+ - The upDownError method of Trial reporters is deprecated (#2883)
+
+Other
+-----
+
+ - #2396, #2211, #1921, #2378, #2247, #1603, #2463, #2530, #2426, #2356, #2574,
+ - #1844, #2575, #2655, #2640, #2670, #2688, #2543, #2743, #2744, #2745, #2746,
+ - #2742, #2741, #1730, #2831, #2216, #1192, #2848, #2767, #1220, #2727, #2643,
+ - #2669, #2866, #2867, #1879, #2766, #2855, #2547, #2857, #2862, #1264, #2735,
+ - #942, #2885, #2739, #2901, #2928, #2954, #2906, #2925, #2942, #2894, #2793,
+ - #2761, #2977, #2968, #2895, #3000, #2990, #2919, #2969, #2921, #3005, #421,
+ - #3031, #2940, #1181, #2783, #1049, #3053, #2847, #2941, #2876, #2886, #3086,
+ - #3095, #3109
+
+
+Conch 8.0.0 (2008-03-17)
+========================
+
+Features
+--------
+ - Add DEC private mode manipulation methods to ITerminalTransport. (#2403)
+
+Fixes
+-----
+ - Parameterize the scheduler function used by the insults TopWindow widget.
+   This change breaks backwards compatibility in the TopWindow initializer.
+   (#2413)
+ - Notify subsystems, like SFTP, of connection close. (#2421)
+ - Change the process file descriptor "connection lost" code to reverse the
+   setNonBlocking operation done during initialization. (#2371)
+ - Change ConsoleManhole to wait for connectionLost notification before
+   stopping the reactor. (#2123, #2371)
+ - Make SSHUserAuthServer.ssh_USERAUTH_REQUEST return a Deferred. (#2528)
+ - Manhole's initializer calls its parent class's initializer with its
+   namespace argument. (#2587)
+ - Handle ^C during input line continuation in manhole by updating the prompt
+   and line buffer correctly. (#2663)
+ - Make twisted.conch.telnet.Telnet by default reject all attempts to enable
+   options. (#1967)
+ - Reduce the number of calls into application code to deliver application-level
+   data in twisted.conch.telnet.Telnet.dataReceived (#2107)
+ - Fix definition and management of extended attributes in conch file transfer.
+   (#3010)
+ - Fix parsing of OpenSSH-generated RSA keys with differing ASN.1 packing style.
+   (#3008)
+ - Fix handling of missing $HOME in twisted.conch.client.unix. (#3061)
+
+Misc
+----
+ - #2267, #2378, #2604, #2707, #2341, #2685, #2679, #2912, #2977, #2678, #2709
+   #2063, #2847
+
+
+Lore 8.0.0 (2008-03-17)
+=======================
+
+Fixes
+-----
+ - Change twisted.lore.tree.setIndexLin so that it removes node with index-link
+   class when the specified index filename is None. (#812)
+ - Fix the conversion of the list of options in man pages to Lore format.
+   (#3017)
+ - Fix conch man pages generation. (#3075)
+ - Fix management of the interactive command tag in man2lore. (#3076)
+
+Misc
+----
+ - #2847
+
+
+News 8.0.0 (2008-03-17)
+=======================
+
+Misc
+----
+ - Remove all "API Stability" markers (#2847)
+
+
+Runner 8.0.0 (2008-03-17)
+=========================
+
+Misc
+----
+ - Remove all "API Stability" markers (#2847)
+
+
+Web 8.0.0 (2008-03-17)
+======================
+
+Features
+--------
+ - Add support to twisted.web.client.getPage for the HTTP HEAD method. (#2750)
+
+Fixes
+-----
+ - Set content-type in xmlrpc responses to "text/xml" (#2430)
+ - Add more error checking in the xmlrpc.XMLRPC render method, and enforce
+   POST requests. (#2505)
+ - Reject unicode input to twisted.web.client._parse to reject invalid
+   unicode URLs early. (#2628)
+ - Correctly re-quote URL path segments when generating an URL string to
+   return from Request.prePathURL. (#2934)
+ - Make twisted.web.proxy.ProxyClientFactory close the connection when
+   reporting a 501 error. (#1089)
+ - Fix twisted.web.proxy.ReverseProxyResource to specify the port in the
+   host header if different from 80. (#1117)
+ - Change twisted.web.proxy.ReverseProxyResource so that it correctly encodes
+   the request URI it sends on to the server for which it is a proxy. (#3013)
+ - Make "twistd web --personal" use PBServerFactory (#2681)
+
+Misc
+----
+ - #1996, #2382, #2211, #2633, #2634, #2640, #2752, #238, #2905
+
+
+Words 8.0.0 (2008-03-17)
+========================
+
+Features
+--------
+ - Provide function for creating XMPP response stanzas. (#2614, #2614)
+ - Log exceptions raised in Xish observers. (#2616)
+ - Add 'and' and 'or' operators for Xish XPath expressions. (#2502)
+ - Make JIDs hashable. (#2770)
+
+Fixes
+-----
+ - Respect the hostname and servername parameters to IRCClient.register. (#1649)
+ - Make EventDispatcher remove empty callback lists. (#1652)
+ - Use legacy base64 API to support Python 2.3 (#2461)
+ - Fix support of DIGEST-MD5 challenge parsing with multi-valued directives.
+   (#2606)
+ - Fix reuse of dict of prefixes in domish.Element.toXml (#2609)
+ - Properly process XMPP stream headers (#2615)
+ - Use proper namespace for XMPP stream errors. (#2630)
+ - Properly parse XMPP stream errors. (#2771)
+ - Fix toResponse for XMPP stanzas without an id attribute. (#2773)
+ - Move XMPP stream header procesing to authenticators. (#2772)
+
+Misc
+----
+ - #2617, #2640, #2741, #2063, #2570, #2847
+
+
+Mail 8.0.0 (2008-03-17)
+=======================
+
+Features
+--------
+ - Support CAPABILITY responses that include atoms of the form "FOO" and
+   "FOO=BAR" in IMAP4 (#2695)
+ - Parameterize error handling behavior of imap4.encoder and imap4.decoder.
+   (#2929)
+
+Fixes
+-----
+ - Handle empty passwords in SMTP auth. (#2521)
+ - Fix IMAP4Client's parsing of literals which are not preceeded by whitespace.
+   (#2700)
+ - Handle MX lookup suceeding without answers. (#2807)
+ - Fix issues with aliases(5) process support. (#2729)
+
+Misc
+----
+ - #2371, #2123, #2378, #739, #2640, #2746, #1917, #2266, #2864, #2832, #2063,
+   #2865, #2847
+
+
+Names 8.0.0 (2008-03-17)
+========================
+
+Fixes
+-----
+
+ - Refactor DNSDatagramProtocol and DNSProtocol to use same base class (#2414)
+ - Change Resolver to query specified nameservers in specified order, instead
+   of reverse order. (#2290)
+ - Make SRVConnector work with bad results and NXDOMAIN responses.
+   (#1908, #2777)
+ - Handle write errors happening in dns queries, to have correct deferred
+   failures. (#2492)
+ - Fix the value of OP_NOTIFY and add a definition for OP_UPDATE. (#2945)
+
+Misc
+----
+ - #2685, #2936, #2581, #2847
+

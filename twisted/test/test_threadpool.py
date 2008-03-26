@@ -178,7 +178,7 @@ class ThreadPoolTestCase(unittest.TestCase):
             lambda tp, actor: tp.dispatch(actor, actor.run))
 
     test_dispatch.suppress = [util.suppress(
-                message="dispatch\(\) is deprecated since Twisted 2.6, "
+                message="dispatch\(\) is deprecated since Twisted 8.0, "
                         "use callInThread\(\) instead",
                 category=DeprecationWarning)]
 
@@ -220,7 +220,7 @@ class ThreadPoolTestCase(unittest.TestCase):
             return tp.dispatch(None, lambda: None)
         try:
             self.assertWarns(DeprecationWarning,
-                "dispatch() is deprecated since Twisted 2.6, "
+                "dispatch() is deprecated since Twisted 8.0, "
                 "use callInThread() instead",
                 __file__, cb)
         finally:
@@ -241,7 +241,7 @@ class ThreadPoolTestCase(unittest.TestCase):
                 lambda: None)
         try:
             self.assertWarns(DeprecationWarning,
-                "dispatchWithCallback() is deprecated since Twisted 2.6, "
+                "dispatchWithCallback() is deprecated since Twisted 8.0, "
                 "use twisted.internet.threads.deferToThread() instead.",
                 __file__, cb)
         finally:

@@ -895,5 +895,5 @@ class ReportProfileTestCase(unittest.TestCase):
         Check that L{app.reportProfile} prints a warning and does nothing else.
         """
         self.assertWarns(DeprecationWarning,
-            "reportProfile is deprecated and a no-op since Twisted 2.6.",
+            "reportProfile is deprecated and a no-op since Twisted 8.0.",
             app.__file__, app.reportProfile, None, None)

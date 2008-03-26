@@ -169,7 +169,7 @@ class DryRunMixin(object):
 
     suppress = [util.suppress(
         category=DeprecationWarning,
-        message="Test visitors deprecated in Twisted 2.6")]
+        message="Test visitors deprecated in Twisted 8.0")]
 
 
     def setUp(self):

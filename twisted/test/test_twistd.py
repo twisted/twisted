@@ -98,7 +98,7 @@ class ServerOptionsTest(unittest.TestCase):
         config = twistd.ServerOptions()
         self.assertWarns(
             DeprecationWarning, "--report-profile option is deprecated and "
-            "a no-op since Twisted 2.6.", app.__file__,
+            "a no-op since Twisted 8.0.", app.__file__,
             config.parseOptions, ["--report-profile", "foo"])
 
 
@@ -541,7 +541,7 @@ class AppProfilingTestCase(unittest.TestCase):
             return app.runWithProfiler(DummyReactor(), {})
 
         self.assertWarns(DeprecationWarning,
-                "runWithProfiler is deprecated since Twisted 2.6. "
+                "runWithProfiler is deprecated since Twisted 8.0. "
                 "Use ProfileRunner instead.", __file__,
                 runWithProfiler)
         self.assertTrue(profiler.called)
@@ -563,7 +563,7 @@ class AppProfilingTestCase(unittest.TestCase):
             return app.runWithHotshot(DummyReactor(), {})
 
         self.assertWarns(DeprecationWarning,
-                "runWithHotshot is deprecated since Twisted 2.6. "
+                "runWithHotshot is deprecated since Twisted 8.0. "
                 "Use HotshotRunner instead.", __file__,
                 runWithHotshot)
         self.assertTrue(profiler.called)

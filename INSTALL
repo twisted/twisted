@@ -1,0 +1,32 @@
+Requirements
+
+  Python 2.3 or later.
+
+  Zope Interfaces 3.0.1 (http://zope.org/Products/ZopeInterface) - if
+  you have ZopeX3 (at least version 3.0.0c1) installed that should
+  work too.
+
+  On Windows pywin32 is recommended (this is built in to ActivePython,
+  so no need to reinstall if you use it instead of standard Python)
+      http://sourceforge.net/project/showfiles.php?group_id=78018
+  The Windows IOCP reactor requires pywin32 build 205 or later.
+
+Installation
+
+  * Debian and Ubuntu
+    Packages are included in the main distribution.
+
+  * FreeBSD, Gentoo
+    Twisted is in their package repositories.
+
+  * Mac OS X
+    Packages are available from http://twistedmatrix.com/
+
+  * Win32
+    EXEs are available from http://twistedmatrix.com/
+
+  * Other
+    As with other Python packages, the standard way of installing from source
+    is:
+
+      python setup.py install

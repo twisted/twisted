@@ -13,7 +13,7 @@ from twisted.trial import unittest, util
 from twisted.internet import reactor, interfaces
 
 timeoutqueueSuppression = util.suppress(
-    message="timeoutqueue is deprecated since Twisted 2.6",
+    message="timeoutqueue is deprecated since Twisted 8.0",
     category=DeprecationWarning)
 
 
@@ -61,7 +61,7 @@ class TimeoutQueueTest(unittest.TestCase):
             return timeoutqueue.TimeoutQueue()
         self.q = self.assertWarns(
             DeprecationWarning,
-            "timeoutqueue is deprecated since Twisted 2.6",
+            "timeoutqueue is deprecated since Twisted 8.0",
             __file__,
             createQueue)
 

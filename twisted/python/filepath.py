@@ -223,7 +223,7 @@ class _PathHelper:
         raise ValueError("%r not parent of %r" % (ancestor, self))
 
 
-    # new in 2.6.0
+    # new in 8.0
     def __hash__(self):
         """
         Hash the same as another FilePath with the same path as mine.
@@ -231,7 +231,7 @@ class _PathHelper:
         return hash((self.__class__, self.path))
 
 
-    # pending deprecation in 2.6.0
+    # pending deprecation in 8.0
     def getmtime(self):
         """
         Deprecated.  Use getModificationTime instead.
