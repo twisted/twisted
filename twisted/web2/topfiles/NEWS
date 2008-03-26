@@ -1,11 +1,27 @@
-8.0.0 (2008-03-17)
+8.0.1 (2008-03-26)
 ==================
 
 Features
 --------
+ - The HTTP authentication support has been improved (#2042, #2104, #2460)
+ - PostableResource now allows greater configurability (#2836)
 
 Fixes
 -----
+ - static.FileSaver no longer incorrectly saves files with '\r\n' on Windows
+   (#1979)
+ - SCRIPT_NAME handling in CGI scripts is no longer inappropriately set (#2075)
+ - A bug in which http_ methods were called with invalid arguments when
+   checkPrecondition returned a Deferred has been fixed (#3084)
+
+Deprecations and Removals
+-------------------------
+
+ - web2.dav has been removed (#3072)
+
+Misc
+----
+ - #2102, #1906, #2640, #2612, #1042, #2304
 
 
 0.2.0 (June 9, 2006)
