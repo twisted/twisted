@@ -1,6 +1,6 @@
 Requirements
 
-  Python 2.2 or later.
+  Python 2.3 or later.
 
   Zope Interfaces 3.0.1 (http://zope.org/Products/ZopeInterface) - if
   you have ZopeX3 (at least version 3.0.0c1) installed that should
@@ -13,32 +13,20 @@ Requirements
 
 Installation
 
-  * Debian 
-    packages are available with these sources - for woody:
+  * Debian and Ubuntu
+    Packages are included in the main distribution.
 
-      deb http://twisted.sourceforge.net/debian/woody/ ./
-
-    and for sarge/sid:
-
-      deb http://twisted.sourceforge.net/debian/ ./
-
-    Sid and sarge both have Twisted as well, but not necessarily the latest
-    version.
-
-  * FreeBSD, Gentoo 
+  * FreeBSD, Gentoo
     Twisted is in their package repositories.
 
-  * Mac OS X 
-    packages and dependences can be obtained from:
+  * Mac OS X
+    Packages are available from http://twistedmatrix.com/
 
-      http://pythonmac.org/packages/
-  
-  * Win32 
-    EXEs are available from http://twisted.sf.net, as well as tarballs
-    for other platforms. 
-  
+  * Win32
+    EXEs are available from http://twistedmatrix.com/
+
   * Other
-    As with other Python packages, the standard way of installing from source 
+    As with other Python packages, the standard way of installing from source
     is:
 
       python setup.py install
