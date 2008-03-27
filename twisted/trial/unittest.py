@@ -817,14 +817,14 @@ class TestCase(_Assertions):
 
     def addCleanup(self, f, *args, **kwargs):
         """
-        Add the given function to a list of functions to be called after
-        C{tearDown}.
+        Add the given function to a list of functions to be called after the
+        test has run, but before C{tearDown}.
 
         Functions will be run in reverse order of being added. This helps
         ensure that tear down complements set up.
 
-        The function may return a Deferred. If so, C{TestCase} will wait until
-        the Deferred has fired before proceeding to the next function.
+        The function C{f} may return a Deferred. If so, C{TestCase} will wait
+        until the Deferred has fired before proceeding to the next function.
         """
         self._cleanups.append((f, args, kwargs))
 
