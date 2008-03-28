@@ -362,6 +362,21 @@ class FilePath(_PathHelper):
     def siblingExtension(self, ext):
         return self.clonePath(self.path+ext)
 
+
+    def linkTo(self, linkFilePath):
+        """
+        Creates a symlink to self to at the path in the L{FilePath}
+        C{linkFilePath}.  Only works on posix systems due to its dependence on
+        C{os.symlink}.  Propagates C{OSError}s up from C{os.symlink} if
+        C{linkFilePath.parent()} does not exist, or C{linkFilePath} already
+        exists.
+
+        @param linkFilePath: a FilePath representing the link to be created
+        @type linkFilePath: L{FilePath}
+        """
+        os.symlink(self.path, linkFilePath.path)
+
+
     def open(self, mode='r'):
         if self.alwaysCreate:
             assert 'a' not in mode, "Appending not supported when alwaysCreate == True"

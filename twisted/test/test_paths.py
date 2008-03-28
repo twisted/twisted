@@ -267,17 +267,58 @@ class FilePathTestCase(AbstractFilePathTestCase):
         newcontent = self.path.child('new').getContent()
         self.failUnlessEqual(content, newcontent)
 
-    def testSymbolicLink(self):
+
+    def test_symbolicLink(self):
+        """
+        Verify the behavior of the C{isLink} method against links and
+        non-links. Also check that the symbolic link shares the directory
+        property with its target.
+        """
         s4 = self.path.child("sub4")
         s3 = self.path.child("sub3")
         os.symlink(s3.path, s4.path)
-        self.failUnless(s4.islink())
-        self.failIf(s3.islink())
-        self.failUnless(s4.isdir())
-        self.failUnless(s3.isdir())
+        self.assertTrue(s4.islink())
+        self.assertFalse(s3.islink())
+        self.assertTrue(s4.isdir())
+        self.assertTrue(s3.isdir())
 
-    if not hasattr(os, "symlink"):
-        testSymbolicLink.skip = "Your platform does not support symbolic links."
+
+    def test_linkTo(self):
+        """
+        Verify that symlink creates a valid symlink that is both a link and a
+        file if its target is a file, or a directory if its target is a
+        directory.
+        """
+        targetLinks = [
+            (self.path.child("sub2"), self.path.child("sub2.link")),
+            (self.path.child("sub2").child("file3.ext1"),
+             self.path.child("file3.ext1.link"))
+            ]
+        for target, link in targetLinks:
+            target.linkTo(link)
+            self.assertTrue(link.islink(), "This is a link")
+            self.assertEquals(target.isdir(), link.isdir())
+            self.assertEquals(target.isfile(), link.isfile())
+
+
+    def test_linkToErrors(self):
+        """
+        Verify C{linkTo} fails in the following case:
+            - the target is in a directory that doesn't exist
+            - the target already exists
+        """
+        self.assertRaises(OSError, self.path.child("file1").linkTo,
+                          self.path.child('nosub').child('file1'))
+        self.assertRaises(OSError, self.path.child("file1").linkTo,
+                          self.path.child('sub1').child('file2'))
+
+
+    if not getattr(os, "symlink", None):
+        skipMsg = "Your platform does not support symbolic links."
+        test_symbolicLink.skip = skipMsg
+        test_linkTo.skip = skipMsg
+        test_linkToErrors.skip = skipMsg
+
 
     def testMultiExt(self):
         f3 = self.path.child('sub3').child('file3')
