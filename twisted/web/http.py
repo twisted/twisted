@@ -377,27 +377,36 @@ class StringTransport:
 
 
 class HTTPClient(basic.LineReceiver):
-    """A client for HTTP 1.0
+    """A client for HTTP 1.0 and 1.1
 
     Notes:
     You probably want to send a 'Host' header with the name of
     the site you're connecting to, in order to not break name
     based virtual hosting.
     """
+    version = '1.0'
     length = None
+    chunked = False
     firstLine = 1
     __buffer = None
 
     def sendCommand(self, command, path):
-        self.transport.write('%s %s HTTP/1.0\r\n' % (command, path))
+        self.transport.write('%s %s HTTP/%s\r\n' % (
+            command, path, self.version
+        ))
 
     def sendHeader(self, name, value):
         self.transport.write('%s: %s\r\n' % (name, value))
 
     def endHeaders(self):
+        if self.version == '1.1':
+            self.transport.write("Connection: close\r\n")
         self.transport.write('\r\n')
 
     def lineReceived(self, line):
+        if self.chunked and self.__buffer is not None:
+            self.chunkedDataReceived(line)
+            return
         if self.firstLine:
             self.firstLine = 0
             l = line.split(None, 2)
@@ -416,10 +425,32 @@ class HTTPClient(basic.LineReceiver):
             self.handleHeader(key, val)
             if key.lower() == 'content-length':
                 self.length = int(val)
+            if key.lower() == 'transfer-encoding' and \
+               val.lower() == 'chunked' and \
+               self.version == '1.1':
+                self.chunked = True
         else:
             self.__buffer = StringIO()
             self.handleEndHeaders()
-            self.setRawMode()
+            if self.chunked:
+                return
+            if self.length == 0:
+                self.handleResponseEnd()
+            else:
+                self.setRawMode()
+
+    
+    def chunkedDataReceived(self, line):
+        if not self.length:
+            self.length = int(line, 16)
+            if self.length == 0:
+                self.handleResponseEnd()
+        else:
+            line += '\r\n'
+            if len(line) > self.length:
+                line = line[:self.length]
+            self.handleResponsePart(line)
+            self.length -= len(line)
 
     def connectionLost(self, reason):
         self.handleResponseEnd()
@@ -428,7 +459,8 @@ class HTTPClient(basic.LineReceiver):
         if self.__buffer is not None:
             b = self.__buffer.getvalue()
             self.__buffer = None
-            self.handleResponse(b)
+            if b:
+                self.handleResponse(b)
 
     def handleResponsePart(self, data):
         self.__buffer.write(data)

@@ -66,9 +66,32 @@ class DummyHTTPHandler(http.Request):
         self.write(request)
         self.finish()
 
+class DummyHTTP11Handler(http.Request):
+    clientproto = "HTTP/1.1"
+    
+    def process(self):
+        self.headers = OrderedDict(self.headers)
+        self.content.seek(0, 0)
+        data = self.content.read()
+        request = "'''\n"+data+"'''\n"
+        self.setResponseCode(200)
+        self.setHeader("Request", self.uri)
+        self.setHeader("Command", self.method)
+        self.setHeader("Version", self.clientproto)
+        self.write(request)
+        self.finish()
+
 
 class LoopbackHTTPClient(http.HTTPClient):
 
+    def connectionMade(self):
+        self.sendCommand("GET", "/foo/bar")
+        self.sendHeader("Content-Length", 10)
+        self.endHeaders()
+        self.transport.write("0123456789")
+
+class LoopbackHTTP11Client(http.HTTPClient):
+    version = '1.1'
     def connectionMade(self):
         self.sendCommand("GET", "/foo/bar")
         self.sendHeader("Content-Length", 10)
@@ -151,7 +174,8 @@ GET /
 
 
 class HTTPLoopbackTestCase(unittest.TestCase):
-
+    Client = LoopbackHTTPClient
+    Handler = DummyHTTPHandler
     expectedHeaders = {'request' : '/foo/bar',
                        'command' : 'GET',
                        'version' : 'HTTP/1.0',
@@ -180,8 +204,8 @@ class HTTPLoopbackTestCase(unittest.TestCase):
 
     def testLoopback(self):
         server = http.HTTPChannel()
-        server.requestFactory = DummyHTTPHandler
-        client = LoopbackHTTPClient()
+        server.requestFactory = self.Handler
+        client = self.Client()
         client.handleResponse = self._handleResponse
         client.handleHeader = self._handleHeader
         client.handleEndHeaders = self._handleEndHeaders
@@ -191,6 +215,44 @@ class HTTPLoopbackTestCase(unittest.TestCase):
         return d
 
     def _cbTestLoopback(self, ignored):
+        if not (self.gotStatus and self.gotResponse and self.gotEndHeaders):
+            raise RuntimeError(
+                "didn't got all callbacks %s"
+                % [self.gotStatus, self.gotResponse, self.gotEndHeaders])
+        del self.gotEndHeaders
+        del self.gotResponse
+        del self.gotStatus
+        del self.numHeaders
+
+class HTTP11LoopbackTestCase(HTTPLoopbackTestCase):
+    Client = LoopbackHTTP11Client
+    Handler = DummyHTTP11Handler
+    expectedHeaders = {'request' : '/foo/bar',
+                       'command' : 'GET',
+                       'version' : 'HTTP/1.1',
+                       'transfer-encoding': 'chunked',
+                       'connection': 'close'}
+
+    def _handleStatus(self, version, status, message):
+        self.gotStatus = 1
+        self.assertEquals(version, "HTTP/1.1")
+        self.assertEquals(status, "200")
+
+    def _handleEndHeaders(self):
+        self.gotEndHeaders = 1
+        self.assertEquals(self.numHeaders, 5)
+
+    def _handleHeader(self, key, value):
+        self.numHeaders = self.numHeaders + 1
+        self.assertEquals(self.expectedHeaders[string.lower(key)], value)
+
+    def _handleResponse(self, data):
+        self.gotResponse += 1
+        self.assertEquals(self.gotResponse, 1)
+        self.assertEquals(data, "'''\n0123456789'''\n")
+
+    def _cbTestLoopback(self, ignored):
+        self.assertEquals(self.gotResponse, 1)
         if not (self.gotStatus and self.gotResponse and self.gotEndHeaders):
             raise RuntimeError(
                 "didn't got all callbacks %s"
@@ -234,6 +296,10 @@ class PersistenceTestCase(unittest.TestCase):
             for header in resultHeaders.keys():
                 self.assertEquals(req.headers.get(header, None), resultHeaders[header])
 
+class ResponseStorer(http.HTTPClient):
+    version = '1.1'
+    def handleResponse(self, resp):
+        self.response = resp
 
 class ChunkingTestCase(unittest.TestCase):
 
@@ -257,8 +323,23 @@ class ChunkingTestCase(unittest.TestCase):
             except ValueError:
                 pass
         self.assertEquals(result, self.strings)
-
-
+        
+    def testClientChunks(self):
+        request = [
+            'HTTP/1.1 200 OK',
+            'Transfer-Encoding: chunked',
+            '',
+            'a',
+            '0123456789',
+            'c',
+            'line1',
+            'line2',
+            '0'
+        ]
+        client = ResponseStorer()
+        for line in request:
+            client.lineReceived(line)
+        self.assertEquals(client.response, '0123456789line1\r\nline2')
 
 class ParsingTestCase(unittest.TestCase):
 
