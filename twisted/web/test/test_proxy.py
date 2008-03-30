@@ -205,7 +205,7 @@ class ProxyClientTestCase(TestCase):
         request, with modifications of the headers, and then forward the result
         to the parent request.
         """
-        return self._testDataForward("200 OK\r\nFoo: bar\r\n\r\nSome data\r\n")
+        return self._testDataForward("200 OK\r\nFoo: Bar\r\n\r\nSome data\r\n")
 
 
     def test_postData(self):
@@ -214,7 +214,7 @@ class ProxyClientTestCase(TestCase):
         forward the body of the request.
         """
         return self._testDataForward(
-            "200 OK\r\nFoo: bar\r\n\r\nSome data\r\n", "POST", "Some content")
+            "200 OK\r\nFoo: Bar\r\n\r\nSome data\r\n", "POST", "Some content")
 
 
     def test_statusWithMessage(self):

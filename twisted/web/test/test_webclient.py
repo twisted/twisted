@@ -395,6 +395,8 @@ class FakeTransport:
         self.data = []
     def write(self, stuff):
         self.data.append(stuff)
+    def loseConnection(self):
+        pass
 
 class CookieTestCase(unittest.TestCase):
     def _listen(self, site):

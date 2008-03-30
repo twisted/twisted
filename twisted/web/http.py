@@ -379,6 +379,10 @@ PARSE_PREFIX = 1
 PREPARE_NEXT = 2
 FINISH_CHUNK = 3
 
+FIRST_LINE = 1
+HEADERS = 2
+BODY = 3
+
 class HTTPClient(basic.LineReceiver):
     """A client for HTTP 1.0 and 1.1
 
@@ -391,7 +395,7 @@ class HTTPClient(basic.LineReceiver):
     length = None
     chunked = False
     willChunk = False
-    firstLine = 1
+    state = FIRST_LINE
     __buffer = None
 
     def sendCommand(self, command, path):
@@ -408,63 +412,62 @@ class HTTPClient(basic.LineReceiver):
         self.transport.write('\r\n')
 
     def lineReceived(self, line):
-        if self.firstLine:
-            return self._firstLine(line)
-        
-        if self.chunked:
-            #import pdb; pdb.set_trace()
-            if self.chunked == PARSE_PREFIX:
-                # First we get a line like "chunk-size [';' chunk-extension]"
-                # (where chunk extension is just random crap as far as we're concerned)
-                # RFC says to ignore any extensions you don't recognize -- that's all of them.
-                chunksize = line.split(';', 1)[0]
-                try:
-                    self.length = int(chunksize, 16)
-                except ValueError:
-                    self.transport.loseConnection()
-                if self.length < 0:
-                    self.transport.loseConnection()
-                if self.length == 0:
-                    # We're done, parse the trailers line
-                    self.chunked = FINISH_CHUNK
-                else:
-                    # Read self.length bytes of raw data
-                    self.setRawMode()
-            elif self.chunked == PREPARE_NEXT:
-                if line != "":
-                    self.transport.loseConnection()
-                self.chunked = PARSE_PREFIX
-            elif self.chunked == FINISH_CHUNK:
-                if line == '':
-                    self.handleResponseEnd()
-            
+        if self.state == FIRST_LINE:
+            self._firstLine(line)
+            self.state = HEADERS
             return
-
-        if line:
-            key, val = line.split(':', 1)
-            val = val.lstrip()
-            self.handleHeader(key, val)
-            if key.lower() == 'content-length':
-                self.length = int(val)
-            elif key.lower() == 'transfer-encoding' and \
-                  val.lower() == 'chunked' and \
-                  self.version == '1.1':
-                   self.willChunk = True
-        else:
-            self.__buffer = StringIO()
-            self.handleEndHeaders()
-            if self.willChunk:
-                self.chunked = PARSE_PREFIX
-                self.willChunk = False
-            if self.chunked:
-                return
-            if self.length == 0:
-                self.handleResponseEnd()
+        elif self.state == HEADERS:
+            if line:
+                key, val = line.split(':', 1)
+                val = val.lstrip()
+                self.handleHeader(key, val)
+                if key.lower() == 'content-length':
+                    self.length = int(val)
+                elif key.lower() == 'transfer-encoding' and \
+                     val.lower() == 'chunked' and \
+                     self.version == '1.1':
+                       self.willChunk = True
             else:
+                self.state = BODY
+                self.__buffer = StringIO()
+                self.handleEndHeaders()
+                if self.willChunk:
+                    self.chunked = PARSE_PREFIX
+                    self.willChunk = False
+                if self.chunked:
+                    return
+                if self.length == 0:
+                    self.handleResponseEnd()
                 self.setRawMode()
-    
+            return
+        elif self.state == BODY:
+            if self.chunked:
+                if self.chunked == PARSE_PREFIX:
+                    # First we get a line like "chunk-size [';' chunk-extension]"
+                    # (where chunk extension is just random crap as far as we're concerned)
+                    # RFC says to ignore any extensions you don't recognize -- that's all of them.
+                    chunksize = line.split(';', 1)[0]
+                    try:
+                        self.length = int(chunksize, 16)
+                    except ValueError:
+                        self.transport.loseConnection()
+                    if self.length < 0:
+                        self.transport.loseConnection()
+                    if self.length == 0:
+                        # We're done, parse the trailers line
+                        self.chunked = FINISH_CHUNK
+                    else:
+                        # Read self.length bytes of raw data
+                        self.setRawMode()
+                elif self.chunked == PREPARE_NEXT:
+                    if line != "":
+                        self.transport.loseConnection()
+                    self.chunked = PARSE_PREFIX
+                elif self.chunked == FINISH_CHUNK:
+                    if line == '':
+                        self.handleResponseEnd()
+
     def _firstLine(self, line):
-        self.firstLine = 0
         l = line.split(None, 2)
         version = l[0]
         status = l[1]
@@ -499,6 +502,9 @@ class HTTPClient(basic.LineReceiver):
     def rawDataReceived(self, data):
         """Handle incoming content."""
         datalen = len(data)
+        if self.length is None:
+            self.handleResponsePart(data)
+            return
         if datalen < self.length:
             self.handleResponsePart(data)
             self.length = self.length - datalen
@@ -513,18 +519,6 @@ class HTTPClient(basic.LineReceiver):
                 # so we still have more to read.
                 self.chunked = 2 # Read next chunksize
             self.setLineMode(extraneous)
-
-    # def rawDataReceived(self, data):
-    #     if self.length is not None:
-    #         data, rest = data[:self.length], data[self.length:]
-    #         self.length -= len(data)
-    #     else:
-    #         rest = ''
-    #     self.handleResponsePart(data)
-    #     if self.length == 0:
-    #         self.handleResponseEnd()
-    #         self.setLineMode(rest)
-
 
 # response codes that must have empty bodies
 NO_BODY_CODES = (204, 304)
