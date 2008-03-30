@@ -238,21 +238,26 @@ class HTTP11LoopbackTestCase(HTTPLoopbackTestCase):
         self.assertEquals(status, "200")
 
     def _handleEndHeaders(self):
+        """Test that every single header is correctly received"""
         self.gotEndHeaders = 1
         self.assertEquals(self.numHeaders, 5)
         self.assertEquals(self.expectedHeaders, {})
 
     def _handleHeader(self, key, value):
+        """Test that all the headers are correctly parsed"""
         self.numHeaders = self.numHeaders + 1
         self.assertEquals(self.expectedHeaders[string.lower(key)], value)
         self.expectedHeaders.pop(key.lower())
 
     def _handleResponse(self, data):
+        """Test that handleResponse is called only once"""
         self.gotResponse += 1
         self.assertEquals(self.gotResponse, 1)
         self.assertEquals(data, "'''0123456789'''")
 
     def _cbTestLoopback(self, ignored):
+        """Test that every method was correctly called and has set the
+        expected values."""
         self.assertEquals(self.gotResponse, 1)
         if not (self.gotStatus and self.gotResponse and self.gotEndHeaders):
             raise RuntimeError(
@@ -326,6 +331,9 @@ class ChunkingTestCase(unittest.TestCase):
         self.assertEquals(result, self.strings)
         
     def testClientChunks(self):
+        """ Test that a chunked response from the server is correctly
+        parsed by the client.
+        """
         request = [
             'HTTP/1.1 200 OK',
             'Transfer-Encoding: chunked',
