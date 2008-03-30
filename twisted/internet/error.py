@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -171,7 +171,15 @@ def getConnectError(e):
     return klass(number, string)
 
 
-class ConnectionLost(Exception):
+
+class ConnectionClosed(Exception):
+    """
+    Connection was closed, whether cleanly or non-cleanly.
+    """
+
+
+
+class ConnectionLost(ConnectionClosed):
     """Connection to the other side was lost in a non-clean fashion"""
 
     def __str__(self):
@@ -182,7 +190,8 @@ class ConnectionLost(Exception):
         return s
 
 
-class ConnectionDone(Exception):
+
+class ConnectionDone(ConnectionClosed):
     """Connection was closed cleanly"""
 
     def __str__(self):

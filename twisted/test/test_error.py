@@ -1,5 +1,4 @@
-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -153,5 +152,19 @@ class TestStringification(unittest.TestCase):
                 str(exception(*args, **kwargs)),
                 output)
 
-if __name__ == '__main__':
-    unittest.main()
+
+    def test_connectionLostSubclassOfConnectionClosed(self):
+        """
+        L{error.ConnectionClosed} is a superclass of L{error.ConnectionLost}.
+        """
+        self.assertTrue(issubclass(error.ConnectionLost,
+                                   error.ConnectionClosed))
+
+
+    def test_connectionDoneSubclassOfConnectionClosed(self):
+        """
+        L{error.ConnectionClosed} is a superclass of L{error.ConnectionDone}.
+        """
+        self.assertTrue(issubclass(error.ConnectionDone,
+                                   error.ConnectionClosed))
+
