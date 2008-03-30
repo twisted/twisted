@@ -505,6 +505,7 @@ class HTTPClient(basic.LineReceiver):
         else:
             self.handleResponsePart(data[:self.length])
             extraneous = data[self.length:]
+            self.length = 0
             if not self.chunked:
                 self.handleResponseEnd()
             else:
