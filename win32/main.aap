@@ -52,15 +52,15 @@ HERE=`os.getcwd()`
 # get the version of twisted from the tree being built, not sys.path
 Version=`getBuildingTwistedVersion()`
 
-ZIVersion=3.1.0c1
+ZIVersion=3.3.0
 
 # PyVersion is variant rather than a regular string variable so the script
 # will accept only one of these two values
 :variant PyVersion
-    py2.3
-        pyversion=2.3
-        pyversion10=23
-        pyhome=`_no.pathdb["python23"]`
+    py2.5
+        pyversion=2.5
+        pyversion10=25
+        pyhome=`_no.pathdb["python25"]`
     py2.4
         pyversion=2.4
         pyversion10=24
@@ -83,24 +83,24 @@ all: dist/$(setupbase)-$(Version).win32-py$(pyversion).exe
 
 # only run setup.py when needed
 build/scripts-$(pyversion) build/lib.win32-$(pyversion):  \
-                                                ZopeInterface-$ZIVersion
+                                                zope.interface-$ZIVersion
     :mkdir {f} build/scripts-$(pyversion)
     :copy win32/twisted_postinstall.py  build/scripts-$(pyversion)/.
-    :sys $(pyexe) setup.py all  build --compiler=mingw32 \
-                                install --root=../win32dist --no-compile
+    :sys $(pyexe) setup.py build --compiler=mingw32 \
+                                install --root=win32dist --no-compile
     @1
-    :pushdir ZopeInterface-$(ZIVersion)
+    :pushdir zope.interface-$(ZIVersion)
     @try:
         :sys $(pyexe) setup.py build --compiler=mingw32 \
-                               install --root=../win32dist --no-compile
+                               install --root=win32dist --no-compile
     @finally:
         :popdir
 
-ZopeInterface-$(ZIVersion).tgz:
-    err = "Please download the ZopeInterface $ZIVersion tarball"
+zope.interface-$(ZIVersion).tar.gz:
+    err = "Please download the zope.interface $ZIVersion tarball"
     @assert os.path.exists(target), err
-ZopeInterface-$ZIVersion: ZopeInterface-$(ZIVersion).tgz
-    :sys tar xvfz ZopeInterface-$(ZIVersion).tgz
+zope.interface-$ZIVersion: zope.interface-$(ZIVersion).tar.gz
+    :sys tar xvfz zope.interface-$(ZIVersion).tar.gz
 
 # build with inno
 ExeDeps=py$(pyversion)-$(DoDocs).iss

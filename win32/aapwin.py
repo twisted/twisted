@@ -58,6 +58,6 @@ innohome = lookupInnoHome()
 
 pathdb = dict(innohome=innohome,
               iscc=os.path.join(innohome, "ISCC.exe"),
-              python23=getPythonHomeForVersion('2.3'),
+              python25=getPythonHomeForVersion('2.5'),
               python24=getPythonHomeForVersion('2.4'),
               )
