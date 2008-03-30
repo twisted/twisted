@@ -70,10 +70,9 @@ class DummyHTTP11Handler(http.Request):
     clientproto = "HTTP/1.1"
     
     def process(self):
-        self.headers = OrderedDict(self.headers)
         self.content.seek(0, 0)
         data = self.content.read()
-        request = "'''\n"+data+"'''\n"
+        request = "'''"+data+"'''"
         self.setResponseCode(200)
         self.setHeader("Request", self.uri)
         self.setHeader("Command", self.method)
@@ -241,15 +240,17 @@ class HTTP11LoopbackTestCase(HTTPLoopbackTestCase):
     def _handleEndHeaders(self):
         self.gotEndHeaders = 1
         self.assertEquals(self.numHeaders, 5)
+        self.assertEquals(self.expectedHeaders, {})
 
     def _handleHeader(self, key, value):
         self.numHeaders = self.numHeaders + 1
         self.assertEquals(self.expectedHeaders[string.lower(key)], value)
+        self.expectedHeaders.pop(key.lower())
 
     def _handleResponse(self, data):
         self.gotResponse += 1
         self.assertEquals(self.gotResponse, 1)
-        self.assertEquals(data, "'''\n0123456789'''\n")
+        self.assertEquals(data, "'''0123456789'''")
 
     def _cbTestLoopback(self, ignored):
         self.assertEquals(self.gotResponse, 1)
@@ -331,14 +332,17 @@ class ChunkingTestCase(unittest.TestCase):
             '',
             'a',
             '0123456789',
-            'c',
+            'c;whatever_chunked_extension',
             'line1',
             'line2',
-            '0'
+            '0',
+            '',
+            ''
         ]
         client = ResponseStorer()
-        for line in request:
-            client.lineReceived(line)
+        b = StringIOWithoutClosing()
+        client.makeConnection(protocol.FileWrapper(b))
+        client.dataReceived('\r\n'.join(request))
         self.assertEquals(client.response, '0123456789line1\r\nline2')
 
 class ParsingTestCase(unittest.TestCase):
