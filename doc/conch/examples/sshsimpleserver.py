@@ -89,10 +89,10 @@ components.registerAdapter(ExampleSession, ExampleAvatar, session.ISession)
 
 class ExampleFactory(factory.SSHFactory):
     publicKeys = {
-        'ssh-rsa': keys.getPublicKeyString(data=publicKey)
+        'ssh-rsa': keys.Key.fromString(data=publicKey)
     }
     privateKeys = {
-        'ssh-rsa': keys.getPrivateKeyObject(data=privateKey)
+        'ssh-rsa': keys.Key.fromString(data=privateKey)
     }
     services = {
         'ssh-userauth': userauth.SSHUserAuthServer,
