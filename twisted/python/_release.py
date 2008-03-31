@@ -336,6 +336,25 @@ class ManBuilder(LoreBuilderMixin):
 class BookBuilder(LoreBuilderMixin):
     """
     Generate the LaTeX and PDF documentation.
+
+    The book is built by assembling a number of LaTeX documents.  Only the
+    overall document which describes how to assemble the documents is stored
+    in LaTeX in the source.  The rest of the documentation is generated from
+    Lore input files.  These are primarily XHTML files (of the particular
+    Lore subset), but man pages are stored in GROFF format.  BookBuilder
+    expects all of its input to be Lore XHTML format, so L{ManBuilder}
+    should be invoked first if the man pages are to be included in the
+    result (this is determined by the book LaTeX definition file).
+    Therefore, a sample usage of BookBuilder may look something like this:
+
+        man = ManBuilder()
+        man.build(FilePath("doc/core/man"))
+        book = BookBuilder()
+        book.build(
+            FilePath('doc/core/howto'),
+            [FilePath('doc/core/howto'), FilePath('doc/core/howto/tutorial'),
+             FilePath('doc/core/man'), FilePath('doc/core/specifications')],
+            FilePath('doc/core/howto/book.tex'), FilePath('/tmp/book.pdf'))
     """
     def run(self, command):
         """
@@ -356,7 +375,7 @@ class BookBuilder(LoreBuilderMixin):
 
     def buildTeX(self, howtoDir):
         """
-        Build LaTex files for lore input files in the given directory.
+        Build LaTeX files for lore input files in the given directory.
 
         Input files ending in .xhtml will be considered. Output will written as
         .tex files.
