@@ -375,13 +375,13 @@ class StringTransport:
     def __getattr__(self, attr):
         return getattr(self.__dict__['s'], attr)
 
-PARSE_PREFIX = 1
-PREPARE_NEXT = 2
-FINISH_CHUNK = 3
+PARSE_PREFIX = 1 # HTTP client is currently waiting for a chunked prefix
+PREPARE_NEXT = 2 # Just finished processing a chunk, prepare for the next one
+FINISH_CHUNK = 3 # Just received 0 length chunk, this response is finished
 
-FIRST_LINE = 1
-HEADERS = 2
-BODY = 3
+FIRST_LINE = 1 # HTTP Parser is waiting for the first line "GET /path HTTP/1.1"
+HEADERS = 2 # After the first, every line is an header until an empty one.
+BODY = 3 # Everything that comes from now on is part of the body.
 
 class HTTPClient(basic.LineReceiver):
     """A client for HTTP 1.0 and 1.1
@@ -390,14 +390,36 @@ class HTTPClient(basic.LineReceiver):
     You probably want to send a 'Host' header with the name of
     the site you're connecting to, in order to not break name
     based virtual hosting.
+    
+    @ivar version: a string that represents the http version that the
+    client should use.
+    @type version: L{str} with values '1.0' (default) or '1.1'
+
+    @ivar chunked: indicates the current chunked state of the of the
+    client. Can be L{False} when the connection is not chunked, or
+    be one of L{PARSE_PREFIX}, L{PREPARE_NEXT}, L{FINISH_CHUNK}.
+
+    @ivar state: represents the current state of the HTTP Parser for
+    the client. Can be L{FIRST_LINE}, L{HEADERS}, L{BODY}.
+    
+    @ivar length: when not in chunked mode it represents the remaining
+    length of the response body. When in chunked mode it represents the
+    remaining length of the current chunk. Otherwise if neither
+    Content-Length nor Transfer-Encoding: chunked are provided it's
+    L{None}.
+    
+    @ivar persistent: Currently does nothing, it's an anticipation
+    for future support of persistent connections.
     """
     version = '1.0'
     length = None
     chunked = False
-    willChunk = False
     state = FIRST_LINE
+    persistent = False
+    _willChunk = False
+    _headers = None # sent headers
     __buffer = None
-
+    
     def sendCommand(self, command, path):
         self.transport.write('%s %s HTTP/%s\r\n' % (
             command, path, self.version
@@ -405,10 +427,14 @@ class HTTPClient(basic.LineReceiver):
 
     def sendHeader(self, name, value):
         self.transport.write('%s: %s\r\n' % (name, value))
+        if self._headers is None:
+            self._headers = {}
+        self._headers[name.lower()] = value
 
     def endHeaders(self):
-        if self.version == '1.1':
-            self.transport.write("Connection: close\r\n")
+        if not self.persistent and self.version == '1.1':
+            if not 'connection' in self._headers:
+                self.sendHeader("Connection", "close")
         self.transport.write('\r\n')
 
     def lineReceived(self, line):
@@ -426,14 +452,14 @@ class HTTPClient(basic.LineReceiver):
                 elif key.lower() == 'transfer-encoding' and \
                      val.lower() == 'chunked' and \
                      self.version == '1.1':
-                       self.willChunk = True
+                       self._willChunk = True
             else:
                 self.state = BODY
                 self.__buffer = StringIO()
                 self.handleEndHeaders()
-                if self.willChunk:
+                if self._willChunk:
                     self.chunked = PARSE_PREFIX
-                    self.willChunk = False
+                    self._willChunk = False
                 if self.chunked:
                     return
                 if self.length == 0:
@@ -480,10 +506,11 @@ class HTTPClient(basic.LineReceiver):
 
     def connectionLost(self, reason):
         if not self.chunked:
-            # see chunkedDataReceived. when chunked connectionLost is
-            # not a way to assume that the request was finished
+            # http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html
+            # The chunked encoding is ended by any chunk whose size is
+            # zero, followed by the trailer, which is terminated by an
+            # empty line.
             self.handleResponseEnd()
-        
 
     def handleResponseEnd(self):
         if self.__buffer is not None:
