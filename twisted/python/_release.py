@@ -229,7 +229,7 @@ class DocBuilder(LoreBuilderMixin):
     Generate HTML documentation for projects.
     """
 
-    def build(self, version, resourceDir, docDir, template, deleteInput=False):
+    def build(self, version, resourceDir, docDir, template, apiBaseURL=None, deleteInput=False):
         """
         Build the documentation in C{docDir} with Lore.
 
@@ -249,6 +249,12 @@ class DocBuilder(LoreBuilderMixin):
         @param template: The template used to generate the documentation.
         @type template: L{twisted.python.filepath.FilePath}
 
+        @type apiBaseURL: C{str} or C{NoneType}
+        @param apiBaseURL: A format string which will be interpolated with the
+            fully-qualified Python name for each API link.  For example, to
+            generate the Twisted 8.0.0 documentation, pass
+            C{"http://twistedmatrix.com/documents/8.0.0/api/%s.html"}.
+
         @param deleteInput: If True, the input documents will be deleted after
             their output is generated.
         @type deleteInput: C{bool}
@@ -261,10 +267,14 @@ class DocBuilder(LoreBuilderMixin):
         filenames = [x.path for x in inputFiles]
         if not filenames:
             raise NoDocumentsFound("No input documents found in %s" % (docDir,))
-        arguments = ["--config", "template=%s" % (template.path,),
-                     "--config", "ext=.html",
-                     "--config", "version=%s" % (version,),
-                     "--linkrel", linkrel] + filenames
+        if apiBaseURL is not None:
+            arguments = ["--config", "baseurl=" + apiBaseURL]
+        else:
+            arguments = []
+        arguments.extend(["--config", "template=%s" % (template.path,),
+                          "--config", "ext=.html",
+                          "--config", "version=%s" % (version,),
+                          "--linkrel", linkrel] + filenames)
         self.lore(arguments)
         if deleteInput:
             for inputFile in inputFiles:
@@ -485,18 +495,26 @@ class DistributionBuilder(object):
     from twisted.python.dist import twisted_subprojects as subprojects
     blacklist = ["vfs", "web2"]
 
-    def __init__(self, rootDirectory, outputDirectory):
+    def __init__(self, rootDirectory, outputDirectory, apiBaseURL=None):
         """
         Create a distribution builder.
 
         @param rootDirectory: root of a Twisted export which will populate
             subsequent tarballs.
         @type rootDirectory: L{FilePath}.
+
         @param outputDirectory: The directory in which to create the tarballs.
         @type outputDirectory: L{FilePath}
+
+        @type apiBaseURL: C{str} or C{NoneType}
+        @param apiBaseURL: A format string which will be interpolated with the
+            fully-qualified Python name for each API link.  For example, to
+            generate the Twisted 8.0.0 documentation, pass
+            C{"http://twistedmatrix.com/documents/8.0.0/api/%s.html"}.
         """
         self.rootDirectory = rootDirectory
         self.outputDirectory = outputDirectory
+        self.apiBaseURL = apiBaseURL
         self.manBuilder = ManBuilder()
         self.docBuilder = DocBuilder()
 
@@ -522,7 +540,7 @@ class DistributionBuilder(object):
         if path.isdir():
             try:
                 self.docBuilder.build(version, howtoPath, path,
-                    templatePath, True)
+                    templatePath, self.apiBaseURL, True)
             except NoDocumentsFound:
                 pass
 

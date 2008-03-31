@@ -352,10 +352,11 @@ class BuilderTestsMixin(object):
         """
         document = ('<?xml version="1.0"?><html><head>'
                     '<title>Yo:Hi! Title: %(count)s</title></head>'
-                    '<body><div class="content">Hi! %(count)s</div>'
-                    '<a href="%(prefix)sindex.html">''Index</a>'
-                    '<span class="version">Version: %(version)s</span>'
-                    '</body></html>')
+                    '<body><div class="content">Hi! %(count)s'
+                    '<div class="API"><a href="foobar" title="foobar">'
+                    'foobar</a></div></div><a href="%(prefix)sindex.html">'
+                    'Index</a><span class="version">Version: %(version)s'
+                    '</span></body></html>')
         return document % {"count": counter, "prefix": prefix,
                            "version": version}
 
@@ -368,8 +369,13 @@ class BuilderTestsMixin(object):
         @type counter: C{int}
         """
         template = (
-            '<html><head><title>Hi! Title: %(count)s</title></head>'
-            '<body>Hi! %(count)s</body></html>')
+            '<html>'
+            '<head><title>Hi! Title: %(count)s</title></head>'
+            '<body>'
+            'Hi! %(count)s'
+            '<div class="API">foobar</div>'
+            '</body>'
+            '</html>')
         return template % {"count": counter}
 
 
@@ -539,6 +545,23 @@ class DocBuilderTestCase(TestCase, BuilderTestsMixin):
         outFile = docDir.child('child.html')
         self.assertIn('<a href="../resources/index.html">Index</a>',
                       outFile.getContent())
+
+
+    def test_apiLinking(self):
+        """
+        The L{DocBuilder} generates correct links from documents to API
+        documentation.
+        """
+        version = "1.2.3"
+        input, output = self.getArbitraryLoreInputAndOutput(version)
+        self.howtoDir.child("one.xhtml").setContent(input)
+
+        self.builder.build(version, self.howtoDir, self.howtoDir,
+                           self.templateFile, "scheme:apilinks/%s.ext")
+        out = self.howtoDir.child('one.html')
+        self.assertIn(
+            '<a href="scheme:apilinks/foobar.ext" title="foobar">foobar</a>',
+            out.getContent())
 
 
     def test_deleteInput(self):
@@ -712,7 +735,7 @@ class BookBuilderTests(TestCase, BuilderTestsMixin):
         return (
             r'\section{Hi! Title: %(count)s\label{%(path)s}}'
             '\n'
-            r'Hi! %(count)s') % {'count': counter, 'path': path}
+            r'Hi! %(count)sfoobar') % {'count': counter, 'path': path}
 
 
     def test_runSuccess(self):
