@@ -13,6 +13,13 @@ import tarfile
 
 from datetime import date
 
+try:
+    import pydoctor.driver
+    # it might not be installed, or it might use syntax not available in
+    # this version of Python.
+except (ImportError, SyntaxError):
+    pydoctor = None
+
 from twisted.trial.unittest import TestCase
 
 from twisted.python.compat import set
@@ -28,7 +35,7 @@ from twisted.python._release import updateTwistedVersionInformation, Project
 from twisted.python._release import VERSION_OFFSET, DocBuilder, ManBuilder
 from twisted.python._release import NoDocumentsFound, filePathDelta
 from twisted.python._release import CommandFailed, BookBuilder
-from twisted.python._release import DistributionBuilder
+from twisted.python._release import DistributionBuilder, APIBuilder
 
 try:
     from twisted.lore.scripts import lore
@@ -628,6 +635,74 @@ class DocBuilderTestCase(TestCase, BuilderTestsMixin):
         linkrel = self.builder.getLinkrel(FilePath("/foo/howto"),
                                           FilePath("/foo/examples/quotes"))
         self.assertEquals(linkrel, "../../howto/")
+
+
+
+class APIBuilderTestCase(TestCase):
+    """
+    Tests for L{APIBuilder}.
+    """
+    if pydoctor is None or getattr(pydoctor, "version_info", (0,)) < (0, 1):
+        skip = "APIBuilder requires Pydoctor 0.1 or newer"
+
+    def test_build(self):
+        """
+        L{APIBuilder.build} writes an index file which includes the name of the
+        project specified.
+        """
+        stdout = StringIO()
+        self.patch(sys, 'stdout', stdout)
+
+        projectName = "Foobar"
+        packageName = "quux"
+        projectURL = "scheme:project"
+        sourceURL = "scheme:source"
+        docstring = "text in docstring"
+        badDocstring = "should not appear in output"
+
+        inputPath = FilePath(self.mktemp()).child(packageName)
+        inputPath.makedirs()
+        inputPath.child("__init__.py").setContent(
+            "def foo():\n"
+            "    '%s'\n"
+            "def _bar():\n"
+            "    '%s'" % (docstring, badDocstring))
+
+        outputPath = FilePath(self.mktemp())
+        outputPath.makedirs()
+
+        builder = APIBuilder()
+        builder.build(projectName, projectURL, sourceURL, inputPath, outputPath)
+
+        indexPath = outputPath.child("index.html")
+        self.assertTrue(
+            indexPath.exists(),
+            "API index %r did not exist." % (outputPath.path,))
+        self.assertIn(
+            '<a href="%s">%s</a>' % (projectURL, projectName),
+            indexPath.getContent(),
+            "Project name/location not in file contents.")
+
+        quuxPath = outputPath.child("quux.html")
+        self.assertTrue(
+            quuxPath.exists(),
+            "Package documentation file %r did not exist." % (quuxPath.path,))
+        self.assertIn(
+            docstring, quuxPath.getContent(),
+            "Docstring not in package documentation file.")
+        self.assertIn(
+            '<a href="%s/%s">View Source</a>' % (sourceURL, packageName),
+            quuxPath.getContent())
+        self.assertIn(
+            '<a href="%s/%s">View Source</a>' % (sourceURL, packageName),
+            quuxPath.getContent())
+        self.assertIn(
+            '<a href="%s/%s/__init__.py#L1" class="functionSourceLink">' % (
+                sourceURL, packageName),
+            quuxPath.getContent())
+        self.assertNotIn(badDocstring, quuxPath.getContent())
+
+        self.assertEqual(stdout.getvalue(), '')
 
 
 

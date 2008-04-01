@@ -333,6 +333,51 @@ class ManBuilder(LoreBuilderMixin):
 
 
 
+class APIBuilder(object):
+    """
+    Generate API documentation from source files using
+    U{pydoctor<http://codespeak.net/~mwh/pydoctor/>}.  This requires
+    pydoctor to be installed and usable (which means you won't be able to
+    use it with Python 2.3).
+    """
+    def build(self, projectName, projectURL, sourceURL, packagePath, outputPath):
+        """
+        Call pydoctor's entry point with options which will generate HTML
+        documentation for the specified package's API.
+
+        @type projectName: C{str}
+        @param projectName: The name of the package for which to generate
+            documentation.
+
+        @type projectURL: C{str}
+        @param projectURL: The location (probably an HTTP URL) of the project
+            on the web.
+
+        @type sourceURL: C{str}
+        @param sourceURL: The location (probably an HTTP URL) of the root of
+            the source browser for the project.
+
+        @type packagePath: L{FilePath}
+        @param packagePath: The path to the top-level of the package named by
+            C{projectName}.
+
+        @type outputPath: L{FilePath}
+        @param outputPath: An existing directory to which the generated API
+            documentation will be written.
+        """
+        from pydoctor.driver import main
+        main(
+            ["--project-name", projectName,
+             "--project-url", projectURL,
+             "--system-class", "pydoctor.twistedmodel.TwistedSystem",
+             "--project-base-dir", packagePath.parent().path,
+             "--html-viewsource-base", sourceURL,
+             "--add-package", packagePath.path,
+             "--html-output", outputPath.path,
+             "--quiet", "--make-html"])
+
+
+
 class BookBuilder(LoreBuilderMixin):
     """
     Generate the LaTeX and PDF documentation.
