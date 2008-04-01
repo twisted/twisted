@@ -48,23 +48,24 @@ def succeed(result):
     d.callback(result)
     return d
 
-class _nothing: pass
 
-def fail(result=_nothing):
+def fail(result=None):
     """
     Return a Deferred that has already had '.errback(result)' called.
 
     See L{succeed}'s docstring for rationale.
 
-    @param result: The same argument that L{Deferred.errback<twisted.internet.defer.Deferred.errback>} takes.
+    @param result: The same argument that L{Deferred.errback} takes.
+
+    @raise NoCurrentExceptionError: If C{result} is C{None} but there is no
+        current exception state.
 
     @rtype: L{Deferred}
     """
-    if result is _nothing:
-        result = failure.Failure()
     d = Deferred()
     d.errback(result)
     return d
+
 
 def execute(callable, *args, **kw):
     """Create a deferred from a callable and arguments.
@@ -243,7 +244,8 @@ class Deferred:
 
 
     def errback(self, fail=None):
-        """Run all error callbacks that have been added to this Deferred.
+        """
+        Run all error callbacks that have been added to this Deferred.
 
         Each callback will have its result passed as the first
         argument to the next; this way, the callbacks act as a
@@ -257,6 +259,9 @@ class Deferred:
 
         Passing a string as `fail' is deprecated, and will be punished with
         a warning message.
+
+        @raise NoCurrentExceptionError: If C{fail} is C{None} but there is
+            no current exception state.
         """
         if not isinstance(fail, failure.Failure):
             fail = failure.Failure(fail)
