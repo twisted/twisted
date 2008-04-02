@@ -26,6 +26,7 @@ from twisted.trial import unittest
 from twisted.internet import defer
 from twisted.protocols import loopback
 from twisted.python import randbytes
+from twisted.python.reflect import qual
 from twisted.conch.ssh import service
 from twisted.test import proto_helpers
 
@@ -1855,38 +1856,75 @@ class TransportLoopbackTestCase(unittest.TestCase):
 
 class OldFactoryTestCase(unittest.TestCase):
     """
-    The old SSHFactory.getPublicKeys() returned mappings of key names to
-    strings of key blobs and mappings of key names to PyCrypto key objects
-    from SSHFactory.getPrivateKeys().  This is no longer supported by the
-    SSHServerTransport, so we warn the user if they create an old factory.
+    The old C{SSHFactory.getPublicKeys}() returned mappings of key names to
+    strings of key blobs and mappings of key names to PyCrypto key objects from
+    C{SSHFactory.getPrivateKeys}() (they could also be specified with the
+    C{publicKeys} and C{privateKeys} attributes).  This is no longer supported
+    by the C{SSHServerTransport}, so we warn the user if they create an old
+    factory.
     """
 
 
     def test_getPublicKeysWarning(self):
         """
-        If the return value of getPublicKeys() isn't a mapping from
-        key names to Key objects, then warn the user and convert the
-        mapping.
+        If the return value of C{getPublicKeys}() isn't a mapping from key
+        names to C{Key} objects, then warn the user and convert the mapping.
         """
-        factory = MockOldFactoryPublicKeys()
+        sshFactory = MockOldFactoryPublicKeys()
         self.assertWarns(DeprecationWarning,
                 "Returning a mapping from strings to strings from"
-                " getPublicKeys() is deprecated.  Return a mapping from"
-                " strings to Key objects instead.",
-                unittest.__file__, factory.startFactory)
-        self.assertEquals(factory.publicKeys, MockFactory().getPublicKeys())
+                " getPublicKeys()/publicKeys (in %s) is deprecated.  Return "
+                "a mapping from strings to Key objects instead." %
+                (qual(MockOldFactoryPublicKeys),),
+                factory.__file__, sshFactory.startFactory)
+        self.assertEquals(sshFactory.publicKeys, MockFactory().getPublicKeys())
 
 
     def test_getPrivateKeysWarning(self):
         """
-        If the return value of getPublicKeys() isn't a mapping from
-        key names to Key objects, then warn the user and convert the
-        mapping.
+        If the return value of C{getPrivateKeys}() isn't a mapping from key
+        names to C{Key} objects, then warn the user and convert the mapping.
         """
-        factory = MockOldFactoryPrivateKeys()
+        sshFactory = MockOldFactoryPrivateKeys()
         self.assertWarns(DeprecationWarning,
                 "Returning a mapping from strings to PyCrypto key objects from"
-                " getPrivateKeys() is deprecated.  Return a mapping from"
-                " strings to Key objects instead.",
-                unittest.__file__, factory.startFactory)
-        self.assertEquals(factory.privateKeys, MockFactory().getPrivateKeys())
+                " getPrivateKeys()/privateKeys (in %s) is deprecated.  Return"
+                " a mapping from strings to Key objects instead." %
+                (qual(MockOldFactoryPrivateKeys),),
+                factory.__file__, sshFactory.startFactory)
+        self.assertEquals(sshFactory.privateKeys,
+                          MockFactory().getPrivateKeys())
+
+
+    def test_publicKeysWarning(self):
+        """
+        If the value of the C{publicKeys} attribute isn't a mapping from key
+        names to C{Key} objects, then warn the user and convert the mapping.
+        """
+        sshFactory = MockOldFactoryPublicKeys()
+        sshFactory.publicKeys = sshFactory.getPublicKeys()
+        self.assertWarns(DeprecationWarning,
+                "Returning a mapping from strings to strings from"
+                " getPublicKeys()/publicKeys (in %s) is deprecated.  Return "
+                "a mapping from strings to Key objects instead." %
+                (qual(MockOldFactoryPublicKeys),),
+                factory.__file__, sshFactory.startFactory)
+        self.assertEquals(sshFactory.publicKeys, MockFactory().getPublicKeys())
+
+
+    def test_privateKeysWarning(self):
+        """
+        If the return value of C{privateKeys} attribute isn't a mapping from
+        key names to C{Key} objects, then warn the user and convert the
+        mapping.
+        """
+        sshFactory = MockOldFactoryPrivateKeys()
+        sshFactory.privateKeys = sshFactory.getPrivateKeys()
+        self.assertWarns(DeprecationWarning,
+                "Returning a mapping from strings to PyCrypto key objects from"
+                " getPrivateKeys()/privateKeys (in %s) is deprecated.  Return"
+                " a mapping from strings to Key objects instead." %
+                (qual(MockOldFactoryPrivateKeys),),
+                factory.__file__, sshFactory.startFactory)
+        self.assertEquals(sshFactory.privateKeys,
+                          MockFactory().getPrivateKeys())

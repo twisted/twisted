@@ -351,8 +351,13 @@ class _Assertions(pyunit.TestCase, object):
         finally:
             warnings.warn_explicit = origExplicit
 
-        self.assertEqual(len(warningsShown), 1, pformat(warningsShown))
-        gotMessage, gotCategory, gotFilename, lineno = warningsShown[0][:4]
+        if not warningsShown:
+            self.fail("No warnings emitted")
+        first = warningsShown[0]
+        for other in warningsShown[1:]:
+            if other[:2] != first[:2]:
+                self.fail("Can't handle different warnings")
+        gotMessage, gotCategory, gotFilename, lineno = first[:4]
         self.assertEqual(gotMessage, message)
         self.assertIdentical(gotCategory, category)
 

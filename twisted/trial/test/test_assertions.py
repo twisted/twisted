@@ -341,6 +341,7 @@ class TestAssertions(unittest.TestCase):
         test.run(result)
         self.assertEqual(1, len(result.failures))
 
+
     def test_assertWarns(self):
         """
         Test basic assertWarns report.
@@ -351,6 +352,7 @@ class TestAssertions(unittest.TestCase):
         r = self.assertWarns(DeprecationWarning, "Woo deprecated", __file__,
             deprecated, 123)
         self.assertEquals(r, 123)
+
 
     def test_assertWarnsRegistryClean(self):
         """
@@ -368,6 +370,7 @@ class TestAssertions(unittest.TestCase):
             deprecated, 321)
         self.assertEquals(r2, 321)
 
+
     def test_assertWarnsError(self):
         """
         Test assertWarns failure when no warning is generated.
@@ -377,6 +380,7 @@ class TestAssertions(unittest.TestCase):
         self.assertRaises(self.failureException,
             self.assertWarns, DeprecationWarning, "Woo deprecated", __file__,
             normal, 123)
+
 
     def test_assertWarnsWrongCategory(self):
         """
@@ -389,6 +393,7 @@ class TestAssertions(unittest.TestCase):
             self.assertWarns, UserWarning, "Foo deprecated", __file__,
             deprecated, 123)
 
+
     def test_assertWarnsWrongMessage(self):
         """
         Test assertWarns failure when the message is wrong.
@@ -399,6 +404,7 @@ class TestAssertions(unittest.TestCase):
         self.assertRaises(self.failureException,
             self.assertWarns, DeprecationWarning, "Bar deprecated", __file__,
             deprecated, 123)
+
 
     def test_assertWarnsOnClass(self):
         """
@@ -413,6 +419,7 @@ class TestAssertions(unittest.TestCase):
         r = self.assertWarns(RuntimeWarning, "Do not call me", __file__,
             Warn)
         self.assertTrue(isinstance(r, Warn))
+
 
     def test_assertWarnsOnMethod(self):
         """
@@ -430,6 +437,7 @@ class TestAssertions(unittest.TestCase):
             w.deprecated, 321)
         self.assertEquals(r, 321)
 
+
     def test_assertWarnsOnCall(self):
         """
         Test assertWarns works on instance with C{__call__} method.
@@ -446,6 +454,7 @@ class TestAssertions(unittest.TestCase):
             w, 321)
         self.assertEquals(r, 321)
 
+
     def test_assertWarnsFilter(self):
         """
         Test assertWarns on a warning filterd by default.
@@ -456,6 +465,44 @@ class TestAssertions(unittest.TestCase):
         r = self.assertWarns(PendingDeprecationWarning, "Woo deprecated",
             __file__, deprecated, 123)
         self.assertEquals(r, 123)
+
+
+    def test_assertWarnsMultipleWarnings(self):
+        """
+        Check that assertWarns is able to handle multiple warnings produced by
+        the same function.
+        """
+        i = [0]
+        def deprecated(a):
+            # the stacklevel is important here, because as the function is
+            # recursive, the warnings produced have a different stack, but we
+            # want to be sure that only the first warning is tested against
+            warnings.warn("Woo deprecated",
+                category=PendingDeprecationWarning,
+                stacklevel=2)
+            i[0] += 1
+            if i[0] < 3:
+                return deprecated(a)
+            else:
+                return a
+        r = self.assertWarns(PendingDeprecationWarning, "Woo deprecated",
+            unittest.__file__, deprecated, 123)
+        self.assertEquals(r, 123)
+
+
+    def test_assertWarnsDifferentWarnings(self):
+        """
+        For now, assertWarns is unable to handle multiple different warnings,
+        so it should raise an exception if it's the case.
+        """
+        def deprecated(a):
+            warnings.warn("Woo deprecated", category=DeprecationWarning)
+            warnings.warn("Another one", category=PendingDeprecationWarning)
+        e = self.assertRaises(self.failureException,
+                self.assertWarns, DeprecationWarning, "Woo deprecated",
+                __file__, deprecated, 123)
+        self.assertEquals(str(e), "Can't handle different warnings")
+
 
     def test_assertIsInstance(self):
         """
