@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.words.test.test_jabberjid -*-
 #
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -238,3 +238,12 @@ class JID(object):
         """
 
         return self.full()
+
+    def __repr__(self):
+        """
+        Get object representation.
+
+        Returns a string that would create a new JID object that compares equal
+        to this one.
+        """
+        return 'JID(%r)' % self.full()

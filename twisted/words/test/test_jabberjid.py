@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -208,6 +208,12 @@ class JIDTest(unittest.TestCase):
         j = jid.JID(tuple=('user', 'host', 'resource'))
         self.assertEquals("user@host/resource", unicode(j))
 
+    def test_repr(self):
+        """
+        Test representation of JID objects.
+        """
+        j = jid.JID(tuple=('user', 'host', 'resource'))
+        self.assertEquals("JID(u'user@host/resource')", repr(j))
 
 class InternJIDTest(unittest.TestCase):
     def test_identity(self):
