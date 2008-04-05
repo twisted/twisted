@@ -314,22 +314,23 @@ class _QueryFactory(protocol.ClientFactory):
         try:
             response = xmlrpclib.loads(contents)
         except:
-            self.deferred.errback(failure.Failure())
-            self.deferred = None
+            deferred, self.deferred = self.deferred, None
+            deferred.errback(failure.Failure())
         else:
-            self.deferred.callback(response[0][0])
-            self.deferred = None
+            deferred, self.deferred = self.deferred, None
+            deferred.callback(response[0][0])
 
     def clientConnectionLost(self, _, reason):
         if self.deferred is not None:
-            self.deferred.errback(reason)
-            self.deferred = None
+            deferred, self.deferred = self.deferred, None
+            deferred.errback(reason)
 
     clientConnectionFailed = clientConnectionLost
 
     def badStatus(self, status, message):
-        self.deferred.errback(ValueError(status, message))
-        self.deferred = None
+        deferred, self.deferred = self.deferred, None
+        deferred.errback(ValueError(status, message))
+
 
 
 class Proxy:

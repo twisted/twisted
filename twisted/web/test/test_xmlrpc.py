@@ -14,11 +14,13 @@ except ImportError:
     class XMLRPC: pass
 else:
     from twisted.web import xmlrpc
-    from twisted.web.xmlrpc import XMLRPC, addIntrospection
+    from twisted.web.xmlrpc import XMLRPC, addIntrospection, _QueryFactory
 
 from twisted.trial import unittest
 from twisted.web import server, static, client, error, http
 from twisted.internet import reactor, defer
+from twisted.internet.error import ConnectionDone
+from twisted.python import failure
 
 
 class TestRuntimeError(RuntimeError):
@@ -386,3 +388,65 @@ class XMLRPCClientErrorHandling(unittest.TestCase):
                              (self.port.getHost().port,))
         return self.assertFailure(proxy.callRemote("someMethod"), Exception)
 
+
+
+class TestQueryFactoryParseResponse(unittest.TestCase):
+    """
+    Test the behaviour of L{_QueryFactory.parseResponse}.
+    """
+
+    def setUp(self):
+        # The _QueryFactory that we are testing. We don't care about any
+        # of the constructor parameters.
+        self.queryFactory = _QueryFactory(
+            path=None, host=None, method='POST', user=None, password=None,
+            allowNone=False, args=())
+        # An XML-RPC response that will parse without raising an error.
+        self.goodContents = xmlrpclib.dumps(('',))
+        # An 'XML-RPC response' that will raise a parsing error.
+        self.badContents = 'invalid xml'
+        # A dummy 'reason' to pass to clientConnectionLost. We don't care
+        # what it is.
+        self.reason = failure.Failure(ConnectionDone())
+
+
+    def test_parseResponseCallbackSafety(self):
+        """
+        We can safely call L{_QueryFactory.clientConnectionLost} as a callback
+        of L{_QueryFactory.parseResponse}.
+        """
+        d = self.queryFactory.deferred
+        # The failure mode is that this callback raises an AlreadyCalled
+        # error. We have to add it now so that it gets called synchronously
+        # and triggers the race condition.
+        d.addCallback(self.queryFactory.clientConnectionLost, self.reason)
+        self.queryFactory.parseResponse(self.goodContents)
+        return d
+
+
+    def test_parseResponseErrbackSafety(self):
+        """
+        We can safely call L{_QueryFactory.clientConnectionLost} as an errback
+        of L{_QueryFactory.parseResponse}.
+        """
+        d = self.queryFactory.deferred
+        # The failure mode is that this callback raises an AlreadyCalled
+        # error. We have to add it now so that it gets called synchronously
+        # and triggers the race condition.
+        d.addErrback(self.queryFactory.clientConnectionLost, self.reason)
+        self.queryFactory.parseResponse(self.badContents)
+        return d
+
+
+    def test_badStatusErrbackSafety(self):
+        """
+        We can safely call L{_QueryFactory.clientConnectionLost} as an errback
+        of L{_QueryFactory.badStatus}.
+        """
+        d = self.queryFactory.deferred
+        # The failure mode is that this callback raises an AlreadyCalled
+        # error. We have to add it now so that it gets called synchronously
+        # and triggers the race condition.
+        d.addErrback(self.queryFactory.clientConnectionLost, self.reason)
+        self.queryFactory.badStatus('status', 'message')
+        return d
