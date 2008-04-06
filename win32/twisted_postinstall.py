@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -30,7 +30,7 @@ def install(sitepackages, prefix):
     scripts = join(prefix, 'scripts')
     pyexe = join(prefix, 'python.exe')
     for bat in """twistd.bat mktap.bat lore.bat 
-               manhole.bat tapconvert.bat trial.bat coil.bat""".split():
+               manhole.bat tapconvert.bat trial.bat""".split():
         f = join(scripts, bat)
         scriptpy = f.replace('.bat', '.py')
         file(f, 'w').write("@%s %s %%*" % (pyexe, scriptpy))

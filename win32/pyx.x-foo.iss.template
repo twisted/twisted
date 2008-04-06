@@ -13,6 +13,7 @@ DefaultGroupName=Twisted (Python %(pyversion)s)
 DisableProgramGroupPage=yes
 PrivilegesRequired=admin
 UninstallFilesDir={code:pythonRegKey}
+SetupIconFile=win32\twisted-icon.ico
 
 [Files]
 Source: "%(twhome)s\win32dist\PYTHON%(pyversion10)s\Lib\site-packages\*.*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs

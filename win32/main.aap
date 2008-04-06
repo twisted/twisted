@@ -18,8 +18,8 @@ HERE=`os.getcwd()`
         import setup
 
         docdct = dict(pyversion=_top.pyversion,
-                      pyversion10=_top.pyversion10, twversion=_top.Version, 
-                      twhome=_recipe.HERE, 
+                      pyversion10=_top.pyversion10, twversion=_top.Version,
+                      twhome=_recipe.HERE,
                       docfile=r'Source: "%s\doc\twisteddoc.zip"; DestDir: "{app}"' % _recipe.HERE,
                       outputbasefilename=template,
                       )
@@ -92,7 +92,7 @@ build/scripts-$(pyversion) build/lib.win32-$(pyversion):  \
     :pushdir zope.interface-$(ZIVersion)
     @try:
         :sys $(pyexe) setup.py build --compiler=mingw32 \
-                               install --root=win32dist --no-compile
+                               install --root=../win32dist --no-compile
     @finally:
         :popdir
 
