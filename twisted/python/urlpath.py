@@ -7,13 +7,24 @@
 import urlparse
 import urllib
 
-class Authority:
+ 
+class URIAuthority:
     """
     An abstraction of the "authority" section of a URI.
 
     Term taken from RFC2396.
     """
-    def __init__(self, auth):
+    def __init__(self, user=None, password=None, host=None, port=0):
+        self.user = user
+        self.password = password
+        self.host = host
+        self.port = int(port)
+        self.auth = self.unparse()
+
+    def fromString(self, auth):
+        """
+        Return a tuple representing the parts of the authority.
+        """
         self.auth = auth
         auths = auth.split('@')
         if len(auths) == 2:
@@ -22,7 +33,7 @@ class Authority:
             self.user = userpass.pop(0)
             try:
                 self.password = userpass.pop(0)
-            except:
+            except IndexError:
                 self.password = ''
         else:
             self.user = self.password = ''
@@ -30,21 +41,34 @@ class Authority:
         self.host = hostport.pop(0) or ''
         try:
             self.port = int(hostport.pop(0))
-        except:
-            self.port = 0
-
-    def parse(self):
-        """
-        Return a tuple representing the parts of the authority.
-        """
+        except IndexError, ValueError:
+            self.port = None
         return (self.user, self.password, self.host, self.port)
 
+    fromString = classmethod(fromString)
+
+    def unparse(self):
+        """
+        Return a string representing the URI authority
+        """
+        user = self.user or ''
+        password = host = port = ''
+        if self.password:
+            password = ':%s' % self.password
+        if self.port:
+            port = ':%s' % self.port
+        if self.user or password:
+            host = '@%s' % self.host
+        else:
+            host = self.host
+        return '%s%s%s%s' % (user, password, host, port)
+
     def __str__(self):
-        return self.auth
+        return self.unparse()
 
     def __repr__(self):
-        return ('Authority(user=%r, password=%r, host=%r, port=%r)'
-                % self.parse())
+        return ('URIAuthority(user=%r, password=%r, host=%r, port=%r)' 
+            % (self.user, self.password, self.host, self.port))
             
 
 class URLPath:
@@ -55,7 +79,7 @@ class URLPath:
         self.path = path or '/'
         self.query = query
         self.fragment = fragment
-        auth = Authority(netloc)
+        auth = URIAuthority.fromString(netloc)
         self.user, self.password, self.host, self.port = auth.parse()
 
     _qpathlist = None
