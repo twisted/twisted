@@ -632,7 +632,7 @@ class URLPathTestCase(unittest.TestCase):
         # here should be equivalent to '.'
         self.assertEquals(str(self.path.here()), 'http://example.com/foo/')
         self.assertEquals(str(self.path.child('').here()), 'http://example.com/foo/bar/')
-
+  
 class URLPathAuthTestCase(unittest.TestCase):
     def setUp(self):
         self.path = urlpath.URLPath.fromString("http://alice:asecret@example.com/foo/bar?yes=no&no=yes#footer")
@@ -665,3 +665,9 @@ class URLPathAuthTestCase(unittest.TestCase):
         # here should be equivalent to '.'
         self.assertEquals(str(self.path.here()), 'http://alice:asecret@example.com/foo/')
         self.assertEquals(str(self.path.child('').here()), 'http://alice:asecret@example.com/foo/bar/')
+
+    def testAuthString(self):
+        self.assertEquals(str(self.path.user), 'alice')
+        self.assertEquals(str(self.path.password), 'asecret')
+        self.assertEquals(str(self.path.host), 'example.com')
+        self.assertEquals(self.path.port, 0)
