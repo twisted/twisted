@@ -632,7 +632,8 @@ class URLPathTestCase(unittest.TestCase):
         # here should be equivalent to '.'
         self.assertEquals(str(self.path.here()), 'http://example.com/foo/')
         self.assertEquals(str(self.path.child('').here()), 'http://example.com/foo/bar/')
-  
+
+
 class URLPathAuthTestCase(unittest.TestCase):
     def setUp(self):
         self.path = urlpath.URLPath.fromString("http://alice:asecret@example.com/foo/bar?yes=no&no=yes#footer")
@@ -671,3 +672,26 @@ class URLPathAuthTestCase(unittest.TestCase):
         self.assertEquals(str(self.path.password), 'asecret')
         self.assertEquals(str(self.path.host), 'example.com')
         self.assertEquals(self.path.port, 0)
+
+
+class URLPathAuthPartialNoPassword(unittest.TestCase):
+    def setUp(self):
+        self.path = urlpath.URLPath.fromString("http://bob@example.com:8080")
+
+    def testAuthString(self):
+        self.assertEquals(str(self.path.user), 'bob')
+        self.assertEquals(str(self.path.password), '')
+        self.assertEquals(str(self.path.host), 'example.com')
+        self.assertEquals(self.path.port, 8080)
+
+
+class URLPathAuthPartialNoUser(unittest.TestCase):
+    def setUp(self):
+        # not really sure of a use case for this one, but oh well...
+        self.path = urlpath.URLPath.fromString("http://:asecret@example.com:8080")
+
+    def testAuthString(self):
+        self.assertEquals(str(self.path.user), '')
+        self.assertEquals(str(self.path.password), 'asecret')
+        self.assertEquals(str(self.path.host), 'example.com')
+        self.assertEquals(self.path.port, 8080)
