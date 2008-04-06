@@ -79,8 +79,7 @@ class URLPath:
         self.path = path or '/'
         self.query = query
         self.fragment = fragment
-        auth = URIAuthority.fromString(netloc)
-        self.user, self.password, self.host, self.port = auth.parse()
+        self.user, self.password, self.host, self.port = URIAuthority.fromString(netloc)
 
     _qpathlist = None
     _uqpathlist = None
