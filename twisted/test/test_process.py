@@ -456,6 +456,26 @@ class ProcessTestCase(unittest.TestCase):
         return d.addCallback(processEnded)
 
 
+    def test_unsetPid(self):
+        """
+        Test if pid is None/non-None before/after process termination.  This
+        reuses process_echoer.py to get a process that blocks on stdin.
+        """
+        finished = defer.Deferred()
+        p = TrivialProcessProtocol(finished)
+        exe = sys.executable
+        scriptPath = util.sibpath(__file__, "process_echoer.py")
+        procTrans = reactor.spawnProcess(p, exe,
+                                    [exe, "-u", scriptPath], env=None)
+        self.failUnless(procTrans.pid)
+
+        def afterProcessEnd(ignored):
+            self.assertEqual(procTrans.pid, None)
+
+        p.transport.closeStdin()
+        return finished.addCallback(afterProcessEnd)
+
+
     def test_process(self):
         """
         Test running a process: check its output, it exitCode, some property of
@@ -1740,6 +1760,43 @@ class Win32ProcessTestCase(unittest.TestCase):
             reactor.spawnProcess, p, pyExe, pyArgs, childFDs={1:'r'})
 
 
+
+class Dumbwin32procPidTest(unittest.TestCase):
+    """
+    Simple test for the pid attribute of Process on win32.
+    """
+
+    def test_pid(self):
+        """
+        Launch process with mock win32process. The only mock aspect of this
+        module is that the pid of the process created will always be 42.
+        """
+        from twisted.internet import _dumbwin32proc
+        from twisted.test import mock_win32process
+        self.patch(_dumbwin32proc, "win32process", mock_win32process)
+        exe = sys.executable
+        scriptPath = util.sibpath(__file__, "process_cmdline.py")
+
+        d = defer.Deferred()
+        processProto = TrivialProcessProtocol(d)
+        comspec = str(os.environ["COMSPEC"])
+        cmd = [comspec, "/c", exe, scriptPath]
+
+        p = _dumbwin32proc.Process(reactor,
+                                  processProto,
+                                  None,
+                                  cmd,
+                                  {},
+                                  None)
+        self.assertEquals(42, p.pid)
+        self.assertEquals("<Process pid=42>", repr(p))
+
+        def pidCompleteCb(result):
+            self.assertEquals(None, p.pid)
+        return d.addCallback(pidCompleteCb)
+
+
+
 class UtilTestCase(unittest.TestCase):
     """
     Tests for process-related helper functions (currently only
@@ -1916,6 +1973,7 @@ else:
 if (runtime.platform.getType() != 'win32') or (not interfaces.IReactorProcess(reactor, None)):
     Win32ProcessTestCase.skip = skipMessage
     TestTwoProcessesNonPosix.skip = skipMessage
+    Dumbwin32procPidTest.skip = skipMessage
 
 if not interfaces.IReactorProcess(reactor, None):
     ProcessTestCase.skip = skipMessage

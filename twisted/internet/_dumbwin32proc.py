@@ -1,8 +1,9 @@
 # -*- test-case-name: twisted.test.test_process -*-
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 """
-
 http://isometric.sixsided.org/_/gates_in_the_head/
-
 """
 
 import os
@@ -46,12 +47,8 @@ class _Reaper(_pollingfile._PollableResource):
         if win32event.WaitForSingleObject(self.proc.hProcess, 0) != win32event.WAIT_OBJECT_0:
             return 0
         exitCode = win32process.GetExitCodeProcess(self.proc.hProcess)
-        if exitCode == 0:
-            err = error.ProcessDone(exitCode)
-        else:
-            err = error.ProcessTerminated(exitCode)
         self.deactivate()
-        self.proc.protocol.processEnded(failure.Failure(err))
+        self.proc.processEnded(exitCode)
         return 0
 
 
@@ -118,6 +115,7 @@ class Process(_pollingfile._PollingTimer):
     implements(IProcessTransport, IConsumer, IProducer)
 
     buffer = ''
+    pid = None
 
     def __init__(self, reactor, protocol, command, args, environment, path):
         _pollingfile._PollingTimer.__init__(self, reactor)
@@ -145,19 +143,19 @@ class Process(_pollingfile._PollingTimer):
         StartupInfo.dwFlags = win32process.STARTF_USESTDHANDLES
 
         # Create new handles whose inheritance property is false
-        pid = win32api.GetCurrentProcess()
+        currentPid = win32api.GetCurrentProcess()
 
-        tmp = win32api.DuplicateHandle(pid, self.hStdoutR, pid, 0, 0,
+        tmp = win32api.DuplicateHandle(currentPid, self.hStdoutR, currentPid, 0, 0,
                                        win32con.DUPLICATE_SAME_ACCESS)
         win32file.CloseHandle(self.hStdoutR)
         self.hStdoutR = tmp
 
-        tmp = win32api.DuplicateHandle(pid, self.hStderrR, pid, 0, 0,
+        tmp = win32api.DuplicateHandle(currentPid, self.hStderrR, currentPid, 0, 0,
                                        win32con.DUPLICATE_SAME_ACCESS)
         win32file.CloseHandle(self.hStderrR)
         self.hStderrR = tmp
 
-        tmp = win32api.DuplicateHandle(pid, self.hStdinW, pid, 0, 0,
+        tmp = win32api.DuplicateHandle(currentPid, self.hStdinW, currentPid, 0, 0,
                                        win32con.DUPLICATE_SAME_ACCESS)
         win32file.CloseHandle(self.hStdinW)
         self.hStdinW = tmp
@@ -172,7 +170,7 @@ class Process(_pollingfile._PollingTimer):
         cmdline = quoteArguments(args)
         # TODO: error detection here.
         def doCreate():
-            self.hProcess, self.hThread, dwPid, dwTid = win32process.CreateProcess(
+            self.hProcess, self.hThread, self.pid, dwTid = win32process.CreateProcess(
                 command, cmdline, None, None, 1, 0, env, path, StartupInfo)
         try:
             doCreate()
@@ -243,10 +241,23 @@ class Process(_pollingfile._PollingTimer):
 
 
     def signalProcess(self, signalID):
-        if self.closed:
+        if self.pid is None:
             raise error.ProcessExitedAlready()
         if signalID in ("INT", "TERM", "KILL"):
             win32process.TerminateProcess(self.hProcess, 1)
+
+
+    def processEnded(self, status):
+        """
+        This is called when the child terminates.
+        """
+        self.pid = None
+        if status == 0:
+            err = error.ProcessDone(status)
+        else:
+            err = error.ProcessTerminated(status)
+        self.protocol.processEnded(failure.Failure(err))
+
 
     def write(self, data):
         """Write data to the process' stdin."""
@@ -319,3 +330,9 @@ class Process(_pollingfile._PollingTimer):
     def stopProducing(self):
         self.loseConnection()
 
+
+    def __repr__(self):
+        """
+        Return a string representation of the process.
+        """
+        return "<%s pid=%s>" % (self.__class__.__name__, self.pid)
