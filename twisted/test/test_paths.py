@@ -634,64 +634,126 @@ class URLPathTestCase(unittest.TestCase):
         self.assertEquals(str(self.path.child('').here()), 'http://example.com/foo/bar/')
 
 
-class URLPathAuthTestCase(unittest.TestCase):
-    def setUp(self):
-        self.path = urlpath.URLPath.fromString("http://alice:asecret@example.com/foo/bar?yes=no&no=yes#footer")
+class URLPathAuthoritySectionTestCase(unittest.TestCase):
 
-    def testStringConversion(self):
-        self.assertEquals(str(self.path), "http://alice:asecret@example.com/foo/bar?yes=no&no=yes#footer")
-        
-    def testChildString(self):
-        self.assertEquals(str(self.path.child('hello')), "http://alice:asecret@example.com/foo/bar/hello")
-        self.assertEquals(str(self.path.child('hello').child('')), "http://alice:asecret@example.com/foo/bar/hello/")
-        
-    def testSiblingString(self):
-        self.assertEquals(str(self.path.sibling('baz')), 'http://alice:asecret@example.com/foo/baz')
+    def testWithAllAuthorityValues(self):
+        """
+        Check that URLPath is properly using URIAuthority.
 
-        # The sibling of http://example.com/foo/bar/
-        #     is http://example.comf/foo/bar/baz
-        # because really we are constructing a sibling of
-        # http://example.com/foo/bar/index.html
-        self.assertEquals(str(self.path.child('').sibling('baz')), 'http://alice:asecret@example.com/foo/bar/baz')
-        
-    def testParentString(self):
-        # parent should be equivalent to '..'
-        # 'foo' is the current directory, '/' is the parent directory
-        self.assertEquals(str(self.path.parent()), 'http://alice:asecret@example.com/')
-        self.assertEquals(str(self.path.child('').parent()), 'http://alice:asecret@example.com/foo/')
-        self.assertEquals(str(self.path.child('baz').parent()), 'http://alice:asecret@example.com/foo/')
-        self.assertEquals(str(self.path.parent().parent().parent().parent().parent()), 'http://alice:asecret@example.com/')
+        Exhaustive tests against URIAuthority are in their own test cases
+        below.
+        """
+        url = "http://alice:asecret@example.com:8080/foo/bar?yes=no&no=yes#footer"
+        path = urlpath.URLPath.fromString(url)
+        self.assertEquals(path.user, 'alice')
+        self.assertEquals(path.password, 'asecret')
+        self.assertEquals(path.host, 'example.com')
+        self.assertEquals(int(path.port), 8080)
 
-    def testHereString(self):
-        # here should be equivalent to '.'
-        self.assertEquals(str(self.path.here()), 'http://alice:asecret@example.com/foo/')
-        self.assertEquals(str(self.path.child('').here()), 'http://alice:asecret@example.com/foo/bar/')
+class URIAuthorityClassTestCase(unittest.TestCase):
 
-    def testAuthString(self):
-        self.assertEquals(str(self.path.user), 'alice')
-        self.assertEquals(str(self.path.password), 'asecret')
-        self.assertEquals(str(self.path.host), 'example.com')
-        self.assertEquals(self.path.port, 0)
+    def testInstantiatedAuthority(self):
+        """
+        Check that the URIAuthority class instantiates properly and parses
+        values as expected.
+        """
+        auth = urlpath.URIAuthority(user='bob', password='asecret',
+            host='example.com', port=80)
+        self.assertEquals(auth.user, 'bob')
+        self.assertEquals(auth.password, 'asecret')
+        self.assertEquals(auth.host, 'example.com')
+        self.assertEquals(int(auth.port), 80)
+        self.assertEquals(str(auth), 'bob:asecret@example.com:80')
+        self.assertEquals(repr(auth),
+            "URIAuthority(user='bob', password='asecret', host='example.com', port=80)")
 
+    def testNoPassword(self):
+        """
+        Make sure that without a password supplied, the authority section gets
+        parsed properly.
+        """
+        auth = urlpath.URIAuthority(user='bob', password='',
+            host='example.com', port=80)
+        self.assertEquals(auth.user, 'bob')
+        self.assertEquals(auth.password, '')
+        self.assertEquals(auth.host, 'example.com')
+        self.assertEquals(int(auth.port), 80)
 
-class URLPathAuthPartialNoPassword(unittest.TestCase):
-    def setUp(self):
-        self.path = urlpath.URLPath.fromString("http://bob@example.com:8080")
-
-    def testAuthString(self):
-        self.assertEquals(str(self.path.user), 'bob')
-        self.assertEquals(str(self.path.password), '')
-        self.assertEquals(str(self.path.host), 'example.com')
-        self.assertEquals(self.path.port, 8080)
-
-
-class URLPathAuthPartialNoUser(unittest.TestCase):
-    def setUp(self):
+    def testNoUsername(self):
+        """
+        Make sure that without a user name supplied, the authority section gets
+        parsed properly.
+        """
         # not really sure of a use case for this one, but oh well...
-        self.path = urlpath.URLPath.fromString("http://:asecret@example.com:8080")
+        auth = urlpath.URIAuthority(user='', password='asecret',
+            host='example.com', port=80)
+        self.assertEquals(auth.user, '')
+        self.assertEquals(auth.password, 'asecret')
+        self.assertEquals(auth.host, 'example.com')
+        self.assertEquals(int(auth.port), 80)
 
-    def testAuthString(self):
-        self.assertEquals(str(self.path.user), '')
-        self.assertEquals(str(self.path.password), 'asecret')
-        self.assertEquals(str(self.path.host), 'example.com')
-        self.assertEquals(self.path.port, 8080)
+    def testUnparse(self):
+        auth = urlpath.URIAuthority(host='example.com')
+        self.assertEquals(auth.unparse(), 'example.com')
+        auth = urlpath.URIAuthority(user='alice', host='example.com')
+        self.assertEquals(auth.unparse(), 'alice@example.com')
+        auth = urlpath.URIAuthority(password='asecret', host='example.com')
+        self.assertEquals(auth.unparse(), ':asecret@example.com')
+        auth = urlpath.URIAuthority(host='example.com', port=8080)
+        self.assertEquals(auth.unparse(), 'example.com:8080')
+        auth = urlpath.URIAuthority(user='bob', host='example.com', port=8080)
+        self.assertEquals(auth.unparse(), 'bob@example.com:8080')
+        auth = urlpath.URIAuthority(password='asecret', host='example.com', port=8080)
+        self.assertEquals(auth.unparse(), ':asecret@example.com:8080')
+        auth = urlpath.URIAuthority(user='alice', password='asecret', host='example.com', port=8080)
+        self.assertEquals(auth.unparse(), 'alice:asecret@example.com:8080')
+
+    def testBadPortValue(self):
+        """
+        Confirm that a port value with a string in it will not be handled.
+        """
+        host = 'example.com'
+        port = 'z80'
+        self.assertRaises(ValueError, urlpath.URIAuthority,
+            None, None, host, port)
+
+
+class URIAuthorityClassMethodTestCase(unittest.TestCase):
+    """
+    Test URIAuthority using the fromString() class method.
+    """
+        
+    def testFullAuthority(self):
+        """
+        Check that the full authority is properly parsed.
+        """
+        url = 'bob:asecret@example.com:80'
+        auth = urlpath.URIAuthority.fromString(url)
+        user, password, host, port = auth
+        self.assertEquals(user, 'bob')
+        self.assertEquals(password, 'asecret')
+        self.assertEquals(host, 'example.com')
+        self.assertEquals(int(port), 80)
+
+    def testBadPortValue(self):
+        """
+        Confirm that a port value with a string in it will not be handled.
+        """
+        self.assertRaises(ValueError, urlpath.URIAuthority.fromString,
+            "example.com:z80")
+
+    def testURLPassedAsAuthority(self):
+        """
+        Attempt to pass a URL to fromString().
+        """
+        self.assertRaises(ValueError, urlpath.URIAuthority.fromString,
+            "http://example.com:8080")
+        
+    def testSwappedSeparators(self):
+        """
+        Test for swapping the user/password separator and the user-pass/host
+        separator.
+        """
+        self.assertRaises(ValueError, urlpath.URIAuthority.fromString,
+            "alice@asecret:example.com:8080")
+        
