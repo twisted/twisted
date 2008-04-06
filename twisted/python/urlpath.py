@@ -7,6 +7,46 @@
 import urlparse
 import urllib
 
+class Authority:
+    """
+    An abstraction of the "authority" section of a URI.
+
+    Term taken from RFC2396.
+    """
+    def __init__(self, auth):
+        self.auth = auth
+        auths = auth.split('@')
+        if len(auths) == 2:
+            userpass = auths.pop(0)
+            userpass = userpass.split(':')
+            self.user = userpass.pop(0)
+            try:
+                self.password = userpass.pop(0)
+            except:
+                self.password = ''
+        else:
+            self.user = self.password = ''
+        hostport = auths[0].split(':')
+        self.host = hostport.pop(0) or ''
+        try:
+            self.port = int(hostport.pop(0))
+        except:
+            self.port = 0
+
+    def parse(self):
+        """
+        Return a tuple representing the parts of the authority.
+        """
+        return (self.user, self.password, self.host, self.port)
+
+    def __str__(self):
+        return self.auth
+
+    def __repr__(self):
+        return ('Authority(user=%r, password=%r, host=%r, port=%r)'
+                % self.parse())
+            
+
 class URLPath:
     def __init__(self, scheme='', netloc='localhost', path='',
                  query='', fragment=''):
@@ -15,6 +55,8 @@ class URLPath:
         self.path = path or '/'
         self.query = query
         self.fragment = fragment
+        auth = Authority(netloc)
+        self.user, self.password, self.host, self.port = auth.parse()
 
     _qpathlist = None
     _uqpathlist = None
