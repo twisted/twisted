@@ -10,7 +10,12 @@ import urllib
  
 class URIAuthority:
     """
-    An abstraction of the "authority" section of a URI.
+    An abstraction of the "authority" section of a URI, where the following is
+    a general representation of a URI:
+        <scheme>://<authority><path>?<query>
+
+    The authority section itself is composed of the following:
+        [username[:password]@]host[:port]
 
     Term taken from RFC2396.
     """
