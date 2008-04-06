@@ -37,16 +37,129 @@ class DeferredTestCase(unittest.TestCase):
         self.callback2_results = None
 
     def _callback(self, *args, **kw):
+        """
+        A callback handler that records its given arguments in
+        C{self.callback_results}
+        """
         self.callback_results = args, kw
         return args[0]
 
     def _callback2(self, *args, **kw):
+        """
+        A callback handler that records its given arguments in
+        C{self.callback2_results}, and converts the result to None.
+        """
         self.callback2_results = args, kw
 
     def _errback(self, *args, **kw):
+        """
+        An errback handler that records its given arguments in
+        C{self.errback_results}, and converts the result to None.
+        """
         self.errback_results = args, kw
 
+    def test_noResult(self):
+        """
+        Test that the C{Deferred.result} attribute is not accessible before a
+        result is found
+        """
+        deferred = defer.Deferred()
+        self.assertRaises(AttributeError, lambda : deferred.result)
+
+    def _verifyCallbackEntry(self, (cb, args, kw), (expected_cb, expected_args, expected_kw)):
+        """
+        Verify that a given callback tuple (from C{Deferred.callbacks}) matches
+        the expected callback, args and keywords.  This will work for verifying
+        both callbacks and errbacks.
+        """
+        if expected_cb is None:
+            # There should never be an empty callback with args/kw
+            self.assertEquals(expected_args, None)
+            self.assertEquals(expected_kw, None)
+        if cb is defer.passthru:
+            cb = None
+        if args == ():
+            args = None
+        if kw == {}:
+            kw = None
+        self.assertEquals((cb, args, kw), (expected_cb, expected_args, expected_kw))
+
+    def _verifyCallbackEntries(self, cbs, expected_cbs):
+        """
+        Verify that a given list of callbacks (from C{Deferred.callbacks})
+        matches the expected list of callbacks. This verifies that the lists
+        match entirely.
+        """
+        self.assertEquals(len(expected_cbs), len(cbs))
+        for (cb, eb), (expected_cb, expected_eb) in zip(cbs, expected_cbs):
+            self._verifyCallbackEntry(cb, expected_cb)
+            self._verifyCallbackEntry(eb, expected_eb)
+
+    def test_reentrantReadCallbacks(self):
+        """
+        Test that the C{Deferred.callbacks} attribute contains the correct
+        B{remaining} list of callbacks even if accessed from within a running
+        callback
+        """
+        deferred = defer.Deferred()
+
+        def callback(result):
+            self._verifyCallbackEntries(deferred.callbacks, expected_cbs[1:])
+        def callback2(result, *args, **kw):
+            return
+        def errback2(result, *args, **kw):
+            # DON'T lose the error.
+            return result
+
+        expected_cbs = (
+            ((callback, None, None),
+             (None, None, None)),
+
+            ((callback2, (1, 2, 3), None),
+             (None, None, None)),
+
+            ((None, None, None),
+             (errback2, (1, 2, 3), dict(a=1, b=2, c=3))),
+
+            ((callback2, (1, 2, 3), dict(a=1)),
+             (errback2, (4, 5, 6), dict(d=4))),
+        )
+
+        deferred.addCallback(callback)
+        deferred.addCallback(callback2, 1, 2, 3)
+        deferred.addErrback(errback2, 1, 2, 3, a=1, b=2, c=3)
+        deferred.addCallbacks(callback2, errback2,
+                              (1, 2, 3), dict(a=1), (4, 5, 6), dict(d=4))
+        self._verifyCallbackEntries(deferred.callbacks, expected_cbs)
+        deferred.callback(None)
+        return deferred
+
+    def test_addCallbackErrbackWithoutArgs(self):
+        """
+        Test that L{Deferred.addCallback}, L{Deferred.addErrback} and
+        L{Deferred.addBoth} verify their argument lists properly
+        """
+        deferred = defer.Deferred()
+        self.assertRaises(TypeError, deferred.addCallback)
+        self.assertRaises(TypeError, deferred.addErrback)
+        self.assertRaises(TypeError, deferred.addBoth)
+        # assertRaises gives a **{} to the function, whereas no arg at all
+        # gives a NULL to cdefer, so lets call it directly here:
+        for cback in [defer.Deferred.addCallback,
+                      defer.Deferred.addErrback,
+                      defer.Deferred.addBoth]:
+            try:
+                cback(deferred)
+            except TypeError, e:
+                pass
+            else:
+                self.assert_(False, "addCallback did not raise TypeError")
+
     def testCallbackWithoutArgs(self):
+        """
+        Test that L{Deferred.addCallback} also allows 0 extra arguments to be
+        given
+        """
         deferred = defer.Deferred()
         deferred.addCallback(self._callback)
         deferred.callback("hello")
@@ -54,6 +167,10 @@ class DeferredTestCase(unittest.TestCase):
         self.failUnlessEqual(self.callback_results, (('hello',), {}))
 
     def testCallbackWithArgs(self):
+        """
+        Test that L{Deferred.addCallback} also allows 1 extra positional
+        argument to be given
+        """
         deferred = defer.Deferred()
         deferred.addCallback(self._callback, "world")
         deferred.callback("hello")
@@ -61,6 +178,10 @@ class DeferredTestCase(unittest.TestCase):
         self.failUnlessEqual(self.callback_results, (('hello', 'world'), {}))
 
     def testCallbackWithKwArgs(self):
+        """
+        Test that L{Deferred.addCallback} also allows 1 extra keyword argument
+        to be given
+        """
         deferred = defer.Deferred()
         deferred.addCallback(self._callback, world="world")
         deferred.callback("hello")
@@ -69,6 +190,9 @@ class DeferredTestCase(unittest.TestCase):
                              (('hello',), {'world': 'world'}))
 
     def testTwoCallbacks(self):
+        """
+        Test that multiple callbacks are called in a chain
+        """
         deferred = defer.Deferred()
         deferred.addCallback(self._callback)
         deferred.addCallback(self._callback2)
@@ -252,6 +376,8 @@ class DeferredTestCase(unittest.TestCase):
         self.failIf(L, "Deferred failed too soon.")
         return d
     testTimeOut.suppress = [_setTimeoutSuppression]
+    if not hasattr(defer.Deferred, 'setTimeout'):
+        testTimeOut.skip = "setTimeout not supported, skipping"
 
 
     def testImmediateSuccess(self):
@@ -272,6 +398,8 @@ class DeferredTestCase(unittest.TestCase):
         d.addCallback(l.append)
         self.assertEquals(l, ["success"])
     test_immediateSuccessBeforeTimeout.suppress = [_setTimeoutSuppression]
+    if not hasattr(defer.Deferred, 'setTimeout'):
+        test_immediateSuccessBeforeTimeout.skip = "setTimeout not supported, skipping"
 
 
     def testImmediateFailure(self):
@@ -390,8 +518,8 @@ class DeferredTestCase(unittest.TestCase):
 
     def test_reentrantRunCallbacks(self):
         """
-        A callback added to a L{Deferred} by a callback on that L{Deferred}
-        should be added to the end of the callback chain.
+        A callback added to a Deferred by a callback on that Deferred should be
+        added to the end of the callback chain.
         """
         deferred = defer.Deferred()
         called = []
@@ -410,8 +538,8 @@ class DeferredTestCase(unittest.TestCase):
 
     def test_nonReentrantCallbacks(self):
         """
-        A callback added to a L{Deferred} by a callback on that L{Deferred}
-        should not be executed until the running callback returns.
+        A callback added to a Deferred by a callback on that Deferred should
+        not be executed until the running callback returns.
         """
         deferred = defer.Deferred()
         called = []
@@ -429,8 +557,8 @@ class DeferredTestCase(unittest.TestCase):
     def test_reentrantRunCallbacksWithFailure(self):
         """
         After an exception is raised by a callback which was added to a
-        L{Deferred} by a callback on that L{Deferred}, the L{Deferred} should
-        call the first errback with a L{Failure} wrapping that exception.
+        Deferred by a callback on that Deferred, the Deferred should call the
+        first errback with a L{Failure} wrapping that exception.
         """
         exceptionMessage = "callback raised exception"
         deferred = defer.Deferred()
@@ -647,8 +775,8 @@ class LogTestCase(unittest.TestCase):
         def _subErrorLogWithInnerFrameCycle():
             d = defer.Deferred()
             d.addCallback(lambda x, d=d: 1/0)
-            d._d = d
             d.callback(1)
+            d.result = d
 
         _subErrorLogWithInnerFrameCycle()
         gc.collect()
@@ -796,8 +924,6 @@ class OtherPrimitives(unittest.TestCase):
         queue = defer.DeferredQueue(backlog=0)
         self.assertRaises(defer.QueueUnderflow, queue.get)
 
-
-
 class DeferredFilesystemLockTestCase(unittest.TestCase):
     """
     Test the behavior of L{DeferredFilesystemLock}
@@ -897,3 +1023,118 @@ class DeferredFilesystemLockTestCase(unittest.TestCase):
         self.clock.advance(1)
 
         return d
+
+class AttributesTestCase(unittest.TestCase):
+    """
+    Test that various Deferred attributes are accessible
+    """
+
+    def test_paused(self):
+        """
+        Test that the C{Deferred.paused} attribute is both readable and
+        writable
+        """
+        d = defer.Deferred()
+        self.assertEquals(d.paused, 0)
+        d.pause()
+        self.assertEquals(d.paused, 1)
+        d.paused = 2
+        d.unpause()
+        self.assertEquals(d.paused, 1)
+
+    def test_called(self):
+        """
+        Test that the C{Deferred.called} attribute is both readable and
+        writable
+        """
+        d = defer.Deferred()
+        self.assertEquals(d.called, 0)
+        d.callback(None)
+        self.assertEquals(d.called, 1)
+        d.called = 0
+        self.assertEquals(d.called, 0)
+
+    def test_debug(self):
+        """
+        Test that the C{Deferred.debug} class attribute works as an alternate name to
+        setDebugging/getDebugging
+        """
+        self.assertEquals(defer.Deferred.debug, False)
+        defer.setDebugging(True)
+        self.assertEquals(defer.Deferred.debug, True)
+        defer.Deferred.debug = False
+        self.assertEquals(defer.getDebugging(), False)
+
+class CallbacksAssignTestCase(unittest.TestCase):
+    """
+    Test that callbacks attribute assignments cause the proper exceptions to be
+    raised, when they should be raised.
+    """
+
+    def test_notList(self):
+        """
+        Test that callbacks assignment of something that's not a list fails
+        """
+        d = defer.Deferred()
+        d.callbacks = 'invalid'
+        self.assertRaises((TypeError, AttributeError), d.callback, None)
+
+    def test_invalidFirstItem(self):
+        """
+        Test that when an invalid item is placed in the callbacks list, it
+        causes a TypeError when trying to run the list.
+        """
+        for obj in [None, 0]:
+            d = defer.Deferred()
+            d.callbacks = [obj]
+            self.assertRaises(TypeError, d.callback, None)
+
+    def test_invalidSecondItem(self):
+        """
+        Test that when an invalid item is placed in the callbacks list, it does
+        not prevent running of previous items.
+        """
+        d = defer.Deferred()
+        l = []
+        d.addCallback(l.append)
+        # Do not mutate d.callbacks directly, cdefer returns a copy of the
+        # list.
+        d.callbacks = d.callbacks + [None]
+        self.assertRaises(TypeError, d.callback, 1)
+        self.assertEquals(l, [1])
+
+    def test_invalidCallbackErrback(self):
+        """
+        Test that an invalid callback or errback entry causes callback/errback
+        to raise
+        """
+        l = []
+
+        d = defer.Deferred()
+        d.callbacks = [((l.append, None, None), 'invalid')]
+        self.assertRaises((TypeError, ValueError), d.errback, Exception())
+
+        d = defer.Deferred()
+        d.callbacks = [('invalid', (l.append, None, None))]
+        self.assertRaises((TypeError, ValueError), d.callback, None)
+
+        self.assertEquals(l, [])
+
+    def test_unusedInvalidCallbackErrback(self):
+        """
+        Test that an invalid callback or errback entry are unused, they do not
+        cause exceptions
+        """
+        l = []
+        d = defer.Deferred()
+        d.callbacks = [((l.append, None, None), 'invalid')]
+        d.callback('one')
+        self.assertEquals(l, ['one'])
+
+        exc = Exception()
+        l = []
+        d = defer.Deferred()
+        d.callbacks = [('invalid', (l.append, None, None))]
+        d.errback(exc)
+        failure, = l
+        self.assertEquals(failure.value, exc)

@@ -31,6 +31,9 @@ extensions = [
               ["twisted/python/_epoll.c"],
               condition=lambda builder: builder._check_header("sys/epoll.h")),
 
+    Extension('twisted.internet.cdefer',
+              ['twisted/internet/cdefer/cdefer.c']),
+
     Extension("twisted.internet.iocpreactor.iocpsupport",
               ["twisted/internet/iocpreactor/iocpsupport/iocpsupport.c",
                "twisted/internet/iocpreactor/iocpsupport/winsock_pointers.c"],

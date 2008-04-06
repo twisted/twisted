@@ -11,9 +11,9 @@ def timeit(func, iter = 1000, *args, **kwargs):
     calls func iter times with args and kwargs, returns time elapsed
     """
 
-    import time
+    from time import time as currentTime
     r = range(iter)
-    t = time.time()
+    t = currentTime()
     for i in r:
         func(*args, **kwargs)
-    return time.time() - t
+    return currentTime() - t

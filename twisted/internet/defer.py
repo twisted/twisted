@@ -289,16 +289,14 @@ class Deferred:
         self.unpause()
 
     def _startRunCallbacks(self, result):
+        if self.debug and self._debugInfo is None:
+            self._debugInfo = DebugInfo()
         if self.called:
             if self.debug:
-                if self._debugInfo is None:
-                    self._debugInfo = DebugInfo()
-                extra = "\n" + self._debugInfo._getDebugTracebacks()
+                extra = self._debugInfo._getDebugTracebacks("\n")
                 raise AlreadyCalledError(extra)
             raise AlreadyCalledError
         if self.debug:
-            if self._debugInfo is None:
-                self._debugInfo = DebugInfo()
             self._debugInfo.invoker = traceback.format_stack()[:-2]
         self.called = True
         self.result = result
@@ -389,8 +387,8 @@ class DebugInfo:
     """Deferred debug helper"""
     failResult = None
 
-    def _getDebugTracebacks(self):
-        info = ''
+    def _getDebugTracebacks(self, prefix=''):
+        info = prefix
         if hasattr(self, "creator"):
             info += " C: Deferred was created:\n C:"
             info += "".join(self.creator).rstrip().replace("\n","\n C:")
@@ -450,6 +448,16 @@ class FirstError(Exception):
             return (self.subFailure == other.subFailure and
                     self.index == other.index)
         return False
+
+def _import_cdefer():
+    from twisted.internet.cdefer import Deferred, setDebugging, getDebugging
+    return Deferred, setDebugging, getDebugging
+try:
+    # Use this form to avoid assigning to some of them, and then
+    # hitting an import error and silently ignoring it
+    Deferred, setDebugging, getDebugging = _import_cdefer()
+except ImportError:
+    pass
 
 class DeferredList(Deferred):
     """I combine a group of deferreds into one callback.
