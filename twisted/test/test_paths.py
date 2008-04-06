@@ -633,3 +633,35 @@ class URLPathTestCase(unittest.TestCase):
         self.assertEquals(str(self.path.here()), 'http://example.com/foo/')
         self.assertEquals(str(self.path.child('').here()), 'http://example.com/foo/bar/')
 
+class URLPathAuthTestCase(unittest.TestCase):
+    def setUp(self):
+        self.path = urlpath.URLPath.fromString("http://alice:asecret@example.com/foo/bar?yes=no&no=yes#footer")
+
+    def testStringConversion(self):
+        self.assertEquals(str(self.path), "http://alice:asecret@example.com/foo/bar?yes=no&no=yes#footer")
+        
+    def testChildString(self):
+        self.assertEquals(str(self.path.child('hello')), "http://alice:asecret@example.com/foo/bar/hello")
+        self.assertEquals(str(self.path.child('hello').child('')), "http://alice:asecret@example.com/foo/bar/hello/")
+        
+    def testSiblingString(self):
+        self.assertEquals(str(self.path.sibling('baz')), 'http://alice:asecret@example.com/foo/baz')
+
+        # The sibling of http://example.com/foo/bar/
+        #     is http://example.comf/foo/bar/baz
+        # because really we are constructing a sibling of
+        # http://example.com/foo/bar/index.html
+        self.assertEquals(str(self.path.child('').sibling('baz')), 'http://alice:asecret@example.com/foo/bar/baz')
+        
+    def testParentString(self):
+        # parent should be equivalent to '..'
+        # 'foo' is the current directory, '/' is the parent directory
+        self.assertEquals(str(self.path.parent()), 'http://alice:asecret@example.com/')
+        self.assertEquals(str(self.path.child('').parent()), 'http://alice:asecret@example.com/foo/')
+        self.assertEquals(str(self.path.child('baz').parent()), 'http://alice:asecret@example.com/foo/')
+        self.assertEquals(str(self.path.parent().parent().parent().parent().parent()), 'http://alice:asecret@example.com/')
+
+    def testHereString(self):
+        # here should be equivalent to '.'
+        self.assertEquals(str(self.path.here()), 'http://alice:asecret@example.com/foo/')
+        self.assertEquals(str(self.path.child('').here()), 'http://alice:asecret@example.com/foo/bar/')
