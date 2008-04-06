@@ -26,6 +26,7 @@ class URIAuthority:
         Return a tuple representing the parts of the authority.
         """
         self.auth = auth
+        self.port = None
         auths = auth.split('@')
         if len(auths) == 2:
             userpass = auths.pop(0)
@@ -39,10 +40,8 @@ class URIAuthority:
             self.user = self.password = ''
         hostport = auths[0].split(':')
         self.host = hostport.pop(0) or ''
-        try:
+        if len(hostport) > 0:
             self.port = int(hostport.pop(0))
-        except IndexError, ValueError:
-            self.port = None
         return (self.user, self.password, self.host, self.port)
 
     fromString = classmethod(fromString)
