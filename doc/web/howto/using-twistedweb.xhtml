@@ -81,16 +81,14 @@ reactor.run()
 from twisted.web.resource import Resource
 
 class Hello(Resource):
+    isLeaf = True
     def getChild(self, name, request):
         if name == '':
             return self
-        return Resource.getChild(
-            self, name, request)
+        return Resource.getChild(self, name, request)
 
-        def render_GET(self, request):
-            return """&lt;html&gt;
-      Hello, world! I am located at %r.
-    &lt;/html&gt;""" % (request.prepath) 
+    def render_GET(self, request):
+        return "Hello, world! I am located at %r." % (request.prepath,)
 
 resource = Hello()
 </pre>
