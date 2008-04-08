@@ -1,9 +1,9 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from twisted.scripts.mktap import _tapHelper
+from twisted.application.service import ServiceMaker
 
-TwistedManhole = _tapHelper(
+TwistedManhole = ServiceMaker(
     "Twisted Manhole (old)",
     "twisted.tap.manhole",
     "An interactive remote debugger service.",

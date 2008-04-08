@@ -3,6 +3,14 @@
 # See LICENSE for details.
 
 import os, sys, hmac, errno, new, inspect
+try:
+    import pwd, grp
+except ImportError:
+    pwd = grp = None
+try:
+    from os import setgroups, getgroups
+except ImportError:
+    setgroups = getgroups = None
 from UserDict import UserDict
 
 
@@ -561,10 +569,14 @@ def dsu(list, key):
     L2.sort()
     return [e[2] for e in L2]
 
-try:
-    import pwd, grp
-    from os import setgroups, getgroups
+if pwd is None or grp is None or setgroups is None or getgroups is None:
+    def initgroups(uid, primaryGid):
+        """
+        Do nothing.
 
+        Underlying platform support require to manipulate groups is missing.
+        """
+else:
     def _setgroups_until_success(l):
         while(1):
             # NASTY NASTY HACK (but glibc does it so it must be okay):
@@ -591,7 +603,8 @@ try:
                 return
 
     def initgroups(uid, primaryGid):
-        """Initializes the group access list.
+        """
+        Initializes the group access list.
 
         This is done by reading the group database /etc/group and using all
         groups of which C{uid} is a member.  The additional group
@@ -600,6 +613,13 @@ try:
         If the given user is a member of more than C{NGROUPS}, arbitrary
         groups will be silently discarded to bring the number below that
         limit.
+
+        @type uid: C{int}
+        @param uid: The UID for which to look up group information.
+
+        @type primaryGid: C{int} or C{NoneType}
+        @param primaryGid: If provided, an additional GID to include when
+            setting the groups.
         """
         try:
             # Try to get the maximum number of groups
@@ -629,13 +649,6 @@ try:
             else:
                 raise
 
-
-except:
-    def initgroups(uid, primaryGid):
-        """Do nothing.
-
-        Underlying platform support require to manipulate groups is missing.
-        """
 
 
 def switchUID(uid, gid, euid=False):
@@ -845,11 +858,58 @@ def nameToLabel(mname):
 
 
 
+def uidFromString(uidString):
+    """
+    Convert a user identifier, as a string, into an integer UID.
+
+    @type uid: C{str}
+    @param uid: A string giving the base-ten representation of a UID or the
+        name of a user which can be converted to a UID via L{pwd.getpwnam}.
+
+    @rtype: C{int}
+    @return: The integer UID corresponding to the given string.
+
+    @raise ValueError: If the user name is supplied and L{pwd} is not
+        available.
+    """
+    try:
+        return int(uidString)
+    except ValueError:
+        if pwd is None:
+            raise
+        return pwd.getpwnam(uidString)[2]
+
+
+
+def gidFromString(gidString):
+    """
+    Convert a group identifier, as a string, into an integer GID.
+
+    @type uid: C{str}
+    @param uid: A string giving the base-ten representation of a GID or the
+        name of a group which can be converted to a GID via L{grp.getgrnam}.
+
+    @rtype: C{int}
+    @return: The integer GID corresponding to the given string.
+
+    @raise ValueError: If the group name is supplied and L{grp} is not
+        available.
+    """
+    try:
+        return int(gidString)
+    except ValueError:
+        if grp is None:
+            raise
+        return grp.getgrnam(gidString)[2]
+
+
+
 __all__ = [
     "uniquify", "padTo", "getPluginDirs", "addPluginDir", "sibpath",
     "getPassword", "dict", "println", "keyed_md5", "makeStatBar",
     "OrderedDict", "InsensitiveDict", "spewer", "searchupwards", "LineLog",
     "raises", "IntervalDifferential", "FancyStrMixin", "FancyEqMixin",
     "dsu", "switchUID", "SubclassableCStringIO", "moduleMovedForSplit",
-    "unsignedID", "mergeFunctionMetadata", "nameToLabel",
+    "unsignedID", "mergeFunctionMetadata", "nameToLabel", "uidFromString",
+    "gidFromString",
 ]

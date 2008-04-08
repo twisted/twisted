@@ -1,9 +1,13 @@
 # -*- test-case-name: twisted.test.test_util -*-
-# Copyright (c) 2001-2004,2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import os.path, sys
 import shutil, errno
+try:
+    import pwd, grp
+except ImportError:
+    pwd = grp = None
 
 from twisted.trial import unittest
 
@@ -77,6 +81,46 @@ class UtilTestCase(unittest.TestCase):
             self.assertEquals(
                 got, out,
                 "nameToLabel(%r) == %r != %r" % (inp, got, out))
+
+
+    def test_uidFromNumericString(self):
+        """
+        When L{uidFromString} is called with a base-ten string representation
+        of an integer, it returns the integer.
+        """
+        self.assertEqual(util.uidFromString("100"), 100)
+
+
+    def test_uidFromUsernameString(self):
+        """
+        When L{uidFromString} is called with a base-ten string representation
+        of an integer, it returns the integer.
+        """
+        pwent = pwd.getpwuid(os.getuid())
+        self.assertEqual(util.uidFromString(pwent.pw_name), pwent.pw_uid)
+    if pwd is None:
+        test_uidFromUsernameString.skip = (
+            "Username/UID conversion requires the pwd module.")
+
+
+    def test_gidFromNumericString(self):
+        """
+        When L{gidFromString} is called with a base-ten string representation
+        of an integer, it returns the integer.
+        """
+        self.assertEqual(util.gidFromString("100"), 100)
+
+
+    def test_gidFromGroupnameString(self):
+        """
+        When L{gidFromString} is called with a base-ten string representation
+        of an integer, it returns the integer.
+        """
+        grent = grp.getgrgid(os.getgid())
+        self.assertEqual(util.gidFromString(grent.gr_name), grent.gr_gid)
+    if grp is None:
+        test_gidFromGroupnameString.skip = (
+            "Group Name/GID conversion requires the grp module.")
 
 
 

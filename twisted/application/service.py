@@ -16,10 +16,11 @@ Maintainer: U{Moshe Zadka<mailto:moshez@twistedmatrix.com>}
 
 from zope.interface import implements, Interface, Attribute
 
+from twisted.python.reflect import namedAny
 from twisted.python import components
 from twisted.internet import defer
 from twisted.persisted import sob
-
+from twisted.plugin import IPlugin
 
 class IServiceMaker(Interface):
     """
@@ -55,8 +56,35 @@ class IServiceMaker(Interface):
 
 
 
-class IService(Interface):
+class ServiceMaker(object):
+    """
+    Utility class to simplify the definition of L{IServiceMaker} plugins.
+    """
+    implements(IPlugin, IServiceMaker)
 
+    def __init__(self, name, module, description, tapname):
+        self.name = name
+        self.module = module
+        self.description = description
+        self.tapname = tapname
+
+
+    def options():
+        def get(self):
+            return namedAny(self.module).Options
+        return get,
+    options = property(*options())
+
+
+    def makeService():
+        def get(self):
+            return namedAny(self.module).makeService
+        return get,
+    makeService = property(*makeService())
+
+
+
+class IService(Interface):
     """
     A service.
 

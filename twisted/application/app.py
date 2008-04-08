@@ -229,7 +229,7 @@ def fixPdb():
 
 
 
-def runReactorWithLogging(config, oldstdout, oldstderr, profiler=None):
+def runReactorWithLogging(config, oldstdout, oldstderr, profiler=None, reactor=None):
     """
     Start the reactor, using profiling if specified by the configuration, and
     log any error happening in the process.
@@ -245,8 +245,12 @@ def runReactorWithLogging(config, oldstdout, oldstderr, profiler=None):
 
     @param profiler: object used to run the reactor with profiling.
     @type profiler: L{AppProfiler}
+
+    @param reactor: The reactor to use.  If C{None}, the global reactor will
+        be used.
     """
-    from twisted.internet import reactor
+    if reactor is None:
+        from twisted.internet import reactor
     try:
         if config['profile']:
             if profiler is not None:
@@ -331,6 +335,17 @@ class ApplicationRunner(object):
         self.startLogging(self.getLogObserver())
 
         self.postApplication()
+
+
+    def startReactor(self, reactor, oldstdout, oldstderr):
+        """
+        Run the reactor with the given configuration.  Subclasses should
+        probably call this from C{postApplication}.
+
+        @see: L{runReactorWithLogging}
+        """
+        runReactorWithLogging(
+            self.config, oldstdout, oldstderr, self.profiler, reactor)
 
 
     def preApplication(self):

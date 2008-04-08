@@ -1,9 +1,9 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from twisted.scripts.mktap import _tapHelper
+from twisted.application.service import ServiceMaker
 
-TwistedWeb = _tapHelper(
+TwistedWeb = ServiceMaker(
     "Twisted Web",
     "twisted.web.tap",
     ("A general-purpose web server which can serve from a "

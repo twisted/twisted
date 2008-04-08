@@ -1,9 +1,9 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from twisted.scripts.mktap import _tapHelper
+from twisted.application.service import ServiceMaker
 
-TwistedSOCKS = _tapHelper(
+TwistedSOCKS = ServiceMaker(
     "Twisted SOCKS",
     "twisted.tap.socks",
     "A SOCKSv4 proxy service.",

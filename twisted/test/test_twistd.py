@@ -1,9 +1,17 @@
 # Copyright (c) 2007-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import os
-import sys
-import cPickle
+"""
+Tests for L{twisted.application.app} and L{twisted.scripts.twistd}.
+"""
+
+import os, sys, cPickle
+try:
+    import pwd, grp
+except ImportError:
+    pwd = grp = None
+
+from zope.interface import implements
 
 from twisted.trial import unittest
 
@@ -30,6 +38,53 @@ try:
     import pstats
 except ImportError:
     cProfile = None
+
+
+
+def patchUserDatabase(patch, user, uid, group, gid):
+    """
+    Patch L{pwd.getpwnam} so that it behaves as though only one user exists
+    and patch L{grp.getgrnam} so that it behaves as though only one group
+    exists.
+
+    @param patch: A function like L{TestCase.patch} which will be used to
+        install the fake implementations.
+
+    @type user: C{str}
+    @param user: The name of the single user which will exist.
+
+    @type uid: C{int}
+    @param uid: The UID of the single user which will exist.
+
+    @type group: C{str}
+    @param group: The name of the single user which will exist.
+
+    @type gid: C{int}
+    @param gid: The GID of the single group which will exist.
+    """
+    # Try not to be an unverified fake, but try not to depend on quirks of
+    # the system either (eg, run as a process with a uid and gid which
+    # equal each other, and so doesn't reliably test that uid is used where
+    # uid should be used and gid is used where gid should be used). -exarkun
+    pwent = pwd.getpwuid(os.getuid())
+    grent = grp.getgrgid(os.getgid())
+
+    def getpwnam(name):
+        result = list(pwent)
+        result[result.index(pwent.pw_name)] = user
+        result[result.index(pwent.pw_uid)] = uid
+        result = tuple(result)
+        return {user: result}[name]
+
+    def getgrnam(name):
+        result = list(grent)
+        result[result.index(grent.gr_name)] = group
+        result[result.index(grent.gr_gid)] = gid
+        result = tuple(result)
+        return {group: result}[name]
+
+    patch(pwd, "getpwnam", getpwnam)
+    patch(grp, "getgrnam", getgrnam)
 
 
 
@@ -229,6 +284,106 @@ class ApplicationRunnerTest(unittest.TestCase):
         writeMethod = observer.write
         fileObj = writeMethod.im_self
         self.assertEqual(fileObj.path, logfilename)
+
+
+    def _applicationStartsWithConfiguredID(self, argv, uid, gid):
+        """
+        Assert that given a particular command line, an application is started
+        as a particular UID/GID.
+
+        @param argv: A list of strings giving the options to parse.
+        @param uid: An integer giving the expected UID.
+        @param gid: An integer giving the expected GID.
+        """
+        self.config.parseOptions(argv)
+
+        events = []
+        class FakeUnixApplicationRunner(twistd._SomeApplicationRunner):
+            def setupEnvironment(self, chroot, rundir, nodaemon, pidfile):
+                events.append('environment')
+
+            def shedPrivileges(self, euid, uid, gid):
+                events.append(('privileges', euid, uid, gid))
+
+            def startReactor(self, reactor, oldstdout, oldstderr):
+                events.append('reactor')
+
+            def removePID(self, pidfile):
+                pass
+
+
+        class FakeService(object):
+            implements(service.IService, service.IProcess)
+
+            processName = None
+
+            def privilegedStartService(self):
+                events.append('privilegedStartService')
+
+            def startService(self):
+                events.append('startService')
+
+            def stopService(self):
+                pass
+
+        runner = FakeUnixApplicationRunner(self.config)
+        runner.preApplication()
+        runner.application = FakeService()
+        runner.postApplication()
+
+        self.assertEqual(
+            events,
+            ['environment', 'privilegedStartService',
+             ('privileges', False, uid, gid), 'startService', 'reactor'])
+
+
+    def test_applicationStartsWithConfiguredNumericIDs(self):
+        """
+        L{postApplication} should change the UID and GID to the values
+        specified as numeric strings by the configuration after running
+        L{service.IService.privilegedStartService} and before running
+        L{service.IService.startService}.
+        """
+        uid = 1234
+        gid = 4321
+        self._applicationStartsWithConfiguredID(
+            ["--uid", str(uid), "--gid", str(gid)], uid, gid)
+
+
+    def test_applicationStartsWithConfiguredNameIDs(self):
+        """
+        L{postApplication} should change the UID and GID to the values
+        specified as user and group names by the configuration after running
+        L{service.IService.privilegedStartService} and before running
+        L{service.IService.startService}.
+        """
+        user = "foo"
+        uid = 1234
+        group = "bar"
+        gid = 4321
+        patchUserDatabase(self.patch, user, uid, group, gid)
+        self._applicationStartsWithConfiguredID(
+            ["--uid", user, "--gid", group], uid, gid)
+
+    if getattr(os, 'setuid', None) is None:
+        msg = "Platform does not support --uid/--gid twistd options."
+        test_applicationStartsWithConfiguredNameIDs.skip = msg
+        test_applicationStartsWithConfiguredNumericIDs.skip = msg
+        del msg
+
+
+    def test_startReactorRunsTheReactor(self):
+        """
+        L{startReactor} calls L{reactor.run}.
+        """
+        reactor = DummyReactor()
+        runner = app.ApplicationRunner({
+                "profile": False,
+                "profiler": "profile",
+                "debug": False})
+        runner.startReactor(reactor, None, None)
+        self.assertTrue(
+            reactor.called, "startReactor did not call reactor.run()")
 
 
 

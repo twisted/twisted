@@ -1,50 +1,56 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.scripts.test.test_mktap -*-
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import sys, os
+import warnings, sys, os
 
-from zope.interface import implements
 
 from twisted.application import service, app
 from twisted.persisted import sob
 from twisted.python import usage, util, plugin as oldplugin
 from twisted import plugin as newplugin
+from twisted.python.util import uidFromString, gidFromString
 
 # API COMPATIBILITY
 IServiceMaker = service.IServiceMaker
-
-
-import warnings
+_tapHelper = service.ServiceMaker
 
 warnings.warn(
-    "mktap is obsolete as of Twisted 2.5, and will soon be officially "
-    "deprecated. Use Twisted Application Plugins with the "
-    "'twistd' command  directly, as described in "
-    "'Writing a Twisted Application Plugin for twistd' chapter of the "
-    "Developer Guide.", PendingDeprecationWarning)
+    "mktap and related support modules are deprecated as of Twisted 8.0.  "
+    "Use Twisted Application Plugins with the 'twistd' command directly, "
+    "as described in 'Writing a Twisted Application Plugin for twistd' "
+    "chapter of the Developer Guide.", DeprecationWarning, stacklevel=2)
 
-try:
-    import pwd, grp
-except ImportError:
-    def getid(uid, gid):
-        if uid is not None:
-            uid = int(uid)
-        if gid is not None:
-            gid = int(gid)
-        return uid, gid
-else:
-    def getid(uid, gid):
-        if uid is not None:
-            try:
-                uid = int(uid)
-            except ValueError:
-                uid = pwd.getpwnam(uid)[2]
-        if gid is not None:
-            try:
-                gid = int(gid)
-            except ValueError:
-                gid = grp.getgrnam(gid)[2]
-        return uid, gid
+
+
+def getid(uid, gid):
+    """
+    Convert one or both of a string representation of a UID and GID into
+    integer form.  On platforms where L{pwd} and L{grp} is available, user and
+    group names can be converted.
+
+    @type uid: C{str} or C{NoneType}
+    @param uid: A string giving the base-ten representation of a UID or the
+        name of a user which can be converted to a UID via L{pwd.getpwnam},
+        or None if no UID value is to be obtained.
+
+    @type gid: C{str} or C{NoneType}
+    @param uid: A string giving the base-ten representation of a GID or the
+        name of a group which can be converted to a GID via
+        L{grp.getgrnam}, or None if no UID value is to be obtained.
+
+    @return: A two-tuple giving integer UID and GID information for
+        whichever (or both) parameter is provided with a non-C{None} value.
+
+    @raise ValueError: If a user or group name is supplied and L{pwd} or L{grp}
+        is not available.
+    """
+    if uid is not None:
+        uid = uidFromString(uid)
+    if gid is not None:
+        gid = gidFromString(gid)
+    return (uid, gid)
+
 
 
 def loadPlugins(debug = None, progress = None):
@@ -85,8 +91,8 @@ class FirstPassOptions(usage.Options):
     params = ()
 
     optParameters = [
-        ['uid', 'u', None, "The uid to run as."],
-        ['gid', 'g', None, "The gid to run as."],
+        ['uid', 'u', None, "The uid to run as.", uidFromString],
+        ['gid', 'g', None, "The gid to run as.", gidFromString],
         ['append', 'a', None,
          "An existing .tap file to append the plugin to, rather than "
          "creating a new one."],
@@ -181,33 +187,4 @@ def run():
     addToApplication(ser,
                      options.subCommand, options['append'], options['appname'],
                      options['type'], options['encrypted'],
-                     *getid(options['uid'], options['gid']))
-
-from twisted.python.reflect import namedAny
-from twisted.plugin import IPlugin
-
-class _tapHelper(object):
-    """
-    Internal utility class to simplify the definition of \"new-style\"
-    mktap plugins based on existing, \"classic\" mktap plugins.
-    """
-
-    implements(IPlugin, IServiceMaker)
-
-    def __init__(self, name, module, description, tapname):
-        self.name = name
-        self.module = module
-        self.description = description
-        self.tapname = tapname
-
-    def options():
-        def get(self):
-            return namedAny(self.module).Options
-        return get,
-    options = property(*options())
-
-    def makeService():
-        def get(self):
-            return namedAny(self.module).makeService
-        return get,
-    makeService = property(*makeService())
+                     options['uid'], options['gid'])

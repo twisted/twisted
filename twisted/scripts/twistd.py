@@ -1,9 +1,12 @@
+# -*- test-case-name: twisted.test.test_twistd -*-
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 """
 The Twisted Daemon: platform-independent interface.
 
 @author: U{Christopher Armstrong<mailto:radix@twistedmatrix.com>}
 """
-
 
 from twisted.application import app
 

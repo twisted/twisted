@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.test.test_twistd -*-
 # Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -83,7 +84,5 @@ class WindowsApplicationRunner(app.ApplicationRunner):
         service.IService(self.application).privilegedStartService()
         app.startApplication(self.application, not self.config['no_save'])
         app.startApplication(internet.TimerService(0.1, lambda:None), 0)
-        app.runReactorWithLogging(self.config, self.oldstdout, self.oldstderr,
-                                  self.profiler)
+        self.startReactor(None, self.oldstdout, self.oldstderr)
         log.msg("Server Shut Down.")
-

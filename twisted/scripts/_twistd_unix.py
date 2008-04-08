@@ -3,15 +3,12 @@
 # See LICENSE for details.
 
 import warnings
-
-from twisted.python import log, syslog, logfile
-from twisted.python.util import switchUID
-from twisted.application import app, service
-from twisted.scripts import mktap
-from twisted import copyright
-
 import os, errno, sys
 
+from twisted.python import log, syslog, logfile
+from twisted.python.util import switchUID, uidFromString, gidFromString
+from twisted.application import app, service
+from twisted import copyright
 
 
 class ServerOptions(app.ServerOptions):
@@ -37,8 +34,8 @@ class ServerOptions(app.ServerOptions):
                       "Name of the pidfile"],
                      ['chroot', None, None,
                       'Chroot to a supplied directory before running'],
-                     ['uid', 'u', None, "The uid to run as."],
-                     ['gid', 'g', None, "The gid to run as."],
+                     ['uid', 'u', None, "The uid to run as.", uidFromString],
+                     ['gid', 'g', None, "The gid to run as.", gidFromString],
                     ]
     zsh_altArgDescr = {"prefix":"Use the given prefix when syslogging (default: twisted)",
                        "pidfile":"Name of the pidfile (default: twistd.pid)",}
@@ -86,22 +83,6 @@ This could either be a previously started instance of your application or a
 different application entirely. To start a new one, either run it in some other
 directory, or use the --pidfile and --logfile parameters to avoid clashes.
 """ %  pid)
-
-def removePID(pidfile):
-    if not pidfile:
-        return
-    try:
-        os.unlink(pidfile)
-    except OSError, e:
-        if e.errno == errno.EACCES or e.errno == errno.EPERM:
-            log.msg("Warning: No permission to delete pid file")
-        else:
-            log.msg("Failed to unlink PID file:")
-            log.deferr()
-    except:
-        log.msg("Failed to unlink PID file:")
-        log.deferr()
-
 
 def _getLogObserver(logfilename, sysLog, prefix, nodaemon):
     """
@@ -173,7 +154,7 @@ def daemonize():
     if os.fork():   # launch child and...
         os._exit(0) # kill off parent again.
     os.umask(077)
-    null=os.open('/dev/null', os.O_RDWR)
+    null = os.open('/dev/null', os.O_RDWR)
     for i in range(3):
         try:
             os.dup2(null, i)
@@ -182,45 +163,12 @@ def daemonize():
                 raise
     os.close(null)
 
-def shedPrivileges(euid, uid, gid):
-    if uid is not None or gid is not None:
-        switchUID(uid, gid, euid)
-        extra = euid and 'e' or ''
-        log.msg('set %suid/%sgid %s/%s' % (extra, extra, uid, gid))
 
 def launchWithName(name):
     if name and name != sys.argv[0]:
         exe = os.path.realpath(sys.executable)
         log.msg('Changing process name to ' + name)
-        os.execv(exe, [name, sys.argv[0], '--originalname']+sys.argv[1:])
-
-def setupEnvironment(config):
-    if config['chroot'] is not None:
-        os.chroot(config['chroot'])
-        if config['rundir'] == '.':
-            config['rundir'] = '/'
-    os.chdir(config['rundir'])
-    if not config['nodaemon']:
-        daemonize()
-    if config['pidfile']:
-        open(config['pidfile'],'wb').write(str(os.getpid()))
-
-def startApplication(config, application):
-    process = service.IProcess(application, None)
-    if not config['originalname']:
-        launchWithName(process.processName)
-    setupEnvironment(config)
-    service.IService(application).privilegedStartService()
-
-    uid, gid = mktap.getid(config['uid'], config['gid'])
-    if uid is None:
-        uid = process.uid
-    if gid is None:
-        gid = process.gid
-
-    shedPrivileges(config['euid'], uid, gid)
-    app.startApplication(application, not config['no_save'])
-
+        os.execv(exe, [name, sys.argv[0], '--originalname'] + sys.argv[1:])
 
 
 class UnixApplicationRunner(app.ApplicationRunner):
@@ -256,8 +204,110 @@ class UnixApplicationRunner(app.ApplicationRunner):
         application and run the reactor. After the reactor stops,
         clean up PID files and such.
         """
-        startApplication(self.config, self.application)
-        app.runReactorWithLogging(self.config, self.oldstdout, self.oldstderr,
-                                  self.profiler)
-        removePID(self.config['pidfile'])
+        self.startApplication(self.application)
+        self.startReactor(None, self.oldstdout, self.oldstderr)
+        self.removePID(self.config['pidfile'])
         log.msg("Server Shut Down.")
+
+
+    def removePID(self, pidfile):
+        """
+        Remove the specified PID file, if possible.  Errors are logged, not
+        raised.
+
+        @type pidfile: C{str}
+        @param pidfile: The path to the PID tracking file.
+        """
+        if not pidfile:
+            return
+        try:
+            os.unlink(pidfile)
+        except OSError, e:
+            if e.errno == errno.EACCES or e.errno == errno.EPERM:
+                log.msg("Warning: No permission to delete pid file")
+            else:
+                log.msg("Failed to unlink PID file:")
+                log.deferr()
+        except:
+            log.msg("Failed to unlink PID file:")
+            log.deferr()
+
+
+    def setupEnvironment(self, chroot, rundir, nodaemon, pidfile):
+        """
+        Set the filesystem root, the working directory, and daemonize.
+
+        @type chroot: C{str} or L{NoneType}
+        @param chroot: If not None, a path to use as the filesystem root (using
+            L{os.chroot}).
+
+        @type rundir: C{str}
+        @param rundir: The path to set as the working directory.
+
+        @type nodaemon: C{bool}
+        @param nodaemon: A flag which, if set, indicates that daemonization
+            should not be done.
+
+        @type pidfile: C{str} or C{NoneType}
+        @param pidfile: If not C{None}, the path to a file into which to put
+            the PID of this process.
+        """
+        if chroot is not None:
+            os.chroot(chroot)
+            if rundir == '.':
+                rundir = '/'
+        os.chdir(rundir)
+        if not nodaemon:
+            daemonize()
+        if pidfile:
+            open(pidfile,'wb').write(str(os.getpid()))
+
+
+    def shedPrivileges(self, euid, uid, gid):
+        """
+        Change the UID and GID or the EUID and EGID of this process.
+
+        @type euid: C{bool}
+        @param euid: A flag which, if set, indicates that only the I{effective}
+            UID and GID should be set.
+
+        @type uid: C{int} or C{NoneType}
+        @param uid: If not C{None}, the UID to which to switch.
+
+        @type gid: C{int} or C{NoneType}
+        @param gid: If not C{None}, the GID to which to switch.
+        """
+        if uid is not None or gid is not None:
+            switchUID(uid, gid, euid)
+            extra = euid and 'e' or ''
+            log.msg('set %suid/%sgid %s/%s' % (extra, extra, uid, gid))
+
+
+    def startApplication(self, application):
+        """
+        Configure global process state based on the given application and run
+        the application.
+
+        @param application: An object which can be adapted to
+            L{service.IProcess} and L{service.IService}.
+        """
+        process = service.IProcess(application)
+        if not self.config['originalname']:
+            launchWithName(process.processName)
+        self.setupEnvironment(
+            self.config['chroot'], self.config['rundir'],
+            self.config['nodaemon'], self.config['pidfile'])
+
+        service.IService(application).privilegedStartService()
+
+        uid, gid = self.config['uid'], self.config['gid']
+        if uid is None:
+            uid = process.uid
+        if gid is None:
+            gid = process.gid
+
+        self.shedPrivileges(self.config['euid'], uid, gid)
+        app.startApplication(application, not self.config['no_save'])
+
+
+

@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 from zope.interface import implements
@@ -19,9 +19,9 @@ TestResource = _Web2ResourcePlugin("TestResource",
                            "I'm a test resource")
 
 
-from twisted.scripts.mktap import _tapHelper
+from twisted.application.service import ServiceMaker
 
-TwistedWeb2 = _tapHelper('Twisted Web2',
+TwistedWeb2 = ServiceMaker('Twisted Web2',
                          'twisted.web2.tap',
                          ("An HTTP/1.1 web server that can serve from a "
                           "filesystem or application resource."),
