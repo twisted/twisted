@@ -25,6 +25,10 @@ Source: "win32\twistenv.bat"; DestDir: "{app}\twisted"; Flags: ignoreversion
 ; *.pyc keeps this directory around
 Type: filesandordirs; Name: "{app}\twisted"
 Type: filesandordirs; Name: "{app}\TwistedDocs"
+Type: files; Name: "{app}\zope\interface\*.pyc"
+Type: files; Name: "{app}\zope\interface\*.pyo"
+Type: files; Name: "{app}\zope\__init__.pyc"
+Type: files; Name: "{app}\zope\__init__.pyo"
 
 [Icons]
 Name: "{group}\Manual"; Filename: "{app}\TwistedDocs\howto\index.xhtml"
