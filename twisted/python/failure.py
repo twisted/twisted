@@ -1,11 +1,12 @@
 # -*- test-case-name: twisted.test.test_failure -*-
 # See also test suite twisted.test.test_pbfailure
 
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""Asynchronous-friendly error mechanism.
+"""
+Asynchronous-friendly error mechanism.
 
 See L{Failure}.
 """
@@ -363,7 +364,10 @@ class Failure:
         # it is only really originating from
         # throwExceptionIntoGenerator if the bottom of the traceback
         # is a yield.
-        if lastFrame.f_code.co_code[lastTb.tb_lasti] != cls._yieldOpcode:
+        # Pyrex and Cython extensions create traceback frames
+        # with no co_code, but they can't yield so we know it's okay to just return here.
+        if ((not lastFrame.f_code.co_code) or
+            lastFrame.f_code.co_code[lastTb.tb_lasti] != cls._yieldOpcode):
             return
 
         # if the exception was caught above the generator.throw

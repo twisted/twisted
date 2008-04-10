@@ -1,7 +1,5 @@
-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 
 """
@@ -14,8 +12,12 @@ import traceback
 
 from twisted.trial import unittest, util
 
-
 from twisted.python import failure
+
+try:
+    from twisted.test import raiser
+except ImportError:
+    raiser = None
 
 
 class BrokenStr(Exception):
@@ -244,6 +246,26 @@ class FindFailureTests(unittest.TestCase):
             self.assertEqual(f.getTraceback(), newF.getTraceback())
         else:
             self.fail("No exception raised from raiseException!?")
+
+
+    def test_failureConstructionWithMungedStackSucceeds(self):
+        """
+        Pyrex and Cython are known to insert fake stack frames so as to give
+        more Python-like tracebacks. These stack frames with empty code objects
+        should not break extraction of the exception.
+        """
+        try:
+            raiser.raiseException()
+        except raiser.RaiserException:
+            f = failure.Failure()
+            self.assertTrue(f.check(raiser.RaiserException))
+        else:
+            self.fail("No exception raised from extension?!")
+
+
+    if raiser is None:
+        skipMsg = "raiser extension not available"
+        test_failureConstructionWithMungedStackSucceeds.skip = skipMsg
 
 
 

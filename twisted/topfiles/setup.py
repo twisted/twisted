@@ -27,6 +27,9 @@ extensions = [
     Extension("twisted.protocols._c_urlarg",
               ["twisted/protocols/_c_urlarg.c"]),
 
+    Extension("twisted.test.raiser",
+              ["twisted/test/raiser.c"]),
+
     Extension("twisted.python._epoll",
               ["twisted/python/_epoll.c"],
               condition=lambda builder: builder._check_header("sys/epoll.h")),
