@@ -7,7 +7,7 @@ Tests for error handling in PB.
 
 from twisted.trial import unittest
 
-from twisted.spread import pb, flavors
+from twisted.spread import pb, flavors, jelly
 from twisted.internet import reactor, defer
 from twisted.python import log
 
@@ -353,3 +353,55 @@ class PBFailureTest(PBConnTestCase):
 class PBFailureTestUnsafe(PBFailureTest):
     compare = unittest.TestCase.failIfEquals
     unsafeTracebacks = 1
+
+
+
+class DummyInvoker(object):
+    """
+    A behaviorless object to be used as the invoker parameter to
+    L{jelly.jelly}.
+    """
+    serializingPerspective = None
+
+
+
+class FailureJellyingTests(unittest.TestCase):
+    """
+    Tests for the interaction of jelly and failures.
+    """
+    def test_unjelliedFailureCheck(self):
+        """
+        An unjellied L{CopyableFailure} has a check method which behaves the
+        same way as the original L{CopyableFailure}'s check method.
+        """
+        original = pb.CopyableFailure(ZeroDivisionError())
+        self.assertIdentical(
+            original.check(ZeroDivisionError), ZeroDivisionError)
+        self.assertIdentical(original.check(ArithmeticError), ArithmeticError)
+        copied = jelly.unjelly(jelly.jelly(original, invoker=DummyInvoker()))
+        self.assertIdentical(
+            copied.check(ZeroDivisionError), ZeroDivisionError)
+        self.assertIdentical(copied.check(ArithmeticError), ArithmeticError)
+
+
+    def test_twiceUnjelliedFailureCheck(self):
+        """
+        The object which results from jellying a L{CopyableFailure}, unjellying
+        the result, creating a new L{CopyableFailure} from the result of that,
+        jellying it, and finally unjellying the result of that has a check
+        method which behaves the same way as the original L{CopyableFailure}'s
+        check method.
+        """
+        original = pb.CopyableFailure(ZeroDivisionError())
+        self.assertIdentical(
+            original.check(ZeroDivisionError), ZeroDivisionError)
+        self.assertIdentical(original.check(ArithmeticError), ArithmeticError)
+        copiedOnce = jelly.unjelly(
+            jelly.jelly(original, invoker=DummyInvoker()))
+        derivative = pb.CopyableFailure(copiedOnce)
+        copiedTwice = jelly.unjelly(
+            jelly.jelly(derivative, invoker=DummyInvoker()))
+        self.assertIdentical(
+            copiedTwice.check(ZeroDivisionError), ZeroDivisionError)
+        self.assertIdentical(
+            copiedTwice.check(ArithmeticError), ArithmeticError)

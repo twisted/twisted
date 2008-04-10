@@ -421,7 +421,10 @@ class CopyableFailure(failure.Failure, Copyable):
             state['value'] = failure2Copyable(self.value, self.unsafeTracebacks)
         else:
             state['value'] = str(self.value) # Exception instance
-        state['type'] = reflect.qual(self.type) # Exception class
+        if isinstance(self.type, str):
+            state['type'] = self.type
+        else:
+            state['type'] = reflect.qual(self.type) # Exception class
         if self.unsafeTracebacks:
             io = StringIO.StringIO()
             self.printTraceback(io)
