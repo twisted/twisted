@@ -3,4 +3,5 @@
 f = open("/dev/tty", "r+")
 a = f.readline()
 f.write(a)
+f.flush()
 f.close()

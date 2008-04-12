@@ -1699,7 +1699,11 @@ class PosixProcessTestCasePTY(unittest.TestCase, PosixProcessBase):
     # testProcess, but not without p.transport.closeStdin
     #  might be solveable: TODO: add test if so
 
-    def testOpeningTTY(self):
+    def test_openingTTY(self):
+        """
+        Launch a script that opens /dev/tty, and verify that it's able to read
+        and write to it.
+        """
         exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_tty.py")
         p = Accumulator()
@@ -1714,7 +1718,8 @@ class PosixProcessTestCasePTY(unittest.TestCase, PosixProcessBase):
             self.assertEquals(
                 p.outF.getvalue(),
                 "hello world!\r\nhello world!\r\n",
-                "Error message from process_tty follows:\n\n%s\n\n" % p.outF.getvalue())
+                "Error message from process_tty follows:\n\n%s\n\n" % (
+                p.outF.getvalue(),))
         return d.addCallback(processEnded)
 
 
