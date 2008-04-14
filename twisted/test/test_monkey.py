@@ -1,4 +1,4 @@
-# Copyright (c) 2007 Twisted Matrix Laboratories.
+# Copyright (c) 2007-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -6,7 +6,9 @@ Tests for L{twisted.python.monkey}.
 """
 
 from twisted.trial import unittest
+
 from twisted.python.monkey import MonkeyPatcher
+
 
 
 class TestObj:
@@ -14,6 +16,7 @@ class TestObj:
         self.foo = 'foo value'
         self.bar = 'bar value'
         self.baz = 'baz value'
+
 
 
 class MonkeyPatcherTest(unittest.TestCase):
@@ -61,15 +64,6 @@ class MonkeyPatcherTest(unittest.TestCase):
         self.monkeyPatcher.addPatch(self.testObject, 'foo', 'haha')
         self.monkeyPatcher.patch()
         self.assertEquals(self.testObject.foo, 'haha')
-
-
-    def test_patchNonExisting(self):
-        """
-        Patching a non-existing attribute fails with an C{AttributeError}.
-        """
-        self.monkeyPatcher.addPatch(self.testObject, 'nowhere',
-                                    'blow up please')
-        self.assertRaises(AttributeError, self.monkeyPatcher.patch)
 
 
     def test_patchAlreadyPatched(self):
@@ -159,3 +153,42 @@ class MonkeyPatcherTest(unittest.TestCase):
         self.assertRaises(RuntimeError, self.monkeyPatcher.runWithPatches, _)
         self.assertEquals(self.testObject.foo, self.originalObject.foo)
         self.assertEquals(self.testObject.bar, self.originalObject.bar)
+
+
+    def test_attributeNotPresent(self):
+        """
+        L{MonkeyPatcher.patch} should be able to patch an attribute not present
+        in the class, and L{MonkeyPatcher.restore} should delete it afterwards.
+        """
+        self.monkeyPatcher.addPatch(self.testObject, 'egg', 'spam')
+        self.monkeyPatcher.patch()
+        self.assertEquals(self.testObject.egg, 'spam')
+        self.monkeyPatcher.restore()
+        self.assertRaises(AttributeError, getattr, self.testObject, "egg")
+
+
+    def test_patchToNotPresentAttribute(self):
+        """
+        When L{MonkeyPatcher.NOT_PRESENT} is passed as value to
+        L{MonkeyPatcher.patch}, the attribute of the object is deleted.
+        """
+        self.monkeyPatcher.addPatch(self.testObject, 'foo',
+                                    self.monkeyPatcher.NOT_PRESENT)
+        self.monkeyPatcher.patch()
+        self.assertRaises(AttributeError, getattr, self.testObject, "foo")
+        self.monkeyPatcher.restore()
+        self.assertEquals(self.testObject.foo, self.originalObject.foo)
+
+
+    def test_patchNotNotPresentAttributeAlreadyNotPresent(self):
+        """
+        If L{MonkeyPatcher.NOT_PRESENT} is passed as value to
+        L{MonkeyPatcher.patch} but the attribute doesn't exist, it doesn't
+        break patch and restore.
+        """
+        self.monkeyPatcher.addPatch(self.testObject, 'egg',
+                                    self.monkeyPatcher.NOT_PRESENT)
+        self.monkeyPatcher.patch()
+        self.assertRaises(AttributeError, getattr, self.testObject, "egg")
+        self.monkeyPatcher.restore()
+        self.assertRaises(AttributeError, getattr, self.testObject, "egg")

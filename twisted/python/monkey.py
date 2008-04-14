@@ -1,14 +1,20 @@
 # -*- test-case-name: twisted.test.test_monkey -*-
 
-# Copyright (c) 2007 Twisted Matrix Laboratories.
+# Copyright (c) 2007-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
+
 
 
 class MonkeyPatcher(object):
     """
     Cover up attributes with new objects. Neat for monkey-patching things for
     unit-testing purposes.
+
+    @cvar NOT_PRESENT: identifier indicating that a patched attribute was not
+        originally present in the object patched.
+    @type NOT_PRESENT: C{object}
     """
+    NOT_PRESENT = object()
 
     def __init__(self, *patches):
         # List of patches to apply in (obj, name, value).
@@ -48,8 +54,16 @@ class MonkeyPatcher(object):
         """
         for obj, name, value in self._patchesToApply:
             if not self._alreadyPatched(obj, name):
-                self._originals.append((obj, name, getattr(obj, name)))
-            setattr(obj, name, value)
+                self._originals.append((obj, name,
+                                        getattr(obj, name, self.NOT_PRESENT)))
+            if value is self.NOT_PRESENT:
+                try:
+                    delattr(obj, name)
+                except AttributeError:
+                    # We may want to delete an attribute not present
+                    pass
+            else:
+                setattr(obj, name, value)
 
 
     def restore(self):
@@ -58,7 +72,14 @@ class MonkeyPatcher(object):
         """
         while self._originals:
             obj, name, value = self._originals.pop()
-            setattr(obj, name, value)
+            if value is self.NOT_PRESENT:
+                try:
+                    delattr(obj, name)
+                except AttributeError:
+                    # This is the pending exception of the one in patch
+                    pass
+            else:
+                setattr(obj, name, value)
 
 
     def runWithPatches(self, f, *args, **kw):
