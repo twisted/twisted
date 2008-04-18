@@ -91,9 +91,11 @@ Framework</a>.</p>
   directory ends up in sys.path. Create a directory
   named <code>twisted</code> containing a directory
   named <code>plugins</code>, and add a file
-  named <code>myproject.py</code> to it. This file will contain your
+  named <code>myproject_plugin.py</code> to it. This file will contain your
   plugin. Note that you should <em>not</em> add any __init__.py files
-  to this directory structure.
+  to this directory structure, and the plugin file should <em>not</em>
+  be named <code>myproject.py</code> (because that would conflict with
+  your project's module name).
 </p>
 
 <p>
