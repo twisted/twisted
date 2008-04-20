@@ -86,7 +86,9 @@ class SSHUserAuthServer(service.SSHService):
         self.method = method
         d = self.tryAuth(method, user, rest)
         if not d:
-            self._ebBadAuth(ConchError('auth returned none'))
+            self._ebBadAuth(
+                failure.Failure(error.ConchError('auth returned none')))
+            return
         d.addCallbacks(self._cbFinishedAuth)
         d.addErrback(self._ebMaybeBadAuth)
         d.addErrback(self._ebBadAuth)

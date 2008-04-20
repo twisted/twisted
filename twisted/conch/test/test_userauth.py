@@ -5,6 +5,7 @@ from twisted.cred.credentials import IUsernamePassword
 from twisted.cred.error import UnauthorizedLogin
 from twisted.cred.portal import IRealm, Portal
 
+from twisted.conch.error import ConchError
 from twisted.conch.ssh import userauth
 from twisted.conch.ssh.common import NS
 from twisted.conch.ssh.transport import SSHServerTransport
@@ -152,3 +153,24 @@ class TestSSHUserAuthServer(unittest.TestCase):
                 self.authServer.transport.packets,
                 [(userauth.MSG_USERAUTH_FAILURE, NS('password') + chr(0))])
         return d.addCallback(check)
+
+
+    def test_requestRaisesConchError(self):
+        """
+        ssh_USERAUTH_REQUEST should raise a ConchError if tryAuth returns
+        None. Added to catch a bug noticed by pyflakes. This is a whitebox
+        test.
+        """
+        def mockTryAuth(kind, user, data):
+            return None
+
+        def mockEbBadAuth(reason):
+            reason.trap(ConchError)
+
+        self.patch(self.authServer, 'tryAuth', mockTryAuth)
+        self.patch(self.authServer, '_ebBadAuth', mockEbBadAuth)
+
+        packet = NS('user') + NS('none') + NS('public-key') + NS('data')
+        # If an error other than ConchError is raised, this will trigger an
+        # exception.
+        return self.authServer.ssh_USERAUTH_REQUEST(packet)
