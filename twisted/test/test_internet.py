@@ -1057,6 +1057,22 @@ class ReactorBaseTestCase(unittest.TestCase):
             lambda: events.append(("during", "shutdown")))
         self.reactor.startRunning()
         self.reactor.stop()
+
+        # Simulate the mainloop spinning a little bit.  Do this to allow
+        # reactor.stop() to schedule the shutdown event to be fired as opposed
+        # to assuming reactor.stop() will fire the shutdown event before
+        # returning.
+
+        # Generally, randomly scheduling things to happen instead of doing them
+        # synchronously is wrong.  However, this is finicky functionality which
+        # was always poorly specified and was implemented such that most times
+        # the shutdown event was fired asynchronously.  If you're implementing
+        # a new API, don't look at this advance(0) and think it's great and
+        # copy it.
+
+        # See #3168, #3146, and #3198.
+        self.reactor.clock.advance(0)
+
         self.assertEquals(events, [("before", "shutdown"),
                                    ("during", "shutdown")])
 

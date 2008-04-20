@@ -393,10 +393,15 @@ class _ThreePhaseEvent(object):
 class ReactorBase(object):
     """
     Default base class for Reactors.
+
+    @type _stopped: C{bool}
+    @ivar _stopped: A flag which is true between paired calls to C{reactor.run}
+        and C{reactor.stop}.
     """
 
     implements(IReactorCore, IReactorTime, IReactorPluggableResolver)
 
+    _stopped = True
     installed = False
     usingThreads = False
     resolver = BlockingResolver()
@@ -485,10 +490,11 @@ class ReactorBase(object):
         """
         See twisted.internet.interfaces.IReactorCore.stop.
         """
-        if not self.running:
+        if self._stopped:
             raise error.ReactorNotRunning(
                 "Can't stop reactor that isn't running.")
-        self.fireSystemEvent("shutdown")
+        self._stopped = True
+        self.callLater(0, self.fireSystemEvent, "shutdown")
 
     def crash(self):
         """
@@ -579,6 +585,7 @@ class ReactorBase(object):
                     "since Twisted 8.0",
                     category=DeprecationWarning, stacklevel=3)
         self.running = True
+        self._stopped = False
         threadable.registerAsIOThread()
         self.fireSystemEvent('startup')
 

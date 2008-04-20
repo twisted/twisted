@@ -210,13 +210,23 @@ class PosixReactorBase(ReactorBase):
         else:
             self.callLater(0, process.reapAllProcesses)
 
+
     def startRunning(self, installSignalHandlers=True):
         """
-        Forward call to ReactorBase, install signal handlers if asked.
+        Forward call to ReactorBase, arrange for signal handlers to be
+        installed if asked.
         """
-        ReactorBase.startRunning(self)
         if installSignalHandlers:
-            self._handleSignals()
+            # Make sure this happens before after-startup events, since the
+            # expectation of after-startup is that the reactor is fully
+            # initialized.  Don't do it right away for historical reasons
+            # (perhaps some before-startup triggers don't want there to be a
+            # custom SIGCHLD handler so that they can run child processes with
+            # some blocking api).
+            self.addSystemEventTrigger(
+                'during', 'startup', self._handleSignals)
+        ReactorBase.startRunning(self)
+
 
     def run(self, installSignalHandlers=True):
         self.startRunning(installSignalHandlers=installSignalHandlers)

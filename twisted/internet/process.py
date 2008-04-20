@@ -12,6 +12,7 @@ Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 
 # System Imports
 import gc, os, sys, traceback, select, signal, errno
+import warnings
 
 try:
     import pty
@@ -487,12 +488,10 @@ class Process(_BaseProcess):
             assert 'r' not in childFDs.values()
             assert 'w' not in childFDs.values()
         if not signal.getsignal(signal.SIGCHLD):
-            log.msg("spawnProcess called, but the SIGCHLD handler is not "
-                    "installed. This probably means you have not yet "
-                    "called reactor.run, or called "
-                    "reactor.run(installSignalHandler=0). You will probably "
-                    "never see this process finish, and it may become a "
-                    "zombie process.")
+            warnings.warn(
+                error.PotentialZombieWarning.MESSAGE,
+                error.PotentialZombieWarning,
+                stacklevel=3)
 
         self.lostProcess = False
 
