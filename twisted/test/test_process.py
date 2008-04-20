@@ -973,13 +973,19 @@ class PosixProcessBase:
         d.addCallback(check)
         return d
 
-    def testAbnormalTermination(self):
-        cmd = self.getCommand('false')
+
+    def test_abnormalTermination(self):
+        """
+        When a process terminates with a system exit code set to 1,
+        C{processEnded} is called with a L{error.ProcessTerminated} error,
+        the C{exitCode} attribute reflecting the system exit code.
+        """
+        exe = sys.executable
 
         d = defer.Deferred()
         p = TrivialProcessProtocol(d)
-        reactor.spawnProcess(p, cmd, ['false'], env=None,
-                             usePTY=self.usePTY)
+        reactor.spawnProcess(p, exe, [exe, '-c', 'import sys; sys.exit(1)'],
+                             env=None, usePTY=self.usePTY)
 
         def check(ignored):
             p.reason.trap(error.ProcessTerminated)
@@ -987,6 +993,7 @@ class PosixProcessBase:
             self.assertEquals(p.reason.value.signal, None)
         d.addCallback(check)
         return d
+
 
     def _testSignal(self, sig):
         exe = sys.executable
@@ -1694,7 +1701,7 @@ class PosixProcessTestCasePTY(unittest.TestCase, PosixProcessBase):
     usePTY = True
     # PTYs only offer one input and one output. What still makes sense?
     # testNormalTermination
-    # testAbnormalTermination
+    # test_abnormalTermination
     # testSignal
     # testProcess, but not without p.transport.closeStdin
     #  might be solveable: TODO: add test if so
