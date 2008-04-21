@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.words.test.test_jabberxmlstream -*-
 #
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -15,7 +15,7 @@ from zope.interface import directlyProvides, implements
 
 from twisted.internet import defer
 from twisted.internet.error import ConnectionLost
-from twisted.python import failure
+from twisted.python import failure, log
 from twisted.words.protocols.jabber import error, ijabber, jid
 from twisted.words.xish import domish, xmlstream
 from twisted.words.xish.xmlstream import STREAM_CONNECTED_EVENT
@@ -46,6 +46,7 @@ def hashPassword(sid, password):
     return sha.new("%s%s" % (sid, password)).hexdigest()
 
 
+
 class Authenticator:
     """
     Base class for business logic of initializing an XmlStream
@@ -72,6 +73,7 @@ class Authenticator:
     def __init__(self):
         self.xmlstream = None
 
+
     def connectionMade(self):
         """
         Called by the XmlStream when the underlying socket connection is
@@ -84,6 +86,7 @@ class Authenticator:
         Subclasses can use self.xmlstream.send() to send any initial data to
         the peer.
         """
+
 
     def streamStarted(self, rootElement):
         """
@@ -112,6 +115,7 @@ class Authenticator:
 
         self.xmlstream.version = min(self.xmlstream.version, version)
 
+
     def associateWithStream(self, xmlstream):
         """
         Called by the XmlStreamFactory when a connection has been made
@@ -129,6 +133,7 @@ class Authenticator:
         self.xmlstream = xmlstream
 
 
+
 class ConnectAuthenticator(Authenticator):
     """
     Authenticator for initiating entities.
@@ -139,10 +144,12 @@ class ConnectAuthenticator(Authenticator):
     def __init__(self, otherHost):
         self.otherHost = otherHost
 
+
     def connectionMade(self):
         self.xmlstream.namespace = self.namespace
         self.xmlstream.otherEntity = jid.internJID(self.otherHost)
         self.xmlstream.sendHeader()
+
 
     def initializeStream(self):
         """
@@ -191,6 +198,7 @@ class ConnectAuthenticator(Authenticator):
         d.addCallback(do_next)
         d.addErrback(self.xmlstream.dispatch, INIT_FAILED_EVENT)
 
+
     def streamStarted(self, rootElement):
         """
         Called by the XmlStream when the stream has started.
@@ -223,6 +231,8 @@ class ConnectAuthenticator(Authenticator):
         else:
             self.initializeStream()
 
+
+
 class ListenAuthenticator(Authenticator):
     """
     Authenticator for receiving entities.
@@ -239,6 +249,7 @@ class ListenAuthenticator(Authenticator):
         """
         Authenticator.associateWithStream(self, xmlstream)
         self.xmlstream.initiating = False
+
 
     def streamStarted(self, rootElement):
         """
@@ -259,11 +270,13 @@ class ListenAuthenticator(Authenticator):
             self.xmlstream.prefixes[uri] = prefix
 
 
+
 class FeatureNotAdvertized(Exception):
     """
     Exception indicating a stream feature was not advertized, while required by
     the initiating entity.
     """
+
 
 
 class BaseFeatureInitiatingInitializer(object):
@@ -288,6 +301,7 @@ class BaseFeatureInitiatingInitializer(object):
     def __init__(self, xs):
         self.xmlstream = xs
 
+
     def initialize(self):
         """
         Initiate the initialization.
@@ -306,6 +320,7 @@ class BaseFeatureInitiatingInitializer(object):
         else:
             return None
 
+
     def start(self):
         """
         Start the actual initialization.
@@ -314,16 +329,19 @@ class BaseFeatureInitiatingInitializer(object):
         """
 
 
+
 class TLSError(Exception):
     """
     TLS base exception.
     """
 
 
+
 class TLSFailed(TLSError):
     """
     Exception indicating failed TLS negotiation
     """
+
 
 
 class TLSRequired(TLSError):
@@ -335,6 +353,7 @@ class TLSRequired(TLSError):
     """
 
 
+
 class TLSNotSupported(TLSError):
     """
     Exception indicating missing TLS support.
@@ -342,6 +361,7 @@ class TLSNotSupported(TLSError):
     This exception is raised when the initiating entity wants and requires to
     negotiate TLS when the OpenSSL library is not available.
     """
+
 
 
 class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
@@ -374,9 +394,11 @@ class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
         self.xmlstream.sendHeader()
         self._deferred.callback(Reset)
 
+
     def onFailure(self, obj):
         self.xmlstream.removeObserver('/proceed', self.onProceed)
         self._deferred.errback(TLSFailed())
+
 
     def start(self):
         """
@@ -409,6 +431,7 @@ class TLSInitiatingInitializer(BaseFeatureInitiatingInitializer):
         self.xmlstream.addOnetimeObserver("/failure", self.onFailure)
         self.xmlstream.send(domish.Element((NS_XMPP_TLS, "starttls")))
         return self._deferred
+
 
 
 class XmlStream(xmlstream.XmlStream):
@@ -463,9 +486,11 @@ class XmlStream(xmlstream.XmlStream):
         # Reset the authenticator
         authenticator.associateWithStream(self)
 
+
     def _callLater(self, *args, **kwargs):
         from twisted.internet import reactor
         return reactor.callLater(*args, **kwargs)
+
 
     def reset(self):
         """
@@ -477,6 +502,7 @@ class XmlStream(xmlstream.XmlStream):
         """
         self._headerSent = False
         self._initializeStream()
+
 
     def onStreamError(self, errelem):
         """
@@ -491,6 +517,7 @@ class XmlStream(xmlstream.XmlStream):
         self.dispatch(failure.Failure(error.exceptionFromStreamError(errelem)),
                       STREAM_ERROR_EVENT)
         self.transport.loseConnection()
+
 
     def sendHeader(self):
         """
@@ -520,11 +547,13 @@ class XmlStream(xmlstream.XmlStream):
         self.send(rootElement.toXml(prefixes=self.prefixes, closeElement=0))
         self._headerSent = True
 
+
     def sendFooter(self):
         """
         Send stream footer.
         """
         self.send('</stream:stream>')
+
 
     def sendStreamError(self, streamError):
         """
@@ -548,6 +577,7 @@ class XmlStream(xmlstream.XmlStream):
 
         self.transport.loseConnection()
 
+
     def send(self, obj):
         """
         Send data over the stream.
@@ -564,6 +594,7 @@ class XmlStream(xmlstream.XmlStream):
 
         xmlstream.XmlStream.send(self, obj)
 
+
     def connectionMade(self):
         """
         Called when a connection is made.
@@ -572,6 +603,7 @@ class XmlStream(xmlstream.XmlStream):
         """
         xmlstream.XmlStream.connectionMade(self)
         self.authenticator.connectionMade()
+
 
     def onDocumentStart(self, rootElement):
         """
@@ -602,6 +634,8 @@ class XmlStream(xmlstream.XmlStream):
 
         self.authenticator.streamStarted(rootElement)
 
+
+
 class XmlStreamFactory(xmlstream.XmlStreamFactory):
     """
     Factory for Jabber XmlStream objects as a reconnecting client.
@@ -618,11 +652,13 @@ class XmlStreamFactory(xmlstream.XmlStreamFactory):
         self.authenticator = authenticator
 
 
+
 class TimeoutError(Exception):
     """
     Exception raised when no IQ response has been received before the
     configured timeout.
     """
+
 
 
 def upgradeWithIQResponseTracker(xs):
@@ -675,6 +711,7 @@ def upgradeWithIQResponseTracker(xs):
     directlyProvides(xs, ijabber.IIQResponseTracker)
 
 
+
 class IQ(domish.Element):
     """
     Wrapper for an iq stanza.
@@ -703,6 +740,7 @@ class IQ(domish.Element):
         self.addUniqueId()
         self["type"] = stanzaType
         self._xmlstream = xmlstream
+
 
     def send(self, to=None):
         """
@@ -745,6 +783,7 @@ class IQ(domish.Element):
         return d
 
 
+
 def toResponse(stanza, stanzaType=None):
     """
     Create a response stanza from another stanza.
@@ -776,3 +815,264 @@ def toResponse(stanza, stanzaType=None):
         response['type'] = stanzaType
 
     return response
+
+
+
+class XMPPHandler(object):
+    """
+    XMPP protocol handler.
+
+    Classes derived from this class implement (part of) one or more XMPP
+    extension protocols, and are referred to as a subprotocol implementation.
+    """
+
+    implements(ijabber.IXMPPHandler)
+
+    def __init__(self):
+        self.parent = None
+        self.xmlstream = None
+
+
+    def setHandlerParent(self, parent):
+        self.parent = parent
+        self.parent.addHandler(self)
+
+
+    def disownHandlerParent(self, parent):
+        self.parent.removeHandler(self)
+        self.parent = None
+
+
+    def makeConnection(self, xs):
+        self.xmlstream = xs
+        self.connectionMade()
+
+
+    def connectionMade(self):
+        """
+        Called after a connection has been established.
+
+        Can be overridden to perform work before stream initialization.
+        """
+
+
+    def connectionInitialized(self):
+        """
+        The XML stream has been initialized.
+
+        Can be overridden to perform work after stream initialization, e.g. to
+        set up observers and start exchanging XML stanzas.
+        """
+
+
+    def connectionLost(self, reason):
+        """
+        The XML stream has been closed.
+
+        This method can be extended to inspect the C{reason} argument and
+        act on it.
+        """
+        self.xmlstream = None
+
+
+    def send(self, obj):
+        """
+        Send data over the managed XML stream.
+
+        @note: The stream manager maintains a queue for data sent using this
+               method when there is no current initialized XML stream. This
+               data is then sent as soon as a new stream has been established
+               and initialized. Subsequently, L{connectionInitialized} will be
+               called again. If this queueing is not desired, use C{send} on
+               C{self.xmlstream}.
+
+        @param obj: data to be sent over the XML stream. This is usually an
+                    object providing L{domish.IElement}, or serialized XML. See
+                    L{xmlstream.XmlStream} for details.
+        """
+        self.parent.send(obj)
+
+
+
+class XMPPHandlerCollection(object):
+    """
+    Collection of XMPP subprotocol handlers.
+
+    This allows for grouping of subprotocol handlers, but is not an
+    L{XMPPHandler} itself, so this is not recursive.
+
+    @ivar handlers: List of protocol handlers.
+    @type handlers: L{list} of objects providing
+                      L{IXMPPHandler}
+    """
+
+    implements(ijabber.IXMPPHandlerCollection)
+
+    def __init__(self):
+        self.handlers = []
+
+
+    def __iter__(self):
+        """
+        Act as a container for handlers.
+        """
+        return iter(self.handlers)
+
+
+    def addHandler(self, handler):
+        """
+        Add protocol handler.
+
+        Protocol handlers are expected to provide L{ijabber.IXMPPHandler}.
+        """
+        self.handlers.append(handler)
+
+
+    def removeHandler(self, handler):
+        """
+        Remove protocol handler.
+        """
+        self.handlers.remove(handler)
+
+
+
+class StreamManager(XMPPHandlerCollection):
+    """
+    Business logic representing a managed XMPP connection.
+
+    This maintains a single XMPP connection and provides facilities for packet
+    routing and transmission. Business logic modules are objects providing
+    L{ijabber.IXMPPHandler} (like subclasses of L{XMPPHandler}), and added
+    using L{addHandler}.
+
+    @ivar xmlstream: currently managed XML stream
+    @type xmlstream: L{XmlStream}
+    @ivar logTraffic: if true, log all traffic.
+    @type logTraffic: L{bool}
+    @ivar _initialized: Whether the stream represented by L{xmlstream} has
+                        been initialized. This is used when caching outgoing
+                        stanzas.
+    @type _initialized: C{bool}
+    @ivar _packetQueue: internal buffer of unsent data. See L{send} for details.
+    @type _packetQueue: L{list}
+    """
+
+    logTraffic = False
+
+    def __init__(self, factory):
+        XMPPHandlerCollection.__init__(self)
+        self.xmlstream = None
+        self._packetQueue = []
+        self._initialized = False
+
+        factory.addBootstrap(STREAM_CONNECTED_EVENT, self._connected)
+        factory.addBootstrap(STREAM_AUTHD_EVENT, self._authd)
+        factory.addBootstrap(INIT_FAILED_EVENT, self.initializationFailed)
+        factory.addBootstrap(STREAM_END_EVENT, self._disconnected)
+        self.factory = factory
+
+
+    def addHandler(self, handler):
+        """
+        Add protocol handler.
+
+        When an XML stream has already been established, the handler's
+        C{connectionInitialized} will be called to get it up to speed.
+        """
+        XMPPHandlerCollection.addHandler(self, handler)
+
+        # get protocol handler up to speed when a connection has already
+        # been established
+        if self.xmlstream and self._initialized:
+            handler.makeConnection(self.xmlstream)
+            handler.connectionInitialized()
+
+
+    def _connected(self, xs):
+        """
+        Called when the transport connection has been established.
+
+        Here we optionally set up traffic logging (depending on L{logTraffic})
+        and call each handler's C{makeConnection} method with the L{XmlStream}
+        instance.
+        """
+        def logDataIn(buf):
+            log.msg("RECV: %r" % buf)
+
+        def logDataOut(buf):
+            log.msg("SEND: %r" % buf)
+
+        if self.logTraffic:
+            xs.rawDataInFn = logDataIn
+            xs.rawDataOutFn = logDataOut
+
+        self.xmlstream = xs
+
+        for e in self:
+            e.makeConnection(xs)
+
+
+    def _authd(self, xs):
+        """
+        Called when the stream has been initialized.
+
+        Send out cached stanzas and call each handler's
+        C{connectionInitialized} method.
+        """
+        # Flush all pending packets
+        for p in self._packetQueue:
+            xs.send(p)
+        self._packetQueue = []
+        self._initialized = True
+
+        # Notify all child services which implement
+        # the IService interface
+        for e in self:
+            e.connectionInitialized()
+
+
+    def initializationFailed(self, reason):
+        """
+        Called when stream initialization has failed.
+
+        Stream initialization has halted, with the reason indicated by
+        C{reason}. It may be retried by calling the authenticator's
+        C{initializeStream}. See the respective authenticators for details.
+
+        @param reason: A failure instance indicating why stream initialization
+                       failed.
+        @type reason: L{failure.Failure}
+        """
+
+
+    def _disconnected(self, _):
+        """
+        Called when the stream has been closed.
+
+        From this point on, the manager doesn't interact with the
+        L{XmlStream} anymore and notifies each handler that the connection
+        was lost by calling its C{connectionLost} method.
+        """
+        self.xmlstream = None
+        self._initialized = False
+
+        # Notify all child services which implement
+        # the IService interface
+        for e in self:
+            e.connectionLost(None)
+
+
+    def send(self, obj):
+        """
+        Send data over the XML stream.
+
+        When there is no established XML stream, the data is queued and sent
+        out when a new XML stream has been established and initialized.
+
+        @param obj: data to be sent over the XML stream. See
+                    L{xmlstream.XmlStream.send} for details.
+        """
+        if self._initialized:
+            self.xmlstream.send(obj)
+        else:
+            self._packetQueue.append(obj)

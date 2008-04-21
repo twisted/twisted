@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2006 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -15,6 +15,8 @@ class IInitializer(Interface):
     used for the exchange of XML stanzas.
     """
 
+
+
 class IInitiatingInitializer(IInitializer):
     """
     Interface for XML stream initializers for the initiating entity.
@@ -28,6 +30,8 @@ class IInitiatingInitializer(IInitializer):
 
         May return a deferred when the initialization is done asynchronously.
         """
+
+
 
 class IIQResponseTracker(Interface):
     """
@@ -47,6 +51,111 @@ class IIQResponseTracker(Interface):
     """
     iqDeferreds = Attribute("Dictionary of deferreds waiting for an iq "
                              "response")
+
+
+
+class IXMPPHandler(Interface):
+    """
+    Interface for XMPP protocol handlers.
+
+    Objects that provide this interface can be added to a stream manager to
+    handle of (part of) an XMPP extension protocol.
+    """
+
+    parent = Attribute("""XML stream manager for this handler""")
+    xmlstream = Attribute("""The managed XML stream""")
+
+    def setHandlerParent(parent):
+        """
+        Set the parent of the handler.
+
+        @type parent: L{IXMPPHandlerCollection}
+        """
+
+
+    def disownHandlerParent(parent):
+        """
+        Remove the parent of the handler.
+
+        @type parent: L{IXMPPHandlerCollection}
+        """
+
+
+    def makeConnection(xs):
+        """
+        A connection over the underlying transport of the XML stream has been
+        established.
+
+        At this point, no traffic has been exchanged over the XML stream
+        given in C{xs}.
+
+        This should setup L{xmlstream} and call L{connectionMade}.
+
+        @type xs: L{XmlStream<twisted.words.protocols.jabber.XmlStream>}
+        """
+
+
+    def connectionMade():
+        """
+        Called after a connection has been established.
+
+        This method can be used to change properties of the XML Stream, its
+        authenticator or the stream manager prior to stream initialization
+        (including authentication).
+        """
+
+
+    def connectionInitialized():
+        """
+        The XML stream has been initialized.
+
+        At this point, authentication was successful, and XML stanzas can be
+        exchanged over the XML stream L{xmlstream}. This method can be
+        used to setup observers for incoming stanzas.
+        """
+
+
+    def connectionLost(reason):
+        """
+        The XML stream has been closed.
+
+        Subsequent use of L{parent.send} will result in data being queued
+        until a new connection has been established.
+
+        @type reason: L{twisted.python.failure.Failure}
+        """
+
+
+
+class IXMPPHandlerCollection(Interface):
+    """
+    Collection of handlers.
+
+    Contain several handlers and manage their connection.
+    """
+
+    def __iter__():
+        """
+        Get an iterator over all child handlers.
+        """
+
+
+    def addHandler(handler):
+        """
+        Add a child handler.
+
+        @type handler: L{IXMPPHandler}
+        """
+
+
+    def removeHandler(handler):
+        """
+        Remove a child handler.
+
+        @type handler: L{IXMPPHandler}
+        """
+
+
 
 class IService(Interface):
     """
@@ -68,6 +177,7 @@ class IService(Interface):
         @type xs: L{xmlstream.XmlStream}
         """
 
+
     def componentDisconnected():
         """
         Parent component has lost the connection to the Jabber server.
@@ -75,6 +185,7 @@ class IService(Interface):
         Subsequent use of C{self.parent.send} will result in data being
         queued until a new connection has been established.
         """
+
 
     def transportConnected(xs):
         """
@@ -86,4 +197,3 @@ class IService(Interface):
         the service manager or it's authenticator prior to stream
         initialization (including authentication).
         """
-
