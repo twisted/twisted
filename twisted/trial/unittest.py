@@ -1233,6 +1233,7 @@ class TestSuite(pyunit.TestSuite):
     def __call__(self, result):
         return self.run(result)
 
+
     def run(self, result):
         """
         Call C{run} on every member of the suite.
@@ -1279,17 +1280,33 @@ class TestDecorator(components.proxyForInterface(itrial.ITestCase,
 
 
 
+def _clearSuite(suite):
+    """
+    Clear all tests from C{suite}.
+
+    This messes with the internals of C{suite}. In particular, it assumes that
+    the suite keeps all of its tests in a list in an instance variable called
+    C{_tests}.
+    """
+    suite._tests = []
+
+
 def decorate(test, decorator):
     """
     Decorate all test cases in C{test} with C{decorator}.
 
-    C{test} can be a test case or a test suite. If it is a test suite, then
-    the structure of the suite is preserved.
+    C{test} can be a test case or a test suite. If it is a test suite, then the
+    structure of the suite is preserved.
 
-    L{decorate} tries to preserve the class of the test suites it finds. To do
-    so, it reconstructs the suites and then adds the decorated tests.
-    L{decorate} assumes that suites passed to it can be constructed with no
-    parameters.
+    L{decorate} tries to preserve the class of the test suites it finds, but
+    assumes the presence of the C{_tests} attribute on the suite.
+
+    @param test: The C{TestCase} or C{TestSuite} to decorate.
+
+    @param decorator: A unary callable used to decorate C{TestCase}s.
+
+    @return: A decorated C{TestCase} or a C{TestSuite} containing decorated
+        C{TestCase}s.
     """
 
     try:
@@ -1297,10 +1314,12 @@ def decorate(test, decorator):
     except TypeError:
         return decorator(test)
 
-    suite = test.__class__()
+    # At this point, we know that 'test' is a test suite.
+    _clearSuite(test)
+
     for case in tests:
-        suite.addTest(decorate(case, decorator))
-    return suite
+        test.addTest(decorate(case, decorator))
+    return test
 
 
 

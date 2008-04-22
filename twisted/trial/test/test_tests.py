@@ -817,6 +817,43 @@ class TestAddCleanup(unittest.TestCase):
 
 
 
+class TestSuiteClearing(unittest.TestCase):
+    """
+    Tests for our extension that allows us to clear out a L{TestSuite}.
+    """
+
+
+    def test_clearSuite(self):
+        """
+        Calling L{unittest._clearSuite} on a populated L{TestSuite} removes
+        all tests.
+        """
+        suite = unittest.TestSuite()
+        suite.addTest(unittest.TestCase())
+        # Double check that the test suite actually has something in it.
+        self.assertEqual(1, suite.countTestCases())
+        unittest._clearSuite(suite)
+        self.assertEqual(0, suite.countTestCases())
+
+
+    def test_clearPyunitSuite(self):
+        """
+        Calling L{unittest._clearSuite} on a populated standard library
+        L{TestSuite} removes all tests.
+
+        This test is important since C{_clearSuite} operates by mutating
+        internal variables.
+        """
+        pyunit = __import__('unittest')
+        suite = pyunit.TestSuite()
+        suite.addTest(unittest.TestCase())
+        # Double check that the test suite actually has something in it.
+        self.assertEqual(1, suite.countTestCases())
+        unittest._clearSuite(suite)
+        self.assertEqual(0, suite.countTestCases())
+
+
+
 class TestTestDecorator(unittest.TestCase):
     """
     Tests for our test decoration features.
@@ -829,7 +866,11 @@ class TestTestDecorator(unittest.TestCase):
         """
         self.assertEqual(observed.__class__, expected.__class__,
                          "Different class")
-        self.assertIdentical(observed._originalTest, expected._originalTest)
+        observedOriginal = getattr(observed, '_originalTest', None)
+        expectedOriginal = getattr(expected, '_originalTest', None)
+        self.assertIdentical(observedOriginal, expectedOriginal)
+        if observedOriginal is expectedOriginal is None:
+            self.assertIdentical(observed, expected)
 
 
     def assertSuitesEqual(self, observed, expected):
@@ -897,6 +938,41 @@ class TestTestDecorator(unittest.TestCase):
         decoratedTest = unittest.decorate(suite, unittest.TestDecorator)
         self.assertSuitesEqual(
             decoratedTest, unittest.TestSuite([unittest.TestDecorator(test)]))
+
+
+    def test_decorateInPlaceMutatesOriginal(self):
+        """
+        Calling L{decorate} on a test suite will mutate the original suite.
+        """
+        test = unittest.TestCase()
+        suite = unittest.TestSuite([test])
+        decoratedTest = unittest.decorate(
+            suite, unittest.TestDecorator)
+        self.assertSuitesEqual(
+            decoratedTest, unittest.TestSuite([unittest.TestDecorator(test)]))
+        self.assertSuitesEqual(
+            suite, unittest.TestSuite([unittest.TestDecorator(test)]))
+
+
+    def test_decorateTestSuiteReferences(self):
+        """
+        When decorating a test suite in-place, the number of references to the
+        test objects in that test suite should stay the same.
+
+        Previously, L{unittest.decorate} recreated a test suite, so the
+        original suite kept references to the test objects. This test is here
+        to ensure the problem doesn't reappear again.
+        """
+        getrefcount = getattr(sys, 'getrefcount', None)
+        if getrefcount is None:
+            raise unittest.SkipTest(
+                "getrefcount not supported on this platform")
+        test = unittest.TestCase()
+        suite = unittest.TestSuite([test])
+        count1 = getrefcount(test)
+        decoratedTest = unittest.decorate(suite, unittest.TestDecorator)
+        count2 = getrefcount(test)
+        self.assertEquals(count1, count2)
 
 
     def test_decorateNestedTestSuite(self):
