@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.test.test_internet -*-
 #
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -14,7 +14,6 @@ import warnings
 import socket
 import errno
 import os
-import sys
 
 from zope.interface import implements, classImplements
 
@@ -29,7 +28,7 @@ from twisted.python import log, failure, util
 from twisted.persisted import styles
 from twisted.python.runtime import platformType, platform
 
-from twisted.internet.base import ReactorBase
+from twisted.internet.base import ReactorBase, _SignalReactorMixin
 
 try:
     from twisted.internet import ssl
@@ -161,7 +160,7 @@ elif platformType == 'win32':
     _Waker = _Win32Waker
 
 
-class PosixReactorBase(ReactorBase):
+class PosixReactorBase(_SignalReactorMixin, ReactorBase):
     """
     A basis for reactors that use file descriptors.
     """
@@ -172,81 +171,6 @@ class PosixReactorBase(ReactorBase):
         if self.usingThreads or platformType == "posix":
             self.installWaker()
 
-    def _handleSignals(self):
-        """
-        Install the signal handlers for the Twisted event loop.
-        """
-        try:
-            import signal
-        except ImportError:
-            log.msg("Warning: signal module unavailable -- "
-                    "not installing signal handlers.")
-            return
-
-        if signal.getsignal(signal.SIGINT) == signal.default_int_handler:
-            # only handle if there isn't already a handler, e.g. for Pdb.
-            signal.signal(signal.SIGINT, self.sigInt)
-        signal.signal(signal.SIGTERM, self.sigTerm)
-
-        # Catch Ctrl-Break in windows
-        if hasattr(signal, "SIGBREAK"):
-            signal.signal(signal.SIGBREAK, self.sigBreak)
-
-        if platformType == 'posix':
-            signal.signal(signal.SIGCHLD, self._handleSigchld)
-
-    def _handleSigchld(self, signum, frame, _threadSupport=platform.supportsThreads()):
-        """
-        Reap all processes on SIGCHLD.
-
-        This gets called on SIGCHLD. We do no processing inside a signal
-        handler, as the calls we make here could occur between any two
-        python bytecode instructions. Deferring processing to the next
-        eventloop round prevents us from violating the state constraints
-        of arbitrary classes.
-        """
-        if _threadSupport:
-            self.callFromThread(process.reapAllProcesses)
-        else:
-            self.callLater(0, process.reapAllProcesses)
-
-
-    def startRunning(self, installSignalHandlers=True):
-        """
-        Forward call to ReactorBase, arrange for signal handlers to be
-        installed if asked.
-        """
-        if installSignalHandlers:
-            # Make sure this happens before after-startup events, since the
-            # expectation of after-startup is that the reactor is fully
-            # initialized.  Don't do it right away for historical reasons
-            # (perhaps some before-startup triggers don't want there to be a
-            # custom SIGCHLD handler so that they can run child processes with
-            # some blocking api).
-            self.addSystemEventTrigger(
-                'during', 'startup', self._handleSignals)
-        ReactorBase.startRunning(self)
-
-
-    def run(self, installSignalHandlers=True):
-        self.startRunning(installSignalHandlers=installSignalHandlers)
-        self.mainLoop()
-
-    def mainLoop(self):
-        while self.running:
-            try:
-                while self.running:
-                    # Advance simulation time in delayed event
-                    # processors.
-                    self.runUntilCurrent()
-                    t2 = self.timeout()
-                    t = self.running and t2
-                    self.doIteration(t)
-            except:
-                log.msg("Unexpected error in main loop.")
-                log.deferr()
-            else:
-                log.msg('Main loop terminated.')
 
     def _disconnectSelectable(self, selectable, why, isRead, faildict={
         error.ConnectionDone: failure.Failure(error.ConnectionDone()),

@@ -10,7 +10,7 @@ Reactor that uses IO completion ports
 
 
 from twisted.internet import base, interfaces, main, error
-from twisted.python import log, threadable, failure
+from twisted.python import log, failure
 from twisted.internet._dumbwin32proc import Process
 
 from zope.interface import implements
@@ -35,11 +35,12 @@ _NO_FILEDESC = error.ConnectionFdescWentAway('Filedescriptor went away')
 
 
 
-class IOCPReactor(base.ReactorBase):
+class IOCPReactor(base._SignalReactorMixin, base.ReactorBase):
     implements(interfaces.IReactorTCP, interfaces.IReactorUDP,
                interfaces.IReactorMulticast, interfaces.IReactorProcess)
 
     port = None
+
     def __init__(self):
         base.ReactorBase.__init__(self)
         self.port = _iocp.CompletionPort()
@@ -52,60 +53,6 @@ class IOCPReactor(base.ReactorBase):
 
     def removeActiveHandle(self, handle):
         self.handles.discard(handle)
-
-
-    def startRunning(self, installSignalHandlers=1):
-        # Just in case we're started on a different thread than
-        # we're made on
-        threadable.registerAsIOThread()
-
-        self.fireSystemEvent('startup')
-        if installSignalHandlers:
-            self._handleSignals()
-        self.running = 1
-
-
-    def _handleSignals(self):
-        """
-        Install the signal handlers for the Twisted event loop.
-        """
-        try:
-            import signal
-        except ImportError:
-            log.msg("Warning: signal module unavailable -- not installing "
-                    "signal handlers.")
-            return
-
-        if signal.getsignal(signal.SIGINT) == signal.default_int_handler:
-            # only handle if there isn't already a handler, e.g. for Pdb.
-            signal.signal(signal.SIGINT, self.sigInt)
-        signal.signal(signal.SIGTERM, self.sigTerm)
-
-        # Catch Ctrl-Break in windows
-        if hasattr(signal, "SIGBREAK"):
-            signal.signal(signal.SIGBREAK, self.sigBreak)
-
-
-    def run(self, installSignalHandlers=1):
-        self.startRunning(installSignalHandlers=installSignalHandlers)
-        self.mainLoop()
-
-
-    def mainLoop(self):
-        while self.running:
-            try:
-                while self.running:
-                    # Advance simulation time in delayed event
-                    # processors.
-                    self.runUntilCurrent()
-                    t2 = self.timeout()
-                    t = self.running and t2
-                    self.doIteration(t)
-            except:
-                log.msg("Unexpected error in main loop.")
-                log.deferr()
-            else:
-                log.msg('Main loop terminated.')
 
 
     def doIteration(self, timeout):
