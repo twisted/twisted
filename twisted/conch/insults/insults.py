@@ -608,7 +608,7 @@ class ServerProtocol(protocol.Protocol):
     def nextLine(self):
         self.cursorPos.x = 0
         self.cursorPos.y = min(self.cursorPos.y + 1, self.termSize.y - 1)
-        self.write('\x1bE')
+        self.write('\n')
 
     def saveCursor(self):
         self._savedCursorPos = Vector(self.cursorPos.x, self.cursorPos.y)

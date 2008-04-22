@@ -36,6 +36,38 @@ class BufferTestCase(unittest.TestCase):
             self.term.privateModes)
 
 
+    def test_carriageReturn(self):
+        """
+        C{"\r"} moves the cursor to the first column in the current row.
+        """
+        self.term.cursorForward(5)
+        self.term.cursorDown(3)
+        self.assertEqual(self.term.reportCursorPosition(), (5, 3))
+        self.term.insertAtCursor("\r")
+        self.assertEqual(self.term.reportCursorPosition(), (0, 3))
+
+
+    def test_linefeed(self):
+        """
+        C{"\n"} moves the cursor to the next row without changing the column.
+        """
+        self.term.cursorForward(5)
+        self.assertEqual(self.term.reportCursorPosition(), (5, 0))
+        self.term.insertAtCursor("\n")
+        self.assertEqual(self.term.reportCursorPosition(), (5, 1))
+
+
+    def test_newline(self):
+        """
+        C{write} transforms C{"\n"} into C{"\r\n"}.
+        """
+        self.term.cursorForward(5)
+        self.term.cursorDown(3)
+        self.assertEqual(self.term.reportCursorPosition(), (5, 3))
+        self.term.write("\n")
+        self.assertEqual(self.term.reportCursorPosition(), (0, 4))
+
+
     def test_setPrivateModes(self):
         """
         Verify that L{helper.TerminalBuffer.setPrivateModes} changes the Set
@@ -169,7 +201,11 @@ class BufferTestCase(unittest.TestCase):
         self.term.reverseIndex()
         self.assertEquals(self.term.reportCursorPosition(), (0, 1))
 
-    def testNextLine(self):
+    def test_nextLine(self):
+        """
+        C{nextLine} positions the cursor at the beginning of the row below the
+        current row.
+        """
         self.term.nextLine()
         self.assertEquals(self.term.reportCursorPosition(), (0, 1))
         self.term.cursorForward(5)

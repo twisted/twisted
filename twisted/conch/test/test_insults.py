@@ -360,3 +360,23 @@ class ClientControlSequences(unittest.TestCase, MockMixin):
         # This isn't really an interesting assert, since it only tests that
         # our mock setup is working right, but I'll include it anyway.
         self.assertEquals(result, (6, 7))
+
+
+
+class ServerProtocolOutputTests(unittest.TestCase):
+    """
+    Tests for the bytes L{ServerProtocol} writes to its transport when its
+    methods are called.
+    """
+    def test_nextLine(self):
+        """
+        L{ServerProtocol.nextLine} writes C{"\r\n"} to its transport.
+        """
+        # Why doesn't it write ESC E?  Because ESC E is poorly supported.  For
+        # example, gnome-terminal (many different versions) fails to scroll if
+        # it receives ESC E and the cursor is already on the last row.
+        protocol = ServerProtocol()
+        transport = StringTransport()
+        protocol.makeConnection(transport)
+        protocol.nextLine()
+        self.assertEqual(transport.value(), "\r\n")

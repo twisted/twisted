@@ -89,6 +89,9 @@ class CharacterAttribute:
 
 # XXX - need to support scroll regions and scroll history
 class TerminalBuffer(protocol.Protocol):
+    """
+    An in-memory terminal emulator.
+    """
     implements(insults.ITerminalTransport)
 
     for keyID in ('UP_ARROW', 'DOWN_ARROW', 'RIGHT_ARROW', 'LEFT_ARROW',
@@ -113,19 +116,39 @@ class TerminalBuffer(protocol.Protocol):
         self.reset()
 
     def write(self, bytes):
-        for b in bytes:
+        """
+        Add the given printable bytes to the terminal.
+
+        Line feeds in C{bytes} will be replaced with carriage return / line
+        feed pairs.
+        """
+        for b in bytes.replace('\n', '\r\n'):
             self.insertAtCursor(b)
 
     def _currentCharacterAttributes(self):
         return CharacterAttribute(self.activeCharset, **self.graphicRendition)
 
     def insertAtCursor(self, b):
+        """
+        Add one byte to the terminal at the cursor and make consequent state
+        updates.
+
+        If b is a carriage return, move the cursor to the beginning of the
+        current row.
+
+        If b is a line feed, move the cursor to the next row or scroll down if
+        the cursor is already in the last row.
+
+        Otherwise, if b is printable, put it at the cursor position (inserting
+        or overwriting as dictated by the current mode) and move the cursor.
+        """
         if b == '\r':
             self.x = 0
-        elif b == '\n' or self.x >= self.width:
-            self.x = 0
+        elif b == '\n':
             self._scrollDown()
-        if b in string.printable and b not in '\r\n':
+        elif b in string.printable:
+            if self.x >= self.width:
+                self.nextLine()
             ch = (b, self._currentCharacterAttributes())
             if self.modes.get(insults.modes.IRM):
                 self.lines[self.y][self.x:self.x] = [ch]
@@ -178,7 +201,11 @@ class TerminalBuffer(protocol.Protocol):
         self._scrollUp()
 
     def nextLine(self):
-        self.insertAtCursor('\n')
+        """
+        Update the cursor position attributes and scroll down if appropriate.
+        """
+        self.x = 0
+        self._scrollDown()
 
     def saveCursor(self):
         self._savedCursor = (self.x, self.y)
