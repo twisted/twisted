@@ -5,7 +5,7 @@
 Test cases covering L{twisted.python.filepath} and L{twisted.python.zippath}.
 """
 
-import os, time, pickle, errno, zipfile
+import os, time, pickle, errno, zipfile, stat
 
 from twisted.python.win32 import WindowsError, ERROR_DIRECTORY
 from twisted.python import filepath
@@ -256,6 +256,19 @@ class ZipFilePathTestCase(AbstractFilePathTestCase):
 
 
 class FilePathTestCase(AbstractFilePathTestCase):
+
+    def test_chmod(self):
+        """
+        Make sure that calling L{FilePath.chmod} modifies the permissions of
+        the passed file as expected (using C{os.stat} to check). We use some
+        basic modes that should work everywhere (even on Windows).
+        """
+        for mode in (0555, 0777):
+            self.path.child("sub1").chmod(mode)
+            self.assertEquals(
+                stat.S_IMODE(os.stat(self.path.child("sub1").path).st_mode),
+                mode)
+
 
     def test_getAndSet(self):
         content = 'newcontent'

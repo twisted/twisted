@@ -401,6 +401,19 @@ class FilePath(_PathHelper):
             if reraise:
                 raise
 
+
+    def chmod(self, mode):
+        """
+        Changes the permissions on self, if possible.  Propagates errors from
+        C{os.chmod} up.
+
+        @param mode: integer representing the new permissions desired (same as
+            the command line chmod)
+        @type mode: C{int}
+        """
+        os.chmod(self.path, mode)
+
+
     def getsize(self):
         st = self.statinfo
         if not st:
