@@ -1,7 +1,8 @@
-import time, sys, signal
+import sys, signal
 
 signal.signal(signal.SIGINT, signal.SIG_DFL)
-signal.signal(signal.SIGHUP, signal.SIG_DFL)
+if getattr(signal, "SIGHUP", None) is not None:
+    signal.signal(signal.SIGHUP, signal.SIG_DFL)
 print 'ok, signal us'
-time.sleep(5)
+sys.stdin.read()
 sys.exit(1)

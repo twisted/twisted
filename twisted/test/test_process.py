@@ -33,6 +33,7 @@ except ImportError:
     process = None
 
 
+
 class StubProcessProtocol(protocol.ProcessProtocol):
     """
     ProcessProtocol counter-implementation: all methods on this class raise an
@@ -255,32 +256,51 @@ class EchoProtocol(protocol.ProcessProtocol):
         self.onEnded.callback(self)
 
 
+
 class SignalProtocol(protocol.ProcessProtocol):
+    """
+    A process protocol that sends a signal when data is first received.
+
+    @ivar deferred: deferred firing on C{processEnded}.
+    @type deferred: L{defer.Deferred}
+
+    @ivar signal: the signal to send to the process.
+    @type signal: C{str}
+    """
+
     def __init__(self, deferred, sig):
         self.deferred = deferred
         self.signal = sig
 
+
     def outReceived(self, data):
         self.transport.signalProcess(self.signal)
 
+
     def processEnded(self, reason):
+        """
+        Callback C{self.deferred} with C{None} if C{reason} is a
+        L{error.ProcessTerminated} failure with C{exitCode} set to C{None},
+        C{signal} set to C{self.signal}, and C{status} holding the status code
+        of the exited process. Otherwise, errback with a C{ValueError}
+        describing the problem.
+        """
         if not reason.check(error.ProcessTerminated):
-            self.deferred.callback("wrong termination: %s" % reason)
-            return
+            return self.deferred.errback(
+                ValueError("wrong termination: %s" % (reason,)))
         v = reason.value
+        signalValue = getattr(signal, 'SIG' + self.signal)
         if v.exitCode is not None:
-            self.deferred.callback("SIG%s: exitCode is %s, not None" %
-                                   (self.signal, v.exitCode))
-            return
-        if v.signal != getattr(signal,'SIG'+self.signal):
-            self.deferred.callback("SIG%s: .signal was %s, wanted %s" %
-                                   (self.signal, v.signal,
-                                    getattr(signal,'SIG'+self.signal)))
-            return
-        if os.WTERMSIG(v.status) != getattr(signal,'SIG'+self.signal):
-            self.deferred.callback('SIG%s: %s'
-                                   % (self.signal, os.WTERMSIG(v.status)))
-            return
+            return self.deferred.errback(
+                ValueError("SIG%s: exitCode is %s, not None" %
+                           (self.signal, v.exitCode)))
+        if v.signal != signalValue:
+            return self.deferred.errback(
+                ValueError("SIG%s: .signal was %s, wanted %s" %
+                           (self.signal, v.signal, signalValue)))
+        if os.WTERMSIG(v.status) != signalValue:
+            return self.deferred.errback(
+                ValueError('SIG%s: %s' % (self.signal, os.WTERMSIG(v.status))))
         self.deferred.callback(None)
 
 
@@ -1003,25 +1023,54 @@ class PosixProcessBase:
         scriptPath = util.sibpath(__file__, "process_signal.py")
         d = defer.Deferred()
         p = SignalProtocol(d, sig)
-        reactor.spawnProcess(p, exe, [exe, "-u", scriptPath, sig],
-                             env=None,
+        reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=None,
                              usePTY=self.usePTY)
         return d
 
-    def testSignalHUP(self):
-        d = self._testSignal('HUP')
-        d.addCallback(self.failIf)
-        return d
 
-    def testSignalINT(self):
-        d = self._testSignal('INT')
-        d.addCallback(self.failIf)
-        return d
+    def test_signalHUP(self):
+        """
+        Sending the SIGHUP signal to a running process interrupts it, and
+        C{processEnded} is called with a L{error.ProcessTerminated} instance
+        with the C{exitCode} set to C{None} and the C{signal} attribute set to
+        C{signal.SIGHUP}. C{os.WTERMSIG} can also be used on the C{status}
+        attribute to extract the signal value.
+        """
+        return self._testSignal('HUP')
 
-    def testSignalKILL(self):
-        d = self._testSignal('KILL')
-        d.addCallback(self.failIf)
-        return d
+
+    def test_signalINT(self):
+        """
+        Sending the SIGINT signal to a running process interrupts it, and
+        C{processEnded} is called with a L{error.ProcessTerminated} instance
+        with the C{exitCode} set to C{None} and the C{signal} attribute set to
+        C{signal.SIGINT}. C{os.WTERMSIG} can also be used on the C{status}
+        attribute to extract the signal value.
+        """
+        return self._testSignal('INT')
+
+
+    def test_signalKILL(self):
+        """
+        Sending the SIGKILL signal to a running process interrupts it, and
+        C{processEnded} is called with a L{error.ProcessTerminated} instance
+        with the C{exitCode} set to C{None} and the C{signal} attribute set to
+        C{signal.SIGKILL}. C{os.WTERMSIG} can also be used on the C{status}
+        attribute to extract the signal value.
+        """
+        return self._testSignal('KILL')
+
+
+    def test_signalTERM(self):
+        """
+        Sending the SIGTERM signal to a running process interrupts it, and
+        C{processEnded} is called with a L{error.ProcessTerminated} instance
+        with the C{exitCode} set to C{None} and the C{signal} attribute set to
+        C{signal.SIGTERM}. C{os.WTERMSIG} can also be used on the C{status}
+        attribute to extract the signal value.
+        """
+        return self._testSignal('TERM')
+
 
     def test_executionError(self):
         """
@@ -1735,6 +1784,31 @@ class PosixProcessTestCasePTY(unittest.TestCase, PosixProcessBase):
         self.assertRaises(ValueError, reactor.spawnProcess, p, pyExe, pyArgs,
             usePTY=1, childFDs={1:'r'})
 
+
+
+class Win32SignalProtocol(SignalProtocol):
+    """
+    A win32-specific process protocol that handles C{processEnded}
+    differently: processes should exit with exit code 1.
+    """
+
+    def processEnded(self, reason):
+        """
+        Callback C{self.deferred} with C{None} if C{reason} is a
+        L{error.ProcessTerminated} failure with C{exitCode} set to 1.
+        Otherwise, errback with a C{ValueError} describing the problem.
+        """
+        if not reason.check(error.ProcessTerminated):
+            return self.deferred.errback(
+                ValueError("wrong termination: %s" % (reason,)))
+        v = reason.value
+        if v.exitCode != 1:
+            return self.deferred.errback(
+                ValueError("Wrong exit code: %s" % (reason.exitCode,)))
+        self.deferred.callback(None)
+
+
+
 class Win32ProcessTestCase(unittest.TestCase):
     """
     Test process programs that are packaged with twisted.
@@ -1768,6 +1842,42 @@ class Win32ProcessTestCase(unittest.TestCase):
             reactor.spawnProcess, p, pyExe, pyArgs, usePTY=1)
         self.assertRaises(ValueError,
             reactor.spawnProcess, p, pyExe, pyArgs, childFDs={1:'r'})
+
+
+    def _testSignal(self, sig):
+        exe = sys.executable
+        scriptPath = util.sibpath(__file__, "process_signal.py")
+        d = defer.Deferred()
+        p = Win32SignalProtocol(d, sig)
+        reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=None)
+        return d
+
+
+    def test_signalTERM(self):
+        """
+        Sending the SIGTERM signal terminates a created process, and
+        C{processEnded} is called with a L{error.ProcessTerminated} instance
+        with the C{exitCode} attribute set to 1.
+        """
+        return self._testSignal('TERM')
+
+
+    def test_signalINT(self):
+        """
+        Sending the SIGINT signal terminates a created process, and
+        C{processEnded} is called with a L{error.ProcessTerminated} instance
+        with the C{exitCode} attribute set to 1.
+        """
+        return self._testSignal('INT')
+
+
+    def test_signalKILL(self):
+        """
+        Sending the SIGKILL signal terminates a created process, and
+        C{processEnded} is called with a L{error.ProcessTerminated} instance
+        with the C{exitCode} attribute set to 1.
+        """
+        return self._testSignal('KILL')
 
 
 
