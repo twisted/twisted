@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.words.test.test_xishutil -*-
 #
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -19,11 +19,13 @@ class _MethodWrapper(object):
         self.args = args
         self.kwargs = kwargs
 
+
     def __call__(self, *args, **kwargs):
         nargs = self.args + args
         nkwargs = self.kwargs.copy()
         nkwargs.update(kwargs)
         self.method(*nargs, **nkwargs)
+
 
 class CallbackList:
     """
@@ -50,6 +52,7 @@ class CallbackList:
     def __init__(self):
         self.callbacks = {}
 
+
     def addCallback(self, onetime, method, *args, **kwargs):
         """
         Add callback.
@@ -69,6 +72,7 @@ class CallbackList:
             self.callbacks[method] = (_MethodWrapper(method, *args, **kwargs),
                                       onetime)
 
+
     def removeCallback(self, method):
         """
         Remove callback.
@@ -78,6 +82,7 @@ class CallbackList:
 
         if method in self.callbacks:
             del self.callbacks[method]
+
 
     def callback(self, *args, **kwargs):
         """
@@ -105,6 +110,7 @@ class CallbackList:
             if onetime:
                 del self.callbacks[key]
 
+
     def isEmpty(self):
         """
         Return if list of registered callbacks is empty.
@@ -113,6 +119,8 @@ class CallbackList:
         """
 
         return len(self.callbacks) == 0
+
+
 
 class EventDispatcher:
     """
@@ -163,6 +171,7 @@ class EventDispatcher:
                                  # in progress
         self._updateQueue = [] # Queued updates for observer ops
 
+
     def _getEventAndObservers(self, event):
         if isinstance(event, xpath.XPathQuery):
             # Treat as xpath
@@ -178,6 +187,7 @@ class EventDispatcher:
 
         return event, observers
 
+
     def addOnetimeObserver(self, event, observerfn, priority=0, *args, **kwargs):
         """
         Register a one-time observer for an event.
@@ -186,6 +196,7 @@ class EventDispatcher:
         for a description of the parameters.
         """
         self._addObserver(True, event, observerfn, priority, *args, **kwargs)
+
 
     def addObserver(self, event, observerfn, priority=0, *args, **kwargs):
         """
@@ -210,11 +221,12 @@ class EventDispatcher:
         """
         self._addObserver(False, event, observerfn, priority, *args, **kwargs)
 
+
     def _addObserver(self, onetime, event, observerfn, priority, *args, **kwargs):
         # If this is happening in the middle of the dispatch, queue
         # it up for processing after the dispatch completes
         if self._dispatchDepth > 0:
-            self._updateQueue.append(lambda:self.addObserver(event, observerfn, priority, *args, **kwargs))
+            self._updateQueue.append(lambda:self._addObserver(onetime, event, observerfn, priority, *args, **kwargs))
             return
 
         event, observers = self._getEventAndObservers(event)
@@ -231,6 +243,7 @@ class EventDispatcher:
                 cbl = priorityObservers[event]
 
         cbl.addCallback(onetime, observerfn, *args, **kwargs)
+
 
     def removeObserver(self, event, observerfn):
         """
@@ -262,6 +275,7 @@ class EventDispatcher:
 
         for priority, query in emptyLists:
             del observers[priority][query]
+
 
     def dispatch(self, obj, event=None):
         """
