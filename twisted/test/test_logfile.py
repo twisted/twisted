@@ -4,7 +4,7 @@
 from twisted.trial import unittest
 
 # system imports
-import os, shutil, time, stat
+import os, time, stat
 
 # twisted imports
 from twisted.python import logfile, runtime
@@ -21,10 +21,16 @@ class LogFileTestCase(unittest.TestCase):
         self.name = "test.log"
         self.path = os.path.join(self.dir, self.name)
 
+
     def tearDown(self):
-        # Restore back write rights if necessary
-        os.chmod(self.path, 0666)
-        shutil.rmtree(self.dir)
+        """
+        Restore back write rights on created paths: if tests modified the
+        rights, that will allow the paths to be removed easily afterwards.
+        """
+        os.chmod(self.dir, 0777)
+        if os.path.exists(self.path):
+            os.chmod(self.path, 0777)
+
 
     def testWriting(self):
         log = logfile.LogFile(self.name, self.dir)
@@ -128,7 +134,8 @@ class LogFileTestCase(unittest.TestCase):
         log.rotate()
         self.assertEquals(mode, os.stat(self.path)[stat.ST_MODE])
 
-    def testNoPermission(self):
+
+    def test_noPermission(self):
         """
         Check it keeps working when permission on dir changes.
         """
@@ -138,32 +145,27 @@ class LogFileTestCase(unittest.TestCase):
         # change permissions so rotation would fail
         os.chmod(self.dir, 0444)
 
+        # if this succeeds, chmod doesn't restrict us, so we can't
+        # do the test
         try:
-            # if this succeeds, chmod doesn't restrict us, so we can't
-            # do the test
-            try:
-                f = open(os.path.join(self.dir,"xxx"), "w")
-            except (OSError, IOError):
-                pass
-            else:
-                f.close()
-                return
+            f = open(os.path.join(self.dir,"xxx"), "w")
+        except (OSError, IOError):
+            pass
+        else:
+            f.close()
+            return
 
-            log.rotate() # this should not fail
+        log.rotate() # this should not fail
 
-            log.write("def")
-            log.flush()
+        log.write("def")
+        log.flush()
 
-            f = log._file
-            self.assertEquals(f.tell(), 6)
-            f.seek(0, 0)
-            self.assertEquals(f.read(), "abcdef")
-            log.close()
+        f = log._file
+        self.assertEquals(f.tell(), 6)
+        f.seek(0, 0)
+        self.assertEquals(f.read(), "abcdef")
+        log.close()
 
-        finally:
-            # reset permission so tearDown won't fail, regardless of if an
-            # assertion was raised.
-            os.chmod(self.dir, 0777)
 
     def test_maxNumberOfLog(self):
         """
@@ -248,9 +250,6 @@ class DailyLogFileTestCase(unittest.TestCase):
         self.name = "testdaily.log"
         self.path = os.path.join(self.dir, self.name)
 
-    def tearDown(self):
-        shutil.rmtree(self.dir)
-        pass
 
     def testWriting(self):
         log = RiggedDailyLogFile(self.name, self.dir)
