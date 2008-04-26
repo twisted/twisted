@@ -129,6 +129,15 @@ class FailureTestCase(unittest.TestCase):
         # The last line should be the value of the raised string
         self.assertEqual(lines[-1], self._stringException)
 
+    test_printStringExceptions.suppress = [
+        util.suppress(message='raising a string exception is deprecated')]
+
+    if sys.version_info[:2] >= (2, 6):
+        skipMsg = ("String exceptions aren't supported anymore starting "
+                   "Python 2.6")
+        test_raiseStringExceptions.skip = skipMsg
+        test_printStringExceptions.skip = skipMsg
+
 
     def testBrokenStr(self):
         """
