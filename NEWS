@@ -1,6 +1,121 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Core 8.1.0pre1 (2008-04-20)
+=======================
+
+Features
+--------
+
+ - twisted.internet.error.ConnectionClosed is a new exception which is the
+   superclass of ConnectionLost and ConnectionDone (#3137)
+
+Fixes
+-----
+
+ - Some reactor re-entrancy regressions were fixed (#3146, #3168)
+ - A regression was fixed whereby constructing a Failure for an exception and
+   traceback raised out of a Pyrex extension would fail (#3132)
+ - CopyableFailures in PB can again be created from CopiedFailures (#3174)
+ - FilePath.remove, when called on a FilePath representing a symlink to a
+   directory, no longer removes the contents of the targeted directory, and
+   instead removes the symlink (#3097)
+ - FilePath now has a linkTo method for creating new symlinks (#3122)
+ - The docstring for Trial's addCleanup method now correctly specifies when
+   cleanup functions are run (#3131)
+ - assertWarns now deals better with multiple identical warnings (#2904)
+ - Various windows installer bugs were fixed (#3115, #3144, #3150, #3151, #3164)
+ - API links in the howto documentation have been corrected (#3130)
+ - The Win32 Process transport object now has a pid attribute (#1836)
+ - A doc bug in the twistd plugin howto which would inevitably lead to
+   confusion was fixed (#3183)
+
+Deprecations and Removals
+-------------------------
+
+ - mktap is now fully deprecated, and will emit DeprecationWarnings when used
+   (#3127)
+
+Other
+-----
+ - #3079, #3118, #3120, #3145, #3069, #3149
+
+
+Conch 8.1.0pre1 (2008-04-20)
+========================
+
+Fixes
+-----
+ - A regression was fixed whereby the publicKeys and privateKeys attributes of
+   SSHFactory would not be interpreted as strings (#3141)
+ - The sshsimpleserver.py example had a minor bug fix (#3135)
+ - The deprecated mktap API is no longer used (#3127)
+
+
+Lore 8.1.0pre1 (2008-04-20)
+=======================
+
+Fixes
+-----
+ - The deprecated mktap API is no longer used (#3127)
+
+
+News 8.1.0pre1 (2008-04-20)
+=======================
+
+Fixes
+-----
+ - The deprecated mktap API is no longer used (#3127)
+
+
+Web 8.1.0pre1 (2008-04-20)
+======================
+
+Fixes
+-----
+ - Fixed an XMLRPC bug whereby sometimes accidentally fire a Deferred twice
+   when a connection was lost during the handling of a response (#3152)
+ - Fixed a bug in the the "Using Twisted Web" document which prevented an
+   example resource from being renderable (#3147)
+ - The deprecated mktap API is no longer used (#3127)
+
+
+Words 8.1.0pre1 (2008-04-20)
+========================
+
+Features
+--------
+ - JID objects now have a nice __repr__ (#3156)
+
+Fixes
+-----
+ - The deprecated mktap API is no longer used (#3127)
+
+
+Mail 8.1.0pre1 (2008-04-20)
+=======================
+
+Fixes
+-----
+ - The deprecated mktap API is no longer used (#3127)
+
+
+Names 8.1.0pre1 (2008-04-20)
+========================
+
+Fixes
+-----
+ - The deprecated mktap API is no longer used (#3127)
+
+
+Web2 8.1.0pre1 (2008-04-20)
+=======================
+
+Fixes
+-----
+ - The deprecated mktap API is no longer used (#3127)
+
+
 Core 8.0.1 (2008-03-26)
 =======================
 
