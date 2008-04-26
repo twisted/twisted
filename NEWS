@@ -1,7 +1,7 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Core 8.1.0pre1 (2008-04-20)
+Core 8.1.0pre2 (2008-04-26)
 =======================
 
 Features
@@ -9,6 +9,8 @@ Features
 
  - twisted.internet.error.ConnectionClosed is a new exception which is the
    superclass of ConnectionLost and ConnectionDone (#3137)
+ - Trial's CPU and memory performance should be better now (#3034)
+ - twisted.python.filepath.FilePath now has a chmod method (#3124)
 
 Fixes
 -----
@@ -29,6 +31,8 @@ Fixes
  - The Win32 Process transport object now has a pid attribute (#1836)
  - A doc bug in the twistd plugin howto which would inevitably lead to
    confusion was fixed (#3183)
+ - A regression breaking IOCP introduced after the last release was fixed
+   (#3200)
 
 Deprecations and Removals
 -------------------------
@@ -38,10 +42,10 @@ Deprecations and Removals
 
 Other
 -----
- - #3079, #3118, #3120, #3145, #3069, #3149
+ - #3079, #3118, #3120, #3145, #3069, #3149, #3186, #3208, #2762
 
 
-Conch 8.1.0pre1 (2008-04-20)
+Conch 8.1.0pre2 (2008-04-26)
 ========================
 
 Fixes
@@ -50,6 +54,11 @@ Fixes
    SSHFactory would not be interpreted as strings (#3141)
  - The sshsimpleserver.py example had a minor bug fix (#3135)
  - The deprecated mktap API is no longer used (#3127)
+ - An infelicity was fixed whereby a NameError would be raised in certain
+   circumstances during authentication when a ConchError should have been
+   (#3154)
+ - A workaround was added to conch.insults for a bug in gnome-terminal whereby
+   it would not scroll correctly (#3189)
 
 
 Lore 8.1.0pre1 (2008-04-20)
@@ -80,16 +89,19 @@ Fixes
  - The deprecated mktap API is no longer used (#3127)
 
 
-Words 8.1.0pre1 (2008-04-20)
+Words 8.1.0pre2 (2008-04-26)
 ========================
 
 Features
 --------
  - JID objects now have a nice __repr__ (#3156)
+ - Extending XMPP protocols is now easier (#2178)
 
 Fixes
 -----
  - The deprecated mktap API is no longer used (#3127)
+ - A bug whereby one-time XMPP observers would be enabled permanently was fixed
+   (#3066)
 
 
 Mail 8.1.0pre1 (2008-04-20)

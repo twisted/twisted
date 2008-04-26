@@ -1,7 +1,7 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-8.1.0pre1 (2008-04-20)
+8.1.0pre2 (2008-04-20)
 ==================
 
 Features
@@ -9,6 +9,8 @@ Features
 
  - twisted.internet.error.ConnectionClosed is a new exception which is the
    superclass of ConnectionLost and ConnectionDone (#3137)
+ - Trial's CPU and memory performance should be better now (#3034)
+ - twisted.python.filepath.FilePath now has a chmod method (#3124)
 
 Fixes
 -----
@@ -29,6 +31,8 @@ Fixes
  - The Win32 Process transport object now has a pid attribute (#1836)
  - A doc bug in the twistd plugin howto which would inevitably lead to
    confusion was fixed (#3183)
+ - A regression breaking IOCP introduced after the last release was fixed
+   (#3200)
 
 
 Deprecations and Removals
@@ -39,7 +43,7 @@ Deprecations and Removals
 
 Other
 -----
- - #3079, #3118, #3120, #3145, #3069, #3149
+ - #3079, #3118, #3120, #3145, #3069, #3149, #3186, #3208, #2762
 
 
 8.0.1 (2008-03-26)
