@@ -1957,8 +1957,10 @@ class UtilTestCase(unittest.TestCase):
 
     def tearDown(self):
         """
-        Restore the saved PATH setting.
+        Restore the saved PATH setting, and set all creates files readable
+        again so that they can be deleted easily.
         """
+        os.chmod(os.path.join(self.bazbar, "executable"), 700)
         if self.oldPath is None:
             try:
                 del os.environ['PATH']
