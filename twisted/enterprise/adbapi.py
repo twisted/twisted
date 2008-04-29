@@ -124,7 +124,7 @@ class ConnectionPool:
 
     CP_ARGS = "min max name noisy openfun reconnect good_sql".split()
 
-    noisy = True # if true, generate informational log messages
+    noisy = False # if true, generate informational log messages
     min = 3 # minimum number of connections in pool
     max = 5 # maximum number of connections in pool
     name = None # Name to assign to thread pool for debugging
