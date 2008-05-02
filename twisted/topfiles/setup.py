@@ -47,6 +47,10 @@ extensions = [
                                '-framework','CoreServices',
                                '-framework','Carbon'],
               condition=lambda builder: sys.platform == "darwin"),
+
+    Extension("twisted.python._libevent",
+              ["twisted/python/_libevent.c"],
+              libraries=["event"]),
 ]
 
 # Figure out which plugins to include: all plugins except subproject ones

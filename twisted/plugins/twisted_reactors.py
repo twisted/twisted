@@ -36,3 +36,6 @@ kqueue = Reactor(
 iocp = Reactor(
     'iocp', 'twisted.internet.iocpreactor',
     'Win32 IO Completion Ports-based reactor.')
+libevent = Reactor(
+    'libevent', 'twisted.internet.libeventreactor',
+    'libevent-based reactor.')
