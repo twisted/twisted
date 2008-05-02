@@ -72,9 +72,6 @@ void Safe_PyGILState_Release(PyGILState_STATE oldstate) {
 typedef struct EventBaseObject {
     PyObject_HEAD
     struct event_base *ev_base;
-    /* A list of objects to be expired. We keep them here until the loop
-       returns, otherwise it may crash libevent (who knows). */
-    PyObject *expiredEvents;
     /* A dict of EventObject => None */
     PyObject *registeredEvents;
 } EventBaseObject;
@@ -126,7 +123,6 @@ static PyObject *EventBase_New(PyTypeObject *type, PyObject *args,
         Py_DECREF(self);
         return NULL;
     }
-    self->expiredEvents = PyList_New(0);
     self->registeredEvents = PyDict_New();
     return (PyObject *)self;
 }
@@ -156,14 +152,6 @@ static int EventBase_Init(EventBaseObject *self, PyObject *args,
     return 0;
 }
 
-/* Internal helper, destroy expired events */
-static void EventBase_ExpireEvents(EventBaseObject *self) {
-    /* Destroy and recreate an empty list, so as to to decref all events
-       as well as their contents */
-    Py_CLEAR(self->expiredEvents);
-    self->expiredEvents = PyList_New(0);
-}
-
 /* Internal helper, register an event */
 static void EventBase_RegisterEvent(EventBaseObject *self, PyObject *obj) {
     PyDict_SetItem(self->registeredEvents, obj, Py_None);
@@ -178,14 +166,12 @@ static void EventBase_UnregisterEvent(EventBaseObject *self, PyObject *obj) {
 static int EventBase_Traverse(EventBaseObject *self, visitproc visit, void *arg)
 {
     Py_VISIT(self->registeredEvents);
-    Py_VISIT(self->expiredEvents);
     return 0;
 }
 
 static int EventBase_Clear(EventBaseObject *self)
 {
     Py_CLEAR(self->registeredEvents);
-    Py_CLEAR(self->expiredEvents);
     return 0;
 }
 
@@ -217,7 +203,6 @@ static PyObject *EventBase_Loop(EventBaseObject *self, PyObject *args,
     rv = event_base_loop(self->ev_base, flags);
     Py_END_ALLOW_THREADS
 
-    EventBase_ExpireEvents(self);
     if (PyErr_Occurred()) {
         return NULL;
     }
@@ -247,7 +232,6 @@ static PyObject *EventBase_LoopExit(EventBaseObject *self, PyObject *args,
     rv = event_base_loopexit(self->ev_base, &tv);
     Py_END_ALLOW_THREADS
 
-    EventBase_ExpireEvents(self);
     if (PyErr_Occurred()) {
         return NULL;
     }
@@ -267,7 +251,6 @@ static PyObject *EventBase_Dispatch(EventBaseObject *self) {
     Py_BEGIN_ALLOW_THREADS
     rv = event_base_dispatch(self->ev_base);
     Py_END_ALLOW_THREADS
-    EventBase_ExpireEvents(self);
     if (PyErr_Occurred()) {
         return NULL;
     }
@@ -462,7 +445,6 @@ static void __libevent_ev_callback(int fd, short events, void *arg) {
         /* Register the event for deletion but do not delete it right now.
            The list will be destroyed and its contents deallocated when the
            event loop returns. */
-        PyList_Append(ev->eventBase->expiredEvents, (PyObject *) ev);
         EventBase_UnregisterEvent(ev->eventBase, (PyObject *) ev);
     }
     if (result) {
