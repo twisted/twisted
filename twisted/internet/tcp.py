@@ -52,8 +52,8 @@ if platformType == 'win32':
     ENOMEM = object()
     EAGAIN = EWOULDBLOCK
     from errno import WSAECONNRESET as ECONNABORTED
-    
-    from twisted.python.win32 import formatError as strerror    
+
+    from twisted.python.win32 import formatError as strerror
 else:
     from errno import EPERM
     from errno import EINVAL
@@ -70,7 +70,7 @@ else:
     from errno import ENOMEM
     from errno import EAGAIN
     from errno import ECONNABORTED
-    
+
     from os import strerror
 
 from errno import errorcode
@@ -679,15 +679,29 @@ class Server(Connection):
         return address.IPv4Address('TCP', *(self.client + ('INET',)))
 
 class Port(base.BasePort, _SocketCloser):
-    """I am a TCP server port, listening for connections.
+    """
+    A TCP server port, listening for connections.
 
-    When a connection is accepted, I will call my factory's buildProtocol with
-    the incoming connection as an argument, according to the specification
-    described in twisted.internet.interfaces.IProtocolFactory.
+    When a connection is accepted, this will call a factory's buildProtocol
+    with the incoming address as an argument, according to the specification
+    described in L{twisted.internet.interfaces.IProtocolFactory}.
 
-    If you wish to change the sort of transport that will be used, my
-    `transport' attribute will be called with the signature expected for
-    Server.__init__, so it can be replaced.
+    If you wish to change the sort of transport that will be used, the
+    C{transport} attribute will be called with the signature expected for
+    C{Server.__init__}, so it can be replaced.
+
+    @ivar deferred: a deferred created when L{stopListening} is called, and
+        that will fire when connection is lost. This is not to be used it
+        directly: prefer the deferred returned by L{stopListening} instead.
+    @type deferred: L{defer.Deferred}
+
+    @ivar disconnecting: flag indicating that the L{stopListening} method has
+        been called and that no connections should be accepted anymore.
+    @type disconnecting: C{bool}
+
+    @ivar connected: flag set once the listen has successfully been called on
+        the socket.
+    @type connected: C{bool}
     """
 
     implements(interfaces.IListeningPort)
@@ -726,6 +740,7 @@ class Port(base.BasePort, _SocketCloser):
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         return s
 
+
     def startListening(self):
         """Create and bind my socket, and begin listening on it.
 
@@ -748,15 +763,17 @@ class Port(base.BasePort, _SocketCloser):
         # can explain it, perhaps we should re-arrange them.
         self.factory.doStart()
         skt.listen(self.backlog)
-        self.connected = 1
+        self.connected = True
         self.socket = skt
         self.fileno = self.socket.fileno
         self.numberAccepts = 100
 
         self.startReading()
 
+
     def _buildAddr(self, (host, port)):
         return address._ServerFactoryIPv4Address('TCP', host, port)
+
 
     def doRead(self):
         """Called when my socket is ready for reading.
@@ -833,13 +850,14 @@ class Port(base.BasePort, _SocketCloser):
         return transport
 
     def loseConnection(self, connDone=failure.Failure(main.CONNECTION_DONE)):
-        """Stop accepting connections on this port.
-
-        This will shut down my socket and call self.connectionLost().
-        It returns a deferred which will fire successfully when the
-        port is actually closed.
         """
-        self.disconnecting = 1
+        Stop accepting connections on this port.
+
+        This will shut down the socket and call self.connectionLost().  It
+        returns a deferred which will fire successfully when the port is
+        actually closed.
+        """
+        self.disconnecting = True
         self.stopReading()
         if self.connected:
             self.deferred = defer.Deferred()
@@ -848,20 +866,37 @@ class Port(base.BasePort, _SocketCloser):
 
     stopListening = loseConnection
 
+
     def connectionLost(self, reason):
-        """Cleans up my socket.
+        """
+        Cleans up the socket.
         """
         log.msg('(Port %s Closed)' % self._realPortNumber)
         self._realPortNumber = None
+        d = None
+        if hasattr(self, "deferred"):
+            d = self.deferred
+            del self.deferred
+
         base.BasePort.connectionLost(self, reason)
-        self.connected = 0
+        self.connected = False
         self._closeSocket()
         del self.socket
         del self.fileno
-        self.factory.doStop()
-        if hasattr(self, "deferred"):
-            self.deferred.callback(None)
-            del self.deferred
+
+        try:
+            self.factory.doStop()
+        except:
+            self.disconnecting = False
+            if d is not None:
+                d.errback(failure.Failure())
+            else:
+                raise
+        else:
+            self.disconnecting = False
+            if d is not None:
+                d.callback(None)
+
 
     def logPrefix(self):
         """Returns the name of my class, to prefix log entries with.

@@ -117,7 +117,7 @@ class Connection(abstract.FileHandle, _SocketCloser):
         return operator.truth(self.socket.getsockopt(socket.SOL_SOCKET,
                                                      socket.SO_KEEPALIVE))
 
-        
+
     def setTcpKeepAlive(self, enabled):
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, enabled)
 
@@ -344,9 +344,6 @@ class Port(styles.Ephemeral, _SocketCloser):
         self.interface = interface
         self.reactor = reactor
 
-        skt = socket.socket(self.addressFamily, self.socketType)
-        self.addrLen = _iocp.maxAddrLen(skt.fileno())
-
 
     def __repr__(self):
         if self._realPortNumber is not None:
@@ -367,6 +364,8 @@ class Port(styles.Ephemeral, _SocketCloser):
         except socket.error, le:
             raise error.CannotListenError, (self.interface, self.port, le)
 
+        self.addrLen = _iocp.maxAddrLen(skt.fileno())
+
         # Make sure that if we listened on port 0, we update that to
         # reflect what the OS actually assigned us.
         self._realPortNumber = skt.getsockname()[1]
@@ -377,6 +376,7 @@ class Port(styles.Ephemeral, _SocketCloser):
         self.factory.doStart()
         skt.listen(self.backlog)
         self.connected = True
+        self.disconnected = False
         self.reactor.addActiveHandle(self)
         self.socket = skt
         self.getFileHandle = self.socket.fileno
@@ -402,20 +402,34 @@ class Port(styles.Ephemeral, _SocketCloser):
 
     def connectionLost(self, reason):
         """
-        Cleans up my socket.
+        Cleans up the socket.
         """
         log.msg('(Port %s Closed)' % self._realPortNumber)
         self._realPortNumber = None
+        d = None
+        if hasattr(self, "deferred"):
+            d = self.deferred
+            del self.deferred
+
         self.disconnected = True
         self.reactor.removeActiveHandle(self)
         self.connected = False
         self._closeSocket()
         del self.socket
         del self.getFileHandle
-        self.factory.doStop()
-        if hasattr(self, "deferred"):
-            self.deferred.callback(None)
-            del self.deferred
+
+        try:
+            self.factory.doStop()
+        except:
+            self.disconnecting = False
+            if d is not None:
+                d.errback(failure.Failure())
+            else:
+                raise
+        else:
+            self.disconnecting = False
+            if d is not None:
+                d.callback(None)
 
 
     def logPrefix(self):
