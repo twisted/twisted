@@ -159,7 +159,13 @@ static void EventBase_RegisterEvent(EventBaseObject *self, PyObject *obj) {
 
 /* Internal helper, unregister an event */
 static void EventBase_UnregisterEvent(EventBaseObject *self, PyObject *obj) {
-    PyDict_DelItem(self->registeredEvents, obj);
+    PyObject *error;
+    if (PyDict_DelItem(self->registeredEvents, obj) == -1) {
+        error = PyErr_Occurred();
+        if (error && PyErr_GivenExceptionMatches(error, PyExc_KeyError)) {
+            PyErr_Clear();
+        }
+    }
 }
 
 

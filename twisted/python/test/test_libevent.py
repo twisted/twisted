@@ -547,6 +547,23 @@ class EventBaseTestCase(unittest.TestCase):
         self.assertEquals(orig, sys.getrefcount(timer))
 
 
+    def test_keyErrorCleanup(self):
+        """
+        If a non-persistent event calls C{removeFromLoop}, it should not raise
+        a random exception.
+        """
+        newEventBase = libevent.EventBase()
+        def cb(fd, events, obj):
+            pass
+        timer = newEventBase.createTimer(cb, persist=False)
+        timer.addToLoop(0.01)
+        newEventBase.dispatch()
+        timer.removeFromLoop()
+        # Before the bug was correct in EventBase_UnregisterEvent, this line
+        # killed python. Not very unity...
+        gc.collect()
+
+
 
 if libevent is None:
     EventTestCase.skip = "libevent module unavailable"

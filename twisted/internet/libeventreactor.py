@@ -23,6 +23,7 @@ from zope.interface import implements
 from twisted.internet import posixbase, main, error
 from twisted.python import libevent, log
 from twisted.internet.interfaces import IReactorFDSet
+from twisted.python.runtime import platformType
 
 
 
@@ -145,6 +146,14 @@ class LibEventReactor(posixbase.PosixReactorBase):
         return result
 
 
+    def getReaders(self):
+        return [self._selectables[fd] for fd in self._reads]
+
+
+    def getWriters(self):
+        return [self._selectables[fd] for fd in self._writes]
+
+
     def _eventCallback(self, fd, events, eventObj):
         """
         Called when an event id available. Wrap L{_doReadOrWrite}.
@@ -152,7 +161,27 @@ class LibEventReactor(posixbase.PosixReactorBase):
         if fd in self._selectables:
             selectable = self._selectables[fd]
             log.callWithLogger(selectable,
-                self._doReadOrWrite, fd, events, selectable)
+                    self._doReadOrWrite, fd, events, selectable)
+
+
+    def _handleSignals(self):
+        import signal
+
+        evt = libevent.createSignalHandler(signal.SIGINT, self.sigInt, True)
+        evt.addToLoop()
+
+        evt = libevent.createSignalHandler(signal.SIGTERM, self.sigTerm, True)
+        evt.addToLoop()
+
+        # Catch Ctrl-Break in windows
+        if hasattr(signal, "SIGBREAK"):
+            evt = libevent.createSignalHandler(signal.SIGBREAK, self.sigBreak,
+                                               True)
+            evt.addToLoop()
+        if platformType == "posix":
+            evt = libevent.createSignalHandler(signal.SIGCHLD,
+                                               self._handleSigchld, True)
+            evt.addToLoop()
 
 
     def _doReadOrWrite(self, fd, events, selectable):
@@ -184,7 +213,7 @@ class LibEventReactor(posixbase.PosixReactorBase):
         Call one iteration of the libevent loop.
         """
         if timeout is not None:
-            evt = libevent.createTimer(lambda *args: None)
+            evt = libevent.createTimer(lambda *args: None, persist=False)
             evt.addToLoop(float(timeout))
         libevent.loop(libevent.EVLOOP_ONCE)
 
