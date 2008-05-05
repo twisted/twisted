@@ -2,7 +2,7 @@
 # Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import os, sys
+import os, sys, socket
 
 try:
     import Crypto
@@ -136,7 +136,7 @@ class ConchTestForwardingProcess(protocol.ProcessProtocol):
 
 
     def _ebConnect(self, f):
-        reactor.callLater(1, self._connect)
+        reactor.callLater(.1, self._connect)
 
 
     def forwardingPortDisconnected(self, buffer):
@@ -332,10 +332,10 @@ class ForwardingTestBase:
 
 
     def _getFreePort(self):
-        f = EchoFactory()
-        serv = reactor.listenTCP(0, f)
-        port = serv.getHost().port
-        serv.stopListening()
+        s = socket.socket()
+        s.bind(('', 0))
+        port = s.getsockname()[1]
+        s.close()
         return port
 
 
@@ -389,11 +389,11 @@ class ForwardingTestBase:
         Test that we can use whatever client to forward a local port to a
         specified port on the server.
         """
-        lport = self._getFreePort()
-        process = ConchTestForwardingProcess(lport, 'test\n')
+        localPort = self._getFreePort()
+        process = ConchTestForwardingProcess(localPort, 'test\n')
         d = self.execute('', process,
                          sshArgs='-N -L%i:127.0.0.1:%i'
-                         % (lport, self.echoPort))
+                         % (localPort, self.echoPort))
         d.addCallback(self.assertEqual, 'test\n')
         return d
 
