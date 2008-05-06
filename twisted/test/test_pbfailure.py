@@ -117,6 +117,21 @@ class SimpleRoot(pb.Root):
 
 
 
+class SaveProtocolServerFactory(pb.PBServerFactory):
+    """
+    A L{pb.PBServerFactory} that saves the latest connected client in
+    C{protocolInstance}.
+    """
+    protocolInstance = None
+
+    def clientConnectionMade(self, protocol):
+        """
+        Keep track of the given protocol.
+        """
+        self.protocolInstance = protocol
+
+
+
 class PBConnTestCase(unittest.TestCase):
     unsafeTracebacks = 0
 
@@ -125,7 +140,7 @@ class PBConnTestCase(unittest.TestCase):
         self._setUpClient()
 
     def _setUpServer(self):
-        self.serverFactory = pb.PBServerFactory(SimpleRoot())
+        self.serverFactory = SaveProtocolServerFactory(SimpleRoot())
         self.serverFactory.unsafeTracebacks = self.unsafeTracebacks
         self.serverPort = reactor.listenTCP(0, self.serverFactory, interface="127.0.0.1")
 
@@ -135,6 +150,8 @@ class PBConnTestCase(unittest.TestCase):
         self.clientConnector = reactor.connectTCP("127.0.0.1", portNo, self.clientFactory)
 
     def tearDown(self):
+        if self.serverFactory.protocolInstance is not None:
+            self.serverFactory.protocolInstance.transport.loseConnection()
         return defer.gatherResults([
             self._tearDownServer(),
             self._tearDownClient()])
