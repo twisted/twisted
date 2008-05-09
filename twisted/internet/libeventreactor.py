@@ -179,6 +179,10 @@ class LibEventReactor(posixbase.PosixReactorBase):
                                                True)
             evt.addToLoop()
         if platformType == "posix":
+            # Install a dummy SIGCHLD handler, to shut up warning. We could
+            # install the normal handler, but it would lead to unnecessary reap
+            # calls
+            signal.signal(signal.SIGCHLD, lambda *args: None)
             evt = libevent.createSignalHandler(signal.SIGCHLD,
                                                self._handleSigchld, True)
             evt.addToLoop()
