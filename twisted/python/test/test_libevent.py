@@ -5,9 +5,10 @@
 Tests for L{libevent} wrapper.
 """
 
-import socket, errno, sys, os, weakref, gc
+import socket, errno, sys, os, weakref, gc, signal
 
 from twisted.trial import unittest
+from twisted.internet.defer import Deferred
 
 try:
     from twisted.python import libevent
@@ -562,6 +563,31 @@ class EventBaseTestCase(unittest.TestCase):
         # Before the bug was correct in EventBase_UnregisterEvent, this line
         # killed python. Not very unity...
         gc.collect()
+
+
+    def test_createSignalHandler(self):
+        """
+        C{createSignalHandler} builds an event that fires a callback when the
+        specified signal is sent to the process.
+        """
+        newEventBase = libevent.EventBase()
+        d = Deferred()
+        def cbSignal(fd, events, obj):
+            d.callback((fd, events, obj))
+        evt = newEventBase.createSignalHandler(signal.SIGUSR1, cbSignal,
+                                               persist=False)
+        evt.addToLoop()
+        def cbTimer(fd, events, obj):
+            os.kill(os.getpid(), signal.SIGUSR1)
+        timer = newEventBase.createTimer(cbTimer, persist=False)
+        timer.addToLoop(0.01)
+        newEventBase.dispatch()
+        def check(result):
+            self.assertIdentical(result[2], evt)
+        return d.addCallback(check)
+
+    if getattr(signal, "SIGUSR1", None) is None:
+        test_createSignalHandler.skip = "SIGUSR1 not available"
 
 
 

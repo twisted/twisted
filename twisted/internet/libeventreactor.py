@@ -12,7 +12,7 @@ listeners or connectors are added)::
 
 API Stability: stable
 
-Maintainer: U{Thomas Herve <mailto:thomas@nimail.org>}
+Maintainer: U{Thomas Herve <mailto:therve@free.fr>}
 """
 
 # System imports
