@@ -348,11 +348,10 @@ def svg(document):
                 "%s:%s svg class is missing source attribute." % svg._markpos
                 )
         f=open(filename)
-        svg.tagName = 'svg'
-        svg.endTagName = 'svg'
-        content = microdom.parseString(f.read()).documentElement()
+        svg.tagName = 'span'
+        svg.endTagName = 'span'
+        content = microdom.parseString(f.read()).documentElement
         svg.appendChild(content)
-        svg.setAttribute('xmlns','http://www.w3.org/2000/svg')
         svg.removeAttribute('source')
 
 
