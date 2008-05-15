@@ -113,7 +113,8 @@ class _Assertions(pyunit.TestCase, object):
     """
 
     def fail(self, msg=None):
-        """absolutely fails the test, do not pass go, do not collect $200
+        """
+        Absolutely fail the test.  Do not pass go, do not collect $200.
 
         @param msg: the message that will be displayed as the reason for the
         failure
@@ -121,7 +122,8 @@ class _Assertions(pyunit.TestCase, object):
         raise self.failureException(msg)
 
     def failIf(self, condition, msg=None):
-        """fails the test if C{condition} evaluates to False
+        """
+        Fail the test if C{condition} evaluates to True.
 
         @param condition: any object that defines __nonzero__
         """
@@ -131,7 +133,8 @@ class _Assertions(pyunit.TestCase, object):
     assertNot = assertFalse = failUnlessFalse = failIf
 
     def failUnless(self, condition, msg=None):
-        """fails the test if C{condition} evaluates to True
+        """
+        Fail the test if C{condition} evaluates to False.
 
         @param condition: any object that defines __nonzero__
         """
@@ -141,16 +144,18 @@ class _Assertions(pyunit.TestCase, object):
     assert_ = assertTrue = failUnlessTrue = failUnless
 
     def failUnlessRaises(self, exception, f, *args, **kwargs):
-        """fails the test unless calling the function C{f} with the given C{args}
-        and C{kwargs} raises C{exception}. The failure will report the
-        traceback and call stack of the unexpected exception.
+        """
+        Fail the test unless calling the function C{f} with the given
+        C{args} and C{kwargs} raises C{exception}. The failure will report
+        the traceback and call stack of the unexpected exception.
 
         @param exception: exception type that is to be expected
         @param f: the function to call
 
         @return: The raised exception instance, if it is of the given type.
-        @raise self.failureException: Raised if the function call does not raise an exception
-        or if it raises an exception of a different type.
+        @raise self.failureException: Raised if the function call does
+            not raise an exception or if it raises an exception of a
+            different type.
         """
         try:
             result = f(*args, **kwargs)
@@ -185,8 +190,10 @@ class _Assertions(pyunit.TestCase, object):
     assertEqual = assertEquals = failUnlessEquals = failUnlessEqual
 
     def failUnlessIdentical(self, first, second, msg=None):
-        """fail the test if C{first} is not C{second}. This is an
-        obect-identity-equality test, not an object equality (i.e. C{__eq__}) test
+        """
+        Fail the test if C{first} is not C{second}.  This is an
+        obect-identity-equality test, not an object equality
+        (i.e. C{__eq__}) test.
 
         @param msg: if msg is None, then the failure message will be
         '%r is not %r' % (first, second)
@@ -197,8 +204,10 @@ class _Assertions(pyunit.TestCase, object):
     assertIdentical = failUnlessIdentical
 
     def failIfIdentical(self, first, second, msg=None):
-        """fail the test if C{first} is C{second}. This is an
-        obect-identity-equality test, not an object equality (i.e. C{__eq__}) test
+        """
+        Fail the test if C{first} is C{second}.  This is an
+        obect-identity-equality test, not an object equality
+        (i.e. C{__eq__}) test.
 
         @param msg: if msg is None, then the failure message will be
         '%r is %r' % (first, second)
@@ -209,7 +218,8 @@ class _Assertions(pyunit.TestCase, object):
     assertNotIdentical = failIfIdentical
 
     def failIfEqual(self, first, second, msg=None):
-        """fail the test if C{first} == C{second}
+        """
+        Fail the test if C{first} == C{second}.
 
         @param msg: if msg is None, then the failure message will be
         '%r == %r' % (first, second)
@@ -220,7 +230,8 @@ class _Assertions(pyunit.TestCase, object):
     assertNotEqual = assertNotEquals = failIfEquals = failIfEqual
 
     def failUnlessIn(self, containee, container, msg=None):
-        """fail the test if C{containee} is not found in C{container}
+        """
+        Fail the test if C{containee} is not found in C{container}.
 
         @param containee: the value that should be in C{container}
         @param container: a sequence type, or in the case of a mapping type,
@@ -235,7 +246,8 @@ class _Assertions(pyunit.TestCase, object):
     assertIn = failUnlessIn
 
     def failIfIn(self, containee, container, msg=None):
-        """fail the test if C{containee} is found in C{container}
+        """
+        Fail the test if C{containee} is found in C{container}.
 
         @param containee: the value that should not be in C{container}
         @param container: a sequence type, or in the case of a mapping type,
@@ -250,7 +262,8 @@ class _Assertions(pyunit.TestCase, object):
     assertNotIn = failIfIn
 
     def failIfAlmostEqual(self, first, second, places=7, msg=None):
-        """Fail if the two objects are equal as determined by their
+        """
+        Fail if the two objects are equal as determined by their
         difference rounded to the given number of decimal places
         (default 7) and comparing to zero.
 
@@ -268,7 +281,8 @@ class _Assertions(pyunit.TestCase, object):
     failIfAlmostEquals = failIfAlmostEqual
 
     def failUnlessAlmostEqual(self, first, second, places=7, msg=None):
-        """Fail if the two objects are unequal as determined by their
+        """
+        Fail if the two objects are unequal as determined by their
         difference rounded to the given number of decimal places
         (default 7) and comparing to zero.
 
@@ -286,7 +300,8 @@ class _Assertions(pyunit.TestCase, object):
     failUnlessAlmostEquals = failUnlessAlmostEqual
 
     def failUnlessApproximates(self, first, second, tolerance, msg=None):
-        """asserts that C{first} - C{second} > C{tolerance}
+        """
+        Fail if C{first} - C{second} > C{tolerance}
 
         @param msg: if msg is None, then the failure message will be
                     '%r ~== %r' % (first, second)
@@ -297,9 +312,10 @@ class _Assertions(pyunit.TestCase, object):
     assertApproximates = failUnlessApproximates
 
     def failUnlessFailure(self, deferred, *expectedFailures):
-        """Assert that C{deferred} will errback with one of
-        C{expectedFailures}.  Returns the original Deferred with callbacks
-        added. You will need to return this Deferred from your test case.
+        """
+        Fail if C{deferred} does not errback with one of C{expectedFailures}.
+        Returns the original Deferred with callbacks added. You will need
+        to return this Deferred from your test case.
         """
         def _cb(ignore):
             raise self.failureException(
@@ -316,10 +332,16 @@ class _Assertions(pyunit.TestCase, object):
     assertFailure = failUnlessFailure
 
     def failUnlessSubstring(self, substring, astring, msg=None):
+        """
+        Fail if C{substring} does not exist within C{astring}.
+        """
         return self.failUnlessIn(substring, astring, msg)
     assertSubstring = failUnlessSubstring
 
     def failIfSubstring(self, substring, astring, msg=None):
+        """
+        Fail if C{astring} contains C{substring}.
+        """
         return self.failIfIn(substring, astring, msg)
     assertNotSubstring = failIfSubstring
 
@@ -377,8 +399,8 @@ class _Assertions(pyunit.TestCase, object):
 
     def failUnlessIsInstance(self, instance, classOrTuple):
         """
-        Assert that the given instance is of the given class or of one of the
-        given classes.
+        Fail if C{instance} is not an instance of the given class or of
+        one of the given classes.
 
         @param instance: the object to test the type (first argument of the
             C{isinstance} call).
@@ -389,13 +411,12 @@ class _Assertions(pyunit.TestCase, object):
         """
         if not isinstance(instance, classOrTuple):
             self.fail("%r is not an instance of %s" % (instance, classOrTuple))
-
     assertIsInstance = failUnlessIsInstance
 
     def failIfIsInstance(self, instance, classOrTuple):
         """
-        Assert that the given instance is not of the given class or of one of
-        the given classes.
+        Fail if C{instance} is not an instance of the given class or of
+        one of the given classes.
 
         @param instance: the object to test the type (first argument of the
             C{isinstance} call).
@@ -406,7 +427,6 @@ class _Assertions(pyunit.TestCase, object):
         """
         if isinstance(instance, classOrTuple):
             self.fail("%r is not an instance of %s" % (instance, classOrTuple))
-
     assertNotIsInstance = failIfIsInstance
 
 
