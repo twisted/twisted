@@ -36,7 +36,7 @@ environment, path, userID, groupID, and usePTY.</p>
 <pre class="python">
 from twisted.internet import reactor
 
-mypp = MyProcessProtocol()
+processProtocol = MyProcessProtocol()
 reactor.spawnProcess(processProtocol, executable, args=[program, arg1, arg2],
                      env={'HOME': os.environ['HOME']}, path,
                      uid, gid, usePTY, childFDs)
