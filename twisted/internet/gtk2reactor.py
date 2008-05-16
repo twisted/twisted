@@ -77,18 +77,17 @@ class Gtk2Reactor(posixbase.PosixReactorBase):
     implements(IReactorFDSet)
 
     def __init__(self, useGtk=True):
-        self.context = gobject.main_context_default()
-        self.loop = gobject.MainLoop()
         self._simtag = None
         self._reads = {}
         self._writes = {}
         posixbase.PosixReactorBase.__init__(self)
         # pre 2.3.91 the glib iteration and mainloop functions didn't release
         # global interpreter lock, thus breaking thread and signal support.
-        if (hasattr(gobject, "pygtk_version") and gobject.pygtk_version >= (2, 3, 91)
-            and not useGtk):
+        if getattr(gobject, "pygtk_version", ()) >= (2, 3, 91) and not useGtk:
+            self.context = gobject.main_context_default()
             self.__pending = self.context.pending
             self.__iteration = self.context.iteration
+            self.loop = gobject.MainLoop()
             self.__crash = self.loop.quit
             self.__run = self.loop.run
         else:
@@ -182,7 +181,7 @@ class Gtk2Reactor(posixbase.PosixReactorBase):
     def run(self, installSignalHandlers=1):
         self.startRunning(installSignalHandlers=installSignalHandlers)
         gobject.timeout_add(0, self.simulate)
-        if not self._stopped:
+        if self._started:
             self.__run()
 
     def _doReadOrWrite(self, source, condition, faildict={

@@ -4,7 +4,7 @@
 
 from twisted.trial import unittest
 from twisted.internet import reactor, protocol, error, abstract, defer
-from twisted.internet import interfaces, base, task
+from twisted.internet import interfaces, base
 from twisted.internet.tcp import Connection
 
 from twisted.test.time_helpers import Clock
@@ -975,136 +975,6 @@ class CallFromThreadTests(unittest.TestCase):
         d = defer.Deferred()
         reactor.callFromThread(self._callFromThreadCallback, d)
         return d
-
-
-
-class DummyReactor(base.ReactorBase):
-    """
-    A reactor faking the methods needed to make it starts.
-    """
-
-    def __init__(self, clock):
-        """
-        @param clock: the clock used to fake time.
-        @type clock: C{task.Clock}.
-        """
-        base.ReactorBase.__init__(self)
-        self.clock = clock
-
-
-    def installWaker(self):
-        """
-        Called by C{self._initThreads}: no waker is needed for the tests.
-        """
-
-
-    def callLater(self, _seconds, _f, *args, **kw):
-        """
-        Override callLater using the internal clock.
-        """
-        return self.clock.callLater( _seconds, _f, *args, **kw)
-
-
-    def removeAll(self):
-        """
-        Needed during stop.
-        """
-        return []
-
-
-
-class ReactorBaseTestCase(unittest.TestCase):
-    """
-    Tests for L{base.ReactorBase} object.
-    """
-
-    def setUp(self):
-        """
-        Create a clock and a L{DummyReactor}.
-        """
-        self.clock = task.Clock()
-        self.reactor = DummyReactor(self.clock)
-
-
-    def test_stopWhenNotStarted(self):
-        """
-        Test that the reactor stop raises an error when the reactor is not
-        started.
-        """
-        self.assertRaises(RuntimeError, self.reactor.stop)
-
-
-    def test_stopWhenAlreadyStopped(self):
-        """
-        Test that the reactor stop raises an error when the reactor is already
-        stopped.
-        """
-        self.reactor.startRunning()
-        self.reactor.stop()
-        self.assertRaises(RuntimeError, self.reactor.stop)
-
-
-    def test_stopShutDownEvents(self):
-        """
-        Verify that reactor.stop fires shutdown events.
-        """
-        events = []
-        self.reactor.addSystemEventTrigger(
-            "before", "shutdown",
-            lambda: events.append(("before", "shutdown")))
-        self.reactor.addSystemEventTrigger(
-            "during", "shutdown",
-            lambda: events.append(("during", "shutdown")))
-        self.reactor.startRunning()
-        self.reactor.stop()
-
-        # Simulate the mainloop spinning a little bit.  Do this to allow
-        # reactor.stop() to schedule the shutdown event to be fired as opposed
-        # to assuming reactor.stop() will fire the shutdown event before
-        # returning.
-
-        # Generally, randomly scheduling things to happen instead of doing them
-        # synchronously is wrong.  However, this is finicky functionality which
-        # was always poorly specified and was implemented such that most times
-        # the shutdown event was fired asynchronously.  If you're implementing
-        # a new API, don't look at this advance(0) and think it's great and
-        # copy it.
-
-        # See #3168, #3146, and #3198.
-        self.reactor.clock.advance(0)
-
-        self.assertEquals(events, [("before", "shutdown"),
-                                   ("during", "shutdown")])
-
-
-    def test_multipleRun(self):
-        """
-        Verify that the reactor.startRunning raises an error when called
-        multiple times.
-        """
-        self.reactor.startRunning()
-        self.assertWarns(DeprecationWarning,
-            "Reactor already running! This behavior is deprecated since "
-            "Twisted 8.0",
-            __file__,
-            self.reactor.startRunning)
-
-
-    def test_crash(self):
-        """
-        reactor.crash should NOT fire shutdown triggers.
-        """
-        events = []
-        self.reactor.addSystemEventTrigger(
-            "before", "shutdown",
-            lambda: events.append(("before", "shutdown")))
-
-        self.reactor.callWhenRunning(
-            self.reactor.callLater, 0, self.reactor.crash)
-        self.reactor.startRunning()
-        self.clock.advance(0.1)
-        self.failIf(events, "reactor.crash invoked shutdown triggers, but it "
-                            "isn't supposed to.")
 
 
 

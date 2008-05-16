@@ -396,9 +396,24 @@ class ReactorBase(object):
 
     @type _stopped: C{bool}
     @ivar _stopped: A flag which is true between paired calls to C{reactor.run}
-        and C{reactor.stop}.
-    """
+        and C{reactor.stop}.  This should be replaced with an explicit state
+        machine.
 
+    @type _justStopped: C{bool}
+    @ivar _justStopped: A flag which is true between the time C{reactor.stop}
+        is called and the time the shutdown system event is fired.  This is
+        used to determine whether that event should be fired after each
+        iteration through the mainloop.  This should be replaced with an
+        explicit state machine.
+
+    @type _started: C{bool}
+    @ivar _started: A flag which is true from the time C{reactor.run} is called
+        until the time C{reactor.run} returns.  This is used to prevent calls
+        to C{reactor.run} on a running reactor.  This should be replaced with
+        an explicit state machine.
+
+    @ivar running: See L{IReactorCore.running}
+    """
     implements(IReactorCore, IReactorTime, IReactorPluggableResolver)
 
     _stopped = True
@@ -415,8 +430,15 @@ class ReactorBase(object):
         self._newTimedCalls = []
         self._cancellations = 0
         self.running = False
+        self._started = False
+        self._justStopped = False
         self.waker = None
 
+        # Arrange for the running attribute to change to True at the right time
+        # and let a subclass possibly do other things at that time (eg install
+        # signal handlers).
+        self.addSystemEventTrigger(
+            'during', 'startup', self._reallyStartRunning)
         self.addSystemEventTrigger('during', 'shutdown', self.crash)
         self.addSystemEventTrigger('during', 'shutdown', self.disconnectAll)
 
@@ -485,7 +507,6 @@ class ReactorBase(object):
     # Installation.
 
     # IReactorCore
-
     def stop(self):
         """
         See twisted.internet.interfaces.IReactorCore.stop.
@@ -494,13 +515,21 @@ class ReactorBase(object):
             raise error.ReactorNotRunning(
                 "Can't stop reactor that isn't running.")
         self._stopped = True
-        self.callLater(0, self.fireSystemEvent, "shutdown")
+        self._justStopped = True
+
 
     def crash(self):
         """
         See twisted.internet.interfaces.IReactorCore.crash.
+
+        Reset reactor state tracking attributes and re-initialize certain
+        state-transition helpers which were set up in C{__init__} but later
+        destroyed (through use).
         """
+        self._started = False
         self.running = False
+        self.addSystemEventTrigger(
+            'during', 'startup', self._reallyStartRunning)
 
     def sigInt(self, *args):
         """Handle a SIGINT interrupt.
@@ -578,16 +607,28 @@ class ReactorBase(object):
 
         Don't call this directly, call reactor.run() instead: it should take
         care of calling this.
+
+        This method is somewhat misnamed.  The reactor will not necessarily be
+        in the running state by the time this method returns.  The only
+        guarantee is that it will be on its way to the running state.
         """
-        if self.running:
+        if self._started:
             warnings.warn(
                     "Reactor already running! This behavior is deprecated "
                     "since Twisted 8.0",
-                    category=DeprecationWarning, stacklevel=3)
-        self.running = True
+                    category=DeprecationWarning, stacklevel=4)
+        self._started = True
         self._stopped = False
         threadable.registerAsIOThread()
         self.fireSystemEvent('startup')
+
+
+    def _reallyStartRunning(self):
+        """
+        Method called to transition to the running state.  This should happen
+        in the I{during startup} event trigger phase.
+        """
+        self.running = True
 
     # IReactorTime
 
@@ -721,6 +762,10 @@ class ReactorBase(object):
             self._pendingTimedCalls = [x for x in self._pendingTimedCalls
                                        if not x.cancelled]
             heapify(self._pendingTimedCalls)
+
+        if self._justStopped:
+            self._justStopped = False
+            self.fireSystemEvent("shutdown")
 
     # IReactorProcess
 
@@ -983,7 +1028,15 @@ class _SignalReactorMixin:
     It can only be used mixed in with L{ReactorBase}, and has to be defined
     first in the inheritance (so that method resolution order finds
     startRunning first).
+
+    @type _installSignalHandlers: C{bool}
+    @ivar _installSignalHandlers: A flag which indicates whether any signal
+        handlers will be installed during startup.  This includes handlers for
+        SIGCHLD to monitor child processes, and SIGINT, SIGTERM, and SIGBREAK
+        to stop the reactor.
     """
+
+    _installSignalHandlers = False
 
     def _handleSignals(self):
         """
@@ -1028,19 +1081,32 @@ class _SignalReactorMixin:
 
     def startRunning(self, installSignalHandlers=True):
         """
-        Forward call to ReactorBase, arrange for signal handlers to be
-        installed if asked.
+        Extend the base implementation in order to remember whether signal
+        handlers should be installed later.
+
+        @type installSignalHandlers: C{bool}
+        @param installSignalHandlers: A flag which, if set, indicates that
+            handlers for a number of (implementation-defined) signals should be
+            installed during startup.
         """
-        if installSignalHandlers:
+        self._installSignalHandlers = installSignalHandlers
+        ReactorBase.startRunning(self)
+
+
+    def _reallyStartRunning(self):
+        """
+        Extend the base implementation by also installing signal handlers, if
+        C{self._installSignalHandlers} is true.
+        """
+        ReactorBase._reallyStartRunning(self)
+        if self._installSignalHandlers:
             # Make sure this happens before after-startup events, since the
             # expectation of after-startup is that the reactor is fully
             # initialized.  Don't do it right away for historical reasons
             # (perhaps some before-startup triggers don't want there to be a
             # custom SIGCHLD handler so that they can run child processes with
             # some blocking api).
-            self.addSystemEventTrigger(
-                'during', 'startup', self._handleSignals)
-        ReactorBase.startRunning(self)
+            self._handleSignals()
 
 
     def run(self, installSignalHandlers=True):
@@ -1049,9 +1115,9 @@ class _SignalReactorMixin:
 
 
     def mainLoop(self):
-        while self.running:
+        while self._started:
             try:
-                while self.running:
+                while self._started:
                     # Advance simulation time in delayed event
                     # processors.
                     self.runUntilCurrent()

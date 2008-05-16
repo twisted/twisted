@@ -8,7 +8,7 @@ Interface documentation.
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
 
-from zope.interface import Interface
+from zope.interface import Interface, Attribute
 
 
 class IAddress(Interface):
@@ -572,8 +572,14 @@ class IReactorThreads(Interface):
 
 
 class IReactorCore(Interface):
-    """Core methods that a Reactor must implement.
     """
+    Core methods that a Reactor must implement.
+    """
+
+    running = Attribute(
+        "A C{bool} which is C{True} from I{during startup} to "
+        "I{during shutdown} and C{False} the rest of the time.")
+
 
     def resolve(name, timeout=10):
         """Return a L{twisted.internet.defer.Deferred} that will resolve a hostname.

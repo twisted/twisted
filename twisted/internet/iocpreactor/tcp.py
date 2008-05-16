@@ -147,7 +147,7 @@ class Client(Connection):
                 except socket.error, se:
                     raise error.ConnectBindError(se[0], se[1])
                 self.socket = skt
-                Connection.__init__(self, skt, None)
+                Connection.__init__(self, skt, None, reactor)
                 reactor.callLater(0, self.resolveAddress)
         except error.ConnectBindError, err:
             reactor.callLater(0, self.failIfNotConnected, err)
@@ -266,7 +266,7 @@ class Server(Connection):
     """
 
 
-    def __init__(self, sock, protocol, clientAddr, serverAddr, sessionno):
+    def __init__(self, sock, protocol, clientAddr, serverAddr, sessionno, reactor):
         """
         Server(sock, protocol, client, server, sessionno)
 
@@ -274,7 +274,7 @@ class Server(Connection):
         tuple of host, port describing the other end of the connection), an
         instance of Port, and a session number.
         """
-        Connection.__init__(self, sock, protocol)
+        Connection.__init__(self, sock, protocol, reactor)
         self.serverAddr = serverAddr
         self.clientAddr = clientAddr
         self.sessionno = sessionno
@@ -482,7 +482,7 @@ class Port(styles.Ephemeral, _SocketCloser):
                 transport = Server(evt.newskt, protocol,
                         address.IPv4Address('TCP', rAddr[0], rAddr[1], 'INET'),
                         address.IPv4Address('TCP', lAddr[0], lAddr[1], 'INET'),
-                        s)
+                        s, self.reactor)
                 protocol.makeConnection(transport)
             return True
 

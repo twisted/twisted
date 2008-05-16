@@ -13,8 +13,6 @@ import signal
 import StringIO
 import errno
 import gc
-import warnings
-import socket
 import stat
 try:
     import fcntl
@@ -24,7 +22,6 @@ except ImportError:
 from zope.interface.verify import verifyObject
 
 from twisted.internet import reactor, protocol, error, interfaces, defer
-from twisted.internet import selectreactor
 from twisted.trial import unittest
 from twisted.python import util, runtime, procutils
 
@@ -2083,139 +2080,6 @@ class ClosingPipes(unittest.TestCase):
         return d
 
 
-class SystemEventOrderRegressionTests(unittest.TestCase):
-    """
-    Ordering and reentrancy tests for C{reactor.callWhenRunning} and reactor
-    shutdown (see #3146 and #3168).
-    """
-    def setUp(self):
-        """
-        Clear the SIGCHLD handler, if there is one, to ensure an environment
-        like the one which exists prior to a call to L{reactor.run}.
-        """
-        self.originalHandler = signal.signal(signal.SIGCHLD, signal.SIG_DFL)
-        self.processTransports = []
-
-
-    def tearDown(self):
-        """
-        Restore the original SIGCHLD handler and reap processes as long as
-        there seem to be any remaining.
-        """
-        signal.signal(signal.SIGCHLD, signal.SIG_DFL)
-        while self.processTransports:
-            transport = self.processTransports.pop()
-            if transport.pid is not None:
-                os.waitpid(transport.pid, 0)
-        signal.signal(signal.SIGCHLD, self.originalHandler)
-
-
-    def unbuildReactor(self, reactor):
-        """
-        Clean up any resources which may have been allocated for the given
-        reactor by its creation or by a test which used it.
-        """
-        # Chris says:
-        #
-        # XXX This explicit calls to clean up the waker should become obsolete
-        # when bug #3063 is fixed. -radix, 2008-02-29. Fortunately it should
-        # probably cause an error when bug #3063 is fixed, so it should be
-        # removed in the same branch that fixes it.
-        #
-        # -exarkun
-        reactor.removeReader(reactor.waker)
-        reactor.waker.connectionLost(None)
-
-        # Here's an extra thing unrelated to wakers but necessary for
-        # cleaning up after the reactors we make.  -exarkun
-        reactor.disconnectAll()
-
-
-    def buildReactor(self):
-        """
-        Create and return an instance of L{selectreactor.SelectReactor}.
-        """
-        reactor = selectreactor.SelectReactor()
-        self.addCleanup(self.unbuildReactor, reactor)
-        return reactor
-
-
-    def spawnProcess(self, reactor):
-        """
-        Call C{reactor.spawnProcess} with some simple arguments.  Do this here
-        so that code object referenced by the stack frame has a C{co_filename}
-        attribute set to this file so that L{TestCase.assertWarns} can be used.
-        """
-        self.processTransports.append(
-            reactor.spawnProcess(
-                protocol.ProcessProtocol(), sys.executable,
-                [sys.executable, "-c", ""]))
-
-
-    def test_spawnProcessTooEarlyWarns(self):
-        """
-        C{reactor.spawnProcess} emits a warning if it is called before
-        C{reactor.run}.
-
-        If you can figure out a way to make it safe to run
-        C{reactor.spawnProcess} before C{reactor.run}, you may delete the
-        warning and this test.
-        """
-        reactor = self.buildReactor()
-        self.assertWarns(
-            error.PotentialZombieWarning,
-            error.PotentialZombieWarning.MESSAGE, __file__,
-            self.spawnProcess, reactor)
-
-
-    def test_callWhenRunningSpawnProcessWarningFree(self):
-        """
-        L{PotentialZombieWarning} is not emitted when the reactor is run after
-        C{reactor.callWhenRunning(reactor.spawnProcess, ...)} has been called.
-        """
-        events = []
-        self.patch(warnings, 'warn', lambda *a, **kw: events.append(a))
-        reactor = self.buildReactor()
-        reactor.callWhenRunning(self.spawnProcess, reactor)
-        reactor.callWhenRunning(reactor.stop)
-        reactor.run()
-        self.assertFalse(events)
-
-
-    def test_clientConnectionFailedStopsReactor(self):
-        """
-        The reactor can be stopped by a client factory's
-        C{clientConnectionFailed} method.
-
-        This isn't really a process test but it's here for simplicity of
-        implementation and it won't be very long lived.
-        """
-        class Stop(protocol.ClientFactory):
-            def clientConnectionFailed(self, connector, reason):
-                reactor.stop()
-        probe = socket.socket()
-        probe.bind(('', 0))
-        host, port = probe.getsockname()
-        probe.close()
-        reactor = self.buildReactor()
-        reactor.connectTCP(host, port, Stop())
-        reactor.run()
-
-
-    def test_shutdownTriggersRun(self):
-        """
-        C{reactor.run()} does not return until shutdown triggers have all run.
-        """
-        events = []
-        reactor = self.buildReactor()
-        reactor.addSystemEventTrigger(
-            'after', 'shutdown', events.append, "done")
-        reactor.callWhenRunning(reactor.stop)
-        reactor.run()
-        self.assertEqual(events, ["done"])
-
-
-
 skipMessage = "wrong platform or reactor doesn't support IReactorProcess"
 if (runtime.platform.getType() != 'posix') or (not interfaces.IReactorProcess(reactor, None)):
     PosixProcessTestCase.skip = skipMessage
@@ -2237,4 +2101,3 @@ if not interfaces.IReactorProcess(reactor, None):
 
 if process is None:
     MockProcessTestCase.skip = skipMessage
-    SystemEventOrderRegressionTests.skip = skipMessage
