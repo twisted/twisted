@@ -3,10 +3,12 @@
 
 Fixes
 -----
- - Fixed an XMLRPC bug whereby sometimes accidentally fire a Deferred twice
-   when a connection was lost during the handling of a response (#3152)
- - Fixed a bug in the the "Using Twisted Web" document which prevented an
-   example resource from being renderable (#3147)
+
+ - Fixed an XMLRPC bug whereby sometimes a callRemote Deferred would
+   accidentally be fired twice when a connection was lost during the handling of
+   a response (#3152)
+ - Fixed a bug in the "Using Twisted Web" document which prevented an example
+   resource from being renderable (#3147)
  - The deprecated mktap API is no longer used (#3127)
 
 
