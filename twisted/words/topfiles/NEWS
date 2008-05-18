@@ -1,3 +1,18 @@
+8.1.0 (2008-05-18)
+==================
+
+Features
+--------
+ - JID objects now have a nice __repr__ (#3156)
+ - Extending XMPP protocols is now easier (#2178)
+
+Fixes
+-----
+ - The deprecated mktap API is no longer used (#3127)
+ - A bug whereby one-time XMPP observers would be enabled permanently was fixed
+   (#3066)
+
+
 8.0.0 (2008-03-17)
 ==================
 

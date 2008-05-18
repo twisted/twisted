@@ -1,3 +1,19 @@
+8.1.0 (2008-05-18)
+==================
+
+Fixes
+-----
+ - A regression was fixed whereby the publicKeys and privateKeys attributes of
+   SSHFactory would not be interpreted as strings (#3141)
+ - The sshsimpleserver.py example had a minor bug fix (#3135)
+ - The deprecated mktap API is no longer used (#3127)
+ - An infelicity was fixed whereby a NameError would be raised in certain
+   circumstances during authentication when a ConchError should have been
+   (#3154)
+ - A workaround was added to conch.insults for a bug in gnome-terminal whereby
+   it would not scroll correctly (#3189)
+
+
 8.0.0 (2008-03-17)
 ==================
 
