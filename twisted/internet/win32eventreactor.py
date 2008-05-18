@@ -18,8 +18,7 @@ LIMITATIONS:
 TODO:
  1. Event loop handling of writes is *very* problematic (this is causing failed tests).
     Switch to doing it the correct way, whatever that means (see below).
- 2. Replace icky socket loopback waker with event based waker (use dummyEvent object)
- 3. Switch everyone to using Free Software so we don't have to deal with proprietary APIs.
+ 2. Switch everyone to using Free Software so we don't have to deal with proprietary APIs.
 
 
 ALTERNATIVE SOLUTIONS:
@@ -49,7 +48,7 @@ from zope.interface import implements
 
 # Win32 imports
 from win32file import WSAEventSelect, FD_READ, FD_CLOSE, FD_ACCEPT, FD_CONNECT
-from win32event import CreateEvent, MsgWaitForMultipleObjects
+from win32event import CreateEvent, SetEvent, MsgWaitForMultipleObjects
 from win32event import WAIT_OBJECT_0, WAIT_TIMEOUT, QS_ALLINPUT, QS_ALLEVENTS
 
 import win32gui
@@ -58,8 +57,24 @@ import win32gui
 from twisted.internet import posixbase
 from twisted.python import log, threadable, failure
 from twisted.internet.interfaces import IReactorFDSet, IReactorProcess
+from twisted.persisted import styles
 
 from twisted.internet._dumbwin32proc import Process
+
+
+
+class Win32EventWaker(log.Logger, styles.Ephemeral):
+    def __init__(self):
+        self.event = CreateEvent(None, 0, 0, None)
+
+
+    def wakeUp(self):
+        SetEvent(self.event)
+
+
+    def signalled(self):
+        pass
+
 
 
 class Win32Reactor(posixbase.PosixReactorBase):
@@ -85,6 +100,15 @@ class Win32Reactor(posixbase.PosixReactorBase):
         self._writes = {}
         self._events = {}
         posixbase.PosixReactorBase.__init__(self)
+
+
+    def installWaker(self):
+        """
+        Install a Windows Event to allow threads to wake up the IO threads
+        """
+        if not self.waker:
+            self.waker = w = Win32EventWaker()
+            self.addEvent(w.event, w, 'signalled')
 
 
     def _makeSocketEvent(self, fd, action, why):
