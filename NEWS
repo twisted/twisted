@@ -1,7 +1,7 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Core 8.1.0pre2 (2008-04-26)
+Core 8.1.0 (2008-05-18)
 =======================
 
 Features
@@ -45,7 +45,7 @@ Other
  - #3079, #3118, #3120, #3145, #3069, #3149, #3186, #3208, #2762
 
 
-Conch 8.1.0pre2 (2008-04-26)
+Conch 8.1.0 (2008-05-18)
 ========================
 
 Fixes
@@ -61,7 +61,7 @@ Fixes
    it would not scroll correctly (#3189)
 
 
-Lore 8.1.0pre1 (2008-04-20)
+Lore 8.1.0 (2008-05-18)
 =======================
 
 Fixes
@@ -69,7 +69,7 @@ Fixes
  - The deprecated mktap API is no longer used (#3127)
 
 
-News 8.1.0pre1 (2008-04-20)
+News 8.1.0 (2008-05-18)
 =======================
 
 Fixes
@@ -77,7 +77,7 @@ Fixes
  - The deprecated mktap API is no longer used (#3127)
 
 
-Web 8.1.0pre1 (2008-04-20)
+Web 8.1.0 (2008-05-18)
 ======================
 
 Fixes
@@ -89,7 +89,7 @@ Fixes
  - The deprecated mktap API is no longer used (#3127)
 
 
-Words 8.1.0pre2 (2008-04-26)
+Words 8.1.0 (2008-05-18)
 ========================
 
 Features
@@ -104,7 +104,7 @@ Fixes
    (#3066)
 
 
-Mail 8.1.0pre1 (2008-04-20)
+Mail 8.1.0 (2008-05-18)
 =======================
 
 Fixes
@@ -112,7 +112,7 @@ Fixes
  - The deprecated mktap API is no longer used (#3127)
 
 
-Names 8.1.0pre1 (2008-04-20)
+Names 8.1.0 (2008-05-18)
 ========================
 
 Fixes
@@ -120,7 +120,7 @@ Fixes
  - The deprecated mktap API is no longer used (#3127)
 
 
-Web2 8.1.0pre1 (2008-04-20)
+Web2 8.1.0 (2008-05-18)
 =======================
 
 Fixes
