@@ -44,7 +44,7 @@ class StatefulProtocol(protocol.Protocol):
                 state = next
         if offset != 0:
             b = buffer.read()
-            buffer.reset()
+            buffer.seek(0)
             buffer.truncate()
             buffer.write(b)
             offset = 0
