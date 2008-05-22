@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.words.test.test_irc -*-
-# Copyright (c) 2001-2005 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -549,6 +549,26 @@ class IRCClient(basic.LineReceiver):
     dcc_destdir = '.'
     dcc_sessions = None
 
+    # 'mode': (added, removed) i.e.:
+    # 'l': (True, False) accepts an arg when added and no arg when removed
+    # from http://www.faqs.org/rfcs/rfc1459.html - 4.2.3.1 Channel modes
+    # if you want other modes to accept args, add them here, by default unknown
+    # modes won't accept any arg
+    _modeAcceptsArg = {
+        'o': (True, True),    # op/deop a user
+        'h': (True, True),    # hop/dehop (halfop) a user (not defined in RFC)
+        'v': (True, True),    # voice/devoice a user
+        'b': (True, True),    # ban/unban a user/mask
+        'l': (True, False),   # set the user limit to channel
+        'k': (True, False),   # set a channel key (password)
+        't': (False, False),  # only ops set topic
+        's': (False, False),  # secret channel
+        'p': (False, False),  # private channel
+        'i': (False, False),  # invite-only channel
+        'm': (False, False),  # moderated channel
+        'n': (False, False),  # no external messages
+    }
+
     # If this is false, no attempt will be made to identify
     # ourself to the server.
     performLogin = 1
@@ -699,17 +719,22 @@ class IRCClient(basic.LineReceiver):
         self.privmsg(user, channel, message)
 
     def modeChanged(self, user, channel, set, modes, args):
-        """Called when a channel's modes are changed
+        """Called when users or channel's modes are changed.
 
         @type user: C{str}
         @param user: The user and hostmask which instigated this change.
 
         @type channel: C{str}
-        @param channel: The channel for which the modes are changing.
+        @param channel: The channel where the modes are changed. If args is
+        empty the channel for which the modes are changing. If the changes are
+        at server level it could be equal to C{user}.
 
         @type set: C{bool} or C{int}
-        @param set: true if the mode is being added, false if it is being
-        removed.
+        @param set: True if the mode(s) is being added, False if it is being
+        removed. If some modes are added and others removed at the same time
+        this function will be called twice, the first time with all the added
+        modes, the second with the removed ones. (To change this behaviour
+        override the irc_MODE method)
 
         @type modes: C{str}
         @param modes: The mode or modes which are being changed.
@@ -1011,12 +1036,42 @@ class IRCClient(basic.LineReceiver):
         nick = string.split(prefix,'!')[0]
         self.userQuit(nick, params[0])
 
+
     def irc_MODE(self, prefix, params):
-        channel, rest = params[0], params[1:]
-        set = rest[0][0] == '+'
-        modes = rest[0][1:]
-        args = rest[1:]
-        self.modeChanged(prefix, channel, set, modes, tuple(args))
+        """
+        Parse the server message when one or more modes are changed
+        """
+        user, channel, modes, args = prefix, params[0], params[1], params[2:]
+        if modes[0] not in '+-':
+            # add a '+' before the modes if it isn't specified (e.g. MODE s)
+            modes = '+' + modes
+        if ((modes[0] == '+' and '-' not in modes[1:]) or
+            (modes[0] == '-' and '+' not in modes[1:])):
+            # all modes are added or removed
+            set = (modes[0] == '+')
+            modes = modes[1:].replace('-+'[set], '')
+            self.modeChanged(user, channel, set, modes, tuple(args))
+        else:
+            # some modes added and other removed
+            modes2, args2 = ['', ''], [[], []]
+            for c in modes:
+                if c == '+':
+                    i = 0
+                elif c == '-':
+                    i = 1
+                else:
+                    modes2[i] += c
+                    # take an arg only if the mode accepts it (e.g. +o nick)
+                    if args and self._modeAcceptsArg.get(c, (False, False))[i]:
+                        args2[i].append(args.pop(0))
+            if args:
+                log.msg('Too many args (%s) received for %s. If one or more '
+                    'modes are supposed to accept an arg and they are not in '
+                    '_modeAcceptsArg, add them.' % (' '.join(args), modes))
+
+            self.modeChanged(user, channel, True, modes2[0], tuple(args2[0]))
+            self.modeChanged(user, channel, False, modes2[1], tuple(args2[1]))
+
 
     def irc_PING(self, prefix, params):
         self.sendLine("PONG %s" % params[-1])

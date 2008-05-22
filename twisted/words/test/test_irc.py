@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2005 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 from StringIO import StringIO
@@ -160,16 +160,170 @@ class ModeTestCase(unittest.TestCase):
         del self.client
         del self.transport
 
-    def testModeChange(self):
-        message = ":ChanServ!ChanServ@services. MODE #tanstaafl +o exarkun\r\n"
+
+    def _sendModeChange(self, msg, args=''):
+        """
+        Format the string and send it to the client.
+        """
+        message = ":Wolf!~wolf@yok.utu.fi MODE #chan %s %s\r\n" % (msg, args)
         self.client.dataReceived(message)
-        self.assertEquals(
-            self.client.calls,
-            [('modeChanged', {'user': "ChanServ!ChanServ@services.",
-                              'channel': '#tanstaafl',
-                              'set': True,
-                              'modes': 'o',
-                              'args': ('exarkun',)})])
+
+
+    def _parseModeChange(self, results):
+        """
+        Parse the results, do some test and return the data to check.
+        """
+        for n,result in enumerate(results):
+            method, data = result
+            self.assertEquals(method, 'modeChanged')
+            self.assertEquals(data['user'], 'Wolf!~wolf@yok.utu.fi')
+            self.assertEquals(data['channel'], '#chan')
+            results[n] = tuple([data[key] for key in ('set', 'modes', 'args')])
+        return results
+
+
+    def _checkModeChange(self, expected):
+        """
+        Compare the expected result with the one returned by the client.
+        """
+        result = self._parseModeChange(self.client.calls)
+        self.assertEquals(result, expected)
+
+
+    def test_modeChangeWithASingleMode(self):
+        """
+        A single mode added to a user.
+        """
+        self._sendModeChange('+o', 'exarkun')
+        self._checkModeChange([(True, 'o', ('exarkun',))])
+
+
+    def test_modeChangeWithArgsAndDifferentModes(self):
+        """
+        Two modes added and one removed, they all accept args.
+        """
+        self._sendModeChange('-oo+b', 'foo bar baz')
+        self._checkModeChange([
+            (True, 'b', ('baz',)),
+            (False, 'oo', ('foo', 'bar'))
+        ])
+
+
+    def test_modeChangeWithArgsAndEqualModes(self):
+        """
+        Two modes added, they all accept args.
+        """
+        self._sendModeChange('+xy', 'cow frog')
+        self._checkModeChange([(True, 'xy', ('cow', 'frog'))])
+
+
+    def test_modeChangeWithArgsAndMixedModes(self):
+        """
+        Some modes added and others removed, they all accept args.
+        """
+        self._sendModeChange('+oo-h+vv-b', 'foo bar baz cow frog bat')
+        self._checkModeChange([
+            (True, 'oovv', ('foo','bar','cow','frog')),
+            (False, 'hb', ('baz', 'bat'))
+        ])
+
+
+    def test_modeChangeWithNoArgsAndDifferentModes(self):
+        """
+        A mode added and another removed, they don't accept any arg.
+        """
+        self._sendModeChange('-c+U')
+        self._checkModeChange([(True, 'U', ()), (False, 'c', ())])
+
+
+    def test_modeChangeWithNoArgsAndEqualModes(self):
+        """
+        Two modes removed, they don't accept any arg.
+        """
+        self._sendModeChange('-cU')
+        self._checkModeChange([(False, 'cU', ())])
+
+
+    def test_modeChangeWithNoArgsAndMixedModes(self):
+        """
+        Some modes added and others removed, they don't accept any arg.
+        """
+        self._sendModeChange('-c+fr-o+og-w')
+        self._checkModeChange([(True, 'frog', ()), (False, 'cow', ())])
+
+
+    def test_modeChangeWithSomeArgAndDifferentModes(self):
+        """
+        Two modes added and two removed, only the last accepts an arg.
+        """
+        self._sendModeChange('+sU-lv', 'dea7h')
+        self._checkModeChange([(True, 'sU', ()), (False, 'lv', ('dea7h',))])
+
+
+    def test_modeChangeWithSomeArgAndEqualModes(self):
+        """
+        Two modes added, only the last accepts an arg.
+        """
+        self._sendModeChange('+cl 1337')
+        self._checkModeChange([(True, 'cl', ('1337',))])
+
+
+    def test_modeChangeWithSomeArgAndMixedModes(self):
+        """
+        Some modes added and others removed, only the 2nd, 3rd and 5th
+        accept an arg.
+        """
+        self._sendModeChange('-co+l-U+o', 'Wolf 3141592 dea7h')
+        self._checkModeChange([
+            (True, 'lo', ('3141592', 'dea7h')),
+            (False, 'coU', ('Wolf',))
+        ])
+
+
+    def test_modeChangeWithUnknownModes(self):
+        """
+        Some modes added and others removed, only the 3rd is known to
+        accept an arg, the other modes don't accept anything by default.
+        """
+        self._sendModeChange('+a-eo+f-g+qz', 'Wolf')
+        self._checkModeChange([(True, 'afqz', ()), (False, 'eog', ('Wolf',))])
+
+
+    def test_modeChangeWithWrongModesString(self):
+        """
+        The modes string is supposed to start with '+' or '-', if they miss
+        a '+' will be added by default.
+        """
+        self._sendModeChange('o', 'Wolf')
+        self._checkModeChange([(True, 'o', ('Wolf',))])
+
+
+    def test_modeChangeWithRepeatedAddedModes(self):
+        """
+        Two modes are added repeating the '+'.
+        """
+        self._sendModeChange('+o+c', 'Wolf')
+        self._checkModeChange([(True, 'oc', ('Wolf',))])
+
+
+    def test_modeChangeWithRepeatedRemovedModes(self):
+        """
+        Two modes are removed repeating the '-'.
+        """
+        self._sendModeChange('-o-c', 'Wolf')
+        self._checkModeChange([(False, 'oc', ('Wolf',))])
+
+
+    def test_modeChangeWithRepeatedMixedModes(self):
+        """
+        Several modes are added and removed repeating the '+' and the '-'.
+        """
+        self._sendModeChange('+a+v-h-r+o+c-k-l', 'Wolf dea7h Svadilfari')
+        self._checkModeChange([
+            (True, 'avoc', ('Wolf', 'Svadilfari')),
+            (False, 'hrkl', ('dea7h',))
+        ])
+
 
     def _serverTestImpl(self, code, msg, func, **kw):
         host = pop(kw, 'host', 'server.host')
@@ -337,8 +491,8 @@ class BasicServerFunctionalityTestCase(unittest.TestCase):
         hostname = self.p.hostname
         req = 'requesting-nick'
         targ = 'target-nick'
-        self.p.whois(req, targ, 'target', 'host.com', 
-                'Target User', 'irc.host.com', 'A fake server', False, 
+        self.p.whois(req, targ, 'target', 'host.com',
+                'Target User', 'irc.host.com', 'A fake server', False,
                 12, timestamp, ['#fakeusers', '#fakemisc'])
         expected = '\r\n'.join([
 ':%(hostname)s 311 %(req)s %(targ)s target host.com * :Target User',
