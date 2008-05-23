@@ -53,14 +53,29 @@ class TestRunners(unittest.TestCase):
         self.assertEqual(7, suite.countTestCases())
 
 
-    def test_expectedResults(self):
+    def _testRun(self, suite):
         """
-        Trial can correctly run doctests with its xUnit test APIs.
+        Run C{suite} and check the result.
         """
-        suite = self.makeDocSuite(mockdoctest)
         result = reporter.TestResult()
         suite.run(result)
         self.assertEqual(5, result.successes)
         # doctest reports failures as errors in 2.3
         self.assertEqual(2, len(result.errors) + len(result.failures))
 
+
+    def test_expectedResults(self, count=1):
+        """
+        Trial can correctly run doctests with its xUnit test APIs.
+        """
+        suite = runner.TestLoader().loadDoctests(mockdoctest)
+        self._testRun(suite)
+
+
+    def test_repeatable(self):
+        """
+        Doctests should be runnable repeatably.
+        """
+        suite = runner.TestLoader().loadDoctests(mockdoctest)
+        self._testRun(suite)
+        self._testRun(suite)
