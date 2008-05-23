@@ -566,19 +566,7 @@ class TestLoader(object):
         if not inspect.ismodule(module):
             warnings.warn("trial only supports doctesting modules")
             return
-        if sys.version_info > (2, 4):
-            # Work around Python issue2604: DocTestCase.tearDown clobbers globs
-            def saveGlobs(test):
-                """
-                Save C{test.globs} and replace it with a copy so that if
-                necessary, the original will be available for the next test
-                run.
-                """
-                test._savedGlobs = getattr(test, '_savedGlobs', test.globs)
-                test.globs = test._savedGlobs.copy()
-        else:
-            saveGlobs = None
-        return doctest.DocTestSuite(module, setUp=saveGlobs)
+        return doctest.DocTestSuite(module)
 
     def loadAnything(self, thing, recurse=False):
         """
