@@ -705,7 +705,7 @@ class MulticastTestCase(unittest.TestCase):
         return self.assertFailure(
             self.client.transport.joinGroup("127.0.0.1"),
             error.MulticastJoinError)
-    if runtime.platform.isWindows():
+    if runtime.platform.isWindows() and not runtime.platform.isVista():
         test_joinFailure.todo = "Windows' multicast is wonky"
 
 

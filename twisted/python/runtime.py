@@ -1,5 +1,5 @@
-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.python.test.test_runtime -*-
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -8,6 +8,7 @@ import os
 import sys
 import time
 import imp
+
 
 def shortPythonVersion():
     hv = sys.hexversion
@@ -68,6 +69,24 @@ class Platform:
     
     def isWindows(self):
         return self.getType() == 'win32'
+
+
+    def isVista(self):
+        """
+        Check if current platform is Windows Vista or Windows Server 2008.
+
+        @return: C{True} if the current platform has been detected as Vista
+        @rtype: C{bool}
+        """
+        try:
+            import win32api
+        except ImportError:
+            import platform
+            uname = platform.uname()
+            return uname[0] == "Windows" and uname[3][0] == "6"
+        else:
+            return win32api.GetVersionEx()[0] == 6
+
 
     def supportsThreads(self):
         """Can threads be created?
