@@ -231,24 +231,27 @@ class Gtk2Reactor(posixbase.PosixReactorBase):
 
 
 class PortableGtkReactor(selectreactor.SelectReactor):
-    """Reactor that works on Windows.
-
-    input_add is not supported on GTK+ for Win32, apparently.
     """
+    Reactor that works on Windows.
+
+    Sockets aren't supported by GTK+'s input_add on Win32.
+    """
+    _simtag = None
 
     def crash(self):
         selectreactor.SelectReactor.crash(self)
         import gtk
         # mainquit is deprecated in newer versions
-        if hasattr(gtk, 'main_quit'):
-            gtk.main_quit()
-        else:
-            gtk.mainquit()
+        if gtk.main_level():
+            if hasattr(gtk, 'main_quit'):
+                gtk.main_quit()
+            else:
+                gtk.mainquit()
 
     def run(self, installSignalHandlers=1):
         import gtk
         self.startRunning(installSignalHandlers=installSignalHandlers)
-        self.simulate()
+        gobject.timeout_add(0, self.simulate)
         # mainloop is deprecated in newer versions
         if hasattr(gtk, 'main'):
             gtk.main()
