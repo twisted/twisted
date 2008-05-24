@@ -138,9 +138,65 @@ class TestOurServerOurClient(SFTPTestBase):
             self.clientTransport.clearBuffer()
 
 
+    def tearDown(self):
+        self.serverTransport.loseConnection()
+        self.clientTransport.loseConnection()
+        self.serverTransport.clearBuffer()
+        self.clientTransport.clearBuffer()
+
+
     def testServerVersion(self):
         self.failUnlessEqual(self._serverVersion, 3)
         self.failUnlessEqual(self._extData, {'conchTest' : 'ext data'})
+
+
+    def test_openedFileClosedWithConnection(self):
+        """
+        A file opened with C{openFile} is close when the connection is lost.
+        """
+        d = self.client.openFile("testfile1", filetransfer.FXF_READ |
+                                 filetransfer.FXF_WRITE, {})
+        self._emptyBuffers()
+
+        oldClose = os.close
+        closed = []
+        def close(fd):
+            closed.append(fd)
+            oldClose(fd)
+
+        self.patch(os, "close", close)
+
+        def _fileOpened(openFile):
+            fd = self.server.openFiles[openFile.handle[4:]].fd
+            self.serverTransport.loseConnection()
+            self.clientTransport.loseConnection()
+            self.serverTransport.clearBuffer()
+            self.clientTransport.clearBuffer()
+            self.assertEquals(self.server.openFiles, {})
+            self.assertIn(fd, closed)
+
+        d.addCallback(_fileOpened)
+        return d
+
+
+    def test_openedDirectoryClosedWithConnection(self):
+        """
+        A directory opened with C{openDirectory} is close when the connection
+        is lost.
+        """
+        d = self.client.openDirectory('')
+        self._emptyBuffers()
+
+        def _getFiles(openDir):
+            self.serverTransport.loseConnection()
+            self.clientTransport.loseConnection()
+            self.serverTransport.clearBuffer()
+            self.clientTransport.clearBuffer()
+            self.assertEquals(self.server.openDirs, {})
+
+        d.addCallback(_getFiles)
+        return d
+
 
     def testOpenFileIO(self):
         d = self.client.openFile("testfile1", filetransfer.FXF_READ |
@@ -255,8 +311,10 @@ class TestOurServerOurClient(SFTPTestBase):
         they are ignored, so we just verify they are correctly parsed.
         """
         savedAttributes = {}
+        oldOpenFile = self.server.client.openFile
         def openFile(filename, flags, attrs):
             savedAttributes.update(attrs)
+            return oldOpenFile(filename, flags, attrs)
         self.server.client.openFile = openFile
 
         d = self.client.openFile("testfile1", filetransfer.FXF_READ |

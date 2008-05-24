@@ -448,6 +448,20 @@ class FileTransferServer(FileTransferBase):
         data += NS(lang)
         self.sendPacket(FXP_STATUS, data)
 
+
+    def connectionLost(self, reason):
+        """
+        Clean all opened files and directories.
+        """
+        for fileObj in self.openFiles.values():
+            fileObj.close()
+        self.openFiles = {}
+        for (dirObj, dirIter) in self.openDirs.values():
+            dirObj.close()
+        self.openDirs = {}
+
+
+
 class FileTransferClient(FileTransferBase):
 
     def __init__(self, extData = {}):
