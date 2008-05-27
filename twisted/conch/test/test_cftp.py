@@ -448,6 +448,22 @@ class TestOurServerCmdLineClient(CFTPClientTestBase):
         return d
 
 
+    def test_existingRemoteDirectory(self):
+        """
+        Test that a C{mkdir} on an existing directory fails with the
+        appropriate error, and doesn't log an useless error server side.
+        """
+        def _check(results):
+            self.assertEquals(results[0], '')
+            self.assertEquals(results[1],
+                              'remote error 11: mkdir failed')
+
+        d = self.runScript('mkdir testMakeDirectory',
+                           'mkdir testMakeDirectory')
+        d.addCallback(_check)
+        return d
+
+
     def testLocalDirectory(self):
         """
         Test that we can create a directory locally and remove it with the

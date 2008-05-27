@@ -30,7 +30,7 @@ class _FakeNode(object):
         newParent = pathutils.fetch(pathutils.getRoot(self),
                                     pathutils.dirname(newName))
         if newParent.exists(pathutils.basename(newName)):
-            raise ivfs.VFSError(
+            raise ivfs.AlreadyExistsError(
                 "Cannot rename over the top of an existing directory")
 
         del self.parent._children[self.name]
