@@ -1,5 +1,5 @@
-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.python.test.test_runtime -*-
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -8,6 +8,7 @@ import os
 import sys
 import time
 import imp
+
 
 def shortPythonVersion():
     hv = sys.hexversion
@@ -18,7 +19,7 @@ def shortPythonVersion():
 
 knownPlatforms = {
     'nt': 'win32',
-    'ce': 'win32', 
+    'ce': 'win32',
     'posix': 'posix',
     'java': 'java',
     'org.python.modules.os': 'java',
@@ -39,11 +40,11 @@ class Platform:
         if name is not None:
             self.type = knownPlatforms.get(name)
             self.seconds = _timeFunctions.get(self.type, time.time)
-    
+
     def isKnown(self):
         """Do we know about this platform?"""
         return self.type != None
-    
+
     def getType(self):
         """Return 'posix', 'win32' or 'java'"""
         return self.type
@@ -51,7 +52,7 @@ class Platform:
     def isMacOSX(self):
         """Return if we are runnng on Mac OS X."""
         return sys.platform == "darwin"
-    
+
     def isWinNT(self):
         """Are we running in Windows NT?"""
         if self.getType() == 'win32':
@@ -65,9 +66,23 @@ class Platform:
                 return 0
         # not windows NT
         return 0
-    
+
     def isWindows(self):
         return self.getType() == 'win32'
+
+
+    def isVista(self):
+        """
+        Check if current platform is Windows Vista or Windows Server 2008.
+
+        @return: C{True} if the current platform has been detected as Vista
+        @rtype: C{bool}
+        """
+        if getattr(sys, "getwindowsversion", None) is not None:
+            return sys.getwindowsversion()[0] == 6
+        else:
+            return False
+
 
     def supportsThreads(self):
         """Can threads be created?
