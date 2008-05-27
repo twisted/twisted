@@ -200,7 +200,7 @@ handle all the details of waiting for the creation of a connection.
 It returns a <code class="API"
 base="twisted.internet.defer">Deferred</code>, which will have its
 callback called when the reactor connects to the remote server and
-<code class="API" base="twisted.">pb.PBClientFactory</code> gets the
+<code class="API" base="twisted.spread">pb.PBClientFactory</code> gets the
 root, and have its <code class="python">errback</code> called when the
 object-connection fails for any reason, whether it was host lookup
 failure, connection refusal, or some server-side error.

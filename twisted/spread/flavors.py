@@ -1,7 +1,6 @@
-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.test.test_pb -*-
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 This module represents flavors of remotely acessible objects.
@@ -16,8 +15,6 @@ but may have a small impact on users who subclass and override methods.
 
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
-
-__version__ = "$Revision: 1.32 $"[11:-2]
 
 # NOTE: this module should NOT import pb; it is supposed to be a module which
 # abstractly defines remotely accessible types.  Many of these types expect to

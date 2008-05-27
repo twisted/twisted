@@ -1,10 +1,9 @@
 # -*- test-case-name: twisted.web.test.test_web -*-
-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-"""Distributed web servers.
+"""
+Distributed web servers.
 
 This is going to have to be refactored so that argument parsing is done
 by each subprocess and not by the main web server (i.e. GET, POST etc.).
@@ -78,7 +77,7 @@ class Request(pb.RemoteCopy, server.Request):
         log.err(failure)
 
 
-pb.setCopierForClass(server.Request, Request)
+pb.setUnjellyableForClass(server.Request, Request)
 
 class Issue:
     def __init__(self, request):

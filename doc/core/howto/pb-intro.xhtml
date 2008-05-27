@@ -240,7 +240,7 @@ class Foo(flavors.Copyable):
     pass
 class RemoteFoo(flavors.RemoteCopy):
     pass
-flavors.setCopierForClass(str(Foo), RemoteFoo)
+flavors.setUnjellyableForClass(Foo, RemoteFoo)
   </pre>
   
   In this case, each time a Foo is copied between peers, a RemoteFoo will be

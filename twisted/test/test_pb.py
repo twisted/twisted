@@ -17,8 +17,8 @@ import sys, os, time, gc
 from cStringIO import StringIO
 from zope.interface import implements, Interface
 
+from twisted.python.versions import Version
 from twisted.trial import unittest
-
 from twisted.spread import pb, util, publish, jelly
 from twisted.internet import protocol, main, reactor, defer
 from twisted.internet.error import ConnectionRefusedError
@@ -142,7 +142,7 @@ class SimpleCopy(pb.Copyable):
 class SimpleLocalCopy(pb.RemoteCopy):
     pass
 
-pb.setCopierForClass(SimpleCopy, SimpleLocalCopy)
+pb.setUnjellyableForClass(SimpleCopy, SimpleLocalCopy)
 
 
 class SimpleFactoryCopy(pb.Copyable):
@@ -173,7 +173,7 @@ def createFactoryCopy(state):
         raise RuntimeError("factory method found no object with id")
     return inst
 
-pb.setFactoryForClass(SimpleFactoryCopy, createFactoryCopy)
+pb.setUnjellyableFactoryForClass(SimpleFactoryCopy, createFactoryCopy)
 
 
 class NestedCopy(pb.Referenceable):
@@ -230,7 +230,7 @@ class RatherBaroqueCache(pb.RemoteCache):
     def observe_end(self):
         log.msg("the end of things")
 
-pb.setCopierForClass(VeryVeryComplicatedCacheable, RatherBaroqueCache)
+pb.setUnjellyableForClass(VeryVeryComplicatedCacheable, RatherBaroqueCache)
 
 
 class SimpleLocalCache(pb.RemoteCache):
@@ -246,7 +246,7 @@ class SimpleLocalCache(pb.RemoteCache):
     def check(self):
         return 1
 
-pb.setCopierForClass(SimpleCache, SimpleLocalCache)
+pb.setUnjellyableForClass(SimpleCache, SimpleLocalCache)
 
 
 class NestedCache(pb.Referenceable):
@@ -329,7 +329,7 @@ class NewStyleCacheCopy(pb.Cacheable, pb.RemoteCache, object):
     def getStateToCacheAndObserveFor(self, perspective, observer):
         return self.__dict__
 
-pb.setCopierForClass(NewStyleCacheCopy, NewStyleCacheCopy)
+pb.setUnjellyableForClass(NewStyleCacheCopy, NewStyleCacheCopy)
 
 
 class Echoer(pb.Root):
@@ -921,7 +921,7 @@ class GetPublisher(pb.Referenceable):
         return self.pub
 
 
-pb.setCopierForClass(DumbPublishable, DumbPub)
+pb.setUnjellyableForClass(DumbPublishable, DumbPub)
 
 class DisconnectionTestCase(unittest.TestCase):
     """
@@ -1616,3 +1616,26 @@ class PBWithSecurityOptionsTest(unittest.TestCase):
         broker = factory.buildProtocol(None)
         self.assertIdentical(broker.security, security)
 
+
+
+class DeprecationTests(unittest.TestCase):
+    """
+    Tests for certain deprecations of free-functions in L{twisted.spread.pb}.
+    """
+    def test_noOperationDeprecated(self):
+        """
+        L{pb.noOperation} is deprecated.
+        """
+        self.callDeprecated(
+            Version("twisted", 8, 2, 0),
+            pb.noOperation, 1, 2, x=3, y=4)
+
+
+    def test_printTraceback(self):
+        """
+        L{pb.printTraceback} is deprecated.
+        """
+        self.callDeprecated(
+            Version("twisted", 8, 2, 0),
+            pb.printTraceback,
+            "printTraceback deprecation fake traceback value")

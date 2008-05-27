@@ -9,57 +9,24 @@ Perspective Broker
 \"This isn\'t a professional opinion, but it's probably got enough
 internet to kill you.\" --glyph
 
-Future Plans: The connection APIs will be extended with support for
-URLs, that will be able to extend resource location and discovery
-conversations and specify different authentication mechanisms besides
-username/password.  This should only add to, and not change, the
-existing protocol.
-
-
-Important Changes
-=================
-
-New APIs have been added for serving and connecting. On the client
-side, use PBClientFactory.getPerspective() instead of connect(), and
-PBClientFactory.getRootObject() instead of getObjectAt().  Server side
-should switch to updated cred APIs by using PBServerFactory, at which
-point clients would switch to PBClientFactory.login().
-
-The new cred support means a different method is sent for login,
-although the protocol is compatible on the binary level. When we
-switch to pluggable credentials this will introduce another change,
-although the current change will still be supported.
-
-The Perspective class is now deprecated, and has been replaced with
-Avatar, which does not rely on the old cred APIs.
-
-
 Introduction
 ============
 
 This is a broker for proxies for and copies of objects.  It provides a
 translucent interface layer to those proxies.
 
-The protocol is not opaque, because it provides objects which
-represent the remote proxies and require no context (server
-references, IDs) to operate on.
+The protocol is not opaque, because it provides objects which represent the
+remote proxies and require no context (server references, IDs) to operate on.
 
-It is not transparent because it does I{not} attempt to make remote
-objects behave identically, or even similiarly, to local objects.
-Method calls are invoked asynchronously, and specific rules are
-applied when serializing arguments.
+It is not transparent because it does I{not} attempt to make remote objects
+behave identically, or even similiarly, to local objects.  Method calls are
+invoked asynchronously, and specific rules are applied when serializing
+arguments.
+
+To get started, begin with L{PBClientFactory} and L{PBServerFactory}.
 
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
-
-__version__ = "$Revision: 1.157 $"[11:-2]
-
-
-# System Imports
-try:
-    import cStringIO as StringIO
-except ImportError:
-    import StringIO
 
 import md5
 import random
@@ -70,6 +37,8 @@ from zope.interface import implements, Interface
 
 # Twisted Imports
 from twisted.python import log, failure, reflect
+from twisted.python.versions import Version
+from twisted.python.deprecate import deprecated
 from twisted.internet import defer, protocol
 from twisted.cred.portal import Portal
 from twisted.cred.credentials import IAnonymous, ICredentials
@@ -93,9 +62,16 @@ from twisted.spread.flavors import RemoteCopy
 from twisted.spread.flavors import RemoteCache
 from twisted.spread.flavors import RemoteCacheObserver
 from twisted.spread.flavors import copyTags
-from twisted.spread.flavors import setCopierForClass, setUnjellyableForClass
+
+from twisted.spread.flavors import setUnjellyableForClass
+from twisted.spread.flavors import setUnjellyableFactoryForClass
+from twisted.spread.flavors import setUnjellyableForClassTree
+# These three are backwards compatibility aliases for the previous three.
+# Ultimately they should be deprecated. -exarkun
+from twisted.spread.flavors import setCopierForClass
 from twisted.spread.flavors import setFactoryForClass
 from twisted.spread.flavors import setCopierForClassTree
+
 
 MAX_BROKER_REFS = 1024
 
@@ -143,22 +119,32 @@ class RemoteMethod:
         """
         return self.obj.broker._sendMessage('',self.obj.perspective, self.obj.luid,  self.name, args, kw)
 
+
+
 def noOperation(*args, **kw):
-    """Do nothing.
+    """
+    Do nothing.
 
     Neque porro quisquam est qui dolorem ipsum quia dolor sit amet,
     consectetur, adipisci velit...
     """
+noOperation = deprecated(Version("twisted", 8, 2, 0))(noOperation)
+
+
 
 class PBConnectionLost(Exception):
     pass
 
-def printTraceback(tb):
-    """Print a traceback (string) to the standard log.
-    """
 
+
+def printTraceback(tb):
+    """
+    Print a traceback (string) to the standard log.
+    """
     log.msg('Perspective Broker Traceback:' )
     log.msg(tb)
+printTraceback = deprecated(Version("twisted", 8, 2, 0))(printTraceback)
+
 
 class IPerspective(Interface):
     """
@@ -203,7 +189,8 @@ class IPerspective(Interface):
 
 
 class Avatar:
-    """A default IPerspective implementor.
+    """
+    A default IPerspective implementor.
 
     This class is intended to be subclassed, and a realm should return
     an instance of such a subclass when IPerspective is requested of
@@ -220,15 +207,16 @@ class Avatar:
     implements(IPerspective)
 
     def perspectiveMessageReceived(self, broker, message, args, kw):
-        """This method is called when a network message is received.
+        """
+        This method is called when a network message is received.
 
-        I will call::
+        This will call::
 
-          |  self.perspective_%(message)s(*broker.unserialize(args),
-          |                               **broker.unserialize(kw))
+            self.perspective_%(message)s(*broker.unserialize(args),
+                                         **broker.unserialize(kw))
 
         to handle the method; subclasses of Avatar are expected to
-        implement methods of this naming convention.
+        implement methods using this naming convention.
         """
 
         args = broker.unserialize(args, self)
@@ -244,18 +232,19 @@ class Avatar:
 
 
 class AsReferenceable(Referenceable):
-    """AsReferenceable: a reference directed towards another object.
+    """
+    A reference directed towards another object.
     """
 
     def __init__(self, object, messageType="remote"):
-        """Initialize me with an object.
-        """
-        self.remoteMessageReceived = getattr(object, messageType + "MessageReceived")
+        self.remoteMessageReceived = getattr(
+            object, messageType + "MessageReceived")
 
 
 
 class RemoteReference(Serializable, styles.Ephemeral):
-    """This is a translucent reference to a remote object.
+    """
+    A translucent reference to a remote object.
 
     I may be a reference to a L{flavors.ViewPoint}, a
     L{flavors.Referenceable}, or an L{IPerspective} implementor (e.g.,
@@ -392,10 +381,6 @@ class Local:
         return self.refcount
 
 
-class _RemoteCacheDummy:
-    """Ignore.
-    """
-
 ##
 # Failure
 ##
@@ -426,9 +411,7 @@ class CopyableFailure(failure.Failure, Copyable):
         else:
             state['type'] = reflect.qual(self.type) # Exception class
         if self.unsafeTracebacks:
-            io = StringIO.StringIO()
-            self.printTraceback(io)
-            state['traceback'] = io.getvalue()
+            state['traceback'] = self.getTraceback()
         else:
             state['traceback'] = 'Traceback unavailable\n'
         return state
@@ -644,12 +627,13 @@ class Broker(banana.Banana):
             pass
 
     def localObjectForID(self, luid):
-        """Get a local object for a locally unique ID.
-
-        I will return an object previously stored with
-        self.L{registerReference}, or C{None} if XXX:Unfinished thought:XXX
         """
+        Get a local object for a locally unique ID.
 
+        @return: An object previously stored with L{registerReference} or
+            C{None} if there is no object which corresponds to the given
+            identifier.
+        """
         lob = self.localObjects.get(luid)
         if lob is None:
             return
@@ -1347,3 +1331,21 @@ class _PortalAuthChallenger(Referenceable, _JellyableAvatarMixin):
         md.update(self.challenge)
         correct = md.digest()
         return self.response == correct
+
+
+__all__ = [
+    # Everything from flavors is exposed publically here.
+    'IPBRoot', 'Serializable', 'Referenceable', 'NoSuchMethod', 'Root',
+    'ViewPoint', 'Viewable', 'Copyable', 'Jellyable', 'Cacheable',
+    'RemoteCopy', 'RemoteCache', 'RemoteCacheObserver', 'copyTags',
+    'setUnjellyableForClass', 'setUnjellyableFactoryForClass',
+    'setUnjellyableForClassTree',
+
+    'MAX_BROKER_REFS', 'portno',
+
+    'ProtocolError', 'DeadReferenceError', 'Error', 'PBConnectionLost',
+    'RemoteMethod', 'IPerspective', 'Avatar', 'AsReferenceable',
+    'RemoteReference', 'CopyableFailure', 'CopiedFailure', 'failure2Copyable',
+    'Broker', 'respond', 'challenge', 'PBClientFactory', 'PBServerFactory',
+    'IUsernameMD5Password',
+    ]

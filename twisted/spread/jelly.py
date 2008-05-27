@@ -1,8 +1,6 @@
 # -*- test-case-name: twisted.test.test_jelly -*-
-
 # Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 S-expression-based persistence of python objects.
@@ -63,8 +61,6 @@ The same rule applies for C{frozenset} and C{sets.ImmutableSet}.
 
 @author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
 """
-
-__version__ = "$Revision: 1.48 $"[11:-2]
 
 # System Imports
 import pickle
@@ -195,7 +191,7 @@ def setUnjellyableForClass(classname, unjellyable):
     If you have written a Copyable class that you expect your client to be
     receiving, write a local "copy" class to represent it, then call::
 
-        jellier.setUnjellyableForClass('module.package.Class', MyJellier).
+        jellier.setUnjellyableForClass('module.package.Class', MyCopier).
 
     Call this at the module level immediately after its class
     definition. MyCopier should be a subclass of RemoteCopy.
@@ -218,7 +214,7 @@ def setUnjellyableFactoryForClass(classname, copyFactory):
     """
     Set the factory to construct a remote instance of a type::
 
-        jellier.setFactoryForClass('module.package.Class', MyFactory)
+      jellier.setUnjellyableFactoryForClass('module.package.Class', MyFactory)
 
     Call this at the module level immediately after its class definition.
     C{copyFactory} should return an instance or subclass of
@@ -240,10 +236,10 @@ def setUnjellyableForClassTree(module, baseClass, prefix=None):
     Set all classes in a module derived from C{baseClass} as copiers for
     a corresponding remote class.
 
-    When you have a heirarchy of Copyable (or Cacheable) classes on
-    one side, and a mirror structure of Copied (or RemoteCache)
-    classes on the other, use this to setCopierForClass all your
-    Copieds for the Copyables.
+    When you have a heirarchy of Copyable (or Cacheable) classes on one
+    side, and a mirror structure of Copied (or RemoteCache) classes on the
+    other, use this to setUnjellyableForClass all your Copieds for the
+    Copyables.
 
     Each copyTag (the \"classname\" argument to getTypeToCopyFor, and
     what the Copyable's getTypeToCopyFor returns) is formed from
