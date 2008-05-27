@@ -765,15 +765,23 @@ class TrialRunner(object):
         log.addObserver(seeWarnings)
         self._logWarnings = True
 
+
     def run(self, test):
         """
         Run the test or suite and return a result object.
         """
-        result = self._makeResult()
         test = unittest.decorate(test, ITestCase)
         if self._forceGarbageCollection:
             test = unittest.decorate(
                 test, unittest._ForceGarbageCollectionDecorator)
+        return self._runWithoutDecoration(test)
+
+
+    def _runWithoutDecoration(self, test):
+        """
+        Private helper that runs the given test but doesn't decorate it.
+        """
+        result = self._makeResult()
         # decorate the suite with reactor cleanup and log starting
         # This should move out of the runner and be presumed to be
         # present
@@ -805,7 +813,7 @@ class TrialRunner(object):
             warnings.warn(
                 "%s should implement done() but doesn't. Falling back to "
                 "printErrors() and friends." % reflect.qual(result.__class__),
-                category=DeprecationWarning, stacklevel=2)
+                category=DeprecationWarning, stacklevel=3)
             result.printErrors()
             result.writeln(result.separator)
             result.writeln('Ran %d tests in %.3fs', result.testsRun,
@@ -816,6 +824,7 @@ class TrialRunner(object):
             result.done()
         return result
 
+
     def runUntilFailure(self, test):
         """
         Repeatedly run C{test} until it fails.
@@ -824,7 +833,10 @@ class TrialRunner(object):
         while True:
             count += 1
             self.stream.write("Test Pass %d\n" % (count,))
-            result = self.run(test)
+            if count == 1:
+                result = self.run(test)
+            else:
+                result = self._runWithoutDecoration(test)
             if result.testsRun == 0:
                 break
             if not result.wasSuccessful():
