@@ -68,7 +68,18 @@ randomBytes = getattr(os, 'urandom', _stub_urandom)
 armor = getattr(base64, 'urlsafe_b64encode', _stub_armor)
 
 class InsecurePath(Exception):
-    pass
+    """
+    Error that is raised when the path provided to FilePath is invalid.
+    """
+
+
+
+class LinkError(Exception):
+    """
+    An error with symlinks - either that there are cyclical symlinks or that
+    symlink are not supported on this platform.
+    """
+
 
 
 class UnlistableError(OSError):
@@ -111,9 +122,12 @@ def _secureEnoughString():
     """
     return armor(sha.new(randomBytes(64)).digest())[:16]
 
+
+
 class _PathHelper:
     """
-    Abstract helper class also used by ZipPath; implements certain utility methods.
+    Abstract helper class also used by ZipPath; implements certain utility
+    methods.
     """
 
     def getContent(self):
@@ -176,17 +190,28 @@ class _PathHelper:
             raise UnlistableError(ose)
         return map(self.child, subnames)
 
-    def walk(self):
+    def walk(self, descend=None):
         """
         Yield myself, then each of my children, and each of those children's
-        children in turn.
+        children in turn.  The optional argument C{descend} is a predicate that
+        takes a FilePath, and determines whether or not that FilePath is
+        traversed/descended into.  It will be called with each path for which
+        C{isdir} returns C{True}.  If C{descend} is not specified, all
+        directories will be traversed (including symbolic links which refer to
+        directories).
+
+        @param descend: A one-argument callable that will return True for
+            FilePaths that should be traversed, False otherwise.
 
         @return: a generator yielding FilePath-like objects.
         """
         yield self
-        if self.isdir():
+        if self.isdir() and (descend is None or descend(self)):
             for c in self.children():
-                for subc in c.walk():
+                for subc in c.walk(descend):
+                    if os.path.realpath(self.path).startswith(
+                        os.path.realpath(subc.path)):
+                        raise LinkError("Cycle in file graph.")
                     yield subc
 
     def sibling(self, path):
@@ -358,6 +383,30 @@ class FilePath(_PathHelper):
             p2 = p + ext
             if exists(p2):
                 return self.clonePath(p2)
+
+
+    def realpath(self):
+        """
+        Returns the absolute target as a FilePath if self is a link, self
+        otherwise.  The absolute link is the ultimate file or directory the 
+        link refers to (for instance, if the link refers to another link, and 
+        another...).  If the filesystem does not support symlinks, or 
+        if the link is cyclical, raises a LinkError.
+
+        Behaves like L{os.path.realpath} in that it does not resolve link
+        names in the middle (ex. /x/y/z, y is a link to w - realpath on z
+        will return /x/y/z, not /x/w/z).
+
+        @return: FilePath of the target path
+        @raises LinkError: if links are not supported or links are cyclical.
+        """
+        if self.islink():
+            result = os.path.realpath(self.path)
+            if result == self.path:
+                raise LinkError("Cyclical link - will loop forever")
+            return self.clonePath(result)
+        return self
+
 
     def siblingExtension(self, ext):
         return self.clonePath(self.path+ext)

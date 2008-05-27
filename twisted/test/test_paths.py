@@ -7,6 +7,7 @@ Test cases covering L{twisted.python.filepath} and L{twisted.python.zippath}.
 
 import os, time, pickle, errno, zipfile, stat
 
+from twisted.python.compat import set
 from twisted.python.win32 import WindowsError, ERROR_DIRECTORY
 from twisted.python import filepath
 from twisted.python.zippath import ZipArchive
@@ -25,11 +26,14 @@ class AbstractFilePathTestCase(unittest.TestCase):
         self.all.append(x)
         return x
 
+
     def subdir(self, *dirname):
         os.mkdir(self._mkpath(*dirname))
 
+
     def subfile(self, *dirname):
         return open(self._mkpath(*dirname), "wb")
+
 
     def setUp(self):
         self.now = time.time()
@@ -45,9 +49,8 @@ class AbstractFilePathTestCase(unittest.TestCase):
         f = self.subfile("sub3", "file3.ext1")
         f = self.subfile("sub3", "file3.ext2")
         f = self.subfile("sub3", "file3.ext3")
-        self.all.sort()
-
         self.path = filepath.FilePath(cmn)
+
 
     def test_segmentsFromPositive(self):
         """
@@ -65,13 +68,15 @@ class AbstractFilePathTestCase(unittest.TestCase):
             self.path.child("a").child("b").child("c").segmentsFrom,
                 self.path.child("d").child("c").child("e"))
 
+
     def test_walk(self):
-        """Verify that walking the path gives the same result as the known file
+        """
+        Verify that walking the path gives the same result as the known file
         hierarchy.
         """
         x = [foo.path for foo in self.path.walk()]
-        x.sort()
-        self.assertEquals(x, self.all)
+        self.assertEquals(set(x), set(self.all))
+
 
     def test_validSubdir(self):
         """Verify that a valid subdirectory will show up as a directory, but not as a
@@ -270,6 +275,88 @@ class FilePathTestCase(AbstractFilePathTestCase):
                 mode)
 
 
+    def symlink(self, target, name):
+        """
+        Create a symbolic link named C{name} pointing at C{target}.
+
+        @type target: C{str}
+        @type name: C{str}
+        @raise SkipTest: raised if symbolic links are not supported on the
+            host platform.
+        """
+        if getattr(os, 'symlink', None) is None:
+            raise unittest.SkipTest(
+                "Platform does not support symbolic links.")
+        os.symlink(target, name)
+
+
+    def createLinks(self):
+        """
+        Create several symbolic links to files and directories.
+        """
+        subdir = self.path.child("sub1")
+        self.symlink(subdir.path, self._mkpath("sub1.link"))
+        self.symlink(subdir.child("file2").path, self._mkpath("file2.link"))
+        self.symlink(subdir.child("file2").path,
+                     self._mkpath("sub1", "sub1.file2.link"))
+
+
+    def test_realpathSymlink(self):
+        """
+        L{FilePath.realpath} returns the path of the ultimate target of a
+        symlink.
+        """
+        self.createLinks()
+        self.symlink(self.path.child("file2.link").path,
+                     self.path.child("link.link").path)
+        self.assertEquals(self.path.child("link.link").realpath(),
+                          self.path.child("sub1").child("file2"))
+
+
+    def test_realpathCyclicalSymlink(self):
+        """
+        L{FilePath.realpath} raises L{filepath.LinkError} if the path is a
+        symbolic link which is part of a cycle.
+        """
+        self.symlink(self.path.child("link1").path, self.path.child("link2").path)
+        self.symlink(self.path.child("link2").path, self.path.child("link1").path)
+        self.assertRaises(filepath.LinkError,
+                          self.path.child("link2").realpath)
+
+
+    def test_realpathNoSymlink(self):
+        """
+        L{FilePath.realpath} returns the path itself if the path is not a
+        symbolic link.
+        """
+        self.assertEquals(self.path.child("sub1").realpath(),
+                          self.path.child("sub1"))
+
+
+    def test_walkCyclicalSymlink(self):
+        """
+        Verify that walking a path with a cyclical symlink raises an error
+        """
+        self.createLinks()
+        self.symlink(self.path.child("sub1").path,
+                     self.path.child("sub1").child("sub1.loopylink").path)
+        def iterateOverPath():
+            return [foo.path for foo in self.path.walk()]
+        self.assertRaises(filepath.LinkError, iterateOverPath)
+
+
+    def test_walkObeysDescend(self):
+        """
+        Verify that when the supplied C{descend} predicate returns C{False},
+        the target is not traversed.
+        """
+        self.createLinks()
+        def noSymLinks(path):
+            return not path.islink()
+        x = [foo.path for foo in self.path.walk(descend=noSymLinks)]
+        self.assertEquals(set(x), set(self.all))
+
+
     def test_getAndSet(self):
         content = 'newcontent'
         self.path.child('new').setContent(content)
@@ -289,7 +376,7 @@ class FilePathTestCase(AbstractFilePathTestCase):
         """
         s4 = self.path.child("sub4")
         s3 = self.path.child("sub3")
-        os.symlink(s3.path, s4.path)
+        self.symlink(s3.path, s4.path)
         self.assertTrue(s4.islink())
         self.assertFalse(s3.islink())
         self.assertTrue(s4.isdir())
@@ -448,13 +535,10 @@ class FilePathTestCase(AbstractFilePathTestCase):
         """
         link = self.path.child("sub1.link")
         # setUp creates the sub1 child
-        os.symlink(self.path.child("sub1").path, link.path)
+        self.symlink(self.path.child("sub1").path, link.path)
         link.remove()
         self.assertFalse(link.exists())
         self.assertTrue(self.path.child("sub1").exists())
-
-    if getattr(os, 'symlink', None) is None:
-        test_removeWithSymlink.skip = "Platform doesn't support symbolic links"
 
 
     def testCopyTo(self):
