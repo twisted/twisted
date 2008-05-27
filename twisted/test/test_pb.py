@@ -20,9 +20,9 @@ from zope.interface import implements, Interface
 from twisted.python.versions import Version
 from twisted.trial import unittest
 from twisted.spread import pb, util, publish, jelly
-from twisted.internet import protocol, main, reactor, defer
+from twisted.internet import protocol, main, reactor
 from twisted.internet.error import ConnectionRefusedError
-from twisted.internet.defer import Deferred, gatherResults
+from twisted.internet.defer import Deferred, gatherResults, succeed
 from twisted.python import failure, log
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.cred import portal, checkers, credentials
@@ -287,7 +287,11 @@ class DeferredRemote(pb.Referenceable):
         assert 0, "shouldn't have been run!"
 
     def remote_doItLater(self):
-        d = defer.Deferred()
+        """
+        Return a L{Deferred} to be fired on client side. When fired,
+        C{self.runMe} is called.
+        """
+        d = Deferred()
         d.addCallbacks(self.runMe, self.dontRunMe)
         self.d = d
         return d
@@ -406,14 +410,14 @@ class NewStyleTestCase(unittest.TestCase):
 class ConnectionNotifyServerFactory(pb.PBServerFactory):
     """
     A server factory which stores the last connection and fires a
-    L{defer.Deferred} on connection made. This factory can handle only one
+    L{Deferred} on connection made. This factory can handle only one
     client connection.
 
     @ivar protocolInstance: the last protocol instance.
     @type protocolInstance: C{pb.Broker}
 
     @ivar connectionMade: the deferred fired upon connection.
-    @type connectionMade: C{defer.Deferred}
+    @type connectionMade: C{Deferred}
     """
     protocolInstance = None
 
@@ -422,7 +426,7 @@ class ConnectionNotifyServerFactory(pb.PBServerFactory):
         Initialize the factory.
         """
         pb.PBServerFactory.__init__(self, root)
-        self.connectionMade = defer.Deferred()
+        self.connectionMade = Deferred()
 
 
     def clientConnectionMade(self, protocol):
@@ -430,7 +434,9 @@ class ConnectionNotifyServerFactory(pb.PBServerFactory):
         Store the protocol and fire the connection deferred.
         """
         self.protocolInstance = protocol
-        self.connectionMade.callback(None)
+        d, self.connectionMade = self.connectionMade, None
+        if d is not None:
+            d.callback(None)
 
 
 
@@ -451,7 +457,7 @@ class NewStyleCachedTestCase(unittest.TestCase):
             self.ref = ref
         d1 = clientFactory.getRootObject().addCallback(gotRoot)
         d2 = self.server.factory.connectionMade
-        return defer.gatherResults([d1, d2])
+        return gatherResults([d1, d2])
 
 
     def tearDown(self):
@@ -1040,19 +1046,22 @@ class TestRealm(object):
         if avatarId is checkers.ANONYMOUS:
             return pb.IPerspective, Echoer(), lambda: None
         else:
-            self.p.loggedIn = 1
+            self.p.loggedIn = True
             return pb.IPerspective, self.p, self.p.logout
 
 
 
 class MyPerspective(pb.Avatar):
+    """
+    @ivar loggedIn: set to C{True} when the avatar is logged in.
+    @type loggedIn: C{bool}
 
+    @ivar loggedOut: set to C{True} when the avatar is logged out.
+    @type loggedOut: C{bool}
+    """
     implements(pb.IPerspective)
 
     loggedIn = loggedOut = False
-
-    def __init__(self):
-        pass
 
 
     def perspective_getViewPoint(self):
@@ -1092,7 +1101,7 @@ class NewCredTestCase(unittest.TestCase):
         """
         self.realm = TestRealm()
         self.portal = portal.Portal(self.realm)
-        self.factory = pb.PBServerFactory(self.portal)
+        self.factory = ConnectionNotifyServerFactory(self.portal)
         self.port = reactor.listenTCP(0, self.factory, interface="127.0.0.1")
         self.portno = self.port.getHost().port
 
@@ -1103,10 +1112,21 @@ class NewCredTestCase(unittest.TestCase):
         """
         return self.port.stopListening()
 
+
     def getFactoryAndRootObject(self, clientFactory=pb.PBClientFactory):
+        """
+        Create a connection to the test server.
+
+        @param clientFactory: the factory class used to create the connection.
+
+        @return: a tuple (C{factory}, C{deferred}), where factory is an
+            instance of C{clientFactory} and C{deferred} the L{Deferred} firing
+            with the PB root object.
+        """
         factory = clientFactory()
         rootObjDeferred = factory.getRootObject()
-        reactor.connectTCP('127.0.0.1', self.portno, factory)
+        connector = reactor.connectTCP('127.0.0.1', self.portno, factory)
+        self.addCleanup(connector.disconnect)
         return factory, rootObjDeferred
 
 
@@ -1118,8 +1138,8 @@ class NewCredTestCase(unittest.TestCase):
         factory, rootObjDeferred = self.getFactoryAndRootObject()
 
         def gotRootObject(rootObj):
-            self.failUnless(isinstance(rootObj, pb.RemoteReference))
-            disconnectedDeferred = defer.Deferred()
+            self.assertIsInstance(rootObj, pb.RemoteReference)
+            disconnectedDeferred = Deferred()
             rootObj.notifyOnDisconnect(disconnectedDeferred.callback)
             factory.disconnect()
             return disconnectedDeferred
@@ -1135,7 +1155,7 @@ class NewCredTestCase(unittest.TestCase):
         factory, rootObjDeferred = self.getFactoryAndRootObject()
 
         def gotRootObject(rootObj):
-            disconnectedDeferred = defer.Deferred()
+            disconnectedDeferred = Deferred()
             rootObj.notifyOnDisconnect(disconnectedDeferred.callback)
 
             def lostConnection(ign):
@@ -1171,7 +1191,7 @@ class NewCredTestCase(unittest.TestCase):
         def gotRootObject(rootObj):
             self.assertIsInstance(rootObj, pb.RemoteReference)
 
-            d = defer.Deferred()
+            d = Deferred()
             rootObj.notifyOnDisconnect(d.callback)
             factory.disconnect()
 
@@ -1181,7 +1201,7 @@ class NewCredTestCase(unittest.TestCase):
                 def gotAnotherRootObject(anotherRootObj):
                     self.assertIsInstance(anotherRootObj, pb.RemoteReference)
 
-                    d = defer.Deferred()
+                    d = Deferred()
                     anotherRootObj.notifyOnDisconnect(d.callback)
                     factory.disconnect()
                     return d
@@ -1216,6 +1236,19 @@ class NewCredTestCase(unittest.TestCase):
         return self.assertFailure(loginDeferred, ConnectionRefusedError)
 
 
+    def _disconnect(self, ignore, factory):
+        """
+        Helper method disconnecting the given client factory and returning a
+        C{Deferred} that will fire when the server connection has noticed the
+        disconnection.
+        """
+        disconnectedDeferred = Deferred()
+        self.factory.protocolInstance.notifyOnDisconnect(
+            lambda: disconnectedDeferred.callback(None))
+        factory.disconnect()
+        return disconnectedDeferred
+
+
     def test_loginLogout(self):
         """
         Test that login can be performed with IUsernamePassword credentials and
@@ -1235,20 +1268,17 @@ class NewCredTestCase(unittest.TestCase):
 
         d = factory.login(creds, mind)
         def cbLogin(perspective):
-            self.assertEquals(self.realm.p.loggedIn, 1)
-            self.assert_(isinstance(perspective, pb.RemoteReference))
-
-            factory.disconnect()
-            d = Deferred()
-            reactor.callLater(1.0, d.callback, None)
-            return d
+            self.assertTrue(self.realm.p.loggedIn)
+            self.assertIsInstance(perspective, pb.RemoteReference)
+            return self._disconnect(None, factory)
         d.addCallback(cbLogin)
 
         def cbLogout(ignored):
-            self.assertEquals(self.realm.p.loggedOut, 1)
+            self.assertTrue(self.realm.p.loggedOut)
         d.addCallback(cbLogout)
 
-        reactor.connectTCP("127.0.0.1", self.portno, factory)
+        connector = reactor.connectTCP("127.0.0.1", self.portno, factory)
+        self.addCleanup(connector.disconnect)
         return d
 
 
@@ -1270,13 +1300,14 @@ class NewCredTestCase(unittest.TestCase):
         self.assertFailure(secondLogin, UnauthorizedLogin)
         d = gatherResults([firstLogin, secondLogin])
 
-        def cleanup(passthrough):
-            self.flushLoggedErrors(UnauthorizedLogin)
-            factory.disconnect()
-            return passthrough
-        d.addBoth(cleanup)
+        def cleanup(ignore):
+            errors = self.flushLoggedErrors(UnauthorizedLogin)
+            self.assertEquals(len(errors), 2)
+            return self._disconnect(None, factory)
+        d.addCallback(cleanup)
 
-        reactor.connectTCP("127.0.0.1", self.portno, factory)
+        connector = reactor.connectTCP("127.0.0.1", self.portno, factory)
+        self.addCleanup(connector.disconnect)
         return d
 
 
@@ -1296,14 +1327,10 @@ class NewCredTestCase(unittest.TestCase):
 
         d.addCallback(self.assertEqual, 123)
 
-        def cleanup(passthrough):
-            factory.disconnect()
-            d = Deferred()
-            reactor.callLater(1.0, d.callback, None)
-            return d
-        d.addBoth(cleanup)
+        d.addCallback(self._disconnect, factory)
 
-        reactor.connectTCP("127.0.0.1", self.portno, factory)
+        connector = reactor.connectTCP("127.0.0.1", self.portno, factory)
+        self.addCleanup(connector.disconnect)
         return d
 
 
@@ -1315,16 +1342,17 @@ class NewCredTestCase(unittest.TestCase):
         self.portal.registerChecker(
             checkers.InMemoryUsernamePasswordDatabaseDontUse(user='pass'))
         factory = pb.PBClientFactory()
-        d = factory.login(credentials.Anonymous(),"BRAINS!")
+        d = factory.login(credentials.Anonymous(), "BRAINS!")
         self.assertFailure(d, UnhandledCredentials)
 
-        def cleanup(passthrough):
-            self.flushLoggedErrors(UnhandledCredentials)
-            factory.disconnect()
-            return passthrough
-        d.addBoth(cleanup)
+        def cleanup(ignore):
+            errors = self.flushLoggedErrors(UnhandledCredentials)
+            self.assertEquals(len(errors), 1)
+            return self._disconnect(None, factory)
+        d.addCallback(cleanup)
 
-        reactor.connectTCP('127.0.0.1', self.portno, factory)
+        connector = reactor.connectTCP('127.0.0.1', self.portno, factory)
+        self.addCleanup(connector.disconnect)
         return d
 
 
@@ -1345,12 +1373,10 @@ class NewCredTestCase(unittest.TestCase):
 
         d.addCallback(self.assertEqual, 123)
 
-        def cleanup(passthrough):
-            factory.disconnect()
-            return passthrough
-        d.addBoth(cleanup)
+        d.addCallback(self._disconnect, factory)
 
-        reactor.connectTCP('127.0.0.1', self.portno, factory)
+        connector = reactor.connectTCP('127.0.0.1', self.portno, factory)
+        self.addCleanup(connector.disconnect)
         return d
 
 
@@ -1372,12 +1398,10 @@ class NewCredTestCase(unittest.TestCase):
 
         d.addCallback(self.assertEqual, 123)
 
-        def cleanup(passthrough):
-            factory.disconnect()
-            return passthrough
-        d.addBoth(cleanup)
+        d.addCallback(self._disconnect, factory)
 
-        reactor.connectTCP('127.0.0.1', self.portno, factory)
+        connector = reactor.connectTCP('127.0.0.1', self.portno, factory)
+        self.addCleanup(connector.disconnect)
         return d
 
 
@@ -1400,16 +1424,12 @@ class NewCredTestCase(unittest.TestCase):
             return viewpoint.callRemote("check")
         d.addCallback(cbView)
 
-        d.addCallback(self.failUnless)
+        d.addCallback(self.assertTrue)
 
-        def cleanup(passthrough):
-            factory.disconnect()
-            d = Deferred()
-            reactor.callLater(1.0, d.callback, None)
-            return d
-        d.addBoth(cleanup)
+        d.addCallback(self._disconnect, factory)
 
-        reactor.connectTCP("127.0.0.1", self.portno, factory)
+        connector = reactor.connectTCP("127.0.0.1", self.portno, factory)
+        self.addCleanup(connector.disconnect)
         return d
 
 
@@ -1503,7 +1523,7 @@ class Forwarded:
         """
         Asynchronously return C{True}.
         """
-        return defer.succeed(True)
+        return succeed(True)
 
 
 class SpreadUtilTestCase(unittest.TestCase):
@@ -1527,7 +1547,7 @@ class SpreadUtilTestCase(unittest.TestCase):
         o = LocalRemoteTest()
         o = LocalRemoteTest()
         d = o.callRemote("add", 2, y=4)
-        self.assertTrue(isinstance(d, defer.Deferred))
+        self.assertIsInstance(d, Deferred)
         d.addCallback(self.assertEquals, 6)
         return d
 
