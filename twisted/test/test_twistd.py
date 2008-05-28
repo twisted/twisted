@@ -4,6 +4,7 @@
 """
 Tests for L{twisted.application.app} and L{twisted.scripts.twistd}.
 """
+import signal
 
 import os, sys, cPickle
 try:
@@ -18,6 +19,18 @@ from twisted.trial import unittest
 from twisted.application import service, app
 from twisted.scripts import twistd
 from twisted.python import log
+from twisted.python.versions import Version
+from twisted.internet.defer import Deferred
+
+try:
+    from twisted.python import syslog
+except ImportError:
+    syslog = None
+
+try:
+    from twisted.scripts._twistd_unix import UnixAppLogger
+except ImportError:
+    UnixAppLogger = None
 
 try:
     import profile
@@ -105,19 +118,29 @@ class MockServiceMaker(object):
 
 
 
+class CrippledAppLogger(app.AppLogger):
+    """
+    @see: CrippledApplicationRunner.
+    """
+
+    def start(self, application):
+        pass
+
+
+
 class CrippledApplicationRunner(twistd._SomeApplicationRunner):
     """
     An application runner that cripples the platform-specific runner and
     nasty side-effect-having code so that we can use it without actually
     running any environment-affecting code.
     """
+    loggerFactory = CrippledAppLogger
+
     def preApplication(self):
         pass
 
-    def postApplication(self):
-        pass
 
-    def startLogging(self, observer):
+    def postApplication(self):
         pass
 
 
@@ -183,24 +206,46 @@ class TapFileTest(unittest.TestCase):
 
 
 
+class TestLoggerFactory(object):
+    """
+    A logger factory for L{TestApplicationRunner}.
+    """
+
+    def __init__(self, runner):
+        self.runner = runner
+
+
+    def start(self, application):
+        """
+        Save the logging start on the C{runner} instance.
+        """
+        self.runner.order.append("log")
+        self.runner.hadApplicationLogObserver = hasattr(self.runner,
+                                                        'application')
+
+
+    def stop(self):
+        """
+        Don't log anything.
+        """
+
+
+
 class TestApplicationRunner(app.ApplicationRunner):
     """
-    An ApplicationRunner which tracks the environment in which its
-    methods are called.
+    An ApplicationRunner which tracks the environment in which its methods are
+    called.
     """
+
+    def __init__(self, options):
+        app.ApplicationRunner.__init__(self, options)
+        self.order = []
+        self.logger = TestLoggerFactory(self)
+
+
     def preApplication(self):
-        self.order = ["pre"]
+        self.order.append("pre")
         self.hadApplicationPreApplication = hasattr(self, 'application')
-
-
-    def getLogObserver(self):
-        self.order.append("log")
-        self.hadApplicationLogObserver = hasattr(self, 'application')
-        return lambda events: None
-
-
-    def startLogging(self, observer):
-        pass
 
 
     def postApplication(self):
@@ -250,40 +295,10 @@ class ApplicationRunnerTest(unittest.TestCase):
         """
         s = TestApplicationRunner(self.config)
         s.run()
-        self.failIf(s.hadApplicationPreApplication)
-        self.failUnless(s.hadApplicationPostApplication)
-        self.failUnless(s.hadApplicationLogObserver)
+        self.assertFalse(s.hadApplicationPreApplication)
+        self.assertTrue(s.hadApplicationPostApplication)
+        self.assertTrue(s.hadApplicationLogObserver)
         self.assertEquals(s.order, ["pre", "log", "post"])
-
-
-    def test_stdoutLogObserver(self):
-        """
-        Verify that if C{'-'} is specified as the log file, stdout is used.
-        """
-        self.config.parseOptions(["--logfile", "-", "--nodaemon"])
-        runner = CrippledApplicationRunner(self.config)
-        observerMethod = runner.getLogObserver()
-        observer = observerMethod.im_self
-        self.failUnless(isinstance(observer, log.FileLogObserver))
-        writeMethod = observer.write
-        fileObj = writeMethod.__self__
-        self.assertIdentical(fileObj, sys.stdout)
-
-
-    def test_fileLogObserver(self):
-        """
-        Verify that if a string other than C{'-'} is specified as the log file,
-        the file with that name is used.
-        """
-        logfilename = os.path.abspath(self.mktemp())
-        self.config.parseOptions(["--logfile", logfilename])
-        runner = CrippledApplicationRunner(self.config)
-        observerMethod = runner.getLogObserver()
-        observer = observerMethod.im_self
-        self.failUnless(isinstance(observer, log.FileLogObserver))
-        writeMethod = observer.write
-        fileObj = writeMethod.im_self
-        self.assertEqual(fileObj.path, logfilename)
 
 
     def _applicationStartsWithConfiguredID(self, argv, uid, gid):
@@ -384,6 +399,44 @@ class ApplicationRunnerTest(unittest.TestCase):
         runner.startReactor(reactor, None, None)
         self.assertTrue(
             reactor.called, "startReactor did not call reactor.run()")
+
+
+    def test_legacyApplicationRunnerGetLogObserver(self):
+        """
+        L{app.ApplicationRunner} subclasses can have a getLogObserver that used
+        to return a log observer. This test is there to ensure that it's
+        supported but it raises a warning when used.
+        """
+        observer = []
+        self.addCleanup(log.removeObserver, observer.append)
+        class GetLogObserverRunner(app.ApplicationRunner):
+            def getLogObserver(self):
+                return observer.append
+
+            def startLogging(self, observer):
+                """
+                Override C{startLogging} to call L{log.addObserver} instead of
+                L{log.startLoggingWithObserver}.
+                """
+                log.addObserver(observer)
+                self.logger._initialLog()
+
+            def preApplication(self):
+                pass
+
+            def postApplication(self):
+                pass
+
+            def createOrGetApplication(self):
+                pass
+
+        conf = twistd.ServerOptions()
+        runner = GetLogObserverRunner(conf)
+        self.assertWarns(DeprecationWarning,
+            "Specifying a log observer with getLogObserver is "
+            "deprecated. Please use a loggerFactory instead.",
+            app.__file__, runner.run)
+        self.assertEquals(len(observer), 3)
 
 
 
@@ -722,3 +775,274 @@ class AppProfilingTestCase(unittest.TestCase):
                 "Use HotshotRunner instead.", __file__,
                 runWithHotshot)
         self.assertTrue(profiler.called)
+
+
+
+def _patchFileLogObserver(patch):
+    """
+    Patch L{log.FileLogObserver} to record every call and keep a reference to
+    the passed log file for tests.
+
+    @param patch: a callback for patching (usually L{unittest.TestCase.patch}).
+
+    @return: the list that keeps track of the log files.
+    @rtype: C{list}
+    """
+    logFiles = []
+    oldFileLobObserver = log.FileLogObserver
+    def FileLogObserver(logFile):
+        logFiles.append(logFile)
+        return oldFileLobObserver(logFile)
+    patch(log, 'FileLogObserver', FileLogObserver)
+    return logFiles
+
+
+
+class AppLoggerTestCase(unittest.TestCase):
+    """
+    Tests for L{app.AppLogger}.
+
+    @ivar observers: list of observers installed during the tests.
+    @type observers: C{list}
+    """
+
+    def setUp(self):
+        """
+        Override L{log.addObserver} so that we can trace the observers
+        installed in C{self.observers}.
+        """
+        self.observers = []
+        def startLoggingWithObserver(observer):
+            self.observers.append(observer)
+            log.addObserver(observer)
+        self.patch(log, 'startLoggingWithObserver', startLoggingWithObserver)
+
+
+    def tearDown(self):
+        """
+        Remove all installed observers.
+        """
+        for observer in self.observers:
+            log.removeObserver(observer)
+
+
+    def test_start(self):
+        """
+        L{app.AppLogger.start} call L{log.addObserver}, and that writes some
+        messages about twistd and the reactor.
+        """
+        logger = app.AppLogger({})
+        observer = []
+        logger._getLogObserver = lambda: observer.append
+
+        logger.start(None)
+
+        self.assertEquals(self.observers, [observer.append])
+        self.assertIn("starting up", observer[0]["message"][0])
+        self.assertIn("reactor class", observer[1]["message"][0])
+
+
+    def test_getLogObserverStdout(self):
+        """
+        When logfile is empty or set to C{-}, L{app.AppLogger._getLogObserver}
+        returns a log observer pointing at C{sys.stdout}.
+        """
+        logger = app.AppLogger({"logfile": "-"})
+        logFiles = _patchFileLogObserver(self.patch)
+
+        observer = logger._getLogObserver()
+
+        self.assertEquals(len(logFiles), 1)
+        self.assertIdentical(logFiles[0], sys.stdout)
+
+        logger = app.AppLogger({"logfile": ""})
+        observer = logger._getLogObserver()
+
+        self.assertEquals(len(logFiles), 2)
+        self.assertIdentical(logFiles[1], sys.stdout)
+
+
+    def test_getLogObserverFile(self):
+        """
+        When passing the C{logfile} option, L{app.AppLogger._getLogObserver}
+        returns a log observer pointing at the specified path.
+        """
+        logFiles = _patchFileLogObserver(self.patch)
+        filename = self.mktemp()
+        logger = app.AppLogger({"logfile": filename})
+
+        observer = logger._getLogObserver()
+
+        self.assertEquals(len(logFiles), 1)
+        self.assertEquals(logFiles[0].path,
+                          os.path.abspath(filename))
+
+
+    def test_stop(self):
+        """
+        L{app.AppLogger.stop} removes the observer created in C{start}, and
+        reinitialize its C{_observer} so that if C{stop} is called several
+        times it doesn't break.
+        """
+        removed = []
+        observer = object()
+        def remove(observer):
+            removed.append(observer)
+        self.patch(log, 'removeObserver', remove)
+        logger = app.AppLogger({})
+        logger._observer = observer
+        logger.stop()
+        self.assertEquals(removed, [observer])
+        logger.stop()
+        self.assertEquals(removed, [observer])
+        self.assertIdentical(logger._observer, None)
+
+
+
+class UnixAppLoggerTestCase(unittest.TestCase):
+    """
+    Tests for L{UnixAppLogger}.
+
+    @ivar signals: list of signal handlers installed.
+    @type signals: C{list}
+    """
+
+    def setUp(self):
+        """
+        Fake C{signal.signal} for not installing the handlers but saving them
+        in C{self.signals}.
+        """
+        self.signals = []
+        def fakeSignal(sig, f):
+            self.signals.append((sig, f))
+        self.patch(signal, "signal", fakeSignal)
+
+
+    def test_getLogObserverStdout(self):
+        """
+        When non-daemonized and C{logfile} is empty or set to C{-},
+        L{UnixAppLogger._getLogObserver} returns a log observer pointing at
+        C{sys.stdout}.
+        """
+        logFiles = _patchFileLogObserver(self.patch)
+
+        logger = UnixAppLogger({"logfile": "-", "nodaemon": True})
+        observer = logger._getLogObserver()
+        self.assertEquals(len(logFiles), 1)
+        self.assertIdentical(logFiles[0], sys.stdout)
+
+        logger = UnixAppLogger({"logfile": "", "nodaemon": True})
+        observer = logger._getLogObserver()
+        self.assertEquals(len(logFiles), 2)
+        self.assertIdentical(logFiles[1], sys.stdout)
+
+
+    def test_getLogObserverStdoutDaemon(self):
+        """
+        When daemonized and C{logfile} is set to C{-},
+        L{UnixAppLogger._getLogObserver} raises C{SystemExit}.
+        """
+        logger = UnixAppLogger({"logfile": "-", "nodaemon": False})
+        error = self.assertRaises(SystemExit, logger._getLogObserver)
+        self.assertEquals(str(error), "Daemons cannot log to stdout, exiting!")
+
+
+    def test_getLogObserverFile(self):
+        """
+        When C{logfile} contains a file name, L{app.AppLogger._getLogObserver}
+        returns a log observer pointing at the specified path, and a signal
+        handler rotating the log is installed.
+        """
+        logFiles = _patchFileLogObserver(self.patch)
+        filename = self.mktemp()
+        logger = UnixAppLogger({"logfile": filename})
+        observer = logger._getLogObserver()
+
+        self.assertEquals(len(logFiles), 1)
+        self.assertEquals(logFiles[0].path,
+                          os.path.abspath(filename))
+
+        self.assertEquals(len(self.signals), 1)
+        self.assertEquals(self.signals[0][0], signal.SIGUSR1)
+
+        d = Deferred()
+        def rotate():
+            d.callback(None)
+        logFiles[0].rotate = rotate
+
+        rotateLog = self.signals[0][1]
+        rotateLog(None, None)
+        return d
+
+
+    def test_getLogObserverDontOverrideSignalHandler(self):
+        """
+        If a signal handler is already installed,
+        L{UnixAppLogger._getLogObserver} doesn't override it.
+        """
+        def fakeGetSignal(sig):
+            self.assertEquals(sig, signal.SIGUSR1)
+            return object()
+        self.patch(signal, "getsignal", fakeGetSignal)
+        filename = self.mktemp()
+        logger = UnixAppLogger({"logfile": filename})
+        observer = logger._getLogObserver()
+
+        self.assertEquals(self.signals, [])
+
+
+    def test_getLogObserverDefaultFile(self):
+        """
+        When daemonized and C{logfile} is empty, the observer returned by
+        L{UnixAppLogger._getLogObserver} points at C{twistd.log} in the current
+        directory.
+        """
+        logFiles = _patchFileLogObserver(self.patch)
+        logger = UnixAppLogger({"logfile": "", "nodaemon": False})
+        observer = logger._getLogObserver()
+
+        self.assertEquals(len(logFiles), 1)
+        self.assertEquals(logFiles[0].path,
+                          os.path.abspath("twistd.log"))
+
+
+    def test_getLogObserverSyslog(self):
+        """
+        If C{syslog} is set to C{True}, L{UnixAppLogger._getLogObserver} starts
+        a L{syslog.SyslogObserver} with given C{prefix}.
+        """
+        class fakesyslog(object):
+            def openlog(self, prefix):
+                self.prefix = prefix
+        syslogModule = fakesyslog()
+        self.patch(syslog, "syslog", syslogModule)
+        logger = UnixAppLogger({"syslog": True, "prefix": "test-prefix"})
+        observer = logger._getLogObserver()
+        self.assertEquals(syslogModule.prefix, "test-prefix")
+
+    if syslog is None:
+        test_getLogObserverSyslog.skip = "Syslog not available"
+
+
+
+if UnixAppLogger is None:
+    UnixAppLoggerTestCase.skip = "twistd unix not available"
+
+
+
+class DeprecationTests(unittest.TestCase):
+    """
+    Tests for deprecated features.
+    """
+
+    def test_initialLog(self):
+        """
+        L{app.initialLog} is deprecated.
+        """
+        logs = []
+        log.addObserver(logs.append)
+        self.addCleanup(log.removeObserver, logs.append)
+        self.callDeprecated(Version("Twisted", 8, 2, 0), app.initialLog)
+        self.assertEquals(len(logs), 2)
+        self.assertIn("starting up", logs[0]["message"][0])
+        self.assertIn("reactor class", logs[1]["message"][0])

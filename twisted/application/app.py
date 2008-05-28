@@ -5,6 +5,9 @@
 import sys, os, pdb, getpass, traceback, signal, warnings
 
 from twisted.python import runtime, log, usage, failure, util, logfile
+from twisted.python.versions import Version
+from twisted.python.reflect import qual
+from twisted.python.deprecate import deprecated
 from twisted.persisted import sob
 from twisted.application import service, reactors
 from twisted.internet import defer
@@ -209,6 +212,66 @@ def runWithHotshot(reactor, config):
 
 
 
+class AppLogger(object):
+    """
+    Class managing logging faciliy of the application.
+
+    @ivar _logfilename: The name of the file to which to log, if other than the
+        default.
+    @type _logfilename: C{str}
+
+    @param _observer: log observer added at C{start} and removed at C{stop}.
+    @type _observer: C{callable}
+    """
+    _observer = None
+
+    def __init__(self, options):
+        self._logfilename = options.get("logfile", "")
+
+
+    def start(self, application):
+        """
+        Initialize the logging system.
+        """
+        self._observer = self._getLogObserver()
+        log.startLoggingWithObserver(self._observer)
+        self._initialLog()
+
+
+    def _initialLog(self):
+        """
+        Print twistd start log message.
+        """
+        from twisted.internet import reactor
+        log.msg("twistd %s (%s %s) starting up." % (copyright.version,
+                                                   sys.executable,
+                                                   runtime.shortPythonVersion()))
+        log.msg('reactor class: %s.' % (qual(reactor.__class__),))
+
+
+    def _getLogObserver(self):
+        """
+        Create a log observer to be added to the logging system before running
+        this application.
+        """
+        if self._logfilename == '-' or not self._logfilename:
+            logFile = sys.stdout
+        else:
+            logFile = logfile.LogFile.fromFullPath(self._logfilename)
+        return log.FileLogObserver(logFile).emit
+
+
+    def stop(self):
+        """
+        Print twistd stop log message.
+        """
+        log.msg("Server Shut Down.")
+        if self._observer is not None:
+            log.removeObserver(self._observer)
+            self._observer = None
+
+
+
 def fixPdb():
     def do_stop(self, arg):
         self.clear_all_breaks()
@@ -314,12 +377,18 @@ class ApplicationRunner(object):
         profile the application if options are set accordingly.
 
     @ivar profiler: Instance provided by C{profilerFactory}.
+
+    @ivar loggerFactory: Factory for creating object responsible for logging.
+
+    @ivar logger: Instance provided by C{loggerFactory}.
     """
     profilerFactory = AppProfiler
+    loggerFactory = AppLogger
 
     def __init__(self, config):
         self.config = config
         self.profiler = self.profilerFactory(config)
+        self.logger = self.loggerFactory(config)
 
 
     def run(self):
@@ -329,12 +398,28 @@ class ApplicationRunner(object):
         self.preApplication()
         self.application = self.createOrGetApplication()
 
-        # Later, try adapting self.application to ILogObserverFactory or
-        # whatever and getting an observer from it, instead.  Fall back to
-        # self.getLogObserver if the adaption fails.
-        self.startLogging(self.getLogObserver())
+
+        getLogObserverLegacy = getattr(self, 'getLogObserver', None)
+        if getLogObserverLegacy is not None:
+            warnings.warn("Specifying a log observer with getLogObserver is "
+                          "deprecated. Please use a loggerFactory instead.",
+                          category=DeprecationWarning)
+            self.startLogging(self.getLogObserver())
+        else:
+            self.logger.start(self.application)
 
         self.postApplication()
+        self.logger.stop()
+
+
+    def startLogging(self, observer):
+        """
+        Initialize the logging system. DEPRECATED.
+
+        @param observer: The observer to add to the logging system.
+        """
+        log.startLoggingWithObserver(observer)
+        self.logger._initialLog()
 
 
     def startReactor(self, reactor, oldstdout, oldstderr):
@@ -358,25 +443,6 @@ class ApplicationRunner(object):
         raise NotImplementedError()
 
 
-    def startLogging(self, observer):
-        """
-        Initialize the logging system.
-
-        @param observer: The observer to add to the logging system.
-        """
-        log.startLoggingWithObserver(observer)
-        sys.stdout.flush()
-        initialLog()
-
-
-    def getLogObserver(self):
-        """
-        Create a log observer to be added to the logging system before running
-        this application.
-        """
-        raise NotImplementedError()
-
-
     def postApplication(self):
         """
         Override in subclass.
@@ -385,7 +451,7 @@ class ApplicationRunner(object):
         the C{application} attribute will be set). Generally this
         should start the application and run the reactor.
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
 
     def createOrGetApplication(self):
@@ -614,12 +680,11 @@ def run(runApp, ServerOptions):
         runApp(config)
 
 
+
 def initialLog():
-    from twisted.internet import reactor
-    log.msg("twistd %s (%s %s) starting up" % (copyright.version,
-                                               sys.executable,
-                                               runtime.shortPythonVersion()))
-    log.msg('reactor class: %s' % reactor.__class__)
+    AppLogger({})._initialLog()
+initialLog = deprecated(Version("Twisted", 8, 2, 0))(initialLog)
+
 
 
 def convertStyle(filein, typein, passphrase, fileout, typeout, encrypt):
@@ -643,7 +708,6 @@ def getLogFile(logfilename):
     """
     Build a log file from the full path.
     """
-    import warnings
     warnings.warn(
         "app.getLogFile is deprecated. Use "
         "twisted.python.logfile.LogFile.fromFullPath instead",

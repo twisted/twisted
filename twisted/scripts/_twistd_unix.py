@@ -2,13 +2,13 @@
 # Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import warnings
 import os, errno, sys
 
 from twisted.python import log, syslog, logfile
 from twisted.python.util import switchUID, uidFromString, gidFromString
 from twisted.application import app, service
 from twisted import copyright
+
 
 
 class ServerOptions(app.ServerOptions):
@@ -84,66 +84,68 @@ different application entirely. To start a new one, either run it in some other
 directory, or use the --pidfile and --logfile parameters to avoid clashes.
 """ %  pid)
 
-def _getLogObserver(logfilename, sysLog, prefix, nodaemon):
+
+
+class UnixAppLogger(app.AppLogger):
     """
-    Create and return a suitable log observer for the given configuration.
+    A logger able to log to syslog, to files, and to stdout.
 
-    The observer will go to syslog using the prefix C{prefix} if C{sysLog} is
-    true.  Otherwise, it will go to the file named C{logfilename} or, if
-    C{nodaemon} is true and C{logfilename} is C{"-"}, to stdout.
+    @ivar _syslog: A flag indicating whether to use syslog instead of file
+        logging.
+    @type _syslog: C{bool}
 
-    @type logfilename: C{str}
-    @param logfilename: The name of the file to which to log, if other than the
-    default.
+    @ivar _syslogPrefix: If C{sysLog} is C{True}, the string prefix to use for
+        syslog messages.
+    @type _syslogPrefix: C{str}
 
-    @type sysLog: C{bool}
-    @param sysLog: A flag indicating whether to use syslog instead of file
-    logging.
-
-    @type prefix: C{str}
-    @param prefix: If C{sysLog} is C{True}, the string prefix to use for syslog
-    messages.
-
-    @type nodaemon: C{bool}
-    @param nodaemon: A flag indicating the process will not be daemonizing.
-
-    @return: An object suitable to be passed to C{log.addObserver}.
+    @ivar _nodaemon: A flag indicating the process will not be daemonizing.
+    @type _nodaemon: C{bool}
     """
-    if sysLog:
-        observer = syslog.SyslogObserver(prefix).emit
-    else:
-        if logfilename == '-':
-            if not nodaemon:
-                print 'daemons cannot log to stdout'
-                os._exit(1)
+
+    def __init__(self, options):
+        app.AppLogger.__init__(self, options)
+        self._syslog = options.get("syslog", False)
+        self._syslogPrefix = options.get("prefix", "")
+        self._nodaemon = options.get("nodaemon", False)
+
+
+    def _getLogObserver(self):
+        """
+        Create and return a suitable log observer for the given configuration.
+
+        The observer will go to syslog using the prefix C{_syslogPrefix} if
+        C{_syslog} is true.  Otherwise, it will go to the file named
+        C{_logfilename} or, if C{_nodaemon} is true and C{_logfilename} is
+        C{"-"}, to stdout.
+
+        @return: An object suitable to be passed to C{log.addObserver}.
+        """
+        if self._syslog:
+            return syslog.SyslogObserver(self._syslogPrefix).emit
+
+        if self._logfilename == '-':
+            if not self._nodaemon:
+                sys.exit('Daemons cannot log to stdout, exiting!')
             logFile = sys.stdout
-        elif nodaemon and not logfilename:
+        elif self._nodaemon and not self._logfilename:
             logFile = sys.stdout
         else:
-            logFile = logfile.LogFile.fromFullPath(logfilename or 'twistd.log')
+            if not self._logfilename:
+                self._logfilename = 'twistd.log'
+            logFile = logfile.LogFile.fromFullPath(self._logfilename)
             try:
                 import signal
             except ImportError:
                 pass
             else:
-                def rotateLog(signal, frame):
-                    from twisted.internet import reactor
-                    reactor.callFromThread(logFile.rotate)
-                signal.signal(signal.SIGUSR1, rotateLog)
-        observer = log.FileLogObserver(logFile).emit
-    return observer
+                # Override if signal is set to None or SIG_DFL (0)
+                if not signal.getsignal(signal.SIGUSR1):
+                    def rotateLog(signal, frame):
+                        from twisted.internet import reactor
+                        reactor.callFromThread(logFile.rotate)
+                    signal.signal(signal.SIGUSR1, rotateLog)
+        return log.FileLogObserver(logFile).emit
 
-
-def startLogging(*args, **kw):
-    warnings.warn(
-        """
-        Use ApplicationRunner instead of startLogging.
-        """,
-        category=PendingDeprecationWarning,
-        stacklevel=2)
-    observer = _getLogObserver(*args, **kw)
-    log.startLoggingWithObserver(observer)
-    sys.stdout.flush()
 
 
 def daemonize():
@@ -164,6 +166,7 @@ def daemonize():
     os.close(null)
 
 
+
 def launchWithName(name):
     if name and name != sys.argv[0]:
         exe = os.path.realpath(sys.executable)
@@ -171,11 +174,13 @@ def launchWithName(name):
         os.execv(exe, [name, sys.argv[0], '--originalname'] + sys.argv[1:])
 
 
+
 class UnixApplicationRunner(app.ApplicationRunner):
     """
     An ApplicationRunner which does Unix-specific things, like fork,
     shed privileges, and maintain a PID file.
     """
+    loggerFactory = UnixAppLogger
 
     def preApplication(self):
         """
@@ -188,16 +193,6 @@ class UnixApplicationRunner(app.ApplicationRunner):
         self.oldstderr = sys.stderr
 
 
-    def getLogObserver(self):
-        """
-        Override to supply a log observer suitable for POSIX based on the given
-        arguments.
-        """
-        return _getLogObserver(
-            self.config['logfile'], self.config['syslog'],
-            self.config['prefix'], self.config['nodaemon'])
-
-
     def postApplication(self):
         """
         To be called after the application is created: start the
@@ -207,7 +202,6 @@ class UnixApplicationRunner(app.ApplicationRunner):
         self.startApplication(self.application)
         self.startReactor(None, self.oldstdout, self.oldstderr)
         self.removePID(self.config['pidfile'])
-        log.msg("Server Shut Down.")
 
 
     def removePID(self, pidfile):
@@ -308,6 +302,3 @@ class UnixApplicationRunner(app.ApplicationRunner):
 
         self.shedPrivileges(self.config['euid'], uid, gid)
         app.startApplication(application, not self.config['no_save'])
-
-
-
