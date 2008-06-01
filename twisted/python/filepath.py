@@ -388,9 +388,9 @@ class FilePath(_PathHelper):
     def realpath(self):
         """
         Returns the absolute target as a FilePath if self is a link, self
-        otherwise.  The absolute link is the ultimate file or directory the 
-        link refers to (for instance, if the link refers to another link, and 
-        another...).  If the filesystem does not support symlinks, or 
+        otherwise.  The absolute link is the ultimate file or directory the
+        link refers to (for instance, if the link refers to another link, and
+        another...).  If the filesystem does not support symlinks, or
         if the link is cyclical, raises a LinkError.
 
         Behaves like L{os.path.realpath} in that it does not resolve link
@@ -661,7 +661,45 @@ class FilePath(_PathHelper):
 
     _chunkSize = 2 ** 2 ** 2 ** 2
 
-    def copyTo(self, destination):
+
+    def copyTo(self, destination, followLinks=True):
+        """
+        Copies self to destination.
+
+        If self is a directory, this method copies its children (but not
+        itself) recursively to destination - if destination does not exist as a
+        directory, this method creates it.  If destination is a file, an
+        IOError will be raised.
+
+        If self is a file, this method copies it to destination.  If
+        destination is a file, this method overwrites it.  If destination is a
+        directory, an IOError will be raised.
+
+        If self is a link (and followLinks is False), self will be copied
+        over as a new symlink with the same target as returned by os.readlink.
+        That means that if it is absolute, both the old and new symlink will
+        link to the same thing.  If it's relative, then perhaps not (and
+        it's also possible that this relative link will be broken).
+
+        File/directory permissions and ownership will NOT be copied over.
+
+        If followLinks is True, symlinks are followed so that they're treated
+        as their targets.  In other words, if self is a link, the link's target
+        will be copied.  If destination is a link, self will be copied to the
+        destination's target (the actual destination will be destination's
+        target).  Symlinks under self (if self is a directory) will be
+        followed and its target's children be copied recursively.
+
+        If followLinks is False, symlinks will be copied over as symlinks.
+
+        @param destination: the destination (a FilePath) to which self
+            should be copied
+        @param followLinks: whether symlinks in self should be treated as links
+            or as their targets
+        """
+        if self.islink() and not followLinks:
+            os.symlink(os.readlink(self.path), destination.path)
+            return
         # XXX TODO: *thorough* audit and documentation of the exact desired
         # semantics of this code.  Right now the behavior of existent
         # destination symlinks is convenient, and quite possibly correct, but
@@ -671,7 +709,7 @@ class FilePath(_PathHelper):
                 destination.createDirectory()
             for child in self.children():
                 destChild = destination.child(child.basename())
-                child.copyTo(destChild)
+                child.copyTo(destChild, followLinks)
         elif self.isfile():
             writefile = destination.open('w')
             readfile = self.open()
@@ -695,7 +733,24 @@ class FilePath(_PathHelper):
             raise NotImplementedError(
                 "Only copying of files and directories supported")
 
-    def moveTo(self, destination):
+
+    def moveTo(self, destination, followLinks=True):
+        """
+        Move self to destination - basically renaming self to whatever
+        destination is named.  If destination is an already-existing directory,
+        moves all children to destination if destination is empty.  If
+        destination is a non-empty directory, or destination is a file, an
+        OSError will be raised.
+
+        If moving between filesystems, self needs to be copied, and everything
+        that applies to copyTo applies to moveTo.
+
+        @param destination: the destination (a FilePath) to which self
+            should be copied
+        @param followLinks: whether symlinks in self should be treated as links
+            or as their targets (only applicable when moving between
+            filesystems)
+        """
         try:
             os.rename(self.path, destination.path)
             self.restat(False)
@@ -710,12 +765,12 @@ class FilePath(_PathHelper):
 
                 # that means it's time to copy trees of directories!
                 secsib = destination.temporarySibling()
-                self.copyTo(secsib) # slow
-                secsib.moveTo(destination) # visible
+                self.copyTo(secsib, followLinks) # slow
+                secsib.moveTo(destination, followLinks) # visible
 
                 # done creating new stuff.  let's clean me up.
                 mysecsib = self.temporarySibling()
-                self.moveTo(mysecsib) # visible
+                self.moveTo(mysecsib, followLinks) # visible
                 mysecsib.remove() # slow
             else:
                 raise

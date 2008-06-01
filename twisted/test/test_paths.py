@@ -541,7 +541,7 @@ class FilePathTestCase(AbstractFilePathTestCase):
         self.assertTrue(self.path.child("sub1").exists())
 
 
-    def testCopyTo(self):
+    def test_copyTo(self):
         self.assertRaises((OSError, IOError), self.path.copyTo, self.path.child('file1'))
         oldPaths = list(self.path.walk()) # Record initial state
         fp = filepath.FilePath(self.mktemp())
@@ -553,8 +553,38 @@ class FilePathTestCase(AbstractFilePathTestCase):
         oldPaths.sort()
         self.assertEquals(newPaths, oldPaths)
 
-    def testMoveTo(self):
-        self.assertRaises((OSError, IOError), self.path.moveTo, self.path.child('file1'))
+
+    def test_copyToWithSymlink(self):
+        """
+        Verify that copying with followLinks=True copies symlink targets
+        instead of symlinks
+        """
+        self.symlink(self.path.child("sub1").path,
+                     self.path.child("link1").path)
+        fp = filepath.FilePath(self.mktemp())
+        self.path.copyTo(fp)
+        self.assertFalse(fp.child("link1").islink())
+        self.assertEquals([x.basename() for x in fp.child("sub1").children()],
+                          [x.basename() for x in fp.child("link1").children()])
+
+
+    def test_copyToWithoutSymlink(self):
+        """
+        Verify that copying with followLinks=False copies symlinks as symlinks
+        """
+        self.symlink("sub1", self.path.child("link1").path)
+        fp = filepath.FilePath(self.mktemp())
+        self.path.copyTo(fp, followLinks=False)
+        self.assertTrue(fp.child("link1").islink())
+        self.assertEquals(os.readlink(self.path.child("link1").path),
+                          os.readlink(fp.child("link1").path))
+
+
+    def test_moveTo(self):
+        """
+        Verify that moving an entire directory results into another directory
+        with the same content.
+        """
         oldPaths = list(self.path.walk()) # Record initial state
         fp = filepath.FilePath(self.mktemp())
         self.path.moveTo(fp)
@@ -565,32 +595,80 @@ class FilePathTestCase(AbstractFilePathTestCase):
         self.assertEquals(newPaths, oldPaths)
 
 
+    def test_moveToError(self):
+        """
+        Verify error behavior of moveTo: it should raises one of OSError or
+        IOError if you want to move a path into one of its child. It's simply
+        the error raised by the underlying rename system call.
+        """
+        self.assertRaises((OSError, IOError), self.path.moveTo, self.path.child('file1'))
+
+
+    def setUpFaultyRename(self):
+        """
+        Set up a C{os.rename} that will fail with L{errno.EXDEV} on first call.
+        This is used to simulate a cross-device rename failure.
+
+        @return: a list of pair (src, dest) of calls to C{os.rename}
+        @rtype: C{list} of C{tuple}
+        """
+        invokedWith = []
+        def faultyRename(src, dest):
+            invokedWith.append((src, dest))
+            if len(invokedWith) == 1:
+                raise OSError(errno.EXDEV, 'Test-induced failure simulating '
+                                           'cross-device rename failure')
+            return originalRename(src, dest)
+
+        originalRename = os.rename
+        self.patch(os, "rename", faultyRename)
+        return invokedWith
+
+
     def test_crossMountMoveTo(self):
         """
         C{moveTo} should be able to handle C{EXDEV} error raised by
         C{os.rename} when trying to move a file on a different mounted
         filesystem.
         """
+        invokedWith = self.setUpFaultyRename()
         # Bit of a whitebox test - force os.rename, which moveTo tries
         # before falling back to a slower method, to fail, forcing moveTo to
         # use the slower behavior.
-        invokedWith = []
-        def faultyRename(src, dest):
-            invokedWith.append((src, dest))
-            if len(invokedWith) == 2:
-                raise OSError(errno.EXDEV, 'Test-induced failure simulating cross-device rename failure')
-            return originalRename(src, dest)
+        self.test_moveTo()
+        # A bit of a sanity check for this whitebox test - if our rename
+        # was never invoked, the test has probably fallen into disrepair!
+        self.assertTrue(invokedWith)
 
-        originalRename = os.rename
-        os.rename = faultyRename
-        try:
-            self.testMoveTo()
-            # A bit of a sanity check for this whitebox test - if our rename
-            # was never invoked, the test has probably fallen into
-            # disrepair!
-            self.failUnless(len(invokedWith) >= 2)
-        finally:
-            os.rename = originalRename
+
+    def test_crossMountMoveToWithSymlink(self):
+        """
+        By default, when moving a symlink, it should follow the link and
+        actually copy the content of the linked node.
+        """
+        invokedWith = self.setUpFaultyRename()
+        f2 = self.path.child('file2')
+        f3 = self.path.child('file3')
+        self.symlink(self.path.child('file1').path, f2.path)
+        f2.moveTo(f3)
+        self.assertFalse(f3.islink())
+        self.assertEquals(f3.getContent(), 'file 1')
+        self.assertTrue(invokedWith)
+
+
+    def test_crossMountMoveToWithoutSymlink(self):
+        """
+        Verify that moveTo called with followLinks=False actually create
+        another symlink.
+        """
+        invokedWith = self.setUpFaultyRename()
+        f2 = self.path.child('file2')
+        f3 = self.path.child('file3')
+        self.symlink(self.path.child('file1').path, f2.path)
+        f2.moveTo(f3, followLinks=False)
+        self.assertTrue(f3.islink())
+        self.assertEquals(f3.getContent(), 'file 1')
+        self.assertTrue(invokedWith)
 
 
     def testOpen(self):
