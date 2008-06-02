@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.trial.test.test_reporter -*-
 #
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 #
 # Maintainer: Jonathan Lange <jml@twistedmatrix.com>
@@ -293,6 +293,10 @@ class _AdaptedReporter(TestResultDecorator):
 class Reporter(TestResult):
     """
     A basic L{TestResult} with support for writing to a stream.
+    
+    @param _startTime: The time when the first test was started. It defaults to
+        C{None}, which means that no test was actually launched.
+    @type _startTime: C{float} or C{NoneType}
     """
 
     implements(itrial.IReporter)
@@ -305,7 +309,6 @@ class Reporter(TestResult):
         self._stream = SafeStream(stream)
         self.tbformat = tbformat
         self.realtime = realtime
-        # The time when the first test was started.
         self._startTime = None
 
 
@@ -332,7 +335,7 @@ class Reporter(TestResult):
         """
         super(Reporter, self).startTest(test)
         if self._startTime is None:
-            self._startTime = time.time()
+            self._startTime = self._getTime()
 
 
     def addFailure(self, test, fail):
@@ -611,7 +614,11 @@ class MinimalReporter(Reporter):
         %(num_failures) %(num_skips)'
         """
         numTests = self.testsRun
-        t = (self._startTime - self._getTime(), numTests, numTests,
+        if self._startTime is not None:
+            timing = self._getTime() - self._startTime
+        else:
+            timing = 0
+        t = (timing, numTests, numTests,
              len(self.errors), len(self.failures), len(self.skips))
         self._writeln(' '.join(map(str, t)))
 

@@ -1,10 +1,15 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 #
 # Maintainer: Jonathan Lange <jml@twistedmatrix.com>
 
+"""
+Tests for L{twisted.trial.reporter}.
+"""
+
 
 import errno, sys, os, re, StringIO
+
 from twisted.internet.utils import suppressWarnings
 from twisted.python.failure import Failure
 from twisted.trial import itrial, unittest, runner, reporter, util
@@ -320,14 +325,47 @@ class PyunitTestNames(unittest.TestCase):
 
     def test_minimalReporter(self):
         """
-        The summary of L{reporter.MinimalReporter} is a simple list of
-        numbers, indicating how many tests ran, how many failed etc.
+        The summary of L{reporter.MinimalReporter} is a simple list of numbers,
+        indicating how many tests ran, how many failed etc.
+
+        The numbers represents:
+         * the run time of the tests
+         * the number of tests run, printed 2 times for legacy reasons
+         * the number of errors
+         * the number of failures
+         * the number of skips
         """
         result = reporter.MinimalReporter(self.stream)
         self.test.run(result)
         result._printSummary()
         output = self.stream.getvalue().strip().split(' ')
         self.failUnlessEqual(output[1:], ['1', '1', '0', '0', '0'])
+
+
+    def test_minimalReporterTime(self):
+        """
+        L{reporter.MinimalReporter} reports the time to run the tests as first
+        data in its output.
+        """
+        times = [1.0, 1.2, 1.5, 1.9]
+        result = reporter.MinimalReporter(self.stream)
+        result._getTime = lambda: times.pop(0)
+        self.test.run(result)
+        result._printSummary()
+        output = self.stream.getvalue().strip().split(' ')
+        timer = output[0]
+        self.assertEquals(timer, "0.7")
+
+
+    def test_emptyMinimalReporter(self):
+        """
+        The summary of L{reporter.MinimalReporter} is a list of zeroes when no
+        test is actually run.
+        """
+        result = reporter.MinimalReporter(self.stream)
+        result._printSummary()
+        output = self.stream.getvalue().strip().split(' ')
+        self.failUnlessEqual(output, ['0', '0', '0', '0', '0', '0'])
 
 
 
