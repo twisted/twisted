@@ -1,6 +1,5 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 Test HTTP support.
@@ -9,11 +8,14 @@ Test HTTP support.
 from urlparse import urlparse, urlunsplit, clear_cache
 import string, random, urllib, cgi
 
+from twisted.python.compat import set
 from twisted.trial import unittest
-from twisted.web import http
+from twisted.web import http, http_headers
 from twisted.protocols import loopback
 from twisted.internet import protocol
 from twisted.test.test_protocols import StringIOWithoutClosing
+
+from twisted.test.proto_helpers import StringTransport
 
 
 class DateTimeTest(unittest.TestCase):
@@ -27,33 +29,9 @@ class DateTimeTest(unittest.TestCase):
             self.assertEquals(time, time2)
 
 
-class OrderedDict:
-
-    def __init__(self, dict):
-        self.dict = dict
-        self.l = dict.keys()
-
-    def __setitem__(self, k, v):
-        self.l.append(k)
-        self.dict[k] = v
-
-    def __getitem__(self, k):
-        return self.dict[k]
-
-    def items(self):
-        result = []
-        for i in self.l:
-            result.append((i, self.dict[i]))
-        return result
-
-    def __getattr__(self, attr):
-        return getattr(self.dict, attr)
-
-
 class DummyHTTPHandler(http.Request):
 
     def process(self):
-        self.headers = OrderedDict(self.headers)
         self.content.seek(0, 0)
         data = self.content.read()
         length = self.getHeader('content-length')
@@ -67,6 +45,13 @@ class DummyHTTPHandler(http.Request):
         self.finish()
 
 
+class DummyChannel(object):
+    """
+    A minimal {http.HTTPChannel} like object.
+    """
+    transport = None
+
+
 class LoopbackHTTPClient(http.HTTPClient):
 
     def connectionMade(self):
@@ -76,18 +61,51 @@ class LoopbackHTTPClient(http.HTTPClient):
         self.transport.write("0123456789")
 
 
-class HTTP1_0TestCase(unittest.TestCase):
+class ResponseTestMixin(object):
+    """
+    A mixin that provides a simple means of comparing an actual response string
+    to an expected response string by performing the minimal parsing.
+    """
 
-    requests = '''\
-GET / HTTP/1.0
+    def assertResponseEquals(self, responses, expected):
+        """
+        Assert that the C{responses} matches the C{expected} responses.
 
-GET / HTTP/1.1
-Accept: text/html
+        @type responses: C{str}
+        @param responses: The bytes sent in response to one or more requests.
 
-'''
-    requests = string.replace(requests, '\n', '\r\n')
+        @type expected: C{list} of C{tuple} of C{str}
+        @param expected: The expected values for the responses.  Each tuple
+            element of the list represents one response.  Each string element
+            of the tuple is a full header line without delimiter, except for
+            the last element which gives the full response body.
+        """
+        for response in expected:
+            expectedHeaders, expectedContent = response[:-1], response[-1]
+            headers, rest = responses.split('\r\n\r\n', 1)
+            headers = headers.splitlines()
+            self.assertEqual(set(headers), set(expectedHeaders))
+            content = rest[:len(expectedContent)]
+            responses = rest[len(expectedContent):]
+            self.assertEqual(content, expectedContent)
 
-    expected_response = "HTTP/1.0 200 OK\015\012Request: /\015\012Command: GET\015\012Version: HTTP/1.0\015\012Content-length: 13\015\012\015\012'''\012None\012'''\012"
+
+
+class HTTP1_0TestCase(unittest.TestCase, ResponseTestMixin):
+    requests = (
+        "GET / HTTP/1.0\r\n"
+        "\r\n"
+        "GET / HTTP/1.1\r\n"
+        "Accept: text/html\r\n"
+        "\r\n")
+
+    expected_response = [
+        ("HTTP/1.0 200 OK",
+         "Request: /",
+         "Command: GET",
+         "Version: HTTP/1.0",
+         "Content-Length: 13",
+         "'''\nNone\n'''\n")]
 
     def test_buffer(self):
         """
@@ -102,52 +120,83 @@ Accept: text/html
             a.dataReceived(byte)
         a.connectionLost(IOError("all one"))
         value = b.getvalue()
-        self.assertEquals(value, self.expected_response)
+        self.assertResponseEquals(value, self.expected_response)
 
 
 class HTTP1_1TestCase(HTTP1_0TestCase):
 
-    requests = '''\
-GET / HTTP/1.1
-Accept: text/html
+    requests = (
+        "GET / HTTP/1.1\r\n"
+        "Accept: text/html\r\n"
+        "\r\n"
+        "POST / HTTP/1.1\r\n"
+        "Content-Length: 10\r\n"
+        "\r\n"
+        "0123456789POST / HTTP/1.1\r\n"
+        "Content-Length: 10\r\n"
+        "\r\n"
+        "0123456789HEAD / HTTP/1.1\r\n"
+        "\r\n")
 
-POST / HTTP/1.1
-Content-Length: 10
+    expected_response = [
+        ("HTTP/1.1 200 OK",
+         "Request: /",
+         "Command: GET",
+         "Version: HTTP/1.1",
+         "Content-Length: 13",
+         "'''\nNone\n'''\n"),
+        ("HTTP/1.1 200 OK",
+         "Request: /",
+         "Command: POST",
+         "Version: HTTP/1.1",
+         "Content-Length: 21",
+         "'''\n10\n0123456789'''\n"),
+        ("HTTP/1.1 200 OK",
+         "Request: /",
+         "Command: POST",
+         "Version: HTTP/1.1",
+         "Content-Length: 21",
+         "'''\n10\n0123456789'''\n"),
+        ("HTTP/1.1 200 OK",
+         "Request: /",
+         "Command: HEAD",
+         "Version: HTTP/1.1",
+         "Content-Length: 13",
+         "")]
 
-0123456789POST / HTTP/1.1
-Content-Length: 10
 
-0123456789HEAD / HTTP/1.1
-
-'''
-    requests = string.replace(requests, '\n', '\r\n')
-
-    expected_response = "HTTP/1.1 200 OK\015\012Request: /\015\012Command: GET\015\012Version: HTTP/1.1\015\012Content-length: 13\015\012\015\012'''\012None\012'''\012HTTP/1.1 200 OK\015\012Request: /\015\012Command: POST\015\012Version: HTTP/1.1\015\012Content-length: 21\015\012\015\012'''\01210\0120123456789'''\012HTTP/1.1 200 OK\015\012Request: /\015\012Command: POST\015\012Version: HTTP/1.1\015\012Content-length: 21\015\012\015\012'''\01210\0120123456789'''\012HTTP/1.1 200 OK\015\012Request: /\015\012Command: HEAD\015\012Version: HTTP/1.1\015\012Content-length: 13\015\012\015\012"
 
 class HTTP1_1_close_TestCase(HTTP1_0TestCase):
 
-    requests = '''\
-GET / HTTP/1.1
-Accept: text/html
-Connection: close
+    requests = (
+        "GET / HTTP/1.1\r\n"
+        "Accept: text/html\r\n"
+        "Connection: close\r\n"
+        "\r\n"
+        "GET / HTTP/1.0\r\n"
+        "\r\n")
 
-GET / HTTP/1.0
+    expected_response = [
+        ("HTTP/1.1 200 OK",
+         "Connection: close",
+         "Request: /",
+         "Command: GET",
+         "Version: HTTP/1.1",
+         "Content-Length: 13",
+         "'''\nNone\n'''\n")]
 
-'''
-
-    requests = string.replace(requests, '\n', '\r\n')
-
-    expected_response = "HTTP/1.1 200 OK\015\012Connection: close\015\012Request: /\015\012Command: GET\015\012Version: HTTP/1.1\015\012Content-length: 13\015\012\015\012'''\012None\012'''\012"
 
 
 class HTTP0_9TestCase(HTTP1_0TestCase):
 
-    requests = '''\
-GET /
-'''
-    requests = string.replace(requests, '\n', '\r\n')
+    requests = (
+        "GET /\r\n")
 
     expected_response = "HTTP/1.1 400 Bad Request\r\n\r\n"
+
+
+    def assertResponseEquals(self, response, expectedResponse):
+        self.assertEquals(response, expectedResponse)
 
 
 class HTTPLoopbackTestCase(unittest.TestCase):
@@ -201,28 +250,27 @@ class HTTPLoopbackTestCase(unittest.TestCase):
         del self.numHeaders
 
 
-class PRequest:
-    """Dummy request for persistence tests."""
 
-    def __init__(self, **headers):
-        self.received_headers = headers
-        self.headers = {}
-
-    def getHeader(self, k):
-        return self.received_headers.get(k, '')
-
-    def setHeader(self, k, v):
-        self.headers[k] = v
+def _prequest(**headers):
+    """
+    Make a request with the given request headers for the persistence tests.
+    """
+    request = http.Request(DummyChannel(), None)
+    for k, v in headers.iteritems():
+        request.requestHeaders.setRawHeaders(k, v)
+    return request
 
 
 class PersistenceTestCase(unittest.TestCase):
-    """Tests for persistent HTTP connections."""
+    """
+    Tests for persistent HTTP connections.
+    """
 
     ptests = [#(PRequest(connection="Keep-Alive"), "HTTP/1.0", 1, {'connection' : 'Keep-Alive'}),
-              (PRequest(), "HTTP/1.0", 0, {'connection': None}),
-              (PRequest(connection="close"), "HTTP/1.1", 0, {'connection' : 'close'}),
-              (PRequest(), "HTTP/1.1", 1, {'connection': None}),
-              (PRequest(), "HTTP/0.9", 0, {'connection': None}),
+              (_prequest(), "HTTP/1.0", 0, {'connection': None}),
+              (_prequest(connection=["close"]), "HTTP/1.1", 0, {'connection' : ['close']}),
+              (_prequest(), "HTTP/1.1", 1, {'connection': None}),
+              (_prequest(), "HTTP/0.9", 0, {'connection': None}),
               ]
 
 
@@ -232,7 +280,7 @@ class PersistenceTestCase(unittest.TestCase):
             result = c.checkPersistence(req, version)
             self.assertEquals(result, correctResult)
             for header in resultHeaders.keys():
-                self.assertEquals(req.headers.get(header, None), resultHeaders[header])
+                self.assertEquals(req.responseHeaders.getRawHeaders(header, None), resultHeaders[header])
 
 
 class ChunkingTestCase(unittest.TestCase):
@@ -546,3 +594,276 @@ class ClientStatusParsing(unittest.TestCase):
         self.failUnlessEqual(c.status, '201')
         self.failUnlessEqual(c.message, '')
 
+
+
+class RequestTests(unittest.TestCase, ResponseTestMixin):
+    """
+    Tests for L{http.Request}
+    """
+    def _compatHeadersTest(self, oldName, newName):
+        """
+        Verify that each of two different attributes which are associated with
+        the same state properly reflect changes made through the other.
+
+        This is used to test that the C{headers}/C{responseHeaders} and
+        C{received_headers}/C{requestHeaders} pairs interact properly.
+        """
+        req = http.Request(DummyChannel(), None)
+        getattr(req, newName).setRawHeaders("test", ["lemur"])
+        self.assertEqual(getattr(req, oldName)["test"], "lemur")
+        setattr(req, oldName, {"foo": "bar"})
+        self.assertEqual(
+            list(getattr(req, newName).getAllRawHeaders()),
+            [("Foo", ["bar"])])
+        setattr(req, newName, http_headers.Headers())
+        self.assertEqual(getattr(req, oldName), {})
+
+
+    def test_received_headers(self):
+        """
+        L{Request.received_headers} is a backwards compatible API which
+        accesses and allows mutation of the state at L{Request.requestHeaders}.
+        """
+        self._compatHeadersTest('received_headers', 'requestHeaders')
+
+
+    def test_headers(self):
+        """
+        L{Request.headers} is a backwards compatible API which accesses and
+        allows mutation of the state at L{Request.responseHeaders}.
+        """
+        self._compatHeadersTest('headers', 'responseHeaders')
+
+
+    def test_getHeader(self):
+        """
+        L{http.Request.getHeader} returns the value of the named request
+        header.
+        """
+        req = http.Request(DummyChannel(), None)
+        req.requestHeaders.setRawHeaders("test", ["lemur"])
+        self.assertEquals(req.getHeader("test"), "lemur")
+
+
+    def test_getHeaderReceivedMultiples(self):
+        """
+        When there are multiple values for a single request header,
+        L{http.Request.getHeader} returns the last value.
+        """
+        req = http.Request(DummyChannel(), None)
+        req.requestHeaders.setRawHeaders("test", ["lemur", "panda"])
+        self.assertEquals(req.getHeader("test"), "panda")
+
+
+    def test_getHeaderNotFound(self):
+        """
+        L{http.Request.getHeader} returns C{None} when asked for the value of a
+        request header which is not present.
+        """
+        req = http.Request(DummyChannel(), None)
+        self.assertEquals(req.getHeader("test"), None)
+
+
+    def test_getAllHeaders(self):
+        """
+        L{http.Request.getAllheaders} returns a C{dict} mapping all request
+        header names to their corresponding values.
+        """
+        req = http.Request(DummyChannel(), None)
+        req.requestHeaders.setRawHeaders("test", ["lemur"])
+        self.assertEquals(req.getAllHeaders(), {"test": "lemur"})
+
+
+    def test_getAllHeadersNoHeaders(self):
+        """
+        L{http.Request.getAllHeaders} returns an empty C{dict} if there are no
+        request headers.
+        """
+        req = http.Request(DummyChannel(), None)
+        self.assertEquals(req.getAllHeaders(), {})
+
+
+    def test_getAllHeadersMultipleHeaders(self):
+        """
+        When there are multiple values for a single request header,
+        L{http.Request.getAllHeaders} returns only the last value.
+        """
+        req = http.Request(DummyChannel(), None)
+        req.requestHeaders.setRawHeaders("test", ["lemur", "panda"])
+        self.assertEquals(req.getAllHeaders(), {"test": "panda"})
+
+
+    def test_setHost(self):
+        """
+        L{http.Request.setHost} sets the value of the host request header.
+        """
+        req = http.Request(DummyChannel(), None)
+        req.setHost("example.com", 443)
+        self.assertEqual(
+            req.requestHeaders.getRawHeaders("host"), ["example.com"])
+
+
+    def test_setHeader(self):
+        """
+        L{http.Request.setHeader} sets the value of the given response header.
+        """
+        req = http.Request(DummyChannel(), None)
+        req.setHeader("test", "lemur")
+        self.assertEquals(req.responseHeaders.getRawHeaders("test"), ["lemur"])
+
+
+    def test_firstWrite(self):
+        """
+        For an HTTP 1.0 request, L{http.Request.write} sends an HTTP 1.0
+        Response-Line and whatever response headers are set.
+        """
+        req = http.Request(DummyChannel(), None)
+        trans = StringTransport()
+
+        req.transport = trans
+
+        req.setResponseCode(200)
+        req.clientproto = "HTTP/1.0"
+        req.responseHeaders.setRawHeaders("test", ["lemur"])
+        req.write('Hello')
+
+        self.assertResponseEquals(
+            trans.value(),
+            [("HTTP/1.0 200 OK",
+              "Test: lemur",
+              "Hello")])
+
+
+    def test_firstWriteHTTP11Chunked(self):
+        """
+        For an HTTP 1.1 request, L{http.Request.write} sends an HTTP 1.1
+        Response-Line, whatever response headers are set, and uses chunked
+        encoding for the response body.
+        """
+        req = http.Request(DummyChannel(), None)
+        trans = StringTransport()
+
+        req.transport = trans
+
+        req.setResponseCode(200)
+        req.clientproto = "HTTP/1.1"
+        req.responseHeaders.setRawHeaders("test", ["lemur"])
+        req.write('Hello')
+        req.write('World!')
+
+        self.assertResponseEquals(
+            trans.value(),
+            [("HTTP/1.1 200 OK",
+              "Test: lemur",
+              "Transfer-Encoding: chunked",
+              "5\r\nHello\r\n6\r\nWorld!\r\n")])
+
+
+    def test_firstWriteLastModified(self):
+        """
+        For an HTTP 1.0 request for a resource with a known last modified time,
+        L{http.Request.write} sends an HTTP Response-Line, whatever response
+        headers are set, and a last-modified header with that time.
+        """
+        req = http.Request(DummyChannel(), None)
+        trans = StringTransport()
+
+        req.transport = trans
+
+        req.setResponseCode(200)
+        req.clientproto = "HTTP/1.0"
+        req.lastModified = 0
+        req.responseHeaders.setRawHeaders("test", ["lemur"])
+        req.write('Hello')
+
+        self.assertResponseEquals(
+            trans.value(),
+            [("HTTP/1.0 200 OK",
+              "Test: lemur",
+              "Last-Modified: Thu, 01 Jan 1970 00:00:00 GMT",
+              "Hello")])
+
+
+    def test_parseCookies(self):
+        """
+        L{http.Request.parseCookies} extracts cookies from C{requestHeaders}
+        and adds them to C{received_cookies}.
+        """
+        req = http.Request(DummyChannel(), None)
+        req.requestHeaders.setRawHeaders(
+            "cookie", ['test="lemur"; test2="panda"'])
+        req.parseCookies()
+        self.assertEquals(req.received_cookies, {"test": '"lemur"',
+                                                 "test2": '"panda"'})
+
+
+    def test_parseCookiesMultipleHeaders(self):
+        """
+        L{http.Request.parseCookies} can extract cookies from multiple Cookie
+        headers.
+        """
+        req = http.Request(DummyChannel(), None)
+        req.requestHeaders.setRawHeaders(
+            "cookie", ['test="lemur"', 'test2="panda"'])
+        req.parseCookies()
+        self.assertEquals(req.received_cookies, {"test": '"lemur"',
+                                                 "test2": '"panda"'})
+
+
+
+class ChannelTests(unittest.TestCase):
+    """
+    Tests for L{http.HTTPChannel}
+    """
+
+    def test_headerReceived(self):
+        """
+        L{http.HTTPChannel.headerReceived} adds a request header value for the
+        current request.
+        """
+        channel = http.HTTPChannel()
+        req = http.Request(channel, None)
+        channel.requests.append(req)
+
+        channel.headerReceived("Content-Length: 10")
+
+        self.assertEquals(
+            req.requestHeaders.getRawHeaders("content-length"), ["10"])
+
+
+    def test_headerReceivedMultiple(self):
+        """
+        L{http.HTTPChannel.headerReceived} adds new values for request headers
+        which have already been received to the list of raw values for that
+        header.
+        """
+        channel = http.HTTPChannel()
+        req = http.Request(channel, None)
+        channel.requests.append(req)
+
+        channel.headerReceived('WWW-Authenticate: Basic realm="foo"')
+        channel.headerReceived('WWW-Authenticate: Basic realm="bar"')
+
+        self.assertEquals(
+            req.requestHeaders.getRawHeaders("www-authenticate"),
+            ['Basic realm="foo"', 'Basic realm="bar"'])
+
+
+    def test_headerReceivedMax(self):
+        """
+        L{http.HTTPChannel.headerReceived} writes a I{400 Bad Request} when
+        more than C{HTTPChannel.maxHeaders} have been received.
+        """
+        channel = http.HTTPChannel()
+        channel.transport = StringTransport()
+
+        req = http.Request(channel, None)
+        channel.requests.append(req)
+
+        channel.maxHeaders = 1
+
+        channel.headerReceived("foo: bar")
+        channel.headerReceived("foo: baz")
+
+        self.assertEquals(channel.transport.value(),
+                          "HTTP/1.1 400 Bad Request\r\n\r\n")
