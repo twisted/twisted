@@ -186,22 +186,37 @@ class LookupsTestCase(unittest.TestCase):
     def test_invalidNames(self):
         """
         Passing a name which isn't a fully-qualified Python name to L{namedAny}
-        should result in a L{ValueError}.
+        should result in one of the following exceptions:
+        - L{InvalidName}: the name is not a dot-separated list of Python objects
+        - L{ObjectNotFound}: the object doesn't exist
+        - L{ModuleNotFound}: the object doesn't exist and there is only one
+          component in the name
         """
-        # Finally, invalid module names should raise a ValueError
-        self.assertRaises(
-            ValueError,
-            reflect.namedAny, "")
-        self.assertRaises(
-            ValueError,
-            reflect.namedAny, "12345")
-        self.assertRaises(
-            ValueError,
-            reflect.namedAny, "@#$@(#.!@(#!@#")
-        # This case is kind of stupid and is mostly a historical accident.
-        self.assertRaises(
-            ValueError,
-            reflect.namedAny, "tcelfer.nohtyp.detsiwt")
+        err = self.assertRaises(reflect.ModuleNotFound, reflect.namedAny,
+                                'nosuchmoduleintheworld')
+        self.assertEqual(str(err), "No module named 'nosuchmoduleintheworld'")
+
+        # This is a dot-separated list, but it isn't valid!
+        err = self.assertRaises(reflect.ObjectNotFound, reflect.namedAny,
+                                "@#$@(#.!@(#!@#")
+        self.assertEqual(str(err), "'@#$@(#.!@(#!@#' does not name an object")
+
+        err = self.assertRaises(reflect.ObjectNotFound, reflect.namedAny,
+                                "tcelfer.nohtyp.detsiwt")
+        self.assertEqual(
+            str(err),
+            "'tcelfer.nohtyp.detsiwt' does not name an object")
+
+        err = self.assertRaises(reflect.InvalidName, reflect.namedAny, '')
+        self.assertEqual(str(err), 'Empty module name')
+
+        for invalidName in ['.twisted', 'twisted.', 'twisted..python']:
+            err = self.assertRaises(
+                reflect.InvalidName, reflect.namedAny, invalidName)
+            self.assertEqual(
+                str(err),
+                "name must be a string giving a '.'-separated list of Python "
+                "identifiers, not %r" % (invalidName,))
 
 
 
