@@ -373,6 +373,9 @@ class _BaseProcess(styles.Ephemeral, object):
             self.pid = os.fork()
         except:
             # Still in the parent process
+            if settingUID:
+                os.setregid(currgid, curegid)
+                os.setreuid(curruid, cureuid)
             if collectorEnabled:
                 gc.enable()
             raise
@@ -414,12 +417,12 @@ class _BaseProcess(styles.Ephemeral, object):
                 os._exit(1)
 
         # we are now in parent process
-        if collectorEnabled:
-            gc.enable()
-        self.status = -1 # this records the exit status of the child
         if settingUID:
             os.setregid(currgid, curegid)
             os.setreuid(curruid, cureuid)
+        if collectorEnabled:
+            gc.enable()
+        self.status = -1 # this records the exit status of the child
 
     def _setupChild(self, *args, **kwargs):
         """
@@ -512,30 +515,40 @@ class Process(_BaseProcess):
         debug = self.debug
         if debug: print "childFDs", childFDs
 
+        _openedPipes = []
+        def pipe():
+            r, w = os.pipe()
+            _openedPipes.extend([r, w])
+            return r, w
+
         # fdmap.keys() are filenos of pipes that are used by the child.
         fdmap = {} # maps childFD to parentFD
-        for childFD, target in childFDs.items():
-            if debug: print "[%d]" % childFD, target
-            if target == "r":
-                # we need a pipe that the parent can read from
-                readFD, writeFD = os.pipe()
-                if debug: print "readFD=%d, writeFD=%d" % (readFD, writeFD)
-                fdmap[childFD] = writeFD     # child writes to this
-                helpers[childFD] = readFD    # parent reads from this
-            elif target == "w":
-                # we need a pipe that the parent can write to
-                readFD, writeFD = os.pipe()
-                if debug: print "readFD=%d, writeFD=%d" % (readFD, writeFD)
-                fdmap[childFD] = readFD      # child reads from this
-                helpers[childFD] = writeFD   # parent writes to this
-            else:
-                assert type(target) == int, '%r should be an int' % (target,)
-                fdmap[childFD] = target      # parent ignores this
-        if debug: print "fdmap", fdmap
-        if debug: print "helpers", helpers
-        # the child only cares about fdmap.values()
+        try:
+            for childFD, target in childFDs.items():
+                if debug: print "[%d]" % childFD, target
+                if target == "r":
+                    # we need a pipe that the parent can read from
+                    readFD, writeFD = pipe()
+                    if debug: print "readFD=%d, writeFD=%d" % (readFD, writeFD)
+                    fdmap[childFD] = writeFD     # child writes to this
+                    helpers[childFD] = readFD    # parent reads from this
+                elif target == "w":
+                    # we need a pipe that the parent can write to
+                    readFD, writeFD = pipe()
+                    if debug: print "readFD=%d, writeFD=%d" % (readFD, writeFD)
+                    fdmap[childFD] = readFD      # child reads from this
+                    helpers[childFD] = writeFD   # parent writes to this
+                else:
+                    assert type(target) == int, '%r should be an int' % (target,)
+                    fdmap[childFD] = target      # parent ignores this
+            if debug: print "fdmap", fdmap
+            if debug: print "helpers", helpers
+            # the child only cares about fdmap.values()
 
-        self._fork(path, uid, gid, executable, args, environment, fdmap=fdmap)
+            self._fork(path, uid, gid, executable, args, environment, fdmap=fdmap)
+        except:
+            map(os.close, _openedPipes)
+            raise
 
         # we are the parent process:
         self.proto = proto
@@ -810,8 +823,14 @@ class PTYProcess(abstract.FileDescriptor, _BaseProcess):
             masterfd, slavefd = pty.openpty()
             ttyname = os.ttyname(slavefd)
 
-        self._fork(path, uid, gid, executable, args, environment,
-                   masterfd=masterfd, slavefd=slavefd)
+        try:
+            self._fork(path, uid, gid, executable, args, environment,
+                       masterfd=masterfd, slavefd=slavefd)
+        except:
+            if not isinstance(usePTY, (tuple, list)):
+                os.close(masterfd)
+                os.close(slavefd)
+            raise
 
         # we are now in parent process:
         os.close(slavefd)

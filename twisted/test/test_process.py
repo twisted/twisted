@@ -24,6 +24,7 @@ from zope.interface.verify import verifyObject
 from twisted.internet import reactor, protocol, error, interfaces, defer
 from twisted.trial import unittest
 from twisted.python import util, runtime, procutils
+from twisted.python.compat import set
 
 try:
     from twisted.internet import process
@@ -1354,6 +1355,13 @@ class MockOS(object):
         self.actions.append(('switchuid', uid, gid))
 
 
+    def openpty(self):
+        """
+        Override C{pty.openpty}, returning fake file descriptors.
+        """
+        return -12, -13
+
+
 
 if process is not None:
     class DumbProcessWriter(process.ProcessWriter):
@@ -1399,39 +1407,28 @@ class MockProcessTestCase(unittest.TestCase):
 
     def setUp(self):
         """
-        Replace L{process} os, fcntl, sys, switchUID modules with the mock
-        class L{MockOS}.
+        Replace L{process} os, fcntl, sys, switchUID, fdesc and pty modules
+        with the mock class L{MockOS}.
         """
         if gc.isenabled():
             self.addCleanup(gc.enable)
         else:
             self.addCleanup(gc.disable)
         self.mockos = MockOS()
-        self.oldos = os
-        self.oldfcntl = fcntl
-        self.oldsys = sys
-        self.oldSwitchUID = util.switchUID
-        self.oldFdesc = process.fdesc
-        process.os = self.mockos
-        process.fcntl = self.mockos
-        process.sys = self.mockos
-        process.switchUID = self.mockos.switchUID
-        process.fdesc = self.mockos
-        process.Process.processReaderFactory = DumbProcessReader
-        process.Process.processWriterFactory = DumbProcessWriter
+        self.patch(process, "os", self.mockos)
+        self.patch(process, "fcntl", self.mockos)
+        self.patch(process, "sys", self.mockos)
+        self.patch(process, "switchUID", self.mockos.switchUID)
+        self.patch(process, "fdesc", self.mockos)
+        self.patch(process.Process, "processReaderFactory", DumbProcessReader)
+        self.patch(process.Process, "processWriterFactory", DumbProcessWriter)
+        self.patch(process, "pty", self.mockos)
 
 
     def tearDown(self):
         """
-        Restore L{process} modules, and reset processes registered for reap.
+        Reset processes registered for reap.
         """
-        process.os = self.oldos
-        process.fcntl = self.oldfcntl
-        process.sys = self.oldsys
-        process.switchUID = self.oldSwitchUID
-        process.fdesc = self.oldFdesc
-        process.Process.processReaderFactory = process.ProcessReader
-        process.Process.processWriterFactory = process.ProcessWriter
         process.reapProcessHandlers = {}
 
 
@@ -1474,7 +1471,7 @@ class MockProcessTestCase(unittest.TestCase):
         reactor.spawnProcess(p, cmd, ['ouch'], env=None,
                              usePTY=False)
         # It should close the first read pipe, and the 2 last write pipes
-        self.assertEqual(self.mockos.closed, [-1, -4, -6])
+        self.assertEqual(set(self.mockos.closed), set([-1, -4, -6]))
         self.assertEquals(self.mockos.actions, [("fork", False), "waitpid"])
 
 
@@ -1552,6 +1549,62 @@ class MockProcessTestCase(unittest.TestCase):
         gc.disable()
         self._mockWithForkError()
         self.assertFalse(gc.isenabled())
+
+
+    def test_mockForkErrorCloseFDs(self):
+        """
+        When C{os.fork} raises an exception, the file descriptors created
+        before are closed and don't leak.
+        """
+        self._mockWithForkError()
+        self.assertEqual(set(self.mockos.closed), set([-1, -4, -6, -2, -3, -5]))
+
+
+    def test_mockForkErrorGivenFDs(self):
+        """
+        When C{os.forks} raises an exception and that file descriptors have
+        been specified with the C{childFDs} arguments of
+        L{reactor.spawnProcess}, they are not closed.
+        """
+        self.mockos.raiseFork = OSError(errno.EAGAIN, None)
+        protocol = TrivialProcessProtocol(None)
+        self.assertRaises(OSError, reactor.spawnProcess, protocol, None,
+            childFDs={0: -10, 1: -11, 2: -13})
+        self.assertEqual(self.mockos.actions, [("fork", False)])
+        self.assertEqual(self.mockos.closed, [])
+
+        # We can also put "r" or "w" to let twisted create the pipes
+        self.assertRaises(OSError, reactor.spawnProcess, protocol, None,
+            childFDs={0: "r", 1: -11, 2: -13})
+        self.assertEqual(set(self.mockos.closed), set([-1, -2]))
+
+
+    def test_mockForkErrorClosePTY(self):
+        """
+        When C{os.fork} raises an exception, the file descriptors created by
+        C{pty.openpty} are closed and don't leak, when C{usePTY} is set to
+        C{True}.
+        """
+        self.mockos.raiseFork = OSError(errno.EAGAIN, None)
+        protocol = TrivialProcessProtocol(None)
+        self.assertRaises(OSError, reactor.spawnProcess, protocol, None,
+                          usePTY=True)
+        self.assertEqual(self.mockos.actions, [("fork", False)])
+        self.assertEqual(set(self.mockos.closed), set([-12, -13]))
+
+
+    def test_mockForkErrorPTYGivenFDs(self):
+        """
+        If a tuple is passed to C{usePTY} to specify slave and master file
+        descriptors and that C{os.fork} raises an exception, these file
+        descriptors aren't closed.
+        """
+        self.mockos.raiseFork = OSError(errno.EAGAIN, None)
+        protocol = TrivialProcessProtocol(None)
+        self.assertRaises(OSError, reactor.spawnProcess, protocol, None,
+                          usePTY=(-20, -21, 'foo'))
+        self.assertEqual(self.mockos.actions, [("fork", False)])
+        self.assertEqual(self.mockos.closed, [])
 
 
     def test_mockWithExecError(self):
@@ -1704,6 +1757,39 @@ class MockProcessTestCase(unittest.TestCase):
         self.mockos.raiseWaitPid.errno = errno.ECHILD
         # This should not produce any errors
         proc.reapProcess()
+
+
+    def test_mockErrorInPipe(self):
+        """
+        If C{os.pipe} raises an exception after some pipes where created, the
+        created pipes are closed and don't leak.
+        """
+        pipes = [-1, -2, -3, -4]
+        def pipe():
+            try:
+                return pipes.pop(0), pipes.pop(0)
+            except IndexError:
+                raise OSError()
+        self.mockos.pipe = pipe
+        protocol = TrivialProcessProtocol(None)
+        self.assertRaises(OSError, reactor.spawnProcess, protocol, None)
+        self.assertEqual(self.mockos.actions, [])
+        self.assertEqual(set(self.mockos.closed), set([-4, -3, -2, -1]))
+
+
+    def test_mockErrorInForkRestoreUID(self):
+        """
+        If C{os.fork} raises an exception and a UID change has been made, the
+        previous UID and GID are restored.
+        """
+        self.mockos.raiseFork = OSError(errno.EAGAIN, None)
+        protocol = TrivialProcessProtocol(None)
+        self.assertRaises(OSError, reactor.spawnProcess, protocol, None,
+                          uid=8080)
+        self.assertEqual(self.mockos.actions,
+            [('setuid', 0), ('setgid', 0), ("fork", False),
+             ('setregid', 1235, 1234), ('setreuid', 1237, 1236)])
+
 
 
 class PosixProcessTestCase(unittest.TestCase, PosixProcessBase):
@@ -1955,7 +2041,7 @@ class UtilTestCase(unittest.TestCase):
 
     def tearDown(self):
         """
-        Restore the saved PATH setting, and set all creates files readable
+        Restore the saved PATH setting, and set all created files readable
         again so that they can be deleted easily.
         """
         os.chmod(os.path.join(self.bazbar, "executable"), stat.S_IWUSR)
