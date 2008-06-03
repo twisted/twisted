@@ -1,6 +1,5 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 Test cases for twisted.reflect module.
@@ -14,9 +13,9 @@ try:
 except ImportError:
     deque = None
 
-# Twisted Imports
-from twisted.trial import unittest
+from twisted.trial import unittest, util
 from twisted.python import reflect
+from twisted.python.filepath import FilePath
 
 
 
@@ -482,10 +481,12 @@ class SafeStr(unittest.TestCase):
         reflect.safe_str(X())
 
 
+
 class FilenameToModule(unittest.TestCase):
     """
     Test L{reflect.filenameToModuleName} detection.
     """
+
     def test_directory(self):
         """
         Tests it finds good name for directories/packages.
@@ -496,6 +497,12 @@ class FilenameToModule(unittest.TestCase):
                                               + os.path.sep)
         self.assertEquals(module, 'test')
 
+    test_directory.suppress = [
+        util.suppress(message="filenameToModuleName\(\) is deprecated since "
+                              "Twisted 2.6, use moduleForFilename\(\) instead.",
+                      category=DeprecationWarning)]
+
+
     def test_file(self):
         """
         Test it finds good name for files.
@@ -503,4 +510,61 @@ class FilenameToModule(unittest.TestCase):
         module = reflect.filenameToModuleName(
             os.path.join('twisted', 'test', 'test_reflect.py'))
         self.assertEquals(module, 'test_reflect')
+
+    test_file.suppress = [
+        util.suppress(message="filenameToModuleName\(\) is deprecated since "
+                              "Twisted 2.6, use moduleForFilename\(\) instead.",
+                      category=DeprecationWarning)]
+
+
+    def test_deprecation(self):
+        """
+        Test that C{reflect.filenameToModuleName} prints a
+        C{DeprecationWarning} when called.
+        """
+        def cb():
+            reflect.filenameToModuleName(
+                os.path.join('twisted', 'test', 'test_reflect.py'))
+        self.assertWarns(DeprecationWarning,
+                "filenameToModuleName() is deprecated since Twisted 2.6, "
+                "use moduleForFilename() instead.",
+                __file__,
+                cb)
+
+
+
+class ModuleForFilename(unittest.TestCase):
+    """
+    Test L{reflect.moduleForFilename}.
+    """
+
+    def test_directory(self):
+        """
+        Test module detections for directory/package.
+        """
+        fp = FilePath(__file__).parent()
+        module = reflect.moduleForFilename(fp.path)
+        self.assertEquals(module.name, 'twisted.test')
+
+        module = reflect.moduleForFilename(fp.path + os.path.sep)
+        self.assertEquals(module.name, 'twisted.test')
+
+
+    def test_file(self):
+        """
+        Test module detection for files.
+        """
+        module = reflect.moduleForFilename(__file__)
+        self.assertEquals(module.name, 'twisted.test.test_reflect')
+
+
+    def test_compiledFile(self):
+        """
+        Test module detection for .so/.pyd files.
+        """
+        import itertools
+        module = reflect.moduleForFilename(itertools.__file__)
+        self.assertEquals(module.name, 'itertools')
+
+    test_soFile.todo = "This should work, but doesn't for now"
 

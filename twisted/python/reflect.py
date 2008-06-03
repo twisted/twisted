@@ -754,6 +754,8 @@ def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None, showUnknowns
 
 def filenameToModuleName(fn):
     """
+    DEPRECATED in Twisted 2.6.
+
     Convert a name in the filesystem to the name of the Python module it is.
 
     This is agressive about getting a module name back from a file; it will
@@ -762,6 +764,10 @@ def filenameToModuleName(fn):
     unless you already know that the filename you're talking about is a Python
     module.
     """
+    warnings.warn("filenameToModuleName() is deprecated since Twisted 2.6, "
+                  "use moduleForFilename() instead.",
+                  category=DeprecationWarning,
+                  stacklevel=2)
     fullName = os.path.abspath(fn)
     base = os.path.basename(fn)
     if not base:
@@ -777,6 +783,36 @@ def filenameToModuleName(fn):
     return modName
 
 
+def moduleForFilename(filename):
+    """
+    Find the python module associated with a filename.
+
+    @return: a module instance ready to be loaded.
+    @rtype: C{twisted.python.modules.PythonModule}
+    """
+    from twisted.python.filepath import FilePath
+    from twisted.python.modules import iterModules, PYTHON_EXTENSIONS
+    fp = FilePath(filename)
+    if not fp.exists():
+        raise ValueError("File does not exists: %s" % (fp.path,))
+    if fp.isfile() and not fp.splitext()[1] in PYTHON_EXTENSIONS:
+        # XXX: there are files not handled, like .so/.pyd files
+        raise ValueError("Invalid extension")
+    for package in iterModules():
+        if fp.path.startswith(package.pathEntry.filePath.path):
+            for module in package.walkModules(importPackages=False):
+                if fp.isdir():
+                    if (module.isPackage() and
+                        fp.path == module.filePath.dirname()):
+                            return module
+                else:
+                    # Discard extension so that pyc/py match
+                    if fp.splitext()[0] == module.filePath.splitext()[0]:
+                        return module
+    raise ValueError("Module not found for file %s" % (fp.path,))
+
+
+
 __all__ = [
     'InvalidName', 'ModuleNotFound', 'ObjectNotFound',
 
@@ -790,4 +826,5 @@ __all__ = [
     'safe_repr', 'safe_str', 'allYourBase', 'accumulatedBases',
     'prefixedMethodNames', 'addMethodNamesToDict', 'prefixedMethods',
     'accumulateClassDict', 'accumulateClassList', 'isSame', 'isLike',
-    'modgrep', 'isOfType', 'findInstances', 'objgrep', 'filenameToModuleName']
+    'modgrep', 'isOfType', 'findInstances', 'objgrep', 'filenameToModuleName',
+    'moduleForFilename']
