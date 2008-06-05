@@ -56,32 +56,18 @@ class NoLengthResource(resource.Resource):
     def render(self, request):
         return "nolength"
 
-
-
 class HostHeaderResource(resource.Resource):
-    """
-    A testing resource which renders itself as the value of the host header
-    from the request.
-    """
+
     def render(self, request):
-        return request.received_headers['host']
-
-
+        return request.received_headers["host"]
 
 class PayloadResource(resource.Resource):
-    """
-    A testing resource which renders itself as the contents of the request body
-    as long as the request body is 100 bytes long, otherwise which renders
-    itself as C{"ERROR"}.
-    """
+
     def render(self, request):
         data = request.content.read()
-        contentLength = request.received_headers['content-length']
-        if len(data) != 100 or int(contentLength) != 100:
+        if len(data) != 100 or int(request.received_headers["content-length"]) != 100:
             return "ERROR"
         return data
-
-
 
 class BrokenDownloadResource(resource.Resource):
 

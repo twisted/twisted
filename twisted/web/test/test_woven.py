@@ -1,12 +1,10 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-"""
-Tests for L{twisted.web.woven}.
-"""
 
 from twisted.trial import unittest
-from twisted.web import server, microdom, domhelpers
+from twisted.web import server, resource, microdom, domhelpers
+from twisted.web import http
 from twisted.web.test import test_web
 from twisted.internet import reactor, defer, address
 
@@ -493,9 +491,9 @@ class GuardTest(unittest.TestCase):
         self.assertEquals(req.headers['location'],
                           'http://fake.com/xxx/'+guard.SESSION_KEY+cookie)
         oldreq = req
-
+        
         # now let's try with a request for the session-cookie URL that has a cookie set
-        url = "/" + (oldreq.headers['location'].split('http://fake.com/',1))[1]
+        url = "/"+(oldreq.headers['location'].split('http://fake.com/',1))[1]
         req = chan.makeFakeRequest(url)
         self.assertEquals(req.headers['location'].split('?')[0],
                           'http://fake.com/xxx/')

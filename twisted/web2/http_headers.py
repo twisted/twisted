@@ -1,12 +1,7 @@
 # -*- test-case-name: twisted.web2.test.test_http_headers -*-
-# Copyright (c) 2008 Twisted Matrix Laboratories.
-# See LICENSE for details.
+from __future__ import generators
 
-"""
-HTTP header representation, parsing, and serialization.
-"""
-
-import time
+import types, time
 from calendar import timegm
 import base64
 import re
@@ -62,7 +57,7 @@ class HeaderHandler(object):
 
         @param name: The header name to parse.
         @type name: C{str}
-
+        
         @param header: A list of unparsed headers.
         @type header: C{list} of C{str}
 
@@ -91,8 +86,8 @@ class HeaderHandler(object):
 
         @param name: The header name to generate.
         @type name: C{str}
-
-        @param header: A parsed header, such as the output of
+        
+        @param header: A parsed header, such as the output of 
             L{HeaderHandler}.parse.
 
         @return: C{list} of C{str} each representing a generated HTTP header.
@@ -120,7 +115,7 @@ class HeaderHandler(object):
 
     def addParser(self, name, value):
         """Add an individual parser chain for the given header.
-
+        
         @param name: Name of the header to add
         @type name: C{str}
 
@@ -316,7 +311,7 @@ def split(seq, delim):
     for item in seq:
         if item == delim:
             yield cur
-            cur = []
+            cur = []        
         else:
             cur.append(item)
     yield cur
@@ -644,7 +639,7 @@ def parseWWWAuthenticate(tokenized):
                 kvChallenge = True
                 challenge[last] = tokenList.pop(0)
                 last = None
-
+                
             elif token == Token(','):
                 if kvChallenge:
                     if len(tokenList) > 1 and tokenList[1] != Token('='):
@@ -655,13 +650,13 @@ def parseWWWAuthenticate(tokenized):
 
             else:
                 last = token
-
+        
         if last and scheme and not challenge and not kvChallenge:
             challenge = last
             last = None
 
         headers.append((scheme, challenge))
-
+        
     if last and last not in (Token('='), Token(',')):
         if headers[-1] == (scheme, challenge):
             scheme = last
@@ -799,7 +794,7 @@ def generateWWWAuthenticate(headers):
     _generated = []
     for seq in headers:
         scheme, challenge = seq[0], seq[1]
-
+        
         # If we're going to parse out to something other than a dict
         # we need to be able to generate from something other than a dict
 
@@ -1259,11 +1254,8 @@ class __RecalcNeeded(object):
 _RecalcNeeded = __RecalcNeeded()
 
 class Headers(object):
-    """
-    This class stores the HTTP headers as both a parsed representation
-    and the raw string representation. It converts between the two on
-    demand.
-    """
+    """This class stores the HTTP headers as both a parsed representation and
+    the raw string representation. It converts between the two on demand."""
 
     def __init__(self, headers=None, rawHeaders=None, handler=DefaultHTTPHandler):
         self._raw_headers = {}
@@ -1485,7 +1477,7 @@ parser_response_headers = {
     'Set-Cookie':(parseSetCookie,),
     'Set-Cookie2':(tokenize, parseSetCookie2),
     'Vary':(tokenize, filterTokens),
-    'WWW-Authenticate': (lambda h: tokenize(h, foldCase=False),
+    'WWW-Authenticate': (lambda h: tokenize(h, foldCase=False), 
                          parseWWWAuthenticate,)
 }
 

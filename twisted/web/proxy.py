@@ -189,11 +189,6 @@ class ReverseProxyRequest(Request):
 
 
     def process(self):
-        """
-        Handle this request by connecting to the proxied server and forwarding
-        it there, then forwarding the response back as the response to this
-        request.
-        """
         self.received_headers['host'] = self.factory.host
         clientFactory = self.proxyClientFactoryClass(
             self.method, self.uri, self.clientproto, self.getAllHeaders(),
@@ -272,10 +267,9 @@ class ReverseProxyResource(Resource):
         # RFC 2616 tells us that we can omit the port if it's the default port,
         # but we have to provide it otherwise
         if self.port == 80:
-            host = self.host
+            request.received_headers['host'] = self.host
         else:
-            host = "%s:%d" % (self.host, self.port)
-        request.received_headers['host'] = host
+            request.received_headers['host'] = "%s:%d" % (self.host, self.port)
         request.content.seek(0, 0)
         qs = urlparse.urlparse(request.uri)[4]
         if qs:
