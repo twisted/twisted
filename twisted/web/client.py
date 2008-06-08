@@ -190,6 +190,12 @@ class HTTPClientFactory(protocol.ClientFactory):
     @type response_headers: dict
     @ivar response_headers: The headers that were specified in the
           response from the server.
+
+    @type method: str
+    @ivar method: The HTTP method to use in the request.  This should be one of
+        OPTIONS, GET, HEAD, POST, PUT, DELETE, TRACE, or CONNECT (case
+        matters).  Other values may be specified if the server being contacted
+        supports them.
     """
 
     protocol = HTTPPageGetter
