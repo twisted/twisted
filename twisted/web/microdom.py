@@ -1,11 +1,9 @@
 # -*- test-case-name: twisted.web.test.test_xml -*-
-#
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
-
-"""Micro Document Object Model: a partial DOM implementation with SUX.
+"""
+Micro Document Object Model: a partial DOM implementation with SUX.
 
 This is an implementation of what we consider to be the useful subset of the
 DOM.  The chief advantage of this library is that, not being burdened with
@@ -20,30 +18,46 @@ sample of XML.
 Microdom mainly focuses on working with HTML and XHTML.
 """
 
-from __future__ import nested_scopes
-
 # System Imports
 import re
 from cStringIO import StringIO
-
-# Twisted Imports
-from twisted.web.sux import XMLParser, ParseError
-from twisted.python.util import InsensitiveDict
 
 # create NodeList class
 from types import ListType as NodeList
 from types import StringTypes, UnicodeType
 
+# Twisted Imports
+from twisted.web.sux import XMLParser, ParseError
+from twisted.python.util import InsensitiveDict
+
+
 def getElementsByTagName(iNode, name):
+    """
+    Return a list of all child elements of C{iNode} with a name matching
+    C{name}.
+
+    Note that this implementation does not conform to the DOM Level 1 Core
+    specification because it may return C{iNode}.
+
+    @param iNode: An element at which to begin searching.  If C{iNode} has a
+        name matching C{name}, it will be included in the result.
+
+    @param name: A C{str} giving the name of the elements to return.
+
+    @return: A C{list} of direct or indirect child elements of C{iNode} with
+        the name C{name}.  This may include C{iNode}.
+    """
     matches = []
     matches_append = matches.append # faster lookup. don't do this at home
-    slice=[iNode]
+    slice = [iNode]
     while len(slice)>0:
         c = slice.pop(0)
         if c.nodeName == name:
             matches_append(c)
         slice[:0] = c.childNodes
     return matches
+
+
 
 def getElementsByTagNameNoCase(iNode, name):
     name = name.lower()
