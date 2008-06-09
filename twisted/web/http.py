@@ -1,8 +1,6 @@
 # -*- test-case-name: twisted.web.test.test_http -*-
-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 HyperText Transfer Protocol implementation.
@@ -41,6 +39,7 @@ try: # try importing the fast, C version
 except ImportError:
     from urllib import unquote
 
+from twisted.web.http_headers import _DictHeaders, Headers
 
 protocol_version = "HTTP/1.1"
 
@@ -466,9 +465,23 @@ class Request:
     @type args: A mapping of strings (the argument names) to lists of values.
                 i.e., ?foo=bar&foo=baz&quux=spam results in
                 {'foo': ['bar', 'baz'], 'quux': ['spam']}.
-    @ivar received_headers: All received headers
-    """
 
+    @type requestHeaders: L{http_headers.Headers}
+    @ivar requestHeaders: All received HTTP request headers.
+
+    @ivar received_headers: Backwards-compatibility access to
+        C{requestHeaders}.  Use C{requestHeaders} instead.  C{received_headers}
+        behaves mostly like a C{dict} and does not provide access to all header
+        values.
+
+    @type responseHeaders: L{http_headers.Headers}
+    @ivar responseHeaders: All HTTP response headers to be sent.
+
+    @ivar headers: Backwards-compatibility access to C{responseHeaders}.  Use
+        C{responseHeaders} instead.  C{headers} behaves mostly like a C{dict}
+        and does not provide access to all header values nor does it allow
+        multiple values for one header to be set.
+    """
     implements(interfaces.IConsumer)
 
     producer = None
@@ -493,15 +506,40 @@ class Request:
         """
         self.channel = channel
         self.queued = queued
-        self.received_headers = {}
+        self.requestHeaders = Headers()
         self.received_cookies = {}
-        self.headers = {} # outgoing headers
+        self.responseHeaders = Headers()
         self.cookies = [] # outgoing cookies
 
         if queued:
             self.transport = StringTransport()
         else:
             self.transport = self.channel.transport
+
+
+    def __setattr__(self, name, value):
+        """
+        Support assignment of C{dict} instances to C{received_headers} for
+        backwards-compatibility.
+        """
+        if name == 'received_headers':
+            # A property would be nice, but Request is classic.
+            self.requestHeaders = headers = Headers()
+            for k, v in value.iteritems():
+                headers.setRawHeaders(k, [v])
+        elif name == 'requestHeaders':
+            self.__dict__[name] = value
+            self.__dict__['received_headers'] = _DictHeaders(value)
+        elif name == 'headers':
+            self.responseHeaders = headers = Headers()
+            for k, v in value.iteritems():
+                headers.setRawHeaders(k, [v])
+        elif name == 'responseHeaders':
+            self.__dict__[name] = value
+            self.__dict__['headers'] = _DictHeaders(value)
+        else:
+            self.__dict__[name] = value
+
 
     def _cleanup(self):
         """Called when have finished responding and are no longer queued."""
@@ -555,19 +593,28 @@ class Request:
         else:
             self.content = tempfile.TemporaryFile()
 
-    def parseCookies(self):
-        """Parse cookie headers.
 
-        This method is not intended for users."""
-        cookietxt = self.getHeader("cookie")
-        if cookietxt:
-            for cook in cookietxt.split(';'):
-                cook = cook.lstrip()
-                try:
-                    k, v = cook.split('=', 1)
-                    self.received_cookies[k] = v
-                except ValueError:
-                    pass
+    def parseCookies(self):
+        """
+        Parse cookie headers.
+
+        This method is not intended for users.
+        """
+        cookieheaders = self.requestHeaders.getRawHeaders("cookie")
+
+        if cookieheaders is None:
+            return
+
+        for cookietxt in cookieheaders:
+            if cookietxt:
+                for cook in cookietxt.split(';'):
+                    cook = cook.lstrip()
+                    try:
+                        k, v = cook.split('=', 1)
+                        self.received_cookies[k] = v
+                    except ValueError:
+                        pass
+
 
     def handleContentChunk(self, data):
         """Write a chunk of data.
@@ -576,10 +623,21 @@ class Request:
         """
         self.content.write(data)
 
+
     def requestReceived(self, command, path, version):
-        """Called by channel when all data has been received.
+        """
+        Called by channel when all data has been received.
 
         This method is not intended for users.
+
+        @type command: C{str}
+        @param command: The HTTP verb of this request.
+
+        @type path: C{str}
+        @param path: The URI of this request.
+
+        @type version: C{str}
+        @param version: The HTTP version of this request.
         """
         self.content.seek(0,0)
         self.args = {}
@@ -602,7 +660,10 @@ class Request:
 
         # Argument processing
         args = self.args
-        ctype = self.getHeader('content-type')
+        ctype = self.requestHeaders.getRawHeaders('content-type')
+        if ctype is not None:
+            ctype = ctype[0]
+
         if self.method == "POST" and ctype:
             mfd = 'multipart/form-data'
             key, pdict = cgi.parse_header(ctype)
@@ -624,6 +685,7 @@ class Request:
                     raise
 
         self.process()
+
 
     def __repr__(self):
         return '<%s %s %s>'% (self.method, self.uri, self.clientproto)
@@ -665,16 +727,27 @@ class Request:
 
     # The following is the public interface that people should be
     # writing to.
-
     def getHeader(self, key):
-        """Get a header that was sent from the network.
         """
-        return self.received_headers.get(key.lower())
+        Get an HTTP request header.
+
+        @type key: C{str}
+        @param key: The name of the header to get the value of.
+
+        @rtype: C{str} or C{NoneType}
+        @return: The value of the specified header, or C{None} if that header
+            was not present in the request.
+        """
+        value = self.requestHeaders.getRawHeaders(key)
+        if value is not None:
+            return value[-1]
+
 
     def getCookie(self, key):
         """Get a cookie that was sent from the network.
         """
         return self.received_cookies.get(key)
+
 
     def finish(self):
         """We are finished writing data."""
@@ -702,6 +775,9 @@ class Request:
         """
         Write some data as a result of an HTTP request.  The first
         time this is called, it writes out response data.
+
+        @type data: C{str}
+        @param data: Some bytes to be sent as part of the response body.
         """
         if not self.startedWriting:
             self.startedWriting = 1
@@ -713,23 +789,30 @@ class Request:
             # chunked mode, so that we can support pipelining in
             # persistent connections.
             if ((version == "HTTP/1.1") and
-                (self.headers.get('content-length', None) is None) and
+                (self.responseHeaders.getRawHeaders('content-length') is None) and
                 self.method != "HEAD" and self.code not in NO_BODY_CODES):
-                l.append("%s: %s\r\n" % ('Transfer-encoding', 'chunked'))
+                l.append("%s: %s\r\n" % ('Transfer-Encoding', 'chunked'))
                 self.chunked = 1
+
             if self.lastModified is not None:
-                if self.headers.has_key('last-modified'):
+                if self.responseHeaders.hasHeader('last-modified'):
                     log.msg("Warning: last-modified specified both in"
                             " header list and lastModified attribute.")
                 else:
-                    self.setHeader('last-modified',
-                                   datetimeToString(self.lastModified))
+                    self.responseHeaders.setRawHeaders(
+                        'last-modified',
+                        [datetimeToString(self.lastModified)])
+
             if self.etag is not None:
-                self.setHeader('ETag', self.etag)
-            for name, value in self.headers.items():
-                l.append("%s: %s\r\n" % (name.capitalize(), value))
+                self.responseHeaders.setRawHeaders('ETag', [self.etag])
+
+            for name, values in self.responseHeaders.getAllRawHeaders():
+                for value in values:
+                    l.append("%s: %s\r\n" % (name, value))
+
             for cookie in self.cookies:
                 l.append('%s: %s\r\n' % ("Set-Cookie", cookie))
+
             l.append("\r\n")
 
             self.transport.writeSequence(l)
@@ -782,10 +865,20 @@ class Request:
         else:
             self.code_message = RESPONSES.get(code, "Unknown Status")
 
-    def setHeader(self, k, v):
-        """Set an outgoing HTTP header.
+
+    def setHeader(self, name, value):
         """
-        self.headers[k.lower()] = v
+        Set an HTTP response header.  Overrides any previously set values for
+        this header.
+
+        @type name: C{str}
+        @param name: The name of the header for which to set the value.
+
+        @type value: C{str}
+        @param value: The value to set for the named header.
+        """
+        self.responseHeaders.setRawHeaders(name, [value])
+
 
     def redirect(self, url):
         """Utility function that does a redirect.
@@ -858,9 +951,20 @@ class Request:
                 return CACHED
         return None
 
+
     def getAllHeaders(self):
-        """Return dictionary of all headers the request received."""
-        return self.received_headers
+        """
+        Return dictionary mapping the names of all received headers to the last
+        value received for each.
+
+        Since this method does not return all header information,
+        C{self.requestHeaders.getAllRawHeaders()} may be preferred.
+        """
+        headers = {}
+        for k, v in self.requestHeaders.getAllRawHeaders():
+            headers[k.lower()] = v[-1]
+        return headers
+
 
     def getRequestHostname(self):
         """
@@ -886,7 +990,8 @@ class Request:
         return self.host
 
     def setHost(self, host, port, ssl=0):
-        """Change the host and port the request thinks it's using.
+        """
+        Change the host and port the request thinks it's using.
 
         This method is useful for working with reverse HTTP proxies (e.g.
         both Squid and Apache's mod_proxy can do this), when the address
@@ -899,11 +1004,17 @@ class Request:
 
            request.setHost('www.example.com', 443, ssl=1)
 
-        This method is experimental.
+        @type host: C{str}
+        @param host: The value to which to change the host header.
+
+        @type ssl: C{bool}
+        @param ssl: A flag which, if C{True}, indicates that the request is
+            considered secure (if C{True}, L{isSecure} will return C{True}).
         """
         self._forceSSL = ssl
-        self.received_headers["host"] = host
+        self.requestHeaders.setRawHeaders("host", [host])
         self.host = address.IPv4Address("TCP", host, port)
+
 
     def getClientIP(self):
         """
@@ -1020,6 +1131,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     requestFactory = Request
 
     _savedTimeOut = None
+    _receivedHeaderCount = 0
 
     def __init__(self):
         # the request queue
@@ -1075,18 +1187,33 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             self.__header = line
 
     def headerReceived(self, line):
-        """Do pre-processing (for content-length) and store this header away.
+        """
+        Do pre-processing (for content-length) and store this header away.
+        Enforce the per-request header limit.
+
+        @type line: C{str}
+        @param line: A line from the header section of a request, excluding the
+            line delimiter.
         """
         header, data = line.split(':', 1)
         header = header.lower()
         data = data.strip()
         if header == 'content-length':
             self.length = int(data)
-        reqHeaders = self.requests[-1].received_headers
-        reqHeaders[header] = data
-        if len(reqHeaders) > self.maxHeaders:
+        reqHeaders = self.requests[-1].requestHeaders
+
+        values = reqHeaders.getRawHeaders(header)
+        if values is not None:
+            values.append(data)
+        else:
+            reqHeaders.setRawHeaders(header, [data])
+
+        self._receivedHeaderCount += 1
+
+        if self._receivedHeaderCount > self.maxHeaders:
             self.transport.write("HTTP/1.1 400 Bad Request\r\n\r\n")
             self.transport.loseConnection()
+
 
     def allContentReceived(self):
         command = self._command
@@ -1096,6 +1223,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         # reset ALL state variables, so we don't interfere with next request
         self.length = 0
         self._header = ''
+        self._receivedHeaderCount = 0
         self.__first_line = 1
         del self._command, self._path, self._version
 
@@ -1123,11 +1251,27 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         self.persistent = self.checkPersistence(req, self._version)
         req.gotLength(self.length)
 
+
     def checkPersistence(self, request, version):
-        """Check if the channel should close or not."""
-        connection = request.getHeader('connection')
+        """
+        Check if the channel should close or not.
+
+        @param request: The request most recently received over this channel
+            against which checks will be made to determine if this connection
+            can remain open after a matching response is returned.
+
+        @type version: C{str}
+        @param version: The version of the request.
+
+        @rtype: C{bool}
+        @return: A flag which, if C{True}, indicates that this connection may
+            remain open to receive another request; if C{False}, the connection
+            must be closed in order to indicate the completion of the response
+            to C{request}.
+        """
+        connection = request.requestHeaders.getRawHeaders('connection')
         if connection:
-            tokens = map(str.lower, connection.split(' '))
+            tokens = map(str.lower, connection[0].split(' '))
         else:
             tokens = []
 
@@ -1146,12 +1290,13 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         #        return 0
         if version == "HTTP/1.1":
             if 'close' in tokens:
-                request.setHeader('connection', 'close')
-                return 0
+                request.responseHeaders.setRawHeaders('connection', ['close'])
+                return False
             else:
-                return 1
+                return True
         else:
-            return 0
+            return False
+
 
     def requestDone(self, request):
         """Called by first request in queue when it is done."""
