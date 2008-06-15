@@ -21,8 +21,8 @@ class Math(amp.AMP):
     Sum.responder(sum)
 
     def divide(self, numerator, denominator):
-        result = numerator / denominator
-        print 'Divided: %d / %d = %d' % (numerator, denominator, total)
+        result = float(numerator) / denominator
+        print 'Divided: %d / %d = %f' % (numerator, denominator, result)
         return {'result': result}
     Divide.responder(divide)
 
