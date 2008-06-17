@@ -321,7 +321,7 @@ class _ThreePhaseEvent(object):
         """
         Just try to remove the trigger.
 
-        @see removeTrigger
+        @see: removeTrigger
         """
         try:
             phase, callable, args, kwargs = handle
@@ -339,7 +339,7 @@ class _ThreePhaseEvent(object):
         warning that in the future an exception will be raised when removing an
         already-executed trigger.
 
-        @see removeTrigger
+        @see: removeTrigger
         """
         phase, callable, args, kwargs = handle
         if phase != 'before':

@@ -208,7 +208,7 @@ class _ModuleIteratorHelper:
         @param modname: a str naming a module to be loaded.  For entries, this
         is a top-level, undotted package name, and for packages it is the name
         of the module without the package prefix.  For example, if you have a
-        PythonModule representing the 'twisted' package, you could use:
+        PythonModule representing the 'twisted' package, you could use::
 
             twistedPackageObj['python']['modules']
 

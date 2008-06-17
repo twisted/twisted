@@ -65,7 +65,7 @@ def _findShebang(filename):
 
     This shebang line support was added in support of the CGI tests;
     appropriately enough, I determined that shebang lines are culturally
-    accepted in the Windows world through this page:
+    accepted in the Windows world through this page::
 
         http://www.cgi101.com/learn/connect/winxp.html
 

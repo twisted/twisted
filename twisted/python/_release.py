@@ -390,7 +390,7 @@ class BookBuilder(LoreBuilderMixin):
     expects all of its input to be Lore XHTML format, so L{ManBuilder}
     should be invoked first if the man pages are to be included in the
     result (this is determined by the book LaTeX definition file).
-    Therefore, a sample usage of BookBuilder may look something like this:
+    Therefore, a sample usage of BookBuilder may look something like this::
 
         man = ManBuilder()
         man.build(FilePath("doc/core/man"))
@@ -405,10 +405,10 @@ class BookBuilder(LoreBuilderMixin):
         """
         Execute a command in a child process and return the output.
 
-        @type command C{str}
+        @type command: C{str}
         @param command: The shell command to run.
 
-        @raise L{RuntimeError}: If the child process exits with an error.
+        @raise RuntimeError: If the child process exits with an error.
         """
         process = Popen4(command)
         stdout = process.fromchild.read()
@@ -682,10 +682,10 @@ class DistributionBuilder(object):
         This is very similar to L{buildSubProject}, but core tarballs and the
         input are laid out slightly differently.
 
-        - scripts are in the top level of the C{bin} directory.
-        - code is included directly from the C{twisted} directory, excluding
-          subprojects.
-        - all plugins except the subproject plugins are included.
+         - scripts are in the top level of the C{bin} directory.
+         - code is included directly from the C{twisted} directory, excluding
+           subprojects.
+         - all plugins except the subproject plugins are included.
 
         @type version: C{str}
         @param version: The version of Twisted to build.

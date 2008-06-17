@@ -211,14 +211,14 @@ class HTTPParser(object):
         vs 'end-to-end' headers in RFC2616 S13.5.1, with the following
         exceptions:
 
-        * proxy-authenticate and proxy-authorization are not treated as
-          connection headers.
+         - proxy-authenticate and proxy-authorization are not treated as
+           connection headers.
 
-        * content-length is, as it is intimiately related with low-level HTTP
-          parsing, and is made available to user-level code via the stream
-          length, rather than a header value. (except for HEAD responses, in
-          which case it is NOT used by low-level HTTP parsing, and IS kept in
-          the normal headers.
+         - content-length is, as it is intimately related with low-level HTTP
+           parsing, and is made available to user-level code via the stream
+           length, rather than a header value. (except for HEAD responses, in
+           which case it is NOT used by low-level HTTP parsing, and IS kept in
+           the normal headers.
         """
 
         def move(name):

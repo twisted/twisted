@@ -658,7 +658,7 @@ class APIBuilderTestCase(TestCase):
         projectURL = "scheme:project"
         sourceURL = "scheme:source"
         docstring = "text in docstring"
-        badDocstring = "should not appear in output"
+        privateDocstring = "should also appear in output"
 
         inputPath = FilePath(self.mktemp()).child(packageName)
         inputPath.makedirs()
@@ -666,7 +666,7 @@ class APIBuilderTestCase(TestCase):
             "def foo():\n"
             "    '%s'\n"
             "def _bar():\n"
-            "    '%s'" % (docstring, badDocstring))
+            "    '%s'" % (docstring, privateDocstring))
 
         outputPath = FilePath(self.mktemp())
         outputPath.makedirs()
@@ -700,7 +700,7 @@ class APIBuilderTestCase(TestCase):
             '<a href="%s/%s/__init__.py#L1" class="functionSourceLink">' % (
                 sourceURL, packageName),
             quuxPath.getContent())
-        self.assertNotIn(badDocstring, quuxPath.getContent())
+        self.assertIn(privateDocstring, quuxPath.getContent())
 
         self.assertEqual(stdout.getvalue(), '')
 
