@@ -1,22 +1,14 @@
 # -*- test-case-name: twisted.web.test.test_web -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-"""I deal with static resources.
+"""
+Static resources for L{twisted.web}.
 """
 
-from __future__ import nested_scopes
-
 # System Imports
-import os, stat, string
-import cStringIO
-import traceback
+import os, string
 import warnings
-import types
-StringIO = cStringIO
-del cStringIO
-import urllib
 
 # Sibling Imports
 from twisted.web import server
@@ -26,8 +18,8 @@ from twisted.web.util import redirectTo
 
 # Twisted Imports
 from twisted.web import http
-from twisted.python import threadable, log, components, failure, filepath
-from twisted.internet import abstract, interfaces, defer
+from twisted.python import components, filepath
+from twisted.internet import abstract
 from twisted.spread import pb
 from twisted.persisted import styles
 from twisted.python.util import InsensitiveDict
@@ -62,7 +54,7 @@ def addSlash(request):
     qindex = string.find(request.uri, '?')
     if qindex != -1:
         qs = request.uri[qindex:]
-        
+
     return "http%s://%s%s/%s" % (
         request.isSecure() and 's' or '',
         request.getHeader("host"),
@@ -136,7 +128,7 @@ def loadMimeTypes(mimetype_locations=['/etc/mime.types']):
             more = mimetypes.read_mime_types(location)
             if more is not None:
                 contentTypes.update(more)
-            
+
     return contentTypes
 
 def getTypeAndEncoding(filename, types, encodings, defaultType):
@@ -251,7 +243,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         """See twisted.web.Resource.getChild.
         """
         self.restat()
-        
+
         if not self.isdir():
             return self.childNotFound
 
@@ -328,7 +320,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
 # Commented out because it's totally broken. --jknight 11/29/04
 #         try:
 #             range = request.getHeader('range')
-# 
+#
 #             if range is not None:
 #                 # This is a request for partial data...
 #                 bytesrange = string.split(range, '=')
@@ -348,7 +340,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
 #                 #content-length should be the actual size of the stuff we're
 #                 #sending, not the full size of the on-server entity.
 #                 fsize = end - int(start)
-# 
+#
 #             request.setHeader('content-length', str(fsize))
 #         except:
 #             traceback.print_exc(file=log.logfile)
@@ -445,20 +437,18 @@ class FileTransfer(pb.Viewable):
         self.stopProducing()
 
 
-    synchronized = ['resumeProducing', 'stopProducing']
-
-threadable.synchronize(FileTransfer)
-
-"""I contain AsIsProcessor, which serves files 'As Is'
-   Inspired by Apache's mod_asis
-"""
 
 class ASISProcessor(resource.Resource):
+    """
+    Serve files exactly as responses without generating a status-line or any
+    headers.  Inspired by Apache's mod_asis.
+    """
 
     def __init__(self, path, registry=None):
         resource.Resource.__init__(self)
         self.path = path
         self.registry = registry or Registry()
+
 
     def render(self, request):
         request.startedWriting = 1
