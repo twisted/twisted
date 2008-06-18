@@ -100,13 +100,13 @@ class RandomFactory(object):
         Return a number of secure random bytes.
 
         @param nbytes: number of bytes to generate.
-        @type nbytes: C{int}.
-        @param fallback: whether the function should fallback on non secure
-            random or not. Default to C{false}.
+        @type nbytes: C{int}
+        @param fallback: Whether the function should fallback on non-secure
+            random or not.  Default to C{False}.
         @type fallback: C{bool}
 
         @return: a string of random bytes.
-        @rtype: C{str}.
+        @rtype: C{str}
         """
         for src in ("_osUrandom", "_fileUrandom", "_cryptoRandom"):
             try:
@@ -151,10 +151,10 @@ class RandomFactory(object):
         Return a number of non secure random bytes.
 
         @param nbytes: number of bytes to generate.
-        @type nbytes: C{int}.
+        @type nbytes: C{int}
 
         @return: a string of random bytes.
-        @rtype: C{str}.
+        @rtype: C{str}
         """
         for src in ("_randBits", "_randRange"):
             try:

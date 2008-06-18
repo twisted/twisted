@@ -29,6 +29,17 @@ class HeadersTests(TestCase):
         self.assertEqual(h.getRawHeaders("test"), rawValue)
 
 
+    def test_addRawHeader(self):
+        """
+        L{Headers.addRawHeader} adds a new value for a given header.
+        """
+        h = Headers()
+        h.addRawHeader("test", "lemur")
+        self.assertEqual(h.getRawHeaders("test"), ["lemur"])
+        h.addRawHeader("test", "panda")
+        self.assertEqual(h.getRawHeaders("test"), ["lemur", "panda"])
+
+
     def test_getRawHeadersNoDefault(self):
         """
         L{Headers.getRawHeaders} returns C{None} if the header is not found and

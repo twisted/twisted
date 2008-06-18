@@ -1,22 +1,31 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from twisted.trial import unittest
+"""
+Tests for various parts of L{twisted.web}.
+"""
+
 from cStringIO import StringIO
 
-from twisted.web import server, resource, util
-from twisted.internet import defer, interfaces, error, task
-from twisted.web import http
-from twisted.python import log
-from twisted.internet.address import IPv4Address
 from zope.interface import implements
 
-class DummyRequest:
-    uri='http://dummy/'
-    method = 'GET'
+from twisted.trial import unittest
+from twisted.internet.address import IPv4Address
+from twisted.internet.defer import Deferred
+from twisted.web import server, resource, util
+from twisted.internet import defer, interfaces, error, task
+from twisted.web import http, http_headers
+from twisted.python import log
 
-    def getHeader(self, h):
-        return None
+
+class DummyRequest:
+    """
+    @ivar _finishedDeferreds: C{None} or a C{list} of L{Deferreds} which will
+        be called back with C{None} when C{finish} is called or which will be
+        errbacked if C{processingFailed} is called.
+    """
+    uri = 'http://dummy/'
+    method = 'GET'
 
     def registerProducer(self, prod,s):
         self.go = 1
@@ -36,6 +45,20 @@ class DummyRequest:
         self.protoSession = session or server.Session(0, self)
         self.args = {}
         self.outgoingHeaders = {}
+        self.responseHeaders = http_headers.Headers()
+        self.responseCode = None
+        self.headers = {}
+        self.client = None
+
+        self._finishedDeferreds = []
+
+
+    def getHeader(self, h):
+        """
+        Return the value of the given request header.
+        """
+        return self.headers.get(h.lower(), None)
+
 
     def setHeader(self, name, value):
         """TODO: make this assert on write() if the header is content-length
@@ -48,24 +71,80 @@ class DummyRequest:
         assert not self.written, "Session cannot be requested after data has been written."
         self.session = self.protoSession
         return self.session
+
     def write(self, data):
         self.written.append(data)
+
+    def notifyFinish(self):
+        """
+        Return a L{Deferred} which is called back with C{None} when the request
+        is finished.  This will probably only work if you haven't called
+        C{finish} yet.
+        """
+        finished = Deferred()
+        self._finishedDeferreds.append(finished)
+        return finished
+
+
     def finish(self):
+        """
+        Record that the request is finished and callback and L{Deferred}s
+        waiting for notification of this.
+        """
         self.finished = self.finished + 1
+        if self._finishedDeferreds is not None:
+            observers = self._finishedDeferreds
+            self._finishedDeferreds = None
+            for obs in observers:
+                obs.callback(None)
+
+
+    def processingFailed(self, reason):
+        """
+        Errback and L{Deferreds} waiting for finish notification.
+        """
+        if self._finishedDeferreds is not None:
+            observers = self._finishedDeferreds
+            self._finishedDeferreds = None
+            for obs in observers:
+                obs.errback(reason)
+
+
     def addArg(self, name, value):
         self.args[name] = [value]
+
+
     def setResponseCode(self, code):
+        """
+        Record the given response code.
+        """
         assert not self.written, "Response code cannot be set after data has been written: %s." % "@@@@".join(self.written)
+        self.responseCode = code
+
+
     def setLastModified(self, when):
         assert not self.written, "Last-Modified cannot be set after data has been written: %s." % "@@@@".join(self.written)
+
+
     def setETag(self, tag):
         assert not self.written, "ETag cannot be set after data has been written: %s." % "@@@@".join(self.written)
+
+
+    def getClientIP(self):
+        """
+        Return the IPv4 address of the client which made this request, if there
+        is one, otherwise C{None}.
+        """
+        if isinstance(self.client, IPv4Address):
+            return self.client.host
+        return None
+
 
 class ResourceTestCase(unittest.TestCase):
     def testListEntities(self):
         r = resource.Resource()
         self.failUnlessEqual([], r.listEntities())
-        
+
 
 class SimpleResource(resource.Resource):
     def render(self, request):
@@ -75,13 +154,34 @@ class SimpleResource(resource.Resource):
         else:
             return "correct"
 
+
+class DummyChannel:
+    class TCP:
+        port = 80
+        def getPeer(self):
+            return IPv4Address("TCP", 'client.example.com', 12344)
+        def getHost(self):
+            return IPv4Address("TCP", 'example.com', self.port)
+    class SSL(TCP):
+        implements(interfaces.ISSLTransport)
+    transport = TCP()
+    site = server.Site(resource.Resource())
+
+
+
 class SiteTest(unittest.TestCase):
-    def testSimplestSite(self):
+    def test_simplestSite(self):
+        """
+        L{Site.getResourceFor} returns the C{""} child of the root resource it
+        is constructed with when processing a request for I{/}.
+        """
         sres1 = SimpleResource()
         sres2 = SimpleResource()
         sres1.putChild("",sres2)
         site = server.Site(sres1)
-        assert site.getResourceFor(DummyRequest([''])) is sres2, "Got the wrong resource."
+        self.assertIdentical(
+            site.getResourceFor(DummyRequest([''])),
+            sres2, "Got the wrong resource.")
 
 
 
@@ -311,18 +411,6 @@ resource = Data('dynamic world','text/plain')
         child_without_ext = f.getChild('AreBelong', dreq)
         self.assertNotEquals(child_without_ext, f.childNotFound)
 
-class DummyChannel:
-    class TCP:
-        port = 80
-        def getPeer(self):
-            return IPv4Address("TCP", 'client.example.com', 12344)
-        def getHost(self):
-            return IPv4Address("TCP", 'example.com', self.port)
-    class SSL(TCP):
-        implements(interfaces.ISSLTransport)
-    transport = TCP()
-    site = server.Site(resource.Resource())
-
 class TestRequest(unittest.TestCase):
 
     def testChildLink(self):
@@ -531,13 +619,14 @@ class SDTest(unittest.TestCase):
 class DummyRequestForLogTest(DummyRequest):
     uri='/dummy' # parent class uri has "http://", which doesn't really happen
     code = 123
-    client = '1.2.3.4'
+    
     clientproto = 'HTTP/1.0'
     sentLength = None
 
     def __init__(self, *a, **kw):
         DummyRequest.__init__(self, *a, **kw)
         self.headers = {}
+        self.client = '1.2.3.4'
 
     def getHeader(self, h):
         return self.headers.get(h.lower(), None)

@@ -191,6 +191,23 @@ class Headers(object):
         self._rawHeaders[name.lower()] = values
 
 
+    def addRawHeader(self, name, value):
+        """
+        Add a new raw value for the given header.
+
+        @type name: C{str}
+        @param name: The name of the header for which to set the value.
+
+        @type value: C{str}
+        @param value: The value to set for the named header.
+        """
+        values = self.getRawHeaders(name)
+        if values is None:
+            self.setRawHeaders(name, [value])
+        else:
+            values.append(value)
+
+
     def getRawHeaders(self, name, default=None):
         """
         Returns a list of headers matching the given name as the raw string

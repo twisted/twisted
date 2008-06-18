@@ -888,6 +888,7 @@ class Request:
         self.setResponseCode(FOUND)
         self.setHeader("location", url)
 
+
     def setLastModified(self, when):
         """Set the X{Last-Modified} time for the response to this request.
 
