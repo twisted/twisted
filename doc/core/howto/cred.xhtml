@@ -341,7 +341,7 @@ href="tap.xhtml">Writing a twistd plugin</a> document.</p>
 <p> To build a plugin for cred, you should first define an <code
 class="python">authType</code>, a short one-word string that defines
 your plugin to the command-line. Once you have this, the convention is
-to create a file named <code>cred_(authtype).py</code> in the
+to create a file named <code>myapp_plugins.py</code> in the
 <code class="API">twisted.plugins</code> module path. </p>
 
 <p> Below is an example file structure for an application that defines
@@ -360,11 +360,9 @@ such a plugin: </p>
   </li>
   <li>twisted/
     <ul>
-    <li>__init__.py</li>
     <li>plugins/
       <ul>
-      <li>__init__.py</li>
-      <li>cred_special.py</li>
+      <li>myapp_plugins.py</li>
       </ul>
     </li>
     </ul>
@@ -392,9 +390,10 @@ checker instance.
 </p>
 
 <pre class="python">
+from zope.interface import implements
+
 from twisted import plugin
 from twisted.cred import checkers
-from zope.interface import implements
 from myapp.cred import SpecialChecker
 
 class SpecialCheckerFactory(object):
