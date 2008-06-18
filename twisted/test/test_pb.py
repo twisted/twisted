@@ -37,8 +37,12 @@ class Dummy(pb.Viewable):
 
 
 class DummyPerspective(pb.Avatar):
+    """
+    An L{IPerspective} avatar which will be used in some tests.
+    """
     def perspective_getDummyViewPoint(self):
         return Dummy()
+
 
 
 class DummyRealm(object):
@@ -47,7 +51,7 @@ class DummyRealm(object):
     def requestAvatar(self, avatarId, mind, *interfaces):
         for iface in interfaces:
             if iface is pb.IPerspective:
-                return iface, DummyPerspective(), lambda: None
+                return iface, DummyPerspective(avatarId), lambda: None
 
 
 class IOPump:
@@ -1025,32 +1029,6 @@ class LocalRemoteTest(util.LocalAsRemote):
 
 
 
-class TestRealm(object):
-    """
-    A realm which repeatedly gives out a single instance of L{MyPerspective}
-    for non-anonymous logins and which gives out a new instance of L{Echoer}
-    for each anonymous login.
-    """
-
-    def __init__(self):
-        self.p = MyPerspective()
-
-    def requestAvatar(self, avatarId, mind, interface):
-        """
-        Verify that the mind and interface supplied have the expected values
-        (this should really be done somewhere else, like inside a test method)
-        and return an avatar appropriate for the given identifier.
-        """
-        assert interface == pb.IPerspective
-        assert mind == "BRAINS!"
-        if avatarId is checkers.ANONYMOUS:
-            return pb.IPerspective, Echoer(), lambda: None
-        else:
-            self.p.loggedIn = True
-            return pb.IPerspective, self.p, self.p.logout
-
-
-
 class MyPerspective(pb.Avatar):
     """
     @ivar loggedIn: set to C{True} when the avatar is logged in.
@@ -1062,6 +1040,16 @@ class MyPerspective(pb.Avatar):
     implements(pb.IPerspective)
 
     loggedIn = loggedOut = False
+
+    def __init__(self, avatarId):
+        self.avatarId = avatarId
+
+
+    def perspective_getAvatarId(self):
+        """
+        Return the avatar identifier which was used to access this avatar.
+        """
+        return self.avatarId
 
 
     def perspective_getViewPoint(self):
@@ -1079,6 +1067,41 @@ class MyPerspective(pb.Avatar):
 
     def logout(self):
         self.loggedOut = True
+
+
+
+class TestRealm(object):
+    """
+    A realm which repeatedly gives out a single instance of L{MyPerspective}
+    for non-anonymous logins and which gives out a new instance of L{Echoer}
+    for each anonymous login.
+
+    @ivar lastPerspective: The L{MyPerspective} most recently created and
+        returned from C{requestAvatar}.
+
+    @ivar perspectiveFactory: A one-argument callable which will be used to
+        create avatars to be returned from C{requestAvatar}.
+    """
+    perspectiveFactory = MyPerspective
+
+    lastPerspective = None
+
+    def requestAvatar(self, avatarId, mind, interface):
+        """
+        Verify that the mind and interface supplied have the expected values
+        (this should really be done somewhere else, like inside a test method)
+        and return an avatar appropriate for the given identifier.
+        """
+        assert interface == pb.IPerspective
+        assert mind == "BRAINS!"
+        if avatarId is checkers.ANONYMOUS:
+            return pb.IPerspective, Echoer(), lambda: None
+        else:
+            self.lastPerspective = self.perspectiveFactory(avatarId)
+            self.lastPerspective.loggedIn = True
+            return (
+                pb.IPerspective, self.lastPerspective,
+                self.lastPerspective.logout)
 
 
 
@@ -1268,16 +1291,47 @@ class NewCredTestCase(unittest.TestCase):
 
         d = factory.login(creds, mind)
         def cbLogin(perspective):
-            self.assertTrue(self.realm.p.loggedIn)
+            self.assertTrue(self.realm.lastPerspective.loggedIn)
             self.assertIsInstance(perspective, pb.RemoteReference)
             return self._disconnect(None, factory)
         d.addCallback(cbLogin)
 
         def cbLogout(ignored):
-            self.assertTrue(self.realm.p.loggedOut)
+            self.assertTrue(self.realm.lastPerspective.loggedOut)
         d.addCallback(cbLogout)
 
         connector = reactor.connectTCP("127.0.0.1", self.portno, factory)
+        self.addCleanup(connector.disconnect)
+        return d
+
+
+    def test_concurrentLogin(self):
+        """
+        Two different correct login attempts can be made on the same root
+        object at the same time and produce two different resulting avatars.
+        """
+        self.portal.registerChecker(
+            checkers.InMemoryUsernamePasswordDatabaseDontUse(
+                foo='bar', baz='quux'))
+        factory = pb.PBClientFactory()
+
+        firstLogin = factory.login(
+            credentials.UsernamePassword('foo', 'bar'), "BRAINS!")
+        secondLogin = factory.login(
+            credentials.UsernamePassword('baz', 'quux'), "BRAINS!")
+        d = gatherResults([firstLogin, secondLogin])
+        def cbLoggedIn((first, second)):
+            return gatherResults([
+                    first.callRemote('getAvatarId'),
+                    second.callRemote('getAvatarId')])
+        d.addCallback(cbLoggedIn)
+        def cbAvatarIds((first, second)):
+            self.assertEqual(first, 'foo')
+            self.assertEqual(second, 'baz')
+        d.addCallback(cbAvatarIds)
+        d.addCallback(self._disconnect, factory)
+
+        connector = reactor.connectTCP('127.0.0.1', self.portno, factory)
         self.addCleanup(connector.disconnect)
         return d
 
@@ -1437,6 +1491,9 @@ class NewCredTestCase(unittest.TestCase):
 class NonSubclassingPerspective:
     implements(pb.IPerspective)
 
+    def __init__(self, avatarId):
+        pass
+
     # IPerspective implementation
     def perspectiveMessageReceived(self, broker, message, args, kwargs):
         args = broker.unserialize(args, self)
@@ -1452,7 +1509,7 @@ class NonSubclassingPerspective:
 class NSPTestCase(unittest.TestCase):
     def setUp(self):
         self.realm = TestRealm()
-        self.realm.p = NonSubclassingPerspective()
+        self.realm.perspectiveFactory = NonSubclassingPerspective
         self.portal = portal.Portal(self.realm)
         self.checker = checkers.InMemoryUsernamePasswordDatabaseDontUse()
         self.checker.addUser("user", "pass")
