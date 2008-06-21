@@ -268,7 +268,10 @@ class ProcessTerminated(ConnectionLost):
 
 
 class ProcessExitedAlready(Exception):
-    """The process has already excited, and the operation requested can no longer be performed."""
+    """
+    The process has already exited and the operation requested can no longer
+    be performed.
+    """
 
 
 class NotConnectingError(RuntimeError):
