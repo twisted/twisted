@@ -338,3 +338,703 @@ class DNSProtocolTestCase(unittest.TestCase):
 
 
 
+class ReprTests(unittest.TestCase):
+    """
+    Tests for the C{__repr__} implementation of record classes.
+    """
+    def test_ns(self):
+        """
+        The repr of a L{dns.Record_NS} instance includes the name of the
+        nameserver and the TTL of the record.
+        """
+        self.assertEqual(
+            repr(dns.Record_NS('example.com', 4321)),
+            "<NS name=example.com ttl=4321>")
+
+
+    def test_md(self):
+        """
+        The repr of a L{dns.Record_MD} instance includes the name of the
+        mail destination and the TTL of the record.
+        """
+        self.assertEqual(
+            repr(dns.Record_MD('example.com', 4321)),
+            "<MD name=example.com ttl=4321>")
+
+
+    def test_mf(self):
+        """
+        The repr of a L{dns.Record_MF} instance includes the name of the
+        mail forwarder and the TTL of the record.
+        """
+        self.assertEqual(
+            repr(dns.Record_MF('example.com', 4321)),
+            "<MF name=example.com ttl=4321>")
+
+
+    def test_cname(self):
+        """
+        The repr of a L{dns.Record_CNAME} instance includes the name of the
+        mail forwarder and the TTL of the record.
+        """
+        self.assertEqual(
+            repr(dns.Record_CNAME('example.com', 4321)),
+            "<CNAME name=example.com ttl=4321>")
+
+
+    def test_mb(self):
+        """
+        The repr of a L{dns.Record_MB} instance includes the name of the
+        mailbox and the TTL of the record.
+        """
+        self.assertEqual(
+            repr(dns.Record_MB('example.com', 4321)),
+            "<MB name=example.com ttl=4321>")
+
+
+    def test_mg(self):
+        """
+        The repr of a L{dns.Record_MG} instance includes the name of the
+        mail group memeber and the TTL of the record.
+        """
+        self.assertEqual(
+            repr(dns.Record_MG('example.com', 4321)),
+            "<MG name=example.com ttl=4321>")
+
+
+    def test_mr(self):
+        """
+        The repr of a L{dns.Record_MR} instance includes the name of the
+        mail rename domain and the TTL of the record.
+        """
+        self.assertEqual(
+            repr(dns.Record_MR('example.com', 4321)),
+            "<MR name=example.com ttl=4321>")
+
+
+    def test_ptr(self):
+        """
+        The repr of a L{dns.Record_PTR} instance includes the name of the
+        pointer and the TTL of the record.
+        """
+        self.assertEqual(
+            repr(dns.Record_PTR('example.com', 4321)),
+            "<PTR name=example.com ttl=4321>")
+
+
+    def test_dname(self):
+        """
+        The repr of a L{dns.Record_DNAME} instance includes the name of the
+        non-terminal DNS name redirection and the TTL of the record.
+        """
+        self.assertEqual(
+            repr(dns.Record_DNAME('example.com', 4321)),
+            "<DNAME name=example.com ttl=4321>")
+
+
+    def test_dname(self):
+        """
+        The repr of a L{dns.Record_DNAME} instance includes the name of the
+        non-terminal DNS name redirection and the TTL of the record.
+        """
+        self.assertEqual(
+            repr(dns.Record_DNAME('example.com', 4321)),
+            "<DNAME name=example.com ttl=4321>")
+
+
+    def test_a(self):
+        """
+        The repr of a L{dns.Record_A} instance includes the dotted-quad
+        string representation of the address it is for and the TTL of the
+        record.
+        """
+        self.assertEqual(
+            repr(dns.Record_A('1.2.3.4', 567)),
+            '<A address=1.2.3.4 ttl=567>')
+
+
+    def test_soa(self):
+        """
+        The repr of a L{dns.Record_SOA} instance includes all of the
+        authority fields.
+        """
+        self.assertEqual(
+            repr(dns.Record_SOA(mname='mName', rname='rName', serial=123,
+                                refresh=456, retry=789, expire=10,
+                                minimum=11, ttl=12)),
+            "<SOA mname=mName rname=rName serial=123 refresh=456 "
+            "retry=789 expire=10 minimum=11 ttl=12>")
+
+
+    def test_null(self):
+        """
+        The repr of a L{dns.Record_NULL} instance includes the repr of its
+        payload and the TTL of the record.
+        """
+        self.assertEqual(
+            repr(dns.Record_NULL('abcd', 123)),
+            "<NULL payload='abcd' ttl=123>")
+
+
+    def test_wks(self):
+        """
+        The repr of a L{dns.Record_WKS} instance includes the dotted-quad
+        string representation of the address it is for, the IP protocol
+        number it is for, and the TTL of the record.
+        """
+        self.assertEqual(
+            repr(dns.Record_WKS('2.3.4.5', 7, ttl=8)),
+            "<WKS address=2.3.4.5 protocol=7 ttl=8>")
+
+
+    def test_aaaa(self):
+        """
+        The repr of a L{dns.Record_AAAA} instance includes the colon-separated
+        hex string representation of the address it is for and the TTL of the
+        record.
+        """
+        self.assertEqual(
+            repr(dns.Record_AAAA('8765::1234', ttl=10)),
+            "<AAAA address=8765::1234 ttl=10>")
+
+
+    def test_a6(self):
+        """
+        The repr of a L{dns.Record_A6} instance includes the colon-separated
+        hex string representation of the address it is for and the TTL of the
+        record.
+        """
+        self.assertEqual(
+            repr(dns.Record_A6(0, '1234::5678', 'foo.bar', ttl=10)),
+            "<A6 suffix=1234::5678 prefix=foo.bar ttl=10>")
+
+
+    def test_srv(self):
+        """
+        The repr of a L{dns.Record_SRV} instance includes the name and port of
+        the target and the priority, weight, and TTL of the record.
+        """
+        self.assertEqual(
+            repr(dns.Record_SRV(1, 2, 3, 'example.org', 4)),
+            "<SRV priority=1 weight=2 target=example.org port=3 ttl=4>")
+
+
+    def test_afsdb(self):
+        """
+        The repr of a L{dns.Record_AFSDB} instance includes the subtype,
+        hostname, and TTL of the record.
+        """
+        self.assertEqual(
+            repr(dns.Record_AFSDB(3, 'example.org', 5)),
+            "<AFSDB subtype=3 hostname=example.org ttl=5>")
+
+
+    def test_rp(self):
+        """
+        The repr of a L{dns.Record_RP} instance includes the mbox, txt, and TTL
+        fields of the record.
+        """
+        self.assertEqual(
+            repr(dns.Record_RP('alice.example.com', 'admin.example.com', 3)),
+            "<RP mbox=alice.example.com txt=admin.example.com ttl=3>")
+
+
+    def test_hinfo(self):
+        """
+        The repr of a L{dns.Record_HINFO} instance includes the cpu, os, and
+        TTL fields of the record.
+        """
+        self.assertEqual(
+            repr(dns.Record_HINFO('sparc', 'minix', 12)),
+            "<HINFO cpu='sparc' os='minix' ttl=12>")
+
+
+    def test_minfo(self):
+        """
+        The repr of a L{dns.Record_MINFO} instance includes the rmailbx,
+        emailbx, and TTL fields of the record.
+        """
+        self.assertEqual(
+            repr(dns.Record_MINFO('alice.example.com', 'bob.example.com', 15)),
+            "<MINFO responsibility=alice.example.com "
+            "errors=bob.example.com ttl=15>")
+
+
+    def test_mx(self):
+        """
+        The repr of a L{dns.Record_MX} instance includes the preference, name,
+        and TTL fields of the record.
+        """
+        self.assertEqual(
+            repr(dns.Record_MX(13, 'mx.example.com', 2)),
+            "<MX preference=13 name=mx.example.com ttl=2>")
+
+
+    def test_txt(self):
+        """
+        The repr of a L{dns.Record_TXT} instance includes the data and ttl
+        fields of the record.
+        """
+        self.assertEqual(
+            repr(dns.Record_TXT("foo", "bar", ttl=15)),
+            "<TXT data=['foo', 'bar'] ttl=15>")
+
+
+
+class _Equal(object):
+    """
+    A class the instances of which are equal to anything and everything.
+    """
+    def __eq__(self, other):
+        return True
+
+
+    def __ne__(self, other):
+        return False
+
+
+
+class _NotEqual(object):
+    """
+    A class the instances of which are equal to nothing.
+    """
+    def __eq__(self, other):
+        return False
+
+
+    def __ne__(self, other):
+        return True
+
+
+
+class EqualityTests(unittest.TestCase):
+    """
+    Tests for the equality and non-equality behavior of record classes.
+    """
+    def _equalityTest(self, firstValueOne, secondValueOne, valueTwo):
+        """
+        Assert that C{firstValueOne} is equal to C{secondValueOne} but not
+        equal to C{valueOne} and that it defines equality cooperatively with
+        other types it doesn't know about.
+        """
+        # This doesn't use assertEqual and assertNotEqual because the exact
+        # operator those functions use is not very well defined.  The point
+        # of these assertions is to check the results of the use of specific
+        # operators (precisely to ensure that using different permutations
+        # (eg "x == y" or "not (x != y)") which should yield the same results
+        # actually does yield the same result). -exarkun
+        self.assertTrue(firstValueOne == firstValueOne)
+        self.assertTrue(firstValueOne == secondValueOne)
+        self.assertFalse(firstValueOne == valueTwo)
+        self.assertFalse(firstValueOne != firstValueOne)
+        self.assertFalse(firstValueOne != secondValueOne)
+        self.assertTrue(firstValueOne != valueTwo)
+        self.assertTrue(firstValueOne == _Equal())
+        self.assertFalse(firstValueOne != _Equal())
+        self.assertFalse(firstValueOne == _NotEqual())
+        self.assertTrue(firstValueOne != _NotEqual())
+
+
+    def _simpleEqualityTest(self, cls):
+        # Vary the TTL
+        self._equalityTest(
+            cls('example.com', 123),
+            cls('example.com', 123),
+            cls('example.com', 321))
+        # Vary the name
+        self._equalityTest(
+            cls('example.com', 123),
+            cls('example.com', 123),
+            cls('example.org', 123))
+
+
+    def test_ns(self):
+        """
+        Two L{dns.Record_NS} instances compare equal if and only if they have
+        the same name and TTL.
+        """
+        self._simpleEqualityTest(dns.Record_NS)
+
+
+    def test_md(self):
+        """
+        Two L{dns.Record_MD} instances compare equal if and only if they have
+        the same name and TTL.
+        """
+        self._simpleEqualityTest(dns.Record_MD)
+
+
+    def test_mf(self):
+        """
+        Two L{dns.Record_MF} instances compare equal if and only if they have
+        the same name and TTL.
+        """
+        self._simpleEqualityTest(dns.Record_MF)
+
+
+    def test_cname(self):
+        """
+        Two L{dns.Record_CNAME} instances compare equal if and only if they
+        have the same name and TTL.
+        """
+        self._simpleEqualityTest(dns.Record_CNAME)
+
+
+    def test_mb(self):
+        """
+        Two L{dns.Record_MB} instances compare equal if and only if they have
+        the same name and TTL.
+        """
+        self._simpleEqualityTest(dns.Record_MB)
+
+
+    def test_mg(self):
+        """
+        Two L{dns.Record_MG} instances compare equal if and only if they have
+        the same name and TTL.
+        """
+        self._simpleEqualityTest(dns.Record_MG)
+
+
+    def test_mr(self):
+        """
+        Two L{dns.Record_MR} instances compare equal if and only if they have
+        the same name and TTL.
+        """
+        self._simpleEqualityTest(dns.Record_MR)
+
+
+    def test_ptr(self):
+        """
+        Two L{dns.Record_PTR} instances compare equal if and only if they have
+        the same name and TTL.
+        """
+        self._simpleEqualityTest(dns.Record_PTR)
+
+
+    def test_dname(self):
+        """
+        Two L{dns.Record_MD} instances compare equal if and only if they have
+        the same name and TTL.
+        """
+        self._simpleEqualityTest(dns.Record_DNAME)
+
+
+    def test_a(self):
+        """
+        Two L{dns.Record_A} instances compare equal if and only if they have
+        the same address and TTL.
+        """
+        # Vary the TTL
+        self._equalityTest(
+            dns.Record_A('1.2.3.4', 5),
+            dns.Record_A('1.2.3.4', 5),
+            dns.Record_A('1.2.3.4', 6))
+        # Vary the address
+        self._equalityTest(
+            dns.Record_A('1.2.3.4', 5),
+            dns.Record_A('1.2.3.4', 5),
+            dns.Record_A('1.2.3.5', 5))
+
+
+    def test_soa(self):
+        """
+        Two L{dns.Record_SOA} instances compare equal if and only if they have
+        the same mname, rname, serial, refresh, minimum, expire, retry, and
+        ttl.
+        """
+        # Vary the mname
+        self._equalityTest(
+            dns.Record_SOA('mname', 'rname', 123, 456, 789, 10, 20, 30),
+            dns.Record_SOA('mname', 'rname', 123, 456, 789, 10, 20, 30),
+            dns.Record_SOA('xname', 'rname', 123, 456, 789, 10, 20, 30))
+        # Vary the rname
+        self._equalityTest(
+            dns.Record_SOA('mname', 'rname', 123, 456, 789, 10, 20, 30),
+            dns.Record_SOA('mname', 'rname', 123, 456, 789, 10, 20, 30),
+            dns.Record_SOA('mname', 'xname', 123, 456, 789, 10, 20, 30))
+        # Vary the serial
+        self._equalityTest(
+            dns.Record_SOA('mname', 'rname', 123, 456, 789, 10, 20, 30),
+            dns.Record_SOA('mname', 'rname', 123, 456, 789, 10, 20, 30),
+            dns.Record_SOA('mname', 'rname', 1, 456, 789, 10, 20, 30))
+        # Vary the refresh
+        self._equalityTest(
+            dns.Record_SOA('mname', 'rname', 123, 456, 789, 10, 20, 30),
+            dns.Record_SOA('mname', 'rname', 123, 456, 789, 10, 20, 30),
+            dns.Record_SOA('mname', 'rname', 123, 1, 789, 10, 20, 30))
+        # Vary the minimum
+        self._equalityTest(
+            dns.Record_SOA('mname', 'rname', 123, 456, 789, 10, 20, 30),
+            dns.Record_SOA('mname', 'rname', 123, 456, 789, 10, 20, 30),
+            dns.Record_SOA('mname', 'rname', 123, 456, 1, 10, 20, 30))
+        # Vary the expire
+        self._equalityTest(
+            dns.Record_SOA('mname', 'rname', 123, 456, 789, 10, 20, 30),
+            dns.Record_SOA('mname', 'rname', 123, 456, 789, 10, 20, 30),
+            dns.Record_SOA('mname', 'rname', 123, 456, 789, 1, 20, 30))
+        # Vary the retry
+        self._equalityTest(
+            dns.Record_SOA('mname', 'rname', 123, 456, 789, 10, 20, 30),
+            dns.Record_SOA('mname', 'rname', 123, 456, 789, 10, 20, 30),
+            dns.Record_SOA('mname', 'rname', 123, 456, 789, 10, 1, 30))
+        # Vary the ttl
+        self._equalityTest(
+            dns.Record_SOA('mname', 'rname', 123, 456, 789, 10, 20, 30),
+            dns.Record_SOA('mname', 'rname', 123, 456, 789, 10, 20, 30),
+            dns.Record_SOA('mname', 'xname', 123, 456, 789, 10, 20, 1))
+
+
+    def test_null(self):
+        """
+        Two L{dns.Record_NULL} instances compare equal if and only if they have
+        the same payload and ttl.
+        """
+        # Vary the payload
+        self._equalityTest(
+            dns.Record_NULL('foo bar', 10),
+            dns.Record_NULL('foo bar', 10),
+            dns.Record_NULL('bar foo', 10))
+        # Vary the ttl
+        self._equalityTest(
+            dns.Record_NULL('foo bar', 10),
+            dns.Record_NULL('foo bar', 10),
+            dns.Record_NULL('foo bar', 100))
+
+
+    def test_wks(self):
+        """
+        Two L{dns.Record_WKS} instances compare equal if and only if they have
+        the same address, protocol, map, and ttl.
+        """
+        # Vary the address
+        self._equalityTest(
+            dns.Record_WKS('1.2.3.4', 1, 'foo', 2),
+            dns.Record_WKS('1.2.3.4', 1, 'foo', 2),
+            dns.Record_WKS('4.3.2.1', 1, 'foo', 2))
+        # Vary the protocol
+        self._equalityTest(
+            dns.Record_WKS('1.2.3.4', 1, 'foo', 2),
+            dns.Record_WKS('1.2.3.4', 1, 'foo', 2),
+            dns.Record_WKS('1.2.3.4', 100, 'foo', 2))
+        # Vary the map
+        self._equalityTest(
+            dns.Record_WKS('1.2.3.4', 1, 'foo', 2),
+            dns.Record_WKS('1.2.3.4', 1, 'foo', 2),
+            dns.Record_WKS('1.2.3.4', 1, 'bar', 2))
+        # Vary the ttl
+        self._equalityTest(
+            dns.Record_WKS('1.2.3.4', 1, 'foo', 2),
+            dns.Record_WKS('1.2.3.4', 1, 'foo', 2),
+            dns.Record_WKS('1.2.3.4', 1, 'foo', 200))
+
+
+    def test_aaaa(self):
+        """
+        Two L{dns.Record_AAAA} instances compare equal if and only if they have
+        the same address and ttl.
+        """
+        # Vary the address
+        self._equalityTest(
+            dns.Record_AAAA('1::2', 1),
+            dns.Record_AAAA('1::2', 1),
+            dns.Record_AAAA('2::1', 1))
+        # Vary the ttl
+        self._equalityTest(
+            dns.Record_AAAA('1::2', 1),
+            dns.Record_AAAA('1::2', 1),
+            dns.Record_AAAA('1::2', 10))
+
+
+    def test_a6(self):
+        """
+        Two L{dns.Record_A6} instances compare equal if and only if they have
+        the same prefix, prefix length, suffix, and ttl.
+        """
+        # Note, A6 is crazy, I'm not sure these values are actually legal.
+        # Hopefully that doesn't matter for this test. -exarkun
+
+        # Vary the prefix length
+        self._equalityTest(
+            dns.Record_A6(16, '::abcd', 'example.com', 10),
+            dns.Record_A6(16, '::abcd', 'example.com', 10),
+            dns.Record_A6(32, '::abcd', 'example.com', 10))
+        # Vary the suffix
+        self._equalityTest(
+            dns.Record_A6(16, '::abcd', 'example.com', 10),
+            dns.Record_A6(16, '::abcd', 'example.com', 10),
+            dns.Record_A6(16, '::abcd:0', 'example.com', 10))
+        # Vary the prefix
+        self._equalityTest(
+            dns.Record_A6(16, '::abcd', 'example.com', 10),
+            dns.Record_A6(16, '::abcd', 'example.com', 10),
+            dns.Record_A6(16, '::abcd', 'example.org', 10))
+        # Vary the ttl
+        self._equalityTest(
+            dns.Record_A6(16, '::abcd', 'example.com', 10),
+            dns.Record_A6(16, '::abcd', 'example.com', 10),
+            dns.Record_A6(16, '::abcd', 'example.com', 100))
+
+
+    def test_srv(self):
+        """
+        Two L{dns.Record_SRV} instances compare equal if and only if they have
+        the same priority, weight, port, target, and ttl.
+        """
+        # Vary the priority
+        self._equalityTest(
+            dns.Record_SRV(10, 20, 30, 'example.com', 40),
+            dns.Record_SRV(10, 20, 30, 'example.com', 40),
+            dns.Record_SRV(100, 20, 30, 'example.com', 40))
+        # Vary the weight
+        self._equalityTest(
+            dns.Record_SRV(10, 20, 30, 'example.com', 40),
+            dns.Record_SRV(10, 20, 30, 'example.com', 40),
+            dns.Record_SRV(10, 200, 30, 'example.com', 40))
+        # Vary the port
+        self._equalityTest(
+            dns.Record_SRV(10, 20, 30, 'example.com', 40),
+            dns.Record_SRV(10, 20, 30, 'example.com', 40),
+            dns.Record_SRV(10, 20, 300, 'example.com', 40))
+        # Vary the target
+        self._equalityTest(
+            dns.Record_SRV(10, 20, 30, 'example.com', 40),
+            dns.Record_SRV(10, 20, 30, 'example.com', 40),
+            dns.Record_SRV(10, 20, 30, 'example.org', 40))
+        # Vary the ttl
+        self._equalityTest(
+            dns.Record_SRV(10, 20, 30, 'example.com', 40),
+            dns.Record_SRV(10, 20, 30, 'example.com', 40),
+            dns.Record_SRV(10, 20, 30, 'example.com', 400))
+
+
+    def test_afsdb(self):
+        """
+        Two L{dns.Record_AFSDB} instances compare equal if and only if they
+        have the same subtype, hostname, and ttl.
+        """
+        # Vary the subtype
+        self._equalityTest(
+            dns.Record_AFSDB(1, 'example.com', 2),
+            dns.Record_AFSDB(1, 'example.com', 2),
+            dns.Record_AFSDB(2, 'example.com', 2))
+        # Vary the hostname
+        self._equalityTest(
+            dns.Record_AFSDB(1, 'example.com', 2),
+            dns.Record_AFSDB(1, 'example.com', 2),
+            dns.Record_AFSDB(1, 'example.org', 2))
+        # Vary the ttl
+        self._equalityTest(
+            dns.Record_AFSDB(1, 'example.com', 2),
+            dns.Record_AFSDB(1, 'example.com', 2),
+            dns.Record_AFSDB(1, 'example.com', 3))
+
+
+    def test_rp(self):
+        """
+        Two L{Record_RP} instances compare equal if and only if they have the
+        same mbox, txt, and ttl.
+        """
+        # Vary the mbox
+        self._equalityTest(
+            dns.Record_RP('alice.example.com', 'alice is nice', 10),
+            dns.Record_RP('alice.example.com', 'alice is nice', 10),
+            dns.Record_RP('bob.example.com', 'alice is nice', 10))
+        # Vary the txt
+        self._equalityTest(
+            dns.Record_RP('alice.example.com', 'alice is nice', 10),
+            dns.Record_RP('alice.example.com', 'alice is nice', 10),
+            dns.Record_RP('alice.example.com', 'alice is not nice', 10))
+        # Vary the ttl
+        self._equalityTest(
+            dns.Record_RP('alice.example.com', 'alice is nice', 10),
+            dns.Record_RP('alice.example.com', 'alice is nice', 10),
+            dns.Record_RP('alice.example.com', 'alice is nice', 100))
+
+
+    def test_hinfo(self):
+        """
+        Two L{dns.Record_HINFO} instances compare equal if and only if they
+        have the same cpu, os, and ttl.
+        """
+        # Vary the cpu
+        self._equalityTest(
+            dns.Record_HINFO('x86-64', 'plan9', 10),
+            dns.Record_HINFO('x86-64', 'plan9', 10),
+            dns.Record_HINFO('i386', 'plan9', 10))
+        # Vary the os
+        self._equalityTest(
+            dns.Record_HINFO('x86-64', 'plan9', 10),
+            dns.Record_HINFO('x86-64', 'plan9', 10),
+            dns.Record_HINFO('x86-64', 'plan11', 10))
+        # Vary the ttl
+        self._equalityTest(
+            dns.Record_HINFO('x86-64', 'plan9', 10),
+            dns.Record_HINFO('x86-64', 'plan9', 10),
+            dns.Record_HINFO('x86-64', 'plan9', 100))
+
+
+    def test_minfo(self):
+        """
+        Two L{dns.Record_MINFO} instances compare equal if and only if they
+        have the same rmailbx, emailbx, and ttl.
+        """
+        # Vary the rmailbx
+        self._equalityTest(
+            dns.Record_MINFO('rmailbox', 'emailbox', 10),
+            dns.Record_MINFO('rmailbox', 'emailbox', 10),
+            dns.Record_MINFO('someplace', 'emailbox', 10))
+        # Vary the emailbx
+        self._equalityTest(
+            dns.Record_MINFO('rmailbox', 'emailbox', 10),
+            dns.Record_MINFO('rmailbox', 'emailbox', 10),
+            dns.Record_MINFO('rmailbox', 'something', 10))
+        # Vary the ttl
+        self._equalityTest(
+            dns.Record_MINFO('rmailbox', 'emailbox', 10),
+            dns.Record_MINFO('rmailbox', 'emailbox', 10),
+            dns.Record_MINFO('rmailbox', 'emailbox', 100))
+
+
+    def test_mx(self):
+        """
+        Two L{dns.Record_MX} instances compare equal if and only if they have
+        the same preference, name, and ttl.
+        """
+        # Vary the preference
+        self._equalityTest(
+            dns.Record_MX(10, 'example.org', 20),
+            dns.Record_MX(10, 'example.org', 20),
+            dns.Record_MX(100, 'example.org', 20))
+        # Vary the name
+        self._equalityTest(
+            dns.Record_MX(10, 'example.org', 20),
+            dns.Record_MX(10, 'example.org', 20),
+            dns.Record_MX(10, 'example.net', 20))
+        # Vary the ttl
+        self._equalityTest(
+            dns.Record_MX(10, 'example.org', 20),
+            dns.Record_MX(10, 'example.org', 20),
+            dns.Record_MX(10, 'example.org', 200))
+
+
+    def test_txt(self):
+        """
+        Two L{dns.Record_TXT} instances compare equal if and only if they have
+        the same data and ttl.
+        """
+        # Vary the length of the data
+        self._equalityTest(
+            dns.Record_TXT(['foo', 'bar'], 10),
+            dns.Record_TXT(['foo', 'bar'], 10),
+            dns.Record_TXT(['foo', 'bar', 'baz'], 10))
+        # Vary the value of the data
+        self._equalityTest(
+            dns.Record_TXT(['foo', 'bar'], 10),
+            dns.Record_TXT(['foo', 'bar'], 10),
+            dns.Record_TXT(['bar', 'foo'], 10))
+        # Vary the ttl
+        self._equalityTest(
+            dns.Record_TXT(['foo', 'bar'], 10),
+            dns.Record_TXT(['foo', 'bar'], 10),
+            dns.Record_TXT(['foo', 'bar'], 100))

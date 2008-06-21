@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.names.test.test_dns -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -473,6 +473,7 @@ class Record_NS(SimpleRecord):
     An authoritative nameserver.
     """
     TYPE = NS
+    fancybasename = 'NS'
 
 
 
@@ -485,6 +486,7 @@ class Record_MD(SimpleRecord):
     @see: L{Record_MX}
     """
     TYPE = MD
+    fancybasename = 'MD'
 
 
 
@@ -497,6 +499,7 @@ class Record_MF(SimpleRecord):
     @see: L{Record_MX}
     """
     TYPE = MF
+    fancybasename = 'MF'
 
 
 
@@ -505,6 +508,7 @@ class Record_CNAME(SimpleRecord):
     The canonical name for an alias.
     """
     TYPE = CNAME
+    fancybasename = 'CNAME'
 
 
 
@@ -515,6 +519,7 @@ class Record_MB(SimpleRecord):
     This is an experimental record type.
     """
     TYPE = MB
+    fancybasename = 'MB'
 
 
 
@@ -525,6 +530,7 @@ class Record_MG(SimpleRecord):
     This is an experimental record type.
     """
     TYPE = MG
+    fancybasename = 'MG'
 
 
 
@@ -535,6 +541,7 @@ class Record_MR(SimpleRecord):
     This is an experimental record type.
     """
     TYPE = MR
+    fancybasename = 'MR'
 
 
 
@@ -543,6 +550,7 @@ class Record_PTR(SimpleRecord):
     A domain name pointer.
     """
     TYPE = PTR
+    fancybasename = 'PTR'
 
 
 
@@ -555,8 +563,10 @@ class Record_DNAME(SimpleRecord):
     maps a single node of the name space.
 
     @see: U{http://www.faqs.org/rfcs/rfc2672.html}
+    @see: U{http://www.faqs.org/rfcs/rfc3363.html}
     """
     TYPE = DNAME
+    fancybasename = 'DNAME'
 
 
 
@@ -598,7 +608,8 @@ class Record_A(tputil.FancyEqMixin):
 
 
     def __str__(self):
-        return '<A %s ttl=%s>' % (self.dottedQuad(), self.ttl)
+        return '<A address=%s ttl=%s>' % (self.dottedQuad(), self.ttl)
+    __repr__ = __str__
 
 
     def dottedQuad(self):
@@ -647,7 +658,8 @@ class Record_SOA(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     implements(IEncodable, IRecord)
 
-    compareAttributes = ('serial', 'mname', 'rname', 'refresh', 'expire', 'retry', 'ttl')
+    fancybasename = 'SOA'
+    compareAttributes = ('serial', 'mname', 'rname', 'refresh', 'expire', 'retry', 'minimum', 'ttl')
     showAttributes = (('mname', 'mname', '%s'), ('rname', 'rname', '%s'), 'serial', 'refresh', 'retry', 'expire', 'minimum', 'ttl')
 
     TYPE = SOA
@@ -688,7 +700,7 @@ class Record_SOA(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
 
 
-class Record_NULL:                   # EXPERIMENTAL
+class Record_NULL(tputil.FancyStrMixin, tputil.FancyEqMixin):
     """
     A null record.
 
@@ -699,6 +711,9 @@ class Record_NULL:                   # EXPERIMENTAL
         cached.
     """
     implements(IEncodable, IRecord)
+
+    fancybasename = 'NULL'
+    showAttributes = compareAttributes = ('payload', 'ttl')
 
     TYPE = NULL
 
@@ -720,7 +735,7 @@ class Record_NULL:                   # EXPERIMENTAL
 
 
 
-class Record_WKS(tputil.FancyEqMixin, tputil.FancyStrMixin):                    # OBSOLETE
+class Record_WKS(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     A well known service description.
 
@@ -744,10 +759,13 @@ class Record_WKS(tputil.FancyEqMixin, tputil.FancyStrMixin):                    
     """
     implements(IEncodable, IRecord)
 
+    fancybasename = "WKS"
     compareAttributes = ('address', 'protocol', 'map', 'ttl')
-    showAttributes = ('address', 'protocol', 'ttl')
+    showAttributes = [('_address', 'address', '%s'), 'protocol', 'ttl']
 
     TYPE = WKS
+
+    _address = property(lambda self: socket.inet_ntoa(self.address))
 
     def __init__(self, address='0.0.0.0', protocol=0, map='', ttl=None):
         self.address = socket.inet_aton(address)
@@ -772,11 +790,9 @@ class Record_WKS(tputil.FancyEqMixin, tputil.FancyStrMixin):                    
 
 
 
-class Record_AAAA(tputil.FancyEqMixin):               # OBSOLETE (or headed there)
+class Record_AAAA(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     An IPv6 host address.
-
-    This record type is obsolete.
 
     @type address: C{str}
     @ivar address: The packed network-order representation of the IPv6 address
@@ -786,12 +802,16 @@ class Record_AAAA(tputil.FancyEqMixin):               # OBSOLETE (or headed ther
     @ivar ttl: The maximum number of seconds which this record should be
         cached.
 
-    @see: L{Record_A6}
+    @see: U{http://www.faqs.org/rfcs/rfc1886.html}
     """
     implements(IEncodable, IRecord)
     TYPE = AAAA
 
+    fancybasename = 'AAAA'
+    showAttributes = (('_address', 'address', '%s'), 'ttl')
     compareAttributes = ('address', 'ttl')
+
+    _address = property(lambda self: socket.inet_ntop(AF_INET6, self.address))
 
     def __init__(self, address = '::', ttl=None):
         self.address = socket.inet_pton(AF_INET6, address)
@@ -810,14 +830,12 @@ class Record_AAAA(tputil.FancyEqMixin):               # OBSOLETE (or headed ther
         return hash(self.address)
 
 
-    def __str__(self):
-        return '<AAAA %s ttl=%s>' % (socket.inet_ntop(AF_INET6, self.address), self.ttl)
 
-
-
-class Record_A6:
+class Record_A6(tputil.FancyStrMixin, tputil.FancyEqMixin):
     """
     An IPv6 address.
+
+    This is an experimental record type.
 
     @type prefixLen: C{int}
     @ivar prefixLen: The length of the suffix.
@@ -837,9 +855,17 @@ class Record_A6:
         cached.
 
     @see: U{http://www.faqs.org/rfcs/rfc2874.html}
+    @see: U{http://www.faqs.org/rfcs/rfc3363.html}
+    @see: U{http://www.faqs.org/rfcs/rfc3364.html}
     """
     implements(IEncodable, IRecord)
     TYPE = A6
+
+    fancybasename = 'A6'
+    showAttributes = (('_suffix', 'suffix', '%s'), ('prefix', 'prefix', '%s'), 'ttl')
+    compareAttributes = ('prefixLen', 'prefix', 'suffix', 'ttl')
+
+    _suffix = property(lambda self: socket.inet_ntop(AF_INET6, self.suffix))
 
     def __init__(self, prefixLen=0, suffix='::', prefix='', ttl=None):
         self.prefixLen = prefixLen
@@ -873,7 +899,7 @@ class Record_A6:
                     self.suffix[-self.bytes:] == other.suffix[-self.bytes:] and
                     self.prefix == other.prefix and
                     self.ttl == other.ttl)
-        return 0
+        return NotImplemented
 
 
     def __hash__(self):
@@ -926,6 +952,7 @@ class Record_SRV(tputil.FancyEqMixin, tputil.FancyStrMixin):
     implements(IEncodable, IRecord)
     TYPE = SRV
 
+    fancybasename = 'SRV'
     compareAttributes = ('priority', 'weight', 'target', 'port', 'ttl')
     showAttributes = ('priority', 'weight', ('target', 'target', '%s'), 'port', 'ttl')
 
@@ -978,6 +1005,7 @@ class Record_AFSDB(tputil.FancyStrMixin, tputil.FancyEqMixin):
     implements(IEncodable, IRecord)
     TYPE = AFSDB
 
+    fancybasename = 'AFSDB'
     compareAttributes = ('subtype', 'hostname', 'ttl')
     showAttributes = ('subtype', ('hostname', 'hostname', '%s'), 'ttl')
 
@@ -1024,6 +1052,7 @@ class Record_RP(tputil.FancyEqMixin, tputil.FancyStrMixin):
     implements(IEncodable, IRecord)
     TYPE = RP
 
+    fancybasename = 'RP'
     compareAttributes = ('mbox', 'txt', 'ttl')
     showAttributes = (('mbox', 'mbox', '%s'), ('txt', 'txt', '%s'), 'ttl')
 
@@ -1050,7 +1079,7 @@ class Record_RP(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
 
 
-class Record_HINFO(tputil.FancyStrMixin):
+class Record_HINFO(tputil.FancyStrMixin, tputil.FancyEqMixin):
     """
     Host information.
 
@@ -1067,7 +1096,8 @@ class Record_HINFO(tputil.FancyStrMixin):
     implements(IEncodable, IRecord)
     TYPE = HINFO
 
-    showAttributes = ('cpu', 'os', 'ttl')
+    fancybasename = 'HINFO'
+    showAttributes = compareAttributes = ('cpu', 'os', 'ttl')
 
     def __init__(self, cpu='', os='', ttl=None):
         self.cpu, self.os = cpu, os
@@ -1091,7 +1121,7 @@ class Record_HINFO(tputil.FancyStrMixin):
             return (self.os.lower() == other.os.lower() and
                     self.cpu.lower() == other.cpu.lower() and
                     self.ttl == other.ttl)
-        return 0
+        return NotImplemented
 
 
     def __hash__(self):
@@ -1126,6 +1156,7 @@ class Record_MINFO(tputil.FancyEqMixin, tputil.FancyStrMixin):
     rmailbx = None
     emailbx = None
 
+    fancybasename = 'MINFO'
     compareAttributes = ('rmailbx', 'emailbx', 'ttl')
     showAttributes = (('rmailbx', 'responsibility', '%s'),
                       ('emailbx', 'errors', '%s'),
@@ -1171,6 +1202,7 @@ class Record_MX(tputil.FancyStrMixin, tputil.FancyEqMixin):
     implements(IEncodable, IRecord)
     TYPE = MX
 
+    fancybasename = 'MX'
     compareAttributes = ('preference', 'name', 'ttl')
     showAttributes = ('preference', ('name', 'name', '%s'), 'ttl')
 
@@ -1211,6 +1243,7 @@ class Record_TXT(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
     TYPE = TXT
 
+    fancybasename = 'TXT'
     showAttributes = compareAttributes = ('data', 'ttl')
 
     def __init__(self, *data, **kw):
