@@ -1,13 +1,11 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
-Test cases for twisted.mail.pop3 module.
+Test cases for Ltwisted.mail.pop3} module.
 """
 
 import StringIO
-import string
 import hmac
 import base64
 import itertools
@@ -277,13 +275,7 @@ class DummyPOP3(pop3.POP3):
 
 class DummyMailbox(pop3.Mailbox):
 
-    messages = [
-'''\
-From: moshe
-To: moshe
-
-How are you, friend?
-''']
+    messages = ['From: moshe\nTo: moshe\n\nHow are you, friend?\n']
 
     def __init__(self, exceptionType):
         self.messages = DummyMailbox.messages[:]
@@ -310,65 +302,71 @@ How are you, friend?
 
 class AnotherPOP3TestCase(unittest.TestCase):
 
-    def runTest(self, lines):
+    def runTest(self, lines, expectedOutput):
         dummy = DummyPOP3()
-        client = LineSendingProtocol([
-            "APOP moshez dummy",
-            "LIST",
-            "UIDL",
-            "RETR 1",
-            "RETR 2",
-            "DELE 1",
-            "RETR 1",
-            "QUIT",
-        ])
+        client = LineSendingProtocol(lines)
         d = loopback.loopbackAsync(dummy, client)
-        return d.addCallback(self._cbRunTest, client, dummy)
+        return d.addCallback(self._cbRunTest, client, dummy, expectedOutput)
 
-    def _cbRunTest(self, ignored, client, dummy):
-        expected_output = [
-            '+OK <moshez>',
-            '+OK Authentication succeeded',
-            '+OK 1',
-            '1 44',
-            '.',
-            '+OK ',
-            '1 0',
-            '.',
-            '+OK 44',
-            'From: moshe',
-            'To: moshe',
-            '',
-            'How are you, friend?',
-            '',
-            '.',
-            '-ERR Bad message number argument',
-            '+OK ',
-            '-ERR message deleted',
-            '+OK ',
-            ''
-            ]
-        self.failUnlessEqual('\r\n'.join(expected_output),
-                             '\r\n'.join(client.response) + '\r\n')
+
+    def _cbRunTest(self, ignored, client, dummy, expectedOutput):
+        self.failUnlessEqual('\r\n'.join(expectedOutput),
+                             '\r\n'.join(client.response))
         dummy.connectionLost(failure.Failure(Exception("Test harness disconnect")))
         return ignored
 
 
-    def testBuffer(self):
-        lines = string.split('''\
-APOP moshez dummy
-LIST
-UIDL
-RETR 1
-RETR 2
-DELE 1
-RETR 1
-QUIT''', '\n')
-        return self.runTest(lines)
+    def test_buffer(self):
+        """
+        Test a lot of different POP3 commands in an extremely pipelined
+        scenario.
 
-    def testNoop(self):
-        lines = ['APOP spiv dummy', 'NOOP', 'QUIT']
-        return self.runTest(lines)
+        This test may cover legitimate behavior, but the intent and
+        granularity are not very good.  It would likely be an improvement to
+        split it into a number of smaller, more focused tests.
+        """
+        return self.runTest(
+            ["APOP moshez dummy",
+             "LIST",
+             "UIDL",
+             "RETR 1",
+             "RETR 2",
+             "DELE 1",
+             "RETR 1",
+             "QUIT"],
+            ['+OK <moshez>',
+             '+OK Authentication succeeded',
+             '+OK 1',
+             '1 44',
+             '.',
+             '+OK ',
+             '1 0',
+             '.',
+             '+OK 44',
+             'From: moshe',
+             'To: moshe',
+             '',
+             'How are you, friend?',
+             '.',
+             '-ERR Bad message number argument',
+             '+OK ',
+             '-ERR message deleted',
+             '+OK '])
+
+
+    def test_noop(self):
+        """
+        Test the no-op command.
+        """
+        return self.runTest(
+            ['APOP spiv dummy',
+             'NOOP',
+             'QUIT'],
+            ['+OK <moshez>',
+             '+OK Authentication succeeded',
+             '+OK ',
+             '+OK '])
+
 
     def testAuthListing(self):
         p = DummyPOP3()

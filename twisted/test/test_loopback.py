@@ -1,9 +1,8 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
-Test case for twisted.protocols.loopback
+Test case for L{twisted.protocols.loopback}.
 """
 
 from zope.interface import implements
@@ -15,7 +14,7 @@ from twisted.internet import defer
 from twisted.internet.protocol import Protocol
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IAddress, IPushProducer, IPullProducer
-from twisted.internet import reactor
+from twisted.internet import reactor, interfaces
 
 
 class SimpleProtocol(basic.LineReceiver):
@@ -315,6 +314,41 @@ class LoopbackAsyncTestCase(LoopbackTestCase):
         return self._producertest(PullProducer)
 
 
+    def test_writeNotReentrant(self):
+        """
+        L{loopback.loopbackAsync} does not call a protocol's C{dataReceived}
+        method while that protocol's transport's C{write} method is higher up
+        on the stack.
+        """
+        class Server(Protocol):
+            def dataReceived(self, bytes):
+                self.transport.write("bytes")
+
+        class Client(Protocol):
+            ready = False
+
+            def connectionMade(self):
+                reactor.callLater(0, self.go)
+
+            def go(self):
+                self.transport.write("foo")
+                self.ready = True
+
+            def dataReceived(self, bytes):
+                self.wasReady = self.ready
+                self.transport.loseConnection()
+
+
+        server = Server()
+        client = Client()
+        d = loopback.loopbackAsync(client, server)
+        def cbFinished(ignored):
+            self.assertTrue(client.wasReady)
+        d.addCallback(cbFinished)
+        return d
+
+
+
 class LoopbackTCPTestCase(LoopbackTestCase):
     loopbackFunc = staticmethod(loopback.loopbackTCP)
 
@@ -322,7 +356,5 @@ class LoopbackTCPTestCase(LoopbackTestCase):
 class LoopbackUNIXTestCase(LoopbackTestCase):
     loopbackFunc = staticmethod(loopback.loopbackUNIX)
 
-    def setUp(self):
-        from twisted.internet import reactor, interfaces
-        if interfaces.IReactorUNIX(reactor, None) is None:
-            raise unittest.SkipTest("Current reactor does not support UNIX sockets")
+    if interfaces.IReactorUNIX(reactor, None) is None:
+        skip = "Current reactor does not support UNIX sockets"

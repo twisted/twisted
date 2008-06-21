@@ -14,6 +14,7 @@ from zope.interface import implements
 # Twisted Imports
 from twisted.protocols import policies
 from twisted.internet import interfaces, protocol, main, defer
+from twisted.internet.task import deferLater
 from twisted.python import failure
 from twisted.internet.interfaces import IAddress
 
@@ -102,13 +103,13 @@ def loopbackAsync(server, client):
     testing a protocol.
 
     @param server: The protocol instance representing the server-side of this
-    connection.
-    
+        connection.
+
     @param client: The protocol instance representing the client-side of this
-    connection.
+        connection.
 
     @return: A L{Deferred} which fires when the connection has been closed and
-    both sides have received notification of this.
+        both sides have received notification of this.
     """
     serverToClient = _LoopbackQueue()
     clientToServer = _LoopbackQueue()
@@ -187,8 +188,14 @@ def _loopbackAsyncContinue(ignored, server, serverToClient, client, clientToServ
     # and cannot be used again.
     clientToServer._notificationDeferred = serverToClient._notificationDeferred = None
 
-    # Push some more bytes around.
-    return _loopbackAsyncBody(server, serverToClient, client, clientToServer)
+    # Schedule some more byte-pushing to happen.  This isn't done
+    # synchronously because no actual transport can re-enter dataReceived as
+    # a result of calling write, and doing this synchronously could result
+    # in that.
+    from twisted.internet import reactor
+    return deferLater(
+        reactor, 0,
+        _loopbackAsyncBody, server, serverToClient, client, clientToServer)
 
 
 
@@ -216,7 +223,7 @@ class LoopbackRelay:
     def clearBuffer(self):
         if self.shouldLose == -1:
             return
-        
+
         if self.producer:
             self.producer.resumeProducing()
         if self.buffer:
