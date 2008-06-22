@@ -13,23 +13,18 @@ from twisted.trial import unittest
 from twisted.web import server, static, client, error, util, resource
 from twisted.internet import reactor, defer, interfaces
 from twisted.python.filepath import FilePath
+from twisted.protocols.policies import WrappingFactory
 
 try:
     from twisted.internet import ssl
 except:
     ssl = None
 
-serverCallID = None
 
-class LongTimeTakingResource(resource.Resource):
+class ForeverTakingResource(resource.Resource):
     def render(self, request):
-        global serverCallID
-        serverCallID =  reactor.callLater(1, self.writeIt, request)
         return server.NOT_DONE_YET
 
-    def writeIt(self, request):
-        request.write("hello!!!")
-        request.finish()
 
 class CookieMirrorResource(resource.Resource):
     def render(self, request):
@@ -142,19 +137,18 @@ class WebClientTestCase(unittest.TestCase):
         FilePath(name).child("file").setContent("0123456789")
         r = static.File(name)
         r.putChild("redirect", util.Redirect("/file"))
-        r.putChild("wait", LongTimeTakingResource())
+        r.putChild("wait", ForeverTakingResource())
         r.putChild("error", ErrorResource())
         r.putChild("nolength", NoLengthResource())
         r.putChild("host", HostHeaderResource())
         r.putChild("payload", PayloadResource())
         r.putChild("broken", BrokenDownloadResource())
-        site = server.Site(r, timeout=None)
-        self.port = self._listen(site)
+        self.site = server.Site(r, timeout=None)
+        self.wrapper = WrappingFactory(self.site)
+        self.port = self._listen(self.wrapper)
         self.portno = self.port.getHost().port
 
     def tearDown(self):
-        if serverCallID and serverCallID.active():
-            serverCallID.cancel()
         return self.port.stopListening()
 
     def getURL(self, path):
@@ -204,17 +198,38 @@ class WebClientTestCase(unittest.TestCase):
             getPage("HEAD").addCallback(self.assertEqual, "")])
 
 
-    def testTimeoutNotTriggering(self):
-        # Test that when the timeout doesn't trigger, things work as expected.
-        d = client.getPage(self.getURL("wait"), timeout=100)
-        d.addCallback(self.assertEquals, "hello!!!")
+    def test_timeoutNotTriggering(self):
+        """
+        When a non-zero timeout is passed to L{getPage} and the page is
+        retrieved before the timeout period elapses, the L{Deferred} is
+        called back with the contents of the page.
+        """
+        d = client.getPage(self.getURL("host"), timeout=100)
+        d.addCallback(self.assertEquals, "127.0.0.1")
         return d
 
-    def testTimeoutTriggering(self):
-        # Test that when the timeout does trigger, we get a defer.TimeoutError.
-        return self.assertFailure(
-            client.getPage(self.getURL("wait"), timeout=0.5),
+
+    def test_timeoutTriggering(self):
+        """
+        When a non-zero timeout is passed to L{getPage} and that many
+        seconds elapse before the server responds to the request. the
+        L{Deferred} is errbacked with a L{error.TimeoutError}.
+        """
+        finished = self.assertFailure(
+            client.getPage(self.getURL("wait"), timeout=0.000001),
             defer.TimeoutError)
+        def cleanup(passthrough):
+            # Clean up the server which is hanging around not doing
+            # anything.
+            connected = self.wrapper.protocols.keys()
+            # There might be nothing here if the server managed to already see
+            # that the connection was lost.
+            if connected:
+                connected[0].transport.loseConnection()
+            return passthrough
+        finished.addBoth(cleanup)
+        return finished
+
 
     def testDownloadPage(self):
         downloads = []
