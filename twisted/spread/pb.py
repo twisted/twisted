@@ -2,7 +2,6 @@
 # Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
 Perspective Broker
 
@@ -474,6 +473,12 @@ class Broker(banana.Banana):
         self.locallyCachedObjects = {}
         self.waitingForAnswers = {}
 
+        # Mapping from LUIDs to weakref objects with callbacks for performing
+        # any local cleanup which may be necessary for the corresponding
+        # object once it no longer exists.
+        self._localCleanup = {}
+
+
     def resumeProducing(self):
         """Called when the consumer attached to me runs out of buffer.
         """
@@ -940,6 +945,7 @@ class Broker(banana.Banana):
             puid = self.localObjects[objectID].object.processUniqueID()
             del self.luids[puid]
             del self.localObjects[objectID]
+            self._localCleanup.pop(puid, lambda: None)()
 
     ##
     # caching
@@ -1259,6 +1265,19 @@ class _JellyableAvatarMixin:
         """
         if not IJellyable.providedBy(avatar):
             avatar = AsReferenceable(avatar, "perspective")
+
+        puid = avatar.processUniqueID()
+
+        def dereferenceLogout():
+            self.broker.dontNotifyOnDisconnect(logout)
+            logout()
+
+        self.broker._localCleanup[puid] = dereferenceLogout
+        # No special helper function is necessary for notifyOnDisconnect
+        # because dereference callbacks won't be invoked if the connection is
+        # randomly dropped.  I'm not sure those are ideal semantics, but this
+        # is the only user of the (private) API at the moment and it works just
+        # fine as things are. -exarkun
         self.broker.notifyOnDisconnect(logout)
         return avatar
 

@@ -1305,6 +1305,47 @@ class NewCredTestCase(unittest.TestCase):
         return d
 
 
+    def test_logoutAfterDecref(self):
+        """
+        If a L{RemoteReference} to an L{IPerspective} avatar is decrefed and
+        there remain no other references to the avatar on the server, the
+        avatar is garbage collected and the logout method called.
+        """
+        loggedOut = Deferred()
+
+        class EventPerspective(pb.Avatar):
+            """
+            An avatar which fires a Deferred when it is logged out.
+            """
+            def __init__(self, avatarId):
+                pass
+
+            def logout(self):
+                loggedOut.callback(None)
+
+        self.realm.perspectiveFactory = EventPerspective
+
+        self.portal.registerChecker(
+            checkers.InMemoryUsernamePasswordDatabaseDontUse(foo='bar'))
+        factory = pb.PBClientFactory()
+        d = factory.login(
+            credentials.UsernamePassword('foo', 'bar'), "BRAINS!")
+        def cbLoggedIn(avatar):
+            # Just wait for the logout to happen, as it should since the
+            # reference to the avatar will shortly no longer exists.
+            return loggedOut
+        d.addCallback(cbLoggedIn)
+        def cbLoggedOut(ignored):
+            # Verify that the server broker's _localCleanup dict isn't growing
+            # without bound.
+            self.assertEqual(self.factory.protocolInstance._localCleanup, {})
+        d.addCallback(cbLoggedOut)
+        d.addCallback(self._disconnect, factory)
+        connector = reactor.connectTCP("127.0.0.1", self.portno, factory)
+        self.addCleanup(connector.disconnect)
+        return d
+
+
     def test_concurrentLogin(self):
         """
         Two different correct login attempts can be made on the same root
