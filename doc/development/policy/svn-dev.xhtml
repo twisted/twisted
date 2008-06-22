@@ -25,8 +25,8 @@ edge.</p>
 <p>Subversion tutorials can be found elsewhere, see in particular <a
 href="http://subversion.tigris.org/">the Subversion homepage</a>. The relevant
 data you need to check out a copy of the Twisted tree is available on the <a
-href="http://twistedmatrix.com/developers/cvs">pserver page</a>, and is as
-follows:</p>
+href="http://twistedmatrix.com/trac/wiki/TwistedDevelopment">development page
+</a>, and is as follows:</p>
 
 <pre class="shell">
 $ svn co svn://svn.twistedmatrix.com/svn/Twisted/trunk Twisted
@@ -55,6 +55,17 @@ matter, but it is good to be aware of the issue in case you run into
 problems.</p>
 
 <p><code>twisted/test/process_twisted.py</code> is one of these programs.</p>
+
+<h2>Combinator</h2>
+
+<p>In order to simplify the use of Subversion, we typically use
+<a href="http://divmod.org/trac/wiki/DivmodCombinator">Divmod Combinator</a>.
+You may find it to be useful, too.  In particular, because Twisted uses
+branches for almost all feature development, if you plan to contribute to
+Twisted you will probably find Combinator very useful.  For more details,
+see the Combinator website, as well as the
+<a href="http://divmod.org/trac/wiki/UltimateQualityDevelopmentSystem">
+UQDS</a> page.</p>
 
 <h2>Compiling C extensions</h2>
 
@@ -97,27 +108,27 @@ they must be deleted by hand.</p>
 
 <p>To run the full unit-test suite, do:</p>
 
-<pre class="shell">./bin/trial -v twisted.test</pre>
+<pre class="shell">./bin/trial twisted</pre>
 
 <p>To run a single test file (like <code>twisted/test/test_defer.py</code>),
 do one of:</p>
 
-<pre class="shell">./bin/trial -v twisted.test.test_defer</pre>
+<pre class="shell">./bin/trial twisted.test.test_defer</pre>
 
 <p>or</p>
 
-<pre class="shell">./bin/trial -v twisted/test/test_defer.py</pre>
+<pre class="shell">./bin/trial twisted/test/test_defer.py</pre>
 
 <p>To run any tests that are related to a code file, like
 <code>twisted/protocols/imap4.py</code>, do:</p>
 
-<pre class="shell">./bin/trial -v --testmodule twisted/protocols/imap4.py</pre>
+<pre class="shell">./bin/trial --testmodule twisted/mail/imap4.py</pre>
 
 <p>This depends upon the <code>.py</code> file having an appropriate
 <q>test-case-name</q> tag that indicates which test cases provide coverage.
 See the <a href="test-standard.xhtml">Test Standards</a> document for
 details about using <q>test-case-name</q>. In this example, the
-<code>twisted.test.test_imap</code> test will be run.</p>
+<code>twisted.mail.test.test_imap</code> test will be run.</p>
 
 <p>Many tests create temporary files in /tmp or ./_trial_temp, but
 everything in /tmp should be deleted when the test finishes. Sometimes these
@@ -126,19 +137,12 @@ cleanup calls are commented out by mistake, so if you see a stray
 Look for an <code>rmtree</code> that has been commented out and complain to
 the last developer who touched that file.</p>
 
-<h2>Admin scripts</h2>
-
-<p>The <code>admin/</code> directory holds several administrative tools,
-some of which are used when turning a Subversion checkout into a full numbered
-release.</p>
-
-
 <h2>Building docs</h2>
 
 <p>Twisted documentation (not including the automatically-generated API docs)
-is in <a href="http://twistedmatrix.com/projects/lore">Lore Format</a>. These
-<code>.xhtml</code> files are translated into <code>.html</code> files by the
-<q>bin/lore/lore</q> script, which can check the files for syntax problems
+is in <a href="http://twistedmatrix.com/trac/wiki/TwistedLore">Lore Format</a>.
+These <code>.xhtml</code> files are translated into <code>.html</code> files by
+the <q>bin/lore/lore</q> script, which can check the files for syntax problems
 (hlint), process multiple files at once, insert the files into a template
 before processing, and can also translate the files into LaTeX or PostScript
 instead.</p>
@@ -188,23 +192,18 @@ probably be wrong unless the correct base URL is provided to Lore.</p>
 
 <h2>Emacs</h2>
 
-<p>Check out the TwistedEmacs module, which lives in the same Subversion
-repository (TODO this is not true), just do <q>cvs checkout TwistedEmacs</q>
-instead of <q>cvs checkout Twisted</q>). <code>twisted-dev.el</code> has
-several utility functions which make it easier to grep for methods, run test
-cases, process Lore documents, etc.</p>
-
+<p>A minor mode for development with Twisted using Emacs is available.  See
+<code>emacs/twisted-dev.el</code> for several utility functions which make
+it easier to grep for methods, run test cases, process Lore documents, etc.
+</p>
 
 <h2>Building Debian packages</h2>
 
-<p>Running <q>debuild -uc -us</q> from the top of the Subversion tree will
-(hopefully) result in a collection of .deb packages in the tree's parent
-directory. This requires other tools to be installed (devscripts for one),
-and requires that <q>admin/process-docs</q> be run first. The .debs created
-will have a version number based upon whatever is at the top of
-<code>debian/changelog</code>, which is generally only updated when an
-official release is made, so be careful that you don't create
-confusingly-numbered package files.</p>
+<p>Our support for building Debian packages has fallen into disrepair.  We
+would very much like to restore this functionality, but until we do so, if
+you are interested in this, you are on your own.  See
+<a href="http://stdeb.python-hosting.com/">stdeb</a> for one possible approach
+to this.</p>
 
 </body>
 </html>
