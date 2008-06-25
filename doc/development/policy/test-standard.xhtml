@@ -47,15 +47,15 @@
     <p>From the root of the Twisted source tree, run:</p>
 
     <pre class="shell">
-$ bin/trial -R twisted
+$ bin/trial twisted
     </pre>
-    
+
     <p>You'll find that having something like this in your emacs init
     files is quite handy:</p>
 
 <pre class="elisp">
 (defun runtests () (interactive)
-  (compile "python /somepath/Twisted/bin/trial -R /somepath/Twisted"))
+  (compile "python /somepath/Twisted/bin/trial /somepath/Twisted"))
 
 (global-set-key [(alt t)] 'runtests)
 </pre>
@@ -85,11 +85,12 @@ $ bin/trial -R twisted
     exactly what the change that broke it was, or until after a
     release, and nobody wants broken code in a release.</p>
 
-    <p>Tests go in Twisted/twisted/test/, and are named <code>test_foo.py</code>,
+    <p>Tests go into dedicated test packages such as Twisted/twisted/test/
+    or Twisted/twisted/conch/test/, and are named <code>test_foo.py</code>,
     where <code>foo</code> is the name of the module or package being tested.
     Extensive documentation on using the PyUnit framework for writing
-    unit tests can be found in the <a href= "#links" >links
-    section</a> below.</p>
+    unit tests can be found in the <a href= "#links" >links section</a> below.
+    </p>
 
     <p>One deviation from the standard PyUnit documentation: To ensure
     that any variations in test results are due to variations in the
@@ -102,6 +103,18 @@ $ bin/trial -R twisted
     <p>As long as you have followed the module naming and placement
     conventions, <code class="shell">trial</code> will be smart
     enough to pick up any new tests you write.</p>
+
+    <p>PyUnit provides a large number of assertion methods to be used when
+    writing tests.  Many of these are redundant.  For consistency, Twisted
+    unit tests should use the <code>assert</code> forms rather than the
+    <code>fail</code> forms and the singular names rather than the plural
+    names.  For example, don't use <code>failUnlessEqual</code>, use <code>
+    assertEqual</code> and don't use <code>assertNotEquals</code>, use
+    <code>assertNotEqual</code>.  <code>assertTrue</code> is also preferred
+    over <code>assert_</code>.  You may notice this convention is not
+    followed everywhere in the Twisted codebase.  If you are changing some
+    test code and notice the wrong method being used in nearby code, feel
+    free to adjust it.</p>
 
 <h2>Skipping tests, TODO items</h2>
 
@@ -121,9 +134,9 @@ printed, at the bottom of the test output) the test is counted as a
 inside a conditional which looks for the necessary prerequisites:</p>
 
 <pre class="python">
-def testSSHClient(self):
+def test_sshClient(self):
     if not ssh_path:
-        raise unittest.SkipTest, "cannot find ssh, nothing to test"
+        raise unittest.SkipTest("cannot find ssh, nothing to test")
     foo() # do actual test after the SkipTest
 </pre>
 
@@ -133,21 +146,21 @@ turning off a test case, but it can also be set conditionally (by
 manipulating the class attributes after they've been defined):</p>
 
 <pre class="python">
-def testThing(self):
+def test_thing(self):
     dotest()
-testThing.skip = "disabled locally"
+test_thing.skip = "disabled locally"
 </pre>
 
 <pre class="python">
 class MyTestCase(unittest.TestCase):
-    def testOne(self):
+    def test_one(self):
         ...
-    def testThing(self):
+    def test_thing(self):
         dotest()
 
 if not haveThing:
-    MyTestCase.testThing.im_func.skip = "cannot test without Thing"
-    # but testOne() will still run
+    MyTestCase.test_thing.im_func.skip = "cannot test without Thing"
+    # but test_one() will still run
 </pre>
 
 <p>Finally, you can turn off an entire TestCase at once by setting the .skip
@@ -156,14 +169,13 @@ depend upon, this is a convenient way to disable just the tests which cannot
 be run.</p>
 
 <pre class="python">
-class SSLTestCase(unittest.TestCase):
-   ...
 class TCPTestCase(unittest.TestCase):
-   ...
-
-if not haveSSL:
-    SSLTestCase.skip = "cannot test without SSL support"
+    ...
+class SSLTestCase(unittest.TestCase):
+    if not haveSSL:
+        skip = "cannot test without SSL support"
     # but TCPTestCase will still run
+    ...
 </pre>
 
 <h3>.todo and Testing New Functionality </h3>
@@ -227,7 +239,12 @@ team.</p>
 
 <p>Any test which remains marked with <code>.todo</code> for too long should
 be examined. Either it represents functionality which nobody is working on,
-or the test is broken in some fashion and needs to be fixed.</p>
+or the test is broken in some fashion and needs to be fixed.  Generally,
+<code>.todo</code> may be of use while you are developing a feature, but
+by the time you are ready to commit anything, all the tests you have written
+should be passing.  In other words, you should rarely, if ever, feel the need
+to add a test marked todo to trunk.  When you do, consider whether a ticket
+in the issue tracker would be more useful.</p>
 
 
 <h2>Associating Test Cases With Source Files</h2>

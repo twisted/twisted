@@ -41,7 +41,7 @@ your tests.</p>
 
 <h3>Leave the Reactor as you found it</h3>
 
-<p>Trial runs the entire test suite (over two thousand tests) in a single
+<p>Trial runs the entire test suite (over four thousand tests) in a single
 process, with a single reactor. Therefore it is important that your test
 leave the reactor in the same state as it found it. Leftover timers may
 expire during somebody else's unsuspecting test. Leftover connection attempts
@@ -49,18 +49,24 @@ may complete (and fail) during a later test. These lead to intermittent
 failures that wander from test to test and are very time-consuming to track
 down.</p>
 
-<p>Your test is responsible for cleaning up after itself. The
-<code>tearDown</code> method is an ideal place for this cleanup code: it is
-always run regardless of whether your test passes or fails (like a bare
-<code>except</code> clause in a try-except construct). Exceptions in
-<code>tearDown</code> are flagged as errors and flunk the test.</p>
+<p>If your test leaves event sources in the reactor, Trial will fail the test.
+The <code>tearDown</code> method is a good place to put cleanup code: it is
+always run regardless of whether your test passes or fails (like a bare <code>
+except</code> clause in a try-except construct). Exceptions in <code>tearDown
+</code> are flagged as errors and flunk the test.
+<code class="API" base="twisted.trial.unittest">TestCase.addCleanup</code> is
+another useful tool for cleaning up.  With it, you can register callables to
+clean up resources as the test allocates them.  Generally, code should be
+written so that only resources allocated in the tests need to be cleaned up in
+the tests.  Resources which are allocated internally by the implementation
+should be cleaned up by the implementation.</p>
 
 <p>If your code uses Deferreds or depends on the reactor running, you can
 return a Deferred from your test method, setUp, or tearDown and Trial will
 do the right thing. That is, it will run the reactor for you until the
 Deferred has triggered and its callbacks have been run. Don't use
-<code>reactor.run()</code>, <code>reactor.stop()</code>, or
-<code>reactor.iterate()</code> in your tests.</p>
+<code>reactor.run()</code>, <code>reactor.stop()</code>, <code>reactor.crash()
+</code>or <code>reactor.iterate()</code> in your tests.</p>
 
 <p>Calls to <code>reactor.callLater</code> create <code class="API"
 base="twisted.internet.interfaces">IDelayedCall</code>s.  These need to be run
@@ -100,8 +106,10 @@ changes are committed to the Subversion repository.</p>
 
 <p>The way to do this in Trial is to set the <code>.timeout</code> attribute
 on your unit test method.  Set the attribute to the number of seconds you wish
-to elapse before the test raises a timeout error.</p>
-
+to elapse before the test raises a timeout error.  Trial has a default timeout
+which will be applied even if the <code>timeout</code> attribute is not set.
+The Trial default timeout is usually sufficient and should be overridden only
+in unusual cases.</p>
 
   </body>
 </html>
