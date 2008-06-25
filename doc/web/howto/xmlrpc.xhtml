@@ -25,7 +25,7 @@ The result is what will be returned to the clients.</p>
 
 <p>Methods published via XML-RPC can return all the basic XML-RPC
 types, such as strings, lists and so on (just return a regular python
-integer, etc).  They can also return Failure instances to indicate an
+integer, etc).  They can also raise exceptions or return Failure instances to indicate an
 error has occurred, or <code base="twisted.web.xmlrpc"
 class="API">Binary</code>, <code base="twisted.web.xmlrpc"
 class="API">Boolean</code> or <code base="twisted.web.xmlrpc"
@@ -49,12 +49,22 @@ class Example(xmlrpc.XMLRPC):
     """An example object to be published."""
 
     def xmlrpc_echo(self, x):
-        """Return all passed args."""
+        """
+        Return all passed args.
+        """
         return x
 
     def xmlrpc_add(self, a, b):
-        """Return sum of arguments."""
+        """
+        Return sum of arguments.
+        """
         return a + b
+
+    def xmlrpc_fault(self):
+        """
+        Raise a Fault indicating that the procedure should not be used.
+        """
+        raise xmlrpc.Fault(123, "The fault procedure is faulty.")
 
 if __name__ == '__main__':
     from twisted.internet import reactor
@@ -73,6 +83,12 @@ to the server:</p>
 'lala'
 &gt;&gt;&gt; s.add(1, 2)
 3
+&gt;&gt;&gt; s.fault()
+Traceback (most recent call last):
+...
+xmlrpclib.Fault: &lt;Fault 123: 'The fault procedure is faulty.'&gt;
+&gt;&gt;&gt;
+
 </pre>
 
 <p>XML-RPC resources can also be part of a normal Twisted web server, using
