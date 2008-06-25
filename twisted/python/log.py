@@ -243,9 +243,11 @@ class LogPublisher:
             except UnicodeEncodeError:
                 raise
             except:
-                o = self.observers.pop(i)
+                observer = self.observers[i]
+                self.observers[i] = lambda event: None
                 err(failure.Failure(),
-                    "Log observer %s failed, removing from observer list." % (o,))
+                    "Log observer %s failed." % (observer,))
+                self.observers[i] = observer
 
 
 try:

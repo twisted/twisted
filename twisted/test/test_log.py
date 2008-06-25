@@ -61,32 +61,47 @@ class LogTest(unittest.TestCase):
             self.flushLoggedErrors(ig)
 
 
-    def testErroneousErrors(self):
+    def test_erroneousErrors(self):
+        """
+        Exceptions raised by log observers are logged but the observer which
+        raised the exception remains registered with the publisher.  These
+        exceptions do not prevent the event from being sent to other observers
+        registered with the publisher.
+        """
         L1 = []
         L2 = []
-        log.addObserver(lambda events: L1.append(events))
-        log.addObserver(lambda events: 1/0)
-        log.addObserver(lambda events: L2.append(events))
-        log.msg("Howdy, y'all.")
+        def broken(events):
+            1 / 0
 
-        # XXX - use private _flushErrors so we don't also catch
-        # the deprecation warnings
-        excs = [f.type for f in log._flushErrors(ZeroDivisionError)]
-        self.assertEquals([ZeroDivisionError], excs)
+        for observer in [L1.append, broken, L2.append]:
+            log.addObserver(observer)
+            self.addCleanup(log.removeObserver, observer)
 
-        self.assertEquals(len(L1), 2)
-        self.assertEquals(len(L2), 2)
+        for i in xrange(3):
+            # Reset the lists for simpler comparison.
+            L1[:] = []
+            L2[:] = []
 
-        self.assertEquals(L1[1]['message'], ("Howdy, y'all.",))
-        self.assertEquals(L2[0]['message'], ("Howdy, y'all.",))
+            # Send out the event which will break one of the observers.
+            log.msg("Howdy, y'all.")
 
-        # The observer has been removed, there should be no exception
-        log.msg("Howdy, y'all.")
+            # The broken observer should have caused this to be logged.  There
+            # is a slight bug with LogPublisher - when it logs an error from an
+            # observer, it uses the global "err", which is not necessarily
+            # associated with it, but which may be associated with a different
+            # LogPublisher!  See #3307.
+            excs = self.flushLoggedErrors(ZeroDivisionError)
+            self.assertEqual(len(excs), 1)
 
-        self.assertEquals(len(L1), 3)
-        self.assertEquals(len(L2), 3)
-        self.assertEquals(L1[2]['message'], ("Howdy, y'all.",))
-        self.assertEquals(L2[2]['message'], ("Howdy, y'all.",))
+            # Both other observers should have seen the message.
+            self.assertEquals(len(L1), 2)
+            self.assertEquals(len(L2), 2)
+
+            # The order is slightly wrong here.  The first event should be
+            # delivered to all observers; then, errors should be delivered.
+            self.assertEquals(L1[1]['message'], ("Howdy, y'all.",))
+            self.assertEquals(L2[0]['message'], ("Howdy, y'all.",))
+
 
 
 class FakeFile(list):
