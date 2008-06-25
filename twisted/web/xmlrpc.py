@@ -1,20 +1,12 @@
 # -*- test-case-name: twisted.web.test.test_xmlrpc -*-
-#
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 A generic resource for publishing objects via XML-RPC.
 
-Requires xmlrpclib (comes standard with Python 2.2 and later, otherwise can be
-downloaded from http://www.pythonware.com/products/xmlrpc/).
-
 Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
 """
-from __future__ import nested_scopes
-
-__version__ = "$Revision: 1.32 $"[11:-2]
 
 # System Imports
 import xmlrpclib
@@ -410,5 +402,8 @@ class Proxy:
             reactor.connectTCP(self.host, self.port or 80, factory)
         return factory.deferred
 
-__all__ = ["XMLRPC", "Handler", "NoSuchFunction", "Fault", "Proxy"]
 
+__all__ = [
+    "XMLRPC", "Handler", "NoSuchFunction", "Proxy",
+
+    "Fault", "Binary", "Boolean", "DateTime"]

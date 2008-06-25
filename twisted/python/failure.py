@@ -292,7 +292,7 @@ class Failure:
         """
         error = self.check(*errorTypes)
         if not error:
-            raise self
+            raise self.type, self.value, self.tb
         return error
 
     def check(self, *errorTypes):
