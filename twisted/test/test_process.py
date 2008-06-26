@@ -1097,6 +1097,57 @@ class PosixProcessBase:
         return d
 
 
+    def test_errorInProcessEnded(self):
+        """
+        The handler which reaps a process is removed when the process is
+        reaped, even if the protocol's C{processEnded} method raises an
+        exception.
+        """
+        connected = defer.Deferred()
+        ended = defer.Deferred()
+
+        # This script runs until we disconnect its transport.
+        pythonExecutable = sys.executable
+        scriptPath = util.sibpath(__file__, "process_twisted.py")
+
+        class ErrorInProcessEnded(protocol.ProcessProtocol):
+            """
+            A protocol that raises an error in C{processEnded}.
+            """
+            def makeConnection(self, transport):
+                connected.callback(transport)
+
+            def processEnded(self, reason):
+                reactor.callLater(0, ended.callback, None)
+                raise RuntimeError("Deliberate error")
+
+        # Launch the process.
+        reactor.spawnProcess(
+            ErrorInProcessEnded(), pythonExecutable,
+            [pythonExecutable, scriptPath],
+            env=None, path=None)
+
+        pid = []
+        def cbConnected(transport):
+            pid.append(transport.pid)
+            # There's now a reap process handler registered.
+            self.assertIn(transport.pid, process.reapProcessHandlers)
+
+            # Kill the process cleanly, triggering an error in the protocol.
+            transport.loseConnection()
+        connected.addCallback(cbConnected)
+
+        def checkTerminated(ignored):
+            # The exception was logged.
+            excs = self.flushLoggedErrors(RuntimeError)
+            self.assertEqual(len(excs), 1)
+            # The process is no longer scheduled for reaping.
+            self.assertNotIn(pid[0], process.reapProcessHandlers)
+        ended.addCallback(checkTerminated)
+
+        return ended
+
+
 
 class MockOS(object):
     """

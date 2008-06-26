@@ -41,7 +41,7 @@ class ReactorBuilder:
                  "twisted.internet.glib2reactor.Glib2Reactor",
                  "twisted.internet.gtk2reactor.Gtk2Reactor",
                  "twisted.internet.kqueuereactor.KQueueReactor",
-                 "twisted.internet.win32reactor.Win32Reactor",
+                 "twisted.internet.win32eventreactor.Win32Reactor",
                  "twisted.internet.iocpreactor.reactor.IOCPReactor"]
 
     reactorFactory = None
