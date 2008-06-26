@@ -1162,12 +1162,20 @@ class ConnectionLostNotifyingProtocol(protocol.Protocol):
     """
     Protocol which fires a Deferred which was previously passed to
     its initializer when the connection is lost.
+
+    @ivar onConnectionLost: The L{Deferred} which will be fired in
+        C{connectionLost}.
+
+    @ivar lostConnectionReason: C{None} until the connection is lost, then a
+        reference to the reason passed to C{connectionLost}.
     """
     def __init__(self, onConnectionLost):
+        self.lostConnectionReason = None
         self.onConnectionLost = onConnectionLost
 
 
     def connectionLost(self, reason):
+        self.lostConnectionReason = reason
         self.onConnectionLost.callback(self)
 
 
@@ -1255,6 +1263,8 @@ class ProperlyCloseFilesMixin:
             Disconnect the client.  Return a Deferred which fires when both
             the client and the server have received disconnect notification.
             """
+            client.transport.write(
+                'some bytes to make sure the connection is set up')
             client.transport.loseConnection()
             return defer.gatherResults([
                 onClientConnectionLost, onServerConnectionLost])
@@ -1265,6 +1275,8 @@ class ProperlyCloseFilesMixin:
             Verify that the underlying platform socket handle has been
             cleaned up.
             """
+            client.lostConnectionReason.trap(error.ConnectionClosed)
+            server.lostConnectionReason.trap(error.ConnectionClosed)
             expectedErrorCode = self.getHandleErrorCode()
             err = self.assertRaises(
                 self.getHandleExceptionType(), client.handle.send, 'bytes')
@@ -1286,15 +1298,30 @@ class ProperlyCloseFilesMixin:
 
 
 class ProperlyCloseFilesTestCase(unittest.TestCase, ProperlyCloseFilesMixin):
+    """
+    Test that the sockets created by L{IReactorTCP.connectTCP} are cleaned up
+    when the connection they are associated with is closed.
+    """
     def createServer(self, address, portNumber, factory):
+        """
+        Create a TCP server using L{IReactorTCP.listenTCP}.
+        """
         return reactor.listenTCP(portNumber, factory, interface=address)
 
 
     def connectClient(self, address, portNumber, clientCreator):
+        """
+        Create a TCP client using L{IReactorTCP.connectTCP}.
+        """
         return clientCreator.connectTCP(address, portNumber)
 
 
     def getHandleExceptionType(self):
+        """
+        Return L{socket.error} as the expected error type which will be
+        raised by a write to the low-level socket object after it has been
+        closed.
+        """
         return socket.error
 
 

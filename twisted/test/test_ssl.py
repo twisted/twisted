@@ -275,26 +275,45 @@ class StolenTCPTestCase(ProperlyCloseFilesMixin, WriteDataTestCase):
     """
 
     def createServer(self, address, portNumber, factory):
-        contextFactory = ssl.CertificateOptions()
+        """
+        Create an SSL server with a certificate using L{IReactorSSL.listenSSL}.
+        """
+        cert = ssl.PrivateCertificate.loadPEM(file(certPath).read())
+        contextFactory = cert.options()
         return reactor.listenSSL(
             portNumber, factory, contextFactory, interface=address)
 
 
     def connectClient(self, address, portNumber, clientCreator):
+        """
+        Create an SSL client using L{IReactorSSL.connectSSL}.
+        """
         contextFactory = ssl.CertificateOptions()
         return clientCreator.connectSSL(address, portNumber, contextFactory)
 
 
     def getHandleExceptionType(self):
-        return SSL.SysCallError
+        """
+        Return L{SSL.Error} as the expected error type which will be raised by
+        a write to the L{OpenSSL.SSL.Connection} object after it has been
+        closed.
+        """
+        return SSL.Error
 
 
     def getHandleErrorCode(self):
+        """
+        Return the argument L{SSL.Error} will be constructed with for this
+        case.  This is basically just a random OpenSSL implementation detail.
+        It would be better if this test worked in a way which did not require
+        this.
+        """
         # Windows 2000 SP 4 and Windows XP SP 2 give back WSAENOTSOCK for
         # SSL.Connection.write for some reason.
         if platform.getType() == 'win32':
             return errno.WSAENOTSOCK
-        return ProperlyCloseFilesMixin.getHandleErrorCode(self)
+        # This is terribly implementation-specific.
+        return [('SSL routines', 'SSL_write', 'protocol is shutdown')]
 
 
 
