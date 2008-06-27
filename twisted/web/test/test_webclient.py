@@ -86,6 +86,19 @@ class BrokenDownloadResource(resource.Resource):
         request.write('abc')
         return ''
 
+class CountingRedirect(util.Redirect):
+    """
+    A L{util.Redirect} resource that keeps track of the number of times the
+    resource has been accessed.
+    """
+    def __init__(self, *a, **kw):
+        util.Redirect.__init__(self, *a, **kw)
+        self.count = 0
+
+    def render(self, request):
+        self.count += 1
+        return util.Redirect.render(self, request)
+
 
 
 class ParseUrlTestCase(unittest.TestCase):
@@ -126,7 +139,6 @@ class ParseUrlTestCase(unittest.TestCase):
         self.assertTrue(isinstance(path, str))
 
 
-
 class WebClientTestCase(unittest.TestCase):
     def _listen(self, site):
         return reactor.listenTCP(0, site, interface="127.0.0.1")
@@ -137,6 +149,8 @@ class WebClientTestCase(unittest.TestCase):
         FilePath(name).child("file").setContent("0123456789")
         r = static.File(name)
         r.putChild("redirect", util.Redirect("/file"))
+        self.infiniteRedirectResource = CountingRedirect("/infiniteRedirect")
+        r.putChild("infiniteRedirect", self.infiniteRedirectResource)
         r.putChild("wait", ForeverTakingResource())
         r.putChild("error", ErrorResource())
         r.putChild("nolength", NoLengthResource())
@@ -328,6 +342,25 @@ class WebClientTestCase(unittest.TestCase):
 
     def _cbCheckLocation(self, exc):
         self.assertEquals(exc.location, "/file")
+
+
+    def test_infiniteRedirection(self):
+        """
+        When more than C{redirectLimit} HTTP redirects are encountered, the
+        page request fails with L{InfiniteRedirection}.
+        """
+        def checkRedirectCount(*a):
+            self.assertEquals(f._redirectCount, 20)
+            self.assertEquals(self.infiniteRedirectResource.count, 20)
+
+        f = client._makeGetterFactory(
+            self.getURL('infiniteRedirect'),
+            client.HTTPClientFactory,
+            redirectLimit=20)
+        d = self.assertFailure(f.deferred, error.InfiniteRedirection)
+        d.addCallback(checkRedirectCount)
+        return d
+
 
     def testPartial(self):
         name = self.mktemp()

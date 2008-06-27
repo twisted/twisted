@@ -17,9 +17,10 @@ from twisted.web import error
 
 
 class PartialDownloadError(error.Error):
-    """Page was only partially downloaded, we got disconnected in middle.
+    """
+    Page was only partially downloaded, we got disconnected in middle.
 
-    The bit that was downloaded is in the response attribute.
+    @ivar response: All of the response body which was downloaded.
     """
 
 
@@ -84,6 +85,18 @@ class HTTPPageGetter(http.HTTPClient):
         if self.followRedirect:
             scheme, host, port, path = \
                 _parse(url, defaultPort=self.transport.getPeer().port)
+
+            self.factory._redirectCount += 1
+            if self.factory._redirectCount >= self.factory.redirectLimit:
+                err = error.InfiniteRedirection(
+                    self.status,
+                    'Infinite redirection detected',
+                    location=url)
+                self.factory.noPage(failure.Failure(err))
+                self.quietLoss = True
+                self.transport.loseConnection()
+                return
+
             self.factory.setURL(url)
 
             if self.factory.scheme == 'https':
@@ -100,7 +113,7 @@ class HTTPPageGetter(http.HTTPClient):
                 failure.Failure(
                     error.PageRedirect(
                         self.status, self.message, location = url)))
-        self.quietLoss = 1
+        self.quietLoss = True
         self.transport.loseConnection()
 
     handleStatus_302 = lambda self: self.handleStatus_301()
@@ -196,6 +209,13 @@ class HTTPClientFactory(protocol.ClientFactory):
         OPTIONS, GET, HEAD, POST, PUT, DELETE, TRACE, or CONNECT (case
         matters).  Other values may be specified if the server being contacted
         supports them.
+
+    @type redirectLimit: int
+    @ivar redirectLimit: The maximum number of HTTP redirects that can occur
+          before it is assumed that the redirection is endless.
+
+    @type _redirectCount: int
+    @ivar _redirectCount: The current number of HTTP redirects encountered.
     """
 
     protocol = HTTPPageGetter
@@ -208,8 +228,10 @@ class HTTPClientFactory(protocol.ClientFactory):
 
     def __init__(self, url, method='GET', postdata=None, headers=None,
                  agent="Twisted PageGetter", timeout=0, cookies=None,
-                 followRedirect=1):
+                 followRedirect=1, redirectLimit=20):
         self.protocol.followRedirect = followRedirect
+        self.redirectLimit = redirectLimit
+        self._redirectCount = 0
         self.timeout = timeout
         self.agent = agent
 
@@ -401,40 +423,67 @@ def _parse(url, defaultPort=None):
     return scheme, host, port, path
 
 
+def _makeGetterFactory(url, factoryFactory, contextFactory=None,
+                       *args, **kwargs):
+    """
+    Create and connect an HTTP page getting factory.
+
+    Any additional positional or keyword arguments are used when calling
+    C{factoryFactory}.
+
+    @param factoryFactory: Factory factory that is called with C{url}, C{args}
+        and C{kwargs} to produce the getter
+
+    @param contextFactory: Context factory to use when creating a secure
+        connection, defaulting to C{None}
+
+    @return: The factory created by C{factoryFactory}
+    """
+    scheme, host, port, path = _parse(url)
+    factory = factoryFactory(url, *args, **kwargs)
+    if scheme == 'https':
+        from twisted.internet import ssl
+        if contextFactory is None:
+            contextFactory = ssl.ClientContextFactory()
+        reactor.connectSSL(host, port, factory, contextFactory)
+    else:
+        reactor.connectTCP(host, port, factory)
+    return factory
+
+
 def getPage(url, contextFactory=None, *args, **kwargs):
-    """Download a web page as a string.
+    """
+    Download a web page as a string.
 
     Download a page. Return a deferred, which will callback with a
     page (as a string) or errback with a description of the error.
 
     See HTTPClientFactory to see what extra args can be passed.
     """
-    scheme, host, port, path = _parse(url)
-    factory = HTTPClientFactory(url, *args, **kwargs)
-    if scheme == 'https':
-        from twisted.internet import ssl
-        if contextFactory is None:
-            contextFactory = ssl.ClientContextFactory()
-        reactor.connectSSL(host, port, factory, contextFactory)
-    else:
-        reactor.connectTCP(host, port, factory)
-    return factory.deferred
+    return _makeGetterFactory(
+        url,
+        HTTPClientFactory,
+        contextFactory=contextFactory,
+        *args, **kwargs).deferred
 
 
 def downloadPage(url, file, contextFactory=None, *args, **kwargs):
-    """Download a web page to a file.
+    """
+    Download a web page to a file.
 
     @param file: path to file on filesystem, or file-like object.
 
     See HTTPDownloader to see what extra args can be passed.
     """
-    scheme, host, port, path = _parse(url)
-    factory = HTTPDownloader(url, file, *args, **kwargs)
-    if scheme == 'https':
-        from twisted.internet import ssl
-        if contextFactory is None:
-            contextFactory = ssl.ClientContextFactory()
-        reactor.connectSSL(host, port, factory, contextFactory)
-    else:
-        reactor.connectTCP(host, port, factory)
-    return factory.deferred
+    factoryFactory = lambda url, *a, **kw: HTTPDownloader(url, file, *a, **kw)
+    return _makeGetterFactory(
+        url,
+        factoryFactory,
+        contextFactory=contextFactory,
+        *args, **kwargs).deferred
+
+
+__all__ = [
+    'PartialDownloadError',
+    'HTTPPageGetter', 'HTTPPageDownloader', 'HTTPClientFactory', 'HTTPDownloader',
+    'getPage', 'downloadPage']

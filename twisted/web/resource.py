@@ -1,16 +1,13 @@
 # -*- test-case-name: twisted.web.test.test_web -*-
-#
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+Implementation of the lowest-level Resource class.
+"""
 
-"""I hold the lowest-level Resource class."""
-
-
-# System Imports
-from twisted.internet import defer
-from twisted.python import roots, reflect
 from zope.interface import Attribute, implements, Interface
+
 
 class IResource(Interface):
     """A web resource."""
@@ -60,7 +57,7 @@ class Resource:
     """
 
     implements(IResource)
-    
+
     entityType = IResource
 
     server = None
@@ -131,6 +128,10 @@ class Resource:
         @param request: a twisted.web.server.Request specifying meta-information
                         about the request that is being made for this child.
         """
+        # This is ugly, I know, but since error.py directly accesses
+        # resource.Resource during import-time (it subclasses it), the Resource
+        # class must be defined by the time error is imported.
+        from twisted.web import error
         return error.NoResource("No such child resource.")
 
     def getChildWithDefault(self, path, request):
@@ -153,7 +154,7 @@ class Resource:
         import warnings
         warnings.warn("Please use module level getChildForRequest.", DeprecationWarning, 2)
         return getChildForRequest(self, request)
-    
+
     def putChild(self, path, child):
         """Register a static child.
 
@@ -189,16 +190,10 @@ class Resource:
         return m(request)
 
     def render_HEAD(self, request):
-        """Default handling of HEAD method.
-        
+        """
+        Default handling of HEAD method.
+
         I just return self.render_GET(request). When method is HEAD,
         the framework will handle this correctly.
         """
         return self.render_GET(request)
-
-
-#t.w imports
-#This is ugly, I know, but since error.py directly access resource.Resource
-#during import-time (it subclasses it), the Resource class must be defined
-#by the time error is imported.
-import error
