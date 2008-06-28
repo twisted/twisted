@@ -143,7 +143,7 @@ class LogFileTestCase(unittest.TestCase):
         log.write("abc")
 
         # change permissions so rotation would fail
-        os.chmod(self.dir, 0444)
+        os.chmod(self.dir, 0555)
 
         # if this succeeds, chmod doesn't restrict us, so we can't
         # do the test
