@@ -24,6 +24,8 @@ class TestFailureInTearDown(unittest.TestCase):
 
 
 class TestFailureInSetUpClass(unittest.TestCase):
+    _suppressUpDownWarning = True
+
     def setUpClass(self):
         raise FoolishError, "I am a broken setUpClass method"
 
@@ -32,6 +34,8 @@ class TestFailureInSetUpClass(unittest.TestCase):
 
 
 class TestFailureInTearDownClass(unittest.TestCase):
+    _suppressUpDownWarning = True
+
     def tearDownClass(self):
         raise FoolishError, "I am a broken setUp method"
 
@@ -84,6 +88,7 @@ TestSkipTestCase.skip = "skipping this test"
 
 
 class TestSkipTestCase2(unittest.TestCase):
+    _suppressUpDownWarning = True
 
     def setUpClass(self):
         raise unittest.SkipTest, "thi stest is fukct"

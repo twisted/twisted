@@ -27,16 +27,15 @@ class TestObject:
 threadable.synchronize(TestObject)
 
 class SynchronizationTestCase(unittest.TestCase):
-    if hasattr(sys, 'getcheckinterval'):
-        def setUpClass(self):
-            self.checkInterval = sys.getcheckinterval()
-            sys.setcheckinterval(7)
-
-        def tearDownClass(self):
-            sys.setcheckinterval(self.checkInterval)
-
-
     def setUp(self):
+        """
+        Reduce the CPython check interval so that thread switches happen much
+        more often, hopefully exercising more possible race conditions.  Also,
+        delay actual test startup until the reactor has been started.
+        """
+        if hasattr(sys, 'getcheckinterval'):
+            self.addCleanup(sys.setcheckinterval, sys.getcheckinterval())
+            sys.setcheckinterval(7)
         # XXX This is a trial hack.  We need to make sure the reactor
         # actually *starts* for isInIOThread() to have a meaningful result.
         # Returning a Deferred here should force that to happen, if it has

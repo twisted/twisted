@@ -1,20 +1,28 @@
-import tempfile, operator, sys, os
+# Copyright (c) 2008 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
-from twisted.trial import unittest
-from twisted.internet import reactor, defer, interfaces
-from twisted.python import log
-from zope.interface import Interface, Attribute, implements
+"""
+Tests for the stream implementations in L{twisted.web2}.
+"""
 
+import tempfile, sys, os
+
+from zope.interface import implements
+
+# sibpath is *not* unused - the doctests use it.
 from twisted.python.util import sibpath
+from twisted.internet import reactor, defer, interfaces
+from twisted.trial import unittest
 from twisted.web2 import stream
+
 
 def bufstr(data):
     try:
         return str(buffer(data))
     except TypeError:
         raise TypeError("%s doesn't conform to the buffer interface" % (data,))
-    
-    
+
+
 class SimpleStreamTests:
     text = '1234567890'
     def test_split(self):
@@ -56,12 +64,15 @@ class SimpleStreamTests:
         self.assertEquals(bufstr(s.read()), self.text[4:10])
         self.assertEquals(s.read(), None)
         self.assertEquals(s.length, 0)
-    
+
 class FileStreamTest(SimpleStreamTests, unittest.TestCase):
     def makeStream(self, *args, **kw):
         return stream.FileStream(self.f, *args, **kw)
-    
-    def setUpClass(self):
+
+    def setUp(self):
+        """
+        Create a file containing C{self.text} to be streamed.
+        """
         f = tempfile.TemporaryFile('w+')
         f.write(self.text)
         f.seek(0, 0)
@@ -97,15 +108,21 @@ class FileStreamTest(SimpleStreamTests, unittest.TestCase):
         self.assertRaises(RuntimeError, s.read) # ran out of data
 
 class MMapFileStreamTest(SimpleStreamTests, unittest.TestCase):
+    text = SimpleStreamTests.text
+    text = text * (stream.MMAP_THRESHOLD // len(text) + 1)
+
     def makeStream(self, *args, **kw):
         return stream.FileStream(self.f, *args, **kw)
-    
-    def setUpClass(self):
+
+    def setUp(self):
+        """
+        Create a file containing C{self.text}, which should be long enough to
+        trigger the mmap-case in L{stream.FileStream}.
+        """
         f = tempfile.TemporaryFile('w+')
-        self.text = self.text*(stream.MMAP_THRESHOLD//len(self.text) + 1)
         f.write(self.text)
         f.seek(0, 0)
-        self.f=f
+        self.f = f
 
     def test_mmapwrapper(self):
         self.assertRaises(TypeError, stream.mmapwrapper)
@@ -114,7 +131,7 @@ class MMapFileStreamTest(SimpleStreamTests, unittest.TestCase):
 
     if not stream.mmap:
         test_mmapwrapper.skip = 'mmap not supported here'
-            
+
 class MemoryStreamTest(SimpleStreamTests, unittest.TestCase):
     def makeStream(self, *args, **kw):
         return stream.MemoryStream(self.text, *args, **kw)
@@ -149,7 +166,7 @@ In the morning glad I see
 My foe outstretch'd beneath the tree"""
 
 class TestSubstream(unittest.TestCase):
-    
+
     def setUp(self):
         self.data = testdata
         self.s = stream.MemoryStream(self.data)
@@ -238,15 +255,17 @@ class TestBufferedStream(unittest.TestCase):
         d.addCallback(self._cbGotData, "I was angry with my friend:\r")
         d.addCallback(lambda _: self.s.readline())
         d.addCallback(self._cbGotData, "\nI told my wrath, my wrath did end.\r\n")
-        
+
     def test_readExactly(self):
         """Make sure readExactly with no arg reads all the data."""
         d = self.s.readExactly()
         d.addCallback(self._cbGotData, self.data)
         return d
 
-    def test_readExactly(self):
-        """Test readExactly with a number."""
+    def test_readExactlyLimited(self):
+        """
+        Test readExactly with a number.
+        """
         d = self.s.readExactly(10)
         d.addCallback(self._cbGotData, self.data[:10])
         return d
@@ -275,10 +294,10 @@ class TestStreamer:
 
     readCalled=0
     closeCalled=0
-    
+
     def __init__(self, list):
         self.list = list
-        
+
     def read(self):
         self.readCalled+=1
         if self.list:
@@ -288,7 +307,7 @@ class TestStreamer:
     def close(self):
         self.closeCalled+=1
         self.list = []
-        
+
 class FallbackSplitTest(unittest.TestCase):
     def test_split(self):
         s = TestStreamer(['abcd', defer.succeed('efgh'), 'ijkl'])
@@ -311,10 +330,10 @@ class FallbackSplitTest(unittest.TestCase):
     def test_split2(self):
         s = TestStreamer(['abcd', defer.succeed('efgh'), 'ijkl'])
         left,right = stream.fallbackSplit(s, 4)
-        
+
         self.assertEquals(left.length, 4)
         self.assertEquals(right.length, None)
-        
+
         self.assertEquals(bufstr(left.read()), 'abcd')
         self.assertEquals(left.read(), None)
 
@@ -326,11 +345,11 @@ class FallbackSplitTest(unittest.TestCase):
         s = TestStreamer(['abcd', defer.succeed('efgh'), 'ijkl'])
         left,right = stream.fallbackSplit(s, 5)
         left,middle = left.split(3)
-        
+
         self.assertEquals(left.length, 3)
         self.assertEquals(middle.length, 2)
         self.assertEquals(right.length, None)
-        
+
         self.assertEquals(bufstr(left.read()), 'abc')
         self.assertEquals(left.read(), None)
 
@@ -384,7 +403,7 @@ class FallbackSplitTest(unittest.TestCase):
 
         self.assertEquals(bufstr(left.read()), 'abc')
         self.assertEquals(left.read(), None)
-        
+
         self.assertEquals(s.closeCalled, 1)
 
 
@@ -448,7 +467,10 @@ class ProcessStreamerTest(unittest.TestCase):
         def verify(_):
             self.assertEquals("".join(l), "hello")
             return d2
-        return d.addCallback(verify).addCallback(lambda _: log.flushErrors(ZeroDivisionError))
+        def cbVerified(ignored):
+            excs = self.flushLoggedErrors(ZeroDivisionError)
+            self.assertEqual(len(excs), 1)
+        return d.addCallback(verify).addCallback(cbVerified)
 
     def test_processclosedinput(self):
         p = self.runCode("import sys; sys.stdout.write(sys.stdin.read(3));" +
@@ -480,25 +502,28 @@ class ReadStreamTestCase(unittest.TestCase):
     def test_pull(self):
         l = []
         s = TestStreamer(['abcd', defer.succeed('efgh'), 'ijkl'])
-        return readStream(s, l.append).addCallback(
+        return stream.readStream(s, l.append).addCallback(
             lambda _: self.assertEquals(l, ["abcd", "efgh", "ijkl"]))
-        
+
     def test_pullFailure(self):
         l = []
         s = TestStreamer(['abcd', defer.fail(RuntimeError()), 'ijkl'])
         def test(result):
             result.trap(RuntimeError)
             self.assertEquals(l, ["abcd"])
-        return readStream(s, l.append).addErrback(test)
-    
+        return stream.readStream(s, l.append).addErrback(test)
+
     def test_pullException(self):
         class Failer:
             def read(self): raise RuntimeError
-        return readStream(Failer(), lambda _: None).addErrback(lambda _: _.trap(RuntimeError))
+        return stream.readStream(Failer(), lambda _: None).addErrback(
+            lambda _: _.trap(RuntimeError))
 
     def test_processingException(self):
         s = TestStreamer(['abcd', defer.succeed('efgh'), 'ijkl'])
-        return readStream(s, lambda x: 1/0).addErrback(lambda _: _.trap(ZeroDivisionError))
+        return stream.readStream(s, lambda x: 1/0).addErrback(
+            lambda _: _.trap(ZeroDivisionError))
+
 
 
 class ProducerStreamTestCase(unittest.TestCase):
@@ -515,21 +540,20 @@ class ProducerStreamTestCase(unittest.TestCase):
         return d
 
 
-from twisted.web2.stream import *
 class CompoundStreamTest:
     """
     CompoundStream lets you combine many streams into one continuous stream.
     For example, let's make a stream:
-    >>> s = CompoundStream()
-    
+    >>> s = stream.CompoundStream()
+
     Then, add a couple streams:
-    >>> s.addStream(MemoryStream("Stream1"))
-    >>> s.addStream(MemoryStream("Stream2"))
-    
+    >>> s.addStream(stream.MemoryStream("Stream1"))
+    >>> s.addStream(stream.MemoryStream("Stream2"))
+
     The length is the sum of all the streams:
     >>> s.length
     14
-    
+
     We can read data from the stream:
     >>> str(s.read())
     'Stream1'
@@ -549,27 +573,27 @@ class CompoundStreamTest:
     0
 
     We can also create CompoundStream more easily like so:
-    >>> s = CompoundStream(['hello', MemoryStream(' world')])
+    >>> s = stream.CompoundStream(['hello', stream.MemoryStream(' world')])
     >>> str(s.read())
     'hello'
     >>> str(s.read())
     ' world'
-    
+
     For a more complicated example, let's try reading from a file:
-    >>> s = CompoundStream()
-    >>> s.addStream(FileStream(open(sibpath(__file__, "stream_data.txt"))))
+    >>> s = stream.CompoundStream()
+    >>> s.addStream(stream.FileStream(open(sibpath(__file__, "stream_data.txt"))))
     >>> s.addStream("================")
-    >>> s.addStream(FileStream(open(sibpath(__file__, "stream_data.txt"))))
+    >>> s.addStream(stream.FileStream(open(sibpath(__file__, "stream_data.txt"))))
 
     Again, the length is the sum:
     >>> int(s.length)
     58
-    
+
     >>> str(s.read())
     "We've got some text!\\n"
     >>> str(s.read())
     '================'
-    
+
     What if you close the stream?
     >>> s.close()
     >>> s.read() is None
@@ -578,8 +602,8 @@ class CompoundStreamTest:
     0
 
     Error handling works using Deferreds:
-    >>> m = MemoryStream("after")
-    >>> s = CompoundStream([TestStreamer([defer.fail(ZeroDivisionError())]), m])
+    >>> m = stream.MemoryStream("after")
+    >>> s = stream.CompoundStream([TestStreamer([defer.fail(ZeroDivisionError())]), m]) # z<
     >>> l = []; x = s.read().addErrback(lambda _: l.append(1))
     >>> l
     [1]
@@ -592,7 +616,7 @@ class CompoundStreamTest:
 
 
 __doctests__ = ['twisted.web2.test.test_stream', 'twisted.web2.stream']
-# TODO: 
+# TODO:
 # CompoundStreamTest
 # more tests for ProducerStreamTest
 # StreamProducerTest

@@ -16,6 +16,7 @@ from pprint import pformat
 
 from twisted.internet import defer, utils
 from twisted.python import components, failure, log, monkey
+from twisted.python.reflect import qual
 from twisted.python.compat import set
 from twisted.python import deprecate
 from twisted.python.deprecate import getDeprecationWarningString
@@ -512,6 +513,9 @@ _logObserver = _LogObserver()
 
 _wait_is_running = []
 
+_classFixturesDeprecationMessage = (
+    "%(method)s, deprecated since Twisted 8.2.0, was overridden by "
+    "%(class)s.  Use %(replace)s instead.")
 
 class TestCase(_Assertions):
     """
@@ -555,6 +559,13 @@ class TestCase(_Assertions):
     C{errors} is either an exception class or an iterable of exception
     classes, and C{reason} is a string. See L{Todo} or L{makeTodo} for more
     information.
+
+    @ivar _suppressUpDownWarning: Private flag used by tests for C{setUpClass}
+        and C{tearDownClass} to suppress the deprecation warnings for these
+        methods.  This is necessary since the normal warning suppression
+        mechanism does not work for these warnings.  No code should use this
+        flag aside from tests for these methods.  When support for the methods
+        is removed altogether, so should this flag be removed.
     """
 
     implements(itrial.ITestCase)
@@ -652,10 +663,32 @@ class TestCase(_Assertions):
         return self.run(*args, **kwargs)
 
     def deferSetUpClass(self, result):
+        """
+        Run the per-class set up fixture, C{setUpClass}, for this test case.
+
+        This must be called only once per TestCase subclass, since it will
+        run the fixture unconditionally.
+
+        @type result: L{IReporter} provider
+        @param result: The result which will be used to report any problems
+            encountered in C{setUpClass}.
+
+        @return: A L{Deferred} which will fire with the result of
+            C{setUpClass} or with C{None} if there is no C{setUpClass}
+            defined.
+        """
         if not hasattr(self, 'setUpClass'):
             d = defer.succeed(None)
             d.addCallback(self.deferSetUp, result)
             return d
+        if not getattr(self, '_suppressUpDownWarning', None):
+            warn = deprecate.getWarningMethod()
+            warn(_classFixturesDeprecationMessage % {
+                    'method': 'setUpClass',
+                    'class': qual(self.__class__),
+                    'replace': 'setUp'},
+                category=DeprecationWarning,
+                stacklevel=0)
         d = self._run('setUpClass', result)
         d.addCallbacks(self.deferSetUp, self._ebDeferSetUpClass,
                        callbackArgs=(result,),
@@ -749,6 +782,31 @@ class TestCase(_Assertions):
                 self._passed = False
 
     def deferTearDownClass(self, ignored, result):
+        """
+        Run the per-class tear down fixture, C{tearDownClass}, for this test
+        case.
+
+        This must be called only once per TestCase subclass, since it will
+        run the fixture unconditionally.  This must not be called if there
+        is no C{tearDownClass} method.
+
+        @param ignored: An ignored parameter.
+
+        @type result: L{IReporter} provider
+        @param result: The result which will be used to report any problems
+            encountered in C{tearDownClass}.
+
+        @return: A L{Deferred} which will fire with the result of
+            C{tearDownClass}.
+        """
+        if not getattr(self, '_suppressUpDownWarning', None):
+            warn = deprecate.getWarningMethod()
+            warn(_classFixturesDeprecationMessage % {
+                    'method': 'tearDownClass',
+                    'class': qual(self.__class__),
+                    'replace': 'tearDown'},
+                category=DeprecationWarning,
+                stacklevel=1)
         d = self._run('tearDownClass', result)
         d.addErrback(self._ebTearDownClass, result)
         return d

@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -113,6 +113,8 @@ reflectorSuppression = suppressWarning(
 class ReflectorTestBase:
     """
     Base class for testing reflectors.
+
+    @ivar reflector: The reflector created during setup.
     """
 
     if interfaces.IReactorThreads(reactor, None) is None:
@@ -123,7 +125,10 @@ class ReflectorTestBase:
     def randomizeRow(self, row):
         return randomizeRow(row, self.nulls_ok, self.trailing_spaces_ok)
 
-    def setUp(self):
+    def extraSetUp(self):
+        """
+        Create and store a reference to a SQL reflector for use by the tests.
+        """
         d = self.createReflector()
         d.addCallback(self._cbSetUp)
         return d

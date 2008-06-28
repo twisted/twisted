@@ -1,12 +1,13 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
-Tests for L{twisted.words.xish.domish}.
+Tests for L{twisted.words.xish.domish}, a DOM-like library for XMPP.
 """
 
 from twisted.trial import unittest
 from twisted.words.xish import domish
+
 
 class DomishTestCase(unittest.TestCase):
     def testEscaping(self):
@@ -75,7 +76,14 @@ class DomishTestCase(unittest.TestCase):
         self.assertEquals(e.hasAttribute("attrib2"), 0)
         self.assertEquals(e[("testns2", "attrib2")], "value2")
 
-class DomishStreamTests:
+class DomishStreamTestsMixin:
+    """
+    Mixin defining tests for different stream implementations.
+
+    @ivar streamClass: A no-argument callable which will be used to create an
+        XML parser which can produce a stream of elements from incremental
+        input.
+    """
     def setUp(self):
         self.doc_started = False
         self.doc_ended = False
@@ -186,27 +194,31 @@ class DomishStreamTests:
         self.assertEquals('testns', self.elements[1].defaultUri)
         self.assertEquals({}, self.elements[1].localPrefixes)
 
-class DomishExpatStreamTestCase(unittest.TestCase, DomishStreamTests):
-    def setUp(self):
-        DomishStreamTests.setUp(self)
 
-    def setUpClass(self):
-        try:
-            import pyexpat
-        except ImportError:
-            raise unittest.SkipTest, "Skipping ExpatElementStream test, since no expat wrapper is available."
 
-        self.streamClass = domish.ExpatElementStream
+class DomishExpatStreamTestCase(DomishStreamTestsMixin, unittest.TestCase):
+    """
+    Tests for L{domish.ExpatElementStream}, the expat-based element stream
+    implementation.
+    """
+    streamClass = domish.ExpatElementStream
 
-class DomishSuxStreamTestCase(unittest.TestCase, DomishStreamTests):
-    def setUp(self):
-        DomishStreamTests.setUp(self)
+    try:
+        import pyexpat
+    except ImportError:
+        skip = "pyexpat is required for ExpatElementStream tests."
 
-    def setUpClass(self):
-        if domish.SuxElementStream is None:
-            raise unittest.SkipTest, "Skipping SuxElementStream test, since twisted.web is not available."
 
-        self.streamClass = domish.SuxElementStream
+
+class DomishSuxStreamTestCase(DomishStreamTestsMixin, unittest.TestCase):
+    """
+    Tests for L{domish.SuxElementStream}, the L{twisted.web.sux}-based element
+    stream implementation.
+    """
+    streamClass = domish.SuxElementStream
+
+    if domish.SuxElementStream is None:
+        skip = "twisted.web is required for SuxElementStream tests."
 
 
 

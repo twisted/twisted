@@ -1,17 +1,28 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
+
+"""
+Tests for Trial's C{setUpClass}, C{setUp}, C{tearDownClass}, and C{tearDown}.
+"""
 
 from twisted.python.compat import set
 from twisted.trial import unittest, reporter, runner
+from twisted.python import deprecate
 
 _setUpClassRuns = 0
 _tearDownClassRuns = 0
 
 class NumberOfRuns(unittest.TestCase):
+    """
+    Test that C{setUpClass} and C{tearDownClass} are each run run only once for
+    this class.
+    """
+    _suppressUpDownWarning = True
+
     def setUpClass(self):
         global _setUpClassRuns
         _setUpClassRuns += 1
-    
+
     def test_1(self):
         global _setUpClassRuns
         self.failUnlessEqual(_setUpClassRuns, 1)
@@ -31,6 +42,12 @@ class NumberOfRuns(unittest.TestCase):
 
 
 class AttributeSetUp(unittest.TestCase):
+    """
+    Test that an attribute set in C{setUpClass} is available in C{setUp} and in
+    each test method.
+    """
+    _suppressUpDownWarning = True
+
     def setUpClass(self):
         self.x = 42
 
@@ -52,6 +69,12 @@ class AttributeSetUp(unittest.TestCase):
 
 
 class AttributeManipulation(unittest.TestCase):
+    """
+    Test that attributes set in test methods are accessible in C{tearDown} and
+    C{tearDownClass}.
+    """
+    _suppressUpDownWarning = True
+
     def setUpClass(self):
         self.testsRun = 0
 
@@ -80,6 +103,8 @@ class AttributeSharing(unittest.TestCase):
             self.failIf(hasattr(self, 'first'))
 
     class ClassAttributeSharer(AttributeSharer):
+        _suppressUpDownWarning = True
+
         def setUpClass(self):
             pass
 
@@ -88,7 +113,7 @@ class AttributeSharing(unittest.TestCase):
 
     def setUp(self):
         self.loader = runner.TestLoader()
-        
+
     def test_normal(self):
         result = reporter.TestResult()
         suite = self.loader.loadClass(AttributeSharing.AttributeSharer)
@@ -104,15 +129,17 @@ class AttributeSharing(unittest.TestCase):
         self.failUnlessEqual(len(result.failures), 1) # from test_2
         self.failUnlessEqual(result.failures[0][0].shortDescription(),
                              'test_2')
-        
+
 
 class FactoryCounting(unittest.TestCase):
     class MyTestCase(unittest.TestCase):
+        _suppressUpDownWarning = True
+
         _setUpClassRun = 0
         _tearDownClassRun = 0
         def setUpClass(self):
             self.__class__._setUpClassRun += 1
-        
+
         def test_1(self):
             pass
 
@@ -123,6 +150,8 @@ class FactoryCounting(unittest.TestCase):
             self.__class__._tearDownClassRun += 1
 
     class AnotherTestCase(MyTestCase):
+        _suppressUpDownWarning = True
+
         _setUpClassRun = 0
         _tearDownClassRun = 0
         def setUpClass(self):
@@ -137,8 +166,8 @@ class FactoryCounting(unittest.TestCase):
 
         def tearDownClass(self):
             self.__class__._tearDownClassRun += 1
-            
-    
+
+
     def setUp(self):
         self.factory = FactoryCounting.MyTestCase
         self.subFactory = FactoryCounting.AnotherTestCase
@@ -169,7 +198,7 @@ class FactoryCounting(unittest.TestCase):
         tests[1](result)
         self.failUnlessEqual(self.factory._setUpClassRun, 1)
         self.failUnlessEqual(self.factory._tearDownClassRun, 1)
-        
+
     def test_runTwice(self):
         test = self.factory('test_1')
         result = reporter.TestResult()
@@ -179,7 +208,7 @@ class FactoryCounting(unittest.TestCase):
         test(result)
         self.failUnlessEqual(self.factory._setUpClassRun, 2)
         self.failUnlessEqual(self.factory._tearDownClassRun, 2)
-        
+
     def test_runMultipleCopies(self):
         tests = map(self.factory, ['test_1', 'test_1'])
         result = reporter.TestResult()
@@ -189,7 +218,7 @@ class FactoryCounting(unittest.TestCase):
         tests[1](result)
         self.failUnlessEqual(self.factory._setUpClassRun, 1)
         self.failUnlessEqual(self.factory._tearDownClassRun, 1)
-        
+
     def test_skippingSetUpClass(self):
         tests = map(self.subFactory, ['test_1', 'test_2'])
         result = reporter.TestResult()
@@ -199,4 +228,51 @@ class FactoryCounting(unittest.TestCase):
         tests[1](result)
         self.failUnlessEqual(self.subFactory._setUpClassRun, 2)
         self.failUnlessEqual(self.subFactory._tearDownClassRun, 0)
-        
+
+
+
+class Deprecation(unittest.TestCase):
+    """
+    L{TestCase.setUpClass} and L{TestCase.tearDownClass} are deprecated and a
+    L{DeprecationWarning} is emitted when they are encountered.
+    """
+    def _classDeprecation(self, cls, methodName):
+        test = cls()
+        result = reporter.TestResult()
+        original = deprecate.getWarningMethod()
+        self.addCleanup(deprecate.setWarningMethod, original)
+        warnings = []
+        # XXX deprecate.collectWarnings()?  Maybe with support for filtering.
+        deprecate.setWarningMethod(
+            lambda message, category, stacklevel: warnings.append((
+                    message, category, stacklevel)))
+        test(result)
+        message, category, stacklevel = warnings[0]
+        self.assertIdentical(category, DeprecationWarning)
+        self.assertEqual(
+            message,
+            methodName + ", deprecated since Twisted 8.2.0, was overridden "
+            "by " + cls.__module__ + "." + cls.__name__ + ".  Use " +
+            methodName.replace('Class', '') + " instead.")
+
+
+    def test_setUpClassDeprecation(self):
+        """
+        A L{DeprecationWarning} is emitted when a L{TestCase} with an
+        overridden C{setUpClass} method is run.
+        """
+        class SetUpClassUser(unittest.TestCase):
+            def setUpClass(self):
+                pass
+        self._classDeprecation(SetUpClassUser, 'setUpClass')
+
+
+    def test_tearDownClassDeprecation(self):
+        """
+        A L{DeprecationWarning} is emitted when a L{TestCase} with an
+        overridden C{tearDownClass} method is run.
+        """
+        class TearDownClassUser(unittest.TestCase):
+            def tearDownClass(self):
+                pass
+        self._classDeprecation(TearDownClassUser, 'tearDownClass')

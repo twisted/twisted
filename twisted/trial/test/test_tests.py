@@ -145,6 +145,8 @@ class TestSkipMethods(unittest.TestCase, ResultsTestMixin):
 
 class TestSkipClasses(unittest.TestCase, ResultsTestMixin):
     class SkippedClass(unittest.TestCase):
+        _suppressUpDownWarning = True
+
         skip = 'class'
         def setUpClass(self):
             self.__class__._setUpClassRan = True
@@ -196,6 +198,8 @@ class TestSkipClasses(unittest.TestCase, ResultsTestMixin):
 
 class TestSkipClassesRaised(unittest.TestCase, ResultsTestMixin):
     class SkippedClass(unittest.TestCase):
+        _suppressUpDownWarning = True
+
         def setUpClass(self):
             raise unittest.SkipTest("class")
         def setUp(self):
@@ -568,6 +572,8 @@ class GCMixin:
             self._log('tearDown')
 
     class ClassTest(unittest.TestCase):
+        _suppressUpDownWarning = True
+
         def test_1(self):
             self._log('test1')
         def test_2(self):

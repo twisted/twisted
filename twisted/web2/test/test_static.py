@@ -1,3 +1,10 @@
+# Copyright (c) 2008 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Tests for L{twisted.web2.static}.
+"""
+
 import os
 
 from twisted.web2.test.test_server import BaseCase
@@ -5,6 +12,8 @@ from twisted.web2 import static
 from twisted.web2 import http_headers
 from twisted.web2 import stream
 from twisted.web2 import iweb
+
+
 
 class TestData(BaseCase):
     def setUp(self):
@@ -47,10 +56,14 @@ class TestData(BaseCase):
 
 
 class TestFileSaver(BaseCase):
-    def setUpClass(self):
+    def setUp(self):
+        """
+        Create an empty directory and a resource which will save uploads to
+        that directory.
+        """
         self.tempdir = self.mktemp()
         os.mkdir(self.tempdir)
-        
+
         self.root = static.FileSaver(self.tempdir,
                               expectedFields=['FileNameOne'],
                               maxBytes=16)
@@ -60,10 +73,10 @@ class TestFileSaver(BaseCase):
                    host='foo', path='/'):
         if not resrc:
             resrc = self.root
-            
+
         ctype = http_headers.MimeType('multipart', 'form-data',
                                       (('boundary', '---weeboundary'),))
-        
+
         return self.getResponseFor(resrc, '/',
                             headers={'host': 'foo',
                                      'content-type': ctype },
@@ -79,10 +92,10 @@ Content-Type: %s\r
 
     def _CbAssertInResponse(self, (code, headers, data, failed),
                             expected_response, expectedFailure=False):
-        
+
         expected_code, expected_headers, expected_data = expected_response
         self.assertEquals(code, expected_code)
-        
+
         if expected_data is not None:
             self.failUnlessSubstring(expected_data, data)
 
@@ -131,4 +144,3 @@ Content-Type: %s\r
         d.addCallback(self.fileNameFromResponse)
         d.addCallback(gotFname)
         return d
-

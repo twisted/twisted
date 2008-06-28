@@ -8,7 +8,7 @@ Tests for twisted.enterprise.adbapi.
 
 from twisted.trial import unittest
 
-import os, stat
+import os, stat, new
 
 from twisted.enterprise.adbapi import ConnectionPool, ConnectionLost, safe
 from twisted.enterprise.adbapi import _unreleasedVersion
@@ -30,10 +30,14 @@ class ADBAPITestBase:
     if interfaces.IReactorThreads(reactor, None) is None:
         skip = "ADB-API requires threads, no way to test without them"
 
-    def setUp(self):
+    def extraSetUp(self):
+        """
+        Set up the database and create a connection pool pointing at it.
+        """
         self.startDB()
         self.dbpool = self.makePool(cp_openfun=self.openfun)
         self.dbpool.start()
+
 
     def tearDown(self):
         d =  self.dbpool.runOperation('DROP TABLE simple')
@@ -245,7 +249,12 @@ class ReconnectTestBase:
     if interfaces.IReactorThreads(reactor, None) is None:
         skip = "ADB-API requires threads, no way to test without them"
 
-    def setUp(self):
+    def extraSetUp(self):
+        """
+        Skip the test if C{good_sql} is unavailable.  Otherwise, set up the
+        database, create a connection pool pointed at it, and set up a simple
+        schema in it.
+        """
         if self.good_sql is None:
             raise unittest.SkipTest('no good sql for reconnect test')
         self.startDB()
@@ -253,6 +262,7 @@ class ReconnectTestBase:
                                     cp_good_sql=self.good_sql)
         self.dbpool.start()
         return self.dbpool.runOperation(simple_table_schema)
+
 
     def tearDown(self):
         d = self.dbpool.runOperation('DROP TABLE simple')
@@ -330,18 +340,16 @@ class DBTestConnector:
     good_sql = ConnectionPool.good_sql
     early_reconnect = True # cursor() will fail on closed connection
     can_clear = True # can try to clear out tables when starting
-    needs_dbdir = False # if a temporary directory is needed for the db
 
     num_iterations = 50 # number of iterations for test loops
                         # (lower this for slow db's)
 
-    def setUpClass(self):
-        if self.needs_dbdir:
-            self.DB_DIR = self.mktemp()
-            os.mkdir(self.DB_DIR)
-
+    def setUp(self):
+        self.DB_DIR = self.mktemp()
+        os.mkdir(self.DB_DIR)
         if not self.can_connect():
             raise unittest.SkipTest('%s: Cannot access db' % self.TEST_PREFIX)
+        return self.extraSetUp()
 
     def can_connect(self):
         """Return true if this database is present on the system
@@ -376,7 +384,6 @@ class GadflyConnector(DBTestConnector):
     can_rollback = False
     escape_slashes = False
     good_sql = 'select * from simple where 1=0'
-    needs_dbdir = True
 
     num_iterations = 1 # slow
 
@@ -407,7 +414,6 @@ class SQLiteConnector(DBTestConnector):
     TEST_PREFIX = 'SQLite'
 
     escape_slashes = False
-    needs_dbdir = True
 
     num_iterations = 1 # slow
 
@@ -496,7 +502,6 @@ class FirebirdConnector(DBTestConnector):
     escape_slashes = False
     good_sql = None # firebird doesn't handle failed sql well
     can_clear = False # firebird is not so good
-    needs_dbdir = True
 
     num_iterations = 5 # slow
 
@@ -510,6 +515,7 @@ class FirebirdConnector(DBTestConnector):
         except:
             return False
 
+
     def startDB(self):
         import kinterbasdb
         self.DB_NAME = os.path.join(self.DB_DIR, DBTestConnector.DB_NAME)
@@ -518,6 +524,7 @@ class FirebirdConnector(DBTestConnector):
         sql %= (self.DB_NAME, self.DB_USER, self.DB_PASS);
         conn = kinterbasdb.create_database(sql)
         conn.close()
+
 
     def getPoolArgs(self):
         args = ('kinterbasdb',)
@@ -545,7 +552,6 @@ def makeSQLTests(base, suffix, globals):
                   PsycopgConnector, MySQLConnector, FirebirdConnector]
     for connclass in connectors:
         name = connclass.TEST_PREFIX + suffix
-        import new
         klass = new.classobj(name, (connclass, base, unittest.TestCase), base.__dict__)
         globals[name] = klass
 
