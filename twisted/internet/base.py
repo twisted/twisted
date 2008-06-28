@@ -450,7 +450,8 @@ class ReactorBase(object):
     _lock = None
 
     def installWaker(self):
-        raise NotImplementedError()
+        raise NotImplementedError(
+            reflect.qual(self.__class__) + " did not implement installWaker")
 
     def installResolver(self, resolver):
         assert IResolverSimple.providedBy(resolver)
@@ -467,31 +468,41 @@ class ReactorBase(object):
             # therefore doesn't need to be woken up
 
     def doIteration(self, delay):
-        """Do one iteration over the readers and writers we know about."""
-        raise NotImplementedError
+        """
+        Do one iteration over the readers and writers which have been added.
+        """
+        raise NotImplementedError(
+            reflect.qual(self.__class__) + " did not implement doIteration")
 
     def addReader(self, reader):
-        raise NotImplementedError
+        raise NotImplementedError(
+            reflect.qual(self.__class__) + " did not implement addReader")
 
     def addWriter(self, writer):
-        raise NotImplementedError
+        raise NotImplementedError(
+            reflect.qual(self.__class__) + " did not implement addWriter")
 
     def removeReader(self, reader):
-        raise NotImplementedError
+        raise NotImplementedError(
+            reflect.qual(self.__class__) + " did not implement removeReader")
 
     def removeWriter(self, writer):
-        raise NotImplementedError
+        raise NotImplementedError(
+            reflect.qual(self.__class__) + " did not implement removeWriter")
 
     def removeAll(self):
-        raise NotImplementedError
+        raise NotImplementedError(
+            reflect.qual(self.__class__) + " did not implement removeAll")
 
 
     def getReaders(self):
-        raise NotImplementedError()
+        raise NotImplementedError(
+            reflect.qual(self.__class__) + " did not implement getReaders")
 
 
     def getWriters(self):
-        raise NotImplementedError()
+        raise NotImplementedError(
+            reflect.qual(self.__class__) + " did not implement getWriters")
 
 
     def resolve(self, name, timeout = (1, 3, 11, 45)):
@@ -993,7 +1004,10 @@ class BaseConnector(styles.Ephemeral):
             self.factoryStarted = 0
 
     def getDestination(self):
-        raise NotImplementedError, "implement in subclasses"
+        raise NotImplementedError(
+            reflect.qual(self.__class__) + " did not implement "
+            "getDestination")
+
 
 
 class BasePort(abstract.FileDescriptor):

@@ -27,8 +27,8 @@ from twisted.python import lockfile, log, reflect, failure
 
 
 class Server(tcp.Server):
-    def __init__(self, sock, protocol, client, server, sessionno):
-        tcp.Server.__init__(self, sock, protocol, (client, None), server, sessionno)
+    def __init__(self, sock, protocol, client, server, sessionno, reactor):
+        tcp.Server.__init__(self, sock, protocol, (client, None), server, sessionno, reactor)
 
     def getHost(self):
         return address.UNIXAddress(self.socket.getsockname())

@@ -239,7 +239,7 @@ class Client(Connection):
 
         This indicates the address that I am connected to.
         """
-        return address.IPv4Address('TCP', *(self.addr + ('INET',)))
+        return address.IPv4Address('TCP', *(self.realAddress + ('INET',)))
 
 
     def __repr__(self):

@@ -614,7 +614,7 @@ class Client(BaseClient):
 
         This indicates the address that I am connected to.
         """
-        return address.IPv4Address('TCP', *(self.addr + ('INET',)))
+        return address.IPv4Address('TCP', *(self.realAddress + ('INET',)))
 
     def __repr__(self):
         s = '<%s to %s at %x>' % (self.__class__, self.addr, unsignedID(self))
@@ -629,7 +629,7 @@ class Server(Connection):
     an accept() on a server.
     """
 
-    def __init__(self, sock, protocol, client, server, sessionno):
+    def __init__(self, sock, protocol, client, server, sessionno, reactor):
         """
         Server(sock, protocol, client, server, sessionno)
 
@@ -637,7 +637,7 @@ class Server(Connection):
         tuple of host, port describing the other end of the connection), an
         instance of Port, and a session number.
         """
-        Connection.__init__(self, sock, protocol)
+        Connection.__init__(self, sock, protocol, reactor)
         self.server = server
         self.client = client
         self.sessionno = sessionno
@@ -831,7 +831,7 @@ class Port(base.BasePort, _SocketCloser):
                     continue
                 s = self.sessionno
                 self.sessionno = s+1
-                transport = self.transport(skt, protocol, addr, self, s)
+                transport = self.transport(skt, protocol, addr, self, s, self.reactor)
                 transport = self._preMakeConnection(transport)
                 protocol.makeConnection(transport)
             else:
