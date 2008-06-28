@@ -1,8 +1,10 @@
 # -*- test-case-name: twisted.test.test_iutils -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-"""Utility methods."""
+"""
+Utility methods.
+"""
 
 import sys, warnings
 
@@ -51,7 +53,7 @@ class _BackRelay(protocol.ProcessProtocol):
             self.deferred.callback(self.s.getvalue())
 
 
-def getProcessOutput(executable, args=(), env={}, path='.', reactor=None,
+def getProcessOutput(executable, args=(), env={}, path=None, reactor=None,
                      errortoo=0):
     """Spawn a process and return its output as a deferred returning a string.
 
@@ -71,7 +73,7 @@ def getProcessOutput(executable, args=(), env={}, path='.', reactor=None,
     @param reactor: the reactor to use - defaults to the default reactor
     @param errortoo: if 1, capture stderr too
     """
-    return _callProtocolWithDeferred(lambda d: 
+    return _callProtocolWithDeferred(lambda d:
                                         _BackRelay(d, errortoo=errortoo),
                                      executable, args, env, path,
                                      reactor)
@@ -86,7 +88,7 @@ class _ValueGetter(protocol.ProcessProtocol):
         self.deferred.callback(reason.value.exitCode)
 
 
-def getProcessValue(executable, args=(), env={}, path='.', reactor=None):
+def getProcessValue(executable, args=(), env={}, path=None, reactor=None):
     """Spawn a process and return its exit code as a Deferred."""
     return _callProtocolWithDeferred(_ValueGetter, executable, args, env, path,
                                     reactor)
@@ -100,7 +102,7 @@ class _EverythingGetter(protocol.ProcessProtocol):
         self.errBuf = StringIO.StringIO()
         self.outReceived = self.outBuf.write
         self.errReceived = self.errBuf.write
-    
+
     def processEnded(self, reason):
         out = self.outBuf.getvalue()
         err = self.errBuf.getvalue()
@@ -111,7 +113,7 @@ class _EverythingGetter(protocol.ProcessProtocol):
         else:
             self.deferred.callback((out, err, code))
 
-def getProcessOutputAndValue(executable, args=(), env={}, path='.', 
+def getProcessOutputAndValue(executable, args=(), env={}, path=None,
                              reactor=None):
     """Spawn a process and returns a Deferred that will be called back with
     its output (from stdout and stderr) and it's exit code as (out, err, code)
