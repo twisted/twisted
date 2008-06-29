@@ -1,6 +1,5 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 FTP tests.
@@ -10,7 +9,6 @@ Maintainer: U{Andrew Bennetts<mailto:spiv@twistedmatrix.com>}
 
 import os.path
 from StringIO import StringIO
-import shutil
 import errno
 
 from zope.interface import implements
@@ -76,7 +74,8 @@ class FTPServerTestCase(unittest.TestCase):
         p.registerChecker(checkers.AllowAnonymousAccess(),
                           credentials.IAnonymous)
         self.factory = ftp.FTPFactory(portal=p)
-        self.port = reactor.listenTCP(0, self.factory, interface="127.0.0.1")
+        port = reactor.listenTCP(0, self.factory, interface="127.0.0.1")
+        self.addCleanup(port.stopListening)
 
         # Hook the server's buildProtocol to make the protocol instance
         # accessible to tests.
@@ -90,25 +89,14 @@ class FTPServerTestCase(unittest.TestCase):
         self.factory.buildProtocol = _rememberProtocolInstance
 
         # Connect a client to it
-        portNum = self.port.getHost().port
+        portNum = port.getHost().port
         clientCreator = protocol.ClientCreator(reactor, self.clientFactory)
         d2 = clientCreator.connectTCP("127.0.0.1", portNum)
         def gotClient(client):
             self.client = client
+            self.addCleanup(self.client.transport.loseConnection)
         d2.addCallback(gotClient)
         return defer.gatherResults([d1, d2])
-
-    def tearDown(self):
-        # Clean up sockets
-        self.client.transport.loseConnection()
-        d = defer.maybeDeferred(self.port.stopListening)
-        d.addCallback(self.ebTearDown)
-        return d
-
-    def ebTearDown(self, ignore):
-        del self.serverProtocol
-        # Clean up temporary directory
-        shutil.rmtree(self.directory)
 
     def assertCommandResponse(self, command, expectedResponseLines,
                               chainDeferred=None):
@@ -614,17 +602,13 @@ class FTPFileListingTests(unittest.TestCase):
 
 
 class FTPClientTests(unittest.TestCase):
-    def tearDown(self):
-        # Clean up self.port, if any.
-        port = getattr(self, 'port', None)
-        if port is not None:
-            return port.stopListening()
 
     def testFailedRETR(self):
         f = protocol.Factory()
         f.noisy = 0
-        self.port = reactor.listenTCP(0, f, interface="127.0.0.1")
-        portNum = self.port.getHost().port
+        port = reactor.listenTCP(0, f, interface="127.0.0.1")
+        self.addCleanup(port.stopListening)
+        portNum = port.getHost().port
         # This test data derived from a bug report by ranty on #twisted
         responses = ['220 ready, dude (vsFTPd 1.0.0: beat me, break me)',
                      # USER anonymous
