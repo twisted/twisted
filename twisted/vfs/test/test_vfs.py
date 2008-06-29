@@ -1,12 +1,16 @@
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Tests for L{twisted.vfs.backends}.
+"""
 
 import os
-import os.path
-import shutil
 
 from twisted.trial import unittest
 
 from twisted.vfs.backends import osfs, inmem
-from twisted.vfs.ivfs import IFileSystemContainer, IFileSystemLeaf
+
 
 
 class OSVFSTest(unittest.TestCase):
@@ -17,9 +21,6 @@ class OSVFSTest(unittest.TestCase):
         os.mkdir(os.path.join(self.tmpdir, 'ned'))
         open(os.path.join(self.tmpdir, 'file.txt'), 'w').write('wobble\n')
         self.root = osfs.OSDirectory(self.tmpdir)
-
-    def tearDown(self):
-        shutil.rmtree(self.tmpdir)
 
     def test_listdir(self):
         nodes = self.root.children()
@@ -91,7 +92,3 @@ class InMemVFSTest(OSVFSTest):
         f = inmem.FakeFile('file.txt', root, 'wobble\n')
         root._children = { 'ned' : ned, 'file.txt' : f }
         self.root = root
-
-    def tearDown(self):
-        pass
-
