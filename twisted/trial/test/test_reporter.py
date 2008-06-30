@@ -707,15 +707,14 @@ class MockColorizer:
     """
     Used by TestTreeReporter to make sure that output is colored correctly.
     """
+
     def __init__(self, stream):
         self.log = []
 
-    def supported(self):
-        return True
-    supported = classmethod(supported)
 
     def write(self, text, color):
         self.log.append((color, text))
+
 
 
 class TestTreeReporter(unittest.TestCase):
@@ -1067,3 +1066,130 @@ class TestAdaptedReporter(unittest.TestCase):
         """
         self.wrappedResult.addUnexpectedSuccess(self, Todo("no reason"))
         self.assertWrapped(self.wrappedResult, self)
+
+
+
+class FakeStream(object):
+    """
+    A fake stream which C{isatty} method returns some predictable.
+
+    @ivar tty: returned value of C{isatty}.
+    @type tty: C{bool}
+    """
+
+    def __init__(self, tty=True):
+        self.tty = tty
+
+
+    def isatty(self):
+        return self.tty
+
+
+
+class AnsiColorizerTests(unittest.TestCase):
+    """
+    Tests for L{reporter._AnsiColorizer}.
+    """
+
+    def setUp(self):
+        self.savedModules = sys.modules.copy()
+
+
+    def tearDown(self):
+        sys.modules.clear()
+        sys.modules.update(self.savedModules)
+
+
+    def test_supportedStdOutTTY(self):
+        """
+        L{reporter._AnsiColorizer.supported} returns C{False} if the given
+        stream is not a TTY.
+        """
+        self.assertFalse(reporter._AnsiColorizer.supported(FakeStream(False)))
+
+
+    def test_supportedNoCurses(self):
+        """
+        L{reporter._AnsiColorizer.supported} returns C{False} if the curses
+        module can't be imported.
+        """
+        sys.modules['curses'] = None
+        self.assertFalse(reporter._AnsiColorizer.supported(FakeStream()))
+
+
+    def test_supportedSetupTerm(self):
+        """
+        L{reporter._AnsiColorizer.supported} returns C{True} if
+        C{curses.tigetnum} returns more than 2 supported colors. It only tries
+        to call C{curses.setupterm} if C{curses.tigetnum} previously failed
+        with a C{curses.error}.
+        """
+        class fakecurses(object):
+            error = RuntimeError
+            setUp = 0
+
+            def setupterm(self):
+                self.setUp += 1
+
+            def tigetnum(self, value):
+                if self.setUp:
+                    return 3
+                else:
+                    raise self.error()
+
+        sys.modules['curses'] = fakecurses()
+        self.assertTrue(reporter._AnsiColorizer.supported(FakeStream()))
+        self.assertTrue(reporter._AnsiColorizer.supported(FakeStream()))
+
+        self.assertEquals(sys.modules['curses'].setUp, 1)
+
+
+    def test_supportedTigetNumWrongError(self):
+        """
+        L{reporter._AnsiColorizer.supported} returns C{False} and doesn't try
+        to call C{curses.setupterm} if C{curses.tigetnum} returns something
+        different than C{curses.error}.
+        """
+        class fakecurses(object):
+            error = RuntimeError
+
+            def tigetnum(self, value):
+                raise ValueError()
+
+        sys.modules['curses'] = fakecurses()
+        self.assertFalse(reporter._AnsiColorizer.supported(FakeStream()))
+
+
+    def test_supportedTigetNumNotEnoughColor(self):
+        """
+        L{reporter._AnsiColorizer.supported} returns C{False} if
+        C{curses.tigetnum} returns less than 2 supported colors.
+        """
+        class fakecurses(object):
+            error = RuntimeError
+
+            def tigetnum(self, value):
+                return 1
+
+        sys.modules['curses'] = fakecurses()
+        self.assertFalse(reporter._AnsiColorizer.supported(FakeStream()))
+
+
+    def test_supportedTigetNumErrors(self):
+        """
+        L{reporter._AnsiColorizer.supported} returns C{False} if
+        C{curses.tigetnum} raises an error, and calls C{curses.setupterm} once.
+        """
+        class fakecurses(object):
+            error = RuntimeError
+            setUp = 0
+
+            def setupterm(self):
+                self.setUp += 1
+
+            def tigetnum(self, value):
+                raise self.error()
+
+        sys.modules['curses'] = fakecurses()
+        self.assertFalse(reporter._AnsiColorizer.supported(FakeStream()))
+        self.assertEquals(sys.modules['curses'].setUp, 1)

@@ -741,24 +741,27 @@ class _AnsiColorizer(object):
     def __init__(self, stream):
         self.stream = stream
 
-    def supported(self):
+    def supported(cls, stream=sys.stdout):
         """
         A class method that returns True if the current platform supports
         coloring terminal output using this method. Returns False otherwise.
         """
-        # assuming stderr
-        # isatty() returns False when SSHd into Win32 machine
-        if 'CYGWIN' in os.environ:
-            return True
-        if not sys.stderr.isatty():
+        if not stream.isatty():
             return False # auto color only on TTYs
         try:
             import curses
-            curses.setupterm()
-            return curses.tigetnum("colors") > 2
-        except:
-            # guess false in case of error
+        except ImportError:
             return False
+        else:
+            try:
+                try:
+                    return curses.tigetnum("colors") > 2
+                except curses.error:
+                    curses.setupterm()
+                    return curses.tigetnum("colors") > 2
+            except:
+                # guess false in case of error
+                return False
     supported = classmethod(supported)
 
     def write(self, text, color):
@@ -796,7 +799,7 @@ class _Win32Colorizer(object):
             'white': red | green | blue | bold
             }
 
-    def supported(self):
+    def supported(cls, stream=sys.stdout):
         try:
             import win32console
             screenBuffer = win32console.GetStdHandle(
@@ -829,7 +832,7 @@ class _NullColorizer(object):
     def __init__(self, stream):
         self.stream = stream
 
-    def supported(self):
+    def supported(cls, stream=sys.stdout):
         return True
     supported = classmethod(supported)
 
@@ -861,7 +864,7 @@ class TreeReporter(Reporter):
         super(TreeReporter, self).__init__(stream, tbformat, realtime)
         self._lastTest = []
         for colorizer in [_Win32Colorizer, _AnsiColorizer, _NullColorizer]:
-            if colorizer.supported():
+            if colorizer.supported(stream):
                 self._colorizer = colorizer(stream)
                 break
 
