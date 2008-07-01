@@ -6,18 +6,18 @@
 Static resources for L{twisted.web}.
 """
 
-# System Imports
-import os, string
+import os
 import warnings
+import urllib
+import itertools
+import cgi
 
-# Sibling Imports
 from twisted.web import server
 from twisted.web import error
 from twisted.web import resource
+from twisted.web import http
 from twisted.web.util import redirectTo
 
-# Twisted Imports
-from twisted.web import http
 from twisted.python import components, filepath
 from twisted.internet import abstract
 from twisted.spread import pb
@@ -51,14 +51,14 @@ class Data(resource.Resource):
 
 def addSlash(request):
     qs = ''
-    qindex = string.find(request.uri, '?')
+    qindex = request.uri.find('?')
     if qindex != -1:
         qs = request.uri[qindex:]
 
     return "http%s://%s%s/%s" % (
         request.isSecure() and 's' or '',
         request.getHeader("host"),
-        (string.split(request.uri,'?')[0]),
+        (request.uri.split('?')[0]),
         qs)
 
 class Redirect(resource.Resource):
@@ -232,12 +232,11 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
     childNotFound = error.NoResource("File not found.")
 
     def directoryListing(self):
-        from twisted.web.woven import dirlist
-        return dirlist.DirectoryLister(self.path,
-                                       self.listNames(),
-                                       self.contentTypes,
-                                       self.contentEncodings,
-                                       self.defaultType)
+        return DirectoryLister(self.path,
+                               self.listNames(),
+                               self.contentTypes,
+                               self.contentEncodings,
+                               self.defaultType)
 
     def getChild(self, path, request):
         """See twisted.web.Resource.getChild.
@@ -454,3 +453,184 @@ class ASISProcessor(resource.Resource):
         request.startedWriting = 1
         res = File(self.path, registry=self.registry)
         return res.render(request)
+
+
+
+def formatFileSize(size):
+    """
+    Format the given file size in bytes to human readable format.
+    """
+    if size < 1024:
+        return '%iB' % size
+    elif size < (1024 ** 2):
+        return '%iK' % (size / 1024)
+    elif size < (1024 ** 3):
+        return '%iM' % (size / (1024 ** 2))
+    else:
+        return '%iG' % (size / (1024 ** 3))
+
+
+
+class DirectoryLister(resource.Resource):
+    """
+    Print the content of a directory.
+
+    @ivar template: page template used to render the content of the directory.
+        It must contain the format keys B{header} and B{tableContent}.
+    @type template: C{str}
+
+    @ivar linePattern: template used to render one line in the listing table.
+        It must contain the format keys B{class}, B{href}, B{text}, B{size},
+        B{type} and B{encoding}.
+    @type linePattern: C{str}
+
+    @ivar contentEncodings: a mapping of extensions to encoding types.
+    @type contentEncodings: C{dict}
+
+    @ivar defaultType: default type used when no mimetype is detected.
+    @type defaultType: C{str}
+
+    @ivar dirs: filtered content of C{path}, if the whole content should not be
+        displayed (default to C{None}, which means the actual content of
+        C{path} is printed).
+    @type dirs: C{NoneType} or C{list}
+
+    @ivar path: directory which content should be listed.
+    @type path: C{str}
+    """
+
+    template = """<html>
+<head>
+<title>%(header)s</title>
+<style>
+.even-dir { background-color: #efe0ef }
+.even { background-color: #eee }
+.odd-dir {background-color: #f0d0ef }
+.odd { background-color: #dedede }
+.icon { text-align: center }
+.listing {
+    margin-left: auto;
+    margin-right: auto;
+    width: 50%%;
+    padding: 0.1em;
+    }
+
+body { border: 0; padding: 0; margin: 0; background-color: #efefef; }
+h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin white dashed;}
+
+</style>
+</head>
+
+<body>
+<h1>%(header)s</h1>
+
+<table>
+    <thead>
+        <tr>
+            <th>Filename</th>
+            <th>Size</th>
+            <th>Content type</th>
+            <th>Content encoding</th>
+        </tr>
+    </thead>
+    <tbody>
+%(tableContent)s
+    </tbody>
+</table>
+
+</body>
+</html>
+"""
+
+    linePattern = """<tr class="%(class)s">
+    <td><a href="%(href)s">%(text)s</a></td>
+    <td>%(size)s</td>
+    <td>%(type)s</td>
+    <td>%(encoding)s</td>
+</tr>
+"""
+
+    def __init__(self, pathname, dirs=None,
+                 contentTypes=File.contentTypes,
+                 contentEncodings=File.contentEncodings,
+                 defaultType='text/html'):
+        self.contentTypes = contentTypes
+        self.contentEncodings = contentEncodings
+        self.defaultType = defaultType
+        # dirs allows usage of the File to specify what gets listed
+        self.dirs = dirs
+        self.path = pathname
+
+
+    def _getFilesAndDirectories(self, directory):
+        """
+        Helper returning files and directories in given directory listing, with
+        attributes to be used to build a table content with
+        C{self.linePattern}.
+
+        @return: tuple of (directories, files)
+        @rtype: C{tuple} of C{list}
+        """
+        files = []
+        dirs = []
+        for path in directory:
+            url = urllib.quote(path, "/")
+            escapedPath = cgi.escape(path)
+            if os.path.isdir(os.path.join(self.path, path)):
+                url = url + '/'
+                dirs.append({'text': escapedPath + "/", 'href': url,
+                             'size': '', 'type': '[Directory]',
+                             'encoding': ''})
+            else:
+                mimetype, encoding = getTypeAndEncoding(path, self.contentTypes,
+                                                        self.contentEncodings,
+                                                        self.defaultType)
+                try:
+                    size = os.stat(os.path.join(self.path, path)).st_size
+                except OSError:
+                    continue
+                files.append({
+                    'text': escapedPath, "href": url,
+                    'type': '[%s]' % mimetype,
+                    'encoding': (encoding and '[%s]' % encoding or ''),
+                    'size': formatFileSize(size)})
+        return dirs, files
+
+
+    def _buildTableContent(self, elements):
+        """
+        Build a table content using C{self.linePattern} and giving elements odd
+        and even classes.
+        """
+        tableContent = []
+        rowClasses = itertools.cycle(['odd', 'even'])
+        for element, rowClass in zip(elements, rowClasses):
+            element["class"] = rowClass
+            tableContent.append(self.linePattern % element)
+        return tableContent
+
+
+    def render(self, request):
+        """
+        Render a listing of the content of C{self.path}.
+        """
+        if self.dirs is None:
+            directory = os.listdir(self.path)
+            directory.sort()
+        else:
+            directory = self.dirs
+
+        dirs, files = self._getFilesAndDirectories(directory)
+
+        tableContent = "".join(self._buildTableContent(dirs + files))
+
+        header = "Directory listing for %s" % (
+            cgi.escape(urllib.unquote(request.uri)),)
+
+        return self.template % {"header": header, "tableContent": tableContent}
+
+
+    def __repr__(self):
+        return '<DirectoryLister of %r>' % self.path
+
+    __str__ = __repr__
