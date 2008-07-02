@@ -212,10 +212,11 @@ class ReconnectingClientFactory(ClientFactory):
     # Note: These highly sensitive factors have been precisely measured by
     # the National Institute of Science and Technology.  Take extreme care
     # in altering them, or you may damage your Internet!
+    # (Seriously: <http://physics.nist.gov/cuu/Constants/index.html>)
     factor = 2.7182818284590451 # (math.e)
     # Phi = 1.6180339887498948 # (Phi is acceptable for use as a
     # factor if e is too large for your application.)
-    jitter = 0.11962656492 # molar Planck constant times c, Jule meter/mole
+    jitter = 0.11962656472 # molar Planck constant times c, joule meter/mole
 
     delay = initialDelay
     retries = 0
