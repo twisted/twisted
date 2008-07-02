@@ -441,21 +441,30 @@ of the results of the Deferreds it contains, like so:</p>
 
 <pre class="python">
 def printResult(result):
-    print result
+    for (success, value) in result:
+        if success:
+            print 'Success:', value
+        else:
+            print 'Failure:', value.getErrorMessage()
 deferred1 = defer.Deferred()
 deferred2 = defer.Deferred()
 deferred3 = defer.Deferred()
-dl = defer.DeferredList([deferred1, deferred2, deferred3])
+dl = defer.DeferredList([deferred1, deferred2, deferred3], consumeErrors=True)
 dl.addCallback(printResult)
 deferred1.callback('one')
-deferred2.errback('bang!')
+deferred2.errback(Exception('bang!'))
 deferred3.callback('three')
 # At this point, dl will fire its callback, printing:
-#     [(1, 'one'), (0, 'bang!'), (1, 'three')]
-# (note that defer.SUCCESS == 1, and defer.FAILURE == 0)
+#    Success: one
+#    Failure: bang!
+#    Success: three
+# (note that defer.SUCCESS == True, and defer.FAILURE == False)
 </pre>
 
-<p>A standard DeferredList will never call errback.</p>
+<p>A standard DeferredList will never call errback, but failures in Deferreds
+passed to a DeferredList will still errback unless <code>consumeErrors</code>
+is passed <code>True</code>.  See below for more details about this and other
+flags which modify the behavior of DeferredList.</p>
 
 <div class="note">
 <p>If you want to apply callbacks to the individual Deferreds that
