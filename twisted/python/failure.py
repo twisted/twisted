@@ -465,6 +465,31 @@ class Failure:
         self.printTraceback(file=io, elideFrameworkCode=elideFrameworkCode, detail=detail)
         return io.getvalue()
 
+    def _formatSyntaxError(self, exc):
+        """
+        @param exc: A L{SyntaxError} instance to be formatted.
+        """
+        lines = []
+        # value = exc
+        lines.append('  File "%s", line %d\n' % (exc.filename, exc.lineno))
+        # if exc.text is not None:
+        lines.append('    %s\n' % exc.text.strip())
+        # if exc.offset is not None:
+        caretspace = exc.text[:exc.offset] # .lstrip()
+        # non-space whitespace (likes tabs) must be kept for alignment
+        spaces = []
+        # for c in caretspace:
+        #     if c == '\t':
+        #         spaces.append(c)
+        #     else:
+        #         spaces.append(' ')
+        lines.append('   %s^\n' % ''.join(spaces))
+        # value = exc.msg
+        lines.append(("%s: %s\n" % (reflect.qual(self.type),
+                                    reflect.safe_str(exc.msg)))) # value
+        return "".join(lines)
+
+
     def printTraceback(self, file=None, elideFrameworkCode=0, detail='default'):
         """Emulate Python's standard error reporting mechanism.
         """
@@ -505,6 +530,8 @@ class Failure:
             # have.
             if isinstance(self.type, (str, unicode)):
                 w(self.type + "\n")
+            elif self.type is SyntaxError: # issubclass(self.type, SyntaxError):
+                w(self._formatSyntaxError(self.value))
             else:
                 w("%s: %s\n" % (reflect.qual(self.type),
                                 reflect.safe_str(self.value)))

@@ -9,10 +9,12 @@ Test cases for failure module.
 import sys
 import StringIO
 import traceback
+import re
 
 from twisted.trial import unittest, util
 
 from twisted.python import failure
+from twisted.python.filepath import FilePath
 
 try:
     from twisted.test import raiser
@@ -195,6 +197,40 @@ class FailureTestCase(unittest.TestCase):
         """
         f = failure.Failure(Exception("some error"))
         self.assertEqual(f.getTracebackObject(), None)
+
+
+    def test_syntaxErrorFormattingWhileLoadingModule(self):
+        """
+        Check if Failure._formatSyntaxError(error) formats correctly the error
+        message when there is a SyntaxError in the fake module we try to import.
+        """
+        content = "[['Testing invalid syntax in progress...})"
+        p = FilePath(self.mktemp())
+        p.makedirs()
+        p.child("broken_module_test.py").setContent(content)
+        sys.path.insert(0, p.path)
+        self.addCleanup(sys.path.remove, p.path)
+        try:
+            import broken_module_test
+        except SyntaxError, error:
+            errormsg = failure.Failure()._formatSyntaxError(error)
+        else:
+            self.fail("The test didn't worked as expected")
+
+        # The error message should look like:
+        # File "/path/to/broken_module_test.py", line 1
+        #     [['Testing invalid syntax in progress...})
+        #                                              ^
+        # exceptions.SyntaxError: EOL while scanning single-quoted string
+
+        pattern = ('^File "\S+?broken_module_test\.py", line 1\s+'
+                   '\[\[\'Testing invalid syntax in progress\.\.\.\}\)\s+'
+                   '\^\s+exceptions\.SyntaxError: EOL while scanning '
+                   'single-quoted string$')
+
+        self.assertTrue(re.match(pattern, errormsg.strip()))
+
+
 
 class FindFailureTests(unittest.TestCase):
     """
