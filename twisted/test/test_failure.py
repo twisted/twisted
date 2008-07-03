@@ -199,13 +199,45 @@ class FailureTestCase(unittest.TestCase):
         self.assertEqual(f.getTracebackObject(), None)
 
 
-    def test_moduleSyntaxErrorFormatting(self):
+    def test_syntaxErrorFormatting(self):
         """
         When a L{Failure} wraps a L{SyntaxError} raised while importing a
         module, the C{getTraceback} method returns a traceback including the
         invalid source line.
         """
         content = "[['Testing invalid syntax in progress...})"
+        p = FilePath(self.mktemp())
+        p.makedirs()
+        p.child("broken_module_test.py").setContent(content)
+        sys.path.insert(0, p.path)
+        self.addCleanup(sys.path.remove, p.path)
+        try:
+            import broken_module_test
+        except SyntaxError:
+            received = failure.Failure().getTraceback().splitlines()[-4:]
+        else:
+            self.fail("SyntaxError was expected but not raised")
+
+        standard = StringIO.StringIO()
+        try:
+            import broken_module_test
+        except SyntaxError:
+            traceback.print_exc(file=standard, limit=0)
+            standard = standard.getvalue().splitlines()[1:]
+        else:
+            self.fail("SyntaxError was expected but not raised")
+
+        self.assertEqual(received, standard)
+
+
+    def test_syntaxErrorFormattingWithTabs(self):
+        """
+        When a L{SyntaxError} is formatted, if the line containing the syntax
+        error contains a tab before the syntax error, the "caret" line still
+        ends up aligned with the character at which the syntax error was
+        encountered.
+        """
+        content = "[['Testing invalid\t syntax\t in progress...})\t"
         p = FilePath(self.mktemp())
         p.makedirs()
         p.child("broken_module_test.py").setContent(content)

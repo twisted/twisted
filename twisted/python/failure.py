@@ -473,17 +473,9 @@ class Failure:
         # value = exc
         lines.append('  File "%s", line %d\n' % (exc.filename, exc.lineno))
         # if exc.text is not None:
-        lines.append('     %s\n' % exc.text.strip())
-        # if exc.offset is not None:
-        caretspace = exc.text[:exc.offset] # .lstrip()
-        # non-space whitespace (likes tabs) must be kept for alignment
-        spaces = []
-        for c in caretspace:
-        #     if c == '\t':
-        #         spaces.append(c)
-        #     else:
-                spaces.append(' ')
-        lines.append('    %s^\n' % ''.join(spaces))
+        lines.append('     %s\n' % exc.text.rstrip())
+        lines.append('    %s^\n' % (
+                ''.join([ch == '\t' and ch or ' ' for ch in ' ' + exc.text[:-2]]),))
         # value = exc.msg
         typeName = reflect.qual(self.type)
         if typeName.startswith("exceptions."):
