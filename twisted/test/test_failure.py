@@ -199,7 +199,7 @@ class FailureTestCase(unittest.TestCase):
         self.assertEqual(f.getTracebackObject(), None)
 
 
-    def test_syntaxErrorFormattingWhileLoadingModule(self):
+    def test_moduleSyntaxErrorFormatting(self):
         """
         When a L{Failure} wraps a L{SyntaxError} raised while importing a
         module, the C{getTraceback} method returns a traceback including the
@@ -214,24 +214,20 @@ class FailureTestCase(unittest.TestCase):
         try:
             import broken_module_test
         except SyntaxError:
-            traceback = failure.Failure().getTraceback()
+            received = failure.Failure().getTraceback().splitlines()[-4:]
         else:
             self.fail("SyntaxError was expected but not raised")
 
-        # The error message should look like:
-        # File "/path/to/broken_module_test.py", line 1
-        #     [['Testing invalid syntax in progress...})
-        #                                              ^
-        # exceptions.SyntaxError: EOL while scanning single-quoted string
+        standard = StringIO.StringIO()
+        try:
+            import broken_module_test
+        except SyntaxError:
+            traceback.print_exc(file=standard, limit=0)
+            standard = standard.getvalue().splitlines()[1:]
+        else:
+            self.fail("SyntaxError was expected but not raised")
 
-        print traceback
-
-        pattern = ('^File "\S+?broken_module_test\.py", line 1\s+'
-                   '\[\[\'Testing invalid syntax in progress\.\.\.\}\)\s+'
-                   '\^\s+exceptions\.SyntaxError: EOL while scanning '
-                   'single-quoted string$')
-
-        self.assertTrue(re.match(pattern, errormsg.strip()))
+        self.assertEqual(received, standard)
 
 
 

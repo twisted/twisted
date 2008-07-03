@@ -473,20 +473,23 @@ class Failure:
         # value = exc
         lines.append('  File "%s", line %d\n' % (exc.filename, exc.lineno))
         # if exc.text is not None:
-        lines.append('    %s\n' % exc.text.strip())
+        lines.append('     %s\n' % exc.text.strip())
         # if exc.offset is not None:
         caretspace = exc.text[:exc.offset] # .lstrip()
         # non-space whitespace (likes tabs) must be kept for alignment
         spaces = []
-        # for c in caretspace:
+        for c in caretspace:
         #     if c == '\t':
         #         spaces.append(c)
         #     else:
-        #         spaces.append(' ')
-        lines.append('   %s^\n' % ''.join(spaces))
+                spaces.append(' ')
+        lines.append('    %s^\n' % ''.join(spaces))
         # value = exc.msg
-        lines.append(("%s: %s\n" % (reflect.qual(self.type),
-                                    reflect.safe_str(exc.msg)))) # value
+        typeName = reflect.qual(self.type)
+        if typeName.startswith("exceptions."):
+            typeName = typeName[len("exceptions."):]
+        lines.append((" %s: %s\n" % (typeName,
+                                     reflect.safe_str(exc.msg)))) # value
         return "".join(lines)
 
 
