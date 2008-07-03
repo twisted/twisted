@@ -201,8 +201,9 @@ class FailureTestCase(unittest.TestCase):
 
     def test_syntaxErrorFormattingWhileLoadingModule(self):
         """
-        Check if Failure._formatSyntaxError(error) formats correctly the error
-        message when there is a SyntaxError in the fake module we try to import.
+        When a L{Failure} wraps a L{SyntaxError} raised while importing a
+        module, the C{getTraceback} method returns a traceback including the
+        invalid source line.
         """
         content = "[['Testing invalid syntax in progress...})"
         p = FilePath(self.mktemp())
@@ -212,16 +213,18 @@ class FailureTestCase(unittest.TestCase):
         self.addCleanup(sys.path.remove, p.path)
         try:
             import broken_module_test
-        except SyntaxError, error:
-            errormsg = failure.Failure()._formatSyntaxError(error)
+        except SyntaxError:
+            traceback = failure.Failure().getTraceback()
         else:
-            self.fail("The test didn't worked as expected")
+            self.fail("SyntaxError was expected but not raised")
 
         # The error message should look like:
         # File "/path/to/broken_module_test.py", line 1
         #     [['Testing invalid syntax in progress...})
         #                                              ^
         # exceptions.SyntaxError: EOL while scanning single-quoted string
+
+        print traceback
 
         pattern = ('^File "\S+?broken_module_test\.py", line 1\s+'
                    '\[\[\'Testing invalid syntax in progress\.\.\.\}\)\s+'
