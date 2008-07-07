@@ -2052,7 +2052,6 @@ class AMP(BinaryBoxProtocol, BoxDispatcher,
             boxReceiver = self
         if locator is None:
             locator = self
-        boxSender = self
         BoxDispatcher.__init__(self, locator)
         BinaryBoxProtocol.__init__(self, boxReceiver)
 
