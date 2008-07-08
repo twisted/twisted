@@ -239,10 +239,12 @@ class TestLoading(unittest.TestCase):
             p.save()
             a1 = service.loadApplication("hello.ta"+style[0], style)
             self.assertEqual(service.IService(a1).name, "hello")
-        open("hello.tac", 'w').writelines([
+        f = open("hello.tac", 'w')
+        f.writelines([
         "from twisted.application import service\n",
         "application = service.Application('hello')\n",
         ])
+        f.close()
         a1 = service.loadApplication("hello.tac", 'python')
         self.assertEqual(service.IService(a1).name, "hello")
 
@@ -270,10 +272,12 @@ class TestAppSupport(unittest.TestCase):
             self.assertEqual(service.IService(a1).name, "hello")
         config = baseconfig.copy()
         config['python'] = 'helloapplication'
-        open("helloapplication", 'w').writelines([
+        f = open("helloapplication", 'w')
+        f.writelines([
         "from twisted.application import service\n",
         "application = service.Application('hello')\n",
         ])
+        f.close()
         a1 = app.getApplication(config, None)
         self.assertEqual(service.IService(a1).name, "hello")
 

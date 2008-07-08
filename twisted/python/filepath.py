@@ -620,7 +620,9 @@ class FilePath(_PathHelper):
 
     def setContent(self, content, ext='.new'):
         sib = self.siblingExtension(ext)
-        sib.open('w').write(content)
+        f = sib.open('w')
+        f.write(content)
+        f.close()
         if platform.isWindows() and exists(self.path):
             os.unlink(self.path)
         os.rename(sib.path, self.path)

@@ -43,12 +43,17 @@ class AbstractFilePathTestCase(unittest.TestCase):
         self.subdir("sub1")
         f = self.subfile("file1")
         f.write(self.f1content)
+        f.close()
         f = self.subfile("sub1", "file2")
         f.write(self.f2content)
+        f.close()
         self.subdir('sub3')
         f = self.subfile("sub3", "file3.ext1")
+        f.close()
         f = self.subfile("sub3", "file3.ext2")
+        f.close()
         f = self.subfile("sub3", "file3.ext3")
+        f.close()
         self.path = filepath.FilePath(cmn)
 
 

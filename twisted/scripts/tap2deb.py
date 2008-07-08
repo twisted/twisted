@@ -38,7 +38,9 @@ type_dict = {
 }
 
 def save_to_file(file, text):
-    open(file, 'w').write(text)
+    f = open(file, 'w')
+    f.write(text)
+    f.close()
 
 
 def run():

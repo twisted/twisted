@@ -34,7 +34,9 @@ def formulaeToImages(document, dir):
                      \\begin{document}\[%s\]
                      \\end{document}''' % (macros, domhelpers.getNodeText(node))
         file = tempfile.mktemp()
-        open(file+'.tex', 'w').write(latexText)
+        f = open(file+'.tex', 'w')
+        f.write(latexText)
+        f.close()
         os.system('latex %s.tex' % file)
         os.system('dvips %s.dvi -o %s.ps' % (os.path.basename(file), file))
         baseimgname = 'latexformula%d.png' % i

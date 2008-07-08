@@ -181,7 +181,9 @@ class LatexSpitter(BaseLatexSpitter):
         data = os.popen("gunzip -dc %s" % (src)).read()
         pre = '<dia:attribute name="scaling">\n          <dia:real val="1"/>'
         post = '<dia:attribute name="scaling">\n          <dia:real val="0.5"/>'
-        open('%s_hacked.dia' % (src), 'wb').write(data.replace(pre, post))
+        f = open('%s_hacked.dia' % (src), 'wb')
+        f.write(data.replace(pre, post))
+        f.close()
         os.system('gzip %s_hacked.dia' % (src,))
         os.system('mv %s_hacked.dia.gz %s_hacked.dia' % (src,src))
         # Let's pretend we never saw that.

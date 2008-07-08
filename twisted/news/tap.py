@@ -29,11 +29,13 @@ class DBOptions(usage.Options):
         except ImportError:
             log.msg("Warning: Cannot import %s" % (self['module'],))
         
-        open(self['schema'], 'w').write(
+        f = open(self['schema'], 'w')
+        f.write(
             database.NewsStorageAugmentation.schema + '\n' +
             database.makeGroupSQL(self['groups']) + '\n' +
             database.makeOverviewSQL()
         )
+        f.close()
         
         info = {
             'host': self['dbhost'], 'user': self['dbuser'],

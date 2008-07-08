@@ -625,6 +625,7 @@ class LogTestCase(unittest.TestCase):
         that exception will be logged immediately.
         """
         defer.Deferred().addCallback(lambda x: 1/0).callback(1)
+        gc.collect()
         self._check()
 
     def test_errorLogWithInnerFrameRef(self):

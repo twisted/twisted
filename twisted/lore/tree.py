@@ -898,4 +898,6 @@ def doFile(filename, linkrel, ext, url, templ, options={}, outfileGenerator=getO
           url, options, outfileGenerator)
     newFilename = outfileGenerator(filename, ext)
     makeSureDirectoryExists(newFilename)
-    clonedNode.writexml(open(newFilename, 'wb'))
+    f = open(newFilename, 'wb')
+    clonedNode.writexml(f)
+    f.close()

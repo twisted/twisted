@@ -90,7 +90,9 @@ class PersistTestCase(unittest.TestCase):
                 self.failUnlessEqual(o, o1)
 
     def testPython(self):
-        open("persisttest.python", 'w').write('foo=[1,2,3] ')
+        f = open("persisttest.python", 'w')
+        f.write('foo=[1,2,3] ')
+        f.close()
         o = sob.loadValueFromFile('persisttest.python', 'foo')
         self.failUnlessEqual(o, [1,2,3])
 
@@ -100,8 +102,10 @@ class PersistTestCase(unittest.TestCase):
         except ImportError:
             raise unittest.SkipTest()
         phrase='once I was the king of spain'
-        open("epersisttest.python", 'w').write(
-                          sob._encrypt(phrase, 'foo=[1,2,3]'))
+        f = open("epersisttest.python", 'w')
+        f.write(
+            sob._encrypt(phrase, 'foo=[1,2,3]'))
+        f.close()
         o = sob.loadValueFromFile('epersisttest.python', 'foo', phrase)
         self.failUnlessEqual(o, [1,2,3])
 

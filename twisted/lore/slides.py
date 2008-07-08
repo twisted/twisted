@@ -278,7 +278,9 @@ def doFile(filename, linkrel, ext, url, templ, options={}, outfileGenerator=getO
     for slide, index in zip(slides, range(len(slides))):
         newFilename = outfileGenerator(filename, ext, index)
         makeSureDirectoryExists(newFilename)
-        slide.dom.writexml(open(newFilename, 'wb'))
+        f = open(newFilename, 'wb')
+        slide.dom.writexml(f)
+        f.close()
 
 # Prosper output
 

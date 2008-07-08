@@ -254,7 +254,9 @@ class UnixApplicationRunner(app.ApplicationRunner):
         if not nodaemon:
             daemonize()
         if pidfile:
-            open(pidfile,'wb').write(str(os.getpid()))
+            f = open(pidfile,'wb')
+            f.write(str(os.getpid()))
+            f.close()
 
 
     def shedPrivileges(self, euid, uid, gid):

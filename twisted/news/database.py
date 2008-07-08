@@ -413,7 +413,9 @@ class PickleStorage:
 
 
     def flush(self):
-        pickle.dump(self.db, open(self.datafile, 'w'))
+        f = open(self.datafile, 'w')
+        pickle.dump(self.db, f)
+        f.close()
 
 
     def load(self, filename, groups = None, moderators = ()):

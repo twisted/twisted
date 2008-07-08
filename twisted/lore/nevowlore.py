@@ -71,7 +71,9 @@ def nevowify(filename, linkrel, ext, url, templ, options=None, outfileGenerator=
     newFilename = outfileGenerator(filename, ext)
 
     if options.has_key('nolore'):
-        open(newFilename, 'w').write(s)
+        f = open(newFilename, 'w')
+        f.write(s)
+        f.close()
         return
 
     doc = parseStringAndReport(s)
@@ -79,7 +81,9 @@ def nevowify(filename, linkrel, ext, url, templ, options=None, outfileGenerator=
     tree.munge(doc, clonedNode, linkrel, os.path.dirname(filename), filename, ext,
                url, options, outfileGenerator)
     tree.makeSureDirectoryExists(newFilename)
-    clonedNode.writexml(open(newFilename, 'wb'))
+    f = open(newFilename, 'wb')
+    clonedNode.writexml(f)
+    f.close()
 
     
 

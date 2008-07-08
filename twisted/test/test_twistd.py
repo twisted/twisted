@@ -191,7 +191,9 @@ class TapFileTest(unittest.TestCase):
         Create a trivial Application and put it in a tap file on disk.
         """
         self.tapfile = self.mktemp()
-        cPickle.dump(service.Application("Hi!"), file(self.tapfile, 'wb'))
+        f = file(self.tapfile, 'wb')
+        cPickle.dump(service.Application("Hi!"), f)
+        f.close()
 
 
     def test_createOrGetApplicationWithTapFile(self):
