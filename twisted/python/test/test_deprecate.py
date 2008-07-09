@@ -1,11 +1,9 @@
 # Copyright (c) 2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
-Tests for Twisted's deprecation framework.
+Tests for Twisted's deprecation framework, L{twisted.python.deprecate}.
 """
-
 
 from twisted.trial.unittest import TestCase
 
@@ -46,13 +44,13 @@ class TestDeprecationWarnings(TestCase):
         """
         version = Version('Twisted', 8, 0, 0)
         dummy = deprecated(version)(dummyCallable)
-        def add_a_stack_level():
+        def addStackLevel():
             dummy()
         self.assertWarns(
             DeprecationWarning,
             getDeprecationWarningString(dummyCallable, version),
             __file__,
-            add_a_stack_level)
+            addStackLevel)
 
 
     def test_deprecatedPreservesName(self):
@@ -96,11 +94,8 @@ class TestDeprecationWarnings(TestCase):
         Deprecating a function adds version information to the decorated
         version of that function.
         """
-        # XXX - Is this a YAGNI?
-
         version = Version('Twisted', 8, 0, 0)
         dummy = deprecated(version)(dummyCallable)
-
         self.assertEqual(version, dummy.deprecatedVersion)
 
 

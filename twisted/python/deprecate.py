@@ -1,8 +1,6 @@
 # -*- test-case-name: twisted.python.test.test_deprecate -*-
-
 # Copyright (c) 2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 Deprecation framework for Twisted.
@@ -81,13 +79,17 @@ def getDeprecationWarningString(callableThing, version):
 def deprecated(version):
     """
     Return a decorator that marks callables as deprecated.
-    """
 
+    @type version: L{twisted.python.versions.Version}
+    @param version: The version in which the callable will be marked as
+        having been deprecated.  The decorated function will be annotated
+        with this version, having it set as its C{deprecatedVersion}
+        attribute.
+    """
     def deprecationDecorator(function):
         """
         Decorator that marks C{function} as deprecated.
         """
-
         warningString = getDeprecationWarningString(function, version)
 
         def deprecatedFunction(*args, **kwargs):
