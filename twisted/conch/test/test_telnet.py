@@ -625,8 +625,10 @@ class TelnetTests(unittest.TestCase):
         A carriage return only puts the protocol into the newline state.  A
         linefeed in the newline state causes just the newline to be
         delivered.  A nul in the newline state causes a carriage return to
-        be delivered.  Anything else causes a carriage return and that thing
-        to be delivered.
+        be delivered.  An IAC in the newline state causes a carriage return
+        to be delivered and puts the protocol into the escaped state. 
+        Anything else causes a carriage return and that thing to be
+        delivered.
         """
         self._deliver('\r')
         self._deliver('\n', ('bytes', '\n'))
@@ -639,6 +641,10 @@ class TelnetTests(unittest.TestCase):
         self._deliver('\r')
         self._deliver('a', ('bytes', '\ra'))
         self._deliver('\ra', ('bytes', '\ra'))
+
+        self._deliver('\r')
+        self._deliver(
+            telnet.IAC + telnet.IAC + 'x', ('bytes', '\r' + telnet.IAC + 'x'))
 
 
     def test_applicationDataBeforeSimpleCommand(self):

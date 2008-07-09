@@ -469,13 +469,26 @@ class Telnet(protocol.Protocol):
                     del appDataBuffer[:]
                 self.commandReceived(command, b)
             elif self.state == 'newline':
+                self.state = 'data'
                 if b == '\n':
                     appDataBuffer.append('\n')
                 elif b == '\0':
                     appDataBuffer.append('\r')
+                elif b == IAC:
+                    # IAC isn't really allowed after \r, according to the
+                    # RFC, but handling it this way is less surprising than
+                    # delivering the IAC to the app as application data. 
+                    # The purpose of the restriction is to allow terminals
+                    # to unambiguously interpret the behavior of the CR
+                    # after reading only one more byte.  CR LF is supposed
+                    # to mean one thing (cursor to next line, first column),
+                    # CR NUL another (cursor to first column).  Absent the
+                    # NUL, it still makes sense to interpret this as CR and
+                    # then apply all the usual interpretation to the IAC.
+                    appDataBuffer.append('\r')
+                    self.state = 'escaped'
                 else:
                     appDataBuffer.append('\r' + b)
-                self.state = 'data'
             elif self.state == 'subnegotiation':
                 if b == IAC:
                     self.state = 'subnegotiation-escaped'
