@@ -69,9 +69,10 @@ class Resolver(common.ResolverBase):
         for modification and re-parsed if it is noticed to have changed.
 
         @type servers: C{list} of C{(str, int)} or C{None}
-        @param servers: If not C{None}, interpreted as a list of addresses of
-        domain name servers to attempt to use for this lookup.  Addresses
-        should be in dotted-quad form.  If specified, overrides C{resolv}.
+        @param servers: If not None, interpreted as a list of (host,port) pairs
+        specifying addresses of domain name servers to attempt to use for this
+        lookup. Hosts should be in dotted-quad form. If specified, overrides
+        C{resolv}.
 
         @type resolv: C{str}
         @param resolv: Filename to read and parse as a resolver(5)
