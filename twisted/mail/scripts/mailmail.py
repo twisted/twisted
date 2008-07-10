@@ -1,19 +1,14 @@
-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.mail.test.test_mailmail -*-
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
-
 """
-Implementation module for the `newtexaco` command.
-
-The name is preliminary and subject to change.
+Implementation module for the I{mailmail} command.
 """
 
 import os
 import sys
 import rfc822
-import socket
 import getpass
 from ConfigParser import ConfigParser
 
@@ -23,7 +18,7 @@ except:
     import StringIO
 
 from twisted.internet import reactor
-from twisted.mail import bounce, smtp
+from twisted.mail import smtp
 
 GLOBAL_CFG = "/etc/mailmail"
 LOCAL_CFG = os.path.expanduser("~/.twisted/mailmail")
@@ -33,9 +28,9 @@ ERROR_FMT = """\
 Subject: Failed Message Delivery
 
   Message delivery failed.  The following occurred:
-  
+
   %s
--- 
+--
 The Twisted sendmail application.
 """
 
@@ -46,10 +41,10 @@ class Options:
     """
     @type to: C{list} of C{str}
     @ivar to: The addresses to which to deliver this message.
-    
+
     @type sender: C{str}
     @ivar sender: The address from which this message is being sent.
-    
+
     @type body: C{file}
     @ivar body: The object from which the message is to be read.
     """
@@ -59,59 +54,61 @@ def getlogin():
         return os.getlogin()
     except:
         return getpass.getuser()
-        
+
+
+_unsupportedOption = SystemExit("Unsupported option.")
 
 def parseOptions(argv):
     o = Options()
     o.to = [e for e in argv if not e.startswith('-')]
     o.sender = getlogin()
-    
+
     # Just be very stupid
 
     # Skip -bm -- it is the default
-    
+
     # -bp lists queue information.  Screw that.
     if '-bp' in argv:
-        raise ValueError, "Unsupported option"
-    
+        raise _unsupportedOption
+
     # -bs makes sendmail use stdin/stdout as its transport.  Screw that.
     if '-bs' in argv:
-        raise ValueError, "Unsupported option"
-    
+        raise _unsupportedOption
+
     # -F sets who the mail is from, but is overridable by the From header
     if '-F' in argv:
         o.sender = argv[argv.index('-F') + 1]
         o.to.remove(o.sender)
-    
+
     # -i and -oi makes us ignore lone "."
     if ('-i' in argv) or ('-oi' in argv):
-        raise ValueError, "Unsupported option"
+        raise _unsupportedOption
 
     # -odb is background delivery
     if '-odb' in argv:
         o.background = True
     else:
         o.background = False
-    
+
     # -odf is foreground delivery
     if '-odf' in argv:
         o.background = False
     else:
         o.background = True
-    
+
     # -oem and -em cause errors to be mailed back to the sender.
     # It is also the default.
-    
+
     # -oep and -ep cause errors to be printed to stderr
     if ('-oep' in argv) or ('-ep' in argv):
         o.printErrors = True
     else:
         o.printErrors = False
-    
+
     # -om causes a copy of the message to be sent to the sender if the sender
     # appears in an alias expansion.  We do not support aliases.
     if '-om' in argv:
-        raise ValueError, "Unsupported option"
+        raise _unsupportedOption
 
     # -t causes us to pick the recipients of the message from the To, Cc, and Bcc
     # headers, and to remove the Bcc header if present.
@@ -122,7 +119,7 @@ def parseOptions(argv):
     else:
         o.recipientsFromHeaders = False
         o.exludeAddresses = []
-    
+
     requiredHeaders = {
         'from': [],
         'to': [],
@@ -130,7 +127,7 @@ def parseOptions(argv):
         'bcc': [],
         'date': [],
     }
-    
+
     headers = []
     buffer = StringIO.StringIO()
     while 1:
@@ -138,9 +135,9 @@ def parseOptions(argv):
         line = sys.stdin.readline()
         if not line.strip():
             break
-        
+
         hdrs = line.split(': ', 1)
-        
+
         hdr = hdrs[0].lower()
         if o.recipientsFromHeaders and hdr in ('to', 'cc', 'bcc'):
             o.to.extend([
@@ -150,7 +147,7 @@ def parseOptions(argv):
                 write = 0
         elif hdr == 'from':
             o.sender = rfc822.parseaddr(hdrs[1])[1]
-        
+
         if hdr in requiredHeaders:
             requiredHeaders[hdr].append(hdrs[1])
 
@@ -161,7 +158,7 @@ def parseOptions(argv):
         buffer.write('From: %s\r\n' % (o.sender,))
     if not requiredHeaders['to']:
         if not o.to:
-            raise ValueError, "No recipients specified"
+            raise SystemExit("No recipients specified.")
         buffer.write('To: %s\r\n' % (', '.join(o.to),))
     if not requiredHeaders['date']:
         buffer.write('Date: %s\r\n' % (smtp.rfc822date(),))
@@ -235,15 +232,15 @@ def loadConfig(path):
     # [addresses]
     # smarthost=a.b.c.d
     # default_domain=x.y.z
-    
+
     c = Configuration()
-    
+
     if not os.access(path, os.R_OK):
         return c
 
     p = ConfigParser()
     p.read(path)
-    
+
     au = c.allowUIDs
     du = c.denyUIDs
     ag = c.allowGIDs
@@ -309,7 +306,7 @@ def senderror(failure, options):
 def deny(conf):
     uid = os.getuid()
     gid = os.getgid()
-    
+
     if conf.useraccess == 'deny':
         if uid in conf.denyUIDs:
             return True
@@ -331,23 +328,23 @@ def deny(conf):
             return False
         if gid in conf.denyGIDs:
             return True
-    
+
     return not conf.defaultAccess
 
 def run():
     o = parseOptions(sys.argv[1:])
     gConf = loadConfig(GLOBAL_CFG)
     lConf = loadConfig(LOCAL_CFG)
-    
+
     if deny(gConf) or deny(lConf):
         log("Permission denied")
         return
 
     host = lConf.smarthost or gConf.smarthost or SMARTHOST
-    
+
     ident = gConf.identities.copy()
     ident.update(lConf.identities)
-    
+
     if lConf.domain:
         smtp.DNSNAME = lConf.domain
     elif gConf.domain:
