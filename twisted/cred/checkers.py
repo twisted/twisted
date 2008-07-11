@@ -30,6 +30,8 @@ class ICredentialsChecker(Interface):
         avatar, an empty tuple to specify an authenticated anonymous user
         (provided as checkers.ANONYMOUS) or fire a Failure(UnauthorizedLogin).
         Alternatively, return the result itself.
+
+        @see: L{twisted.cred.credentials}
         """
 
 
