@@ -435,8 +435,26 @@ class HTTPClient(basic.LineReceiver):
     def connectionMade(self):
         pass
 
-    handleStatus = handleHeader = handleEndHeaders = lambda *args: None
+    def handleStatus(self, version, status, message):
+        """
+        Called when the status-line is received.
 
+        @param version: e.g. 'HTTP/1.0'
+        @param status: e.g. '200'
+        @type status: C{str}
+        @param message: e.g. 'OK'
+        """
+        
+    def handleHeader(self, key, val):
+        """
+        Called every time a header is received.
+        """
+
+    def handleEndHeaders(self):
+        """
+        Called when all headers have been received.
+        """
+    
     def rawDataReceived(self, data):
         if self.length is not None:
             data, rest = data[:self.length], data[self.length:]
@@ -453,7 +471,8 @@ class HTTPClient(basic.LineReceiver):
 NO_BODY_CODES = (204, 304)
 
 class Request:
-    """A HTTP request.
+    """
+    A HTTP request.
 
     Subclasses should override the process() method to determine how
     the request will be processed.
