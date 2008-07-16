@@ -1,3 +1,0 @@
-#!/bin/sh
-dpkg-scanpackages . $1 |gzip -9> Packages.gz
-dpkg-scansources . $1 |gzip -9 > Sources.gz
