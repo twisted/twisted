@@ -148,16 +148,28 @@ callback.</p>
 <pre>
 callback 1
         got result: success
+callback 2
+        got result: yay! handleResult was successful!
         about to raise exception
 errback
 we got an exception: Traceback (most recent call last):
+  File "./deferred_ex3.py", line 97, in &lt;module&gt;
+    deferredExample()
+  File "./deferred_ex3.py", line 90, in deferredExample
+    d.callback("success")
+  File "/home/slyphon/Projects/Twisted/trunk/twisted/internet/defer.py", line 243, in callback
+    self._startRunCallbacks(result)
+  File "/home/slyphon/Projects/Twisted/trunk/twisted/internet/defer.py", line 312, in _startRunCallbacks
+    self._runCallbacks()
 --- &lt;exception caught here&gt; ---
-  File "/home/slyphon/Projects/Twisted/trunk/twisted/internet/defer.py", line
-326, in _runCallbacks
+  File "/home/slyphon/Projects/Twisted/trunk/twisted/internet/defer.py", line 328, in _runCallbacks
     self.result = callback(self.result, *args, **kw)
-  File "./deferred_ex2.py", line 35, in failAtHandlingResult
+  File "./deferred_ex3.py", line 34, in failAtHandlingResult
     raise RuntimeError, "whoops! we encountered an error"
 exceptions.RuntimeError: whoops! we encountered an error
+
+callback 3
+        got result: okay, continue on
 </pre>
 
 <h2>addBoth: the deferred version of <em>finally</em></h2>
