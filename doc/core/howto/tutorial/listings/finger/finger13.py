@@ -17,8 +17,7 @@ class FingerSetterProtocol(basic.LineReceiver):
     # first line: user   second line: status
 
 class FingerService(service.Service):
-    def __init__(self, *args, **kwargs):
-        self.parent.__init__(self, *args)
+    def __init__(self, **kwargs):
         self.users = kwargs
     def getUser(self, user):
         return defer.succeed(self.users.get(user, "No such user"))
@@ -32,7 +31,7 @@ class FingerService(service.Service):
         return f
 
 application = service.Application('finger', uid=1, gid=1)
-f = FingerService('finger', moshez='Happy and well')
+f = FingerService(moshez='Happy and well')
 serviceCollection = service.IServiceCollection(application)
 internet.TCPServer(79,f.getFingerFactory()
                    ).setServiceParent(serviceCollection)
