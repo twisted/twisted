@@ -415,7 +415,7 @@ class ConnectionPool:
 
 
 # Common deprecation decorator used for all deprecations.
-_unreleasedVersion = Version("Twisted", 2, 6, 0)
+_unreleasedVersion = Version("Twisted", 8, 0, 0)
 _unreleasedDeprecation = deprecated(_unreleasedVersion)
 
 
