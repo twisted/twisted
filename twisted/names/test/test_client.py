@@ -1,9 +1,8 @@
-# -*- test-case-name: twisted.names.test.test_client -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
-Test cases for twisted.names.client
+Test cases for L{twisted.names.client}.
 """
 
 from twisted.names import client, dns
@@ -11,6 +10,7 @@ from twisted.names.error import DNSQueryTimeoutError
 from twisted.trial import unittest
 from twisted.names.common import ResolverBase
 from twisted.internet import defer
+from twisted.python import failure
 
 class FakeResolver(ResolverBase):
 
@@ -94,6 +94,115 @@ class ResolverTests(unittest.TestCase):
         protocol.queries[3][-1].callback(expectedResult)
 
         return queryResult
+
+
+    def test_singleConcurrentRequest(self):
+        """
+        L{client.Resolver.query} only issues one request at a time per query.
+        Subsequent requests made before responses to prior ones are received
+        are queued and given the same response as is given to the first one.
+        """
+        resolver = client.Resolver(servers=[('example.com', 53)])
+        resolver.protocol = StubDNSDatagramProtocol()
+        queries = resolver.protocol.queries
+
+        query = dns.Query('foo.example.com', dns.A, dns.IN)
+        # The first query should be passed to the underlying protocol.
+        firstResult = resolver.query(query)
+        self.assertEqual(len(queries), 1)
+
+        # The same query again should not be passed to the underlying protocol.
+        secondResult = resolver.query(query)
+        self.assertEqual(len(queries), 1)
+
+        # The response to the first query should be sent in response to both
+        # queries.
+        answer = object()
+        response = dns.Message()
+        response.answers.append(answer)
+        queries.pop()[-1].callback(response)
+
+        d = defer.gatherResults([firstResult, secondResult])
+        def cbFinished((firstResponse, secondResponse)):
+            self.assertEqual(firstResponse, ([answer], [], []))
+            self.assertEqual(secondResponse, ([answer], [], []))
+        d.addCallback(cbFinished)
+        return d
+
+
+    def test_multipleConcurrentRequests(self):
+        """
+        L{client.Resolver.query} issues a request for each different concurrent
+        query.
+        """
+        resolver = client.Resolver(servers=[('example.com', 53)])
+        resolver.protocol = StubDNSDatagramProtocol()
+        queries = resolver.protocol.queries
+
+        # The first query should be passed to the underlying protocol.
+        firstQuery = dns.Query('foo.example.com', dns.A)
+        resolver.query(firstQuery)
+        self.assertEqual(len(queries), 1)
+
+        # A query for a different name is also passed to the underlying
+        # protocol.
+        secondQuery = dns.Query('bar.example.com', dns.A)
+        resolver.query(secondQuery)
+        self.assertEqual(len(queries), 2)
+
+        # A query for a different type is also passed to the underlying
+        # protocol.
+        thirdQuery = dns.Query('foo.example.com', dns.A6)
+        resolver.query(thirdQuery)
+        self.assertEqual(len(queries), 3)
+
+
+    def test_multipleSequentialRequests(self):
+        """
+        After a response is received to a query issued with
+        L{client.Resolver.query}, another query with the same parameters
+        results in a new network request.
+        """
+        resolver = client.Resolver(servers=[('example.com', 53)])
+        resolver.protocol = StubDNSDatagramProtocol()
+        queries = resolver.protocol.queries
+
+        query = dns.Query('foo.example.com', dns.A)
+
+        # The first query should be passed to the underlying protocol.
+        resolver.query(query)
+        self.assertEqual(len(queries), 1)
+
+        # Deliver the response.
+        queries.pop()[-1].callback(dns.Message())
+
+        # Repeating the first query should touch the protocol again.
+        resolver.query(query)
+        self.assertEqual(len(queries), 1)
+
+
+    def test_multipleConcurrentFailure(self):
+        """
+        If the result of a request is an error response, the Deferreds for all
+        concurrently issued requests associated with that result fire with the
+        L{Failure}.
+        """
+        resolver = client.Resolver(servers=[('example.com', 53)])
+        resolver.protocol = StubDNSDatagramProtocol()
+        queries = resolver.protocol.queries
+
+        query = dns.Query('foo.example.com', dns.A)
+        firstResult = resolver.query(query)
+        secondResult = resolver.query(query)
+
+        class ExpectedException(Exception):
+            pass
+
+        queries.pop()[-1].errback(failure.Failure(ExpectedException()))
+
+        return defer.gatherResults([
+                self.assertFailure(firstResult, ExpectedException),
+                self.assertFailure(secondResult, ExpectedException)])
 
 
 

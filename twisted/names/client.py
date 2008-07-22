@@ -1,7 +1,6 @@
 # -*- test-case-name: twisted.names.test.test_names -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 Asynchronous client DNS
@@ -19,8 +18,6 @@ better caching, respect timeouts
 @author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
 """
 
-from __future__ import nested_scopes
-
 import os
 import errno
 
@@ -37,6 +34,15 @@ from twisted.names.error import DNSUnknownError
 
 
 class Resolver(common.ResolverBase):
+    """
+    @ivar _waiting: A C{dict} mapping tuple keys of query name/type/class to
+        Deferreds which will be called back with the result of those queries.
+        This is used to avoid issuing the same query more than once in
+        parallel.  This is more efficient on the network and helps avoid a
+        "birthday paradox" attack by keeping the number of outstanding requests
+        for a particular query fixed at one instead of allowing the attacker to
+        raise it to an arbitrary number.
+    """
     implements(interfaces.IResolver)
 
     index = 0
@@ -106,6 +112,8 @@ class Resolver(common.ResolverBase):
 
         self.connections = []
         self.pending = []
+
+        self._waiting = {}
 
         self.maybeParseConfig()
 
@@ -312,9 +320,36 @@ class Resolver(common.ResolverBase):
 
 
     def _lookup(self, name, cls, type, timeout):
-        return self.queryUDP(
-            [dns.Query(name, type, cls)], timeout
-        ).addCallback(self.filterAnswers)
+        """
+        Build a L{dns.Query} for the given parameters and dispatch it via UDP.
+
+        If this query is already outstanding, it will not be re-issued.
+        Instead, when the outstanding query receives a response, that response
+        will be re-used for this query as well.
+
+        @type name: C{str}
+        @type type: C{int}
+        @type cls: C{int}
+
+        @return: A L{Deferred} which fires with a three-tuple giving the
+            answer, authority, and additional sections of the response or with
+            a L{Failure} if the response code is anything other than C{dns.OK}.
+        """
+        key = (name, type, cls)
+        waiting = self._waiting.get(key)
+        if waiting is None:
+            self._waiting[key] = []
+            d = self.queryUDP([dns.Query(name, type, cls)], timeout)
+            def cbResult(result):
+                for d in self._waiting.pop(key):
+                    d.callback(result)
+                return result
+            d.addCallback(self.filterAnswers)
+            d.addBoth(cbResult)
+        else:
+            d = defer.Deferred()
+            waiting.append(d)
+        return d
 
 
     # This one doesn't ever belong on UDP
