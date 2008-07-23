@@ -20,30 +20,12 @@ from twisted.python import log
 
 class DummyRequest:
     """
-    Represents a dummy or fake request.
-
     @ivar _finishedDeferreds: C{None} or a C{list} of L{Deferreds} which will
         be called back with C{None} when C{finish} is called or which will be
         errbacked if C{processingFailed} is called.
-
-    @type headers: C{dict}
-    @ivar headers: A mapping of header name to header value for all request
-        headers.
-
-    @type outgoingHeaders: C{dict}
-    @ivar outgoingHeaders: A mapping of header name to header value for all
-        response headers.
-
-    @type responseCode: C{int}
-    @ivar responseCode: The response code which was passed to
-        C{setResponseCode}.
-
-    @type written: C{list} of C{str}
-    @ivar written: The bytes which have been written to the request.
     """
     uri = 'http://dummy/'
     method = 'GET'
-    client = None
 
     def registerProducer(self, prod,s):
         self.go = 1
@@ -52,7 +34,6 @@ class DummyRequest:
 
     def unregisterProducer(self):
         self.go = 0
-
 
     def __init__(self, postpath, session=None):
         self.sitepath = []
@@ -67,21 +48,16 @@ class DummyRequest:
         self.responseHeaders = http_headers.Headers()
         self.responseCode = None
         self.headers = {}
+        self.client = None
+
         self._finishedDeferreds = []
 
 
-    def getHeader(self, name):
+    def getHeader(self, h):
         """
-        Retrieve the value of a request header.
-
-        @type name: C{str}
-        @param name: The name of the request header for which to retrieve the
-            value.  Header names are compared case-insensitively.
-
-        @rtype: C{str} or L{NoneType}
-        @return: The value of the specified request header.
+        Return the value of the given request header.
         """
-        return self.headers.get(name.lower(), None)
+        return self.headers.get(h.lower(), None)
 
 
     def setHeader(self, name, value):
@@ -140,8 +116,7 @@ class DummyRequest:
 
     def setResponseCode(self, code):
         """
-        Set the HTTP status response code, but takes care that this is called
-        before any data is written.
+        Record the given response code.
         """
         assert not self.written, "Response code cannot be set after data has been written: %s." % "@@@@".join(self.written)
         self.responseCode = code
@@ -278,7 +253,7 @@ class SessionTest(unittest.TestCase):
 
         self.failIf(self.clock.calls)
         self.failIf(loop.running)
-
+        
 
 
 # Conditional requests:
@@ -328,7 +303,7 @@ class ConditionalTest(unittest.TestCase):
         for l in ["GET / HTTP/1.1",
                   "Accept: text/html"]:
             self.channel.lineReceived(l)
-
+    
     def tearDown(self):
         self.channel.connectionLost(None)
 
@@ -641,17 +616,23 @@ class SDTest(unittest.TestCase):
         resource.getChildForRequest(s, d)
         self.assertEqual(d.postpath, ['bar', 'baz'])
 
-
-
 class DummyRequestForLogTest(DummyRequest):
-    uri = '/dummy' # parent class uri has "http://", which doesn't really happen
+    uri='/dummy' # parent class uri has "http://", which doesn't really happen
     code = 123
-
+    
     clientproto = 'HTTP/1.0'
     sentLength = None
-    client = IPv4Address('TCP', '1.2.3.4', 12345)
 
+    def __init__(self, *a, **kw):
+        DummyRequest.__init__(self, *a, **kw)
+        self.headers = {}
+        self.client = '1.2.3.4'
 
+    def getHeader(self, h):
+        return self.headers.get(h.lower(), None)
+
+    def getClientIP(self):
+        return self.client
 
 class TestLogEscaping(unittest.TestCase):
     def setUp(self):

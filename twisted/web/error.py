@@ -11,14 +11,6 @@ from twisted.web import resource, http
 
 class Error(Exception):
     def __init__(self, code, message=None, response=None):
-        """
-        Initializes a basic exception.
-
-        @param code: Refers to an HTTP status code for example http.NOT_FOUND.
-        If no message is given the given code is mapped to a descriptive
-        string and used instead.
-        """
-
         message = message or http.responses.get(code)
         Exception.__init__(self, code, message, response)
         self.status = code

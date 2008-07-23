@@ -18,7 +18,7 @@ from twisted.web import resource
 from twisted.web import http
 from twisted.web.util import redirectTo
 
-from twisted.python import components, filepath, log
+from twisted.python import components, filepath
 from twisted.internet import abstract
 from twisted.spread import pb
 from twisted.persisted import styles
@@ -141,8 +141,6 @@ def getTypeAndEncoding(filename, types, encodings, defaultType):
         enc = None
     type = types.get(ext, defaultType)
     return type, enc
-
-
 
 class File(resource.Resource, styles.Versioned, filepath.FilePath):
     """
@@ -280,96 +278,6 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         return self.getsize()
 
 
-    def _parseRangeHeader(self, range):
-        """
-        Return a two-tuple of the start and stop value from the given range
-        header.  Raise ValueError if the header is syntactically invalid or
-        if the Bytes-Unit is anything other than "bytes".
-        """
-        try:
-            kind, value = range.split('=', 1)
-        except ValueError:
-            raise ValueError("Missing '=' separator")
-        kind = kind.strip()
-        if kind != 'bytes':
-            raise ValueError("Unsupported Bytes-Unit: %r" % (kind,))
-        byteRanges = filter(None, map(str.strip, value.split(',')))
-        if len(byteRanges) > 1:
-            # Support for multiple ranges should be added later.  For now, this
-            # implementation gives up.
-            raise ValueError("Multiple Byte-Ranges not supported")
-        firstRange = byteRanges[0]
-        try:
-            start, end = firstRange.split('-', 1)
-        except ValueError:
-            raise ValueError("Invalid Byte-Range: %r" % (firstRange,))
-        if start:
-            try:
-                start = int(start)
-            except ValueError:
-                raise ValueError("Invalid Byte-Range: %r" % (firstRange,))
-        else:
-            start = None
-        if end:
-            try:
-                end = int(end)
-            except ValueError:
-                raise ValueError("Invalid Byte-Range: %r" % (firstRange,))
-        else:
-            end = None
-        if start is not None:
-            if end is not None and start > end:
-                # Start must be less than or equal to end or it is invalid.
-                raise ValueError("Invalid Byte-Range: %r" % (firstRange,))
-        elif end is None:
-            # One or both of start and end must be specified.  Omitting both is
-            # invalid.
-            raise ValueError("Invalid Byte-Range: %r" % (firstRange,))
-        return start, end
-
-
-
-    def _doRangeRequest(self, request, (start, end)):
-        """
-        Responds to simple Range-Header requests. Simple means that only the
-        first byte range is handled.
-
-        @raise ValueError: If the given Byte-Ranges-Specifier was invalid
-
-        @return: A three-tuple of the start, length, and end byte of the
-            response.
-        """
-        size = self.getFileSize()
-        if start is None:
-            # Omitted start means that the end value is actually a start value
-            # relative to the end of the resource.
-            start = size - end
-            end = size
-        elif end is None:
-            # Omitted end means the end of the resource should be the end of
-            # the range.
-            end = size
-        elif end < size:
-            # If the end was specified (this is an else for `end is None`) and
-            # there's room, bump the value by one to compensate for the
-            # disagreement between Python and the HTTP RFC on whether the
-            # closing index of the range is inclusive (HTTP) or exclusive
-            # (Python).
-            end += 1
-        if start >= size:
-            # This range doesn't overlap with any of this resource, so the
-            # request is unsatisfiable.
-            request.setResponseCode(http.REQUESTED_RANGE_NOT_SATISFIABLE)
-            request.setHeader(
-                'content-range', 'bytes */%d' % (size,))
-            start = end = 0
-        else:
-            request.setResponseCode(http.PARTIAL_CONTENT)
-            request.setHeader(
-                'content-range', 'bytes %d-%d/%d' % (start, end - 1, size))
-        return start, (end - start), end
-
-
     def render(self, request):
         """You know what you doing."""
         self.restat()
@@ -386,7 +294,10 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         if self.isdir():
             return self.redirect(request)
 
-        request.setHeader('accept-ranges','bytes')
+        #for content-length
+        fsize = size = self.getFileSize()
+
+#         request.setHeader('accept-ranges','bytes')
 
         if self.type:
             request.setHeader('content-type', self.type)
@@ -405,29 +316,42 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         if request.setLastModified(self.getmtime()) is http.CACHED:
             return ''
 
-        # set the stop byte, and content-length
-        contentLength = stop = self.getFileSize()
+# Commented out because it's totally broken. --jknight 11/29/04
+#         try:
+#             range = request.getHeader('range')
+#
+#             if range is not None:
+#                 # This is a request for partial data...
+#                 bytesrange = string.split(range, '=')
+#                 assert bytesrange[0] == 'bytes',\
+#                        "Syntactically invalid http range header!"
+#                 start, end = string.split(bytesrange[1],'-')
+#                 if start:
+#                     f.seek(int(start))
+#                 if end:
+#                     end = int(end)
+#                     size = end
+#                 else:
+#                     end = size
+#                 request.setResponseCode(http.PARTIAL_CONTENT)
+#                 request.setHeader('content-range',"bytes %s-%s/%s " % (
+#                     str(start), str(end), str(size)))
+#                 #content-length should be the actual size of the stuff we're
+#                 #sending, not the full size of the on-server entity.
+#                 fsize = end - int(start)
+#
+#             request.setHeader('content-length', str(fsize))
+#         except:
+#             traceback.print_exc(file=log.logfile)
 
-        byteRange = request.getHeader('range')
-        if byteRange is not None:
-            try:
-                start, contentLength, stop = self._doRangeRequest(
-                    request, self._parseRangeHeader(byteRange))
-            except ValueError, e:
-                log.msg("Ignoring malformed Range header %r" % (byteRange,))
-                request.setResponseCode(http.OK)
-            else:
-                f.seek(start)
-
-        request.setHeader('content-length', str(contentLength))
+        request.setHeader('content-length', str(fsize))
         if request.method == 'HEAD':
             return ''
 
         # return data
-        FileTransfer(f, stop, request)
+        FileTransfer(f, size, request)
         # and make sure the connection doesn't get closed
         return server.NOT_DONE_YET
-
 
     def redirect(self, request):
         return redirectTo(addSlash(request), request)
