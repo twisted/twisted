@@ -18,6 +18,7 @@ import random, doctest, time
 from twisted.python import reflect, log, failure, modules
 from twisted.python.util import dsu
 from twisted.python.compat import set
+from twisted.python.lockfile import FilesystemLock
 
 from twisted.internet import defer, interfaces
 from twisted.trial import util, unittest
@@ -30,6 +31,15 @@ from twisted.trial.unittest import suiteVisit, TestSuite
 from zope.interface import implements
 
 pyunit = __import__('unittest')
+
+
+
+class _WorkingDirectoryBusy(Exception):
+    """
+    A working directory was specified to the runner, but another test run is
+    currently using that directory.
+    """
+
 
 
 def isPackage(module):
@@ -690,27 +700,57 @@ class TrialRunner(object):
                     dbg.rcLines.extend(rcFile.readlines())
         return dbg
 
+
+    def _removeSafely(self, path):
+        try:
+            shutil.rmtree(path)
+        except OSError, e:
+            print ("could not remove %r, caught OSError [Errno %s]: %s"
+                   % (path, e.errno,e.strerror))
+            try:
+                os.rename(path,
+                          os.path.abspath("_trial_temp_old%s"
+                                          % random.randint(0, 99999999)))
+            except OSError, e:
+                print ("could not rename path, caught OSError [Errno %s]: %s"
+                       % (e.errno,e.strerror))
+                raise
+
+
     def _setUpTestdir(self):
         self._tearDownLogFile()
         currentDir = os.getcwd()
-        testdir = os.path.normpath(os.path.abspath(self.workingDirectory))
-        if os.path.exists(testdir):
-           try:
-               shutil.rmtree(testdir)
-           except OSError, e:
-               print ("could not remove %r, caught OSError [Errno %s]: %s"
-                      % (testdir, e.errno,e.strerror))
-               try:
-                   os.rename(testdir,
-                             os.path.abspath("_trial_temp_old%s"
-                                             % random.randint(0, 99999999)))
-               except OSError, e:
-                   print ("could not rename path, caught OSError [Errno %s]: %s"
-                          % (e.errno,e.strerror))
-                   raise
+        base = os.path.normpath(os.path.abspath(self.workingDirectory))
+        counter = 0
+        while True:
+            if counter:
+                testdir = '%s-%d' % (base, counter)
+            else:
+                testdir = base
+
+            self._testDirLock = FilesystemLock(testdir + '.lock')
+            if self._testDirLock.lock():
+                # It is not in use
+                if os.path.exists(testdir):
+                    # It exists though - delete it
+                    self._removeSafely(testdir)
+                break
+            else:
+                # It is in use
+                if self.workingDirectory == '_trial_temp':
+                    counter += 1
+                else:
+                    raise _WorkingDirectoryBusy()
+
         os.mkdir(testdir)
         os.chdir(testdir)
         return currentDir
+
+
+    def _tearDownTestdir(self, oldDir):
+        os.chdir(oldDir)
+        self._testDirLock.unlock()
+
 
     def _makeResult(self):
         reporter = self.reporterFactory(self.stream, self.tbformat,
@@ -801,24 +841,22 @@ class TrialRunner(object):
         startTime = time.time()
         if self.mode == self.DRY_RUN:
             suite.visit(DryRunVisitor(result).markSuccessful)
-        elif self.mode == self.DEBUG:
-            # open question - should this be self.debug() instead.
-            debugger = self._getDebugger()
-            oldDir = self._setUpTestdir()
-            try:
-                self._setUpLogging()
-                debugger.runcall(suite.run, result)
-            finally:
-                self._tearDownLogFile()
-                os.chdir(oldDir)
         else:
+            if self.mode == self.DEBUG:
+                # open question - should this be self.debug() instead.
+                debugger = self._getDebugger()
+                run = lambda: debugger.runcall(suite.run, result)
+            else:
+                run = lambda: suite.run(result)
+
             oldDir = self._setUpTestdir()
             try:
                 self._setUpLogging()
-                suite.run(result)
+                run()
             finally:
                 self._tearDownLogFile()
-                os.chdir(oldDir)
+                self._tearDownTestdir(oldDir)
+
         endTime = time.time()
         done = getattr(result, 'done', None)
         if done is None:

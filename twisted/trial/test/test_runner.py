@@ -5,7 +5,7 @@
 # Author: Robert Collins <robertc@robertcollins.net>
 
 
-import StringIO
+import StringIO, os
 from zope.interface import implements
 
 from twisted.trial.itrial import IReporter, ITestCase
@@ -295,17 +295,14 @@ class TestRunner(unittest.TestCase):
     def test_runner_can_get_reporter(self):
         self.parseOptions([])
         result = self.config['reporter']
-        my_runner = self.getRunner()
-        try:
-            self.assertEqual(result, my_runner._makeResult().__class__)
-        finally:
-            my_runner._tearDownLogFile()
+        runner = self.getRunner()
+        self.assertEqual(result, runner._makeResult().__class__)
 
 
     def test_runner_get_result(self):
         self.parseOptions([])
-        my_runner = self.getRunner()
-        result = my_runner._makeResult()
+        runner = self.getRunner()
+        result = runner._makeResult()
         self.assertEqual(result.__class__, self.config['reporter'])
 
 
@@ -336,10 +333,89 @@ class TestRunner(unittest.TestCase):
     def test_runner_working_directory(self):
         self.parseOptions(['--temp-directory', 'some_path'])
         runner = self.getRunner()
-        try:
-            self.assertEquals(runner.workingDirectory, 'some_path')
-        finally:
-            runner._tearDownLogFile()
+        self.assertEquals(runner.workingDirectory, 'some_path')
+
+
+    def test_concurrentImplicitWorkingDirectory(self):
+        """
+        If no working directory is explicitly specified and the default
+        working directory is in use by another runner, L{TrialRunner.run}
+        selects a different default working directory to use.
+        """
+        self.parseOptions([])
+
+        initialDirectory = os.getcwd()
+        self.addCleanup(os.chdir, initialDirectory)
+
+        firstRunner = self.getRunner()
+        secondRunner = self.getRunner()
+
+        where = {}
+
+        class ConcurrentCase(unittest.TestCase):
+            def test_first(self):
+                """
+                Start a second test run which will have a default working
+                directory which is the same as the working directory of the
+                test run already in progress.
+                """
+                # Change the working directory to the value it had before this
+                # test suite was started.
+                where['concurrent'] = subsequentDirectory = os.getcwd()
+                os.chdir(initialDirectory)
+                self.addCleanup(os.chdir, subsequentDirectory)
+
+                secondRunner.run(ConcurrentCase('test_second'))
+
+            def test_second(self):
+                """
+                Record the working directory for later analysis.
+                """
+                where['record'] = os.getcwd()
+
+        result = firstRunner.run(ConcurrentCase('test_first'))
+        bad = result.errors + result.failures
+        if bad:
+            self.fail(bad[0][1])
+        self.assertEqual(
+            where, {
+                'concurrent': os.path.join(initialDirectory, '_trial_temp'),
+                'record': os.path.join(initialDirectory, '_trial_temp-1')})
+
+
+    def test_concurrentExplicitWorkingDirectory(self):
+        """
+        If a working directory which is already in use is explicitly specified,
+        L{TrialRunner.run} raises L{_WorkingDirectoryBusy}.
+        """
+        self.parseOptions(['--temp-directory', os.path.abspath(self.mktemp())])
+
+        initialDirectory = os.getcwd()
+        self.addCleanup(os.chdir, initialDirectory)
+
+        firstRunner = self.getRunner()
+        secondRunner = self.getRunner()
+
+        class ConcurrentCase(unittest.TestCase):
+            def test_concurrent(self):
+                """
+                Try to start another runner in the same working directory and
+                assert that it raises L{_WorkingDirectoryBusy}.
+                """
+                self.assertRaises(
+                    runner._WorkingDirectoryBusy,
+                    secondRunner.run, ConcurrentCase('test_failure'))
+
+            def test_failure(self):
+                """
+                Should not be called, always fails.
+                """
+                self.fail("test_failure should never be called.")
+
+        result = firstRunner.run(ConcurrentCase('test_concurrent'))
+        bad = result.errors + result.failures
+        if bad:
+            self.fail(bad[0][1])
 
 
     def test_runner_normal(self):
