@@ -7,31 +7,36 @@
 An asynchronous mapping to U{DB-API 2.0<http://www.python.org/topics/database/DatabaseAPI-2.0.html>}.
 """
 
+import sys
+
 from twisted.internet import defer, threads
 from twisted.python import reflect, log
 from twisted.python.deprecate import deprecated
 from twisted.python.versions import Version
 
 
+
 class ConnectionLost(Exception):
-    """This exception means that a db connection has been lost.
-    Client code may try again."""
-    pass
-    
-    
+    """
+    This exception means that a db connection has been lost.
+    Client code may try again.
+    """
+
+
+
 class Connection(object):
     """A wrapper for a DB-API connection instance.
-    
+
     The wrapper passes almost everything to the wrapped connection and so has
     the same API. However, the Connection knows about its pool and also
     handle reconnecting should when the real connection dies.
     """
-    
+
     def __init__(self, pool):
         self._pool = pool
         self._connection = None
         self.reconnect()
-        
+
     def close(self):
         # The way adbapi works right now means that closing a connection is
         # a really bad thing  as it leaves a dead connection associated with
@@ -41,7 +46,7 @@ class Connection(object):
         # rather than upsetting anyone by raising an exception, let's ignore
         # the request
         pass
-        
+
     def rollback(self):
         if not self._pool.reconnect:
             self._connection.rollback()
@@ -55,12 +60,12 @@ class Connection(object):
             self._connection.commit()
             return
         except:
-            pass
+            log.err(None, "Rollback failed")
 
         self._pool.disconnect(self._connection)
 
         if self._pool.noisy:
-            log.msg('Connection lost.')
+            log.msg("Connection lost.")
 
         raise ConnectionLost()
 
@@ -68,11 +73,11 @@ class Connection(object):
         if self._connection is not None:
             self._pool.disconnect(self._connection)
         self._connection = self._pool.connect()
-        
+
     def __getattr__(self, name):
         return getattr(self._connection, name)
-        
-        
+
+
 class Transaction:
     """A lightweight wrapper for a DB-API 'cursor' object.
 
@@ -103,6 +108,8 @@ class Transaction:
         except:
             if not self._pool.reconnect:
                 raise
+            else:
+                log.err(None, "Cursor creation failed")
 
         if self._pool.noisy:
             log.msg('Connection lost, reconnecting')
@@ -119,7 +126,15 @@ class Transaction:
 
 
 class ConnectionPool:
-    """I represent a pool of connections to a DB-API 2.0 compliant database.
+    """
+    Represent a pool of connections to a DB-API 2.0 compliant database.
+
+    @ivar connectionFactory: factory for connections, default to L{Connection}.
+    @type connectionFactory: any callable.
+
+    @ivar transactionFactory: factory for transactions, default to
+        L{Transaction}.
+    @type transactionFactory: any callable
     """
 
     CP_ARGS = "min max name noisy openfun reconnect good_sql".split()
@@ -133,6 +148,8 @@ class ConnectionPool:
     good_sql = 'select 1' # a query which should always succeed
 
     running = False # true when the pool is operating
+    connectionFactory = Connection
+    transactionFactory = Transaction
 
     def __init__(self, dbapiName, *connargs, **connkw):
         """Create a new ConnectionPool.
@@ -217,21 +234,28 @@ class ConnectionPool:
                                                             'shutdown',
                                                             self.finalClose)
             self.running = True
-            
+
+
     def runWithConnection(self, func, *args, **kw):
         return self._deferToThread(self._runWithConnection,
                                    func, *args, **kw)
 
+
     def _runWithConnection(self, func, *args, **kw):
-        conn = Connection(self)
+        conn = self.connectionFactory(self)
         try:
             result = func(conn, *args, **kw)
             conn.commit()
             return result
         except:
-            conn.rollback()
-            raise
-        
+            excType, excValue, excTraceback = sys.exc_info()
+            try:
+                conn.rollback()
+            except:
+                log.err(None, "Rollback failed")
+            raise excType, excValue, excTraceback
+
+
     def runInteraction(self, interaction, *args, **kw):
         """Interact with the database and return the result.
 
@@ -352,7 +376,6 @@ class ConnectionPool:
         called connect(). As with connect(), this function is not used
         in normal non-threaded twisted code.
         """
-
         tid = self.threadID()
         if conn is not self.connections.get(tid):
             raise Exception("wrong connection for thread")
@@ -360,25 +383,32 @@ class ConnectionPool:
             self._close(conn)
             del self.connections[tid]
 
+
     def _close(self, conn):
         if self.noisy:
             log.msg('adbapi closing: %s' % (self.dbapiName,))
         try:
             conn.close()
         except:
-            pass
+            log.err(None, "Connection close failed")
+
 
     def _runInteraction(self, interaction, *args, **kw):
-        conn = Connection(self)
-        trans = Transaction(self, conn)
+        conn = self.connectionFactory(self)
+        trans = self.transactionFactory(self, conn)
         try:
             result = interaction(trans, *args, **kw)
             trans.close()
             conn.commit()
             return result
         except:
-            conn.rollback()
-            raise
+            excType, excValue, excTraceback = sys.exc_info()
+            try:
+                conn.rollback()
+            except:
+                log.err(None, "Rollback failed")
+            raise excType, excValue, excTraceback
+
 
     def _runQuery(self, trans, *args, **kw):
         trans.execute(*args, **kw)

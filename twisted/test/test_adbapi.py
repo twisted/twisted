@@ -11,6 +11,7 @@ from twisted.trial import unittest
 import os, stat, new
 
 from twisted.enterprise.adbapi import ConnectionPool, ConnectionLost, safe
+from twisted.enterprise.adbapi import Connection, Transaction
 from twisted.enterprise.adbapi import _unreleasedVersion
 from twisted.internet import reactor, defer, interfaces
 
@@ -296,7 +297,7 @@ class ReconnectTestBase:
         sql = "select count(1) from simple"
         d = defer.maybeDeferred(self.dbpool.runQuery, sql)
         d.addCallbacks(lambda res: self.fail('no exception'),
-                       lambda f: f.trap(ConnectionLost))
+                       lambda f: None)
         return d
 
     def _testPool_4(self, res):
@@ -308,6 +309,7 @@ class ReconnectTestBase:
         return d
 
     def _testPool_5(self, res):
+        self.flushLoggedErrors()
         sql = "select * from NOTABLE" # bad sql
         d = defer.maybeDeferred(self.dbpool.runQuery, sql)
         d.addCallbacks(lambda res: self.fail('no exception'),
@@ -579,3 +581,180 @@ class DeprecationTestCase(unittest.TestCase):
 
         # make sure safe still behaves like the original
         self.assertEqual(result, "test''")
+
+
+
+class FakePool(object):
+    """
+    A fake L{ConnectionPool} for tests.
+
+    @ivar connectionFactory: factory for making connections returned by the
+        C{connect} method.
+    @type connectionFactory: any callable
+    """
+    reconnect = True
+    noisy = True
+
+    def __init__(self, connectionFactory):
+        self.connectionFactory = connectionFactory
+
+
+    def connect(self):
+        """
+        Return an instance of C{self.connectionFactory}.
+        """
+        return self.connectionFactory()
+
+
+    def disconnect(self, connection):
+        """
+        Do nothing.
+        """
+
+
+
+class ConnectionTestCase(unittest.TestCase):
+    """
+    Tests for the L{Connection} class.
+    """
+
+    def test_rollbackErrorLogged(self):
+        """
+        If an error happens during rollback, L{ConnectionLost} is raised but
+        the original error is logged.
+        """
+        class ConnectionRollbackRaise(object):
+            def rollback(self):
+                raise RuntimeError("problem!")
+
+        pool = FakePool(ConnectionRollbackRaise)
+        connection = Connection(pool)
+        self.assertRaises(ConnectionLost, connection.rollback)
+        errors = self.flushLoggedErrors(RuntimeError)
+        self.assertEquals(len(errors), 1)
+        self.assertEquals(errors[0].value.args[0], "problem!")
+
+
+
+class TransactionTestCase(unittest.TestCase):
+    """
+    Tests for the L{Transaction} class.
+    """
+
+    def test_reopenLogErrorIfReconnect(self):
+        """
+        If the cursor creation raises an error in L{Transaction.reopen}, it
+        reconnects but log the error occurred.
+        """
+        class ConnectionCursorRaise(object):
+            count = 0
+
+            def reconnect(self):
+                pass
+
+            def cursor(self):
+                if self.count == 0:
+                    self.count += 1
+                    raise RuntimeError("problem!")
+
+        pool = FakePool(None)
+        transaction = Transaction(pool, ConnectionCursorRaise())
+        transaction.reopen()
+        errors = self.flushLoggedErrors(RuntimeError)
+        self.assertEquals(len(errors), 1)
+        self.assertEquals(errors[0].value.args[0], "problem!")
+
+
+
+class DummyConnectionPool(ConnectionPool):
+    """
+    A testable L{ConnectionPool};
+    """
+
+    def __init__(self):
+        """
+        Don't forward init call.
+        """
+
+
+    def _deferToThread(self, f, *args, **kwargs):
+        """
+        Synchronously run function.
+        """
+        return f(*args, **kwargs)
+
+
+
+
+class ConnectionPoolTestCase(unittest.TestCase):
+    """
+    Unit tests for L{ConnectionPool}.
+    """
+
+    def test_runWithConnectionRaiseOriginalError(self):
+        """
+        If rollback fails, L{ConnectionPool.runWithConnection} raises the
+        original exception and log the error of the rollback.
+        """
+        class ConnectionRollbackRaise(object):
+            def __init__(self, pool):
+                pass
+
+            def rollback(self):
+                raise RuntimeError("problem!")
+
+        def raisingFunction(connection):
+            raise ValueError("foo")
+
+        pool = DummyConnectionPool()
+        pool.connectionFactory = ConnectionRollbackRaise
+        self.assertRaises(ValueError, pool.runWithConnection, raisingFunction)
+
+        errors = self.flushLoggedErrors(RuntimeError)
+        self.assertEquals(len(errors), 1)
+        self.assertEquals(errors[0].value.args[0], "problem!")
+
+
+    def test_closeLogError(self):
+        """
+        L{ConnectionPool._close} logs exceptions.
+        """
+        class ConnectionCloseRaise(object):
+            def close(self):
+                raise RuntimeError("problem!")
+
+        pool = DummyConnectionPool()
+        pool._close(ConnectionCloseRaise())
+
+        errors = self.flushLoggedErrors(RuntimeError)
+        self.assertEquals(len(errors), 1)
+        self.assertEquals(errors[0].value.args[0], "problem!")
+
+
+    def test_runWithInteractionRaiseOriginalError(self):
+        """
+        If rollback fails, L{ConnectionPool.runInteraction} raises the
+        original exception and log the error of the rollback.
+        """
+        class ConnectionRollbackRaise(object):
+            def __init__(self, pool):
+                pass
+
+            def rollback(self):
+                raise RuntimeError("problem!")
+
+        class DummyTransaction(object):
+            def __init__(self, pool, connection):
+                pass
+
+        def raisingFunction(transaction):
+            raise ValueError("foo")
+
+        pool = DummyConnectionPool()
+        pool.connectionFactory = ConnectionRollbackRaise
+        pool.transactionFactory = DummyTransaction
+        self.assertRaises(ValueError, pool.runInteraction, raisingFunction)
+
+        errors = self.flushLoggedErrors(RuntimeError)
+        self.assertEquals(len(errors), 1)
+        self.assertEquals(errors[0].value.args[0], "problem!")
