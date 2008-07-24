@@ -145,6 +145,8 @@ class Port(base.BasePort):
                     raise error.MessageLengthError, "message too long"
                 elif no == ECONNREFUSED:
                     self.protocol.connectionRefused()
+                elif no == EAGAIN or no == EWOULDBLOCK:
+                    return
                 else:
                     raise
         else:
@@ -159,10 +161,13 @@ class Port(base.BasePort):
                     return self.write(datagram, addr)
                 elif no == EMSGSIZE:
                     raise error.MessageLengthError, "message too long"
-                elif no == ECONNREFUSED:
+                elif no == ECONNREFUSED or no == EAGAIN or no == EWOULDBLOCK:
                     # in non-connected UDP ECONNREFUSED is platform dependent, I think
                     # and the info is not necessarily useful. Nevertheless maybe we
                     # should call connectionRefused? XXX
+
+                    # EAGAIN and EWOULDBLOCK indicate the out buffer is
+                    # seriously full.  It's UDP, so drop the datagram.
                     return
                 else:
                     raise

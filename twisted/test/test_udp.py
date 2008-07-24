@@ -6,6 +6,8 @@
 Tests for implementations of L{IReactorUDP} and L{IReactorMulticast}.
 """
 
+import errno, socket
+
 from twisted.trial import unittest, util
 
 from twisted.internet.defer import Deferred, gatherResults, maybeDeferred
@@ -531,6 +533,56 @@ class UDPTestCase(unittest.TestCase):
 
         makeAttempt()
         return finalDeferred
+
+
+    def _testSendErrno(self, errno, connect):
+        class ErrorSocket(object):
+            if connect:
+                def send(self, bytes):
+                    raise socket.error(errno)
+            else:
+                def sendto(self, bytes, addr):
+                    raise socket.error(errno)
+
+        port = reactor.listenUDP(0, protocol.DatagramProtocol())
+        self.addCleanup(port.stopListening)
+        addr = port.getHost()
+        if connect:
+            port.connect(addr.host, addr.port)
+        self.patch(port, 'socket', ErrorSocket())
+        port.write('foo bar', (addr.host, addr.port))
+
+
+    def test_unconnectedEWOULDBLOCK(self):
+        """
+        An unconnected L{udp.Port}'s C{write} method returns without error
+        when the underlying send call fails with L{EWOULDBLOCK}.
+        """
+        self._testSendErrno(errno.EWOULDBLOCK, False)
+
+
+    def test_unconnectedEAGAIN(self):
+        """
+        An unconnected L{udp.Port}'s C{write} method returns without error
+        when the underlying send call fails with L{EAGAIN}.
+        """
+        self._testSendErrno(errno.EAGAIN, False)
+
+
+    def test_connectedEWOULDBLOCK(self):
+        """
+        A connected L{udp.Port}'s C{write} method returns without error
+        when the underlying send call fails with L{EWOULDBLOCK}.
+        """
+        self._testSendErrno(errno.EWOULDBLOCK, True)
+
+
+    def test_connectedEAGAIN(self):
+        """
+        A connected L{udp.Port}'s C{write} method returns without error
+        when the underlying send call fails with L{EAGAIN}.
+        """
+        self._testSendErrno(errno.EAGAIN, True)
 
 
     def testPortRepr(self):
