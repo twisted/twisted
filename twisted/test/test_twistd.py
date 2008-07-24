@@ -180,6 +180,16 @@ class ServerOptionsTest(unittest.TestCase):
             config.parseOptions, ["--report-profile", "foo"])
 
 
+    def test_listAllProfilers(self):
+        """
+        All the profilers that can be used in L{app.AppProfiler} are listed in
+        the help output.
+        """
+        config = twistd.ServerOptions()
+        helpOutput = str(config)
+        for profiler in app.AppProfiler.profilers:
+            self.assertIn(profiler, helpOutput)
+
 
 class TapFileTest(unittest.TestCase):
     """
@@ -733,6 +743,23 @@ class AppProfilingTestCase(unittest.TestCase):
 
         error = self.assertRaises(SystemExit, app.AppProfiler, config)
         self.assertEquals(str(error), "Unsupported profiler name: foobar")
+
+
+    def test_defaultProfiler(self):
+        """
+        L{app.Profiler} defaults to the hotshot profiler if not specified.
+        """
+        profiler = app.AppProfiler({})
+        self.assertEquals(profiler.profiler, "hotshot")
+
+
+    def test_profilerNameCaseInsentive(self):
+        """
+        The case of the profiler name passed to L{app.AppProfiler} is not
+        relevant.
+        """
+        profiler = app.AppProfiler({"profiler": "HotShot"})
+        self.assertEquals(profiler.profiler, "hotshot")
 
 
     def test_oldRunWithProfiler(self):

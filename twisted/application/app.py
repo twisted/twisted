@@ -167,12 +167,12 @@ class AppProfiler(object):
     @type profiler: C{str}
     """
     profilers = {"profile": ProfileRunner, "hotshot": HotshotRunner,
-                 "cProfile": CProfileRunner}
+                 "cprofile": CProfileRunner}
 
     def __init__(self, options):
         saveStats = options.get("savestats", False)
         profileOutput = options.get("profile", None)
-        self.profiler = options.get("profiler", None)
+        self.profiler = options.get("profiler", "hotshot").lower()
         if options.get("nothotshot", False):
             warnings.warn("The --nothotshot option is deprecated. Please "
                           "specify the profiler name using the --profiler "
@@ -576,7 +576,7 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
                 ['encrypted', 'e',
                  "The specified tap/aos/xml file is encrypted."],
                 ['nothotshot', None,
-                 "DEPRECATED. Don't use the 'hotshot' profiler even if "
+                 "DEPRECATED. Don't use the hotshot profiler even if "
                  "it's available."]]
 
     optParameters = [['logfile','l', None,
@@ -584,7 +584,8 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
                      ['profile', 'p', None,
                       "Run in profile mode, dumping results to specified file"],
                      ['profiler', None, "hotshot",
-                      "Name of the profiler to use, 'hotshot' or 'profile'."],
+                      "Name of the profiler to use (%s)." %
+                      ", ".join(AppProfiler.profilers)],
                      ['file','f','twistd.tap',
                       "read the given .tap file"],
                      ['python','y', None,
