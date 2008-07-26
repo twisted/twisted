@@ -32,6 +32,7 @@ from twisted.internet import error
 from twisted.python import failure
 
 from twisted.internet import _pollingfile
+from twisted.internet._baseprocess import BaseProcess
 
 def debug(msg):
     import sys
@@ -94,7 +95,7 @@ def _invalidWin32App(pywinerr):
 
     return pywinerr.args[0] == 193
 
-class Process(_pollingfile._PollingTimer):
+class Process(_pollingfile._PollingTimer, BaseProcess):
     """A process that integrates with the Twisted event loop.
 
     If your subprocess is a python program, you need to:
@@ -114,12 +115,11 @@ class Process(_pollingfile._PollingTimer):
     """
     implements(IProcessTransport, IConsumer, IProducer)
 
-    buffer = ''
-    pid = None
+    closedNotifies = 0
 
     def __init__(self, reactor, protocol, command, args, environment, path):
         _pollingfile._PollingTimer.__init__(self, reactor)
-        self.protocol = protocol
+        BaseProcess.__init__(self, protocol)
 
         # security attributes for pipes
         sAttrs = win32security.SECURITY_ATTRIBUTES()
@@ -212,18 +212,15 @@ class Process(_pollingfile._PollingTimer):
         win32file.CloseHandle(hStdoutW)
         win32file.CloseHandle(hStdinR)
 
-        self.closed = 0
-        self.closedNotifies = 0
-
         # set up everything
         self.stdout = _pollingfile._PollableReadPipe(
             self.hStdoutR,
-            lambda data: self.protocol.childDataReceived(1, data),
+            lambda data: self.proto.childDataReceived(1, data),
             self.outConnectionLost)
 
         self.stderr = _pollingfile._PollableReadPipe(
                 self.hStderrR,
-                lambda data: self.protocol.childDataReceived(2, data),
+                lambda data: self.proto.childDataReceived(2, data),
                 self.errConnectionLost)
 
         self.stdin = _pollingfile._PollableWritePipe(
@@ -234,10 +231,9 @@ class Process(_pollingfile._PollingTimer):
 
 
         # notify protocol
-        self.protocol.makeConnection(self)
+        self.proto.makeConnection(self)
 
-        # (maybe?) a good idea in win32er, otherwise not
-        # self.reactor.addEvent(self.hProcess, self, 'inConnectionLost')
+        self._addPollableResource(_Reaper(self))
 
 
     def signalProcess(self, signalID):
@@ -247,16 +243,10 @@ class Process(_pollingfile._PollingTimer):
             win32process.TerminateProcess(self.hProcess, 1)
 
 
-    def processEnded(self, status):
-        """
-        This is called when the child terminates.
-        """
-        self.pid = None
+    def _getReason(self, status):
         if status == 0:
-            err = error.ProcessDone(status)
-        else:
-            err = error.ProcessTerminated(status)
-        self.protocol.processEnded(failure.Failure(err))
+            return error.ProcessDone(status)
+        return error.ProcessTerminated(status)
 
 
     def write(self, data):
@@ -294,24 +284,34 @@ class Process(_pollingfile._PollingTimer):
         self.closeStdout()
         self.closeStderr()
 
+
     def outConnectionLost(self):
-        self.protocol.childConnectionLost(1)
+        self.proto.childConnectionLost(1)
         self.connectionLostNotify()
+
 
     def errConnectionLost(self):
-        self.protocol.childConnectionLost(2)
+        self.proto.childConnectionLost(2)
         self.connectionLostNotify()
+
 
     def inConnectionLost(self):
-        self.protocol.childConnectionLost(0)
+        self.proto.childConnectionLost(0)
         self.connectionLostNotify()
 
+
     def connectionLostNotify(self):
-        """Will be called 3 times, by stdout/err threads and process handle."""
-        self.closedNotifies = self.closedNotifies + 1
-        if self.closedNotifies == 3:
-            self.closed = 1
-            self._addPollableResource(_Reaper(self))
+        """
+        Will be called 3 times, by stdout/err threads and process handle.
+        """
+        self.closedNotifies += 1
+        self.maybeCallProcessEnded()
+
+
+    def maybeCallProcessEnded(self):
+        if self.closedNotifies == 3 and self.lostProcess:
+            BaseProcess.maybeCallProcessEnded(self)
+
 
     # IConsumer
     def registerProducer(self, producer, streaming):

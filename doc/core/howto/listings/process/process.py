@@ -31,11 +31,13 @@ class MyPP(protocol.ProcessProtocol):
         print "I saw %s lines" % lines
     def errConnectionLost(self):
         print "errConnectionLost! The child closed their stderr."
-    def processEnded(self, status_object):
-        print "processEnded, status %d" % status_object.value.exitCode
+    def processExited(self, reason):
+        print "processExited, status %d" % (reason.value.exitCode,)
+    def processEnded(self, reason):
+        print "processEnded, status %d" % (reason.value.exitCode,)
         print "quitting"
         reactor.stop()
-        
+
 pp = MyPP(10)
 reactor.spawnProcess(pp, "wc", ["wc"], {})
 reactor.run()

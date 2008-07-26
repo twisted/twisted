@@ -27,6 +27,9 @@ class ReactorBuilder:
     defines C{setUp} and C{tearDown}, so mix it in before L{TestCase} or call
     its methods from the overridden ones in the subclass.
 
+    @cvar skippedReactors: A dict mapping FQPN strings of reactors for
+        which the tests defined by this class will be skipped to strings
+        giving the skip message.
     @ivar reactorFactory: A no-argument callable which returns the reactor to
         use for testing.
     @ivar originalHandler: The SIGCHLD handler which was installed when setUp
@@ -46,6 +49,7 @@ class ReactorBuilder:
 
     reactorFactory = None
     originalHandler = None
+    skippedReactors = {}
 
     def setUp(self):
         """
@@ -120,6 +124,8 @@ class ReactorBuilder:
             name = (cls.__name__ + "." + shortReactorName).replace(".", "_")
             class testcase(cls, TestCase):
                 __module__ = cls.__module__
+                if reactor in cls.skippedReactors:
+                    skip = cls.skippedReactors[reactor]
                 try:
                     reactorFactory = namedAny(reactor)
                 except:

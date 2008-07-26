@@ -29,6 +29,7 @@ from twisted.python import log, failure
 from twisted.python.util import switchUID
 from twisted.internet import fdesc, abstract, error
 from twisted.internet.main import CONNECTION_LOST, CONNECTION_DONE
+from twisted.internet._baseprocess import BaseProcess
 
 # Some people were importing this, which is incorrect, just keeping it
 # here for backwards compatibility:
@@ -259,13 +260,21 @@ class ProcessReader(abstract.FileDescriptor):
         self.proc.childConnectionLost(self.name, reason)
 
 
-class _BaseProcess(styles.Ephemeral, object):
+class _BaseProcess(BaseProcess, object):
     """
     Base class for Process and PTYProcess.
     """
-
-    status = -1
+    status = None
     pid = None
+
+    def __init__(self, protocol):
+        BaseProcess.__init__(self, protocol)
+        if not signal.getsignal(signal.SIGCHLD):
+            warnings.warn(
+                error.PotentialZombieWarning.MESSAGE,
+                error.PotentialZombieWarning,
+                stacklevel=4)
+
 
     def reapProcess(self):
         """
@@ -297,6 +306,18 @@ class _BaseProcess(styles.Ephemeral, object):
             self.processEnded(status)
             unregisterReapProcessHandler(pid, self)
 
+
+    def _getReason(self, status):
+        exitCode = sig = None
+        if os.WIFEXITED(status):
+            exitCode = os.WEXITSTATUS(status)
+        else:
+            sig = os.WTERMSIG(status)
+        if exitCode or sig:
+            return error.ProcessTerminated(exitCode, sig, status)
+        return error.ProcessDone(status)
+
+
     def signalProcess(self, signalID):
         """
         Send the given signal C{signalID} to the process. It'll translate a
@@ -312,28 +333,6 @@ class _BaseProcess(styles.Ephemeral, object):
             raise ProcessExitedAlready()
         os.kill(self.pid, signalID)
 
-    def maybeCallProcessEnded(self):
-        """
-        Call processEnded on protocol after final cleanup.
-        """
-        try:
-            exitCode = sig = None
-            if self.status != -1:
-                if os.WIFEXITED(self.status):
-                    exitCode = os.WEXITSTATUS(self.status)
-                else:
-                    sig = os.WTERMSIG(self.status)
-            else:
-                pass # don't think this can happen
-            if exitCode or sig:
-                e = error.ProcessTerminated(exitCode, sig, self.status)
-            else:
-                e = error.ProcessDone(self.status)
-            if self.proto is not None:
-                self.proto.processEnded(failure.Failure(e))
-                self.proto = None
-        except:
-            log.err()
 
     def _fork(self, path, uid, gid, executable, args, environment, **kwargs):
         """
@@ -490,13 +489,7 @@ class Process(_BaseProcess):
         if not proto:
             assert 'r' not in childFDs.values()
             assert 'w' not in childFDs.values()
-        if not signal.getsignal(signal.SIGCHLD):
-            warnings.warn(
-                error.PotentialZombieWarning.MESSAGE,
-                error.PotentialZombieWarning,
-                stacklevel=3)
-
-        self.lostProcess = False
+        _BaseProcess.__init__(self, proto)
 
         self.pipes = {}
         # keys are childFDs, we can sense them closing
@@ -755,15 +748,10 @@ class Process(_BaseProcess):
         if 0 in self.pipes:
             self.pipes[0].writeSequence(seq)
 
+
     def childDataReceived(self, name, data):
         self.proto.childDataReceived(name, data)
 
-    def processEnded(self, status):
-        # this is called when the child terminates (SIGCHLD)
-        self.status = status
-        self.lostProcess = True
-        self.pid = None
-        self.maybeCallProcessEnded()
 
     def childConnectionLost(self, childFD, reason):
         # this is called when one of the helpers (ProcessReader or
@@ -816,6 +804,7 @@ class PTYProcess(abstract.FileDescriptor, _BaseProcess):
             raise NotImplementedError(
                 "cannot use PTYProcess on platforms without the pty module.")
         abstract.FileDescriptor.__init__(self, reactor)
+        _BaseProcess.__init__(self, proto)
 
         if isinstance(usePTY, (tuple, list)):
             masterfd, slavefd, ttyname = usePTY
@@ -838,8 +827,6 @@ class PTYProcess(abstract.FileDescriptor, _BaseProcess):
         self.fd = masterfd
         self.startReading()
         self.connected = 1
-        self.proto = proto
-        self.lostProcess = 0
         self.status = -1
         try:
             self.proto.makeConnection(self)
@@ -893,12 +880,6 @@ class PTYProcess(abstract.FileDescriptor, _BaseProcess):
 
     def closeStderr(self):
         pass
-
-    def processEnded(self, status):
-        self.status = status
-        self.lostProcess += 1
-        self.pid = None
-        self.maybeCallProcessEnded()
 
     def doRead(self):
         """

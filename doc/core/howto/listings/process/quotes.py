@@ -16,7 +16,7 @@ class FortuneQuoter(protocol.Protocol):
 
     def noResponse(self, err):
         self.transport.loseConnection()
-         
+
 
 if __name__ == '__main__':
     f = protocol.Factory()

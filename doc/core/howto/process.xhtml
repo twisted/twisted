@@ -6,10 +6,10 @@
   <head>
     <title>Using Processes</title>
   </head>
-  
+
   <body>
     <h1>Using Processes</h1>
-    
+
     <h2>Overview</h2>
 
 <p>Along with connection to servers across the internet, Twisted also
@@ -18,7 +18,7 @@ more detail in the documentation of:
 <ul>
 <li><code class="API">twisted.internet.interfaces.IReactorProcess</code></li>
 <li><code class="API">twisted.internet.interfaces.IProcessTransport</code></li>
-<li><code class="API">twisted.internet.protocol.ProcessProtocol</code></li>
+<li><code class="API">twisted.internet.interfaces.IProcessProtocol</code></li>
 </ul>
 </p>
 
@@ -29,8 +29,9 @@ class="python">reactor.spawnProcess()</code>. Pipes are created to the child
 process, and added to the reactor core so that the application will not
 block while sending data into or pulling data out of the new process. <code
 class="python">reactor.spawnProcess()</code> requires two arguments,
-processProtocol and executable, and optionally takes six more: arguments,
-environment, path, userID, groupID, and usePTY.</p>
+processProtocol and executable, and optionally takes several more: arguments,
+environment, path, userID, groupID, usePTY, and childFDs.  Not all of these
+are available on Windows.</p>
 
 
 <pre class="python">
@@ -66,9 +67,10 @@ reactor.spawnProcess(processProtocol, executable, args=[program, arg1, arg2],
   to succeed if you start as root.</li>
 
   <li><code>usePTY</code> specifies whether the child process should be run
-  with a pty, or if it should just get a pair of pipes. Interactive programs
-  (where you don't know when it may read or write) need to be run with
-  ptys.</li>
+  with a pty, or if it should just get a pair of pipes.  Whether a program
+  needs to be run with a PTY or not depends on the particulars of that
+  program.  Often, programs which primarily interact with users via a terminal
+  do need a PTY.</li>
 
   <li><code>childFDs</code> lets you specify how the child's file
   descriptors should be set up. Each key is a file descriptor number (an
@@ -91,10 +93,10 @@ program will inherit the environment from the current process, which is
 usually the civilized thing to do (unless you want to explicitly clean the
 environment as a security precaution). The default is to give an empty
 <code>env</code> to the child.</p>
-  
+
 <p><code class="python">reactor.spawnProcess()</code> returns an instance
-that implements the <code
-class="API">twisted.internet.interfaces.IProcessTransport</code>.</p>
+that implements <code base="twisted.internet.interfaces" class="API">
+IProcessTransport</code>.</p>
 
   <h2>Writing a ProcessProtocol</h2>
 
@@ -125,9 +127,9 @@ process know we are done writing to it.</p>
 </pre>
 
 <p>At this point, the process has receieved the data, and it's time for us
-to read the results. Instead of being receieved in dataReceived, data from
-standard output is receieve in outReceived. This is to distinguish it from
-data on standard error.</p>
+to read the results. Instead of being received in <code>dataReceived</code>,
+data from standard output is received in <code>outReceived</code>. This is
+to distinguish it from data on standard error.</p>
 
 <pre class="python">
     def outReceived(self, data):
@@ -170,7 +172,7 @@ reactor.run()
 
 <ul>
 
-  <li><code>.connectionMade</code>: This is called when the program is
+  <li><code>.connectionMade()</code>: This is called when the program is
   started, and makes a good place to write data into the stdin pipe (using
   <code class="python">self.transport.write()</code>).</li>
 
@@ -198,7 +200,7 @@ reactor.run()
   <li><code>.errConnectionLost</code>: Same as
   <code>outConnectionLost</code>, but for stderr instead of stdout.</li>
 
-  <li><p><code>.processEnded(status)</code>: This is called when the child
+  <li><code>.processExited(status)</code>: This is called when the child
   process has been reaped, and receives information about the process' exit
   status. The status is passed in the form of a <code class="API"
   base="twisted.python.failure">Failure</code> instance, created with a
@@ -207,20 +209,17 @@ reactor.run()
   terminated normally (it died of natural causes instead of receiving a
   signal, and if the exit code was 0), or a <code class="API"
   base="twisted.internet.error">ProcessTerminated</code> object (with an
-  <code>.exitCode</code> attribute) if something went wrong. This scheme may
-  seem a bit weird, but I trust that it proves useful when dealing with
-  exceptions that occur in asynchronous code.</p>
+  <code>.exitCode</code> attribute) if something went wrong.</li>
 
-  <!-- XXX: check twisted/internet/process.py:v1.30:line357, I think
-  death-by-signal wouldn't be reported properly. -->
-  
-  <p>This will always be called <em>after</em> <code>inConnectionLost</code>,
-  <code>outConnectionLost</code>, and <code>errConnectionLost</code> are
-  called.</p></li>
+  <li><code>.processEnded(status)</code>: This is called when all the file
+  descriptors associated with the child process have been closed and the
+  process has been reaped.  This means it is the last callback which will be
+  made onto a <code>ProcessProtocol</code>.  The <code>status</code> parameter
+  has the same meaning as it does for <code>processExited</code>.</li>
 
 </ul>
 
-<p>The base-class definitions of these functions are all no-ops. This will
+<p>The base-class definitions of most of these functions are no-ops. This will
 result in all stdout and stderr being thrown away. Note that it is important
 for data you don't care about to be thrown away: if the pipe were not read,
 the child process would eventually block as it tried to write to a full
@@ -248,7 +247,7 @@ pipe.</p>
   putting the process into a state where any attempt to write to stdout will
   cause a SIGPIPE error. This isn't a nice thing to do to the poor
   process.</li>
-  
+
   <li><code>self.transport.closeStderr</code>: Not usually called, same reason
   as <code>closeStdout</code>.</li>
 
@@ -257,7 +256,7 @@ pipe.</p>
   <li><code>self.transport.signalProcess('KILL')</code>: Kill the child
   process. This will eventually result in <code>processEnded</code> being
   called.</li>
-  
+
 </ul>
 
 
@@ -275,7 +274,7 @@ process close its stderr pipe before or after it reads data from the stdout
 pipe. One possible transcript would look like this:</p>
 
 <pre class="shell">
-% ./process.py 
+% ./process.py
 connectionMade!
 inConnectionLost! stdin is closed! (we probably did it)
 errConnectionLost! The child closed their stderr.
@@ -285,7 +284,7 @@ I saw 40 lines
 processEnded, status 0
 quitting
 Main loop terminated.
-% 
+%
 </pre>
 
 <h2>Doing it the Easy Way</h2>

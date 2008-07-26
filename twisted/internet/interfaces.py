@@ -1063,9 +1063,22 @@ class IProcessProtocol(Interface):
         """
 
 
-    def processEnded(reason):
+    def processExited(reason):
         """
         Called when the child process exits.
+
+        @type reason: L{twisted.python.failure.Failure}
+        @param reason: A failure giving the reason the child process
+            terminated.  The type of exception for this failure is either
+            L{twisted.internet.error.ProcessDone} or
+            L{twisted.internet.error.ProcessTerminated}.
+        """
+
+
+    def processEnded(reason):
+        """
+        Called when the child process exits and all file descriptors associated
+        with it have been closed.
 
         @type reason: L{twisted.python.failure.Failure}
         @param reason: A failure giving the reason the child process

@@ -477,12 +477,21 @@ class ProcessProtocol(BaseProtocol):
         """
 
 
+    def processExited(self, reason):
+        """
+        This will be called when the subprocess exits.
+
+        @type reason: L{twisted.python.failure.Failure}
+        """
+
+
     def processEnded(self, reason):
         """
         This will be called when the subprocess is finished.
 
         @type reason: L{twisted.python.failure.Failure}
         """
+
 
 
 class AbstractDatagramProtocol:

@@ -1197,9 +1197,6 @@ class MockOS(object):
     @type waitChild: C{None} or a tuple
     """
     exited = False
-    O_RDWR = 1
-    O_NOCTTY = 1
-    WNOHANG = 1
     raiseExec = False
     fdio = None
     child = True
@@ -1214,6 +1211,11 @@ class MockOS(object):
         self.actions = []
         self.closed = []
         self.pipeCount = 0
+        self.O_RDWR = os.O_RDWR
+        self.O_NOCTTY = os.O_NOCTTY
+        self.WNOHANG = os.WNOHANG
+        self.WEXITSTATUS = os.WEXITSTATUS
+        self.WIFEXITED = os.WIFEXITED
 
 
     def open(self, dev, flags):
@@ -1455,6 +1457,8 @@ class MockProcessTestCase(unittest.TestCase):
     """
     Mock a process runner to test forked child code path.
     """
+    if process is None:
+        skip = "twisted.internet.process is never used on Windows"
 
     def setUp(self):
         """
@@ -2236,5 +2240,3 @@ if not interfaces.IReactorProcess(reactor, None):
     ProcessTestCase.skip = skipMessage
     ClosingPipes.skip = skipMessage
 
-if process is None:
-    MockProcessTestCase.skip = skipMessage
