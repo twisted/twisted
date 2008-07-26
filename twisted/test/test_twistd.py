@@ -4,7 +4,8 @@
 """
 Tests for L{twisted.application.app} and L{twisted.scripts.twistd}.
 """
-import signal
+
+import signal, inspect
 
 import os, sys, cPickle
 try:
@@ -19,6 +20,7 @@ from twisted.trial import unittest
 from twisted.application import service, app
 from twisted.scripts import twistd
 from twisted.python import log
+from twisted.python.usage import UsageError
 from twisted.python.versions import Version
 from twisted.internet.defer import Deferred
 
@@ -28,9 +30,12 @@ except ImportError:
     syslog = None
 
 try:
-    from twisted.scripts._twistd_unix import UnixAppLogger
+    from twisted.scripts import _twistd_unix
 except ImportError:
-    UnixAppLogger = None
+    _twistd_unix = None
+else:
+    from twisted.scripts._twistd_unix import UnixApplicationRunner
+    from twisted.scripts._twistd_unix import UnixAppLogger
 
 try:
     import profile
@@ -47,8 +52,8 @@ except (ImportError, SystemExit):
     hotshot = None
 
 try:
-    import cProfile
     import pstats
+    import cProfile
 except ImportError:
     cProfile = None
 
@@ -191,6 +196,40 @@ class ServerOptionsTest(unittest.TestCase):
             self.assertIn(profiler, helpOutput)
 
 
+    def test_defaultUmask(self):
+        """
+        The default value for the C{umask} option is C{None}.
+        """
+        config = twistd.ServerOptions()
+        self.assertEqual(config['umask'], None)
+
+
+    def test_umask(self):
+        """
+        The value given for the C{umask} option is parsed as an octal integer
+        literal.
+        """
+        config = twistd.ServerOptions()
+        config.parseOptions(['--umask', '123'])
+        self.assertEqual(config['umask'], 83)
+        config.parseOptions(['--umask', '0123'])
+        self.assertEqual(config['umask'], 83)
+
+
+    def test_invalidUmask(self):
+        """
+        If a value is given for the C{umask} option which cannot be parsed as
+        an integer, L{UsageError} is raised by L{ServerOptions.parseOptions}.
+        """
+        config = twistd.ServerOptions()
+        self.assertRaises(UsageError, config.parseOptions, ['--umask', 'abcdef'])
+
+    if _twistd_unix is None:
+        msg = "twistd unix not available"
+        test_defaultUmask.skip = test_umask.skip = test_invalidUmask.skip = msg
+
+
+
 class TapFileTest(unittest.TestCase):
     """
     Test twistd-related functionality that requires a tap file on disk.
@@ -326,7 +365,8 @@ class ApplicationRunnerTest(unittest.TestCase):
 
         events = []
         class FakeUnixApplicationRunner(twistd._SomeApplicationRunner):
-            def setupEnvironment(self, chroot, rundir, nodaemon, pidfile):
+            def setupEnvironment(self, chroot, rundir, nodaemon, umask,
+                                 pidfile):
                 events.append('environment')
 
             def shedPrivileges(self, euid, uid, gid):
@@ -449,6 +489,199 @@ class ApplicationRunnerTest(unittest.TestCase):
             "deprecated. Please use a loggerFactory instead.",
             app.__file__, runner.run)
         self.assertEquals(len(observer), 3)
+
+
+
+class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
+    """
+    Tests for L{UnixApplicationRunner.setupEnvironment}.
+
+    @ivar root: The root of the filesystem, or C{unset} if none has been
+        specified with a call to L{os.chroot} (patched for this TestCase with
+        L{UnixApplicationRunnerSetupEnvironmentTests.chroot ).
+
+    @ivar cwd: The current working directory of the process, or C{unset} if
+        none has been specified with a call to L{os.chdir} (patched for this
+        TestCase with L{UnixApplicationRunnerSetupEnvironmentTests.chdir).
+
+    @ivar mask: The current file creation mask of the process, or C{unset} if
+        none has been specified with a call to L{os.umask} (patched for this
+        TestCase with L{UnixApplicationRunnerSetupEnvironmentTests.umask).
+
+    @ivar daemon: A boolean indicating whether daemonization has been performed
+        by a call to L{_twistd_unix.daemonize} (patched for this TestCase with
+        L{UnixApplicationRunnerSetupEnvironmentTests.
+    """
+    if _twistd_unix is None:
+        skip = "twistd unix not available"
+
+    unset = object()
+
+    def setUp(self):
+        self.root = self.unset
+        self.cwd = self.unset
+        self.mask = self.unset
+        self.daemon = False
+        self.pid = os.getpid()
+        self.patch(os, 'chroot', lambda path: setattr(self, 'root', path))
+        self.patch(os, 'chdir', lambda path: setattr(self, 'cwd', path))
+        self.patch(os, 'umask', lambda mask: setattr(self, 'mask', mask))
+        self.patch(_twistd_unix, "daemonize", self.daemonize)
+        self.runner = UnixApplicationRunner({})
+
+
+    def daemonize(self):
+        """
+        Indicate that daemonization has happened and change the PID so that the
+        value written to the pidfile can be tested in the daemonization case.
+        """
+        self.daemon = True
+        self.patch(os, 'getpid', lambda: self.pid + 1)
+
+
+    def test_chroot(self):
+        """
+        L{UnixApplicationRunner.setupEnvironment} changes the root of the
+        filesystem if passed a non-C{None} value for the C{chroot} parameter.
+        """
+        self.runner.setupEnvironment("/foo/bar", ".", True, None, None)
+        self.assertEqual(self.root, "/foo/bar")
+
+
+    def test_noChroot(self):
+        """
+        L{UnixApplicationRunner.setupEnvironment} does not change the root of
+        the filesystem if passed C{None} for the C{chroot} parameter.
+        """
+        self.runner.setupEnvironment(None, ".", True, None, None)
+        self.assertIdentical(self.root, self.unset)
+
+
+    def test_changeWorkingDirectory(self):
+        """
+        L{UnixApplicationRunner.setupEnvironment} changes the working directory
+        of the process to the path given for the C{rundir} parameter.
+        """
+        self.runner.setupEnvironment(None, "/foo/bar", True, None, None)
+        self.assertEqual(self.cwd, "/foo/bar")
+
+
+    def test_daemonize(self):
+        """
+        L{UnixApplicationRunner.setupEnvironment} daemonizes the process if
+        C{False} is passed for the C{nodaemon} parameter.
+        """
+        self.runner.setupEnvironment(None, ".", False, None, None)
+        self.assertTrue(self.daemon)
+
+
+    def test_noDaemonize(self):
+        """
+        L{UnixApplicationRunner.setupEnvironment} does not daemonize the
+        process if C{True} is passed for the C{nodaemon} parameter.
+        """
+        self.runner.setupEnvironment(None, ".", True, None, None)
+        self.assertFalse(self.daemon)
+
+
+    def test_nonDaemonPIDFile(self):
+        """
+        L{UnixApplicationRunner.setupEnvironment} writes the process's PID to
+        the file specified by the C{pidfile} parameter.
+        """
+        pidfile = self.mktemp()
+        self.runner.setupEnvironment(None, ".", True, None, pidfile)
+        fObj = file(pidfile)
+        pid = int(fObj.read())
+        fObj.close()
+        self.assertEqual(pid, self.pid)
+
+
+    def test_daemonPIDFile(self):
+        """
+        L{UnixApplicationRunner.setupEnvironment} writes the daemonized
+        process's PID to the file specified by the C{pidfile} parameter if
+        C{nodaemon} is C{False}.
+        """
+        pidfile = self.mktemp()
+        self.runner.setupEnvironment(None, ".", False, None, pidfile)
+        fObj = file(pidfile)
+        pid = int(fObj.read())
+        fObj.close()
+        self.assertEqual(pid, self.pid + 1)
+
+
+    def test_umask(self):
+        """
+        L{UnixApplicationRunner.setupEnvironment} changes the process umask to
+        the value specified by the C{umask} parameter.
+        """
+        self.runner.setupEnvironment(None, ".", False, 123, None)
+        self.assertEqual(self.mask, 123)
+
+
+    def test_noDaemonizeNoUmask(self):
+        """
+        L{UnixApplicationRunner.setupEnvironment} doesn't change the process
+        umask if C{None} is passed for the C{umask} parameter and C{True} is
+        passed for the C{nodaemon} parameter.
+        """
+        self.runner.setupEnvironment(None, ".", True, None, None)
+        self.assertIdentical(self.mask, self.unset)
+
+
+    def test_daemonizedNoUmask(self):
+        """
+        L{UnixApplicationRunner.setupEnvironment} changes the process umask to
+        C{0077} if C{None} is passed for the C{umask} parameter and C{False} is
+        passed for the C{nodaemon} parameter.
+        """
+        self.runner.setupEnvironment(None, ".", False, None, None)
+        self.assertEqual(self.mask, 0077)
+
+
+
+class UnixApplicationRunnerStartApplicationTests(unittest.TestCase):
+    """
+    Tests for L{UnixApplicationRunner.startApplication}.
+    """
+    if _twistd_unix is None:
+        skip = "twistd unix not available"
+
+    def test_setupEnvironment(self):
+        """
+        L{UnixApplicationRunner.startApplication} calls
+        L{UnixApplicationRunner.setupEnvironment} with the chroot, rundir,
+        nodaemon, umask, and pidfile parameters from the configuration it is
+        constructed with.
+        """
+        options = twistd.ServerOptions()
+        options.parseOptions([
+                '--nodaemon',
+                '--umask', '0070',
+                '--chroot', '/foo/chroot',
+                '--rundir', '/foo/rundir',
+                '--pidfile', '/foo/pidfile'])
+        application = service.Application("test_setupEnvironment")
+        self.runner = UnixApplicationRunner(options)
+
+        args = []
+        def fakeSetupEnvironment(self, chroot, rundir, nodaemon, umask, pidfile):
+            args.extend((chroot, rundir, nodaemon, umask, pidfile))
+
+        # Sanity check
+        self.assertEqual(
+            inspect.getargspec(self.runner.setupEnvironment),
+            inspect.getargspec(fakeSetupEnvironment))
+
+        self.patch(UnixApplicationRunner, 'setupEnvironment', fakeSetupEnvironment)
+        self.patch(UnixApplicationRunner, 'shedPrivileges', lambda *a, **kw: None)
+        self.patch(app, 'startApplication', lambda *a, **kw: None)
+        self.runner.startApplication(application)
+
+        self.assertEqual(
+            args,
+            ['/foo/chroot', '/foo/rundir', True, 56, '/foo/pidfile'])
 
 
 
@@ -648,7 +881,6 @@ class AppProfilingTestCase(unittest.TestCase):
         When an error happens while printing the stats, C{sys.stdout}
         should be restored to its initial value.
         """
-        import pstats
         class ErroneousStats(pstats.Stats):
             def print_stats(self):
                 raise RuntimeError("Boom")
@@ -935,6 +1167,8 @@ class UnixAppLoggerTestCase(unittest.TestCase):
     @ivar signals: list of signal handlers installed.
     @type signals: C{list}
     """
+    if _twistd_unix is None:
+        skip = "twistd unix not available"
 
     def setUp(self):
         """
@@ -1054,8 +1288,6 @@ class UnixAppLoggerTestCase(unittest.TestCase):
 
 
 
-if UnixAppLogger is None:
-    UnixAppLoggerTestCase.skip = "twistd unix not available"
 
 
 

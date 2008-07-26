@@ -7,10 +7,10 @@ twistd \- run Twisted applications (TACs, TAPs)
 .SH DESCRIPTION
 Read an twisted.application.service.Application out of a file and runs it.
 .TP
-\fB\-n\fR, \fB\--nodaemon\fR 
+\fB\-n\fR, \fB\--nodaemon\fR
 Don't daemonize (stay in foreground)
 .TP
-\fB\-q\fR, \fB\--quiet\fR 
+\fB\-q\fR, \fB\--quiet\fR
 No-op for backwards compatibility.
 .TP
 \fB\-p\fR, \fB\--profile\fR \fI<profile output>\fR
@@ -22,11 +22,11 @@ Specify the profiler to use, default to the 'hotshot' profiler.
 \fB--savestats\fR
 Save the Stats object rather than the text output of the profiler.
 .TP
-\fB\-b\fR, \fB\--debug\fR 
+\fB\-b\fR, \fB\--debug\fR
 Run the application in the Python Debugger (implies nodaemon option).
 Sending a SIGUSR2 signal to the process will drop it into the debugger.
 .TP
-\fB\-o\fR, \fB\--no_save\fR 
+\fB\-o\fR, \fB\--no_save\fR
 Do not save shutdown state
 .TP
 \fB\--originalname\fR
@@ -34,18 +34,28 @@ Behave as though the specified Application has no process name set, and run
 with the standard process name (the python binary in most cases).
 .TP
 \fB\-l\fR, \fB\--logfile\fR \fI<logfile>\fR
-Log to a specified file, - for stdout (default twistd.log).
+Log to a specified file, - for stdout (default: twistd.log).
 The log file will be rotated on SIGUSR1.
 .TP
 \fB\--pidfile\fR \fI<pidfile>\fR
-Save pid in specified file (default twistd.pid)
+Save pid in specified file (default: twistd.pid)
 .TP
 \fB\--chroot\fR \fI<directory>\fR
-Chroot to a supplied directory before running (default -- don't chroot).
+Chroot to a supplied directory before running (default: don't chroot).
 Chrooting is done before changing the current directory.
 .TP
 \fB\-d\fR, \fB\--rundir\fR \fI<directory>\fR
-Change to a supplied directory before running (default .)
+Change to a supplied directory before running (default: .)
+.TP
+\fB\-u\fR, \fB\--uid\fR \fI<uid>\fR
+The uid to run as. (default: don't change)
+.TP
+\fB\-g\fR, \fB\--gid\fR \fI<gid>\fR
+The gid to run as. (default: don't change)
+.TP
+\fB--umask\fR \fI<mask>\fR
+The (octal) file creation mask to apply. (default: 0077 for daemons, no
+change otherwise).
 .TP
 \fB\-r\fR, \fB\--reactor\fR \fI<reactor>\fR
 Choose which reactor to use.  See --help-reactors for a list.
@@ -58,7 +68,7 @@ Write an extremely verbose log of everything that happens.  Useful for
 debugging freezes or locks in complex code.
 .TP
 \fB\-f\fR, \fB\--file\fR \fI<tap file>\fR
-Read the given .tap file (default twistd.tap)
+Read the given .tap file (default: twistd.tap)
 .TP
 \fB\-x\fR, \fB\--xml\fR \fI<tax file>\fR
 Load an Application from the given .tax (XML) file.
@@ -68,7 +78,7 @@ Load an Application from the given .tas (AOT Python source) file.
 .TP
 \fB\-y\fR, \fB\--python\fR \fI<python file>\fR
 Use the variable "application" from the given Python
-file. This setting, if given, overrides \fB\-f\fR. 
+file. This setting, if given, overrides \fB\-f\fR.
 This option implies \fB\--no_save\fR.
 .TP
 \fB\-g\fR, \fB\--plugin\fR \fI<plugin name>\fR

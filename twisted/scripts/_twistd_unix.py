@@ -10,11 +10,14 @@ from twisted.application import app, service
 from twisted import copyright
 
 
+def _umask(value):
+    return int(value, 8)
+
 
 class ServerOptions(app.ServerOptions):
     synopsis = "Usage: twistd [options]"
 
-    optFlags = [['nodaemon','n',  "don't daemonize"],
+    optFlags = [['nodaemon','n',  "don't daemonize, don't use default umask of 0077"],
                 ['quiet', 'q', "No-op for backwards compatibility."],
                 ['originalname', None, "Don't try to change the process name"],
                 ['syslog', None,   "Log to syslog, not to file"],
@@ -36,6 +39,8 @@ class ServerOptions(app.ServerOptions):
                       'Chroot to a supplied directory before running'],
                      ['uid', 'u', None, "The uid to run as.", uidFromString],
                      ['gid', 'g', None, "The gid to run as.", gidFromString],
+                     ['umask', None, None,
+                      "The (octal) file creation mask to apply.", _umask],
                     ]
     zsh_altArgDescr = {"prefix":"Use the given prefix when syslogging (default: twisted)",
                        "pidfile":"Name of the pidfile (default: twistd.pid)",}
@@ -155,7 +160,6 @@ def daemonize():
     os.setsid()
     if os.fork():   # launch child and...
         os._exit(0) # kill off parent again.
-    os.umask(077)
     null = os.open('/dev/null', os.O_RDWR)
     for i in range(3):
         try:
@@ -227,7 +231,7 @@ class UnixApplicationRunner(app.ApplicationRunner):
             log.deferr()
 
 
-    def setupEnvironment(self, chroot, rundir, nodaemon, pidfile):
+    def setupEnvironment(self, chroot, rundir, nodaemon, umask, pidfile):
         """
         Set the filesystem root, the working directory, and daemonize.
 
@@ -242,16 +246,25 @@ class UnixApplicationRunner(app.ApplicationRunner):
         @param nodaemon: A flag which, if set, indicates that daemonization
             should not be done.
 
-        @type pidfile: C{str} or C{NoneType}
+        @type umask: C{int} or L{NoneType}
+        @param umask: The value to which to change the process umask.
+
+        @type pidfile: C{str} or L{NoneType}
         @param pidfile: If not C{None}, the path to a file into which to put
             the PID of this process.
         """
+        daemon = not nodaemon
+
         if chroot is not None:
             os.chroot(chroot)
             if rundir == '.':
                 rundir = '/'
         os.chdir(rundir)
-        if not nodaemon:
+        if daemon and umask is None:
+            umask = 077
+        if umask is not None:
+            os.umask(umask)
+        if daemon:
             daemonize()
         if pidfile:
             f = open(pidfile,'wb')
@@ -292,7 +305,8 @@ class UnixApplicationRunner(app.ApplicationRunner):
             launchWithName(process.processName)
         self.setupEnvironment(
             self.config['chroot'], self.config['rundir'],
-            self.config['nodaemon'], self.config['pidfile'])
+            self.config['nodaemon'], self.config['umask'],
+            self.config['pidfile'])
 
         service.IService(application).privilegedStartService()
 
