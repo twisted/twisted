@@ -12,211 +12,6 @@ from twisted.internet.error import VerifyError, CertificateError
 # a unique session id for each context
 _sessionCounter = itertools.count().next
 
-class _SSLApplicationData(object):
-    def __init__(self):
-        self.problems = []
-
-class OpenSSLVerifyError(VerifyError):
-
-    _errorCodes = {0: ('X509_V_OK',
-                       'ok',
-                       'the operation was successful. >'),
-
-                   2: ('X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT',
-                       'unable to get issuer certificate',
-                       "The issuer certificate could not be found.  This "
-                       "occurs if the issuer certificate of an untrusted "
-                       "certificate cannot be found."),
-
-                   3: ('X509_V_ERR_UNABLE_TO_GET_CRL',
-                       'unable to get certificate CRL',
-                       "The CRL of a certificate could not be found. "
-                       "Unused."),
-
-                   4: ('X509_V_ERR_UNABLE_TO_DECRYPT_CERT_SIGNATURE',
-                       "unable to decrypt certificate's signature",
-                       "The certificate signature could not be decrypted.  "
-                       "This means that the actual signature value could not "
-                       "be determined rather than it not matching the "
-                       "expected value, this is only meaningful for RSA "
-                       "keys."),
-
-                   5: ('X509_V_ERR_UNABLE_TO_DECRYPT_CRL_SIGNATURE',
-                       "unable to decrypt CRL's signature",
-                       "The CRL signature could not be decrypted.  This "
-                       "means that the actual signature value could not be "
-                       "determined rather than it not matching the expected "
-                       "value. Unused."),
-
-                   6: ('X509_V_ERR_UNABLE_TO_DECODE_ISSUER_PUBLIC_KEY',
-                       'unable to decode issuer',
-                       "Public key the public key in the certificate "
-                       "SubjectPublicKeyInfo could not be read."),
-
-                   7: ('X509_V_ERR_CERT_SIGNATURE_FAILURE',
-                       'certificate signature failure',
-                       'The signature of the certificate is invalid.'),
-
-                   8: ('X509_V_ERR_CRL_SIGNATURE_FAILURE',
-                       'CRL signature failure',
-                       'The signature of the certificate is invalid. Unused.'),
-
-                   9: ('X509_V_ERR_CERT_NOT_YET_VALID',
-                       'certificate is not yet valid',
-                       "The certificate is not yet valid.  The notBefore "
-                       "date is after the current time."),
-
-                   10: ('X509_V_ERR_CERT_HAS_EXPIRED',
-                        'certificate has expired',
-                        "The certificate has expired.  The notAfter date "
-                        "is before the current time."),
-
-                   11: ('X509_V_ERR_CRL_NOT_YET_VALID',
-                        'CRL is not yet valid',
-                        'The CRL is not yet valid. Unused.'),
-
-                   12: ('X509_V_ERR_CRL_HAS_EXPIRED',
-                        'CRL has expired',
-                        'The CRL has expired. Unused.'),
-
-                   13: ('X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD',
-                        "format error in certificate's notBefore field",
-                        "The certificate's notBefore field contains an "
-                        "invalid time."),
-
-                   14: ('X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD',
-                        "format error in certificate's notAfter field.",
-                        "The certificate's notAfter field contains an "
-                        "invalid time."),
-
-                   15: ('X509_V_ERR_ERROR_IN_CRL_LAST_UPDATE_FIELD',
-                        "format error in CRL's lastUpdate field",
-                        "The CRL lastUpdate field contains an invalid "
-                        "time. Unused."),
-
-                   16: ('X509_V_ERR_ERROR_IN_CRL_NEXT_UPDATE_FIELD',
-                        "format error in CRL's nextUpdate field",
-                        "The CRL nextUpdate field contains an invalid "
-                        "time. Unused."),
-
-                   17: ('X509_V_ERR_OUT_OF_MEM',
-                        'out of memory',
-                        'An error occurred trying to allocate memory. '
-                        'This should never happen.'),
-
-                   18: ('X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT',
-                        'self signed certificate',
-                        'The passed certificate is self signed and the same '
-                        'certificate cannot be found in the list of trusted '
-                        'certificates.'),
-
-                   19: ('X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN',
-                        'self signed certificate in certificate chain',
-                        'The certificate chain could be built up using the '
-                        'untrusted certificates but the root could not be '
-                        'found locally.'),
-
-                   20: ('X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY',
-                        'unable to get local issuer certificate',
-                        'The issuer certificate of a locally looked up '
-                        'certificate could not be found. This normally '
-                        'means the list of trusted certificates is not '
-                        'complete.'),
-
-                   21: ('X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE',
-                        'unable to verify the first certificate',
-                        'No signatures could be verified because the chain '
-                        'contains only one certificate and it is not self '
-                        'signed.'),
-
-                   22: ('X509_V_ERR_CERT_CHAIN_TOO_LONG',
-                        'certificate chain too long',
-                        'The certificate chain length is greater than the '
-                        'supplied maximum depth. Unused.'),
-
-                   23: ('X509_V_ERR_CERT_REVOKED',
-                        'certificate revoked',
-                        'The certificate has been revoked. Unused.'),
-
-                   24: ('X509_V_ERR_INVALID_CA',
-                        'invalid CA certificate',
-                        'A CA certificate is invalid. Either it is not a CA '
-                        'or its extensions are not consistent with the '
-                        'supplied purpose.'),
-
-                   25: ('X509_V_ERR_PATH_LENGTH_EXCEEDED',
-                        'path length constraint exceeded',
-                        'The basicConstraints pathlength parameter has been '
-                        'exceeded.'),
-
-                   26: ('X509_V_ERR_INVALID_PURPOSE',
-                        'unsupported certificate purpose',
-                        'The supplied certificate cannot be used for the '
-                        'specified purpose.'),
-
-                   27: ('X509_V_ERR_CERT_UNTRUSTED',
-                        'certificate not trusted',
-                        'The root CA is not marked as trusted for the '
-                        'specified purpose.'),
-
-                   28: ('X509_V_ERR_CERT_REJECTED',
-                        'certificate rejected',
-                        'The root CA is marked to reject the specified '
-                        'purpose.'),
-
-                   29: ('X509_V_ERR_SUBJECT_ISSUER_MISMATCH',
-                        'subject issuer mismatch',
-                        'The current candidate issuer certificate was '
-                        'rejected because its subject name did not match '
-                        'the issuer name of the current certificate. Only '
-                        'displayed when the issuer_checks option is set.'),
-
-                   30: ('X509_V_ERR_AKID_SKID_MISMATCH',
-                        'authority and subject key identifier mismatch',
-                        'The current candidate issuer certificate was '
-                        'rejected because its subject key identifier was '
-                        'present and did not match the authority key '
-                        'identifier current certificate. Only displayed '
-                        'when the issuer_checks option is set.'),
-
-                   31: ('X509_V_ERR_AKID_ISSUER_SERIAL_MISMATCH',
-                        'authority and issuer serial number mismatch',
-                        'The current candidate issuer certificate was '
-                        'rejected because its issuer name and serial '
-                        'number was present and did not match the '
-                        'authority key identifier of the current '
-                        'certificate. Only displayed when the issuer_checks '
-                        'option is set.'),
-
-                   32: ('X509_V_ERR_KEYUSAGE_NO_CERTSIGN',
-                        'key usage does not include certificate',
-                        'Signing the current candidate issuer certificate was '
-                        'rejected because its keyUsage extension does not '
-                        'permit certificate signing.'),
-
-                   50: ('X509_V_ERR_APPLICATION_VERIFICATION',
-                        'application verification failure',
-                        'an application specific error. Unused.')}
-
-
-    def __init__(self, cert, errno, depth):
-        VerifyError.__init__(self, cert, errno, depth)
-        self.cert = cert
-        self.errno = errno
-        self.depth = depth
-
-    def __repr__(self):
-        x = self._errorCodes.get(self.errno)
-        if x is not None:
-            name, short, long = x
-            return 'Peer Certificate Verification Failed: %s (error code: %d)' % (
-                long, self.errno
-                )
-        return "Peer Certificate Verification Failed for Unknown Reason"
-
-    __str__ = __repr__
-
-
 _x509names = {
     'CN': 'commonName',
     'commonName': 'commonName',
@@ -338,16 +133,6 @@ class CertBase:
 
 
 
-def problemsFromTransport(tpt):
-    """
-    Retrieve the SSL errors associated with the given transport.
-
-    @type tpt: L{ISystemHandle} provider wrapper around an SSL connection.
-    @rtype: C{list} of L{OpenSSLVerifyError}.
-    """
-    return tpt.getHandle().get_context().get_app_data().problems
-
-
 def _handleattrhelper(Class, transport, methodName):
     """
     (private) Helper for L{Certificate.peerFromTransport} and
@@ -434,7 +219,7 @@ class Certificate(CertBase):
         """
         Get the certificate for the local end of the given transport.
 
-        @param transport: an L{ISystemHandle} provider; the transport we will 
+        @param transport: an L{ISystemHandle} provider; the transport we will
 
         @rtype: C{Class}
 
@@ -904,7 +689,6 @@ class OpenSSLCertificateOptions(object):
 
     def _makeContext(self):
         ctx = SSL.Context(self.method)
-        ctx.set_app_data(_SSLApplicationData())
 
         if self.certificate is not None and self.privateKey is not None:
             ctx.use_certificate(self.certificate)
@@ -924,13 +708,12 @@ class OpenSSLCertificateOptions(object):
                 for cert in self.caCerts:
                     store.add_cert(cert)
 
-        def _trackVerificationProblems(conn,cert,errno,depth,preverify_ok):
-            # retcode is the answer OpenSSL's default verifier would have
-            # given, had we allowed it to run.
-            if not preverify_ok:
-                ctx.get_app_data().problems.append(OpenSSLVerifyError(cert, errno, depth))
+        # It'd be nice if pyOpenSSL let us pass None here for this behavior (as
+        # the underlying OpenSSL API call allows NULL to be passed).  It
+        # doesn't, so we'll supply a function which does the same thing.
+        def _verifyCallback(conn, cert, errno, depth, preverify_ok):
             return preverify_ok
-        ctx.set_verify(verifyFlags, _trackVerificationProblems)
+        ctx.set_verify(verifyFlags, _verifyCallback)
 
         if self.verifyDepth is not None:
             ctx.set_verify_depth(self.verifyDepth)

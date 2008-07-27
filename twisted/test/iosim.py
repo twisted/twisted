@@ -1,17 +1,20 @@
 # -*- test-case-name: twisted.test.test_amp.TLSTest -*-
-"""Utilities and helpers for simulating a network
+# Copyright (c) 2008 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Utilities and helpers for simulating a network
 """
 
 import itertools
 
+from OpenSSL.SSL import Error as NativeOpenSSLError
 
 from zope.interface import implements, directlyProvides
 
+from twisted.python.failure import Failure
 from twisted.internet import error
 from twisted.internet import interfaces
-from OpenSSL.SSL import Error as NativeOpenSSLError
-
-from twisted.internet._sslverify import OpenSSLVerifyError
 
 class TLSNegotiation:
     def __init__(self, obj, connectState):
@@ -28,18 +31,17 @@ class TLSNegotiation:
         # hmmmmm... need some negative path tests.
 
         if not self.obj.iosimVerify(other.obj):
-            tpt.problems.append(OpenSSLVerifyError("fake cert", "fake errno", "fake depth"))
             tpt.disconnectReason = NativeOpenSSLError()
             tpt.loseConnection()
 
 
 class FakeTransport:
-    """A wrapper around a file-like object to make it behave as a Transport.
+    """
+    A wrapper around a file-like object to make it behave as a Transport.
 
     This doesn't actually stream the file to the attached protocol,
     and is thus useful mainly as a utility for debugging protocols.
     """
-
     implements(interfaces.ITransport,
                interfaces.ITLSTransport) # ha ha not really
 
@@ -54,7 +56,6 @@ class FakeTransport:
 
     def __init__(self):
         self.stream = []
-        self.problems = []
         self.serial = self._nextserial()
 
     def __repr__(self):
@@ -101,7 +102,7 @@ class FakeTransport:
             err = NativeOpenSSLError()
         else:
             err = self.disconnectReason
-        self.protocol.connectionLost(err)
+        self.protocol.connectionLost(Failure(err))
 
     def getPeer(self):
         # XXX: According to ITransport, this should return an IAddress!
@@ -165,15 +166,6 @@ class FakeTransport:
             self.protocol.dataReceived(buf)
 
 
-    # this next bit is just to fake out problemsFromTransport, which is an
-    # ultra-shitty API anyway.  remove it when we manage to remove that. -glyph
-    def getHandle(self):
-        return self
-
-    get_context = getHandle
-    get_app_data = getHandle
-
-    # end of gross problemsFromTransport stuff
 
 def makeFakeClient(c):
     ft = FakeTransport()

@@ -169,14 +169,9 @@ from twisted.python import log, filepath
 
 from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.error import PeerVerifyError, ConnectionLost
+from twisted.internet.error import ConnectionClosed
 from twisted.internet.defer import Deferred, maybeDeferred, fail
 from twisted.protocols.basic import Int16StringReceiver, StatefulStringProtocol
-
-from twisted.internet._sslverify import problemsFromTransport
-
-# I'd like this to use the exposed public API, but for some reason, when it was
-# moved, these names were not exposed by internet.ssl.
-
 from twisted.internet.ssl import CertificateOptions, Certificate, DN, KeyPair
 
 ASK = '_ask'
@@ -1784,14 +1779,6 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver):
     innerProtocol = None
     innerProtocolClientFactory = None
 
-    _sslVerifyProblems = ()
-    # ^ Later this will become a mutable list - we can't get the handle during
-    # connection shutdown thanks to the fact that Twisted destroys the socket
-    # on our transport before notifying us of a lost connection (which I guess
-    # is reasonable - the socket is dead by then) See a few lines below in
-    # startTLS for details.  --glyph
-
-
     def __init__(self, boxReceiver):
         self.boxReceiver = boxReceiver
 
@@ -1879,15 +1866,7 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver):
             self.innerProtocol.connectionLost(reason)
             if self.innerProtocolClientFactory is not None:
                 self.innerProtocolClientFactory.clientConnectionLost(None, reason)
-        # XXX this may be a slight oversimplification, but I believe that if
-        # there are pending SSL errors, they _are_ the reason that the
-        # connection was lost.  a totally correct implementation of this would
-        # set up a simple state machine to track whether any bytes were
-        # received after startTLS was called.  --glyph
-        problems = self._sslVerifyProblems
-        if problems:
-            failReason = Failure(problems[0])
-        elif self._justStartedTLS:
+        if reason.check(ConnectionClosed) and self._justStartedTLS:
             # We just started TLS and haven't received any data.  This means
             # the other connection didn't like our cert (although they may not
             # have told us why - later Twisted should make 'reason' into a TLS
@@ -1983,10 +1962,6 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver):
         if verifyAuthorities is None:
             verifyAuthorities = ()
         self.transport.startTLS(certificate.options(*verifyAuthorities))
-        # Remember that mutable list that we were just talking about?  Here
-        # it is.  sslverify.py takes care of populating this list as
-        # necessary. --glyph
-        self._sslVerifyProblems = problemsFromTransport(self.transport)
         stlsb = self._startingTLSBuffer
         if stlsb is not None:
             self._startingTLSBuffer = None

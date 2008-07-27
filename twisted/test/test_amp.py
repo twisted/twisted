@@ -1559,7 +1559,7 @@ class TLSTest(unittest.TestCase):
         self.assertEquals(badCert.verifyCount, 2)
         d = cli.callRemote(SecuredPing)
         p.flush()
-        self.assertFailure(d, iosim.OpenSSLVerifyError)
+        self.assertFailure(d, iosim.NativeOpenSSLError)
 
 
     def test_negotiationFailedByClosing(self):
