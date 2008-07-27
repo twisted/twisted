@@ -9,8 +9,11 @@ from twisted.names import client, dns
 from twisted.names.error import DNSQueryTimeoutError
 from twisted.trial import unittest
 from twisted.names.common import ResolverBase
-from twisted.internet import defer
+from twisted.internet import defer, error
 from twisted.python import failure
+from twisted.python.deprecate import getWarningMethod, setWarningMethod
+from twisted.python.compat import set
+
 
 class FakeResolver(ResolverBase):
 
@@ -33,6 +36,21 @@ class FakeResolver(ResolverBase):
 
 
 
+class StubPort(object):
+    """
+    A partial implementation of L{IListeningPort} which only keeps track of
+    whether it has been stopped.
+
+    @ivar disconnected: A C{bool} which is C{False} until C{stopListening} is
+        called, C{True} afterwards.
+    """
+    disconnected = False
+
+    def stopListening(self):
+        self.disconnected = True
+
+
+
 class StubDNSDatagramProtocol(object):
     """
     L{dns.DNSDatagramProtocol}-alike.
@@ -43,6 +61,7 @@ class StubDNSDatagramProtocol(object):
     """
     def __init__(self):
         self.queries = []
+        self.transport = StubPort()
 
 
     def query(self, address, queries, timeout=10, id=None):
@@ -60,6 +79,26 @@ class ResolverTests(unittest.TestCase):
     """
     Tests for L{client.Resolver}.
     """
+    def test_resolverProtocol(self):
+        """
+        Reading L{client.Resolver.protocol} causes a deprecation warning to be
+        emitted and evaluates to an instance of L{DNSDatagramProtocol}.
+        """
+        resolver = client.Resolver(servers=[('example.com', 53)])
+        self.addCleanup(setWarningMethod, getWarningMethod())
+        warnings = []
+        setWarningMethod(
+            lambda message, category, stacklevel:
+                warnings.append((message, category, stacklevel)))
+        protocol = resolver.protocol
+        self.assertIsInstance(protocol, dns.DNSDatagramProtocol)
+        self.assertEqual(
+            warnings, [("Resolver.protocol is deprecated; use "
+                        "Resolver.queryUDP instead.",
+                        PendingDeprecationWarning, 0)])
+        self.assertIdentical(protocol, resolver.protocol)
+
+
     def test_datagramQueryServerOrder(self):
         """
         L{client.Resolver.queryUDP} should issue queries to its
@@ -68,7 +107,6 @@ class ResolverTests(unittest.TestCase):
         as L{DNSQueryTimeoutError}s occur.
         """
         protocol = StubDNSDatagramProtocol()
-        protocol.transport = object()
 
         servers = [object(), object()]
         dynServers = [object(), object()]
@@ -203,6 +241,178 @@ class ResolverTests(unittest.TestCase):
         return defer.gatherResults([
                 self.assertFailure(firstResult, ExpectedException),
                 self.assertFailure(secondResult, ExpectedException)])
+
+
+    def test_connectedProtocol(self):
+        """
+        L{client.Resolver._connectedProtocol} returns a new
+        L{DNSDatagramProtocol} connected to a new address with a
+        cryptographically secure random port number.
+        """
+        resolver = client.Resolver(servers=[('example.com', 53)])
+        firstProto = resolver._connectedProtocol()
+        secondProto = resolver._connectedProtocol()
+
+        self.assertNotIdentical(firstProto.transport, None)
+        self.assertNotIdentical(secondProto.transport, None)
+        self.assertNotEqual(
+            firstProto.transport.getHost().port,
+            secondProto.transport.getHost().port)
+
+        return defer.gatherResults([
+                defer.maybeDeferred(firstProto.transport.stopListening),
+                defer.maybeDeferred(secondProto.transport.stopListening)])
+
+
+    def test_differentProtocol(self):
+        """
+        L{client.Resolver._connectedProtocol} is called once each time a UDP
+        request needs to be issued and the resulting protocol instance is used
+        for that request.
+        """
+        resolver = client.Resolver(servers=[('example.com', 53)])
+        protocols = []
+
+        class FakeProtocol(object):
+            def __init__(self):
+                self.transport = StubPort()
+
+            def query(self, address, query, timeout=10, id=None):
+                protocols.append(self)
+                return defer.succeed(dns.Message())
+
+        resolver._connectedProtocol = FakeProtocol
+        resolver.query(dns.Query('foo.example.com'))
+        resolver.query(dns.Query('bar.example.com'))
+        self.assertEqual(len(set(protocols)), 2)
+
+
+    def test_disallowedPort(self):
+        """
+        If a port number is initially selected which cannot be bound, the
+        L{CannotListenError} is handled and another port number is attempted.
+        """
+        ports = []
+
+        class FakeReactor(object):
+            def listenUDP(self, port, *args):
+                ports.append(port)
+                if len(ports) == 1:
+                    raise error.CannotListenError(None, port, None)
+
+        resolver = client.Resolver(servers=[('example.com', 53)])
+        resolver._reactor = FakeReactor()
+
+        proto = resolver._connectedProtocol()
+        self.assertEqual(len(set(ports)), 2)
+
+
+    def test_differentProtocolAfterTimeout(self):
+        """
+        When a query issued by L{client.Resolver.query} times out, the retry
+        uses a new protocol instance.
+        """
+        resolver = client.Resolver(servers=[('example.com', 53)])
+        protocols = []
+        results = [defer.fail(failure.Failure(DNSQueryTimeoutError(None))),
+                   defer.succeed(dns.Message())]
+
+        class FakeProtocol(object):
+            def __init__(self):
+                self.transport = StubPort()
+
+            def query(self, address, query, timeout=10, id=None):
+                protocols.append(self)
+                return results.pop(0)
+
+        resolver._connectedProtocol = FakeProtocol
+        resolver.query(dns.Query('foo.example.com'))
+        self.assertEqual(len(set(protocols)), 2)
+
+
+    def test_protocolShutDown(self):
+        """
+        After the L{Deferred} returned by L{DNSDatagramProtocol.query} is
+        called back, the L{DNSDatagramProtocol} is disconnected from its
+        transport.
+        """
+        resolver = client.Resolver(servers=[('example.com', 53)])
+        protocols = []
+        result = defer.Deferred()
+
+        class FakeProtocol(object):
+            def __init__(self):
+                self.transport = StubPort()
+
+            def query(self, address, query, timeout=10, id=None):
+                protocols.append(self)
+                return result
+
+        resolver._connectedProtocol = FakeProtocol
+        resolver.query(dns.Query('foo.example.com'))
+
+        self.assertFalse(protocols[0].transport.disconnected)
+        result.callback(dns.Message())
+        self.assertTrue(protocols[0].transport.disconnected)
+
+
+    def test_protocolShutDownAfterTimeout(self):
+        """
+        The L{DNSDatagramProtocol} created when an interim timeout occurs is
+        also disconnected from its transport after the Deferred returned by its
+        query method completes.
+        """
+        resolver = client.Resolver(servers=[('example.com', 53)])
+        protocols = []
+        result = defer.Deferred()
+        results = [defer.fail(failure.Failure(DNSQueryTimeoutError(None))),
+                   result]
+
+        class FakeProtocol(object):
+            def __init__(self):
+                self.transport = StubPort()
+
+            def query(self, address, query, timeout=10, id=None):
+                protocols.append(self)
+                return results.pop(0)
+
+        resolver._connectedProtocol = FakeProtocol
+        resolver.query(dns.Query('foo.example.com'))
+
+        self.assertFalse(protocols[1].transport.disconnected)
+        result.callback(dns.Message())
+        self.assertTrue(protocols[1].transport.disconnected)
+
+
+    def test_protocolShutDownAfterFailure(self):
+        """
+        If the L{Deferred} returned by L{DNSDatagramProtocol.query} fires with
+        a failure, the L{DNSDatagramProtocol} is still disconnected from its
+        transport.
+        """
+        class ExpectedException(Exception):
+            pass
+
+        resolver = client.Resolver(servers=[('example.com', 53)])
+        protocols = []
+        result = defer.Deferred()
+
+        class FakeProtocol(object):
+            def __init__(self):
+                self.transport = StubPort()
+
+            def query(self, address, query, timeout=10, id=None):
+                protocols.append(self)
+                return result
+
+        resolver._connectedProtocol = FakeProtocol
+        queryResult = resolver.query(dns.Query('foo.example.com'))
+
+        self.assertFalse(protocols[0].transport.disconnected)
+        result.errback(failure.Failure(ExpectedException()))
+        self.assertTrue(protocols[0].transport.disconnected)
+
+        return self.assertFailure(queryResult, ExpectedException)
 
 
 

@@ -27,6 +27,7 @@ from zope.interface import implements
 from twisted.python.runtime import platform
 from twisted.internet import error, defer, protocol, interfaces
 from twisted.python import log, failure
+from twisted.python.deprecate import getWarningMethod
 from twisted.names import dns, common
 from twisted.names.error import DNSFormatError, DNSServerError, DNSNameError
 from twisted.names.error import DNSNotImplementedError, DNSQueryRefusedError
@@ -42,6 +43,10 @@ class Resolver(common.ResolverBase):
         "birthday paradox" attack by keeping the number of outstanding requests
         for a particular query fixed at one instead of allowing the attacker to
         raise it to an arbitrary number.
+
+    @ivar _reactor: A provider of L{IReactorTCP}, L{IReactorUDP}, and
+        L{IReactorTime} which will be used to set up network resources and
+        track timeouts.
     """
     implements(interfaces.IResolver)
 
@@ -52,7 +57,6 @@ class Resolver(common.ResolverBase):
     servers = None
     dynServers = ()
     pending = None
-    protocol = None
     connections = None
 
     resolv = None
@@ -66,7 +70,17 @@ class Resolver(common.ResolverBase):
         dns.ENOTIMP: DNSNotImplementedError,
         dns.EREFUSED: DNSQueryRefusedError}
 
-    def __init__(self, resolv = None, servers = None, timeout = (1, 3, 11, 45)):
+    def _getProtocol(self):
+        getWarningMethod()(
+            "Resolver.protocol is deprecated; use Resolver.queryUDP instead.",
+            PendingDeprecationWarning,
+            stacklevel=0)
+        self.protocol = dns.DNSDatagramProtocol(self)
+        return self.protocol
+    protocol = property(_getProtocol)
+
+
+    def __init__(self, resolv=None, servers=None, timeout=(1, 3, 11, 45)):
         """
         Construct a resolver which will query domain name servers listed in
         the C{resolv.conf(5)}-format file given by C{resolv} as well as
@@ -75,22 +89,25 @@ class Resolver(common.ResolverBase):
         for modification and re-parsed if it is noticed to have changed.
 
         @type servers: C{list} of C{(str, int)} or C{None}
-        @param servers: If not None, interpreted as a list of (host,port) pairs
-        specifying addresses of domain name servers to attempt to use for this
-        lookup. Hosts should be in dotted-quad form. If specified, overrides
-        C{resolv}.
+        @param servers: If not None, interpreted as a list of (host, port)
+            pairs specifying addresses of domain name servers to attempt to use
+            for this lookup.  Host addresses should be in IPv4 dotted-quad
+            form.  If specified, overrides C{resolv}.
 
         @type resolv: C{str}
         @param resolv: Filename to read and parse as a resolver(5)
-        configuration file.
+            configuration file.
 
         @type timeout: Sequence of C{int}
-        @param timeout: Default number of seconds after which to reissue the query.
-        When the last timeout expires, the query is considered failed.
+        @param timeout: Default number of seconds after which to reissue the
+            query.  When the last timeout expires, the query is considered
+            failed.
 
         @raise ValueError: Raised if no nameserver addresses can be found.
         """
         common.ResolverBase.__init__(self)
+        from twisted.internet import reactor
+        self._reactor = reactor
 
         self.timeout = timeout
 
@@ -106,9 +123,6 @@ class Resolver(common.ResolverBase):
 
         self.factory = DNSClientFactory(self, timeout)
         self.factory.noisy = 0   # Be quiet by default
-
-        self.protocol = dns.DNSDatagramProtocol(self)
-        self.protocol.noisy = 0  # You too
 
         self.connections = []
         self.pending = []
@@ -151,8 +165,8 @@ class Resolver(common.ResolverBase):
                 self.parseConfig(resolvConf)
 
         # Check again in a little while
-        from twisted.internet import reactor
-        self._parseCall = reactor.callLater(self._resolvReadInterval, self.maybeParseConfig)
+        self._parseCall = self._reactor.callLater(
+            self._resolvReadInterval, self.maybeParseConfig)
 
 
     def parseConfig(self, resolvConf):
@@ -199,6 +213,30 @@ class Resolver(common.ResolverBase):
         else:
             return self.dynServers[self.index - serverL]
 
+
+    def _connectedProtocol(self):
+        """
+        Return a new L{DNSDatagramProtocol} bound to a randomly selected port
+        number.
+        """
+        if 'protocol' in self.__dict__:
+            # Some code previously asked for or set the deprecated `protocol`
+            # attribute, so it probably expects that object to be used for
+            # queries.  Give it back and skip the super awesome source port
+            # randomization logic.  This is actually a really good reason to
+            # remove this deprecated backward compatibility as soon as
+            # possible. -exarkun
+            return self.protocol
+        proto = dns.DNSDatagramProtocol(self)
+        while True:
+            try:
+                self._reactor.listenUDP(dns.randomSource(), proto)
+            except error.CannotListenError:
+                pass
+            else:
+                return proto
+
+
     def connectionMade(self, protocol):
         self.connections.append(protocol)
         for (d, q, t) in self.pending:
@@ -208,6 +246,27 @@ class Resolver(common.ResolverBase):
 
     def messageReceived(self, message, protocol, address = None):
         log.msg("Unexpected message (%d) received from %r" % (message.id, address))
+
+
+    def _query(self, *args):
+        """
+        Get a new L{DNSDatagramProtocol} instance from L{_connectedProtocol},
+        issue a query to it using C{*args}, and arrange for it to be
+        disconnected from its transport after the query completes.
+
+        @param *args: Positional arguments to be passed to
+            L{DNSDatagramProtocol.query}.
+
+        @return: A L{Deferred} which will be called back with the result of the
+            query.
+        """
+        protocol = self._connectedProtocol()
+        d = protocol.query(*args)
+        def cbQueried(result):
+            protocol.transport.stopListening()
+            return result
+        d.addBoth(cbQueried)
+        return d
 
 
     def queryUDP(self, queries, timeout = None):
@@ -237,9 +296,9 @@ class Resolver(common.ResolverBase):
         addresses.reverse()
 
         used = addresses.pop()
-        return self.protocol.query(used, queries, timeout[0]
-            ).addErrback(self._reissue, addresses, [used], queries, timeout
-            )
+        d = self._query(used, queries, timeout[0])
+        d.addErrback(self._reissue, addresses, [used], queries, timeout)
+        return d
 
 
     def _reissue(self, reason, addressesLeft, addressesUsed, query, timeout):
@@ -254,12 +313,10 @@ class Resolver(common.ResolverBase):
             addressesUsed = []
             timeout = timeout[1:]
 
-        # If all timeout values have been used, or the protocol has no
-        # transport, this query has failed.  Tell the protocol we're
-        # giving up on it and return a terminal timeout failure to our
-        # caller.
-        if not timeout or self.protocol.transport is None:
-            self.protocol.removeResend(reason.value.id)
+        # If all timeout values have been used this query has failed.  Tell the
+        # protocol we're giving up on it and return a terminal timeout failure
+        # to our caller.
+        if not timeout:
             return failure.Failure(defer.TimeoutError(query))
 
         # Get an address to try.  Take it out of the list of addresses
@@ -269,7 +326,7 @@ class Resolver(common.ResolverBase):
 
         # Issue a query to a server.  Use the current timeout.  Add this
         # function as a timeout errback in case another retry is required.
-        d = self.protocol.query(address, query, timeout[0], reason.value.id)
+        d = self._query(address, query, timeout[0], reason.value.id)
         d.addErrback(self._reissue, addressesLeft, addressesUsed, query, timeout)
         return d
 
@@ -291,8 +348,7 @@ class Resolver(common.ResolverBase):
             if address is None:
                 return defer.fail(IOError("No domain name servers available"))
             host, port = address
-            from twisted.internet import reactor
-            reactor.connectTCP(host, port, self.factory)
+            self._reactor.connectTCP(host, port, self.factory)
             self.pending.append((defer.Deferred(), queries, timeout))
             return self.pending[-1][0]
         else:
@@ -368,13 +424,10 @@ class Resolver(common.ResolverBase):
         factory = DNSClientFactory(controller, timeout)
         factory.noisy = False #stfu
 
-        from twisted.internet import reactor
-        connector = reactor.connectTCP(host, port, factory)
-        controller.timeoutCall = reactor.callLater(timeout or 10,
-                                                   self._timeoutZone,
-                                                   d, controller,
-                                                   connector,
-                                                   timeout or 10)
+        connector = self._reactor.connectTCP(host, port, factory)
+        controller.timeoutCall = self._reactor.callLater(
+            timeout or 10, self._timeoutZone, d, controller,
+            connector, timeout or 10)
         return d.addCallback(self._cbLookupZone, connector)
 
     def _timeoutZone(self, d, controller, connector, seconds):

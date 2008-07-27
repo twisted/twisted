@@ -1417,16 +1417,16 @@ class DNSMixin(object):
         self.controller = controller
         self.id = random.randrange(2 ** 10, 2 ** 15)
 
+
     def pickID(self):
         """
         Return a unique ID for queries.
         """
         while True:
-            self.id += randomSource() % (2 ** 10)
-            self.id %= 2 ** 16
-            if self.id not in self.liveMessages:
-                break
-        return self.id
+            id = randomSource()
+            if id not in self.liveMessages:
+                return id
+
 
     def callLater(self, period, func, *args):
         """

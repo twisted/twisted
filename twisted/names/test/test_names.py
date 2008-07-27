@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.names.test.test_names -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -22,6 +22,7 @@ from twisted.names.dns import EFORMAT, ESERVER, ENAME, ENOTIMP, EREFUSED
 from twisted.names.dns import Message
 from twisted.names.client import Resolver
 
+from twisted.names.test.test_client import StubPort
 
 def justPayload(results):
     return [r.payload for r in results[0]]
@@ -169,10 +170,6 @@ class ServerDNSTestCase(unittest.TestCase):
         d1 = self.listenerTCP.loseConnection()
         d2 = defer.maybeDeferred(self.listenerUDP.stopListening)
         d = defer.gatherResults([d1, d2])
-        def disconnectTransport(ignored):
-            if getattr(self.resolver.protocol, 'transport', None) is not None:
-                return self.resolver.protocol.transport.stopListening()
-        d.addCallback(disconnectTransport)
         d.addCallback(lambda x : self.failUnless(
             self.listenerUDP.disconnected
             and self.listenerTCP.disconnected))
@@ -560,10 +557,9 @@ class HostsTestCase(unittest.TestCase):
 
 
 class FakeDNSDatagramProtocol(object):
-    transport = object()
-
     def __init__(self):
         self.queries = []
+        self.transport = StubPort()
 
     def query(self, address, queries, timeout=10, id=None):
         self.queries.append((address, queries, timeout, id))
