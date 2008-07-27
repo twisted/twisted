@@ -5,30 +5,25 @@
 
 import sys
 
-try:
-    from wx import Frame as wxFrame, DefaultPosition as wxDefaultPosition, \
-         Size as wxSize, Menu as wxMenu, MenuBar as wxMenuBar, \
-         EVT_MENU, MessageDialog as wxMessageDialog, App as wxApp, \
-         EVT_CLOSE
-except ImportError, e:
-    from wxPython.wx import *
+from wx import Frame, DefaultPosition, Size, Menu, MenuBar, App
+from wx import EVT_MENU, EVT_CLOSE
 
 from twisted.python import log
 from twisted.internet import wxreactor
 wxreactor.install()
 
 # import t.i.reactor only after installing wxreactor:
-from twisted.internet import reactor, defer
+from twisted.internet import reactor
 
 
 ID_EXIT  = 101
 
-class MyFrame(wxFrame):
+class MyFrame(Frame):
     def __init__(self, parent, ID, title):
-        wxFrame.__init__(self, parent, ID, title, wxDefaultPosition, wxSize(300, 200))
-        menu = wxMenu()
+        Frame.__init__(self, parent, ID, title, DefaultPosition, Size(300, 200))
+        menu = Menu()
         menu.Append(ID_EXIT, "E&xit", "Terminate the program")
-        menuBar = wxMenuBar()
+        menuBar = MenuBar()
         menuBar.Append(menu, "&File")
         self.SetMenuBar(menuBar)
         EVT_MENU(self, ID_EXIT,  self.DoExit)
@@ -40,7 +35,7 @@ class MyFrame(wxFrame):
         reactor.stop()
 
 
-class MyApp(wxApp):
+class MyApp(App):
 
     def twoSecondsPassed(self):
         print "two seconds passed"
@@ -57,7 +52,7 @@ class MyApp(wxApp):
 def demo():
     log.startLogging(sys.stdout)
 
-    # register the wxApp instance with Twisted:
+    # register the App instance with Twisted:
     app = MyApp(0)
     reactor.registerWxApp(app)
 
