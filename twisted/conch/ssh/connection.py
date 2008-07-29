@@ -8,7 +8,7 @@
 This module contains the implementation of the ssh-connection service, which
 allows access to the shell and port-forwarding.
 
-Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
+Maintainer: Paul Swartz
 """
 
 import struct

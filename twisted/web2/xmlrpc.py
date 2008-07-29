@@ -7,7 +7,7 @@
 """
 A generic resource for publishing objects via XML-RPC.
 
-Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
+Maintainer: Itamar Shtull-Trauring
 """
 
 # System Imports

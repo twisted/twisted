@@ -1,7 +1,7 @@
 # Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 #
-# Maintainer: Jonathan Lange <jml@twistedmatrix.com>
+# Maintainer: Jonathan Lange
 
 
 import sys

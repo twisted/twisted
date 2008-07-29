@@ -8,7 +8,7 @@
 This module contains the implementation of SSHSession, which (by default)
 allows access to a shell and a python interpreter over SSH.
 
-Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
+Maintainer: Paul Swartz
 """
 
 import struct

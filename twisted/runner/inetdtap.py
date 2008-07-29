@@ -6,7 +6,7 @@
 """
 Twisted inetd TAP support
 
-Maintainer: U{Andrew Bennetts<mailto:spiv@twistedmatrix.com>}
+Maintainer: Andrew Bennetts
 
 Future Plans: more configurability.
 """

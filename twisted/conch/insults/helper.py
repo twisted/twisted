@@ -5,7 +5,7 @@
 """
 Partial in-memory terminal emulator
 
-@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+@author: Jp Calderone
 """
 
 import re, string

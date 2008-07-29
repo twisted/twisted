@@ -12,7 +12,7 @@ nothing here in this module for you to use unless you are maintaining Trial.
 
 Any non-Trial Twisted code that uses this module will be shot.
 
-Maintainer: U{Jonathan Lange<mailto:jml@twistedmatrix.com>}
+Maintainer: Jonathan Lange
 """
 
 import traceback, sys

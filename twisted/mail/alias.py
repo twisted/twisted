@@ -7,7 +7,7 @@
 """
 Support for aliases(5) configuration files
 
-@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+@author: Jp Calderone
 
 TODO::
     Monitor files for reparsing

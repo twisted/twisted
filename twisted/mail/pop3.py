@@ -7,8 +7,8 @@
 """
 Post-office Protocol version 3
 
-@author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
-@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+@author: Glyph Lefkowitz
+@author: Jp Calderone
 """
 
 import string

@@ -4,7 +4,7 @@
 
 """NMEA 0183 implementation
 
-Maintainer: U{Bob Ippolito<mailto:bob@redivi.com>}
+Maintainer: Bob Ippolito
 
 The following NMEA 0183 sentences are currently understood::
     GPGGA (fix)

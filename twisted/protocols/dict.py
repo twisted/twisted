@@ -5,7 +5,7 @@
 """
 Dict client protocol implementation.
 
-@author: U{Pavel Pergamenshchik<mailto:pp64@cornell.edu>}
+@author: Pavel Pergamenshchik
 """
 
 from twisted.protocols import basic

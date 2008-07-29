@@ -6,7 +6,7 @@
 """
 NNTP protocol support.
 
-Maintainer: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+Maintainer: Jp Calderone
 
 The following protocol commands are currently understood::
 

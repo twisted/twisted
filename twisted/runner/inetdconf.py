@@ -5,7 +5,7 @@
 """
 Parser for inetd.conf files
 
-Maintainer: U{Andrew Bennetts<mailto:spiv@twistedmatrix.com>}
+Maintainer: Andrew Bennetts
 
 Future Plans: xinetd configuration file support?
 """

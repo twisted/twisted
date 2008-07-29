@@ -5,7 +5,7 @@
 """
 Telnet protocol implementation.
 
-@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+@author: Jp Calderone
 """
 
 import struct

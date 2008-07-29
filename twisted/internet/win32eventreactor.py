@@ -7,7 +7,7 @@ A win32event based implementation of the Twisted main loop.
 
 This requires win32all or ActivePython to be installed.
 
-Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
+Maintainer: Itamar Shtull-Trauring
 
 
 LIMITATIONS:

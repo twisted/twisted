@@ -19,7 +19,7 @@ When installing the reactor, you can choose whether to use the glib
 event loop or the GTK+ event loop which is based on it but adds GUI
 integration.
 
-Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
+Maintainer: Itamar Shtull-Trauring
 """
 
 # System Imports

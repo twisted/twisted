@@ -14,7 +14,7 @@ Do something like::
 
   lore -inevow --config pageclass=some.module.SomePageSubclass [other-opts]
 
-Maintainer: U{Christopher Armstrong<mailto:radix@twistedmatrix.com>}
+Maintainer: Christopher Armstrong
 
 """
 

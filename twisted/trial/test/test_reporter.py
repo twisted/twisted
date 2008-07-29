@@ -1,7 +1,7 @@
 # Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 #
-# Maintainer: Jonathan Lange <jml@twistedmatrix.com>
+# Maintainer: Jonathan Lange
 
 """
 Tests for L{twisted.trial.reporter}.

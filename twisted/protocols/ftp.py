@@ -5,9 +5,9 @@
 """
 An FTP protocol implementation
 
-@author: U{Itamar Shtull-Trauring<mailto:itamarst@twistedmatrix.com>}
-@author: U{Jp Calderone<mailto:exarkun@divmod.com>}
-@author: U{Andrew Bennetts<mailto:spiv@twistedmatrix.com>}
+@author: Itamar Shtull-Trauring
+@author: Jp Calderone
+@author: Andrew Bennetts
 """
 
 # System Imports

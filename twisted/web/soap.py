@@ -8,7 +8,7 @@ SOAP support for twisted.web.
 
 Requires SOAPpy 0.10.1 or later.
 
-Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
+Maintainer: Itamar Shtull-Trauring
 
 Future plans:
 SOAPContext support of some kind.

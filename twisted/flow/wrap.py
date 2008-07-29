@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 #
-# Author: Clark Evans  (cce@clarkevans.com)
+# Author: Clark Evans
 # 
  
 """ flow.wrap 

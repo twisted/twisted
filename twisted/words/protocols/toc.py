@@ -13,7 +13,7 @@ connect to the aim server automatically
 
 This module is deprecated.
 
-Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
+Maintainer: Paul Swartz
 """
 
 # twisted imports

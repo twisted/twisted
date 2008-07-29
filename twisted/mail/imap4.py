@@ -6,7 +6,7 @@
 """
 An IMAP4 protocol implementation
 
-@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+@author: Jp Calderone
 
 To do::
   Suspend idle timeout while server is processing

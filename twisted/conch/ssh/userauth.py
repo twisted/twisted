@@ -7,7 +7,7 @@
 Implementation of the ssh-userauth service.
 Currently implemented authentication types are public-key and password.
 
-Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
+Maintainer: Paul Swartz
 """
 
 import struct

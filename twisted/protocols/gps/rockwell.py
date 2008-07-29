@@ -5,7 +5,7 @@
 """Rockwell Semiconductor Zodiac Serial Protocol
 Coded from official protocol specs (Order No. GPS-25, 09/24/1996, Revision 11)
 
-Maintainer: U{Bob Ippolito<mailto:bob@redivi.com>}
+Maintainer: Bob Ippolito
 
 The following Rockwell Zodiac messages are currently understood::
     EARTHA\\r\\n (a hack to "turn on" a DeLorme Earthmate)

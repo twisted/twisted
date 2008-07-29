@@ -10,7 +10,7 @@ listeners or connectors are added)::
     from twisted.internet import epollreactor
     epollreactor.install()
 
-Maintainer: U{Jp Calderone <mailto:exarkun@twistedmatrix.com>}
+Maintainer: Jp Calderone
 """
 
 import sys, errno

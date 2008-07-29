@@ -10,8 +10,8 @@ Future Plans:
     - Get rid of some toplevels, maybe.
     - Put in a better lookupRecordType implementation.
 
-@author: U{Moshe Zadka<mailto:moshez@twistedmatrix.com>},
-         U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+@author: Moshe Zadka
+@author: Jp Calderone
 """
 
 # System imports

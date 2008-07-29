@@ -8,7 +8,7 @@ Lookup a name using multiple resolvers.
 Future Plans: This needs someway to specify which resolver answered
 the query, or someway to specify (authority|ttl|cache behavior|more?)
 
-@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+@author: Jp Calderone
 """
 
 from twisted.internet import defer, interfaces

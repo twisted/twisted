@@ -6,7 +6,7 @@
 """
 Support for results that aren't immediately available.
 
-Maintainer: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
+Maintainer: Glyph Lefkowitz
 """
 
 from __future__ import nested_scopes, generators
@@ -628,8 +628,6 @@ def _deferGenerator(g, deferred):
 
 def deferredGenerator(f):
     """
-    Maintainer: U{Christopher Armstrong<mailto:radix@twistedmatrix.com>}
-
     deferredGenerator and waitForDeferred help you write Deferred-using code
     that looks like a regular sequential function. If your code has a minimum
     requirement of Python 2.5, consider the use of L{inlineCallbacks} instead,
@@ -778,8 +776,6 @@ def _inlineCallbacks(result, g, deferred):
 
 def inlineCallbacks(f):
     """
-    Maintainer: U{Christopher Armstrong<mailto:radix@twistedmatrix.com>}
-
     WARNING: this function will not work in Python 2.4 and earlier!
 
     inlineCallbacks helps you write Deferred-using code that looks like a

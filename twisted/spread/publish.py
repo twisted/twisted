@@ -5,7 +5,7 @@
 """
 Persistently cached objects for PB.
 
-Maintainer: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
+Maintainer: Glyph Lefkowitz
 
 Future Plans: None known.
 """

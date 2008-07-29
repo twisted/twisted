@@ -13,7 +13,7 @@ unit of interaction is a direct child element of the root element (stanza).
 The most prominent use of XML Streams is Jabber, but this module is generically
 usable. See Twisted Words for Jabber specific protocol support.
 
-Maintainer: U{Ralph Meijer<mailto:twisted@ralphm.ik.nu>}
+Maintainer: Ralph Meijer
 """
 
 from twisted.internet import protocol

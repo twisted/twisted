@@ -6,7 +6,7 @@
 """
 Things likely to be used by writers of unit tests.
 
-Maintainer: Jonathan Lange <jml@twistedmatrix.com>
+Maintainer: Jonathan Lange
 """
 
 

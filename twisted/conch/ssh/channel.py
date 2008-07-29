@@ -7,7 +7,7 @@
 The parent class for all the SSH Channels.  Currently implemented channels
 are session. direct-tcp, and forwarded-tcp.
 
-Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
+Maintainer: Paul Swartz
 """
 
 from twisted.python import log

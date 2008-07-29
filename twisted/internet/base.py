@@ -6,7 +6,7 @@
 """
 Very basic functionality for a Reactor implementation.
 
-Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
+Maintainer: Itamar Shtull-Trauring
 """
 
 import socket # needed only for sync-dns

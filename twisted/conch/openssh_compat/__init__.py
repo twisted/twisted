@@ -6,6 +6,6 @@
 """
 Support for OpenSSH configuration files.
 
-Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
+Maintainer: Paul Swartz
 """
 

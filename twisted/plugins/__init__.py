@@ -8,8 +8,8 @@ Plugins go in directories on your PYTHONPATH named twisted/plugins:
 this is the only place where an __init__.py is necessary, thanks to
 the __path__ variable.
 
-@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
-@author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
+@author: Jp Calderone
+@author: Glyph Lefkowitz
 """
 
 from twisted.plugin import pluginPackagePaths

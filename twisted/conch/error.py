@@ -7,7 +7,7 @@
 """
 An error to represent bad things happening in Conch.
 
-Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
+Maintainer: Paul Swartz
 """
 
 class ConchError(Exception):

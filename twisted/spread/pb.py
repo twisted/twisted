@@ -24,7 +24,7 @@ arguments.
 
 To get started, begin with L{PBClientFactory} and L{PBServerFactory}.
 
-@author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
+@author: Glyph Lefkowitz
 """
 
 import md5

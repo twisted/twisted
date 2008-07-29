@@ -5,7 +5,7 @@
 """
 This module integrates PyUI with twisted.internet's mainloop.
 
-Maintainer: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+Maintainer: Jp Calderone
 
 See doc/examples/pyuidemo.py for example usage.
 """

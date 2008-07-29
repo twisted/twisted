@@ -14,7 +14,7 @@ listeners or connectors are added)::
 This reactor only works on FreeBSD and requires PyKQueue 1.3, which is
 available at:  U{http://people.freebsd.org/~dwhite/PyKQueue/}
 
-Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
+Maintainer: Itamar Shtull-Trauring
 
 
 

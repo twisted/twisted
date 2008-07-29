@@ -5,7 +5,7 @@
 """
 insults/SSH integration support.
 
-@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+@author: Jp Calderone
 """
 
 from zope.interface import implements

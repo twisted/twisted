@@ -6,7 +6,7 @@
 """
 Basic protocols, such as line-oriented, netstring, and int prefixed strings.
 
-Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
+Maintainer: Itamar Shtull-Trauring
 """
 
 # System imports

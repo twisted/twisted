@@ -7,7 +7,7 @@
 """
 Posix reactor base class
 
-Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
+Maintainer: Itamar Shtull-Trauring
 """
 
 import warnings

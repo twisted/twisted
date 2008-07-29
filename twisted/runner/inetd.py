@@ -6,7 +6,7 @@
 """
 Twisted inetd.
 
-Maintainer: U{Andrew Bennetts<mailto:spiv@twistedmatrix.com>}
+Maintainer: Andrew Bennetts
 
 Future Plans: Bugfixes.  Specifically for UDP and Sun-RPC, which don't work
 correctly yet.

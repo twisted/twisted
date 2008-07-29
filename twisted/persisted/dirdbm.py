@@ -17,7 +17,7 @@ a time.
 No files should be placed in the working directory of a DirDBM save those
 created by the DirDBM itself!
 
-Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
+Maintainer: Itamar Shtull-Trauring
 """
 
 

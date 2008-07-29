@@ -7,7 +7,7 @@
 """
 A miscellany of code used to run Trial tests.
 
-Maintainer: Jonathan Lange <jml@twistedmatrix.com>
+Maintainer: Jonathan Lange
 """
 
 

@@ -5,7 +5,7 @@
 A Factory for SSH servers, along with an OpenSSHFactory to use the same
 data sources as OpenSSH.
 
-Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
+Maintainer: Paul Swartz
 """
 
 try:

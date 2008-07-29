@@ -5,7 +5,7 @@
 """
 Asynchronous local terminal input handling
 
-@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+@author: Jp Calderone
 """
 
 import os, tty, sys, termios

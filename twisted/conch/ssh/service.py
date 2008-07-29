@@ -5,7 +5,7 @@
 The parent class for all the SSH services.  Currently implemented services
 are ssh-userauth and ssh-connection.
 
-Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
+Maintainer: Paul Swartz
 """
 
 

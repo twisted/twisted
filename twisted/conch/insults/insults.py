@@ -5,7 +5,7 @@
 """
 VT102 and VT220 terminal manipulation.
 
-@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+@author: Jp Calderone
 """
 
 from zope.interface import implements, Interface

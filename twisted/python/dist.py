@@ -3,7 +3,7 @@ Distutils convenience functionality.
 
 Don't use this outside of Twisted.
 
-Maintainer: U{Christopher Armstrong<mailto:radix@twistedmatrix.com>}
+Maintainer: Christopher Armstrong
 """
 
 import sys, os

@@ -8,7 +8,7 @@ Experimental optimization
 This module provides a single mixin class which allows protocols to
 collapse numerous small writes into a single larger one.
 
-@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+@author: Jp Calderone
 """
 
 from twisted.internet import reactor

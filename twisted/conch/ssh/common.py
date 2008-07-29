@@ -6,7 +6,7 @@
 """
 Common functions for the SSH classes.
 
-Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
+Maintainer: Paul Swartz
 """
 
 import struct, warnings

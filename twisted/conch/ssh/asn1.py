@@ -6,7 +6,7 @@
 """
 A basic ASN.1 parser to parse private SSH keys.
 
-Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
+Maintainer: Paul Swartz
 """
 
 from Crypto.Util import number

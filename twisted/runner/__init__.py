@@ -1,7 +1,7 @@
 """
 Twisted runer: run and monitor processes
 
-Maintainer: U{Andrew Bennetts<mailto:spiv@twistedmatrix.com>}
+Maintainer: Andrew Bennetts
 
 classic inetd(8) support:
 Future Plans: The basic design should be final.  There are some bugs that need

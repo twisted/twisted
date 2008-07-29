@@ -9,7 +9,7 @@ from __future__ import generators
 """
 Threaded select reactor
 
-Maintainer: U{Bob Ippolito<mailto:bob@redivi.com>}
+Maintainer: Bob Ippolito
 
 
 The threadedselectreactor is a specialized reactor for integrating with

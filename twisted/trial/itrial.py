@@ -4,7 +4,7 @@ Interfaces for Trial.
 
 # Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
-# Maintainer: Jonathan Lange <jml@twistedmatrix.com>
+# Maintainer: Jonathan Lange
 
 import zope.interface as zi
 from zope.interface import Attribute

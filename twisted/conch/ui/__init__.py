@@ -7,5 +7,5 @@
 """
 twisted.conch.ui is home to the UI elements for tkconch.
 
-Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
+Maintainer: Paul Swartz
 """

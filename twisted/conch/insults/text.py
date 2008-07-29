@@ -49,7 +49,7 @@ caused it to be on.  For example::
 
  | A.underline[A.fg.red[\"Hello\", -A.underline[\" world\"]]]
 
-@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+@author: Jp Calderone
 """
 
 from twisted.conch.insults import helper, insults

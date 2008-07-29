@@ -6,7 +6,7 @@
 """
 Select reactor
 
-Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
+Maintainer: Itamar Shtull-Trauring
 """
 
 from time import sleep

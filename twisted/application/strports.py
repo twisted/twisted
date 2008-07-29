@@ -31,7 +31,7 @@ Here are some examples::
 
 See specific function documentation for more information.
 
-Maintainer: U{Moshe Zadka<mailto:moshez@twistedmatrix.com>}
+Maintainer: Moshe Zadka
 """
 from __future__ import generators
 

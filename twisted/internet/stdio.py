@@ -20,7 +20,7 @@ Future Plans::
         protocols to transport.
 
 
-Maintainer: U{James Y Knight <mailto:foom@fuhm.net>}
+Maintainer: James Y Knight
 """
 
 from twisted.python.runtime import platform

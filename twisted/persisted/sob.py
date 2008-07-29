@@ -6,7 +6,7 @@
 """
 Save and load Small OBjects to and from files, using various formats.
 
-Maintainer: U{Moshe Zadka<mailto:moshez@twistedmatrix.com>}
+Maintainer: Moshe Zadka
 """
 
 import os, md5, sys

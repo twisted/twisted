@@ -7,7 +7,7 @@ __version__ = "$Revision: 1.17 $"[11:-2]
 """
 Path-based references for PB, and other reference-based protocols.
 
-Maintainer: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
+Maintainer: Glyph Lefkowitz
 
 Future Plans: None at this point besides a final overview and finalization
 pass.

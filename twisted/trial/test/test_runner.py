@@ -1,8 +1,8 @@
 # Copyright (c) 2005-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 #
-# Maintainer: Jonathan Lange <jml@twistedmatrix.com>
-# Author: Robert Collins <robertc@robertcollins.net>
+# Maintainer: Jonathan Lange
+# Author: Robert Collins
 
 
 import StringIO, os

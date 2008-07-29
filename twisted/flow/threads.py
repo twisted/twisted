@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 #
-# Author: Clark Evans  (cce@clarkevans.com)
+# Author: Clark Evans
 # Stability: The API is stable, but the implementation may still
 #            have one or more bugs; threads are tough.
 #

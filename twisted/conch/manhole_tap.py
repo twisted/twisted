@@ -4,7 +4,7 @@
 """
 TAP plugin for creating telnet- and ssh-accessible manhole servers.
 
-@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+@author: Jp Calderone
 """
 
 from zope.interface import implements

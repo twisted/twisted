@@ -3,7 +3,7 @@
 """
 Simple insults-based widget library
 
-@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+@author: Jp Calderone
 """
 
 import array

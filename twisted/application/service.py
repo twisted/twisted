@@ -11,7 +11,7 @@ Services can be named or anonymous -- usually, they will be named if
 there is need to access them through the hierarchy (from a parent or
 a sibling).
 
-Maintainer: U{Moshe Zadka<mailto:moshez@twistedmatrix.com>}
+Maintainer: Moshe Zadka
 """
 
 from zope.interface import implements, Interface, Attribute

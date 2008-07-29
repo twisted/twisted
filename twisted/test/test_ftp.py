@@ -4,7 +4,7 @@
 """
 FTP tests.
 
-Maintainer: U{Andrew Bennetts<mailto:spiv@twistedmatrix.com>}
+Maintainer: Andrew Bennetts
 """
 
 import os.path

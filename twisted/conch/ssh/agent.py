@@ -5,7 +5,7 @@
 """
 Implements the old SSHv1 key agent protocol.
 
-Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
+Maintainer: Paul Swartz
 """
 
 import struct

@@ -10,7 +10,7 @@ Future Plans: This module is almost entirely stable.  The same caveat applies
 to it as applies to L{twisted.spread.jelly}, however.  Read its future plans
 for more details.
 
-@author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
+@author: Glyph Lefkowitz
 """
 
 __version__ = "$Revision: 1.37 $"[11:-2]

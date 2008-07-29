@@ -10,7 +10,7 @@ A (R)elational (O)bject (W)rapper.
 
 This is an extremely thin wrapper.
 
-Maintainer: U{Dave Peticolas<mailto:davep@twistedmatrix.com>}
+Maintainer: Dave Peticolas
 """
 
 import warnings

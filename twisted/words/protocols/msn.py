@@ -70,7 +70,7 @@ TODO
 - font handling
 - switchboard factory
 
-@author: U{Sam Jordan<mailto:sam@twistedmatrix.com>}
+@author: Sam Jordan
 """
 
 from __future__ import nested_scopes

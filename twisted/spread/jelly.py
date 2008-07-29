@@ -59,7 +59,7 @@ Python 2.3; this can be accomplished by using L{twisted.python.compat.set}.
 
 The same rule applies for C{frozenset} and C{sets.ImmutableSet}.
 
-@author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
+@author: Glyph Lefkowitz
 """
 
 # System Imports

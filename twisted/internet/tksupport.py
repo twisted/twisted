@@ -5,7 +5,7 @@
 """
 This module integrates Tkinter with twisted.internet's mainloop.
 
-Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
+Maintainer: Itamar Shtull-Trauring
 
 To use, do::
 

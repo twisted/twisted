@@ -5,7 +5,7 @@
 """
 Scheduling utility methods and classes.
 
-@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+@author: Jp Calderone
 """
 
 __metaclass__ = type

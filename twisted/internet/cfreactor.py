@@ -19,7 +19,7 @@ as to which runLoop you want (the current NSRunLoop if PyObjC is imported,
 otherwise the current CFRunLoop.  Either way, if one doesn't exist, it will
 be created).
 
-Maintainer: U{Bob Ippolito<mailto:bob@redivi.com>}
+Maintainer: Bob Ippolito
 """
 
 __all__ = ['install']

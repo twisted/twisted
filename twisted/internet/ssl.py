@@ -20,7 +20,7 @@ Future Plans:
     - support for switching TCP into SSL
     - more options
 
-Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
+Maintainer: Itamar Shtull-Trauring
 """
 
 # If something goes wrong, most notably an OpenSSL import failure,

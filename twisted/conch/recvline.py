@@ -5,7 +5,7 @@
 """
 Basic line editing support.
 
-@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+@author: Jp Calderone
 """
 
 import string

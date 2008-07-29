@@ -6,7 +6,7 @@
 
 The second coming.
 
-Maintainer: U{James Y Knight <mailto:foom@fuhm.net>}
+Maintainer: James Y Knight
 
 """
 #        import traceback; log.msg(''.join(traceback.format_stack()))

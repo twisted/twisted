@@ -6,7 +6,7 @@
 """
 An implementation of the OSCAR protocol, which AIM and ICQ use to communcate.
 
-Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
+Maintainer: Paul Swartz
 """
 
 from __future__ import nested_scopes

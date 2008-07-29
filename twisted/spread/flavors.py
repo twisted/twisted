@@ -13,7 +13,7 @@ Future Plans: Optimization.  Exploitation of new-style object model.
 Optimizations to this module should not affect external-use semantics at all,
 but may have a small impact on users who subclass and override methods.
 
-@author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
+@author: Glyph Lefkowitz
 """
 
 # NOTE: this module should NOT import pb; it is supposed to be a module which

@@ -4,7 +4,7 @@
 #
 """Module to parse ANSI escape sequences
 
-Maintainer: U{Jean-Paul Calderone <exarkun@twistedmatrix.com>}
+Maintainer: Jean-Paul Calderone
 """
 
 import string

@@ -6,7 +6,7 @@
 """
 Support for generic select()able objects.
 
-Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
+Maintainer: Itamar Shtull-Trauring
 """
 
 from zope.interface import implements

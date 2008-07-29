@@ -8,7 +8,7 @@ The lowest level SSH protocol.  This handles the key negotiation, the
 encryption and the compression.  The transport layer is described in
 RFC 4253.
 
-Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
+Maintainer: Paul Swartz
 """
 
 # base library imports

@@ -10,7 +10,7 @@ interactively from a Twisted application.  Also included is syntax coloring
 code with support for VT102 terminals, control code handling (^C, ^D, ^Q),
 and reasonable handling of Deferreds.
 
-@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+@author: Jp Calderone
 """
 
 import code, sys, StringIO, tokenize

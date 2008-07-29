@@ -11,7 +11,7 @@ listeners or connectors are added)::
     from twisted.internet import pollreactor
     pollreactor.install()
 
-Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
+Maintainer: Itamar Shtull-Trauring
 """
 
 # System imports

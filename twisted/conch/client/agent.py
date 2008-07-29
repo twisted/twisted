@@ -5,7 +5,7 @@
 """
 Accesses the key agent for user authentication.
 
-Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
+Maintainer: Paul Swartz
 """
 
 from twisted.conch.ssh import agent, channel

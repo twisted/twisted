@@ -5,7 +5,7 @@
 """
 The Twisted Daemon: platform-independent interface.
 
-@author: U{Christopher Armstrong<mailto:radix@twistedmatrix.com>}
+@author: Christopher Armstrong
 """
 
 from twisted.application import app

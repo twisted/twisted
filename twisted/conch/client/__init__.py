@@ -5,5 +5,5 @@
 """
 Client support code for Conch.
 
-Maintainer: U{Paul Swartz<mailto:z3p@twistedmatrix.com>}
+Maintainer: Paul Swartz
 """

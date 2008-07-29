@@ -13,7 +13,7 @@ shaper for the Linux kernel<http://luxik.cdi.cz/~devik/qos/htb/>}.
   <http://luxik.cdi.cz/~devik/qos/htb/manual/userg.htm>}
 @seealso: U{Token Bucket Filter in Linux Advanced Routing & Traffic Control
     HOWTO<http://lartc.org/howto/lartc.qdisc.classless.html#AEN682>}
-@author: U{Kevin Turner<mailto:acapnotic@twistedmatrix.com>}
+@author: Kevin Turner
 """
 
 from __future__ import nested_scopes

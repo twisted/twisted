@@ -8,7 +8,7 @@ Utility functions for authorization.
 
 These are currently for challenge-response shared secret authentication.
 
-Maintainer: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
+Maintainer: Glyph Lefkowitz
 """
 
 # System Imports

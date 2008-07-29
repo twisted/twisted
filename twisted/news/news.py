@@ -3,7 +3,7 @@
 
 
 """
-Maintainer: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+Maintainer: Jp Calderone
 """
 
 from twisted.news import nntp

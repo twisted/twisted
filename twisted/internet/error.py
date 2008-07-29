@@ -5,7 +5,7 @@
 """
 Exceptions and errors for use in twisted.internet modules.
 
-Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
+Maintainer: Itamar Shtull-Trauring
 """
 
 import socket

@@ -9,7 +9,7 @@ Various asynchronous UDP classes.
 
 Please do not use this module directly.
 
-Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
+Maintainer: Itamar Shtull-Trauring
 """
 
 # System Imports

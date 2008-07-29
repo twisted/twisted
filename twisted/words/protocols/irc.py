@@ -20,7 +20,7 @@ and \"Transfer #2 is 67% done.\" and otherwise manage the DCC sessions.
 
 Test coverage needs to be better.
 
-@author: U{Kevin Turner<mailto:acapnotic@twistedmatrix.com>}
+@author: Kevin Turner
 
 @see: RFC 1459: Internet Relay Chat Protocol
 @see: RFC 2812: Internet Relay Chat: Client Protocol

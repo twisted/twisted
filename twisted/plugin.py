@@ -6,8 +6,8 @@
 """
 Plugin system for Twisted.
 
-@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
-@author: U{Glyph Lefkowitz<mailto:glyph@twistedmatrix.com>}
+@author: Jp Calderone
+@author: Glyph Lefkowitz
 """
 
 import os

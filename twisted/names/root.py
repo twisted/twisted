@@ -7,7 +7,7 @@
 Resolver implementation for querying successive authoritative servers to
 lookup a record, starting from the root nameservers.
 
-@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+@author: Jp Calderone
 
 todo::
     robustify it

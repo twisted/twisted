@@ -8,7 +8,7 @@ Future Plans::
     Rewrite to use the reactor instead of an ad-hoc mechanism for connecting
         protocols to transport.
 
-Maintainer: U{James Y Knight <mailto:foom@fuhm.net>}
+Maintainer: James Y Knight
 """
 
 import warnings

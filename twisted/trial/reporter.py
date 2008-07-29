@@ -3,7 +3,7 @@
 # Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 #
-# Maintainer: Jonathan Lange <jml@twistedmatrix.com>
+# Maintainer: Jonathan Lange
 
 """
 Defines classes that handle the results of tests.

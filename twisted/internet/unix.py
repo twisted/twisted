@@ -8,7 +8,7 @@
 
 End users shouldn't use this module directly - use the reactor APIs instead.
 
-Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
+Maintainer: Itamar Shtull-Trauring
 """
 
 # System imports

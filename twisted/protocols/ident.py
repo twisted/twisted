@@ -6,7 +6,7 @@
 """
 Ident protocol implementation.
 
-@author: U{Jp Calderone<mailto:exarkun@twistedmatrix.com>}
+@author: Jp Calderone
 """
 
 from __future__ import generators

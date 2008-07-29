@@ -22,7 +22,7 @@ IMPORTANT: tests will fail when run under this reactor. This is
 expected and probably does not reflect on the reactor's ability to run
 real applications.
 
-Maintainer: U{Itamar Shtull-Trauring<mailto:twisted@itamarst.org>}
+Maintainer: Itamar Shtull-Trauring
 """
 
 import Queue
