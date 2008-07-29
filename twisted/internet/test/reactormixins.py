@@ -97,6 +97,12 @@ class ReactorBuilder:
         # cleaning up after the reactors we make.  -exarkun
         reactor.disconnectAll()
 
+        # It would also be bad if any timed calls left over were allowed to
+        # run.
+        calls = reactor.getDelayedCalls()
+        for c in calls:
+            c.cancel()
+
 
     def buildReactor(self):
         """
