@@ -664,23 +664,6 @@ class KeyTestCase(unittest.TestCase):
         badKey = keys.Key(None)
         self.assertRaises(RuntimeError, badKey.blob)
 
-    def test_privateBlob(self):
-        """
-        Test that the Key object generates private blobs correctly.
-        """
-        self.assertEquals(keys.Key(self.rsaObj).privateBlob(),
-                '\x00\x00\x00\x07ssh-rsa\x00\x00\x00\x01\x01'
-                '\x00\x00\x00\x01\x02\x00\x00\x00\x01\x03\x00'
-                '\x00\x00\x01\x04\x00\x00\x00\x01\x04\x00\x00'
-                '\x00\x01\x05')
-        self.assertEquals(keys.Key(self.dsaObj).privateBlob(),
-                '\x00\x00\x00\x07ssh-dss\x00\x00\x00\x01\x03'
-                '\x00\x00\x00\x01\x04\x00\x00\x00\x01\x02\x00'
-                '\x00\x00\x01\x01\x00\x00\x00\x01\x05')
-
-        badKey = keys.Key(None)
-        self.assertRaises(RuntimeError, badKey.privateBlob)
-
     def test_toOpenSSH(self):
         """
         Test that the Key object generates OpenSSH keys correctly.
