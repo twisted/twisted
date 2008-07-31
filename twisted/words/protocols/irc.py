@@ -2,8 +2,8 @@
 # Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-"""Internet Relay Chat Protocol for client and server.
+"""
+Internet Relay Chat Protocol for client and server.
 
 Future Plans
 ============
@@ -28,29 +28,14 @@ Test coverage needs to be better.
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
 
-__version__ = '$Revision: 1.94 $'[11:-2]
+import errno, os, random, re, stat, struct, sys, time, types, traceback
+import string, socket
+from os import path
 
 from twisted.internet import reactor, protocol
 from twisted.persisted import styles
 from twisted.protocols import basic
 from twisted.python import log, reflect, text
-
-# System Imports
-
-import errno
-import os
-import random
-import re
-import stat
-import string
-import struct
-import sys
-import time
-import types
-import traceback
-import socket
-
-from os import path
 
 NUL = chr(0)
 CR = chr(015)
@@ -812,7 +797,7 @@ class IRCClient(basic.LineReceiver):
         motd is a list of strings, where each string was sent as a seperate
         message from the server. To display, you might want to use::
 
-            string.join(motd, '\\n')
+            '\\n'.join(motd)
 
         to get a nicely formatted string.
         """
@@ -822,6 +807,15 @@ class IRCClient(basic.LineReceiver):
     ### Your client will want to invoke these.
 
     def join(self, channel, key=None):
+        """
+        Join a channel.
+
+        @type channel: C{str}
+        @param channel: The name of the channel to join. If it has no
+            prefix, C{'#'} will to prepended to it.
+        @type key: C{str}
+        @param key: If specified, the key used to join the channel.
+        """
         if channel[0] not in '&#!+': channel = '#' + channel
         if key:
             self.sendLine("JOIN %s %s" % (channel, key))
@@ -829,6 +823,15 @@ class IRCClient(basic.LineReceiver):
             self.sendLine("JOIN %s" % (channel,))
 
     def leave(self, channel, reason=None):
+        """
+        Leave a channel.
+
+        @type channel: C{str}
+        @param channel: The name of the channel to leave. If it has no
+            prefix, C{'#'} will to prepended to it.
+        @type reason: C{str}
+        @param reason: If given, the reason for leaving.
+        """
         if channel[0] not in '&#!+': channel = '#' + channel
         if reason:
             self.sendLine("PART %s :%s" % (channel, reason))
@@ -836,6 +839,17 @@ class IRCClient(basic.LineReceiver):
             self.sendLine("PART %s" % (channel,))
 
     def kick(self, channel, user, reason=None):
+        """
+        Attempt to kick a user from a channel.
+
+        @type channel: C{str}
+        @param channel: The name of the channel to kick the user from. If it
+            has no prefix, C{'#'} will to prepended to it.
+        @type user: C{str}
+        @param user: The nick of the user to kick.
+        @type reason: C{str}
+        @param reason: If given, the reason for kicking the user.
+        """
         if channel[0] not in '&#!+': channel = '#' + channel
         if reason:
             self.sendLine("KICK %s %s :%s" % (channel, user, reason))
@@ -850,6 +864,12 @@ class IRCClient(basic.LineReceiver):
         If topic is None, then I sent a topic query instead of trying to set
         the topic. The server should respond with a TOPIC message containing
         the current topic of the given channel.
+
+        @type channel: C{str}
+        @param channel: The name of the channel to change the topic on. If it
+            has no prefix, C{'#'} will to prepended to it.
+        @type topic: C{str}
+        @param topic: If specified, what to set the topic to.
         """
         # << TOPIC #xtestx :fff
         if channel[0] not in '&#!+': channel = '#' + channel
@@ -859,7 +879,28 @@ class IRCClient(basic.LineReceiver):
             self.sendLine("TOPIC %s" % (channel,))
 
     def mode(self, chan, set, modes, limit = None, user = None, mask = None):
-        """Change the modes on a user or channel."""
+        """
+        Change the modes on a user or channel.
+
+        The C{limit}, C{user}, and C{mask} parameters are mutually exclusive.
+
+        @type chan: C{str}
+        @param chan: The name of the channel to operate on. If it has no
+            prefix, C{'#'} will to prepended to it.
+        @type set: C{bool}
+        @param set: True to give the user or channel permissions and False to
+            remove them.
+        @type modes: C{str}
+        @param modes: The mode flags to set on the user or channel.
+        @type limit: C{int}
+        @param limit: In conjuction with the C{'l'} mode flag, limits the
+             number of users on the channel.
+        @type user: C{str}
+        @param user: The user to change the mode on.
+        @type mask: C{str}
+        @param mask: In conjuction with the C{'b'} mode flag, sets a mask of
+            users to be banned from the channel.
+        """
         if set:
             line = 'MODE %s +%s' % (chan, modes)
         else:
@@ -874,8 +915,24 @@ class IRCClient(basic.LineReceiver):
 
 
     def say(self, channel, message, length = None):
+        """
+        Send a message to a channel
+
+        @type channel: C{str}
+        @param channel: The channel to say the message on.
+        @type message: C{str}
+        @param message: The message to say.
+        @type length: C{int}
+        @param length: The maximum number of octets to send at a time.  This
+            has the effect of turning a single call to C{msg()} into multiple
+            commands to the server.  This is useful when long messages may be
+            sent that would otherwise cause the server to kick us off or
+            silently truncate the text we are sending.  If None is passed, the
+            entire message is always send in one command.
+        """
         if channel[0] not in '&#!+': channel = '#' + channel
         self.msg(channel, message, length)
+
 
     def msg(self, user, message, length = None):
         """Send a message to a user or channel.
@@ -913,12 +970,40 @@ class IRCClient(basic.LineReceiver):
                 lines)
 
     def notice(self, user, message):
+        """
+        Send a notice to a user.
+
+        Notices are like normal message, but should never get automated
+        replies.
+
+        @type user: C{str}
+        @param user: The user to send a notice to.
+        @type message: C{str}
+        @param message: The contents of the notice to send.
+        """
         self.sendLine("NOTICE %s :%s" % (user, message))
 
     def away(self, message=''):
+        """
+        Mark this client as away.
+
+        @type message: C{str}
+        @param message: If specified, the away message.
+        """
         self.sendLine("AWAY :%s" % message)
 
+
     def register(self, nickname, hostname='foo', servername='bar'):
+        """
+        Login to the server.
+
+        @type nickname: C{str}
+        @param nickname: The nickname to register.
+        @type hostname: C{str}
+        @param hostname: If specified, the hostname to logon as.
+        @type servername: C{str}
+        @param servername: If specified, the servername to logon as.
+        """
         if self.password is not None:
             self.sendLine("PASS %s" % self.password)
         self.setNick(nickname)
@@ -927,16 +1012,37 @@ class IRCClient(basic.LineReceiver):
         self.sendLine("USER %s %s %s :%s" % (self.username, hostname, servername, self.realname))
 
     def setNick(self, nickname):
+        """
+        Set this client's nickname.
+
+        @type nickname: C{str}
+        @param nickname: The nickname to change to.
+        """
         self.nickname = nickname
         self.sendLine("NICK %s" % nickname)
 
     def quit(self, message = ''):
+        """
+        Disconnect from the server
+
+        @type message: C{str}
+
+        @param message: If specified, the message to give when quitting the
+            server.
+        """
         self.sendLine("QUIT :%s" % message)
 
     ### user input commands, client->client
 
     def me(self, channel, action):
-        """Strike a pose.
+        """
+        Strike a pose.
+
+        @type channel: C{str}
+        @param channel: The name of the channel to have an action on. If it
+            has no prefix, C{'#'} will to prepended to it.
+        @type action: C{str}
+        @param action: The action to preform.
         """
         if channel[0] not in '&#!+': channel = '#' + channel
         self.ctcpMakeQuery(channel, [('ACTION', action)])
@@ -945,7 +1051,8 @@ class IRCClient(basic.LineReceiver):
     _MAX_PINGRING = 12
 
     def ping(self, user, text = None):
-        """Measure round-trip delay to another IRC client.
+        """
+        Measure round-trip delay to another IRC client.
         """
         if self._pings is None:
             self._pings = {}
@@ -1008,15 +1115,27 @@ class IRCClient(basic.LineReceiver):
     ### but it is safe to leave them alone.
 
     def irc_ERR_NICKNAMEINUSE(self, prefix, params):
+        """
+        Called when we try to register an invalid nickname.
+        """
         self.register(self.nickname+'_')
 
     def irc_ERR_PASSWDMISMATCH(self, prefix, params):
+        """
+        Called when the login was incorrect.
+        """
         raise IRCPasswordMismatch("Password Incorrect.")
 
     def irc_RPL_WELCOME(self, prefix, params):
+        """
+        Called when we have received the welcome from the server.
+        """
         self.signedOn()
 
     def irc_JOIN(self, prefix, params):
+        """
+        Called when a user joins a channel.
+        """
         nick = string.split(prefix,'!')[0]
         channel = params[-1]
         if nick == self.nickname:
@@ -1025,6 +1144,9 @@ class IRCClient(basic.LineReceiver):
             self.userJoined(nick, channel)
 
     def irc_PART(self, prefix, params):
+        """
+        Called when a user leaves a channel.
+        """
         nick = string.split(prefix,'!')[0]
         channel = params[0]
         if nick == self.nickname:
@@ -1033,6 +1155,9 @@ class IRCClient(basic.LineReceiver):
             self.userLeft(nick, channel)
 
     def irc_QUIT(self, prefix, params):
+        """
+        Called when a user has quit.
+        """
         nick = string.split(prefix,'!')[0]
         self.userQuit(nick, params[0])
 
@@ -1074,9 +1199,15 @@ class IRCClient(basic.LineReceiver):
 
 
     def irc_PING(self, prefix, params):
+        """
+        Called when some has pinged us.
+        """
         self.sendLine("PONG %s" % params[-1])
 
     def irc_PRIVMSG(self, prefix, params):
+        """
+        Called when we get a message.
+        """
         user = prefix
         channel = params[0]
         message = params[-1]
@@ -1096,6 +1227,9 @@ class IRCClient(basic.LineReceiver):
         self.privmsg(user, channel, message)
 
     def irc_NOTICE(self, prefix, params):
+        """
+        Called when a user gets a notice.
+        """
         user = prefix
         channel = params[0]
         message = params[-1]
@@ -1113,6 +1247,9 @@ class IRCClient(basic.LineReceiver):
         self.noticed(user, channel, message)
 
     def irc_NICK(self, prefix, params):
+        """
+        Called when a user changes their nickname.
+        """
         nick = string.split(prefix,'!', 1)[0]
         if nick == self.nickname:
             self.nickChanged(params[0])
@@ -1120,7 +1257,8 @@ class IRCClient(basic.LineReceiver):
             self.userRenamed(nick, params[0])
 
     def irc_KICK(self, prefix, params):
-        """Kicked?  Who?  Not me, I hope.
+        """
+        Called when a user is kicked from a channel.
         """
         kicker = string.split(prefix,'!')[0]
         channel = params[0]
@@ -1133,7 +1271,8 @@ class IRCClient(basic.LineReceiver):
             self.userKicked(kicked, channel, kicker, message)
 
     def irc_TOPIC(self, prefix, params):
-        """Someone in the channel set the topic.
+        """
+        Someone in the channel set the topic.
         """
         user = string.split(prefix, '!')[0]
         channel = params[0]
@@ -1141,7 +1280,9 @@ class IRCClient(basic.LineReceiver):
         self.topicUpdated(user, channel, newtopic)
 
     def irc_RPL_TOPIC(self, prefix, params):
-        """I just joined the channel, and the server is telling me the current topic.
+        """
+        Called when the topic for a channel is initially reported or when it
+        subsequently changes.
         """
         user = string.split(prefix, '!')[0]
         channel = params[1]
