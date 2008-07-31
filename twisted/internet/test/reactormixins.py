@@ -9,6 +9,7 @@ __metaclass__ = type
 
 import signal
 
+from twisted.internet.defer import TimeoutError
 from twisted.trial.unittest import TestCase, SkipTest
 from twisted.python.reflect import namedAny
 from twisted.python import log
@@ -117,6 +118,38 @@ class ReactorBuilder:
             raise SkipTest(Failure().getErrorMessage())
         self.addCleanup(self.unbuildReactor, reactor)
         return reactor
+
+
+    def runReactor(self, reactor, timeout=None):
+        """
+        Run the reactor for at most the given amount of time.
+
+        @param reactor: The reactor to run.
+
+        @type timeout: C{int} or C{float}
+        @param timeout: The maximum amount of time, specified in seconds, to
+            allow the reactor to run.  If the reactor is still running after
+            this much time has elapsed, it will be stopped and an exception
+            raised.  If C{None}, the default test method timeout imposed by
+            Trial will be used.  This depends on the L{IReactorTime}
+            implementation of C{reactor} for correct operation.
+
+        @raise TimeoutError: If the reactor is still running after C{timeout}
+            seconds.
+        """
+        if timeout is None:
+            timeout = self.getTimeout()
+
+        timedOut = []
+        def stop():
+            timedOut.append(None)
+            reactor.stop()
+
+        reactor.callLater(timeout, stop)
+        reactor.run()
+        if timedOut:
+            raise TimeoutError(
+                "reactor still running after %s seconds" % (timeout,))
 
 
     def makeTestCaseClasses(cls):

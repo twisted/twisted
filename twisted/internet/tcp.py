@@ -103,6 +103,8 @@ class _SocketCloser:
         except socket.error:
             pass
 
+
+
 class _TLSMixin:
     _socketShutdownMethod = 'sock_shutdown'
 
@@ -114,6 +116,24 @@ class _TLSMixin:
         return self.socket.get_peer_certificate()
 
     def doRead(self):
+        if self.disconnected:
+            # See the comment in the similar check in doWrite below.
+            # Additionally, in order for anything other than returning
+            # CONNECTION_DONE here to make sense, it will probably be necessary
+            # to implement a way to switch back to TCP from TLS (actually, if
+            # we did something other than return CONNECTION_DONE, that would be
+            # a big part of implementing that feature).  In other words, the
+            # expectation is that doRead will be called when self.disconnected
+            # is True only when the connection has been lost.  It's possible
+            # that the other end could stop speaking TLS and then send us some
+            # non-TLS data.  We'll end up ignoring that data and dropping the
+            # connection.  There's no unit tests for this check in the cases
+            # where it makes a difference.  The test suite only hits this
+            # codepath when it would have otherwise hit the SSL.ZeroReturnError
+            # exception handler below, which has exactly the same behavior as
+            # this conditional.  Maybe that's the only case that can ever be
+            # triggered, I'm not sure.  -exarkun
+            return main.CONNECTION_DONE
         if self.writeBlockedOnRead:
             self.writeBlockedOnRead = 0
             self._resetReadWrite()
@@ -140,6 +160,17 @@ class _TLSMixin:
     def doWrite(self):
         # Retry disconnecting
         if self.disconnected:
+            # This case is triggered when "disconnected" is set to True by a
+            # call to _postLoseConnection from FileDescriptor.doWrite (to which
+            # we upcall at the end of this overridden version of that API).  It
+            # means that while, as far as any protocol connected to this
+            # transport is concerned, the connection no longer exists, the
+            # connection *does* actually still exist.  Instead of closing the
+            # connection in the overridden _postLoseConnection, we probably
+            # tried (and failed) to send a TLS close alert.  The TCP connection
+            # is still up and we're waiting for the socket to become writeable
+            # enough for the TLS close alert to actually be sendable.  Only
+            # then will the connection actually be torn down. -exarkun
             return self._postLoseConnection()
         if self._writeDisconnected:
             return self._closeWriteConnection()
@@ -171,18 +202,29 @@ class _TLSMixin:
         except SSL.Error, e:
             return e
 
+
     def _postLoseConnection(self):
-        """Gets called after loseConnection(), after buffered data is sent.
+        """
+        Gets called after loseConnection(), after buffered data is sent.
 
         We try to send an SSL shutdown alert, but if it doesn't work, retry
         when the socket is writable.
         """
-        self.disconnected=1
+        # Here, set "disconnected" to True to trick higher levels into thinking
+        # the connection is really gone.  It's not, and we're not going to
+        # close it yet.  Instead, we'll try to send a TLS close alert to shut
+        # down the TLS connection cleanly.  Only after we actually get the
+        # close alert into the socket will we disconnect the underlying TCP
+        # connection.
+        self.disconnected = True
         if hasattr(self.socket, 'set_shutdown'):
+            # If possible, mark the state of the TLS connection as having
+            # already received a TLS close alert from the peer.  Why do
+            # this???
             self.socket.set_shutdown(SSL.RECEIVED_SHUTDOWN)
         return self._sendCloseAlert()
 
-    _first=False
+
     def _sendCloseAlert(self):
         # Okay, *THIS* is a bit complicated.
 
@@ -232,7 +274,20 @@ class _TLSMixin:
             # Note that this is tested for by identity below.
             return main.CONNECTION_DONE
         else:
+            # For some reason, the close alert wasn't sent.  Start writing
+            # again so that we'll get another chance to send it.
             self.startWriting()
+            # On Linux, select will sometimes not report a closed file
+            # descriptor in the write set (in particular, it seems that if a
+            # send() fails with EPIPE, the socket will not appear in the write
+            # set).  The shutdown call above (which calls down to SSL_shutdown)
+            # may have swallowed a write error.  Therefore, also start reading
+            # so that if the socket is closed we will notice.  This doesn't
+            # seem to be a problem for poll (because poll reports errors
+            # separately) or with select on BSD (presumably because, unlike
+            # Linux, it doesn't implement select in terms of poll and then map
+            # POLLHUP to select's in fd_set).
+            self.startReading()
             return None
 
     def _closeWriteConnection(self):
