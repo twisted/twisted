@@ -11,6 +11,7 @@ Maintainer: Paul Swartz
 import struct
 from common import NS, getNS
 from twisted.conch.error import ConchError
+from twisted.conch.ssh import keys
 from twisted.internet import defer, protocol
 
 class SSHAgentClient(protocol.Protocol):
@@ -47,22 +48,19 @@ class SSHAgentClient(protocol.Protocol):
 
     def _cbRequestIdentities(self, data):
         if ord(data[0]) != AGENT_IDENTITIES_ANSWER:
-            return ConchError('unexpected respone: %i' % ord(data[0]))
+            raise ConchError('unexpected respone: %i' % ord(data[0]))
         numKeys = struct.unpack('!L', data[1:5])[0]
         keys = []
         data = data[5:]
         for i in range(numKeys):
-            blobLen = struct.unpack('!L', data[:4])[0]
-            blob, data = data[4:4+blobLen], data[4+blobLen:]
-            commLen = struct.unpack('!L', data[:4])[0]
-            comm, data = data[4:4+commLen], data[4+commLen:]
-            keys.append((blob, comm))
+            blob, data = getNS(data)
+            comment, data = getNS(data)
+            keys.append((blob, comment))
         return keys
 
     def addIdentity(self, blob, comment = ''):
         req = blob
         req += NS(comment)
-        co
         return self.sendRequest(AGENTC_ADD_IDENTITY, req)
 
     def signData(self, blob, data):
@@ -72,8 +70,8 @@ class SSHAgentClient(protocol.Protocol):
         return self.sendRequest(AGENTC_SIGN_REQUEST, req).addCallback(self._cbSignData)
 
     def _cbSignData(self, data):
-        if data[0] != chr(AGENT_SIGN_RESPONSE):
-            return ConchError('unexpected data: %i' % ord(data[0]))
+        if ord(data[0]) != AGENT_SIGN_RESPONSE:
+            raise ConchError('unexpected data: %i' % ord(data[0]))
         signature = getNS(data[1:])[0]
         return signature
 
@@ -99,9 +97,12 @@ class SSHAgentServer(protocol.Protocol):
             reqType = ord(packet[0])
             reqName = messages.get(reqType, None)
             if not reqName:
-                print 'bad request', reqType
-            f = getattr(self, 'agentc_%s' % reqName)
-            f(packet[1:])
+                self.sendResponse(AGENT_FAILURE, '')
+            else:
+                f = getattr(self, 'agentc_%s' % reqName)
+                if not hasattr(self.factory, 'keys'):
+                    self.factory.keys = {}
+                f(packet[1:])
 
     def sendResponse(self, reqType, data):
         pack = struct.pack('!LB', len(data)+1, reqType) + data
@@ -109,27 +110,58 @@ class SSHAgentServer(protocol.Protocol):
 
     def agentc_REQUEST_IDENTITIES(self, data):
         assert data == ''
-        numKeys = len(self.keys)
+        numKeys = len(self.factory.keys)
         s = struct.pack('!L', numKeys)
-        for k in self.keys:
-            s += struct.pack('!L', len(k)) + k
-            s += struct.pack('!L', len(self.keys[k][1])) + self.keys[k][1]
+        for key, comment in self.factory.keys.itervalues():
+            s += NS(key.blob()) # yes, wrapped in an NS
+            s += NS(comment)
         self.sendResponse(AGENT_IDENTITIES_ANSWER, s)
 
     def agentc_SIGN_REQUEST(self, data):
-        blob, data = common.getNS(data)
-        if blob not in self.keys:
+        blob, data = getNS(data)
+        if blob not in self.factory.keys:
             return self.sendResponse(AGENT_FAILURE, '')
-        signData, data = common.getNS(data)
+        signData, data = getNS(data)
         assert data == '\000\000\000\000'
-        self.sendResponse(AGENT_SIGN_RESPONSE, common.NS(keys.signData(self.keys[blob][0], signData)))
+        self.sendResponse(AGENT_SIGN_RESPONSE, NS(self.factory.keys[blob][0].sign(signData)))
 
-    def agentc_ADD_IDENTITY(self, data): pass
-    def agentc_REMOVE_IDENTITY(self, data): pass
-    def agentc_REMOVE_ALL_IDENTITIES(self, data): pass
+    def agentc_ADD_IDENTITY(self, data): 
+        k = keys.Key.fromString(data, type='private_blob') # not wrapped in NS here
+        self.factory.keys[k.blob()] = (k, k.comment)
+        self.sendResponse(AGENT_SUCCESS, '')
 
+    def agentc_REMOVE_IDENTITY(self, data): 
+        blob, _ = getNS(data)
+        k = keys.Key.fromString(blob, type='blob')
+        del self.factory.keys[k.blob()]
+        self.sendResponse(AGENT_SUCCESS, '')
+
+    def agentc_REMOVE_ALL_IDENTITIES(self, data): 
+        assert data == ''
+        self.factory.keys = {}
+        self.sendResponse(AGENT_SUCCESS, '')
+
+    # v1 messages that we ignore because we don't keep v1 keys
+    # open-ssh sends both v1 and v2 commands, so we have to
+    # do no-ops for v1 commands or we'll get "bad request" errors
+
+    def agentc_REQUEST_RSA_IDENTITIES(self, data):
+        self.sendResponse(AGENT_RSA_IDENTITIES_ANSWER, struct.pack('!L', 0))
+
+    def agentc_REMOVE_RSA_IDENTITY(self, data):
+        self.sendResponse(AGENT_SUCCESS, '')
+
+    def agentc_REMOVE_ALL_RSA_IDENTITIES(self, data):
+        self.sendResponse(AGENT_SUCCESS, '')
+
+AGENTC_REQUEST_RSA_IDENTITIES   = 1
+AGENT_RSA_IDENTITIES_ANSWER     = 2
 AGENT_FAILURE                   = 5
 AGENT_SUCCESS                   = 6
+
+AGENTC_REMOVE_RSA_IDENTITY         = 8
+AGENTC_REMOVE_ALL_RSA_IDENTITIES   = 9
+
 AGENTC_REQUEST_IDENTITIES       = 11
 AGENT_IDENTITIES_ANSWER         = 12
 AGENTC_SIGN_REQUEST             = 13

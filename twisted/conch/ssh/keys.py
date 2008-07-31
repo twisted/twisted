@@ -118,6 +118,50 @@ class Key(object):
             raise BadKeyError('unknown blob type: %s' % keyType)
     _fromString_BLOB = classmethod(_fromString_BLOB)
 
+    def _fromString_PRIVATE_BLOB(Class, blob):
+        """
+        Return a private key object corresponding to this private key blob.
+        The blob formats are as follows:
+
+        RSA keys::
+            string 'ssh-rsa'
+            integer n
+            integer e
+            integer d
+            integer u
+            integer p
+            integer q
+
+        DSA keys::
+            string 'ssh-dss'
+            integer p
+            integer q
+            integer g
+            integer y
+            integer x
+
+        @type blob: C{str}
+        @return: a C{Crypto.PublicKey.pubkey.pubkey} object
+        @raises BadKeyError: if the key type (the first string) is unknown.
+        """
+        keyType, rest = common.getNS(blob)
+
+        if keyType == 'ssh-rsa':
+            n, e, d, u, p, q, rest = common.getMP(rest, 6)
+            comment, rest = common.getNS(rest)
+            rsakey = Class(RSA.construct((n, e, d, p, q, u)))
+            rsakey.comment = comment
+            return rsakey
+        elif keyType == 'ssh-dss':
+            p, q, g, y, x, rest = common.getMP(rest, 5)
+            comment, rest = common.getNS(rest)
+            dsakey =  Class(DSA.construct((y, g, p, q, x)))
+            dsakey.comment = comment
+            return dsakey
+        else:
+            raise BadKeyError('unknown blob type: %s' % keyType)
+    _fromString_PRIVATE_BLOB = classmethod(_fromString_PRIVATE_BLOB)
+
     def _fromString_PUBLIC_OPENSSH(Class, data):
         """
         Return a public key object corresponding to this OpenSSH public key
@@ -448,6 +492,40 @@ class Key(object):
             return (common.NS('ssh-dss') + common.MP(data['p']) +
                     common.MP(data['q']) + common.MP(data['g']) +
                     common.MP(data['y']))
+
+    def privateBlob(self):
+        """
+        Return the private key blob for this key.  The blob is the
+        over-the-wire format for private keys:
+
+        RSA keys::
+            string 'ssh-rsa'
+            integer n
+            integer e
+            integer d
+            integer u
+            integer p
+            integer q
+
+        DSA keys::
+            string 'ssh-dss'
+            integer p
+            integer q
+            integer g
+            integer y
+            integer x
+        """
+        type = self.type()
+        data = self.data()
+        if type == 'RSA':
+            return (common.NS('ssh-rsa') + common.MP(data['n']) +
+                    common.MP(data['e']) + common.MP(data['d']) +
+                    common.MP(data['u']) + common.MP(data['p']) +
+                    common.MP(data['q']))
+        elif type == 'DSA':
+            return (common.NS('ssh-dss') + common.MP(data['p']) +
+                    common.MP(data['q']) + common.MP(data['g']) +
+                    common.MP(data['y']) + common.MP(data['x']))
 
     def toString(self, type, extra=None):
         """
