@@ -50,6 +50,7 @@ PORT = 53
  RP, AFSDB) = range(1, 19)
 AAAA = 28
 SRV = 33
+NAPTR = 35
 A6 = 38
 DNAME = 39
 
@@ -77,7 +78,7 @@ QUERY_TYPES = {
 
     AAAA: 'AAAA',
     SRV: 'SRV',
-
+    NAPTR: 'NAPTR',
     A6: 'A6',
     DNAME: 'DNAME'
 }
@@ -192,6 +193,61 @@ class IEncodable(Interface):
         records similar to TXT where the total length is in no way
         encoded in the data is it necessary.
         """
+
+
+
+class Charstr(object):
+    implements(IEncodable)
+
+    def __init__(self, string=''):
+        if not isinstance(string, str):
+            raise ValueError("%r is not a string" % (string,))
+        self.string = string
+
+
+    def encode(self, strio, compDict=None):
+        """
+        Encode this Character string into the appropriate byte format.
+
+        @type strio: file
+        @param strio: The byte representation of this Charstr will be written
+            to this file.
+        """
+        string = self.string
+        ind = len(string)
+        strio.write(chr(ind))
+        strio.write(string)
+
+
+    def decode(self, strio, length=None):
+        """
+        Decode a byte string into this Name.
+
+        @type strio: file
+        @param strio: Bytes will be read from this file until the full string
+            is decoded.
+
+        @raise EOFError: Raised when there are not enough bytes available from
+            C{strio}.
+        """
+        self.string = ''
+        l = ord(readPrecisely(strio, 1))
+        self.string = readPrecisely(strio, l)
+
+
+    def __eq__(self, other):
+        if isinstance(other, Charstr):
+            return self.string == other.string
+        return False
+
+
+    def __hash__(self):
+        return hash(self.string)
+
+
+    def __str__(self):
+        return self.string
+
 
 
 class Name:
@@ -979,6 +1035,100 @@ class Record_SRV(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
     def __hash__(self):
         return hash((self.priority, self.weight, self.port, self.target))
+
+
+
+class Record_NAPTR(tputil.FancyEqMixin, tputil.FancyStrMixin):
+    """
+    The location of the server(s) for a specific protocol and domain.
+
+    @type order: C{int}
+    @ivar order: An integer specifying the order in which the NAPTR records
+        MUST be processed to ensure the correct ordering of rules.  Low numbers
+        are processed before high numbers.
+
+    @type preference: C{int}
+    @ivar preference: An integer that specifies the order in which NAPTR
+        records with equal "order" values SHOULD be processed, low numbers
+        being processed before high numbers.
+
+    @type flag: L{Charstr}
+    @ivar flag: A <character-string> containing flags to control aspects of the
+        rewriting and interpretation of the fields in the record.  Flags
+        aresingle characters from the set [A-Z0-9].  The case of the alphabetic
+        characters is not significant.
+
+        At this time only four flags, "S", "A", "U", and "P", are defined.
+
+    @type service: L{Charstr}
+    @ivar service: Specifies the service(s) available down this rewrite path.
+        It may also specify the particular protocol that is used to talk with a
+        service.  A protocol MUST be specified if the flags field states that
+        the NAPTR is terminal.
+
+    @type regexp: L{Charstr}
+    @ivar regexp: A STRING containing a substitution expression that is applied
+        to the original string held by the client in order to construct the
+        next domain name to lookup.
+
+    @type replacement: L{Name}
+    @ivar replacement: The next NAME to query for NAPTR, SRV, or address
+        records depending on the value of the flags field.  This MUST be a
+        fully qualified domain-name.
+
+    @type ttl: C{int}
+    @ivar ttl: The maximum number of seconds which this record should be
+        cached.
+
+    @see: U{http://www.faqs.org/rfcs/rfc2915.html}
+    """
+    implements(IEncodable, IRecord)
+    TYPE = NAPTR
+
+    compareAttributes = ('order', 'preference', 'flags', 'service', 'regexp',
+                         'replacement')
+    fancybasename = 'NAPTR'
+    showAttributes = ('order', 'preference', ('flags', 'flags', '%s'),
+                      ('service', 'service', '%s'), ('regexp', 'regexp', '%s'),
+                      ('replacement', 'replacement', '%s'), 'ttl')
+
+    def __init__(self, order=0, preference=0, flags='', service='', regexp='',
+                 replacement='', ttl=None):
+        self.order = int(order)
+        self.preference = int(preference)
+        self.flags = Charstr(flags)
+        self.service = Charstr(service)
+        self.regexp = Charstr(regexp)
+        self.replacement = Name(replacement)
+        self.ttl = str2time(ttl)
+
+
+    def encode(self, strio, compDict=None):
+        strio.write(struct.pack('!HH', self.order, self.preference))
+        # This can't be compressed
+        self.flags.encode(strio, None)
+        self.service.encode(strio, None)
+        self.regexp.encode(strio, None)
+        self.replacement.encode(strio, None)
+
+
+    def decode(self, strio, length=None):
+        r = struct.unpack('!HH', readPrecisely(strio, struct.calcsize('!HH')))
+        self.order, self.preference = r
+        self.flags = Charstr()
+        self.service = Charstr()
+        self.regexp = Charstr()
+        self.replacement = Name()
+        self.flags.decode(strio)
+        self.service.decode(strio)
+        self.regexp.decode(strio)
+        self.replacement.decode(strio)
+
+
+    def __hash__(self):
+        return hash((
+            self.order, self.preference, self.flags,
+            self.service, self.regexp, self.replacement))
 
 
 

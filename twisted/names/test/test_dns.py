@@ -86,14 +86,17 @@ class RoundtripDNSTestCase(unittest.TestCase):
             result.decode(f)
             self.assertEquals(str(result.name), s)
 
-    def testHashable(self):
+    def test_hashable(self):
+        """
+        Instances of all record types are hashable.
+        """
         records = [
             dns.Record_NS, dns.Record_MD, dns.Record_MF, dns.Record_CNAME,
             dns.Record_MB, dns.Record_MG, dns.Record_MR, dns.Record_PTR,
             dns.Record_DNAME, dns.Record_A, dns.Record_SOA, dns.Record_NULL,
             dns.Record_WKS, dns.Record_SRV, dns.Record_AFSDB, dns.Record_RP,
             dns.Record_HINFO, dns.Record_MINFO, dns.Record_MX, dns.Record_TXT,
-            dns.Record_AAAA, dns.Record_A6
+            dns.Record_AAAA, dns.Record_A6, dns.Record_NAPTR
         ]
 
         for k in records:
@@ -101,6 +104,48 @@ class RoundtripDNSTestCase(unittest.TestCase):
             hk1 = hash(k1)
             hk2 = hash(k2)
             self.assertEquals(hk1, hk2, "%s != %s (for %s)" % (hk1,hk2,k))
+
+
+    def test_Charstr(self):
+        """
+        Test L{dns.Charstr} encode and decode.
+        """
+        for n in self.names:
+            # encode the name
+            f = StringIO()
+            dns.Charstr(n).encode(f)
+
+            # decode the name
+            f.seek(0, 0)
+            result = dns.Charstr()
+            result.decode(f)
+            self.assertEquals(result.string, n)
+
+
+    def test_NAPTR(self):
+        """
+        Test L{dns.Record_NAPTR} encode and decode.
+        """
+        naptrs = [(100, 10, "u", "sip+E2U",
+                   "!^.*$!sip:information@domain.tld!", ""),
+                  (100, 50, "s", "http+I2L+I2C+I2R", "",
+                   "_http._tcp.gatech.edu")]
+
+        for (order, preference, flags, service, regexp, replacement) in naptrs:
+            rin = dns.Record_NAPTR(order, preference, flags, service, regexp,
+                                   replacement)
+            e = StringIO()
+            rin.encode(e)
+            e.seek(0,0)
+            rout = dns.Record_NAPTR()
+            rout.decode(e)
+            self.assertEquals(rin.order, rout.order)
+            self.assertEquals(rin.preference, rout.preference)
+            self.assertEquals(rin.flags, rout.flags)
+            self.assertEquals(rin.service, rout.service)
+            self.assertEquals(rin.regexp, rout.regexp)
+            self.assertEquals(rin.replacement.name, rout.replacement.name)
+            self.assertEquals(rin.ttl, rout.ttl)
 
 
 
@@ -519,6 +564,18 @@ class ReprTests(unittest.TestCase):
             "<SRV priority=1 weight=2 target=example.org port=3 ttl=4>")
 
 
+    def test_naptr(self):
+        """
+        The repr of a L{dns.Record_NAPTR} instance includes the order,
+        preference, flags, service, regular expression, replacement, and TTL of
+        the record.
+        """
+        self.assertEqual(
+            repr(dns.Record_NAPTR(5, 9, "S", "http", "/foo/bar/i", "baz", 3)),
+            "<NAPTR order=5 preference=9 flags=S service=http "
+            "regexp=/foo/bar/i replacement=baz ttl=3>")
+
+
     def test_afsdb(self):
         """
         The repr of a L{dns.Record_AFSDB} instance includes the subtype,
@@ -906,6 +963,49 @@ class EqualityTests(unittest.TestCase):
             dns.Record_SRV(10, 20, 30, 'example.com', 40),
             dns.Record_SRV(10, 20, 30, 'example.com', 40),
             dns.Record_SRV(10, 20, 30, 'example.com', 400))
+
+
+    def test_naptr(self):
+        """
+        Two L{dns.Record_NAPTR} instances compare equal if and only if they
+        have the same order, preference, flags, service, regexp, replacement,
+        and ttl.
+        """
+        # Vary the order
+        self._equalityTest(
+            dns.Record_NAPTR(1, 2, "u", "sip+E2U", "/foo/bar/", "baz", 12),
+            dns.Record_NAPTR(1, 2, "u", "sip+E2U", "/foo/bar/", "baz", 12),
+            dns.Record_NAPTR(2, 2, "u", "sip+E2U", "/foo/bar/", "baz", 12))
+        # Vary the preference
+        self._equalityTest(
+            dns.Record_NAPTR(1, 2, "u", "sip+E2U", "/foo/bar/", "baz", 12),
+            dns.Record_NAPTR(1, 2, "u", "sip+E2U", "/foo/bar/", "baz", 12),
+            dns.Record_NAPTR(1, 3, "u", "sip+E2U", "/foo/bar/", "baz", 12))
+        # Vary the flags
+        self._equalityTest(
+            dns.Record_NAPTR(1, 2, "u", "sip+E2U", "/foo/bar/", "baz", 12),
+            dns.Record_NAPTR(1, 2, "u", "sip+E2U", "/foo/bar/", "baz", 12),
+            dns.Record_NAPTR(1, 2, "p", "sip+E2U", "/foo/bar/", "baz", 12))
+        # Vary the service
+        self._equalityTest(
+            dns.Record_NAPTR(1, 2, "u", "sip+E2U", "/foo/bar/", "baz", 12),
+            dns.Record_NAPTR(1, 2, "u", "sip+E2U", "/foo/bar/", "baz", 12),
+            dns.Record_NAPTR(1, 2, "u", "http", "/foo/bar/", "baz", 12))
+        # Vary the regexp
+        self._equalityTest(
+            dns.Record_NAPTR(1, 2, "u", "sip+E2U", "/foo/bar/", "baz", 12),
+            dns.Record_NAPTR(1, 2, "u", "sip+E2U", "/foo/bar/", "baz", 12),
+            dns.Record_NAPTR(1, 2, "u", "sip+E2U", "/bar/foo/", "baz", 12))
+        # Vary the replacement
+        self._equalityTest(
+            dns.Record_NAPTR(1, 2, "u", "sip+E2U", "/foo/bar/", "baz", 12),
+            dns.Record_NAPTR(1, 2, "u", "sip+E2U", "/foo/bar/", "baz", 12),
+            dns.Record_NAPTR(1, 2, "u", "sip+E2U", "/bar/foo/", "quux", 12))
+        # Vary the ttl
+        self._equalityTest(
+            dns.Record_NAPTR(1, 2, "u", "sip+E2U", "/foo/bar/", "baz", 12),
+            dns.Record_NAPTR(1, 2, "u", "sip+E2U", "/foo/bar/", "baz", 12),
+            dns.Record_NAPTR(1, 2, "u", "sip+E2U", "/bar/foo/", "baz", 5))
 
 
     def test_afsdb(self):

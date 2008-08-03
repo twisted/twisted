@@ -87,7 +87,10 @@ test_domain_com = NoFileAuthority(
             dns.Record_MINFO(rmailbx='r mail box', emailbx='e mail box'),
             dns.Record_AFSDB(subtype=1, hostname='afsdb.test-domain.com'),
             dns.Record_RP(mbox='whatever.i.dunno', txt='some.more.text'),
-            dns.Record_WKS('12.54.78.12', socket.IPPROTO_TCP, '\x12\x01\x16\xfe\xc1\x00\x01'),
+            dns.Record_WKS('12.54.78.12', socket.IPPROTO_TCP,
+                           '\x12\x01\x16\xfe\xc1\x00\x01'),
+            dns.Record_NAPTR(100, 10, "u", "sip+E2U",
+                             "!^.*$!sip:information@domain.tld!"),
             dns.Record_AAAA('AF43:5634:1294:AFCB:56AC:48EF:34C3:01FF')],
         'http.tcp.test-domain.com': [
             dns.Record_SRV(257, 16383, 43690, 'some.other.place.fool')
@@ -389,6 +392,17 @@ class ServerDNSTestCase(unittest.TestCase):
             self.resolver.lookupAddress("anothertest-domain.com"),
             [dns.Record_A('1.2.3.4', ttl=19283784)]
         )
+
+
+    def test_NAPTR(self):
+        """
+        Test DNS 'NAPTR' record queries.
+        """
+        return self.namesTest(
+            self.resolver.lookupNamingAuthorityPointer('test-domain.com'),
+            [dns.Record_NAPTR(100, 10, "u", "sip+E2U",
+                              "!^.*$!sip:information@domain.tld!",
+                              ttl=19283784)])
 
 
 

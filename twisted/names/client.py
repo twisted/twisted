@@ -901,3 +901,20 @@ def lookupAllRecords(name, timeout=None):
     @rtype: C{Deferred}
     """
     return getResolver().lookupAllRecords(name, timeout)
+
+
+
+def lookupNamingAuthorityPointer(name, timeout=None):
+    """
+    NAPTR lookup.
+
+    @type name: C{str}
+    @param name: DNS name to resolve.
+
+    @type timeout: Sequence of C{int}
+    @param timeout: Number of seconds after which to reissue the query.
+        When the last timeout expires, the query is considered failed.
+
+    @rtype: C{Deferred}
+    """
+    return getResolver().lookupNamingAuthorityPointer(name, timeout)

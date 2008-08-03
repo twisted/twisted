@@ -624,3 +624,12 @@ class ClientTestCase(unittest.TestCase):
         d = client.lookupAllRecords(self.hostname)
         d.addCallback(self.checkResult, dns.ALL_RECORDS)
         return d
+
+
+    def test_lookupNamingAuthorityPointer(self):
+        """
+        See L{test_lookupAddress}
+        """
+        d = client.lookupNamingAuthorityPointer(self.hostname)
+        d.addCallback(self.checkResult, dns.NAPTR)
+        return d

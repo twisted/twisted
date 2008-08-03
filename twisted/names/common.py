@@ -148,6 +148,14 @@ class ResolverBase:
         """
         return self._lookup(name, dns.IN, dns.AXFR, timeout)
 
+
+    def lookupNamingAuthorityPointer(self, name, timeout=None):
+        """
+        @see: twisted.names.client.lookupNamingAuthorityPointer
+        """
+        return self._lookup(name, dns.IN, dns.NAPTR, timeout)
+
+
     def lookupAllRecords(self, name, timeout = None):
         """
         @see: twisted.names.client.lookupAllRecords
@@ -218,7 +226,7 @@ typeToMethod = {
     dns.RP:    'lookupResponsibility',
     dns.AFSDB: 'lookupAFSDatabase',
     dns.SRV:   'lookupService',
-
+    dns.NAPTR: 'lookupNamingAuthorityPointer',
     dns.AXFR:         'lookupZone',
     dns.ALL_RECORDS:  'lookupAllRecords',
 }
