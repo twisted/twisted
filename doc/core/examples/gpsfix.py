@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 """
 GPSTest is a simple example using the SerialPort transport and the NMEA 0183 and Rockwell Zodiac GPS protocols to display fix data as it is received from the device.
 """

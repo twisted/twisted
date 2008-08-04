@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 """
 Example using MouseMan protocol with the SerialPort transport
 """

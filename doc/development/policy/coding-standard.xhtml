@@ -254,8 +254,12 @@ def foo2bar(f):
       functions or classes in this module, if you feel they are useful
       to others.</li>
 
-      <li>Write a file in <code class="shell">bin/</code> which contains the
-          Twisted running-from-SVN header, and ending with
+      <li>Write a file in <code class="shell">bin/</code> which contains a
+          shebang line for Python
+<pre class="shell">
+#!/usr/bin/python
+</pre></li>
+<li> add the Twisted running-from-SVN header, and end with
 
 <pre class="python">
 from twisted.scripts.yourmodule import run
@@ -272,6 +276,15 @@ run()
 
     <p>This will insure your program will work correctly for users of SVN,
     Windows releases and Debian packages.</p>
+
+    <h2>Examples</h2>
+
+    <p>For example scripts you expect a Twisted user
+    to run from the command-line, add this Python shebang line at the top
+    of the file:</p>
+<pre class="shell">
+#!/usr/bin/python
+</pre>
 
     <h2>Standard Library Extension Modules</h2>
 

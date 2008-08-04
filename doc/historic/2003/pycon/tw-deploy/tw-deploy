@@ -1,4 +1,4 @@
-#!/usr/bin/python2.2
+#!/usr/bin/python
 # Requires CVS Slides
 
 from slides import Lecture, Slide, TitleSlide, Image, Bullet, PRE, URL, SubBullet, NumSlide, toHTML

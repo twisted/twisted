@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 from twisted.cred import portal, checkers
 from twisted.conch import error, avatar
 from twisted.conch.checkers import SSHPublicKeyDatabase

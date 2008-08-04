@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 """Example using stdio, Deferreds, LineReceiver and twisted.web.client.
 
 Note that the WebCheckerCommandProtocol protocol could easily be used in e.g.

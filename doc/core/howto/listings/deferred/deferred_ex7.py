@@ -1,4 +1,4 @@
-#!/usr/bin/python2.3
+#!/usr/bin/python
 
 from twisted.internet import defer
 from twisted.python import failure, util

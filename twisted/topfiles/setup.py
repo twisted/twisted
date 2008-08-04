@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 
 # Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 from twisted.conch.ssh import transport, userauth, connection, common, keys, channel
 from twisted.internet import defer, protocol, reactor
 from twisted.python import log

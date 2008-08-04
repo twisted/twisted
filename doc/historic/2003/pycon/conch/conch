@@ -1,4 +1,4 @@
-#!/usr/bin/python2.2
+#!/usr/bin/python
 from slides import Slide, Bullet, SubBullet, URL
 from twslides import Lecture
 
