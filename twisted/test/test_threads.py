@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -11,7 +11,9 @@ import sys, os, time
 from twisted.trial import unittest
 
 from twisted.internet import reactor, defer, interfaces, threads, protocol, error
-from twisted.python import failure, threadable, log
+from twisted.python import failure, threadable, log, threadpool
+
+
 
 class ReactorThreadsTestCase(unittest.TestCase):
     """
@@ -233,22 +235,35 @@ class DeferredResultTestCase(unittest.TestCase):
         return d
 
 
-    def testDeferredResult(self):
+    def test_deferredResult(self):
+        """
+        L{threads.deferToThread} executes the function passed, and correctly
+        handles the positional and keyword arguments given.
+        """
         d = threads.deferToThread(lambda x, y=5: x + y, 3, y=4)
         d.addCallback(self.assertEquals, 7)
         return d
 
 
-    def testDeferredFailure(self):
+    def test_deferredFailure(self):
+        """
+        Check that L{threads.deferToThread} return a failure object
+        with an appropriate exception instance when the called
+        function raises an exception.
+        """
         class NewError(Exception):
             pass
         def raiseError():
-            raise NewError
+            raise NewError()
         d = threads.deferToThread(raiseError)
         return self.assertFailure(d, NewError)
 
 
-    def testDeferredFailure2(self):
+    def test_deferredFailureAfterSuccess(self):
+        """
+        Check that a successfull L{threads.deferToThread} followed by a one
+        that raises an exception correctly result as a failure.
+        """
         # set up a condition that causes cReactor to hang. These conditions
         # can also be set by other tests when the full test suite is run in
         # alphabetical order (test_flow.FlowTest.testThreaded followed by
@@ -262,6 +277,47 @@ class DeferredResultTestCase(unittest.TestCase):
         d = threads.deferToThread(lambda: None)
         d.addCallback(lambda ign: threads.deferToThread(lambda: 1/0))
         return self.assertFailure(d, ZeroDivisionError)
+
+
+
+class DeferToThreadPoolTestCase(unittest.TestCase):
+    """
+    Test L{twisted.internet.threads.deferToThreadPool}.
+    """
+
+    def setUp(self):
+        self.tp = threadpool.ThreadPool(0, 8)
+        self.tp.start()
+
+
+    def tearDown(self):
+        self.tp.stop()
+
+
+    def test_deferredResult(self):
+        """
+        L{threads.deferToThreadPool} executes the function passed, and
+        correctly handles the positional and keyword arguments given.
+        """
+        d = threads.deferToThreadPool(reactor, self.tp,
+                                      lambda x, y=5: x + y, 3, y=4)
+        d.addCallback(self.assertEqual, 7)
+        return d
+
+
+    def test_deferredFailure(self):
+        """
+        Check that L{threads.deferToThreadPool} return a failure object with an
+        appropriate exception instance when the called function raises an
+        exception.
+        """
+        class NewError(Exception):
+            pass
+        def raiseError():
+            raise NewError()
+        d = threads.deferToThreadPool(reactor, self.tp, raiseError)
+        return self.assertFailure(d, NewError)
+
 
 
 _callBeforeStartupProgram = """

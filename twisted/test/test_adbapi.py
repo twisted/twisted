@@ -14,6 +14,7 @@ from twisted.enterprise.adbapi import ConnectionPool, ConnectionLost, safe
 from twisted.enterprise.adbapi import Connection, Transaction
 from twisted.enterprise.adbapi import _unreleasedVersion
 from twisted.internet import reactor, defer, interfaces
+from twisted.python.failure import Failure
 
 
 simple_table_schema = """
@@ -666,23 +667,28 @@ class TransactionTestCase(unittest.TestCase):
 
 
 
+class NonThreadPool(object):
+    def callInThreadWithCallback(self, onResult, f, *a, **kw):
+        success = True
+        try:
+            result = f(*a, **kw)
+        except Exception, e:
+            success = False
+            result = Failure()
+        onResult(success, result)
+
+
+
 class DummyConnectionPool(ConnectionPool):
     """
     A testable L{ConnectionPool};
     """
+    threadpool = NonThreadPool()
 
     def __init__(self):
         """
         Don't forward init call.
         """
-
-
-    def _deferToThread(self, f, *args, **kwargs):
-        """
-        Synchronously run function.
-        """
-        return f(*args, **kwargs)
-
 
 
 
@@ -708,11 +714,14 @@ class ConnectionPoolTestCase(unittest.TestCase):
 
         pool = DummyConnectionPool()
         pool.connectionFactory = ConnectionRollbackRaise
-        self.assertRaises(ValueError, pool.runWithConnection, raisingFunction)
-
-        errors = self.flushLoggedErrors(RuntimeError)
-        self.assertEquals(len(errors), 1)
-        self.assertEquals(errors[0].value.args[0], "problem!")
+        d = pool.runWithConnection(raisingFunction)
+        d = self.assertFailure(d, ValueError)
+        def cbFailed(ignored):
+            errors = self.flushLoggedErrors(RuntimeError)
+            self.assertEquals(len(errors), 1)
+            self.assertEquals(errors[0].value.args[0], "problem!")
+        d.addCallback(cbFailed)
+        return d
 
 
     def test_closeLogError(self):
@@ -753,8 +762,13 @@ class ConnectionPoolTestCase(unittest.TestCase):
         pool = DummyConnectionPool()
         pool.connectionFactory = ConnectionRollbackRaise
         pool.transactionFactory = DummyTransaction
-        self.assertRaises(ValueError, pool.runInteraction, raisingFunction)
 
-        errors = self.flushLoggedErrors(RuntimeError)
-        self.assertEquals(len(errors), 1)
-        self.assertEquals(errors[0].value.args[0], "problem!")
+        d = pool.runInteraction(raisingFunction)
+        d = self.assertFailure(d, ValueError)
+        def cbFailed(ignored):
+            errors = self.flushLoggedErrors(RuntimeError)
+            self.assertEquals(len(errors), 1)
+            self.assertEquals(errors[0].value.args[0], "problem!")
+        d.addCallback(cbFailed)
+        return d
+

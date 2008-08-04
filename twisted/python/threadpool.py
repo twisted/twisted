@@ -19,7 +19,7 @@ import warnings
 
 
 # Twisted Imports
-from twisted.python import log, runtime, context, threadable
+from twisted.python import log, runtime, context, failure
 
 WorkerStop = object()
 
@@ -102,6 +102,7 @@ class ThreadPool:
         while self.workers < min(self.max, neededSize):
             self.startAWorker()
 
+
     def dispatch(self, owner, func, *args, **kw):
         """
         DEPRECATED: use L{callInThread} instead.
@@ -113,14 +114,58 @@ class ThreadPool:
                       DeprecationWarning, stacklevel=2)
         self.callInThread(func, *args, **kw)
 
+
     def callInThread(self, func, *args, **kw):
+        """
+        Call a callable object in a separate thread.
+
+        @param func: callable object to be called in separate thread
+
+        @param *args: positional arguments to be passed to func
+
+        @param **kw: keyword args to be passed to func
+        """
+        self.callInThreadWithCallback(None, func, *args, **kw)
+
+
+    def callInThreadWithCallback(self, onResult, func, *args, **kw):
+        """
+        Call a callable object in a separate thread and call onResult
+        with the return value, or a L{twisted.python.failure.Failure}
+        if the callable raises an exception.
+
+        The callable is allowed to block, but the onResult function
+        must not block and should perform as little work as possible.
+
+        A typical action for onResult for a threadpool used with a
+        Twisted reactor would be to schedule a Deferred to fire in the
+        main reactor thread using C{.callFromThread}.  Note that
+        onResult is called inside the separate thread, not inside the
+        reactor thread.
+
+        @param onResult: a callable with the signature (success, result).
+            If the callable returns normally, onResult is called with
+            (True, result) where result is the return value of the callable.
+            If the callable throws an exception, onResult is called with
+            (False, failure).
+
+            Optionally, onResult may be None, in which case it is not
+            called at all.
+
+        @param func: callable object to be called in separate thread
+
+        @param *args: positional arguments to be passed to func
+
+        @param **kwargs: keyword arguments to be passed to func
+        """
         if self.joined:
             return
         ctx = context.theContextTracker.currentContext().contexts[-1]
-        o = (ctx, func, args, kw)
+        o = (ctx, func, args, kw, onResult)
         self.q.put(o)
         if self.started:
             self._startSomeWorkers()
+
 
     def _runWithCallback(self, callback, errback, func, args, kwargs):
         try:
@@ -129,6 +174,7 @@ class ThreadPool:
             errback(sys.exc_info()[1])
         else:
             callback(result)
+
 
     def dispatchWithCallback(self, owner, callback, errback, func, *args, **kw):
         """
@@ -146,6 +192,7 @@ class ThreadPool:
             self._runWithCallback, callback, errback, func, args, kw
         )
 
+
     def _worker(self):
         """
         Method used as target of the created threads: retrieve task to run
@@ -156,13 +203,32 @@ class ThreadPool:
         o = self.q.get()
         while o is not WorkerStop:
             self.working.append(ct)
-            ctx, function, args, kwargs = o
+            ctx, function, args, kwargs, onResult = o
+            del o
+
             try:
-                context.call(ctx, function, *args, **kwargs)
+                result = context.call(ctx, function, *args, **kwargs)
+                success = True
             except:
-                context.call(ctx, log.err)
+                success = False
+                if onResult is None:
+                    context.call(ctx, log.err)
+                    result = None
+                else:
+                    result = failure.Failure()
+
+            del function, args, kwargs
+
             self.working.remove(ct)
-            del o, ctx, function, args, kwargs
+
+            if onResult is not None:
+                try:
+                    context.call(ctx, onResult, success, result)
+                except:
+                    context.call(ctx, log.err)
+
+            del ctx, onResult, result
+
             self.waiters.append(ct)
             o = self.q.get()
             self.waiters.remove(ct)

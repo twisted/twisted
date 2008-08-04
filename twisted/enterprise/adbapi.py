@@ -2,14 +2,13 @@
 # Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
 An asynchronous mapping to U{DB-API 2.0<http://www.python.org/topics/database/DatabaseAPI-2.0.html>}.
 """
 
 import sys
 
-from twisted.internet import defer, threads
+from twisted.internet import threads
 from twisted.python import reflect, log
 from twisted.python.deprecate import deprecated
 from twisted.python.versions import Version
@@ -18,14 +17,15 @@ from twisted.python.versions import Version
 
 class ConnectionLost(Exception):
     """
-    This exception means that a db connection has been lost.
-    Client code may try again.
+    This exception means that a db connection has been lost.  Client code may
+    try again.
     """
 
 
 
 class Connection(object):
-    """A wrapper for a DB-API connection instance.
+    """
+    A wrapper for a DB-API connection instance.
 
     The wrapper passes almost everything to the wrapped connection and so has
     the same API. However, the Connection knows about its pool and also
@@ -237,8 +237,30 @@ class ConnectionPool:
 
 
     def runWithConnection(self, func, *args, **kw):
-        return self._deferToThread(self._runWithConnection,
-                                   func, *args, **kw)
+        """
+        Execute a function with a database connection and return the result.
+
+        @param func: A callable object of one argument which will be executed
+            in a thread with a connection from the pool.  It will be passed as
+            its first argument a L{Connection} instance (whose interface is
+            mostly identical to that of a connection object for your DB-API
+            module of choice), and its results will be returned as a Deferred.
+            If the method raises an exception the transaction will be rolled
+            back.  Otherwise, the transaction will be committed.  B{Note} that
+            this function is B{not} run in the main thread: it must be
+            threadsafe.
+
+        @param *args: positional arguments to be passed to func
+
+        @param **kw: keyword arguments to be passed to func
+
+        @return: a Deferred which will fire the return value of
+            C{func(Transaction(...), *args, **kw)}, or a Failure.
+        """
+        from twisted.internet import reactor
+        return threads.deferToThreadPool(reactor, self.threadpool,
+                                         self._runWithConnection,
+                                         func, *args, **kw)
 
 
     def _runWithConnection(self, func, *args, **kw):
@@ -257,7 +279,8 @@ class ConnectionPool:
 
 
     def runInteraction(self, interaction, *args, **kw):
-        """Interact with the database and return the result.
+        """
+        Interact with the database and return the result.
 
         The 'interaction' is a callable object which will be executed
         in a thread using a pooled connection. It will be passed an
@@ -273,16 +296,22 @@ class ConnectionPool:
         function you pass to this if it tries to use non-local
         objects.
 
-        @param interaction: a callable object whose first argument is
-            L{adbapi.Transaction}. *args,**kw will be passed as
-            additional arguments.
+        @param interaction: a callable object whose first argument
+            is an L{adbapi.Transaction}.
+
+        @param *args: additional positional arguments to be passed
+            to interaction
+
+        @param **kw: keyword arguments to be passed to interaction
 
         @return: a Deferred which will fire the return value of
-            'interaction(Transaction(...))', or a Failure.
+            'interaction(Transaction(...), *args, **kw)', or a Failure.
         """
+        from twisted.internet import reactor
+        return threads.deferToThreadPool(reactor, self.threadpool,
+                                         self._runInteraction,
+                                         interaction, *args, **kw)
 
-        return self._deferToThread(self._runInteraction,
-                                   interaction, *args, **kw)
 
     def runQuery(self, *args, **kw):
         """Execute an SQL query and return the result.
@@ -301,8 +330,8 @@ class ConnectionPool:
         @return: a Deferred which will fire the return value of a DB-API
         cursor's 'fetchall' method, or a Failure.
         """
-
         return self.runInteraction(self._runQuery, *args, **kw)
+
 
     def runOperation(self, *args, **kw):
         """Execute an SQL query and return None.
@@ -320,8 +349,8 @@ class ConnectionPool:
 
         return: a Deferred which will fire None or a Failure.
         """
-
         return self.runInteraction(self._runOperation, *args, **kw)
+
 
     def close(self):
         """Close all pool connections and shutdown the pool."""
@@ -430,17 +459,6 @@ class ConnectionPool:
     def __setstate__(self, state):
         self.__dict__ = state
         self.__init__(self.dbapiName, *self.connargs, **self.connkw)
-
-    def _deferToThread(self, f, *args, **kwargs):
-        """Internal function.
-
-        Call f in one of the connection pool's threads.
-        """
-
-        d = defer.Deferred()
-        self.threadpool.callInThread(threads._putResultInDeferred,
-                                     d, f, args, kwargs)
-        return d
 
 
 

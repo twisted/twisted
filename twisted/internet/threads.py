@@ -15,28 +15,59 @@ from twisted.python import failure
 from twisted.internet import defer
 
 
-def _putResultInDeferred(deferred, f, args, kwargs):
+def deferToThreadPool(reactor, threadpool, f, *args, **kwargs):
     """
-    Run a function and give results to a Deferred.
+    Call the function C{f} using a thread from the given threadpool and return
+    the result as a Deferred.
+
+    This function is only used by client code which is maintaining its own
+    threadpool.  To run a function in the reactor's threadpool, use
+    C{deferToThread}.
+
+    @param reactor: The reactor in whose main thread the Deferred will be
+        invoked.
+
+    @param threadpool: An object which supports the C{callInThreadWithCallback}
+        method of C{twisted.python.threadpool.ThreadPool}.
+
+    @param f: The function to call.
+    @param *args: positional arguments to pass to f.
+    @param **kwargs: keyword arguments to pass to f.
+
+    @return: A Deferred which fires a callback with the result of f, or an
+        errback with a L{twisted.python.failure.Failure} if f throws an
+        exception.
     """
-    from twisted.internet import reactor
-    try:
-        result = f(*args, **kwargs)
-    except:
-        f = failure.Failure()
-        reactor.callFromThread(deferred.errback, f)
-    else:
-        reactor.callFromThread(deferred.callback, result)
+    d = defer.Deferred()
+
+    def onResult(success, result):
+        if success:
+            reactor.callFromThread(d.callback, result)
+        else:
+            reactor.callFromThread(d.errback, result)
+
+    threadpool.callInThreadWithCallback(onResult, f, *args, **kwargs)
+
+    return d
 
 
 def deferToThread(f, *args, **kwargs):
     """
-    Run function in thread and return result as Deferred.
+    Run a function in a thread and return the result as a Deferred.
+
+    @param f: The function to call.
+    @param *args: positional arguments to pass to f.
+    @param **kwargs: keyword arguments to pass to f.
+
+    @return: A Deferred which fires a callback with the result of f,
+    or an errback with a L{twisted.python.failure.Failure} if f throws
+    an exception.
     """
-    d = defer.Deferred()
     from twisted.internet import reactor
-    reactor.callInThread(_putResultInDeferred, d, f, args, kwargs)
-    return d
+    if reactor.threadpool is None:
+        reactor._initThreadPool()
+    return deferToThreadPool(reactor, reactor.threadpool,
+                             f, *args, **kwargs)
 
 
 def _runMultiple(tupleList):
