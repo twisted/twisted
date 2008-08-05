@@ -17,7 +17,6 @@ import types
 import socket
 import sys
 import operator
-import warnings
 
 try:
     import fcntl
@@ -331,12 +330,41 @@ class _TLSMixin:
         else:
             self.stopReading()
 
+
+
+class _TLSDelayed(object):
+    """
+    State tracking record for TLS startup parameters.  Used to remember how
+    TLS should be started when starting it is delayed to wait for the output
+    buffer to be flushed.
+
+    @ivar bufferedData: A C{list} which contains all the data which was
+        written to the transport after an attempt to start TLS was made but
+        before the buffers outstanding at that time could be flushed and TLS
+        could really be started.  This is appended to by the transport's
+        write and writeSequence methods until it is possible to actually
+        start TLS, then it is written to the TLS-enabled transport.
+
+    @ivar context: An SSL context factory object to use to start TLS.
+
+    @ivar extra: An extra argument to pass to the transport's C{startTLS}
+        method.
+    """
+    def __init__(self, bufferedData, context, extra):
+        self.bufferedData = bufferedData
+        self.context = context
+        self.extra = extra
+
+
+
 def _getTLSClass(klass, _existing={}):
     if klass not in _existing:
         class TLSConnection(_TLSMixin, klass):
             implements(interfaces.ISSLTransport)
         _existing[klass] = TLSConnection
     return _existing[klass]
+
+
 
 class Connection(abstract.FileDescriptor, _SocketCloser):
     """
@@ -361,22 +389,15 @@ class Connection(abstract.FileDescriptor, _SocketCloser):
         self.protocol = protocol
 
     if SSL:
-
-        def startTLS(self, ctx):
+        _tlsWaiting = None
+        def startTLS(self, ctx, extra):
             assert not self.TLS
-            error=False
             if self.dataBuffer or self._tempDataBuffer:
-                self.dataBuffer += "".join(self._tempDataBuffer)
-                self._tempDataBuffer = []
-                self._tempDataLen = 0
-                written = self.writeSomeData(buffer(self.dataBuffer, self.offset))
-                offset = self.offset
-                dataLen = len(self.dataBuffer)
-                self.offset = 0
-                self.dataBuffer = ""
-                if isinstance(written, Exception) or (offset + written != dataLen):
-                    error=True
-
+                # pre-TLS bytes are still being written.  Starting TLS now
+                # will do the wrong thing.  Instead, mark that we're trying
+                # to go into the TLS state.
+                self._tlsWaiting = _TLSDelayed([], ctx, extra)
+                return False
 
             self.stopReading()
             self.stopWriting()
@@ -384,18 +405,43 @@ class Connection(abstract.FileDescriptor, _SocketCloser):
             self.socket = SSL.Connection(ctx.getContext(), self.socket)
             self.fileno = self.socket.fileno
             self.startReading()
-            if error:
-                warnings.warn("startTLS with unwritten buffered data currently doesn't work right. See issue #686. Closing connection.", category=RuntimeWarning, stacklevel=2)
-                self.loseConnection()
-                return
+            return True
+
 
         def _startTLS(self):
             self.TLS = 1
             self.__class__ = _getTLSClass(self.__class__)
 
+
+        def write(self, bytes):
+            if self._tlsWaiting is not None:
+                self._tlsWaiting.bufferedData.append(bytes)
+            else:
+                abstract.FileDescriptor.write(self, bytes)
+
+
+        def writeSequence(self, iovec):
+            if self._tlsWaiting is not None:
+                self._tlsWaiting.bufferedData.extend(iovec)
+            else:
+                abstract.FileDescriptor.writeSequence(self, iovec)
+
+
+        def doWrite(self):
+            result = abstract.FileDescriptor.doWrite(self)
+            if self._tlsWaiting is not None:
+                if not self.dataBuffer and not self._tempDataBuffer:
+                    waiting = self._tlsWaiting
+                    self._tlsWaiting = None
+                    self.startTLS(waiting.context, waiting.extra)
+                    self.writeSequence(waiting.bufferedData)
+            return result
+
+
     def getHandle(self):
         """Return the socket for this connection."""
         return self.socket
+
 
     def doRead(self):
         """Calls self.protocol.dataReceived with all available data.
@@ -416,6 +462,7 @@ class Connection(abstract.FileDescriptor, _SocketCloser):
             return main.CONNECTION_DONE
         return self.protocol.dataReceived(data)
 
+
     def writeSomeData(self, data):
         """Connection.writeSomeData(data) -> #of bytes written | CONNECTION_LOST
         This writes as much data as possible to the socket and returns either
@@ -434,6 +481,7 @@ class Connection(abstract.FileDescriptor, _SocketCloser):
             else:
                 return main.CONNECTION_LOST
 
+
     def _closeWriteConnection(self):
         try:
             getattr(self.socket, self._socketShutdownMethod)(1)
@@ -447,6 +495,7 @@ class Connection(abstract.FileDescriptor, _SocketCloser):
                 f = failure.Failure()
                 log.err()
                 self.connectionLost(f)
+
 
     def readConnectionLost(self, reason):
         p = interfaces.IHalfCloseableProtocol(self.protocol, None)
@@ -510,12 +559,12 @@ class BaseClient(Connection):
             reactor.callLater(0, self.failIfNotConnected, error)
 
     def startTLS(self, ctx, client=1):
-        holder = Connection.startTLS(self, ctx)
-        if client:
-            self.socket.set_connect_state()
-        else:
-            self.socket.set_accept_state()
-        return holder
+        if Connection.startTLS(self, ctx, client):
+            if client:
+                self.socket.set_connect_state()
+            else:
+                self.socket.set_accept_state()
+
 
     def stopConnecting(self):
         """Stop attempt to connect."""
@@ -712,12 +761,12 @@ class Server(Connection):
         return self.repstr
 
     def startTLS(self, ctx, server=1):
-        holder = Connection.startTLS(self, ctx)
-        if server:
-            self.socket.set_accept_state()
-        else:
-            self.socket.set_connect_state()
-        return holder
+        if Connection.startTLS(self, ctx, server):
+            if server:
+                self.socket.set_accept_state()
+            else:
+                self.socket.set_connect_state()
+
 
     def getHost(self):
         """Returns an IPv4Address.

@@ -5,7 +5,7 @@
 Tests for twisted SSL support.
 """
 
-from twisted.trial import unittest, util as trial_util
+from twisted.trial import unittest
 from twisted.internet import protocol, reactor, interfaces, defer
 from twisted.protocols import basic
 from twisted.python import util
@@ -422,31 +422,11 @@ class TLSTestCase(unittest.TestCase):
 
 
 
-_bufferedSuppression = trial_util.suppress(
-    message="startTLS with unwritten buffered data currently doesn't work "
-            "right. See issue #686. Closing connection.",
-    category=RuntimeWarning)
-
-
-
 class SpammyTLSTestCase(TLSTestCase):
     """
     Test TLS features with bytes sitting in the out buffer.
     """
     fillBuffer = True
-
-    def test_TLS(self):
-        return TLSTestCase.test_TLS(self)
-
-    test_TLS.suppress = [_bufferedSuppression]
-    test_TLS.todo = "startTLS doesn't empty buffer before starting TLS. :("
-
-
-    def test_backwardsTLS(self):
-        return TLSTestCase.test_backwardsTLS(self)
-
-    test_backwardsTLS.suppress = [_bufferedSuppression]
-    test_backwardsTLS.todo = "startTLS doesn't empty buffer before starting TLS. :("
 
 
 
