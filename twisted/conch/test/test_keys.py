@@ -649,6 +649,26 @@ class KeyTestCase(unittest.TestCase):
                 keys.Key.fromString, badBlob)
 
 
+    def test_fromPrivateBlob(self):
+        """
+        Test that a private key is correctly generated from a private key blob.
+        """
+        rsaBlob = (common.NS('ssh-rsa') + common.MP(2) + common.MP(3) +
+                   common.MP(4) + common.MP(5) + common.MP(6) + common.MP(7))
+        rsaKey = keys.Key._fromString_PRIVATE_BLOB(rsaBlob)
+        dsaBlob = (common.NS('ssh-dss') + common.MP(2) + common.MP(3) +
+                   common.MP(4) + common.MP(5) + common.MP(6))
+        dsaKey = keys.Key._fromString_PRIVATE_BLOB(dsaBlob)
+        badBlob = common.NS('ssh-bad')
+        self.assertFalse(rsaKey.isPublic())
+        self.assertEqual(
+            rsaKey.data(), {'n':2L, 'e':3L, 'd':4L, 'u':5L, 'p':6L, 'q':7L})
+        self.assertFalse(dsaKey.isPublic())
+        self.assertEqual(dsaKey.data(), {'p':2L, 'q':3L, 'g':4L, 'y':5L, 'x':6L})
+        self.assertRaises(
+            keys.BadKeyError, keys.Key._fromString_PRIVATE_BLOB, badBlob)
+
+
     def test_blob(self):
         """
         Test that the Key object generates blobs correctly.
@@ -663,6 +683,26 @@ class KeyTestCase(unittest.TestCase):
 
         badKey = keys.Key(None)
         self.assertRaises(RuntimeError, badKey.blob)
+
+
+    def test_privateBlob(self):
+        """
+        L{Key.privateBlob} returns the SSH protocol-level format of the private
+        key and raises L{RuntimeError} if the underlying key object is invalid.
+        """
+        self.assertEquals(keys.Key(self.rsaObj).privateBlob(),
+                '\x00\x00\x00\x07ssh-rsa\x00\x00\x00\x01\x01'
+                '\x00\x00\x00\x01\x02\x00\x00\x00\x01\x03\x00'
+                '\x00\x00\x01\x04\x00\x00\x00\x01\x04\x00\x00'
+                '\x00\x01\x05')
+        self.assertEquals(keys.Key(self.dsaObj).privateBlob(),
+                '\x00\x00\x00\x07ssh-dss\x00\x00\x00\x01\x03'
+                '\x00\x00\x00\x01\x04\x00\x00\x00\x01\x02\x00'
+                '\x00\x00\x01\x01\x00\x00\x00\x01\x05')
+
+        badKey = keys.Key(None)
+        self.assertRaises(RuntimeError, badKey.privateBlob)
+
 
     def test_toOpenSSH(self):
         """
