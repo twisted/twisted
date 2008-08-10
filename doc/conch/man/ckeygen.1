@@ -11,7 +11,7 @@ ckeygen \- connect to SSH servers
 The \fB\--help\fR prints out a usage message to standard output.
 .TP
 \fB-b\fR, \fB--bits\fR <bits>
-Number of bits in the key to create.
+Number of bits in the key to create (default: 1024)
 .TP
 \fB-f\fR, \fB--filename\fR <file name>
 Filename of the key file.
@@ -38,7 +38,10 @@ Change passphrase of private key file.
 Be quiet.
 .TP
 \fB-y\fR, \fB--showpub\fR
-Show public key.
+Read private key file and print public key.
+.TP
+\fB--version\fR
+Display version number only.
 .SH DESCRIPTION
 Manipulate public/private keys in various ways.
 If no filename is given, a file name will be requested interactively.

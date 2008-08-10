@@ -26,6 +26,15 @@ Save the Stats object rather than the text output of the profiler.
 Run the application in the Python Debugger (implies nodaemon option).
 Sending a SIGUSR2 signal to the process will drop it into the debugger.
 .TP
+\fB\-e\fR, \fB\--encrypted\fR \fI<file>\fR
+The specified tap/aos/xml file is encrypted.
+.TP
+\fB--euid\fR
+Set only effective user-id rather than real user-id. This option has no  
+effect unless the server is running as root, in which case it means not  
+to shed all privileges after binding ports, retaining the option to regain 
+privileges in cases such as spawning processes. Use with caution. 
+.TP
 \fB\-o\fR, \fB\--no_save\fR
 Do not save shutdown state
 .TP
@@ -58,7 +67,8 @@ The (octal) file creation mask to apply. (default: 0077 for daemons, no
 change otherwise).
 .TP
 \fB\-r\fR, \fB\--reactor\fR \fI<reactor>\fR
-Choose which reactor to use.  See --help-reactors for a list.
+Choose which reactor to use.  See --help-reactors for a list of
+possibilties.
 .TP
 \fB--help-reactors\fR
 List the names of possibly available reactors.
@@ -86,6 +96,15 @@ Read config.tac from a plugin package, as with \fB\-y\fR.
 .TP
 \fB\--syslog\fR
 Log to syslog, not to file.
+.TP
+\fB\-u\fR, \fB\--uid\fR \fI<uid>\fR
+The uid to run as.
+.TP
+\fB\-g\fR, \fB\--gid\fR \fI<gid>\fR
+The gid to run as.
+.TP
+\fB\--version\fR
+Print version information and exit.
 .TP
 \fB\--prefix\fR \fI<prefix>\fR
 Use the specified prefix when logging to logfile. Default is "twisted".

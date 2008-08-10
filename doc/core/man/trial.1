@@ -17,7 +17,8 @@ invoke trial.
 .TP
 \fB-b\fR, \fB--debug\fR
 Run the tests in the Python debugger. Also does post-mortem
-debugging on exceptions.
+debugging on exceptions. Will load '.pdbrc' from current directory if
+it exists.
 .TP
 \fB-B\fR, \fB--debug-stacktraces\fR
 Report Deferred creation and callback stack traces
@@ -28,6 +29,10 @@ or higher.
 .TP
 \fB--disablegc\fR
 Disable the garbage collector.  I don't know why this is in trial.
+.TP
+\fB-x\fR, \fB--extra\fR
+Add an extra argument. (This is a hack necessary for interfacing with emacs's
+`gud'.)
 .TP
 \fB-e\fR, \fB--rterrors\fR
 Print tracebacks to standard output as soon as they occur
@@ -62,13 +67,13 @@ Don't automatically jump into debugger for post-mortem analysis of
 exceptions.  Only usable in conjunction with --debug.
 .TP
 \fB--profile\fR
-I don't know what this option does.
+Run tests under the Python profiler.
 .TP
 \fB\-r\fR, \fB\--reactor\fR \fI<reactor>\fR
 Choose which reactor to use.  See --help-reactors for a list.
 .TP
 \fB--recursionlimit\fR
-Set Python's recursion limit.  I don't know why this is in trial.
+Set Python's recursion limit. See sys.setrecursionlimit()
 .TP
 \fB--reporter\fR
 Select the reporter to use for Trial's output.  Use the --help-reporters
@@ -104,6 +109,9 @@ into warnings.
 \fB-u\fR, \fB--until-failure\fR
 Keep looping the tests until one of them raises an error or a failure.
 This is particularly useful for reproducing intermittent failures.
+.TP
+\fB--version\fR
+Prints the Twisted version number and exit.
 .TP
 \fB--without-module <modulenames>\fR
 Simulate the lack of the specified comma-separated list of modules. This makes

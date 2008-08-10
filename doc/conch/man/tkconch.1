@@ -9,11 +9,14 @@ tkconch \- connect to SSH servers graphically
 .PP
 The \fB\--help\fR prints out a usage message to standard output.
 .TP
-\fB-t\fR, \fB--user\fR <user>
-User name to use
+\fB-l\fR, \fB--user\fR <user>
+Log in using this user name.
+.TP
+\fB-e\fR, \fB--escape\fR <escape character>
+Set escape character; 'none' = disable (default: ~)
 .TP
 \fB-i\fR, \fB--identity\fR <identity>
-Add an identity file.
+Add an identity file for public key authentication (default: ~/.ssh/identity)
 .TP
 \fB-c\fR, \fB--cipher\fR <cipher>
 Cipher algorithm to use.
@@ -24,8 +27,11 @@ Specify MAC algorithms for protocol version 2.
 \fB-p\fR, \fB--port\fR <port>
 Port to connect to.
 .TP
-\fB-n\fR, \fB--null\fR
-Redirect input from /dev/null
+\fB-L\fR, \fB--localforward\fR <listen-port:host:port>
+Forward local port to remote address.
+.TP
+\fB-R\fR, \fB--remoteforward\fR <listen-port:host:port>
+Forward remote port to local address.
 .TP
 \fB-t\fR, \fB--tty\fR
 Allocate a tty even if command is given.
@@ -37,16 +43,19 @@ Do not allocate a tty.
 Display version number only.
 .TP
 \fB-C\fR, \fB--compress\fR
-nable compression.
+Enable compression.
+.TP
+\fB-a\fR, \fB--ansilog\fR
+Print the received data to stdout.
 .TP
 \fB-N\fR, \fB--noshell\fR
 Do not execute a shell or command.
 .TP
 \fB-s\fR, \fB--subsystem\fR
-Invoke command (mandatory) as SSH2 subsystem
+Invoke command (mandatory) as SSH2 subsystem.
 .TP
 \fB--log\fR
-Log to stderr
+Print the receieved data to stderr.
 .SH DESCRIPTION
 Open an SSH connection to specified server, and either run the command
 given there or open a remote interactive shell.
