@@ -271,6 +271,19 @@ class NotificationTests(unittest.TestCase):
         return d.addCallback(assertErrorCode)
 
 
+    def testNotificationMessage(self):
+        m = "NOT 570\r\n<NOTIFICATION ver=\"1\" siteid=\"111100200\" siteurl=\"http://calendar.msn.com\" id=\"1\">\r\n<TO pid=\"0x00060000:0x81ee5a43\" name=\"example@passport.com\" />\r\n<MSG pri=\"\" id=\"1\">\r\n<ACTION url=\"/calendar/isapi.dll?request=action&operation=modify&objectID=1&uicode1=modifyreminder&locale=2052\"/>\r\n<SUBSCR url=\"/calendar/isapi.dll?request=action&operation=modify&objectID=1&uicode1=modifyreminder&locale=2052\"/><CAT id=\"111100201\" />\r\n<BODY lang=\"2052\" icon=\"/En/img/calendar.png\">\r\n<TEXT>goto club 7. 2002 21:15 - 22:15 </TEXT>\r\n</BODY>\r\n</MSG>\r\n</NOTIFICATION>\r\n"
+        passed = False
+        error = ''
+        try:
+            map(self.client.lineReceived, m.split('\r\n')[:-1])
+            passed = True
+        except msn.MSNProtocolError, err:
+            passed = False
+            error = err
+        self.failUnless(passed, message='Failed to handle NOT message (MSN Alerts) - ' + error)
+
+
 class MessageHandlingTests(unittest.TestCase):
     """ testing various message handling methods from SwichboardClient """
 

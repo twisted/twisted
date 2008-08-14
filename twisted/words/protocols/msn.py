@@ -624,6 +624,7 @@ class MSNEventBase(LineReceiver):
                 if self.currentMessage.readPos == self.currentMessage.length:
                     self.rawDataReceived("") # :(
                 return
+            if self.currentMessage.userHandle == "NOTIFICATION": return
             try:
                 header, value = line.split(':')
             except ValueError:
@@ -667,7 +668,7 @@ class MSNEventBase(LineReceiver):
         elif diff == 0:
             self.currentMessage.message += data
         else:
-            self.currentMessage += data
+            self.currentMessage.message += data
             return
         del self.currentMessage.readPos
         m = self.currentMessage
@@ -1053,6 +1054,19 @@ class NotificationClient(MSNEventBase):
         self.gotSwitchboardInvitation(int(params[0]), host, port, params[3], params[4],
                                       unquote(params[5]))
 
+
+    def handle_NOT(self, params):
+        checkParamLen(len(params), 1, 'NOT')
+        try:
+            messageLen = int(params[0])
+        except ValueError:
+            raise MSNProtocolError("Invalid Parameter for NOT length argument")
+        self.currentMessage = MSNMessage(
+            length=messageLen,
+            userHandle="NOTIFICATION",
+            screenName="NOTIFICATION")
+
+
     def handle_OUT(self, params):
         checkParamLen(len(params), 1, 'OUT')
         if params[0] == "OTH":
@@ -1126,26 +1140,37 @@ class NotificationClient(MSNEventBase):
     def gotContactStatus(self, statusCode, userHandle, screenName):
         """
         Called after loggin in when the server sends status of online contacts.
-        By default we will update the status attribute of the contact stored
-        on the factory.
+        By default we will update the status attribute and screenName of the 
+        contact stored on the factory.
 
         @param statusCode: 3-letter status code
         @param userHandle: the contact's user handle (passport)
         @param screenName: the contact's screen name
         """
-        self.factory.contacts.getContact(userHandle).status = statusCode
+        msnContact = self.factory.contacts.getContact(userHandle)
+        if(not msnContact):
+            msnContact = MSNContact()
+            msnContact.addToList(FORWARD_LIST)
+            self.factory.contacts.addContact(msnContact)
+        msnContact.status = statusCode
+        msnContact.screenName = screenName
 
     def contactStatusChanged(self, statusCode, userHandle, screenName):
         """
         Called when we're notified that a contact's status has changed.
-        By default we will update the status attribute of the contact
-        stored on the factory.
+        By default we will update the status attribute and screenName 
+        of the contact stored on the factory.
 
         @param statusCode: 3-letter status code
         @param userHandle: the contact's user handle (passport)
         @param screenName: the contact's screen name
         """
-        self.factory.contacts.getContact(userHandle).status = statusCode
+        msnContact = self.factory.contacts.getContact(userHandle)
+        if(not msnContact):
+            msnContact = MSNContact()
+            self.factory.contacts.addContact(msnContact)
+        msnContact.status = statusCode
+        msnContact.screenName = screenName
 
     def contactOffline(self, userHandle):
         """
@@ -1155,7 +1180,9 @@ class NotificationClient(MSNEventBase):
 
         @param userHandle: the contact's user handle
         """
-        self.factory.contacts.getContact(userHandle).status = STATUS_OFFLINE
+        msnContact = self.factory.contacts.getContact(userHandle)
+        if(msnContact):
+            msnContact.status = STATUS_OFFLINE
 
     def gotPhoneNumber(self, listVersion, userHandle, phoneType, number):
         """
@@ -1709,7 +1736,6 @@ class SwitchboardClient(MSNEventBase):
 
     def connectionMade(self):
         MSNEventBase.connectionMade(self)
-        print 'sending initial stuff'
         self._sendInit()
 
     def connectionLost(self, reason):
