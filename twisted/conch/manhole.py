@@ -323,7 +323,13 @@ class ColoredManhole(Manhole):
             # We couldn't do it.  Strange.  Oh well, just add the character.
             self.terminal.write(ch)
         else:
-            # Success!  Clear the source on this line.
+            # Success!  Clear the source for this input.  The input might be
+            # wider than the terminal, so we might have to erase previous lines
+            # as well.
+            lines = (len(self.lineBuffer) + len(self.ps[self.pn])) / self.width
+            if lines:
+                self.terminal.eraseLine()
+                self.terminal.cursorUp(lines)
             self.terminal.eraseLine()
             self.terminal.cursorBackward(len(self.lineBuffer) + len(self.ps[self.pn]) - 1)
 

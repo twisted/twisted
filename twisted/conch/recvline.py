@@ -96,7 +96,8 @@ class LocalTerminalBufferMixin(object):
         return str(self.terminalCopy)
 
 class RecvLine(insults.TerminalProtocol):
-    """L{TerminalProtocol} which adds line editing features.
+    """
+    L{TerminalProtocol} which adds line editing features.
 
     Clients will be prompted for lines of input with all the usual
     features: character echoing, left and right arrow support for
@@ -108,6 +109,14 @@ class RecvLine(insults.TerminalProtocol):
     cleared and the line to be passed to the lineReceived() method
     which, by default, does nothing.  Subclasses are responsible for
     redrawing the input prompt (this will probably change).
+
+    @type width: C{int}
+    @ivar width: The number of columns in the terminal to which this instance
+        is connected.
+
+    @ivar height: C{int}
+    @ivar height: The number of rows in the terminal to which this instance is
+        connected.
     """
     width = 80
     height = 24

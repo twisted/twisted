@@ -328,8 +328,53 @@ class ManholeLoopbackMixin:
              ">>> c = reactor.callLater(0.1, d.callback, 'Hi!')",
              "Deferred #0 called back: 'Hi!'",
              ">>> "])
-
     testDeferred = defer.deferredGenerator(testDeferred)
+
+
+    def test_wrap(self):
+        """
+        When an input line exceeds the width of the terminal, the excess input
+        is rendered at the beginning of the next line.
+        """
+        # "za" will appear at the end of the input string
+        done = self.recvlineClient.expect("za")
+
+        self._testwrite("x" * 75 + "yza")
+
+        def cbInputted(ignored):
+            self._assertBuffer([">>> " + "x" * 75 + "y", "za"])
+
+        done.addCallback(cbInputted)
+        return done
+
+
+    def test_wrapTwice(self):
+        """
+        When an input line exceeds an integer multiple of width of the
+        terminal, the excess input is wrapped onto as many lines as necessary
+        to hold it all.
+        """
+        # "za" will appear at the end of the input string
+        done = self.recvlineClient.expect("bcd")
+
+        self._testwrite("x" * 75 + "y" + "a" * 80 + "bcd")
+
+        def cbInputted(ignored):
+            self._assertBuffer([">>> " + "x" * 75 + "y", "a" * 80, "bcd"])
+
+        done.addCallback(cbInputted)
+        return done
+
+
+    def test_insertWrapped(self):
+        """
+        If a keystroke is received while building up an input line which is
+        wider than the terminal and the cursor is positioned on the first row
+        of the display of that input,
+        """
+        1/0
+
+
 
 class ManholeLoopbackTelnet(_TelnetMixin, unittest.TestCase, ManholeLoopbackMixin):
     pass
