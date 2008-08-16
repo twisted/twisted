@@ -235,9 +235,18 @@ class RecvLine(insults.TerminalProtocol):
             self.terminal.cursorForward()
 
     def handle_HOME(self):
-        if self.lineBufferIndex:
-            self.terminal.cursorBackward(self.lineBufferIndex)
-            self.lineBufferIndex = 0
+        prompt = len(self.ps[self.pn])
+        offset = prompt + self.lineBufferIndex
+        rows = offset / self.width
+        cols = offset % self.width
+        if rows:
+            self.terminal.cursorUp(rows)
+        if cols < prompt:
+            self.terminal.cursorForward(prompt - cols)
+        elif cols > prompt:
+            self.terminal.cursorBackward(cols - prompt)
+        self.lineBufferIndex = 0
+
 
     def handle_END(self):
         offset = len(self.lineBuffer) - self.lineBufferIndex

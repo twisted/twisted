@@ -596,12 +596,28 @@ class RecvlineLoopbackMixin:
              "home line",
              ">>> done"])
 
+
     def testEnd(self):
         return self._trivialTest(
             "end " + left * 4 + end + "line\ndone",
             [">>> end line",
              "end line",
              ">>> done"])
+
+
+    def test_multilineHome(self):
+        """
+        The I{HOME} function key positions the cursor at the beginning of the
+        first line of a multiline input.
+        """
+        d = self.recvlineClient.expect("z")
+        self._testwrite('a' * 76 + 'xy' + home + 'z')
+        def cbWrote(ignored):
+            self._assertBuffer([">>> z" + "a" * 75, "axy"])
+        d.addCallback(cbWrote)
+        return d
+
+
 
 class RecvlineLoopbackTelnet(_TelnetMixin, unittest.TestCase, RecvlineLoopbackMixin):
     pass

@@ -366,15 +366,6 @@ class ManholeLoopbackMixin:
         return done
 
 
-    def test_insertWrapped(self):
-        """
-        If a keystroke is received while building up an input line which is
-        wider than the terminal and the cursor is positioned on the first row
-        of the display of that input,
-        """
-        1/0
-
-
 
 class ManholeLoopbackTelnet(_TelnetMixin, unittest.TestCase, ManholeLoopbackMixin):
     pass
