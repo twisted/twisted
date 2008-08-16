@@ -8,9 +8,9 @@ Support for creating a service which runs a web server.
 import os
 
 # Twisted Imports
-from twisted.web import server, static, twcgi, script, demo, distrib, trp
-from twisted.internet import interfaces
-from twisted.python import usage, reflect
+from twisted.web import server, static, twcgi, script, demo, distrib, trp, wsgi
+from twisted.internet import interfaces, reactor
+from twisted.python import usage, reflect, threadpool
 from twisted.spread import pb
 from twisted.application import internet, service, strports
 
@@ -61,10 +61,11 @@ twisted.web.demo in it."""
     opt_u = opt_user
 
     def opt_path(self, path):
-        """<path> is either a specific file or a directory to
-        be set as the root of the web server. Use this if you
-        have a directory full of HTML, cgi, php3, epy, or rpy files or
-        any other files that you want to be served up raw.
+        """
+        <path> is either a specific file or a directory to be set as the root
+        of the web server. Use this if you have a directory full of HTML, cgi,
+        php3, epy, or rpy files or any other files that you want to be served
+        up raw.
         """
 
         self['root'] = static.File(os.path.abspath(path))
@@ -104,6 +105,21 @@ twisted.web.demo in it."""
     def opt_resource_script(self, name):
         """An .rpy file to be used as the root resource of the webserver."""
         self['root'] = script.ResourceScriptWrapper(name)
+
+
+    def opt_wsgi(self, name):
+        """
+        The FQPN of a WSGI application object to serve as the root resource of
+        the webserver.
+        """
+        pool = threadpool.ThreadPool()
+        reactor.callWhenRunning(pool.start)
+        reactor.addSystemEventTrigger('after', 'shutdown', pool.stop)
+        try:
+            application = reflect.namedAny(name)
+        except (AttributeError, ValueError):
+            raise usage.UsageError("No such WSGI application: %r" % (name,))
+        self['root'] = wsgi.WSGIResource(reactor, pool, application)
 
 
     def opt_mime_type(self, defaultType):

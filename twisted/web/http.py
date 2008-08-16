@@ -650,7 +650,8 @@ class Request:
         This method is not intended for users.
 
         @type command: C{str}
-        @param command: The HTTP verb of this request.
+        @param command: The HTTP verb of this request.  This has the case
+            supplied by the client (eg, it maybe "get" rather than "GET").
 
         @type path: C{str}
         @param path: The URI of this request.
@@ -878,6 +879,8 @@ class Request:
     def setResponseCode(self, code, message=None):
         """Set the HTTP response code.
         """
+        if not isinstance(code, (int, long)):
+            raise TypeError("HTTP response code must be int or long")
         self.code = code
         if message:
             self.code_message = message
@@ -996,9 +999,13 @@ class Request:
         @returns: the requested hostname
         @rtype: C{str}
         """
-        return (self.getHeader('host') or
-                socket.gethostbyaddr(self.getHost()[1])[0]
-                ).split(':')[0]
+        # XXX This method probably has no unit tests.  I changed it a ton and
+        # nothing failed.
+        host = self.getHeader('host')
+        if host:
+            return host.split(':', 1)[0]
+        return self.getHost().host
+
 
     def getHost(self):
         """Get my originally requesting transport's host.

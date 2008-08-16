@@ -16,7 +16,7 @@ from twisted.internet import protocol
 from twisted.test.test_protocols import StringIOWithoutClosing
 
 from twisted.test.proto_helpers import StringTransport
-
+from twisted.web.test.test_web import DummyChannel
 
 class DateTimeTest(unittest.TestCase):
     """Test date parsing functions."""
@@ -43,13 +43,6 @@ class DummyHTTPHandler(http.Request):
         self.setHeader("Content-Length", len(request))
         self.write(request)
         self.finish()
-
-
-class DummyChannel(object):
-    """
-    A minimal {http.HTTPChannel} like object.
-    """
-    transport = None
 
 
 class LoopbackHTTPClient(http.HTTPClient):
@@ -762,6 +755,45 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         req = http.Request(DummyChannel(), None)
         req.requestHeaders.setRawHeaders("test", ["lemur", "panda"])
         self.assertEquals(req.getAllHeaders(), {"test": "panda"})
+
+
+    def test_setResponseCode(self):
+        """
+        L{http.Request.setResponseCode} takes a status code and causes it to be
+        used as the response status.
+        """
+        channel = DummyChannel()
+        req = http.Request(channel, None)
+        req.setResponseCode(201)
+        req.write('')
+        self.assertEqual(
+            channel.transport.written.getvalue().splitlines()[0],
+            '%s 201 Created' % (req.clientproto,))
+
+
+    def test_setResponseCodeAndMessage(self):
+        """
+        L{http.Request.setResponseCode} takes a status code and a message and
+        causes them to be used as the response status.
+        """
+        channel = DummyChannel()
+        req = http.Request(channel, None)
+        req.setResponseCode(202, "happily accepted")
+        req.write('')
+        self.assertEqual(
+            channel.transport.written.getvalue().splitlines()[0],
+            '%s 202 happily accepted' % (req.clientproto,))
+
+
+    def test_setResponseCodeAcceptsIntegers(self):
+        """
+        L{http.Request.setResponseCode} accepts C{int} or C{long} for the code
+        parameter and raises L{TypeError} if passed anything else.
+        """
+        req = http.Request(DummyChannel(), None)
+        req.setResponseCode(1)
+        req.setResponseCode(1L)
+        self.assertRaises(TypeError, req.setResponseCode, "1")
 
 
     def test_setHost(self):

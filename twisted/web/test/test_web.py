@@ -183,14 +183,35 @@ class SimpleResource(resource.Resource):
 class DummyChannel:
     class TCP:
         port = 80
+
+        def __init__(self):
+            self.written = StringIO()
+
         def getPeer(self):
-            return IPv4Address("TCP", 'client.example.com', 12344)
+            return IPv4Address("TCP", '192.168.1.1', 12344)
+
+        def write(self, bytes):
+            assert isinstance(bytes, str)
+            self.written.write(bytes)
+
+        def writeSequence(self, iovec):
+            map(self.write, iovec)
+
         def getHost(self):
-            return IPv4Address("TCP", 'example.com', self.port)
+            return IPv4Address("TCP", '10.0.0.1', self.port)
+
     class SSL(TCP):
         implements(interfaces.ISSLTransport)
-    transport = TCP()
+
     site = server.Site(resource.Resource())
+
+    def __init__(self):
+        self.transport = self.TCP()
+
+
+    def requestDone(self, request):
+        pass
+
 
 
 
@@ -457,7 +478,6 @@ class TestRequest(unittest.TestCase):
 
     def testPrePathURLNonDefault(self):
         d = DummyChannel()
-        d.transport = DummyChannel.TCP()
         d.transport.port = 81
         request = server.Request(d, 1)
         request.setHost('example.com', 81)
@@ -467,7 +487,6 @@ class TestRequest(unittest.TestCase):
 
     def testPrePathURLSSLPort(self):
         d = DummyChannel()
-        d.transport = DummyChannel.TCP()
         d.transport.port = 443
         request = server.Request(d, 1)
         request.setHost('example.com', 443)
@@ -507,7 +526,6 @@ class TestRequest(unittest.TestCase):
 
     def testPrePathURLSetSSLHost(self):
         d = DummyChannel()
-        d.transport = DummyChannel.TCP()
         d.transport.port = 81
         request = server.Request(d, 1)
         request.setHost('foo.com', 81, 1)
@@ -531,7 +549,6 @@ class TestRequest(unittest.TestCase):
 
     def testNotifyFinishConnectionLost(self):
         d = DummyChannel()
-        d.transport = DummyChannel.TCP()
         request = server.Request(d, 1)
         finished = request.notifyFinish()
         request.connectionLost(error.ConnectionDone("Connection done"))
@@ -549,7 +566,6 @@ class RootResource(resource.Resource):
 class RememberURLTest(unittest.TestCase):
     def createServer(self, r):
         chan = DummyChannel()
-        chan.transport = DummyChannel.TCP()
         chan.site = server.Site(r)
         return chan
 
@@ -593,7 +609,6 @@ class NewRenderTestCase(unittest.TestCase):
     def _getReq(self):
         d = DummyChannel()
         d.site.resource.putChild('newrender', NewRenderResource())
-        d.transport = DummyChannel.TCP()
         d.transport.port = 81
         request = server.Request(d, 1)
         request.setHost('example.com', 81)
