@@ -58,14 +58,15 @@ class Mock(object):
         return attrValue
 
 class MockMixin:
-    def assertCall(self, occurrence, methodName, args=(), kw={}):
+    def assertCall(self, occurrence, methodName, expectedPositionalArgs=(),
+                   expectedKeywordArgs={}):
         attr, mock = occurrence
         self.assertEquals(attr, methodName)
         self.assertEquals(len(occurrences(mock)), 1)
         [(call, result, args, kw)] = occurrences(mock)
         self.assertEquals(call, "__call__")
-        self.assertEquals(args, args)
-        self.assertEquals(kw, kw)
+        self.assertEquals(args, expectedPositionalArgs)
+        self.assertEquals(kw, expectedKeywordArgs)
         return result
 
 
@@ -360,6 +361,83 @@ class ClientControlSequences(unittest.TestCase, MockMixin):
         # This isn't really an interesting assert, since it only tests that
         # our mock setup is working right, but I'll include it anyway.
         self.assertEquals(result, (6, 7))
+
+
+    def test_applicationDataBytes(self):
+        """
+        Contiguous non-control bytes are passed to a single call to the
+        C{write} method of the terminal to which the L{ClientProtocol} is
+        connected.
+        """
+        occs = occurrences(self.proto)
+        self.parser.dataReceived('a')
+        self.assertCall(occs.pop(0), "write", ("a",))
+        self.parser.dataReceived('bc')
+        self.assertCall(occs.pop(0), "write", ("bc",))
+
+
+    def _applicationDataTest(self, data, calls):
+        occs = occurrences(self.proto)
+        self.parser.dataReceived(data)
+        while calls:
+            self.assertCall(occs.pop(0), *calls.pop(0))
+        self.assertFalse(occs, "No other calls should happen: %r" % (occs,))
+
+
+    def test_shiftInAfterApplicationData(self):
+        """
+        Application data bytes followed by a shift-in command are passed to a
+        call to C{write} before the terminal's C{shiftIn} method is called.
+        """
+        self._applicationDataTest(
+            'ab\x15', [
+                ("write", ("ab",)),
+                ("shiftIn",)])
+
+
+    def test_shiftOutAfterApplicationData(self):
+        """
+        Application data bytes followed by a shift-out command are passed to a
+        call to C{write} before the terminal's C{shiftOut} method is called.
+        """
+        self._applicationDataTest(
+            'ab\x14', [
+                ("write", ("ab",)),
+                ("shiftOut",)])
+
+
+    def test_cursorBackwardAfterApplicationData(self):
+        """
+        Application data bytes followed by a cursor-backward command are passed
+        to a call to C{write} before the terminal's C{cursorBackward} method is
+        called.
+        """
+        self._applicationDataTest(
+            'ab\x08', [
+                ("write", ("ab",)),
+                ("cursorBackward",)])
+
+
+    def test_escapeAfterApplicationData(self):
+        """
+        Application data bytes followed by an escape character are passed to a
+        call to C{write} before the terminal's handler method for the escape is
+        called.
+        """
+        # Test a short escape
+        self._applicationDataTest(
+            'ab\x1bD', [
+                ("write", ("ab",)),
+                ("index",)])
+
+        # And a long escape
+        self._applicationDataTest(
+            'ab\x1b[4h', [
+                ("write", ("ab",)),
+                ("setModes", ([4],))])
+
+        # There's some other cases too, but they're all handled by the same
+        # codepaths as above.
 
 
 

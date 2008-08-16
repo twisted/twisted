@@ -848,18 +848,35 @@ class ClientProtocol(protocol.Protocol):
                 del self.terminal
 
     def dataReceived(self, bytes):
+        """
+        Parse the given data from a terminal server, dispatching to event
+        handlers defined by C{self.terminal}.
+        """
+        toWrite = []
         for b in bytes:
             if self.state == 'data':
                 if b == '\x1b':
+                    if toWrite:
+                        self.terminal.write(''.join(toWrite))
+                        del toWrite[:]
                     self.state = 'escaped'
                 elif b == '\x14':
+                    if toWrite:
+                        self.terminal.write(''.join(toWrite))
+                        del toWrite[:]
                     self.terminal.shiftOut()
                 elif b == '\x15':
+                    if toWrite:
+                        self.terminal.write(''.join(toWrite))
+                        del toWrite[:]
                     self.terminal.shiftIn()
                 elif b == '\x08':
+                    if toWrite:
+                        self.terminal.write(''.join(toWrite))
+                        del toWrite[:]
                     self.terminal.cursorBackward()
                 else:
-                    self.terminal.write(b)
+                    toWrite.append(b)
             elif self.state == 'escaped':
                 fName = self._shorts.get(b)
                 if fName is not None:
@@ -892,6 +909,9 @@ class ClientProtocol(protocol.Protocol):
                 self.state = 'data'
             else:
                 raise ValueError("Illegal state")
+        if toWrite:
+            self.terminal.write(''.join(toWrite))
+
 
     def _handleControlSequence(self, buf, terminal):
         f = getattr(self.controlSequenceParser, CST.get(terminal, terminal), None)
