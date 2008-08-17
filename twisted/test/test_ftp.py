@@ -63,6 +63,7 @@ class FTPServerTestCase(unittest.TestCase):
     @ivar clientFactory: class used as ftp client.
     """
     clientFactory = ftp.FTPClientBasic
+    userAnonymous = "anonymous"
 
     def setUp(self):
         # Create a directory
@@ -73,7 +74,8 @@ class FTPServerTestCase(unittest.TestCase):
         p = portal.Portal(ftp.FTPRealm(self.directory))
         p.registerChecker(checkers.AllowAnonymousAccess(),
                           credentials.IAnonymous)
-        self.factory = ftp.FTPFactory(portal=p)
+        self.factory = ftp.FTPFactory(portal=p,
+                                      userAnonymous=self.userAnonymous)
         port = reactor.listenTCP(0, self.factory, interface="127.0.0.1")
         self.addCleanup(port.stopListening)
 
@@ -139,6 +141,31 @@ class FTPServerTestCase(unittest.TestCase):
             'PASS test@twistedmatrix.com',
             ['230 Anonymous login ok, access restrictions apply.'],
             chainDeferred=d)
+
+
+
+class FTPAnonymousTestCase(FTPServerTestCase):
+    """
+    Simple tests for an FTP server with different anonymous username.
+    The new anonymous username used in this test case is "guest"
+    """
+    userAnonymous = "guest"
+
+    def test_anonymousLogin(self):
+        """
+        Tests whether the changing of the anonymous username is working or not.
+        The FTP server should not comply about the need of password for the
+        username 'guest', letting it login as anonymous asking just an email
+        address as password.
+        """
+        d = self.assertCommandResponse(
+            'USER guest',
+            ['331 Guest login ok, type your email address as password.'])
+        return self.assertCommandResponse(
+            'PASS test@twistedmatrix.com',
+            ['230 Anonymous login ok, access restrictions apply.'],
+            chainDeferred=d)
+
 
 
 class BasicFTPServerTestCase(FTPServerTestCase):

@@ -1246,7 +1246,7 @@ class FTPFactory(policies.LimitTotalConnectionsFactory):
 
     def __init__(self, portal=None, userAnonymous='anonymous'):
         self.portal = portal
-        self.userAnonymous = 'anonymous'
+        self.userAnonymous = userAnonymous
         self.instances = []
 
     def buildProtocol(self, addr):
