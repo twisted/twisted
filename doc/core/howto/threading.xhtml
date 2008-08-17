@@ -28,6 +28,7 @@ def threadSafeScheduler():
     """Run in thread-safe manner."""
     reactor.callFromThread(notThreadSafe, 3) # will run 'notThreadSafe(3)'
                                              # in the event loop
+reactor.run()
 </pre>
 
     <h2>Running code in threads</h2>
@@ -52,6 +53,7 @@ def aSillyBlockingMethod(x):
 
 # run method in thread
 reactor.callInThread(aSillyBlockingMethod, "2 seconds have passed")
+reactor.run()
 </pre>
 
     <h2>Utility Methods</h2>
@@ -64,7 +66,7 @@ reactor.callInThread(aSillyBlockingMethod, "2 seconds have passed")
     we can do:</p>
 
 <pre class="python">
-from twisted.internet import threads
+from twisted.internet import reactor, threads
 
 def aSillyBlockingMethodOne(x):
     import time
@@ -78,12 +80,13 @@ def aSillyBlockingMethodTwo(x):
 commands = [(aSillyBlockingMethodOne, ["Calling First"], {})]
 commands.append((aSillyBlockingMethodTwo, ["And the second"], {}))
 threads.callMultipleInThread(commands)
+reactor.run()
 </pre>
 
     <p>For functions whose results we wish to get, we can have the
     result returned as a Deferred:</p>
 <pre class="python">
-from twisted.internet import threads
+from twisted.internet import reactor, threads
 
 def doLongCalculation():
     # .... do long calculation here ...
@@ -95,6 +98,7 @@ def printResult(x):
 # run method in thread and get result as defer.Deferred
 d = threads.deferToThread(doLongCalculation)
 d.addCallback(printResult)
+reactor.run()
 </pre>
 
     <p>If you wish to call a method in the reactor thread and get its
