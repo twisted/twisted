@@ -993,6 +993,15 @@ class IRCClient(basic.LineReceiver):
         self.sendLine("AWAY :%s" % message)
 
 
+
+    def back(self):
+        """
+        Clear the away status.
+        """
+        # An empty away marks us as back
+        self.away()
+
+
     def register(self, nickname, hostname='foo', servername='bar'):
         """
         Login to the server.

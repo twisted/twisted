@@ -1,6 +1,10 @@
 # Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+Tests for L{twisted.words.protocols.irc}.
+"""
+
 from StringIO import StringIO
 import time
 
@@ -566,10 +570,35 @@ class ClientTests(TestCase):
         self.failIf(self.transport.getvalue())
 
 
+    def test_away(self):
+        """
+        L{IRCCLient.away} sends an AWAY command with the specified message.
+        """
+        message = "Sorry, I'm not here."
+        self.protocol.away(message)
+        expected = [
+            'AWAY :%s' % (message,),
+            '',
+        ]
+        self.assertEqual(self.transport.getvalue().split('\r\n'), expected)
+
+
+    def test_back(self):
+        """
+        L{IRCClient.back} sends an AWAY command with an empty message.
+        """
+        self.protocol.back()
+        expected = [
+            'AWAY :',
+            '',
+        ]
+        self.assertEqual(self.transport.getvalue().split('\r\n'), expected)
+
+
     def test_register(self):
         """
-        Verify that the L{IRCClient.register} method sends a a USER command
-        with the correct arguments.
+        L{IRCClient.register} sends NICK and USER commands with the
+        username, name, hostname, server name, and real name specified.
         """
         username = 'testuser'
         hostname = 'testhost'
@@ -587,8 +616,9 @@ class ClientTests(TestCase):
 
     def test_registerWithPassword(self):
         """
-        Verify that if the C{password} attribute of L{IRCClient} is not
-        C{None}, the C{register} method also authenticates using it.
+        If the C{password} attribute of L{IRCClient} is not C{None}, the
+        C{register} method also sends a PASS command with it as the
+        argument.
         """
         username = 'testuser'
         hostname = 'testhost'
