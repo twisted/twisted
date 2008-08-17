@@ -1,3 +1,5 @@
+# You can run this .tac file directly with:
+#    twistd -ny inmem.tac
 
 import vfsapp
 

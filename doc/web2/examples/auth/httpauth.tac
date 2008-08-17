@@ -1,3 +1,6 @@
+# You can run this .tac file directly with:
+#    twistd -ny httpauth.tac
+
 from twisted.web2 import channel, resource, http, responsecode, server
 from twisted.web2.auth.interfaces import IAuthenticatedRequest, IHTTPUser
 

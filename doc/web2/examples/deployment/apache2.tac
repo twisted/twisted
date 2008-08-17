@@ -1,3 +1,6 @@
+# You can run this .tac file directly with:
+#    twistd -ny apache2.tac
+
 from twisted.web2 import server, channel, static, vhost
 
 # For example, serve the /tmp directory

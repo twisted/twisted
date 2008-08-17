@@ -1,6 +1,9 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+# You can run this .tac file directly with:
+#    twistd -ny demo_recvline.tac
+
 """Demonstrates line-at-a-time handling with basic line-editing support.
 
 This is a variation on the echo server.  It sets up two listening

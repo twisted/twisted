@@ -1,3 +1,6 @@
+# You can run this .tac file directly with:
+#    twistd -ny scgi.tac
+
 from twisted.web2 import server, channel, static
 
 # For example, serve the /tmp directory

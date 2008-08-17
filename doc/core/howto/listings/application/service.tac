@@ -1,3 +1,6 @@
+# You can run this .tac file directly with:
+#    twistd -ny service.tac
+
 """
 This is an example .tac file which starts a webserver on port 8080 and
 serves files from the current working directory.

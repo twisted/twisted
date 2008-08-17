@@ -1,6 +1,9 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+# You can run this .tac file directly with:
+#    twistd -ny demo_draw.tac
+
 """A trivial drawing application.
 
 Clients are allowed to connect and spew various characters out over

@@ -1,3 +1,5 @@
+# You can run this .tac file directly with:
+#    twistd -ny osfs.tac
 
 import vfsapp
 

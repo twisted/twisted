@@ -1,6 +1,9 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+# You can run this .tac file directly with:
+#    twistd -ny demo_scroll.tac
+
 """Simple echo-ish server that uses the scroll-region.
 
 This demo sets up two listening ports: one on 6022 which accepts ssh

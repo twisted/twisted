@@ -1,3 +1,5 @@
+# You can run this .tac file directly with:
+#    twistd -ny welsh.tac
 
 from twisted.application import service, internet
 from twisted.conch.ssh import factory, keys, common

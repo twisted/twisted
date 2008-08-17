@@ -1,6 +1,9 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+# You can run this .tac file directly with:
+#    twistd -ny demo.tac
+
 """Nearly pointless demonstration of the manhole interactive interpreter.
 
 This does about the same thing as demo_manhole, but uses the tap

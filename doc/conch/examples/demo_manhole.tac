@@ -1,6 +1,9 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+# You can run this .tac file directly with:
+#    twistd -ny demo_manhole.tac
+
 """An interactive Python interpreter with syntax coloring.
 
 Nothing interesting is actually defined here.  Two listening ports are

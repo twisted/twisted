@@ -1,3 +1,6 @@
+# You can run this .tac file directly with:
+#    twistd -ny apache1_twohosts.tac
+
 from twisted.web2 import server, channel, resource, static, vhost
 
 # For example, server the /tmp/foo directory

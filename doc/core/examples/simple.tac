@@ -1,3 +1,6 @@
+# You can run this .tac file directly with:
+#    twistd -ny simple.tac
+
 from twisted.application import service, internet
 from twisted.protocols import wire
 from twisted.internet import protocol

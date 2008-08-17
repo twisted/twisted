@@ -1,3 +1,9 @@
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+# You can run this .tac file directly with:
+#    twistd -ny window.tac
+
 from __future__ import division
 
 import string, random
