@@ -98,6 +98,25 @@ environment as a security precaution). The default is to give an empty
 that implements <code base="twisted.internet.interfaces" class="API">
 IProcessTransport</code>.</p>
 
+<p>Calling <code base="twisted.internet" class="API">reactor.spawnProcess()</code>
+before <code base="twisted.internet" class="API">reactor.run()</code> can lead to
+a race condition where exit isn't noticed (and a warning emitted). The use of
+<code base="twisted.internet" class="API">reactor.callWhenRunning()</code>
+prevents this issue as demonstrated in the example below:</p>
+
+<pre class="python">
+from twisted.internet.utils import getProcessOutput
+from twisted.internet import reactor
+def getOutput():
+    d = getProcessOutput('/bin/echo', ['foo'])
+    def cbOutput(output):
+        print output
+        reactor.stop()
+    d.addCallback(cbOutput)
+reactor.callWhenRunning(getOutput)
+reactor.run()
+</pre>
+
   <h2>Writing a ProcessProtocol</h2>
 
 <p>The ProcessProtocol you pass to spawnProcess is your interaction with the
