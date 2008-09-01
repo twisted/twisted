@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_log -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -148,6 +148,22 @@ def _clearIgnores():
 def err(_stuff=None, _why=None, **kw):
     """
     Write a failure to the log.
+
+    The C{_stuff} and C{_why} parameters use an underscore prefix to lessen
+    the chance of colliding with a keyword argument the application wishes
+    to pass.  It is intended that they be supplied with arguments passed
+    positionally, not by keyword.
+
+    @param _stuff: The failure to log.  If C{_stuff} is C{None} a new
+        L{Failure} will be created from the current exception state.  If
+        C{_stuff} is an C{Exception} instance it will be wrapped in a
+        L{Failure}.
+    @type _stuff: C{NoneType}, C{Exception}, or L{Failure}.
+
+    @param _why: The source of this failure.  This will be logged along with
+        C{_stuff} and should describe the context in which the failure
+        occurred.
+    @type _why: C{str}
     """
     if _stuff is None:
         _stuff = failure.Failure()
