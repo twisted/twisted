@@ -119,7 +119,8 @@ class _Code(object):
 
 
 class Failure:
-    """A basic abstraction for an error that has occurred.
+    """
+    A basic abstraction for an error that has occurred.
 
     This is necessary because Python's built-in error mechanisms are
     inconvenient for asynchronous communication.
@@ -137,18 +138,24 @@ class Failure:
     _yieldOpcode = chr(opcode.opmap["YIELD_VALUE"])
 
     def __init__(self, exc_value=None, exc_type=None, exc_tb=None):
-        """Initialize me with an explanation of the error.
+        """
+        Initialize me with an explanation of the error.
 
-        By default, this will use the current X{exception}
+        By default, this will use the current C{exception}
         (L{sys.exc_info}()).  However, if you want to specify a
         particular kind of failure, you can pass an exception as an
         argument.
 
-        If no C{exc_value} is passed, then an "original" Failure will
+        If no C{exc_value} is passed, then an "original" C{Failure} will
         be searched for. If the current exception handler that this
-        Failure is being constructed in is handling an exception
-        raised by L{raiseException}, then this Failure will act like
-        the original Failure.
+        C{Failure} is being constructed in is handling an exception
+        raised by L{raiseException}, then this C{Failure} will act like
+        the original C{Failure}.
+
+        For C{exc_tb} only L{traceback} instances or C{None} are allowed.
+        If C{None} is supplied for C{exc_value}, the value of C{exc_tb} is
+        ignored, otherwise if C{exc_tb} is C{None}, it will be found from
+        execution context (ie, L{sys.exc_info}).
         """
         global count
         count = count + 1
