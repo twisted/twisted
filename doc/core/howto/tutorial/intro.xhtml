@@ -10,7 +10,7 @@
 
 <h2>Introduction</h2>
 
-<p> This is the first part of the Twisted tutorial <a
+<p>This is the first part of the Twisted tutorial <a
 href="index.xhtml">Twisted from Scratch, or The Evolution of Finger</a>.</p>
 
 <p>By the end of this section of the tutorial, our finger server will answer
@@ -29,12 +29,11 @@ will grow.
 <h3>The Reactor</h3>
 
 <p>
-You don't call Twisted, Twisted calls you. The <code class="API" base="twisted.internet">reactor</code> is Twisted's
-main event loop. There is exactly one reactor in any running Twisted
+You don't call Twisted, Twisted calls you. The <code class="API" base="twisted.internet">reactor</code>
+is Twisted's main event loop, similar to the main loop in other toolkits available
+in Python (Qt, wx, and Gtk). There is exactly one reactor in any running Twisted
 application. Once started it loops over and over again, responding to network
-events, and making scheduled calls to code.
-</p>
-
+events, and making scheduled calls to code.</p>
 
 <h2>Do Nothing</h2>
 
@@ -45,6 +44,10 @@ eventually, we want to run on port 79, the standard port for finger servers.
 We define a protocol which does not respond to any events. Thus, connections to
 1079 will be accepted, but the input ignored.</p>
 
+<p>A new Protocol instance is created for every connection and defines what you
+want to do in response to events. A Factory produces new Protocol instances,
+and is the proper place for data that you want to make available to the protocol
+instances, since they are garbage collected when the connection is closed.</p>
 
 <h2>Drop Connections</h2>
 
@@ -66,8 +69,7 @@ send() of the username result in an error.</p>
 <p>Here we make <code>FingerProtocol</code> inherit from <code class="API"
 base="twisted.protocols.basic">LineReceiver</code>, so that we get data-based
 events on a line-by-line basis. We respond to the event of receiving the line
-with shutting down the connection.
-</p>
+with shutting down the connection.</p>
 
 <p>Congratulations, this is the first standard-compliant version of the code.
 However, usually people actually expect some data about users to be
