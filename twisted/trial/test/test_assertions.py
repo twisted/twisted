@@ -565,7 +565,9 @@ class TestAssertions(unittest.TestCase):
         """
         A = type('A', (object,), {})
         a = A()
-        self.assertRaises(self.failureException, self.assertNotIsInstance, a, A)
+        error = self.assertRaises(self.failureException,
+                                  self.assertNotIsInstance, a, A)
+        self.assertEquals(str(error), "%r is an instance of %s" % (a, A))
 
     def test_assertNotIsInstanceErrorMultipleClasses(self):
         """

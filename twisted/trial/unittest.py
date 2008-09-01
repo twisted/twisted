@@ -427,7 +427,7 @@ class _Assertions(pyunit.TestCase, object):
         @type classOrTuple: class, type, or tuple.
         """
         if isinstance(instance, classOrTuple):
-            self.fail("%r is not an instance of %s" % (instance, classOrTuple))
+            self.fail("%r is an instance of %s" % (instance, classOrTuple))
     assertNotIsInstance = failIfIsInstance
 
 
