@@ -711,6 +711,8 @@ class MSNEventBase(LineReceiver):
         """
         log.msg('Error %s' % (errorCodes[errorCode]))
 
+
+
 class DispatchClient(MSNEventBase):
     """
     This class provides support for clients connecting to the dispatch server
@@ -728,10 +730,6 @@ class DispatchClient(MSNEventBase):
     ### protocol command handlers ( there is no need to override these )
 
     def handle_VER(self, params):
-        versions = params[1:]
-        if versions is None or ' '.join(versions) != MSN_PROTOCOL_VERSION:
-            self.transport.loseConnection()
-            raise MSNProtocolError, "Invalid version response"
         id = self._nextTransactionID()
         self.sendLine("CVR %s %s %s" % (id, MSN_CVR_STR, self.userHandle))
 
@@ -813,11 +811,8 @@ class NotificationClient(MSNEventBase):
     ### protocol command handlers - no need to override these
 
     def handle_VER(self, params):
-        versions = params[1:]
-        if versions is None or ' '.join(versions) != MSN_PROTOCOL_VERSION:
-            self.transport.loseConnection()
-            raise MSNProtocolError, "Invalid version response"
-        self.sendLine("CVR %s %s %s" % (self._nextTransactionID(), MSN_CVR_STR, self.factory.userHandle))
+        id = self._nextTransactionID()
+        self.sendLine("CVR %s %s %s" % (id, MSN_CVR_STR, self.factory.userHandle))
 
     def handle_CVR(self, params):
         self.sendLine("USR %s TWN I %s" % (self._nextTransactionID(), self.factory.userHandle))

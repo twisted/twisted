@@ -155,6 +155,54 @@ if msn is not None:
                screenName == 'Screen Name':
                 self.state = 'SBINVITED'
 
+
+
+class DispatchTests(unittest.TestCase):
+    """
+    Tests for L{DispatchClient}.
+    """
+    def _versionTest(self, serverVersionResponse):
+        """
+        Test L{DispatchClient} version negotiation.
+        """
+        client = msn.DispatchClient()
+        client.userHandle = "foo"
+
+        transport = StringIOWithoutClosing()
+        client.makeConnection(transport)
+        self.assertEqual(
+            transport.getvalue(), "VER 1 MSNP8 CVR0\r\n")
+        transport.seek(0)
+        transport.truncate()
+
+        client.dataReceived(serverVersionResponse)
+        self.assertEqual(
+            transport.getvalue(),
+            "CVR 2 0x0409 win 4.10 i386 MSNMSGR 5.0.0544 MSMSGS foo\r\n")
+
+
+    def test_version(self):
+        """
+        L{DispatchClient.connectionMade} greets the server with a I{VER}
+        (version) message and then L{NotificationClient.dataReceived}
+        handles the server's I{VER} response by sending a I{CVR} (client
+        version) message.
+        """
+        self._versionTest("VER 1 MSNP8 CVR0\r\n")
+
+
+    def test_versionWithoutCVR0(self):
+        """
+        If the server responds to a I{VER} command without including the
+        I{CVR0} protocol, L{DispatchClient} behaves in the same way as if
+        that protocol were included.
+
+        Starting in August 2008, CVR0 disappeared from the I{VER} response.
+        """
+        self._versionTest("VER 1 MSNP8\r\n")
+
+
+
 class NotificationTests(unittest.TestCase):
     """ testing the various events in NotificationClient """
 
@@ -165,6 +213,47 @@ class NotificationTests(unittest.TestCase):
 
     def tearDown(self):
         self.client = None
+
+
+    def _versionTest(self, serverVersionResponse):
+        """
+        Test L{NotificationClient} version negotiation.
+        """
+        self.client.factory.userHandle = "foo"
+
+        transport = StringIOWithoutClosing()
+        self.client.makeConnection(transport)
+        self.assertEqual(
+            transport.getvalue(), "VER 1 MSNP8 CVR0\r\n")
+        transport.seek(0)
+        transport.truncate()
+
+        self.client.dataReceived(serverVersionResponse)
+        self.assertEqual(
+            transport.getvalue(),
+            "CVR 2 0x0409 win 4.10 i386 MSNMSGR 5.0.0544 MSMSGS foo\r\n")
+
+
+    def test_version(self):
+        """
+        L{NotificationClient.connectionMade} greets the server with a I{VER}
+        (version) message and then L{NotificationClient.dataReceived}
+        handles the server's I{VER} response by sending a I{CVR} (client
+        version) message.
+        """
+        self._versionTest("VER 1 MSNP8 CVR0\r\n")
+
+
+    def test_versionWithoutCVR0(self):
+        """
+        If the server responds to a I{VER} command without including the
+        I{CVR0} protocol, L{NotificationClient} behaves in the same way as
+        if that protocol were included.
+
+        Starting in August 2008, CVR0 disappeared from the I{VER} response.
+        """
+        self._versionTest("VER 1 MSNP8\r\n")
+
 
     def testLogin(self):
         self.client.lineReceived('USR 1 OK foo@bar.com Test%20Screen%20Name 1 0')
