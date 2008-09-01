@@ -526,7 +526,7 @@ class PythonPath:
     I represent the very top of the Python object-space, the module list in
     sys.path and the modules list in sys.modules.
 
-    @ivar sysPath: a sequence of strings like sys.path.  This attribute is
+    @ivar _sysPath: a sequence of strings like sys.path.  This attribute is
     read-only.
 
     @ivar moduleDict: a dictionary mapping string module names to module
@@ -592,34 +592,16 @@ class PythonPath:
         self.moduleDict = moduleDict
         self.sysPathHooks = sysPathHooks
         self.importerCache = importerCache
-        self._moduleLoader = moduleLoader
+        self.moduleLoader = moduleLoader
 
 
     def _getSysPath(self):
         """
-        Retrieve the current value of sys.path.
+        Retrieve the current value of the module search path list.
         """
         return self._sysPathFactory()
 
     sysPath = property(_getSysPath)
-
-    def moduleLoader(self, modname):
-        """
-        Replicate python2.4+ sys.modules preservation behavior.
-
-        @param modname: a str module name.
-
-        @return: an imported module.
-
-        @raise: any type of exception that may arise from importing.
-        """
-        freezeModules = self.moduleDict.copy()
-        try:
-            return self._moduleLoader(modname)
-        except:
-            self.moduleDict.clear()
-            self.moduleDict.update(freezeModules)
-            raise
 
     def _findEntryPathString(self, modobj):
         """

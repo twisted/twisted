@@ -1,7 +1,14 @@
+# Copyright (c) 2008 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Tests for loading tests by name.
+"""
 
 import md5
 import os
 import shutil
+import sys
 
 from twisted.python import util
 from twisted.trial.test import packages
@@ -381,8 +388,17 @@ class ZipLoadingTest(LoaderTest):
 
 
 class PackageOrderingTest(packages.SysPathManglingTest):
+    if sys.version_info < (2, 4):
+        skip = (
+            "Python 2.3 import semantics make this behavior incorrect on that "
+            "version of Python as well as difficult to test.  The second "
+            "import of a package which raised an exception the first time it "
+            "was imported will succeed on Python 2.3, whereas it will fail on "
+            "later versions of Python.  Trial does not account for this, so "
+            "this test fails with inconsistencies between the expected and "
+            "the received loader errors.")
+
     def setUp(self):
-        self.resultingTests = []
         self.loader = runner.TestLoader()
         self.topDir = self.mktemp()
         parent = os.path.join(self.topDir, "uberpackage")
@@ -446,15 +462,15 @@ class PackageOrderingTest(packages.SysPathManglingTest):
         # XXX: Work around strange, unexplained Zope crap.
         # jml, 2007-11-15.
         suite = unittest.decorate(suite, ITestCase)
-        self.resultingTests = list(unittest._iterateTests(suite))
+        resultingTests = list(unittest._iterateTests(suite))
         manifest = list(self._trialSortAlgorithm(sorter))
         for number, (manifestTest, actualTest) in enumerate(
-            zip(manifest, self.resultingTests)):
+            zip(manifest, resultingTests)):
             self.assertEqual(
                  manifestTest.name, actualTest.id(),
                  "#%d: %s != %s" %
                  (number, manifestTest.name, actualTest.id()))
-        self.assertEqual(len(manifest), len(self.resultingTests))
+        self.assertEqual(len(manifest), len(resultingTests))
 
 
     def test_sortPackagesDefaultOrder(self):
