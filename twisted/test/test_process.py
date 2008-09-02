@@ -1195,6 +1195,21 @@ class MockOS(object):
 
     @ivar waitChild: if set, subsequent calls to waitpid will return it.
     @type waitChild: C{None} or a tuple
+
+    @ivar euid: the uid returned by the fake C{os.geteuid}
+    @type euid: C{int}
+
+    @ivar egid: the gid returned by the fake C{os.getegid}
+    @type egid: C{int}
+
+    @ivar seteuidCalls: stored results of C{os.seteuid} calls.
+    @type seteuidCalls: C{list}
+
+    @ivar setegidCalls: stored results of C{os.setegid} calls.
+    @type setegidCalls: C{list}
+
+    @ivar path: the path returned by C{os.path.expanduser}.
+    @type path: C{str}
     """
     exited = False
     raiseExec = False
@@ -1203,6 +1218,9 @@ class MockOS(object):
     raiseWaitPid = None
     raiseFork = None
     waitChild = None
+    euid = 0
+    egid = 0
+    path = None
 
     def __init__(self):
         """
@@ -1216,6 +1234,8 @@ class MockOS(object):
         self.WNOHANG = os.WNOHANG
         self.WEXITSTATUS = os.WEXITSTATUS
         self.WIFEXITED = os.WIFEXITED
+        self.seteuidCalls = []
+        self.setegidCalls = []
 
 
     def open(self, dev, flags):
@@ -1345,25 +1365,11 @@ class MockOS(object):
         """
 
 
-    def getegid(self):
-        """
-        Override C{os.getegid}. Return a dumb number.
-        """
-        return 1234
-
-
     def getgid(self):
         """
         Override C{os.getgid}. Return a dumb number.
         """
         return 1235
-
-
-    def geteuid(self):
-        """
-        Override C{os.geteuid}. Return a dumb number.
-        """
-        return 1236
 
 
     def getuid(self):
@@ -1413,6 +1419,48 @@ class MockOS(object):
         Override C{pty.openpty}, returning fake file descriptors.
         """
         return -12, -13
+
+
+    def geteuid(self):
+        """
+        Mock C{os.geteuid}, returning C{self.euid} instead.
+        """
+        return self.euid
+
+
+    def getegid(self):
+        """
+        Mock C{os.getegid}, returning C{self.egid} instead.
+        """
+        return self.egid
+
+
+    def seteuid(self, egid):
+        """
+        Mock C{os.seteuid}, store result.
+        """
+        self.seteuidCalls.append(egid)
+
+
+    def setegid(self, egid):
+        """
+        Mock C{os.setegid}, store result.
+        """
+        self.setegidCalls.append(egid)
+
+
+    def expanduser(self, path):
+        """
+        Mock C{os.path.expanduser}.
+        """
+        return self.path
+
+
+    def getpwnam(self, user):
+        """
+        Mock C{pwd.getpwnam}.
+        """
+        return 0, 0, 1, 2
 
 
 
@@ -1470,6 +1518,8 @@ class MockProcessTestCase(unittest.TestCase):
         else:
             self.addCleanup(gc.disable)
         self.mockos = MockOS()
+        self.mockos.euid = 1236
+        self.mockos.egid = 1234
         self.patch(process, "os", self.mockos)
         self.patch(process, "fcntl", self.mockos)
         self.patch(process, "sys", self.mockos)

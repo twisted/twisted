@@ -1,43 +1,73 @@
-from twisted.conch.ssh import keys, factory, common
+# -*- test-case-name: twisted.conch.test.test_openssh_compat -*-
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Factory for reading openssh configuration files: public keys, private keys, and
+modile file.
+"""
+
+import os, errno
+
 from twisted.python import log
-import primes
-import os
+from twisted.python.util import runAsEffectiveUser
+
+from twisted.conch.ssh import keys, factory, common
+from twisted.conch.openssh_compat import primes
+
+
 
 class OpenSSHFactory(factory.SSHFactory):
     dataRoot = '/usr/local/etc'
     moduliRoot = '/usr/local/etc' # for openbsd which puts moduli in a different
                                   # directory from keys
+
+
     def getPublicKeys(self):
+        """
+        Return the server public keys.
+        """
         ks = {}
-        for file in os.listdir(self.dataRoot):
-            if file[:9] == 'ssh_host_' and file[-8:]=='_key.pub':
+        for filename in os.listdir(self.dataRoot):
+            if filename[:9] == 'ssh_host_' and filename[-8:]=='_key.pub':
                 try:
-                    k = keys.getPublicKeyString(self.dataRoot+'/'+file)
-                    t = common.getNS(k)[0]
+                    k = keys.Key.fromFile(
+                        os.path.join(self.dataRoot, filename))
+                    t = common.getNS(k.blob())[0]
                     ks[t] = k
                 except Exception, e:
-                    log.msg('bad public key file %s: %s' % (file,e))
+                    log.msg('bad public key file %s: %s' % (filename, e))
         return ks
+
+
     def getPrivateKeys(self):
-        ks = {}
-        euid,egid = os.geteuid(), os.getegid()
-        os.setegid(0) # gain priviledges
-        os.seteuid(0)
-        for file in os.listdir(self.dataRoot):
-            if file[:9] == 'ssh_host_' and file[-4:]=='_key':
+        """
+        Return the server private keys.
+        """
+        privateKeys = {}
+        for filename in os.listdir(self.dataRoot):
+            if filename[:9] == 'ssh_host_' and filename[-4:]=='_key':
+                fullPath = os.path.join(self.dataRoot, filename)
                 try:
-                    k = keys.getPrivateKeyObject(self.dataRoot+'/'+file)
-                    t = keys.objectType(k)
-                    ks[t] = k
+                    key = keys.Key.fromFile(fullPath)
+                except IOError, e:
+                    if e.errno == errno.EACCES:
+                        # Not allowed, let's switch to root
+                        key = runAsEffectiveUser(0, 0, keys.Key.fromFile, fullPath)
+                        keyType = keys.objectType(key.keyObject)
+                        privateKeys[keyType] = key
+                    else:
+                        raise
                 except Exception, e:
-                    log.msg('bad private key file %s: %s' % (file, e))
-        os.setegid(egid) # drop them just as quickily
-        os.seteuid(euid)
-        return ks
+                    log.msg('bad private key file %s: %s' % (filename, e))
+                else:
+                    keyType = keys.objectType(key.keyObject)
+                    privateKeys[keyType] = key
+        return privateKeys
+
 
     def getPrimes(self):
         try:
             return primes.parseModuliFile(self.moduliRoot+'/moduli')
         except IOError:
             return None
-

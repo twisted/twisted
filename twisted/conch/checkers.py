@@ -1,4 +1,12 @@
-import os, base64, binascii
+# -*- test-case-name: twisted.conch.test.test_checkers -*-
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Provide L{ICredentialsChecker} implementations to be used in Conch protocols.
+"""
+
+import os, base64, binascii, errno
 try:
     import pwd
 except ImportError:
@@ -17,14 +25,16 @@ try:
 except ImportError:
     pamauth = None
 
+from zope.interface import implements, providedBy
+
 from twisted.conch import error
 from twisted.conch.ssh import keys
 from twisted.cred.checkers import ICredentialsChecker
-from twisted.cred.credentials import IUsernamePassword, ISSHPrivateKey, IPluggableAuthenticationModules
+from twisted.cred.credentials import IUsernamePassword, ISSHPrivateKey
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.internet import defer
 from twisted.python import failure, reflect, log
-from zope import interface
+from twisted.python.util import runAsEffectiveUser
 
 def verifyCryptedPassword(crypted, pw):
     if crypted[0] == '$': # md5_crypt encrypted
@@ -35,7 +45,7 @@ def verifyCryptedPassword(crypted, pw):
 
 class UNIXPasswordDatabase:
     credentialInterfaces = IUsernamePassword,
-    interface.implements(ICredentialsChecker)
+    implements(ICredentialsChecker)
 
     def requestAvatarId(self, credentials):
         if pwd:
@@ -63,13 +73,13 @@ class UNIXPasswordDatabase:
             if verifyCryptedPassword(shadowPass, credentials.password):
                 return defer.succeed(credentials.username)
             return defer.fail(UnauthorizedLogin())
-        
+
         return defer.fail(UnauthorizedLogin())
 
 
 class SSHPublicKeyDatabase:
     credentialInterfaces = ISSHPrivateKey,
-    interface.implements(ICredentialsChecker)
+    implements(ICredentialsChecker)
 
     def requestAvatarId(self, credentials):
         d = defer.maybeDeferred(self.checkKey, credentials)
@@ -95,33 +105,37 @@ class SSHPublicKeyDatabase:
         return failure.Failure(UnauthorizedLogin())
 
     def checkKey(self, credentials):
-        sshDir = os.path.expanduser('~%s/.ssh/' % credentials.username)
+        """
+        Retrieve the keys of the user specified by the credentials, and check
+        if one matches the blob in the credentials.
+        """
+        sshDir = os.path.expanduser(
+            os.path.join("~", credentials.username, ".ssh"))
         if sshDir.startswith('~'): # didn't expand
-            return 0
+            return False
         uid, gid = os.geteuid(), os.getegid()
         ouid, ogid = pwd.getpwnam(credentials.username)[2:4]
-        os.setegid(0)
-        os.seteuid(0)
-        os.setegid(ogid)
-        os.seteuid(ouid)
         for name in ['authorized_keys2', 'authorized_keys']:
-            if not os.path.exists(sshDir+name):
+            filename = os.path.join(sshDir, name)
+            if not os.path.exists(filename):
                 continue
-            lines = open(sshDir+name).xreadlines()
-            os.setegid(0)
-            os.seteuid(0)
-            os.setegid(gid)
-            os.seteuid(uid)
+            try:
+                lines = open(filename)
+            except IOError, e:
+                if e.errno == errno.EACCES:
+                    lines = runAsEffectiveUser(ouid, ogid, open, filename)
+                else:
+                    raise
             for l in lines:
                 l2 = l.split()
                 if len(l2) < 2:
                     continue
                 try:
                     if base64.decodestring(l2[1]) == credentials.blob:
-                        return 1
+                        return True
                 except binascii.Error:
                     continue
-        return 0
+        return False
 
     def _ebRequestAvatarId(self, f):
         if not f.check(UnauthorizedLogin, error.ValidPublicKey):
@@ -131,7 +145,7 @@ class SSHPublicKeyDatabase:
 
 
 class SSHProtocolChecker:
-    interface.implements(ICredentialsChecker)
+    implements(ICredentialsChecker)
 
     checkers = {}
 
@@ -149,7 +163,7 @@ class SSHProtocolChecker:
             self.checkers[credentialInterface] = checker
 
     def requestAvatarId(self, credentials):
-        ifac = interface.providedBy(credentials)
+        ifac = providedBy(credentials)
         for i in ifac:
             c = self.checkers.get(i)
             if c is not None:
@@ -157,7 +171,7 @@ class SSHProtocolChecker:
                     self._cbGoodAuthentication, credentials)
         return defer.fail(UnhandledCredentials("No checker for %s" % \
             ', '.join(map(reflect.qal, ifac))))
-    
+
     def _cbGoodAuthentication(self, avatarId, credentials):
         if avatarId not in self.successfulCredentials:
             self.successfulCredentials[avatarId] = []
