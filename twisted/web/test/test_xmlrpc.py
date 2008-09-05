@@ -450,3 +450,20 @@ class TestQueryFactoryParseResponse(unittest.TestCase):
         d.addErrback(self.queryFactory.clientConnectionLost, self.reason)
         self.queryFactory.badStatus('status', 'message')
         return d
+
+    def test_parseResponseWithoutData(self):
+        """
+        Some server can send a response without any data:
+        L{_QueryFactory.parseResponse} should catch the error and call the
+        result errback.
+        """
+        content = """
+<methodResponse>
+ <params>
+  <param>
+  </param>
+ </params>
+</methodResponse>"""
+        d = self.queryFactory.deferred
+        self.queryFactory.parseResponse(content)
+        return self.assertFailure(d, IndexError)

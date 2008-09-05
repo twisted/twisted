@@ -304,13 +304,13 @@ class _QueryFactory(protocol.ClientFactory):
         if not self.deferred:
             return
         try:
-            response = xmlrpclib.loads(contents)
+            response = xmlrpclib.loads(contents)[0][0]
         except:
             deferred, self.deferred = self.deferred, None
             deferred.errback(failure.Failure())
         else:
             deferred, self.deferred = self.deferred, None
-            deferred.callback(response[0][0])
+            deferred.callback(response)
 
     def clientConnectionLost(self, _, reason):
         if self.deferred is not None:
@@ -391,6 +391,14 @@ class Proxy:
         self.allowNone = allowNone
 
     def callRemote(self, method, *args):
+        """
+        Call remote XML-RPC C{method} with given arguments.
+
+        @return: a L{defer.Deferred} that will fire with the method response,
+            or a failure if the method failed. Generally, the failure type will
+            be L{Fault}, but you can also have an C{IndexError} on some buggy
+            servers giving empty responses.
+        """
         factory = self.queryFactory(
             self.path, self.host, method, self.user,
             self.password, self.allowNone, args)
