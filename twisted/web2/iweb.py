@@ -221,7 +221,7 @@ class IOldRequest(Interface):
         """
 
     def setLastModified(when):
-        """Set the X{Last-Modified} time for the response to this request.
+        """Set the C{Last-Modified} time for the response to this request.
 
         If I am called more than once, I ignore attempts to set
         Last-Modified earlier, only replacing the Last-Modified time
@@ -233,16 +233,16 @@ class IOldRequest(Interface):
         @param when: The last time the resource being returned was
             modified, in seconds since the epoch.
         @type when: number
-        @return: If I am a X{If-Modified-Since} conditional request and
+        @return: If I am a C{If-Modified-Since} conditional request and
             the time given is not newer than the condition, I return
             L{http.CACHED<CACHED>} to indicate that you should write no
             body.  Otherwise, I return a false value.
         """
 
     def setETag(etag):
-        """Set an X{entity tag} for the outgoing response.
+        """Set an C{entity tag} for the outgoing response.
 
-        That's \"entity tag\" as in the HTTP/1.1 X{ETag} header, \"used
+        That's \"entity tag\" as in the HTTP/1.1 C{ETag} header, \"used
         for comparing two or more entities from the same requested
         resource.\"
 
@@ -252,7 +252,7 @@ class IOldRequest(Interface):
 
         @param etag: The entity tag for the resource being returned.
         @type etag: string
-        @return: If I am a X{If-None-Match} conditional request and
+        @return: If I am a C{If-None-Match} conditional request and
             the tag matches one in the request, I return
             L{http.CACHED<CACHED>} to indicate that you should write
             no body.  Otherwise, I return a false value.

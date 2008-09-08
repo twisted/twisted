@@ -494,11 +494,11 @@ class IRCClient(basic.LineReceiver):
     @ivar username: Supplied to the server during login as the \"User name\".
         May be C{None}
 
-    @ivar userinfo: Sent in reply to a X{USERINFO} CTCP query.  If C{None}, no
+    @ivar userinfo: Sent in reply to a C{USERINFO} CTCP query.  If C{None}, no
         USERINFO reply will be sent.
         \"This is used to transmit a string which is settable by
         the user (and never should be set by the client).\"
-    @ivar fingerReply: Sent in reply to a X{FINGER} CTCP query.  If C{None}, no
+    @ivar fingerReply: Sent in reply to a C{FINGER} CTCP query.  If C{None}, no
         FINGER reply will be sent.
     @type fingerReply: Callable or String
 
@@ -1604,7 +1604,8 @@ class IRCClient(basic.LineReceiver):
                  % (user, tag, data))
 
     def ctcpMakeReply(self, user, messages):
-        """Send one or more X{extended messages} as a CTCP reply.
+        """
+        Send one or more C{extended messages} as a CTCP reply.
 
         @type messages: a list of extended messages.  An extended
         message is a (tag, data) tuple, where 'data' may be C{None}.
@@ -1614,7 +1615,8 @@ class IRCClient(basic.LineReceiver):
     ### client CTCP query commands
 
     def ctcpMakeQuery(self, user, messages):
-        """Send one or more X{extended messages} as a CTCP query.
+        """
+        Send one or more C{extended messages} as a CTCP query.
 
         @type messages: a list of extended messages.  An extended
         message is a (tag, data) tuple, where 'data' may be C{None}.
@@ -1625,7 +1627,8 @@ class IRCClient(basic.LineReceiver):
     ### You may want to add methods here, or override UnknownReply.
 
     def ctcpReply(self, user, channel, messages):
-        """Dispatch method for any CTCP replies received.
+        """
+        Dispatch method for any CTCP replies received.
         """
         for m in messages:
             method = getattr(self, "ctcpReply_%s" % m[0], None)
