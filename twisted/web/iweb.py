@@ -8,6 +8,8 @@ Interface definitions for L{twisted.web}.
 
 from zope.interface import Interface, Attribute
 
+from twisted.internet.interfaces import IConsumer
+
 
 class ICredentialFactory(Interface):
     """
@@ -67,4 +69,112 @@ class IUsernameDigestHash(Interface):
         @return: C{True} if the credentials represented by this object match
             the given hash, C{False} if they do not, or a L{Deferred} which
             will be called back with one of these values.
+        """
+
+
+
+class IHTTPRequest(Interface):
+    """
+    @ivar uri: The full C{Request-URI} (rfc 2616) that is being requested,
+        including any query part.
+    @ivar path: The C{Request-URI} minus any query part.
+    """
+
+    def setURI(path):
+        """
+        Set the URI that this request is handling. This must set the L{uri} and
+        L{path} attributes of this request as per their specification.
+        """
+
+
+
+class IHTTPResponse(Interface):
+    """
+    The basic definition of an HTTP response.
+
+    This is the interface to an HTTP response object as seen by the HTTP
+    protocol. It is not concerned with constructing and configuring an HTTP
+    response, it is only concerned with getting the data for the
+    response. Providers of this interface should provide other methods for
+    specifying the data.
+    """
+
+    def getResponseCode():
+        """
+        @return: the previously-specified HTTP response code.
+        @rtype: Two tuple of code and message.
+        """
+
+
+    def getHeaders():
+        """
+        Return all response headers. The header names must all be lower-case.
+
+        @rtype: C{dict} of header name to value.
+        """
+
+
+    def writeBody(receiver):
+        """
+        Send data to the given C{receiver}.
+
+        This method can optionally call
+        L{IHTTPResponseReceiver.registerProducer} on the given C{receiver} if
+        it cares about writability notification.
+
+        This method MUST cause L{IHTTPResponseReceiver.finishResponse} to be
+        called.
+
+        @param receiver: The object that when written to will send data to the
+            HTTP client.
+        @type receiver: L{IHTTPResponseReceiver}
+        """
+
+
+
+class IHTTPChannel(Interface):
+    """
+    The HTTP protocol.
+
+    """
+
+    def setHTTPRequestReceiver(receiver):
+        """
+        @param receiver: The request receiver that will be notified when
+            requests are made.
+        @type receiver: L{IHTTPRequestReceiver}.
+        """
+
+
+
+class IHTTPResponseReceiver(IConsumer):
+    """
+    The object that HTTP response data gets sent to.
+
+    Notably, this interface extends IConsumer.
+    """
+
+    def finishResponse():
+        """
+        Finish the current response. No more data should be written to it for
+        the current response.
+        """
+
+
+
+class IHTTPRequestReceiver(Interface):
+
+    def requestReceived(request):
+        """
+        Process a request and return an L{IHTTPResponse}.
+
+        @param request: The request to respond to
+        @type request: L{IHTTPRequest}
+
+
+        @return: The deferred HTTP response object that will be asked to send
+            its response. By the time the Deferred fires, the response code and
+            headers must be prepared. See L{IHTTPResponse}.
+
+        @rtype: L{Deferred} of L{IHTTPResponse}
         """

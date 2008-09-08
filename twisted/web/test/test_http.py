@@ -5,20 +5,27 @@
 Test HTTP support.
 """
 
+from zope.interface import implements
+
 from urlparse import urlparse, urlunsplit, clear_cache
 import string, random, urllib, cgi
 
 from twisted.python.compat import set
-from twisted.trial import unittest
-from twisted.web import http, http_headers
+from twisted.python.log import addObserver, removeObserver
+from twisted.trial.unittest import TestCase, SkipTest
+from twisted.web import http
+from twisted.web.http_headers import Headers
+from twisted.web.iweb import IHTTPRequestReceiver, IHTTPResponse, IHTTPRequest
 from twisted.protocols import loopback
 from twisted.internet import protocol
+from twisted.internet.protocol import FileWrapper
+from twisted.internet.defer import succeed
 from twisted.test.test_protocols import StringIOWithoutClosing
 
 from twisted.test.proto_helpers import StringTransport
 from twisted.web.test.test_web import DummyChannel
 
-class DateTimeTest(unittest.TestCase):
+class DateTimeTest(TestCase):
     """Test date parsing functions."""
 
     def testRoundtrip(self):
@@ -54,12 +61,12 @@ class LoopbackHTTPClient(http.HTTPClient):
         self.transport.write("0123456789")
 
 
+
 class ResponseTestMixin(object):
     """
     A mixin that provides a simple means of comparing an actual response string
     to an expected response string by performing the minimal parsing.
     """
-
     def assertResponseEquals(self, responses, expected):
         """
         Assert that the C{responses} matches the C{expected} responses.
@@ -84,7 +91,7 @@ class ResponseTestMixin(object):
 
 
 
-class HTTP1_0TestCase(unittest.TestCase, ResponseTestMixin):
+class HTTP1_0TestCase(TestCase, ResponseTestMixin):
     requests = (
         "GET / HTTP/1.0\r\n"
         "\r\n"
@@ -192,7 +199,7 @@ class HTTP0_9TestCase(HTTP1_0TestCase):
         self.assertEquals(response, expectedResponse)
 
 
-class HTTPLoopbackTestCase(unittest.TestCase):
+class HTTPLoopbackTestCase(TestCase):
 
     expectedHeaders = {'request' : '/foo/bar',
                        'command' : 'GET',
@@ -254,7 +261,7 @@ def _prequest(**headers):
     return request
 
 
-class PersistenceTestCase(unittest.TestCase):
+class PersistenceTestCase(TestCase):
     """
     Tests for persistent HTTP connections.
     """
@@ -276,7 +283,7 @@ class PersistenceTestCase(unittest.TestCase):
                 self.assertEquals(req.responseHeaders.getRawHeaders(header, None), resultHeaders[header])
 
 
-class ChunkingTestCase(unittest.TestCase):
+class ChunkingTestCase(TestCase):
 
     strings = ["abcv", "", "fdfsd423", "Ffasfas\r\n",
                "523523\n\rfsdf", "4234"]
@@ -301,7 +308,7 @@ class ChunkingTestCase(unittest.TestCase):
 
 
 
-class ParsingTestCase(unittest.TestCase):
+class ParsingTestCase(TestCase):
     """
     Tests for protocol parsing in L{HTTPChannel}.
     """
@@ -530,12 +537,12 @@ abasdfg
 '''
         self.runRequest(req, http.Request, success=False)
 
-class QueryArgumentsTestCase(unittest.TestCase):
+class QueryArgumentsTestCase(TestCase):
     def testUnquote(self):
         try:
             from twisted.protocols import _c_urlarg
         except ImportError:
-            raise unittest.SkipTest("_c_urlarg module is not available")
+            raise SkipTest("_c_urlarg module is not available")
         # work exactly like urllib.unquote, including stupid things
         # % followed by a non-hexdigit in the middle and in the end
         self.failUnlessEqual(urllib.unquote("%notreally%n"),
@@ -626,7 +633,7 @@ class QueryArgumentsTestCase(unittest.TestCase):
         try:
             from twisted.protocols import _c_urlarg
         except ImportError:
-            raise unittest.SkipTest("_c_urlarg module is not available")
+            raise SkipTest("_c_urlarg module is not available")
         self.failUnlessEqual("!@#+b",
             _c_urlarg.unquote("+21+40+23+b", "+"))
 
@@ -636,7 +643,7 @@ class ClientDriver(http.HTTPClient):
         self.status = status
         self.message = message
 
-class ClientStatusParsing(unittest.TestCase):
+class ClientStatusParsing(TestCase):
     def testBaseline(self):
         c = ClientDriver()
         c.lineReceived('HTTP/1.0 201 foo')
@@ -660,10 +667,19 @@ class ClientStatusParsing(unittest.TestCase):
 
 
 
-class RequestTests(unittest.TestCase, ResponseTestMixin):
+class RequestTests(TestCase, ResponseTestMixin):
     """
     Tests for L{http.Request}
     """
+    def test_argumentlessRequest(self):
+        """
+        A L{Request} can be instantiated with no arguments.
+        """
+        request = http.Request()
+        self.assertEquals(request.channel, None)
+        self.assertEquals(request.transport, None)
+
+
     def _compatHeadersTest(self, oldName, newName):
         """
         Verify that each of two different attributes which are associated with
@@ -679,7 +695,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         self.assertEqual(
             list(getattr(req, newName).getAllRawHeaders()),
             [("Foo", ["bar"])])
-        setattr(req, newName, http_headers.Headers())
+        setattr(req, newName, Headers())
         self.assertEqual(getattr(req, oldName), {})
 
 
@@ -911,3 +927,327 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         req.parseCookies()
         self.assertEquals(req.received_cookies, {"test": '"lemur"',
                                                  "test2": '"panda"'})
+
+
+
+
+class StubRequestReceiver(object):
+    """
+    A stub request receiver that simply records requests received.
+
+    @ivar requests: List of requests.
+    @ivar responseToReturn: The response to return from L{requestReceived}.
+    """
+    implements(IHTTPRequestReceiver)
+
+    responseToReturn = None
+
+    def __init__(self):
+        self.requests = []
+        self.responses = []
+
+
+    def requestReceived(self, request):
+        """
+        Record the request in C{self.requests}
+
+        @return: L{responseToReturn}
+        """
+        self.requests.append(request)
+        return succeed(self.responseToReturn)
+
+
+
+class StringResponse(object):
+    """
+    A simple L{IHTTPResponse} implementation that writes a string of data as
+    the body.
+    """
+    implements(IHTTPResponse)
+
+    def __init__(self, code, headers, data):
+        """
+        @param code: The HTTP code to use.
+        @type code: C{int}
+
+        @param headers: A dict of response headers.
+        @type headers: C{dict}
+
+        @param data: The body data.
+        @type data: C{str}
+        """
+        self.code = code
+        self.headers = headers
+        self.data = data
+
+
+    def getResponseCode(self):
+        """
+        Return the previously specified code and the string C{"Whatever"} as
+        the message.
+        """
+        return (self.code, "Whatever")
+
+
+    def getHeaders(self):
+        """
+        Return the previously specified headers.
+        """
+        return self.headers
+
+
+    def writeBody(self, consumer):
+        """
+        Write the previously specified data to the consumer.
+        """
+        self.responseReceiver = consumer
+        consumer.write(self.data)
+        consumer.finishResponse()
+
+
+
+class ChannelTests(TestCase):
+
+    def setUp(self):
+        self.io = StringIOWithoutClosing()
+        self.transport = FileWrapper(self.io)
+        self.channel = http.HTTPChannel()
+        self.channel.makeConnection(self.transport)
+
+
+    def test_callRequestReceivedOnRequestReceiver(self):
+        """
+        If L{HTTPChannel.setRequestReceiver} is used, the passed object will be
+        notified of requests.
+        """
+        receiver = StubRequestReceiver()
+        receiver.responseToReturn = StringResponse(200, {}, "")
+
+        self.channel.setRequestReceiver(receiver)
+        self.channel.dataReceived('GET / HTTP/1.1\r\n\r\n')
+
+        self.assertEquals(len(receiver.requests), 1)
+        request = receiver.requests[0]
+
+        self.assertEquals(request.path, '/')
+        self.assertEquals(request.method, 'GET')
+        self.assertEquals(request.uri, '/')
+        self.assertEquals(request.clientproto, "HTTP/1.1")
+
+
+    def request(self, response, request_data=None):
+        if request_data is None:
+            request_data = "GET / HTTP/1.1\r\n\r\n"
+        receiver = StubRequestReceiver()
+        receiver.responseToReturn = response
+
+        self.channel.setRequestReceiver(receiver)
+        self.channel.dataReceived(request_data)
+        self.assertEquals(len(receiver.requests), 1)
+        return receiver.requests[0]
+
+    def assertResponse(self, response, expected_response, request_data=None):
+        self.request(response, request_data=request_data)
+        expected_response = expected_response.replace('\n', '\r\n')
+        self.assertEquals(self.io.getvalue(), expected_response)
+        self.io.seek(0,0)
+        self.io.truncate()
+
+
+    def test_processResponseFromRequestReceiver(self):
+        """
+        When the channel notifies the request receiver of the request, it will
+        handle a response object returned from that request by fetching various
+        data from it, writing it to the transport, and telling it to write its
+        to the channel.
+        """
+        expected_response = """\
+HTTP/1.1 200 Whatever
+Content-length: 7
+
+Thanks!"""
+        self.assertResponse(
+            StringResponse(200, {"content-length": "7"}, "Thanks!"),
+            expected_response)
+
+
+    def test_chunkedResponses(self):
+        """
+        When the response doesn't specify a content-length in the headers,
+        chunked encoding will be used.
+        """
+        expected_response ="""\
+HTTP/1.1 200 Whatever
+Transfer-encoding: chunked
+
+7
+Thanks!
+0
+
+"""
+        self.assertResponse(StringResponse(200, {}, "Thanks!"),
+                            expected_response)
+
+
+    def test_onlyChunkWithHTTP1_1(self):
+        """
+        Chunked encoding will not be used with HTTP 1.0.
+        """
+        expected_response = """\
+HTTP/1.0 200 Whatever
+
+Thanks!"""
+        self.assertResponse(StringResponse(200, {}, "Thanks!"),
+                            expected_response,
+                            request_data="GET / HTTP/1.0\r\n\r\n")
+
+
+    def test_head(self):
+        """
+        HEAD requests should not have a body written. They should also not have
+        a transfer-encoding of chunked, even when content-length is not
+        specified.
+        """
+        expected_response = """\
+HTTP/1.1 200 Whatever
+Foo: bar
+
+"""
+        self.assertResponse(StringResponse(200, {"foo": "bar"}, "Thanks!"),
+                            expected_response,
+                            request_data="HEAD / HTTP/1.1\r\n\r\n")
+
+
+    def test_noBodyCodes(self):
+        """
+        If one of the codes that the response has returned is in the set of
+        codes that no body should be written for, no body should be written.
+        """
+        for code in http.NO_BODY_CODES:
+            expected_response = """\
+HTTP/1.1 %d Whatever
+Foo: bar
+
+""" % (code,)
+
+            self.assertResponse(StringResponse(code, {"foo": "bar"}, "Thanks!"),
+                                expected_response)
+
+
+    def test_unregisterProducer(self):
+        """
+        L{unregisterProducer} should be delegated to the underlying transport.
+        """
+        response = StringResponse(200, {}, "Hi!")
+        self.request(response)
+        unregistrations = []
+        def unregisterProducer():
+            unregistrations.append(True)
+        self.transport.unregisterProducer = unregisterProducer
+
+        producer = object()
+        streaming = object()
+        response.responseReceiver.unregisterProducer()
+        self.assertEquals(unregistrations, [True])
+
+
+    def test_registerProducer(self):
+        """
+        L{registerProducer} should be delegated to the underlying transport.
+        """
+        response = StringResponse(200, {}, "Hi!")
+        self.request(response)
+        registrations = []
+        def registerProducer(producer, streaming):
+            registrations.append((producer, streaming))
+        self.transport.registerProducer = registerProducer
+
+        producer = object()
+        streaming = object()
+        response.responseReceiver.registerProducer(producer, streaming)
+        self.assertEquals(registrations, [(producer, streaming)])
+
+
+    def test_twoRequests(self):
+
+        chunked_response = StringResponse(200, {}, "Hi")
+        length_response = StringResponse(200, {"content-length": 2}, "Hi")
+
+        self.request(chunked_response)
+        self.request(length_response)
+
+        self.assertEquals(self.io.getvalue(),
+                          """\
+HTTP/1.1 200 Whatever
+Transfer-encoding: chunked
+
+2
+Hi
+0
+
+HTTP/1.1 200 Whatever
+Content-length: 2
+
+Hi""".replace('\n', '\r\n'))
+
+    def test_finishResponseWithNoBody(self):
+        """
+        When finishing a response without having written any body, a complete
+        response should still be sent.
+        """
+        response = StringResponse(200, {}, "Hi")
+        response.writeBody = lambda channel: channel.finishResponse()
+        self.request(response)
+        self.assertEquals(self.io.getvalue(),
+                          """\
+HTTP/1.1 200 Whatever
+Transfer-encoding: chunked
+
+0
+
+""".replace("\n", "\r\n"))
+
+
+    def test_logging(self):
+        """
+        When finishing a response, the request should be logged.
+        """
+        response = StringResponse(200, {}, "Hi")
+        logs = []
+        addObserver(logs.append)
+        try:
+            request = self.request(response)
+        finally:
+            removeObserver(logs.append)
+
+        self.assertEquals(len(logs), 1)
+        log = logs[0]
+
+        self.assertEquals(log["interface"], IHTTPRequest)
+        self.assertIdentical(log["request"], request)
+        self.assertEquals(log["client"], self.transport.getPeer())
+        self.assertEquals(log["sentLength"], 2)
+
+
+
+
+# XXX Test cleanup between requests (_chunked!). Or maybe the thing passed to
+# writeBody really ought to be separate from the channel. :\ Fortunately that
+# change would not actually change any APIs.
+
+# XXX Test that logged requests have the correct sent data size.
+
+# XXX move the crap in Request.requestReceived somewhere else...
+
+# XXX Test HTTPResponse (or just Response).
+
+# XXX Maybe make Request take all of its data in __init__.
+
+# It should take a request in its constructor. As much as that seems really
+# weird, I think it's actually exactly the right direction of dependency. It
+# allows the response to calculate things based on the request. It should have
+# setLastModified and setETag, for example.
+
+# It should also have setHeader, addCookie, etc.
+
+# It should have redirect.

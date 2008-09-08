@@ -34,6 +34,8 @@ from zope.interface import implements
 from twisted.internet import interfaces, reactor, protocol, address
 from twisted.protocols import policies, basic
 from twisted.python import log
+from twisted.web.iweb import IHTTPChannel, IHTTPRequest, IHTTPResponseReceiver
+
 try: # try importing the fast, C version
     from twisted.protocols._c_urlarg import unquote
 except ImportError:
@@ -478,12 +480,20 @@ class Request:
     the request will be processed.
 
     @ivar method: The HTTP method that was used.
+    @type method: C{str}
+
     @ivar uri: The full URI that was requested (includes arguments).
+    @type uri: C{str}
+
     @ivar path: The path only (arguments not included).
-    @ivar args: All of the arguments, including URL and POST arguments.
-    @type args: A mapping of strings (the argument names) to lists of values.
-                i.e., ?foo=bar&foo=baz&quux=spam results in
-                {'foo': ['bar', 'baz'], 'quux': ['spam']}.
+    @type path: C{str}
+
+    @ivar args: All of the arguments, including URL and POST arguments. This is
+        a mapping of strings (the argument names) to lists of values.  i.e.,
+        C{?foo=bar&foo=baz&quux=spam} results in
+        C{{'foo': ['bar', 'baz'], 'quux': ['spam']}}.
+    @type args: C{dict}
+
 
     @type requestHeaders: L{http_headers.Headers}
     @ivar requestHeaders: All received HTTP request headers.
@@ -500,8 +510,13 @@ class Request:
         C{responseHeaders} instead.  C{headers} behaves mostly like a C{dict}
         and does not provide access to all header values nor does it allow
         multiple values for one header to be set.
+    @type received_hedears: C{dict}.
+
+    @ivar sentLength: content-length of response, or total bytes sent via
+        chunking
+    @type sentLength: C{int}
     """
-    implements(interfaces.IConsumer)
+    implements(interfaces.IConsumer, IHTTPRequest)
 
     producer = None
     finished = 0
@@ -510,18 +525,19 @@ class Request:
     method = "(no method yet)"
     clientproto = "(no clientproto yet)"
     uri = "(no uri yet)"
+    path = None
     startedWriting = 0
     chunked = 0
-    sentLength = 0 # content-length of response, or total bytes sent via chunking
+    sentLength = 0
     etag = None
     lastModified = None
     _forceSSL = 0
 
-    def __init__(self, channel, queued):
+    def __init__(self, channel=None, queued=None):
         """
-        @param channel: the channel we're connected to.
-        @param queued: are we in the request queue, or can we start writing to
-            the transport?
+        @param channel: (optional, deprecated) the channel we're connected to.
+        @param queued: (optional, deprecated) are we in the request queue, or
+            can we start writing to the transport?
         """
         self.channel = channel
         self.queued = queued
@@ -530,10 +546,13 @@ class Request:
         self.responseHeaders = Headers()
         self.cookies = [] # outgoing cookies
 
-        if queued:
-            self.transport = StringTransport()
+        if channel is not None:
+            if queued:
+                self.transport = StringTransport()
+            else:
+                self.transport = self.channel.transport
         else:
-            self.transport = self.channel.transport
+            self.transport = None
 
 
     def __setattr__(self, name, value):
@@ -643,8 +662,28 @@ class Request:
         self.content.write(data)
 
 
+    def setURI(self, path):
+        """
+        Set the URI for this request.
+
+        Both C{self.uri} and C{self.path} will be set. C{self.uri} will be set
+        to the full URI, and C{self.path} will be set to the path part,
+        excluding any query arguments.
+        """
+        self.uri = path
+        parts = path.split('?', 1)
+
+        if len(parts) == 1:
+            self.path = self.uri
+        else:
+            self.path, argstring = parts
+            self.args = parse_qs(argstring, 1)
+
+
     def requestReceived(self, command, path, version):
         """
+        DEPRECATED.
+
         Called by channel when all data has been received.
 
         This method is not intended for users.
@@ -663,15 +702,9 @@ class Request:
         self.args = {}
         self.stack = []
 
-        self.method, self.uri = command, path
+        self.method = command
         self.clientproto = version
-        x = self.uri.split('?', 1)
-
-        if len(x) == 1:
-            self.path = self.uri
-        else:
-            self.path, argstring = x
-            self.args = parse_qs(argstring, 1)
+        self.setURI(path)
 
         # cache the client and server information, we'll need this later to be
         # serialized and sent with the request so CGIs will work remotely
@@ -711,7 +744,10 @@ class Request:
         return '<%s %s %s>'% (self.method, self.uri, self.clientproto)
 
     def process(self):
-        """Override in subclasses.
+        """
+        DEPRECATED
+
+        Override in subclasses.
 
         This method is not intended for users.
         """
@@ -799,6 +835,8 @@ class Request:
         @type data: C{str}
         @param data: Some bytes to be sent as part of the response body.
         """
+        # XXX Replace all of this with use of a backwards compatibility
+        # Response object.
         if not self.startedWriting:
             self.startedWriting = 1
             version = self.clientproto
@@ -853,6 +891,9 @@ class Request:
                 self.transport.writeSequence(toChunk(data))
             else:
                 self.transport.write(data)
+
+
+
 
     def addCookie(self, k, v, expires=None, domain=None, path=None, max_age=None, comment=None, secure=None):
         """Set an outgoing HTTP cookie.
@@ -1143,8 +1184,123 @@ class Request:
         """connection was lost"""
         pass
 
+
+
+class HTTPResponseReceiver(object):
+    """
+    An implementation of L{IHTTPResponseReceiver} that sends its data to a
+    transport.
+    """
+
+    implements(IHTTPResponseReceiver)
+
+    def __init__(self, transport, request, response):
+        """
+        @param transport: The transport that data will be written to.
+        @param request: The request.
+        @param response: The response that will be written to the C{transport}.
+        """
+        self._transport = transport
+        self._sentLength = 0
+        self._chunked = 0
+        self._request = request
+        self._sentLength = 0
+
+        code, message = response.getResponseCode()
+        headers = response.getHeaders()
+        version = request.clientproto
+
+        output = []
+        output.append('%s %s %s\r\n' % (version, code, message))
+
+        # if we don't have a content length, we send data in
+        # chunked mode, so that we can support pipelining in
+        # persistent connections.
+        if ((version == "HTTP/1.1") and
+            (headers.get('content-length', None) is None) and
+            request.method != "HEAD" and code not in NO_BODY_CODES):
+            output.append("%s: %s\r\n" % ('Transfer-encoding', 'chunked'))
+            self._chunked = 1
+
+        for name, value in headers.items():
+            output.append("%s: %s\r\n" % (name.capitalize(), value))
+
+        output.append("\r\n")
+
+        self._transport.writeSequence(output)
+
+        # if this is a "HEAD" request, we shouldn't return any data
+        if request.method == "HEAD":
+            #self.finishResponse() must be called
+            return
+
+        # for certain result codes, we should never return any data
+        if code in NO_BODY_CODES:
+            #self.finishResponse() must be called!
+            return
+
+        response.writeBody(self)
+
+
+    def registerProducer(self, producer, streaming):
+        """
+        Start sending writability notifications to the given C{producer}.
+        """
+        self._transport.registerProducer(producer, streaming)
+
+
+    def unregisterProducer(self):
+        """
+        Stop sending writability notifications to the current producer.
+        """
+        self._transport.unregisterProducer()
+
+
+    def write(self, data):
+        """
+        Write some data to the client.
+
+        If using chunked encoding, the data will be translated to chunks.
+        """
+        self._sentLength += len(data)
+        if data:
+            if self._chunked:
+                self._transport.writeSequence(toChunk(data))
+            else:
+                self._transport.write(data)
+
+
+    def finishResponse(self):
+        """
+        Indicate that the response is now done, and that L{writeResponse} will
+        no longer be called.
+
+        This writes a chunked response footer if necessary, logs the request,
+        and cleans up internal state.
+        """
+        if self._chunked:
+            # write last chunk and closing CRLF
+            self._transport.write("0\r\n\r\n")
+
+        log.msg(interface=IHTTPRequest, request=self._request,
+                sentLength=self._sentLength, client=self._transport.getPeer())
+
+#         self.finished = 1
+#         if not self.queued:
+#             self._cleanup()
+
+
+
 class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
-    """A receiver for HTTP requests."""
+    """
+    A receiver for HTTP requests.
+
+    @ivar _ignore_written_data: Whether the current response does not need any
+        written data.
+    @type _ignore_written_data: C{bool}
+    """
+
+    implements(IHTTPChannel)
 
     maxHeaders = 500 # max number of headers allowed per request
 
@@ -1157,6 +1313,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     # set in instances or subclasses
     requestFactory = Request
 
+    _requestReceiver = None
     _savedTimeOut = None
     _receivedHeaderCount = 0
 
@@ -1242,7 +1399,28 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             self.transport.loseConnection()
 
 
+    def setRequestReceiver(self, receiver):
+        """
+        See L{IHTTPChannel.setRequestReceiver}
+
+        When a request is received the given C{receiver} will be notified. If
+        this method is not called, the request object will be notified
+        directly via a deprecated code path.
+
+        Not calling this method is deprecated.
+        """
+        self._requestReceiver = receiver
+
+
     def allContentReceived(self):
+        """
+        Call this when the request should is done being parsed and should be
+        dispatched.
+
+        If L{setRequestReceiver} was called, the receiver will be given the
+        request for processing as per L{IHTTPRequestReceiver}. If not, the
+        request will be told to process itself.
+        """
         command = self._command
         path = self._path
         version = self._version
@@ -1260,7 +1438,29 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             self._savedTimeOut = self.setTimeout(None)
 
         req = self.requests[-1]
+        if self._requestReceiver is not None:
+            # NEW AWESOME CODE
+            req.method = command
+            req.clientproto = version
+            req.setURI(path)
+            response = self._requestReceiver.requestReceived(req)
+            response.addCallback(self._gotResponse, req)
+            # XXX addErrback log.err?
+#         else:
+        # OLD BAD CODE: XXX THIS NEEDS TO BE IN AN ELSE BLOCK
+        import warnings
+        warnings.warn("XXX fill me out with policy-compliant deprecation message",
+                      PendingDeprecationWarning)
         req.requestReceived(command, path, version)
+
+
+    def _gotResponse(self, response, request):
+        """
+        Write out the response code & message, and all headers, then tell the
+        response to start sending data to this channel.
+        """
+        responseReceiver = HTTPResponseReceiver(self.transport,
+                                                request, response)
 
     def rawDataReceived(self, data):
         if len(data) < self.length:
@@ -1348,6 +1548,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         self.setTimeout(None)
         for request in self.requests:
             request.connectionLost(reason)
+
 
 
 class HTTPFactory(protocol.ServerFactory):
