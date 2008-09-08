@@ -87,7 +87,7 @@
     control structure indentation is always visible.</p>
 
     <p>Lines are flowed at 79 columns. They must not have trailing
-    whitespaces. Long lines must be wrapped using implied line continuation
+    whitespace. Long lines must be wrapped using implied line continuation
     inside parentheses; backslashes aren't allowed. To handle long import
     lines, please repeat the import like this:</p>
 
@@ -181,6 +181,29 @@ parent.Foo = Foo
     circularly.  While this applies to all packages within Twisted, one
     <code>twisted.python</code> deserves particular attention, as it may
     not depend on any other Twisted package.</p>
+
+    <h2>String Formatting Operations</h2>
+
+    <p>When using <a
+    href="http://docs.python.org/lib/typesseq-strings.html">string formatting
+    operations</a> like <code>formatString % values</code> you should always
+    use a tuple if you're using non-mapping <code>values</code>. This is to
+    avoid unexpected behavior when you think you're passing in a single value,
+    but the value is unexpectedly a tuple, e.g.:</p>
+
+<pre class="python">
+def foo(x):
+    return "Hi %s\n" % x
+</pre>
+
+    <p>The example shows you can pass in <code>foo("foo")</code> or
+    <code>foo(3)</code> fine, but if you pass in <code>foo((1,2))</code>,
+    it raises a <code>TypeError</code>. You should use this instead:</p>
+
+<pre class="python">
+def foo(x):
+    return "Hi %s\n" % (x,)
+</pre>
 
     <h2>Docstrings</h2>
 
