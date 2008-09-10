@@ -10,7 +10,7 @@ import os
 from twisted.trial import unittest
 
 from twisted.vfs.backends import osfs, inmem
-
+from twisted.python.filepath import FilePath
 
 
 class OSVFSTest(unittest.TestCase):
@@ -19,7 +19,7 @@ class OSVFSTest(unittest.TestCase):
         self.tmpdir = self.mktemp()
         os.mkdir(self.tmpdir)
         os.mkdir(os.path.join(self.tmpdir, 'ned'))
-        open(os.path.join(self.tmpdir, 'file.txt'), 'w').write('wobble\n')
+        FilePath(self.tmpdir).child('file.txt').setContent('wobble\n')
         self.root = osfs.OSDirectory(self.tmpdir)
 
     def test_listdir(self):
