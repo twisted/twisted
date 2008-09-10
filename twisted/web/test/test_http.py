@@ -276,6 +276,95 @@ class PersistenceTestCase(unittest.TestCase):
                 self.assertEquals(req.responseHeaders.getRawHeaders(header, None), resultHeaders[header])
 
 
+
+class ChunkedTransferEncodingTests(unittest.TestCase):
+    """
+    Tests for L{_ChunkedTransferEncoding}, which turns a byte stream encoded
+    using HTTP I{chunked} C{Transfer-Encoding} back into the original byte
+    stream.
+    """
+    def test_decoding(self):
+        """
+        L{_ChunkedTransferEncoding.dataReceived} decodes chunked-encoded data
+        and passes the result to the specified callback.
+        """
+        L = []
+        p = http._ChunkedTransferEncoding(L.append, None)
+        p.dataReceived('3\r\nabc\r\n5\r\n12345\r\n')
+        p.dataReceived('a\r\n0123456789\r\n')
+        self.assertEqual(L, ['abc', '12345', '0123456789'])
+
+
+    def test_short(self):
+        """
+        L{_ChunkedTransferEncoding.dataReceived} decodes chunks broken up and
+        delivered in multiple calls.
+        """
+        L = []
+        finished = []
+        p = http._ChunkedTransferEncoding(L.append, finished.append)
+        for s in '3\r\nabc\r\n5\r\n12345\r\n0\r\n\r\n':
+            p.dataReceived(s)
+        self.assertEqual(L, ['a', 'b', 'c', '1', '2', '3', '4', '5'])
+        self.assertEqual(finished, [''])
+
+
+    def test_newlines(self):
+        """
+        L{_ChunkedTransferEncoding.dataReceived} doesn't treat CR LF pairs
+        embedded in chunk bodies specially.
+        """
+        L = []
+        p = http._ChunkedTransferEncoding(L.append, None)
+        p.dataReceived('2\r\n\r\n\r\n')
+        self.assertEqual(L, ['\r\n'])
+
+
+    def test_extensions(self):
+        """
+        L{_ChunkedTransferEncoding.dataReceived} disregards chunk-extension
+        fields.
+        """
+        L = []
+        p = http._ChunkedTransferEncoding(L.append, None)
+        p.dataReceived('3; x-foo=bar\r\nabc\r\n')
+        self.assertEqual(L, ['abc'])
+
+
+    def test_finish(self):
+        """
+        L{_ChunkedTransferEncoding.dataReceived} interprets a zero-length
+        chunk as the end of the chunked data stream and calls the completion
+        callback.
+        """
+        finished = []
+        p = http._ChunkedTransferEncoding(None, finished.append)
+        p.dataReceived('0\r\n\r\n')
+        self.assertEqual(finished, [''])
+
+
+    def test_extra(self):
+        """
+        L{_ChunkedTransferEncoding.dataReceived} passes any bytes which come
+        after the terminating zero-length chunk to the completion callback.
+        """
+        finished = []
+        p = http._ChunkedTransferEncoding(None, finished.append)
+        p.dataReceived('0\r\n\r\nhello')
+        self.assertEqual(finished, ['hello'])
+
+
+    def test_afterFinished(self):
+        """
+        L{_ChunkedTransferEncoding.dataReceived} raises L{RuntimeError} if it
+        is called after it has seen the last chunk.
+        """
+        p = http._ChunkedTransferEncoding(None, lambda bytes: None)
+        p.dataReceived('0\r\n\r\n')
+        self.assertRaises(RuntimeError, p.dataReceived, 'hello')
+
+
+
 class ChunkingTestCase(unittest.TestCase):
 
     strings = ["abcv", "", "fdfsd423", "Ffasfas\r\n",
@@ -529,6 +618,45 @@ abasdfg
 --AaB03x--
 '''
         self.runRequest(req, http.Request, success=False)
+
+    def test_chunkedEncoding(self):
+        """
+        If a request uses the I{chunked} transfer encoding, the request body is
+        decoded accordingly before it is made available on the request.
+        """
+        httpRequest = '''\
+GET / HTTP/1.0
+Content-Type: text/plain
+Transfer-Encoding: chunked
+
+6
+Hello,
+14
+ spam,eggs spam spam
+0
+
+'''
+        testcase = self
+        class MyRequest(http.Request):
+            def process(self):
+                # The tempfile API used to create content returns an
+                # instance of a different type depending on what platform
+                # we're running on.  The point here is to verify that the
+                # request body is in a file that's on the filesystem. 
+                # Having a fileno method that returns an int is a somewhat
+                # close approximation of this. -exarkun
+                testcase.assertIsInstance(self.content.fileno(), int)
+                testcase.assertEqual(self.method, 'GET')
+                testcase.assertEqual(self.path, '/')
+                content = self.content.read()
+                testcase.assertEqual(content, 'Hello, spam,eggs spam spam')
+                testcase.assertIdentical(self.channel._transferDecoder, None)
+                testcase.didRequest = 1
+                self.finish()
+
+        self.runRequest(httpRequest, MyRequest)
+
+
 
 class QueryArgumentsTestCase(unittest.TestCase):
     def testUnquote(self):

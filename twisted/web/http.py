@@ -603,11 +603,16 @@ class Request:
             self._cleanup()
 
     def gotLength(self, length):
-        """Called when HTTP channel got length of content in this request.
+        """
+        Called when HTTP channel got length of content in this request.
 
         This method is not intended for users.
+
+        @param length: The length of the request body, as indicated by the
+            request headers.  C{None} if the request headers do not indicate a
+            length.
         """
-        if length < 100000:
+        if length is not None and length < 100000:
             self.content = StringIO()
         else:
             self.content = tempfile.TemporaryFile()
@@ -1145,8 +1150,116 @@ class Request:
         """connection was lost"""
         pass
 
+
+
+class _ChunkedTransferEncoding(object):
+    """
+    Protocol for decoding chunked Transfer-Encoding, as defined by RFC 2616,
+    section 3.6.1.  This protocol can interpret the contents of a request or
+    response body which uses the I{chunked} Transfer-Encoding.  It cannot
+    interpret any of the rest of the HTTP protocol.
+
+    It may make sense for _ChunkedTransferEncoding to be an actual IProtocol
+    implementation.  Currently, the only user of this class will only ever
+    call dataReceived on it.  However, it might be an improvement if the
+    user could connect this to a transport and deliver connection lost
+    notification.  This way, `dataCallback` becomes `self.transport.write`
+    and perhaps `finishCallback` becomes `self.transport.loseConnection()`
+    (although I'm not sure where the extra data goes in that case).  This
+    could also allow this object to indicate to the receiver of data that
+    the stream was not completely received, an error case which should be
+    noticed. -exarkun
+
+    @ivar dataCallback: A one-argument callable which will be invoked each
+        time application data is received.
+
+    @ivar finishCallback: A one-argument callable which will be invoked when
+        the terminal chunk is received.  It will be invoked with all bytes
+        which were delivered to this protocol which came after the terminal
+        chunk.
+
+    @ivar length: Counter keeping track of how many more bytes in a chunk there
+        are to receive.
+
+    @ivar state: One of C{'chunk-length'}, C{'trailer'}, C{'body'}, or
+        C{'finished'}.  For C{'chunk-length'}, data for the chunk length line
+        is currently being read.  For C{'trailer'}, the CR LF pair which
+        follows each chunk is being read.  For C{'body'}, the contents of a
+        chunk are being read.  For C{'finished'}, the last chunk has been
+        completely read and no more input is valid.
+
+    @ivar finish: A flag indicating that the last chunk has been started.  When
+        it finishes, the state will change to C{'finished'} and no more data
+        will be accepted.
+    """
+    state = 'chunk-length'
+    finish = False
+
+    def __init__(self, dataCallback, finishCallback):
+        self.dataCallback = dataCallback
+        self.finishCallback = finishCallback
+        self._buffer = ''
+
+
+    def dataReceived(self, data):
+        """
+        Interpret data from a request or response body which uses the
+        I{chunked} Transfer-Encoding.
+        """
+        data = self._buffer + data
+        self._buffer = ''
+        while data:
+            if self.state == 'chunk-length':
+                if '\r\n' in data:
+                    line, rest = data.split('\r\n', 1)
+                    parts = line.split(';')
+                    self.length = int(parts[0], 16)
+                    if self.length == 0:
+                        self.state = 'trailer'
+                        self.finish = True
+                    else:
+                        self.state = 'body'
+                    data = rest
+                else:
+                    self._buffer = data
+                    data = ''
+            elif self.state == 'trailer':
+                if data.startswith('\r\n'):
+                    data = data[2:]
+                    if self.finish:
+                        self.finishCallback(data)
+                        self.state = 'finished'
+                        data = ''
+                    else:
+                        self.state = 'chunk-length'
+                else:
+                    self._buffer = data
+                    data = ''
+            elif self.state == 'body':
+                if len(data) >= self.length:
+                    chunk, data = data[:self.length], data[self.length:]
+                    self.dataCallback(chunk)
+                    self.state = 'trailer'
+                elif len(data) < self.length:
+                    self.length -= len(data)
+                    self.dataCallback(data)
+                    data = ''
+            elif self.state == 'finished':
+                raise RuntimeError(
+                    "_ChunkedTransferEncoding.dataReceived called after last "
+                    "chunk was processed")
+
+
+
+
 class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
-    """A receiver for HTTP requests."""
+    """
+    A receiver for HTTP requests.
+
+    @ivar _transferDecoder: C{None} or an instance of
+        L{_ChunkedTransferEncoding} if the request body uses the I{chunked}
+        Transfer-Encoding.
+    """
 
     maxHeaders = 500 # max number of headers allowed per request
 
@@ -1165,6 +1278,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     def __init__(self):
         # the request queue
         self.requests = []
+        self._transferDecoder = None
+
 
     def connectionMade(self):
         self.setTimeout(self.timeOut)
@@ -1215,6 +1330,12 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 self.headerReceived(self.__header)
             self.__header = line
 
+
+    def _finishRequestBody(self, data):
+        self.allContentReceived()
+        self.setLineMode(data)
+
+
     def headerReceived(self, line):
         """
         Do pre-processing (for content-length) and store this header away.
@@ -1229,8 +1350,12 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         data = data.strip()
         if header == 'content-length':
             self.length = int(data)
-        reqHeaders = self.requests[-1].requestHeaders
+        elif header == 'transfer-encoding' and data.lower() == 'chunked':
+            self.length = None
+            self._transferDecoder = _ChunkedTransferEncoding(
+                self.requests[-1].handleContentChunk, self._finishRequestBody)
 
+        reqHeaders = self.requests[-1].requestHeaders
         values = reqHeaders.getRawHeaders(header)
         if values is not None:
             values.append(data)
@@ -1254,6 +1379,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         self._header = ''
         self._receivedHeaderCount = 0
         self.__first_line = 1
+        self._transferDecoder = None
         del self._command, self._path, self._version
 
         # Disable the idle timeout, in case this request takes a long
@@ -1265,14 +1391,15 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         req.requestReceived(command, path, version)
 
     def rawDataReceived(self, data):
-        if len(data) < self.length:
+        if self._transferDecoder is not None:
+            self._transferDecoder.dataReceived(data)
+        elif len(data) < self.length:
             self.requests[-1].handleContentChunk(data)
             self.length = self.length - len(data)
         else:
             self.requests[-1].handleContentChunk(data[:self.length])
-            extraneous = data[self.length:]
-            self.allContentReceived()
-            self.setLineMode(extraneous)
+            self._finishRequestBody(data[self.length:])
+
 
     def allHeadersReceived(self):
         req = self.requests[-1]
