@@ -8,10 +8,23 @@ Tests for L{twisted.conch.ssh.agent}.
 import struct
 
 from twisted.trial import unittest
-from twisted.test import iosim
+
+try:
+    import OpenSSL
+except ImportError:
+    iosim = None
+else:
+    from twisted.test import iosim
+
+try:
+    import Crypto.Cipher.DES3
+except ImportError:
+    keys = agent = None
+else:
+    from twisted.conch.ssh import keys, agent
+
 from twisted.conch.test import keydata
 from twisted.conch.error import ConchError, MissingKeyStoreError
-from twisted.conch.ssh import agent, keys
 
 
 class StubFactory(object):
@@ -28,6 +41,10 @@ class AgentTestBase(unittest.TestCase):
     """
     Tests for SSHAgentServer/Client.
     """
+    if iosim is None:
+        skip = "iosim requires SSL, but SSL is not available"
+    elif agent is None or keys is None:
+        skip = "Cannot run without PyCrypto"
 
     def setUp(self):
         # wire up our client <-> server
@@ -103,18 +120,19 @@ class TestUnimplementedVersionOneServer(AgentTestBase):
 
 
 
-class CorruptServer(agent.SSHAgentServer):
-    """
-    A misbehaving server that returns bogus response op codes so that we can
-    verify that our callbacks that deal with these op codes handle such
-    miscreants.
-    """
-    def agentc_REQUEST_IDENTITIES(self, data):
-        self.sendResponse(254, '')
+if agent is not None:
+    class CorruptServer(agent.SSHAgentServer):
+        """
+        A misbehaving server that returns bogus response op codes so that we can
+        verify that our callbacks that deal with these op codes handle such
+        miscreants.
+        """
+        def agentc_REQUEST_IDENTITIES(self, data):
+            self.sendResponse(254, '')
 
 
-    def agentc_SIGN_REQUEST(self, data):
-        self.sendResponse(254, '')
+        def agentc_SIGN_REQUEST(self, data):
+            self.sendResponse(254, '')
 
 
 

@@ -17,7 +17,12 @@ from twisted.python.filepath import FilePath
 from twisted.cred.credentials import UsernamePassword
 from twisted.test.test_process import MockOS
 
-from twisted.conch.checkers import SSHPublicKeyDatabase
+try:
+    import Crypto.Cipher.DES3
+except ImportError:
+    SSHPublicKeyDatabase = None
+else:
+    from twisted.conch.checkers import SSHPublicKeyDatabase
 
 
 
@@ -25,6 +30,11 @@ class SSHPublicKeyDatabaseTests(TestCase):
     """
     Tests for L{SSHPublicKeyDatabase}.
     """
+
+    if pwd is None:
+        skip = "Cannot run without pwd module"
+    elif SSHPublicKeyDatabase is None:
+        skip = "Cannot run without PyCrypto"
 
     def setUp(self):
         self.checker = SSHPublicKeyDatabase()
@@ -95,8 +105,3 @@ class SSHPublicKeyDatabaseTests(TestCase):
         self.assertTrue(self.checker.checkKey(user))
         self.assertEquals(self.mockos.seteuidCalls, [0, 1, 0, os.getuid()])
         self.assertEquals(self.mockos.setegidCalls, [2, os.getgid()])
-
-
-
-if pwd is None:
-    SSHPublicKeyDatabaseTests.skip = "pwd module not available"

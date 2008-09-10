@@ -8,7 +8,7 @@ Tests for ssh/transport.py and the classes therein.
 import md5, sha
 
 try:
-    import Crypto
+    import Crypto.Cipher.DES3
 except ImportError:
     Crypto = None
     class transport: # fictional modules to make classes work
@@ -1863,6 +1863,9 @@ class OldFactoryTestCase(unittest.TestCase):
     by the C{SSHServerTransport}, so we warn the user if they create an old
     factory.
     """
+
+    if Crypto is None:
+        skip = "cannot run w/o PyCrypto"
 
 
     def test_getPublicKeysWarning(self):

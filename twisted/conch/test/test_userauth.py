@@ -1,3 +1,4 @@
+
 from zope.interface import implements
 
 from twisted.cred.checkers import ICredentialsChecker
@@ -5,10 +6,15 @@ from twisted.cred.credentials import IUsernamePassword
 from twisted.cred.error import UnauthorizedLogin
 from twisted.cred.portal import IRealm, Portal
 
+try:
+    import Crypto.Cipher.DES3, Crypto.Cipher.XOR
+except ImportError:
+    userauth = transport = None
+else:
+    from twisted.conch.ssh import userauth, transport
+
 from twisted.conch.error import ConchError
-from twisted.conch.ssh import userauth
 from twisted.conch.ssh.common import NS
-from twisted.conch.ssh.transport import SSHServerTransport
 
 from twisted.internet import defer
 
@@ -16,51 +22,52 @@ from twisted.trial import unittest
 
 
 
-class FakeTransport(SSHServerTransport):
-    """
-    L{userauth.SSHUserAuthServer} expects an SSH transport which has a factory
-    attribute which has a portal attribute. Because the portal is important for
-    testing authentication, we need to be able to provide an interesting portal
-    object to the C{SSHUserAuthServer}.
-
-    In addition, we want to be able to capture any packets sent over the
-    transport.
-    """
-
-
-    class Service(object):
-        name = 'nancy'
-
-        def serviceStarted(self):
-            pass
-
-
-    class Factory(object):
-        def _makeService(self):
-            return FakeTransport.Service()
-
-        def getService(self, transport, nextService):
-            # This has to return a callable.
-            return self._makeService
-
-
-    def __init__(self, portal):
-        self.factory = self.Factory()
-        self.factory.portal = portal
-        self.packets = []
-
-
-    def sendPacket(self, messageType, message):
-        self.packets.append((messageType, message))
-
-
-    def isEncrypted(self, direction):
+if transport is not None:
+    class FakeTransport(transport.SSHServerTransport):
         """
-        Pretend that this transport encrypts traffic in both directions. The
-        SSHUserAuthServer disables password authentication if the transport
-        isn't encrypted.
+        L{userauth.SSHUserAuthServer} expects an SSH transport which has a factory
+        attribute which has a portal attribute. Because the portal is important for
+        testing authentication, we need to be able to provide an interesting portal
+        object to the C{SSHUserAuthServer}.
+
+        In addition, we want to be able to capture any packets sent over the
+        transport.
         """
-        return True
+
+
+        class Service(object):
+            name = 'nancy'
+
+            def serviceStarted(self):
+                pass
+
+
+        class Factory(object):
+            def _makeService(self):
+                return FakeTransport.Service()
+
+            def getService(self, transport, nextService):
+                # This has to return a callable.
+                return self._makeService
+
+
+        def __init__(self, portal):
+            self.factory = self.Factory()
+            self.factory.portal = portal
+            self.packets = []
+
+
+        def sendPacket(self, messageType, message):
+            self.packets.append((messageType, message))
+
+
+        def isEncrypted(self, direction):
+            """
+            Pretend that this transport encrypts traffic in both directions. The
+            SSHUserAuthServer disables password authentication if the transport
+            isn't encrypted.
+            """
+            return True
 
 
 
@@ -97,7 +104,12 @@ class MockChecker(object):
 
 
 class TestSSHUserAuthServer(unittest.TestCase):
-    """Tests for SSHUserAuthServer."""
+    """
+    Tests for SSHUserAuthServer.
+    """
+
+    if userauth is None:
+        skip = "Cannot run without PyCrypto"
 
     def setUp(self):
         self.realm = Realm()

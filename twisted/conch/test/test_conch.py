@@ -5,7 +5,7 @@
 import os, sys, socket
 
 try:
-    import Crypto
+    import Crypto.Cipher.DES3
 except:
     Crypto = None
 

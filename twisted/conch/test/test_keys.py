@@ -3,7 +3,7 @@
 # See LICENSE for details.
 
 try:
-    import Crypto
+    import Crypto.Cipher.DES3
 except ImportError:
     Crypto = None
 else:
@@ -20,7 +20,7 @@ class SSHKeysHandlingTestCase(unittest.TestCase):
     assumed test keys are in test/
     """
 
-    if not Crypto:
+    if Crypto is None:
         skip = "cannot run w/o PyCrypto"
 
     def setUp(self):
@@ -297,7 +297,7 @@ class SSHKeysHandlingTestCase(unittest.TestCase):
 
 class HelpersTestCase(unittest.TestCase):
 
-    if not Crypto:
+    if Crypto is None:
         skip = "cannot run w/o PyCrypto"
 
     def setUp(self):
@@ -438,6 +438,9 @@ attr u:
 \tdc:eb:db:2a""")
 
 class KeyTestCase(unittest.TestCase):
+
+    if Crypto is None:
+        skip = "cannot run w/o PyCrypto"
 
     def setUp(self):
         self.rsaObj = Crypto.PublicKey.RSA.construct((1L, 2L, 3L, 4L, 5L))
@@ -798,6 +801,8 @@ class WarningsTestCase(unittest.TestCase):
     """
     Test that deprecated functions warn the user of their deprecation.
     """
+    if Crypto is None:
+        skip = "cannot run w/o PyCrypto"
 
     def setUp(self):
         self.keyObject = keys.Key.fromString(keydata.privateRSA_lsh).keyObject

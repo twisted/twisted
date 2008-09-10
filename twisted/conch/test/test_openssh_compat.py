@@ -11,7 +11,13 @@ from twisted.trial.unittest import TestCase
 from twisted.python.filepath import FilePath
 from twisted.python.compat import set
 
-from twisted.conch.openssh_compat.factory import OpenSSHFactory
+try:
+    import Crypto.Cipher.DES3
+except ImportError:
+    OpenSSHFactory = None
+else:
+    from twisted.conch.openssh_compat.factory import OpenSSHFactory
+
 from twisted.conch.test import keydata
 from twisted.test.test_process import MockOS
 
@@ -20,6 +26,10 @@ class OpenSSHFactoryTests(TestCase):
     """
     Tests for L{OpenSSHFactory}.
     """
+    if getattr(os, "geteuid", None) is None:
+        skip = "geteuid/seteuid not available"
+    elif OpenSSHFactory is None:
+        skip = "Cannot run without PyCrypto"
 
     def setUp(self):
         self.factory = OpenSSHFactory()
@@ -89,8 +99,3 @@ class OpenSSHFactoryTests(TestCase):
         self.assertEqual(set(keyTypes), set(['ssh-rsa', 'ssh-dss']))
         self.assertEquals(self.mockos.seteuidCalls, [0, os.geteuid()])
         self.assertEquals(self.mockos.setegidCalls, [0, os.getegid()])
-
-
-
-if getattr(os, "geteuid", None) is None:
-    OpenSSHFactoryTests.skip = "geteuid/seteuid not available"

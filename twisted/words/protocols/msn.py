@@ -73,23 +73,21 @@ TODO
 @author: Sam Jordan
 """
 
-from __future__ import nested_scopes
-
-
-# Twisted imports
-from twisted.internet import reactor
-from twisted.internet.defer import Deferred
-from twisted.internet.protocol import ClientFactory
-from twisted.internet.ssl import ClientContextFactory
-from twisted.python import failure, log
-
-from twisted.protocols.basic import LineReceiver
-from twisted.web.http import HTTPClient
-
-# System imports
 import types, operator, os, md5
 from random import randint
 from urllib import quote, unquote
+
+from twisted.python import failure, log
+from twisted.internet import reactor
+from twisted.internet.defer import Deferred
+from twisted.internet.protocol import ClientFactory
+try:
+    from twisted.internet.ssl import ClientContextFactory
+except ImportError:
+    ClientContextFactory = None
+from twisted.protocols.basic import LineReceiver
+from twisted.web.http import HTTPClient
+
 
 MSN_PROTOCOL_VERSION = "MSNP8 CVR0"       # protocol version
 MSN_PORT             = 1863               # default dispatch server port

@@ -2,8 +2,10 @@
 # Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+import struct
+
 try:
-    import Crypto
+    import Crypto.Cipher.DES3
 except ImportError:
     Crypto = None
 
@@ -19,7 +21,6 @@ from twisted.trial import unittest
 
 from test_recvline import LoopbackRelay
 
-import struct
 
 
 class ConchTestRealm:

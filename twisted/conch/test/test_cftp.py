@@ -5,7 +5,7 @@
 import sys, os
 
 try:
-    import Crypto
+    import Crypto.Cipher.DES3
 except ImportError:
     Crypto = None
 

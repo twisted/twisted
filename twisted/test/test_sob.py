@@ -1,13 +1,17 @@
-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-# System Imports
+import sys, os
+
+try:
+    import Crypto.Cipher.AES
+except ImportError:
+    Crypto = None
+
 from twisted.trial import unittest
 from twisted.persisted import sob
 from twisted.python import components
-import sys, os
 
 try:
     from twisted.web import microdom
@@ -74,10 +78,6 @@ class PersistTestCase(unittest.TestCase):
                 self.failUnlessEqual(o, o1)
       
     def testEncryptedStyles(self):
-        try:
-            import Crypto
-        except ImportError:
-            raise unittest.SkipTest()
         for o in objects:
             phrase='once I was the king of spain'
             p = sob.Persistent(o, '')
@@ -88,6 +88,8 @@ class PersistTestCase(unittest.TestCase):
                 p.save(filename='epersisttest.'+style, passphrase=phrase)
                 o1 = sob.load('epersisttest.'+style, style, phrase)
                 self.failUnlessEqual(o, o1)
+    if Crypto is None:
+        testEncryptedStyles.skip = "PyCrypto required for encrypted config"
 
     def testPython(self):
         f = open("persisttest.python", 'w')
@@ -97,10 +99,6 @@ class PersistTestCase(unittest.TestCase):
         self.failUnlessEqual(o, [1,2,3])
 
     def testEncryptedPython(self):
-        try:
-            import Crypto
-        except ImportError:
-            raise unittest.SkipTest()
         phrase='once I was the king of spain'
         f = open("epersisttest.python", 'w')
         f.write(
@@ -108,6 +106,8 @@ class PersistTestCase(unittest.TestCase):
         f.close()
         o = sob.loadValueFromFile('epersisttest.python', 'foo', phrase)
         self.failUnlessEqual(o, [1,2,3])
+    if Crypto is None:
+        testEncryptedPython.skip = "PyCrypto required for encrypted config"
 
     def testTypeGuesser(self):
         self.assertRaises(KeyError, sob.guessType, "file.blah")

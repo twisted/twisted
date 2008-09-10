@@ -76,17 +76,3 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.enterprise import reflector
         from twisted.enterprise import sqlreflector
         from twisted.enterprise import row
-
-    def test_test(self):
-        import os, sys
-        oldargv = sys.argv
-        sys.argv = sys.argv[:1]
-        try:
-            tests = os.listdir(os.path.dirname(__file__))
-            for f in tests:
-                if f.startswith('test_') and f.endswith('.py'):
-                    __import__('twisted.test.%s' % f[:-3])
-        finally:
-            sys.argv = oldargv
-
-testCases = [AtLeastImportTestCase]

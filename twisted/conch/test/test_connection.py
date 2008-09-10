@@ -4,11 +4,14 @@
 """
 This module tests twisted.conch.ssh.connection.
 """
+
 import struct
+
 from twisted.conch import error
 from twisted.conch.ssh import channel, common, connection
 from twisted.trial import unittest
 from twisted.conch.test import test_userauth
+
 
 class TestChannel(channel.SSHChannel):
     """
@@ -167,7 +170,12 @@ class TestConnection(connection.SSHConnection):
         """
         raise AssertionError('no such thing')
 
+
+
 class ConnectionTestCase(unittest.TestCase):
+
+    if test_userauth.transport is None:
+        skip = "Cannot run without PyCrypto"
 
     def setUp(self):
         self.transport = test_userauth.FakeTransport(None)
