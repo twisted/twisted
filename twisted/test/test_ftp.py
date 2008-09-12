@@ -86,6 +86,10 @@ class FTPServerTestCase(unittest.TestCase):
         def _rememberProtocolInstance(addr):
             protocol = buildProtocol(addr)
             self.serverProtocol = protocol.wrappedProtocol
+            def cleanupServer():
+                if self.serverProtocol.transport is not None:
+                    self.serverProtocol.transport.loseConnection()
+            self.addCleanup(cleanupServer)
             d1.callback(None)
             return protocol
         self.factory.buildProtocol = _rememberProtocolInstance
