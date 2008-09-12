@@ -9,7 +9,7 @@ import warnings, os, stat, sys, signal
 
 from twisted.python.runtime import platform
 from twisted.trial import unittest
-from twisted.internet import reactor, utils, interfaces
+from twisted.internet import error, reactor, utils, interfaces
 
 
 class ProcessUtilsTests(unittest.TestCase):
@@ -63,7 +63,11 @@ class ProcessUtilsTests(unittest.TestCase):
             ])
 
         d = utils.getProcessOutput(self.exe, ['-u', scriptFile])
-        return self.assertFailure(d, IOError)
+        d = self.assertFailure(d, IOError)
+        def cbFailed(err):
+            return self.assertFailure(err.processEnded, error.ProcessDone)
+        d.addCallback(cbFailed)
+        return d
 
 
     def test_outputWithErrorCollected(self):

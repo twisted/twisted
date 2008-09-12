@@ -26,7 +26,41 @@ def _callProtocolWithDeferred(protocol, executable, args, env, path, reactor=Non
     return d
 
 
+
+class _UnexpectedErrorOutput(IOError):
+    """
+    Standard error data was received where it was not expected.  This is a
+    subclass of L{IOError} to preserve backward compatibility with the previous
+    error behavior of L{getProcessOutput}.
+
+    @ivar processEnded: A L{Deferred} which will fire when the process which
+        produced the data on stderr has ended (exited and all file descriptors
+        closed).
+    """
+    def __init__(self, text, processEnded):
+        IOError.__init__(self, "got stderr: %r" % (text,))
+        self.processEnded = processEnded
+
+
+
 class _BackRelay(protocol.ProcessProtocol):
+    """
+    Trivial protocol for communicating with a process and turning its output
+    into the result of a L{Deferred}.
+
+    @ivar deferred: A L{Deferred} which will be called back with all of stdout
+        and, if C{errortoo} is true, all of stderr as well (mixed together in
+        one string).  If C{errortoo} is false and any bytes are received over
+        stderr, this will fire with an L{_UnexpectedErrorOutput} instance and
+        the attribute will be set to C{None}.
+
+    @ivar onProcessEnded: If C{errortoo} is false and bytes are received over
+        stderr, this attribute will refer to a L{Deferred} which will be called
+        back when the process ends.  This C{Deferred} is also associated with
+        the L{_UnexpectedErrorOutput} which C{deferred} fires with earlier in
+        this case so that users can determine when the process has actually
+        ended, in addition to knowing when bytes have been received via stderr.
+    """
 
     def __init__(self, deferred, errortoo=0):
         self.deferred = deferred
@@ -38,7 +72,9 @@ class _BackRelay(protocol.ProcessProtocol):
 
     def errReceivedIsBad(self, text):
         if self.deferred is not None:
-            self.deferred.errback(failure.Failure(IOError("got stderr: %r" % text)))
+            self.onProcessEnded = defer.Deferred()
+            err = _UnexpectedErrorOutput(text, self.onProcessEnded)
+            self.deferred.errback(failure.Failure(err))
             self.deferred = None
             self.transport.loseConnection()
 
@@ -51,11 +87,15 @@ class _BackRelay(protocol.ProcessProtocol):
     def processEnded(self, reason):
         if self.deferred is not None:
             self.deferred.callback(self.s.getvalue())
+        elif self.onProcessEnded is not None:
+            self.onProcessEnded.errback(reason)
+
 
 
 def getProcessOutput(executable, args=(), env={}, path=None, reactor=None,
                      errortoo=0):
-    """Spawn a process and return its output as a deferred returning a string.
+    """
+    Spawn a process and return its output as a deferred returning a string.
 
     @param executable: The file name to run and get the output of - the
                        full path should be used.
@@ -71,7 +111,12 @@ def getProcessOutput(executable, args=(), env={}, path=None, reactor=None,
                  current directory.
 
     @param reactor: the reactor to use - defaults to the default reactor
-    @param errortoo: if 1, capture stderr too
+
+    @param errortoo: If true, include stderr in the result.  If false, if
+        stderr is received the returned L{Deferred} will errback with an
+        L{IOError} instance with a C{processEnded} attribute.  The
+        C{processEnded} attribute refers to a L{Deferred} which fires when the
+        executed process ends.
     """
     return _callProtocolWithDeferred(lambda d:
                                         _BackRelay(d, errortoo=errortoo),
