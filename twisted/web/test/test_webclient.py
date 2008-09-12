@@ -14,6 +14,7 @@ from twisted.web import server, static, client, error, util, resource
 from twisted.internet import reactor, defer, interfaces
 from twisted.python.filepath import FilePath
 from twisted.protocols.policies import WrappingFactory
+from twisted.test.proto_helpers import StringTransport
 
 try:
     from twisted.internet import ssl
@@ -137,6 +138,52 @@ class ParseUrlTestCase(unittest.TestCase):
         self.assertTrue(isinstance(scheme, str))
         self.assertTrue(isinstance(host, str))
         self.assertTrue(isinstance(path, str))
+
+
+
+class HTTPPageGetterTests(unittest.TestCase):
+    """
+    Tests for L{HTTPPagerGetter}, the HTTP client protocol implementation
+    used to implement L{getPage}.
+    """
+    def test_earlyHeaders(self):
+        """
+        When a connection is made, L{HTTPPagerGetter} sends the headers from
+        its factory's C{headers} dict.  If I{Host} or I{Content-Length} is
+        present in this dict, the values are not sent, since they are sent with
+        special values before the C{headers} dict is processed.  If
+        I{User-Agent} is present in the dict, it overrides the value of the
+        C{agent} attribute of the factory.  If I{Cookie} is present in the
+        dict, its value is added to the values from the factory's C{cookies}
+        attribute.
+        """
+        factory = client.HTTPClientFactory(
+            'http://foo/bar',
+            agent="foobar",
+            cookies={'baz': 'quux'},
+            postdata="some data",
+            headers={
+                'Host': 'example.net',
+                'User-Agent': 'fooble',
+                'Cookie': 'blah blah',
+                'Content-Length': '12981',
+                'Useful': 'value'})
+        transport = StringTransport()
+        protocol = client.HTTPPageGetter()
+        protocol.factory = factory
+        protocol.makeConnection(transport)
+        self.assertEqual(
+            transport.value(),
+            "GET /bar HTTP/1.0\r\n"
+            "Host: example.net\r\n"
+            "User-Agent: foobar\r\n"
+            "Content-Length: 9\r\n"
+            "Useful: value\r\n"
+            "connection: close\r\n"
+            "Cookie: blah blah; baz=quux\r\n"
+            "\r\n"
+            "some data")
+
 
 
 class WebClientTestCase(unittest.TestCase):

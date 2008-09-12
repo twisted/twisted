@@ -14,6 +14,7 @@ from twisted.internet import defer, protocol, reactor
 from twisted.python import failure
 from twisted.python.util import InsensitiveDict
 from twisted.web import error
+from twisted.python.compat import set
 
 
 class PartialDownloadError(error.Error):
@@ -30,23 +31,28 @@ class HTTPPageGetter(http.HTTPClient):
     followRedirect = 1
     failed = 0
 
+    _specialHeaders = set(('host', 'user-agent', 'cookie', 'content-length'))
+
     def connectionMade(self):
         method = getattr(self.factory, 'method', 'GET')
         self.sendCommand(method, self.factory.path)
         self.sendHeader('Host', self.factory.headers.get("host", self.factory.host))
         self.sendHeader('User-Agent', self.factory.agent)
-        if self.factory.cookies:
-            l=[]
-            for cookie, cookval in self.factory.cookies.items():
-                l.append('%s=%s' % (cookie, cookval))
-            self.sendHeader('Cookie', '; '.join(l))
         data = getattr(self.factory, 'postdata', None)
         if data is not None:
             self.sendHeader("Content-Length", str(len(data)))
+
+        cookieData = []
         for (key, value) in self.factory.headers.items():
-            if key.lower() != "content-length":
+            if key.lower() not in self._specialHeaders:
                 # we calculated it on our own
                 self.sendHeader(key, value)
+            if key.lower() == 'cookie':
+                cookieData.append(value)
+        for cookie, cookval in self.factory.cookies.items():
+            cookieData.append('%s=%s' % (cookie, cookval))
+        if cookieData:
+            self.sendHeader('Cookie', '; '.join(cookieData))
         self.endHeaders()
         self.headers = {}
 
