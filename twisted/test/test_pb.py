@@ -9,8 +9,7 @@ only specific tests for old API.
 """
 
 # issue1195 TODOs: replace pump.pump() with something involving Deferreds.
-# Clean up warning suppression. Find a better replacement for the handful of
-# reactor.callLater(0.1, ..) calls.
+# Clean up warning suppression.
 
 import sys, os, time, gc
 
@@ -23,6 +22,7 @@ from twisted.spread import pb, util, publish, jelly
 from twisted.internet import protocol, main, reactor
 from twisted.internet.error import ConnectionRefusedError
 from twisted.internet.defer import Deferred, gatherResults, succeed
+from twisted.protocols.policies import WrappingFactory
 from twisted.python import failure, log
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.cred import portal, checkers, credentials
@@ -1548,6 +1548,10 @@ class NonSubclassingPerspective:
 
 
 class NSPTestCase(unittest.TestCase):
+    """
+    Tests for authentication against a realm where the L{IPerspective}
+    implementation is not a subclass of L{Avatar}.
+    """
     def setUp(self):
         self.realm = TestRealm()
         self.realm.perspectiveFactory = NonSubclassingPerspective
@@ -1555,14 +1559,17 @@ class NSPTestCase(unittest.TestCase):
         self.checker = checkers.InMemoryUsernamePasswordDatabaseDontUse()
         self.checker.addUser("user", "pass")
         self.portal.registerChecker(self.checker)
-        self.factory = pb.PBServerFactory(self.portal)
+        self.factory = WrappingFactory(pb.PBServerFactory(self.portal))
         self.port = reactor.listenTCP(0, self.factory, interface="127.0.0.1")
+        self.addCleanup(self.port.stopListening)
         self.portno = self.port.getHost().port
 
-    def tearDown(self):
-        return self.port.stopListening()
 
     def test_NSP(self):
+        """
+        An L{IPerspective} implementation which does not subclass
+        L{Avatar} can expose remote methods for the client to call.
+        """
         factory = pb.PBClientFactory()
         d = factory.login(credentials.UsernamePassword('user', 'pass'),
                           "BRAINS!")
@@ -1570,7 +1577,11 @@ class NSPTestCase(unittest.TestCase):
         d.addCallback(lambda p: p.callRemote('ANYTHING', 'here', bar='baz'))
         d.addCallback(self.assertEquals,
                       ('ANYTHING', ('here',), {'bar': 'baz'}))
-        d.addCallback(lambda res: factory.disconnect())
+        def cleanup(ignored):
+            factory.disconnect()
+            for p in self.factory.protocols:
+                p.transport.loseConnection()
+        d.addCallback(cleanup)
         return d
 
 
