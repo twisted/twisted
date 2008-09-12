@@ -1759,6 +1759,15 @@ class DNSProtocol(DNSMixin, protocol.Protocol):
         self.liveMessages = {}
         self.controller.connectionMade(self)
 
+
+    def connectionLost(self, reason):
+        """
+        Notify the controller that this protocol is no longer
+        connected.
+        """
+        self.controller.connectionLost(self)
+
+
     def dataReceived(self, data):
         self.buffer += data
 
@@ -1789,6 +1798,7 @@ class DNSProtocol(DNSMixin, protocol.Protocol):
                 self.length = None
             else:
                 break
+
 
     def query(self, queries, timeout=60):
         """

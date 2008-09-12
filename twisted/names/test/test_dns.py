@@ -13,8 +13,9 @@ except ImportError:
 
 import struct
 
+from twisted.python.failure import Failure
 from twisted.internet import address, task
-from twisted.internet.error import CannotListenError
+from twisted.internet.error import CannotListenError, ConnectionDone
 from twisted.trial import unittest
 from twisted.names import dns
 
@@ -315,9 +316,22 @@ class DatagramProtocolTestCase(unittest.TestCase):
 class TestTCPController(TestController):
     """
     Pretend to be a DNS query processor for a DNSProtocol.
+
+    @ivar connections: A list of L{DNSProtocol} instances which have
+        notified this controller that they are connected and have not
+        yet notified it that their connection has been lost.
     """
+    def __init__(self):
+        TestController.__init__(self)
+        self.connections = []
+
+
     def connectionMade(self, proto):
-        pass
+        self.connections.append(proto)
+
+
+    def connectionLost(self, proto):
+        self.connections.remove(proto)
 
 
 
@@ -331,10 +345,22 @@ class DNSProtocolTestCase(unittest.TestCase):
         Create a L{dns.DNSProtocol} with a deterministic clock.
         """
         self.clock = task.Clock()
-        controller = TestTCPController()
-        self.proto = dns.DNSProtocol(controller)
+        self.controller = TestTCPController()
+        self.proto = dns.DNSProtocol(self.controller)
         self.proto.makeConnection(proto_helpers.StringTransport())
         self.proto.callLater = self.clock.callLater
+
+
+    def test_connectionTracking(self):
+        """
+        L{dns.DNSProtocol} calls its controller's C{connectionMade}
+        method with itself when it is connected to a transport and its
+        controller's C{connectionLost} method when it is disconnected.
+        """
+        self.assertEqual(self.controller.connections, [self.proto])
+        self.proto.connectionLost(
+            Failure(ConnectionDone("Fake Connection Done")))
+        self.assertEqual(self.controller.connections, [])
 
 
     def test_queryTimeout(self):
@@ -465,16 +491,6 @@ class ReprTests(unittest.TestCase):
         self.assertEqual(
             repr(dns.Record_PTR('example.com', 4321)),
             "<PTR name=example.com ttl=4321>")
-
-
-    def test_dname(self):
-        """
-        The repr of a L{dns.Record_DNAME} instance includes the name of the
-        non-terminal DNS name redirection and the TTL of the record.
-        """
-        self.assertEqual(
-            repr(dns.Record_DNAME('example.com', 4321)),
-            "<DNAME name=example.com ttl=4321>")
 
 
     def test_dname(self):

@@ -1,7 +1,6 @@
 # -*- test-case-name: twisted.names.test.test_names -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 Async DNS server
@@ -18,17 +17,23 @@ for resolvers to deal with.  Fix it.
 @author: Jp Calderone
 """
 
-from __future__ import nested_scopes
 import time
 
-# Twisted imports
 from twisted.internet import protocol
-from twisted.names import dns
+from twisted.names import dns, resolve
 from twisted.python import log
 
-import resolve
 
 class DNSServerFactory(protocol.ServerFactory):
+    """
+    Server factory and tracker for L{DNSProtocol} connections.  This
+    class also provides records for responses to DNS queries.
+
+    @ivar connections: A list of all the connected L{DNSProtocol}
+        instances using this object as their controller.
+    @type connections: C{list} of L{DNSProtocol}
+    """
+
     protocol = dns.DNSProtocol
     cache = None
 
@@ -46,6 +51,7 @@ class DNSServerFactory(protocol.ServerFactory):
         self.verbose = verbose
         if caches:
             self.cache = caches[-1]
+        self.connections = []
 
 
     def buildProtocol(self, addr):
@@ -53,8 +59,19 @@ class DNSServerFactory(protocol.ServerFactory):
         p.factory = self
         return p
 
+
     def connectionMade(self, protocol):
-        pass
+        """
+        Track a newly connected L{DNSProtocol}.
+        """
+        self.connections.append(protocol)
+
+
+    def connectionLost(self, protocol):
+        """
+        Stop tracking a no-longer connected L{DNSProtocol}.
+        """
+        self.connections.remove(protocol)
 
 
     def sendReply(self, protocol, message, address):

@@ -456,6 +456,12 @@ class AXFRController:
         message.queries = [dns.Query(self.name, dns.AXFR, dns.IN)]
         protocol.writeMessage(message)
 
+
+    def connectionLost(self, protocol):
+        # XXX Do something here - see #3428
+        pass
+
+
     def messageReceived(self, message, protocol):
         # Caveat: We have to handle two cases: All records are in 1
         # message, or all records are in N messages.

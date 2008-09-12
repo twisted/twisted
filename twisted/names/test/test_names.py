@@ -153,30 +153,39 @@ class ServerDNSTestCase(unittest.TestCase):
         p = dns.DNSDatagramProtocol(self.factory)
 
         while 1:
-            self.listenerTCP = reactor.listenTCP(0, self.factory, interface="127.0.0.1")
-            port = self.listenerTCP.getHost().port
+            listenerTCP = reactor.listenTCP(0, self.factory, interface="127.0.0.1")
+            # It's simpler to do the stop listening with addCleanup,
+            # even though we might not end up using this TCP port in
+            # the test (if the listenUDP below fails).  Cleaning up
+            # this TCP port sooner than "cleanup time" would mean
+            # adding more code to keep track of the Deferred returned
+            # by stopListening.
+            self.addCleanup(listenerTCP.stopListening)
+            port = listenerTCP.getHost().port
 
             try:
-                self.listenerUDP = reactor.listenUDP(port, p, interface="127.0.0.1")
+                listenerUDP = reactor.listenUDP(port, p, interface="127.0.0.1")
             except error.CannotListenError:
-                self.listenerTCP.stopListening()
+                pass
             else:
+                self.addCleanup(listenerUDP.stopListening)
                 break
 
+        self.listenerTCP = listenerTCP
+        self.listenerUDP = listenerUDP
         self.resolver = client.Resolver(servers=[('127.0.0.1', port)])
 
 
     def tearDown(self):
         """
-        Asynchronously disconnect listenerTCP, listenerUDP and resolver.
+        Clean up any server connections associated with the
+        L{DNSServerFactory} created in L{setUp}
         """
-        d1 = self.listenerTCP.loseConnection()
-        d2 = defer.maybeDeferred(self.listenerUDP.stopListening)
-        d = defer.gatherResults([d1, d2])
-        d.addCallback(lambda x : self.failUnless(
-            self.listenerUDP.disconnected
-            and self.listenerTCP.disconnected))
-        return d
+        # It'd be great if DNSServerFactory had a method that
+        # encapsulated this task.  At least the necessary data is
+        # available, though.
+        for conn in self.factory.connections[:]:
+            conn.transport.loseConnection()
 
 
     def namesTest(self, d, r):
@@ -455,6 +464,24 @@ class DNSServerFactoryTests(unittest.TestCase):
         opCode = 5
         self._messageReceivedTest('handleOther', Message(opCode=opCode))
 
+
+    def test_connectionTracking(self):
+        """
+        The C{connectionMade} and C{connectionLost} methods of
+        L{DNSServerFactory} cooperate to keep track of all
+        L{DNSProtocol} objects created by a factory which are
+        connected.
+        """
+        protoA, protoB = object(), object()
+        factory = server.DNSServerFactory()
+        factory.connectionMade(protoA)
+        self.assertEqual(factory.connections, [protoA])
+        factory.connectionMade(protoB)
+        self.assertEqual(factory.connections, [protoA, protoB])
+        factory.connectionLost(protoA)
+        self.assertEqual(factory.connections, [protoB])
+        factory.connectionLost(protoB)
+        self.assertEqual(factory.connections, [])
 
 
 class HelperTestCase(unittest.TestCase):
