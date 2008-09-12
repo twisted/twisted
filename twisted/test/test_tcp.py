@@ -902,22 +902,33 @@ class LocalRemoteAddressTestCase(unittest.TestCase):
         L{IListeningPort.getHost} returns the same address as a client
         connection's L{ITCPTransport.getPeer}.
         """
-        f1 = MyServerFactory()
-        p1 = reactor.listenTCP(0, f1, interface='127.0.0.1')
-        self.addCleanup(p1.stopListening)
-        n = p1.getHost().port
+        serverFactory = MyServerFactory()
+        serverFactory.protocolConnectionLost = defer.Deferred()
+        serverConnectionLost = serverFactory.protocolConnectionLost
+        port = reactor.listenTCP(0, serverFactory, interface='127.0.0.1')
+        self.addCleanup(port.stopListening)
+        n = port.getHost().port
 
-        f2 = MyOtherClientFactory()
-        p2 = reactor.connectTCP('127.0.0.1', n, f2)
+        clientFactory = MyClientFactory()
+        onConnection = clientFactory.protocolConnectionMade = defer.Deferred()
+        connector = reactor.connectTCP('127.0.0.1', n, clientFactory)
 
-        d = loopUntil(lambda :p2.state == "connected")
         def check(ignored):
-            self.assertEquals(p1.getHost(), f2.address)
-            self.assertEquals(p1.getHost(), f2.protocol.transport.getPeer())
-            return p1.stopListening()
+            self.assertEquals([port.getHost()], clientFactory.peerAddresses)
+            self.assertEquals(
+                port.getHost(), clientFactory.protocol.transport.getPeer())
+        onConnection.addCallback(check)
+
         def cleanup(ignored):
-            p2.transport.loseConnection()
-        return d.addCallback(check).addCallback(cleanup)
+            # Clean up the client explicitly here so that tear down of
+            # the server side of the connection begins, then wait for
+            # the server side to actually disconnect.
+            connector.disconnect()
+            return serverConnectionLost
+        onConnection.addCallback(cleanup)
+
+        return onConnection
+
 
 
 class WriterProtocol(protocol.Protocol):
