@@ -7,7 +7,7 @@ Tests for L{twisted.application.app} and L{twisted.scripts.twistd}.
 
 import signal, inspect
 
-import os, sys, cPickle
+import os, sys, cPickle, StringIO
 try:
     import pwd, grp
 except ImportError:
@@ -732,6 +732,24 @@ class AppProfilingTestCase(unittest.TestCase):
         test_profile.skip = "profile module not available"
 
 
+    def _testStats(self, statsClass, profile):
+        out = StringIO.StringIO()
+
+        # Patch before creating the pstats, because pstats binds self.stream to
+        # sys.stdout early in 2.5 and newer.
+        stdout = self.patch(sys, 'stdout', out)
+
+        # If pstats.Stats can load the data and then reformat it, then the
+        # right thing probably happened.
+        stats = statsClass(profile)
+        stats.print_stats()
+        stdout.restore()
+
+        data = out.getvalue()
+        self.assertIn("function calls", data)
+        self.assertIn("(run)", data)
+
+
     def test_profileSaveStats(self):
         """
         With the C{savestats} option specified, L{app.ProfileRunner.run}
@@ -747,9 +765,7 @@ class AppProfilingTestCase(unittest.TestCase):
         profiler.run(reactor)
 
         self.assertTrue(reactor.called)
-        data = file(config["profile"]).read()
-        self.assertIn("DummyReactor.run", data)
-        self.assertNotIn("function calls", data)
+        self._testStats(pstats.Stats, config['profile'])
 
     if profile is None:
         test_profileSaveStats.skip = "profile module not available"
@@ -835,10 +851,7 @@ class AppProfilingTestCase(unittest.TestCase):
         profiler.run(reactor)
 
         self.assertTrue(reactor.called)
-        data = file(config["profile"]).read()
-        self.assertIn("hotshot-version", data)
-        self.assertIn("run", data)
-        self.assertNotIn("function calls", data)
+        self._testStats(hotshot.stats.load, config['profile'])
 
     if hotshot is None:
         test_hotshotSaveStats.skip = "hotshot module not available"
@@ -938,8 +951,7 @@ class AppProfilingTestCase(unittest.TestCase):
         profiler.run(reactor)
 
         self.assertTrue(reactor.called)
-        data = file(config["profile"]).read()
-        self.assertIn("run", data)
+        self._testStats(pstats.Stats, config['profile'])
 
     if cProfile is None:
         test_cProfileSaveStats.skip = "cProfile module not available"
