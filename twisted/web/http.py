@@ -444,7 +444,7 @@ class HTTPClient(basic.LineReceiver):
         @type status: C{str}
         @param message: e.g. 'OK'
         """
-        
+
     def handleHeader(self, key, val):
         """
         Called every time a header is received.
@@ -454,7 +454,8 @@ class HTTPClient(basic.LineReceiver):
         """
         Called when all headers have been received.
         """
-    
+
+
     def rawDataReceived(self, data):
         if self.length is not None:
             data, rest = data[:self.length], data[self.length:]
@@ -465,6 +466,7 @@ class HTTPClient(basic.LineReceiver):
         if self.length == 0:
             self.handleResponseEnd()
             self.setLineMode(rest)
+
 
 
 # response codes that must have empty bodies
@@ -1363,7 +1365,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             reqHeaders.setRawHeaders(header, [data])
 
         self._receivedHeaderCount += 1
-
         if self._receivedHeaderCount > self.maxHeaders:
             self.transport.write("HTTP/1.1 400 Bad Request\r\n\r\n")
             self.transport.loseConnection()
@@ -1391,6 +1392,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         req.requestReceived(command, path, version)
 
     def rawDataReceived(self, data):
+        self.resetTimeout()
         if self._transferDecoder is not None:
             self._transferDecoder.dataReceived(data)
         elif len(data) < self.length:

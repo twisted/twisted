@@ -72,7 +72,7 @@ class StringTransport:
         self.io.write(''.join(data))
 
     def loseConnection(self):
-        pass
+        self.disconnecting = True
 
     def getPeer(self):
         if self.peerAddr is None:

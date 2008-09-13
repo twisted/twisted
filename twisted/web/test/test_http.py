@@ -6,17 +6,16 @@ Test HTTP support.
 """
 
 from urlparse import urlparse, urlunsplit, clear_cache
-import string, random, urllib, cgi
+import random, urllib, cgi
 
 from twisted.python.compat import set
 from twisted.trial import unittest
 from twisted.web import http, http_headers
 from twisted.protocols import loopback
-from twisted.internet import protocol
-from twisted.test.test_protocols import StringIOWithoutClosing
-
+from twisted.internet.task import Clock
 from twisted.test.proto_helpers import StringTransport
 from twisted.web.test.test_web import DummyChannel
+
 
 class DateTimeTest(unittest.TestCase):
     """Test date parsing functions."""
@@ -104,16 +103,38 @@ class HTTP1_0TestCase(unittest.TestCase, ResponseTestMixin):
         """
         Send requests over a channel and check responses match what is expected.
         """
-        b = StringIOWithoutClosing()
+        b = StringTransport()
         a = http.HTTPChannel()
         a.requestFactory = DummyHTTPHandler
-        a.makeConnection(protocol.FileWrapper(b))
+        a.makeConnection(b)
         # one byte at a time, to stress it.
         for byte in self.requests:
             a.dataReceived(byte)
         a.connectionLost(IOError("all one"))
-        value = b.getvalue()
+        value = b.value()
         self.assertResponseEquals(value, self.expected_response)
+
+
+    def test_requestBodyTimeout(self):
+        """
+        L{HTTPChannel} resets its timeout whenever data from a request body is
+        delivered to it.
+        """
+        clock = Clock()
+        transport = StringTransport()
+        protocol = http.HTTPChannel()
+        protocol.timeOut = 100
+        protocol.callLater = clock.callLater
+        protocol.makeConnection(transport)
+        protocol.dataReceived('POST / HTTP/1.0\r\nContent-Length: 2\r\n\r\n')
+        clock.advance(99)
+        self.assertFalse(transport.disconnecting)
+        protocol.dataReceived('x')
+        clock.advance(99)
+        self.assertFalse(transport.disconnecting)
+        protocol.dataReceived('x')
+        self.assertEqual(len(protocol.requests), 1)
+
 
 
 class HTTP1_1TestCase(HTTP1_0TestCase):
@@ -214,7 +235,7 @@ class HTTPLoopbackTestCase(unittest.TestCase):
 
     def _handleHeader(self, key, value):
         self.numHeaders = self.numHeaders + 1
-        self.assertEquals(self.expectedHeaders[string.lower(key)], value)
+        self.assertEquals(self.expectedHeaders[key.lower()], value)
 
     def _handleEndHeaders(self):
         self.gotEndHeaders = 1
@@ -396,13 +417,13 @@ class ParsingTestCase(unittest.TestCase):
     """
     def runRequest(self, httpRequest, requestClass, success=1):
         httpRequest = httpRequest.replace("\n", "\r\n")
-        b = StringIOWithoutClosing()
+        b = StringTransport()
         a = http.HTTPChannel()
         a.requestFactory = requestClass
-        a.makeConnection(protocol.FileWrapper(b))
+        a.makeConnection(b)
         # one byte at a time, to stress it.
         for byte in httpRequest:
-            if a.transport.closed:
+            if a.transport.disconnecting:
                 break
             a.dataReceived(byte)
         a.connectionLost(IOError("all done"))
@@ -478,7 +499,7 @@ class ParsingTestCase(unittest.TestCase):
         channel = self.runRequest("\n".join(requestLines), MyRequest, 0)
         self.assertEqual(processed, [])
         self.assertEqual(
-            channel.transport.file.getvalue(),
+            channel.transport.value(),
             "HTTP/1.1 400 Bad Request\r\n\r\n")
 
 
@@ -510,7 +531,7 @@ class ParsingTestCase(unittest.TestCase):
         self.assertEqual(first.getHeader('foo'), 'bar')
         self.assertEqual(second.getHeader('bar'), 'baz')
         self.assertEqual(
-            channel.transport.file.getvalue(),
+            channel.transport.value(),
             'HTTP/1.1 200 OK\r\n'
             'Transfer-Encoding: chunked\r\n'
             '\r\n'
