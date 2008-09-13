@@ -16,11 +16,6 @@ class IFingerService(Interface):
     def getUsers():
         """Return a deferred returning a list of strings"""
 
-class IFingerSetterService(Interface):
-
-    def setUser(user, status):
-        """Set the user's status to something"""
-
 def catchError(err):
     return "Internal error in server"
 
@@ -96,7 +91,6 @@ class FingerSetterFactoryFromService(protocol.ServerFactory):
 
 
 components.registerAdapter(FingerSetterFactoryFromService,
-                           IFingerSetterService,
                            IFingerSetterFactory)
 
 class IRCReplyBot(irc.IRCClient):
