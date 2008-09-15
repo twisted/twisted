@@ -1,13 +1,25 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import os, sys, time, logging
+"""
+Tests for L{twisted.python.log}.
+"""
+
+import os, sys, time, logging, warnings
 from cStringIO import StringIO
 
-from twisted.trial import unittest
+from twisted.trial import unittest, util
 
 from twisted.python import log
 from twisted.python import failure
+
+
+class FakeWarning(Warning):
+    """
+    A unique L{Warning} subclass used by tests for interactions of
+    L{twisted.python.log} with the L{warnings} module.
+    """
+
 
 
 class LogTest(unittest.TestCase):
@@ -102,6 +114,65 @@ class LogTest(unittest.TestCase):
             self.assertEquals(L1[1]['message'], ("Howdy, y'all.",))
             self.assertEquals(L2[0]['message'], ("Howdy, y'all.",))
 
+
+    def test_showwarning(self):
+        """
+        L{twisted.python.log.showwarning} emits the warning as a message
+        to the Twisted logging system.
+        """
+        # XXX These warnings show up on stdout!  See #3433.
+        log.showwarning(
+            "unique warning message", FakeWarning, "warning-filename.py", 27)
+        event = self.catcher.pop()
+        self.assertEqual(
+            event['format'] % event,
+            'warning-filename.py:27: twisted.test.test_log.FakeWarning: '
+            'unique warning message')
+        self.assertEqual(self.catcher, [])
+
+        # Python 2.6 requires that any function used to override the
+        # warnings.showwarning API accept a "line" parameter or a
+        # deprecation warning is emitted.
+        log.showwarning(
+            "unique warning message", FakeWarning, "warning-filename.py", 27,
+            line=object())
+        event = self.catcher.pop()
+        self.assertEqual(
+            event['format'] % event,
+            'warning-filename.py:27: twisted.test.test_log.FakeWarning: '
+            'unique warning message')
+        self.assertEqual(self.catcher, [])
+
+
+    def test_warningToFile(self):
+        """
+        L{twisted.python.log.showwarning} passes warnings with an explicit file
+        target on to the underlying Python warning system.
+        """
+        message = "another unique message"
+        category = FakeWarning
+        filename = "warning-filename.py"
+        lineno = 31
+
+        output = StringIO()
+        log.showwarning(message, category, filename, lineno, file=output)
+
+        self.assertEqual(
+            output.getvalue(),
+            warnings.formatwarning(message, category, filename, lineno))
+
+        # In Python 2.6, warnings.showwarning accepts a "line" argument which
+        # gives the source line the warning message is to include.
+        if sys.version_info >= (2, 6):
+            line = "hello world"
+            output = StringIO()
+            log.showwarning(message, category, filename, lineno, file=output,
+                            line=line)
+
+            self.assertEqual(
+                output.getvalue(),
+                warnings.formatwarning(message, category, filename, lineno,
+                                       line))
 
 
 class FakeFile(list):

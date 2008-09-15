@@ -54,12 +54,15 @@ def callWithLogger(logger, func, *args, **kw):
     except:
         err(system=lp)
 
-def showwarning(message, category, filename, lineno, file=None):
+def showwarning(message, category, filename, lineno, file=None, line=None):
     if file is None:
         msg(warning=message, category=reflect.qual(category), filename=filename, lineno=lineno,
             format="%(filename)s:%(lineno)s: %(category)s: %(warning)s")
     else:
-        _oldshowwarning(message, category, filename, lineno, file)
+        if sys.version_info < (2, 6):
+            _oldshowwarning(message, category, filename, lineno, file)
+        else:
+            _oldshowwarning(message, category, filename, lineno, file, line)
 
 _keepErrors = 0
 _keptErrors = []
