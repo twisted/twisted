@@ -1,6 +1,5 @@
 # -*- test-case-name: twisted.trial.test.test_tests -*-
-#
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -363,16 +362,30 @@ class _Assertions(pyunit.TestCase, object):
 
         @return: the result of the original function C{f}.
         """
-        warningsShown = []
-        def warnExplicit(*args):
-            warningsShown.append(args)
+        catch_warnings = getattr(warnings, 'catch_warnings', None)
+        if catch_warnings is not None:
+            catcher = warnings.catch_warnings(True)
+            # Not a completely faithful implementation of the expansion of
+            # "with", but close enough for our purposes in this case.
+            warningsShown = catcher.__enter__()
+            try:
+                warnings.simplefilter('always')
+                result = f(*args, **kwargs)
+            finally:
+                catcher.__exit__()
+            warningsShown = [(str(w.message), w.category, w.filename)
+                             for w in warningsShown]
+        else:
+            warningsShown = []
+            def warnExplicit(*args):
+                warningsShown.append(args)
 
-        origExplicit = warnings.warn_explicit
-        try:
-            warnings.warn_explicit = warnExplicit
-            result = f(*args, **kwargs)
-        finally:
-            warnings.warn_explicit = origExplicit
+            origExplicit = warnings.warn_explicit
+            try:
+                warnings.warn_explicit = warnExplicit
+                result = f(*args, **kwargs)
+            finally:
+                warnings.warn_explicit = origExplicit
 
         if not warningsShown:
             self.fail("No warnings emitted")
@@ -380,7 +393,7 @@ class _Assertions(pyunit.TestCase, object):
         for other in warningsShown[1:]:
             if other[:2] != first[:2]:
                 self.fail("Can't handle different warnings")
-        gotMessage, gotCategory, gotFilename, lineno = first[:4]
+        gotMessage, gotCategory, gotFilename = first[:3]
         self.assertEqual(gotMessage, message)
         self.assertIdentical(gotCategory, category)
 
