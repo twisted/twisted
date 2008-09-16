@@ -1377,7 +1377,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         # reset ALL state variables, so we don't interfere with next request
         self.length = 0
-        self._header = ''
         self._receivedHeaderCount = 0
         self.__first_line = 1
         self._transferDecoder = None
