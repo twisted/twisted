@@ -1,4 +1,6 @@
 #!/usr/bin/python
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 import sys
 from twisted.python import filepath
@@ -6,8 +8,7 @@ from twisted.python import filepath
 def updateDocumentation(project, twistedCheckoutPath, websiteCheckoutPath):
     """
     Copy documentation for a particular project out of the craphole where lore
-    dumps it (ie, admin/process-docs has been run) and into a WebSite working
-    copy.
+    dumps it, and into a WebSite working copy.
 
     @param generatedDocPath: The path to the root of a Twisted checkout, ie
     ~/Projects/Twisted/tags/releases/TwistedWeb/0.5.x/

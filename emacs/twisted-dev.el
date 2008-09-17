@@ -17,7 +17,6 @@
 ;;   S-f9: run all unit tests, no confirmation
 ;;   M-f9: run unit tests specific to current code under debugger
 ;;   f11: grep through twisted source
-;;   f12: run admin/process-docs
 ;;
 ;; If you wish to associate a unit test with a particular bit of code, and the
 ;; test code (as normal for Twisted modules)is in the module
@@ -172,11 +171,6 @@
   (with-cd (format "%s/doc/howto" twisted-dev-directory)
     (compile (format "../../bin/lore -p %s" buffer-file-name))))
 
-(defun twisted-dev-gendocs ()
-  (interactive)
-  (with-cd twisted-dev-directory
-    (compile (format "%s/admin/process-docs" twisted-dev-directory))))
-
 (defun twisted-dev-grep ()
   (interactive)
   (grep (format
@@ -205,7 +199,6 @@ Null prefix argument turns off the mode."
      (key-symbol . twisted-dev-run-all-tests))
    ([(meta f9)] . twisted-dev-debug-tests)
    ([f11] . twisted-dev-grep)
-   ([f12] . twisted-dev-gendocs)
 ))
 
 (add-hook

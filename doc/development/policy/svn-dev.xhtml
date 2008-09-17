@@ -49,7 +49,7 @@ administrative tools which expect to be launched from somewhere inside the
 tree (but not necessarily from the top).</p>
 
 <p>If you rename the tree to something other than <code>Twisted</code>, these
-tools may wind up trying to use Twisted source files from /usr/lib/python2.2
+tools may wind up trying to use Twisted source files from /usr/lib/python2.5
 or elsewhere on the default <code>sys.path</code>.  Normally this won't
 matter, but it is good to be aware of the issue in case you run into
 problems.</p>
@@ -81,9 +81,9 @@ features, performance improvements, or bugs. There are two approaches.
 will create a directory under <code>build/</code> to hold both the generated
 <code>.so</code> files as well as a copy of the 600-odd <code>.py</code> files
 that make up Twisted. If you do this, you will need to set your PYTHONPATH to
-something like <code>MyDir/Twisted/build/lib.linux-i686-2.2</code> in order to
+something like <code>MyDir/Twisted/build/lib.linux-i686-2.5</code> in order to
 run code against the Subversion twisted (as opposed to whatever's installed in
-<code>/usr/lib/python2.2</code> or wherever python usually looks). In
+<code>/usr/lib/python2.5</code> or wherever python usually looks). In
 addition, you will need to re-run the <code>build</code> command <em>every
 time</em> you change a <code>.py</code> file. The <code>build/lib.foo</code>
 directory is a copy of the main tree, and that copy is only updated when you
@@ -147,17 +147,7 @@ the <q>bin/lore/lore</q> script, which can check the files for syntax problems
 before processing, and can also translate the files into LaTeX or PostScript
 instead.</p>
 
-<p>To generate the full documentation set, run the
-<code>admin/process-docs</code> shell script. This will create processed
-HTML, man pages, and 250-page <q>book.pdf</q> file containing all the docs
-rolled into a single nicely-formatted volume. This script needs several
-helper tools to handle the images and the LaTeX conversion: debian packages
-<q>tetex-extra</q>, <q>netpbm</q>, and <q>gs-common</q> should be
-sufficient. The docs-build process currently takes about 3 minutes on the
-twistedmatrix.com build machine.</p>
-
-<p>To build just the HTML form of the howto/ docs, do a subset of the work
-done in <code>admin/process-docs</code>, such as the following. Note that
+<p>To build the HTML form of the howto/ docs, do the following. Note that
 the index file will be placed in <code>doc/howto/index.html</code>.</p>
 
 <pre class="shell">
@@ -194,8 +184,7 @@ probably be wrong unless the correct base URL is provided to Lore.</p>
 
 <p>A minor mode for development with Twisted using Emacs is available.  See
 <code>emacs/twisted-dev.el</code> for several utility functions which make
-it easier to grep for methods, run test cases, process Lore documents, etc.
-</p>
+it easier to grep for methods, run test cases, etc.</p>
 
 <h2>Building Debian packages</h2>
 

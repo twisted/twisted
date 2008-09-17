@@ -1,10 +1,5 @@
-# IMPORTANT:
-# When all the unit tests for Lore run, there's one more test to do:
-#   from a shell,
-#   cd Twisted/
-#   admin/process-docs
-# It takes a while to run (2:03 on a reasonable box)
-# Make sure there are no errors!  Warnings are OK.
+# Copyright (c) 2008 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 # ++ single anchor added to individual output file
 # ++ two anchors added to individual output file
