@@ -243,6 +243,24 @@ provides, but hopefully it gives you a good idea of where to get started
 setting up your own application. Here are some of the other building blocks
 you can use.</p>
 
+<h2>Deferred results</h2>
+
+<p>A remote method may return a <code class="API"
+base="twisted.internet.defer">Deferred</code>.</p>
+
+<a href="listings/TwistedQuotes/pbquote2.py" class="py-listing">pbquote2.py</a>
+
+<p>This (admittedly silly) <code class="python">DelayedQuoteReader</code>
+implementation returns a <code class="API" base="twisted.internet.defer">Deferred</code>
+instead of a string. When the Deferred fires the result of its callback will
+be serialized and sent over the wire to the remote caller.</p>
+
+<p>Likewise, many callbacks may be chained together, each one except the last
+returning a <code class="API" base="twisted.internet.defer">Deferred</code>.
+The result of the last callback in the chain will be serialized and sent back
+to the remote caller. This allows <code class="python">remote_</code> methods
+to perform complex Deferred logic.</p>
+
 <h2>Passing more references</h2>
 
 <p>Here is an example of using 
