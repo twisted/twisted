@@ -724,16 +724,43 @@ class TestSSHFactory(unittest.TestCase):
     if not Crypto:
         skip = "can't run w/o PyCrypto"
 
-    def testMultipleFactories(self):
-        f1 = factory.SSHFactory()
-        f2 = factory.SSHFactory()
+    def makeSSHFactory(self, primes=None):
+        sshFactory = factory.SSHFactory()
         gpk = lambda: {'ssh-rsa' : keys.Key(None)}
-        f1.getPrimes = lambda: None
-        f2.getPrimes = lambda: {1:(2,3)}
-        f1.getPublicKeys = f2.getPublicKeys = gpk
-        f1.getPrivateKeys = f2.getPrivateKeys = gpk
-        f1.startFactory()
-        f2.startFactory()
+        sshFactory.getPrimes = lambda: primes
+        sshFactory.getPublicKeys = sshFactory.getPrivateKeys = gpk
+        sshFactory.startFactory()
+        return sshFactory
+
+
+    def test_buildProtocol(self):
+        """
+        By default, buildProtocol() constructs an instance of
+        SSHServerTransport.
+        """
+        factory = self.makeSSHFactory()
+        protocol = factory.buildProtocol(None)
+        self.assertIsInstance(protocol, transport.SSHServerTransport)
+
+
+    def test_buildProtocolRespectsProtocol(self):
+        """
+        buildProtocol() calls 'self.protocol()' to construct a protocol
+        instance.
+        """
+        calls = []
+        def makeProtocol(*args):
+            calls.append(args)
+            return transport.SSHServerTransport()
+        factory = self.makeSSHFactory()
+        factory.protocol = makeProtocol
+        protocol = factory.buildProtocol(None)
+        self.assertEquals([()], calls)
+
+
+    def test_multipleFactories(self):
+        f1 = self.makeSSHFactory(primes=None)
+        f2 = self.makeSSHFactory(primes={1:(2,3)})
         p1 = f1.buildProtocol(None)
         p2 = f2.buildProtocol(None)
         self.failIf('diffie-hellman-group-exchange-sha1' in p1.supportedKeyExchanges,

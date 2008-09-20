@@ -25,6 +25,9 @@ import random
 import warnings
 
 class SSHFactory(protocol.Factory):
+
+    protocol = transport.SSHServerTransport
+
     services = {
         'ssh-userauth':userauth.SSHUserAuthServer,
         'ssh-connection':connection.SSHConnection
@@ -64,7 +67,7 @@ class SSHFactory(protocol.Factory):
             self.primes = self.getPrimes()
 
     def buildProtocol(self, addr):
-        t = transport.SSHServerTransport()
+        t = protocol.Factory.buildProtocol(self, addr)
         t.supportedPublicKeys = self.privateKeys.keys()
         if not self.primes:
             log.msg('disabling diffie-hellman-group-exchange because we '
@@ -72,7 +75,6 @@ class SSHFactory(protocol.Factory):
             ske = t.supportedKeyExchanges[:]
             ske.remove('diffie-hellman-group-exchange-sha1')
             t.supportedKeyExchanges = ske
-        t.factory = self
         return t
 
     def getPublicKeys(self):
