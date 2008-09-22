@@ -1,15 +1,19 @@
 # -*- test-case-name: twisted.mail.test.test_smtp -*-
-#
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-"""Simple Mail Transfer Protocol implementation.
+"""
+Simple Mail Transfer Protocol implementation.
 """
 
-from __future__ import generators
+import time, re, base64, types, socket, os, random, hmac
+import MimeWriter, tempfile, rfc822
+import warnings
+import binascii
+from email.base64MIME import encode as encode_base64
 
-# Twisted imports
+from zope.interface import implements, Interface
+
 from twisted.copyright import longversion
 from twisted.protocols import basic
 from twisted.protocols import policies
@@ -26,20 +30,6 @@ from twisted import cred
 import twisted.cred.checkers
 import twisted.cred.credentials
 from twisted.python.runtime import platform
-
-# System imports
-import time, re, base64, types, socket, os, random, hmac
-import MimeWriter, tempfile, rfc822
-import warnings
-import binascii
-
-from zope.interface import implements, Interface
-
-try:
-    from email.base64MIME import encode as encode_base64
-except ImportError:
-    def encode_base64(s, eol='\n'):
-        return s.encode('base64').rstrip() + eol
 
 try:
     from cStringIO import StringIO
@@ -1971,35 +1961,44 @@ def sendEmail(smtphost, fromEmail, toEmail, content, headers = None, attachments
 ## Yerg.  Codecs!
 ##
 import codecs
-def xtext_encode(s):
+def xtext_encode(s, errors=None):
     r = []
     for ch in s:
         o = ord(ch)
         if ch == '+' or ch == '=' or o < 33 or o > 126:
             r.append('+%02X' % o)
         else:
-            r.append(ch)
+            r.append(chr(o))
+    return (''.join(r), len(s))
+
+
+def _slowXTextDecode(s, errors=None):
+    """
+    Decode the xtext-encoded string C{s}.
+    """
+    r = []
+    i = 0
+    while i < len(s):
+        if s[i] == '+':
+            try:
+                r.append(chr(int(s[i + 1:i + 3], 16)))
+            except ValueError:
+                r.append(s[i:i + 3])
+            i += 3
+        else:
+            r.append(s[i])
+            i += 1
     return (''.join(r), len(s))
 
 try:
     from twisted.protocols._c_urlarg import unquote as _helper_unquote
 except ImportError:
-    def xtext_decode(s):
-        r = []
-        i = 0
-        while i < len(s):
-            if s[i] == '+':
-                try:
-                    r.append(chr(int(s[i + 1:i + 3], 16)))
-                except ValueError:
-                    r.append(s[i:i + 3])
-                i += 3
-            else:
-                r.append(s[i])
-                i += 1
-        return (''.join(r), len(s))
+    xtext_decode = _slowXTextDecode
 else:
-    def xtext_decode(s):
+    def xtext_decode(s, errors=None):
+        """
+        Decode the xtext-encoded string C{s} using a fast extension function.
+        """
         return (_helper_unquote(s, '+'), len(s))
 
 class xtextStreamReader(codecs.StreamReader):

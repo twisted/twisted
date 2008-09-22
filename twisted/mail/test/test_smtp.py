@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -441,8 +441,45 @@ class SMTPHelperTestCase(unittest.TestCase):
         ]
 
         for (case, expected) in cases:
+            self.assertEqual(smtp.xtext_encode(case), (expected, len(case)))
             self.assertEquals(case.encode('xtext'), expected)
+            self.assertEqual(
+                smtp.xtext_decode(expected), (case, len(expected)))
             self.assertEquals(expected.decode('xtext'), case)
+
+
+    def test_encodeWithErrors(self):
+        """
+        Specifying an error policy to C{unicode.encode} with the
+        I{xtext} codec should produce the same result as not
+        specifying the error policy.
+        """
+        text = u'Hello world'
+        self.assertEqual(
+            smtp.xtext_encode(text, 'strict'),
+            (text.encode('xtext'), len(text)))
+        self.assertEqual(
+            text.encode('xtext', 'strict'),
+            text.encode('xtext'))
+
+
+    def test_decodeWithErrors(self):
+        """
+        Similar to L{test_encodeWithErrors}, but for C{str.decode}.
+        """
+        bytes = 'Hello world'
+        self.assertEqual(
+            smtp._slowXTextDecode(bytes, 'strict'),
+            (bytes.decode('xtext'), len(bytes)))
+        # This might be the same as _slowXTextDecode, but it might also be the
+        # fast version instead.
+        self.assertEqual(
+            smtp.xtext_decode(bytes, 'strict'),
+            (bytes.decode('xtext'), len(bytes)))
+        self.assertEqual(
+            bytes.decode('xtext', 'strict'),
+            bytes.decode('xtext'))
+
 
 
 class NoticeTLSClient(MyESMTPClient):
