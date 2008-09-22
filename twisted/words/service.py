@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.words.test.test_service -*-
-# Copyright (c) 2001-2005 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -656,11 +656,15 @@ class IRCUser(irc.IRC):
 
 
     def _sendTopic(self, group):
+        """
+        Send the topic of the given group to this user, if it has one.
+        """
         topic = group.meta.get("topic")
-        author = group.meta.get("topic_author") or "<noone>"
-        date = group.meta.get("topic_date", 0)
-        self.topic(self.name, '#' + group.name, topic)
-        self.topicAuthor(self.name, '#' + group.name, author, date)
+        if topic:
+            author = group.meta.get("topic_author") or "<noone>"
+            date = group.meta.get("topic_date", 0)
+            self.topic(self.name, '#' + group.name, topic)
+            self.topicAuthor(self.name, '#' + group.name, author, date)
 
 
     def _getTopic(self, channel):

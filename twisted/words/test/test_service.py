@@ -1,17 +1,17 @@
-# Copyright (c) 2001-2005 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import generators
+"""
+Tests for L{twisted.words.service}.
+"""
 
 import time
-
-from zope.interface import implements
 
 from twisted.trial import unittest
 from twisted.test import proto_helpers
 
 from twisted.cred import portal, credentials, checkers
-from twisted.words import ewords, iwords, service
+from twisted.words import ewords, service
 from twisted.words.protocols import irc
 from twisted.spread import pb
 from twisted.internet.defer import Deferred, DeferredList, maybeDeferred, succeed
@@ -350,6 +350,8 @@ class IRCProtocolTestCase(unittest.TestCase):
         yield somechannel
         somechannel = somechannel.getResult()
 
+        somechannel.meta['topic'] = 'some random topic'
+
         # Bring in one user, make sure he gets into the channel sanely
         user = TestCaseUserAgg(firstuser, self.realm, self.factory)
         self._login(user, "firstuser")
@@ -395,6 +397,32 @@ class IRCProtocolTestCase(unittest.TestCase):
         self.assertEquals(response[1][1], '353')
         self.assertEquals(response[1][2], ['otheruser', '=', '#somechannel', 'firstuser otheruser'])
     testJoin = dG(testJoin)
+
+
+    def test_joinTopicless(self):
+        """
+        When a user joins a group without a topic, no topic information is
+        sent to that user.
+        """
+        firstuser = wFD(self.realm.lookupUser(u'firstuser'))
+        yield firstuser
+        firstuser = firstuser.getResult()
+
+        somechannel = wFD(self.realm.createGroup(u"somechannel"))
+        yield somechannel
+        somechannel = somechannel.getResult()
+
+        # Bring in one user, make sure he gets into the channel sanely
+        user = TestCaseUserAgg(firstuser, self.realm, self.factory)
+        self._login(user, "firstuser")
+        user.transport.clear()
+        user.write('JOIN #somechannel\r\n')
+
+        response = self._response(user)
+        responseCodes = [r[1] for r in response]
+        self.assertNotIn('332', responseCodes)
+        self.assertNotIn('333', responseCodes)
+    test_joinTopicless = dG(test_joinTopicless)
 
 
     def testLeave(self):
