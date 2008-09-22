@@ -115,11 +115,21 @@ class Node(object):
         self.parentNode = parentNode
         self.childNodes = []
 
-    def isEqualToNode(self, n):
-        for a, b in zip(self.childNodes, n.childNodes):
+    def isEqualToNode(self, other):
+        """
+        Compare this node to C{other}.  If the nodes have the same number of
+        children and corresponding children are equal to each other, return
+        C{True}, otherwise return C{False}.
+
+        @type other: L{Node}
+        @rtype: C{bool}
+        """
+        if len(self.childNodes) != len(other.childNodes):
+            return False
+        for a, b in zip(self.childNodes, other.childNodes):
             if not a.isEqualToNode(b):
-                return 0
-        return 1
+                return False
+        return True
 
     def writexml(self, stream, indent='', addindent='', newl='', strip=0,
                  nsprefixes={}, namespace=''):
@@ -215,7 +225,8 @@ class Document(Node):
     doctype = None
 
     def isEqualToDocument(self, n):
-        return (self.doctype == n.doctype) and self.isEqualToNode(n)
+        return (self.doctype == n.doctype) and Node.isEqualToNode(self, n)
+    isEqualToNode = isEqualToDocument
 
     def get_documentElement(self):
         return self.childNodes[0]
@@ -269,6 +280,7 @@ class EntityReference(Node):
         if not isinstance(n, EntityReference):
             return 0
         return (self.eref == n.eref) and (self.nodeValue == n.nodeValue)
+    isEqualToNode = isEqualToEntityReference
 
     def writexml(self, stream, indent='', addindent='', newl='', strip=0,
                  nsprefixes={}, namespace=''):
@@ -286,6 +298,7 @@ class CharacterData(Node):
 
     def isEqualToCharacterData(self, n):
         return self.value == n.value
+    isEqualToNode = isEqualToCharacterData
 
 
 class Comment(CharacterData):
@@ -307,6 +320,17 @@ class Text(CharacterData):
     def __init__(self, data, parentNode=None, raw=0):
         CharacterData.__init__(self, data, parentNode)
         self.raw = raw
+
+
+    def isEqualToNode(self, other):
+        """
+        Compare this text to C{text}.  If the underlying values and the C{raw}
+        flag are the same, return C{True}, otherwise return C{False}.
+        """
+        return (
+            CharacterData.isEqualToNode(self, other) and
+            self.raw == other.raw)
+
 
     def cloneNode(self, deep=0, parent=None):
         return Text(self.nodeValue, parent, self.raw)
@@ -399,6 +423,20 @@ class Element(Node):
             return ((self.attributes == n.attributes)
                     and (self.nodeName.lower() == n.nodeName.lower()))
         return (self.attributes == n.attributes) and (self.nodeName == n.nodeName)
+
+
+    def isEqualToNode(self, other):
+        """
+        Compare this element to C{other}.  If the C{nodeName}, C{namespace},
+        C{attributes}, and C{childNodes} are all the same, return C{True},
+        otherwise return C{False}.
+        """
+        return (
+            self.nodeName.lower() == other.nodeName.lower() and
+            self.namespace == other.namespace and
+            self.attributes == other.attributes and
+            Node.isEqualToNode(self, other))
+
 
     def cloneNode(self, deep=0, parent=None):
         clone = Element(

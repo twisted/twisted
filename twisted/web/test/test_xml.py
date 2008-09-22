@@ -1,20 +1,16 @@
 # -*- test-case-name: twisted.web.test.test_xml -*-
-#
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-"""Some fairly inadequate testcases for Twisted XML support."""
-
-from __future__ import nested_scopes
+"""
+Some fairly inadequate testcases for Twisted XML support.
+"""
 
 from twisted.trial.unittest import TestCase
-
 from twisted.web import sux
-
 from twisted.web import microdom
-
 from twisted.web import domhelpers
+
 
 class Sux0r(sux.XMLParser):
     def __init__(self):
@@ -758,3 +754,213 @@ class TestBrokenHTML(TestCase):
         expected = '<body><h1><span>Hello World!<!></!></span></h1></body>'
         self.checkParsed(input, expected)
 
+
+
+
+class NodeTests(TestCase):
+    """
+    Tests for L{Node}.
+    """
+    def test_isNodeEqualTo(self):
+        """
+        L{Node.isEqualToNode} returns C{True} if and only if passed a L{Node}
+        with the same children.
+        """
+        # A node is equal to itself
+        node = microdom.Node(object())
+        self.assertTrue(node.isEqualToNode(node))
+        another = microdom.Node(object())
+        # Two nodes with no children are equal
+        self.assertTrue(node.isEqualToNode(another))
+        node.appendChild(microdom.Node(object()))
+        # A node with no children is not equal to a node with a child
+        self.assertFalse(node.isEqualToNode(another))
+        another.appendChild(microdom.Node(object()))
+        # A node with a child and no grandchildren is equal to another node
+        # with a child and no grandchildren.
+        self.assertTrue(node.isEqualToNode(another))
+        # A node with a child and a grandchild is not equal to another node
+        # with a child and no grandchildren.
+        node.firstChild().appendChild(microdom.Node(object()))
+        self.assertFalse(node.isEqualToNode(another))
+        # A node with a child and a grandchild is equal to another node with a
+        # child and a grandchild.
+        another.firstChild().appendChild(microdom.Node(object()))
+        self.assertTrue(node.isEqualToNode(another))
+
+
+
+class DocumentTests(TestCase):
+    """
+    Tests for L{Document}.
+    """
+    doctype = 'foo PUBLIC "baz" "http://www.example.com/example.dtd"'
+
+    def test_isEqualToNode(self):
+        """
+        L{Document.isEqualToNode} returns C{True} if and only if passed a
+        L{Document} with the same C{doctype} and C{documentElement}.
+        """
+        # A document is equal to itself
+        document = microdom.Document()
+        self.assertTrue(document.isEqualToNode(document))
+        # A document without a doctype or documentElement is equal to another
+        # document without a doctype or documentElement.
+        another = microdom.Document()
+        self.assertTrue(document.isEqualToNode(another))
+        # A document with a doctype is not equal to a document without a
+        # doctype.
+        document.doctype = self.doctype
+        self.assertFalse(document.isEqualToNode(another))
+        # Two documents with the same doctype are equal
+        another.doctype = self.doctype
+        self.assertTrue(document.isEqualToNode(another))
+        # A document with a documentElement is not equal to a document without
+        # a documentElement
+        document.appendChild(microdom.Node(object()))
+        self.assertFalse(document.isEqualToNode(another))
+        # Two documents with equal documentElements are equal.
+        another.appendChild(microdom.Node(object()))
+        self.assertTrue(document.isEqualToNode(another))
+        # Two documents with documentElements which are not equal are not
+        # equal.
+        document.documentElement.appendChild(microdom.Node(object()))
+        self.assertFalse(document.isEqualToNode(another))
+
+
+
+class EntityReferenceTests(TestCase):
+    """
+    Tests for L{EntityReference}.
+    """
+    def test_isEqualToNode(self):
+        """
+        L{EntityReference.isEqualToNode} returns C{True} if and only if passed
+        a L{EntityReference} with the same C{eref}.
+        """
+        self.assertTrue(
+            microdom.EntityReference('quot').isEqualToNode(
+                microdom.EntityReference('quot')))
+        self.assertFalse(
+            microdom.EntityReference('quot').isEqualToNode(
+                microdom.EntityReference('apos')))
+
+
+
+class CharacterDataTests(TestCase):
+    """
+    Tests for L{CharacterData}.
+    """
+    def test_isEqualToNode(self):
+        """
+        L{CharacterData.isEqualToNode} returns C{True} if and only if passed a
+        L{CharacterData} with the same value.
+        """
+        self.assertTrue(
+            microdom.CharacterData('foo').isEqualToNode(
+                microdom.CharacterData('foo')))
+        self.assertFalse(
+            microdom.CharacterData('foo').isEqualToNode(
+                microdom.CharacterData('bar')))
+
+
+
+class CommentTests(TestCase):
+    """
+    Tests for L{Comment}.
+    """
+    def test_isEqualToNode(self):
+        """
+        L{Comment.isEqualToNode} returns C{True} if and only if passed a
+        L{Comment} with the same value.
+        """
+        self.assertTrue(
+            microdom.Comment('foo').isEqualToNode(
+                microdom.Comment('foo')))
+        self.assertFalse(
+            microdom.Comment('foo').isEqualToNode(
+                microdom.Comment('bar')))
+
+
+
+class TextTests(TestCase):
+    """
+    Tests for L{Text}.
+    """
+    def test_isEqualToNode(self):
+        """
+        L{Text.isEqualToNode} returns C{True} if and only if passed a L{Text}
+        which represents the same data.
+        """
+        self.assertTrue(
+            microdom.Text('foo', raw=True).isEqualToNode(
+                microdom.Text('foo', raw=True)))
+        self.assertFalse(
+            microdom.Text('foo', raw=True).isEqualToNode(
+                microdom.Text('foo', raw=False)))
+        self.assertFalse(
+            microdom.Text('foo', raw=True).isEqualToNode(
+                microdom.Text('bar', raw=True)))
+
+
+
+class CDATASectionTests(TestCase):
+    """
+    Tests for L{CDATASection}.
+    """
+    def test_isEqualToNode(self):
+        """
+        L{CDATASection.isEqualToNode} returns C{True} if and only if passed a
+        L{CDATASection} which represents the same data.
+        """
+        self.assertTrue(
+            microdom.CDATASection('foo').isEqualToNode(
+                microdom.CDATASection('foo')))
+        self.assertFalse(
+            microdom.CDATASection('foo').isEqualToNode(
+                microdom.CDATASection('bar')))
+
+
+
+class ElementTests(TestCase):
+    """
+    Tests for L{Element}.
+    """
+    def test_isEqualToNode(self):
+        """
+        L{Element.isEqualToNode} returns C{True} if and only if passed a
+        L{Element} with the same C{nodeName}, C{namespace}, C{childNodes}, and
+        C{attributes}.
+        """
+        self.assertTrue(
+            microdom.Element(
+                'foo', {'a': 'b'}, object(), namespace='bar').isEqualToNode(
+                microdom.Element(
+                    'foo', {'a': 'b'}, object(), namespace='bar')))
+
+        # Elements with different nodeName values do not compare equal.
+        self.assertFalse(
+            microdom.Element(
+                'foo', {'a': 'b'}, object(), namespace='bar').isEqualToNode(
+                microdom.Element(
+                    'bar', {'a': 'b'}, object(), namespace='bar')))
+
+        # Elements with different namespaces do not compare equal.
+        self.assertFalse(
+            microdom.Element(
+                'foo', {'a': 'b'}, object(), namespace='bar').isEqualToNode(
+                microdom.Element(
+                    'foo', {'a': 'b'}, object(), namespace='baz')))
+
+        # Elements with different childNodes do not compare equal.
+        one = microdom.Element('foo', {'a': 'b'}, object(), namespace='bar')
+        two = microdom.Element('foo', {'a': 'b'}, object(), namespace='bar')
+        two.appendChild(microdom.Node(object()))
+        self.assertFalse(one.isEqualToNode(two))
+
+        # Elements with different attributes do not compare equal.
+        self.assertFalse(
+            microdom.Element(
+                'foo', {'a': 'b'}, object(), namespace='bar').isEqualToNode(
+                microdom.Element(
+                    'foo', {'a': 'c'}, object(), namespace='bar')))
