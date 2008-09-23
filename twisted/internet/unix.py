@@ -93,7 +93,7 @@ class Port(tcp.Port):
             # Make the socket readable and writable to the world.
             try:
                 os.chmod(self.port, self.mode)
-            except: # probably not a visible filesystem name
+            except OSError: # probably not a visible filesystem name
                 pass
             skt.listen(self.backlog)
             self.connected = True

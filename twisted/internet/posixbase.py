@@ -285,10 +285,32 @@ class PosixReactorBase(_SignalReactorMixin, ReactorBase):
         c.connect()
         return c
 
-    def listenUNIX(self, address, factory, backlog=50, mode=0666, wantPID=0):
-        """@see: twisted.internet.interfaces.IReactorUNIX.listenUNIX
+    _unspecified = object()
+    def _checkMode(self, name, mode):
+        """
+        Check C{mode} to see if a value was specified for it and emit a
+        deprecation warning if so.  Return the default value if none was
+        specified, otherwise return C{mode}.
+        """
+        if mode is not self._unspecified:
+            warnings.warn(
+                'The mode parameter of %(name)s will be removed.  Do not pass '
+                'a value for it.  Set permissions on the containing directory '
+                'before calling %(name)s, instead.' % dict(name=name),
+                category=DeprecationWarning,
+                stacklevel=3)
+        else:
+            mode = 0666
+        return mode
+
+
+    def listenUNIX(self, address, factory, backlog=50, mode=_unspecified,
+                   wantPID=0):
+        """
+        @see: twisted.internet.interfaces.IReactorUNIX.listenUNIX
         """
         assert unixEnabled, "UNIX support is not present"
+        mode = self._checkMode('IReactorUNIX.listenUNIX', mode)
         p = unix.Port(address, factory, backlog, mode, self, wantPID)
         p.startListening()
         return p
@@ -296,24 +318,30 @@ class PosixReactorBase(_SignalReactorMixin, ReactorBase):
 
     # IReactorUNIXDatagram
 
-    def listenUNIXDatagram(self, address, protocol, maxPacketSize=8192, mode=0666):
-        """Connects a given L{DatagramProtocol} to the given path.
+    def listenUNIXDatagram(self, address, protocol, maxPacketSize=8192,
+                           mode=_unspecified):
+        """
+        Connects a given L{DatagramProtocol} to the given path.
 
         EXPERIMENTAL.
 
         @returns: object conforming to L{IListeningPort}.
         """
         assert unixEnabled, "UNIX support is not present"
+        mode = self._checkMode('IReactorUNIXDatagram.listenUNIXDatagram', mode)
         p = unix.DatagramPort(address, protocol, maxPacketSize, mode, self)
         p.startListening()
         return p
 
-    def connectUNIXDatagram(self, address, protocol, maxPacketSize=8192, mode=0666, bindAddress=None):
-        """Connects a L{ConnectedDatagramProtocol} instance to a path.
+    def connectUNIXDatagram(self, address, protocol, maxPacketSize=8192,
+                            mode=_unspecified, bindAddress=None):
+        """
+        Connects a L{ConnectedDatagramProtocol} instance to a path.
 
         EXPERIMENTAL.
         """
         assert unixEnabled, "UNIX support is not present"
+        mopde = self._checkMode('IReactorUNIXDatagram.connectUNIXDatagram', mode)
         p = unix.ConnectedDatagramPort(address, protocol, maxPacketSize, mode, bindAddress, self)
         p.startListening()
         return p

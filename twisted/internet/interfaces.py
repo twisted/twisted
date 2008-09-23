@@ -267,7 +267,8 @@ class IReactorUNIX(Interface):
         """
 
     def listenUNIX(address, factory, backlog=50, mode=0666, wantPID=0):
-        """Listen on a UNIX socket.
+        """
+        Listen on a UNIX socket.
 
         @param address: a path to a unix socket on the filesystem.
 
@@ -275,7 +276,9 @@ class IReactorUNIX(Interface):
 
         @param backlog: number of connections to allow in backlog.
 
-        @param mode: mode to set on the unix socket.
+        @param mode: mode to set on the unix socket.  This parameter is
+            deprecated.  Permissions should be set on the directory which
+            contains the UNIX socket.
 
         @param wantPID: if True, create a pidfile for the socket.
 
@@ -287,7 +290,8 @@ class IReactorUNIXDatagram(Interface):
     """datagram UNIX socket methods."""
 
     def connectUNIXDatagram(address, protocol, maxPacketSize=8192, mode=0666, bindAddress=None):
-        """Connect a client protocol to a datagram UNIX socket.
+        """
+        Connect a client protocol to a datagram UNIX socket.
 
         @param address: a path to a unix socket on the filesystem.
 
@@ -295,7 +299,9 @@ class IReactorUNIXDatagram(Interface):
 
         @param maxPacketSize: maximum packet size to accept
 
-        @param mode: mode to set on the unix socket.
+        @param mode: mode to set on the unix socket.  This parameter is
+            deprecated.  Permissions should be set on the directory which
+            contains the UNIX socket.
 
         @param bindAddress: address to bind to
 
@@ -303,7 +309,8 @@ class IReactorUNIXDatagram(Interface):
         """
 
     def listenUNIXDatagram(address, protocol, maxPacketSize=8192, mode=0666):
-        """Listen on a datagram UNIX socket.
+        """
+        Listen on a datagram UNIX socket.
 
         @param address: a path to a unix socket on the filesystem.
 
@@ -311,7 +318,9 @@ class IReactorUNIXDatagram(Interface):
 
         @param maxPacketSize: maximum packet size to accept
 
-        @param mode: mode to set on the unix socket.
+        @param mode: mode to set on the unix socket.  This parameter is
+            deprecated.  Permissions should be set on the directory which
+            contains the UNIX socket.
 
         @return: An object which provides L{IListeningPort}.
         """

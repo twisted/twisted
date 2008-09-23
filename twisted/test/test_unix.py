@@ -81,19 +81,6 @@ class UnixSocketTestCase(unittest.TestCase):
         return d
 
 
-    def test_mode(self):
-        """
-        The UNIX socket created by L{IReactorUNIX.listenUNIX} is created with
-        the mode specified.
-        """
-        mode = 0600
-        filename = self.mktemp()
-        serverFactory = MyServerFactory()
-        unixPort = reactor.listenUNIX(filename, serverFactory, mode=mode)
-        self.addCleanup(unixPort.stopListening)
-        self.assertEquals(stat.S_IMODE(os.stat(filename).st_mode), mode)
-
-
     def test_pidFile(self):
         """
         A lockfile is created and locked when L{IReactorUNIX.listenUNIX} is
