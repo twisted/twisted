@@ -45,29 +45,42 @@ header) element, which contains the exact same content as the
 
 <h3>Elements and Their Uses</h3>
 
-<p><code>p</code>: The paragraph element. Most of the document should be inside
-   paragraphs.</p>
+<table border="2" cellspacing="0" cellpadding="7">
+<tr>
+<th>Element</th>
+<th>Description</th>
+</tr>
 
-<p><code>span</code>: The span element is an element which has no meaning
-   -- unless it has a special <code>class</code> attributes.
-   The following classes have the stated meanings:
+<tr>
+<td><code>p</code></td>
+<td>The paragraph element. Most of the document should be inside paragraphs.
+</td>
+</tr>
+
+<tr>
+<td><code>span</code></td>
+<td>The span element is an element which has no meaning -- unless it has a
+special <code>class</code> attributes. The following classes have the stated
+meanings:
 <dl>
 <dt><code>footnote</code></dt>
 <dd>a small comment which should not be inside the main text-flow.</dd>
 <dt><code>manhole-output</code></dt>
 <dd>This signifies, within a manhole transcript, that the enclosed text is
     the output and not something the user has to input.</dd>
-<dt><code>span</code></dt>
+<dt><code>index</code></dt>
 <dd>This should be an <em>empty</em> element, with an attribute
     <code>value</code>. That attribute should be an index term, in the
     format of <code>generic!specific!more specific</code>. Usually,
     you will only have one level, in which case <code>value="term"</code>
     works.</dd>
-</dl>
-</p>
+</dl></td>
+</tr>
 
-<p><code>div</code>: The div element is equivalent to a span, except it always
-   appears outside paragraphs. The following classes have the given meanings:
+<tr>
+<td><code>div</code></td>
+<td>The div element is equivalent to a span, except it always appears outside
+paragraphs. The following classes have the given meanings:
 <dl>
 <dt><code>note</code></dt>
 <dd>A short note which is not necessary for the understanding of the text.</dd>
@@ -77,10 +90,12 @@ header) element, which contains the exact same content as the
 <dt><code>boxed</code></dt>
 <dd>An indication that the text should be clearly separated from its
     surroundings.</dd>
-</dl></p>
+</dl></td>
+</tr>
 
-<p><code>a</code>: This element can have several meanings, depending on
-   the attributes:
+<tr>
+<td><code>a</code></td>
+<td>This element can have several meanings, depending on the attributes:
 <dl>
 <dt><code>name</code> attribute</dt>
 <dd>Add a label to the current position, which might be used in this document
@@ -97,77 +112,110 @@ header) element, which contains the exact same content as the
     <code>class=html-listing</code></dt>
 <dd>Indicate the given resource is a part of the text flow, and should be
     inlined (and if possible, syntax highlighted).</dd>
-</dl></p>
+</dl></td>
+</tr>
 
-<p><code>ol</code>, <code>ul</code>: A list. It can be enumerated or
-   bulleted. Inside a list, the element <code>li</code> (for a list element)
-   is valid.</p>
+<tr>
+<td><code>ol</code>, <code>ul</code></td>
+<td>A list. It can be enumerated or bulleted. Inside a list, the element
+<code>li</code> (for a list element) is valid.</td>
+</tr>
 
-<p><code>h2</code>, <code>h3</code>: Second- and third-level section
-   headings.</p>
+<tr>
+<td><code>h2</code>, <code>h3</code></td>
+<td>Second- and third-level section headings.</td>
+</tr>
 
-<p><code>code</code>: a string which has meaning to the computer.
-   There are many possible classes:
+<tr>
+<td><code>code</code></td>
+<td>A string which has meaning to the computer. There are many possible
+classes:
 <dl>
 <dt><code>API</code></dt>
 <dd>A class, function or a module. It does not have to be a fully qualified
     name -- but if it isn't, a <code>base</code> attribute is necessary.
-    Example:
+    <br/>Example:
   <code>&lt;code class="API" base="urllib"&gt;urlencode&lt;code&gt;</code>.</dd>
 <dt><code>shell</code></dt>
 <dd>Shell (usually Bourne) code.</dd>
 <dt><code>python</code></dt>
-<dd>Python code</dd>
+<dd>Python code.</dd>
 <dt><code>py-prototype</code></dt>
-<dd>Function prototype</dd>
+<dd>Function prototype.</dd>
 <dt><code>py-filename</code></dt>
-<dd>Python file</dd>
+<dd>Python file.</dd>
 <dt><code>py-src-string</code></dt>
-<dd>Python string</dd>
+<dd>Python string.</dd>
 <dt><code>py-signature</code></dt>
-<dd>Function signature</dd>
+<dd>Function signature.</dd>
 <dt><code>py-src-parameter</code></dt>
-<dd>Parameter</dd>
+<dd>Parameter.</dd>
 <dt><code>py-src-identifier</code></dt>
-<dd>Identifier</dd>
+<dd>Identifier.</dd>
 <dt><code>py-src-keyword</code></dt>
-<dd>Keyword</dd>
-</dl></p>
+<dd>Keyword.</dd>
+</dl></td>
+</tr>
 
-<p><code>pre</code>: Preformatted text, usually for file listings. It can
-be used with the <code>python</code>
-class to indicate Python syntax coloring. Other possible classes are
-<code>shell</code> (to indicate a shell-transcript) or
+<tr>
+<td><code>pre</code></td>
+<td>Preformatted text, usually for file listings. It can be used with the
+<code>python</code> class to indicate Python syntax coloring. Other possible
+classes are <code>shell</code> (to indicate a shell-transcript) or
 <code>python-interpreter</code> (to indicate an interactive interpreter
-transcript).</p>
+transcript).</td>
+</tr>
 
-<p><code>img</code>: Insert the image indicated by the <code>src</code>
-attribute.</p>
+<tr>
+<td><code>img</code></td>
+<td>Insert the image indicated by the <code>src</code> attribute.</td>
+</tr>
 
-<p><code>q</code>: The quote signs (<code>"</code>) are not recommended
+<tr>
+<td><code>q</code></td>
+<td>The quote signs (<code>"</code>) are not recommended
 except in preformatted or code environment. Instead, quote by using the
 <code>q</code> element which allows nested quotes and properly distinguishes
-opening quote from closing quote.</p>
+opening quote from closing quote.</td>
+</tr>
 
-<p><code>em</code>, <code>strong</code>: Emphasise (or strongly emphasise)
-text.</p>
+<tr>
+<td><code>em</code>, <code>strong</code></td>
+<td>Emphasise (or strongly emphasise) text.</td>
+</tr>
 
-<p><code>table</code>: Tabular data. Inside a table, use the <code>tr</code>
+<tr>
+<td><code>table</code></td>
+<td>Tabular data. Inside a table, use the <code>tr</code>
 element for each rows, and inside it use either <code>td</code> for a regular
-table cell or <code>th</code> for a table header (column or row).</p>
+table cell or <code>th</code> for a table header (column or row).</td>
+</tr>
 
-<p><code>blockquote</code>: A long quote which should be properly seperated
-from the main text.</p>
+<tr>
+<td><code>blockquote</code></td>
+<td>A long quote which should be properly seperated from the main text.</td>
+</tr>
 
-<p><code>cite</code>: Cite a resource.</p>
+<tr>
+<td><code>cite</code></td>
+<td>Cite a resource.</td>
+</tr>
 
-<p><code>sub</code>, <code>sup</code>: subscripts and superscripts.</p>
+<tr>
+<td><code>sub</code>, <code>sup</code></td>
+<td>Subscripts and superscripts.</td>
+</tr>
 
-<p><code>link</code>: currently, the only <code>link</code> elements supported
+<tr>
+<td><code>link</code></td>
+<td>Currently, the only <code>link</code> elements supported
 are for for indicating authorship. <code>&lt;link rel="author"
 href="author-address@examples.com" title="Author Name" /&gt;</code>
 should be used to indicate authorship. Multiple instances
-are allowed, and indicate shared authorship.</p>
+are allowed, and indicate shared authorship.</td>
+</tr>
+
+</table>
 
 <h2>Writing Lore XHTML Templates</h2>
 
