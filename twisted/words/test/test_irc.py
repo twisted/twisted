@@ -595,6 +595,27 @@ class ClientTests(TestCase):
         self.assertEqual(self.transport.getvalue().split('\r\n'), expected)
 
 
+    def test_whois(self):
+        """
+        L{IRCClient.whois} sends a WHOIS message.
+        """
+        self.protocol.whois('alice')
+        self.assertEqual(
+            self.transport.getvalue().split('\r\n'),
+            ['WHOIS alice', ''])
+
+
+    def test_whoisWithServer(self):
+        """
+        L{IRCClient.whois} sends a WHOIS message with a server name if a
+        value is passed for the C{server} parameter.
+        """
+        self.protocol.whois('alice', 'example.org')
+        self.assertEqual(
+            self.transport.getvalue().split('\r\n'),
+            ['WHOIS example.org alice', ''])
+
+
     def test_register(self):
         """
         L{IRCClient.register} sends NICK and USER commands with the

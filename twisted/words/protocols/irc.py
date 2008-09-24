@@ -1002,6 +1002,21 @@ class IRCClient(basic.LineReceiver):
         self.away()
 
 
+    def whois(self, nickname, server=None):
+        """
+        Retrieve user information about the given nick name.
+
+        @type nickname: C{str}
+        @param nickname: The nick name about which to retrieve information.
+
+        @since: 8.2
+        """
+        if server is None:
+            self.sendLine('WHOIS ' + nickname)
+        else:
+            self.sendLine('WHOIS %s %s' % (server, nickname))
+
+
     def register(self, nickname, hostname='foo', servername='bar'):
         """
         Login to the server.
