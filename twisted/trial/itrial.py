@@ -1,10 +1,11 @@
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 """
 Interfaces for Trial.
-"""
 
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
-# See LICENSE for details.
-# Maintainer: Jonathan Lange
+Maintainer: Jonathan Lange
+"""
 
 import zope.interface as zi
 from zope.interface import Attribute

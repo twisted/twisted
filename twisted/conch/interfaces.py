@@ -1,15 +1,16 @@
-# Copyright (c) 2007 Twisted Matrix Laboratories.
+# Copyright (c) 2007-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from zope.interface import Interface
+from zope.interface import Interface, Attribute
 
 class IConchUser(Interface):
-    """A user who has been authenticated to Cred through Conch.  This is 
-    the interface between the SSH connection and the user.
-
-    @ivar conn: The SSHConnection object for this user.
+    """
+    A user who has been authenticated to Cred through Conch.  This is
+    the interface between the SSH connection and the user. 
     """
 
+    conn = Attribute('The SSHConnection object for this user.')
+    
     def lookupChannel(channelType, windowSize, maxPacket, data):
         """
         The other side requested a channel of some sort.
