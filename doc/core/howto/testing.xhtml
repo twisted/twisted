@@ -27,6 +27,25 @@ $ trial twisted
 
 <p>Refer to the Trial man page for other command-line options.</p>
 
+<h2>Trial directories</h2>
+
+<p>You might notice a new <code class="shell">_trial_temp</code> folder in the
+current working directory after Trial completes the tests. This folder is the
+working directory for the Trial process. It can be used by unit tests and 
+allows them to write whatever data they like to disk, and not worry
+about polluting the current working directory.</p>
+
+<p>Folders named <code class="shell">_trial_temp-&lt;counter&gt;</code> are
+created if two instances of Trial are run in parallel from the same directory,
+so as to avoid giving two different test-runs the same temporary directory.</p>
+
+<p>The <code class="API">twisted.python.lockfile</code> utility is used to lock
+the <code class="shell">_trial_temp</code> directories. On Linux, this results
+in symlinks to pids. On Windows, directories are created with a single file with
+a pid as the contents. These lock files will be cleaned up if Trial exits normally
+and otherwise they will be left behind. They should be cleaned up the next time
+Trial tries to use the directory they lock, but it's also safe to delete them
+manually if desired.</p>
 
 <h2>Twisted-specific quirks: reactor, Deferreds, callLater</h2>
 
