@@ -33,9 +33,11 @@ except ImportError:
             return self.pop(0)
 
 
+from zope.interface import Interface, implements
+
 from twisted.protocols.basic import LineReceiver
 from twisted.protocols.policies import TimeoutMixin
-from twisted.internet.defer import Deferred, fail, TimeoutError
+from twisted.internet.defer import Deferred, fail, TimeoutError, succeed
 from twisted.python import log
 
 
@@ -383,9 +385,9 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         if len(key) > self.MAX_KEY_LENGTH:
             return fail(ClientError("Key too long"))
         fullcmd = "%s %s %d" % (cmd, key, int(val))
-        self.sendLine(fullcmd)
         cmdObj = Command(cmd, key=key)
         self._current.append(cmdObj)
+        self.sendLine(fullcmd)
         return cmdObj._deferred
 
 
@@ -652,6 +654,771 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
 
 
 
+class ICacheBackend(Interface):
+    """
+    Represent the set of operations needed to implement a cache backend for
+    a memcache server.
+    """
+
+    def get(key):
+        """
+        Get a value from the cache.
+
+        @param key: the key holding the data.
+        @type key: C{str}
+
+        @return: a deferred that will fire with the flags and the value
+            associated with the key.
+        @rtype: L{Deferred}
+        """
+
+    def gets(key):
+        """
+        Get a value from the cache.
+
+        @param key: the key holding the data.
+        @type key: C{str}
+
+        @return: a deferred that will fire with the flags, casvalue and value
+            associated with the key.
+        @rtype: L{Deferred}
+        """
+
+
+    def set(key, value, flags, expireTime):
+        """
+        Set a value in the cache.
+
+        @return: a deferred that will fire with C{True} if everything went
+            fine.
+        @rtype: L{Deferred}
+        """
+
+
+    def add(key, value, flags, expireTime):
+        """
+        Add a value in the cache. The key must not be present in the cache.
+
+        @return: a deferred that will fire with C{True} if everything went
+            fine.
+        @rtype: L{Deferred}
+        """
+
+
+    def replace(key, value, flags, expireTime):
+        """
+        Replace a value in the cache. The key must be present in the cache.
+
+        @return: a deferred that will fire with C{True} if everything went
+            fine.
+        @rtype: L{Deferred}
+        """
+
+
+    def append(key, value, flags, expireTime):
+        """
+        Append data to a existing value in the cache. The key must be present
+        in the cache. The flags and expireTime parameters are ignored.
+
+        @return: a deferred that will fire with C{True} if everything went
+            fine.
+        @rtype: L{Deferred}
+        """
+
+
+    def prepend(key, value, flags, expireTime):
+        """
+        Prepend data to a existing value in the cache. The key must be present
+        in the cache. The flags and expireTime parameters are ignored.
+
+        @return: a deferred that will fire with C{True} if everything went
+            fine.
+        @rtype: L{Deferred}
+        """
+
+
+    def checkAndSet(key, value, flags, expireTime, casValue):
+        """
+        Set the value associated with key, only if the casValue is matching the
+        current casValue of the key.
+
+        @return: a deferred that will fire with C{True} if everything went
+            fine.
+        @rtype: L{Deferred}
+        """
+
+
+    def delete(key):
+        """
+        Remove a key from the cache.
+
+        @return: a deferred that will fire with C{True} if everything went
+            fine.
+        @rtype: L{Deferred}
+        """
+
+
+    def increment(key, value):
+        """
+        Increment the current value associated with a key.
+
+        @return: a deferred that will fire with the new value.
+        @rtype: L{Deferred}
+        """
+
+
+    def decrement(key, value):
+        """
+        Decrement the current value associated with a key.
+
+        @return: a deferred that will fire with the new value.
+        @rtype: L{Deferred}
+        """
+
+
+    def flush_all():
+        """
+        Remove all the keys from the cache.
+
+        @return: a deferred that will fire with C{True} if everything went
+            fine.
+        @rtype: L{Deferred}
+        """
+
+
+    def stats():
+        """
+        Return the statistics registered for the cache.
+
+        @return: a deferred that will fire with a dictionary of statistics.
+        @rtype: L{Deferred}
+        """
+
+
+    def version():
+        """
+        Return the version of the cache backend.
+
+        @return: a deferred that will fire with the current version as a
+            string.
+        @rtype: L{Deferred}
+        """
+
+
+
+class _CachedValue(object):
+    """
+    Represent a value stored in a cache.
+    """
+
+    def __init__(self, value, flags, expireTime):
+        """
+        """
+        self.value = value
+        self.flags = flags
+        self.expireTime = expireTime
+        self.casValue = str(id(self))
+
+
+
+class KeyNotFoundError(Exception):
+    """
+    Exception raised when a key hasn't been found in the cache whereas it was
+    expected.
+    """
+
+
+
+class KeyFoundError(Exception):
+    """
+    Exception raised when a key has been found in the cache whereas it wasn't
+    expected.
+    """
+
+
+
+class CasError(Exception):
+    """
+    Exception raised when a cas update failed because cas value has changed.
+    """
+
+
+
+class StandardBackend(object):
+    """
+    Simple backend using a dictionary to store values.
+    """
+    implements(ICacheBackend)
+
+    def __init__(self, maxSize=0):
+        """
+        @param maxSize: maximum value in bytes the values in the cache should
+            take. Default to 0 for unlimited.
+        @type maxSize: C{int}
+        """
+        self._cache = {}
+        self._cacheSize = 0
+        self.maxSize = maxSize
+        self._order = []
+
+
+    def setMaxSize(self, maxSize):
+        """
+        """
+        self.maxSize = maxSize
+        if self._cacheSize > self.maxSize:
+            self._clearCache(maxSize/4)
+
+
+    def get(self, key):
+        """
+        Retrieve the value associated from the key in the cache.
+
+        @raise KeyNotFoundError: if the given key is not in the cache.
+
+        @return: a L{Deferred} firing with the tuple (flags, value)
+        @rtype: L{Deferred}
+        """
+        cachedValue = self._cache.get(key)
+        if cachedValue is None:
+            return fail(KeyNotFoundError(key))
+        return succeed((cachedValue.flags, cachedValue.value))
+
+
+    def gets(self, key):
+        """
+        @raise KeyNotFoundError: if the given key is not in the cache.
+
+        @return: a L{Deferred} firing with the tuple (flags, cas identifier,
+            value)
+        @rtype: L{Deferred}
+        """
+        cachedValue = self._cache.get(key)
+        if cachedValue is None:
+            return fail(KeyNotFoundError(key))
+        return succeed(
+            (cachedValue.flags, cachedValue.casValue, cachedValue.value))
+
+
+    def _clearCache(self, howMany=0):
+        """
+        Empty the cache.
+        """
+        while self._cacheSize > self.maxSize - howMany:
+            key = self._order.pop(0)
+            value = self._cache.pop(key)
+            self._cacheSize -= value.value
+
+
+    def _set(self, key, value, flags, expireTime):
+        """
+        Helper method for set operations.
+        """
+        if self.maxSize and self._cacheSize + len(value) > self.maxSize:
+            # We have to drop keys
+            self._clearCache(self._cacheSize/4)
+        self._cacheSize += len(value)
+        value = _CachedValue(value, flags, expireTime)
+        self._cache[key] = value
+        if not 'key' in self._order:
+            self._order.append(key)
+        return succeed(True)
+
+
+    def set(self, key, value, flags, expireTime):
+        """
+        Set the content associated with C{key} to C{value}.
+
+        @param key:
+        @type key: C{str}
+
+        @param value:
+        @type value: C{str}
+
+        @param flags:
+        @type flags:
+
+        @param expireTime:
+        @type expireTime:
+
+        @return: a L{Deferred} that will fire with C{True} if the operation has
+            succeeded.
+        @rtype: L{Deferred}
+        """
+        return self._set(key, value, flags, expireTime)
+
+
+    def checkAndSet(self, key, value, flags, expireTime, casValue):
+        """
+        Set the content associated with C{key} to C{value} only if the given
+        C{casValue} match the current one associated with the key.
+
+        @return: a L{Deferred} that will fire with C{True} if the operation has
+            succeeded.
+        @rtype: L{Deferred}
+        """
+        if not key in self._cache:
+            return fail(KeyNotFoundError(key))
+        if self._cache[key].casValue != casValue:
+            return fail(CasError(key, casValue))
+        return self._set(key, value, flags, expireTime)
+
+
+    def add(self, key, value, flags, expireTime):
+        """
+        Set the content for the given C{key} to C{value} only if the key is not
+        yet in the cache.
+        """
+        if key in self._cache:
+            return fail(KeyFoundError(key))
+        return self._set(key, value, flags, expireTime)
+
+
+    def replace(self, key, value, flags, expireTime):
+        """
+        Set the content for the given C{key} to C{value} only if the key is
+        already in the cache.
+        """
+        if not key in self._cache:
+            return fail(KeyNotFoundError(key))
+        return self._set(key, value, flags, expireTime)
+
+
+    def append(self, key, value, flags, expireTime):
+        """
+        Append the given C{value} to the current value associated with the
+        C{key}. The key has to be in the cache.
+        """
+        if not key in self._cache:
+            return fail(KeyNotFoundError(key))
+        currentValue = self._cache[key]
+        currentValue.value += value
+        return succeed(True)
+
+
+    def prepend(self, key, value, flags, expireTime):
+        """
+        Prepend the given C{value} to the current value associated with the
+        C{key}. The key has to be in the cache.
+        """
+        if not key in self._cache:
+            return fail(KeyNotFoundError(key))
+        currentValue = self._cache[key]
+        currentValue.value = value + currentValue.value
+        return succeed(True)
+
+
+    def delete(self, key):
+        """
+        Delete the given C{key} from the cache. The key has to be in the cache.
+        """
+        if key not in self._cache:
+            return fail(KeyNotFoundError(key))
+        del self._cache[key]
+        self._order.remove(key)
+        return succeed(True)
+
+
+    def increment(self, key, value):
+        """
+        Increment the value associated with the key with C{value}. The current
+        value and the given value should be coercible to an integer.
+        """
+        if key not in self._cache:
+            return fail(KeyNotFoundError(key))
+        try:
+            self._cache[key].value = str(
+                int(self._cache[key].value) + int(value))
+        except ValueError:
+            return fail()
+        return succeed(self._cache[key].value)
+
+
+    def decrement(self, key, value):
+        """
+        Decrement the value associated with the key with C{value}. The current
+        value and the given value should be coercible to an integer.
+        """
+        if key not in self._cache:
+            return fail(KeyNotFoundError(key))
+        try:
+            self._cache[key].value = str(
+                int(self._cache[key].value) - int(value))
+        except ValueError:
+            return fail()
+        return succeed(self._cache[key].value)
+
+
+    def flush_all(self):
+        """
+        Empty the cache.
+
+        @return: a L{Deferred} firing with C{True}.
+        @rtype: L{Deferred}
+        """
+        self._cache = {}
+        return succeed(True)
+
+
+    def stats(self):
+        """
+        Return some statistics of the current status of the cache.
+        """
+        stats = {"curr_items": len(self._cache)}
+        return succeed(stats)
+
+
+    def version(self):
+        """
+        Return the version of the backend.
+        """
+        return succeed("1.0")
+
+
+
+class _ServerCommand(object):
+    """
+    Represent a current pending commad server-side.
+    """
+
+    def __init__(self, command, **kwargs):
+        """
+        Create a command.
+
+        @param command: the name of the command.
+        @type command: C{str}
+
+        @param kwargs: values stored as attributes of the object for future
+            use.
+        """
+        self.command = command
+        self.isReady = False
+        self.value = ""
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+
+
+class MemCacheServerProtocol(LineReceiver, TimeoutMixin):
+    """
+    Implementation of memcache server protocol.
+
+    @ivar backend: backend managing the cache.
+    @type backend: a provider of L{ICacheBackend}
+    """
+    backendFactory = StandardBackend
+
+    def __init__(self):
+        """
+        Initialize the protocol and the internal structures.
+        """
+        self.backend = self.backendFactory()
+        self._current = deque()
+        self._lenExpected = None
+        self._getBuffer = None
+        self._bufferLength = None
+
+
+    def timeoutConnection(self):
+        """
+        On timeout, clear current commands and close transport.
+        """
+        self._current = deque()
+        self.transport.loseConnection()
+
+
+    def rawDataReceived(self, data):
+        """
+        Manage data received during set operations.
+        """
+        self.resetTimeout()
+        self._getBuffer.append(data)
+        self._bufferLength += len(data)
+        if self._bufferLength >= self._lenExpected + 2:
+            data = "".join(self._getBuffer)
+            buf = data[:self._lenExpected]
+            rem = data[self._lenExpected + 2:]
+            val = buf
+            self._lenExpected = None
+            self._getBuffer = None
+            self._bufferLength = None
+            cmd = self._current[0]
+            cmd.value = val
+            self.setLineMode(rem)
+            method = getattr(self.backend, cmd.command)
+            if cmd.command == "cas":
+                d = method(cmd.key, cmd.value, cmd.flags, cmd.expireTime,
+                           cmd.casValue)
+            else:
+                d = method(cmd.key, cmd.value, cmd.flags, cmd.expireTime)
+            d.addCallback(self._responseSet, cmd)
+
+
+    def _popResponses(self, cmd):
+        """
+        Fire up response, if given command is the first in the queue.
+        """
+        cmd.isReady = True
+        if not cmd is self._current[0]:
+            return
+        while self._current and self._current[0].isReady:
+            self.sendLine(self._current[0].value)
+            self._current.popleft()
+
+
+    def _responseSet(self, result, cmd):
+        """
+        Reply to a set query with the C{STORED} token.
+        """
+        if result:
+            cmd.value = "STORED"
+
+        self._popResponses(cmd)
+
+
+    def _responseGet(self, data, cmd):
+        """
+        Reply to the get query with the value got from the the store.
+        """
+        value = "VALUE %s %s %s\r\n%s\r\nEND" % (
+            cmd.key, data[0], len(data[1]), data[1])
+        cmd.value = value
+
+        self._popResponses(cmd)
+
+
+    def _errorGet(self, err, cmd):
+        """
+        """
+        err.trap(KeyNotFoundError)
+        cmd.value = "END"
+        self._popResponses(cmd)
+
+
+    def _responseGets(self, data, cmd):
+        """
+        Reply to the get query with the value got from the the store, along
+        with the cas value.
+        """
+        value = "VALUE %s %s %s %s\r\n%s\r\nEND" % (
+            cmd.key, data[0], len(data[2]), data[1], data[2])
+        cmd.value = value
+
+        self._popResponses(cmd)
+
+
+    def cmd_GET(self, key):
+        """
+        Manage C{get} command.
+        """
+        cmd = _ServerCommand("get", key=key)
+        self._current.append(cmd)
+        d = self.backend.get(key)
+        d.addCallback(self._responseGet, cmd)
+        d.addErrback(self._errorGet, cmd)
+        return d
+
+
+    def cmd_GETS(self, key):
+        """
+        Manage C{gets} command.
+        """
+        cmd = _ServerCommand("gets", key=key)
+        self._current.append(cmd)
+        d = self.backend.gets(key)
+        d.addCallback(self._responseGets, cmd)
+        d.addErrback(self._errorGet, cmd)
+        return d
+
+
+    def _prepareSet(self, cmd, key, flags, expireTime, length, casValue=""):
+        """
+        Common code to all set operations.
+        """
+        cmd = _ServerCommand(cmd, key=key, flags=int(flags),
+            expireTime=int(expireTime), length=int(length), casValue=casValue)
+        self._current.append(cmd)
+        self._lenExpected = int(length)
+        self._getBuffer = []
+        self._bufferLength = 0
+        self.setRawMode()
+
+
+    def cmd_SET(self, key, flags, expireTime, length):
+        """
+        Reply to the C{set} command.
+        """
+        self._prepareSet("set", key, flags, expireTime, length)
+
+
+    def cmd_ADD(self, key, flags, expireTime, length):
+        """
+        Reply to the C{add} command.
+        """
+        self._prepareSet("add", key, flags, expireTime, length)
+
+
+    def cmd_REPLACE(self, key, flags, expireTime, length):
+        """
+        Reply to the C{replace} command.
+        """
+        self._prepareSet("replace", key, flags, expireTime, length)
+
+
+    def cmd_APPEND(self, key, flags, expireTime, length):
+        """
+        Reply to the C{append} command.
+        """
+        self._prepareSet("append", key, flags, expireTime, length)
+
+
+    def cmd_PREPEND(self, key, flags, expireTime, length):
+        """
+        Reply to the C{prepend} command.
+        """
+        self._prepareSet("prepend", key, flags, expireTime, length)
+
+
+    def cmd_CAS(self, key, flags, expireTime, length, casValue):
+        """
+        Reply to the C{cas} command.
+        """
+        self._prepareSet(
+            "checkAndSet", key, flags, expireTime, length, casValue)
+
+
+    def _responseDelete(self, result, cmd):
+        """
+        Serialize response to the C{delete} command.
+        """
+        cmd.value = "DELETED"
+
+        self._popResponses(cmd)
+
+
+    def cmd_DELETE(self, key):
+        """
+        Manage C{delete} command.
+        """
+        cmd = _ServerCommand("delete", key=key)
+        self._current.append(cmd)
+        return self.backend.delete(key).addCallback(self._responseDelete, cmd)
+
+
+    def _responseIncrDecr(self, result, cmd):
+        """
+        Serialize response to C{incr} and C{decr} commands.
+        """
+        cmd.value = result
+
+        self._popResponses(cmd)
+
+
+    def _errorIncrDecr(self, result, cmd):
+        """
+        """
+        if result.check(KeyNotFoundError) is not None:
+            cmd.value = "NOT FOUND"
+        else:
+            cmd.value = "CLIENT_ERROR %s" % (str(result.value),)
+
+        self._popResponses(cmd)
+
+
+    def cmd_INCR(self, key, value):
+        """
+        Manage C{incr} command.
+        """
+        cmd = _ServerCommand("increment", key=key)
+        self._current.append(cmd)
+        return self.backend.increment(key, value
+            ).addCallback(self._responseIncrDecr, cmd
+            ).addErrback(self._errorIncrDecr, cmd)
+
+
+    def cmd_DECR(self, key, value):
+        """
+        Manage C{decr} command.
+        """
+        cmd = _ServerCommand("decrement", key=key)
+        self._current.append(cmd)
+        return self.backend.decrement(key, value
+            ).addCallback(self._responseIncrDecr, cmd
+            ).addErrback(self._errorIncrDecr, cmd)
+
+
+    def _responseStats(self, result, cmd):
+        """
+        Manage response to the stats command.
+        """
+        cmd.value = ""
+        for key, value in result.iteritems():
+            cmd.value += "STAT %s %s\r\n" % (key, value)
+        cmd.value += "END"
+
+        self._popResponses(cmd)
+
+
+    def cmd_STATS(self):
+        """
+        Manage C{stats} command.
+        """
+        cmd = _ServerCommand("stats")
+        self._current.append(cmd)
+        return self.backend.stats().addCallback(self._responseStats, cmd)
+
+
+    def _responseVersion(self, result, cmd):
+        """
+        Manage response to the version command.
+        """
+        cmd.value = "VERSION %s" % (result,)
+
+        self._popResponses(cmd)
+
+
+    def cmd_VERSION(self):
+        """
+        Manage C{version} command.
+        """
+        cmd = _ServerCommand("version")
+        self._current.append(cmd)
+        return self.backend.version().addCallback(self._responseVersion, cmd)
+
+
+    def _responseFlush(self, result, cmd):
+        """
+        Manage response to the flush command.
+        """
+        cmd.value = "OK"
+
+        self._popResponses(cmd)
+
+
+    def cmd_FLUSH_ALL(self):
+        """
+        Manage C{flush} command.
+        """
+        cmd = _ServerCommand("flush_all")
+        self._current.append(cmd)
+        return self.backend.flush_all().addCallback(self._responseFlush, cmd)
+
+
+    def lineReceived(self, line):
+        """
+        Receive line commands from the client.
+        """
+        self.resetTimeout()
+        token = line.split(" ", 1)[0]
+        cmd = getattr(self, "cmd_%s" % (token.upper(),), None)
+        if cmd is not None:
+            args = line.split(" ")[1:]
+            cmd(*args)
+        else:
+            raise RuntimeError("Unknown command %s" % (token,))
+
+
 __all__ = ["MemCacheProtocol", "DEFAULT_PORT", "NoSuchCommand", "ClientError",
-           "ServerError"]
+           "ServerError", "MemCacheServerProtocol", "ICacheBackend",
+           "StandardBackend", "KeyFoundError", "KeyNotFoundError", "CasError"]
 
