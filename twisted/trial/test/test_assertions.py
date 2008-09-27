@@ -629,7 +629,6 @@ class TestCallDeprecated(unittest.TestCase):
         Deprecated method for testing.
         """
         return x
-    oldMethod = deprecated(version)(oldMethod)
 
 
     def test_callDeprecatedSuppressesWarning(self):
@@ -696,3 +695,6 @@ class TestCallDeprecated(unittest.TestCase):
         nestedDeprecation = deprecated(differentVersion)(nestedDeprecation)
 
         self.callDeprecated(differentVersion, nestedDeprecation, 24)
+
+TestCallDeprecated.oldMethod = deprecated(TestCallDeprecated.version)(
+    TestCallDeprecated.oldMethod)

@@ -18,6 +18,7 @@ import traceback
 import weakref
 import re
 import warnings
+import inspect
 try:
     from collections import deque
 except ImportError:
@@ -777,6 +778,26 @@ def filenameToModuleName(fn):
     return modName
 
 
+
+def fullyQualifiedName(obj):
+    """
+    Return the fully qualified name of a module, class, method or function.
+    Classes and functions need to be module level ones to be correctly
+    qualified.
+
+    @rtype: C{str}.
+    """
+    name = obj.__name__
+    if inspect.isclass(obj) or inspect.isfunction(obj):
+        moduleName = obj.__module__
+        return "%s.%s" % (moduleName, name)
+    elif inspect.ismethod(obj):
+        className = fullyQualifiedName(obj.im_class)
+        return "%s.%s" % (className, name)
+    return name
+
+
+
 __all__ = [
     'InvalidName', 'ModuleNotFound', 'ObjectNotFound',
 
@@ -790,4 +811,7 @@ __all__ = [
     'safe_repr', 'safe_str', 'allYourBase', 'accumulatedBases',
     'prefixedMethodNames', 'addMethodNamesToDict', 'prefixedMethods',
     'accumulateClassDict', 'accumulateClassList', 'isSame', 'isLike',
-    'modgrep', 'isOfType', 'findInstances', 'objgrep', 'filenameToModuleName']
+    'modgrep', 'isOfType', 'findInstances', 'objgrep', 'filenameToModuleName',
+    'fullyQualifiedName']
+
+

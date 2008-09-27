@@ -31,8 +31,8 @@ __all__ = [
 
 from warnings import warn
 
-from twisted.python.versions import getVersionString, Version
-from twisted.python.reflect import qual
+from twisted.python.versions import getVersionString
+from twisted.python.reflect import fullyQualifiedName
 from twisted.python.util import mergeFunctionMetadata
 
 
@@ -72,7 +72,7 @@ def getDeprecationWarningString(callableThing, version):
     @return: A string describing the deprecation.
     """
     return "%s was deprecated in %s" % (
-        qual(callableThing), getVersionString(version))
+        fullyQualifiedName(callableThing), getVersionString(version))
 
 
 

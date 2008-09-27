@@ -504,3 +504,68 @@ class FilenameToModule(unittest.TestCase):
             os.path.join('twisted', 'test', 'test_reflect.py'))
         self.assertEquals(module, 'test_reflect')
 
+
+
+class FullyQualifiedNameTests(unittest.TestCase):
+    """
+    Test for L{reflect.fullyQualifiedName}.
+    """
+
+    def _checkFullyQualifiedName(self, obj, expected):
+        """
+        Helper to check that fully qualified name of C{obj} results to
+        C{expected}.
+        """
+        self.assertEquals(
+            reflect.fullyQualifiedName(obj), expected)
+
+
+    def test_package(self):
+        """
+        L{reflect.fullyQualifiedName} returns the full name of a package and
+        a subpackage.
+        """
+        import twisted
+        self._checkFullyQualifiedName(twisted, 'twisted')
+        import twisted.python
+        self._checkFullyQualifiedName(twisted.python, 'twisted.python')
+
+
+    def test_module(self):
+        """
+        L{reflect.fullyQualifiedName} returns the name of a module inside a a
+        package.
+        """
+        self._checkFullyQualifiedName(reflect, 'twisted.python.reflect')
+        import twisted.trial.unittest
+        self._checkFullyQualifiedName(twisted.trial.unittest,
+                                      'twisted.trial.unittest')
+
+
+    def test_class(self):
+        """
+        L{reflect.fullyQualifiedName} returns the name of a class and its
+        module.
+        """
+        self._checkFullyQualifiedName(reflect.Settable,
+                                      'twisted.python.reflect.Settable')
+
+
+    def test_function(self):
+        """
+        L{reflect.fullyQualifiedName} returns the name of a function inside its
+        module.
+        """
+        self._checkFullyQualifiedName(reflect.fullyQualifiedName,
+            "twisted.python.reflect.fullyQualifiedName")
+
+
+    def test_method(self):
+        """
+        L{reflect.fullyQualifiedName} returns the name of a method inside its
+        class and its module.
+        """
+        self._checkFullyQualifiedName(reflect.PropertyAccessor.reallyDel,
+            "twisted.python.reflect.PropertyAccessor.reallyDel")
+        self._checkFullyQualifiedName(reflect.PropertyAccessor().reallyDel,
+            "twisted.python.reflect.PropertyAccessor.reallyDel")

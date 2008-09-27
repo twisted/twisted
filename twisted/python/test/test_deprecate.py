@@ -10,8 +10,8 @@ from twisted.trial.unittest import TestCase
 from twisted.python.deprecate import _appendToDocstring
 from twisted.python.deprecate import _getDeprecationDocstring
 from twisted.python.deprecate import deprecated, getDeprecationWarningString
-from twisted.python.reflect import qual
-from twisted.python.versions import getVersionString, Version
+from twisted.python.reflect import fullyQualifiedName
+from twisted.python.versions import Version
 
 
 
@@ -33,9 +33,11 @@ class TestDeprecationWarnings(TestCase):
         """
         version = Version('Twisted', 8, 0, 0)
         self.assertEqual(
-            getDeprecationWarningString(self.test_getDeprecationWarningString, version),
-            "%s was deprecated in Twisted 8.0.0" % (
-                qual(self.test_getDeprecationWarningString)))
+            getDeprecationWarningString(self.test_getDeprecationWarningString,
+                                        version),
+            "twisted.python.test.test_deprecate.TestDeprecationWarnings."
+            "test_getDeprecationWarningString was deprecated in "
+            "Twisted 8.0.0")
 
 
     def test_deprecateEmitsWarning(self):
@@ -60,7 +62,8 @@ class TestDeprecationWarnings(TestCase):
         version = Version('Twisted', 8, 0, 0)
         dummy = deprecated(version)(dummyCallable)
         self.assertEqual(dummyCallable.__name__, dummy.__name__)
-        self.assertEqual(qual(dummyCallable), qual(dummy))
+        self.assertEqual(fullyQualifiedName(dummyCallable),
+                         fullyQualifiedName(dummy))
 
 
     def test_getDeprecationDocstring(self):
