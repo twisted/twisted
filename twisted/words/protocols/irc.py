@@ -85,7 +85,13 @@ def split(str, length = 80):
         if w == -1 and n == -1:
             line, str = str[:length], str[length:]
         else:
-            i = n == -1 and w or n
+            if n == -1:
+                i = w
+            else:
+                i = n
+            if i == 0: # just skip the space or newline. don't append any output.
+                str = str[1:]
+                continue
             line, str = str[:i], str[i+1:]
         r.append(line)
     if len(str):

@@ -553,6 +553,17 @@ class ClientMsgTests(unittest.TestCase):
         self.assertEquals([], irc.split('', 1))
         self.assertEquals([], irc.split(''))
 
+    def test_splitDelimiters(self):
+        """
+        Test that split() skips any delimiter (space or newline) that it finds
+        at the very beginning of the string segment it is operating on.
+        Nothing should be added to the output list because of it.
+        """
+        r = irc.split("xx yyz", 2)
+        self.assertEquals(['xx', 'yy', 'z'], r)
+        r = irc.split("xx\nyyz", 2)
+        self.assertEquals(['xx', 'yy', 'z'], r)
+
 
 class ClientTests(TestCase):
     """
