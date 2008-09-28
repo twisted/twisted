@@ -771,4 +771,6 @@ class CollectWarnings(unittest.TestCase):
 
         self.assertEqual(warningsShown[0].message, message)
         self.assertEqual(warningsShown[0].category, category)
+        self.assertTrue(
+            util.__file__.startswith(warningsShown[0].filename))
         self.assertEqual(len(warningsShown), 1)
