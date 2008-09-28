@@ -982,27 +982,6 @@ class TestCase(_Assertions):
         self._cleanups.append((f, args, kwargs))
 
 
-    def _captureDeprecationWarnings(self, f, *args, **kwargs):
-        """
-        Call C{f} and capture all deprecation warnings.
-        """
-        warnings = []
-        def accumulateDeprecations(message, category, stacklevel):
-            # XXX No tests for this line
-            # self.assertEqual(DeprecationWarning, category)
-            # XXX No tests for this line
-            # self.assertEqual(stacklevel, 2)
-            warnings.append(message)
-
-        originalMethod = deprecate.getWarningMethod()
-        deprecate.setWarningMethod(accumulateDeprecations)
-        try:
-            result = f(*args, **kwargs)
-        finally:
-            deprecate.setWarningMethod(originalMethod)
-        return (warnings, result)
-
-
     def callDeprecated(self, version, f, *args, **kwargs):
         """
         Call a function that was deprecated at a specific version.
@@ -1011,13 +990,13 @@ class TestCase(_Assertions):
         @param f: The deprecated function to call.
         @return: Whatever the function returns.
         """
-        warnings, result = self._captureDeprecationWarnings(
-            f, *args, **kwargs)
+        result = f(*args, **kwargs)
+        warningsShown = self.flushWarnings([self.callDeprecated])
 
-        if len(warnings) == 0:
+        if len(warningsShown) == 0:
             self.fail('%r is not deprecated.' % (f,))
 
-        observedWarning = warnings[0]
+        observedWarning = warningsShown[0]['args'][0]
         expectedWarning = getDeprecationWarningString(f, version)
         self.assertEqual(expectedWarning, observedWarning)
 

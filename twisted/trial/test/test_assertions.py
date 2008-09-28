@@ -643,12 +643,9 @@ class TestCallDeprecated(unittest.TestCase):
         callDeprecated calls a deprecated callable, suppressing the
         deprecation warning.
         """
-        warningsShown = []
-        def warnExplicit(*args):
-            warningsShown.append(args)
-        self.patch(warnings, 'warn_explicit', warnExplicit)
         self.callDeprecated(self.version, self.oldMethod, 'foo')
-        self.assertEqual([], warningsShown, "No warnings should be shown")
+        self.assertEqual(
+            self.flushWarnings(), [], "No warnings should be shown")
 
 
     def test_callDeprecatedCallsFunction(self):
@@ -702,6 +699,9 @@ class TestCallDeprecated(unittest.TestCase):
         nestedDeprecation = deprecated(differentVersion)(nestedDeprecation)
 
         self.callDeprecated(differentVersion, nestedDeprecation, 24)
+
+        warningsShown = self.flushWarnings()
+        self.assertEqual(len(warningsShown), 1)
 
 TestCallDeprecated.oldMethod = deprecated(TestCallDeprecated.version)(
     TestCallDeprecated.oldMethod)
