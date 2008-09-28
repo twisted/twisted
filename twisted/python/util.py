@@ -945,9 +945,10 @@ def runAsEffectiveUser(euid, egid, function, *args, **kwargs):
 
 
 class _Warning:
-    def __init__(self, message, category):
+    def __init__(self, message, category, filename):
         self.message = message
         self.category = category
+        self.filename = filename
 
 
 
@@ -963,12 +964,12 @@ def collectWarnings(f, *args, **kwargs):
             result = f(*args, **kwargs)
         finally:
             catcher.__exit__()
-        warningsShown = [_Warning(str(w.message), w.category)
+        warningsShown = [_Warning(str(w.message), w.category, w.filename)
                          for w in warningsShown]
     else:
         warningsShown = []
         def warnExplicit(*args):
-            warningsShown.append(_Warning(args[0], args[1]))
+            warningsShown.append(_Warning(args[0], args[1], args[2]))
 
         origExplicit = warnings.warn_explicit
         try:
