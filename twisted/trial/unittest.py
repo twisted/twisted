@@ -9,7 +9,7 @@ Maintainer: Jonathan Lange
 """
 
 
-import doctest
+import doctest, inspect
 import os, warnings, sys, tempfile, gc
 from pprint import pformat
 
@@ -530,14 +530,28 @@ class _LogObserver(object):
         return self._errors
 
 
-    def flushWarnings(self):
+    def flushWarnings(self, offendingFunctions=None):
         """
         Remove stored warnings from the list of captured warnings and return
         them.
         """
-        warnings = self._warnings
+        toFlush = self._warnings
         self._warnings = []
-        return warnings
+        for w in toFlush:
+            if offendingFunctions is not None:
+                for aFunction in offendingFunctions:
+                    filename = inspect.getabsfile(aFunction)
+                    if filename != w['filename']:
+                        continue
+                    lines, start = inspect.getsourcelines(aFunction)
+                    if not (start <= w['lineno'] <= start + len(lines)):
+                        continue
+                    break
+                else:
+                    # It didn't match anything, don't flush it.
+                    self._warnings.append(w)
+        map(toFlush.remove, self._warnings)
+        return toFlush
 
 
     def gotEvent(self, event):
@@ -948,11 +962,11 @@ class TestCase(_Assertions):
         return self._observer.flushErrors(*errorTypes)
 
 
-    def flushWarnings(self):
+    def flushWarnings(self, offendingFunctions=None):
         """
         Remove stored warnings from the list of captured warnings.
         """
-        return self._observer.flushWarnings()
+        return self._observer.flushWarnings(offendingFunctions)
 
 
     def addCleanup(self, f, *args, **kwargs):

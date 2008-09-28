@@ -7,7 +7,7 @@ Test the interaction between trial and errors logged during test run.
 
 import time
 
-from twisted.internet import defer, task
+from twisted.internet import reactor, defer, task
 from twisted.python import failure, log, reflect
 from twisted.trial import unittest, reporter, runner
 
@@ -51,7 +51,7 @@ class Mask(object):
             """
             Log an error in an asynchronous callback.
             """
-            return deferLater(0, lambda: log.err(makeFailure()))
+            return task.deferLater(reactor, 0, lambda: log.err(makeFailure()))
 
 
 class TestObserver(unittest.TestCase):
@@ -158,9 +158,56 @@ class TestObserver(unittest.TestCase):
             'filename': filename,
             'lineno': lineno,
             'format': 'bar'}
-        self.observer.gotEvent(event)
+        # Make a copy to be sure no accidental sharing goes on.
+        self.observer.gotEvent(dict(event))
+
+        event['args'] = ('some warning text',)
+        event['category'] = RuntimeWarning
+
         self.assertEqual(self.observer.flushWarnings(), [event])
         self.assertEqual(self.observer.flushWarnings(), [])
+
+
+    def test_flushWarningsByFunction(self):
+        """
+        Check that C{flushWarnings} accepts a list of function objects and only
+        returns warnings which refer to one of those functions as the offender.
+        """
+        def offenderOne():
+            pass
+
+        def offenderTwo():
+            pass
+
+        def nonOffender():
+            pass
+
+        # Emit a warning from the two offenders, but not from the non-offender.
+        events = []
+        for offender in [offenderOne, offenderTwo]:
+            where = offender.func_code
+            filename = where.co_filename
+            lineno = where.co_firstlineno
+            event = {
+                'warning': RuntimeWarning('some warning text'),
+                'category': reflect.qual(RuntimeWarning),
+                'filename': filename,
+                'lineno': lineno,
+                'format': 'bar'}
+            events.append(event)
+            self.observer.gotEvent(dict(event))
+            event['args'] = ('some warning text',)
+            event['category'] = RuntimeWarning
+
+        self.assertEqual(
+            self.observer.flushWarnings([nonOffender]),
+            [])
+        self.assertEqual(
+            self.observer.flushWarnings([offenderTwo]),
+            events[1:])
+        self.assertEqual(
+            self.observer.flushWarnings([offenderOne]),
+            events[:1])
 
 
 

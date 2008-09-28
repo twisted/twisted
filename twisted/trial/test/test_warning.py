@@ -166,19 +166,24 @@ class FlushWarningsTests(TestCase):
         """
         The list returned by L{TestCase.flushWarnings} includes only those
         warnings which refer to the source of the function passed as the value
-        for C{offendingFunction}, if a a value is passed for that parameter.
+        for C{offendingFunction}, if a value is passed for that parameter.
         """
         firstMessage = "first warning text"
         firstCategory = UserWarning
         def one():
             warnings.warn(firstMessage, firstCategory, stacklevel=1)
 
+        secondMessage = "some text"
+        secondCategory = RuntimeWarning
         def two():
-            warnings.warn("some text", RuntimeWarning, stacklevel=1)
+            warnings.warn(secondMessage, secondCategory, stacklevel=1)
 
         one()
         two()
 
         self.assertDictSubsets(
-            self.flushWarnings(offender=one),
-            [{'category': firstCategory, args: (firstMessage,)}])
+            self.flushWarnings(offendingFunctions=[one]),
+            [{'category': firstCategory, 'args': (firstMessage,)}])
+        self.assertDictSubsets(
+            self.flushWarnings(offendingFunctions=[two]),
+            [{'category': secondCategory, 'args': (secondMessage,)}])
