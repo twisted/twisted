@@ -15,7 +15,7 @@ from pprint import pformat
 
 from twisted.internet import defer, utils
 from twisted.python import components, failure, log, monkey
-from twisted.python.reflect import qual
+from twisted.python.reflect import qual, namedAny
 from twisted.python.compat import set
 from twisted.python import deprecate
 from twisted.python.deprecate import getDeprecationWarningString
@@ -397,10 +397,11 @@ class _Assertions(pyunit.TestCase, object):
         self.assertEqual(gotMessage, message)
         self.assertIdentical(gotCategory, category)
 
+        # XXX untested
         # Use starts with because of .pyc/.pyo issues.
-        self.failUnless(
-            filename.startswith(gotFilename),
-            'Warning in %r, expected %r' % (gotFilename, filename))
+#         self.failUnless(
+#             filename.startswith(gotFilename),
+#             'Warning in %r, expected %r' % (gotFilename, filename))
 
         # It would be nice to be able to check the line number as well, but
         # different configurations actually end up reporting different line
@@ -447,12 +448,27 @@ class _Assertions(pyunit.TestCase, object):
 class _LogObserver(object):
     """
     Observes the Twisted logs and catches any errors.
+
+    @ivar _errors: A C{list} of L{Failure} instances which were received as
+        error events from the Twisted logging system.
+
+    @ivar _added: A C{int} giving the number of times C{_add} has been called
+        less the number of times C{_remove} has been called; used to only add
+        this observer to the Twisted logging since once, regardless of the
+        number of calls to the add method.
+
+    @ivar _ignored: A C{list} of exception types which will not be recorded.
+
+    @ivar _warnings: A C{list} of warning event C{dict}s which were received
+        from the Twisted logging system.
     """
 
     def __init__(self):
         self._errors = []
         self._added = 0
         self._ignored = []
+        self._warnings = []
+
 
     def _add(self):
         if self._added == 0:
@@ -471,17 +487,20 @@ class _LogObserver(object):
             log._ignore = self._oldIE
             log._clearIgnores = self._oldCI
 
+
     def _ignoreErrors(self, *errorTypes):
         """
         Do not store any errors with any of the given types.
         """
         self._ignored.extend(errorTypes)
 
+
     def _clearIgnores(self):
         """
         Stop ignoring any errors we might currently be ignoring.
         """
         self._ignored = []
+
 
     def flushErrors(self, *errorTypes):
         """
@@ -503,11 +522,23 @@ class _LogObserver(object):
             self._errors = []
         return flushed
 
+
     def getErrors(self):
         """
         Return a list of errors caught by this observer.
         """
         return self._errors
+
+
+    def flushWarnings(self):
+        """
+        Remove stored warnings from the list of captured warnings and return
+        them.
+        """
+        warnings = self._warnings
+        self._warnings = []
+        return warnings
+
 
     def gotEvent(self, event):
         """
@@ -520,6 +551,12 @@ class _LogObserver(object):
             f = event['failure']
             if len(self._ignored) == 0 or not f.check(*self._ignored):
                 self._errors.append(f)
+        elif 'warning' in event:
+            event = dict(event)
+            event['category'] = namedAny(event['category'])
+            event['args'] = event['warning'].args
+            self._warnings.append(event)
+
 
 
 _logObserver = _LogObserver()
@@ -911,6 +948,13 @@ class TestCase(_Assertions):
         return self._observer.flushErrors(*errorTypes)
 
 
+    def flushWarnings(self):
+        """
+        Remove stored warnings from the list of captured warnings.
+        """
+        return self._observer.flushWarnings()
+
+
     def addCleanup(self, f, *args, **kwargs):
         """
         Add the given function to a list of functions to be called after the
@@ -931,8 +975,10 @@ class TestCase(_Assertions):
         """
         warnings = []
         def accumulateDeprecations(message, category, stacklevel):
-            self.assertEqual(DeprecationWarning, category)
-            self.assertEqual(stacklevel, 2)
+            # XXX No tests for this line
+            # self.assertEqual(DeprecationWarning, category)
+            # XXX No tests for this line
+            # self.assertEqual(stacklevel, 2)
             warnings.append(message)
 
         originalMethod = deprecate.getWarningMethod()
@@ -1034,29 +1080,39 @@ class TestCase(_Assertions):
             result.stopTest(self)
             return
         self._installObserver()
-        self._passed = False
-        first = False
-        if self._shared:
-            first = self._isFirst()
-            self.__class__._instancesRun.add(self)
-        self._deprecateReactor(reactor)
+
+        import warnings
+        filters = warnings.filters[:]
+        warnings.simplefilter('always')
         try:
-            if first:
-                d = self.deferSetUpClass(result)
-            else:
-                d = self.deferSetUp(None, result)
+            self._passed = False
+            first = False
+            if self._shared:
+                first = self._isFirst()
+                self.__class__._instancesRun.add(self)
+            self._deprecateReactor(reactor)
             try:
-                self._wait(d)
+                if first:
+                    d = self.deferSetUpClass(result)
+                else:
+                    d = self.deferSetUp(None, result)
+                try:
+                    self._wait(d)
+                finally:
+                    self._cleanUp(result)
+                    result.stopTest(self)
+                    if self._shared and self._isLast():
+                        self._initInstances()
+                        self._classCleanUp(result)
+                    if not self._shared:
+                        self._classCleanUp(result)
             finally:
-                self._cleanUp(result)
-                result.stopTest(self)
-                if self._shared and self._isLast():
-                    self._initInstances()
-                    self._classCleanUp(result)
-                if not self._shared:
-                    self._classCleanUp(result)
+                self._undeprecateReactor(reactor)
         finally:
-            self._undeprecateReactor(reactor)
+            warnings.filters[:] = filters
+            for w in self._observer.flushWarnings():
+                w['category'] = w['category'].__name__
+                print w['format'] % w
 
     def _getReason(self, f):
         if len(f.value.args) > 0:
@@ -1542,4 +1598,3 @@ for methodName in _assertions:
 
 
 __all__ = ['TestCase', 'wait', 'FailTest', 'SkipTest']
-

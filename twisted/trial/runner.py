@@ -787,7 +787,6 @@ class TrialRunner(object):
 
     def _setUpLogging(self):
         self._setUpLogFile()
-        self._setUpLogWarnings()
 
     def _tearDownLogFile(self):
         if self._logFileObserver is not None:
@@ -806,16 +805,6 @@ class TrialRunner(object):
         self._logFileObject = logFile
         self._logFileObserver = log.FileLogObserver(logFile)
         log.startLoggingWithObserver(self._logFileObserver.emit, 0)
-
-    def _setUpLogWarnings(self):
-        if self._logWarnings:
-            return
-        def seeWarnings(x):
-           if x.has_key('warning'):
-               print
-               print x['format'] % x
-        log.addObserver(seeWarnings)
-        self._logWarnings = True
 
 
     def run(self, test):

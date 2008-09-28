@@ -7,8 +7,8 @@ Test the interaction between trial and errors logged during test run.
 
 import time
 
-from twisted.internet import defer
-from twisted.python import failure, log
+from twisted.internet import defer, task
+from twisted.python import failure, log, reflect
 from twisted.trial import unittest, reporter, runner
 
 
@@ -23,21 +23,11 @@ def makeFailure():
     return f
 
 
-def deferLater(n):
-    """
-    Return a L{defer.Deferred} that will fire in C{n} seconds.
-    """
-    from twisted.internet import reactor
-    d = defer.Deferred()
-    reactor.callLater(n, d.callback, None)
-    return d
-
-
 class Mask(object):
     """
     Hide C{MockTest}s from Trial's automatic test finder.
     """
-    
+
     class MockTest(unittest.TestCase):
         def test_silent(self):
             """
@@ -61,15 +51,19 @@ class Mask(object):
             """
             Log an error in an asynchronous callback.
             """
-            d = deferLater(0)
-            d.addCallback(lambda _: log.err(makeFailure()))
-            return d
+            return deferLater(0, lambda: log.err(makeFailure()))
 
 
 class TestObserver(unittest.TestCase):
+    """
+    Tests for L{unittest._LogObserver}, a helper for the implementation of
+    L{TestCase.flushLoggedErrors}, L{TestCase.flushWarnings}, and related
+    functions.
+    """
     def setUp(self):
         self.result = reporter.TestResult()
         self.observer = unittest._LogObserver()
+
 
     def test_msg(self):
         """
@@ -79,6 +73,7 @@ class TestObserver(unittest.TestCase):
                                 'time': time.time(), 'isError': 0,
                                 'system': '-'})
         self.assertEqual(self.observer.getErrors(), [])
+
 
     def test_error(self):
         """
@@ -91,6 +86,7 @@ class TestObserver(unittest.TestCase):
                                 'why': None})
         self.assertEqual(self.observer.getErrors(), [f])
 
+
     def test_flush(self):
         """
         Check that flushing the observer with no args removes all errors.
@@ -101,8 +97,10 @@ class TestObserver(unittest.TestCase):
         self.assertEqual(len(flushed), 1)
         self.assertTrue(flushed[0].check(ZeroDivisionError))
 
+
     def _makeRuntimeFailure(self):
         return failure.Failure(RuntimeError('test error'))
+
 
     def test_flushByType(self):
         """
@@ -117,6 +115,7 @@ class TestObserver(unittest.TestCase):
         self.assertEqual(len(flushed), 1)
         self.assertTrue(flushed[0].check(ZeroDivisionError))
 
+
     def test_ignoreErrors(self):
         """
         Check that C{_ignoreErrors} actually causes errors to be ignored.
@@ -128,6 +127,7 @@ class TestObserver(unittest.TestCase):
                                 'system': '-', 'failure': f,
                                 'why': None})
         self.assertEqual(self.observer.getErrors(), [])
+
 
     def test_clearIgnores(self):
         """
@@ -144,12 +144,32 @@ class TestObserver(unittest.TestCase):
         self.assertEqual(self.observer.getErrors(), [f])
 
 
+    def test_flushWarnings(self):
+        """
+        Check that C{flushWarnings} returns a list of all warnings received by
+        the observer and removes them from the observer.
+        """
+        here = self.test_flushWarnings.im_func.func_code
+        filename = here.co_filename
+        lineno = here.co_firstlineno
+        event = {
+            'warning': RuntimeWarning('some warning text'),
+            'category': reflect.qual(RuntimeWarning),
+            'filename': filename,
+            'lineno': lineno,
+            'format': 'bar'}
+        self.observer.gotEvent(event)
+        self.assertEqual(self.observer.flushWarnings(), [event])
+        self.assertEqual(self.observer.flushWarnings(), [])
+
+
+
 class LogErrors(unittest.TestCase):
     """
     High-level tests demonstrating the expected behaviour of logged errors
     during tests.
     """
-    
+
     def setUp(self):
         self.result = reporter.TestResult()
 
@@ -184,7 +204,7 @@ class LogErrors(unittest.TestCase):
         self.assertEqual(len(self.result.errors), 1)
         self.assertTrue(self.result.errors[0][1].check(ZeroDivisionError),
                         self.result.errors[0][1])
-        
+
     def test_errorsIsolated(self):
         """
         Check that an error logged in one test doesn't fail the next test.

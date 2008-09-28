@@ -9,7 +9,7 @@ This module is only for use within Twisted's release system. If you are anyone
 else, do not use it. The interface and behaviour will change without notice.
 """
 
-from datetime import date
+from datetime import date, datetime, timedelta
 import os
 from tempfile import mkdtemp
 import tarfile
@@ -23,6 +23,7 @@ except ImportError:
 
 from twisted.python.versions import Version
 from twisted.python.filepath import FilePath
+from twisted.python.deprecate import _Release, _DeprecationPolicy
 
 # This import is an example of why you shouldn't use this module unless you're
 # radix
@@ -801,3 +802,17 @@ class DistributionBuilder(object):
             tarball.add(docPath.path, buildPath("doc"))
 
         return tarball
+
+
+twisted_2_5 = _Release(Version("Twisted", 2, 5, 0), datetime(2007, 1, 11))
+twisted_8_0 = _Release(Version("Twisted", 8, 0, 0), datetime(2008, 3, 26))
+twisted_8_1 = _Release(Version("Twisted", 8, 1, 0), datetime(2008, 5, 18))
+
+deprecation = _DeprecationPolicy(
+    minimumPendingPeriod=timedelta(days=365 / 2),
+    minimumPendingReleases=2,
+    allReleases=[
+        twisted_2_5,
+        twisted_8_0,
+        twisted_8_1,
+        ])

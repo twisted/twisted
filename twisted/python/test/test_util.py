@@ -2,7 +2,7 @@
 # Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import os.path, sys
+import os.path, sys, StringIO, warnings
 import shutil, errno
 try:
     import pwd, grp
@@ -604,8 +604,10 @@ class EqualityTests(unittest.TestCase):
 class RunAsEffectiveUserTests(unittest.TestCase):
     """
     Test for the L{util.runAsEffectiveUser} function.
-
     """
+
+    if getattr(os, "geteuid", None) is None:
+        skip = "geteuid/seteuid not available"
 
     def setUp(self):
         self.mockos = MockOS()
@@ -714,5 +716,59 @@ class RunAsEffectiveUserTests(unittest.TestCase):
 
 
 
-if getattr(os, "geteuid", None) is None:
-    RunAsEffectiveUserTests.skip = "geteuid/seteuid not available"
+
+
+
+class FakeWarning(Warning):
+    pass
+
+
+
+class CollectWarnings(unittest.TestCase):
+    """
+    Tests for L{collectWarnings}.
+    """
+    def test_suppresses(self):
+        """
+        Any warnings emitted by a call to a function passed to
+        L{collectWarnings} are not actually emitted to the warning system.
+        """
+        output = StringIO.StringIO()
+        self.patch(sys, 'stdout', output)
+        warningsShown, result = util.collectWarnings(warnings.warn, "text")
+        self.assertEqual(output.getvalue(), "")
+
+
+    def test_callsFunction(self):
+        """
+        L{collectWarnings} returns a two-tuple the second element of which is
+        the result of calling the callable passed to it with the parameters
+        given.
+        """
+        arguments = []
+        value = object()
+
+        def f(*args, **kwargs):
+            arguments.append((args, kwargs))
+            return value
+
+        warningsShown, result = util.collectWarnings(f, 1, 'a', b=2, c='d')
+        self.assertEqual(arguments, [((1, 'a'), {'b': 2, 'c': 'd'})])
+        self.assertIdentical(result, value)
+
+
+    def test_collectsWarnings(self):
+        """
+        L{collectWarnings} returns a two-tuple the first element of which is
+        the result of calling the callable passed to it with the parameters
+        given.
+        """
+        message = "warning text"
+        category = FakeWarning
+
+        warningsShown, result = util.collectWarnings(
+            warnings.warn, message=message, category=category)
+
+        self.assertEqual(warningsShown[0].message, message)
+        self.assertEqual(warningsShown[0].category, category)
+        self.assertEqual(len(warningsShown), 1)

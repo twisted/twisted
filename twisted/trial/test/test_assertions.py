@@ -1,7 +1,11 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details
 
-import StringIO, warnings
+"""
+Tests for assertions provided by L{twisted.trial.unittest.TestCase}.
+"""
+
+import warnings, StringIO
 from pprint import pformat
 
 from twisted.python import reflect, failure
@@ -10,7 +14,6 @@ from twisted.python.versions import Version
 from twisted.python.util import dsu
 from twisted.internet import defer
 from twisted.trial import unittest, runner, reporter
-
 
 class MockEquality(object):
     def __init__(self, name):
@@ -619,7 +622,7 @@ class TestAssertionNames(unittest.TestCase):
 
 class TestCallDeprecated(unittest.TestCase):
     """
-    Test the L{TestCase.callDeprecated} method.
+    Test use of the L{TestCase.callDeprecated} method with version objects.
     """
 
     version = Version('Twisted', 8, 0, 0)

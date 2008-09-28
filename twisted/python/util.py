@@ -2,7 +2,7 @@
 # Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import os, sys, hmac, errno, new, inspect
+import os, sys, hmac, errno, new, inspect, warnings
 try:
     import pwd, grp
 except ImportError:
@@ -317,7 +317,6 @@ def getPassword(prompt = 'Password: ', confirm = 0, forceTTY = 0,
 
 
 def dict(*a, **k):
-    import warnings
     import __builtin__
     warnings.warn('twisted.python.util.dict is deprecated.  Use __builtin__.dict instead')
     return __builtin__.dict(*a, **k)
@@ -945,6 +944,43 @@ def runAsEffectiveUser(euid, egid, function, *args, **kwargs):
 
 
 
+class _Warning:
+    def __init__(self, message, category):
+        self.message = message
+        self.category = category
+
+
+
+def collectWarnings(f, *args, **kwargs):
+    catch_warnings = getattr(warnings, 'catch_warnings', None)
+    if catch_warnings is not None:
+        catcher = warnings.catch_warnings(True)
+        # Not a completely faithful implementation of the expansion of
+        # "with", but close enough for our purposes in this case.
+        warningsShown = catcher.__enter__()
+        try:
+            warnings.simplefilter('always')
+            result = f(*args, **kwargs)
+        finally:
+            catcher.__exit__()
+        warningsShown = [_Warning(str(w.message), w.category)
+                         for w in warningsShown]
+    else:
+        warningsShown = []
+        def warnExplicit(*args):
+            warningsShown.append(_Warning(args[0], args[1]))
+
+        origExplicit = warnings.warn_explicit
+        try:
+            warnings.warn_explicit = warnExplicit
+            result = f(*args, **kwargs)
+        finally:
+            warnings.warn_explicit = origExplicit
+
+    return warningsShown, result
+
+
+
 __all__ = [
     "uniquify", "padTo", "getPluginDirs", "addPluginDir", "sibpath",
     "getPassword", "dict", "println", "keyed_md5", "makeStatBar",
@@ -952,5 +988,5 @@ __all__ = [
     "raises", "IntervalDifferential", "FancyStrMixin", "FancyEqMixin",
     "dsu", "switchUID", "SubclassableCStringIO", "moduleMovedForSplit",
     "unsignedID", "mergeFunctionMetadata", "nameToLabel", "uidFromString",
-    "gidFromString", "runAsEffectiveUser",
+    "gidFromString", "runAsEffectiveUser", "collectWarnings",
 ]
