@@ -93,32 +93,31 @@ class TestTrialRunner(unittest.TestCase):
         self.runner = runner.TrialRunner(CapturingReporter, stream=self.stream)
         self.test = TestTrialRunner('test_empty')
 
+
     def test_empty(self):
         """
         Empty test method, used by the other tests.
         """
 
+
     def tearDown(self):
         self.runner._tearDownLogFile()
+
 
     def _getObservers(self):
         return log.theLogPublisher.observers
 
+
     def test_addObservers(self):
         """
-        Tests that the runner add logging observers during the run.
+        Any log system observers L{TrialRunner.run} adds are removed by the
+        time it returns.
         """
         originalCount = len(self._getObservers())
         self.runner.run(self.test)
         newCount = len(self._getObservers())
-        self.failUnlessEqual(originalCount + 1, newCount)
+        self.assertEqual(newCount, originalCount)
 
-    def test_addObservers_repeat(self):
-        self.runner.run(self.test)
-        count = len(self._getObservers())
-        self.runner.run(self.test)
-        newCount = len(self._getObservers())
-        self.failUnlessEqual(count, newCount)
 
     def test_logFileAlwaysActive(self):
         """
@@ -134,6 +133,7 @@ class TestTrialRunner(unittest.TestCase):
         self.runner.run(self.test)
         self.failUnlessEqual(len(l), 2)
         self.failIf(l[0] is l[1], "Should have created a new file observer")
+
 
     def test_logFileGetsClosed(self):
         """
