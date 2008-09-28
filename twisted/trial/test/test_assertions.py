@@ -409,6 +409,19 @@ class TestAssertions(unittest.TestCase):
             deprecated, 123)
 
 
+    def test_assertWarnsWrongFile(self):
+        """
+        If the warning emitted by a function refers to a different file than is
+        passed to C{assertWarns}, C{failureException} is raised.
+        """
+        def deprecated(a):
+            warnings.warn(
+                "Foo deprecated", category=DeprecationWarning, stacklevel=0)
+        self.assertRaises(
+            self.failureException,
+            self.assertWarns, DeprecationWarning, "Foo deprecated", __file__,
+            deprecated, 123)
+
     def test_assertWarnsOnClass(self):
         """
         Test asserWarns works when creating a class instance.
@@ -472,25 +485,16 @@ class TestAssertions(unittest.TestCase):
 
     def test_assertWarnsMultipleWarnings(self):
         """
-        Check that assertWarns is able to handle multiple warnings produced by
-        the same function.
+        C{assertWarns} does not raise an exception if the function it is passed
+        triggers the same warning more than once.
         """
-        i = [0]
-        def deprecated(a):
-            # the stacklevel is important here, because as the function is
-            # recursive, the warnings produced have a different stack, but we
-            # want to be sure that only the first warning is tested against
-            warnings.warn("Woo deprecated",
-                category=PendingDeprecationWarning,
-                stacklevel=2)
-            i[0] += 1
-            if i[0] < 3:
-                return deprecated(a)
-            else:
-                return a
-        r = self.assertWarns(PendingDeprecationWarning, "Woo deprecated",
-            unittest.__file__, deprecated, 123)
-        self.assertEquals(r, 123)
+        def deprecated():
+            warnings.warn("Woo deprecated", category=PendingDeprecationWarning)
+        def f():
+            deprecated()
+            deprecated()
+        self.assertWarns(
+            PendingDeprecationWarning, "Woo deprecated", __file__, f)
 
 
     def test_assertWarnsDifferentWarnings(self):
