@@ -14,7 +14,6 @@ import os, warnings, sys, tempfile, gc
 from pprint import pformat
 
 from twisted.internet import defer, utils
-from twisted.python.util import collectWarnings
 from twisted.python import components, failure, log, monkey
 from twisted.python.reflect import qual, namedAny
 from twisted.python.compat import set
@@ -363,22 +362,45 @@ class _Assertions(pyunit.TestCase, object):
 
         @return: the result of the original function C{f}.
         """
-        warningsShown, result = collectWarnings(f, *args, **kwargs)
+        catch_warnings = getattr(warnings, 'catch_warnings', None)
+        if catch_warnings is not None:
+            catcher = warnings.catch_warnings(True)
+            # Not a completely faithful implementation of the expansion of
+            # "with", but close enough for our purposes in this case.
+            warningsShown = catcher.__enter__()
+            try:
+                warnings.simplefilter('always')
+                result = f(*args, **kwargs)
+            finally:
+                catcher.__exit__()
+            warningsShown = [(str(w.message), w.category, w.filename)
+                             for w in warningsShown]
+        else:
+            warningsShown = []
+            def warnExplicit(*args):
+                warningsShown.append(args)
+
+            origExplicit = warnings.warn_explicit
+            try:
+                warnings.warn_explicit = warnExplicit
+                result = f(*args, **kwargs)
+            finally:
+                warnings.warn_explicit = origExplicit
 
         if not warningsShown:
             self.fail("No warnings emitted")
         first = warningsShown[0]
         for other in warningsShown[1:]:
-            if (other.message, other.category) != (first.message, first.category):
+            if other[:2] != first[:2]:
                 self.fail("Can't handle different warnings")
-        self.assertEqual(first.message, message)
-        self.assertIdentical(first.category, category)
+        gotMessage, gotCategory, gotFilename = first[:3]
+        self.assertEqual(gotMessage, message)
+        self.assertIdentical(gotCategory, category)
 
-        # XXX untested
         # Use starts with because of .pyc/.pyo issues.
         self.failUnless(
-            filename.startswith(first.filename),
-            'Warning in %r, expected %r' % (first.filename, filename))
+            filename.startswith(gotFilename),
+            'Warning in %r, expected %r' % (gotFilename, filename))
 
         # It would be nice to be able to check the line number as well, but
         # different configurations actually end up reporting different line
