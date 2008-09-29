@@ -510,50 +510,58 @@ class SuppressionTest(unittest.TestCase):
 
 
     def setUp(self):
-        self.stream = StringIO.StringIO()
-        self._stdout, sys.stdout = sys.stdout, self.stream
         self.loader = runner.TestLoader()
-
-
-    def tearDown(self):
-        sys.stdout = self._stdout
-        self.stream = None
-
-
-    def getIO(self):
-        return self.stream.getvalue()
 
 
     def testSuppressMethod(self):
         self.runTests(self.loader.loadMethod(
             suppression.TestSuppression.testSuppressMethod))
-        self.assertNotSubstring(suppression.METHOD_WARNING_MSG, self.getIO())
-        self.assertSubstring(suppression.CLASS_WARNING_MSG, self.getIO())
-        self.assertSubstring(suppression.MODULE_WARNING_MSG, self.getIO())
+        warningsShown = self.flushWarnings([
+                suppression.TestSuppression._emit])
+        self.assertEqual(
+            warningsShown[0]['message'], suppression.CLASS_WARNING_MSG)
+        self.assertEqual(
+            warningsShown[1]['message'], suppression.MODULE_WARNING_MSG)
+        self.assertEqual(len(warningsShown), 2)
 
 
     def testSuppressClass(self):
         self.runTests(self.loader.loadMethod(
             suppression.TestSuppression.testSuppressClass))
-        self.assertSubstring(suppression.METHOD_WARNING_MSG, self.getIO())
-        self.assertNotSubstring(suppression.CLASS_WARNING_MSG, self.getIO())
-        self.assertSubstring(suppression.MODULE_WARNING_MSG, self.getIO())
+        warningsShown = self.flushWarnings([
+                suppression.TestSuppression._emit])
+        self.assertEqual(
+            warningsShown[0]['message'], suppression.METHOD_WARNING_MSG)
+        self.assertEqual(
+            warningsShown[1]['message'], suppression.MODULE_WARNING_MSG)
+        self.assertEqual(len(warningsShown), 2)
 
 
     def testSuppressModule(self):
         self.runTests(self.loader.loadMethod(
             suppression.TestSuppression2.testSuppressModule))
-        self.assertSubstring(suppression.METHOD_WARNING_MSG, self.getIO())
-        self.assertSubstring(suppression.CLASS_WARNING_MSG, self.getIO())
-        self.assertNotSubstring(suppression.MODULE_WARNING_MSG, self.getIO())
+        warningsShown = self.flushWarnings([
+                suppression.TestSuppression._emit])
+        self.assertEqual(
+            warningsShown[0]['message'], suppression.METHOD_WARNING_MSG)
+        self.assertEqual(
+            warningsShown[1]['message'], suppression.CLASS_WARNING_MSG)
+        self.assertEqual(len(warningsShown), 2)
 
 
     def testOverrideSuppressClass(self):
-        self.runTests(self.loader.loadMethod(
-            suppression.TestSuppression.testOverrideSuppressClass))
-        self.assertSubstring(suppression.CLASS_WARNING_MSG, self.getIO())
-        self.assertSubstring(suppression.MODULE_WARNING_MSG, self.getIO())
-        self.assertSubstring(suppression.METHOD_WARNING_MSG, self.getIO())
+        case = self.loader.loadMethod(
+            suppression.TestSuppression.testOverrideSuppressClass)
+        self.runTests(case)
+        warningsShown = self.flushWarnings([
+                suppression.TestSuppression._emit])
+        self.assertEqual(
+            warningsShown[0]['message'], suppression.METHOD_WARNING_MSG)
+        self.assertEqual(
+            warningsShown[1]['message'], suppression.CLASS_WARNING_MSG)
+        self.assertEqual(
+            warningsShown[2]['message'], suppression.MODULE_WARNING_MSG)
+        self.assertEqual(len(warningsShown), 3)
 
 
 

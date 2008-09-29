@@ -735,7 +735,7 @@ class CollectWarnings(unittest.TestCase):
         """
         output = StringIO.StringIO()
         self.patch(sys, 'stdout', output)
-        warningsShown, result = util.collectWarnings(warnings.warn, "text")
+        warningsShown, result = util.collectWarnings(lambda x: None, warnings.warn, "text")
         self.assertEqual(output.getvalue(), "")
 
 
@@ -752,7 +752,7 @@ class CollectWarnings(unittest.TestCase):
             arguments.append((args, kwargs))
             return value
 
-        warningsShown, result = util.collectWarnings(f, 1, 'a', b=2, c='d')
+        warningsShown, result = util.collectWarnings(lambda x: None, f, 1, 'a', b=2, c='d')
         self.assertEqual(arguments, [((1, 'a'), {'b': 2, 'c': 'd'})])
         self.assertIdentical(result, value)
 
@@ -767,8 +767,9 @@ class CollectWarnings(unittest.TestCase):
         category = FakeWarning
 
         warningsShown, result = util.collectWarnings(
-            warnings.warn, message=message, category=category)
+            lambda x: None, warnings.warn, message=message, category=category)
 
+        # XXX This fails but it is correct.  Fix the implementation.
         self.assertEqual(warningsShown[0].message, message)
         self.assertEqual(warningsShown[0].category, category)
         self.assertTrue(

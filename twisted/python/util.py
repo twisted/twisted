@@ -952,32 +952,58 @@ class _Warning:
 
 
 
-def collectWarnings(f, *args, **kwargs):
+def collectWarnings(RENAME, f, *args, **kwargs):
     catch_warnings = getattr(warnings, 'catch_warnings', None)
     if catch_warnings is not None:
         catcher = warnings.catch_warnings(True)
         # Not a completely faithful implementation of the expansion of
         # "with", but close enough for our purposes in this case.
         warningsShown = catcher.__enter__()
+        RENAME(warningsShown)
         try:
             warnings.simplefilter('always')
             result = f(*args, **kwargs)
         finally:
             catcher.__exit__()
-        warningsShown = [_Warning(str(w.message), w.category, w.filename)
-                         for w in warningsShown]
+#         warningsShown = [_Warning(str(w.message), w.category, w.filename)
+#                          for w in warningsShown]
     else:
         warningsShown = []
-        def warnExplicit(*args):
-            warningsShown.append(_Warning(args[0], args[1], args[2]))
+        RENAME(warningsShown)
+        def warnExplicit(message, category, filename, lineno,
+                  module=None, registry=None, module_globals=None):
+
+            filters = warnings.filters[:]
+            for f in origFilters:
+                try:
+                    warnings.filters.remove(f)
+                except ValueError:
+                    pass
+            origExplicit(message, category, filename, lineno,
+                         module, None, module_globals)
+            warnings.filters[:] = filters
+
+
+        def showWarning(message, category, filename, lineno):
+            assert isinstance(message, Warning)
+            warningsShown.append({
+                    'warning': message,
+                    'message': message.args[0],
+                    'category': category,
+                    'filename': filename,
+                    'lineno': lineno})
 
         origExplicit = warnings.warn_explicit
+        origFilters = warnings.filters[:]
+        origShow = warnings.showwarning
         try:
             warnings.warn_explicit = warnExplicit
+            warnings.showwarning = showWarning
             result = f(*args, **kwargs)
         finally:
             warnings.warn_explicit = origExplicit
-
+            warnings.filters[:] = origFilters
+            warnings.showwarning = origShow
     return warningsShown, result
 
 

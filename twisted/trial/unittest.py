@@ -363,6 +363,8 @@ class _Assertions(pyunit.TestCase, object):
         @return: the result of the original function C{f}.
         """
         result = f(*args, **kwargs)
+        # XXX this flushes too many warnings (those emited before this function
+        # is called!)
         warningsShown = self.flushWarnings()
 
         if not warningsShown:
@@ -372,7 +374,7 @@ class _Assertions(pyunit.TestCase, object):
             if ((other['message'], other['category'])
                 != (first['message'], first['category'])):
                 self.fail("Can't handle different warnings")
-        self.assertEqual(first['args'][0], message)
+        self.assertEqual(first['message'], message)
         self.assertIdentical(first['category'], category)
 
         # Use starts with because of .pyc/.pyo issues.
@@ -435,16 +437,12 @@ class _LogObserver(object):
         number of calls to the add method.
 
     @ivar _ignored: A C{list} of exception types which will not be recorded.
-
-    @ivar _warnings: A C{list} of warning event C{dict}s which were received
-        from the Twisted logging system.
     """
 
     def __init__(self):
         self._errors = []
         self._added = 0
         self._ignored = []
-        self._warnings = []
 
 
     def _add(self):
@@ -507,30 +505,6 @@ class _LogObserver(object):
         return self._errors
 
 
-    def flushWarnings(self, offendingFunctions=None):
-        """
-        Remove stored warnings from the list of captured warnings and return
-        them.
-        """
-        toFlush = self._warnings
-        self._warnings = []
-        for w in toFlush:
-            if offendingFunctions is not None:
-                for aFunction in offendingFunctions:
-                    filename = inspect.getabsfile(aFunction)
-                    if filename != w['filename']:
-                        continue
-                    lines, start = inspect.getsourcelines(aFunction)
-                    if not (start <= w['lineno'] <= start + len(lines)):
-                        continue
-                    break
-                else:
-                    # It didn't match anything, don't flush it.
-                    self._warnings.append(w)
-        map(toFlush.remove, self._warnings)
-        return toFlush
-
-
     def gotEvent(self, event):
         """
         The actual observer method. Called whenever a message is logged.
@@ -542,11 +516,6 @@ class _LogObserver(object):
             f = event['failure']
             if len(self._ignored) == 0 or not f.check(*self._ignored):
                 self._errors.append(f)
-        elif 'warning' in event:
-            event = dict(event)
-            event['category'] = namedAny(event['category'])
-            event['args'] = event['warning'].args
-            self._warnings.append(event)
 
 
 
@@ -941,9 +910,28 @@ class TestCase(_Assertions):
 
     def flushWarnings(self, offendingFunctions=None):
         """
-        Remove stored warnings from the list of captured warnings.
+        Remove stored warnings from the list of captured warnings and return
+        them.
         """
-        return self._observer.flushWarnings(offendingFunctions)
+        toFlush = self._warnings[:]
+        self._warnings[:] = []
+        for w in toFlush:
+            if offendingFunctions is not None:
+                for aFunction in offendingFunctions:
+                    filename = inspect.getabsfile(aFunction)
+                    if filename != w['filename']:
+                        continue
+                    lines, start = inspect.getsourcelines(aFunction)
+                    if not (start <= w['lineno'] <= start + len(lines)):
+                        continue
+                    break
+                else:
+                    # It didn't match anything, don't flush it.
+                    self._warnings.append(w)
+        map(toFlush.remove, self._warnings)
+        for d in toFlush:
+            d['args'] = d['warning'].args
+        return toFlush
 
 
     def addCleanup(self, f, *args, **kwargs):
@@ -974,7 +962,7 @@ class TestCase(_Assertions):
         if len(warningsShown) == 0:
             self.fail('%r is not deprecated.' % (f,))
 
-        observedWarning = warningsShown[0]['args'][0]
+        observedWarning = warningsShown[0]['message']
         expectedWarning = getDeprecationWarningString(f, version)
         self.assertEqual(expectedWarning, observedWarning)
 
@@ -1051,9 +1039,7 @@ class TestCase(_Assertions):
             return
         self._installObserver()
 
-        filters = warnings.filters[:]
-        warnings.simplefilter('always')
-        try:
+        def _():
             self._passed = False
             first = False
             if self._shared:
@@ -1077,11 +1063,16 @@ class TestCase(_Assertions):
                         self._classCleanUp(result)
             finally:
                 self._undeprecateReactor(reactor)
-        finally:
-            warnings.filters[:] = filters
-            for w in self._observer.flushWarnings():
-                w['category'] = w['category'].__name__
-                print w['format'] % w
+
+        def RENAME(warningsList):
+            self._warnings = warningsList
+        from twisted.python.util import collectWarnings
+        collectWarnings(RENAME, _)
+
+        for w in self.flushWarnings():
+            del w['warning'], w['args']
+            warnings.warn_explicit(**w)
+
 
     def _getReason(self, f):
         if len(f.value.args) > 0:

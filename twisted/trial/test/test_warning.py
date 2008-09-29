@@ -10,6 +10,8 @@ from StringIO import StringIO
 
 from twisted.trial.unittest import TestCase
 from twisted.trial.reporter import TestResult
+from twisted.python import reflect
+
 
 class Mask(object):
     """
@@ -128,24 +130,24 @@ class FlushWarningsTests(TestCase):
         """
         result = TestResult()
         case = Mask.MockTests('test_unflushed')
-        output = StringIO()
-        monkey = self.patch(sys, 'stdout', output)
-        case.run(result)
-        monkey.restore()
+        from twisted.python.util import collectWarnings
+        warningsShown, result = collectWarnings(lambda x: None, case.run, result)
+        self.assertEqual(warningsShown[0]['warning'].args[0], 'some warning text')
+        self.assertEqual(warningsShown[0]['category'], UserWarning)
+
         where = case.test_unflushed.im_func.func_code
         filename = where.co_filename
         # If someone edits MockTests.test_unflushed, the value added to
         # firstlineno might need to change.
         lineno = where.co_firstlineno + 4
 
-        expected = warnings.formatwarning(
-            case.message, case.category, filename, lineno)
+        self.assertEqual(warningsShown[0]['filename'], filename)
+        self.assertEqual(warningsShown[0]['lineno'], lineno)
 
-        # twisted.python.log only bothers to include the warning line, not the
-        # source line to which it refers.  This assertion should change if
-        # twisted.python.log does.
-        expected = expected.splitlines()[0]
-        self.assertEqual(output.getvalue().strip(), expected)
+        from pprint import pprint
+        pprint([(w['filename'], w['lineno']) for w in warningsShown])
+
+        self.assertEqual(len(warningsShown), 1)
 
 
     def test_hidden(self):
@@ -187,3 +189,69 @@ class FlushWarningsTests(TestCase):
         self.assertDictSubsets(
             self.flushWarnings(offendingFunctions=[two]),
             [{'category': secondCategory, 'args': (secondMessage,)}])
+
+
+#     def test_flushWarnings(self):
+#         """
+#         Check that C{flushWarnings} returns a list of all warnings received by
+#         the observer and removes them from the observer.
+#         """
+#         here = self.test_flushWarnings.im_func.func_code
+#         filename = here.co_filename
+#         lineno = here.co_firstlineno
+#         event = {
+#             'warning': RuntimeWarning('some warning text'),
+#             'category': reflect.qual(RuntimeWarning),
+#             'filename': filename,
+#             'lineno': lineno,
+#             'format': 'bar'}
+#         # Make a copy to be sure no accidental sharing goes on.
+#         self.observer.gotEvent(dict(event))
+
+#         event['args'] = ('some warning text',)
+#         event['category'] = RuntimeWarning
+
+#         self.assertEqual(self.observer.flushWarnings(), [event])
+#         self.assertEqual(self.observer.flushWarnings(), [])
+
+
+#     def test_flushWarningsByFunction(self):
+#         """
+#         Check that C{flushWarnings} accepts a list of function objects and only
+#         returns warnings which refer to one of those functions as the offender.
+#         """
+#         def offenderOne():
+#             pass
+
+#         def offenderTwo():
+#             pass
+
+#         def nonOffender():
+#             pass
+
+#         # Emit a warning from the two offenders, but not from the non-offender.
+#         events = []
+#         for offender in [offenderOne, offenderTwo]:
+#             where = offender.func_code
+#             filename = where.co_filename
+#             lineno = where.co_firstlineno
+#             event = {
+#                 'warning': RuntimeWarning('some warning text'),
+#                 'category': reflect.qual(RuntimeWarning),
+#                 'filename': filename,
+#                 'lineno': lineno,
+#                 'format': 'bar'}
+#             events.append(event)
+#             self.observer.gotEvent(dict(event))
+#             event['args'] = ('some warning text',)
+#             event['category'] = RuntimeWarning
+
+#         self.assertEqual(
+#             self.observer.flushWarnings([nonOffender]),
+#             [])
+#         self.assertEqual(
+#             self.observer.flushWarnings([offenderTwo]),
+#             events[1:])
+#         self.assertEqual(
+#             self.observer.flushWarnings([offenderOne]),
+#             events[:1])
