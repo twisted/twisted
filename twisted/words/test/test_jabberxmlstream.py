@@ -11,7 +11,9 @@ from zope.interface.verify import verifyObject
 
 from twisted.internet import defer, task
 from twisted.internet.error import ConnectionLost
+from twisted.internet.interfaces import IProtocolFactory
 from twisted.test import proto_helpers
+from twisted.words.test.test_xmlstream import XmlStreamFactoryMixinTest
 from twisted.words.xish import domish
 from twisted.words.protocols.jabber import error, ijabber, jid, xmlstream
 
@@ -1172,3 +1174,49 @@ class StreamManagerTest(unittest.TestCase):
         sm.send("<presence/>")
         self.assertEquals("", xs.transport.value())
         self.assertEquals("<presence/>", sm._packetQueue[0])
+
+
+
+class XmlStreamServerFactoryTest(XmlStreamFactoryMixinTest):
+    """
+    Tests for L{xmlstream.XmlStreamServerFactory}.
+    """
+
+    def setUp(self):
+        """
+        Set up a server factory with a authenticator factory function.
+        """
+        def authenticatorFactory():
+            return xmlstream.Authenticator()
+
+        self.factory = xmlstream.XmlStreamServerFactory(authenticatorFactory)
+
+
+    def test_interface(self):
+        """
+        L{XmlStreamServerFactory} is a L{Factory}.
+        """
+        verifyObject(IProtocolFactory, self.factory)
+
+
+    def test_buildProtocolOnce(self):
+        """
+        The authenticator factory should be passed to its protocol and it
+        should instantiate the authenticator and save it.
+        L{xmlstream.XmlStream}s do that, but we also want to ensure it really
+        is one.
+        """
+        xs = self.factory.buildProtocol(None)
+        self.assertIsInstance(xs, xmlstream.XmlStream)
+        self.assertIsInstance(xs.authenticator, xmlstream.Authenticator)
+
+
+    def test_buildProtocolTwice(self):
+        """
+        Subsequent calls to buildProtocol should result in different instances
+        of the protocol, as well as their authenticators.
+        """
+        xs1 = self.factory.buildProtocol(None)
+        xs2 = self.factory.buildProtocol(None)
+        self.assertNotIdentical(xs1, xs2)
+        self.assertNotIdentical(xs1.authenticator, xs2.authenticator)

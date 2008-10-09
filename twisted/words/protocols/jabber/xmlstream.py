@@ -13,7 +13,7 @@ Stanzas.
 
 from zope.interface import directlyProvides, implements
 
-from twisted.internet import defer
+from twisted.internet import defer, protocol
 from twisted.internet.error import ConnectionLost
 from twisted.python import failure, log
 from twisted.words.protocols.jabber import error, ijabber, jid
@@ -650,6 +650,36 @@ class XmlStreamFactory(xmlstream.XmlStreamFactory):
     def __init__(self, authenticator):
         xmlstream.XmlStreamFactory.__init__(self, authenticator)
         self.authenticator = authenticator
+
+
+
+class XmlStreamServerFactory(xmlstream.XmlStreamFactoryMixin,
+                             protocol.ServerFactory):
+    """
+    Factory for Jabber XmlStream objects as a server.
+
+    @ivar authenticatorFactory: Factory callable that takes no arguments, to
+                                create a fresh authenticator to be associated
+                                with the XmlStream.
+    """
+
+    protocol = XmlStream
+
+    def __init__(self, authenticatorFactory):
+        xmlstream.XmlStreamFactoryMixin.__init__(self)
+        self.authenticatorFactory = authenticatorFactory
+
+
+    def buildProtocol(self, addr):
+        """
+        Create an instance of XmlStream.
+
+        A new authenticator instance will be created and passed to the new
+        XmlStream.
+        """
+        authenticator = self.authenticatorFactory()
+        self.args = (authenticator,)
+        return xmlstream.XmlStreamFactoryMixin.buildProtocol(self, addr)
 
 
 

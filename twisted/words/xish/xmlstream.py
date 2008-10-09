@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.words.test.test_xmlstream -*-
 #
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -148,21 +148,35 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
         self.transport.write(obj)
 
 
+
 class XmlStreamFactoryMixin(object):
     """
     XmlStream factory mixin that takes care of event handlers.
 
-    To make sure certain event observers are set up before incoming data is
-    processed, you can set up bootstrap event observers using C{addBootstrap}.
+    This mixin is for factories providing
+    L{IProtocolFactory<twisted.internet.interfaces.IProtocolFactory>} to make
+    sure certain event observers are set up on protocols, before incoming data
+    is processed. Such protocols typically derive from
+    L{utility.EventDispatcher}, like L{XmlStream}.
 
-    The C{event} and C{fn} parameters correspond with the C{event} and
+    You can set up bootstrap event observers using C{addBootstrap}. The
+    C{event} and C{fn} parameters correspond with the C{event} and
     C{observerfn} arguments to L{utility.EventDispatcher.addObserver}.
+
+    All positional and keyword arguments passed to create this factory are
+    passed on as-is to the protocol.
+
+    @ivar args: Positional arguments passed to the protocol upon instantiation.
+    @type args: C{tuple}.
+    @ivar kwargs: Keyword arguments passed to the protocol upon instantiation.
+    @type kwargs: C{dict}.
     """
 
     def __init__(self, *args, **kwargs):
         self.bootstraps = []
         self.args = args
         self.kwargs = kwargs
+
 
     def buildProtocol(self, addr):
         """
@@ -177,17 +191,20 @@ class XmlStreamFactoryMixin(object):
             xs.addObserver(event, fn)
         return xs
 
+
     def addBootstrap(self, event, fn):
         """
         Add a bootstrap event handler.
         """
         self.bootstraps.append((event, fn))
 
+
     def removeBootstrap(self, event, fn):
         """
         Remove a bootstrap event handler.
         """
         self.bootstraps.remove((event, fn))
+
 
 
 class XmlStreamFactory(XmlStreamFactoryMixin,
