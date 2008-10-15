@@ -85,13 +85,13 @@ class IQTest(unittest.TestCase):
         xmlstream.upgradeWithIQResponseTracker(xs)
 
         # Make sure we aren't tracking any iq's.
-        self.failIf(xs.iqDeferreds)
+        self.assertFalse(xs.iqDeferreds)
 
         # Set up a fallback handler that checks the stanza's handled attribute.
         # If that is set to True, the iq tracker claims to have handled the
         # response.
         def cb(iq):
-            self.failIf(getattr(iq, 'handled', False))
+            self.assertFalse(getattr(iq, 'handled', False))
 
         xs.addObserver("/iq", cb, -1)
 
@@ -151,8 +151,8 @@ class IQTest(unittest.TestCase):
         self.assertFailure(d, xmlstream.TimeoutError)
 
         self.clock.pump([1, 60])
-        self.failIf(self.clock.calls)
-        self.failIf(self.xmlstream.iqDeferreds)
+        self.assertFalse(self.clock.calls)
+        self.assertFalse(self.xmlstream.iqDeferreds)
         return d
 
 
@@ -166,7 +166,7 @@ class IQTest(unittest.TestCase):
         self.clock.callLater(1, self.xmlstream.dataReceived,
                              "<iq type='result' id='%s'/>" % self.iq['id'])
         self.clock.pump([1, 1])
-        self.failIf(self.clock.calls)
+        self.assertFalse(self.clock.calls)
         return d
 
 
@@ -182,7 +182,7 @@ class IQTest(unittest.TestCase):
         xs = self.xmlstream
         xs.connectionLost("Closed by peer")
         self.assertFailure(d, ConnectionLost)
-        self.failIf(self.clock.calls)
+        self.assertFalse(self.clock.calls)
         return d
 
 
@@ -782,7 +782,7 @@ class ToResponseTest(unittest.TestCase):
         stanza['to'] = 'user1@example.com'
         response = xmlstream.toResponse(stanza)
         self.assertEqual(response['from'], 'user1@example.com')
-        self.failIf(response.hasAttribute('to'))
+        self.assertFalse(response.hasAttribute('to'))
 
 
     def test_toResponseNoTo(self):
@@ -793,7 +793,7 @@ class ToResponseTest(unittest.TestCase):
         stanza['type'] = 'get'
         stanza['from'] = 'user2@example.com/resource'
         response = xmlstream.toResponse(stanza)
-        self.failIf(response.hasAttribute('from'))
+        self.assertFalse(response.hasAttribute('from'))
         self.assertEqual(response['to'], 'user2@example.com/resource')
 
 
@@ -804,8 +804,8 @@ class ToResponseTest(unittest.TestCase):
         stanza = domish.Element(('jabber:client', 'message'))
         stanza['type'] = 'chat'
         response = xmlstream.toResponse(stanza)
-        self.failIf(response.hasAttribute('to'))
-        self.failIf(response.hasAttribute('from'))
+        self.assertFalse(response.hasAttribute('to'))
+        self.assertFalse(response.hasAttribute('from'))
 
 
     def test_noID(self):
@@ -814,8 +814,16 @@ class ToResponseTest(unittest.TestCase):
         """
         stanza = domish.Element(('jabber:client', 'message'))
         response = xmlstream.toResponse(stanza)
-        self.failIf(response.hasAttribute('id'))
+        self.assertFalse(response.hasAttribute('id'))
 
+
+    def test_noType(self):
+        """
+        Test that a proper response is generated without type attribute.
+        """
+        stanza = domish.Element(('jabber:client', 'message'))
+        response = xmlstream.toResponse(stanza)
+        self.assertFalse(response.hasAttribute('type'))
 
 
 class DummyFactory(object):
@@ -1132,7 +1140,7 @@ class StreamManagerTest(unittest.TestCase):
         xs.dispatch(xs, "//event/stream/authd")
 
         self.assertEquals("<presence/>", xs.transport.value())
-        self.failIf(sm._packetQueue)
+        self.assertFalse(sm._packetQueue)
 
 
     def test_sendNotInitialized(self):
