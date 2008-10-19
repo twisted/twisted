@@ -518,6 +518,22 @@ not itself part of Twisted.
 
 <p> Once you're running both of these instances, go to <code>http://localhost:8080/your_username.twistd/</code> -- you will see the front page from the server you created with the <code>--personal</code> option.  What's happening here is that the request you've sent is being relayed from the central (User) server to your own (Personal) server, over a PB connection.  This technique can be highly useful for small <q>community</q> sites; using the code that makes this demo work, you can connect one HTTP port to multiple resources running with different permissions on the same machine, on different local machines, or even over the internet to a remote site.  </p>
 
+<p>
+By default, a personal server listens on a UNIX socket in the owner's home
+directory.  The <code class="shell">--port</code> option can be used to make
+it listen on a different address, such as a TCP or SSL server or on a UNIX
+server in a different location.  If you use this option to make a personal
+server listen on a different address, the central (User) server won't be
+able to find it, but a custom server which uses the same APIs as the central
+server might.  Another use of the <code class="shell">--port</code> option
+is to make the UNIX server robust against system crashes.  If the server
+crashes and the UNIX socket is left on the filesystem, the personal server
+will not be able to restart until it is removed.  However, if <code
+class="shell">--port unix:/home/username/.twistd-web-pb:wantPID=1</code> is
+supplied when creating the personal server, then a lockfile will be used to
+keep track of whether the server socket is in use and automatically delete
+it when it is not.
+</p>
 
 <h3>Serving PHP/Perl/CGI</h3>
 

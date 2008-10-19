@@ -28,6 +28,7 @@ Here are some examples::
  >>> p=listen("ssl:443:privateKey=mykey.pem:certKey=cert.pem", server.Site())
  >>> p=listen("unix:/var/run/finger", FingerFactory())
  >>> p=listen("unix:/var/run/finger:mode=660", FingerFactory())
+ >>> p=listen("unix:/var/run/finger:lockfile=0", FingerFactory())
 
 See specific function documentation for more information.
 
@@ -39,8 +40,15 @@ def _parseTCP(factory, port, interface="", backlog=50):
     return (int(port), factory), {'interface': interface,
                                   'backlog': int(backlog)}
 
-def _parseUNIX(factory, address, mode='666', backlog=50):
-    return (address, factory), {'mode': int(mode, 8), 'backlog': int(backlog)}
+
+
+def _parseUNIX(factory, address, mode='666', backlog=50, lockfile=True):
+    return (
+        (address, factory),
+        {'mode': int(mode, 8), 'backlog': int(backlog),
+         'wantPID': bool(int(lockfile))})
+
+
 
 def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
               sslmethod=None, interface='', backlog=50):

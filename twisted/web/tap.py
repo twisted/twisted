@@ -16,20 +16,28 @@ from twisted.application import internet, service, strports
 
 
 class Options(usage.Options):
-    synopsis = "Usage: mktap web [options]"
-    optParameters = [["port", "p", "8080","Port to start the server on."],
+    """
+    Define the options accepted by the I{twistd web} plugin.
+    """
+    synopsis = "[web options]"
+
+    optParameters = [["port", "p", None, "strports description of the port to "
+                      "start the server on."],
                      ["logfile", "l", None, "Path to web CLF (Combined Log Format) log file."],
                      ["https", None, None, "Port to listen on for Secure HTTP."],
                      ["certificate", "c", "server.pem", "SSL certificate to use for HTTPS. "],
                      ["privkey", "k", "server.pem", "SSL certificate to use for HTTPS."],
                      ]
+
     optFlags = [["personal", "",
                  "Instead of generating a webserver, generate a "
-                 "ResourcePublisher which listens on "
-                 "~/%s" % distrib.UserDirectory.userSocketName],
+                 "ResourcePublisher which listens on  the port given by "
+                 "--port, or ~/%s " % (distrib.UserDirectory.userSocketName,) +
+                 "if --port is not specified."],
                 ["notracebacks", "n", "Display tracebacks in broken web pages. " +
                  "Displaying tracebacks to users may be security risk!"],
-]
+                ]
+
     zsh_actions = {"logfile" : "_files -g '*.log'", "certificate" : "_files -g '*.pem'",
                    "privkey" : "_files -g '*.pem'"}
 
@@ -153,11 +161,27 @@ twisted.web.demo in it."""
         self['flashconduit'] = port
 
     def postOptions(self):
+        """
+        Set up conditional defaults and check for dependencies.
+
+        If SSL is not available but an HTTPS server was configured, raise a
+        L{UsageError} indicating that this is not possible.
+
+        If no server port was supplied, select a default appropriate for the
+        other options supplied.
+        """
         if self['https']:
             try:
                 from twisted.internet.ssl import DefaultOpenSSLContextFactory
             except ImportError:
                 raise usage.UsageError("SSL support not installed")
+        if self['port'] is None:
+            if self['personal']:
+                path = os.path.expanduser(
+                    os.path.join('~', distrib.UserDirectory.userSocketName))
+                self['port'] = 'unix:' + path
+            else:
+                self['port'] = 'tcp:8080'
 
 
 
@@ -194,11 +218,8 @@ def makeService(config):
     site.displayTracebacks = not config["notracebacks"]
 
     if config['personal']:
-        import pwd
-        name, passwd, uid, gid, gecos, dir, shell = pwd.getpwuid(os.getuid())
-        personal = internet.UNIXServer(
-            os.path.join(dir, distrib.UserDirectory.userSocketName),
-            makePersonalServerFactory(site))
+        personal = strports.service(
+            config['port'], makePersonalServerFactory(site))
         personal.setServiceParent(s)
     else:
         if config['https']:
