@@ -2849,20 +2849,25 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         return results
 
     def status(self, mailbox, *names):
-        """Retrieve the status of the given mailbox
+        """
+        Retrieve the status of the given mailbox
 
         This command is allowed in the Authenticated and Selected states.
 
         @type mailbox: C{str}
         @param mailbox: The name of the mailbox to query
 
-        @type names: C{str}
-        @param names: The status names to query.  These may be any number of:
-        MESSAGES, RECENT, UIDNEXT, UIDVALIDITY, and UNSEEN.
+        @type *names: C{str}
+        @param *names: The status names to query.  These may be any number of:
+            C{'MESSAGES'}, C{'RECENT'}, C{'UIDNEXT'}, C{'UIDVALIDITY'}, and
+            C{'UNSEEN'}.
 
         @rtype: C{Deferred}
-        @return: A deferred whose callback is invoked with the status information
-        if the command is successful and whose errback is invoked otherwise.
+        @return: A deferred which fires with with the status information if the
+            command is successful and whose errback is invoked otherwise.  The
+            status information is in the form of a C{dict}.  Each element of
+            C{names} is a key in the dictionary.  The value for each key is the
+            corresponding response from the server.
         """
         cmd = 'STATUS'
         args = "%s (%s)" % (_prepareMailboxName(mailbox), ' '.join(names))
@@ -3181,18 +3186,21 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         This command is allowed in the Selected state.
 
-        @type messages: C{MessageSet} or C{str}
+        @type messages: L{MessageSet} or C{str}
         @param messages: A message sequence set
 
         @type uid: C{bool}
         @param uid: Indicates whether the message sequence set is of message
         numbers or of unique message IDs.
 
-        @rtype: C{Deferred}
-        @return: A deferred whose callback is invoked with a dict mapping
-        message objects (as returned by self.messageFile(), file objects by
-        default), to additional information, or whose errback is invoked if
-        there is an error.
+        @rtype: L{Deferred}
+
+        @return: A L{Deferred} which will fire with a C{dict} mapping message
+            sequence numbers to C{dict}s giving message data for the
+            corresponding message.  If C{uid} is true, the inner dictionaries
+            have a C{'UID'} key mapped to a C{str} giving the UID for the
+            message.  The text of the message is a C{str} associated with the
+            C{'RFC822'} key in each dictionary.
         """
         d = self._fetch(messages, useUID=uid, rfc822=1)
         d.addCallback(self.__cbFetch)
