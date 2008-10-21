@@ -15,7 +15,7 @@
 <p>Twisted Web serves python objects that implement the interface 
 IResource.</p>
 
-<img src="../img/twisted_1.gif" alt="Twisted Web process" />
+<img src="../img/web-process.png" alt="Twisted Web process" />
 
 <h3>Main Concepts</h3>
 
@@ -196,7 +196,7 @@ resource regardless of whether they used GET
 
 <p>Twisted Web provides an abstraction of this browser-tracking behavior called the <em>Session object</em>. Calling <code>request.getSession()</code> checks to see if a session cookie has been set; if not, it creates a unique session id, creates a Session object, stores it in the Site, and returns it. If a session object already exists, the same session object is returned. In this way, you can store data specific to the session in the session object.</p>
 
-<img src="../img/twisted_2.gif" />
+<img src="../img/web-session.png" />
 
 <h2>Advanced Configuration</h2>
 
