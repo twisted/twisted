@@ -1,4 +1,24 @@
-# -*- test-case-name: twisted.conch.test.test_cftp -*-
+"""
+Supplies tests for the L{twisted.conch.client.connect} alternatives
+to L{twisted.conch.client.direct}.  The latter predates the former and
+is retained for backward compatibility as it was not possible to
+modify it without breaking its API.
+
+The major difference is this:  when you use the implementation in direct,
+it is not possible to cleanly close a connection without closing the
+reactor, unless you are willing to poke into the internals of the
+implementation as shown in the 
+test_direct_connect_lose_connection_workaround test below.  The
+executive summary of the problem is that the implementation provides
+only a single deferred for a workflow that requires more than one
+callback.  In some cases (closing a connection), this strategy 
+prevents the underlying connection from being closed.
+
+The alternative offered by L{twisted.conch.client.connect} provides
+a distinct set of deferreds that do not prevent users from closing
+connections.
+"""
+
 # Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE file for details.
 
@@ -10,11 +30,7 @@ except ImportError:
     Crypto = None
 
 try:
-    from twisted.conch import unix, error
-    from twisted.conch.scripts import cftp
-    from twisted.conch.client import connect, default, options, direct
-    from twisted.conch.ssh import connection, transport
-    from twisted.conch.test.test_filetransfer import FileTransferForTestAvatar
+    from twisted.conch import unix
 except ImportError:
     unix = None
     try:
@@ -24,26 +40,31 @@ except ImportError:
         pass
 
 from twisted.cred import portal
-from twisted.internet import reactor, protocol, interfaces, defer
-from twisted.internet.utils import getProcessOutputAndValue
+from twisted.internet import reactor, interfaces, defer
 from twisted.python import log
-from twisted.conch.client import direct, options
+from twisted.conch import error
+from twisted.conch.client import direct, options, connect, default
 from twisted.trial import unittest
+from twisted.conch.ssh import connection, transport
 
-from twisted.conch.test import test_ssh, test_conch
-from twisted.conch.test.test_filetransfer import SFTPTestBase
+from twisted.conch.test import test_ssh
 from twisted.conch.test.test_filetransfer import TestAvatar
+
+
 
 class TestRealm:
     def requestAvatar(self, avatarID, mind, *interfaces):
         a = TestAvatar()
         return interfaces[0], a, lambda: None
 
+
+
 class ClientTestBase(unittest.TestCase):
     """
     Provides SSH server start/stop capabilities that our subclasses
     (which test client behavior) can rely on.
     """
+
 
     def setUp(self):
         """
@@ -61,6 +82,7 @@ class ClientTestBase(unittest.TestCase):
         f.write('127.0.0.1 ' + test_ssh.publicRSA_openssh)
         f.close()
 
+
     def startServer(self):
         """
         Fire up an SSH server on an available port.
@@ -71,7 +93,9 @@ class ClientTestBase(unittest.TestCase):
         p.registerChecker(test_ssh.ConchTestPublicKeyChecker())
         self.serverFactory = test_ssh.ConchTestServerFactory()
         self.serverFactory.portal = p
-        self.server = reactor.listenTCP(0, self.serverFactory, interface="127.0.0.1")
+        self.server = reactor.listenTCP(0, self.serverFactory, 
+                                        interface="127.0.0.1")
+
 
     def stopServer(self):
         """
@@ -86,8 +110,10 @@ class ClientTestBase(unittest.TestCase):
         d.addCallback(self._cbStopServer)
         return d
 
+
     def _cbStopServer(self, ignored):
         return defer.maybeDeferred(self.server.stopListening)
+
 
     def tearDown(self):
         """
@@ -100,12 +126,15 @@ class ClientTestBase(unittest.TestCase):
             except:
                 pass
 
+
+
 class TestOurServerOurClientConnections(ClientTestBase):
     """
     Tests that exercise connection behavior for conch clients talking
     to conch servers.  The server could just as easily be an OpenSSH
     server, as it is not under test in these scenarios.
     """
+
 
     def setUp(self):
         """
@@ -116,6 +145,7 @@ class TestOurServerOurClientConnections(ClientTestBase):
         d.addCallback(lambda _: self.startServer())
         return d
 
+
     def tearDown(self):
         """
         Kill off our server
@@ -124,6 +154,7 @@ class TestOurServerOurClientConnections(ClientTestBase):
         d = defer.maybeDeferred(ClientTestBase.tearDown, self)
         d.addCallback(lambda _: self.stopServer())
         return d
+
 
     def _makeOpts(self):
         """
@@ -143,16 +174,22 @@ class TestOurServerOurClientConnections(ClientTestBase):
         opts.identitys = ['dsa_test',]
         return opts
 
+
     def _cbConnect(self, ignored, conn):
         """
-        A callback that arranges additional callbacks for the deferred on the supplied connection.
-        These shutdown the connection.
+        A callback that arranges additional callbacks for the deferred
+        on the supplied connection.  These shutdown the connection.
 
-        Returns the connection's deferred so that it can become part of the callback chain.
+        Returns the connection's deferred so that it can become part
+        of the callback chain.
         """
-        conn.deferred.addCallback(lambda _: log.msg("client connection is up, ready to close it down"))
-        conn.deferred.addCallback((lambda _, c: c.transport.loseConnection()), conn)
+        conn.deferred.addCallback(
+            lambda _: log.msg("client connection is up, "
+                              "ready to close it down"))
+        conn.deferred.addCallback(
+            (lambda _, c: c.transport.loseConnection()), conn)
         return conn.deferred
+
 
     def test_direct_connect_lose_connection_workaround(self):
         """
@@ -184,11 +221,13 @@ class TestOurServerOurClientConnections(ClientTestBase):
 
         # set up a connection as usual
         d = direct.connect(self.server.getHost().host, opts['port'], 
-                           opts, vhk, default.SSHUserAuthClient(opts['user'], opts, conn))
+                           opts, vhk, default.SSHUserAuthClient(opts['user']
+                                                                , opts, conn))
 
         # after we get called back, inject the replacement
         d.addCallback(_cbInjectReplacementDeferredOnFactory, newd, conn)
-        # and then "normal" work can begin, in this case, we just call loseConnection
+        # and then "normal" work can begin, in this case, we just call 
+        # loseConnection
         d.addCallback(self._cbConnect, conn)
         
         # the replacement deferred will get an errback when
@@ -196,8 +235,11 @@ class TestOurServerOurClientConnections(ClientTestBase):
         afd = self.assertFailure(newd, error.ConchError)
         # and that errback's value will be a connection lost message,
         # since that's what we wanted.
-        afd.addCallback(lambda v: self.assertEquals(transport.DISCONNECT_CONNECTION_LOST, v.data))
+        afd.addCallback(
+            lambda v: self.assertEquals(transport.DISCONNECT_CONNECTION_LOST,
+                                        v.data))
         return afd
+
 
     def test_connect_connectTCP_loseConnection(self):
         """
@@ -214,27 +256,37 @@ class TestOurServerOurClientConnections(ClientTestBase):
         conn = ClientConnection()
 
         # set up a connection as usual
-        willConnect = connect.connectTCP(self.server.getHost().host, opts['port'], 
-                                         opts, vhk, default.SSHUserAuthClient(opts['user'], opts, conn))
+        willConnect = connect.connectTCP(
+            self.server.getHost().host, 
+            opts['port'], 
+            opts, vhk, 
+            default.SSHUserAuthClient(opts['user'], opts, conn))
 
         willConnect.addCallback(lambda _: log.msg("will connect did connect"))
-        # and then "normal" work can begin, in this case, we just call loseConnection
+        
+        # and then "normal" work can begin, in this case, we just call
+        # loseConnection
         willConnect.addCallback(self._cbConnect, conn)
 
         def _cb_didDisconnect(ignored, conn):
             dd = conn.transport.factory.didDisconnect
-            dd.addErrback(lambda f: self.assertEquals(transport.DISCONNECT_CONNECTION_LOST, f.value.data))
+            dd.addErrback(
+                lambda f: 
+                self.assertEquals(transport.DISCONNECT_CONNECTION_LOST, 
+                                  f.value.data))
             return dd
 
         willConnect.addCallback(_cb_didDisconnect, conn)
         
         return willConnect
 
+
     def test_connect_connectTCP_serverDisconnects(self):
         """
         test callback/errback chain of our client when the server
         drops the connection.
         """
+
 
         # a conch options instance
         opts = self._makeOpts()
@@ -245,8 +297,11 @@ class TestOurServerOurClientConnections(ClientTestBase):
         conn = ClientConnection()
 
         # set up a connection as usual
-        willConnect = connect.connectTCP(self.server.getHost().host, opts['port'], 
-                                         opts, vhk, default.SSHUserAuthClient(opts['user'], opts, conn))
+        willConnect = connect.connectTCP(
+            self.server.getHost().host, 
+            opts['port'], 
+            opts, vhk, 
+            default.SSHUserAuthClient(opts['user'], opts, conn))
 
         willConnect.addCallback(lambda _: log.msg("will connect did connect"))
 
@@ -260,12 +315,15 @@ class TestOurServerOurClientConnections(ClientTestBase):
 
         def _cb_didDisconnect(ignored, conn):
             dd = conn.transport.factory.didDisconnect
-            dd.addErrback(lambda f: self.assertEquals(transport.DISCONNECT_CONNECTION_LOST, f.value.data))
+            dd.addErrback(
+                lambda f: self.assertEquals(
+                    transport.DISCONNECT_CONNECTION_LOST, f.value.data))
             return dd
 
         willConnect.addCallback(_cb_didDisconnect, conn)
         
         return willConnect
+
 
     def test_connect_connectTCP_err_handling_during_connection(self):
         """
@@ -281,20 +339,30 @@ class TestOurServerOurClientConnections(ClientTestBase):
         conn = ClientConnection()
 
         # set up a connection as usual
-        willConnect = connect.connectTCP(self.server.getHost().host, opts['port'], 
-                                         opts, vhk, default.SSHUserAuthClient(opts['user'], opts, conn))
+        willConnect = connect.connectTCP(
+            self.server.getHost().host, 
+            opts['port'], 
+            opts, vhk, 
+            default.SSHUserAuthClient(opts['user'], opts, conn))
 
-        willConnect.addErrback(lambda f: self.assertEquals(transport.DISCONNECT_HOST_KEY_NOT_VERIFIABLE, f.value.data))
+        willConnect.addErrback(
+            lambda f: self.assertEquals(
+                transport.DISCONNECT_HOST_KEY_NOT_VERIFIABLE, f.value.data))
         # make certain the errback got called
-        willConnect.addCallback(lambda d: self.assertEquals(transport.DISCONNECT_HOST_KEY_NOT_VERIFIABLE, d))
+        willConnect.addCallback(
+            lambda d: self.assertEquals(
+                transport.DISCONNECT_HOST_KEY_NOT_VERIFIABLE, d))
 
         return willConnect
+
+
 
 class ClientConnection(connection.SSHConnection):
     """
     A simple SSHConnection that calls back on a deferred when it gets
     the serviceStarted notification.
     """
+
 
     def __init__(self):
         """
@@ -303,6 +371,7 @@ class ClientConnection(connection.SSHConnection):
 
         connection.SSHConnection.__init__(self)
         self.deferred = defer.Deferred()
+
 
     def serviceStarted(self):
         """
@@ -313,5 +382,7 @@ class ClientConnection(connection.SSHConnection):
         connection.SSHConnection.serviceStarted(self)
         self.deferred.callback(None)
 
+
+
 if not unix or not Crypto or not interfaces.IReactorProcess(reactor, None):
-    TestOurServerOurClient.skip = "don't run w/o PyCrypto"
+    TestOurServerOurClientConnections.skip = "don't run w/o PyCrypto"

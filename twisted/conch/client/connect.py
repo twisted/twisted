@@ -1,7 +1,7 @@
+# -*- test-case-name: twisted.conch.test.test_connect -*-
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
 import os
 
 from twisted.internet import defer, protocol, reactor
@@ -19,6 +19,8 @@ def connect(host, port, options, verifyHostKey, userAuthObject):
     return _ebConnect(None, useConnects, host, port, options, verifyHostKey,
                       userAuthObject)
 
+
+
 def _ebConnect(f, useConnects, host, port, options, vhk, uao):
     if not useConnects:
         return f
@@ -27,6 +29,7 @@ def _ebConnect(f, useConnects, host, port, options, vhk, uao):
     d = f(host, port, options, vhk, uao)
     d.addErrback(_ebConnect, useConnects, host, port, options, vhk, uao)
     return d
+
 
 
 class SSHClientFactory(protocol.ClientFactory):
@@ -38,18 +41,22 @@ class SSHClientFactory(protocol.ClientFactory):
 
     didConnect = 0
 
-    def __init__(self, willConnect, didDisconnect, options, verifyHostKey, userAuthObject):
+
+    def __init__(self, willConnect, didDisconnect, options, verifyHostKey, 
+                 userAuthObject):
         self.willConnect = willConnect.addCallback(self._cbWillConnect)
         self.didDisconnect = didDisconnect
         self.options = options
         self.verifyHostKey = verifyHostKey
         self.userAuthObject = userAuthObject
 
+
     def _cbWillConnect(self, ignored):
         #log.msg("_cbWillConnect")
         self.didConnect = 1
         self.willConnect = None
         return ignored
+
 
     def clientConnectionLost(self, connector, reason):
         log.msg("clientConnectionLost", reason)
@@ -85,6 +92,7 @@ class SSHClientTransport(transport.SSHClientTransport):
     disconnect behavior after the connection is established.
     """
 
+
     def __init__(self, factory):
         self.factory = factory
         self.unixServer = None
@@ -119,6 +127,7 @@ class SSHClientTransport(transport.SSHClientTransport):
         else:
             self.factory.willConnect.errback(error.ConchError(desc, code))
 
+
     def sendDisconnect(self, code, reason):
         """
         this message is issued when either the server or the client
@@ -145,7 +154,8 @@ class SSHClientTransport(transport.SSHClientTransport):
             # only if receiveError didn't get there first (due to an
             # error received from the other side).
             if not self.factory.didDisconnect.called:
-                self.factory.didDisconnect.errback(error.ConchError(reason, code))
+                self.factory.didDisconnect.errback(error.ConchError(reason, 
+                                                                    code))
             else:
                 pass # already called in receiveError
         elif not self.factory.willConnect.called:
@@ -167,8 +177,8 @@ class SSHClientTransport(transport.SSHClientTransport):
         Ask our factory to verify the other side's host key.
         """
 
-        return self.factory.verifyHostKey(self, self.transport.getPeer().host, pubKey,
-                                          fingerprint)
+        return self.factory.verifyHostKey(self, self.transport.getPeer().host, 
+                                          pubKey, fingerprint)
 
 
     def setService(self, service):
@@ -186,21 +196,26 @@ class SSHClientTransport(transport.SSHClientTransport):
             if not self.factory.options['nocache']:
                 user = self.factory.userAuthObject.user
                 peer = self.transport.getPeer()
-                filename = os.path.expanduser("~/.conch-%s-%s-%i" % (user, peer.host, peer.port))
+                filename = os.path.expanduser("~/.conch-%s-%s-%i" % 
+                                              (user, peer.host, peer.port))
 
-                # this is one possible solution to the deprecation of the mode argument to listenUNIX
-                # but it is not enabled here because t.c.c.unix expects to find the socket file
-                # in the "bad" location
+                # this is one possible solution to the deprecation of
+                # the mode argument to listenUNIX but it is not
+                # enabled here because t.c.c.unix expects to find the
+                # socket file in the "bad" location
 
                 #path = os.path.expanduser("~/.conch")
                 #if not os.path.exists(path):
                 #    os.makedirs(path)
                 #     os.chmod(path, 0700)
-                #filename = os.path.join(path, "%s-%s-%i" % (user, peer.host, peer.port))
+                #filename = os.path.join(path, "%s-%s-%i" % 
+                #                        (user, peer.host, peer.port))
 
                 u = unix.SSHUnixServerFactory(service)
                 try:
-                    self.unixServer = reactor.listenUNIX(filename, u, mode=0600, wantPID=1)
+                    self.unixServer = reactor.listenUNIX(filename, u, 
+                                                         mode=0600, 
+                                                         wantPID=1)
                 except:
                     if self.factory.d is not None:
                         d, self.factory.d = self.factory.d, None
@@ -215,6 +230,8 @@ class SSHClientTransport(transport.SSHClientTransport):
         """
 
         self.requestService(self.factory.userAuthObject)
+
+
 
 def connectTCP(host, port, options, verifyHostKey, userAuthObject):
     """
@@ -234,6 +251,7 @@ def connectTCP(host, port, options, verifyHostKey, userAuthObject):
 
     willConnect = defer.Deferred()
     didDisconnect = defer.Deferred()
-    factory = SSHClientFactory(willConnect, didDisconnect, options, verifyHostKey, userAuthObject)
+    factory = SSHClientFactory(willConnect, didDisconnect, options, 
+                               verifyHostKey, userAuthObject)
     reactor.connectTCP(host, port, factory)
     return willConnect
