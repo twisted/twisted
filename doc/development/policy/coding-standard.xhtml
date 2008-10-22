@@ -228,10 +228,14 @@ def foo(x):
     <p>Docstrings should be triple-quoted. The opening and the closing of the
     docstrings should be on a line by themselves. For example:
 <pre class="python">
-class MyClass(object):
+class Ninja(object):
     """
-    MyClass docstring.
+    A L{Ninja} is a warrior specializing in various unorthodox arts of war.
     """
+    def attack(self, someone):
+        """
+        Attack C{someone} with this L{Ninja}'s shiruken.
+        """
 </pre>
     </p>
 
@@ -253,16 +257,18 @@ class MyClass(object):
       code as real functions, methods, and classes.</li>
     </ul>
 
-
     <p>For example,</p>
 <pre class="python">
 def foo2bar(f):
     """
-    I am a function to convert foos to bars.
+    Convert L{foo}s to L{bar}s.
 
-    I should be used when you have a foo but you want a bar; note that this is
-    a non-destructive operation.  If I can\'t convert the foo to a bar I will
-    raise a FooException().
+    A function that should be used when you have a C{foo} but you want a
+    C{bar}; note that this is a non-destructive operation.  If this method
+    can't convert the C{foo} to a C{bar} it will raise a L{FooException}.
+
+    @param f: C{foo}
+    @type f: str
 
     For example::
 
@@ -276,7 +282,6 @@ def foo2bar(f):
 
     """
     # Optionally, actual code can go here.
-
 </pre>
 
     <h2>Comments</h2>
