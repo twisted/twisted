@@ -26,7 +26,7 @@ except ImportError:
 
 AF_INET6 = socket.AF_INET6
 
-from zope.interface import implements, Interface
+from zope.interface import implements, Interface, Attribute
 
 
 # Twisted imports
@@ -125,9 +125,9 @@ OK, EFORMAT, ESERVER, ENAME, ENOTIMP, EREFUSED = range(6)
 class IRecord(Interface):
     """
     An single entry in a zone of authority.
-
-    @cvar TYPE: An indicator of what kind of record this is.
     """
+
+    TYPE = Attribute("An indicator of what kind of record this is.")
 
 
 # Backwards compatibility aliases - these should be deprecated or something I
@@ -165,6 +165,7 @@ class IEncodable(Interface):
     Interface for something which can be encoded to and decoded
     from a file object.
     """
+
     def encode(strio, compDict = None):
         """
         Write a representation of this object to the given

@@ -23,13 +23,11 @@ from twisted.words.im import locals
 class IAccount(Interface):
     """
     I represent a user's account with a chat service.
-
-    @cvar gatewayType: Identifies the protocol used by this account.
-    @type gatewayType: str
     """
 
     client = Attribute('The L{IClient} currently connecting to this account, if any.')
-    
+    gatewayType = Attribute('A C{str} that identifies the protocol used by this account.')
+
     def __init__(accountName, autoLogin, username, password, host, port):
         """
         @type accountName: string
@@ -75,7 +73,7 @@ class IAccount(Interface):
 class IClient(Interface):
 
     account = Attribute('The L{IAccount} I am a Client for')
-    
+
     def __init__(account, chatui, logonDeferred):
         """
         @type account: L{IAccount}
@@ -96,7 +94,7 @@ class IClient(Interface):
         @type groupName: string
         """
 
-    def getGroupConversation(name,hide=0):
+    def getGroupConversation(name, hide=0):
         pass
 
     def getPerson(name):
@@ -104,7 +102,7 @@ class IClient(Interface):
 
 
 class IPerson(Interface):
-    
+
     def __init__(name, account):
         """
         Initialize me.
@@ -153,7 +151,7 @@ class IGroup(Interface):
 
     name = Attribute('My C{str} name, as the server knows me.')
     account = Attribute('The L{Account<IAccount>} I am accessed through.')
-    
+
     def __init__(name, account):
         """
         Initialize me.
@@ -179,7 +177,7 @@ class IGroup(Interface):
 
         @type metadata: dict
         @param metadata: Valid keys for this dictionary include:
-        
+
             - C{'style'}: associated with one of:
                 - C{'emote'}: indicates this is an action
         """
@@ -199,7 +197,7 @@ class IConversation(Interface):
     """
     A conversation with a specific person.
     """
-    
+
     def __init__(person, chatui):
         """
         @type person: L{IPerson}
@@ -227,7 +225,7 @@ class IConversation(Interface):
         """
 
 class IGroupConversation(Interface):
-    
+
     def show():
         """
         doesn't seem like it belongs in this interface.
@@ -284,7 +282,7 @@ class IGroupConversation(Interface):
 
 
 class IChatUI(Interface):
-    
+
     def registerAccountClient(client):
         """
         Notifies user that an account has been signed on to.
@@ -319,7 +317,7 @@ class IChatUI(Interface):
         @rtype: L{Conversation<IConversation>}
         """
 
-    def getGroupConversation(group,Class,stayHidden=0):
+    def getGroupConversation(group, Class, stayHidden=0):
         """
         For the given group object, returns the group conversation window or
         creates and returns a new group conversation window if it doesn't exist.
