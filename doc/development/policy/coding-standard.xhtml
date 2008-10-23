@@ -35,27 +35,68 @@
 
     <h2>Testing</h2>
 
-    <p>Unit tests are written using the <code
-    class="API">twisted.trial</code> framework. Many examples are in the
-    <code class="API">twisted.test</code> package. Test modules should start
-    with 'test_' in their name. Source files should have <a
-    href="test-standard.xhtml"><code>test-case-name</code></a> tags that
-    point to their related tests.</p>
+    <h3>Overview</h3>
 
-    <p>Run the unit tests tests before you check anything in.</p>
+    <p>Twisted development should always be
+     <a href="http://en.wikipedia.org/wiki/Test-driven_development">
+     test-driven</a>.  The complete test suite in trunk@HEAD is required to
+     be passing on <a href="http://buildbot.twistedmatrix.com/supported">
+     supported platforms</a> at all times.  Regressions in the test suite
+     are addressed by reverting whatever revisions introduced them.  For
+     complete documentation about testing Twisted itself, refer to the
+     <a href="test-standard.xhtml">Test Standard</a>.  What follows is
+     intended to be a synopsis of the most important points.</p>
 
-    <p>Let me repeat that, for emphasis: <em>run the unit tests before you
-    check <strong>anything</strong> in</em>.  Code which breaks functionality
-    is unfortunate and unavoidable. Code which breaks the unit tests in a way
-    that you could have prevented by running them yourself, however, may be
-    grounds for anything from merciless taunting through revertion of the
-    breakage to revocation of SVN commit privileges.</p>
+    <h3>Test Suite</h3>
+
+    <p>The Twisted test suite is spread across many subpackages of the
+     <code>twisted</code> package.  Many tests are in
+     <code>twisted.test</code>.  Others can be found at places such as
+     <code>twisted.web.test</code> or <code>twisted.internet.test</code>. 
+     Parts of the Twisted test suite may serve as good examples of how to
+     write tests for Twisted or for Twisted-based libraries (newer parts of
+     the test suite are generally better examples than older parts - check
+     when the code you are looking at was written before you use it as an
+     example of what you should write).  The names of test modules should
+     begin with <q>test_</q> so that they are automatically discoverable by
+     test runners such as Trial.  Twisted's unit tests are written using
+     <code class="API">twisted.trial</code>, an xUnit library which has been
+     extensively customized for use in testing Twisted and Twisted-based
+     libraries.</p>
+
+    <p>Implementation (ie, non-test) source files should begin with a
+     <code>test-case-name</code> tag which gives the name of any test
+     modules or packages which exercise them.  This lets tools discover a
+     subset of the entire test suite which they can run first to find tests
+     which might be broken by a particular change.</p>
 
     <p>It is strongly suggested that developers learn to use Emacs, and use
-    the <code>twisted-dev.el</code> file included in the TwistedEmacs
-    package to bind the F9 key to <q>run unit tests</q> and bang on it
-    frequently.  Support for other editors is unavailable at this time
-    but we would love to provide it.</p>
+     the <code>twisted-dev.el</code> file included in the TwistedEmacs
+     package to bind the F9 key to <q>run unit tests</q> and bang on it
+     frequently.  Support for other editors is unavailable at this time but
+     we would love to provide it.</p>
+
+    <p>To run the whole Twisted test without using emacs, use trial:</p>
+
+    <pre class="shell">
+$ bin/trial twisted
+    </pre>
+
+    <p>To run an individual test module, such as 
+     <code>twisted/mail/test/test_pop3.py</code>, specify the module
+     name:</p>
+
+    <pre class="shell">
+$ bin/trial twisted.mail.test.test_pop3
+    </pre>
+
+    <p>To run the tests associated with a particular implementation file,
+     such as <code>twisted/mail/pop3.py</code>, use the
+     <code>testmodule</code> option:</p>
+
+    <pre class="shell">
+$ bin/trial twisted/mail/pop3.py
+    </pre>
 
     <p>All unit test methods should have docstrings specifying at a high 
     level the intent of the test. That is, a description that users of the 
@@ -234,7 +275,7 @@ class Ninja(object):
     """
     def attack(self, someone):
         """
-        Attack C{someone} with this L{Ninja}'s shiruken.
+        Attack C{someone} with this L{Ninja}'s shuriken.
         """
 </pre>
     </p>
