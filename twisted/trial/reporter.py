@@ -81,7 +81,8 @@ class TestResult(pyunit.TestResult, object):
         return error
 
     def startTest(self, test):
-        """This must be called before the given test is commenced.
+        """
+        This must be called before the given test is commenced.
 
         @type test: L{pyunit.TestCase}
         """
@@ -89,7 +90,8 @@ class TestResult(pyunit.TestResult, object):
         self._testStarted = self._getTime()
 
     def stopTest(self, test):
-        """This must be called after the given test is completed.
+        """
+        This must be called after the given test is completed.
 
         @type test: L{pyunit.TestCase}
         """
@@ -97,7 +99,8 @@ class TestResult(pyunit.TestResult, object):
         self._lastTime = self._getTime() - self._testStarted
 
     def addFailure(self, test, fail):
-        """Report a failed assertion for the given test.
+        """
+        Report a failed assertion for the given test.
 
         @type test: L{pyunit.TestCase}
         @type fail: L{Failure} or L{tuple}
@@ -105,10 +108,11 @@ class TestResult(pyunit.TestResult, object):
         self.failures.append((test, self._getFailure(fail)))
 
     def addError(self, test, error):
-        """Report an error that occurred while running the given test.
+        """
+        Report an error that occurred while running the given test.
 
         @type test: L{pyunit.TestCase}
-        @type fail: L{Failure} or L{tuple}
+        @type error: L{Failure} or L{tuple}
         """
         self.errors.append((test, self._getFailure(error)))
 
