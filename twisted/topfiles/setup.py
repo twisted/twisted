@@ -67,7 +67,6 @@ setup_args = dict(
     author="Twisted Matrix Laboratories",
     author_email="twisted-python@twistedmatrix.com",
     maintainer="Glyph Lefkowitz",
-    maintainer_email="glyph@twistedmatrix.com",
     url="http://twistedmatrix.com/",
     license="MIT",
     long_description="""\

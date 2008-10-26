@@ -1,3 +1,6 @@
+# Copyright (c) 2008 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 import sys
 
 try:
@@ -32,7 +35,6 @@ if __name__ == '__main__':
         author="Twisted Matrix Laboratories",
         author_email="twisted-python@twistedmatrix.com",
         maintainer="Jp Calderone",
-        maintainer_email="exarkun@divmod.com",
         url="http://twistedmatrix.com/trac/wiki/TwistedMail",
         license="MIT",
         long_description="""\

@@ -1,3 +1,6 @@
+# Copyright (c) 2008 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 import sys
 
 try:
@@ -17,7 +20,6 @@ if __name__ == '__main__':
         author="Twisted Matrix Laboratories",
         author_email="twisted-python@twistedmatrix.com",
         maintainer="James Knight",
-        maintainer_email="foom@fuhm.net",
         url="http://twistedmatrix.com/trac/wiki/TwistedWeb",
         license="MIT",
         long_description="""\

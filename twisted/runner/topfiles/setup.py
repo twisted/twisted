@@ -1,3 +1,6 @@
+# Copyright (c) 2008 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 try:
     from twisted.python.dist import setup, ConditionalExtension as Extension
 except ImportError:
@@ -21,7 +24,6 @@ if __name__ == '__main__':
         author="Twisted Matrix Laboratories",
         author_email="twisted-python@twistedmatrix.com",
         maintainer="Andrew Bennetts",
-        maintainer_email="spiv@twistedmatrix.com",
         url="http://twistedmatrix.com/trac/wiki/TwistedRunner",
         license="MIT",
         long_description="""\
