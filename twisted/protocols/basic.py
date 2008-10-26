@@ -306,7 +306,7 @@ class IntNStringReceiver(protocol.Protocol, _PauseableMixin):
     @type structFormat: C{str}
 
     @ivar prefixLength: length of the prefix, in bytes. Define it in subclass,
-        using C{struct.calcSize(structFormat)}
+        using C{struct.calcsize(structFormat)}
     @type prefixLength: C{int}
     """
     MAX_LENGTH = 99999
