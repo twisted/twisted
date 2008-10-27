@@ -9,7 +9,7 @@ Name:		%{name}
 Version:	%{version}
 Release:	%{release}
 Source:		%{name}-%{version}.tar.bz2
-License:	LGPL
+License:	MIT
 Group:		System/Libraries
 URL:		http://www.twistedmatrix.com/
 Requires:	python >= %{py_libver}
