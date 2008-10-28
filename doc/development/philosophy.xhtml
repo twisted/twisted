@@ -12,12 +12,12 @@
 the network, provide two interfaces:</p>
 
 <ul>
-<li>One that doesn't hide platform specific or library specific 
+<li>One that doesn't hide platform specific or library specific
 functionality.
 For example, you can use file descriptors on Unix, and Win32 events on
 Windows.
 </li>
-<li>One that provides a high level interface hiding platform specific 
+<li>One that provides a high level interface hiding platform specific
 details.
 E.g. process running uses same API on Unix and Windows, although
 the implementation is very different.
@@ -41,10 +41,9 @@ user to get started. If this means they have less functionality,
 that's OK, when they need it they can learn a bit more. This
 will also lead to a cleaner, easier to test design.</p>
 
-<p>For example - mktap together with twistd is a great way to
-deploy applications. But to get started you don't need to know
-or care about either. Later on you can start using twistd,
-and if you choose mktap as well. Using them is optional.</p>
+<p>For example - using twistd is a great way to deploy applications.
+But to get started you don't need to know about it.  Later on you can
+start using twistd, but its usage is optional.</p>
 
 </body>
 </html>

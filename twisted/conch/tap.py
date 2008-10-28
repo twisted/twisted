@@ -8,7 +8,7 @@
 
 
 """
-I am a support module for making SSH servers with mktap.
+I am a support module for making SSH servers with twistd.
 """
 
 from twisted.conch import checkers, unix
@@ -19,8 +19,8 @@ from twisted.application import strports
 
 
 class Options(usage.Options):
-    synopsis = "Usage: mktap conch [-i <interface>] [-p <port>] [-d <dir>] "
-    longdesc = "Makes a Conch SSH server.."
+    synopsis = "[-i <interface>] [-p <port>] [-d <dir>] "
+    longdesc = "Makes a Conch SSH server."
     optParameters = [
          ["interface", "i", "", "local interface to which we listen"],
          ["port", "p", "22", "Port on which to listen"],

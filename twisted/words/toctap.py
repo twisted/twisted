@@ -4,7 +4,7 @@
 
 
 """
-Support module for making TOC servers with mktap.
+Support module for making TOC servers with twistd.
 """
 
 from twisted.words.protocols import toc
@@ -12,7 +12,7 @@ from twisted.python import usage
 from twisted.application import strports
 
 class Options(usage.Options):
-    synopsis = "Usage: mktap toc [-p <port>]"
+    synopsis = "[-p <port>]"
     optParameters = [["port", "p", "5190"]]
     longdesc = "Makes a TOC server."
 

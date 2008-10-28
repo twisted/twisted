@@ -3,7 +3,7 @@
 # See LICENSE for details.
 
 
-"""I am the support module for creating mail servers with 'mktap'
+"""I am the support module for creating mail servers with twistd
 """
 
 import os
@@ -22,7 +22,7 @@ from twisted.application import internet
 
 
 class Options(usage.Options):
-    synopsis = "Usage: mktap mail [options]"
+    synopsis = "[options]"
 
     optParameters = [
         ["pop3", "p", 8110, "Port to start the POP3 server on (0 to disable).", usage.portCoerce],

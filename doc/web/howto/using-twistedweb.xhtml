@@ -12,7 +12,7 @@
 
 <h2>Twisted Web Development</h2><a name="development" />
 
-<p>Twisted Web serves python objects that implement the interface 
+<p>Twisted Web serves python objects that implement the interface
 IResource.</p>
 
 <img src="../img/web-process.png" alt="Twisted Web process" />
@@ -36,12 +36,18 @@ IResource.</p>
 
 </ul>
 
+<p>The Twisted.Web server is started through the Twisted Daemonizer, as in:</p>
+
+<pre class="shell">
+% twistd web
+</pre>
+
 <h3>Site Objects</h3>
 <a name="sites" />
 
 <p>Site objects serve as the glue between a port to listen for HTTP requests on, and a root Resource object.</p>
 
-<p>When using <code>mktap web --path /foo/bar/baz</code>, a Site object is created with a root Resource that serves files out of the given path.</p>
+<p>When using <code>twistd -n web --path /foo/bar/baz</code>, a Site object is created with a root Resource that serves files out of the given path.</p>
 
 <p>You can also create a <code>Site</code> instance by hand, passing it a
 <code>Resource</code> object which will serve as the root of the site:</p>
@@ -148,8 +154,7 @@ resource = myresource.MyResource()
 <p>Creating a Twisted Web server which serves a directory is easy:</p>
 
 <pre class="shell">
-% mktap web --path /Users/dsp/Sites
-% twistd -nf web.tap
+% twistd -n web --path /Users/dsp/Sites
 </pre>
 
 <h3>Resource rendering</h3>
@@ -376,29 +381,38 @@ for num in map(int, open("/etc/web/ports").read().split()):
 </pre>
 
 
-<h2>Installing a pre-configured server</h2>
+<h2>Running a Twisted Web Server</h2>
 
-<p>In many cases, you'll end up repeating common usage patterns of twisted.web. In those cases you'll probably want to use Twisted's pre-configured web server setup.</p>
+<p>In many cases, you'll end up repeating common usage patterns of
+twisted.web. In those cases you'll probably want to use Twisted's
+pre-configured web server setup.</p>
 
-<p> To install the Twisted.Web server, you'll need to have
-installed Twisted.</p>
-
-<p> Pre-configured Twisted servers, like the web server, do not have configuration files.  Instead, you instantiate the server and store it into a 'Pickle' file, <code>web.tap</code>.  This file will then be loaded by the Twisted Daemon.   </p>
+<p>The easiest way to run a Twisted Web server is with the Twisted Daemonizer.
+For example, this command will run a web server which serves static files from
+a particular directory:</p>
 
 <pre class="shell">
-% mktap web --path /path/to/web/content
+% twistd web --path /path/to/web/content
 </pre>
 
-<p> If you just want to serve content from your own home directory, the following will do:  </p>
+<p>If you just want to serve content from your own home directory, the
+following will do:</p>
 
 <pre class="shell">
-% mktap web --path ~/public_html/
+% twistd web --path ~/public_html/
+</pre>
+
+<p>You can stop the server at any time by going back to the directory you
+started it in and running the command:</p>
+
+<pre class="shell">
+% kill `cat twistd.pid`
 </pre>
 
 <p> Some other configuration options are available as well:  </p>
 
 <ul>
-  <li> <code>--port</code>: Specify the port for the web 
+  <li> <code>--port</code>: Specify the port for the web
        server to listen on.  This defaults to 8080.  </li>
   <li> <code>--logfile</code>: Specify the path to the
        log file. </li>
@@ -407,24 +421,7 @@ installed Twisted.</p>
 <p> The full set of options that are available can be seen with:  </p>
 
 <pre class="shell">
-% mktap web --help
-</pre>
-
-
-<h2>Using Twisted.Web</h2>
-
-<h3>Stopping and Starting the Server</h3>
-
-<p> Once you've created your <code>web.tap</code> file and done any configuration, you can start the server:  </p>
-
-<pre class="shell">
-% twistd -f web.tap
-</pre>
-
-<p> You can stop the server at any time by going back to the directory you started it in and running the command: </p>
-
-<pre class="shell">
-% kill `cat twistd.pid`
+% twistd web --help
 </pre>
 
 <h3>Serving Flat HTML</h3>
@@ -494,7 +491,7 @@ class Counter:
 <h3>Web UIs</h3>
 
 <p>
-The 
+The
 <a href="http://www.divmod.org/projects/nevow">Nevow</a> framework, available as
 part of the <a href="http://www.divmod.org/projects/quotient">Quotient</a> project,
 is an advanced system for giving Web UIs to your application. Nevow uses Twisted Web but is
@@ -507,11 +504,11 @@ not itself part of Twisted.
 <p> One of the most interesting applications of Twisted.Web is the distributed webserver; multiple servers can all answer requests on the same port, using the <code class="API">twisted.spread</code> package for <q>spreadable</q> computing.  In two different directories, run the commands:  </p>
 
 <pre class="shell">
-% mktap web --user
-% mktap web --personal [other options, if you desire]
+% twistd web --user
+% twistd web --personal [other options, if you desire]
 </pre>
 
-<p> Both of these create a <code>web.tap</code>; you need to run both at the same time.  Once you have, go to <code>http://localhost:8080/your_username.twistd/</code> -- you will see the front page from the server you created with the <code>--personal</code> option.  What's happening here is that the request you've sent is being relayed from the central (User) server to your own (Personal) server, over a PB connection.  This technique can be highly useful for small <q>community</q> sites; using the code that makes this demo work, you can connect one HTTP port to multiple resources running with different permissions on the same machine, on different local machines, or even over the internet to a remote site.  </p>
+<p> Once you're running both of these instances, go to <code>http://localhost:8080/your_username.twistd/</code> -- you will see the front page from the server you created with the <code>--personal</code> option.  What's happening here is that the request you've sent is being relayed from the central (User) server to your own (Personal) server, over a PB connection.  This technique can be highly useful for small <q>community</q> sites; using the code that makes this demo work, you can connect one HTTP port to multiple resources running with different permissions on the same machine, on different local machines, or even over the internet to a remote site.  </p>
 
 <p>
 By default, a personal server listens on a UNIX socket in the owner's home
@@ -558,7 +555,7 @@ resource.indexNames = ['index.pl']
 
 <p>It is common to use one server (for example, Apache) on a site with multiple
 names which then uses reverse proxy (in Apache, via <code>mod_proxy</code>) to different
-internal web servers, possibly on different machines. However, naive 
+internal web servers, possibly on different machines. However, naive
 configuration causes miscommunication: the internal server firmly believes it
 is running on <q>internal-name:port</q>, and will generate URLs to that effect,
 which will be completely wrong when received by the client.</p>
@@ -576,9 +573,9 @@ resource = vhost.VHostMonsterResource()
 </pre>
 
 <p>Of course, an equivalent <code>.trp</code> can also be used. Make sure
-the web server is configured with the correct processors for the 
-<code>rpy</code> or <code>trp</code> extensions (the web server 
-<code>mktap web --path</code> generates by default is so configured).</p>
+the web server is configured with the correct processors for the
+<code>rpy</code> or <code>trp</code> extensions (the web server
+<code>twistd web --path</code> generates by default is so configured).</p>
 
 <p>From the Apache side, instead of using the following ProxyPass directive:</p>
 
@@ -617,7 +614,7 @@ i.setServiceParent(sc)
 
 <h2>Rewriting URLs</h2>
 
-<p>Sometimes it is convenient to modify the content of the 
+<p>Sometimes it is convenient to modify the content of the
 <code class="API" base="twisted.web.server">Request</code> object
 before passing it on. Because this is most often used to rewrite
 either the URL, the similarity to Apache's <code>mod_rewrite</code> has

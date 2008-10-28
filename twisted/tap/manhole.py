@@ -4,7 +4,7 @@
 
 
 """
-I am the support module for making a manhole server with mktap.
+I am the support module for making a manhole server with twistd.
 """
 
 from twisted.manhole import service
@@ -15,7 +15,7 @@ from twisted.application import strports
 import os, sys
 
 class Options(usage.Options):
-    synopsis = "mktap manhole [options]"
+    synopsis = "[options]"
     optParameters = [
            ["user", "u", "admin", "Name of user to allow to log in"],
            ["port", "p", str(pb.portno), "Port to listen on"],

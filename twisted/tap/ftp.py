@@ -4,7 +4,7 @@
 
 
 """
-I am the support module for making a ftp server with mktap.
+I am the support module for making a ftp server with twistd.
 """
 
 from twisted.protocols import ftp
@@ -16,7 +16,7 @@ import os.path
 
 
 class Options(usage.Options):
-    synopsis = """Usage: mktap ftp [options].
+    synopsis = """[options].
     WARNING: This FTP server is probably INSECURE do not use it.
     """
     optParameters = [

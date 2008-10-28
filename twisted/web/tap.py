@@ -43,9 +43,8 @@ class Options(usage.Options):
 
 
     longdesc = """\
-This creates a web.tap file that can be used by twistd.  If you specify
-no arguments, it will be a demo webserver that has the Test class from
-twisted.web.demo in it."""
+This starts a webserver.  If you specify no arguments, it will be a
+demo webserver that has the Test class from twisted.web.demo in it."""
 
     def __init__(self):
         usage.Options.__init__(self)

@@ -1,3 +1,9 @@
+# Copyright (c) 2008 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Tests for L{twisted.mail.tap}.
+"""
 
 from twisted.trial.unittest import TestCase
 
@@ -7,7 +13,7 @@ from twisted.mail.tap import Options
 
 class OptionsTestCase(TestCase):
     """
-    Tests for the command line option parser used for C{mktap mail}.
+    Tests for the command line option parser used for C{twistd mail}.
     """
     def setUp(self):
         self.aliasFilename = self.mktemp()

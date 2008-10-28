@@ -72,7 +72,7 @@ class PickleOptions(usage.Options):
 
 
 class Options(usage.Options):
-    synopsis = "Usage: mktap news [options]"
+    synopsis = "[options]"
     
     groups = None
     servers = None

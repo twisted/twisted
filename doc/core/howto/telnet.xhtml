@@ -10,13 +10,10 @@
 gives you remote access to a Python interpreter. We will use a telnet client
 to access this server.</p>
 
-<p>Run <code class="shell">mktap telnet -p 4040 -u admin -w admin</code> at
-your shell prompt. If you list the contents of your current directory,
-you'll notice a new file -- <code>telnet.tap</code>.  After you do this, run
-<code class="shell">twistd -f telnet.tap</code>. Since the Application has a
-telnet server that you specified to be on port 4040, it will start listening
-for connections on this port. Try connecting with your favorite telnet
-utility to 127.0.0.1 port 4040.</p>
+<p>Run <code class="shell">twistd telnet -p 4040 -u admin -w admin</code> at
+your shell prompt. The Application has a telnet server that you specified to 
+be on port 4040, and it will start listening for connections on this port. Try 
+connecting with your favorite telnet utility to 127.0.0.1 port 4040.</p>
 
 <pre class="shell">
 $ <em>telnet localhost 4040</em>
@@ -59,18 +56,17 @@ and that it is listening on port 4040 with something called a
 <code class="API" base="twisted.manhole.telnet">ShellFactory</code>. 
 Its parent is a <code class="python">twisted.application.service.MultiService</code>,
 a collection of services. We can keep getting the parent attribute
-of services until we hit the root of all services in this tap.</p>
+of services until we hit the root of all services.</p>
 
 <p>As you can see, this is quite useful - we can introspect a
 running process, see the internal objects, and even change
-their attributes. We can add telnet support to existing
-tap like so: <code class="shell">mktap --append=foo.tap telnet -p 4040 -u user -w pass</code>. 
-The telnet server can of coursed be used from straight Python code as well. You can
-see how to do this by reading the code for <code class="API">twisted.tap.telnet</code>.</p>
+their attributes. The telnet server can of course be used from straight 
+Python code; you can see how to do this by reading the code for 
+<code class="API">twisted.tap.telnet</code>.</p>
 
 <p>A final note - if you want access to be more secure, you can even
 have the telnet server use SSL. Assuming you have the appropriate
-certificate and private key files, you can <code class="shell">mktap
+certificate and private key files, you can <code class="shell">twistd
 telnet -p ssl:443:privateKey=mykey.pem:certKey=cert.pem -u admin -w
 admin</code>.  See <code
 class="API">twisted.application.strports</code> for more examples of

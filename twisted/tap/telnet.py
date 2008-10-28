@@ -4,7 +4,7 @@
 
 
 """
-Support module for making a telnet server with mktap.
+Support module for making a telnet server with twistd.
 """
 
 from twisted.manhole import telnet
@@ -12,7 +12,7 @@ from twisted.python import usage
 from twisted.application import strports
 
 class Options(usage.Options):
-    synopsis = "Usage: mktap telnet [options]"
+    synopsis = "[options]"
     longdesc = "Makes a telnet server to a Python shell."
     optParameters = [
          ["username", "u", "admin","set the login username"],

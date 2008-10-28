@@ -3,14 +3,14 @@
 # See LICENSE for details.
 
 """
-Support module for making a port forwarder with mktap.
+Support module for making a port forwarder with twistd.
 """
 from twisted.protocols import portforward
 from twisted.python import usage
 from twisted.application import strports
 
 class Options(usage.Options):
-    synopsis = "Usage: mktap portforward [options]"
+    synopsis = "[options]"
     longdesc = 'Port Forwarder.'
     optParameters = [
           ["port", "p", "6666","Set the port number."],
