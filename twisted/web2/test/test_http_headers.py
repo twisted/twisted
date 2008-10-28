@@ -146,15 +146,13 @@ class HeaderParsingTestBase(unittest.TestCase):
         @type headername: C{str}
         @param headername: The name of the HTTP header L{table} contains values for.
 
-        @type table: A sequence of tuples describing inputs to and
-        outputs from header parsing and generation.  The tuples may be
-        either 2 or 3 elements long.  In either case: the first
-        element is a string representing an HTTP-format header value;
-        the second element is a dictionary mapping names of parameters
-        to values of those parameters (the parsed form of the header).
-        If there is a third element, it is a list of strings which
-        must occur exactly in the HTTP header value
-        string which is re-generated from the parsed form.
+        @type table: A sequence of tuples describing inputs to and outputs from
+            header parsing and generation.  The tuples may be either 2 or 3
+            elements long.  In either case: the first element is a string
+            representing an HTTP-format header value; the second element is the
+            parsed form of the header.  If there is a third element, it is a
+            list of strings which must occur exactly in the HTTP header value
+            string which is re-generated from the parsed form.
         """
         for row in table:
             if len(row) == 2:
@@ -198,6 +196,16 @@ class GeneralHeaderParsingTests(HeaderParsingTestBase):
         table = (
             ("no-cache",
              {'no-cache':None}),
+
+            # Verify that null elements delimited by commas are ignored.
+            ("no-cache,",
+             {'no-cache':None}),
+
+            ('private="Set-Cookie, Set-Cookie2,", no-cache="PROXY-AUTHENTICATE,"',
+             {'private': ['set-cookie', 'set-cookie2'],
+              'no-cache': ['proxy-authenticate']},
+             ['private="Set-Cookie, Set-Cookie2"', 'no-cache="Proxy-Authenticate"']),
+
             ("no-cache, no-store, max-age=5, max-stale=3, min-fresh=5, no-transform, only-if-cached, blahblah-extension-thingy",
              {'no-cache': None,
               'no-store': None,
@@ -230,6 +238,8 @@ class GeneralHeaderParsingTests(HeaderParsingTestBase):
     def testConnection(self):
         table = (
             ("close", ['close',]),
+            # Verify that null elements delimited by commas are ignored.
+            ("close,", ['close',]),
             ("close, foo-bar", ['close', 'foo-bar'])
             )
         self.runRoundtripTest("Connection", table)
@@ -239,25 +249,32 @@ class GeneralHeaderParsingTests(HeaderParsingTestBase):
         self.runRoundtripTest("Date", (("Sun, 09 Sep 2001 01:46:40 GMT", 1000000000),))
 
 #     def testPragma(self):
+        # if you write this test, make sure you cover the null elements case
 #         fail
 
 #     def testTrailer(self):
+        # if you write this test, make sure you cover the null elements case
 #         fail
 
     def testTransferEncoding(self):
         table = (
             ('chunked', ['chunked']),
+            # Verify that null elements delimited by commas are ignored.
+            ('chunked,', ['chunked']),
             ('gzip, chunked', ['gzip', 'chunked'])
             )
         self.runRoundtripTest("Transfer-Encoding", table)
 
 #     def testUpgrade(self):
+        # if you write this test, make sure you cover the null elements case
 #         fail
 
 #     def testVia(self):
+        # if you write this test, make sure you cover the null elements case
 #         fail
 
 #     def testWarning(self):
+        # if you write this test, make sure you cover the null elements case
 #         fail
 
 class RequestHeaderParsingTests(HeaderParsingTestBase):
@@ -265,6 +282,11 @@ class RequestHeaderParsingTests(HeaderParsingTestBase):
     def testAccept(self):
         table = (
             ("audio/*;q=0.2, audio/basic",
+             {http_headers.MimeType('audio', '*'): 0.2,
+              http_headers.MimeType('audio', 'basic'): 1.0}),
+
+            # Verify that null elements delimited by commas are ignored.
+            ("audio/*;q=0.2,,audio/basic",
              {http_headers.MimeType('audio', '*'): 0.2,
               http_headers.MimeType('audio', 'basic'): 1.0}),
 
@@ -280,7 +302,8 @@ class RequestHeaderParsingTests(HeaderParsingTestBase):
               http_headers.MimeType('text', 'html', (('level', '1'),)): 1.0,
               http_headers.MimeType('*', '*'): 1.0}),
 
-       ("text/*;q=0.3, text/html;q=0.7, text/html;level=1, text/html;level=2;q=0.4, */*;q=0.5",
+            ("text/*;q=0.3, text/html;q=0.7, text/html;level=1, text/html;"
+             "level=2;q=0.4, */*;q=0.5",
              {http_headers.MimeType('text', '*'): 0.3,
               http_headers.MimeType('text', 'html'): 0.7,
               http_headers.MimeType('text', 'html', (('level', '1'),)): 1.0,
@@ -296,6 +319,12 @@ class RequestHeaderParsingTests(HeaderParsingTestBase):
             ("iso-8859-5, unicode-1-1;q=0.8",
              {'iso-8859-5': 1.0, 'iso-8859-1': 1.0, 'unicode-1-1': 0.8},
              ["iso-8859-5", "unicode-1-1;q=0.8", "iso-8859-1"]),
+
+            # Verify that null elements delimited by commas are ignored.
+            ("iso-8859-5,, unicode-1-1;q=0.8",
+             {'iso-8859-5': 1.0, 'iso-8859-1': 1.0, 'unicode-1-1': 0.8},
+             ["iso-8859-5", "unicode-1-1;q=0.8", "iso-8859-1"]),
+
             ("iso-8859-1;q=0.7",
              {'iso-8859-1': 0.7}),
             ("*;q=.7",
@@ -311,6 +340,11 @@ class RequestHeaderParsingTests(HeaderParsingTestBase):
         table = (
             ("compress, gzip",
              {'compress': 1.0, 'gzip': 1.0, 'identity': 0.0001}),
+
+            # Verify that null elements delimited by commas are ignored.
+            ("compress,, gzip",
+             {'compress': 1.0, 'gzip': 1.0, 'identity': 0.0001}),
+
             ("",
              {'identity': 0.0001}),
             ("*",
@@ -327,6 +361,9 @@ class RequestHeaderParsingTests(HeaderParsingTestBase):
     def testAcceptLanguage(self):
         table = (
             ("da, en-gb;q=0.8, en;q=0.7",
+             {'da': 1.0, 'en-gb': 0.8, 'en': 0.7}),
+            # Verify that null elements delimited by commas are ignored.
+            ("da,, en-gb;q=0.8, en;q=0.7",
              {'da': 1.0, 'en-gb': 0.8, 'en': 0.7}),
             ("*",
              {'*': 1}),
@@ -411,6 +448,9 @@ class RequestHeaderParsingTests(HeaderParsingTestBase):
         table = (
             ("100-continue",
              {"100-continue":(None,)}),
+            # Verify that null elements delimited by commas are ignored.
+            ("100-continue,",
+             {"100-continue":(None,)}),
             ('foobar=twiddle',
              {'foobar':('twiddle',)}),
             ("foo=bar;a=b;c",
@@ -427,11 +467,15 @@ class RequestHeaderParsingTests(HeaderParsingTestBase):
     def testIfMatch(self):
         table = (
             ('"xyzzy"', [http_headers.ETag('xyzzy')]),
+            # Verify that null elements delimited by commas are ignored.
+            ('"xyzzy",', [http_headers.ETag('xyzzy')]),
             ('"xyzzy", "r2d2xxxx", "c3piozzzz"', [http_headers.ETag('xyzzy'),
                                                     http_headers.ETag('r2d2xxxx'),
                                                     http_headers.ETag('c3piozzzz')]),
             ('*', ['*']),
             )
+        self.runRoundtripTest("If-Match", table)
+
     def testIfModifiedSince(self):
         # Don't need major tests since the datetime parser has its own test
         # Just test stupid ; length= brokenness.
@@ -445,6 +489,8 @@ class RequestHeaderParsingTests(HeaderParsingTestBase):
     def testIfNoneMatch(self):
         table = (
             ('"xyzzy"', [http_headers.ETag('xyzzy')]),
+            # Verify that null elements delimited by commas are ignored.
+            ('"xyzzy",', [http_headers.ETag('xyzzy')]),
             ('W/"xyzzy", "r2d2xxxx", "c3piozzzz"', [http_headers.ETag('xyzzy', weak=True),
                                                     http_headers.ETag('r2d2xxxx'),
                                                     http_headers.ETag('c3piozzzz')]),
@@ -481,6 +527,9 @@ class RequestHeaderParsingTests(HeaderParsingTestBase):
             ("bytes=-500",('bytes', [(None,500),])),
             ("bytes=9500-",('bytes', [(9500, None),])),
             ("bytes=0-0,-1", ('bytes', [(0,0),(None,1)])),
+
+            # Verify that null elements delimited by commas are ignored.
+            ("bytes=1-2,,3-4", ('bytes', [(1, 2), (3, 4)])),
             )
         self.runRoundtripTest("Range", table)
 
@@ -493,6 +542,8 @@ class RequestHeaderParsingTests(HeaderParsingTestBase):
     def testTE(self):
         table = (
             ("deflate", {'deflate':1}),
+            # Verify that null elements delimited by commas are ignored.
+            ("deflate,", {'deflate':1}),
             ("", {}),
             ("trailers, deflate;q=0.5", {'trailers':1, 'deflate':0.5}),
             )
@@ -504,7 +555,13 @@ class RequestHeaderParsingTests(HeaderParsingTestBase):
 
 class ResponseHeaderParsingTests(HeaderParsingTestBase):
     def testAcceptRanges(self):
-        self.runRoundtripTest("Accept-Ranges", (("bytes", ["bytes"]), ("none", ["none"])))
+        table = (
+            ("bytes", ["bytes"]),
+            # Verify that null elements delimited by commas are ignored.
+            ("bytes,", ["bytes"]),
+            ("none", ["none"]),
+            )
+        self.runRoundtripTest("Accept-Ranges", table)
 
     def testAge(self):
         self.runRoundtripTest("Age", (("15", 15),))
@@ -523,6 +580,7 @@ class ResponseHeaderParsingTests(HeaderParsingTestBase):
 
 
 #     def testProxyAuthenticate(self):
+        # if you write this test, make sure you cover the null elements case
 #         fail
 
     def testRetryAfter(self):
@@ -539,7 +597,9 @@ class ResponseHeaderParsingTests(HeaderParsingTestBase):
     def testVary(self):
         table = (
             ("*", ["*"]),
-            ("Accept, Accept-Encoding", ["accept", "accept-encoding"], ["accept", "accept-encoding"])
+            ("Accept, Accept-Encoding", ["accept", "accept-encoding"], ["accept", "accept-encoding"]),
+            # Verify that null elements delimited by commas are ignored.
+            ("Accept,, Accept-Encoding", ["accept", "accept-encoding"], ["accept", "accept-encoding"])
             )
         self.runRoundtripTest("Vary", table)
 
@@ -565,6 +625,12 @@ class ResponseHeaderParsingTests(HeaderParsingTestBase):
                  (digest[0]+', '+basic[0],
                   digest[1] + basic[1],
                   [digest[2], basic[2]]),
+
+                 # Verify that null elements delimited by commas are ignored.
+                 (digest[0]+',,,'+basic[0],
+                  digest[1] + basic[1],
+                  [digest[2], basic[2]]),
+
                  ntlm,
                  negotiate,
                  (ntlm[0]+', '+basic[0],
@@ -620,20 +686,26 @@ class EntityHeaderParsingTests(HeaderParsingTestBase):
     def testAllow(self):
         # Allow is a silly case-sensitive header unlike all the rest
         table = (
-            ("GET", ['GET', ]),
+            ("GET", ['GET']),
+            # Verify that null elements delimited by commas are ignored.
+            ("GET,,", ['GET']),
             ("GET, HEAD, PUT", ['GET', 'HEAD', 'PUT']),
             )
         self.runRoundtripTest("Allow", table)
 
     def testContentEncoding(self):
         table = (
-            ("gzip", ['gzip',]),
+            ("gzip", ['gzip']),
+            # Verify that null elements delimited by commas are ignored.
+            ("gzip,", ['gzip']),
             )
         self.runRoundtripTest("Content-Encoding", table)
 
     def testContentLanguage(self):
         table = (
-            ("da", ['da',]),
+            ("da", ['da']),
+            # Verify that null elements delimited by commas are ignored.
+            ("da,", ['da']),
             ("mi, en", ['mi', 'en']),
             )
         self.runRoundtripTest("Content-Language", table)
