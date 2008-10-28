@@ -662,6 +662,12 @@ def parseWWWAuthenticate(tokenized):
 
     while tokenList:
         scheme = tokenList.pop(0)
+        # The challenge list can include null elements.  Null elements will
+        # always be encountered here (rather than further down in this
+        # function).  This loop takes care of skipping them.
+        while scheme == Token(","):
+            scheme = tokenList.pop(0)
+
         challenge = {}
         last = None
         kvChallenge = False
@@ -675,6 +681,12 @@ def parseWWWAuthenticate(tokenized):
 
             elif token == Token(','):
                 if kvChallenge:
+                    # Whenever a , is seen, look two ahead in the token list:
+                    # inside a particular challenge, at this point the token
+                    # after the next token will be an =.  If the token is
+                    # anything else, then we're about to run into the beginning
+                    # of the next challenge so we should stop and let the outer
+                    # loop run again.
                     if len(tokenList) > 1 and tokenList[1] != Token('='):
                         break
 
@@ -743,7 +755,7 @@ def parseCacheControl(kv):
     elif k == 'private' or k == 'no-cache':
         # Optional list argument
         if v is not None:
-            v = [field.strip().lower() for field in v.split(',')]
+            v = filter(None, [field.strip().lower() for field in v.split(',')])
     return k, v
 
 def generateCacheControl((k, v)):
