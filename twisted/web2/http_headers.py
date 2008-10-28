@@ -225,6 +225,7 @@ class Token(str):
         return "Token(%s)" % str.__repr__(self)
 
 
+# RFC 2616 section 2.2
 http_tokens = " \t\"()<>@,;:\\/[]?={}"
 http_ctls = "\x00\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b\x0c\r\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f\x7f"
 
@@ -384,6 +385,13 @@ def last(seq):
 
 ##### Generation utilities
 def quoteString(s):
+    """
+    Quote a string according to the rules for the I{quoted-string} production
+    in RFC 2616 section 2.2.
+
+    @type s: C{str}
+    @rtype: C{str}
+    """
     return '"%s"' % s.replace('\\', '\\\\').replace('"', '\\"')
 
 def listGenerator(fun):
@@ -400,14 +408,32 @@ def generateList(seq):
 def singleHeader(item):
     return [item]
 
-def generateKeyValues(kvs):
+_seperators = re.compile('[' + re.escape(http_tokens) + ']')
+
+def generateKeyValues(parameters):
+    """
+    Format an iterable of key/value pairs.
+
+    Although each header in HTTP 1.1 redefines the grammar for the formatting
+    of its parameters, the grammar defined by almost all headers conforms to
+    the specification given in RFC 2046.  Note also that RFC 2616 section 19.2
+    note 2 points out that many implementations fail if the value is quoted,
+    therefore this function only quotes the value when it is necessary.
+
+    @param parameters: An iterable of C{tuple} of a C{str} parameter name and
+        C{str} or C{None} parameter value which will be formated.
+
+    @return: The formatted result.
+    @rtype: C{str}
+    """
     l = []
-    # print kvs
-    for k,v in kvs:
+    for k, v in parameters:
         if v is None:
             l.append('%s' % k)
         else:
-            l.append('%s=%s' % (k,v))
+            if _seperators.search(v) is not None:
+                v = quoteString(v)
+            l.append('%s=%s' % (k, v))
     return ";".join(l)
 
 

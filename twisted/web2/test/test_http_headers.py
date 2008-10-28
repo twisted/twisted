@@ -1,8 +1,15 @@
+# Copyright (c) 2008 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Tests for L{twisted.web2.http_headers}.
+"""
+
 from twisted.trial import unittest
 import random, time
 
 from twisted.web2 import http_headers
-from twisted.web2.http_headers import Cookie, HeaderHandler
+from twisted.web2.http_headers import Cookie, HeaderHandler, quoteString, generateKeyValues
 from twisted.python import util
 
 class parsedvalue:
@@ -737,3 +744,53 @@ class TestMimeType(unittest.TestCase):
         self.assertEquals(dictMime, tupleMime)
         self.assertEquals(kwargMime, tupleMime)
         self.assertEquals(kwargMime, stringMime)
+
+
+
+class FormattingUtilityTests(unittest.TestCase):
+    """
+    Tests for various string formatting functionality required to generate
+    headers.
+    """
+    def test_quoteString(self):
+        """
+        L{quoteString} returns a string which when interpreted according to the
+        rules for I{quoted-string} (RFC 2616 section 2.2) matches the input
+        string.
+        """
+        self.assertEqual(
+            quoteString('a\\b"c'),
+            '"a\\\\b\\"c"')
+
+
+    def test_generateKeyValues(self):
+        """
+        L{generateKeyValues} accepts an iterable of parameters and returns a
+        string formatted according to RFC 2045 section 5.1.
+        """
+        self.assertEqual(
+            generateKeyValues(iter([("foo", "bar"), ("baz", "quux")])),
+            "foo=bar;baz=quux")
+
+
+    def test_generateKeyValuesNone(self):
+        """
+        L{generateKeyValues} accepts C{None} as the 2nd element of a tuple and
+        includes just the 1st element in the output without an C{"="}.
+        """
+        self.assertEqual(
+            generateKeyValues([("foo", None), ("bar", "baz")]),
+            "foo;bar=baz")
+
+
+    def test_generateKeyValuesQuoting(self):
+        """
+        L{generateKeyValues} quotes the value of the 2nd element of a tuple if
+        it includes a character which cannot be in an HTTP token as defined in
+        RFC 2616 section 2.2.
+        """
+        for needsQuote in [' ', '\t', '(', ')', '<', '>', '@', ',', ';', ':',
+                           '\\', '"', '/', '[', ']', '?', '=', '{', '}']:
+            self.assertEqual(
+                generateKeyValues([("foo", needsQuote)]),
+                'foo=%s' % (quoteString(needsQuote),))
