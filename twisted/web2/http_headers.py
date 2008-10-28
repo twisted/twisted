@@ -621,6 +621,8 @@ def parseRange(range):
     ranges = []
 
     for byterangespec in rangeset:
+        if len(byterangespec) == 0:
+            continue
         if len(byterangespec) != 1:
             raise ValueError("Invalid range header format: %s" % (range,))
         start,end=byterangespec[0].split('-')
