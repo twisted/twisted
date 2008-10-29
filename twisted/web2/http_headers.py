@@ -656,59 +656,32 @@ def parseRetryAfter(header):
 # WWW-Authenticate and Authorization
 
 def parseWWWAuthenticate(tokenized):
+    comma = Token(',')
+    space = Token(' ')
+    equal = Token('=')
+
     headers = []
-
-    tokenList = list(tokenized)
-
+    tokenList = [t for t in tokenized if t != comma and t != space]
     while tokenList:
         scheme = tokenList.pop(0)
-        # The challenge list can include null elements.  Null elements will
-        # always be encountered here (rather than further down in this
-        # function).  This loop takes care of skipping them.
-        while scheme == Token(","):
-            scheme = tokenList.pop(0)
+        parameters = {}
+        while len(tokenList) > 2:
+            if not isinstance(tokenList[0], str):
+                break
+            if tokenList[1] != equal:
+                break
+            if not isinstance(tokenList[2], str):
+                break
 
-        challenge = {}
-        last = None
-        kvChallenge = False
+            key, equal, value = tokenList[:3]
+            del tokenList[:3]
+            parameters[key] = value
 
-        while tokenList:
-            token = tokenList.pop(0)
-            if token == Token('='):
-                kvChallenge = True
-                challenge[last] = tokenList.pop(0)
-                last = None
-
-            elif token == Token(','):
-                if kvChallenge:
-                    # Whenever a , is seen, look two ahead in the token list:
-                    # inside a particular challenge, at this point the token
-                    # after the next token will be an =.  If the token is
-                    # anything else, then we're about to run into the beginning
-                    # of the next challenge so we should stop and let the outer
-                    # loop run again.
-                    if len(tokenList) > 1 and tokenList[1] != Token('='):
-                        break
-
-                else:
-                    break
-
-            else:
-                last = token
-
-        if last and scheme and not challenge and not kvChallenge:
-            challenge = last
-            last = None
-
-        headers.append((scheme, challenge))
-
-    if last and last not in (Token('='), Token(',')):
-        if headers[-1] == (scheme, challenge):
-            scheme = last
-            challenge = {}
-            headers.append((scheme, challenge))
-
+        if scheme in ('Basic', 'Digest'):
+            headers.append((scheme, parameters))
     return headers
+
+
 
 def parseAuthorization(header):
     scheme, rest = header.split(' ', 1)
@@ -1525,8 +1498,8 @@ parser_response_headers = {
     'Set-Cookie':(parseSetCookie,),
     'Set-Cookie2':(tokenize, parseSetCookie2),
     'Vary':(tokenize, filterTokens),
-    'WWW-Authenticate': (lambda h: tokenize(h, foldCase=False),
-                         parseWWWAuthenticate,)
+    'WWW-Authenticate': (lambda header: tokenize(header, foldCase=False),
+                         parseWWWAuthenticate),
 }
 
 generator_response_headers = {

@@ -604,21 +604,28 @@ class ResponseHeaderParsingTests(HeaderParsingTestBase):
         self.runRoundtripTest("Vary", table)
 
     def testWWWAuthenticate(self):
-        digest = ('Digest realm="digest realm", nonce="bAr", qop="auth"',
-                  [('Digest', {'realm': 'digest realm', 'nonce': 'bAr', 
+        digest = ('Digest realm="digest realm", nonce="bAr", qop="auth",',
+                  [('Digest', {'realm': 'digest realm', 'nonce': 'bAr',
                                'qop': 'auth'})],
-                  ['Digest', 'realm="digest realm"', 
+                  ['Digest', 'realm="digest realm"',
                    'nonce="bAr"', 'qop="auth"'])
+
+        digestWithChallengeNulls = (
+            'Digest ,realm="digest realm",, nonce="bAx", qop="auth"',
+            [('Digest', {'realm': 'digest realm', 'nonce': 'bAx',
+                         'qop': 'auth'})],
+            ['Digest', 'realm="digest realm"',
+             'nonce="bAx"', 'qop="auth"'])
+
+        digestWithQoPNulls = (
+            'Digest realm="digest realm" nonce="bAy", qop="auth"',
+            [('Digest', {'realm': 'digest realm', 'nonce': 'bAy',
+                         'qop': 'auth'})],
+            ['Digest', 'realm="digest realm"',
+             'nonce="bAy"', 'qop="auth"'])
 
         basic = ('Basic realm="foo"',
                  [('Basic', {'realm': 'foo'})], ['Basic', 'realm="foo"'])
-
-        ntlm = ('NTLM',
-                [('NTLM', {})], ['NTLM', ''])
-
-        negotiate = ('Negotiate SomeGssAPIData',
-                     [('Negotiate', 'SomeGssAPIData')], 
-                     ['Negotiate', 'SomeGssAPIData'])
 
         table = (digest,
                  basic,
@@ -630,25 +637,16 @@ class ResponseHeaderParsingTests(HeaderParsingTestBase):
                  (digest[0]+',,,'+basic[0],
                   digest[1] + basic[1],
                   [digest[2], basic[2]]),
+                 digestWithChallengeNulls,
+                 digestWithQoPNulls,
 
-                 ntlm,
-                 negotiate,
-                 (ntlm[0]+', '+basic[0],
-                  ntlm[1] + basic[1],
-                  [ntlm[2], basic[2]]),
-                 (digest[0]+', '+negotiate[0],
-                  digest[1] + negotiate[1],
-                  [digest[2], negotiate[2]]),
-                 (negotiate[0]+', '+negotiate[0],
-                  negotiate[1] + negotiate[1],
-                  [negotiate[2] + negotiate[2]]),
-                 (ntlm[0]+', '+ntlm[0],
-                  ntlm[1] + ntlm[1],
-                  [ntlm[2], ntlm[2]]),
-                 (basic[0]+', '+ntlm[0],
-                  basic[1] + ntlm[1],
-                  [basic[2], ntlm[2]]),
-                 )
+                # Verify that NTLM at the end doesn't hork up basic or digest
+                (basic[0] + ', NTLM', basic[1], basic[2]),
+
+                 # Verify that Negotiate at the end doesn't hork up basic or
+                 # digest
+                (basic[0] + ', Negotiate', basic[1], basic[2]),
+                )
 
         # runRoundtripTest doesn't work because we don't generate a single
         # header
