@@ -606,21 +606,21 @@ class ResponseHeaderParsingTests(HeaderParsingTestBase):
     def testWWWAuthenticate(self):
         digest = ('Digest realm="digest realm", nonce="bAr", qop="auth",',
                   [('Digest', {'realm': 'digest realm', 'nonce': 'bAr',
-                               'qop': 'auth'})],
+                               'qop': ['auth']})],
                   ['Digest', 'realm="digest realm"',
                    'nonce="bAr"', 'qop="auth"'])
 
         digestWithChallengeNulls = (
             'Digest ,realm="digest realm",, nonce="bAx", qop="auth"',
             [('Digest', {'realm': 'digest realm', 'nonce': 'bAx',
-                         'qop': 'auth'})],
+                         'qop': ['auth']})],
             ['Digest', 'realm="digest realm"',
              'nonce="bAx"', 'qop="auth"'])
 
         digestWithQoPNulls = (
-            'Digest realm="digest realm" nonce="bAy", qop="auth"',
+            'Digest realm="digest realm" nonce="bAy", qop=",auth, ,"',
             [('Digest', {'realm': 'digest realm', 'nonce': 'bAy',
-                         'qop': 'auth'})],
+                         'qop': ['auth']})],
             ['Digest', 'realm="digest realm"',
              'nonce="bAy"', 'qop="auth"'])
 

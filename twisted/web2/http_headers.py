@@ -686,6 +686,10 @@ def parseWWWAuthenticate(tokenized):
 
             key, equal, value = tokenList[:3]
             del tokenList[:3]
+
+            if key == 'qop':
+                value = filter(None, map(str.strip, value.split(',')))
+
             parameters[key] = value
 
         if scheme in ('Basic', 'Digest'):
@@ -830,6 +834,8 @@ def generateWWWAuthenticate(headers):
         try:
             l = []
             for k,v in dict(challenge).iteritems():
+                if k == 'qop':
+                    v = ','.join(v)
                 l.append("%s=%s" % (k, quoteString(v)))
 
             _generated.append("%s %s" % (scheme, ", ".join(l)))
