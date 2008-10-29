@@ -2404,6 +2404,55 @@ class FTPClient(FTPClientBasic):
 
     stor = storeFile
 
+    def rename(self, pathFrom, pathTo):
+        """
+        Rename a file.
+
+        This method issues the I{RNFR}/I{RNTO} command sequence to rename
+        C{pathFrom} to C{pathTo}.
+
+        @param: pathFrom: the absolute path to the file to be renamed
+        @type pathFrom: C{str}
+
+        @param: pathTo: the absolute path to rename the file to.
+        @type pathTo: C{str}
+
+        @return: A L{Deferred} which fires when the rename operation has
+            succeeded or failed.  If it succeeds, the L{Deferred} is called
+            back with a two-tuple of lists.  The first list contains the
+            responses to the I{RNFR} command.  The second list contains the
+            responses to the I{RNTO} command.  If either I{RNFR} or I{RNTO}
+            fails, the L{Deferred} is errbacked with L{CommandFailed} or
+            L{BadResponse}.
+        @rtype: L{Deferred}
+
+        @since: 8.2
+        """
+        renameFrom = self.queueStringCommand('RNFR ' + self.escapePath(pathFrom))
+        renameTo = self.queueStringCommand('RNTO ' + self.escapePath(pathTo))
+
+        fromResponse = []
+
+        # Use a separate Deferred for the ultimate result so that Deferred
+        # chaining can't interfere with its result.
+        result = defer.Deferred()
+        # Bundle up all the responses
+        result.addCallback(lambda toResponse: (fromResponse, toResponse))
+
+        def ebFrom(failure):
+            # Make sure the RNTO doesn't run if the RNFR failed.
+            self.popCommandQueue()
+            result.errback(failure)
+
+        # Save the RNFR response to pass to the result Deferred later
+        renameFrom.addCallbacks(fromResponse.extend, ebFrom)
+
+        # Hook up the RNTO to the result Deferred as well
+        renameTo.chainDeferred(result)
+
+        return result
+
+
     def list(self, path, protocol):
         """
         Retrieve a file listing into the given protocol instance.
@@ -2509,11 +2558,17 @@ class FTPClient(FTPClientBasic):
             return path
         return self.pwd().addCallback(cbParse)
 
+
     def quit(self):
         """
-        Issues the QUIT command.
+        Issues the I{QUIT} command.
+
+        @return: A L{Deferred} that fires when the server acknowledges the
+            I{QUIT} command.  The transport should not be disconnected until
+            this L{Deferred} fires.
         """
         return self.queueStringCommand('QUIT')
+
 
 
 class FTPFileListProtocol(basic.LineReceiver):

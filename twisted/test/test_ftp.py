@@ -1383,6 +1383,84 @@ class FTPClientTestCase(unittest.TestCase):
         return d
 
 
+    def test_renameFromTo(self):
+        """
+        L{ftp.FTPClient.rename} issues I{RNTO} and I{RNFR} commands and returns
+        a L{Deferred} which fires when a file has successfully been renamed.
+        """
+        self._testLogin()
+
+        d = self.client.rename("/spam", "/ham")
+        self.assertEqual(self.transport.value(), 'RNFR /spam\r\n')
+        self.transport.clear()
+
+        fromResponse = (
+            '350 Requested file action pending further information.\r\n')
+        self.client.lineReceived(fromResponse)
+        self.assertEqual(self.transport.value(), 'RNTO /ham\r\n')
+        toResponse = (
+            '250 Requested File Action Completed OK')
+        self.client.lineReceived(toResponse)
+
+        d.addCallback(self.assertEqual, ([fromResponse], [toResponse]))
+        return d
+
+
+    def test_renameFromToEscapesPaths(self):
+        """
+        L{ftp.FTPClient.rename} issues I{RNTO} and I{RNFR} commands with paths
+        escaped according to U{http://cr.yp.to/ftp/filesystem.html}.
+        """
+        self._testLogin()
+
+        fromFile = "/foo/ba\nr/baz"
+        toFile = "/qu\nux"
+        self.client.rename(fromFile, toFile)
+        self.client.lineReceived("350 ")
+        self.client.lineReceived("250 ")
+        self.assertEqual(
+            self.transport.value(),
+            "RNFR /foo/ba\x00r/baz\r\n"
+            "RNTO /qu\x00ux\r\n")
+
+
+    def test_renameFromToFailingOnFirstError(self):
+        """
+        The L{Deferred} returned by L{ftp.FTPClient.rename} is errbacked with
+        L{CommandFailed} if the I{RNFR} command receives an error response code
+        (for example, because the file does not exist).
+        """
+        self._testLogin()
+
+        d = self.client.rename("/spam", "/ham")
+        self.assertEqual(self.transport.value(), 'RNFR /spam\r\n')
+        self.transport.clear()
+
+        self.client.lineReceived('550 Requested file unavailable.\r\n')
+        # The RNTO should not execute since the RNFR failed.
+        self.assertEqual(self.transport.value(), '')
+
+        return self.assertFailure(d, ftp.CommandFailed)
+
+
+    def test_renameFromToFailingOnRenameTo(self):
+        """
+        The L{Deferred} returned by L{ftp.FTPClient.rename} is errbacked with
+        L{CommandFailed} if the I{RNTO} command receives an error response code
+        (for example, because the destination directory does not exist).
+        """
+        self._testLogin()
+
+        d = self.client.rename("/spam", "/ham")
+        self.assertEqual(self.transport.value(), 'RNFR /spam\r\n')
+        self.transport.clear()
+
+        self.client.lineReceived('350 Requested file action pending further information.\r\n')
+        self.assertEqual(self.transport.value(), 'RNTO /ham\r\n')
+        self.client.lineReceived('550 Requested file unavailable.\r\n')
+        return self.assertFailure(d, ftp.CommandFailed)
+
+
     def test_getDirectory(self):
         """
         Test the getDirectory method.
@@ -2265,4 +2343,3 @@ class FTPReadWriteTestCase(unittest.TestCase, IReadWriteTestsMixin):
         Return the content of the temporary file.
         """
         return self.root.child(self.filename).getContent()
-
