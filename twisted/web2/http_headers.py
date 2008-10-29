@@ -656,6 +656,17 @@ def parseRetryAfter(header):
 # WWW-Authenticate and Authorization
 
 def parseWWWAuthenticate(tokenized):
+    """
+    Parse I{Basic} and I{Digest} challenges out of a tokenized
+    I{WWW-Authenticate} header value.
+
+    @param tokenized: The result of C{tokenize(value, foldCase=False)} for the
+        value of the header.
+
+    @return: A C{list} of two-tuples.  The first element of each tuple is
+        C{'Basic'} or C{'Digest'}, depending on the type of challenge found.
+        The second element is a C{dict} giving the parameters of the challenge.
+    """
     comma = Token(',')
     space = Token(' ')
     equal = Token('=')
