@@ -76,6 +76,46 @@ class DomishTestCase(unittest.TestCase):
         self.assertEquals(e.hasAttribute("attrib2"), 0)
         self.assertEquals(e[("testns2", "attrib2")], "value2")
 
+
+    def test_elements(self):
+        """
+        Calling C{elements} without arguments on a L{domish.Element} returns
+        all child elements, whatever the qualfied name.
+        """
+        e = domish.Element((u"testns", u"foo"))
+        c1 = e.addElement(u"name")
+        c2 = e.addElement((u"testns2", u"baz"))
+        c3 = e.addElement(u"quux")
+        c4 = e.addElement((u"testns", u"name"))
+
+        elts = list(e.elements())
+
+        self.assertIn(c1, elts)
+        self.assertIn(c2, elts)
+        self.assertIn(c3, elts)
+        self.assertIn(c4, elts)
+
+
+    def test_elementsWithQN(self):
+        """
+        Calling C{elements} with a namespace and local name on a
+        L{domish.Element} returns all child elements with that qualified name.
+        """
+        e = domish.Element((u"testns", u"foo"))
+        c1 = e.addElement(u"name")
+        c2 = e.addElement((u"testns2", u"baz"))
+        c3 = e.addElement(u"quux")
+        c4 = e.addElement((u"testns", u"name"))
+
+        elts = list(e.elements(u"testns", u"name"))
+
+        self.assertIn(c1, elts)
+        self.assertNotIn(c2, elts)
+        self.assertNotIn(c3, elts)
+        self.assertIn(c4, elts)
+
+
+
 class DomishStreamTestsMixin:
     """
     Mixin defining tests for different stream implementations.

@@ -515,9 +515,26 @@ class Element(object):
         self.attributes["id"] = "H_%d" % Element._idCounter
         Element._idCounter = Element._idCounter + 1
 
-    def elements(self):
-        """ Iterate across all children of this Element that are Elements. """
-        return generateOnlyInterface(self.children, IElement)
+
+    def elements(self, uri=None, name=None):
+        """
+        Iterate across all children of this Element that are Elements.
+
+        Returns a generator over the child elements. If both the C{uri} and
+        C{name} parameters are set, the returned generator will only yield
+        on elements matching the qualified name.
+
+        @param uri: Optional element URI.
+        @type uri: C{unicode}
+        @param name: Optional element name.
+        @type name: C{unicode}
+        @return: Iterator that yields objects implementing L{IElement}.
+        """
+        if name is None:
+            return generateOnlyInterface(self.children, IElement)
+        else:
+            return generateElementsQNamed(self.children, name, uri)
+
 
     def toXml(self, prefixes=None, closeElement=1, defaultUri='',
                     prefixesInScope=None):
