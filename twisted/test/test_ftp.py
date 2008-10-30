@@ -13,7 +13,7 @@ import errno
 
 from zope.interface import implements
 
-from twisted.trial import unittest
+from twisted.trial import unittest, util
 from twisted.protocols import basic
 from twisted.internet import reactor, protocol, defer, error
 from twisted.internet.interfaces import IConsumer
@@ -29,6 +29,12 @@ class NonClosingStringIO(StringIO):
 
 StringIOWithoutClosing = NonClosingStringIO
 
+
+_changeDirectorySuppression = util.suppress(
+    category=DeprecationWarning,
+    message=(
+        r"FTPClient\.changeDirectory is deprecated in Twisted 8\.2 and "
+        r"newer\.  Use FTPClient\.cwd instead\."))
 
 
 class Dummy(basic.LineReceiver):
@@ -1337,6 +1343,25 @@ class FTPClientTestCase(unittest.TestCase):
         return d
 
 
+    def test_changeDirectoryDeprecated(self):
+        """
+        L{ftp.FTPClient.changeDirectory} is deprecated and the direct caller of
+        it is warned of this.
+        """
+        self._testLogin()
+        d = self.assertWarns(
+            DeprecationWarning,
+            "FTPClient.changeDirectory is deprecated in Twisted 8.2 and "
+            "newer.  Use FTPClient.cwd instead.",
+            __file__,
+            lambda: self.client.changeDirectory('.'))
+        # This is necessary to make the Deferred fire.  The Deferred needs
+        # to fire so that tearDown doesn't cause it to errback and fail this
+        # or (more likely) a later test.
+        self.client.lineReceived('250 success')
+        return d
+
+
     def test_changeDirectory(self):
         """
         Test the changeDirectory method.
@@ -1352,6 +1377,7 @@ class FTPClientTestCase(unittest.TestCase):
         self.assertEquals(self.transport.value(), 'CWD bar/foo\r\n')
         self.client.lineReceived('250 Requested File Action Completed OK')
         return d
+    test_changeDirectory.suppress = [_changeDirectorySuppression]
 
 
     def test_failedChangeDirectory(self):
@@ -1366,6 +1392,7 @@ class FTPClientTestCase(unittest.TestCase):
         self.assertEquals(self.transport.value(), 'CWD bar/foo\r\n')
         self.client.lineReceived('550 bar/foo: No such file or directory')
         return d
+    test_failedChangeDirectory.suppress = [_changeDirectorySuppression]
 
 
     def test_strangeFailedChangeDirectory(self):
@@ -1381,6 +1408,7 @@ class FTPClientTestCase(unittest.TestCase):
         self.assertEquals(self.transport.value(), 'CWD bar/foo\r\n')
         self.client.lineReceived('252 I do what I want !')
         return d
+    test_strangeFailedChangeDirectory.suppress = [_changeDirectorySuppression]
 
 
     def test_renameFromTo(self):
@@ -1547,6 +1575,66 @@ class FTPClientTestCase(unittest.TestCase):
         self.assertEquals(self.transport.value(), 'PWD\r\n')
         self.client.lineReceived('257 /bar/baz')
         return d
+
+
+    def test_removeFile(self):
+        """
+        L{ftp.FTPClient.removeFile} sends a I{DELE} command to the server for
+        the indicated file and returns a Deferred which fires after the server
+        sends a 250 response code.
+        """
+        self._testLogin()
+        d = self.client.removeFile("/tmp/test")
+        self.assertEquals(self.transport.value(), 'DELE /tmp/test\r\n')
+        response = '250 Requested file action okay, completed.'
+        self.client.lineReceived(response)
+        return d.addCallback(self.assertEqual, [response])
+
+
+    def test_failedRemoveFile(self):
+        """
+        If the server returns a response code other than 250 in response to a
+        I{DELE} sent by L{ftp.FTPClient.removeFile}, the L{Deferred} returned
+        by C{removeFile} is errbacked with a L{Failure} wrapping a
+        L{CommandFailed}.
+        """
+        self._testLogin()
+        d = self.client.removeFile("/tmp/test")
+        self.assertEquals(self.transport.value(), 'DELE /tmp/test\r\n')
+        response = '501 Syntax error in parameters or arguments.'
+        self.client.lineReceived(response)
+        d = self.assertFailure(d, ftp.CommandFailed)
+        d.addCallback(lambda exc: self.assertEqual(exc.args, ([response],)))
+        return d
+
+
+    def test_unparsableRemoveFileResponse(self):
+        """
+        If the server returns a response line which cannot be parsed, the
+        L{Deferred} returned by L{ftp.FTPClient.removeFile} is errbacked with a
+        L{BadResponse} containing the response.
+        """
+        self._testLogin()
+        d = self.client.removeFile("/tmp/test")
+        response = '765 blah blah blah'
+        self.client.lineReceived(response)
+        d = self.assertFailure(d, ftp.BadResponse)
+        d.addCallback(lambda exc: self.assertEqual(exc.args, ([response],)))
+        return d
+
+
+    def test_multilineRemoveFileResponse(self):
+        """
+        If the server returns multiple response lines, the L{Deferred} returned
+        by L{ftp.FTPClient.removeFile} is still fired with a true value if the
+        ultimate response code is 250.
+        """
+        self._testLogin()
+        d = self.client.removeFile("/tmp/test")
+        response = ['250-perhaps a progress report',
+                    '250 okay']
+        map(self.client.lineReceived, response)
+        return d.addCallback(self.assertTrue)
 
 
 

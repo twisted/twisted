@@ -18,6 +18,7 @@ import operator
 import stat
 import errno
 import fnmatch
+import warnings
 
 try:
     import pwd, grp
@@ -2507,18 +2508,19 @@ class FTPClient(FTPClientBasic):
         @param path: The path to which to change.
 
         @return: a L{Deferred} which will be called back when the directory
-            change has succeeded or and errbacked if an error occurrs.
+            change has succeeded or errbacked if an error occurrs.
         """
-        def cbParse(result):
-            try:
-                # The only valid code is 250
-                if int(result[0].split(' ', 1)[0]) == 250:
-                    return True
-                else:
-                    raise ValueError
-            except (IndexError, ValueError), e:
+        warnings.warn(
+            "FTPClient.changeDirectory is deprecated in Twisted 8.2 and "
+            "newer.  Use FTPClient.cwd instead.",
+            category=DeprecationWarning,
+            stacklevel=2)
+
+        def cbResult(result):
+            if result[-1][:3] != '250':
                 return failure.Failure(CommandFailed(result))
-        return self.cwd(path).addCallback(cbParse)
+            return True
+        return self.cwd(path).addCallback(cbResult)
 
 
     def makeDirectory(self, path):
@@ -2542,6 +2544,27 @@ class FTPClient(FTPClientBasic):
         return self.queueStringCommand('MKD ' + self.escapePath(path))
 
 
+    def removeFile(self, path):
+        """
+        Delete a file on the server.
+
+        L{removeFile} issues a I{DELE} command to the server to remove the
+        indicated file.  Note that this command cannot remove a directory.
+
+        @param path: The path to the file to delete. May be relative to the
+            current dir.
+        @type path: C{str}
+
+        @return: A L{Deferred} which fires when the server responds.  On error,
+            it is errbacked with either L{CommandFailed} or L{BadResponse}.  On
+            success, it is called back with a list of response lines.
+        @rtype: L{Deferred}
+
+        @since: 8.2
+        """
+        return self.queueStringCommand('DELE ' + self.escapePath(path))
+
+
     def cdup(self):
         """
         Issues the CDUP (Change Directory UP) command.
@@ -2549,6 +2572,7 @@ class FTPClient(FTPClientBasic):
         @return: a L{Deferred} that will be called when done.
         """
         return self.queueStringCommand('CDUP')
+
 
     def pwd(self):
         """
