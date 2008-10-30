@@ -2404,6 +2404,7 @@ class FTPClient(FTPClientBasic):
 
     stor = storeFile
 
+
     def rename(self, pathFrom, pathTo):
         """
         Rename a file.
@@ -2470,6 +2471,7 @@ class FTPClient(FTPClientBasic):
             path = ''
         return self.receiveFromConnection(['LIST ' + self.escapePath(path)], protocol)
 
+
     def nlst(self, path, protocol):
         """
         Retrieve a short file listing into the given protocol instance.
@@ -2485,6 +2487,7 @@ class FTPClient(FTPClientBasic):
             path = ''
         return self.receiveFromConnection(['NLST ' + self.escapePath(path)], protocol)
 
+
     def cwd(self, path):
         """
         Issues the CWD (Change Working Directory) command. It's also
@@ -2493,6 +2496,7 @@ class FTPClient(FTPClientBasic):
         @return: a L{Deferred} that will be called when done.
         """
         return self.queueStringCommand('CWD ' + self.escapePath(path))
+
 
     def changeDirectory(self, path):
         """
@@ -2515,6 +2519,28 @@ class FTPClient(FTPClientBasic):
             except (IndexError, ValueError), e:
                 return failure.Failure(CommandFailed(result))
         return self.cwd(path).addCallback(cbParse)
+
+
+    def makeDirectory(self, path):
+        """
+        Make a directory
+
+        This method issues the MKD command.
+
+        @param path: The path to the directory to create.
+        @type path: C{str}
+
+        @return: A L{Deferred} which fires when the server responds.  If the
+            directory is created, the L{Deferred} is called back with the
+            server response.  If the server response indicates the directory
+            was not created, the L{Deferred} is errbacked with a L{Failure}
+            wrapping L{CommandFailed} or L{BadResponse}.
+        @rtype: L{Deferred}
+
+        @since: 8.2
+        """
+        return self.queueStringCommand('MKD ' + self.escapePath(path))
+
 
     def cdup(self):
         """

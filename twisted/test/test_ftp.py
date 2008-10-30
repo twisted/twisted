@@ -1461,6 +1461,48 @@ class FTPClientTestCase(unittest.TestCase):
         return self.assertFailure(d, ftp.CommandFailed)
 
 
+    def test_makeDirectory(self):
+        """
+        L{ftp.FTPClient.makeDirectory} issues a I{MKD} command and returns a
+        L{Deferred} which is called back with the server's response if the
+        directory is created.
+        """
+        self._testLogin()
+
+        d = self.client.makeDirectory("/spam")
+        self.assertEquals(self.transport.value(), 'MKD /spam\r\n')
+        self.client.lineReceived('257 "/spam" created.')
+        return d.addCallback(self.assertEqual, ['257 "/spam" created.'])
+
+
+    def test_makeDirectoryPathEscape(self):
+        """
+        L{ftp.FTPClient.makeDirectory} escapes the path name it sends according
+        to U{http://cr.yp.to/ftp/filesystem.html}.
+        """
+        self._testLogin()
+        d = self.client.makeDirectory("/sp\nam")
+        self.assertEqual(self.transport.value(), 'MKD /sp\x00am\r\n')
+        # This is necessary to make the Deferred fire.  The Deferred needs
+        # to fire so that tearDown doesn't cause it to errback and fail this
+        # or (more likely) a later test.
+        self.client.lineReceived('257 win')
+        return d
+
+
+    def test_failedMakeDirectory(self):
+        """
+        L{ftp.FTPClient.makeDirectory} returns a L{Deferred} which is errbacked
+        with L{CommandFailed} if the server returns an error response code.
+        """
+        self._testLogin()
+
+        d = self.client.makeDirectory("/spam")
+        self.assertEquals(self.transport.value(), 'MKD /spam\r\n')
+        self.client.lineReceived('550 PERMISSION DENIED')
+        return self.assertFailure(d, ftp.CommandFailed)
+
+
     def test_getDirectory(self):
         """
         Test the getDirectory method.
