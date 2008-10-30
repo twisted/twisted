@@ -24,10 +24,6 @@ _setTimeoutSuppression = util.suppress(
             "support specific to the API you are using instead.",
     category=DeprecationWarning)
 
-_firstErrorSuppression = util.suppress(
-    message="FirstError.__getitem__ is deprecated.  Use attributes instead.",
-    category=DeprecationWarning)
-
 
 class DeferredTestCase(unittest.TestCase):
 
@@ -161,20 +157,6 @@ class DeferredTestCase(unittest.TestCase):
         self.failUnlessEqual(firstError.subFailure.type, GenericError)
         self.failUnlessEqual(firstError.subFailure.value.args, ("from def2",))
         self.failUnlessEqual(firstError.index, 1)
-
-
-    def test_indexingFirstError(self):
-        """
-        L{FirstError} behaves a little like a tuple, for backwards
-        compatibility.  Test that it can actually be indexed to retrieve
-        information about the failure.
-        """
-        subFailure = object()
-        index = object()
-        firstError = defer.FirstError(subFailure, index)
-        self.assertIdentical(firstError[0], firstError.subFailure)
-        self.assertIdentical(firstError[1], firstError.index)
-    test_indexingFirstError.suppress = [_firstErrorSuppression]
 
 
     def testDeferredListDontConsumeErrors(self):
@@ -445,6 +427,74 @@ class DeferredTestCase(unittest.TestCase):
             self.assertEqual(exception.args, (exceptionMessage,))
         deferred.addCallback(cbFailed)
         return deferred
+
+
+
+class FirstErrorTests(unittest.TestCase):
+    """
+    Tests for L{FirstError}.
+    """
+    def test_repr(self):
+        """
+        The repr of a L{FirstError} instance includes the repr of the value of
+        the sub-failure and the index which corresponds to the L{FirstError}.
+        """
+        exc = ValueError("some text")
+        try:
+            raise exc
+        except:
+            f = failure.Failure()
+
+        error = defer.FirstError(f, 3)
+        self.assertEqual(
+            repr(error),
+            "FirstError[#3, %s]" % (repr(exc),))
+
+
+    def test_str(self):
+        """
+        The str of a L{FirstError} instance includes the str of the
+        sub-failure and the index which corresponds to the L{FirstError}.
+        """
+        exc = ValueError("some text")
+        try:
+            raise exc
+        except:
+            f = failure.Failure()
+
+        error = defer.FirstError(f, 5)
+        self.assertEqual(
+            str(error),
+            "FirstError[#5, %s]" % (str(f),))
+
+
+    def test_comparison(self):
+        """
+        L{FirstError} instances compare equal to each other if and only if
+        their failure and index compare equal.  L{FirstError} instances do not
+        compare equal to instances of other types.
+        """
+        try:
+            1 / 0
+        except:
+            firstFailure = failure.Failure()
+
+        one = defer.FirstError(firstFailure, 13)
+        anotherOne = defer.FirstError(firstFailure, 13)
+
+        try:
+            raise ValueError("bar")
+        except:
+            secondFailure = failure.Failure()
+
+        another = defer.FirstError(secondFailure, 9)
+
+        self.assertTrue(one == anotherOne)
+        self.assertFalse(one == another)
+        self.assertTrue(one != another)
+        self.assertFalse(one != anotherOne)
+
+        self.assertFalse(one == 10)
 
 
 

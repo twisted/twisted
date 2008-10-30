@@ -414,42 +414,58 @@ class DebugInfo:
                 log.msg("(debug: " + debugInfo + ")", isError=True)
             log.err(self.failResult)
 
-class FirstError(Exception):
-    """First error to occur in a DeferredList if fireOnOneErrback is set.
 
-    @ivar subFailure: the L{Failure} that occurred.
-    @ivar index: the index of the Deferred in the DeferredList where it
-    happened.
+
+class FirstError(Exception):
+    """
+    First error to occur in a L{DeferredList} if C{fireOnOneErrback} is set.
+
+    @ivar subFailure: The L{Failure} that occurred.
+    @type subFailure: L{Failure}
+
+    @ivar index: The index of the L{Deferred} in the L{DeferredList} where
+        it happened.
+    @type index: C{int}
     """
     def __init__(self, failure, index):
+        Exception.__init__(self, failure, index)
         self.subFailure = failure
         self.index = index
 
+
     def __repr__(self):
-        return 'FirstError(%r, %d)' % (self.subFailure, self.index)
+        """
+        The I{repr} of L{FirstError} instances includes the repr of the
+        wrapped failure's exception and the index of the L{FirstError}.
+        """
+        return 'FirstError[#%d, %r]' % (self.index, self.subFailure.value)
+
 
     def __str__(self):
-        return repr(self)
+        """
+        The I{str} of L{FirstError} instances includes the I{str} of the
+        entire wrapped failure (including its traceback and exception) and
+        the index of the L{FirstError}.
+        """
+        return 'FirstError[#%d, %s]' % (self.index, self.subFailure)
 
-    def __getitem__(self, index):
-        warnings.warn("FirstError.__getitem__ is deprecated.  "
-                      "Use attributes instead.",
-                      category=DeprecationWarning, stacklevel=2)
-        return [self.subFailure, self.index][index]
 
-    def __getslice__(self, start, stop):
-        warnings.warn("FirstError.__getslice__ is deprecated.  "
-                      "Use attributes instead.",
-                      category=DeprecationWarning, stacklevel=2)
-        return [self.subFailure, self.index][start:stop]
+    def __cmp__(self, other):
+        """
+        Comparison between L{FirstError} and other L{FirstError} instances
+        is defined as the comparison of the index and sub-failure of each
+        instance.  L{FirstError} instances don't compare equal to anything
+        that isn't a L{FirstError} instance.
 
-    def __eq__(self, other):
-        if isinstance(other, tuple):
-            return tuple(self) == other
-        elif isinstance(other, FirstError):
-            return (self.subFailure == other.subFailure and
-                    self.index == other.index)
-        return False
+        @since: 8.2
+        """
+        if isinstance(other, FirstError):
+            return cmp(
+                (self.index, self.subFailure),
+                (other.index, other.subFailure))
+        return -1
+
+
 
 class DeferredList(Deferred):
     """I combine a group of deferreds into one callback.
