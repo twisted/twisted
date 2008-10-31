@@ -866,9 +866,10 @@ FXP_EXTENDED        = 200
 FXP_EXTENDED_REPLY  = 201
 
 FILEXFER_ATTR_SIZE        = 0x00000001
-FILEXFER_ATTR_OWNERGROUP  = 0x00000002
+FILEXFER_ATTR_UIDGID      = 0x00000002
+FILEXFER_ATTR_OWNERGROUP  = FILEXFER_ATTR_UIDGID
 FILEXFER_ATTR_PERMISSIONS = 0x00000004
-FILEXFER_ATTR_ACMODTIME   = 0x00000009
+FILEXFER_ATTR_ACMODTIME   = 0x00000008
 FILEXFER_ATTR_EXTENDED    = 0x80000000L
 
 FILEXFER_TYPE_REGULAR        = 1
@@ -895,9 +896,9 @@ FX_NO_CONNECTION               = 6
 FX_CONNECTION_LOST             = 7
 FX_OP_UNSUPPORTED              = 8
 FX_FILE_ALREADY_EXISTS         = 11
-# https://datatracker.ietf.org/idtracker/draft-ietf-secsh-filexfer/ defines
-# more useful error codes, but so far OpenSSH doesn't implement them.  We use
-# them internally for clarity, but for now define them all as FX_FAILURE to be
+# http://tools.ietf.org/wg/secsh/draft-ietf-secsh-filexfer/ defines more
+# useful error codes, but so far OpenSSH doesn't implement them.  We use them
+# internally for clarity, but for now define them all as FX_FAILURE to be
 # compatible with existing software.
 FX_NOT_A_DIRECTORY             = FX_FAILURE
 FX_FILE_IS_A_DIRECTORY         = FX_FAILURE
