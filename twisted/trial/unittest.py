@@ -613,6 +613,25 @@ class TestCase(_Assertions):
         cls._instancesRun = set()
     _initInstances = classmethod(_initInstances)
 
+    if sys.version_info >= (2, 6):
+        # Override the comparison defined by the base TestCase which considers
+        # instances of the same class with the same _testMethodName to be
+        # equal.  Since trial puts TestCase instances into a set, that
+        # definition of comparison makes it impossible to run the same test
+        # method twice.  Most likely, trial should stop using a set to hold
+        # tests, but until it does, this is necessary on Python 2.6.  Only
+        # __eq__ and __ne__ are required here, not __hash__, since the
+        # inherited __hash__ is compatible with these equality semantics.  A
+        # different __hash__ might be slightly more efficient (by reducing
+        # collisions), but who cares? -exarkun
+        def __eq__(self, other):
+            return self is other
+
+        def __ne__(self, other):
+            return self is not other
+
+
+
     def _isFirst(self):
         return len(self.__class__._instancesRun) == 0
 

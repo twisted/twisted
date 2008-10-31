@@ -209,6 +209,24 @@ class FactoryCounting(unittest.TestCase):
         self.failUnlessEqual(self.factory._setUpClassRun, 2)
         self.failUnlessEqual(self.factory._tearDownClassRun, 2)
 
+
+    def test_hashability(self):
+        """
+        In order for one test method to be runnable twice, two TestCase
+        instances with the same test method name must not compare as equal.
+        """
+        first = self.factory('test_1')
+        second = self.factory('test_1')
+        self.assertTrue(first == first)
+        self.assertTrue(first != second)
+        self.assertFalse(first == second)
+        # Just to make sure
+        container = {}
+        container[first] = None
+        container[second] = None
+        self.assertEqual(len(container), 2)
+
+
     def test_runMultipleCopies(self):
         tests = map(self.factory, ['test_1', 'test_1'])
         result = reporter.TestResult()
