@@ -653,11 +653,12 @@ class XmlStreamFactory(xmlstream.XmlStreamFactory):
 
 
 
-class XmlStreamServerFactory(xmlstream.XmlStreamFactoryMixin,
+class XmlStreamServerFactory(xmlstream.BootstrapMixin,
                              protocol.ServerFactory):
     """
     Factory for Jabber XmlStream objects as a server.
 
+    @since: 8.2.
     @ivar authenticatorFactory: Factory callable that takes no arguments, to
                                 create a fresh authenticator to be associated
                                 with the XmlStream.
@@ -666,7 +667,7 @@ class XmlStreamServerFactory(xmlstream.XmlStreamFactoryMixin,
     protocol = XmlStream
 
     def __init__(self, authenticatorFactory):
-        xmlstream.XmlStreamFactoryMixin.__init__(self)
+        xmlstream.BootstrapMixin.__init__(self)
         self.authenticatorFactory = authenticatorFactory
 
 
@@ -675,11 +676,13 @@ class XmlStreamServerFactory(xmlstream.XmlStreamFactoryMixin,
         Create an instance of XmlStream.
 
         A new authenticator instance will be created and passed to the new
-        XmlStream.
+        XmlStream. Registered bootstrap event observers are installed as well.
         """
         authenticator = self.authenticatorFactory()
-        self.args = (authenticator,)
-        return xmlstream.XmlStreamFactoryMixin.buildProtocol(self, addr)
+        xs = self.protocol(authenticator)
+        xs.factory = self
+        self.installBootstraps(xs)
+        return xs
 
 
 

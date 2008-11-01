@@ -5,7 +5,7 @@
 Tests for L{twisted.words.xish.xmlstream}.
 """
 
-from twisted.internet import defer, protocol
+from twisted.internet import protocol
 from twisted.trial import unittest
 from twisted.words.xish import utility, xmlstream
 
@@ -72,39 +72,107 @@ class DummyProtocol(protocol.Protocol, utility.EventDispatcher):
         utility.EventDispatcher.__init__(self)
 
 
-class XmlStreamFactoryMixinTest(unittest.TestCase):
 
-    def test_buildProtocol(self):
+class BootstrapMixinTest(unittest.TestCase):
+    """
+    Tests for L{xmlstream.BootstrapMixin}.
+
+    @ivar factory: Instance of the factory or mixin under test.
+    """
+
+    def setUp(self):
+        self.factory = xmlstream.BootstrapMixin()
+
+
+    def test_installBootstraps(self):
         """
-        Test building of protocol.
-
-        Arguments passed to Factory should be passed to protocol on
-        instantiation. Bootstrap observers should be setup.
+        Dispatching an event should fire registered bootstrap observers.
         """
-        d = defer.Deferred()
+        called = []
 
-        f = xmlstream.XmlStreamFactoryMixin(None, test=None)
-        f.protocol = DummyProtocol
-        f.addBootstrap('//event/myevent', d.callback)
-        xs = f.buildProtocol(None)
+        def cb(data):
+            called.append(data)
 
-        self.assertEquals(f, xs.factory)
-        self.assertEquals((None,), xs.args)
-        self.assertEquals({'test': None}, xs.kwargs)
-        xs.dispatch(None, '//event/myevent')
-        return d
+        dispatcher = DummyProtocol()
+        self.factory.addBootstrap('//event/myevent', cb)
+        self.factory.installBootstraps(dispatcher)
+
+        dispatcher.dispatch(None, '//event/myevent')
+        self.assertEquals(1, len(called))
+
 
     def test_addAndRemoveBootstrap(self):
         """
         Test addition and removal of a bootstrap event handler.
         """
-        def cb(self):
-            pass
 
-        f = xmlstream.XmlStreamFactoryMixin(None, test=None)
+        called = []
 
-        f.addBootstrap('//event/myevent', cb)
-        self.assertIn(('//event/myevent', cb), f.bootstraps)
+        def cb(data):
+            called.append(data)
 
-        f.removeBootstrap('//event/myevent', cb)
-        self.assertNotIn(('//event/myevent', cb), f.bootstraps)
+        self.factory.addBootstrap('//event/myevent', cb)
+        self.factory.removeBootstrap('//event/myevent', cb)
+
+        dispatcher = DummyProtocol()
+        self.factory.installBootstraps(dispatcher)
+
+        dispatcher.dispatch(None, '//event/myevent')
+        self.assertFalse(called)
+
+
+
+class GenericXmlStreamFactoryTestsMixin(BootstrapMixinTest):
+    """
+    Generic tests for L{XmlStream} factories.
+    """
+
+    def setUp(self):
+        self.factory = xmlstream.XmlStreamFactory()
+
+
+    def test_buildProtocolInstallsBootstraps(self):
+        """
+        The protocol factory installs bootstrap event handlers on the protocol.
+        """
+        called = []
+
+        def cb(data):
+            called.append(data)
+
+        self.factory.addBootstrap('//event/myevent', cb)
+
+        xs = self.factory.buildProtocol(None)
+        xs.dispatch(None, '//event/myevent')
+
+        self.assertEquals(1, len(called))
+
+
+    def test_buildProtocolStoresFactory(self):
+        """
+        The protocol factory is saved in the protocol.
+        """
+        xs = self.factory.buildProtocol(None)
+        self.assertIdentical(self.factory, xs.factory)
+
+
+
+class XmlStreamFactoryMixinTest(GenericXmlStreamFactoryTestsMixin):
+    """
+    Tests for L{xmlstream.XmlStreamFactoryMixin}.
+    """
+
+    def setUp(self):
+        self.factory = xmlstream.XmlStreamFactoryMixin(None, test=None)
+        self.factory.protocol = DummyProtocol
+
+
+    def test_buildProtocolFactoryArguments(self):
+        """
+        Arguments passed to the factory should be passed to protocol on
+        instantiation.
+        """
+        xs = self.factory.buildProtocol(None)
+
+        self.assertEquals((None,), xs.args)
+        self.assertEquals({'test': None}, xs.kwargs)

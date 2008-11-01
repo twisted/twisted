@@ -13,7 +13,7 @@ from twisted.internet import defer, task
 from twisted.internet.error import ConnectionLost
 from twisted.internet.interfaces import IProtocolFactory
 from twisted.test import proto_helpers
-from twisted.words.test.test_xmlstream import XmlStreamFactoryMixinTest
+from twisted.words.test.test_xmlstream import GenericXmlStreamFactoryTestsMixin
 from twisted.words.xish import domish
 from twisted.words.protocols.jabber import error, ijabber, jid, xmlstream
 
@@ -1185,7 +1185,7 @@ class StreamManagerTest(unittest.TestCase):
 
 
 
-class XmlStreamServerFactoryTest(XmlStreamFactoryMixinTest):
+class XmlStreamServerFactoryTest(GenericXmlStreamFactoryTestsMixin):
     """
     Tests for L{xmlstream.XmlStreamServerFactory}.
     """
@@ -1194,8 +1194,15 @@ class XmlStreamServerFactoryTest(XmlStreamFactoryMixinTest):
         """
         Set up a server factory with a authenticator factory function.
         """
+        class TestAuthenticator(object):
+            def __init__(self):
+                self.xmlstreams = []
+
+            def associateWithStream(self, xs):
+                self.xmlstreams.append(xs)
+
         def authenticatorFactory():
-            return xmlstream.Authenticator()
+            return TestAuthenticator()
 
         self.factory = xmlstream.XmlStreamServerFactory(authenticatorFactory)
 
@@ -1207,16 +1214,26 @@ class XmlStreamServerFactoryTest(XmlStreamFactoryMixinTest):
         verifyObject(IProtocolFactory, self.factory)
 
 
-    def test_buildProtocolOnce(self):
+    def test_buildProtocolAuthenticatorInstantiation(self):
         """
-        The authenticator factory should be passed to its protocol and it
-        should instantiate the authenticator and save it.
-        L{xmlstream.XmlStream}s do that, but we also want to ensure it really
-        is one.
+        The authenticator factory should be used to instantiate the
+        authenticator and pass it to the protocol.
+
+        The default protocol, L{XmlStream} stores the authenticator it is
+        passed, and calls its C{associateWithStream} method. so we use that to
+        check whether our authenticator factory is used and the protocol
+        instance gets an authenticator.
+        """
+        xs = self.factory.buildProtocol(None)
+        self.assertEquals([xs], xs.authenticator.xmlstreams)
+
+
+    def test_buildProtocolXmlStream(self):
+        """
+        The protocol factory creates Jabber XML Stream protocols by default.
         """
         xs = self.factory.buildProtocol(None)
         self.assertIsInstance(xs, xmlstream.XmlStream)
-        self.assertIsInstance(xs.authenticator, xmlstream.Authenticator)
 
 
     def test_buildProtocolTwice(self):
