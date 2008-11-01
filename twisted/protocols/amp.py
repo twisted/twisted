@@ -1839,8 +1839,9 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver):
         Notify L{boxReceiver} that it is about to receive boxes from this
         protocol by invoking L{startReceivingBoxes}.
         """
+        self.transport = transport
         self.boxReceiver.startReceivingBoxes(self)
-        Int16StringReceiver.makeConnection(self, transport)
+        self.connectionMade()
 
 
     def dataReceived(self, data):

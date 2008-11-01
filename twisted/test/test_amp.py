@@ -1,13 +1,18 @@
 # Copyright (c) 2005 Divmod, Inc.
-# Copyright (c) 2007 Twisted Matrix Laboratories.
+# Copyright (c) 2007-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
+
+"""
+Tests for L{twisted.protocols.amp}.
+"""
 
 from twisted.python import filepath
 from twisted.python.failure import Failure
 from twisted.protocols import amp
-from twisted.test import iosim
 from twisted.trial import unittest
 from twisted.internet import protocol, defer, error, reactor, interfaces
+from twisted.test import iosim
+from twisted.test.proto_helpers import StringTransport
 
 
 class TestProto(protocol.Protocol):
@@ -652,6 +657,9 @@ SWITCH_SERVER_DATA = 'No, really.  Success.'
 class BinaryProtocolTests(unittest.TestCase):
     """
     Tests for L{amp.BinaryBoxProtocol}.
+
+    @ivar _boxSender: After C{startReceivingBoxes} is called, the L{IBoxSender}
+        which was passed to it.
     """
 
     def setUp(self):
@@ -665,8 +673,10 @@ class BinaryProtocolTests(unittest.TestCase):
 
     def startReceivingBoxes(self, sender):
         """
-        Implement L{IBoxReceiver.startReceivingBoxes} to do nothing.
+        Implement L{IBoxReceiver.startReceivingBoxes} to just remember the
+        value passed in.
         """
+        self._boxSender = sender
 
 
     def ampBoxReceived(self, box):
@@ -694,6 +704,36 @@ class BinaryProtocolTests(unittest.TestCase):
 
     def write(self, data):
         self.data.append(data)
+
+
+    def test_startReceivingBoxes(self):
+        """
+        When L{amp.BinaryBoxProtocol} is connected to a transport, it calls
+        C{startReceivingBoxes} on its L{IBoxReceiver} with itself as the
+        L{IBoxSender} parameter.
+        """
+        protocol = amp.BinaryBoxProtocol(self)
+        protocol.makeConnection(None)
+        self.assertIdentical(self._boxSender, protocol)
+
+
+    def test_sendBoxInStartReceivingBoxes(self):
+        """
+        The L{IBoxReceiver} which is started when L{amp.BinaryBoxProtocol} is
+        connected to a transport can call C{sendBox} on the L{IBoxSender}
+        passed to it before C{startReceivingBoxes} returns and have that box
+        sent.
+        """
+        class SynchronouslySendingReceiver:
+            def startReceivingBoxes(self, sender):
+                sender.sendBox(amp.Box({'foo': 'bar'}))
+
+        transport = StringTransport()
+        protocol = amp.BinaryBoxProtocol(SynchronouslySendingReceiver())
+        protocol.makeConnection(transport)
+        self.assertEqual(
+            transport.value(),
+            '\x00\x03foo\x00\x03bar\x00\x00')
 
 
     def test_receiveBoxStateMachine(self):
