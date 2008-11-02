@@ -384,12 +384,16 @@ class FileLogObserver:
 
         tzOffset = -self.getTimezoneOffset(when)
         when = datetime.utcfromtimestamp(when + tzOffset)
-        tzHour = int(tzOffset / 60 / 60)
-        tzMin = int(tzOffset / 60 % 60)
-        return '%d-%02d-%02d %02d:%02d:%02d%+03d%02d' % (
+        tzHour = abs(int(tzOffset / 60 / 60))
+        tzMin = abs(int(tzOffset / 60 % 60))
+        if tzOffset < 0:
+            tzSign = '-'
+        else:
+            tzSign = '+'
+        return '%d-%02d-%02d %02d:%02d:%02d%s%02d%02d' % (
             when.year, when.month, when.day,
             when.hour, when.minute, when.second,
-            tzHour, tzMin)
+            tzSign, tzHour, tzMin)
 
     def emit(self, eventDict):
         text = textFromEventDict(eventDict)

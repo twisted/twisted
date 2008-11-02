@@ -341,6 +341,15 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
         self.flo.getTimezoneOffset = lambda when: -5400
         self.assertEquals(self.flo.formatTime(when), '2001-02-03 05:35:06+0130')
 
+        # Test an offset which is between 0 and 60 minutes to make sure the
+        # sign comes out properly in that case.
+        self.flo.getTimezoneOffset = lambda when: 1800
+        self.assertEquals(self.flo.formatTime(when), '2001-02-03 03:35:06-0030')
+
+        # Test an offset between 0 and 60 minutes in the other direction.
+        self.flo.getTimezoneOffset = lambda when: -1800
+        self.assertEquals(self.flo.formatTime(when), '2001-02-03 04:35:06+0030')
+
         # If a strftime-format string is present on the logger, it should
         # use that instead.  Note we don't assert anything about day, hour
         # or minute because we cannot easily control what time.strftime()
