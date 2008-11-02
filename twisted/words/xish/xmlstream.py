@@ -16,7 +16,6 @@ usable. See Twisted Words for Jabber specific protocol support.
 Maintainer: Ralph Meijer
 """
 
-from twisted.python import failure
 from twisted.internet import protocol
 from twisted.words.xish import domish, utility
 
@@ -74,7 +73,7 @@ class XmlStream(protocol.Protocol, utility.EventDispatcher):
                 self.rawDataInFn(data)
             self.stream.parse(data)
         except domish.ParserError:
-            self.dispatch(failure.Failure(), STREAM_ERROR_EVENT)
+            self.dispatch(self, STREAM_ERROR_EVENT)
             self.transport.loseConnection()
 
     def connectionLost(self, reason):

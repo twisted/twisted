@@ -20,12 +20,6 @@ NewTwistedWords = ServiceMaker(
     "A modern words server",
     "words")
 
-TwistedXMPPRouter = ServiceMaker(
-    "XMPP Router",
-    "twisted.words.xmpproutertap",
-    "An XMPP Router server",
-    "xmpp-router")
-
 class RelayChatInterface(object):
     classProvides(IPlugin, iwords.IProtocolPlugin)
 

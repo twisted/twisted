@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -7,76 +7,53 @@ Tests for L{twisted.words.xish.xmlstream}.
 
 from twisted.internet import protocol
 from twisted.trial import unittest
-from twisted.words.xish import domish, utility, xmlstream
+from twisted.words.xish import utility, xmlstream
 
 class XmlStreamTest(unittest.TestCase):
     def setUp(self):
+        self.errorOccurred = False
+        self.streamStarted = False
+        self.streamEnded = False
         self.outlist = []
         self.xmlstream = xmlstream.XmlStream()
         self.xmlstream.transport = self
         self.xmlstream.transport.write = self.outlist.append
 
-
+    # Auxilary methods
     def loseConnection(self):
-        """
-        Stub loseConnection because we are a transport.
-        """
         self.xmlstream.connectionLost("no reason")
 
+    def streamStartEvent(self, rootelem):
+        self.streamStarted = True
 
-    def test_send(self):
-        """
-        Sending data should result into it being written to the transport.
-        """
-        self.xmlstream.connectionMade()
-        self.xmlstream.send("<root>")
+    def streamErrorEvent(self, errelem):
+        self.errorOccurred = True
+
+    def streamEndEvent(self, _):
+        self.streamEnded = True
+
+    def testBasicOp(self):
+        xs = self.xmlstream
+        xs.addObserver(xmlstream.STREAM_START_EVENT,
+                       self.streamStartEvent)
+        xs.addObserver(xmlstream.STREAM_ERROR_EVENT,
+                       self.streamErrorEvent)
+        xs.addObserver(xmlstream.STREAM_END_EVENT,
+                       self.streamEndEvent)
+
+        # Go...
+        xs.connectionMade()
+        xs.send("<root>")
         self.assertEquals(self.outlist[0], "<root>")
 
+        xs.dataReceived("<root>")
+        self.assertEquals(self.streamStarted, True)
 
-    def test_receiveRoot(self):
-        """
-        Receiving the starttag of the root element results in stream start.
-        """
-        streamStarted = []
-
-        def streamStartEvent(rootelem):
-            streamStarted.append(None)
-
-        self.xmlstream.addObserver(xmlstream.STREAM_START_EVENT,
-                                   streamStartEvent)
-        self.xmlstream.connectionMade()
-        self.xmlstream.dataReceived("<root>")
-        self.assertEquals(1, len(streamStarted))
-
-
-    def test_receiveBadXML(self):
-        """
-        Receiving malformed XML should result in in error.
-        """
-        streamError = []
-        streamEnd = []
-
-        def streamErrorEvent(reason):
-            streamError.append(reason)
-
-        def streamEndEvent(_):
-            streamEnd.append(None)
-
-        self.xmlstream.addObserver(xmlstream.STREAM_ERROR_EVENT,
-                                   streamErrorEvent)
-        self.xmlstream.addObserver(xmlstream.STREAM_END_EVENT,
-                                   streamEndEvent)
-        self.xmlstream.connectionMade()
-
-        self.xmlstream.dataReceived("<root>")
-        self.assertEquals(0, len(streamError))
-        self.assertEquals(0, len(streamEnd))
-
-        self.xmlstream.dataReceived("<child><unclosed></child>")
-        self.assertEquals(1, len(streamError))
-        self.assertTrue(streamError[0].check(domish.ParserError))
-        self.assertEquals(1, len(streamEnd))
-
+        self.assertEquals(self.errorOccurred, False)
+        self.assertEquals(self.streamEnded, False)
+        xs.dataReceived("<child><unclosed></child>")
+        self.assertEquals(self.errorOccurred, True)
+        self.assertEquals(self.streamEnded, True)
 
 
 class DummyProtocol(protocol.Protocol, utility.EventDispatcher):

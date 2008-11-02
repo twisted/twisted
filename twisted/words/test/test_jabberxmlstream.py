@@ -428,7 +428,7 @@ class TestError(Exception):
 
 class AuthenticatorTest(unittest.TestCase):
     def setUp(self):
-        self.authenticator = xmlstream.Authenticator()
+        self.authenticator = xmlstream.ListenAuthenticator()
         self.xmlstream = xmlstream.XmlStream(self.authenticator)
 
 
@@ -445,9 +445,9 @@ class AuthenticatorTest(unittest.TestCase):
                          "version='1.0'>")
         self.assertEqual((1, 0), xs.version)
         self.assertIdentical(None, xs.sid)
-        self.assertEqual('invalid', xs.namespace)
+        self.assertEqual('jabber:client', xs.namespace)
         self.assertIdentical(None, xs.otherEntity)
-        self.assertEqual(None, xs.thisEntity)
+        self.assertEqual('example.com', xs.thisEntity.host)
 
 
     def test_streamStartLegacy(self):
@@ -582,14 +582,12 @@ class ListenAuthenticatorTest(unittest.TestCase):
         """
         xs = self.xmlstream
         xs.makeConnection(proto_helpers.StringTransport())
-        self.assertIdentical(None, xs.sid)
         xs.dataReceived("<stream:stream xmlns='jabber:client' "
                          "xmlns:stream='http://etherx.jabber.org/streams' "
                          "from='example.org' to='example.com' id='12345' "
                          "version='1.0'>")
         self.assertEqual((1, 0), xs.version)
-        self.assertNotIdentical(None, xs.sid)
-        self.assertNotEquals('12345', xs.sid)
+        self.assertIdentical(None, xs.sid)
         self.assertEqual('jabber:client', xs.namespace)
         self.assertIdentical(None, xs.otherEntity)
         self.assertEqual('example.com', xs.thisEntity.host)
