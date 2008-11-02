@@ -13,7 +13,7 @@ from twisted.trial import unittest
 from twisted.cred import credentials, checkers, error, strcred
 from twisted.plugins import cred_file, cred_anonymous
 from twisted.python import usage
-
+from twisted.python.filepath import FilePath
 
 try:
     import crypt
@@ -263,7 +263,7 @@ class TestFileDBChecker(unittest.TestCase):
         self.badPass = credentials.UsernamePassword('alice', 'foobar')
         self.badUser = credentials.UsernamePassword('x', 'yz')
         self.filename = self.mktemp()
-        file(self.filename, 'w').write('admin:asdf\nalice:foo\n')
+        FilePath(self.filename).setContent('admin:asdf\nalice:foo\n')
         self.checker = strcred.makeChecker('file:' + self.filename)
 
 
