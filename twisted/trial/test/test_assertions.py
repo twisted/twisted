@@ -1,7 +1,11 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details
 
-import StringIO, warnings
+"""
+Tests for assertions provided by L{twisted.trial.unittest.TestCase}.
+"""
+
+import warnings, StringIO
 from pprint import pformat
 
 from twisted.python import reflect, failure
@@ -10,7 +14,6 @@ from twisted.python.versions import Version
 from twisted.python.util import dsu
 from twisted.internet import defer
 from twisted.trial import unittest, runner, reporter
-
 
 class MockEquality(object):
     def __init__(self, name):
@@ -406,6 +409,31 @@ class TestAssertions(unittest.TestCase):
             deprecated, 123)
 
 
+    def test_assertWarnsWrongFile(self):
+        """
+        If the warning emitted by a function refers to a different file than is
+        passed to C{assertWarns}, C{failureException} is raised.
+        """
+        def deprecated(a):
+            # stacklevel=2 points at the direct caller of the function.  The
+            # way assertRaises is invoked below, the direct caller will be
+            # something somewhere in trial, not something in this file.  In
+            # Python 2.5 and earlier, stacklevel of 0 resulted in a warning
+            # pointing to the warnings module itself.  Starting in Python 2.6,
+            # stacklevel of 0 and 1 both result in a warning pointing to *this*
+            # file, presumably due to the fact that the warn function is
+            # implemented in C and has no convenient Python
+            # filename/linenumber.
+            warnings.warn(
+                "Foo deprecated", category=DeprecationWarning, stacklevel=2)
+        self.assertRaises(
+            self.failureException,
+            # Since the direct caller isn't in this file, try to assert that
+            # the warning *does* point to this file, so that assertWarns raises
+            # an exception.
+            self.assertWarns, DeprecationWarning, "Foo deprecated", __file__,
+            deprecated, 123)
+
     def test_assertWarnsOnClass(self):
         """
         Test asserWarns works when creating a class instance.
@@ -469,25 +497,16 @@ class TestAssertions(unittest.TestCase):
 
     def test_assertWarnsMultipleWarnings(self):
         """
-        Check that assertWarns is able to handle multiple warnings produced by
-        the same function.
+        C{assertWarns} does not raise an exception if the function it is passed
+        triggers the same warning more than once.
         """
-        i = [0]
-        def deprecated(a):
-            # the stacklevel is important here, because as the function is
-            # recursive, the warnings produced have a different stack, but we
-            # want to be sure that only the first warning is tested against
-            warnings.warn("Woo deprecated",
-                category=PendingDeprecationWarning,
-                stacklevel=2)
-            i[0] += 1
-            if i[0] < 3:
-                return deprecated(a)
-            else:
-                return a
-        r = self.assertWarns(PendingDeprecationWarning, "Woo deprecated",
-            unittest.__file__, deprecated, 123)
-        self.assertEquals(r, 123)
+        def deprecated():
+            warnings.warn("Woo deprecated", category=PendingDeprecationWarning)
+        def f():
+            deprecated()
+            deprecated()
+        self.assertWarns(
+            PendingDeprecationWarning, "Woo deprecated", __file__, f)
 
 
     def test_assertWarnsDifferentWarnings(self):
@@ -502,6 +521,22 @@ class TestAssertions(unittest.TestCase):
                 self.assertWarns, DeprecationWarning, "Woo deprecated",
                 __file__, deprecated, 123)
         self.assertEquals(str(e), "Can't handle different warnings")
+
+
+    def test_assertWarnsAfterUnassertedWarning(self):
+        """
+        Warnings emitted before L{TestCase.assertWarns} is called do not get
+        flushed and do not alter the behavior of L{TestCase.assertWarns}.
+        """
+        class TheWarning(Warning):
+            pass
+
+        def f(message):
+            warnings.warn(message, category=TheWarning)
+        f("foo")
+        self.assertWarns(TheWarning, "bar", __file__, f, "bar")
+        [warning] = self.flushWarnings([f])
+        self.assertEqual(warning['message'], "foo")
 
 
     def test_assertIsInstance(self):
@@ -619,7 +654,7 @@ class TestAssertionNames(unittest.TestCase):
 
 class TestCallDeprecated(unittest.TestCase):
     """
-    Test the L{TestCase.callDeprecated} method.
+    Test use of the L{TestCase.callDeprecated} method with version objects.
     """
 
     version = Version('Twisted', 8, 0, 0)
@@ -636,12 +671,9 @@ class TestCallDeprecated(unittest.TestCase):
         callDeprecated calls a deprecated callable, suppressing the
         deprecation warning.
         """
-        warningsShown = []
-        def warnExplicit(*args):
-            warningsShown.append(args)
-        self.patch(warnings, 'warn_explicit', warnExplicit)
         self.callDeprecated(self.version, self.oldMethod, 'foo')
-        self.assertEqual([], warningsShown, "No warnings should be shown")
+        self.assertEqual(
+            self.flushWarnings(), [], "No warnings should be shown")
 
 
     def test_callDeprecatedCallsFunction(self):
@@ -695,6 +727,12 @@ class TestCallDeprecated(unittest.TestCase):
         nestedDeprecation = deprecated(differentVersion)(nestedDeprecation)
 
         self.callDeprecated(differentVersion, nestedDeprecation, 24)
+
+        # The oldMethod deprecation should have been emitted too, not captured
+        # by callDeprecated.  Flush it now to make sure it did happen and to
+        # prevent it from showing up on stdout.
+        warningsShown = self.flushWarnings()
+        self.assertEqual(len(warningsShown), 1)
 
 TestCallDeprecated.oldMethod = deprecated(TestCallDeprecated.version)(
     TestCallDeprecated.oldMethod)

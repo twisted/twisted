@@ -11,6 +11,7 @@ Tests for L{twisted.trial.reporter}.
 import errno, sys, os, re, StringIO
 
 from twisted.internet.utils import suppressWarnings
+from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.trial import itrial, unittest, runner, reporter, util
 from twisted.trial.reporter import UncleanWarningsReporterWrapper
@@ -818,7 +819,8 @@ class TestReporter(unittest.TestCase):
         from twisted.trial.test import sample
         self.test = sample.FooTest('test_foo')
         self.stream = StringIO.StringIO()
-        self.result = self.resultFactory(self.stream)
+        self.publisher = log.LogPublisher()
+        self.result = self.resultFactory(self.stream, publisher=self.publisher)
         self._timer = 0
         self.result._getTime = self._getTime
 
@@ -922,6 +924,85 @@ class TestReporter(unittest.TestCase):
         self.assertWarns(
             DeprecationWarning, "upDownError is deprecated in Twisted 8.0.",
             __file__, f)
+
+
+    def test_warning(self):
+        """
+        L{reporter.Reporter} observes warnings emitted by the Twisted log
+        system and writes them to its output stream.
+        """
+        message = RuntimeWarning("some warning text")
+        category = 'exceptions.RuntimeWarning'
+        filename = "path/to/some/file.py"
+        lineno = 71
+        self.publisher.msg(
+            warning=message, category=category,
+            filename=filename, lineno=lineno)
+        self.assertEqual(
+            self.stream.getvalue(),
+            "%s:%d: %s: %s\n" % (
+                filename, lineno, category.split('.')[-1], message))
+
+
+
+    def test_duplicateWarningSuppressed(self):
+        """
+        A warning emitted twice within a single test is only written to the
+        stream once.
+        """
+        # Emit the warning and assert that it shows up
+        self.test_warning()
+        # Emit the warning again and assert that the stream still only has one
+        # warning on it.
+        self.test_warning()
+
+
+    def test_warningEmittedForNewTest(self):
+        """
+        A warning emitted again after a new test has started is written to the
+        stream again.
+        """
+        test = self.__class__('test_warningEmittedForNewTest')
+        self.result.startTest(test)
+
+        # Clear whatever startTest wrote to the stream
+        self.stream.seek(0)
+        self.stream.truncate()
+
+        # Emit a warning (and incidentally, assert that it was emitted)
+        self.test_warning()
+
+        # Clean up from the first warning to simplify the rest of the
+        # assertions.
+        self.stream.seek(0)
+        self.stream.truncate()
+
+        # Stop the first test and start another one (it just happens to be the
+        # same one, but that doesn't matter)
+        self.result.stopTest(test)
+        self.result.startTest(test)
+
+        # Clean up the stopTest/startTest output
+        self.stream.seek(0)
+        self.stream.truncate()
+
+        # Emit the warning again and make sure it shows up
+        self.test_warning()
+
+
+    def test_stopObserving(self):
+        """
+        L{reporter.Reporter} stops observing log events when its C{done} method
+        is called.
+        """
+        self.result.done()
+        self.stream.seek(0)
+        self.stream.truncate()
+        self.publisher.msg(
+            warning=RuntimeWarning("some message"),
+            category='exceptions.RuntimeWarning',
+            filename="file/name.py", lineno=17)
+        self.assertEqual(self.stream.getvalue(), "")
 
 
 

@@ -1,13 +1,17 @@
 # -*- test-case-name: twisted.trial.test.test_tests -*-
+# Copyright (c) 2008 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Test cases used to make sure that warning supression works at the module,
+method, and class levels.
+"""
 
 import warnings
 
 from twisted.trial import unittest, util
 
 
-""" test to make sure that warning supression works at the module, method, and
-class levels
-"""
 
 METHOD_WARNING_MSG = "method warning message"
 CLASS_WARNING_MSG = "class warning message"
@@ -23,13 +27,10 @@ class ModuleWarning(Warning):
     pass
 
 class EmitMixin:
-    __counter = 0
-
     def _emit(self):
-        warnings.warn(METHOD_WARNING_MSG + '_%s' % (EmitMixin.__counter), MethodWarning)
-        warnings.warn(CLASS_WARNING_MSG + '_%s' % (EmitMixin.__counter), ClassWarning)
-        warnings.warn(MODULE_WARNING_MSG + '_%s' % (EmitMixin.__counter), ModuleWarning)
-        EmitMixin.__counter += 1
+        warnings.warn(METHOD_WARNING_MSG, MethodWarning)
+        warnings.warn(CLASS_WARNING_MSG, ClassWarning)
+        warnings.warn(MODULE_WARNING_MSG, ModuleWarning)
 
 
 class TestSuppression(unittest.TestCase, EmitMixin):
@@ -45,7 +46,7 @@ class TestSuppression(unittest.TestCase, EmitMixin):
     testOverrideSuppressClass.suppress = []
 
 TestSuppression.suppress = [util.suppress(message=CLASS_WARNING_MSG)]
-                            
+
 
 class TestSuppression2(unittest.TestCase, EmitMixin):
     def testSuppressModule(self):

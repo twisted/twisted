@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -33,7 +33,7 @@ class TestRunners(unittest.TestCase):
         """
         return self.assertWarns(
             DeprecationWarning, "DocTestSuite is deprecated in Twisted 8.0.",
-            __file__, runner.DocTestSuite, mockdoctest)
+            __file__, lambda: runner.DocTestSuite(mockdoctest))
 
 
     def test_correctCount(self):

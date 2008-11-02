@@ -604,8 +604,10 @@ class EqualityTests(unittest.TestCase):
 class RunAsEffectiveUserTests(unittest.TestCase):
     """
     Test for the L{util.runAsEffectiveUser} function.
-
     """
+
+    if getattr(os, "geteuid", None) is None:
+        skip = "geteuid/seteuid not available"
 
     def setUp(self):
         self.mockos = MockOS()
@@ -711,8 +713,3 @@ class RunAsEffectiveUserTests(unittest.TestCase):
         self._testUIDGIDSwitch(1, 1, 2, 1, [0, 2, 0, 1], [])
         self._testUIDGIDSwitch(1, 1, 1, 2, [0, 1, 0, 1], [2, 1])
         self._testUIDGIDSwitch(1, 1, 2, 2, [0, 2, 0, 1], [2, 1])
-
-
-
-if getattr(os, "geteuid", None) is None:
-    RunAsEffectiveUserTests.skip = "geteuid/seteuid not available"

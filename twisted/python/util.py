@@ -2,7 +2,7 @@
 # Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import os, sys, hmac, errno, new, inspect
+import os, sys, hmac, errno, new, inspect, warnings
 try:
     import pwd, grp
 except ImportError:
@@ -317,7 +317,6 @@ def getPassword(prompt = 'Password: ', confirm = 0, forceTTY = 0,
 
 
 def dict(*a, **k):
-    import warnings
     import __builtin__
     warnings.warn('twisted.python.util.dict is deprecated.  Use __builtin__.dict instead')
     return __builtin__.dict(*a, **k)

@@ -13,6 +13,7 @@ import sys, os
 import time
 import warnings
 
+from twisted.python.compat import set
 from twisted.python import reflect, log
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
@@ -297,10 +298,20 @@ class _AdaptedReporter(TestResultDecorator):
 class Reporter(TestResult):
     """
     A basic L{TestResult} with support for writing to a stream.
-    
-    @param _startTime: The time when the first test was started. It defaults to
+
+    @ivar _startTime: The time when the first test was started. It defaults to
         C{None}, which means that no test was actually launched.
     @type _startTime: C{float} or C{NoneType}
+
+    @ivar _warningCache: A C{set} of tuples of warning message (file, line,
+        text, category) which have already been written to the output stream
+        during the currently executing test.  This is used to avoid writing
+        duplicates of the same warning to the output stream.
+    @type _warningCache: C{set}
+
+    @ivar _publisher: The log publisher which will be observed for warning
+        events.
+    @type _publisher: L{LogPublisher} (or another type sufficiently similar)
     """
 
     implements(itrial.IReporter)
@@ -308,24 +319,51 @@ class Reporter(TestResult):
     _separator = '-' * 79
     _doubleSeparator = '=' * 79
 
-    def __init__(self, stream=sys.stdout, tbformat='default', realtime=False):
+    def __init__(self, stream=sys.stdout, tbformat='default', realtime=False,
+                 publisher=None):
         super(Reporter, self).__init__()
         self._stream = SafeStream(stream)
         self.tbformat = tbformat
         self.realtime = realtime
         self._startTime = None
+        self._warningCache = set()
+
+        # Start observing log events so as to be able to report warnings.
+        self._publisher = publisher
+        if publisher is not None:
+            publisher.addObserver(self._observeWarnings)
+
+
+    def _observeWarnings(self, event):
+        """
+        Observe warning events and write them to C{self._stream}.
+
+        This method is a log observer which will be registered with
+        C{self._publisher.addObserver}.
+
+        @param event: A C{dict} from the logging system.  If it has a
+            C{'warning'} key, a logged warning will be extracted from it and
+            possibly written to C{self.stream}.
+        """
+        if 'warning' in event:
+            key = (event['filename'], event['lineno'],
+                   event['category'].split('.')[-1],
+                   str(event['warning']))
+            if key not in self._warningCache:
+                self._warningCache.add(key)
+                self._stream.write('%s:%s: %s: %s\n' % key)
 
 
     def stream(self):
         warnings.warn("stream is deprecated in Twisted 8.0.",
-                      category=DeprecationWarning, stacklevel=4)
+                      category=DeprecationWarning, stacklevel=2)
         return self._stream
     stream = property(stream)
 
 
     def separator(self):
         warnings.warn("separator is deprecated in Twisted 8.0.",
-                      category=DeprecationWarning, stacklevel=4)
+                      category=DeprecationWarning, stacklevel=2)
         return self._separator
     separator = property(separator)
 
@@ -333,13 +371,14 @@ class Reporter(TestResult):
     def startTest(self, test):
         """
         Called when a test begins to run. Records the time when it was first
-        called.
+        called and resets the warning cache.
 
         @param test: L{ITestCase}
         """
         super(Reporter, self).startTest(test)
         if self._startTime is None:
             self._startTime = self._getTime()
+        self._warningCache = set()
 
 
     def addFailure(self, test, fail):
@@ -588,6 +627,8 @@ class Reporter(TestResult):
         Expects that L{_printErrors}, L{_writeln}, L{_write}, L{_printSummary}
         and L{_separator} are all implemented.
         """
+        if self._publisher is not None:
+            self._publisher.removeObserver(self._observeWarnings)
         self._printErrors()
         self._writeln(self._separator)
         if self._startTime is not None:
@@ -864,8 +905,8 @@ class TreeReporter(Reporter):
     TODONE = 'red'
     SUCCESS = 'green'
 
-    def __init__(self, stream=sys.stdout, tbformat='default', realtime=False):
-        super(TreeReporter, self).__init__(stream, tbformat, realtime)
+    def __init__(self, stream=sys.stdout, *args, **kwargs):
+        super(TreeReporter, self).__init__(stream, *args, **kwargs)
         self._lastTest = []
         for colorizer in [_Win32Colorizer, _AnsiColorizer, _NullColorizer]:
             if colorizer.supported(stream):

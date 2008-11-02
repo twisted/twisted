@@ -9,8 +9,8 @@ Maintainer: Jonathan Lange
 """
 
 
-import doctest
-import os, warnings, sys, tempfile, gc
+import doctest, inspect
+import os, warnings, sys, tempfile, gc, types
 from pprint import pformat
 
 from twisted.internet import defer, utils
@@ -100,6 +100,80 @@ def makeTodo(value):
         except TypeError:
             errors = [errors]
         return Todo(reason=reason, errors=errors)
+
+
+
+class _Warning(object):
+    """
+    A L{_Warning} instance represents one warning emitted through the Python
+    warning system (L{warnings}).  This is used to insulate callers of
+    L{_collectWarnings} from changes to the Python warnings system which might
+    otherwise require changes to the warning objects that function passes to
+    the observer object it accepts.
+
+    @ivar message: The string which was passed as the message parameter to
+        L{warnings.warn}.
+
+    @ivar category: The L{Warning} subclass which was passed as the category
+        parameter to L{warnings.warn}.
+
+    @ivar filename: The name of the file containing the definition of the code
+        object which was C{stacklevel} frames above the call to
+        L{warnings.warn}, where C{stacklevel} is the value of the C{stacklevel}
+        parameter passed to L{warnings.warn}.
+
+    @ivar lineno: The source line associated with the active instruction of the
+        code object object which was C{stacklevel} frames above the call to
+        L{warnings.warn}, where C{stacklevel} is the value of the C{stacklevel}
+        parameter passed to L{warnings.warn}.
+    """
+    def __init__(self, message, category, filename, lineno):
+        self.message = message
+        self.category = category
+        self.filename = filename
+        self.lineno = lineno
+
+
+
+def _collectWarnings(observeWarning, f, *args, **kwargs):
+    """
+    Call C{f} with C{args} positional arguments and C{kwargs} keyword arguments
+    and collect all warnings which are emitted as a result in a list.
+
+    @param observeWarning: A callable which will be invoked with a L{_Warning}
+        instance each time a warning is emitted.
+
+    @return: The return value of C{f(*args, **kwargs)}.
+    """
+    def showWarning(message, category, filename, lineno, file=None, line=None):
+        assert isinstance(message, Warning)
+        observeWarning(_Warning(
+                message.args[0], category, filename, lineno))
+
+    # Disable the per-module cache for every module otherwise if the warning
+    # which the caller is expecting us to collect was already emitted it won't
+    # be re-emitted by the call to f which happens below.
+    for v in sys.modules.itervalues():
+        if v is not None:
+            try:
+                v.__warningregistry__ = None
+            except:
+                # Don't specify a particular exception type to handle in case
+                # some wacky object raises some wacky exception in response to
+                # the setattr attempt.
+                pass
+
+    origFilters = warnings.filters[:]
+    origShow = warnings.showwarning
+    warnings.simplefilter('always')
+    try:
+        warnings.showwarning = showWarning
+        result = f(*args, **kwargs)
+    finally:
+        warnings.filters[:] = origFilters
+        warnings.showwarning = origShow
+    return result
+
 
 
 class _Assertions(pyunit.TestCase, object):
@@ -362,45 +436,23 @@ class _Assertions(pyunit.TestCase, object):
 
         @return: the result of the original function C{f}.
         """
-        catch_warnings = getattr(warnings, 'catch_warnings', None)
-        if catch_warnings is not None:
-            catcher = warnings.catch_warnings(True)
-            # Not a completely faithful implementation of the expansion of
-            # "with", but close enough for our purposes in this case.
-            warningsShown = catcher.__enter__()
-            try:
-                warnings.simplefilter('always')
-                result = f(*args, **kwargs)
-            finally:
-                catcher.__exit__()
-            warningsShown = [(str(w.message), w.category, w.filename)
-                             for w in warningsShown]
-        else:
-            warningsShown = []
-            def warnExplicit(*args):
-                warningsShown.append(args)
-
-            origExplicit = warnings.warn_explicit
-            try:
-                warnings.warn_explicit = warnExplicit
-                result = f(*args, **kwargs)
-            finally:
-                warnings.warn_explicit = origExplicit
+        warningsShown = []
+        result = _collectWarnings(warningsShown.append, f, *args, **kwargs)
 
         if not warningsShown:
             self.fail("No warnings emitted")
         first = warningsShown[0]
         for other in warningsShown[1:]:
-            if other[:2] != first[:2]:
+            if ((other.message, other.category)
+                != (first.message, first.category)):
                 self.fail("Can't handle different warnings")
-        gotMessage, gotCategory, gotFilename = first[:3]
-        self.assertEqual(gotMessage, message)
-        self.assertIdentical(gotCategory, category)
+        self.assertEqual(first.message, message)
+        self.assertIdentical(first.category, category)
 
         # Use starts with because of .pyc/.pyo issues.
         self.failUnless(
-            filename.startswith(gotFilename),
-            'Warning in %r, expected %r' % (gotFilename, filename))
+            filename.startswith(first.filename),
+            'Warning in %r, expected %r' % (first.filename, filename))
 
         # It would be nice to be able to check the line number as well, but
         # different configurations actually end up reporting different line
@@ -447,12 +499,23 @@ class _Assertions(pyunit.TestCase, object):
 class _LogObserver(object):
     """
     Observes the Twisted logs and catches any errors.
+
+    @ivar _errors: A C{list} of L{Failure} instances which were received as
+        error events from the Twisted logging system.
+
+    @ivar _added: A C{int} giving the number of times C{_add} has been called
+        less the number of times C{_remove} has been called; used to only add
+        this observer to the Twisted logging since once, regardless of the
+        number of calls to the add method.
+
+    @ivar _ignored: A C{list} of exception types which will not be recorded.
     """
 
     def __init__(self):
         self._errors = []
         self._added = 0
         self._ignored = []
+
 
     def _add(self):
         if self._added == 0:
@@ -471,17 +534,20 @@ class _LogObserver(object):
             log._ignore = self._oldIE
             log._clearIgnores = self._oldCI
 
+
     def _ignoreErrors(self, *errorTypes):
         """
         Do not store any errors with any of the given types.
         """
         self._ignored.extend(errorTypes)
 
+
     def _clearIgnores(self):
         """
         Stop ignoring any errors we might currently be ignoring.
         """
         self._ignored = []
+
 
     def flushErrors(self, *errorTypes):
         """
@@ -503,11 +569,13 @@ class _LogObserver(object):
             self._errors = []
         return flushed
 
+
     def getErrors(self):
         """
         Return a list of errors caught by this observer.
         """
         return self._errors
+
 
     def gotEvent(self, event):
         """
@@ -520,6 +588,7 @@ class _LogObserver(object):
             f = event['failure']
             if len(self._ignored) == 0 or not f.check(*self._ignored):
                 self._errors.append(f)
+
 
 
 _logObserver = _LogObserver()
@@ -930,6 +999,79 @@ class TestCase(_Assertions):
         return self._observer.flushErrors(*errorTypes)
 
 
+    def flushWarnings(self, offendingFunctions=None):
+        """
+        Remove stored warnings from the list of captured warnings and return
+        them.
+
+        @param offendingFunctions: If C{None}, all warnings issued during the
+            currently running test will be flushed.  Otherwise, only warnings
+            which I{point} to a function included in this list will be flushed.
+            All warnings include a filename and source line number; if these
+            parts of a warning point to a source line which is part of a
+            function, then the warning I{points} to that function.
+        @type offendingFunctions: L{NoneType} or L{list} of functions or methods.
+
+        @raise ValueError: If C{offendingFunctions} is not C{None} and includes
+            an object which is not a L{FunctionType} or L{MethodType} instance.
+
+        @raise IOError: If the source file (.py) for one of the functions in
+            C{offendingFunctions} is not available, its lines cannot be
+            determined and L{IOError} will be raised.  (It may be possible to
+            implement this function without requiring source files by using the
+            co_lnotab attribute of code objects.)
+
+        @return: A C{list}, each element of which is a C{dict} giving
+            information about one warning which was flushed by this call.  The
+            keys of each C{dict} are:
+
+                - C{'message'}: The string which was passed as the I{message}
+                  parameter to L{warnings.warn}.
+
+                - C{'category'}: The warning subclass which was passed as the
+                  I{category} parameter to L{warnings.warn}.
+
+                - C{'filename'}: The name of the file containing the definition
+                  of the code object which was C{stacklevel} frames above the
+                  call to L{warnings.warn}, where C{stacklevel} is the value of
+                  the C{stacklevel} parameter passed to L{warnings.warn}.
+
+                - C{'lineno'}: The source line associated with the active
+                  instruction of the code object object which was C{stacklevel}
+                  frames above the call to L{warnings.warn}, where
+                  C{stacklevel} is the value of the C{stacklevel} parameter
+                  passed to L{warnings.warn}.
+        """
+        if offendingFunctions is None:
+            toFlush = self._warnings[:]
+            self._warnings[:] = []
+        else:
+            toFlush = []
+            for w in self._warnings:
+                for aFunction in offendingFunctions:
+                    if not isinstance(aFunction, (
+                            types.FunctionType, types.MethodType)):
+                        raise ValueError("%r is not a function or method" % (
+                                aFunction,))
+                    filename = inspect.getabsfile(aFunction)
+                    if os.path.normcase(filename) != os.path.normcase(w.filename):
+                        continue
+                    lines, start = inspect.getsourcelines(aFunction)
+                    if not (start <= w.lineno <= start + len(lines)):
+                        continue
+                    # The warning points to this function, flush it and move on
+                    # to the next warning.
+                    toFlush.append(w)
+                    break
+            # Remove everything which is being flushed.
+            map(self._warnings.remove, toFlush)
+
+        return [
+            {'message': w.message, 'category': w.category,
+             'filename': w.filename, 'lineno': w.lineno}
+            for w in toFlush]
+
+
     def addCleanup(self, f, *args, **kwargs):
         """
         Add the given function to a list of functions to be called after the
@@ -944,25 +1086,6 @@ class TestCase(_Assertions):
         self._cleanups.append((f, args, kwargs))
 
 
-    def _captureDeprecationWarnings(self, f, *args, **kwargs):
-        """
-        Call C{f} and capture all deprecation warnings.
-        """
-        warnings = []
-        def accumulateDeprecations(message, category, stacklevel):
-            self.assertEqual(DeprecationWarning, category)
-            self.assertEqual(stacklevel, 2)
-            warnings.append(message)
-
-        originalMethod = deprecate.getWarningMethod()
-        deprecate.setWarningMethod(accumulateDeprecations)
-        try:
-            result = f(*args, **kwargs)
-        finally:
-            deprecate.setWarningMethod(originalMethod)
-        return (warnings, result)
-
-
     def callDeprecated(self, version, f, *args, **kwargs):
         """
         Call a function that was deprecated at a specific version.
@@ -971,13 +1094,13 @@ class TestCase(_Assertions):
         @param f: The deprecated function to call.
         @return: Whatever the function returns.
         """
-        warnings, result = self._captureDeprecationWarnings(
-            f, *args, **kwargs)
+        result = f(*args, **kwargs)
+        warningsShown = self.flushWarnings([self.callDeprecated])
 
-        if len(warnings) == 0:
+        if len(warningsShown) == 0:
             self.fail('%r is not deprecated.' % (f,))
 
-        observedWarning = warnings[0]
+        observedWarning = warningsShown[0]['message']
         expectedWarning = getDeprecationWarningString(f, version)
         self.assertEqual(expectedWarning, observedWarning)
 
@@ -1053,29 +1176,46 @@ class TestCase(_Assertions):
             result.stopTest(self)
             return
         self._installObserver()
-        self._passed = False
-        first = False
-        if self._shared:
-            first = self._isFirst()
-            self.__class__._instancesRun.add(self)
-        self._deprecateReactor(reactor)
-        try:
-            if first:
-                d = self.deferSetUpClass(result)
-            else:
-                d = self.deferSetUp(None, result)
+
+        # All the code inside runThunk will be run such that warnings emitted
+        # by it will be collected and retrievable by flushWarnings.
+        def runThunk():
+            self._passed = False
+            first = False
+            if self._shared:
+                first = self._isFirst()
+                self.__class__._instancesRun.add(self)
+            self._deprecateReactor(reactor)
             try:
-                self._wait(d)
+                if first:
+                    d = self.deferSetUpClass(result)
+                else:
+                    d = self.deferSetUp(None, result)
+                try:
+                    self._wait(d)
+                finally:
+                    self._cleanUp(result)
+                    if self._shared and self._isLast():
+                        self._initInstances()
+                        self._classCleanUp(result)
+                    if not self._shared:
+                        self._classCleanUp(result)
             finally:
-                self._cleanUp(result)
-                result.stopTest(self)
-                if self._shared and self._isLast():
-                    self._initInstances()
-                    self._classCleanUp(result)
-                if not self._shared:
-                    self._classCleanUp(result)
-        finally:
-            self._undeprecateReactor(reactor)
+                self._undeprecateReactor(reactor)
+
+        self._warnings = []
+        _collectWarnings(self._warnings.append, runThunk)
+
+        # Any collected warnings which the test method didn't flush get
+        # re-emitted so they'll be logged or show up on stdout or whatever.
+        for w in self.flushWarnings():
+            try:
+                warnings.warn_explicit(**w)
+            except:
+                result.addError(self, failure.Failure())
+
+        result.stopTest(self)
+
 
     def _getReason(self, f):
         if len(f.value.args) > 0:
@@ -1561,4 +1701,3 @@ for methodName in _assertions:
 
 
 __all__ = ['TestCase', 'wait', 'FailTest', 'SkipTest']
-

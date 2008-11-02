@@ -8,10 +8,9 @@ Tests for L{twisted.python.log}.
 import os, sys, time, logging, warnings
 from cStringIO import StringIO
 
-from twisted.trial import unittest, util
+from twisted.trial import unittest
 
-from twisted.python import log
-from twisted.python import failure
+from twisted.python import log, failure
 
 
 class FakeWarning(Warning):
@@ -26,10 +25,10 @@ class LogTest(unittest.TestCase):
 
     def setUp(self):
         self.catcher = []
-        log.addObserver(self.catcher.append)
+        observer = self.catcher.append
+        log.addObserver(observer)
+        self.addCleanup(log.removeObserver, observer)
 
-    def tearDown(self):
-        log.removeObserver(self.catcher.append)
 
     def testObservation(self):
         catcher = self.catcher
@@ -39,6 +38,7 @@ class LogTest(unittest.TestCase):
         self.assertEquals(i["testShouldCatch"], True)
         self.failUnless(i.has_key("time"))
         self.assertEquals(len(catcher), 0)
+
 
     def testContext(self):
         catcher = self.catcher
@@ -120,9 +120,9 @@ class LogTest(unittest.TestCase):
         L{twisted.python.log.showwarning} emits the warning as a message
         to the Twisted logging system.
         """
-        # XXX These warnings show up on stdout!  See #3433.
         log.showwarning(
-            "unique warning message", FakeWarning, "warning-filename.py", 27)
+            FakeWarning("unique warning message"), FakeWarning,
+            "warning-filename.py", 27)
         event = self.catcher.pop()
         self.assertEqual(
             event['format'] % event,
@@ -134,8 +134,8 @@ class LogTest(unittest.TestCase):
         # warnings.showwarning API accept a "line" parameter or a
         # deprecation warning is emitted.
         log.showwarning(
-            "unique warning message", FakeWarning, "warning-filename.py", 27,
-            line=object())
+            FakeWarning("unique warning message"), FakeWarning,
+            "warning-filename.py", 27, line=object())
         event = self.catcher.pop()
         self.assertEqual(
             event['format'] % event,

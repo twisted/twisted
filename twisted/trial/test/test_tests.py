@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -510,50 +510,77 @@ class SuppressionTest(unittest.TestCase):
 
 
     def setUp(self):
-        self.stream = StringIO.StringIO()
-        self._stdout, sys.stdout = sys.stdout, self.stream
         self.loader = runner.TestLoader()
 
 
-    def tearDown(self):
-        sys.stdout = self._stdout
-        self.stream = None
-
-
-    def getIO(self):
-        return self.stream.getvalue()
-
-
-    def testSuppressMethod(self):
+    def test_suppressMethod(self):
+        """
+        A suppression set on a test method prevents warnings emitted by that
+        test method which the suppression matches from being emitted.
+        """
         self.runTests(self.loader.loadMethod(
             suppression.TestSuppression.testSuppressMethod))
-        self.assertNotSubstring(suppression.METHOD_WARNING_MSG, self.getIO())
-        self.assertSubstring(suppression.CLASS_WARNING_MSG, self.getIO())
-        self.assertSubstring(suppression.MODULE_WARNING_MSG, self.getIO())
+        warningsShown = self.flushWarnings([
+                suppression.TestSuppression._emit])
+        self.assertEqual(
+            warningsShown[0]['message'], suppression.CLASS_WARNING_MSG)
+        self.assertEqual(
+            warningsShown[1]['message'], suppression.MODULE_WARNING_MSG)
+        self.assertEqual(len(warningsShown), 2)
 
 
-    def testSuppressClass(self):
+    def test_suppressClass(self):
+        """
+        A suppression set on a L{TestCase} subclass prevents warnings emitted
+        by any test methods defined on that class which match the suppression
+        from being emitted.
+        """
         self.runTests(self.loader.loadMethod(
             suppression.TestSuppression.testSuppressClass))
-        self.assertSubstring(suppression.METHOD_WARNING_MSG, self.getIO())
-        self.assertNotSubstring(suppression.CLASS_WARNING_MSG, self.getIO())
-        self.assertSubstring(suppression.MODULE_WARNING_MSG, self.getIO())
+        warningsShown = self.flushWarnings([
+                suppression.TestSuppression._emit])
+        self.assertEqual(
+            warningsShown[0]['message'], suppression.METHOD_WARNING_MSG)
+        self.assertEqual(
+            warningsShown[1]['message'], suppression.MODULE_WARNING_MSG)
+        self.assertEqual(len(warningsShown), 2)
 
 
-    def testSuppressModule(self):
+    def test_suppressModule(self):
+        """
+        A suppression set on a module prevents warnings emitted by any test
+        mewthods defined in that module which match the suppression from being
+        emitted.
+        """
         self.runTests(self.loader.loadMethod(
             suppression.TestSuppression2.testSuppressModule))
-        self.assertSubstring(suppression.METHOD_WARNING_MSG, self.getIO())
-        self.assertSubstring(suppression.CLASS_WARNING_MSG, self.getIO())
-        self.assertNotSubstring(suppression.MODULE_WARNING_MSG, self.getIO())
+        warningsShown = self.flushWarnings([
+                suppression.TestSuppression._emit])
+        self.assertEqual(
+            warningsShown[0]['message'], suppression.METHOD_WARNING_MSG)
+        self.assertEqual(
+            warningsShown[1]['message'], suppression.CLASS_WARNING_MSG)
+        self.assertEqual(len(warningsShown), 2)
 
 
-    def testOverrideSuppressClass(self):
-        self.runTests(self.loader.loadMethod(
-            suppression.TestSuppression.testOverrideSuppressClass))
-        self.assertSubstring(suppression.CLASS_WARNING_MSG, self.getIO())
-        self.assertSubstring(suppression.MODULE_WARNING_MSG, self.getIO())
-        self.assertSubstring(suppression.METHOD_WARNING_MSG, self.getIO())
+    def test_overrideSuppressClass(self):
+        """
+        The suppression set on a test method completely overrides a suppression
+        with wider scope; if it does not match a warning emitted by that test
+        method, the warning is emitted, even if a wider suppression matches.
+        """
+        case = self.loader.loadMethod(
+            suppression.TestSuppression.testOverrideSuppressClass)
+        self.runTests(case)
+        warningsShown = self.flushWarnings([
+                suppression.TestSuppression._emit])
+        self.assertEqual(
+            warningsShown[0]['message'], suppression.METHOD_WARNING_MSG)
+        self.assertEqual(
+            warningsShown[1]['message'], suppression.CLASS_WARNING_MSG)
+        self.assertEqual(
+            warningsShown[2]['message'], suppression.MODULE_WARNING_MSG)
+        self.assertEqual(len(warningsShown), 3)
 
 
 

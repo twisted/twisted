@@ -1,7 +1,5 @@
 # -*- test-case-name: twisted.trial.test.test_runner -*-
-
-#
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -182,7 +180,7 @@ class DocTestSuite(TestSuite):
 
     def __init__(self, testModule):
         warnings.warn("DocTestSuite is deprecated in Twisted 8.0.",
-                      category=DeprecationWarning, stacklevel=3)
+                      category=DeprecationWarning, stacklevel=2)
         TestSuite.__init__(self)
         suite = doctest.DocTestSuite(testModule)
         for test in suite._tests: #yay encapsulation
@@ -752,9 +750,10 @@ class TrialRunner(object):
         self._testDirLock.unlock()
 
 
+    _log = log
     def _makeResult(self):
         reporter = self.reporterFactory(self.stream, self.tbformat,
-                                        self.rterrors)
+                                        self.rterrors, self._log)
         if self.uncleanWarnings:
             reporter = UncleanWarningsReporterWrapper(reporter)
         return reporter
@@ -780,14 +779,9 @@ class TrialRunner(object):
         self.workingDirectory = workingDirectory or '_trial_temp'
         self._logFileObserver = None
         self._logFileObject = None
-        self._logWarnings = False
         self._forceGarbageCollection = forceGarbageCollection
         if profile:
             self.run = util.profiled(self.run, 'profile.data')
-
-    def _setUpLogging(self):
-        self._setUpLogFile()
-        self._setUpLogWarnings()
 
     def _tearDownLogFile(self):
         if self._logFileObserver is not None:
@@ -806,16 +800,6 @@ class TrialRunner(object):
         self._logFileObject = logFile
         self._logFileObserver = log.FileLogObserver(logFile)
         log.startLoggingWithObserver(self._logFileObserver.emit, 0)
-
-    def _setUpLogWarnings(self):
-        if self._logWarnings:
-            return
-        def seeWarnings(x):
-           if x.has_key('warning'):
-               print
-               print x['format'] % x
-        log.addObserver(seeWarnings)
-        self._logWarnings = True
 
 
     def run(self, test):
@@ -851,7 +835,7 @@ class TrialRunner(object):
 
             oldDir = self._setUpTestdir()
             try:
-                self._setUpLogging()
+                self._setUpLogFile()
                 run()
             finally:
                 self._tearDownLogFile()

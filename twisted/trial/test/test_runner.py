@@ -1,4 +1,4 @@
-# Copyright (c) 2005-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2005-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 #
 # Maintainer: Jonathan Lange
@@ -44,12 +44,17 @@ class CapturingReporter(object):
     separator = None
     testsRun = None
 
-    def __init__(self, *a, **kw):
+    def __init__(self, stream=None, tbformat=None, rterrors=None,
+                 publisher=None):
         """
         Create a capturing reporter.
         """
         self._calls = []
         self.shouldStop = False
+        self._stream = stream
+        self._tbformat = tbformat
+        self._rterrors = rterrors
+        self._publisher = publisher
 
 
     def startTest(self, method):
@@ -86,72 +91,90 @@ class CapturingReporter(object):
 
 
 
-class TestTrialRunner(unittest.TestCase):
+class TrialRunnerTestsMixin:
+    """
+    Mixin defining tests for L{runner.TrialRunner}.
+    """
+    def tearDown(self):
+        self.runner._tearDownLogFile()
 
-    def setUp(self):
-        self.stream = StringIO.StringIO()
-        self.runner = runner.TrialRunner(CapturingReporter, stream=self.stream)
-        self.test = TestTrialRunner('test_empty')
 
     def test_empty(self):
         """
         Empty test method, used by the other tests.
         """
 
-    def tearDown(self):
-        self.runner._tearDownLogFile()
 
     def _getObservers(self):
         return log.theLogPublisher.observers
 
+
     def test_addObservers(self):
         """
-        Tests that the runner add logging observers during the run.
+        Any log system observers L{TrialRunner.run} adds are removed by the
+        time it returns.
         """
         originalCount = len(self._getObservers())
         self.runner.run(self.test)
         newCount = len(self._getObservers())
-        self.failUnlessEqual(originalCount + 1, newCount)
+        self.assertEqual(newCount, originalCount)
 
-    def test_addObservers_repeat(self):
-        self.runner.run(self.test)
-        count = len(self._getObservers())
-        self.runner.run(self.test)
-        newCount = len(self._getObservers())
-        self.failUnlessEqual(count, newCount)
 
     def test_logFileAlwaysActive(self):
         """
         Test that a new file is opened on each run.
         """
-        oldSetUpLogging = self.runner._setUpLogging
+        oldSetUpLogFile = self.runner._setUpLogFile
         l = []
-        def setUpLogging():
-            oldSetUpLogging()
+        def setUpLogFile():
+            oldSetUpLogFile()
             l.append(self.runner._logFileObserver)
-        self.runner._setUpLogging = setUpLogging
+        self.runner._setUpLogFile = setUpLogFile
         self.runner.run(self.test)
         self.runner.run(self.test)
         self.failUnlessEqual(len(l), 2)
         self.failIf(l[0] is l[1], "Should have created a new file observer")
 
+
     def test_logFileGetsClosed(self):
         """
         Test that file created is closed during the run.
         """
-        oldSetUpLogging = self.runner._setUpLogging
+        oldSetUpLogFile = self.runner._setUpLogFile
         l = []
-        def setUpLogging():
-            oldSetUpLogging()
+        def setUpLogFile():
+            oldSetUpLogFile()
             l.append(self.runner._logFileObject)
-        self.runner._setUpLogging = setUpLogging
+        self.runner._setUpLogFile = setUpLogFile
         self.runner.run(self.test)
         self.failUnlessEqual(len(l), 1)
         self.failUnless(l[0].closed)
 
 
 
-class TrialRunnerWithUncleanWarningsReporter(TestTrialRunner):
+class TestTrialRunner(TrialRunnerTestsMixin, unittest.TestCase):
+    """
+    Tests for L{runner.TrialRunner} with the feature to turn unclean errors
+    into warnings disabled.
+    """
+    def setUp(self):
+        self.stream = StringIO.StringIO()
+        self.runner = runner.TrialRunner(CapturingReporter, stream=self.stream)
+        self.test = TestTrialRunner('test_empty')
+
+
+    def test_publisher(self):
+        """
+        The reporter constructed by L{runner.TrialRunner} is passed
+        L{twisted.python.log} as the value for the C{publisher} parameter.
+        """
+        result = self.runner._makeResult()
+        self.assertIdentical(result._publisher, log)
+
+
+
+class TrialRunnerWithUncleanWarningsReporter(TrialRunnerTestsMixin,
+                                             unittest.TestCase):
     """
     Tests for the TrialRunner's interaction with an unclean-error suppressing
     reporter.
@@ -288,7 +311,17 @@ class TestRunner(unittest.TestCase):
     def getRunner(self):
         r = trial._makeRunner(self.config)
         r.stream = StringIO.StringIO()
+        # XXX The runner should always take care of cleaning this up itself.
+        # It's not clear why this is necessary.  The runner always tears down
+        # its log file.
         self.addCleanup(r._tearDownLogFile)
+        # XXX The runner should always take care of cleaning this up itself as
+        # well.  It's necessary because TrialRunner._setUpTestdir might raise
+        # an exception preventing Reporter.done from being run, leaving the
+        # observer added by Reporter.__init__ still present in the system.
+        # Something better needs to happen inside
+        # TrialRunner._runWithoutDecoration to remove the need for this cludge.
+        r._log = log.LogPublisher()
         return r
 
 
