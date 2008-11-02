@@ -130,5 +130,44 @@ which will be applied even if the <code>timeout</code> attribute is not set.
 The Trial default timeout is usually sufficient and should be overridden only
 in unusual cases.</p>
 
+<h3>Interacting with warnings in tests</h3>
+
+<p>Trial includes specific support for interacting with Python's
+<code>warnings</code> module.  This support allows warning-emitting code to
+be written test-driven, just as any other code would be.  It also improves
+the way in which warnings reporting when a test suite is running.</p>
+
+<p><code class="API"
+base="twisted.trial.unittest">TestCase.assertWarns</code> and <code
+class="API" base="twisted.trial.unittest">TestCase.flushWarnings</code>
+allow tests to be written which make assertions about what warnings have
+been emitted during a particular test method.  <code>flushWarnings</code> is
+the new method and has a simpler and more flexible API and should be
+preferred when writing new code.  In order to test a warning with
+<code>flushWarnings</code>, write a test which first invokes the code which
+will emit a warning and then calls <code>flushWarnings</code> and makes
+assertions about the result.  For example:</p>
+
+<pre class="python">
+def test_warning(self):
+    warnings.warn("foo is bad")
+    self.assertEqual(len(self.flushWarnings()), 1)
+</pre>
+
+<p>Warnings emitted in tests which are not flushed will be included by the
+default reporter in its output after the result of the test.  If Python's
+warnings filter system (see <a
+href="http://docs.python.org/using/cmdline.html#cmdoption-W">the -W command
+line option to Python</a>) is configured to treat a warning as an error,
+then unflushed warnings will causes tests to fail and will be included in
+the summary section of the default reporter.  Note that unlike usual
+operation, when <code>warnings.warn</code> is called as part of a test
+method, it will not raise an exception when warnings have been configured as
+errors.  However, if called outside of a test method (for example, at module
+scope in a test module or a module imported by a test module) then it
+<em>will</em> raise an exception.</p>
+
   </body>
 </html>
+
+
