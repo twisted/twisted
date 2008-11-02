@@ -654,6 +654,9 @@ SWITCH_CLIENT_DATA = 'Success!'
 SWITCH_SERVER_DATA = 'No, really.  Success.'
 
 
+from twisted.test.proto_helpers import StringTransport
+
+
 class BinaryProtocolTests(unittest.TestCase):
     """
     Tests for L{amp.BinaryBoxProtocol}.
@@ -751,6 +754,64 @@ class BinaryProtocolTests(unittest.TestCase):
         self.assertEquals(self.boxes, [amp.AmpBox(hello="world")])
 
 
+    def test_firstBoxFirstKeyExcessiveLength(self):
+        """
+        L{amp.BinaryBoxProtocol} drops its connection if the length prefix for
+        the first a key it receives is larger than 255.
+        """
+        transport = StringTransport()
+        protocol = amp.BinaryBoxProtocol(self)
+        protocol.makeConnection(transport)
+        protocol.dataReceived('\x01\x00')
+        self.assertTrue(transport.disconnecting)
+
+
+    def test_firstBoxSubsequentKeyExcessiveLength(self):
+        """
+        L{amp.BinaryBoxProtocol} drops its connection if the length prefix for
+        a subsequent key in the first box it receives is larger than 255.
+        """
+        transport = StringTransport()
+        protocol = amp.BinaryBoxProtocol(self)
+        protocol.makeConnection(transport)
+        protocol.dataReceived('\x00\x01k\x00\x01v')
+        self.assertFalse(transport.disconnecting)
+        protocol.dataReceived('\x01\x00')
+        self.assertTrue(transport.disconnecting)
+
+
+    def test_subsequentBoxFirstKeyExcessiveLength(self):
+        """
+        L{amp.BinaryBoxProtocol} drops its connection if the length prefix for
+        the first key in a subsequent box it receives is larger than 255.
+        """
+        transport = StringTransport()
+        protocol = amp.BinaryBoxProtocol(self)
+        protocol.makeConnection(transport)
+        protocol.dataReceived('\x00\x01k\x00\x01v\x00\x00')
+        self.assertFalse(transport.disconnecting)
+        protocol.dataReceived('\x01\x00')
+        self.assertTrue(transport.disconnecting)
+
+
+    def test_excessiveKeyFailure(self):
+        """
+        If L{amp.BinaryBoxProtocol} disconnects because it received a key
+        length prefix which was too large, the L{IBoxReceiver}'s
+        C{stopReceivingBoxes} method is called with a L{TooLong} failure.
+        """
+        protocol = amp.BinaryBoxProtocol(self)
+        protocol.makeConnection(StringTransport())
+        protocol.dataReceived('\x01\x00')
+        protocol.connectionLost(
+            Failure(error.ConnectionDone("simulated connection done")))
+        self.stopReason.trap(amp.TooLong)
+        self.assertTrue(self.stopReason.value.isKey)
+        self.assertFalse(self.stopReason.value.isLocal)
+        self.assertIdentical(self.stopReason.value.value, None)
+        self.assertIdentical(self.stopReason.value.keyName, None)
+
+
     def test_receiveBoxData(self):
         """
         When a binary box protocol receives the serialized form of an AMP box,
@@ -762,6 +823,21 @@ class BinaryProtocolTests(unittest.TestCase):
         self.assertEquals(self.boxes,
                           [amp.Box({"testKey": "valueTest",
                                     "anotherKey": "anotherValue"})])
+
+
+    def test_receiveLongerBoxData(self):
+        """
+        An L{amp.BinaryBoxProtocol} can receive serialized AMP boxes with
+        values of up to (2 ** 16 - 1) bytes.
+        """
+        length = (2 ** 16 - 1)
+        value = 'x' * length
+        transport = StringTransport()
+        protocol = amp.BinaryBoxProtocol(self)
+        protocol.makeConnection(transport)
+        protocol.dataReceived(amp.Box({'k': value}).serialize())
+        self.assertEqual(self.boxes, [amp.Box({'k': value})])
+        self.assertFalse(transport.disconnecting)
 
 
     def test_sendBox(self):

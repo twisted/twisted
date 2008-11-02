@@ -1762,6 +1762,10 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver):
     tricky elements of the implementation, the public interface to this
     functionality is L{ProtocolSwitchCommand} and L{StartTLS}.
 
+    @ivar _keyLengthLimitExceeded: A flag which is only true when the
+        connection is being closed because a key length prefix which was longer
+        than allowed by the protocol was received.
+
     @ivar boxReceiver: an L{IBoxReceiver} provider, whose L{ampBoxReceived}
     method will be invoked for each L{Box} that is received.
     """
@@ -1773,6 +1777,8 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver):
     _locked = False
     _currentKey = None
     _currentBox = None
+
+    _keyLengthLimitExceeded = False
 
     hostCertificate = None
     noPeerCertificate = False   # for tests
@@ -1867,7 +1873,9 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver):
             self.innerProtocol.connectionLost(reason)
             if self.innerProtocolClientFactory is not None:
                 self.innerProtocolClientFactory.clientConnectionLost(None, reason)
-        if reason.check(ConnectionClosed) and self._justStartedTLS:
+        if self._keyLengthLimitExceeded:
+            failReason = Failure(TooLong(True, False, None, None))
+        elif reason.check(ConnectionClosed) and self._justStartedTLS:
             # We just started TLS and haven't received any data.  This means
             # the other connection didn't like our cert (although they may not
             # have told us why - later Twisted should make 'reason' into a TLS
@@ -1879,6 +1887,15 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver):
         self.boxReceiver.stopReceivingBoxes(failReason)
 
 
+    # The longest key allowed
+    _MAX_KEY_LENGTH = 255
+
+    # The longest value allowed (this is somewhat redundant, as longer values
+    # cannot be encoded - ah well).
+    _MAX_VALUE_LENGTH = 65535
+
+    # The first thing received is a key.
+    MAX_LENGTH = _MAX_KEY_LENGTH
 
     def proto_init(self, string):
         """
@@ -1895,6 +1912,7 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver):
         """
         if string:
             self._currentKey = string
+            self.MAX_LENGTH = self._MAX_VALUE_LENGTH
             return 'value'
         else:
             self.boxReceiver.ampBoxReceived(self._currentBox)
@@ -1908,7 +1926,17 @@ class BinaryBoxProtocol(StatefulStringProtocol, Int16StringReceiver):
         """
         self._currentBox[self._currentKey] = string
         self._currentKey = None
+        self.MAX_LENGTH = self._MAX_KEY_LENGTH
         return 'key'
+
+
+    def lengthLimitExceeded(self, length):
+        """
+        The key length limit was exceeded.  Disconnect the transport and make
+        sure a meaningful exception is reported.
+        """
+        self._keyLengthLimitExceeded = True
+        self.transport.loseConnection()
 
 
     def _lockForSwitch(self):

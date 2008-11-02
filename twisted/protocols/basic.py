@@ -318,6 +318,19 @@ class IntNStringReceiver(protocol.Protocol, _PauseableMixin):
         """
         raise NotImplementedError
 
+
+    def lengthLimitExceeded(self, length):
+        """
+        Callback invoked when a length prefix greater than C{MAX_LENGTH} is
+        received.  The default implementation disconnects the transport.
+        Override this.
+
+        @param length: The length prefix which was received.
+        @type length: C{int}
+        """
+        self.transport.loseConnection()
+
+
     def dataReceived(self, recd):
         """
         Convert int prefixed strings into calls to stringReceived.
@@ -327,7 +340,7 @@ class IntNStringReceiver(protocol.Protocol, _PauseableMixin):
             length ,= struct.unpack(
                 self.structFormat, self.recvd[:self.prefixLength])
             if length > self.MAX_LENGTH:
-                self.transport.loseConnection()
+                self.lengthLimitExceeded(length)
                 return
             if len(self.recvd) < length + self.prefixLength:
                 break
@@ -394,7 +407,7 @@ class StatefulStringProtocol:
     This is a mixin for string protocols (Int32StringReceiver,
     NetstringReceiver) which translates stringReceived into a callback
     (prefixed with 'proto_') depending on state.
-    
+
     The state 'done' is special; if a proto_* method returns it, the
     connection will be closed immediately.
     """

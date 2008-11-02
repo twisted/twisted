@@ -23,10 +23,13 @@ class MyInt32StringReceiver(StatefulProtocol):
     def getInitialState(self):
         return self._getHeader, 4
 
+    def lengthLimitExceeded(self, length):
+        self.transport.loseConnection()
+
     def _getHeader(self, msg):
         length, = unpack("!i", msg)
         if length > self.MAX_LENGTH:
-            self.transport.loseConnection()
+            self.lengthLimitExceeded(length)
             return
         return self._getString, length
 

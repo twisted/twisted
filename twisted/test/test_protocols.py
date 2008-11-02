@@ -420,6 +420,34 @@ class IntNTestCaseMixin(LPTestCaseMixin):
             struct.pack(self.protocol.structFormat, 16) + "b" * 16)
 
 
+    def test_lengthLimitExceeded(self):
+        """
+        When a length prefix is received which is greater than the protocol's
+        C{MAX_LENGTH} attribute, the C{lengthLimitExceeded} method is called
+        with the received length prefix.
+        """
+        length = []
+        r = self.getProtocol()
+        r.lengthLimitExceeded = length.append
+        r.MAX_LENGTH = 10
+        r.dataReceived(struct.pack(self.protocol.structFormat, 11))
+        self.assertEqual(length, [11])
+
+
+    def test_longStringNotDelivered(self):
+        """
+        If a length prefix for a string longer than C{MAX_LENGTH} is delivered
+        to C{dataReceived} at the same time as the entire string, the string is
+        not passed to C{stringReceived}.
+        """
+        r = self.getProtocol()
+        r.MAX_LENGTH = 10
+        r.dataReceived(
+            struct.pack(self.protocol.structFormat, 11) + 'x' * 11)
+        self.assertEqual(r.received, [])
+
+
+
 class TestInt32(TestMixin, basic.Int32StringReceiver):
     """
     A L{basic.Int32StringReceiver} storing received strings in an array.
