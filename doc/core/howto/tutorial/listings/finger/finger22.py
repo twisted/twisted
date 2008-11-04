@@ -1,14 +1,13 @@
 # Do everything properly, and componentize
 from twisted.application import internet, service
-from twisted.internet import protocol, reactor, defer
+from twisted.internet import protocol, reactor, defer, error
 from twisted.words.protocols import irc
 from twisted.protocols import basic
 from twisted.python import components
-from twisted.web import resource, server, static, xmlrpc, microdom
+from twisted.web import resource, server, xmlrpc
 from twisted.spread import pb
 from zope.interface import Interface, implements
 from OpenSSL import SSL
-import cgi
 
 class IFingerService(Interface):
 
@@ -32,7 +31,7 @@ class FingerProtocol(basic.LineReceiver):
         d = self.factory.getUser(user)
         d.addErrback(catchError)
         def writeValue(value):
-            self.transport.write(value+'\r\n')
+            self.sendLine(value)
             self.transport.loseConnection()
         d.addCallback(writeValue)
 
@@ -247,16 +246,29 @@ class FingerService(service.Service):
 
     def __init__(self, filename):
         self.filename = filename
-        self._read()
+        self.call = None
+        self.users = {}
 
     def _read(self):
-        self.users = {}
+        self.users.clear()
         for line in file(self.filename):
             user, status = line.split(':', 1)
             user = user.strip()
             status = status.strip()
             self.users[user] = status
         self.call = reactor.callLater(30, self._read)
+
+    def startService(self):
+        self._read()
+        service.Service.startService(self)
+
+    def stopService(self):
+        service.Service.stopService(self)
+        try:
+            if self.call:
+                self.call.cancel()
+        except error.AlreadyCancelled:
+            pass
 
     def getUser(self, user):
         return defer.succeed(self.users.get(user, "No such user"))
@@ -279,18 +291,17 @@ class ServerContextFactory:
 
 
 application = service.Application('finger', uid=1, gid=1)
-f = FingerService('/etc/users')
-serviceCollection = service.IServiceCollection(application)
-internet.TCPServer(79, IFingerFactory(f)
-                   ).setServiceParent(serviceCollection)
-site = server.Site(resource.IResource(f))
+svc = FingerService('/etc/users')
+internet.TCPServer(79, IFingerFactory(svc)
+                   ).setServiceParent(application)
+site = server.Site(resource.IResource(svc))
 internet.TCPServer(8000, site
-                   ).setServiceParent(serviceCollection)
+                   ).setServiceParent(application)
 internet.SSLServer(443, site, ServerContextFactory()
-                   ).setServiceParent(serviceCollection)
-i = IIRCClientFactory(f)
+                   ).setServiceParent(application)
+i = IIRCClientFactory(svc)
 i.nickname = 'fingerbot'
 internet.TCPClient('irc.freenode.org', 6667, i
-                   ).setServiceParent(serviceCollection)
-internet.TCPServer(8889, pb.PBServerFactory(IPerspectiveFinger(f))
-                   ).setServiceParent(serviceCollection)
+                   ).setServiceParent(application)
+internet.TCPServer(8889, pb.PBServerFactory(IPerspectiveFinger(svc))
+                   ).setServiceParent(application)

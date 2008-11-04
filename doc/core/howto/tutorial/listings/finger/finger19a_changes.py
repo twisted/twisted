@@ -23,7 +23,6 @@ class MemoryFingerService(service.Service):
         self.users[user] = status
 
 
-f = MemoryFingerService(moshez='Happy and well')
-serviceCollection = service.IServiceCollection(application)
-internet.TCPServer(1079, IFingerSetterFactory(f), interface='127.0.0.1'
-                   ).setServiceParent(serviceCollection)
+svc = MemoryFingerService(moshez='Happy and well')
+internet.TCPServer(1079, IFingerSetterFactory(svc), interface='127.0.0.1'
+                   ).setServiceParent(application)

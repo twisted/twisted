@@ -14,4 +14,3 @@ options = { 'file': '/etc/users',
 
 ser = finger.makeService(options)
 application = service.Application('finger', uid=1, gid=1)
-ser.setServiceParent(service.IServiceCollection(application))

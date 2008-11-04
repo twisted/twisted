@@ -337,20 +337,27 @@ class Process:
 
 
 def Application(name, uid=None, gid=None):
-    """Return a compound class.
+    """Return a compound class representing an application, suitable for
+    using in a context such as a .tac file to be run with twistd.
 
-    Return an object supporting the L{IService}, L{IServiceCollection},
-    L{IProcess} and L{sob.IPersistable} interfaces, with the given
-    parameters. Always access the return value by explicit casting to
-    one of the interfaces.
+    @param name: Name of the application.
+
+    @param uid: The user ID as whom to execute the process.  If this is
+    None, no attempt will be made to change the UID.
+
+    @param gid: The group ID as whom to execute the process.  If this is
+    None, no attempt will be made to change the GID.
+
+    @return: an object supporting the L{IService},
+    L{IServiceCollection}, L{IProcess} and L{sob.IPersistable}
+    interfaces, with the given parameters. Always access the return
+    value by explicit casting to one of the interfaces.
     """
     ret = components.Componentized()
     for comp in (MultiService(), sob.Persistent(ret, name), Process(uid, gid)):
         ret.addComponent(comp, ignoreClass=1)
     IService(ret).setName(name)
     return ret
-
-
 
 def loadApplication(filename, kind, passphrase=None):
     """Load Application from a given file.

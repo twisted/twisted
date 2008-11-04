@@ -28,5 +28,4 @@ class LocalFingerService(service.Service):
         return defer.succeed([])
 
 
-
-f = LocalFingerService()
+svc = LocalFingerService()

@@ -3,29 +3,26 @@
 
 import finger
 
-from twisted.internet import protocol, reactor, defer
 from twisted.spread import pb
 from twisted.web import resource, server
-from twisted.application import internet, service, strports
-from twisted.python import log
+from twisted.application import internet, service
 
 application = service.Application('finger', uid=1, gid=1)
 f = finger.FingerService('/etc/users')
-serviceCollection = service.IServiceCollection(application)
 internet.TCPServer(79, finger.IFingerFactory(f)
-                   ).setServiceParent(serviceCollection)
+                   ).setServiceParent(application)
 
 site = server.Site(resource.IResource(f))
 internet.TCPServer(8000, site
-                   ).setServiceParent(serviceCollection)
+                   ).setServiceParent(application)
 
 internet.SSLServer(443, site, finger.ServerContextFactory()
-                   ).setServiceParent(serviceCollection)
+                   ).setServiceParent(application)
 
 i = finger.IIRCClientFactory(f)
 i.nickname = 'fingerbot'
 internet.TCPClient('irc.freenode.org', 6667, i
-                   ).setServiceParent(serviceCollection)
+                   ).setServiceParent(application)
 
 internet.TCPServer(8889, pb.PBServerFactory(finger.IPerspectiveFinger(f))
-                   ).setServiceParent(serviceCollection)
+                   ).setServiceParent(application)

@@ -211,8 +211,7 @@ directory named <q>Pictures</q> in our home directory:</p>
 rootDirectory = os.path.expanduser("~/Pictures")
 site = server.Site(DirectoryListing(directory=rootDirectory))
 application = service.Application("ImagePool") 
-parent = service.IServiceCollection(application)
-internet.TCPServer(8088, site).setServiceParent(parent)
+internet.TCPServer(8088, site).setServiceParent(application)
 </pre>
 
 <p>And then start the server by running the following command-line:

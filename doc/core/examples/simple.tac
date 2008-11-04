@@ -7,13 +7,10 @@ from twisted.internet import protocol
 from twisted.python import util
 
 application = service.Application('test')
-s = service.IServiceCollection(application)
 factory = protocol.ServerFactory()
 factory.protocol = wire.Echo
-internet.TCPServer(8080, factory).setServiceParent(s)
-
-internet.TCPServer(8081, factory).setServiceParent(s)
-internet.TimerService(5, util.println, "--MARK--").setServiceParent(s)
+internet.TCPServer(8081, factory).setServiceParent(application)
+internet.TimerService(5, util.println, "--MARK--").setServiceParent(application)
 
 class Foo(protocol.Protocol):
     def connectionMade(self):
@@ -23,7 +20,7 @@ class Foo(protocol.Protocol):
 
 factory = protocol.ClientFactory()
 factory.protocol = Foo
-internet.TCPClient('localhost', 8081, factory).setServiceParent(s)
+internet.TCPClient('localhost', 8081, factory).setServiceParent(application)
 
 class FooService(service.Service):
     def startService(self):
@@ -36,4 +33,4 @@ class FooService(service.Service):
 
 foo = FooService()
 foo.setName('foo')
-foo.setServiceParent(s)
+foo.setServiceParent(application)

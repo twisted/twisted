@@ -33,4 +33,4 @@ class Receiver(pb.Root):
 
 application = service.Application("copy_receiver")
 internet.TCPServer(8800, pb.PBServerFactory(Receiver())).setServiceParent(
-    service.IServiceCollection(application))
+        application)
