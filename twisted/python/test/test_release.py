@@ -11,6 +11,14 @@ import os, sys, signal
 from StringIO import StringIO
 import tarfile
 
+try:
+    from popen2 import Popen4
+except:
+    popen4Available = False
+else:
+    popen4Available = True
+    del Popen4
+
 from datetime import date
 
 try:
@@ -32,10 +40,15 @@ from twisted.python._release import _changeVersionInFile, getNextVersion
 from twisted.python._release import findTwistedProjects, replaceInFile
 from twisted.python._release import replaceProjectVersion
 from twisted.python._release import updateTwistedVersionInformation, Project
+from twisted.python._release import generateVersionFileData
+from twisted.python._release import changeAllProjectVersions
 from twisted.python._release import VERSION_OFFSET, DocBuilder, ManBuilder
 from twisted.python._release import NoDocumentsFound, filePathDelta
 from twisted.python._release import CommandFailed, BookBuilder
 from twisted.python._release import DistributionBuilder, APIBuilder
+from twisted.python._release import buildAllTarballs, runCommand
+from twisted.python._release import UncleanWorkingDirectory, NotWorkingDirectory
+from twisted.python._release import ChangeVersionsScript, BuildTarballsScript
 
 try:
     from twisted.lore.scripts import lore
@@ -43,8 +56,98 @@ except ImportError:
     lore = None
 
 
+def genVersion(*args, **kwargs):
+    """
+    A convenience for generating _version.py data.
 
-class ChangeVersionTest(TestCase):
+    @param args: Arguments to pass to L{Version}.
+    @param kwargs: Keyword arguments to pass to L{Version}.
+    @type output: C{bool}
+    @param output: If passed as a keyword argument with a True value, replace
+        line endings with the platform's convention.
+    """
+    output = kwargs.pop("output", False)
+    data = generateVersionFileData(Version(*args, **kwargs))
+    if output:
+        data = data.replace("\n", os.linesep)
+    return data
+
+
+class StructureAssertingMixin(object):
+    """
+    A mixin for L{TestCase} subclasses which provides some methods for asserting
+    the structure and contents of directories and files on the filesystem.
+    """
+    def createStructure(self, root, dirDict):
+        """
+        Create a set of directories and files given a dict defining their
+        structure.
+
+        @param root: The directory in which to create the structure.
+        @type root: L{FilePath}
+
+        @param dirDict: The dict defining the structure. Keys should be strings
+            naming files, values should be strings describing file contents OR
+            dicts describing subdirectories. For example: C{{"foofile":
+            "foocontents", "bardir": {"barfile": "barcontents"}}}
+        @type dirDict: C{dict}
+        """
+        for x in dirDict:
+            child = root.child(x)
+            if isinstance(dirDict[x], dict):
+                child.createDirectory()
+                self.createStructure(child, dirDict[x])
+            else:
+                child.setContent(dirDict[x])
+
+    def assertStructure(self, root, dirDict):
+        """
+        Assert that a directory is equivalent to one described by a dict.
+
+        @param root: The filesystem directory to compare.
+        @type root: L{FilePath}
+        @param dirDict: The dict that should describe the contents of the
+            directory. It should be the same structure as the C{dirDict}
+            parameter to L{createStructure}.
+        @type dirDict: C{dict}
+        """
+        children = [x.basename() for x in root.children()]
+        for x in dirDict:
+            child = root.child(x)
+            if isinstance(dirDict[x], dict):
+                self.assertTrue(child.isdir(), "%s is not a dir!"
+                                % (child.path,))
+                self.assertStructure(child, dirDict[x])
+            else:
+                a = child.getContent()
+                self.assertEquals(a, dirDict[x], child.path)
+            children.remove(x)
+        if children:
+            self.fail("There were extra children in %s: %s"
+                      % (root.path, children))
+
+
+    def assertExtractedStructure(self, outputFile, dirDict):
+        """
+        Assert that a tarfile content is equivalent to one described by a dict.
+
+        @param outputFile: The tar file built by L{DistributionBuilder}.
+        @type outputFile: L{FilePath}.
+        @param dirDict: The dict that should describe the contents of the
+            directory. It should be the same structure as the C{dirDict}
+            parameter to L{createStructure}.
+        @type dirDict: C{dict}
+        """
+        tarFile = tarfile.TarFile.open(outputFile.path, "r:bz2")
+        extracted = FilePath(self.mktemp())
+        extracted.createDirectory()
+        for info in tarFile:
+            tarFile.extract(info, path=extracted.path)
+        self.assertStructure(extracted.children()[0], dirDict)
+
+
+
+class ChangeVersionTest(TestCase, StructureAssertingMixin):
     """
     Twisted has the ability to change versions.
     """
@@ -110,6 +213,41 @@ class ChangeVersionTest(TestCase):
                          "Hello and welcome to %s." % newVersion.base())
 
 
+    def test_changeAllProjectVersions(self):
+        """
+        L{changeAllProjectVersions} changes all version numbers in _version.py
+        and README files for all projects.
+        """
+        root = FilePath(self.mktemp())
+        root.createDirectory()
+        structure = {
+            "twisted": {
+                "topfiles": {
+                    "README": "Hi this is 1.0.0"},
+                "_version.py":
+                    genVersion("twisted", 1, 0, 0),
+                "web": {
+                    "topfiles": {
+                        "README": "Hi this is 1.0.0"},
+                    "_version.py": genVersion("twisted.web", 1, 0, 0)
+                    }}}
+        self.createStructure(root, structure)
+        changeAllProjectVersions(root, Version("lol", 1, 0, 2))
+        outStructure = {
+            "twisted": {
+                "topfiles": {
+                    "README": "Hi this is 1.0.2"},
+                "_version.py":
+                    genVersion("twisted", 1, 0, 2, output=True),
+                "web": {
+                    "topfiles": {
+                        "README": "Hi this is 1.0.2"},
+                    "_version.py": genVersion("twisted.web", 1, 0, 2,
+                                              output=True)
+                    }}}
+        self.assertStructure(root, outStructure)
+
+
 
 class ProjectTest(TestCase):
     """
@@ -151,8 +289,7 @@ class ProjectTest(TestCase):
         directory.child('topfiles').createDirectory()
         directory.child('topfiles').child('README').setContent(version.base())
         replaceProjectVersion(
-            version.package, directory.child('_version.py').path,
-            version)
+            directory.child('_version.py').path, version)
         return Project(directory)
 
 
@@ -295,8 +432,8 @@ class VersionWritingTest(TestCase):
         C{version} variable that corresponds to the given name and version
         number.
         """
-        replaceProjectVersion("twisted.test_project",
-                              "test_project", Version("whatever", 0, 82, 7))
+        replaceProjectVersion("test_project",
+                              Version("twisted.test_project", 0, 82, 7))
         ns = {'__name___': 'twisted.test_project'}
         execfile("test_project", ns)
         self.assertEquals(ns["version"].base(), "0.82.7")
@@ -307,9 +444,9 @@ class VersionWritingTest(TestCase):
         L{replaceProjectVersion} will write a Version instantiation that
         includes a prerelease parameter if necessary.
         """
-        replaceProjectVersion("twisted.test_project",
-                              "test_project", Version("whatever", 0, 82, 7,
-                                                      prerelease=8))
+        replaceProjectVersion("test_project",
+                              Version("twisted.test_project", 0, 82, 7,
+                                      prerelease=8))
         ns = {'__name___': 'twisted.test_project'}
         execfile("test_project", ns)
         self.assertEquals(ns["version"].base(), "0.82.7pre8")
@@ -347,7 +484,7 @@ class BuilderTestsMixin(object):
         self.docCounter = 0
 
 
-    def getArbitraryOutput(self, version, counter, prefix=""):
+    def getArbitraryOutput(self, version, counter, prefix="", apiBaseURL="%s"):
         """
         Get the correct HTML output for the arbitrary input returned by
         L{getArbitraryLoreInput} for the given parameters.
@@ -360,12 +497,13 @@ class BuilderTestsMixin(object):
         document = ('<?xml version="1.0"?><html><head>'
                     '<title>Yo:Hi! Title: %(count)s</title></head>'
                     '<body><div class="content">Hi! %(count)s'
-                    '<div class="API"><a href="foobar" title="foobar">'
+                    '<div class="API"><a href="%(foobarLink)s" title="foobar">'
                     'foobar</a></div></div><a href="%(prefix)sindex.html">'
                     'Index</a><span class="version">Version: %(version)s'
                     '</span></body></html>')
         return document % {"count": counter, "prefix": prefix,
-                           "version": version}
+                           "version": version,
+                           "foobarLink": apiBaseURL % ("foobar",)}
 
 
     def getArbitraryLoreInput(self, counter):
@@ -386,7 +524,8 @@ class BuilderTestsMixin(object):
         return template % {"count": counter}
 
 
-    def getArbitraryLoreInputAndOutput(self, version, prefix=""):
+    def getArbitraryLoreInputAndOutput(self, version, prefix="",
+                                       apiBaseURL="%s"):
         """
         Get an input document along with expected output for lore run on that
         output document, assuming an appropriately-specified C{self.template}.
@@ -402,7 +541,7 @@ class BuilderTestsMixin(object):
         self.docCounter += 1
         return (self.getArbitraryLoreInput(self.docCounter),
                 self.getArbitraryOutput(version, self.docCounter,
-                                        prefix=prefix))
+                                        prefix=prefix, apiBaseURL=apiBaseURL))
 
 
     def getArbitraryManInput(self):
@@ -783,12 +922,8 @@ class BookBuilderTests(TestCase, BuilderTestsMixin):
     """
     if not (which("latex") and which("dvips") and which("ps2pdf13")):
         skip = "Book Builder tests require latex."
-    try:
-        from popen2 import Popen4
-    except ImportError:
+    if not popen4Available:
         skip = "Book Builder requires popen2.Popen4."
-    else:
-        del Popen4
 
     def setUp(self):
         """
@@ -797,9 +932,14 @@ class BookBuilderTests(TestCase, BuilderTestsMixin):
         self.docCounter = 0
         self.howtoDir = FilePath(self.mktemp())
         self.howtoDir.makedirs()
+        self.oldHandler = signal.signal(signal.SIGCHLD, signal.SIG_DFL)
 
 
-    def getArbitraryOutput(self, version, counter, prefix=""):
+    def tearDown(self):
+        signal.signal(signal.SIGCHLD, self.oldHandler)
+
+
+    def getArbitraryOutput(self, version, counter, prefix="", apiBaseURL=None):
         """
         Create and return a C{str} containing the LaTeX document which is
         expected as the output for processing the result of the document
@@ -1135,9 +1275,10 @@ class FilePathDeltaTest(TestCase):
 
 
 
-class DistributionBuilderTests(BuilderTestsMixin, TestCase):
+class DistributionBuilderTestBase(BuilderTestsMixin, StructureAssertingMixin,
+                                   TestCase):
     """
-    Tests for L{DistributionBuilder}.
+    Base for tests of L{DistributionBuilder}.
     """
 
     def setUp(self):
@@ -1146,79 +1287,13 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
         self.rootDir = FilePath(self.mktemp())
         self.rootDir.createDirectory()
 
-        outputDir = FilePath(self.mktemp())
-        outputDir.createDirectory()
-        self.builder = DistributionBuilder(self.rootDir, outputDir)
+        self.outputDir = FilePath(self.mktemp())
+        self.outputDir.createDirectory()
+        self.builder = DistributionBuilder(self.rootDir, self.outputDir)
 
 
-    def createStructure(self, root, dirDict):
-        """
-        Create a set of directories and files given a dict defining their
-        structure.
 
-        @param root: The directory in which to create the structure.
-        @type root: L{FilePath}
-
-        @param dirDict: The dict defining the structure. Keys should be strings
-            naming files, values should be strings describing file contents OR
-            dicts describing subdirectories. For example: C{{"foofile":
-            "foocontents", "bardir": {"barfile": "barcontents"}}}
-        @type dirDict: C{dict}
-        """
-        for x in dirDict:
-            child = root.child(x)
-            if isinstance(dirDict[x], dict):
-                child.createDirectory()
-                self.createStructure(child, dirDict[x])
-            else:
-                child.setContent(dirDict[x])
-
-
-    def assertExtractedStructure(self, outputFile, dirDict):
-        """
-        Assert that a tarfile content is equivalent to one described by a dict.
-
-        @param outputFile: The tar file built by L{DistributionBuilder}.
-        @type outputFile: L{FilePath}.
-        @param dirDict: The dict that should describe the contents of the
-            directory. It should be the same structure as the C{dirDict}
-            parameter to L{createStructure}.
-        @type dirDict: C{dict}
-        """
-        tarFile = tarfile.TarFile.open(outputFile.path, "r:bz2")
-        extracted = FilePath(self.mktemp())
-        extracted.createDirectory()
-        for info in tarFile:
-            tarFile.extract(info, path=extracted.path)
-        self.assertStructure(extracted.children()[0], dirDict)
-
-
-    def assertStructure(self, root, dirDict):
-        """
-        Assert that a directory is equivalent to one described by a dict.
-
-        @param root: The filesystem directory to compare.
-        @type root: L{FilePath}
-        @param dirDict: The dict that should describe the contents of the
-            directory. It should be the same structure as the C{dirDict}
-            parameter to L{createStructure}.
-        @type dirDict: C{dict}
-        """
-        children = [x.basename() for x in root.children()]
-        for x in dirDict:
-            child = root.child(x)
-            if isinstance(dirDict[x], dict):
-                self.assertTrue(child.isdir(), "%s is not a dir!"
-                                % (child.path,))
-                self.assertStructure(child, dirDict[x])
-            else:
-                a = child.getContent()
-                self.assertEquals(a, dirDict[x], child.path)
-            children.remove(x)
-        if children:
-            self.fail("There were extra children in %s: %s"
-                      % (root.path, children))
-
+class DistributionBuilderTest(DistributionBuilderTestBase):
 
     def test_twistedDistribution(self):
         """
@@ -1282,9 +1357,11 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
 
         self.assertExtractedStructure(outputFile, outStructure)
 
-    def test_twistedDistributionExcludesWeb2AndVFS(self):
+
+    def test_twistedDistributionExcludesWeb2AndVFSAndAdmin(self):
         """
-        The main Twisted distribution does not include web2 or vfs.
+        The main Twisted distribution does not include web2 or vfs, or the
+        bin/admin directory.
         """
         loreInput, loreOutput = self.getArbitraryLoreInputAndOutput("10.0.0")
         coreIndexInput, coreIndexOutput = self.getArbitraryLoreInputAndOutput(
@@ -1297,7 +1374,8 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
             "setup.py": "import toplevel",
             "bin": {"web2": {"websetroot": "SET ROOT"},
                     "vfs": {"vfsitup": "hee hee"},
-                    "twistd": "TWISTD"},
+                    "twistd": "TWISTD",
+                    "admin": {"build-a-thing": "yay"}},
             "twisted":
                 {"web2":
                      {"__init__.py": "import WEB",
@@ -1501,11 +1579,339 @@ class DistributionBuilderTests(BuilderTestsMixin, TestCase):
             }
 
         self.createStructure(self.rootDir, structure)
-
         outputFile = self.builder.buildCore("8.0.0")
-
         self.assertExtractedStructure(outputFile, outStructure)
 
+
+    def test_apiBaseURL(self):
+        """
+        DistributionBuilder builds documentation with the specified
+        API base URL.
+        """
+        apiBaseURL = "http://%s"
+        builder = DistributionBuilder(self.rootDir, self.outputDir,
+                                      apiBaseURL=apiBaseURL)
+        loreInput, loreOutput = self.getArbitraryLoreInputAndOutput(
+            "0.3.0", apiBaseURL=apiBaseURL)
+        structure = {
+            "LICENSE": "copyright!",
+            "twisted": {"web": {"__init__.py": "import WEB",
+                                "topfiles": {"setup.py": "import WEBINST"}}},
+            "doc": {"web": {"howto": {"index.xhtml": loreInput}},
+                    "core": {"howto": {"template.tpl": self.template}}
+                    }
+            }
+
+        outStructure = {
+            "LICENSE": "copyright!",
+            "setup.py": "import WEBINST",
+            "twisted": {"web": {"__init__.py": "import WEB"}},
+            "doc": {"howto": {"index.html": loreOutput}}}
+
+        self.createStructure(self.rootDir, structure)
+        outputFile = builder.buildSubProject("web", "0.3.0")
+        self.assertExtractedStructure(outputFile, outStructure)
+
+
+
+class BuildAllTarballsTest(DistributionBuilderTestBase):
+    """
+    Tests for L{DistributionBuilder.buildAllTarballs}.
+    """
+
+    if not (which("svn") and which("svnadmin")):
+        skip = "buildAllTarballs requires svn to be installed."
+    if not popen4Available:
+        skip = "buildAllTarballs requires popen2.Popen4."
+
+
+    def setUp(self):
+        self.oldHandler = signal.signal(signal.SIGCHLD, signal.SIG_DFL)
+        DistributionBuilderTestBase.setUp(self)
+
+
+    def tearDown(self):
+        signal.signal(signal.SIGCHLD, self.oldHandler)
+        DistributionBuilderTestBase.tearDown(self)
+
+
+    def test_buildAllTarballs(self):
+        """
+        L{buildAllTarballs} builds tarballs for Twisted and all of its
+        subprojects based on an SVN checkout; the resulting tarballs contain
+        no SVN metadata.  This involves building documentation, which it will
+        build with the correct API documentation reference base URL.
+        """
+        repositoryPath = self.mktemp()
+        repository = FilePath(repositoryPath)
+        checkoutPath = self.mktemp()
+        checkout = FilePath(checkoutPath)
+        self.outputDir.remove()
+
+        runCommand(["svnadmin", "create", repositoryPath])
+        runCommand(["svn", "checkout", "file://" + repository.path,
+                    checkout.path])
+        coreIndexInput, coreIndexOutput = self.getArbitraryLoreInputAndOutput(
+            "1.2.0", prefix="howto/",
+            apiBaseURL="http://twistedmatrix.com/documents/1.2.0/api/%s.html")
+
+        structure = {
+            "README": "Twisted",
+            "unrelated": "x",
+            "LICENSE": "copyright!",
+            "setup.py": "import toplevel",
+            "bin": {"web2": {"websetroot": "SET ROOT"},
+                    "vfs": {"vfsitup": "hee hee"},
+                    "words": {"im": "import im"},
+                    "twistd": "TWISTD"},
+            "twisted":
+                {
+                    "topfiles": {"setup.py": "import TOPINSTALL",
+                                 "README": "CORE!"},
+                    "_version.py": genVersion("twisted", 1, 2, 0),
+                    "web2":
+                    {"__init__.py": "import WEB",
+                      "topfiles": {"setup.py": "import WEBINSTALL",
+                                   "README": "WEB!"}},
+                    "vfs":
+                     {"__init__.py": "import VFS",
+                      "blah blah": "blah blah"},
+                    "words": {"__init__.py": "import WORDS",
+                              "_version.py":
+                                  genVersion("twisted.words", 1, 2, 0),
+                              "topfiles": {"setup.py": "import WORDSINSTALL",
+                                           "README": "WORDS!"},
+                              },
+                    "plugins": {"twisted_web.py": "import WEBPLUG",
+                                "twisted_words.py": "import WORDPLUG",
+                                "twisted_web2.py": "import WEB2",
+                                "twisted_vfs.py": "import VFS",
+                                "twisted_yay.py": "import YAY"}},
+            "doc": {"web2": {"excluded!": "yay"},
+                    "vfs": {"unrelated": "whatever"},
+                    "core": {"howto": {"template.tpl": self.template},
+                             "index.xhtml": coreIndexInput}}}
+
+        twistedStructure = {
+            "README": "Twisted",
+            "unrelated": "x",
+            "LICENSE": "copyright!",
+            "setup.py": "import toplevel",
+            "bin": {"twistd": "TWISTD",
+                    "words": {"im": "import im"}},
+            "twisted":
+                {
+                    "topfiles": {"setup.py": "import TOPINSTALL",
+                                 "README": "CORE!"},
+                    "_version.py": genVersion("twisted", 1, 2, 0),
+                    "words": {"__init__.py": "import WORDS",
+                              "_version.py":
+                                  genVersion("twisted.words", 1, 2, 0),
+                              "topfiles": {"setup.py": "import WORDSINSTALL",
+                                           "README": "WORDS!"},
+                              },
+                    "plugins": {"twisted_web.py": "import WEBPLUG",
+                                "twisted_words.py": "import WORDPLUG",
+                                "twisted_yay.py": "import YAY"}},
+            "doc": {"core": {"howto": {"template.tpl": self.template},
+                             "index.html": coreIndexOutput}}}
+
+        coreStructure = {
+            "setup.py": "import TOPINSTALL",
+            "README": "CORE!",
+            "LICENSE": "copyright!",
+            "bin": {"twistd": "TWISTD"},
+            "twisted": {
+                "_version.py": genVersion("twisted", 1, 2, 0),
+                "plugins": {"twisted_yay.py": "import YAY"}},
+            "doc": {"howto": {"template.tpl": self.template},
+                    "index.html": coreIndexOutput}}
+
+        wordsStructure = {
+            "README": "WORDS!",
+            "LICENSE": "copyright!",
+            "setup.py": "import WORDSINSTALL",
+            "bin": {"im": "import im"},
+            "twisted":
+                {
+                    "words": {"__init__.py": "import WORDS",
+                              "_version.py":
+                                  genVersion("twisted.words", 1, 2, 0),
+                              },
+                    "plugins": {"twisted_words.py": "import WORDPLUG"}}}
+
+        self.createStructure(checkout, structure)
+        childs = [x.path for x in checkout.children()]
+        runCommand(["svn", "add"] + childs)
+        runCommand(["svn", "commit", checkout.path, "-m", "yay"])
+
+        buildAllTarballs(checkout, self.outputDir)
+        self.assertEquals(
+            set(self.outputDir.children()),
+            set([self.outputDir.child("Twisted-1.2.0.tar.bz2"),
+                 self.outputDir.child("TwistedCore-1.2.0.tar.bz2"),
+                 self.outputDir.child("TwistedWords-1.2.0.tar.bz2")]))
+
+        self.assertExtractedStructure(
+            self.outputDir.child("Twisted-1.2.0.tar.bz2"),
+            twistedStructure)
+        self.assertExtractedStructure(
+            self.outputDir.child("TwistedCore-1.2.0.tar.bz2"),
+            coreStructure)
+        self.assertExtractedStructure(
+            self.outputDir.child("TwistedWords-1.2.0.tar.bz2"),
+            wordsStructure)
+
+
+    def test_buildAllTarballsEnsuresCleanCheckout(self):
+        """
+        L{UncleanWorkingDirectory} is raised by L{buildAllTarballs} when the
+        SVN checkout provided has uncommitted changes.
+        """
+        repositoryPath = self.mktemp()
+        repository = FilePath(repositoryPath)
+        checkoutPath = self.mktemp()
+        checkout = FilePath(checkoutPath)
+
+        runCommand(["svnadmin", "create", repositoryPath])
+        runCommand(["svn", "checkout", "file://" + repository.path,
+                    checkout.path])
+
+        checkout.child("foo").setContent("whatever")
+        self.assertRaises(UncleanWorkingDirectory,
+                          buildAllTarballs, checkout, FilePath(self.mktemp()))
+
+
+    def test_buildAllTarballsEnsuresExistingCheckout(self):
+        """
+        L{NotWorkingDirectory} is raised by L{buildAllTarballs} when the
+        checkout passed does not exist or is not an SVN checkout.
+        """
+        checkout = FilePath(self.mktemp())
+        self.assertRaises(NotWorkingDirectory,
+                          buildAllTarballs,
+                          checkout, FilePath(self.mktemp()))
+        checkout.createDirectory()
+        self.assertRaises(NotWorkingDirectory,
+                          buildAllTarballs,
+                          checkout, FilePath(self.mktemp()))
+
+
+
+class ScriptTests(BuilderTestsMixin, StructureAssertingMixin, TestCase):
+    """
+    Tests for the release script functionality.
+    """
+
+    def _testVersionChanging(self, major, minor, micro, prerelease=None):
+        """
+        Check that L{ChangeVersionsScript.main} calls the version-changing
+        function with the appropriate version data and filesystem path.
+        """
+        versionUpdates = []
+        def myVersionChanger(sourceTree, versionTemplate):
+            versionUpdates.append((sourceTree, versionTemplate))
+        versionChanger = ChangeVersionsScript()
+        versionChanger.changeAllProjectVersions = myVersionChanger
+        version = "%d.%d.%d" % (major, minor, micro)
+        if prerelease is not None:
+            version += "pre%d" % (prerelease,)
+        versionChanger.main([version])
+        self.assertEquals(len(versionUpdates), 1)
+        self.assertEquals(versionUpdates[0][0], FilePath("."))
+        self.assertEquals(versionUpdates[0][1].major, major)
+        self.assertEquals(versionUpdates[0][1].minor, minor)
+        self.assertEquals(versionUpdates[0][1].micro, micro)
+        self.assertEquals(versionUpdates[0][1].prerelease, prerelease)
+
+
+    def test_changeVersions(self):
+        """
+        L{ChangeVersionsScript.main} changes version numbers for all Twisted
+        projects.
+        """
+        self._testVersionChanging(8, 2, 3)
+
+
+    def test_changeVersionsWithPrerelease(self):
+        """
+        A prerelease can be specified to L{changeVersionsScript}.
+        """
+        self._testVersionChanging(9, 2, 7, 38)
+
+
+    def test_defaultChangeVersionsVersionChanger(self):
+        """
+        The default implementation of C{changeAllProjectVersions} is
+        L{changeAllProjectVersions}.
+        """
+        versionChanger = ChangeVersionsScript()
+        self.assertEquals(versionChanger.changeAllProjectVersions,
+                          changeAllProjectVersions)
+
+
+    def test_badNumberOfArgumentsToChangeVersionsScript(self):
+        """
+        L{changeVersionsScript} raises SystemExit when the wrong number of
+        arguments are passed.
+        """
+        versionChanger = ChangeVersionsScript()
+        self.assertRaises(SystemExit, versionChanger.main, [])
+
+
+    def test_tooManyDotsToChangeVersionsScript(self):
+        """
+        L{changeVersionsScript} raises SystemExit when there are the wrong
+        number of segments in the version number passed.
+        """
+        versionChanger = ChangeVersionsScript()
+        self.assertRaises(SystemExit, versionChanger.main,
+                          ["3.2.1.0"])
+
+
+    def test_nonIntPartsToChangeVersionsScript(self):
+        """
+        L{changeVersionsScript} raises SystemExit when the version number isn't
+        made out of numbers.
+        """
+        versionChanger = ChangeVersionsScript()
+        self.assertRaises(SystemExit, versionChanger.main,
+                          ["my united.states.of prewhatever"])
+
+
+    def test_buildTarballsScript(self):
+        """
+        L{BuildTarballsScript.main} invokes L{buildAllTarballs} with
+        L{FilePath} instances representing the paths passed to it.
+        """
+        builds = []
+        def myBuilder(checkout, destination):
+            builds.append((checkout, destination))
+        tarballBuilder = BuildTarballsScript()
+        tarballBuilder.buildAllTarballs = myBuilder
+
+        tarballBuilder.main(["checkoutDir", "destinationDir"])
+        self.assertEquals(
+            builds,
+            [(FilePath("checkoutDir"), FilePath("destinationDir"))])
+
+
+    def test_defaultBuildTarballsScriptBuilder(self):
+        """
+        The default implementation of L{BuildTarballsScript.buildAllTarballs}
+        is L{buildAllTarballs}.
+        """
+        tarballBuilder = BuildTarballsScript()
+        self.assertEquals(tarballBuilder.buildAllTarballs, buildAllTarballs)
+
+
+    def test_badNumberOfArgumentsToBuildTarballs(self):
+        """
+        L{BuildTarballsScript.main} raises SystemExit when the wrong number of
+        arguments are passed.
+        """
+        tarballBuilder = BuildTarballsScript()
+        self.assertRaises(SystemExit, tarballBuilder.main, [])
 
 
 if lore is None:

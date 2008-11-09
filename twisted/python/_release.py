@@ -10,6 +10,7 @@ else, do not use it. The interface and behaviour will change without notice.
 """
 
 from datetime import date
+import sys
 import os
 from tempfile import mkdtemp
 import tarfile
@@ -23,6 +24,7 @@ except ImportError:
 
 from twisted.python.versions import Version
 from twisted.python.filepath import FilePath
+from twisted.python.dist import twisted_subprojects
 
 # This import is an example of why you shouldn't use this module unless you're
 # radix
@@ -33,6 +35,27 @@ except ImportError:
 
 # The offset between a year and the corresponding major version number.
 VERSION_OFFSET = 2000
+
+
+def runCommand(args):
+    """
+    Execute a vector of arguments.
+
+    @type args: C{list} of C{str}
+    @param args: A list of arguments, the first of which will be used as the
+        executable to run.
+
+    @rtype: C{str}
+    @return: All of the standard output.
+
+    @raise CommandFailed: when the program exited with a non-0 exit code.
+    """
+    process = Popen4(args)
+    stdout = process.fromchild.read()
+    exitCode = process.wait()
+    if os.WIFSIGNALED(exitCode) or os.WEXITSTATUS(exitCode):
+        raise CommandFailed(exitCode, stdout)
+    return stdout
 
 
 class CommandFailed(Exception):
@@ -81,6 +104,26 @@ def getNextVersion(version, now=None):
     return Version(version.package, major, minor, 0)
 
 
+def changeAllProjectVersions(root, versionTemplate):
+    """
+    Change the version of all projects (including core and all subprojects).
+
+    @type root: L{FilePath}
+    @param root: The root of the Twisted source tree.
+    @type versionTemplate: L{Version}
+    @param versionTemplate: The version of all projects.  The name will be
+        replaced for each respective project.
+    """
+    for project in findTwistedProjects(root):
+        if project.directory.basename() == "twisted":
+            packageName = "twisted"
+        else:
+            packageName = "twisted." + project.directory.basename()
+        version = Version(packageName, versionTemplate.major,
+                          versionTemplate.minor, versionTemplate.micro,
+                          prerelease=versionTemplate.prerelease)
+        project.updateVersion(version)
+
 
 class Project(object):
     """
@@ -117,8 +160,7 @@ class Project(object):
         with the specified version.
         """
         oldVersion = self.getVersion()
-        replaceProjectVersion(oldVersion.package,
-                              self.directory.child("_version.py").path,
+        replaceProjectVersion(self.directory.child("_version.py").path,
                               version)
         _changeVersionInFile(
             oldVersion, version,
@@ -156,8 +198,25 @@ def updateTwistedVersionInformation(baseDirectory, now):
         project.updateVersion(getNextVersion(project.getVersion(), now=now))
 
 
+def generateVersionFileData(version):
+    """
+    Generate the data to be placed into a _version.py file.
 
-def replaceProjectVersion(name, filename, newversion):
+    @param version: A version object.
+    """
+    if version.prerelease is not None:
+        prerelease = ", prerelease=%r" % (version.prerelease,)
+    else:
+        prerelease = ""
+    data = '''\
+# This is an auto-generated file. Do not edit it.
+from twisted.python import versions
+version = versions.Version(%r, %s, %s, %s%s)
+''' % (version.package, version.major, version.minor, version.micro, prerelease)
+    return data
+
+
+def replaceProjectVersion(filename, newversion):
     """
     Write version specification code into the given filename, which
     sets the version to the given version number.
@@ -169,15 +228,7 @@ def replaceProjectVersion(name, filename, newversion):
     # XXX - this should be moved to Project and renamed to writeVersionFile.
     # jml, 2007-11-15.
     f = open(filename, 'w')
-    if newversion.prerelease is not None:
-        prerelease = ", prerelease=%r" % (newversion.prerelease,)
-    else:
-        prerelease = ""
-    f.write('''\
-# This is an auto-generated file. Do not edit it.
-from twisted.python import versions
-version = versions.Version(%r, %s, %s, %s%s)
-''' % (name, newversion.major, newversion.minor, newversion.micro, prerelease))
+    f.write(generateVersionFileData(newversion))
     f.close()
 
 
@@ -229,7 +280,8 @@ class DocBuilder(LoreBuilderMixin):
     Generate HTML documentation for projects.
     """
 
-    def build(self, version, resourceDir, docDir, template, apiBaseURL=None, deleteInput=False):
+    def build(self, version, resourceDir, docDir, template, apiBaseURL=None,
+              deleteInput=False):
         """
         Build the documentation in C{docDir} with Lore.
 
@@ -408,14 +460,9 @@ class BookBuilder(LoreBuilderMixin):
         @type command: C{str}
         @param command: The shell command to run.
 
-        @raise RuntimeError: If the child process exits with an error.
+        @raise CommandFailed: If the child process exits with an error.
         """
-        process = Popen4(command)
-        stdout = process.fromchild.read()
-        exitCode = process.wait()
-        if os.WIFSIGNALED(exitCode) or os.WEXITSTATUS(exitCode):
-            raise CommandFailed(exitCode, stdout)
-        return stdout
+        return runCommand(command)
 
 
     def buildTeX(self, howtoDir):
@@ -554,6 +601,10 @@ class DistributionBuilder(object):
     A builder of Twisted distributions.
 
     This knows how to build tarballs for Twisted and all of its subprojects.
+
+    @type blacklist: C{list} of C{str}
+    @cvar blacklist: The list subproject names to exclude from the main Twisted
+        tarball and for which no individual project tarballs will be built.
     """
 
     from twisted.python.dist import twisted_subprojects as subprojects
@@ -613,6 +664,11 @@ class DistributionBuilder(object):
         """
         Build the main Twisted distribution in C{Twisted-<version>.tar.bz2}.
 
+        Projects listed in in L{blacklist} will not have their plugins, code,
+        documentation, or bin directories included.
+
+        bin/admin is also excluded.
+
         @type version: C{str}
         @param version: The version of Twisted to build.
 
@@ -645,7 +701,8 @@ class DistributionBuilder(object):
         # part of the blacklisted projects.
 
         for binthing in self.rootDirectory.child("bin").children():
-            if binthing.basename() not in self.blacklist:
+            # bin/admin should also not be included.
+            if binthing.basename() not in self.blacklist + ["admin"]:
                 tarball.add(binthing.path,
                             buildPath("bin", binthing.basename()))
 
@@ -801,3 +858,129 @@ class DistributionBuilder(object):
             tarball.add(docPath.path, buildPath("doc"))
 
         return tarball
+
+
+
+class UncleanWorkingDirectory(Exception):
+    """
+    Raised when the working directory of an SVN checkout is unclean.
+    """
+
+
+class NotWorkingDirectory(Exception):
+    """
+    Raised when a directory does not appear to be an SVN working directory.
+    """
+
+
+def buildAllTarballs(checkout, destination):
+    """
+    Build complete tarballs (including documentation) for Twisted and all
+    subprojects.
+
+    This should be called after the version numbers have been updated and
+    NEWS files created.
+
+    @type checkout: L{FilePath}
+    @param checkout: The SVN working copy from which a pristine source tree
+        will be exported.
+    @type destination: L{FilePath}
+    @param destination: The directory in which tarballs will be placed.
+
+    @raise UncleanWorkingDirectory: if there are modifications to the
+        working directory of C{checkout}.
+    @raise NotWorkingDirectory: if the checkout path is not an SVN checkout.
+    """
+    if not checkout.child(".svn").exists():
+        raise NotWorkingDirectory(
+            "%s does not appear to be an SVN working directory."
+            % (checkout.path,))
+    if runCommand(["svn", "st", checkout.path]).strip():
+        raise UncleanWorkingDirectory(
+            "There are local modifications to the SVN checkout in %s."
+             % (checkout.path,))
+
+    workPath = FilePath(mkdtemp())
+    export = workPath.child("export")
+    runCommand(["svn", "export", checkout.path, export.path])
+    twistedPath = export.child("twisted")
+    version = Project(twistedPath).getVersion()
+    versionString = version.base()
+
+    apiBaseURL = "http://twistedmatrix.com/documents/%s/api/%%s.html" % (
+        versionString)
+    if not destination.exists():
+        destination.createDirectory()
+    db = DistributionBuilder(export, destination, apiBaseURL=apiBaseURL)
+
+    db.buildCore(versionString)
+    for subproject in twisted_subprojects:
+        if (subproject not in db.blacklist
+            and twistedPath.child(subproject).exists()):
+            db.buildSubProject(subproject, versionString)
+
+    db.buildTwisted(versionString)
+    workPath.remove()
+
+
+class ChangeVersionsScript(object):
+    """
+    A thing for changing version numbers. See L{main}.
+    """
+    changeAllProjectVersions = staticmethod(changeAllProjectVersions)
+
+    def main(self, args):
+        """
+        Given a list of command-line arguments, change all the Twisted versions
+        in the current directory.
+
+        @type args: list of str
+        @param args: List of command line arguments.  This should only
+            contain the version number.
+        """
+        version_format = (
+            "Version should be in a form kind of like '1.2.3[pre4]'")
+        if len(args) != 1:
+            sys.exit("Must specify exactly one argument to change-versions")
+        version = args[0]
+        try:
+            major, minor, micro_and_pre = version.split(".")
+        except ValueError:
+            raise SystemExit(version_format)
+        if "pre" in micro_and_pre:
+            micro, pre = micro_and_pre.split("pre")
+        else:
+            micro = micro_and_pre
+            pre = None
+        try:
+            major = int(major)
+            minor = int(minor)
+            micro = int(micro)
+            if pre is not None:
+                pre = int(pre)
+        except ValueError:
+            raise SystemExit(version_format)
+        version_template = Version("Whatever",
+                                   major, minor, micro, prerelease=pre)
+        self.changeAllProjectVersions(FilePath("."), version_template)
+
+
+
+class BuildTarballsScript(object):
+    """
+    A thing for building release tarballs. See L{main}.
+    """
+    buildAllTarballs = staticmethod(buildAllTarballs)
+
+    def main(self, args):
+        """
+        Build all release tarballs.
+
+        @type args: list of str
+        @param args: The command line arguments to process.  This must contain
+            two strings: the checkout directory and the destination directory.
+        """
+        if len(args) != 2:
+            sys.exit("Must specify two arguments: "
+                     "Twisted checkout and destination path")
+        self.buildAllTarballs(FilePath(args[0]), FilePath(args[1]))
