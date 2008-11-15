@@ -266,8 +266,6 @@ def run():
     d = threads.deferToThread(largeFibonnaciNumber)
     # add our callback to print it out
     d.addCallback(fibonacciCallback)
-    # unless the largeFibonnaciNumber thread returns very fast, these print
-    #lines should happen first
     print "1st line after the addition of the callback"
     print "2nd line after the addition of the callback"
 
