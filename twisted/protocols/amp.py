@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.test.test_amp -*-
 # Copyright (c) 2005 Divmod, Inc.
-# Copyright (c) 2007 Twisted Matrix Laboratories.
+# Copyright (c) 2007-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -59,7 +59,7 @@ responder for our 'Sum' command::
         Sum.responder(sum)
 
 Later, when you want to actually do a sum, the following expression will return
-a Deferred which will fire with the result::
+a L{Deferred} which will fire with the result::
 
     ClientCreator(reactor, amp.AMP).connectTCP(...).addCallback(
         lambda p: p.callRemote(Sum, a=13, b=81)).addCallback(
@@ -129,6 +129,11 @@ so::
 
 Notes:
 
+In general, the order of keys is arbitrary.  Specific uses of AMP may impose an
+ordering requirement, but unless this is specified explicitly, any ordering may
+be generated and any ordering must be accepted.  This applies to the
+command-related keys I{_command} and I{_ask} as well as any other keys.
+
 Values are limited to the maximum encodable size in a 16-bit length, 65535
 bytes.
 
@@ -137,8 +142,8 @@ Note that we still use 2-byte lengths to encode keys.  This small redundancy
 has several features:
 
     - If an implementation becomes confused and starts emitting corrupt data,
-      or gets keys confused with values, many common errors will be
-      signalled immediately instead of delivering obviously corrupt packets.
+      or gets keys confused with values, many common errors will be signalled
+      immediately instead of delivering obviously corrupt packets.
 
     - A single NUL will separate every key, and a double NUL separates
       messages.  This provides some redundancy when debugging traffic dumps.
@@ -151,7 +156,6 @@ has several features:
       plain-text protocol, and easily distinguish between non-AMP clients (like
       web browsers) which issue non-NUL as the first byte, and AMP clients,
       which always issue NUL as the first byte.
-
 """
 
 __metaclass__ = type
