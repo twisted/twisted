@@ -182,6 +182,12 @@ class Version(object):
         entriesFile.readline()
         entriesFile.readline()
         return entriesFile.readline().strip()
+    
+    
+    # Add handlers for version 9 and 10 formats, which are the same as
+    # version 8 as far as revision information is concerned.
+    _parseSVNEntries_9 = _parseSVNEntries_8
+    _parseSVNEntries_10 = _parseSVNEntries_8
 
 
     def _getSVNVersion(self):

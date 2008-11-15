@@ -40,6 +40,23 @@ svn+ssh://svn.twistedmatrix.com/svn/Twisted/trunk
 """
 
 
+VERSION_9_ENTRIES = """\
+9
+
+dir
+22715
+svn+ssh://svn.twistedmatrix.com/svn/Twisted/trunk
+"""
+
+
+VERSION_10_ENTRIES = """\
+10
+
+dir
+22715
+svn+ssh://svn.twistedmatrix.com/svn/Twisted/trunk
+"""
+
 
 class VersionsTest(unittest.TestCase):
 
@@ -160,6 +177,24 @@ class VersionsTest(unittest.TestCase):
         version = Version("dummy", 1, 0, 0)
         self.assertEqual(
             version._parseSVNEntries_8(StringIO(VERSION_8_ENTRIES)), '22715')
+        
+        
+    def test_goodSVNEntries_9(self):
+        """
+        Version should be able to parse an SVN format 9 entries file.
+        """
+        version = Version("dummy", 1, 0, 0)
+        self.assertEqual(
+            version._parseSVNEntries_9(StringIO(VERSION_9_ENTRIES)), '22715')
+        
+        
+    def test_goodSVNEntries_10(self):
+        """
+        Version should be able to parse an SVN format 10 entries file.
+        """
+        version = Version("dummy", 1, 0, 0)
+        self.assertEqual(
+            version._parseSVNEntries_10(StringIO(VERSION_10_ENTRIES)), '22715')
 
 
     def test_getVersionString(self):
@@ -258,6 +293,22 @@ class FormatDiscoveryTests(unittest.TestCase):
         parsed.
         """
         self.checkSVNFormat("8", VERSION_8_ENTRIES, '22715')
+        
+    
+    def test_detectVersion9(self):
+        """
+        Verify that version 9 format files will be properly detected and
+        parsed.
+        """
+        self.checkSVNFormat("9", VERSION_9_ENTRIES, '22715')
+        
+        
+    def test_detectVersion10(self):
+        """
+        Verify that version 10 format files will be properly detected and
+        parsed.
+        """
+        self.checkSVNFormat("10", VERSION_10_ENTRIES, '22715')
 
 
     def test_detectUnknownVersion(self):
@@ -265,5 +316,3 @@ class FormatDiscoveryTests(unittest.TestCase):
         Verify that a new version of SVN will result in the revision 'Unknown'.
         """
         self.checkSVNFormat("some-random-new-version", "ooga booga!", 'Unknown')
-
-
