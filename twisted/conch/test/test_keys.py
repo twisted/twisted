@@ -1,6 +1,9 @@
-# -*- test-case-name: twisted.conch.test.test_keys -*-
 # Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
+
+"""
+Tests for L{twisted.conch.ssh.keys}.
+"""
 
 try:
     import Crypto.Cipher.DES3
@@ -76,6 +79,17 @@ class SSHKeysHandlingTestCase(unittest.TestCase):
                 data=keydata.privateRSA_agentv3)
         self._testGeneratePrivateKey(obj, keydata.privateRSA_agentv3,
                 'agentv3')
+
+
+    def test_fingerprint(self):
+        """
+        L{Key.fingerprint} returns a hex-encoded colon-separated md5 sum of the
+        public key.
+        """
+        self.assertEquals(
+            '3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af',
+            keys.Key.fromString(keydata.publicRSA_openssh).fingerprint())
+
 
     def _testKey(self, pubStr, privStr, data, keyType):
         """

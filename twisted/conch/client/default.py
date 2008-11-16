@@ -1,56 +1,82 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.conch.test.test_knownhosts -*-
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
-from twisted.conch.error import ConchError
-from twisted.conch.ssh import common, keys, userauth, agent
-from twisted.internet import defer, protocol, reactor
-from twisted.python import log
+"""
+Various classes and functions for implementing user-interaction in the
+command-line conch client.
 
-import agent
+You probably shouldn't use anything in this module directly, since it assumes
+you are sitting at an interactive terminal.  For example, to programmatically
+interact with a known_hosts database, use L{twisted.conch.client.knownhosts}.
+"""
+
+from twisted.python import log
+from twisted.python.filepath import FilePath
+
+from twisted.conch.error import ConchError
+from twisted.conch.ssh import common, keys, userauth
+from twisted.internet import defer, protocol, reactor
+
+from twisted.conch.client.knownhosts import KnownHostsFile, ConsoleUI
+
+from twisted.conch.client import agent
 
 import os, sys, base64, getpass
 
+# This name is bound so that the unit tests can use 'patch' to override it.
+_open = open
+
 def verifyHostKey(transport, host, pubKey, fingerprint):
-    goodKey = isInKnownHosts(host, pubKey, transport.factory.options)
-    if goodKey == 1: # good key
-        return defer.succeed(1)
-    elif goodKey == 2: # AAHHHHH changed
-        return defer.fail(ConchError('changed host key'))
-    else:
-        oldout, oldin = sys.stdout, sys.stdin
-        sys.stdin = sys.stdout = open('/dev/tty','r+')
-        if host == transport.transport.getPeer().host:
-            khHost = host
-        else:
-            host = '%s (%s)' % (host,
-                                transport.transport.getPeer().host)
-            khHost = '%s,%s' % (host,
-                                transport.transport.getPeer().host)
-        keyType = common.getNS(pubKey)[0]
-        print """The authenticity of host '%s' can't be established.
-%s key fingerprint is %s.""" % (host,
-                            {'ssh-dss':'DSA', 'ssh-rsa':'RSA'}[keyType],
-                            fingerprint)
-        try:
-            ans = raw_input('Are you sure you want to continue connecting (yes/no)? ')
-        except KeyboardInterrupt:
-            return defer.fail(ConchError("^C"))
-        while ans.lower() not in ('yes', 'no'):
-            ans = raw_input("Please type 'yes' or 'no': ")
-        sys.stdout,sys.stdin=oldout,oldin
-        if ans == 'no':
-            print 'Host key verification failed.'
-            return defer.fail(ConchError('bad host key'))
-        print "Warning: Permanently added '%s' (%s) to the list of known hosts." % (khHost, {'ssh-dss':'DSA', 'ssh-rsa':'RSA'}[keyType])
-        known_hosts = open(os.path.expanduser('~/.ssh/known_hosts'), 'r+')
-        known_hosts.seek(-1, 2)
-        if known_hosts.read(1) != '\n':
-            known_hosts.write('\n')
-        encodedKey = base64.encodestring(pubKey).replace('\n', '')
-        known_hosts.write('%s %s %s\n' % (khHost, keyType, encodedKey))
-        known_hosts.close()
-        return defer.succeed(1)
+    """
+    Verify a host's key.
+
+    This function is a gross vestige of some bad factoring in the client
+    internals.  The actual implementation, and a better signature of this logic
+    is in L{KnownHostsFile.verifyHostKey}.  This function is not deprecated yet
+    because the callers have not yet been rehabilitated, but they should
+    eventually be changed to call that method instead.
+
+    However, this function does perform two functions not implemented by
+    L{KnownHostsFile.verifyHostKey}.  It determines the path to the user's
+    known_hosts file based on the options (which should really be the options
+    object's job), and it provides an opener to L{ConsoleUI} which opens
+    '/dev/tty' so that the user will be prompted on the tty of the process even
+    if the input and output of the process has been redirected.  This latter
+    part is, somewhat obviously, not portable, but I don't know of a portable
+    equivalent that could be used.
+
+    @param host: Due to a bug in L{SSHClientTransport.verifyHostKey}, this is
+    always the dotted-quad IP address of the host being connected to.
+    @type host: L{str}
+
+    @param transport: the client transport which is attempting to connect to
+    the given host.
+    @type transport: L{SSHClientTransport}
+
+    @param fingerprint: the fingerprint of the given public key, in
+    xx:xx:xx:... format.  This is ignored in favor of getting the fingerprint
+    from the key itself.
+    @type fingerprint: L{str}
+
+    @param pubKey: The public key of the server being connected to.
+    @type pubKey: L{str}
+
+    @return: a L{Deferred} which fires with C{1} if the key was successfully
+    verified, or fails if the key could not be successfully verified.  Failure
+    types may include L{HostKeyChanged}, L{UserRejectedKey}, L{IOError} or
+    L{KeyboardInterrupt}.
+    """
+    actualHost = transport.factory.options['host']
+    actualKey = keys.Key.fromString(pubKey)
+    kh = KnownHostsFile.fromPath(FilePath(
+            transport.factory.options['known-hosts']
+            or os.path.expanduser("~/.ssh/known_hosts")
+            ))
+    ui = ConsoleUI(lambda : _open("/dev/tty", "r+b"))
+    return kh.verifyHostKey(ui, actualHost, host, actualKey)
+
+
 
 def isInKnownHosts(host, pubKey, options):
     """checks to see if host is in the known_hosts file for the user.
@@ -58,7 +84,7 @@ def isInKnownHosts(host, pubKey, options):
     """
     keyType = common.getNS(pubKey)[0]
     retVal = 0
-    
+
     if not options['known-hosts'] and not os.path.exists(os.path.expanduser('~/.ssh/')):
         print 'Creating ~/.ssh directory...'
         os.mkdir(os.path.expanduser('~/.ssh'))

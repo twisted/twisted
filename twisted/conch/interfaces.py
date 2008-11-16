@@ -1,16 +1,20 @@
 # Copyright (c) 2007-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+This module contains interfaces defined for the L{twisted.conch} package.
+"""
+
 from zope.interface import Interface, Attribute
 
 class IConchUser(Interface):
     """
     A user who has been authenticated to Cred through Conch.  This is
-    the interface between the SSH connection and the user. 
+    the interface between the SSH connection and the user.
     """
 
     conn = Attribute('The SSHConnection object for this user.')
-    
+
     def lookupChannel(channelType, windowSize, maxPacket, data):
         """
         The other side requested a channel of some sort.
@@ -36,17 +40,17 @@ class IConchUser(Interface):
         The other side requested a subsystem.
         subsystem is the name of the subsystem being requested.
         data is any other packet data (often nothing).
-        
+
         We return a L{Protocol}.
         """
 
     def gotGlobalRequest(requestType, data):
         """
         A global request was sent from the other side.
-        
+
         By default, this dispatches to a method 'channel_channelType' with any
-        non-alphanumerics in the channelType replace with _'s.  If it cannot 
-        find a suitable method, it returns an OPEN_UNKNOWN_CHANNEL_TYPE error. 
+        non-alphanumerics in the channelType replace with _'s.  If it cannot
+        find a suitable method, it returns an OPEN_UNKNOWN_CHANNEL_TYPE error.
         The method is called with arguments of windowSize, maxPacket, data.
         """
 
@@ -83,7 +87,7 @@ class ISession(Interface):
         """
         Called when the other side has indicated no more data will be sent.
         """
-        
+
     def closed():
         """
         Called when the session is closed.
@@ -292,6 +296,49 @@ class ISFTPServer(Interface):
         @param extendedData: the data the other side sent with the request,
         as a string.
         """
+
+
+
+class IKnownHostEntry(Interface):
+    """
+    A L{IKnownHostEntry} is an entry in an OpenSSH-formatted C{known_hosts}
+    file.
+
+    @since: 8.2
+    """
+
+    def matchesKey(key):
+        """
+        Return True if this entry matches the given Key object, False
+        otherwise.
+
+        @param key: The key object to match against.
+        @type key: L{twisted.conch.ssh.Key}
+        """
+
+
+    def matchesHost(hostname):
+        """
+        Return True if this entry matches the given hostname, False otherwise.
+
+        Note that this does no name resolution; if you want to match an IP
+        address, you have to resolve it yourself, and pass it in as a dotted
+        quad string.
+
+        @param key: The hostname to match against.
+        @type key: L{str}
+        """
+
+
+    def toString():
+        """
+        @return: a serialized string representation of this entry, suitable for
+        inclusion in a known_hosts file.  (Newline not included.)
+
+        @rtype: L{str}
+        """
+
+
 
 class ISFTPFile(Interface):
     """

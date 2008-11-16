@@ -2,8 +2,6 @@
 # Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
-
 """
 Handling of RSA and DSA keys.
 
@@ -423,6 +421,30 @@ class Key(object):
         as self.
         """
         return Key(self.keyObject.publickey())
+
+
+    def fingerprint(self):
+        """
+        Get the user presentation of the fingerprint of this L{Key}.  As
+        described by U{RFC 4716 section
+        4<http://tools.ietf.org/html/rfc4716#section-4>}::
+
+            The fingerprint of a public key consists of the output of the MD5
+            message-digest algorithm [RFC1321].  The input to the algorithm is
+            the public key data as specified by [RFC4253].  (...)  The output
+            of the (MD5) algorithm is presented to the user as a sequence of 16
+            octets printed as hexadecimal with lowercase letters and separated
+            by colons.
+
+        @since: 8.2
+
+        @return: the user presentation of this L{Key}'s fingerprint, as a
+        string.
+
+        @rtype: L{str}
+        """
+        return ':'.join([x.encode('hex') for x in md5.md5(self.blob()).digest()])
+
 
     def type(self):
         """
