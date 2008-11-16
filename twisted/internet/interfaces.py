@@ -1430,8 +1430,12 @@ class IProcessTransport(ITransport):
     A process transport.
     """
 
-    pid = Attribute("The Process-ID of this process.")
-    
+    pid = Attribute(
+        "From before L{IProcessProtocol.makeConnection} is called to before "
+        "L{IProcessProtocol.processEnded} is called, C{pid} is an L{int} "
+        "giving the platform process ID of this process.  C{pid} is L{None} "
+        "at all other times.")
+
     def closeStdin():
         """
         Close stdin after all data has been written out.
