@@ -350,24 +350,38 @@ def foo2bar(f):
       functions or classes in this module, if you feel they are useful
       to others.</li>
 
-      <li>Write a file in <code class="shell">bin/</code> which contains a
-          shebang line for Python
-<pre class="shell">
+      <li>Create a file which contains a shebang line for Python. For Twisted
+      Core, this file should be placed in the <code>bin/</code> directory; for
+      example, <code>bin/twistd</code>. For sub-projects, it should be placed
+      in <code>bin/&lt;subproject&gt;</code>; for example, the key-generation tool
+      for the Conch sub-project is in <code>bin/conch/ckeygen</code>.
+<pre class="python">
 #!/usr/bin/python
 </pre></li>
-<li> add the Twisted running-from-SVN header, and end with
 
+      <li>Add the Twisted running-from-SVN header:
+<pre class="python">
+### Twisted Preamble
+# This makes sure that users don't have to set up their environment
+# specially in order to run these programs from bin/.
+import sys, os, string
+if string.find(os.path.abspath(sys.argv[0]), os.sep+'Twisted') != -1:
+    sys.path.insert(0, os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]), os.pardir, os.pardir)))
+if not hasattr(os, "getuid") or os.getuid() != 0:
+    sys.path.insert(0, os.getcwd())
+### end of preamble
+</pre></li>
+
+      <li>And end with:
 <pre class="python">
 from twisted.scripts.yourmodule import run
 run()
 </pre></li>
 
-      <li>Write a manpage in <code class="shell">doc/man</code>.
-      On debian systems you can find a skeleton example of a manpage in
+      <li>Write a manpage and add it to the <code class="shell">man</code> folder
+      of a subproject's <code class="shell">doc</code> folder. On Debian systems
+      you can find a skeleton example of a manpage in
       <code>/usr/share/doc/man-db/examples/manpage.example</code>.</li>
-
-      <li>Add your script to the script list in
-      <code class="shell">setup.py</code>.</li>
     </ol>
 
     <p>This will insure your program will work correctly for users of SVN,
@@ -378,7 +392,7 @@ run()
     <p>For example scripts you expect a Twisted user
     to run from the command-line, add this Python shebang line at the top
     of the file:</p>
-<pre class="shell">
+<pre class="python">
 #!/usr/bin/python
 </pre>
 
