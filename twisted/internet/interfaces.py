@@ -1202,6 +1202,8 @@ class IProcessProtocol(Interface):
             terminated.  The type of exception for this failure is either
             L{twisted.internet.error.ProcessDone} or
             L{twisted.internet.error.ProcessTerminated}.
+
+        @since: 8.2
         """
 
 

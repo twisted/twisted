@@ -34,7 +34,7 @@ class BaseProcess(Ephemeral):
                 _missingProcessExited % (qual(self.proto.__class__),),
                 DeprecationWarning, stacklevel=0)
         else:
-            processExited(reason)
+            processExited(Failure(reason))
 
 
     def processEnded(self, status):
@@ -60,5 +60,3 @@ class BaseProcess(Ephemeral):
                 proto.processEnded(Failure(reason))
             except:
                 err(None, "unexpected error in processEnded")
-
-

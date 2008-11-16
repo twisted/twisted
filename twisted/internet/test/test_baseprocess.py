@@ -21,8 +21,9 @@ class BaseProcessTests(TestCase):
     """
     def test_callProcessExited(self):
         """
-        L{BaseProcess._callProcessExited} calls the C{processExited} method if
-        its C{proto} attribute and passes it the given C{reason} object.
+        L{BaseProcess._callProcessExited} calls the C{processExited} method of
+        its C{proto} attribute and passes it a L{Failure} wrapping the given
+        exception.
         """
         class FakeProto:
             reason = None
@@ -30,10 +31,11 @@ class BaseProcessTests(TestCase):
             def processExited(self, reason):
                 self.reason = reason
 
-        reason = object()
+        reason = RuntimeError("fake reason")
         process = BaseProcess(FakeProto())
         process._callProcessExited(reason)
-        self.assertIdentical(reason, process.proto.reason)
+        process.proto.reason.trap(RuntimeError)
+        self.assertIdentical(reason, process.proto.reason.value)
 
 
     def test_callProcessExitedMissing(self):

@@ -14,6 +14,7 @@ from twisted.python.compat import set
 from twisted.python.log import msg, err
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
+from twisted.python.failure import Failure
 from twisted.internet.defer import Deferred
 from twisted.internet.protocol import ProcessProtocol
 from twisted.internet.error import ProcessDone, PotentialZombieWarning
@@ -58,7 +59,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         reactor = self.buildReactor()
         reactor.callWhenRunning(self.spawnProcess, reactor)
         reactor.callWhenRunning(reactor.stop)
-        reactor.run()
+        self.runReactor(reactor)
         self.assertFalse(events)
 
 
@@ -97,7 +98,12 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
             def processExited(self, reason):
                 msg('processExited(%r)' % (reason,))
-                exited.errback(reason)
+                # Protect the Deferred from the failure so that it follows
+                # the callback chain.  This doesn't use the errback chain
+                # because it wants to make sure reason is a Failure.  An
+                # Exception would also make an errback-based test pass, and
+                # that would be wrong.
+                exited.callback([reason])
 
             def processEnded(self, reason):
                 msg('processEnded(%r)' % (reason,))
@@ -107,8 +113,11 @@ class ProcessTestsBuilderBase(ReactorBuilder):
             reactor.spawnProcess, Exiter(), sys.executable,
             [sys.executable, "-c", source], usePTY=self.usePTY)
 
-        exited = self.assertFailure(exited, ProcessTerminated)
-        def cbExited(err):
+        def cbExited((failure,)):
+            # Trapping implicitly verifies that it's a Failure (rather than
+            # an exception) and explicitly makes sure it's the right type.
+            failure.trap(ProcessTerminated)
+            err = failure.value
             if platform.isWindows():
                 # Windows can't really /have/ signals, so it certainly can't
                 # report them as the reason for termination.  Maybe there's
@@ -121,11 +130,12 @@ class ProcessTestsBuilderBase(ReactorBuilder):
             else:
                 self.assertEqual(err.signal, sigNum)
                 self.assertIdentical(err.exitCode, None)
+
         exited.addCallback(cbExited)
         exited.addErrback(err)
         exited.addCallback(lambda ign: reactor.stop())
 
-        reactor.run()
+        self.runReactor(reactor)
 
 
 
@@ -192,7 +202,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
             reactor.stop()
         connected.addCallback(cbEnded)
 
-        reactor.run()
+        self.runReactor(reactor)
 
 
     # This test is here because PTYProcess never delivers childConnectionLost.
@@ -219,7 +229,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
 
             def processEnded(self, reason):
                 msg('processEnded(%r)' % (reason,))
-                ended.errback(reason)
+                ended.callback([reason])
 
         reactor = self.buildReactor()
         reactor.callWhenRunning(
@@ -228,15 +238,15 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
              self.keepStdioOpenArg],
             usePTY=self.usePTY)
 
-        ended = self.assertFailure(ended, ProcessDone)
-        def cbEnded(ignored):
+        def cbEnded((failure,)):
+            failure.trap(ProcessDone)
             self.assertEqual(set(lost), set([0, 1, 2]))
         ended.addCallback(cbEnded)
 
         ended.addErrback(err)
         ended.addCallback(lambda ign: reactor.stop())
 
-        reactor.run()
+        self.runReactor(reactor)
 
 
     # This test is here because PTYProcess.loseConnection does not actually
@@ -264,7 +274,8 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
 
             def processExited(self, reason):
                 msg('processExited(%r)' % (reason,))
-                exited.errback(reason)
+                # See test_processExitedWithSignal
+                exited.callback([reason])
                 self.transport.loseConnection()
 
         reactor = self.buildReactor()
@@ -274,8 +285,8 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
              self.keepStdioOpenArg],
             usePTY=self.usePTY)
 
-        exited = self.assertFailure(exited, ProcessDone)
-        def cbExited(ignored):
+        def cbExited((failure,)):
+            failure.trap(ProcessDone)
             msg('cbExited; lost = %s' % (lost,))
             self.assertEqual(lost, [])
             return allLost
@@ -288,7 +299,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         exited.addErrback(err)
         exited.addCallback(lambda ign: reactor.stop())
 
-        reactor.run()
+        self.runReactor(reactor)
 
 
 globals().update(ProcessTestsBuilder.makeTestCaseClasses())
