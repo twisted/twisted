@@ -44,7 +44,9 @@
 
     <h3>How</h3>
 
-    <p>From the root of the Twisted source tree, run:</p>
+    <p>From the root of the Twisted source tree, run
+    <a href='http://twistedmatrix.com/trac/wiki/TwistedTrial'>Trial</a>:
+    </p>
 
     <pre class="shell">
 $ bin/trial twisted
@@ -61,7 +63,7 @@ $ bin/trial twisted
 </pre>
     <h3>When</h3>
 
-    <p>Always always <em>always</em> be sure <a href=
+    <p>Always, always, <em>always</em> be sure <a href=
      "http://www.xprogramming.com/xpmag/expUnitTestsAt100.htm">all the
      tests pass</a> before committing any code.  If someone else
      checks out code at the start of a development session and finds
@@ -72,8 +74,7 @@ $ bin/trial twisted
     can help you get your code working probably isn't in the room with
     you.  You may want to share your work in progress over the
     network, but you want to leave the main Subversion tree in good working
-    order.  So <a href=
-    "http://svnbook.red-bean.com/svnbook/ch04.html" >use a branch</a>,
+    order.  So <a href="http://svnbook.red-bean.com/en/1.0/ch04.html">use a branch</a>,
     and merge your changes back in only after your problem is solved
     and all the unit tests pass again.</p>
 
@@ -85,11 +86,12 @@ $ bin/trial twisted
     exactly what the change that broke it was, or until after a
     release, and nobody wants broken code in a release.</p>
 
-    <p>Tests go into dedicated test packages such as Twisted/twisted/test/
-    or Twisted/twisted/conch/test/, and are named <code>test_foo.py</code>,
-    where <code>foo</code> is the name of the module or package being tested.
-    Extensive documentation on using the PyUnit framework for writing
-    unit tests can be found in the <a href= "#links" >links section</a> below.
+    <p>Tests go into dedicated test packages such as
+    <code>twisted/test/</code> or <code>twisted/conch/test/</code>,
+    and are named <code>test_foo.py</code>, where <code>foo</code> is the name
+    of the module or package being tested. Extensive documentation on using
+    the PyUnit framework for writing unit tests can be found in the
+    <a href="#links">links section</a> below.
     </p>
 
     <p>One deviation from the standard PyUnit documentation: To ensure
@@ -97,7 +99,7 @@ $ bin/trial twisted
     code or environment and not the test process itself, Twisted ships
     with its own, compatible, testing framework.  That just
     means that when you import the unittest module, you will <code
-    class= "python" >from twisted.trial import unittest</code> instead of the
+    class="python">from twisted.trial import unittest</code> instead of the
     standard <code class="python">import unittest</code>.</p>
 
     <p>As long as you have followed the module naming and placement
@@ -250,6 +252,13 @@ should be passing.  In other words, you should rarely, if ever, feel the need
 to add a test marked todo to trunk.  When you do, consider whether a ticket
 in the issue tracker would be more useful.</p>
 
+<h3>Line Coverage Information</h3>
+
+<p>Trial provides line coverage information, which is very useful to ensure
+old code has decent coverage. Passing the <code>--coverage</code> option to
+to Trial will generate the coverage information in a file called
+<code>coverage</code> which can be found in the <code>_trial_temp</code>
+folder. This option requires Python 2.3.3 or newer.</p>
 
 <h2>Associating Test Cases With Source Files</h2>
 
@@ -298,14 +307,14 @@ run the right tests.</p>
 
 <ul>
       <li>A chapter on <a href=
-      "http://diveintopython.org/roman_divein.html" >Unit Testing</a>
+      "http://diveintopython.org/unit_testing/index.html">Unit Testing</a>
       in Mark Pilgrim's <a href="http://diveintopython.org">Dive Into
       Python</a>.</li>
 
       <li><a href=
-      "http://www.python.org/doc/current/lib/module-unittest.html"
+      "http://docs.python.org/lib/module-unittest.html"
       ><code>unittest</code></a> module documentation, in the <a href=
-      "http://www.python.org/doc/current/lib/" >Python Library
+      "http://docs.python.org/library">Python Library
       Reference</a>.</li>
 
       <li><a href="http://c2.com/cgi/wiki?UnitTests">UnitTests</a> on
@@ -315,18 +324,18 @@ run the right tests.</p>
       >ExtremeProgramming</a> kids hang out.</li>
 
       <li><a href=
-      "http://www.extremeprogramming.org/rules/unittests.html" >Unit
+      "http://www.extremeprogramming.org/rules/unittests.html">Unit
       Tests</a> in <a href= "http://www.extremeprogramming.org"
       >Extreme Programming: A Gentle Introduction</a>.</li>
 
-      <li>Ron Jeffries espouses on the importance of <a href=
-      "http://www.xprogramming.com/xpmag/expUnitTestsAt100.htm" >Unit
+      <li>Ron Jeffries expounds on the importance of <a href=
+      "http://www.xprogramming.com/xpmag/expUnitTestsAt100.htm">Unit
       Tests at 100%</a>.</li>
 
       <li>Ron Jeffries writes about the <a href=
       "http://www.xprogramming.com/Practices/PracUnitTest.html" >Unit
       Test</a> in the <a href=
-      "http://www.xprogramming.com/Practices/xpractices.htm" >Extreme
+      "http://www.xprogramming.com/Practices/xpractices.htm">Extreme
       Programming practices of C3</a>.</li>
 
       <li><a href="http://pyunit.sourceforge.net">PyUnit's homepage</a>.</li>
