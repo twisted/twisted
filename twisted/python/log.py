@@ -8,15 +8,17 @@ Logging and metrics infrastructure.
 
 from __future__ import division
 
-# System Imports
 import sys
 import time
 import warnings
 from datetime import datetime
 import logging
 
-# Sibling Imports
+from zope.interface import Interface
+
 from twisted.python import util, context, reflect
+
+
 
 class ILogContext:
     """
@@ -25,6 +27,37 @@ class ILogContext:
 
     I do not inherit from Interface because the world is a cruel place.
     """
+
+
+
+class ILogObserver(Interface):
+    """
+    An observer which can do something with log events.
+    
+    Given that most log observers are actually bound methods, it's okay to not
+    explicitly declare provision of this interface.
+    """
+    def __call__(eventDict):
+        """
+        Log an event.
+
+        @type eventDict: C{dict} with C{str} keys.
+        @param eventDict: A dictionary with arbitrary keys.  However, these
+            keys are often available:
+              - C{message}: A C{tuple} of C{str} containing messages to be
+                logged.
+              - C{system}: A C{str} which indicates the "system" which is
+                generating this event.
+              - C{isError}: A C{bool} indicating whether this event represents
+                an error.
+              - C{failure}: A L{failure.Failure} instance
+              - C{why}: Used as header of the traceback in case of errors.
+              - C{format}: A string format used in place of C{message} to
+                customize the event.  The intent is for the observer to format
+                a message by doing something like C{format % eventDict}.
+        """
+
+
 
 context.setDefault(ILogContext,
                    {"isError": 0,
@@ -221,8 +254,9 @@ class LogPublisher:
         """
         Add a new observer.
 
-        Observers are callable objects that will be called with each new log
-        message (a dict).
+        @type other: Provider of L{ILogObserver}
+        @param other: A callable object that will be called with each new log
+            message (a dict).
         """
         assert callable(other)
         self.observers.append(other)

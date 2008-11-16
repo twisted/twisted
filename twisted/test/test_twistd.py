@@ -21,7 +21,9 @@ from twisted.application import service, app
 from twisted.scripts import twistd
 from twisted.python import log
 from twisted.python.usage import UsageError
+from twisted.python.log import ILogObserver
 from twisted.python.versions import Version
+from twisted.python.components import Componentized
 from twisted.internet.defer import Deferred
 
 try:
@@ -1099,20 +1101,43 @@ class AppLoggerTestCase(unittest.TestCase):
             log.removeObserver(observer)
 
 
+    def _checkObserver(self, logs):
+        """
+        Ensure that initial C{twistd} logs are written to the given list.
+
+        @type logs: C{list}
+        @param logs: The list whose C{append} method was specified as the
+            initial log observer.
+        """
+        self.assertEquals(self.observers, [logs.append])
+        self.assertIn("starting up", logs[0]["message"][0])
+        self.assertIn("reactor class", logs[1]["message"][0])
+
+
     def test_start(self):
         """
-        L{app.AppLogger.start} call L{log.addObserver}, and that writes some
+        L{app.AppLogger.start} calls L{log.addObserver}, and then writes some
         messages about twistd and the reactor.
         """
         logger = app.AppLogger({})
         observer = []
         logger._getLogObserver = lambda: observer.append
+        logger.start(Componentized())
+        self._checkObserver(observer)
 
-        logger.start(None)
 
-        self.assertEquals(self.observers, [observer.append])
-        self.assertIn("starting up", observer[0]["message"][0])
-        self.assertIn("reactor class", observer[1]["message"][0])
+    def test_startUsesApplicationLogObserver(self):
+        """
+        When the L{ILogObserver} component is available on the application,
+        that object will be used as the log observer instead of constructing a
+        new one.
+        """
+        application = Componentized()
+        logs = []
+        application.setComponent(ILogObserver, logs.append)
+        logger = app.AppLogger({})
+        logger.start(application)
+        self._checkObserver(logs)
 
 
     def test_getLogObserverStdout(self):

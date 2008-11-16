@@ -114,6 +114,37 @@ service.tac</code></p>
 
 <p>For more information, see the <code>twistd</code> man page.</p>
 
+<h3>Customizing <code>twistd</code> logging in a .tac application</h3>
+
+<p>
+The logging behavior can be customized through an API
+accessible from <code>.tac</code> files.  The <code class="API"
+base="twisted.python.log.ILogObserver">ILogObserver</code> component can be
+set on an Application in order to customize the default log observer that
+<code>twistd</code> will use.
+</p>
+
+<p>
+Here is an example of how to use <code class="API"
+base="twisted.python.logfile">DailyLogFile</code>, which rotates the log once
+per day.
+</p>
+
+<pre class="python">
+from twisted.application.service import Application
+from twisted.python.log import ILogObserver, FileLogObserver
+from twisted.python.logfile import DailyLogFile
+
+application = Application("myapp")
+logfile = DailyLogFile("my.log", "/tmp")
+application.setComponent(ILogObserver, FileLogObserver(logfile).emit)
+</pre>
+
+<p>
+invoking <code class="shell">twistd -y my.tac</code> will create a log file
+at<code>/tmp/my.log</code>.
+</p>
+
 <h3>Services provided by Twisted</h3>
 
 <p>Twisted provides several services that you want to know about.</p>

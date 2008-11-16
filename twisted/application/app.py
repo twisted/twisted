@@ -8,6 +8,7 @@ from twisted.python import runtime, log, usage, failure, util, logfile
 from twisted.python.versions import Version
 from twisted.python.reflect import qual
 from twisted.python.deprecate import deprecated
+from twisted.python.log import ILogObserver
 from twisted.persisted import sob
 from twisted.application import service, reactors
 from twisted.internet import defer
@@ -220,7 +221,7 @@ class AppLogger(object):
         default.
     @type _logfilename: C{str}
 
-    @param _observer: log observer added at C{start} and removed at C{stop}.
+    @ivar _observer: log observer added at C{start} and removed at C{stop}.
     @type _observer: C{callable}
     """
     _observer = None
@@ -232,8 +233,19 @@ class AppLogger(object):
     def start(self, application):
         """
         Initialize the logging system.
+
+        If an L{ILogObserver} component has been set on C{application}, then
+        it will be used as the log observer.  Otherwise a log observer will be
+        created based on the command-line options.
+        
+        @param application: The application on which to check for an
+            L{ILogObserver}.
         """
-        self._observer = self._getLogObserver()
+        observer = application.getComponent(ILogObserver, None)
+
+        if observer is None:
+            observer = self._getLogObserver()
+        self._observer = observer
         log.startLoggingWithObserver(self._observer)
         self._initialLog()
 
@@ -589,7 +601,8 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
                      ['file','f','twistd.tap',
                       "read the given .tap file"],
                      ['python','y', None,
-                      "read an application from within a Python file (implies -o)"],
+                      "read an application from within a Python file "
+                      "(implies -o)"],
                      ['xml', 'x', None,
                       "Read an application from a .tax file "
                       "(Marmalade format)."],
