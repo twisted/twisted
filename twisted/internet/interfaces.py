@@ -634,13 +634,14 @@ class IReactorThreads(Interface):
         Cause a function to be executed by the reactor thread.
 
         Use this method when you want to run a function in the reactor's thread
-        from another thread.  Calling callFromThread should wake up the main
-        thread (where reactor.run() is executing) and run the given callable in
-        that thread.
+        from another thread.  Calling L{callFromThread} should wake up the main
+        thread (where L{reactor.run()<reactor.run>} is executing) and run the
+        given callable in that thread.
 
-        Obviously, the callable must be thread safe.  (If you want to call a
-        function in the next mainloop iteration, but you're in the same thread,
-        use callLater with a delay of 0.)
+        If you're writing a multi-threaded application the C{callable} may need
+        to be thread safe, but this method doesn't require it as such. If you
+        want to call a function in the next mainloop iteration, but you're in
+        the same thread, use L{callLater} with a delay of 0.
         """
 
     def suggestThreadPoolSize(size):
