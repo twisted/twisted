@@ -422,7 +422,6 @@ except ImportError:
 
     <ul>
       <li>twisted.spread.pb.ViewPoint</li>
-
       <li>twisted.parser.patterns.Pattern</li>
     </ul>
 
@@ -430,7 +429,6 @@ except ImportError:
 
     <ul>
       <li>event.EventHandler</li>
-
       <li>main.MainGadget</li>
     </ul>
 
@@ -444,6 +442,15 @@ except ImportError:
     imported directly into the user's namespace and not cause
     confusion.</p>
 
+    <h3>New-style Classes</h3>
+
+    <p>Classes and instances in Python come in two flavors: old-style or
+    classic, and new-style. Up to Python 2.1, old-style classes were the
+    only flavour available to the user, new-style classes were introduced
+    in Python 2.2 to unify classes and types. All classes added to Twisted
+    should be written as new-style classes. If <code class="python">x</code>
+    is an instance of a new-style class, then <code class="python">type(x)</code>
+    is the same as <code class="python">x.__class__</code>.</p>
 
     <h2>Methods</h2>
 
