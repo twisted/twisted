@@ -24,7 +24,8 @@ Features
  - A new deferToThreadPool function exists in twisted.internet.threads (#2845)
  - There is now an example of writing an FTP server in examples/ftpserver.py
    (#1579)
- - A new runAsEffectiveUser has been added to twisted.python.util (#2607)
+ - A new runAsEffectiveUser function has been added to twisted.python.util
+   (#2607)
  - twisted.internet.utils.getProcessOutput now offers a mechanism for
    waiting for the process to actually end, in the event of data received on
    stderr (#3239)
@@ -87,10 +88,8 @@ Fixes
  - AMP boxes can now be sent in IBoxReceiver.startReceivingBoxes (#3477)
  - AMP connections are closed as soon as a key length larger than 255 is
    received (#3478)
- - Log events with timezone offsetse between -1 and -59 minutes are now
+ - Log events with timezone offsets between -1 and -59 minutes are now
    correctly reported as negative (#3515)
- - 
-
 
 Deprecations and Removals
 -------------------------
@@ -104,8 +103,6 @@ Deprecations and Removals
    removed in favor of the subFailure attribute (#3298)
  - The 'changeDirectory' method of FTPClient has been deprecated in favor of
    the 'cwd' method (#3491)
-
-
 
 Other
 -----
@@ -155,7 +152,7 @@ Lore 8.2.0 (2008-11-16)
 
 Other
 -----
- - #2207, #2514, 
+ - #2207, #2514
 
 
 Mail 8.2.0 (2008-11-16)
@@ -168,7 +165,7 @@ Fixes
 
 Other
 -----
- - #3475, 
+ - #3475
 
 
 Names 8.2.0 (2008-11-16)
@@ -190,7 +187,7 @@ Fixes
 
 Other
 -----
- - #1622, #3424, 
+ - #1622, #3424
 
 
 Web 8.2.0 (2008-11-16)
@@ -228,7 +225,7 @@ Deprecations and Removals
 
 Other
 -----
- - #909, #687, #2938, #1152, #2930, #2025, #2683, #3471, 
+ - #909, #687, #2938, #1152, #2930, #2025, #2683, #3471
 
 
 Web2 8.2.0 (2008-11-16)
@@ -261,7 +258,7 @@ Feature
 Fixes
 -----
  - The IRC Client implementation can now deal with compound mode changes (#3230)
- - The MSN protocol implementation no longer require sthe CVR0 protocol to
+ - The MSN protocol implementation no longer requires the CVR0 protocol to
    be included in the VER command (#3394)
  - In the IRC server implementation, topic messages will no longer be sent for
    a group which has no topic (#2204)
@@ -275,7 +272,7 @@ Fixes
 
 Other
 -----
- - #3365, 
+ - #3365
 
 
 Core 8.1.0 (2008-05-18)
