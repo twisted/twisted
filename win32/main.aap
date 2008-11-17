@@ -57,6 +57,10 @@ ZIVersion=3.3.0
 # PyVersion is variant rather than a regular string variable so the script
 # will accept only one of these two values
 :variant PyVersion
+    py2.6
+        pyversion=2.6
+        pyversion10=26
+        pyhome=`_no.pathdb["python26"]`
     py2.5
         pyversion=2.5
         pyversion10=25

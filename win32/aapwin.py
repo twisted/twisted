@@ -8,7 +8,7 @@ def getValueFromReg(key, valuename, default, hive=winreg.HKLM):
         return default
     if valuename is None:
         return key.value
-    try:    
+    try:
         return key.values[valuename].value
     except winreg.ValueNotFound:
         return default
@@ -49,7 +49,7 @@ def lookupInnoHome():
         _innohome = getValueFromReg(r'%s\%s' % (regkey, _four),
                                     "Inno Setup: App Path",
                                     None)
-    if _innohome is None: 
+    if _innohome is None:
         return fallback
     else:
         return _innohome
@@ -58,6 +58,7 @@ innohome = lookupInnoHome()
 
 pathdb = dict(innohome=innohome,
               iscc=os.path.join(innohome, "ISCC.exe"),
+              python26=getPythonHomeForVersion('2.6'),
               python25=getPythonHomeForVersion('2.5'),
               python24=getPythonHomeForVersion('2.4'),
               )

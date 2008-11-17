@@ -1,5 +1,5 @@
 
-@supported_pythons = ('py2.5', 'py2.4')
+@supported_pythons = ('py2.6', 'py2.5', 'py2.4')
 
 all: ../main.aap
     @for p in _no.supported_pythons:
