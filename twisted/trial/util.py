@@ -215,25 +215,6 @@ class _Janitor(object):
         return selectableStrings
 
 
-def collectWarnings(f, *a, **kw):
-    """
-    Collect all of the warnings raised by C{f}, suppressing them in the process.
-    Return a 2-tuple of C{(ret, warnings)}, where C{ret} is C{f}'s return value
-    and C{warnings} is a list of the warnings.
-
-    @return: (ret, [(message, category, filename, lineno), ...])
-    """
-    _warnings = []
-    def showwarning(message, category, filename, lineno):
-        _warnings.append((message, category, filename,  lineno))
-    original, warnings.showwarning = warnings.showwarning, showwarning
-    try:
-        ret = f(*a, **kw)
-    finally:
-        warnings.showwarning = original
-    return (ret, _warnings)
-
-
 def suppress(action='ignore', **kwarg):
     """
     Sets up the .suppress tuple properly, pass options to this method as you
