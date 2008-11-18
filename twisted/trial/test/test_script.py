@@ -15,7 +15,6 @@ from twisted.scripts import trial
 from twisted.python.compat import set
 
 from twisted.trial import itrial, reporter, runner, unittest
-from twisted.trial.util import collectWarnings
 from twisted.trial.test.test_loader import testNames
 
 pyunit = __import__('unittest')
@@ -423,12 +422,7 @@ class TestFindReporterPlugins(unittest.TestCase):
     def setUp(self):
         self.oldPlugins = []
         self.newPlugins = []
-        self._getPlugins = plugin.getPlugins
-        plugin.getPlugins = self.getPlugins
-
-
-    def tearDown(self):
-        plugin.getPlugins = self._getPlugins
+        self.patch(plugin, 'getPlugins', self.getPlugins)
 
 
     def test_getsNewPlugins(self):
@@ -449,10 +443,10 @@ class TestFindReporterPlugins(unittest.TestCase):
             implements(plugin.IPlugin, itrial.IReporter)
 
         self.oldPlugins = [ReporterPlugin()]
-        plugins, warnings = collectWarnings(
-            lambda: list(trial.findReporterPlugins()))
+        plugins = list(trial.findReporterPlugins())
         self.assertEqual(self.oldPlugins, plugins)
 
-        [(message, category, filename, lineno)] = warnings
-        self.assertEqual(DeprecationWarning, category)
-        self.assertIn(repr(self.oldPlugins[0]), str(message))
+        warnings = self.flushWarnings()
+
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertIn(repr(self.oldPlugins[0]), warnings[0]['message'])
