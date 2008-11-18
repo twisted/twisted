@@ -1,9 +1,12 @@
-# Copyright (c) 2001-2005 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.conch.test.test_cftp -*-
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import array
 import stat
-import time
+
+from time import time, strftime, localtime
+
 
 def lsLine(name, s):
     mode = s.st_mode
@@ -46,10 +49,12 @@ def lsLine(name, s):
     l += sz.rjust(8)
     l += ' '
     sixmo = 60 * 60 * 24 * 7 * 26
-    if s.st_mtime + sixmo < time.time(): # last edited more than 6mo ago
-        l += time.strftime("%b %2d  %Y ", time.localtime(s.st_mtime))
+    if s.st_mtime + sixmo < time(): # last edited more than 6mo ago
+        l += strftime("%b %d  %Y ", localtime(s.st_mtime))
     else:
-        l += time.strftime("%b %2d %H:%S ", time.localtime(s.st_mtime))
+        l += strftime("%b %d %H:%M ", localtime(s.st_mtime))
     l += name
     return l
 
+
+__all__ = ['lsLine']

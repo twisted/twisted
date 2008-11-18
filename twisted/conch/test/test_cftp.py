@@ -2,7 +2,7 @@
 # Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE file for details.
 
-import sys, os
+import time, sys, os
 
 try:
     import Crypto.Cipher.DES3
@@ -22,14 +22,109 @@ except ImportError:
         # In Python 2.4, the bad import has already been cleaned up for us.
         pass
 
+
+from twisted.trial.unittest import TestCase
 from twisted.cred import portal
 from twisted.internet import reactor, protocol, interfaces, defer, error
 from twisted.internet.utils import getProcessOutputAndValue
 from twisted.python import log
+from twisted.conch import ls
 
 from twisted.conch.test import test_ssh, test_conch
 from twisted.conch.test.test_filetransfer import SFTPTestBase
 from twisted.conch.test.test_filetransfer import FileTransferTestAvatar
+
+
+
+class ListingTests(TestCase):
+    """
+    Tests for L{lsLine}, the function which generates an entry for a file or
+    directory in an SFTP I{ls} command's output.
+    """
+    def setUp(self):
+        """
+        Patch the L{ls} module's time function so the results of L{lsLine} are
+        deterministic.
+        """
+        self.now = 123456789
+        def fakeTime():
+            return self.now
+        self.patch(ls, 'time', fakeTime)
+
+
+    def test_oldFile(self):
+        """
+        A file with an mtime six months (approximately) or more in the past has
+        a listing including a low-resolution timestamp.
+        """
+        # Go with 7 months.  That's more than 6 months.
+        then = self.now - (60 * 60 * 24 * 31 * 7)
+        listing = ls.lsLine(
+            'foo',
+            os.stat_result((0, 0, 0, 0, 0, 0, 0, 0, then, 0)))
+        self.assertEqual(
+            listing,
+            '!---------    0 0        0               0 Apr 26  1973 foo')
+
+
+    def test_oldSingleDigitDayOfMonth(self):
+        """
+        A file with a high-resolution timestamp which falls on a day of the
+        month which can be represented by one decimal digit is formatted with
+        one padding 0 to preserve the columns which come after it.
+        """
+        # A point about 7 months in the past, tweaked to fall on the first of a
+        # month so we test the case we want to test.
+        then = self.now - (60 * 60 * 24 * 31 * 7) + (60 * 60 * 24 * 5)
+        listing = ls.lsLine(
+            'foo',
+            os.stat_result((0, 0, 0, 0, 0, 0, 0, 0, then, 0)))
+        self.assertEqual(
+            listing,
+            '!---------    0 0        0               0 May 01  1973 foo')
+
+
+    def test_newFile(self):
+        """
+        A file with an mtime fewer than six months (approximately) in the past
+        has a listing including a high-resolution timestamp excluding the year.
+        """
+        # A point about three months in the past.
+        then = self.now - (60 * 60 * 24 * 31 * 3)
+        listing = ls.lsLine(
+            'foo',
+            os.stat_result((0, 0, 0, 0, 0, 0, 0, 0, then, 0)))
+
+        # Timezones affect the hour of the result.  Make time.localtime
+        # figure out what it should be for us.
+        hour = time.localtime(then).tm_hour
+        self.assertEqual(
+            listing,
+            '!---------    0 0        0               0 Aug 28 %02d:33 foo' % (
+                hour,))
+
+
+    def test_newSingleDigitDayOfMonth(self):
+        """
+        A file with a high-resolution timestamp which falls on a day of the
+        month which can be represented by one decimal digit is formatted with
+        one padding 0 to preserve the columns which come after it.
+        """
+        # A point about three months in the past, tweaked to fall on the first
+        # of a month so we test the case we want to test.
+        then = self.now - (60 * 60 * 24 * 31 * 3) + (60 * 60 * 24 * 4)
+        listing = ls.lsLine(
+            'foo',
+            os.stat_result((0, 0, 0, 0, 0, 0, 0, 0, then, 0)))
+
+        # Timezones again.  See test_newFile.
+        hour = time.localtime(then).tm_hour
+        self.assertEqual(
+            listing,
+            '!---------    0 0        0               0 Sep 01 %02d:33 foo' % (
+                hour,))
+
+
 
 
 class FileTransferTestRealm:
@@ -311,6 +406,7 @@ class TestOurServerCmdLineClient(CFTPClientTestBase):
                            'ls *File', 'ls -a *File', 'ls -l testDirectory')
         d.addCallback(lambda xs: [x.split('\n') for x in xs])
         return d.addCallback(_check)
+
 
     def testHelp(self):
         """
