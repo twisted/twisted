@@ -46,6 +46,7 @@ class SafeStream(object):
         return untilConcludes(self.original.write, *a, **kw)
 
 
+
 class TestResult(pyunit.TestResult, object):
     """
     Accumulates the results of several L{twisted.trial.unittest.TestCase}s.
@@ -53,7 +54,9 @@ class TestResult(pyunit.TestResult, object):
     @ivar successes: count the number of successes achieved by the test run.
     @type successes: C{int}
     """
-    implements(itrial.IReporter)
+
+    implements(itrial.IReporter, itrial.IResult)
+
 
     def __init__(self):
         super(TestResult, self).__init__()
@@ -173,9 +176,11 @@ class TestResult(pyunit.TestResult, object):
                       "Deprecated in Twisted 8.0",
                       category=DeprecationWarning, stacklevel=2)
 
+
     def startSuite(self, name):
         warnings.warn("startSuite deprecated in Twisted 8.0",
                       category=DeprecationWarning, stacklevel=2)
+
 
     def endSuite(self, name):
         warnings.warn("endSuite deprecated in Twisted 8.0",
@@ -207,7 +212,8 @@ class UncleanWarningsReporterWrapper(TestResultDecorator):
     A wrapper for a reporter that converts L{util.DirtyReactorError}s
     to warnings.
     """
-    implements(itrial.IReporter)
+
+    implements(itrial.IReporter, itrial.IResultPrinter)
 
     def addError(self, test, error):
         """
@@ -314,7 +320,7 @@ class Reporter(TestResult):
     @type _publisher: L{LogPublisher} (or another type sufficiently similar)
     """
 
-    implements(itrial.IReporter)
+    implements(itrial.IReporter, itrial.IResultPrinter)
 
     _separator = '-' * 79
     _doubleSeparator = '=' * 79
@@ -992,6 +998,7 @@ class TreeReporter(Reporter):
         self.endLine('[ERROR]', self.ERROR)
         super(TreeReporter, self).cleanupErrors(errs)
 
+
     def upDownError(self, method, error, warn, printStatus):
         self._colorizer.write("  %s" % method, self.ERROR)
         if printStatus:
@@ -1036,3 +1043,45 @@ class TreeReporter(Reporter):
             color = self.FAILURE
         self._colorizer.write(status, color)
         self._write("%s\n", summary)
+
+
+
+class TrialReporterPlugin(object):
+    """
+    Plugin to the trial command line which handles all descendants of
+    L{Reporter}.
+    """
+
+    implements(itrial.IReporterPlugin)
+
+    def __init__(self, name, reporterClass, description=None):
+        """
+        Build a Trial reporter plugin
+
+        @param name: The name used to invoke this plugin from the command-line.
+        @type name: str
+
+        @param reporterClass: The L{Reporter} subclass that L{makeReporter}
+        should instantiate.
+        @type reporterClass: type
+
+        @param description: A human-readable description of what this plugin
+        does.
+        @type description: str
+        """
+        self._reporterClass = reporterClass
+        self.name = name
+        self.description = description
+
+
+    def makeReporter(self, options=None):
+        """
+        Return a L{Reporter} instance. Accepts 'rterrors' and 'tbformat'
+        options.
+        """
+        if options is None:
+            options = {}
+        if 'rterrors' in options:
+            options['realtime'] = options.pop('rterrors')
+        options['publisher'] = log
+        return self._reporterClass(**options)

@@ -18,8 +18,7 @@ def runTrial(*args):
     config.parseOptions(args)
     output = StringIO.StringIO()
     myRunner = runner.TrialRunner(
-        reporter.VerboseTextReporter,
-        stream=output,
+        lambda: reporter.VerboseTextReporter(stream=output),
         workingDirectory=config['temp-directory'])
     suite = trial._getSuite(config)
     result = myRunner.run(suite)

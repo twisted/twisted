@@ -1,10 +1,12 @@
 import os
+import sys
+import warnings
 
 from zope.interface import implements
 
-from twisted.internet.interfaces import IProcessTransport
 from twisted.internet import defer
 from twisted.internet.base import DelayedCall
+from twisted.internet.interfaces import IProcessTransport
 
 from twisted.trial.unittest import TestCase
 from twisted.trial import util
@@ -12,8 +14,8 @@ from twisted.trial.util import DirtyReactorAggregateError, _Janitor
 from twisted.trial.test import packages
 
 
-
 class TestMktemp(TestCase):
+
     def test_name(self):
         name = self.mktemp()
         dirs = os.path.dirname(name).split(os.sep)[:-1]
@@ -35,7 +37,108 @@ class TestMktemp(TestCase):
         self.failUnless(path.startswith(os.getcwd()))
 
 
+class TestCollectWarnings(TestCase):
+    """
+    Tests for L{util.collectWarnings}
+    """
+
+    def assertIsThisModule(self, filename):
+        """
+        Assert that the given filename refers to this module.
+        """
+        self.assertEqual(
+            os.path.splitext(os.path.abspath(filename))[0],
+            os.path.splitext(os.path.abspath(sys.modules[__name__].__file__))[0])
+
+
+    def emitWarning(self, x):
+        warnings.warn("foo", DeprecationWarning)
+        return x
+
+
+    def dontEmitWarning(self, x):
+        return x
+
+
+    def raiseException(self):
+        warnings.warn('foo', DeprecationWarning)
+        1/0
+
+
+    def test_returnsValue(self):
+        """
+        C{collectWarnings} should return the result of the function that it calls.
+        """
+        ret, warnings = util.collectWarnings(self.emitWarning, 42)
+        self.assertEqual(ret, 42)
+
+
+    def test_noWarnings(self):
+        """
+        If no warnings are emitted, C{collectWarnings} should return an empty
+        list for the warnings.
+        """
+        ret, warnings = util.collectWarnings(self.dontEmitWarning, 42)
+        self.assertEqual(warnings, [])
+
+
+    def test_collectsWarnings(self):
+        """
+        If the function emits warnings, C{collectWarnings} should return those
+        warnings in a list. Each item in the list should be a tuple of (message,
+        category, filename, lineno).
+        """
+        ret, warnings = util.collectWarnings(self.emitWarning, 42)
+        self.assertEqual(len(warnings), 1)
+
+        message, category, filename, lineno = warnings[0]
+        self.assertEqual(str(message), 'foo')
+        self.assertEqual(category, DeprecationWarning)
+        self.assertIsThisModule(filename)
+        self.failUnless(isinstance(lineno, int))
+
+
+    def test_suppression(self):
+        """
+        When we are calling a function inside C{collectWarnings}, no warnings
+        should be emitted.
+        """
+        ret, warnings = util.collectWarnings(util.collectWarnings,
+                                             self.emitWarning, 42)
+        self.assertEqual(warnings,  [])
+
+
+    def test_raiseException(self):
+        """
+        If the function raises an error, then C{collectWarnings} should just
+        let the error bubble up, and forget about collecting warnings.
+        """
+        self.assertRaises(ZeroDivisionError,
+                          util.collectWarnings, self.raiseException)
+
+
+    def test_canSwallowExceptions(self):
+        """
+        If we wrap an exception-raising function (like L{raiseException}) in an
+        exception-swallowing function (like L{TestCase.assertRaises}),
+        L{util.collectWarnings} should collect the warnings emitted in the
+        inner, exception-raising function.
+        """
+        ret, warnings = util.collectWarnings(self.assertRaises,
+                                             ZeroDivisionError,
+                                             self.raiseException)
+        self.assertEqual(len(warnings), 1)
+
+        message, category, filename, lineno = warnings[0]
+        self.assertEqual(str(message), 'foo')
+        self.assertEqual(category, DeprecationWarning)
+        self.assertIsThisModule(filename)
+        self.failUnless(isinstance(lineno, int))
+
+
+
 class TestIntrospection(TestCase):
+
     def test_containers(self):
         import suppression
         parents = util.getPythonContainers(
@@ -43,6 +146,7 @@ class TestIntrospection(TestCase):
         expected = [suppression.TestSuppression2, suppression]
         for a, b in zip(parents, expected):
             self.failUnlessEqual(a, b)
+
 
 
 class TestFindObject(packages.SysPathManglingTest):

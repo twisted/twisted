@@ -1441,8 +1441,6 @@ class PyUnitResultAdapter(object):
     def addSuccess(self, test):
         self.original.addSuccess(test)
 
-    def upDownError(self, method, error, warn, printStatus):
-        pass
 
 
 

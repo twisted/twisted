@@ -8,7 +8,7 @@ import sys, os, random, gc, time, warnings
 
 from twisted.internet import defer
 from twisted.application import app
-from twisted.python import usage, reflect, failure
+from twisted.python import usage, failure
 from twisted import plugin
 from twisted.python.util import spewer
 from twisted.python.compat import set
@@ -85,8 +85,22 @@ def isTestFile(filename):
             and os.path.splitext(basename)[1] == ('.py'))
 
 
+def findReporterPlugins():
+    """
+    Iterate through the available reporter plugins
+    """
+    for p in plugin.getPlugins(itrial.IReporterPlugin):
+        yield p
+    for p in plugin.getPlugins(itrial.IReporter):
+        warnings.warn("Found deprecated plugin: %r. Use IReporterPlugin "
+                      "instead of IReporter for Trial plugins." % p,
+                      DeprecationWarning)
+        yield p
+
+
 def _zshReporterAction():
-    return "(%s)" % (" ".join([p.longOpt for p in plugin.getPlugins(itrial.IReporter)]),)
+    return "(%s)" % (" ".join([p.name for p in findReporterPlugins()]),)
+
 
 class Options(usage.Options, app.ReactorSelectionMixin):
     synopsis = """%s [options] [[file|package|module|TestCase|testmethod]...]
@@ -123,13 +137,12 @@ class Options(usage.Options, app.ReactorSelectionMixin):
          'The reporter to use for this test run.  See --help-reporters for '
          'more info.']]
 
-    zsh_actions = {"tbformat":"(plain emacs cgitb)",
+    zsh_actions = {"tbformat":"(default brief verbose)",
                    "reporter":_zshReporterAction}
     zsh_actionDescr = {"logfile":"log file name",
                        "random":"random seed"}
     zsh_extras = ["*:file|module|package|TestCase|testMethod:_files -g '*.py'"]
 
-    fallbackReporter = reporter.TreeReporter
     extra = None
     tracer = None
 
@@ -207,12 +220,16 @@ class Options(usage.Options, app.ReactorSelectionMixin):
     def opt_help_reporters(self):
         synopsis = ("Trial's output can be customized using plugins called "
                     "Reporters. You can\nselect any of the following "
-                    "reporters using --reporter=<foo>\n")
+                    "reporters using --reporter=<foo>")
         print synopsis
-        for p in plugin.getPlugins(itrial.IReporter):
-            print '   ', p.longOpt, '\t', p.description
-        print
+        for p in findReporterPlugins():
+            print '   ', p.name,
+            if p.description is not None:
+                print '\t', p.description
+            else:
+                print
         sys.exit(0)
+
 
     def opt_disablegc(self):
         """Disable the garbage collector"""
@@ -220,13 +237,13 @@ class Options(usage.Options, app.ReactorSelectionMixin):
 
     def opt_tbformat(self, opt):
         """Specify the format to display tracebacks with. Valid formats are
-        'plain', 'emacs', and 'cgitb' which uses the nicely verbose stdlib
-        cgitb.text function"""
+        'default', 'brief', and 'verbose'. For backwards compatibility, 'plain',
+        'emacs' and 'cgitb' also work."""
         try:
             self['tbformat'] = TBFORMAT_MAP[opt]
         except KeyError:
             raise usage.UsageError(
-                "tbformat must be 'plain', 'emacs', or 'cgitb'.")
+                "tbformat must be 'default', 'brief', or 'verbose'.")
 
     def opt_extra(self, arg):
         """
@@ -275,17 +292,20 @@ class Options(usage.Options, app.ReactorSelectionMixin):
         if self.extra is not None:
             self['tests'].update(self.extra)
 
+
     def _loadReporterByName(self, name):
-        for p in plugin.getPlugins(itrial.IReporter):
-            qual = "%s.%s" % (p.module, p.klass)
-            if p.longOpt == name:
-                return reflect.namedAny(qual)
+        for p in findReporterPlugins():
+            if p.name == name:
+                return lambda: p.makeReporter({'tbformat': self['tbformat'],
+                                               'rterrors': self['rterrors']})
         raise usage.UsageError("Only pass names of Reporter plugins to "
                                "--reporter. See --help-reporters for "
                                "more info.")
 
 
     def postOptions(self):
+        if 'tbformat' not in self:
+            self['tbformat'] = 'default'
 
         # Only load reporters now, as opposed to any earlier, to avoid letting
         # application-defined plugins muck up reactor selecting by importing
@@ -337,8 +357,6 @@ def _makeRunner(config):
                               mode=mode,
                               profile=config['profile'],
                               logfile=config['logfile'],
-                              tracebackFormat=config['tbformat'],
-                              realTimeErrors=config['rterrors'],
                               uncleanWarnings=config['unclean-warnings'],
                               workingDirectory=config['temp-directory'],
                               forceGarbageCollection=config['force-gc'])

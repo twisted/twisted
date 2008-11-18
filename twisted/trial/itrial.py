@@ -7,16 +7,17 @@ Interfaces for Trial.
 Maintainer: Jonathan Lange
 """
 
-import zope.interface as zi
-from zope.interface import Attribute
+from zope.interface import Interface, Attribute
+
+from twisted.plugin import IPlugin
 
 
-class ITestCase(zi.Interface):
+class ITestCase(Interface):
     """
     The interface that a test case must implement in order to be used in Trial.
     """
 
-    failureException = zi.Attribute(
+    failureException = Attribute(
         "The exception class that is raised by failed assertions")
 
 
@@ -54,18 +55,165 @@ class ITestCase(zi.Interface):
 
 
 
-class IReporter(zi.Interface):
+class IResult(Interface):
     """
+    Receives events from tests and reports those results to the user or another
+    computer.
+    """
+
+    testsRun = Attribute("The number of tests that have been run using this "
+                         "reporter.")
+
+    def startTest(test):
+        """
+        Report that the test C{test} has started to run.
+
+        @param test: A unit test.
+        @type test: Generally a L{unittest.TestCase}, but anything that behaves
+        like L{TestCase} in the standard library module C{unittest}.
+        """
+
+
+    def stopTest(test):
+        """
+        Report that the test C{test} has finished running.
+
+        @param test: A unit test.
+        @type test: Generally a L{unittest.TestCase}, but anything that behaves
+        like L{TestCase} in the standard library module C{unittest}.
+        """
+
+
+    def addSuccess(test):
+        """
+        Record that C{test} passed.
+        """
+
+
+    def addError(test, error):
+        """
+        Report that C{test} received an unexpected error.
+
+        @param test: The test that received the error.
+        @type test: Generally a L{unittest.TestCase}, but anything that behaves
+        like L{TestCase} in the standard library module C{unittest}.
+
+        @param error: The error that occurred.
+        @type error: L{failure.Failure} or a L{sys.exc_info} tuple.
+        """
+
+
+    def addFailure(test, error):
+        """
+        Report that C{test} had a failed assertion.
+
+        @param test: The test that failed.
+        @type test: Generally a L{unittest.TestCase}, but anything that behaves
+        like L{TestCase} in the standard library module C{unittest}.
+
+        @param error: An error object representing the failed assertion.
+        @type error: L{failure.Failure} or a L{sys.exc_info} tuple.
+        """
+
+
+    def addSkip(test, reason):
+        """
+        Report that the given test was not run at all.
+
+        @param test: The test that failed.
+        @type test: Generally a L{unittest.TestCase}, but anything that behaves
+        like L{TestCase} in the standard library module C{unittest}.
+
+        @param reason: A string explaining why the test was not run.
+        @type reason: L{str}
+        """
+
+
+    def addUnexpectedSuccess(test, todo):
+        """
+        If C{test} was expected to fail, but succeeded, then this method will
+        be called to indicate the unexpected success.
+
+        @param test: The test that failed.
+        @type test: Generally a L{unittest.TestCase}, but anything that behaves
+        like L{TestCase} in the standard library module C{unittest}.
+
+        # XXX - should just be a string
+        @param todo: An object representing the reason for marking the test
+        'todo'.
+        @type todo: L{unittest.Todo}
+        """
+
+
+    def addExpectedFailure(test, error, todo):
+        """
+        If C{test} was marked as 'todo' and raised an expected error, then this
+        method will be called.
+
+        @param test: The test that failed.
+        @type test: Generally a L{unittest.TestCase}, but anything that behaves
+        like L{TestCase} in the standard library module C{unittest}.
+
+        @param error: The expected error that was raised.
+        @type error: L{failure.Failure} or a L{sys.exc_info} tuple.
+
+        # XXX - should just be a string
+        @param todo: An object representing the reason for marking the test
+        'todo'.
+        @type todo: L{unittest.Todo}
+        """
+
+
+class IResultPrinter(Interface):
+    """
+    Prints summaries of test results.
+    """
+
+    separator = Attribute('A string used to separate test errors.')
+
+
+    def printErrors():
+        """
+        Print all non-success results.
+        """
+
+
+    def printSummary():
+        """
+        Print a summary of the test result, indicating whether it has been
+        successful, how many tests passed, how many failed and so forth.
+        """
+
+
+    def write(format, *args):
+        """
+        Print the given format string using the supplied arguments.
+        """
+
+
+    def writeln(format, *args):
+        """
+        Print the given format string using the supplied arguments, followed by
+        a newline.
+        """
+
+
+
+class IReporter(Interface):
+    """DEPRECATED SINCE Twisted 2.6. DO NOT USE THIS INTERFACE.
+
+    Use L{IResult} or I{IResultPrinter} instead.
+
     I report results from a run of a test suite.
     """
 
-    stream = zi.Attribute(
+    stream = Attribute(
         "Deprecated in Twisted 8.0. "
         "The io-stream that this reporter will write to")
-    tbformat = zi.Attribute("Either 'default', 'brief', or 'verbose'")
-    args = zi.Attribute(
+    tbformat = Attribute("Either 'default', 'brief', or 'verbose'")
+    args = Attribute(
         "Additional string argument passed from the command line")
-    shouldStop = zi.Attribute(
+    shouldStop = Attribute(
         """
         A boolean indicating that this reporter would like the test run to stop.
         """)
@@ -233,6 +381,7 @@ class IReporter(zi.Interface):
         Display a string to the user, appending a new line.
         """
 
+
     def wasSuccessful():
         """
         Return a boolean indicating whether all test results that were reported
@@ -248,4 +397,29 @@ class IReporter(zi.Interface):
         information to the user. Once you have called C{done} on an
         L{IReporter} object, you should assume that the L{IReporter} object is
         no longer usable.
+        """
+
+
+
+class IReporterPlugin(IPlugin):
+    """
+    This plugin interface allows 'reporters' (i.e. TestResult objects) to be
+    added to the Trial command line.
+    """
+
+    name = Attribute('A single-word name used to identify the reporter. '
+                     'Must be set to a unique string.')
+    description = Attribute("A brief description of what the reporter does. "
+                            'Ignored if set to None.')
+
+
+    def makeReporter(options=None):
+        """
+        Return a new reporter.
+
+        @param options: Options from the command line. By default, assumes there
+        were no command-line options.
+        @type options: dict
+
+        @return: L{IResult} that can be adapted to L{IResultPrinter}.
         """

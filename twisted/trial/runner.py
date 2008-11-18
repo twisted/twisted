@@ -20,7 +20,7 @@ from twisted.python.lockfile import FilesystemLock
 
 from twisted.internet import defer, interfaces
 from twisted.trial import util, unittest
-from twisted.trial.itrial import ITestCase
+from twisted.trial.itrial import ITestCase, IResultPrinter
 from twisted.trial.reporter import UncleanWarningsReporterWrapper
 
 # These are imported so that they remain in the public API for t.trial.runner
@@ -685,6 +685,7 @@ class TrialRunner(object):
         dbg = pdb.Pdb()
         try:
             import readline
+            readline # Silence spurious pyflakes warning.
         except ImportError:
             print "readline module not available"
             hasattr(sys, 'exc_clear') and sys.exc_clear()
@@ -750,13 +751,12 @@ class TrialRunner(object):
         self._testDirLock.unlock()
 
 
-    _log = log
     def _makeResult(self):
-        reporter = self.reporterFactory(self.stream, self.tbformat,
-                                        self.rterrors, self._log)
+        reporter = self.reporterFactory()
         if self.uncleanWarnings:
             reporter = UncleanWarningsReporterWrapper(reporter)
         return reporter
+
 
     def __init__(self, reporterFactory,
                  mode=None,
@@ -768,12 +768,33 @@ class TrialRunner(object):
                  uncleanWarnings=False,
                  workingDirectory=None,
                  forceGarbageCollection=False):
+        """
+        Construct a Trial runner.
+
+        @param reporterFactory: A callable that returns a new result object
+        @type reporterFactory: A callbable that accepts no arguments
+
+        @param mode: Whether to dry-run the tests, run them normally or in a
+        debugger.
+        @type mode: One of None, TrialRunner.DEBUG, TrialRunner.DRY_RUN
+
+        @param logfile: Path to a file where the test logs will be filed.
+        Relative to the working directory.
+        @type logfile: A string path
+
+        @param profile: Whether to collect profile data.
+        @type profile: bool
+
+        @param workingDirectory: The directory in which to run trial
+        @type workingDirectory: A string path to a directory
+
+        @param uncleanWarnings: If True, then report unclean errors as
+        warnings.
+        @type uncleanWarnings: bool
+        """
         self.reporterFactory = reporterFactory
-        self.logfile = logfile
         self.mode = mode
-        self.stream = stream
-        self.tbformat = tracebackFormat
-        self.rterrors = realTimeErrors
+        self.logfile = logfile
         self.uncleanWarnings = uncleanWarnings
         self._result = None
         self.workingDirectory = workingDirectory or '_trial_temp'
@@ -782,6 +803,7 @@ class TrialRunner(object):
         self._forceGarbageCollection = forceGarbageCollection
         if profile:
             self.run = util.profiled(self.run, 'profile.data')
+
 
     def _tearDownLogFile(self):
         if self._logFileObserver is not None:
@@ -802,22 +824,32 @@ class TrialRunner(object):
         log.startLoggingWithObserver(self._logFileObserver.emit, 0)
 
 
-    def run(self, test):
+    def run(self, test, result=None):
         """
         Run the test or suite and return a result object.
+
+        @param test: A test case or test suite to run.
+        @type test: Generally L{runner.TestSuite} or L{unittest.TestCase}.
+
+        @param result: An optional result to use, instead of making our own.
+        @type result: A test result, should implement L{IResult} and be
+        adaptable to L{IResultPrinter}.
+
+        @return: A test result.
         """
         test = unittest.decorate(test, ITestCase)
         if self._forceGarbageCollection:
             test = unittest.decorate(
                 test, unittest._ForceGarbageCollectionDecorator)
-        return self._runWithoutDecoration(test)
+        if result is None:
+            result = self._makeResult()
+        return self._runWithoutDecoration(test, result)
 
 
-    def _runWithoutDecoration(self, test):
+    def _runWithoutDecoration(self, test, result):
         """
         Private helper that runs the given test but doesn't decorate it.
         """
-        result = self._makeResult()
         # decorate the suite with reactor cleanup and log starting
         # This should move out of the runner and be presumed to be
         # present
@@ -866,11 +898,12 @@ class TrialRunner(object):
         count = 0
         while True:
             count += 1
-            self.stream.write("Test Pass %d\n" % (count,))
+            result = self._makeResult()
+            result.writeln("Test Pass %d" % (count,))
             if count == 1:
-                result = self.run(test)
+                result = self.run(test, result)
             else:
-                result = self._runWithoutDecoration(test)
+                result = self._runWithoutDecoration(test, result)
             if result.testsRun == 0:
                 break
             if not result.wasSuccessful():

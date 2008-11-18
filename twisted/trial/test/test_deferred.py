@@ -209,6 +209,13 @@ class TestTimeout(TestTester):
         self._wasTimeout(result.errors[0][1])
 
     def test_callbackReturnsNonCallingDeferred(self):
+        """
+        Trial enforces a timeout across all tests. One edge case occurs when
+        tests return Deferreds are fired, but then have something in their
+        callback chain which takes a very long time. If this time goes over the
+        configured timeout, Trial should interrupt the test and mark it as
+        failed with a TimeoutError.
+        """
         #hacky timeout
         # raises KeyboardInterrupt because Trial sucks
         from twisted.internet import reactor

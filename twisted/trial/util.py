@@ -15,7 +15,9 @@ Any non-Trial Twisted code that uses this module will be shot.
 Maintainer: Jonathan Lange
 """
 
-import traceback, sys
+import sys
+import traceback
+import warnings
 
 from twisted.internet import defer, utils, interfaces
 from twisted.python.failure import Failure
@@ -211,6 +213,25 @@ class _Janitor(object):
                 sel.signalProcess('KILL')
             selectableStrings.append(repr(sel))
         return selectableStrings
+
+
+def collectWarnings(f, *a, **kw):
+    """
+    Collect all of the warnings raised by C{f}, suppressing them in the process.
+    Return a 2-tuple of C{(ret, warnings)}, where C{ret} is C{f}'s return value
+    and C{warnings} is a list of the warnings.
+
+    @return: (ret, [(message, category, filename, lineno), ...])
+    """
+    _warnings = []
+    def showwarning(message, category, filename, lineno):
+        _warnings.append((message, category, filename,  lineno))
+    original, warnings.showwarning = warnings.showwarning, showwarning
+    try:
+        ret = f(*a, **kw)
+    finally:
+        warnings.showwarning = original
+    return (ret, _warnings)
 
 
 def suppress(action='ignore', **kwarg):

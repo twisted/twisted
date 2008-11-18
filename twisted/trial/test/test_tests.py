@@ -407,13 +407,12 @@ class TestCleanup(unittest.TestCase):
         self.loader = runner.TestLoader()
 
 
-    def testLeftoverSockets(self):
+    def test_leftoverSockets(self):
         """
         Trial reports a L{util.DirtyReactorAggregateError} if a test leaves
         sockets behind.
         """
-        suite = self.loader.loadMethod(
-            erroneous.SocketOpenTest.test_socketsLeftOpen)
+        suite = erroneous.SocketOpenTest('test_socketsLeftOpen')
         suite.run(self.result)
         self.failIf(self.result.wasSuccessful())
         # socket cleanup happens at end of class's tests.
@@ -423,8 +422,7 @@ class TestCleanup(unittest.TestCase):
         failure = self.result.errors[0][1]
         self.failUnless(failure.check(util.DirtyReactorAggregateError))
 
-
-    def testLeftoverPendingCalls(self):
+    def test_leftoverPendingCalls(self):
         """
         Trial reports a L{util.DirtyReactorAggregateError} and fails the test
         if a test leaves a L{DelayedCall} hanging.
@@ -448,7 +446,10 @@ class FixtureTest(unittest.TestCase):
         self.loader = runner.TestLoader()
 
 
-    def testBrokenSetUp(self):
+    def test_brokenSetUp(self):
+        """
+        Errors raised in a setUp are reported to the result object.
+        """
         """
         When setUp fails, the error is recorded in the result object.
         """
@@ -458,7 +459,10 @@ class FixtureTest(unittest.TestCase):
                                 erroneous.FoolishError))
 
 
-    def testBrokenTearDown(self):
+    def test_brokenTearDown(self):
+        """
+        Errors raised in tearDown are reported to the result object.
+        """
         """
         When tearDown fails, the error is recorded in the result object.
         """
@@ -469,22 +473,32 @@ class FixtureTest(unittest.TestCase):
         self.assert_(isinstance(errors[0][1].value, erroneous.FoolishError))
 
 
-    def testBrokenSetUpClass(self):
+    def test_brokenSetUpClass(self):
+        """
+        Errors raised in setUpClass are reported to the result object.
+        """
         """
         When setUpClass fails, an error is recorded in the result object.
         """
         suite = self.loader.loadClass(erroneous.TestFailureInSetUpClass)
         suite.run(self.reporter)
-        self.assert_(self.reporter.errors)
+        self.assertEqual(len(self.reporter.errors), 1)
+        self.assert_(isinstance(self.reporter.errors[0][1].value,
+                                erroneous.FoolishError))
 
 
-    def testBrokenTearDownClass(self):
+    def test_brokenTearDownClass(self):
+        """
+        Error raised in tearDownClass are reported to the result object.
+        """
         """
         When setUpClass fails, an error is recorded in the result object.
         """
         suite = self.loader.loadClass(erroneous.TestFailureInTearDownClass)
         suite.run(self.reporter)
-        self.assert_(self.reporter.errors)
+        self.assertEqual(len(self.reporter.errors), 1)
+        self.assert_(isinstance(self.reporter.errors[0][1].value,
+                                erroneous.FoolishError))
 
 
 
@@ -493,7 +507,7 @@ class FixtureMetaTest(unittest.TestCase):
     def test_testBrokenTearDownClass(self):
         """FixtureTest.testBrokenTearDownClass succeeds when run twice
         """
-        test = FixtureTest('testBrokenTearDownClass')
+        test = FixtureTest('test_brokenTearDownClass')
         result = reporter.TestResult()
         test(result)
         self.failUnless(result.wasSuccessful())

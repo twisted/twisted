@@ -13,7 +13,7 @@ import errno, sys, os, re, StringIO
 from twisted.internet.utils import suppressWarnings
 from twisted.python import log
 from twisted.python.failure import Failure
-from twisted.trial import itrial, unittest, runner, reporter, util
+from twisted.trial import unittest, runner, reporter, itrial, util
 from twisted.trial.reporter import UncleanWarningsReporterWrapper
 from twisted.trial.test import erroneous
 from twisted.trial.unittest import makeTodo, SkipTest, Todo
@@ -75,9 +75,9 @@ class TestTestResult(unittest.TestCase):
             raise RuntimeError('foo')
         except RuntimeError, excValue:
             self.result.addError(self, sys.exc_info())
-        failure = self.result.errors[0][1]
-        self.assertEqual(excValue, failure.value)
-        self.assertEqual(RuntimeError, failure.type)
+        fail = self.result.errors[0][1]
+        self.assertEqual(excValue, fail.value)
+        self.assertEqual(RuntimeError, fail.type)
 
     def test_pyunitAddFailure(self):
         # pyunit passes an exc_info tuple directly to addFailure
@@ -85,15 +85,63 @@ class TestTestResult(unittest.TestCase):
             raise self.failureException('foo')
         except self.failureException, excValue:
             self.result.addFailure(self, sys.exc_info())
-        failure = self.result.failures[0][1]
-        self.assertEqual(excValue, failure.value)
-        self.assertEqual(self.failureException, failure.type)
+        fail = self.result.failures[0][1]
+        self.assertEqual(excValue, fail.value)
+        self.assertEqual(self.failureException, fail.type)
 
 
 class TestReporterRealtime(TestTestResult):
     def setUp(self):
         output = StringIO.StringIO()
         self.result = reporter.Reporter(output, realtime=True)
+
+
+
+class TestReporterPlugin(unittest.TestCase):
+    def test_construct(self):
+        """
+        Check that we can create a basic reporter plugin and that it implements
+        the interface.
+        """
+        p = reporter.TrialReporterPlugin('tree', reporter.TreeReporter)
+        self.failUnless(itrial.IReporterPlugin.providedBy(p))
+
+
+    def test_factory(self):
+        """
+        Test that the L{TrialReporterPlugin} creates a reporter even if no
+        settings have been specified.
+        """
+        p = reporter.TrialReporterPlugin('tree', reporter.TreeReporter)
+        rep = p.makeReporter()
+        self.failUnless(isinstance(rep, reporter.TreeReporter))
+
+
+    def test_settings(self):
+        """
+        Test that we can set options for the reporter that get used when it
+        is created.
+        """
+        p = reporter.TrialReporterPlugin('tree', reporter.TreeReporter)
+        rep = p.makeReporter(dict(stream=sys.stderr, tbformat='brief',
+                                  rterrors=True))
+        # Whitebox the reporter's stream wrapper.
+        self.assertEqual(rep.stream.original, sys.stderr)
+        self.assertEqual(rep.tbformat, 'brief')
+        self.assertEqual(rep.realtime, True)
+        self.assertIdentical(rep._publisher, log)
+
+
+    def test_commandLineSettings(self):
+        """
+        Check that the plugin instance provides the information we need to make
+        it available on the command line.
+        """
+        p = reporter.TrialReporterPlugin('tree', reporter.TreeReporter,
+                                         description='verbose color output')
+        self.assertEqual(p.name, 'tree')
+        self.assertEqual(p.description, 'verbose color output')
+
 
 
 class TestErrorReporting(StringTest):
@@ -727,6 +775,7 @@ class TestTreeReporter(unittest.TestCase):
         self.result._colorizer = MockColorizer(self.stream)
         self.log = self.result._colorizer.log
 
+
     def makeError(self):
         try:
             1/0
@@ -810,6 +859,7 @@ class TestTreeReporter(unittest.TestCase):
             ['foo'],
             self.result._getPreludeSegments('foo.bar'))
         self.assertEqual([], self.result._getPreludeSegments('foo'))
+
 
 
 class TestReporter(unittest.TestCase):

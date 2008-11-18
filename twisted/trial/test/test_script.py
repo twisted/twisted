@@ -1,21 +1,30 @@
 # Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import gc
-import StringIO, sys, types
+"""
+Tests for the C{trial} script. See twisted/scripts/trial.py.
+"""
 
-from twisted.trial import unittest, runner
-from twisted.scripts import trial
+import StringIO, sys, types, gc
+
+from zope.interface import implements
+
+from twisted import plugin
 from twisted.python import util
+from twisted.scripts import trial
 from twisted.python.compat import set
 
+from twisted.trial import itrial, reporter, runner, unittest
+from twisted.trial.util import collectWarnings
 from twisted.trial.test.test_loader import testNames
 
 pyunit = __import__('unittest')
 
 
 def sibpath(filename):
-    """For finding files in twisted/trial/test"""
+    """
+    For finding files in twisted/trial/test
+    """
     return util.sibpath(__file__, filename)
 
 
@@ -309,6 +318,7 @@ class TestModuleTest(unittest.TestCase):
                         "%r should *not* be a test file" % (filename,))
 
 
+
 class WithoutModuleTests(unittest.TestCase):
     """
     Test the C{without-module} flag.
@@ -388,3 +398,61 @@ class WithoutModuleTests(unittest.TestCase):
                 self.config.parseOptions, ["--without-module", "smtplib"])
         self.assertRaises(ImportError, self._checkSMTP)
 
+
+
+class TestFindReporterPlugins(unittest.TestCase):
+    """
+    Tests for findReporterPlugins.
+    """
+
+    def getPlugins(self, interface):
+        """
+        Yield self.newPlugins if using the new IReporterPlugin interface.
+        Yield self.oldPlugins if using the deprecated IReporter interface.
+        """
+        self.failUnlessIn(
+            interface, (itrial.IReporterPlugin, itrial.IReporter))
+        if interface is itrial.IReporterPlugin:
+            for p in self.newPlugins:
+                yield p
+        if interface is itrial.IReporter:
+            for p in self.oldPlugins:
+                yield p
+
+
+    def setUp(self):
+        self.oldPlugins = []
+        self.newPlugins = []
+        self._getPlugins = plugin.getPlugins
+        plugin.getPlugins = self.getPlugins
+
+
+    def tearDown(self):
+        plugin.getPlugins = self._getPlugins
+
+
+    def test_getsNewPlugins(self):
+        """
+        findReporterPlugins() should ask for the IReporterPlugins.
+        """
+        self.newPlugins = [
+            reporter.TrialReporterPlugin('verbose', reporter.TreeReporter)]
+        self.assertEqual(self.newPlugins, list(trial.findReporterPlugins()))
+
+
+    def test_getsDeprecatedPlugins(self):
+        """
+        findReporterPlugins() should ask for IReporter plugins and issue
+        DeprecationWarnings for each one found.
+        """
+        class ReporterPlugin(object):
+            implements(plugin.IPlugin, itrial.IReporter)
+
+        self.oldPlugins = [ReporterPlugin()]
+        plugins, warnings = collectWarnings(
+            lambda: list(trial.findReporterPlugins()))
+        self.assertEqual(self.oldPlugins, plugins)
+
+        [(message, category, filename, lineno)] = warnings
+        self.assertEqual(DeprecationWarning, category)
+        self.assertIn(repr(self.oldPlugins[0]), str(message))

@@ -8,11 +8,10 @@
 import StringIO, os
 from zope.interface import implements
 
-from twisted.trial.itrial import IReporter, ITestCase
+from twisted.trial.itrial import IReporter, ITestCase, IResult, IResultPrinter
 from twisted.trial import unittest, runner, reporter, util
 from twisted.python import failure, log, reflect
 from twisted.scripts import trial
-from twisted.plugins import twisted_trial
 from twisted import plugin
 from twisted.internet import defer
 
@@ -21,7 +20,6 @@ pyunit = __import__('unittest')
 
 
 class CapturingDebugger(object):
-
     def __init__(self):
         self._calls = []
 
@@ -36,7 +34,7 @@ class CapturingReporter(object):
     Reporter that keeps a log of all actions performed on it.
     """
 
-    implements(IReporter)
+    implements(IResult, IResultPrinter)
 
     stream = None
     tbformat = None
@@ -44,7 +42,7 @@ class CapturingReporter(object):
     separator = None
     testsRun = None
 
-    def __init__(self, stream=None, tbformat=None, rterrors=None,
+    def __init__(self, stream=None, tbformat=None, realtime=None,
                  publisher=None):
         """
         Create a capturing reporter.
@@ -53,7 +51,7 @@ class CapturingReporter(object):
         self.shouldStop = False
         self._stream = stream
         self._tbformat = tbformat
-        self._rterrors = rterrors
+        self._realtime = realtime
         self._publisher = publisher
 
 
@@ -95,6 +93,11 @@ class TrialRunnerTestsMixin:
     """
     Mixin defining tests for L{runner.TrialRunner}.
     """
+    def setUp(self):
+        self.runner = runner.TrialRunner(CapturingReporter)
+        self.test = TestTrialRunner('test_empty')
+
+
     def tearDown(self):
         self.runner._tearDownLogFile()
 
@@ -163,15 +166,6 @@ class TestTrialRunner(TrialRunnerTestsMixin, unittest.TestCase):
         self.test = TestTrialRunner('test_empty')
 
 
-    def test_publisher(self):
-        """
-        The reporter constructed by L{runner.TrialRunner} is passed
-        L{twisted.python.log} as the value for the C{publisher} parameter.
-        """
-        result = self.runner._makeResult()
-        self.assertIdentical(result._publisher, log)
-
-
 
 class TrialRunnerWithUncleanWarningsReporter(TrialRunnerTestsMixin,
                                              unittest.TestCase):
@@ -182,7 +176,7 @@ class TrialRunnerWithUncleanWarningsReporter(TrialRunnerTestsMixin,
 
     def setUp(self):
         self.stream = StringIO.StringIO()
-        self.runner = runner.TrialRunner(CapturingReporter, stream=self.stream,
+        self.runner = runner.TrialRunner(CapturingReporter,
                                          uncleanWarnings=True)
         self.test = TestTrialRunner('test_empty')
 
@@ -197,10 +191,8 @@ class DryRunMixin(object):
 
     def setUp(self):
         self.log = []
-        self.stream = StringIO.StringIO()
         self.runner = runner.TrialRunner(CapturingReporter,
-                                         runner.TrialRunner.DRY_RUN,
-                                         stream=self.stream)
+                                         runner.TrialRunner.DRY_RUN)
         self.makeTestFixtures()
 
 
@@ -273,19 +265,11 @@ class TestRunner(unittest.TestCase):
         parts = reflect.qual(CapturingReporter).split('.')
         package = '.'.join(parts[:-1])
         klass = parts[-1]
-        plugins = [twisted_trial._Reporter(
-            "Test Helper Reporter",
-            package,
-            description="Utility for unit testing.",
-            longOpt="capturing",
-            shortOpt=None,
-            klass=klass)]
-
+        plugins = [reporter.TrialReporterPlugin('capturing', CapturingReporter)]
 
         # XXX There should really be a general way to hook the plugin system
         # for tests.
         def getPlugins(iface, *a, **kw):
-            self.assertEqual(iface, IReporter)
             return plugins + list(self.original(iface, *a, **kw))
 
         self.original = plugin.getPlugins
@@ -324,19 +308,32 @@ class TestRunner(unittest.TestCase):
         r._log = log.LogPublisher()
         return r
 
-
-    def test_runner_can_get_reporter(self):
+    def test_runnerCanGetReporter(self):
+        """
+        TrialRunner should make a reporter that is of the type configured by
+        the trial script.
+        """
         self.parseOptions([])
         result = self.config['reporter']
         runner = self.getRunner()
-        self.assertEqual(result, runner._makeResult().__class__)
+        self.assertIsInstance(result(), runner._makeResult().__class__)
+
+
+    def test_runnerWorkingDirectory(self):
+        self.parseOptions(['--temp-directory', 'some_path'])
+        runner = self.getRunner()
+        try:
+            self.assertEquals(runner.workingDirectory, 'some_path')
+        finally:
+            runner._tearDownLogFile()
 
 
     def test_runner_get_result(self):
         self.parseOptions([])
         runner = self.getRunner()
         result = runner._makeResult()
-        self.assertEqual(result.__class__, self.config['reporter'])
+        configuredReporter = self.config['reporter']()
+        self.assertEqual(result.__class__, configuredReporter.__class__)
 
 
     def test_uncleanWarningsOffByDefault(self):
@@ -451,28 +448,28 @@ class TestRunner(unittest.TestCase):
             self.fail(bad[0][1])
 
 
-    def test_runner_normal(self):
+    def test_runnerNormal(self):
         self.parseOptions(['--temp-directory', self.mktemp(),
                            '--reporter', 'capturing',
                            'twisted.trial.test.sample'])
-        my_runner = self.getRunner()
+        myRunner = self.getRunner()
         loader = runner.TestLoader()
         suite = loader.loadByName('twisted.trial.test.sample', True)
-        result = my_runner.run(suite)
+        result = myRunner.run(suite)
         self.assertEqual(self.standardReport, result._calls)
 
 
-    def test_runner_debug(self):
+    def test_runnerDebug(self):
         self.parseOptions(['--reporter', 'capturing',
                            '--debug', 'twisted.trial.test.sample'])
-        my_runner = self.getRunner()
+        myRunner = self.getRunner()
         debugger = CapturingDebugger()
-        def get_debugger():
+        def getDebugger():
             return debugger
-        my_runner._getDebugger = get_debugger
+        myRunner._getDebugger = getDebugger
         loader = runner.TestLoader()
         suite = loader.loadByName('twisted.trial.test.sample', True)
-        result = my_runner.run(suite)
+        result = myRunner.run(suite)
         self.assertEqual(self.standardReport, result._calls)
         self.assertEqual(['runcall'], debugger._calls)
 
@@ -505,7 +502,8 @@ class TestUntilFailure(unittest.TestCase):
         TestUntilFailure.FailAfter.count = []
         self.test = TestUntilFailure.FailAfter('test_foo')
         self.stream = StringIO.StringIO()
-        self.runner = runner.TrialRunner(reporter.Reporter, stream=self.stream)
+        self.runner = runner.TrialRunner(
+            lambda: reporter.Reporter(stream=self.stream))
 
 
     def test_runUntilFailure(self):
@@ -572,8 +570,9 @@ class UncleanUntilFailureTests(TestUntilFailure):
 
     def setUp(self):
         TestUntilFailure.setUp(self)
-        self.runner = runner.TrialRunner(reporter.Reporter, stream=self.stream,
-                                         uncleanWarnings=True)
+        self.runner = runner.TrialRunner(
+            lambda: reporter.Reporter(stream=self.stream),
+            uncleanWarnings=True)
 
     def _getFailures(self, result):
         """
@@ -691,7 +690,8 @@ class TestMalformedMethod(unittest.TestCase):
         Wrapper for one of the test method of L{ContainMalformed}.
         """
         stream = StringIO.StringIO()
-        trialRunner = runner.TrialRunner(reporter.Reporter, stream=stream)
+        trialRunner = runner.TrialRunner(
+            lambda: reporter.Reporter(stream=stream))
         test = TestMalformedMethod.ContainMalformed(method)
         result = trialRunner.run(test)
         self.failUnlessEqual(result.testsRun, 1)

@@ -1,53 +1,15 @@
-
-from zope.interface import implements
-
-from twisted.trial.itrial import IReporter
-from twisted.plugin import IPlugin
-
-class _Reporter(object):
-    implements(IPlugin, IReporter)
-
-    def __init__(self, name, module, description, longOpt, shortOpt, klass):
-        self.name = name
-        self.module = module
-        self.description = description
-        self.longOpt = longOpt
-        self.shortOpt = shortOpt
-        self.klass = klass
+from twisted.trial import reporter
 
 
-Tree = _Reporter("Tree Reporter",
-                 "twisted.trial.reporter",
-                 description="verbose color output (default reporter)",
-                 longOpt="verbose",
-                 shortOpt="v",
-                 klass="TreeReporter")
+_Plugin = reporter.TrialReporterPlugin
 
-BlackAndWhite = _Reporter("Black-And-White Reporter",
-                          "twisted.trial.reporter",
-                          description="Colorless verbose output",
-                          longOpt="bwverbose",
-                          shortOpt="o",
-                          klass="VerboseTextReporter")
+Tree = _Plugin('verbose', reporter.TreeReporter)
 
-Minimal = _Reporter("Minimal Reporter",
-                    "twisted.trial.reporter",
-                    description="minimal summary output",
-                    longOpt="summary",
-                    shortOpt="s",
-                    klass="MinimalReporter")
+BlackAndWhite = _Plugin('bwverbose', reporter.VerboseTextReporter)
 
-Classic = _Reporter("Classic Reporter",
-                    "twisted.trial.reporter",
-                    description="terse text output",
-                    longOpt="text",
-                    shortOpt="t",
-                    klass="TextReporter")
+Minimal = _Plugin('summary', reporter.MinimalReporter)
 
-Timing = _Reporter("Timing Reporter",
-                   "twisted.trial.reporter",
-                   description="Timing output",
-                   longOpt="timing",
-                   shortOpt=None,
-                   klass="TimingTextReporter")
+Classic = _Plugin("text", reporter.TextReporter)
+
+Timing = _Plugin('timing', reporter.TimingTextReporter)
 
