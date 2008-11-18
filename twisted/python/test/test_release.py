@@ -216,11 +216,13 @@ class ChangeVersionTest(TestCase, StructureAssertingMixin):
     def test_changeAllProjectVersions(self):
         """
         L{changeAllProjectVersions} changes all version numbers in _version.py
-        and README files for all projects.
+        and README files for all projects as well as in the the top-level
+        README file.
         """
         root = FilePath(self.mktemp())
         root.createDirectory()
         structure = {
+            "README": "Hi this is 1.0.0.",
             "twisted": {
                 "topfiles": {
                     "README": "Hi this is 1.0.0"},
@@ -234,6 +236,7 @@ class ChangeVersionTest(TestCase, StructureAssertingMixin):
         self.createStructure(root, structure)
         changeAllProjectVersions(root, Version("lol", 1, 0, 2))
         outStructure = {
+            "README": "Hi this is 1.0.2.",
             "twisted": {
                 "topfiles": {
                     "README": "Hi this is 1.0.2"},

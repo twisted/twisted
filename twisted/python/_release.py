@@ -122,7 +122,17 @@ def changeAllProjectVersions(root, versionTemplate):
         version = Version(packageName, versionTemplate.major,
                           versionTemplate.minor, versionTemplate.micro,
                           prerelease=versionTemplate.prerelease)
+
+        # The placement of the top-level README with respect to other files (eg
+        # _version.py) is sufficiently different from the others that we just
+        # have to handle it specially.
+        if packageName == "twisted":
+            _changeVersionInFile(
+                project.getVersion(), version, root.child('README').path)
+
         project.updateVersion(version)
+
+
 
 
 class Project(object):
