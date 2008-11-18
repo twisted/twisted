@@ -761,10 +761,7 @@ class TrialRunner(object):
     def __init__(self, reporterFactory,
                  mode=None,
                  logfile='test.log',
-                 stream=sys.stdout,
                  profile=False,
-                 tracebackFormat='default',
-                 realTimeErrors=False,
                  uncleanWarnings=False,
                  workingDirectory=None,
                  forceGarbageCollection=False):
