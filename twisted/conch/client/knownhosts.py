@@ -95,8 +95,8 @@ class PlainEntry(_BaseEntry):
     A L{PlainEntry} is a representation of a plain-text entry in a known_hosts
     file.
 
-    @ivar _hostname: the host-name associated with this entry.
-    @type _hostname: L{str}
+    @ivar _hostnames: the list of all host-names associated with this entry.
+    @type _hostnames: L{list} of L{str}
     """
 
     implements(IKnownHostEntry)
