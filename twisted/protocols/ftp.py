@@ -2178,9 +2178,21 @@ class _PassiveConnectionFactory(protocol.ClientFactory):
 
 class FTPClient(FTPClientBasic):
     """
-    A Twisted FTP Client
+    L{FTPClient} is a client implementation of the FTP protocol which
+    exposes FTP commands as methods which return L{Deferred}s.
 
-    Supports active and passive transfers.
+    Each command method returns a L{Deferred} which is called back when a
+    successful response code (2xx or 3xx) is received from the server or
+    which is error backed if an error response code (4xx or 5xx) is received
+    from the server or if a protocol violation occurs.  If an error response
+    code is received, the L{Deferred} fires with a L{Failure} wrapping a
+    L{CommandFailed} instance.  The L{CommandFailed} instance is created
+    with a list of the response lines received from the server.
+
+    See U{RFC 959<http://www.ietf.org/rfc/rfc959.txt>} for error code
+    definitions.
+
+    Both active and passive transfers are supported.
 
     @ivar passive: See description in __init__.
     """
