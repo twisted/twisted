@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.web2.test.test_server -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -522,7 +522,7 @@ class Request(http.Request):
     def _cbFinishRender(self, result):
         def filterit(response, f):
             if (hasattr(f, 'handleErrors') or
-                (response.code >= 200 and response.code < 300 and response.code != 204)):
+                (response.code >= 200 and response.code < 300)):
                 return f(self, response)
             else:
                 return response

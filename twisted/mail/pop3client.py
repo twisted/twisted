@@ -1,5 +1,6 @@
 # -*- test-case-name: twisted.mail.test.test_pop3client -*-
 # Copyright (c) 2001-2004 Divmod Inc.
+# Copyright (c) 2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -10,9 +11,10 @@ Don't use this module directly.  Use twisted.mail.pop3 instead.
 @author: Jp Calderone
 """
 
-import re, md5
+import re
 
 from twisted.python import log
+from twisted.python.hashlib import md5
 from twisted.internet import defer
 from twisted.protocols import basic
 from twisted.protocols import policies
@@ -485,7 +487,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
     def _apop(self, username, password, challenge):
         # Internal helper.  Computes and sends an APOP response.  Returns
         # a Deferred that fires when the server responds to the response.
-        digest = md5.new(challenge + password).hexdigest()
+        digest = md5(challenge + password).hexdigest()
         return self.apop(username, digest)
 
     def apop(self, username, digest):

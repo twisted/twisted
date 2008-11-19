@@ -12,10 +12,11 @@ except ImportError:
 else:
     from twisted.conch.ssh import keys, common, sexpy, asn1
 
+import os, base64
 from twisted.conch.test import keydata
 from twisted.python import randbytes
+from twisted.python.hashlib import sha1
 from twisted.trial import unittest
-import sha, os, base64
 
 class SSHKeysHandlingTestCase(unittest.TestCase):
     """
@@ -330,7 +331,7 @@ class HelpersTestCase(unittest.TestCase):
         messageSize = 6
         self.assertEquals(keys.pkcs1Pad(data, messageSize),
                 '\x01\xff\x00ABC')
-        hash = sha.new().digest()
+        hash = sha1().digest()
         messageSize = 40
         self.assertEquals(keys.pkcs1Digest('', messageSize),
                 '\x01\xff\xff\xff\x00' + keys.ID_SHA1 + hash)
@@ -362,7 +363,7 @@ class HelpersTestCase(unittest.TestCase):
         """
         data = 'data'
         key, sig = self._signDSA(data)
-        sigData = sha.new(data).digest()
+        sigData = sha1(data).digest()
         v = key.sign(sigData, '\x55' * 19)
         self.assertEquals(sig, common.NS('ssh-dss') + common.NS(
             Crypto.Util.number.long_to_bytes(v[0], 20) +

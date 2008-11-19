@@ -42,8 +42,8 @@ def hashPassword(sid, password):
     """
     Create a SHA1-digest string of a session identifier and password.
     """
-    import sha
-    return sha.new("%s%s" % (sid, password)).hexdigest()
+    from twisted.python.hashlib import sha1
+    return sha1("%s%s" % (sid, password)).hexdigest()
 
 
 

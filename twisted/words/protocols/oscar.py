@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.words.test -*-
-# Copyright (c) 2001-2005 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -9,19 +9,16 @@ An implementation of the OSCAR protocol, which AIM and ICQ use to communcate.
 Maintainer: Paul Swartz
 """
 
-from __future__ import nested_scopes
-
-from twisted.internet import reactor, defer, protocol
-from twisted.python import log
-
 import struct
-import md5
 import string
 import socket
 import random
-import time
 import types
 import re
+
+from twisted.internet import reactor, defer, protocol
+from twisted.python import log
+from twisted.python.hashlib import md5
 
 def logPacketData(data):
     lines = len(data)/16
@@ -62,9 +59,9 @@ def readTLVs(data,count=None):
     return dict,data
 
 def encryptPasswordMD5(password,key):
-    m=md5.new()
+    m=md5()
     m.update(key)
-    m.update(md5.new(password).digest())
+    m.update(md5(password).digest())
     m.update("AOL Instant Messenger (SM)")
     return m.digest()
 

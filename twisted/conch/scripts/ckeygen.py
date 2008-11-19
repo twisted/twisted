@@ -1,16 +1,12 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.conch.test.test_ckeygen -*-
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
-# $Id: ckeygen.py,v 1.8 2003/05/10 14:03:40 spiv Exp $
+"""
+Implementation module for the `ckeygen` command.
+"""
 
-#""" Implementation module for the `ckeygen` command.
-#"""
-
-from twisted.conch.ssh import keys
-from twisted.python import log, usage, randbytes
-
-import sys, os, getpass, md5, socket
+import sys, os, getpass, socket
 if getpass.getpass == getpass.unix_getpass:
     try:
         import termios # hack around broken termios
@@ -18,6 +14,10 @@ if getpass.getpass == getpass.unix_getpass:
     except (ImportError, AttributeError):
         sys.modules['termios'] = None
         reload(getpass)
+
+from twisted.conch.ssh import keys
+from twisted.python import filepath, log, usage, randbytes
+
 
 class GeneralOptions(usage.Options):
     synopsis = """Usage:    ckeygen [options]
@@ -88,6 +88,7 @@ def generateDSAkey(options):
     key = DSA.generate(int(options['bits']), randbytes.secureRandom)
     _saveKey(key, options)
 
+
 def printFingerprint(options):
     if not options['filename']:
         filename = os.path.expanduser('~/.ssh/id_rsa')
@@ -95,11 +96,12 @@ def printFingerprint(options):
     if os.path.exists(options['filename']+'.pub'):
         options['filename'] += '.pub'
     try:
-        string = keys.getPublicKeyString(options['filename'])
-        obj = keys.getPublicKeyObject(string)
+        key = keys.Key.fromFile(options['filename'])
+        obj = key.keyObject
+        string = key.blob()
         print '%s %s %s' % (
-            obj.size()+1,
-            ':'.join(['%02x' % ord(x) for x in md5.new(string).digest()]),
+            obj.size() + 1,
+            key.fingerprint(),
             os.path.basename(options['filename']))
     except:
         sys.exit('bad key')
@@ -163,17 +165,21 @@ def _saveKey(key, options):
                 break
             print 'Passphrases do not match.  Try again.'
         options['pass'] = p1
+
+    keyObj = keys.Key(key)
     comment = '%s@%s' % (getpass.getuser(), socket.gethostname())
-    open(options['filename'], 'w').write(
-            keys.makePrivateKeyString(key, passphrase=options['pass']))
+
+    filepath.FilePath(options['filename']).setContent(
+        keyObj.toString('openssh', options['pass']))
     os.chmod(options['filename'], 33152)
-    open(options['filename']+'.pub', 'w').write(
-            keys.makePublicKeyString(key, comment = comment))
-    pubKey = keys.getPublicKeyString(data=keys.makePublicKeyString(key, comment=comment))
+
+    filepath.FilePath(options['filename'] + '.pub').setContent(
+        keyObj.public().toString('openssh', comment))
+
     print 'Your identification has been saved in %s' % options['filename']
     print 'Your public key has been saved in %s.pub' % options['filename']
     print 'The key fingerprint is:'
-    print ':'.join(['%02x' % ord(x) for x in md5.new(pubKey).digest()])
+    print keyObj.fingerprint()
 
 if __name__ == '__main__':
     run()

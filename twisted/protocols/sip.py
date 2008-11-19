@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.test.test_sip -*-
 
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -14,12 +14,12 @@ Documented in RFC 2543.
 import socket
 import random
 import time
-import md5
 import sys
 from zope.interface import implements, Interface
 
 # twisted imports
 from twisted.python import log, util
+from twisted.python.hashlib import md5
 from twisted.internet import protocol, defer, reactor
 
 from twisted import cred
@@ -132,7 +132,7 @@ def DigestCalcHA1(
     pszNonce,
     pszCNonce,
 ):
-    m = md5.md5()
+    m = md5()
     m.update(pszUserName)
     m.update(":")
     m.update(pszRealm)
@@ -140,7 +140,7 @@ def DigestCalcHA1(
     m.update(pszPassword)
     HA1 = m.digest()
     if pszAlg == "md5-sess":
-        m = md5.md5()
+        m = md5()
         m.update(HA1)
         m.update(":")
         m.update(pszNonce)
@@ -159,7 +159,7 @@ def DigestCalcResponse(
     pszDigestUri,
     pszHEntity,
 ):
-    m = md5.md5()
+    m = md5()
     m.update(pszMethod)
     m.update(":")
     m.update(pszDigestUri)
@@ -168,7 +168,7 @@ def DigestCalcResponse(
         m.update(pszHEntity)
     HA2 = m.digest().encode('hex')
     
-    m = md5.md5()
+    m = md5()
     m.update(HA1)
     m.update(":")
     m.update(pszNonce)

@@ -1,26 +1,27 @@
 # -*- test-case-name: twisted.web2.test.test_httpauth -*-
+# Copyright (c) 2006-2008 Twisted Matrix Laboratories.
 
 """
 Implementation of RFC2617: HTTP Digest Authentication
 
 http://www.faqs.org/rfcs/rfc2617.html
 """
+import sys
 import time
+import random
 
 from twisted.cred import credentials, error
 from zope.interface import implements, Interface
 
 from twisted.web2.auth.interfaces import ICredentialFactory
-
-import md5, sha
-import random, sys
+from twisted.python.hashlib import md5, sha1
 
 # The digest math
 
 algorithms = {
-    'md5': md5.new,
-    'md5-sess': md5.new,
-    'sha': sha.new,
+    'md5': md5,
+    'md5-sess': md5,
+    'sha': sha1,
 }
 
 # DigestCalcHA1
@@ -228,7 +229,7 @@ class DigestCredentialFactory(object):
         # Now, what we do is encode the nonce, client ip and a timestamp
         # in the opaque value with a suitable digest
         key = "%s,%s,%s" % (nonce, clientip, str(int(self._getTime())))
-        digest = md5.new(key + self.privateKey).hexdigest()
+        digest = md5(key + self.privateKey).hexdigest()
         ekey = key.encode('base64')
         return "%s-%s" % (digest, ekey.strip('\n'))
 
@@ -275,7 +276,7 @@ class DigestCredentialFactory(object):
                 'Invalid response, incompatible opaque/nonce too old')
 
         # Verify the digest
-        digest = md5.new(key + self.privateKey).hexdigest()
+        digest = md5(key + self.privateKey).hexdigest()
         if digest != opaqueParts[0]:
             raise error.LoginFailed('Invalid response, invalid opaque value')
 

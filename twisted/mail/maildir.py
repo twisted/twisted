@@ -11,7 +11,6 @@ import os
 import stat
 import socket
 import time
-import md5
 
 from zope.interface import implements
 
@@ -26,6 +25,7 @@ from twisted.mail import smtp
 from twisted.protocols import basic
 from twisted.persisted import dirdbm
 from twisted.python import log, failure
+from twisted.python.hashlib import md5
 from twisted.mail import mail
 from twisted.internet import interfaces, defer, reactor
 
@@ -296,7 +296,7 @@ class MaildirMailbox(pop3.Mailbox):
         """
         # Returning the actual filename is a mistake.  Hash it.
         base = os.path.basename(self.list[i])
-        return md5.md5(base).hexdigest()
+        return md5(base).hexdigest()
 
     def deleteMessage(self, i):
         """Delete a message
@@ -379,7 +379,7 @@ class StringListMailbox:
         """
         Return a hash of the contents of the message at the given offset.
         """
-        return md5.new(self.msgs[i]).hexdigest()
+        return md5(self.msgs[i]).hexdigest()
 
 
     def deleteMessage(self, i):

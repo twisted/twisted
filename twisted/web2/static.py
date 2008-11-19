@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -9,7 +9,6 @@ I deal with static resources.
 # System Imports
 import os, time, stat
 import tempfile
-import md5
 
 # Sibling Imports
 from twisted.web2 import http_headers, resource

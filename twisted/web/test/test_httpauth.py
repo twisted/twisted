@@ -5,11 +5,11 @@
 Tests for L{twisted.web._auth}.
 """
 
-import md5, sha
 
 from zope.interface import implements
 from zope.interface.verify import verifyObject
 
+from twisted.python.hashlib import md5, sha1
 from twisted.trial import unittest
 from twisted.cred import error, portal
 from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
@@ -181,7 +181,7 @@ class DigestAuthTestsMixin:
             self.algorithm, self.realm)
 
 
-    def test_MD5HashA1(self, _algorithm='md5', _hash=md5.md5):
+    def test_MD5HashA1(self, _algorithm='md5', _hash=md5):
         """
         L{calcHA1} accepts the C{'md5'} algorithm and returns an MD5 hash of
         its parameters, excluding the nonce and cnonce.
@@ -203,9 +203,9 @@ class DigestAuthTestsMixin:
         hashA1 = calcHA1('md5-sess', self.username, self.realm, self.password,
                          nonce, self.cnonce)
         a1 = '%s:%s:%s' % (self.username, self.realm, self.password)
-        ha1 = md5.md5(a1).digest()
+        ha1 = md5(a1).digest()
         a1 = '%s:%s:%s' % (ha1, nonce, self.cnonce)
-        expected = md5.md5(a1).hexdigest()
+        expected = md5(a1).hexdigest()
         self.assertEqual(hashA1, expected)
 
 
@@ -214,10 +214,10 @@ class DigestAuthTestsMixin:
         L{calcHA1} accepts the C{'sha'} algorithm and returns a SHA hash of its
         parameters, excluding the nonce and cnonce.
         """
-        self.test_MD5HashA1('sha', sha.sha)
+        self.test_MD5HashA1('sha', sha1)
 
 
-    def test_MD5HashA2Auth(self, _algorithm='md5', _hash=md5.md5):
+    def test_MD5HashA2Auth(self, _algorithm='md5', _hash=md5):
         """
         L{calcHA2} accepts the C{'md5'} algorithm and returns an MD5 hash of
         its arguments, excluding the entity hash for QOP other than
@@ -230,7 +230,7 @@ class DigestAuthTestsMixin:
         self.assertEqual(hashA2, expected)
 
 
-    def test_MD5HashA2AuthInt(self, _algorithm='md5', _hash=md5.md5):
+    def test_MD5HashA2AuthInt(self, _algorithm='md5', _hash=md5):
         """
         L{calcHA2} accepts the C{'md5'} algorithm and returns an MD5 hash of
         its arguments, including the entity hash for QOP of C{'auth-int'}.
@@ -265,7 +265,7 @@ class DigestAuthTestsMixin:
         its arguments, excluding the entity hash for QOP other than
         C{'auth-int'}.
         """
-        self.test_MD5HashA2Auth('sha', sha.sha)
+        self.test_MD5HashA2Auth('sha', sha1)
 
 
     def test_SHAHashA2AuthInt(self):
@@ -273,10 +273,10 @@ class DigestAuthTestsMixin:
         L{calcHA2} accepts the C{'sha'} algorithm and returns a SHA hash of
         its arguments, including the entity hash for QOP of C{'auth-int'}.
         """
-        self.test_MD5HashA2AuthInt('sha', sha.sha)
+        self.test_MD5HashA2AuthInt('sha', sha1)
 
 
-    def test_MD5HashResponse(self, _algorithm='md5', _hash=md5.md5):
+    def test_MD5HashResponse(self, _algorithm='md5', _hash=md5):
         """
         L{calcResponse} accepts the C{'md5'} algorithm and returns an MD5 hash
         of its parameters, excluding the nonce count, client nonce, and QoP
@@ -308,10 +308,10 @@ class DigestAuthTestsMixin:
         of its parameters, excluding the nonce count, client nonce, and QoP
         value if the nonce count and client nonce are C{None}
         """
-        self.test_MD5HashResponse('sha', sha.sha)
+        self.test_MD5HashResponse('sha', sha1)
 
 
-    def test_MD5HashResponseExtra(self, _algorithm='md5', _hash=md5.md5):
+    def test_MD5HashResponseExtra(self, _algorithm='md5', _hash=md5):
         """
         L{calcResponse} accepts the C{'md5'} algorithm and returns an MD5 hash
         of its parameters, including the nonce count, client nonce, and QoP
@@ -348,7 +348,7 @@ class DigestAuthTestsMixin:
         of its parameters, including the nonce count, client nonce, and QoP
         value if they are specified.
         """
-        self.test_MD5HashResponseExtra('sha', sha.sha)
+        self.test_MD5HashResponseExtra('sha', sha1)
 
 
     def makeRequest(self, method='GET', clientAddress=None):
@@ -639,7 +639,7 @@ class DigestAuthTestsMixin:
         self.assertTrue(verifyObject(IUsernameDigestHash, creds))
 
         cleartext = '%s:%s:%s' % (self.username, self.realm, self.password)
-        hash = md5.md5(cleartext)
+        hash = md5(cleartext)
         self.assertTrue(creds.checkHash(hash.hexdigest()))
         hash.update('wrong')
         self.assertFalse(creds.checkHash(hash.hexdigest()))
@@ -761,7 +761,7 @@ class DigestAuthTestsMixin:
         key = '%s,%s,%s' % (challenge['nonce'],
                             self.clientAddress.host,
                             '-137876876')
-        digest = md5.md5(key + credentialFactory.privateKey).hexdigest()
+        digest = md5(key + credentialFactory.privateKey).hexdigest()
         ekey = b64encode(key)
 
         oldNonceOpaque = '%s-%s' % (digest, ekey.strip('\n'))
@@ -786,7 +786,7 @@ class DigestAuthTestsMixin:
                             self.clientAddress.host,
                             '0')
 
-        digest = md5.md5(key + 'this is not the right pkey').hexdigest()
+        digest = md5(key + 'this is not the right pkey').hexdigest()
         badChecksum = '%s-%s' % (digest, b64encode(key))
 
         self.assertRaises(

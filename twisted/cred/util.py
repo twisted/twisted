@@ -1,30 +1,32 @@
-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.test.test_newcred -*-
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
-Utility functions for authorization.
+Outdated, deprecated functionality related to challenge-based authentication.
 
-These are currently for challenge-response shared secret authentication.
-
-Maintainer: Glyph Lefkowitz
+Seek a solution to your problem elsewhere.  This module is deprecated.
 """
 
 # System Imports
-import md5
-import random
+import random, warnings
 
+from twisted.python.hashlib import md5
 from twisted.cred.error import Unauthorized
+
 
 def respond(challenge, password):
     """Respond to a challenge.
     This is useful for challenge/response authentication.
     """
-    m = md5.new()
+    warnings.warn(
+        "twisted.cred.util.respond is deprecated since Twisted 8.3.",
+        category=PendingDeprecationWarning,
+        stacklevel=2)
+    m = md5()
     m.update(password)
     hashedPassword = m.digest()
-    m = md5.new()
+    m = md5()
     m.update(hashedPassword)
     m.update(challenge)
     doubleHashedPassword = m.digest()
@@ -33,8 +35,12 @@ def respond(challenge, password):
 def challenge():
     """I return some random data.
     """
+    warnings.warn(
+        "twisted.cred.util.challenge is deprecated since Twisted 8.3.",
+        category=PendingDeprecationWarning,
+        stacklevel=2)
     crap = ''
     for x in range(random.randrange(15,25)):
         crap = crap + chr(random.randint(65,90))
-    crap = md5.new(crap).digest()
+    crap = md5(crap).digest()
     return crap

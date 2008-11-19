@@ -7,7 +7,6 @@ Tests for large portions of L{twisted.mail}.
 
 import os
 import errno
-import md5
 import shutil
 import pickle
 import StringIO
@@ -32,6 +31,7 @@ from twisted.internet.error import ProcessDone, ProcessTerminated
 from twisted.internet import address
 from twisted.python import failure
 from twisted.python.filepath import FilePath
+from twisted.python.hashlib import md5
 
 from twisted import mail
 import twisted.mail.mail
@@ -669,7 +669,7 @@ class VirtualPOP3TestCase(unittest.TestCase):
         shutil.rmtree(self.tmpdir)
 
     def testAuthenticateAPOP(self):
-        resp = md5.new(self.P.magic + 'password').hexdigest()
+        resp = md5(self.P.magic + 'password').hexdigest()
         return self.P.authenticateUserAPOP('user', resp
             ).addCallback(self._cbAuthenticateAPOP
             )
@@ -681,13 +681,13 @@ class VirtualPOP3TestCase(unittest.TestCase):
         result[2]()
 
     def testAuthenticateIncorrectUserAPOP(self):
-        resp = md5.new(self.P.magic + 'password').hexdigest()
+        resp = md5(self.P.magic + 'password').hexdigest()
         return self.assertFailure(
             self.P.authenticateUserAPOP('resu', resp),
             cred.error.UnauthorizedLogin)
 
     def testAuthenticateIncorrectResponseAPOP(self):
-        resp = md5.new('wrong digest').hexdigest()
+        resp = md5('wrong digest').hexdigest()
         return self.assertFailure(
             self.P.authenticateUserAPOP('user', resp),
             cred.error.UnauthorizedLogin)

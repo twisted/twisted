@@ -6,10 +6,10 @@ Tests for L{twisted.python.zipstream}
 """
 import sys
 import random
-import md5
 import zipfile
 
 from twisted.python import zipstream, filepath
+from twisted.python.hashlib import md5
 from twisted.trial import unittest
 
 class FileEntryMixin:
@@ -347,7 +347,7 @@ class ZipstreamTest(unittest.TestCase):
         unzipIterChunky should unzip the given number of bytes per iteration.
         """
         junk = ' '.join([str(random.random()) for n in xrange(1000)])
-        junkmd5 = md5.new(junk).hexdigest()
+        junkmd5 = md5(junk).hexdigest()
 
         tempdir = filepath.FilePath(self.mktemp())
         tempdir.makedirs()
@@ -364,7 +364,7 @@ class ZipstreamTest(unittest.TestCase):
         for r in uziter:
             pass
         self.assertEqual(r, 0)
-        newmd5 = md5.new(
+        newmd5 = md5(
             tempdir.child("zipstreamjunk").open().read()).hexdigest()
         self.assertEqual(newmd5, junkmd5)
 

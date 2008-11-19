@@ -1,11 +1,11 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
 Tests for L{twisted.words.protocols.jabber.client}
 """
 
-import sha
+from twisted.python.hashlib import sha1
 from twisted.trial import unittest
 from twisted.words.protocols.jabber import client, error, jid, xmlstream
 from twisted.words.protocols.jabber.sasl import SASLInitiatingInitializer
@@ -117,7 +117,7 @@ class IQAuthInitializerTest(InitiatingInitializerHarness, unittest.TestCase):
         self.assertEquals(('jabber:iq:auth', 'query'),
                           (iq.children[0].uri, iq.children[0].name))
         self.assertEquals('user', unicode(iq.query.username))
-        self.assertEquals(sha.new('12345secret').hexdigest(),
+        self.assertEquals(sha1('12345secret').hexdigest(),
                           unicode(iq.query.digest))
         self.assertEquals('resource', unicode(iq.query.resource))
 

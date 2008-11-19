@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_sob -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 #
@@ -9,7 +9,7 @@ Save and load Small OBjects to and from files, using various formats.
 Maintainer: Moshe Zadka
 """
 
-import os, md5, sys
+import os, sys
 try:
     import cPickle as pickle
 except ImportError:
@@ -19,6 +19,7 @@ try:
 except ImportError:
     import StringIO
 from twisted.python import log, runtime
+from twisted.python.hashlib import md5
 from twisted.persisted import styles
 from zope.interface import implements, Interface
 
@@ -31,11 +32,11 @@ def _encrypt(passphrase, data):
     leftover = len(data) % cipher.block_size
     if leftover:
         data += ' '*(cipher.block_size - leftover)
-    return cipher.new(md5.new(passphrase).digest()[:16]).encrypt(data)
+    return cipher.new(md5(passphrase).digest()[:16]).encrypt(data)
 
 def _decrypt(passphrase, data):
     from Crypto.Cipher import AES
-    return AES.new(md5.new(passphrase).digest()[:16]).decrypt(data)
+    return AES.new(md5(passphrase).digest()[:16]).decrypt(data)
 
 
 class IPersistable(Interface):

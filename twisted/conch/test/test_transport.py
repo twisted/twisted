@@ -5,8 +5,6 @@
 Tests for ssh/transport.py and the classes therein.
 """
 
-import md5, sha
-
 try:
     import Crypto.Cipher.DES3
 except ImportError:
@@ -27,6 +25,7 @@ from twisted.internet import defer
 from twisted.protocols import loopback
 from twisted.python import randbytes
 from twisted.python.reflect import qual
+from twisted.python.hashlib import md5, sha1
 from twisted.conch.ssh import service
 from twisted.test import proto_helpers
 
@@ -856,9 +855,8 @@ here's some other stuff
         """
         self.proto.sessionID = 'EF'
 
-        k1 = sha.new('AB' + 'CD'
-                     + 'K' + self.proto.sessionID).digest()
-        k2 = sha.new('ABCD' + k1).digest()
+        k1 = sha1('AB' + 'CD' + 'K' + self.proto.sessionID).digest()
+        k2 = sha1('ABCD' + k1).digest()
         self.assertEquals(self.proto._getKey('K', 'AB', 'CD'), k1 + k2)
 
 
@@ -1109,7 +1107,7 @@ class ServerSSHTransportTestCase(ServerAndClientSSHTransportBaseCase,
         f = common._MPpow(transport.DH_GENERATOR, y, transport.DH_PRIME)
         sharedSecret = common._MPpow(e, y, transport.DH_PRIME)
 
-        h = sha.new()
+        h = sha1()
         h.update(common.NS(self.proto.ourVersionString) * 2)
         h.update(common.NS(self.proto.ourKexInitPayload) * 2)
         h.update(common.NS(self.proto.factory.publicKeys['ssh-rsa'].blob()))
@@ -1190,7 +1188,7 @@ class ServerSSHTransportTestCase(ServerAndClientSSHTransportBaseCase,
         y = common.getMP('\x00\x00\x00\x80' + '\x99' * 128)[0]
         f = common._MPpow(self.proto.g, y, self.proto.p)
         sharedSecret = common._MPpow(e, y, self.proto.p)
-        h = sha.new()
+        h = sha1()
         h.update(common.NS(self.proto.ourVersionString) * 2)
         h.update(common.NS(self.proto.ourKexInitPayload) * 2)
         h.update(common.NS(self.proto.factory.publicKeys['ssh-rsa'].blob()))
@@ -1221,7 +1219,7 @@ class ServerSSHTransportTestCase(ServerAndClientSSHTransportBaseCase,
         y = common.getMP('\x00\x00\x00\x80' + '\x99' * 128)[0]
         f = common._MPpow(self.proto.g, y, self.proto.p)
         sharedSecret = common._MPpow(e, y, self.proto.p)
-        h = sha.new()
+        h = sha1()
         h.update(common.NS(self.proto.ourVersionString) * 2)
         h.update(common.NS(self.proto.ourKexInitPayload) * 2)
         h.update(common.NS(self.proto.factory.publicKeys['ssh-rsa'].blob()))
@@ -1360,7 +1358,7 @@ class ClientSSHTransportTestCase(ServerAndClientSSHTransportBaseCase,
         self.calledVerifyHostKey = True
         self.assertEquals(pubKey, self.blob)
         self.assertEquals(fingerprint.replace(':', ''),
-                          md5.new(pubKey).hexdigest())
+                          md5(pubKey).hexdigest())
         return defer.succeed(True)
 
 
@@ -1427,7 +1425,7 @@ class ClientSSHTransportTestCase(ServerAndClientSSHTransportBaseCase,
 
         sharedSecret = common._MPpow(transport.DH_GENERATOR,
                                      self.proto.x, transport.DH_PRIME)
-        h = sha.new()
+        h = sha1()
         h.update(common.NS(self.proto.ourVersionString) * 2)
         h.update(common.NS(self.proto.ourKexInitPayload) * 2)
         h.update(common.NS(self.blob))
@@ -1476,7 +1474,7 @@ class ClientSSHTransportTestCase(ServerAndClientSSHTransportBaseCase,
 
         self.test_KEX_DH_GEX_GROUP()
         sharedSecret = common._MPpow(3, self.proto.x, self.proto.p)
-        h = sha.new()
+        h = sha1()
         h.update(common.NS(self.proto.ourVersionString) * 2)
         h.update(common.NS(self.proto.ourKexInitPayload) * 2)
         h.update(common.NS(self.blob))
@@ -1654,7 +1652,7 @@ class SSHCiphersTestCase(unittest.TestCase):
                                   Crypto.Cipher.XOR.new('\x36').encrypt(key))
                 self.assertEquals(mod[2],
                                   Crypto.Cipher.XOR.new('\x5c').encrypt(key))
-                self.assertEquals(mod[3], len(mod[0].new().digest()))
+                self.assertEquals(mod[3], len(mod[0]().digest()))
 
 
     def test_setKeysCiphers(self):
@@ -1693,7 +1691,7 @@ class SSHCiphersTestCase(unittest.TestCase):
             outMac.setKeys('', '', '', '', key, '')
             inMac.setKeys('', '', '', '', '', key)
             if mod:
-                ds = mod.digest_size
+                ds = mod().digest_size
             else:
                 ds = 0
             self.assertEquals(inMac.verifyDigestSize, ds)
@@ -1703,7 +1701,7 @@ class SSHCiphersTestCase(unittest.TestCase):
             data = key
             packet = '\x00' * 4 + key
             if mod:
-                mac = mod.new(o + mod.new(i + packet).digest()).digest()
+                mac = mod(o + mod(i + packet).digest()).digest()
             else:
                 mac = ''
             self.assertEquals(outMac.makeMAC(seqid, data), mac)

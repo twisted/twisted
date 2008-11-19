@@ -9,7 +9,6 @@ Object-oriented filesystem path representation.
 import os
 import errno
 import random
-import sha
 import base64
 
 from os.path import isabs, exists, normpath, abspath, splitext
@@ -25,6 +24,7 @@ from stat import S_ISREG, S_ISDIR
 # modified for inclusion in the standard library.  --glyph
 
 from twisted.python.runtime import platform
+from twisted.python.hashlib import sha1
 
 from twisted.python.win32 import ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND
 from twisted.python.win32 import ERROR_INVALID_NAME, ERROR_DIRECTORY
@@ -120,7 +120,7 @@ def _secureEnoughString():
     """
     Create a pseudorandom, 16-character string for use in secure filenames.
     """
-    return armor(sha.new(randomBytes(64)).digest())[:16]
+    return armor(sha1(randomBytes(64)).digest())[:16]
 
 
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2005 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -6,7 +6,7 @@ Test cases for twisted.words.protocols.msn
 """
 
 # System imports
-import StringIO, sys
+import StringIO
 
 # Twisted imports
 
@@ -24,6 +24,7 @@ else:
     from twisted.words.protocols import msn
 
 
+from twisted.python.hashlib import md5
 from twisted.protocols import loopback
 from twisted.internet.defer import Deferred
 from twisted.trial import unittest
@@ -255,9 +256,34 @@ class NotificationTests(unittest.TestCase):
         self._versionTest("VER 1 MSNP8\r\n")
 
 
+    def test_challenge(self):
+        """
+        L{NotificationClient} responds to a I{CHL} message by sending a I{QRY}
+        back which included a hash based on the parameters of the I{CHL}.
+        """
+        transport = StringIOWithoutClosing()
+        self.client.makeConnection(transport)
+        transport.seek(0)
+        transport.truncate()
+
+        challenge = "15570131571988941333"
+        self.client.dataReceived('CHL 0 ' + challenge + '\r\n')
+        # md5 of the challenge and a magic string defined by the protocol
+        response = "8f2f5a91b72102cd28355e9fc9000d6e"
+        # Sanity check - the response is what the comment above says it is.
+        self.assertEqual(
+            response, md5(challenge + "Q1P7W2E4J9R8U3S5").hexdigest())
+        self.assertEqual(
+            transport.getvalue(),
+            # 2 is the next transaction identifier.  32 is the length of the
+            # response.
+            "QRY 2 msmsgs@msnmsgr.com 32\r\n" + response)
+
+
     def testLogin(self):
         self.client.lineReceived('USR 1 OK foo@bar.com Test%20Screen%20Name 1 0')
         self.failUnless((self.client.state == 'LOGIN'), msg='Failed to detect successful login')
+
 
     def testProfile(self):
         m = 'MSG Hotmail Hotmail 353\r\nMIME-Version: 1.0\r\nContent-Type: text/x-msmsgsprofile; charset=UTF-8\r\n'

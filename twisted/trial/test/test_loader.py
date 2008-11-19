@@ -5,12 +5,12 @@
 Tests for loading tests by name.
 """
 
-import md5
 import os
 import shutil
 import sys
 
 from twisted.python import util
+from twisted.python.hashlib import md5
 from twisted.trial.test import packages
 from twisted.trial import runner, reporter, unittest
 from twisted.trial.itrial import ITestCase
@@ -484,7 +484,7 @@ class PackageOrderingTest(packages.SysPathManglingTest):
 #             if isinstance(s, type) or isinstance(s, types.ClassType):
 #                 return s.__module__+'.'+s.__name__
             n = runner.name(s)
-            d = md5.new(n).hexdigest()
+            d = md5(n).hexdigest()
             return d
         self.loadSortedPackages(sillySorter)
 

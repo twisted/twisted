@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.web.test.test_woven -*-
 
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 #
@@ -16,12 +16,12 @@ __version__ = "$Revision: 1.34 $"[11:-2]
 
 import random
 import time
-import md5
 import urllib
 
 # Twisted Imports
 
 from twisted.python import log, components
+from twisted.python.hashlib import md5
 from twisted.web.resource import Resource, IResource
 from twisted.web.util import redirectTo, Redirect, DeferredResource
 from twisted.web.static import addSlash
@@ -29,7 +29,7 @@ from twisted.internet import reactor
 from twisted.cred.error import LoginFailed, UnauthorizedLogin
 
 def _sessionCookie():
-    return md5.new("%s_%s" % (str(random.random()) , str(time.time()))).hexdigest()
+    return md5("%s_%s" % (str(random.random()) , str(time.time()))).hexdigest()
 
 class GuardSession(components.Componentized):
     """A user's session with a system.

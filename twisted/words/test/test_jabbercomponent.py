@@ -5,9 +5,8 @@
 Tests for L{twisted.words.protocols.jabber.component}
 """
 
-import sha
-
 from twisted.python import failure
+from twisted.python.hashlib import sha1
 from twisted.trial import unittest
 from twisted.words.protocols.jabber import component, xmlstream
 from twisted.words.protocols.jabber.jid import JID
@@ -50,7 +49,7 @@ class ComponentInitiatingInitializerTest(unittest.TestCase):
         handshake = self.output[-1]
         self.assertEquals('handshake', handshake.name)
         self.assertEquals('test:component', handshake.uri)
-        self.assertEquals(sha.new("%s%s" % ('12345', 'secret')).hexdigest(),
+        self.assertEquals(sha1("%s%s" % ('12345', 'secret')).hexdigest(),
                           unicode(handshake))
 
         # successful authentication
@@ -80,7 +79,7 @@ class ComponentAuthTest(unittest.TestCase):
         xs.dataReceived("<stream:stream xmlns='jabber:component:accept' xmlns:stream='http://etherx.jabber.org/streams' from='cjid' id='12345'>")
 
         # Calculate what we expect the handshake value to be
-        hv = sha.new("%s%s" % ("12345", "secret")).hexdigest()
+        hv = sha1("%s%s" % ("12345", "secret")).hexdigest()
 
         self.assertEquals(outlist[1], "<handshake>%s</handshake>" % (hv))
 

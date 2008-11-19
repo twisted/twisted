@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.news.test.test_news -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -13,18 +13,19 @@ less NNTP specific
 """
 
 
-from __future__ import nested_scopes
+import getpass, pickle, time, socket
+import os
+import StringIO
+
+from zope.interface import implements, Interface
 
 from twisted.news.nntp import NNTPError
 from twisted.mail import smtp
 from twisted.internet import defer
 from twisted.enterprise import adbapi
 from twisted.persisted import dirdbm
+from twisted.python.hashlib import md5
 
-import getpass, pickle, time, socket, md5
-import os
-import StringIO
-from zope.interface import implements, Interface
 
 
 ERR_NOGROUP, ERR_NOARTICLE = range(2, 4)  # XXX - put NNTP values here (I guess?)
@@ -53,15 +54,15 @@ class Article:
 
         if not self.getHeader('Message-ID'):
             s = str(time.time()) + self.body
-            id = hexdigest(md5.md5(s)) + '@' + socket.gethostname()
+            id = hexdigest(md5(s)) + '@' + socket.gethostname()
             self.putHeader('Message-ID', '<%s>' % id)
 
         if not self.getHeader('Bytes'):
             self.putHeader('Bytes', str(len(self.body)))
-        
+
         if not self.getHeader('Lines'):
             self.putHeader('Lines', str(self.body.count('\n')))
-        
+
         if not self.getHeader('Date'):
             self.putHeader('Date', time.ctime(time.time()))
 
@@ -83,7 +84,7 @@ class Article:
         for i in self.headers.values():
             headers.append('%s: %s' % i)
         return '\r\n'.join(headers) + '\r\n'
-    
+
     def overview(self):
         xover = []
         for i in OVERVIEW_FMT:
@@ -94,12 +95,12 @@ class Article:
 class NewsServerError(Exception):
     pass
 
-    
+
 class INewsStorage(Interface):
     """
     An interface for storing and requesting news articles
     """
-    
+
     def listRequest():
         """
         Returns a deferred whose callback will be passed a list of 4-tuples
@@ -112,16 +113,16 @@ class INewsStorage(Interface):
         Returns a deferred whose callback will be passed the list of
         recommended subscription groups for new server users
         """
-    
-    
+
+
     def postRequest(message):
         """
         Returns a deferred whose callback will be invoked if 'message'
         is successfully posted to one or more specified groups and
         whose errback will be invoked otherwise.
         """
-    
-    
+
+
     def overviewRequest():
         """
         Returns a deferred whose callback will be passed the a list of
@@ -146,21 +147,21 @@ class INewsStorage(Interface):
         ends at the last article.
         """
 
-    
+
     def listGroupRequest(group):
         """
         Returns a deferred whose callback will be passed a two-tuple of
         (group name, [article indices])
         """
-    
-    
+
+
     def groupRequest(group):
         """
         Returns a deferred whose callback will be passed a five-tuple of
         (group name, article count, highest index, lowest index, group flags)
         """
 
-    
+
     def articleExistsRequest(id):
         """
         Returns a deferred whose callback will be passed with a true value
@@ -170,7 +171,7 @@ class INewsStorage(Interface):
 
 
     def articleRequest(group, index, id = None):
-        """ 
+        """
         Returns a deferred whose callback will be passed a file-like object
         containing the full article text (headers and body) for the article
         of the specified index in the specified group, and whose errback
@@ -180,7 +181,7 @@ class INewsStorage(Interface):
         group.
         """
 
-    
+
     def headRequest(group, index):
         """
         Returns a deferred whose callback will be passed the header for
@@ -189,7 +190,7 @@ class INewsStorage(Interface):
         exist.
         """
 
-    
+
     def bodyRequest(group, index):
         """
         Returns a deferred whose callback will be passed the body for
@@ -231,7 +232,7 @@ class NewsStorage:
 
 class PickleStorage:
     """A trivial NewsStorage implementation using pickles
-    
+
     Contains numerous flaws and is generally unsuitable for any
     real applications.  Consider yourself warned!
     """
@@ -388,8 +389,8 @@ class PickleStorage:
                 return defer.fail(ERR_NOARTICLE)
         else:
             return defer.fail(ERR_NOGROUP)
-                
-    
+
+
     def headRequest(self, group, index):
         if self.db.has_key(group):
             if self.db[group].has_key(index):
@@ -441,7 +442,7 @@ class Group:
     minArticle = 1
     maxArticle = 0
     articles = None
-    
+
     def __init__(self, name, flags = 'y'):
         self.name = name
         self.flags = flags
@@ -452,9 +453,9 @@ class NewsShelf:
     """
     A NewStorage implementation using Twisted's dirdbm persistence module.
     """
-    
-    implements(INewsStorage)    
-    
+
+    implements(INewsStorage)
+
     def __init__(self, mailhost, path):
         self.path = path
         self.mailhost = mailhost
@@ -502,8 +503,8 @@ class NewsShelf:
 
     def subscriptionRequest(self):
         return defer.succeed(self.dbm['subscriptions'])
-    
-    
+
+
     def getModerator(self, groups):
         # first see if any groups are moderated.  if so, nothing gets posted,
         # but the whole messages gets forwarded to the moderator address
@@ -532,17 +533,17 @@ class NewsShelf:
     def postRequest(self, message):
         cleave = message.find('\r\n\r\n')
         headers, article = message[:cleave], message[cleave + 4:]
-        
+
         article = Article(headers, article)
         groups = article.getHeader('Newsgroups').split()
         xref = []
-        
+
         # Check for moderated status
         moderator = self.getModerator(groups)
         if moderator and not article.getHeader('Approved'):
             return self.notifyModerator(moderator, article)
-        
-        
+
+
         for group in groups:
             try:
                 g = self.dbm['groups'][group]
@@ -570,7 +571,7 @@ class NewsShelf:
     def xoverRequest(self, group, low, high):
         if not self.dbm['groups'].has_key(group):
             return defer.succeed([])
-        
+
         if low is None:
             low = 0
         if high is None:
@@ -585,7 +586,7 @@ class NewsShelf:
     def xhdrRequest(self, group, low, high, header):
         if group not in self.dbm['groups']:
             return defer.succeed([])
-        
+
         if low is None:
             low = 0
         if high is None:
@@ -618,8 +619,8 @@ class NewsShelf:
 
     def articleExistsRequest(self, id):
         return defer.succeed(id in self.dbm['Message-IDs'])
-    
-    
+
+
     def articleRequest(self, group, index, id = None):
         if id is not None:
             try:
@@ -629,7 +630,7 @@ class NewsShelf:
             else:
                 group, index = xref[0]
                 index = int(index)
-        
+
         try:
             a = self.dbm['groups'][group].articles[index]
         except KeyError:
@@ -640,8 +641,8 @@ class NewsShelf:
                 a.getHeader('Message-ID'),
                 StringIO.StringIO(a.textHeaders() + '\r\n' + a.body)
             ))
-    
-    
+
+
     def headRequest(self, group, index, id = None):
         if id is not None:
             try:
@@ -651,7 +652,7 @@ class NewsShelf:
             else:
                 group, index = xref[0]
                 index = int(index)
-        
+
         try:
             a = self.dbm['groups'][group].articles[index]
         except KeyError:
@@ -669,7 +670,7 @@ class NewsShelf:
             else:
                 group, index = xref[0]
                 index = int(index)
-        
+
         try:
             a = self.dbm['groups'][group].articles[index]
         except KeyError:
@@ -690,7 +691,7 @@ class NewsStorageAugmentation:
     CREATE TABLE groups (
         group_id      SERIAL,
         name          VARCHAR(80) NOT NULL,
-        
+
         flags         INTEGER DEFAULT 0 NOT NULL
     );
 
@@ -700,7 +701,7 @@ class NewsStorageAugmentation:
     CREATE TABLE articles (
         article_id    SERIAL,
         message_id    TEXT,
-        
+
         header        TEXT,
         body          TEXT
     );
@@ -719,16 +720,16 @@ class NewsStorageAugmentation:
     CREATE TABLE subscriptions (
         group_id    INTEGER
     );
-    
+
     CREATE TABLE overview (
         header      TEXT
     );
     """
-    
+
     def __init__(self, info):
         self.info = info
         self.dbpool = adbapi.ConnectionPool(**self.info)
-        
+
 
     def __setstate__(self, state):
         self.__dict__ = state
@@ -778,14 +779,14 @@ class NewsStorageAugmentation:
             SELECT name, group_id FROM groups
             WHERE name IN (%s)
         """ % (', '.join([("'%s'" % (adbapi.safe(group),)) for group in groups]),)
-        
+
         transaction.execute(sql)
         result = transaction.fetchall()
-        
+
         # No relevant groups, bye bye!
         if not len(result):
             raise NNTPError('None of groups in Newsgroup header carried')
-        
+
         # Got some groups, now find the indices this article will have in each
         sql = """
             SELECT groups.group_id, COALESCE(MAX(postings.article_index), 0) + 1
@@ -800,20 +801,20 @@ class NewsStorageAugmentation:
 
         if not len(indices):
             raise NNTPError('Internal server error - no indices found')
-        
+
         # Associate indices with group names
         gidToName = dict([(b, a) for (a, b) in result])
         gidToIndex = dict(indices)
-        
+
         nameIndex = []
         for i in gidToName:
             nameIndex.append((gidToName[i], gidToIndex[i]))
-        
+
         # Build xrefs
         xrefs = socket.gethostname().split()[0]
         xrefs = xrefs + ' ' + ' '.join([('%s:%d' % (group, id)) for (group, id) in nameIndex])
         article.putHeader('Xref', xrefs)
-        
+
         # Hey!  The article is ready to be posted!  God damn f'in finally.
         sql = """
             INSERT INTO articles (message_id, header, body)
@@ -823,9 +824,9 @@ class NewsStorageAugmentation:
             adbapi.safe(article.textHeaders()),
             adbapi.safe(article.body)
         )
-        
+
         transaction.execute(sql)
-        
+
         # Now update the posting to reflect the groups to which this belongs
         for gid in gidToName:
             sql = """
@@ -833,7 +834,7 @@ class NewsStorageAugmentation:
                 VALUES (%d, (SELECT last_value FROM articles_article_id_seq), %d)
             """ % (gid, gidToIndex[gid])
             transaction.execute(sql)
-        
+
         return len(nameIndex)
 
 
@@ -888,13 +889,13 @@ class NewsStorageAugmentation:
             WHERE postings.group_id = groups.group_id
             AND groups.name = '%s'
         """ % (adbapi.safe(group),)
-        
+
         return self.dbpool.runQuery(sql).addCallback(
             lambda results, group = group: (group, [res[0] for res in results])
         )
 
 
-    def groupRequest(self, group): 
+    def groupRequest(self, group):
         sql = """
             SELECT groups.name,
                 COUNT(postings.article_index),
@@ -906,7 +907,7 @@ class NewsStorageAugmentation:
             WHERE groups.name = '%s'
             GROUP BY groups.name, groups.flags
         """ % (adbapi.safe(group),)
-        
+
         return self.dbpool.runQuery(sql).addCallback(
             lambda results: tuple(results[0])
         )
@@ -917,7 +918,7 @@ class NewsStorageAugmentation:
             SELECT COUNT(message_id) FROM articles
             WHERE message_id = '%s'
         """ % (adbapi.safe(id),)
-        
+
         return self.dbpool.runQuery(sql).addCallback(
             lambda result: bool(result[0][0])
         )
@@ -933,7 +934,7 @@ class NewsStorageAugmentation:
                 AND groups.group_id = postings.group_id
             """ % (adbapi.safe(id), adbapi.safe(group))
         else:
-            sql = """ 
+            sql = """
                 SELECT postings.article_index, articles.message_id, articles.header, articles.body
                 FROM groups,articles LEFT OUTER JOIN postings
                 ON postings.article_id = articles.article_id
@@ -960,7 +961,7 @@ class NewsStorageAugmentation:
             AND postings.group_id = groups.group_id
             AND groups.name = '%s'
         """ % (index, adbapi.safe(group))
-        
+
         return self.dbpool.runQuery(sql).addCallback(lambda result: result[0])
 
 
@@ -973,7 +974,7 @@ class NewsStorageAugmentation:
             AND postings.group_id = groups.group_id
             AND groups.name = '%s'
         """ % (index, adbapi.safe(group))
-        
+
         return self.dbpool.runQuery(sql).addCallback(
             lambda result: result[0]
         ).addCallback(

@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.web.test.test_web -*-
 
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -507,9 +507,10 @@ class Site(http.HTTPFactory):
         """
         (internal) Generate an opaque, unique ID for a user's session.
         """
-        import md5, random
+        from twisted.python.hashlib import md5
+        import random
         self.counter = self.counter + 1
-        return md5.new("%s_%s" % (str(random.random()) , str(self.counter))).hexdigest()
+        return md5("%s_%s" % (str(random.random()) , str(self.counter))).hexdigest()
 
     def makeSession(self):
         """

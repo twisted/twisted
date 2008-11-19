@@ -1,8 +1,8 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
-Now with 30% more starch.
+Tests for L{twisted.cred}, now with 30% more starch.
 """
 
 
@@ -10,7 +10,7 @@ import hmac
 from zope.interface import implements, Interface
 
 from twisted.trial import unittest
-from twisted.cred import portal, checkers, credentials, error
+from twisted.cred import portal, checkers, credentials, error, util
 from twisted.python import components
 from twisted.internet import defer
 from twisted.internet.defer import deferredGenerator as dG, waitForDeferred as wFD
@@ -26,6 +26,49 @@ except ImportError:
     pamauth = None
 else:
     from twisted.cred import pamauth
+
+
+class DeprecatedUtilTests(unittest.TestCase):
+    """
+    Tests for the deprecation of the functions in L{twisted.cred.util}.
+    """
+    def test_respond(self):
+        """
+        L{respond} applies a particular hashing to a challenge and a password
+        and returns the result.  It is deprecated and calling it emits a
+        deprecation warning.
+        """
+        # Use some values and test against the known correct output.
+        self.assertEqual(
+            util.respond('foo', 'bar').encode('hex'),
+            'ebe4a2902532198cafaa223fb5ac0f20')
+
+        warnings = self.flushWarnings(offendingFunctions=[self.test_respond])
+        self.assertEqual(
+            warnings[0]['message'],
+            'twisted.cred.util.respond is deprecated since Twisted 8.3.')
+        self.assertEqual(
+            warnings[0]['category'],
+            PendingDeprecationWarning)
+        self.assertEqual(len(warnings), 1)
+
+
+    def test_challenge(self):
+        """
+        L{challenge} returns a different string each time it is called.
+        """
+        self.assertNotEqual(util.challenge(), util.challenge())
+        warnings = self.flushWarnings(offendingFunctions=[self.test_challenge])
+        for w in warnings:
+            self.assertEqual(
+                w['message'],
+                'twisted.cred.util.challenge is deprecated since Twisted 8.3.')
+            self.assertEqual(
+                w['category'],
+                PendingDeprecationWarning)
+        self.assertEqual(len(warnings), 2)
+
+
 
 class ITestable(Interface):
     pass

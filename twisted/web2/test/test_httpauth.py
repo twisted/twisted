@@ -1,4 +1,7 @@
-import md5
+# Copyright (c) 2006-2008 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+from twisted.python.hashlib import md5
 from twisted.internet import address
 from twisted.trial import unittest
 from twisted.cred import error
@@ -263,10 +266,10 @@ class DigestAuthTestCase(unittest.TestCase):
         creds = self.credentialFactory.decode(clientResponse, _trivial_GET)
 
         self.failUnless(creds.checkHash(
-                md5.md5('username:test realm:password').hexdigest()))
+                md5('username:test realm:password').hexdigest()))
 
         self.failIf(creds.checkHash(
-                md5.md5('username:test realm:bogus').hexdigest()))
+                md5('username:test realm:bogus').hexdigest()))
 
     def test_invalidOpaque(self):
         """
@@ -364,7 +367,7 @@ class DigestAuthTestCase(unittest.TestCase):
         key = '%s,%s,%s' % (challenge['nonce'],
                             clientAddress.host,
                             '-137876876')
-        digest = md5.new(key + credentialFactory.privateKey).hexdigest()
+        digest = md5(key + credentialFactory.privateKey).hexdigest()
         ekey = key.encode('base64')
 
         oldNonceOpaque = '%s-%s' % (digest, ekey.strip('\n'))
@@ -390,7 +393,7 @@ class DigestAuthTestCase(unittest.TestCase):
                             clientAddress.host,
                             '0')
 
-        digest = md5.new(key + 'this is not the right pkey').hexdigest()
+        digest = md5(key + 'this is not the right pkey').hexdigest()
 
         badChecksum = '%s-%s' % (digest,
                                  key.encode('base64').strip('\n'))

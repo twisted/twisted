@@ -1,7 +1,9 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.python.test.test_otp -*-
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-""" A One-Time Password System based on RFC 2289
+"""
+A One-Time Password System based on RFC 2289
 
 The class Authenticator contains the hashing-logic, and the parser for the
 readable output. It also contains challenge which returns a string describing
@@ -17,10 +19,20 @@ words for storing pronouncable 11-bit values. Taken from RFC 1760.
 Uses the MD5- and SHA-algorithms for hashing
 
 Todo: RFC2444, SASL (perhaps), parsing hex-responses
+
+This module is deprecated.  Consider using U{another Python OTP
+library<http://labix.org/python-otp>} instead.
 """
 
+import warnings
 import string
 import random
+
+warnings.warn(
+    "twisted.python.otp is deprecated since Twisted 8.3.",
+    category=DeprecationWarning,
+    stacklevel=2)
+
 
 def stringToLong(s):
     """ Convert digest to long """
@@ -47,33 +59,37 @@ def longToString(l):
         result = chr(l % 256) + result
         l = l / 256L
     return result
-        
-import md5, sha
-hashid = {md5: 'md5', sha: 'sha1'}
+
+from twisted.python.hashlib import md5, sha1
+hashid = {md5: 'md5', sha1: 'sha1'}
 
 INITIALSEQUENCE = 1000
 MINIMUMSEQUENCE = 50
 
 class Unauthorized(Exception):
     """the Unauthorized exception
-    
+
     This exception is raised when an action is not allowed, or a user is not
     authenticated properly.
     """
 
 class OTPAuthenticator:
-    """A One Time Password System
-    
+    """
+    A One Time Password System
+
     Based on RFC 2289, which is based on a the S/KEY Authentication-scheme.
     It uses the MD5- and SHA-algorithms for hashing
-    
-    The variable OTP is at all times a 64bit string"""
 
+    The variable OTP is at all times a 64bit string.
+
+    @ivar hash: An object which can be used to compute hashes.  This is either
+        L{md5} or L{sha1}.
+    """
     def __init__(self, hash = md5):
         "Set the hash to either md5 or sha1"
         self.hash = hash
-        pass
-    
+
+
     def generateSeed(self):
         "Return a 10 char random seed, with 6 lowercase chars and 4 digits"
         seed = ''
@@ -86,9 +102,9 @@ class OTPAuthenticator:
     def foldDigest(self, otp):
         if self.hash == md5:
             return self.foldDigest128(otp)
-        if self.hash == sha:
+        if self.hash == sha1:
             return self.foldDigest160(otp)
-    
+
     def foldDigest128(self, otp128):
         "Fold a 128 bit digest to 64 bit"
         regs = stringToDWords(otp128)
@@ -120,9 +136,9 @@ class OTPAuthenticator:
 
     def hashUpdate(self, digest):
         "Run through the hash and fold to 64 bit"
-        h = self.hash.new(digest)
+        h = self.hash(digest)
         return self.foldDigest(h.digest())
-    
+
     def generateOTP(self, seed, passwd, sequence):
         """Return a 64 bit OTP based on inputs
         Run through makeReadable to get a 6 word pass-phrase"""
@@ -138,7 +154,7 @@ class OTPAuthenticator:
         for i in xrange(0, 64, 2):
             parity = parity + otp & 0x3
             otp = otp >> 2
-        return parity        
+        return parity
 
     def makeReadable(self, otp):
         "Returns a 6 word pass-phrase from a 64bit OTP"
@@ -151,7 +167,7 @@ class OTPAuthenticator:
         return string.join(list)
 
     def challenge(self, seed, sequence):
-        """Return a challenge in the format otp-<hash> <sequence> <seed>"""  
+        """Return a challenge in the format otp-<hash> <sequence> <seed>"""
         return "otp-%s %i %s" % (hashid[self.hash], sequence, seed)
 
     def parsePhrase(self, phrase):
@@ -178,9 +194,9 @@ class OTP(OTPAuthenticator):
     On the next authentication, the stored password is hashed and checked
     up against the one given by the user. If they match, the sequencecounter
     is decreased and the circle is closed.
-    
+
     This object should be glued to each user
-    
+
     Note:
     It does NOT reset the sequence when the combinations left approach zero,
     This has to be done manuelly by instancing a new object
@@ -478,4 +494,3 @@ dict =  ["A",     "ABE",   "ACE",   "ACT",   "AD",    "ADA",   "ADD",
 "WORM",  "WORN",  "WOVE",  "WRIT",  "WYNN",  "YALE",  "YANG",  "YANK",
 "YARD",  "YARN",  "YAWL",  "YAWN",  "YEAH",  "YEAR",  "YELL",  "YOGA",
 "YOKE"]
-

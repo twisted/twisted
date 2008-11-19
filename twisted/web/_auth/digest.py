@@ -9,10 +9,10 @@ Implementation of RFC2617: HTTP Digest Authentication
 """
 
 import time
-import md5, sha
 
 from zope.interface import implements
 
+from twisted.python.hashlib import md5, sha1
 from twisted.python.randbytes import secureRandom
 from twisted.cred import credentials, error
 from twisted.web.iweb import ICredentialFactory, IUsernameDigestHash
@@ -21,7 +21,7 @@ from twisted.web.iweb import ICredentialFactory, IUsernameDigestHash
 # The digest math
 
 algorithms = {
-    'md5': md5.new,
+    'md5': md5,
 
     # md5-sess is more complicated than just another algorithm.  It requires
     # H(A1) state to be remembered from the first WWW-Authenticate challenge
@@ -30,9 +30,9 @@ algorithms = {
     # recalculate H(A1) each time an Authorization header is received.  Read
     # RFC 2617, section 3.2.2.2 and do not try to make DigestCredentialFactory
     # support this unless you completely understand it. -exarkun
-    'md5-sess': md5.new,
+    'md5-sess': md5,
 
-    'sha': sha.new,
+    'sha': sha1,
 }
 
 # DigestCalcHA1
@@ -257,7 +257,7 @@ class DigestCredentialFactory(object):
         if clientip is None:
             clientip = ''
         key = "%s,%s,%s" % (nonce, clientip, now)
-        digest = md5.new(key + self.privateKey).hexdigest()
+        digest = md5(key + self.privateKey).hexdigest()
         ekey = key.encode('base64')
         return "%s-%s" % (digest, ekey.strip('\n'))
 
@@ -315,7 +315,7 @@ class DigestCredentialFactory(object):
                 'Invalid response, incompatible opaque/nonce too old')
 
         # Verify the digest
-        digest = md5.new(key + self.privateKey).hexdigest()
+        digest = md5(key + self.privateKey).hexdigest()
         if digest != opaqueParts[0]:
             raise error.LoginFailed('Invalid response, invalid opaque value')
 

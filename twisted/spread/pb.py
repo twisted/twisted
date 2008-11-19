@@ -27,7 +27,6 @@ To get started, begin with L{PBClientFactory} and L{PBServerFactory}.
 @author: Glyph Lefkowitz
 """
 
-import md5
 import random
 import new
 import types
@@ -38,6 +37,7 @@ from zope.interface import implements, Interface
 from twisted.python import log, failure, reflect
 from twisted.python.versions import Version
 from twisted.python.deprecate import deprecated
+from twisted.python.hashlib import md5
 from twisted.internet import defer, protocol
 from twisted.cred.portal import Portal
 from twisted.cred.credentials import IAnonymous, ICredentials
@@ -997,10 +997,10 @@ def respond(challenge, password):
 
     This is useful for challenge/response authentication.
     """
-    m = md5.new()
+    m = md5()
     m.update(password)
     hashedPassword = m.digest()
-    m = md5.new()
+    m = md5()
     m.update(hashedPassword)
     m.update(challenge)
     doubleHashedPassword = m.digest()
@@ -1011,7 +1011,7 @@ def challenge():
     crap = ''
     for x in range(random.randrange(15,25)):
         crap = crap + chr(random.randint(65,90))
-    crap = md5.new(crap).digest()
+    crap = md5(crap).digest()
     return crap
 
 
@@ -1340,12 +1340,12 @@ class _PortalAuthChallenger(Referenceable, _JellyableAvatarMixin):
 
     # IUsernameHashedPassword:
     def checkPassword(self, password):
-        return self.checkMD5Password(md5.md5(password).digest())
+        return self.checkMD5Password(md5(password).digest())
 
 
     # IUsernameMD5Password
     def checkMD5Password(self, md5Password):
-        md = md5.new()
+        md = md5()
         md.update(md5Password)
         md.update(self.challenge)
         correct = md.digest()

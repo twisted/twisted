@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.mail.test.test_pop3 -*-
 #
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -14,7 +14,6 @@ Post-office Protocol version 3
 import string
 import base64
 import binascii
-import md5
 import warnings
 
 from zope.interface import implements, Interface
@@ -26,6 +25,7 @@ from twisted.internet import task
 from twisted.internet import defer
 from twisted.internet import interfaces
 from twisted.python import log
+from twisted.python.hashlib import md5
 
 from twisted import cred
 import twisted.cred.error
@@ -44,7 +44,7 @@ class APOPCredentials:
 
     def checkPassword(self, password):
         seed = self.magic + password
-        myDigest = md5.new(seed).hexdigest()
+        myDigest = md5(seed).hexdigest()
         return myDigest == self.digest
 
 
@@ -1031,7 +1031,7 @@ class POP3Client(basic.LineOnlyReceiver):
             self._dispatch(self.command+"_continue", None, line)
 
     def apopAuthenticate(self, user, password, magic):
-        digest = md5.new(magic + password).hexdigest()
+        digest = md5(magic + password).hexdigest()
         self.apop(user, digest)
 
     def apop(self, user, digest):

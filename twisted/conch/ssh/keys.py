@@ -10,7 +10,6 @@ Maintainer: U{Paul Swartz}
 
 # base library imports
 import base64
-import sha, md5
 import warnings
 
 # external library imports
@@ -20,6 +19,7 @@ from Crypto import Util
 
 # twisted
 from twisted.python import randbytes
+from twisted.python.hashlib import md5, sha1
 
 # sibling imports
 from twisted.conch.ssh import asn1, common, sexpy
@@ -205,8 +205,8 @@ class Key(object):
                 len(ivdata), 2)])
             if not passphrase:
                 raise EncryptedKeyError('encrypted key with no passphrase')
-            ba = md5.new(passphrase + iv).digest()
-            bb = md5.new(ba + passphrase + iv).digest()
+            ba = md5(passphrase + iv).digest()
+            bb = md5(ba + passphrase + iv).digest()
             decKey = (ba + bb)[:24]
             b64Data = base64.decodestring(''.join(lines[3:-1]))
             keyData = DES3.new(decKey, DES3.MODE_CBC, iv).decrypt(b64Data)
@@ -443,7 +443,7 @@ class Key(object):
 
         @rtype: L{str}
         """
-        return ':'.join([x.encode('hex') for x in md5.md5(self.blob()).digest()])
+        return ':'.join([x.encode('hex') for x in md5(self.blob()).digest()])
 
 
     def type(self):
@@ -597,8 +597,8 @@ class Key(object):
                 hexiv = ''.join(['%02X' % ord(x) for x in iv])
                 lines.append('Proc-Type: 4,ENCRYPTED')
                 lines.append('DEK-Info: DES-EDE3-CBC,%s\n' % hexiv)
-                ba = md5.new(extra + iv).digest()
-                bb = md5.new(ba + extra + iv).digest()
+                ba = md5(extra + iv).digest()
+                bb = md5(ba + extra + iv).digest()
                 encKey = (ba + bb)[:24]
             asn1Data = asn1.pack([objData])
             if extra:
@@ -681,7 +681,7 @@ class Key(object):
             signature = self.keyObject.sign(digest, '')[0]
             ret = common.NS(Util.number.long_to_bytes(signature))
         elif self.type() == 'DSA':
-            digest = sha.new(data).digest()
+            digest = sha1(data).digest()
             randomBytes = randbytes.secureRandom(19)
             sig = self.keyObject.sign(digest, randomBytes)
             # SSH insists that the DSS signature blob be two 160-bit integers
@@ -710,7 +710,7 @@ class Key(object):
             signature = common.getNS(signature)[0]
             numbers = [Util.number.bytes_to_long(n) for n in signature[:20],
                     signature[20:]]
-            digest = sha.new(data).digest()
+            digest = sha1(data).digest()
         return self.keyObject.verify(digest, numbers)
 
 def getPublicKeyString(filename=None, line=0, data=''):
@@ -863,7 +863,7 @@ def pkcs1Digest(data, messageLength):
     @type data: C{str}
     @type messageLength: C{str}
     """
-    digest = sha.new(data).digest()
+    digest = sha1(data).digest()
     return pkcs1Pad(ID_SHA1+digest, messageLength)
 
 def lenSig(obj):

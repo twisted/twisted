@@ -1,8 +1,6 @@
 # -*- test-case-name: twisted.words.test -*-
-# Copyright (c) 2001-2005 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
-#
 
 """
 MSNP8 Protocol (client only) - semi-experimental
@@ -18,7 +16,7 @@ suitable notification server.
 
 You will want to subclass this and handle the gotNotificationReferral
 method appropriately.
-    
+
 I{Notification Server}
 
 The NotificationClient class handles connections to the
@@ -73,11 +71,12 @@ TODO
 @author: Sam Jordan
 """
 
-import types, operator, os, md5
+import types, operator, os
 from random import randint
 from urllib import quote, unquote
 
 from twisted.python import failure, log
+from twisted.python.hashlib import md5
 from twisted.internet import reactor
 from twisted.internet.defer import Deferred
 from twisted.internet.protocol import ClientFactory
@@ -185,7 +184,7 @@ def _login(userHandle, passwd, nexusServer, cached=0, authData=''):
 
 
 class PassportNexus(HTTPClient):
-    
+
     """
     Used to obtain the URL of a valid passport
     login HTTPS server.
@@ -330,7 +329,7 @@ class MSNMessage:
                If set to MESSAGE_ACK_NONE the server will do nothing.
                This is relevant for the return value of
                SwitchboardClient.sendMessage (which will return
-               a Deferred if ack is set to either MESSAGE_ACK or MESSAGE_NACK  
+               a Deferred if ack is set to either MESSAGE_ACK or MESSAGE_NACK
                and will fire when the respective ACK or NACK is received).
                If set to MESSAGE_ACK_NONE sendMessage will return None.
     """
@@ -379,7 +378,7 @@ class MSNMessage:
         self.message = message
 
 class MSNContact:
-    
+
     """
     This class represents a contact (user).
 
@@ -401,7 +400,7 @@ class MSNContact:
     @ivar hasPager: Whether or not this user has a mobile pager
                     (true=yes, false=no)
     """
-    
+
     def __init__(self, userHandle="", screenName="", lists=0, groups=[], status=None):
         self.userHandle = userHandle
         self.screenName = screenName
@@ -856,7 +855,7 @@ class NotificationClient(MSNEventBase):
     def handle_CHL(self, params):
         checkParamLen(len(params), 2, 'CHL')
         self.sendLine("QRY %s msmsgs@msnmsgr.com 32" % self._nextTransactionID())
-        self.transport.write(md5.md5(params[1] + MSN_CHALLENGE_STR).hexdigest())
+        self.transport.write(md5(params[1] + MSN_CHALLENGE_STR).hexdigest())
 
     def handle_QRY(self, params):
         pass
@@ -1253,7 +1252,7 @@ class NotificationClient(MSNEventBase):
                  a tuple with the new status code as the
                  only element.
         """
-        
+
         id, d = self._createIDMapping()
         self.sendLine("CHG %s %s" % (id, status))
         def _cb(r):
@@ -1304,7 +1303,7 @@ class NotificationClient(MSNEventBase):
                           the state as 'bl' which the official client
                           interprets as -> allow messages from all
                           users except those on the block list.
-                          
+
         @return: A Deferred, the callback of which will be fired when
                  the server replies with the new privacy setting.
                  The callback argument will be a tuple, the 2 elements
@@ -1362,7 +1361,7 @@ class NotificationClient(MSNEventBase):
     # if lists are synchronized and updated correctly, which they
     # should be. If someone has a specific justified need for this
     # then please contact me and i'll re-enable/fix support for it.
-                    
+
     #def requestListGroups(self):
     #    """
     #    Request (forward) list groups.
@@ -1373,7 +1372,7 @@ class NotificationClient(MSNEventBase):
     #             a dictionary mapping group IDs to group names and the
     #             current list version.
     #    """
-    #    
+    #
     #    # this doesn't need to be used if syncing of the lists takes place (which it SHOULD!)
     #    # i.e. please don't use it!
     #    warnings.warn("Please do not use this method - use the list syncing process instead")
@@ -1473,7 +1472,7 @@ class NotificationClient(MSNEventBase):
                  the new list version (int), the group id (int) and
                  the new group name (str).
         """
-        
+
         id, d = self._createIDMapping()
         self.sendLine("REG %s %s %s 0" % (id, groupID, quote(newName)))
         def _cb(r):
@@ -1509,7 +1508,7 @@ class NotificationClient(MSNEventBase):
                  version, and the group id (if relevant, otherwise it
                  will be None)
         """
-        
+
         id, d = self._createIDMapping()
         listType = listIDToCode[listType].upper()
         if listType == "FL":
@@ -1554,7 +1553,7 @@ class NotificationClient(MSNEventBase):
                  version, and the group id (if relevant, otherwise it will
                  be None)
         """
-        
+
         id, d = self._createIDMapping()
         listType = listIDToCode[listType].upper()
         if listType == "FL":
@@ -1624,7 +1623,7 @@ class NotificationClient(MSNEventBase):
         After running the method the server is expected
         to close the connection.
         """
-        
+
         self.sendLine("OUT")
 
 class NotificationFactory(ClientFactory):
@@ -2117,7 +2116,7 @@ class FileReceive(LineReceiver):
         self.state = 'CONNECTING'
         self.segmentLength = 0
         self.buffer = ''
-        
+
         if isinstance(file, types.StringType):
             path = os.path.join(directory, file)
             if os.path.exists(path) and not self.overwrite:
@@ -2237,7 +2236,7 @@ class FileSend(LineReceiver):
     @ivar auth: the auth cookie (number) to use when sending the
                 transfer invitation
     """
-    
+
     def __init__(self, file):
         """
         @param file: A string or file object represnting the file to send.

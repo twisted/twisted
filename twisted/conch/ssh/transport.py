@@ -13,8 +13,6 @@ Maintainer: Paul Swartz
 
 # base library imports
 import struct
-import md5
-import sha
 import zlib
 import array
 
@@ -26,6 +24,7 @@ from Crypto.Cipher import XOR
 from twisted.internet import protocol, defer
 from twisted.conch import error
 from twisted.python import log, randbytes
+from twisted.python.hashlib import md5, sha1
 
 # sibling imports
 from twisted.conch.ssh import keys
@@ -532,9 +531,9 @@ class SSHTransportBase(protocol.Protocol):
         @type sharedSecret: C{str}
         @type exchangeHash: C{str}
         """
-        k1 = sha.new(sharedSecret + exchangeHash + c + self.sessionID)
+        k1 = sha1(sharedSecret + exchangeHash + c + self.sessionID)
         k1 = k1.digest()
-        k2 = sha.new(sharedSecret + exchangeHash + k1).digest()
+        k2 = sha1(sharedSecret + exchangeHash + k1).digest()
         return k1 + k2
 
 
@@ -723,7 +722,7 @@ class SSHServerTransport(SSHTransportBase):
             y = Util.number.getRandomNumber(512, randbytes.secureRandom)
             serverDHpublicKey = _MPpow(DH_GENERATOR, y, DH_PRIME)
             sharedSecret = _MPpow(clientDHpublicKey, y, DH_PRIME)
-            h = sha.new()
+            h = sha1()
             h.update(NS(self.otherVersionString))
             h.update(NS(self.ourVersionString))
             h.update(NS(self.otherKexInitPayload))
@@ -792,7 +791,7 @@ class SSHServerTransport(SSHTransportBase):
 
         serverDHpublicKey = _MPpow(self.g, y, self.p)
         sharedSecret = _MPpow(clientDHpublicKey, y, self.p)
-        h = sha.new()
+        h = sha1()
         h.update(NS(self.otherVersionString))
         h.update(NS(self.ourVersionString))
         h.update(NS(self.otherKexInitPayload))
@@ -933,7 +932,7 @@ class SSHClientTransport(SSHTransportBase):
             f, packet = getMP(packet)
             signature, packet = getNS(packet)
             fingerprint = ':'.join([ch.encode('hex') for ch in
-                                    md5.new(pubKey).digest()])
+                                    md5(pubKey).digest()])
             d = self.verifyHostKey(pubKey, fingerprint)
             d.addCallback(self._continueKEXDH_REPLY, pubKey, f, signature)
             d.addErrback(
@@ -962,7 +961,7 @@ class SSHClientTransport(SSHTransportBase):
         """
         serverKey = keys.Key.fromString(pubKey)
         sharedSecret = _MPpow(f, self.x, DH_PRIME)
-        h = sha.new()
+        h = sha1()
         h.update(NS(self.ourVersionString))
         h.update(NS(self.otherVersionString))
         h.update(NS(self.ourKexInitPayload))
@@ -992,7 +991,7 @@ class SSHClientTransport(SSHTransportBase):
         f, packet = getMP(packet)
         signature, packet = getNS(packet)
         fingerprint = ':'.join(map(lambda c: '%02x'%ord(c),
-            md5.new(pubKey).digest()))
+            md5(pubKey).digest()))
         d = self.verifyHostKey(pubKey, fingerprint)
         d.addCallback(self._continueGEX_REPLY, pubKey, f, signature)
         d.addErrback(
@@ -1015,7 +1014,7 @@ class SSHClientTransport(SSHTransportBase):
         """
         serverKey = keys.Key.fromString(pubKey)
         sharedSecret = _MPpow(f, self.x, self.p)
-        h = sha.new()
+        h = sha1()
         h.update(NS(self.ourVersionString))
         h.update(NS(self.otherVersionString))
         h.update(NS(self.ourKexInitPayload))
@@ -1169,9 +1168,9 @@ class SSHCiphers:
         'none':(None, 0, 0),
     }
     macMap = {
-        'hmac-sha1': sha,
+        'hmac-sha1': sha1,
         'hmac-md5': md5,
-        'none':None
+        'none': None
      }
 
 
@@ -1243,10 +1242,7 @@ class SSHCiphers:
         mod = self.macMap[mac]
         if not mod:
             return (None, '', '', 0)
-        #if not hasattr(mod, 'digest_size'):
-        #     ds = len(mod.new().digest())
-        #else:
-        ds = mod.digest_size
+        ds = mod().digest_size
         key = key[:ds] + '\x00' * (64 - ds)
         i = XOR.new('\x36').encrypt(key)
         o = XOR.new('\x5c').encrypt(key)
@@ -1287,8 +1283,8 @@ class SSHCiphers:
             return ''
         data = struct.pack('>L', seqid) + data
         mod, i, o, ds = self.outMAC
-        inner = mod.new(i + data)
-        outer = mod.new(o + inner.digest())
+        inner = mod(i + data)
+        outer = mod(o + inner.digest())
         return outer.digest()
 
 
@@ -1309,8 +1305,8 @@ class SSHCiphers:
             return mac == ''
         data = struct.pack('>L', seqid) + data
         mod, i, o, ds = self.inMAC
-        inner = mod.new(i + data)
-        outer = mod.new(o + inner.digest())
+        inner = mod(i + data)
+        outer = mod(o + inner.digest())
         return mac == outer.digest()
 
 

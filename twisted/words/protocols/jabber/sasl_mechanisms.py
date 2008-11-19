@@ -1,15 +1,17 @@
 # -*- test-case-name: twisted.words.test.test_jabbersaslmechanisms -*-
 #
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
 Protocol agnostic implementations of SASL authentication mechanisms.
 """
 
-import md5, binascii, random, time, os
+import binascii, random, time, os
 
 from zope.interface import Interface, Attribute, implements
+
+from twisted.python.hashlib import md5
 
 class ISASLMechanism(Interface):
     name = Attribute("""Common name for the SASL Mechanism.""")
@@ -178,7 +180,7 @@ class DigestMD5(object):
         """
 
         def H(s):
-            return md5.new(s).digest()
+            return md5(s).digest()
 
         def HEX(n):
             return binascii.b2a_hex(n)
@@ -221,4 +223,4 @@ class DigestMD5(object):
 
 
     def _gen_nonce(self):
-        return md5.new("%s:%s:%s" % (str(random.random()) , str(time.gmtime()),str(os.getpid()))).hexdigest()
+        return md5("%s:%s:%s" % (str(random.random()) , str(time.gmtime()),str(os.getpid()))).hexdigest()
