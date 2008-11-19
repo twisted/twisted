@@ -1,19 +1,17 @@
 # -*- test-case-name: twisted.mail.test.test_mail -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""Maildir-style mailbox support
 """
-
-from __future__ import generators
+Maildir-style mailbox support
+"""
 
 import os
 import stat
 import socket
 import time
 import md5
-import cStringIO
 
 from zope.interface import implements
 
@@ -22,13 +20,13 @@ try:
 except ImportError:
     import StringIO
 
+from twisted.python.compat import set
 from twisted.mail import pop3
 from twisted.mail import smtp
 from twisted.protocols import basic
 from twisted.persisted import dirdbm
 from twisted.python import log, failure
 from twisted.mail import mail
-from twisted.mail import alias
 from twisted.internet import interfaces, defer, reactor
 
 from twisted import cred
@@ -341,30 +339,74 @@ class MaildirMailbox(pop3.Mailbox):
         return task.defer
 
 class StringListMailbox:
+    """
+    L{StringListMailbox} is an in-memory mailbox.
+
+    @ivar msgs: A C{list} of C{str} giving the contents of each message in the
+        mailbox.
+
+    @ivar _delete: A C{set} of the indexes of messages which have been deleted
+        since the last C{sync} call.
+    """
     implements(pop3.IMailbox)
 
     def __init__(self, msgs):
         self.msgs = msgs
+        self._delete = set()
+
 
     def listMessages(self, i=None):
+        """
+        Return the length of the message at the given offset, or a list of all
+        message lengths.
+        """
         if i is None:
-            return map(len, self.msgs)
+            return [self.listMessages(i) for i in range(len(self.msgs))]
+        if i in self._delete:
+            return 0
         return len(self.msgs[i])
 
+
     def getMessage(self, i):
+        """
+        Return an in-memory file-like object for the message content at the
+        given offset.
+        """
         return StringIO.StringIO(self.msgs[i])
 
+
     def getUidl(self, i):
+        """
+        Return a hash of the contents of the message at the given offset.
+        """
         return md5.new(self.msgs[i]).hexdigest()
 
+
     def deleteMessage(self, i):
-        pass
+        """
+        Mark the given message for deletion.
+        """
+        self._delete.add(i)
+
 
     def undeleteMessages(self):
-        pass
+        """
+        Reset deletion tracking, undeleting any messages which have been
+        deleted since the last call to C{sync}.
+        """
+        self._delete = set()
+
 
     def sync(self):
-        pass
+        """
+        Discard the contents of any message marked for deletion and reset
+        deletion tracking.
+        """
+        for index in self._delete:
+            self.msgs[index] = ""
+        self._delete = set()
+
+
 
 class MaildirDirdbmDomain(AbstractMaildirDomain):
     """A Maildir Domain where membership is checked by a dirdbm file
