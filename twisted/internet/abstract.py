@@ -66,17 +66,20 @@ class FileDescriptor(log.Logger, styles.Ephemeral, object):
         self.stopReading()
         self.stopWriting()
 
+
     def writeSomeData(self, data):
-        """Write as much as possible of the given data, immediately.
-
-        This is called to invoke the lower-level writing functionality, such as
-        a socket's send() method, or a file's write(); this method returns an
-        integer.  If positive, it is the number of bytes written; if negative,
-        it indicates the connection was lost.
         """
+        Write as much as possible of the given data, immediately.
 
+        This is called to invoke the lower-level writing functionality, such
+        as a socket's send() method, or a file's write(); this method
+        returns an integer or an exception.  If an integer, it is the number
+        of bytes written (possibly zero); if an exception, it indicates the
+        connection was lost.
+        """
         raise NotImplementedError("%s does not implement writeSomeData" %
                                   reflect.qual(self.__class__))
+
 
     def doRead(self):
         """Called when data is avaliable for reading.
@@ -88,12 +91,14 @@ class FileDescriptor(log.Logger, styles.Ephemeral, object):
                                   reflect.qual(self.__class__))
 
     def doWrite(self):
-        """Called when data can be written.
+        """
+        Called when data can be written.
 
-        A result that is true (which will be a negative number) implies the
-        connection was lost. A false result implies the connection is still
-        there; a result of 0 implies no write was done, and a result of None
-        indicates that a write was done.
+        A result that is true (which will be a negative number or an
+        exception instance) indicates that the connection was lost. A false
+        result implies the connection is still there; a result of 0
+        indicates no write was done, and a result of None indicates that a
+        write was done.
         """
         if len(self.dataBuffer) - self.offset < self.SEND_LIMIT:
             # If there is currently less than SEND_LIMIT bytes left to send
@@ -108,6 +113,11 @@ class FileDescriptor(log.Logger, styles.Ephemeral, object):
             l = self.writeSomeData(buffer(self.dataBuffer, self.offset))
         else:
             l = self.writeSomeData(self.dataBuffer)
+
+        # There is no writeSomeData implementation in Twisted which returns
+        # 0, but the documentation for writeSomeData used to claim negative
+        # integers meant connection lost.  Keep supporting this here,
+        # although it may be worth deprecating and removing at some point.
         if l < 0 or isinstance(l, Exception):
             return l
         if l == 0 and self.dataBuffer:

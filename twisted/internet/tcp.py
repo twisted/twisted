@@ -464,10 +464,12 @@ class Connection(abstract.FileDescriptor, _SocketCloser):
 
 
     def writeSomeData(self, data):
-        """Connection.writeSomeData(data) -> #of bytes written | CONNECTION_LOST
-        This writes as much data as possible to the socket and returns either
-        the number of bytes read (which is positive) or a connection error code
-        (which is negative)
+        """
+        Write as much as possible of the given data to this TCP connection.
+
+        This sends up to C{self.SEND_LIMIT} bytes from C{data}.  If the
+        connection is lost, an exception is returned.  Otherwise, the number
+        of bytes successfully written is returned.
         """
         try:
             # Limit length of buffer to try to send, because some OSes are too
