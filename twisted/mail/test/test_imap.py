@@ -1047,7 +1047,22 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
             'READ-WRITE': 1
         })
 
-    def testExamine(self):
+
+    def test_examine(self):
+        """
+        L{IMAP4Client.examine} issues an I{EXAMINE} command to the server and
+        returns a L{Deferred} which fires with a C{dict} with as many of the
+        following keys as the server includes in its response: C{'FLAGS'},
+        C{'EXISTS'}, C{'RECENT'}, C{'UNSEEN'}, C{'READ-WRITE'}, C{'READ-ONLY'},
+        C{'UIDVALIDITY'}, and C{'PERMANENTFLAGS'}.
+
+        Unfortunately the server doesn't generate all of these so it's hard to
+        test the client's handling of them here.  See
+        L{IMAP4ClientExamineTests} below.
+
+        See U{RFC 3501<http://www.faqs.org/rfcs/rfc3501.html>}, section 6.3.2,
+        for details.
+        """
         SimpleServer.theAccount.addMailbox('test-mailbox')
         self.examinedArgs = None
         def login():
@@ -1067,6 +1082,7 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         d = defer.gatherResults([d1, d2])
         return d.addCallback(self._cbTestExamine)
 
+
     def _cbTestExamine(self, ignored):
         mbox = SimpleServer.theAccount.mailboxes['TEST-MAILBOX']
         self.assertEquals(self.server.mbox, mbox)
@@ -1075,6 +1091,7 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
             'FLAGS': ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag'),
             'READ-WRITE': 0
         })
+
 
     def testCreate(self):
         succeed = ('testbox', 'test/box', 'test/', 'test/box/box', 'INBOX')
@@ -2007,6 +2024,158 @@ class HandCraftedTestCase(IMAP4HelperMixin, unittest.TestCase):
         d.addCallback(strip(select))
         d.addCallback(strip(fetch))
         return d
+
+
+
+class IMAP4ClientExamineTests(unittest.TestCase):
+    """
+    Tests for the L{IMAP4Client.examine} method.
+
+    An example of usage of the EXAMINE command from RFC 3501, section 6.3.2::
+
+        S: * 17 EXISTS
+        S: * 2 RECENT
+        S: * OK [UNSEEN 8] Message 8 is first unseen
+        S: * OK [UIDVALIDITY 3857529045] UIDs valid
+        S: * OK [UIDNEXT 4392] Predicted next UID
+        S: * FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)
+        S: * OK [PERMANENTFLAGS ()] No permanent flags permitted
+        S: A932 OK [READ-ONLY] EXAMINE completed
+
+    @ivar transport: A L{StringTransport} to which C{client} is connected.
+    @ivar client: An L{IMAP4Client} which is connected to C{transport}.
+    """
+    def setUp(self):
+        """
+        Create an IMAP4Client connected to a fake transport and in the
+        authenticated state.
+        """
+        self.transport = StringTransport()
+        self.client = imap4.IMAP4Client()
+        self.client.makeConnection(self.transport)
+        self.client.dataReceived('* PREAUTH Hello unittest\r\n')
+
+
+    def _examine(self):
+        """
+        Issue an examine command, assert that the correct bytes are written to
+        the transport, and return the L{Deferred} returned by the C{examine}
+        method.
+        """
+        d = self.client.examine('foobox')
+        self.assertEqual(self.transport.value(), '0001 EXAMINE foobox\r\n')
+        return d
+
+
+    def _response(self, *lines):
+        """
+        Deliver the given (unterminated) response lines to C{self.client} and
+        then deliver a tagged EXAMINE completion line to finish the EXAMINE
+        response.
+        """
+        for line in lines:
+            self.client.dataReceived(line + '\r\n')
+        self.client.dataReceived('0001 OK [READ-ONLY] EXAMINE completed\r\n')
+
+
+    def _result(self, d):
+        """
+        Synchronously extract the result of the given L{Deferred}.  Raise
+        L{IndexError} if that is not possible.
+        """
+        result = []
+        d.addCallback(result.append)
+        return result[0]
+
+
+    def test_exists(self):
+        """
+        If the server response to an I{EXAMINE} command includes an I{EXISTS}
+        response, the L{Deferred} return by L{IMAP4Client.examine} fires with a
+        C{dict} including the value associated with the C{'EXISTS'} key.
+        """
+        d = self._examine()
+        self._response('* 3 EXISTS')
+        self.assertEqual(self._result(d), {'READ-WRITE': False, 'EXISTS': 3})
+
+
+    def test_recent(self):
+        """
+        If the server response to an I{EXAMINE} command includes an I{RECENT}
+        response, the L{Deferred} return by L{IMAP4Client.examine} fires with a
+        C{dict} including the value associated with the C{'RECENT'} key.
+        """
+        d = self._examine()
+        self._response('* 5 RECENT')
+        self.assertEqual(self._result(d), {'READ-WRITE': False, 'RECENT': 5})
+
+
+    def test_unseen(self):
+        """
+        If the server response to an I{EXAMINE} command includes an I{UNSEEN}
+        response, the L{Deferred} returned by L{IMAP4Client.examine} fires with
+        a C{dict} including the value associated with the C{'UNSEEN'} key.
+        """
+        d = self._examine()
+        self._response('* OK [UNSEEN 8] Message 8 is first unseen')
+        self.assertEqual(self._result(d), {'READ-WRITE': False, 'UNSEEN': 8})
+
+
+    def test_uidvalidity(self):
+        """
+        If the server response to an I{EXAMINE} command includes an
+        I{UIDVALIDITY} response, the L{Deferred} returned by
+        L{IMAP4Client.examine} fires with a C{dict} including the value
+        associated with the C{'UIDVALIDITY'} key.
+        """
+        d = self._examine()
+        self._response('* OK [UIDVALIDITY 12345] UIDs valid')
+        self.assertEqual(
+            self._result(d), {'READ-WRITE': False, 'UIDVALIDITY': 12345})
+
+
+    def test_uidnext(self):
+        """
+        If the server response to an I{EXAMINE} command includes an I{UIDNEXT}
+        response, the L{Deferred} returned by L{IMAP4Client.examine} fires with
+        a C{dict} including the value associated with the C{'UIDNEXT'} key.
+        """
+        d = self._examine()
+        self._response('* OK [UIDNEXT 4392] Predicted next UID')
+        self.assertEqual(
+            self._result(d), {'READ-WRITE': False, 'UIDNEXT': 4392})
+
+
+    def test_flags(self):
+        """
+        If the server response to an I{EXAMINE} command includes an I{FLAGS}
+        response, the L{Deferred} returned by L{IMAP4Client.examine} fires with
+        a C{dict} including the value associated with the C{'FLAGS'} key.
+        """
+        d = self._examine()
+        self._response(
+            '* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)')
+        self.assertEqual(
+            self._result(d), {
+                'READ-WRITE': False,
+                'FLAGS': ('\\Answered', '\\Flagged', '\\Deleted', '\\Seen',
+                          '\\Draft')})
+
+
+    def test_permanentflags(self):
+        """
+        If the server response to an I{EXAMINE} command includes an I{FLAGS}
+        response, the L{Deferred} returned by L{IMAP4Client.examine} fires with
+        a C{dict} including the value associated with the C{'FLAGS'} key.
+        """
+        d = self._examine()
+        self._response(
+            '* OK [PERMANENTFLAGS (\\Starred)] Just one permanent flag in '
+            'that list up there')
+        self.assertEqual(
+            self._result(d), {
+                'READ-WRITE': False,
+                'PERMANENTFLAGS': ('\\Starred',)})
 
 
 
