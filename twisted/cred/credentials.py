@@ -147,19 +147,24 @@ class Anonymous:
 
 class ISSHPrivateKey(ICredentials):
     """
-    I encapsulate an SSH public key to be checked against a users private
-    key.
+    L{ISSHPrivateKey} credentials encapsulate an SSH public key to be checked
+    against a user's private key.
 
-    @ivar username: Duh?
+    @ivar username: The username associated with these credentials.
+    @type username: C{str}
 
     @ivar algName: The algorithm name for the blob.
+    @type algName: C{str}
 
     @ivar blob: The public key blob as sent by the client.
+    @type blob: C{str}
 
     @ivar sigData: The data the signature was made from.
+    @type sigData: C{str}
 
     @ivar signature: The signed data.  This is checked to verify that the user
-    owns the private key.
+        owns the private key.
+    @type signature: C{str} or C{NoneType}
     """
 
 

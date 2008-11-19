@@ -78,6 +78,11 @@ class UNIXPasswordDatabase:
 
 
 class SSHPublicKeyDatabase:
+    """
+    Checker that authenticates SSH public keys, based on public keys listed in
+    authorized_keys and authorized_keys2 files in user .ssh/ directories.
+    """
+
     credentialInterfaces = ISSHPrivateKey,
     implements(ICredentialsChecker)
 
@@ -88,6 +93,26 @@ class SSHPublicKeyDatabase:
         return d
 
     def _cbRequestAvatarId(self, validKey, credentials):
+        """
+        Check whether the credentials themselves are valid, now that we know
+        if the key matches the user.
+
+        @param validKey: A boolean indicating whether or not the public key
+            matches a key in the user's authorized_keys file.
+
+        @param credentials: The credentials offered by the user.
+        @type credentials: L{ISSHPrivateKey} provider
+
+        @raise UnauthorizedLogin: (as a failure) if the key does not match the
+            user in C{credentials}. Also raised if the user provides an invalid
+            signature.
+
+        @raise ValidPublicKey: (as a failure) if the key matches the user but
+            the credentials do not include a signature. See
+            L{error.ValidPublicKey} for more information.
+
+        @return: The user's username, if authentication was successful.
+        """
         if not validKey:
             return failure.Failure(UnauthorizedLogin())
         if not credentials.signature:
@@ -138,7 +163,7 @@ class SSHPublicKeyDatabase:
         return False
 
     def _ebRequestAvatarId(self, f):
-        if not f.check(UnauthorizedLogin, error.ValidPublicKey):
+        if not f.check(UnauthorizedLogin):
             log.msg(f)
             return failure.Failure(UnauthorizedLogin())
         return f
