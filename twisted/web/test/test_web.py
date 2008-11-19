@@ -388,6 +388,8 @@ class ConditionalTest(unittest.TestCase):
         self.failUnlessEqual(httpCode(result), http.NOT_MODIFIED)
         self.failUnlessEqual(httpBody(result), "")
 
+
+
 from twisted.web import google
 class GoogleTestCase(unittest.TestCase):
     def testCheckGoogle(self):
@@ -396,66 +398,7 @@ class GoogleTestCase(unittest.TestCase):
         d.addCallback(self.assertEquals, 'http://twistedmatrix.com/')
         return d
 
-from twisted.web import static
-from twisted.web import script
 
-class StaticFileTest(unittest.TestCase):
-
-    def testStaticPaths(self):
-        import os
-        dp = os.path.join(self.mktemp(),"hello")
-        ddp = os.path.join(dp, "goodbye")
-        tp = os.path.abspath(os.path.join(dp,"world.txt"))
-        tpy = os.path.join(dp,"wyrld.rpy")
-        os.makedirs(dp)
-        f = open(tp,"wb")
-        f.write("hello world")
-        f = open(tpy, "wb")
-        f.write("""
-from twisted.web.static import Data
-resource = Data('dynamic world','text/plain')
-""")
-        f = static.File(dp)
-        f.processors = {
-            '.rpy': script.ResourceScript,
-            }
-
-        f.indexNames = f.indexNames + ['world.txt']
-        self.assertEquals(f.getChild('', DummyRequest([''])).path,
-                          tp)
-        self.assertEquals(f.getChild('wyrld.rpy', DummyRequest(['wyrld.rpy'])
-                                     ).__class__,
-                          static.Data)
-        f = static.File(dp)
-        wtextr = DummyRequest(['world.txt'])
-        wtext = f.getChild('world.txt', wtextr)
-        self.assertEquals(wtext.path, tp)
-        wtext.render(wtextr)
-        self.assertEquals(wtextr.outgoingHeaders.get('content-length'),
-                          str(len('hello world')))
-        self.assertNotEquals(f.getChild('', DummyRequest([''])).__class__,
-                             static.File)
-
-    def testIgnoreExt(self):
-        f = static.File(".")
-        f.ignoreExt(".foo")
-        self.assertEquals(f.ignoredExts, [".foo"])
-        f = static.File(".")
-        self.assertEquals(f.ignoredExts, [])
-        f = static.File(".", ignoredExts=(".bar", ".baz"))
-        self.assertEquals(f.ignoredExts, [".bar", ".baz"])
-
-    def testIgnoredExts(self):
-        import os
-        dp = os.path.join(self.mktemp(), 'allYourBase')
-        fp = os.path.join(dp, 'AreBelong.ToUs')
-        os.makedirs(dp)
-        open(fp, 'wb').write("Take off every 'Zig'!!")
-        f = static.File(dp)
-        f.ignoreExt('.ToUs')
-        dreq = DummyRequest([''])
-        child_without_ext = f.getChild('AreBelong', dreq)
-        self.assertNotEquals(child_without_ext, f.childNotFound)
 
 class TestRequest(unittest.TestCase):
 

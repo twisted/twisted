@@ -249,7 +249,10 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
             return self.childNotFound
 
         if path:
-            fpath = self.child(path)
+            try:
+                fpath = self.child(path)
+            except filepath.InsecurePath:
+                return self.childNotFound
         else:
             fpath = self.childSearchPreauth(*self.indexNames)
             if fpath is None:

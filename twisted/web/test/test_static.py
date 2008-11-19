@@ -10,9 +10,179 @@ import os
 
 from twisted.python.filepath import FilePath
 from twisted.python import log
+from twisted.internet.defer import succeed
 from twisted.trial.unittest import TestCase
-from twisted.web import static, http
+from twisted.web import static, http, server, script
 from twisted.web.test.test_web import DummyRequest
+
+
+class StaticFileTests(TestCase):
+    """
+    Tests for the basic behavior of L{File}.
+    """
+    def _render(self, resource, request):
+        result = resource.render(request)
+        if isinstance(result, str):
+            request.write(result)
+            request.finish()
+            return succeed(None)
+        elif result is server.NOT_DONE_YET:
+            if request.finished:
+                return succeed(None)
+            else:
+                return request.notifyFinish()
+        else:
+            self.fail("Unexpected return value: %r" % (result,))
+
+
+    def test_notFound(self):
+        """
+        If a request is made which encounters a L{File} before a final segment
+        which does not correspond to any file in the path the L{File} was
+        created with, a not found response is sent.
+        """
+        base = FilePath(self.mktemp())
+        base.makedirs()
+        file = static.File(base.path)
+
+        request = DummyRequest(['foobar'])
+        child = file.getChild("foobar", request)
+
+        d = self._render(child, request)
+        def cbRendered(ignored):
+            self.assertEqual(request.responseCode, 404)
+        d.addCallback(cbRendered)
+        return d
+
+
+    def test_securityViolationNotFound(self):
+        """
+        If a request is made which encounters a L{File} before a final segment
+        which cannot be looked up in the filesystem due to security
+        considerations, a not found response is sent.
+        """
+        base = FilePath(self.mktemp())
+        base.makedirs()
+        file = static.File(base.path)
+
+        request = DummyRequest(['..'])
+        child = file.getChild("..", request)
+
+        d = self._render(child, request)
+        def cbRendered(ignored):
+            self.assertEqual(request.responseCode, 404)
+        d.addCallback(cbRendered)
+        return d
+
+
+    def test_indexNames(self):
+        """
+        If a request is made which encounters a L{File} before a final empty
+        segment, a file in the L{File} instance's C{indexNames} list which
+        exists in the path the L{File} was created with is served as the
+        response to the request.
+        """
+        base = FilePath(self.mktemp())
+        base.makedirs()
+        base.child("foo.bar").setContent("baz")
+        file = static.File(base.path)
+        file.indexNames = ['foo.bar']
+
+        request = DummyRequest([''])
+        child = file.getChild("", request)
+
+        d = self._render(child, request)
+        def cbRendered(ignored):
+            self.assertEqual(''.join(request.written), 'baz')
+            self.assertEqual(request.outgoingHeaders['content-length'], '3')
+        d.addCallback(cbRendered)
+        return d
+
+
+    def test_staticFile(self):
+        """
+        If a request is made which encounters a L{File} before a final segment
+        which names a file in the path the L{File} was created with, that file
+        is served as the response to the request.
+        """
+        base = FilePath(self.mktemp())
+        base.makedirs()
+        base.child("foo.bar").setContent("baz")
+        file = static.File(base.path)
+
+        request = DummyRequest(['foo.bar'])
+        child = file.getChild("foo.bar", request)
+
+        d = self._render(child, request)
+        def cbRendered(ignored):
+            self.assertEqual(''.join(request.written), 'baz')
+            self.assertEqual(request.outgoingHeaders['content-length'], '3')
+        d.addCallback(cbRendered)
+        return d
+
+
+    def test_processors(self):
+        """
+        If a request is made which encounters a L{File} before a final segment
+        which names a file with an extension which is in the L{File}'s
+        C{processors} mapping, the processor associated with that extension is
+        used to serve the response to the request.
+        """
+        base = FilePath(self.mktemp())
+        base.makedirs()
+        base.child("foo.bar").setContent(
+            "from twisted.web.static import Data\n"
+            "resource = Data('dynamic world','text/plain')\n")
+
+        file = static.File(base.path)
+        file.processors = {'.bar': script.ResourceScript}
+        request = DummyRequest(["foo.bar"])
+        child = file.getChild("foo.bar", request)
+
+        d = self._render(child, request)
+        def cbRendered(ignored):
+            self.assertEqual(''.join(request.written), 'dynamic world')
+            self.assertEqual(request.outgoingHeaders['content-length'], '13')
+        d.addCallback(cbRendered)
+        return d
+
+
+    def test_ignoreExt(self):
+        """
+        The list of ignored extensions can be set by passing a value to
+        L{File.__init__} or by calling L{File.ignoreExt} later.
+        """
+        file = static.File(".")
+        self.assertEqual(file.ignoredExts, [])
+        file.ignoreExt(".foo")
+        file.ignoreExt(".bar")
+        self.assertEqual(file.ignoredExts, [".foo", ".bar"])
+
+        file = static.File(".", ignoredExts=(".bar", ".baz"))
+        self.assertEqual(file.ignoredExts, [".bar", ".baz"])
+
+
+    def test_ignoredExtensionsIgnored(self):
+        """
+        A request for the I{base} child of a L{File} succeeds with a resource
+        for the I{base<extension>} file in the path the L{File} was created
+        with if such a file exists and the L{File} has been configured to
+        ignore the I{<extension>} extension.
+        """
+        base = FilePath(self.mktemp())
+        base.makedirs()
+        base.child('foo.bar').setContent('baz')
+        base.child('foo.quux').setContent('foobar')
+        file = static.File(base.path, ignoredExts=(".bar",))
+
+        request = DummyRequest(["foo"])
+        child = file.getChild("foo", request)
+
+        d = self._render(child, request)
+        def cbRendered(ignored):
+            self.assertEqual(''.join(request.written), 'baz')
+        d.addCallback(cbRendered)
+        return d
 
 
 
