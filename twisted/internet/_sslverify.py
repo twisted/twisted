@@ -2,6 +2,7 @@
 # Copyright (c) 2005 Divmod, Inc.
 # Copyright (c) 2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
+# Copyright (c) 2005-2008 Twisted Matrix Laboratories.
 
 import itertools
 from OpenSSL import SSL, crypto
@@ -593,6 +594,8 @@ class OpenSSLCertificateOptions(object):
     _context = None
     # Older versions of PyOpenSSL didn't provide OP_ALL.  Fudge it here, just in case.
     _OP_ALL = getattr(SSL, 'OP_ALL', 0x0000FFFF)
+    # OP_NO_TICKET is not (yet) exposed by PyOpenSSL
+    _OP_NO_TICKET = 0x00004000
 
     method = SSL.TLSv1_METHOD
 
@@ -607,7 +610,8 @@ class OpenSSLCertificateOptions(object):
                  verifyOnce=True,
                  enableSingleUseKeys=True,
                  enableSessions=True,
-                 fixBrokenPeers=False):
+                 fixBrokenPeers=False,
+                 enableSessionTickets=False):
         """
         Create an OpenSSL context SSL connection context factory.
 
@@ -648,6 +652,12 @@ class OpenSSLCertificateOptions(object):
         according to the OpenSSL documentation, but YMMV.  This option is now
         off by default, because it causes problems with connections between
         peers using OpenSSL 0.9.8a.
+
+        @param enableSessionTickets: If True, enable session ticket extension
+        for session resumption per RFC 5077. Note there is no support for
+        controlling session tickets. This option is off by default, as some
+        server implementations don't correctly process incoming empty session
+        ticket extensions in the hello.
         """
 
         assert (privateKey is None) == (certificate is None), "Specify neither or both of privateKey and certificate"
@@ -667,6 +677,7 @@ class OpenSSLCertificateOptions(object):
         self.enableSingleUseKeys = enableSingleUseKeys
         self.enableSessions = enableSessions
         self.fixBrokenPeers = fixBrokenPeers
+        self.enableSessionTickets = enableSessionTickets
 
 
     def __getstate__(self):
@@ -730,5 +741,8 @@ class OpenSSLCertificateOptions(object):
         if self.enableSessions:
             sessionName = md5("%s-%d" % (reflect.qual(self.__class__), _sessionCounter())).hexdigest()
             ctx.set_session_id(sessionName)
+
+        if not self.enableSessionTickets:
+            ctx.set_options(self._OP_NO_TICKET)
 
         return ctx
