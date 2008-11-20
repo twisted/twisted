@@ -1,6 +1,10 @@
 # Copyright 2005 Divmod, Inc.  See LICENSE file for details
-# Copyright (c) 2007 Twisted Matrix Laboratories.
+# Copyright (c) 2006-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
+
+"""
+Tests for L{twisted.internet._sslverify}.
+"""
 
 import itertools
 
@@ -265,7 +269,8 @@ class OpenSSLOptions(unittest.TestCase):
             verifyOnce=False,
             enableSingleUseKeys=False,
             enableSessions=False,
-            fixBrokenPeers=True)
+            fixBrokenPeers=True,
+            enableSessionTickets=True)
         context = firstOpts.getContext()
         state = firstOpts.__getstate__()
 
@@ -286,6 +291,25 @@ class OpenSSLOptions(unittest.TestCase):
         self.assertEqual(opts.enableSingleUseKeys, False)
         self.assertEqual(opts.enableSessions, False)
         self.assertEqual(opts.fixBrokenPeers, True)
+        self.assertEqual(opts.enableSessionTickets, True)
+
+
+    def test_certificateOptionsSessionTickets(self):
+        """
+        Enabling session tickets should not set the OP_NO_TICKET option.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(enableSessionTickets=True)
+        ctx = opts.getContext()
+        self.assertEquals(0, ctx.set_options(0) & 0x00004000)
+
+
+    def test_certificateOptionsSessionTicketsDisabled(self):
+        """
+        Enabling session tickets should set the OP_NO_TICKET option.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(enableSessionTickets=False)
+        ctx = opts.getContext()
+        self.assertEquals(0x00004000, ctx.set_options(0) & 0x00004000)
 
 
     def test_allowedAnonymousClientConnection(self):
