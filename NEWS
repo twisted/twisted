@@ -6,9 +6,9 @@ Core 8.2.0pre2 (2008-11-20)
 
 Fixes
 -----
- - TLS Session Tickets now disabled by default, allowing connections to
-   certain servers which didn't hang when an empty session ticket is
-   received (like GTalk) (#3463)
+ - TLS Session Tickets are now disabled by default, allowing connections to
+   certain servers which hang when an empty session ticket is received (like
+   GTalk) (#3463)
 
 
 Core 8.2.0pre1 (2008-11-16)
