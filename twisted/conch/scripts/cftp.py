@@ -412,7 +412,8 @@ class StdioClient(basic.LineReceiver):
             remote = os.path.split(local)[1]
         lf = file(local, 'r')
         path = os.path.join(self.currentDirectory, remote)
-        d = self.client.openFile(path, filetransfer.FXF_WRITE|filetransfer.FXF_CREAT, {})
+        flags = filetransfer.FXF_WRITE|filetransfer.FXF_CREAT|filetransfer.FXF_TRUNC
+        d = self.client.openFile(path, flags, {})
         d.addCallback(self._cbPutOpenFile, lf)
         d.addErrback(self._ebCloseLf, lf)
         return d
@@ -442,7 +443,8 @@ class StdioClient(basic.LineReceiver):
         name = os.path.split(f)[1]
         remote = os.path.join(self.currentDirectory, path, name)
         log.msg((name, remote, path))
-        d = self.client.openFile(remote, filetransfer.FXF_WRITE|filetransfer.FXF_CREAT, {})
+        flags = filetransfer.FXF_WRITE|filetransfer.FXF_CREAT|filetransfer.FXF_TRUNC
+        d = self.client.openFile(remote, flags, {})
         d.addCallback(self._cbPutOpenFile, lf)
         d.addErrback(self._ebCloseLf, lf)
         d.addBoth(self._cbPutMultipleNext, files, path)

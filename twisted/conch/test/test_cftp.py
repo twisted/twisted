@@ -488,6 +488,51 @@ class TestOurServerCmdLineClient(CFTPClientTestBase):
         return d
 
 
+    def test_putOverLongerFile(self):
+        """
+        Check that 'put' uploads files correctly when overwriting a longer
+        file.
+        """
+        # XXX - not actually a unit test
+        f = file(os.path.join(self.testDir, 'shorterFile'), 'w')
+        f.write("a")
+        f.close()
+        f = file(os.path.join(self.testDir, 'longerFile'), 'w')
+        f.write("bb")
+        f.close()
+        def _checkPut(result):
+            self.assertFilesEqual(self.testDir + '/shorterFile',
+                                  self.testDir + '/longerFile')
+
+        d = self.runCommand('put %s/shorterFile longerFile'
+                            % (self.testDir,))
+        d.addCallback(_checkPut)
+        return d
+
+
+    def test_putMultipleOverLongerFile(self):
+        """
+        Check that 'put' uploads files correctly when overwriting a longer
+        file and you use a wildcard to specify the files to upload.
+        """
+        # XXX - not actually a unit test
+        os.mkdir(os.path.join(self.testDir, 'dir'))
+        f = file(os.path.join(self.testDir, 'dir', 'file'), 'w')
+        f.write("a")
+        f.close()
+        f = file(os.path.join(self.testDir, 'file'), 'w')
+        f.write("bb")
+        f.close()
+        def _checkPut(result):
+            self.assertFilesEqual(self.testDir + '/dir/file',
+                                  self.testDir + '/file')
+
+        d = self.runCommand('put %s/dir/*'
+                            % (self.testDir,))
+        d.addCallback(_checkPut)
+        return d
+
+
     def testWildcardPut(self):
         """
         What happens if you issue a 'put' command and include a wildcard (i.e.
