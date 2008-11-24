@@ -2,7 +2,7 @@
 # Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE file for details.
 
-import time, sys, os
+import time, sys, os, operator
 
 try:
     import Crypto.Cipher.DES3
@@ -41,6 +41,9 @@ class ListingTests(TestCase):
     Tests for L{lsLine}, the function which generates an entry for a file or
     directory in an SFTP I{ls} command's output.
     """
+    if getattr(time, 'tzset', None) is None:
+        skip = "Cannot test timestamp formatting code without time.tzset"
+
     def setUp(self):
         """
         Patch the L{ls} module's time function so the results of L{lsLine} are
@@ -51,6 +54,32 @@ class ListingTests(TestCase):
             return self.now
         self.patch(ls, 'time', fakeTime)
 
+        # Make sure that the timezone ends up the same after these tests as it was before.
+        if 'TZ' in os.environ:
+            self.addCleanup(operator.setitem, os.environ, 'TZ', os.environ['TZ'])
+            self.addCleanup(time.tzset)
+        else:
+            def cleanup():
+                # os.environ.pop is broken!  Don't use it!  Ever!  Or die!
+                try:
+                    del os.environ['TZ']
+                except KeyError:
+                    pass
+                time.tzset()
+            self.addCleanup(cleanup)
+
+
+    def _lsInTimezone(self, timezone, stat):
+        """
+        Call L{ls.lsLine} after setting the timezone to C{timezone} and return
+        the result.
+        """
+        # Set the timezone to a well-known value so the timestamps are
+        # predictable.
+        os.environ['TZ'] = timezone
+        time.tzset()
+        return ls.lsLine('foo', stat)
+
 
     def test_oldFile(self):
         """
@@ -59,12 +88,14 @@ class ListingTests(TestCase):
         """
         # Go with 7 months.  That's more than 6 months.
         then = self.now - (60 * 60 * 24 * 31 * 7)
-        listing = ls.lsLine(
-            'foo',
-            os.stat_result((0, 0, 0, 0, 0, 0, 0, 0, then, 0)))
+        stat = os.stat_result((0, 0, 0, 0, 0, 0, 0, 0, then, 0))
+
         self.assertEqual(
-            listing,
+            self._lsInTimezone('America/New_York', stat),
             '!---------    0 0        0               0 Apr 26  1973 foo')
+        self.assertEqual(
+            self._lsInTimezone('Pacific/Auckland', stat),
+            '!---------    0 0        0               0 Apr 27  1973 foo')
 
 
     def test_oldSingleDigitDayOfMonth(self):
@@ -76,12 +107,14 @@ class ListingTests(TestCase):
         # A point about 7 months in the past, tweaked to fall on the first of a
         # month so we test the case we want to test.
         then = self.now - (60 * 60 * 24 * 31 * 7) + (60 * 60 * 24 * 5)
-        listing = ls.lsLine(
-            'foo',
-            os.stat_result((0, 0, 0, 0, 0, 0, 0, 0, then, 0)))
+        stat = os.stat_result((0, 0, 0, 0, 0, 0, 0, 0, then, 0))
+
         self.assertEqual(
-            listing,
+            self._lsInTimezone('America/New_York', stat),
             '!---------    0 0        0               0 May 01  1973 foo')
+        self.assertEqual(
+            self._lsInTimezone('Pacific/Auckland', stat),
+            '!---------    0 0        0               0 May 02  1973 foo')
 
 
     def test_newFile(self):
@@ -91,17 +124,14 @@ class ListingTests(TestCase):
         """
         # A point about three months in the past.
         then = self.now - (60 * 60 * 24 * 31 * 3)
-        listing = ls.lsLine(
-            'foo',
-            os.stat_result((0, 0, 0, 0, 0, 0, 0, 0, then, 0)))
+        stat = os.stat_result((0, 0, 0, 0, 0, 0, 0, 0, then, 0))
 
-        # Timezones affect the hour of the result.  Make time.localtime
-        # figure out what it should be for us.
-        hour = time.localtime(then).tm_hour
         self.assertEqual(
-            listing,
-            '!---------    0 0        0               0 Aug 28 %02d:33 foo' % (
-                hour,))
+            self._lsInTimezone('America/New_York', stat),
+            '!---------    0 0        0               0 Aug 28 17:33 foo')
+        self.assertEqual(
+            self._lsInTimezone('Pacific/Auckland', stat),
+            '!---------    0 0        0               0 Aug 29 09:33 foo')
 
 
     def test_newSingleDigitDayOfMonth(self):
@@ -113,16 +143,14 @@ class ListingTests(TestCase):
         # A point about three months in the past, tweaked to fall on the first
         # of a month so we test the case we want to test.
         then = self.now - (60 * 60 * 24 * 31 * 3) + (60 * 60 * 24 * 4)
-        listing = ls.lsLine(
-            'foo',
-            os.stat_result((0, 0, 0, 0, 0, 0, 0, 0, then, 0)))
+        stat = os.stat_result((0, 0, 0, 0, 0, 0, 0, 0, then, 0))
 
-        # Timezones again.  See test_newFile.
-        hour = time.localtime(then).tm_hour
         self.assertEqual(
-            listing,
-            '!---------    0 0        0               0 Sep 01 %02d:33 foo' % (
-                hour,))
+            self._lsInTimezone('America/New_York', stat),
+            '!---------    0 0        0               0 Sep 01 17:33 foo')
+        self.assertEqual(
+            self._lsInTimezone('Pacific/Auckland', stat),
+            '!---------    0 0        0               0 Sep 02 09:33 foo')
 
 
 
