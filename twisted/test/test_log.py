@@ -251,7 +251,7 @@ class LogPublisherTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
     def testSingleUnicode(self):
         self.lp.msg(u"Hello, \N{VULGAR FRACTION ONE HALF} world.")
         self.assertEquals(len(self.out), 1)
-        self.assertIn('with str error Traceback', self.out[0])
+        self.assertIn('with str error', self.out[0])
         self.assertIn('UnicodeEncodeError', self.out[0])
 
 

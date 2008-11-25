@@ -7,18 +7,16 @@ Standardized versions of various cool and/or strange things that you can do
 with Python's reflection capabilities.
 """
 
-# System Imports
 import sys
 import os
 import types
-import string
 import pickle
-import new
 import traceback
 import weakref
 import re
 import warnings
 import inspect
+import new
 try:
     from collections import deque
 except ImportError:
@@ -28,9 +26,13 @@ RegexType = type(re.compile(""))
 
 
 try:
-    import cStringIO as StringIO
+    from cStringIO import StringIO
 except ImportError:
-    import StringIO
+    from StringIO import StringIO
+
+from twisted.python.util import unsignedID
+
+
 
 class Settable:
     """
@@ -87,16 +89,16 @@ class AccessorType(type):
                 if hasattr(self, name):
                     value = getattr(self, name)
                     def getter(this, value=value, name=name):
-                        if this.__dict__.has_key(name):
+                        if name in this.__dict__:
                             return this.__dict__[name]
                         else:
                             return value
                 else:
                     def getter(this, name=name):
-                        if this.__dict__.has_key(name):
+                        if name in this.__dict__:
                             return this.__dict__[name]
                         else:
-                            raise AttributeError, "no such attribute %r" % name
+                            raise AttributeError("no such attribute %r" % name)
             if setter is None:
                 def setter(this, value, name=name):
                     this.__dict__[name] = value
@@ -239,6 +241,7 @@ class Summer(Accessor):
                     Accessor.reallySet(self,y,v)
         Accessor.reallySet(self,k,v)
 
+
 class QueueMethod:
     """ I represent a method that doesn't exist yet."""
     def __init__(self, name, calls):
@@ -287,9 +290,11 @@ def fullFuncName(func):
         raise Exception("Couldn't find %s as %s." % (func, qualName))
     return qualName
 
+
 def qual(clazz):
     """Return full import path of a class."""
     return clazz.__module__ + '.' + clazz.__name__
+
 
 def getcurrent(clazz):
     assert type(clazz) == types.ClassType, 'must be a class...'
@@ -298,6 +303,7 @@ def getcurrent(clazz):
     if currclass is None:
         return clazz
     return currclass
+
 
 def getClass(obj):
     """Return the class or type of object 'obj'.
@@ -339,8 +345,8 @@ def namedModule(name):
 def namedObject(name):
     """Get a fully named module-global object.
     """
-    classSplit = string.split(name, '.')
-    module = namedModule(string.join(classSplit[:-1], '.'))
+    classSplit = name.split('.')
+    module = namedModule('.'.join(classSplit[:-1]))
     return getattr(module, classSplit[-1])
 
 namedClass = namedObject # backwards compat
@@ -468,19 +474,12 @@ def namedAny(name):
 
     return obj
 
-def _reclass(clazz):
-    clazz = getattr(namedModule(clazz.__module__),clazz.__name__)
-    clazz.__bases__ = tuple(map(_reclass, clazz.__bases__))
-    return clazz
-
-
 
 
 def macro(name, filename, source, **identifiers):
     """macro(name, source, **identifiers)
 
-    This allows you to create macro-like behaviors in python.  See
-    twisted.python.hook for an example of its usage.
+    This allows you to create macro-like behaviors in python.
     """
     if not identifiers.has_key('name'):
         identifiers['name'] = name
@@ -514,11 +513,16 @@ def macro(name, filename, source, **identifiers):
     exec code in dict, dict
     return dict[name]
 
+
+
+
 def _determineClass(x):
     try:
         return x.__class__
     except:
         return type(x)
+
+
 
 def _determineClassName(x):
     c = _determineClass(x)
@@ -528,42 +532,46 @@ def _determineClassName(x):
         try:
             return str(c)
         except:
-            return '<BROKEN CLASS AT %s>' % id(c)
+            return '<BROKEN CLASS AT 0x%x>' % unsignedID(c)
+
+
+
+def _safeFormat(formatter, o):
+    """
+    Helper function for L{safe_repr} and L{safe_str}.
+    """
+    try:
+        return formatter(o)
+    except:
+        io = StringIO()
+        traceback.print_exc(file=io)
+        className = _determineClassName(o)
+        tbValue = io.getvalue()
+        return "<%s instance at 0x%x with %s error:\n %s>" % (
+            className, unsignedID(o), formatter.__name__, tbValue)
+
+
 
 def safe_repr(o):
-    """safe_repr(anything) -> string
+    """
+    safe_repr(anything) -> string
 
     Returns a string representation of an object, or a string containing a
     traceback, if that object's __repr__ raised an exception.
     """
+    return _safeFormat(repr, o)
 
-    try:
-        return repr(o)
-    except:
-        io = StringIO.StringIO()
-        traceback.print_stack(file=io)
-        whati = _determineClassName(o)
-        swron = io.getvalue()
-        gwith = id(o)
-        you ='<%s instance at %s with repr error %s>' % (
-            whati,swron,gwith)
-        return you
+
 
 def safe_str(o):
-    """safe_str(anything) -> string
+    """
+    safe_str(anything) -> string
 
     Returns a string representation of an object, or a string containing a
     traceback, if that object's __str__ raised an exception.
     """
+    return _safeFormat(str, o)
 
-    try:
-        return str(o)
-    except:
-        strExc = '\n'.join(traceback.format_exception(*sys.exc_info()))
-        clsName = _determineClassName(o)
-        obId = id(o)
-        return '<%s instance at %s with str error %s>' % (
-            clsName, obId, strExc)
 
 
 ##the following were factored out of usage
@@ -615,12 +623,14 @@ def addMethodNamesToDict(classObj, dict, prefix, baseClass=None):
                 and (len(optName))):
                 dict[optName] = 1
 
+
 def prefixedMethods(obj, prefix=''):
     """A list of methods with a given prefix on a given instance.
     """
     dct = {}
     accumulateMethods(obj, dct, prefix)
     return dct.values()
+
 
 def accumulateMethods(obj, dict, prefix='', curClass=None):
     """accumulateMethods(instance, dict, prefix)
@@ -639,6 +649,7 @@ def accumulateMethods(obj, dict, prefix='', curClass=None):
             and (name[:len(prefix)] == prefix)
             and (len(optName))):
             dict[optName] = getattr(obj, name)
+
 
 def accumulateClassDict(classObj, attr, adict, baseClass=None):
     """Accumulate all attributes of a given name in a class heirarchy into a single dictionary.
@@ -690,11 +701,14 @@ def accumulateClassList(classObj, attr, listObj, baseClass=None):
 def isSame(a, b):
     return (a is b)
 
+
 def isLike(a, b):
     return (a == b)
 
+
 def modgrep(goal):
     return objgrep(sys.modules, goal, isLike, 'sys.modules')
+
 
 def isOfType(start, goal):
     return ((type(start) is goal) or
@@ -705,6 +719,7 @@ def isOfType(start, goal):
 def findInstances(start, t):
     return objgrep(start, t, isOfType)
 
+
 def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None, showUnknowns=0, maxDepth=None):
     '''An insanely CPU-intensive process for finding stuff.
     '''
@@ -714,7 +729,7 @@ def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None, showUnknowns
         seen = {}
     if eq(start, goal):
         paths.append(path)
-    if seen.has_key(id(start)):
+    if id(start) in seen:
         if seen[id(start)] is start:
             return
     if maxDepth is not None:
@@ -798,6 +813,13 @@ def fullyQualifiedName(obj):
 
 
 
+# At the end for dependency reason
+from twisted.python.deprecate import deprecated
+from twisted.python.versions import Version
+macro = deprecated(Version("Twisted", 8, 2, 0))(macro)
+
+
+
 __all__ = [
     'InvalidName', 'ModuleNotFound', 'ObjectNotFound',
 
@@ -813,5 +835,3 @@ __all__ = [
     'accumulateClassDict', 'accumulateClassList', 'isSame', 'isLike',
     'modgrep', 'isOfType', 'findInstances', 'objgrep', 'filenameToModuleName',
     'fullyQualifiedName']
-
-

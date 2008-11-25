@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -14,9 +14,9 @@ try:
 except ImportError:
     deque = None
 
-# Twisted Imports
 from twisted.trial import unittest
-from twisted.python import reflect
+from twisted.python import reflect, util
+from twisted.python.versions import Version
 
 
 
@@ -33,17 +33,47 @@ class SettableTest(unittest.TestCase):
         self.failUnlessEqual(self.setter.b, 2)
 
 
+
 class AccessorTester(reflect.Accessor):
+
     def set_x(self, x):
         self.y = x
-        self.reallySet('x',x)
+        self.reallySet('x', x)
+
 
     def get_z(self):
         self.q = 1
         return 1
 
+
     def del_z(self):
         self.reallyDel("q")
+
+
+
+class PropertyAccessorTester(reflect.PropertyAccessor):
+    """
+    Test class to check L{reflect.PropertyAccessor} functionalities.
+    """
+    r = 0
+
+    def set_r(self, r):
+        self.s = r
+
+
+    def set_x(self, x):
+        self.y = x
+        self.reallySet('x', x)
+
+
+    def get_z(self):
+        self.q = 1
+        return 1
+
+
+    def del_z(self):
+        self.reallyDel("q")
+
 
 
 class AccessorTest(unittest.TestCase):
@@ -67,6 +97,45 @@ class AccessorTest(unittest.TestCase):
         self.tester.x = 1
         del self.tester.x
         self.failUnlessEqual(hasattr(self.tester, "x"), 0)
+
+
+
+class PropertyAccessorTest(AccessorTest):
+    """
+    Tests for L{reflect.PropertyAccessor}, using L{PropertyAccessorTester}.
+    """
+
+    def setUp(self):
+        self.tester = PropertyAccessorTester()
+
+
+    def test_setWithDefaultValue(self):
+        """
+        If an attribute is present in the class, it can be retrieved by
+        default.
+        """
+        self.assertEquals(self.tester.r, 0)
+        self.tester.r = 1
+        self.assertEquals(self.tester.r, 0)
+        self.assertEquals(self.tester.s, 1)
+
+
+    def test_getValueInDict(self):
+        """
+        The attribute value can be overriden by directly modifying the value in
+        C{__dict__}.
+        """
+        self.tester.__dict__["r"] = 10
+        self.assertEquals(self.tester.r, 10)
+
+
+    def test_notYetInDict(self):
+        """
+        If a getter is defined on an attribute but without any default value,
+        it raises C{AttributeError} when trying to access it.
+        """
+        self.assertRaises(AttributeError, getattr, self.tester, "x")
+
 
 
 class LookupsTestCase(unittest.TestCase):
@@ -375,6 +444,8 @@ class GetClass(unittest.TestCase):
         self.assertEquals(reflect.getClass(NewClass).__name__, 'type')
         self.assertEquals(reflect.getClass(new).__name__, 'NewClass')
 
+
+
 class Breakable(object):
 
     breakRepr = False
@@ -382,23 +453,28 @@ class Breakable(object):
 
     def __str__(self):
         if self.breakStr:
-            raise self
+            raise RuntimeError("str!")
         else:
             return '<Breakable>'
 
     def __repr__(self):
         if self.breakRepr:
-            raise self
+            raise RuntimeError("repr!")
         else:
             return 'Breakable()'
 
+
+
 class BrokenType(Breakable, type):
     breakName = False
+
     def get___name__(self):
         if self.breakName:
             raise RuntimeError("no name")
         return 'BrokenType'
     __name__ = property(get___name__)
+
+
 
 class BTBase(Breakable):
     __metaclass__ = BrokenType
@@ -406,80 +482,176 @@ class BTBase(Breakable):
     breakStr = True
 
 
-class NoClassAttr(object):
+
+class NoClassAttr(Breakable):
     __class__ = property(lambda x: x.not_class)
 
-class SafeRepr(unittest.TestCase):
 
-    def testWorkingRepr(self):
-        x = [1,2,3]
+
+class SafeRepr(unittest.TestCase):
+    """
+    Tests for L{reflect.safe_repr} function.
+    """
+
+    def test_workingRepr(self):
+        """
+        L{reflect.safe_repr} produces the same output as C{repr} on a working
+        object.
+        """
+        x = [1, 2, 3]
         self.assertEquals(reflect.safe_repr(x), repr(x))
 
-    def testBrokenRepr(self):
+
+    def test_brokenRepr(self):
+        """
+        L{reflect.safe_repr} returns a string with class name, address, and
+        traceback when the repr call failed.
+        """
         b = Breakable()
         b.breakRepr = True
-        reflect.safe_repr(b)
+        bRepr = reflect.safe_repr(b)
+        self.assertIn("Breakable instance at 0x", bRepr)
+        # Check that the file is in the repr, but without the extension as it
+        # can be .py/.pyc
+        self.assertIn(os.path.splitext(__file__)[0], bRepr)
+        self.assertIn("RuntimeError: repr!", bRepr)
 
-    def testBrokenStr(self):
+
+    def test_brokenStr(self):
+        """
+        L{reflect.safe_repr} isn't affected by a broken C{__str__} method.
+        """
         b = Breakable()
         b.breakStr = True
-        reflect.safe_repr(b)
+        self.assertEquals(reflect.safe_repr(b), repr(b))
 
-    def testBrokenClassRepr(self):
+
+    def test_brokenClassRepr(self):
         class X(BTBase):
             breakRepr = True
         reflect.safe_repr(X)
         reflect.safe_repr(X())
 
-    def testBrokenClassStr(self):
+
+    def test_unsignedID(self):
+        """
+        L{unsignedID} is used to print ID of the object in case of error, not
+        standard ID value which can be negative.
+        """
+        class X(BTBase):
+            breakRepr = True
+        util.id = lambda x: 100
+        try:
+            xRepr = reflect.safe_repr(X)
+            self.assertIn("0x64", xRepr)
+            util.id = lambda x: -100
+            xRepr = reflect.safe_repr(X)
+            # We can't check for the whole id, as it can be different in 32 or
+            # 64 bits
+            self.assertIn("ffffff9c", xRepr)
+        finally:
+            del util.id
+
+
+    def test_brokenClassStr(self):
         class X(BTBase):
             breakStr = True
         reflect.safe_repr(X)
         reflect.safe_repr(X())
 
-    def testBroken__Class__Attr(self):
-        reflect.safe_repr(NoClassAttr())
 
-    def testBroken__Class__Name__Attr(self):
+    def test_brokenClassAttribute(self):
+        """
+        If an object raises an exception when accessing its C{__class__}
+        attribute, L{reflect.safe_repr} uses C{type} to retrieve the class
+        object.
+        """
+        b = NoClassAttr()
+        b.breakRepr = True
+        bRepr = reflect.safe_repr(b)
+        self.assertIn("NoClassAttr instance at 0x", bRepr)
+        self.assertIn(os.path.splitext(__file__)[0], bRepr)
+        self.assertIn("RuntimeError: repr!", bRepr)
+
+
+    def test_brokenClassNameAttribute(self):
+        """
+        If a class raises an exception when accessing its C{__name__} attribute
+        B{and} when calling its C{__str__} implementation, L{reflect.safe_repr}
+        returns 'BROKEN CLASS' instead of the class name.
+        """
         class X(BTBase):
             breakName = True
-        reflect.safe_repr(X())
+        xRepr = reflect.safe_repr(X())
+        self.assertIn("<BROKEN CLASS AT 0x", xRepr)
+        self.assertIn(os.path.splitext(__file__)[0], xRepr)
+        self.assertIn("RuntimeError: repr!", xRepr)
+
 
 
 class SafeStr(unittest.TestCase):
-    def testWorkingStr(self):
-        x = [1,2,3]
+    """
+    Tests for L{reflect.safe_str} function.
+    """
+
+    def test_workingStr(self):
+        x = [1, 2, 3]
         self.assertEquals(reflect.safe_str(x), str(x))
 
-    def testBrokenStr(self):
+
+    def test_brokenStr(self):
         b = Breakable()
         b.breakStr = True
         reflect.safe_str(b)
 
-    def testBrokenRepr(self):
+
+    def test_brokenRepr(self):
         b = Breakable()
         b.breakRepr = True
         reflect.safe_str(b)
 
-    def testBrokenClassStr(self):
+
+    def test_brokenClassStr(self):
         class X(BTBase):
             breakStr = True
         reflect.safe_str(X)
         reflect.safe_str(X())
 
-    def testBrokenClassRepr(self):
+
+    def test_brokenClassRepr(self):
         class X(BTBase):
             breakRepr = True
         reflect.safe_str(X)
         reflect.safe_str(X())
 
-    def testBroken__Class__Attr(self):
-        reflect.safe_str(NoClassAttr())
 
-    def testBroken__Class__Name__Attr(self):
+    def test_brokenClassAttribute(self):
+        """
+        If an object raises an exception when accessing its C{__class__}
+        attribute, L{reflect.safe_str} uses C{type} to retrieve the class
+        object.
+        """
+        b = NoClassAttr()
+        b.breakStr = True
+        bStr = reflect.safe_str(b)
+        self.assertIn("NoClassAttr instance at 0x", bStr)
+        self.assertIn(os.path.splitext(__file__)[0], bStr)
+        self.assertIn("RuntimeError: str!", bStr)
+
+
+    def test_brokenClassNameAttribute(self):
+        """
+        If a class raises an exception when accessing its C{__name__} attribute
+        B{and} when calling its C{__str__} implementation, L{reflect.safe_str}
+        returns 'BROKEN CLASS' instead of the class name.
+        """
         class X(BTBase):
             breakName = True
-        reflect.safe_str(X())
+        xStr = reflect.safe_str(X())
+        self.assertIn("<BROKEN CLASS AT 0x", xStr)
+        self.assertIn(os.path.splitext(__file__)[0], xStr)
+        self.assertIn("RuntimeError: str!", xStr)
+
 
 
 class FilenameToModule(unittest.TestCase):
@@ -569,3 +741,17 @@ class FullyQualifiedNameTests(unittest.TestCase):
             "twisted.python.reflect.PropertyAccessor.reallyDel")
         self._checkFullyQualifiedName(reflect.PropertyAccessor().reallyDel,
             "twisted.python.reflect.PropertyAccessor.reallyDel")
+
+
+class DeprecationTestCase(unittest.TestCase):
+    """
+    Test deprecations in twisted.python.reflect
+    """
+
+    def test_macro(self):
+        """
+        Test deprecation of L{reflect.macro}.
+        """
+        result = self.callDeprecated(Version("Twisted", 8, 2, 0),
+            reflect.macro, "test", __file__, "test = 1")
+        self.assertEquals(result, 1)
