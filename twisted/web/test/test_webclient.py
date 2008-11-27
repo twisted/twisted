@@ -409,6 +409,19 @@ class WebClientTestCase(unittest.TestCase):
         return d
 
 
+    def test_isolatedFollowRedirect(self):
+        """
+        C{client.HTTPPagerGetter} instances each obey the C{followRedirect}
+        value passed to the L{client.getPage} call which created them.
+        """
+        d1 = client.getPage(self.getURL('redirect'), followRedirect=True)
+        d2 = client.getPage(self.getURL('redirect'), followRedirect=False)
+
+        d = self.assertFailure(d2, error.PageRedirect
+            ).addCallback(lambda dummy: d1)
+        return d
+
+
     def testPartial(self):
         name = self.mktemp()
         f = open(name, "wb")

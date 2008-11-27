@@ -28,7 +28,7 @@ class PartialDownloadError(error.Error):
 class HTTPPageGetter(http.HTTPClient):
 
     quietLoss = 0
-    followRedirect = 1
+    followRedirect = True
     failed = 0
 
     _specialHeaders = set(('host', 'user-agent', 'cookie', 'content-length'))
@@ -234,8 +234,8 @@ class HTTPClientFactory(protocol.ClientFactory):
 
     def __init__(self, url, method='GET', postdata=None, headers=None,
                  agent="Twisted PageGetter", timeout=0, cookies=None,
-                 followRedirect=1, redirectLimit=20):
-        self.protocol.followRedirect = followRedirect
+                 followRedirect=True, redirectLimit=20):
+        self.followRedirect = followRedirect
         self.redirectLimit = redirectLimit
         self._redirectCount = 0
         self.timeout = timeout
@@ -275,6 +275,7 @@ class HTTPClientFactory(protocol.ClientFactory):
 
     def buildProtocol(self, addr):
         p = protocol.ClientFactory.buildProtocol(self, addr)
+        p.followRedirect = self.followRedirect
         if self.timeout:
             timeoutCall = reactor.callLater(self.timeout, p.timeout)
             self.deferred.addBoth(self._cancelTimeout, timeoutCall)
