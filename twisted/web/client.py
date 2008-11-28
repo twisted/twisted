@@ -415,18 +415,25 @@ def _parse(url, defaultPort=None):
     url = url.strip()
     parsed = http.urlparse(url)
     scheme = parsed[0]
-    path = urlunparse(('','')+parsed[2:])
+    path = urlunparse(('', '') + parsed[2:])
+
     if defaultPort is None:
         if scheme == 'https':
             defaultPort = 443
         else:
             defaultPort = 80
+
     host, port = parsed[1], defaultPort
     if ':' in host:
         host, port = host.split(':')
-        port = int(port)
-    if path == "":
-        path = "/"
+        try:
+            port = int(port)
+        except ValueError:
+            port = defaultPort
+
+    if path == '':
+        path = '/'
+
     return scheme, host, port, path
 
 

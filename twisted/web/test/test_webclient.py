@@ -107,22 +107,34 @@ class ParseUrlTestCase(unittest.TestCase):
     Test URL parsing facility and defaults values.
     """
 
-    def testParse(self):
-        scheme, host, port, path = client._parse("http://127.0.0.1/")
-        self.assertEquals(path, "/")
-        self.assertEquals(port, 80)
-        scheme, host, port, path = client._parse("https://127.0.0.1/")
-        self.assertEquals(path, "/")
-        self.assertEquals(port, 443)
-        scheme, host, port, path = client._parse("http://spam:12345/")
-        self.assertEquals(port, 12345)
-        scheme, host, port, path = client._parse("http://foo ")
-        self.assertEquals(host, "foo")
-        self.assertEquals(path, "/")
-        scheme, host, port, path = client._parse("http://egg:7890")
-        self.assertEquals(port, 7890)
-        self.assertEquals(host, "egg")
-        self.assertEquals(path, "/")
+    def test_parse(self):
+        """
+        L{client._parse} correctly parses a URL into its various components.
+        """
+        # The default port for HTTP is 80.
+        self.assertEqual(
+            client._parse('http://127.0.0.1/'),
+            ('http', '127.0.0.1', 80, '/'))
+
+        # The default port for HTTPS is 443.
+        self.assertEqual(
+            client._parse('https://127.0.0.1/'),
+            ('https', '127.0.0.1', 443, '/'))
+
+        # Specifying a port.
+        self.assertEqual(
+            client._parse('http://spam:12345/'),
+            ('http', 'spam', 12345, '/'))
+
+        # Weird (but commonly accepted) structure uses default port.
+        self.assertEqual(
+            client._parse('http://spam:/'),
+            ('http', 'spam', 80, '/'))
+
+        # Spaces in the hostname are trimmed, the default path is /.
+        self.assertEqual(
+            client._parse('http://foo '),
+            ('http', 'foo', 80, '/'))
 
 
     def test_externalUnicodeInterference(self):
