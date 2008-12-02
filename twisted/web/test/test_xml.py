@@ -350,6 +350,20 @@ alert("I hate you");
         self.assertEquals(d.firstChild(), t)
         self.assert_(d.isEqualToNode(d2))
 
+
+    def test_replaceNonChild(self):
+        """
+        L{Node.replaceChild} raises L{ValueError} if the node given to be
+        replaced is not a child of the node C{replaceChild} is called on.
+        """
+        parent = microdom.parseString('<foo />')
+        orphan = microdom.parseString('<bar />')
+        replacement = microdom.parseString('<baz />')
+
+        self.assertRaises(
+            ValueError, parent.replaceChild, replacement, orphan)
+
+
     def testSearch(self):
         s = "<foo><bar id='me' /><baz><foo /></baz></foo>"
         s2 = "<fOo><bAr id='me' /><bAz><fOO /></bAz></fOo>"
@@ -788,6 +802,26 @@ class NodeTests(TestCase):
         another.firstChild().appendChild(microdom.Node(object()))
         self.assertTrue(node.isEqualToNode(another))
 
+    def test_validChildInstance(self):
+        """
+        Children of L{Node} instances must also be L{Node} instances.
+        """
+        node = microdom.Node()
+        child = microdom.Node()
+        # Node.appendChild() only accepts Node instances.
+        node.appendChild(child)
+        self.assertRaises(TypeError, node.appendChild, None)
+        # Node.insertBefore() only accepts Node instances.
+        self.assertRaises(TypeError, node.insertBefore, child, None)
+        self.assertRaises(TypeError, node.insertBefore, None, child)
+        self.assertRaises(TypeError, node.insertBefore, None, None)
+        # Node.removeChild() only accepts Node instances.
+        node.removeChild(child)
+        self.assertRaises(TypeError, node.removeChild, None)
+        # Node.replaceChild() only accepts Node instances.
+        self.assertRaises(TypeError, node.replaceChild, child, None)
+        self.assertRaises(TypeError, node.replaceChild, None, child)
+        self.assertRaises(TypeError, node.replaceChild, None, None)
 
 
 class DocumentTests(TestCase):
@@ -826,6 +860,18 @@ class DocumentTests(TestCase):
         # equal.
         document.documentElement.appendChild(microdom.Node(object()))
         self.assertFalse(document.isEqualToNode(another))
+
+
+    def test_childRestriction(self):
+        """
+        L{Document.appendChild} raises L{ValueError} if the document already
+        has a child.
+        """
+        document = microdom.Document()
+        child = microdom.Node()
+        another = microdom.Node()
+        document.appendChild(child)
+        self.assertRaises(ValueError, document.appendChild, another)
 
 
 
