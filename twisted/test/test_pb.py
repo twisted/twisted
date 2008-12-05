@@ -1331,10 +1331,19 @@ class NewCredTestCase(unittest.TestCase):
         d = factory.login(
             credentials.UsernamePassword('foo', 'bar'), "BRAINS!")
         def cbLoggedIn(avatar):
-            # Just wait for the logout to happen, as it should since the
-            # reference to the avatar will shortly no longer exists.
-            return loggedOut
+            # Return None to clear the reference to avatar from this frame
+            # and from the caller.
+            return None
         d.addCallback(cbLoggedIn)
+        def cbDereferenced(ignored):
+            # Now that the avatar should have no referrers, make sure it
+            # really gets garbage collected.  This is probably necessary on
+            # any Python runtime where reference counting isn't being used.
+            gc.collect()
+
+            # Now just wait for the logout event
+            return loggedOut
+        d.addCallback(cbDereferenced)
         def cbLoggedOut(ignored):
             # Verify that the server broker's _localCleanup dict isn't growing
             # without bound.
