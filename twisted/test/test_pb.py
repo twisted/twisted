@@ -1341,6 +1341,12 @@ class NewCredTestCase(unittest.TestCase):
             # any Python runtime where reference counting isn't being used.
             gc.collect()
 
+            # Well that wasn't good enough.  Try more harder.
+            reactor.callLater(0, gc.collect)
+            reactor.callLater(2, gc.collect)
+            reactor.callLater(4, gc.collect)
+            reactor.callLater(6, gc.collect)
+
             # Now just wait for the logout event
             return loggedOut
         d.addCallback(cbDereferenced)
