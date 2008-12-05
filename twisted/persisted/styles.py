@@ -124,8 +124,9 @@ class Ephemeral:
     def __getstate__(self):
         log.msg( "WARNING: serializing ephemeral %s" % self )
         import gc
-        for r in gc.get_referrers(self):
-            log.msg( " referred to by %s" % (r,))
+        if getattr(gc, 'get_referrers', None):
+            for r in gc.get_referrers(self):
+                log.msg( " referred to by %s" % (r,))
         return None
 
     def __setstate__(self, state):
