@@ -345,6 +345,7 @@ def _makeRunner(config):
 
 
 def run():
+    sys.argv[1:] = ["twisted.test.test_pb"]
     if len(sys.argv) == 1:
         sys.argv.append("--help")
     config = Options()

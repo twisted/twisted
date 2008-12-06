@@ -1321,6 +1321,7 @@ class NewCredTestCase(unittest.TestCase):
                 pass
 
             def logout(self):
+                log.msg("EventPerspective.logout")
                 loggedOut.callback(None)
 
         self.realm.perspectiveFactory = EventPerspective
@@ -1331,11 +1332,13 @@ class NewCredTestCase(unittest.TestCase):
         d = factory.login(
             credentials.UsernamePassword('foo', 'bar'), "BRAINS!")
         def cbLoggedIn(avatar):
+            log.msg("cbLoggedIn")
             # Return None to clear the reference to avatar from this frame
             # and from the caller.
             return None
         d.addCallback(cbLoggedIn)
         def cbDereferenced(ignored):
+            log.msg("cbDereferenced")
             # Now that the avatar should have no referrers, make sure it
             # really gets garbage collected.  This is probably necessary on
             # any Python runtime where reference counting isn't being used.
@@ -1351,6 +1354,7 @@ class NewCredTestCase(unittest.TestCase):
             return loggedOut
         d.addCallback(cbDereferenced)
         def cbLoggedOut(ignored):
+            log.msg("cbLoggedOut")
             # Verify that the server broker's _localCleanup dict isn't growing
             # without bound.
             self.assertEqual(self.factory.protocolInstance._localCleanup, {})
