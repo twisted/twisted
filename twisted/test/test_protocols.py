@@ -191,19 +191,32 @@ a'''
               'len 20', 'foo 123', '0123456789\n012345678',
               'len 0', 'foo 5', '', '67890', 'len 1', 'a']
 
+    def _iotest(self, delimiter):
+        data = delimiter.join(self.output) + delimiter
+        for packetSize in range(1, 11):
+            transport = proto_helpers.StringTransport()
+            protocol = LineTester()
+            protocol.delimiter = delimiter
+            protocol.makeConnection(transport)
+            for i in range(len(data) / packetSize + 1):
+                bytes = self.buffer[i * packetSize:(i + 1) * packetSize]
+                protocol.dataReceived(bytes)
+            self.assertEqual(protocol.received, self.output)
+
+
     def testBuffer(self):
         """
         Test buffering for different packet size, checking received matches
         expected data.
         """
-        for packet_size in range(1, 10):
-            t = StringIOWithoutClosing()
-            a = LineTester()
-            a.makeConnection(protocol.FileWrapper(t))
-            for i in range(len(self.buffer)/packet_size + 1):
-                s = self.buffer[i*packet_size:(i+1)*packet_size]
-                a.dataReceived(s)
-            self.failUnlessEqual(self.output, a.received)
+        self._iotest('\n')
+
+
+    def test_multibyteDelimiter(self):
+        """
+        L{LineReceiver.delimiter} may be multiple bytes.
+        """
+        self._iotest('\1\2\3')
 
 
     pause_buf = 'twiddle1\ntwiddle2\npause\ntwiddle3\n'
