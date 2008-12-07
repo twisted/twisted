@@ -12,6 +12,7 @@ Maintainer: Itamar Shtull-Trauring
 # System imports
 import re
 import struct
+import warnings
 
 from zope.interface import implements
 
@@ -123,18 +124,32 @@ class LineOnlyReceiver(protocol.Protocol):
 
     @cvar delimiter: The line-ending delimiter to use. By default this is
                      '\\r\\n'.
+    @type delimiter: C{str}
+
     @cvar MAX_LENGTH: The maximum length of a line to allow (If a
                       sent line is longer than this, the connection is dropped).
                       Default is 16384.
+    @type MAX_LENGTH: C{int}
+
+    @ivar _buffer: A list of data pieces received and buffered, waiting
+                   for a delimiter.
+    @type _buffer: C{list} of C{str}
+
+    @ivar _buffer_size: The amount of data stored in L{_buffer}.
+    @type _buffer_size: C{int}
     """
-    _buffer = ''
+    _buffer = None
+    _buffer_size = 0
     delimiter = '\r\n'
     MAX_LENGTH = 16384
 
     def dataReceived(self, data):
         """Translates bytes into lines, and calls lineReceived."""
-        lines  = (self._buffer+data).split(self.delimiter)
-        self._buffer = lines.pop(-1)
+        if self._buffer is None:
+            self._buffer = []
+        lines = data.split(self.delimiter)
+        trailing = lines.pop()
+
         for line in lines:
             if self.transport.disconnecting:
                 # this is necessary because the transport may be told to lose
@@ -142,12 +157,19 @@ class LineOnlyReceiver(protocol.Protocol):
                 # important to disregard all the lines in that packet following
                 # the one that told it to close.
                 return
+            self._buffer.append(line)
+            line = ''.join(self._buffer)
+            self._buffer, self._buffer_size = [], 0
+
             if len(line) > self.MAX_LENGTH:
                 return self.lineLengthExceeded(line)
             else:
                 self.lineReceived(line)
-        if len(self._buffer) > self.MAX_LENGTH:
-            return self.lineLengthExceeded(self._buffer)
+
+        self._buffer.append(trailing)
+        self._buffer_size += len(trailing)
+        if self._buffer_size > self.MAX_LENGTH:
+            return self.lineLengthExceeded(''.join(self._buffer))
 
     def lineReceived(self, line):
         """Override this for when each line is received.
@@ -195,46 +217,97 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
 
     @cvar delimiter: The line-ending delimiter to use. By default this is
                      '\\r\\n'.
+    @type delimiter: C{str}
+
     @cvar MAX_LENGTH: The maximum length of a line to allow (If a
                       sent line is longer than this, the connection is dropped).
                       Default is 16384.
+    @type MAX_LENGTH: C{int}
+
+    @ivar _buffer: A list of data pieces received and buffered. Either
+                   an incomplete line, or raw data when the protocol is
+                   paused.
+    @type _buffer: C{list} of C{str}
+
+    @ivar _buffer_size: The amount of data stored in L{_buffer}.
+    @type _buffer_size: C{int}
+
+    @ivar _was_paused: True if the protocol was paused the last time
+                       L{dataReceived} was called. This is needed to
+                       detect unpausing and trigger processing of
+                       buffered data.
+    @type _was_paused: C{bool}
     """
     line_mode = 1
-    __buffer = ''
+    _buffer = None
+    _buffer_size = 0
+    _was_paused = False
     delimiter = '\r\n'
     MAX_LENGTH = 16384
 
+    def _appendToLineBuffer(self, data):
+        self._buffer.append(data)
+        self._buffer_size += len(data)
+
     def clearLineBuffer(self):
         """Clear buffered data."""
-        self.__buffer = ""
+        self._buffer, self._buffer_size = [], 0
 
     def dataReceived(self, data):
         """Protocol.dataReceived.
         Translates bytes into lines, and calls lineReceived (or
         rawDataReceived, depending on mode.)
         """
-        self.__buffer = self.__buffer+data
+        if self._buffer is None:
+            self._buffer = []
+
+        if self.paused:
+            self._was_paused = True
+            self._appendToLineBuffer(data)
+            return
+        elif self._was_paused:
+            # This is the call of dataReceived that follows an
+            # unpausing. The buffer has been accumulating data without
+            # processing it, so we need to send it all back through the
+            # pipes.
+            self._was_paused = False
+            self._buffer.append(data)
+            buf = self._buffer
+            self.clearLineBuffer()
+            for chunk in buf:
+                why = self.dataReceived(chunk)
+                if why or self.transport and self.transport.disconnecting:
+                    return why
+            return
+        self._was_paused = False
+
         while self.line_mode and not self.paused:
             try:
-                line, self.__buffer = self.__buffer.split(self.delimiter, 1)
+                line, data = data.split(self.delimiter, 1)
             except ValueError:
-                if len(self.__buffer) > self.MAX_LENGTH:
-                    line, self.__buffer = self.__buffer, ''
+                self._appendToLineBuffer(data)
+                if self._buffer_size > self.MAX_LENGTH:
+                    line = ''.join(self._buffer)
+                    self.clearLineBuffer()
                     return self.lineLengthExceeded(line)
                 break
             else:
-                linelength = len(line)
-                if linelength > self.MAX_LENGTH:
-                    exceeded = line + self.__buffer
-                    self.__buffer = ''
-                    return self.lineLengthExceeded(exceeded)
+                self._buffer.append(line)
+                line = ''.join(self._buffer)
+                self.clearLineBuffer()
+                if len(line) > self.MAX_LENGTH:
+                    return self.lineLengthExceeded(line)
                 why = self.lineReceived(line)
                 if why or self.transport and self.transport.disconnecting:
                     return why
+                elif self.paused:
+                    self._was_paused = True
+                    self._appendToLineBuffer(data)
         else:
             if not self.paused:
-                data=self.__buffer
-                self.__buffer=''
+                self._buffer.append(data)
+                data = ''.join(self._buffer)
+                self.clearLineBuffer()
                 if data:
                     return self.rawDataReceived(data)
 
@@ -273,7 +346,7 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
     def sendLine(self, line):
         """Sends a line to the other end of the connection.
         """
-        return self.transport.write(line + self.delimiter)
+        return self.transport.writeSequence((line, self.delimiter))
 
     def lineLengthExceeded(self, line):
         """Called when the maximum line length has been reached.
@@ -298,9 +371,6 @@ class IntNStringReceiver(protocol.Protocol, _PauseableMixin):
     """
     Generic class for length prefixed protocols.
 
-    @ivar recvd: buffer holding received data when splitted.
-    @type recvd: C{str}
-
     @ivar structFormat: format used for struct packing/unpacking. Define it in
         subclass.
     @type structFormat: C{str}
@@ -308,9 +378,42 @@ class IntNStringReceiver(protocol.Protocol, _PauseableMixin):
     @ivar prefixLength: length of the prefix, in bytes. Define it in subclass,
         using C{struct.calcsize(structFormat)}
     @type prefixLength: C{int}
+
+    @ivar _buffer: A list of data pieces received and buffered.
+    @type _buffer: C{list} of C{str}
+
+    @ivar _buffer_size: The amount of data stored in L{_buffer}.
+    @type _buffer_size: C{int}
+
+    @ivar _packet_length: The total length of the packet currently being
+                          buffered up, including the prefix. The length
+                          will be None until a full prefix can be
+                          decoded.
+    @type _packet_length: C{int} or C{None}
+
+    @ivar recvd: A string representation of C{_buffer}. This is a
+                 deprecated attribute, and will fire a
+                 DeprecationWarning when accessed. Be very careful if
+                 you write to this attribute, no sanity checking is
+                 performed on the contents being injected into the
+                 buffer.
+    @type recvd: C{str}
     """
     MAX_LENGTH = 99999
-    recvd = ""
+
+    _buffer = None
+    _buffer_size = 0
+    _packet_length = None
+
+    def _appendToBuffer(self, data):
+        self._buffer.append(data)
+        self._buffer_size += len(data)
+
+
+    def _clearBuffer(self):
+        """Clear buffered data."""
+        self._buffer, self._buffer_size = [], 0
+
 
     def stringReceived(self, msg):
         """
@@ -331,22 +434,37 @@ class IntNStringReceiver(protocol.Protocol, _PauseableMixin):
         self.transport.loseConnection()
 
 
-    def dataReceived(self, recd):
+    def dataReceived(self, data):
         """
         Convert int prefixed strings into calls to stringReceived.
         """
-        self.recvd = self.recvd + recd
-        while len(self.recvd) >= self.prefixLength and not self.paused:
-            length ,= struct.unpack(
-                self.structFormat, self.recvd[:self.prefixLength])
-            if length > self.MAX_LENGTH:
-                self.lengthLimitExceeded(length)
-                return
-            if len(self.recvd) < length + self.prefixLength:
-                break
-            packet = self.recvd[self.prefixLength:length + self.prefixLength]
-            self.recvd = self.recvd[length + self.prefixLength:]
-            self.stringReceived(packet)
+        if self._buffer is None:
+            self._buffer = []
+        self._appendToBuffer(data)
+
+        while not self.paused:
+            if self._packet_length is None:
+                if self._buffer_size < self.prefixLength:
+                    return
+                data = ''.join(self._buffer)
+                self._packet_length ,= struct.unpack(
+                    self.structFormat, data[:self.prefixLength])
+                if self._packet_length > self.MAX_LENGTH:
+                    self._clearBuffer()
+                    return self.lengthLimitExceeded(self._packet_length)
+                self._packet_length += self.prefixLength
+                self._buffer = [data]
+
+            if self._packet_length is not None:
+                if self._buffer_size < self._packet_length:
+                    return
+                data = ''.join(self._buffer)
+                packet = data[self.prefixLength:self._packet_length]
+                self._clearBuffer()
+                self._appendToBuffer(data[self._packet_length:])
+                self._packet_length = None
+                self.stringReceived(packet)
+
 
     def sendString(self, data):
         """
@@ -358,8 +476,25 @@ class IntNStringReceiver(protocol.Protocol, _PauseableMixin):
             raise StringTooLongError(
                 "Try to send %s bytes whereas maximum is %s" % (
                 len(data), 2 ** (8 * self.prefixLength)))
-        self.transport.write(struct.pack(self.structFormat, len(data)) + data)
+        self.transport.writeSequence(
+            (struct.pack(self.structFormat, len(data)), data))
 
+    def _getRecvd(self):
+        warnings.warn("The recvd attribute of IntNStringReceiver is deprecated",
+                      DeprecationWarning)
+        if len(self._buffer) == 0:
+            return ''
+        elif len(self._buffer) > 1:
+            self._buffer = ''.join(self._buffer)
+        return self._buffer[0]
+
+    def _setRecvd(self, data):
+        warnings.warn("The recvd attribute of IntNStringReceiver is deprecated",
+                      DeprecationWarning)
+        self._buffer = [data]
+        self._buffer_size = len(data)
+
+    recvd = property(_getRecvd, _setRecvd)
 
 class Int32StringReceiver(IntNStringReceiver):
     """
