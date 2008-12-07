@@ -1638,16 +1638,6 @@ class FTPClientTestCase(unittest.TestCase):
 
 
 
-class DummyTransport:
-    def write(self, bytes):
-        pass
-
-class BufferingTransport:
-    buffer = ''
-    def write(self, bytes):
-        self.buffer += bytes
-
-
 class FTPClientBasicTests(unittest.TestCase):
 
     def testGreeting(self):
@@ -1665,7 +1655,7 @@ class FTPClientBasicTests(unittest.TestCase):
 
     def testMultilineResponse(self):
         ftpClient = ftp.FTPClientBasic()
-        ftpClient.transport = DummyTransport()
+        ftpClient.transport = proto_helpers.StringTransport()
         ftpClient.lineReceived('220 Imaginary FTP.')
 
         # Queue (and send) a dummy command, and set up a callback to capture the
@@ -1714,40 +1704,40 @@ class FTPClientBasicTests(unittest.TestCase):
         """Passing None as the password avoids sending the PASS command."""
         # Create a client, and give it a greeting.
         ftpClient = ftp.FTPClientBasic()
-        ftpClient.transport = BufferingTransport()
+        ftpClient.transport = proto_helpers.StringTransport()
         ftpClient.lineReceived('220 Welcome to Imaginary FTP.')
 
         # Queue a login with no password
         ftpClient.queueLogin('bob', None)
-        self.failUnlessEqual('USER bob\r\n', ftpClient.transport.buffer)
+        self.failUnlessEqual('USER bob\r\n', ftpClient.transport.value())
 
         # Clear the test buffer, acknowledge the USER command.
-        ftpClient.transport.buffer = ''
+        ftpClient.transport.clear()
         ftpClient.lineReceived('200 Hello bob.')
 
         # The client shouldn't have sent anything more (i.e. it shouldn't have
         # sent a PASS command).
-        self.failUnlessEqual('', ftpClient.transport.buffer)
+        self.failUnlessEqual('', ftpClient.transport.value())
 
     def testNoPasswordNeeded(self):
         """Receiving a 230 response to USER prevents PASS from being sent."""
         # Create a client, and give it a greeting.
         ftpClient = ftp.FTPClientBasic()
-        ftpClient.transport = BufferingTransport()
+        ftpClient.transport = proto_helpers.StringTransport()
         ftpClient.lineReceived('220 Welcome to Imaginary FTP.')
 
         # Queue a login with no password
         ftpClient.queueLogin('bob', 'secret')
-        self.failUnlessEqual('USER bob\r\n', ftpClient.transport.buffer)
+        self.failUnlessEqual('USER bob\r\n', ftpClient.transport.value())
 
         # Clear the test buffer, acknowledge the USER command with a 230
         # response code.
-        ftpClient.transport.buffer = ''
+        ftpClient.transport.clear()
         ftpClient.lineReceived('230 Hello bob.  No password needed.')
 
         # The client shouldn't have sent anything more (i.e. it shouldn't have
         # sent a PASS command).
-        self.failUnlessEqual('', ftpClient.transport.buffer)
+        self.failUnlessEqual('', ftpClient.transport.value())
 
 
 class PathHandling(unittest.TestCase):
