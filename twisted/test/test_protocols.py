@@ -400,7 +400,7 @@ class IntNTestCaseMixin(LPTestCaseMixin):
         """
         r = self.getProtocol()
         for s in self.strings:
-            for c in struct.pack(self.protocol.structFormat,len(s)) + s:
+            for c in struct.pack(r.structFormat,len(s)) + s:
                 r.dataReceived(c)
         self.assertEquals(r.received, self.strings)
 
@@ -421,7 +421,7 @@ class IntNTestCaseMixin(LPTestCaseMixin):
         r = self.getProtocol()
         r.sendString("b" * 16)
         self.assertEquals(r.transport.value(),
-            struct.pack(self.protocol.structFormat, 16) + "b" * 16)
+            struct.pack(r.structFormat, 16) + "b" * 16)
 
 
     def test_lengthLimitExceeded(self):
@@ -434,7 +434,7 @@ class IntNTestCaseMixin(LPTestCaseMixin):
         r = self.getProtocol()
         r.lengthLimitExceeded = length.append
         r.MAX_LENGTH = 10
-        r.dataReceived(struct.pack(self.protocol.structFormat, 11))
+        r.dataReceived(struct.pack(r.structFormat, 11))
         self.assertEqual(length, [11])
 
 
@@ -447,9 +447,46 @@ class IntNTestCaseMixin(LPTestCaseMixin):
         r = self.getProtocol()
         r.MAX_LENGTH = 10
         r.dataReceived(
-            struct.pack(self.protocol.structFormat, 11) + 'x' * 11)
+            struct.pack(r.structFormat, 11) + 'x' * 11)
         self.assertEqual(r.received, [])
 
+
+    def _verifyRecvdDeprecation(self, warnings):
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warnings[0]['message'],
+            "IntNStringReceiver.recvd deprecated since Twisted 8.3")
+        self.assertEqual(len(warnings), 1)
+
+
+    def test_recvdInStringReceived(self):
+        """
+        During a call to C{stringReceived}, the protocol's C{recvd} attribute
+        is a C{str} containing any bytes already received for the next string.
+        """
+        buffered = []
+        protocol = self.getProtocol()
+        def invasiveStringReceived(string):
+            buffered.append(protocol.recvd)
+        protocol.stringReceived = invasiveStringReceived
+        protocol.dataReceived(
+            struct.pack(protocol.structFormat, 1) + 'x' + 'abc')
+        self.assertEqual(buffered, ['abc'])
+        warnings = self.flushWarnings(
+            offendingFunctions=[invasiveStringReceived])
+        self._verifyRecvdDeprecation(warnings)
+
+
+    def test_recvdBeforeDataReceived(self):
+        """
+        Before any calls to C{dataReceived}, the protocol's C{recvd} attribute
+        is C{""}.
+        """
+        protocol = self.getProtocol()
+        self.assertEqual(protocol.recvd, "")
+        warnings = self.flushWarnings(
+            offendingFunctions=[self.test_recvdBeforeDataReceived])
+        self._verifyRecvdDeprecation(warnings)
 
 
 class TestInt32(TestMixin, basic.Int32StringReceiver):

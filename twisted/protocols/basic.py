@@ -480,9 +480,10 @@ class IntNStringReceiver(protocol.Protocol, _PauseableMixin):
             (struct.pack(self.structFormat, len(data)), data))
 
     def _getRecvd(self):
-        warnings.warn("The recvd attribute of IntNStringReceiver is deprecated",
-                      DeprecationWarning)
-        if len(self._buffer) == 0:
+        warnings.warn(
+            "IntNStringReceiver.recvd deprecated since Twisted 8.3",
+            DeprecationWarning, 2)
+        if not self._buffer: # None or empty
             return ''
         elif len(self._buffer) > 1:
             self._buffer = ''.join(self._buffer)
