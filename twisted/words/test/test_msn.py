@@ -28,14 +28,11 @@ from twisted.python.hashlib import md5
 from twisted.protocols import loopback
 from twisted.internet.defer import Deferred
 from twisted.trial import unittest
+from twisted.test.proto_helpers import StringTransport, StringIOWithoutClosing
 
 def printError(f):
     print f
 
-class StringIOWithoutClosing(StringIO.StringIO):
-    disconnecting = 0
-    def close(self): pass
-    def loseConnection(self): pass
 
 class PassportTests(unittest.TestCase):
 
@@ -52,7 +49,7 @@ class PassportTests(unittest.TestCase):
             'Content-Type'   : 'text/html',
             'PassportURLs'   : 'DARealm=Passport.Net,DALogin=login.myserver.com/,DAReg=reg.myserver.com'
         }
-        transport = StringIOWithoutClosing()
+        transport = StringTransport()
         protocol.makeConnection(transport)
         protocol.dataReceived('HTTP/1.0 200 OK\r\n')
         for (h,v) in headers.items(): protocol.dataReceived('%s: %s\r\n' % (h,v))
@@ -61,7 +58,7 @@ class PassportTests(unittest.TestCase):
 
     def _doLoginTest(self, response, headers):
         protocol = msn.PassportLogin(self.deferred,'foo@foo.com','testpass','https://foo.com/', 'a')
-        protocol.makeConnection(StringIOWithoutClosing())
+        protocol.makeConnection(StringTransport())
         protocol.dataReceived(response)
         for (h,v) in headers.items(): protocol.dataReceived('%s: %s\r\n' % (h,v))
         protocol.dataReceived('\r\n')
@@ -169,16 +166,15 @@ class DispatchTests(unittest.TestCase):
         client = msn.DispatchClient()
         client.userHandle = "foo"
 
-        transport = StringIOWithoutClosing()
+        transport = StringTransport()
         client.makeConnection(transport)
         self.assertEqual(
-            transport.getvalue(), "VER 1 MSNP8 CVR0\r\n")
-        transport.seek(0)
-        transport.truncate()
+            transport.value(), "VER 1 MSNP8 CVR0\r\n")
+        transport.clear()
 
         client.dataReceived(serverVersionResponse)
         self.assertEqual(
-            transport.getvalue(),
+            transport.value(),
             "CVR 2 0x0409 win 4.10 i386 MSNMSGR 5.0.0544 MSMSGS foo\r\n")
 
 
@@ -222,16 +218,15 @@ class NotificationTests(unittest.TestCase):
         """
         self.client.factory.userHandle = "foo"
 
-        transport = StringIOWithoutClosing()
+        transport = StringTransport()
         self.client.makeConnection(transport)
         self.assertEqual(
-            transport.getvalue(), "VER 1 MSNP8 CVR0\r\n")
-        transport.seek(0)
-        transport.truncate()
+            transport.value(), "VER 1 MSNP8 CVR0\r\n")
+        transport.clear()
 
         self.client.dataReceived(serverVersionResponse)
         self.assertEqual(
-            transport.getvalue(),
+            transport.value(),
             "CVR 2 0x0409 win 4.10 i386 MSNMSGR 5.0.0544 MSMSGS foo\r\n")
 
 
@@ -261,10 +256,9 @@ class NotificationTests(unittest.TestCase):
         L{NotificationClient} responds to a I{CHL} message by sending a I{QRY}
         back which included a hash based on the parameters of the I{CHL}.
         """
-        transport = StringIOWithoutClosing()
+        transport = StringTransport()
         self.client.makeConnection(transport)
-        transport.seek(0)
-        transport.truncate()
+        transport.clear()
 
         challenge = "15570131571988941333"
         self.client.dataReceived('CHL 0 ' + challenge + '\r\n')
@@ -274,7 +268,7 @@ class NotificationTests(unittest.TestCase):
         self.assertEqual(
             response, md5(challenge + "Q1P7W2E4J9R8U3S5").hexdigest())
         self.assertEqual(
-            transport.getvalue(),
+            transport.value(),
             # 2 is the next transaction identifier.  32 is the length of the
             # response.
             "QRY 2 msmsgs@msnmsgr.com 32\r\n" + response)
@@ -307,7 +301,7 @@ class NotificationTests(unittest.TestCase):
         # that BPRs sent as part of the SYN reply may not be interpreted
         # as such if they are for the last LST -- maybe I should
         # factor this in later.
-        self.client.makeConnection(StringIOWithoutClosing())
+        self.client.makeConnection(StringTransport())
         msn.NotificationClient.loggedIn(self.client, 'foo@foo.com', 'foobar', 1)
         lines = [
             "SYN %s 100 1 1" % self.client.currentID,
@@ -329,7 +323,7 @@ class NotificationTests(unittest.TestCase):
         c = msn.MSNContact(userHandle='userHandle@email.com')
         self.client.factory.contacts = msn.MSNContactList()
         self.client.factory.contacts.addContact(c)
-        self.client.makeConnection(StringIOWithoutClosing())
+        self.client.makeConnection(StringTransport())
         self.client.lineReceived("BPR 101 userHandle@email.com PHH 123%20456")
         c = self.client.factory.contacts.getContact('userHandle@email.com')
         self.failUnless(self.client.state == 'GOTPHONE', "Did not fire phone change callback")
@@ -342,7 +336,7 @@ class NotificationTests(unittest.TestCase):
         to be part of a SYN response (but came after the last LST)
         is received, the correct contact is updated and all is well
         """
-        self.client.makeConnection(StringIOWithoutClosing())
+        self.client.makeConnection(StringTransport())
         msn.NotificationClient.loggedIn(self.client, 'foo@foo.com', 'foo', 1)
         lines = [
             "SYN %s 100 1 1" % self.client.currentID,
@@ -460,10 +454,9 @@ class FileTransferTestCase(unittest.TestCase):
     """ test FileSend against FileReceive """
 
     def setUp(self):
-        self.input = StringIOWithoutClosing()
-        self.input.writelines(['a'] * 7000)
-        self.input.seek(0)
+        self.input = 'a' * 7000
         self.output = StringIOWithoutClosing()
+
 
     def tearDown(self):
         self.input = None
@@ -471,16 +464,18 @@ class FileTransferTestCase(unittest.TestCase):
 
     def testFileTransfer(self):
         auth = 1234
-        sender = msn.FileSend(self.input)
+        sender = msn.FileSend(StringIO.StringIO(self.input))
         sender.auth = auth
         sender.fileSize = 7000
         client = msn.FileReceive(auth, "foo@bar.com", self.output)
         client.fileSize = 7000
         def check(ignored):
-            self.failUnless((client.completed and sender.completed),
-                            msg="send failed to complete")
-            self.failUnless((self.input.getvalue() == self.output.getvalue()),
-                            msg="saved file does not match original")
+            self.assertTrue(
+                client.completed and sender.completed,
+                msg="send failed to complete")
+            self.assertEqual(
+                self.input, self.output.getvalue(),
+                msg="saved file does not match original")
         d = loopback.loopbackAsync(sender, client)
         d.addCallback(check)
         return d

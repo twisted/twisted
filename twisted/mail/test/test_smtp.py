@@ -12,7 +12,6 @@ from twisted.protocols import basic, loopback
 from twisted.mail import smtp
 from twisted.internet import defer, protocol, reactor, interfaces
 from twisted.internet import address, error, task
-from twisted.test.test_protocols import StringIOWithoutClosing
 from twisted.test.proto_helpers import StringTransport
 
 from twisted import cred
@@ -93,8 +92,7 @@ Someone set up us the bomb!\015
         self.factory = smtp.SMTPFactory()
         self.factory.domains = {}
         self.factory.domains['baz.com'] = DummyDomain(['foo'])
-        self.output = StringIOWithoutClosing()
-        self.transport = protocol.FileWrapper(self.output)
+        self.transport = StringTransport()
 
     def testMessages(self):
         from twisted.mail import protocols
@@ -309,18 +307,18 @@ To: foo
 
 
     def testBuffer(self):
-        output = StringIOWithoutClosing()
+        transport = StringTransport()
         a = self.serverClass()
         class fooFactory:
             domain = 'foo.com'
 
         a.factory = fooFactory()
-        a.makeConnection(protocol.FileWrapper(output))
+        a.makeConnection(transport)
         for (send, expect, msg, msgexpect) in self.data:
             if send:
                 a.dataReceived(send)
-            data = output.getvalue()
-            output.truncate(0)
+            data = transport.value()
+            transport.clear()
             if not re.match(expect, data):
                 raise AssertionError, (send, expect, data)
             if data[:3] == '354':
@@ -331,8 +329,8 @@ To: foo
                 a.dataReceived('.\r\n')
                 # Special case for DATA. Now we want a 250, and then
                 # we compare the messages
-                data = output.getvalue()
-                output.truncate()
+                data = transport.value()
+                transport.clear()
                 resp, msgdata = msgexpect
                 if not re.match(resp, data):
                     raise AssertionError, (resp, data)
@@ -514,13 +512,12 @@ if not interfaces.IReactorSSL.providedBy(reactor):
 class EmptyLineTestCase(unittest.TestCase):
     def testEmptyLineSyntaxError(self):
         proto = smtp.SMTP()
-        output = StringIOWithoutClosing()
-        transport = protocol.FileWrapper(output)
+        transport = StringTransport()
         proto.makeConnection(transport)
         proto.lineReceived('')
         proto.setTimeout(None)
 
-        out = output.getvalue().splitlines()
+        out = transport.value().splitlines()
         self.assertEquals(len(out), 2)
         self.failUnless(out[0].startswith('220'))
         self.assertEquals(out[1], "500 Error: bad syntax")

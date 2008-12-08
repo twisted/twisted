@@ -13,11 +13,8 @@ from twisted.trial.unittest import TestCase
 from twisted.words.protocols import irc
 from twisted.words.protocols.irc import IRCClient
 from twisted.internet import protocol
+from twisted.test.proto_helpers import StringTransport, StringIOWithoutClosing
 
-
-class StringIOWithoutClosing(StringIO):
-    def close(self):
-        pass
 
 stringSubjects = [
     "Hello, this is a nice string with no complications.",
@@ -571,14 +568,14 @@ class ClientTests(TestCase):
     be called by application code.
     """
     def setUp(self):
-        self.transport = StringIO()
+        self.transport = StringTransport()
         self.protocol = IRCClient()
         self.protocol.performLogin = False
         self.protocol.makeConnection(self.transport)
 
         # Sanity check - we don't want anything to have happened at this
         # point, since we're not in a test yet.
-        self.failIf(self.transport.getvalue())
+        self.assertEqual(self.transport.value(), "")
 
 
     def test_away(self):
@@ -591,7 +588,7 @@ class ClientTests(TestCase):
             'AWAY :%s' % (message,),
             '',
         ]
-        self.assertEqual(self.transport.getvalue().split('\r\n'), expected)
+        self.assertEqual(self.transport.value().split('\r\n'), expected)
 
 
     def test_back(self):
@@ -603,7 +600,7 @@ class ClientTests(TestCase):
             'AWAY :',
             '',
         ]
-        self.assertEqual(self.transport.getvalue().split('\r\n'), expected)
+        self.assertEqual(self.transport.value().split('\r\n'), expected)
 
 
     def test_whois(self):
@@ -612,7 +609,7 @@ class ClientTests(TestCase):
         """
         self.protocol.whois('alice')
         self.assertEqual(
-            self.transport.getvalue().split('\r\n'),
+            self.transport.value().split('\r\n'),
             ['WHOIS alice', ''])
 
 
@@ -623,7 +620,7 @@ class ClientTests(TestCase):
         """
         self.protocol.whois('alice', 'example.org')
         self.assertEqual(
-            self.transport.getvalue().split('\r\n'),
+            self.transport.value().split('\r\n'),
             ['WHOIS example.org alice', ''])
 
 
@@ -643,7 +640,7 @@ class ClientTests(TestCase):
             'USER %s %s %s :%s' % (
                 username, hostname, servername, self.protocol.realname),
             '']
-        self.assertEqual(self.transport.getvalue().split('\r\n'), expected)
+        self.assertEqual(self.transport.value().split('\r\n'), expected)
 
 
     def test_registerWithPassword(self):
@@ -664,4 +661,4 @@ class ClientTests(TestCase):
             'USER %s %s %s :%s' % (
                 username, hostname, servername, self.protocol.realname),
             '']
-        self.assertEqual(self.transport.getvalue().split('\r\n'), expected)
+        self.assertEqual(self.transport.value().split('\r\n'), expected)

@@ -2,10 +2,7 @@
 # See LICENSE for details.
 
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+from StringIO import StringIO
 
 from twisted.protocols import basic
 from twisted.internet import error
@@ -91,3 +88,13 @@ class StringTransportWithDisconnection(StringTransport):
             self.connected = False
             self.protocol.connectionLost(error.ConnectionDone("Bye."))
 
+
+
+class StringIOWithoutClosing(StringIO):
+    """
+    A StringIO that can't be closed.
+    """
+    def close(self):
+        """
+        Do nothing.
+        """

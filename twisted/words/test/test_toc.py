@@ -7,14 +7,11 @@ from twisted.trial import unittest
 from twisted.words.protocols import toc
 from twisted.internet import protocol, main
 from twisted.python import failure
-
+from twisted.test.proto_helpers import StringIOWithoutClosing
 import StringIO
 from struct import pack,unpack
 
-class StringIOWithoutClosing(StringIO.StringIO):
-    def close(self):
-        pass
-        
+
 class DummyTOC(toc.TOC):
     """
     used to override authentication, now overrides printing.

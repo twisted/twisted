@@ -13,7 +13,8 @@ from twisted import internet
 from twisted.protocols import loopback
 from twisted.protocols import postfix
 from twisted.internet import defer, protocol
-from twisted.test.test_protocols import StringIOWithoutClosing
+from twisted.test.proto_helpers import StringTransport
+
 
 class PostfixTCPMapQuoteTestCase(unittest.TestCase):
     data = [
@@ -47,8 +48,7 @@ class PostfixTCPMapServerTestCase:
 
     def testChat(self):
         factory = postfix.PostfixTCPMapDictServerFactory(self.data)
-        output = StringIOWithoutClosing()
-        transport = internet.protocol.FileWrapper(output)
+        transport = StringTransport()
 
         protocol = postfix.PostfixTCPMapServer()
         protocol.service = factory
@@ -57,18 +57,16 @@ class PostfixTCPMapServerTestCase:
 
         for input, expected_output in self.chat:
             protocol.lineReceived(input)
-            # self.runReactor(1)
-            self.assertEquals(output.getvalue(), expected_output,
-                              'For %r, expected %r but got %r' % (
-                input, expected_output, output.getvalue()
-                ))
-            output.truncate(0)
+            self.assertEqual(
+                transport.value(), expected_output,
+                'For %r, expected %r but got %r' % (
+                    input, expected_output, transport.value()))
+            transport.clear()
         protocol.setTimeout(None)
 
     def testDeferredChat(self):
         factory = postfix.PostfixTCPMapDeferringDictServerFactory(self.data)
-        output = StringIOWithoutClosing()
-        transport = internet.protocol.FileWrapper(output)
+        transport = StringTransport()
 
         protocol = postfix.PostfixTCPMapServer()
         protocol.service = factory
@@ -77,12 +75,11 @@ class PostfixTCPMapServerTestCase:
 
         for input, expected_output in self.chat:
             protocol.lineReceived(input)
-            # self.runReactor(1)
-            self.assertEquals(output.getvalue(), expected_output,
-                              'For %r, expected %r but got %r' % (
-                input, expected_output, output.getvalue()
-                ))
-            output.truncate(0)
+            self.assertEqual(
+                transport.value(), expected_output,
+                'For %r, expected %r but got %r' % (
+                    input, expected_output, transport.value()))
+            transport.clear()
         protocol.setTimeout(None)
 
 class Valid(PostfixTCPMapServerTestCase, unittest.TestCase):

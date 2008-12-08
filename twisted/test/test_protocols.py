@@ -14,15 +14,6 @@ from twisted.test import proto_helpers
 import struct
 import StringIO
 
-class StringIOWithoutClosing(StringIO.StringIO):
-    """
-    A StringIO that can't be closed.
-    """
-    def close(self):
-        """
-        Do nothing.
-        """
-
 class LineTester(basic.LineReceiver):
     """
     A line receiver that parses data received and make actions on some tokens.
@@ -122,48 +113,48 @@ class WireTestCase(unittest.TestCase):
         """
         Test wire.Echo protocol: send some data and check it send it back.
         """
-        t = StringIOWithoutClosing()
+        t = proto_helpers.StringTransport()
         a = wire.Echo()
-        a.makeConnection(protocol.FileWrapper(t))
+        a.makeConnection(t)
         a.dataReceived("hello")
         a.dataReceived("world")
         a.dataReceived("how")
         a.dataReceived("are")
         a.dataReceived("you")
-        self.failUnlessEqual(t.getvalue(), "helloworldhowareyou")
+        self.assertEqual(t.value(), "helloworldhowareyou")
 
     def testWho(self):
         """
         Test wire.Who protocol.
         """
-        t = StringIOWithoutClosing()
+        t = proto_helpers.StringTransport()
         a = wire.Who()
-        a.makeConnection(protocol.FileWrapper(t))
-        self.failUnlessEqual(t.getvalue(), "root\r\n")
+        a.makeConnection(t)
+        self.assertEqual(t.value(), "root\r\n")
 
     def testQOTD(self):
         """
         Test wire.QOTD protocol.
         """
-        t = StringIOWithoutClosing()
+        t = proto_helpers.StringTransport()
         a = wire.QOTD()
-        a.makeConnection(protocol.FileWrapper(t))
-        self.failUnlessEqual(t.getvalue(),
-                             "An apple a day keeps the doctor away.\r\n")
+        a.makeConnection(t)
+        self.assertEqual(t.value(),
+                         "An apple a day keeps the doctor away.\r\n")
 
     def testDiscard(self):
         """
         Test wire.Discard protocol.
         """
-        t = StringIOWithoutClosing()
+        t = proto_helpers.StringTransport()
         a = wire.Discard()
-        a.makeConnection(protocol.FileWrapper(t))
+        a.makeConnection(t)
         a.dataReceived("hello")
         a.dataReceived("world")
         a.dataReceived("how")
         a.dataReceived("are")
         a.dataReceived("you")
-        self.failUnlessEqual(t.getvalue(), "")
+        self.assertEqual(t.value(), "")
 
 class LineReceiverTestCase(unittest.TestCase):
     """
@@ -230,7 +221,7 @@ a'''
         pausing/resuming work.
         """
         for packet_size in range(1, 10):
-            t = StringIOWithoutClosing()
+            t = proto_helpers.StringIOWithoutClosing()
             clock = task.Clock()
             a = LineTester(clock)
             a.makeConnection(protocol.FileWrapper(t))
@@ -252,7 +243,7 @@ a'''
         Test pause inside raw date receiving.
         """
         for packet_size in range(1, 10):
-            t = StringIOWithoutClosing()
+            t = proto_helpers.StringIOWithoutClosing()
             clock = task.Clock()
             a = LineTester(clock)
             a.makeConnection(protocol.FileWrapper(t))
@@ -272,7 +263,7 @@ a'''
         Test stop inside producing.
         """
         for packet_size in range(1, 10):
-            t = StringIOWithoutClosing()
+            t = proto_helpers.StringIOWithoutClosing()
             a = LineTester()
             a.makeConnection(protocol.FileWrapper(t))
             for i in range(len(self.stop_buf)/packet_size + 1):
@@ -286,7 +277,7 @@ a'''
         Test produce/unproduce in receiving.
         """
         a = LineTester()
-        t = StringIOWithoutClosing()
+        t = proto_helpers.StringIOWithoutClosing()
         a.makeConnection(protocol.FileWrapper(t))
         a.dataReceived('produce\nhello world\nunproduce\ngoodbye\n')
         self.assertEquals(a.received,
@@ -307,9 +298,9 @@ class LineOnlyReceiverTestCase(unittest.TestCase):
         """
         Test buffering over line protocol: data received should match buffer.
         """
-        t = StringIOWithoutClosing()
+        t = proto_helpers.StringTransport()
         a = LineOnlyTester()
-        a.makeConnection(protocol.FileWrapper(t))
+        a.makeConnection(t)
         for c in self.buffer:
             a.dataReceived(c)
         self.failUnlessEqual(a.received, self.buffer.split('\n')[:-1])
@@ -318,9 +309,9 @@ class LineOnlyReceiverTestCase(unittest.TestCase):
         """
         Test sending a line too long: it should close the connection.
         """
-        t = StringIOWithoutClosing()
+        t = proto_helpers.StringTransport()
         a = LineOnlyTester()
-        a.makeConnection(protocol.FileWrapper(t))
+        a.makeConnection(t)
         res = a.dataReceived('x'*200)
         self.assertTrue(isinstance(res, error.ConnectionLost))
 
@@ -351,9 +342,9 @@ class LPTestCaseMixin:
     protocol = None
 
     def getProtocol(self):
-        t = StringIOWithoutClosing()
+        t = proto_helpers.StringTransport()
         a = self.protocol()
-        a.makeConnection(protocol.FileWrapper(t))
+        a.makeConnection(t)
         return a
 
     def test_illegal(self):
@@ -364,7 +355,7 @@ class LPTestCaseMixin:
             r = self.getProtocol()
             for c in s:
                 r.dataReceived(c)
-            self.assertEquals(r.transport.closed, 1)
+            self.assertTrue(r.transport.disconnecting)
 
 
 class NetstringReceiverTestCase(unittest.TestCase, LPTestCaseMixin):
@@ -379,13 +370,13 @@ class NetstringReceiverTestCase(unittest.TestCase, LPTestCaseMixin):
 
     def testBuffer(self):
         for packet_size in range(1, 10):
-            t = StringIOWithoutClosing()
+            t = proto_helpers.StringTransport()
             a = TestNetstring()
             a.MAX_LENGTH = 699
-            a.makeConnection(protocol.FileWrapper(t))
+            a.makeConnection(t)
             for s in self.strings:
                 a.sendString(s)
-            out = t.getvalue()
+            out = t.value()
             for i in range(len(out)/packet_size + 1):
                 s = out[i*packet_size:(i+1)*packet_size]
                 if s:
@@ -429,7 +420,7 @@ class IntNTestCaseMixin(LPTestCaseMixin):
         """
         r = self.getProtocol()
         r.sendString("b" * 16)
-        self.assertEquals(r.transport.file.getvalue(),
+        self.assertEquals(r.transport.value(),
             struct.pack(self.protocol.structFormat, 16) + "b" * 16)
 
 
@@ -484,7 +475,7 @@ class Int32TestCase(unittest.TestCase, IntNTestCaseMixin):
         """
         r = self.getProtocol()
         r.sendString("foo")
-        self.assertEquals(r.transport.file.getvalue(), "\x00\x00\x00\x03foo")
+        self.assertEquals(r.transport.value(), "\x00\x00\x00\x03foo")
         r.dataReceived("\x00\x00\x00\x04ubar")
         self.assertEquals(r.received, ["ubar"])
 
@@ -512,7 +503,7 @@ class Int16TestCase(unittest.TestCase, IntNTestCaseMixin):
         """
         r = self.getProtocol()
         r.sendString("foo")
-        self.assertEquals(r.transport.file.getvalue(), "\x00\x03foo")
+        self.assertEquals(r.transport.value(), "\x00\x03foo")
         r.dataReceived("\x00\x04ubar")
         self.assertEquals(r.received, ["ubar"])
 
@@ -548,7 +539,7 @@ class Int8TestCase(unittest.TestCase, IntNTestCaseMixin):
         """
         r = self.getProtocol()
         r.sendString("foo")
-        self.assertEquals(r.transport.file.getvalue(), "\x03foo")
+        self.assertEquals(r.transport.value(), "\x03foo")
         r.dataReceived("\x04ubar")
         self.assertEquals(r.received, ["ubar"])
 
