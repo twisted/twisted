@@ -489,6 +489,32 @@ class IntNTestCaseMixin(LPTestCaseMixin):
         self._verifyRecvdDeprecation(warnings)
 
 
+    def test_recvdSetInStringReceived(self):
+        """
+        If C{recvd} is changed during a call to the protocol's
+        C{stringReceived}, the previous value is forgotten and the new value is
+        parsed instead.
+        """
+        received = []
+        protocol = self.getProtocol()
+        def invasiveStringReceived(string):
+            received.append(string)
+            protocol.recvd = nextValues.pop(0) + 'garbage'
+        protocol.stringReceived = invasiveStringReceived
+        nextValues = [
+            struct.pack(protocol.structFormat, 1) + '1',
+            struct.pack(protocol.structFormat, 3) + 'abc',
+            struct.pack(protocol.structFormat, 5) + 'hello',
+            '']
+        protocol.dataReceived(nextValues.pop(0) + 'garbage')
+        self.assertEqual(received, ['1', 'abc', 'hello'])
+        warnings = self.flushWarnings()
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warnings[0]['message'],
+            "Setting IntNStringReceiver.recvd deprecated since Twisted 8.3")
+
+
 class TestInt32(TestMixin, basic.Int32StringReceiver):
     """
     A L{basic.Int32StringReceiver} storing received strings in an array.
