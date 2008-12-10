@@ -20,8 +20,9 @@ from twisted.python.threadpool import ThreadPool
 from twisted.internet.defer import Deferred, gatherResults
 from twisted.internet import reactor
 from twisted.trial.unittest import TestCase
+from twisted.web import http
 from twisted.web.resource import IResource, Resource
-from twisted.web.server import Request, Site
+from twisted.web.server import Request, Site, version
 from twisted.web.wsgi import WSGIResource
 from twisted.web.test.test_web import DummyChannel
 
@@ -321,8 +322,8 @@ class EnvironTests(WSGITestsMixin, TestCase):
         unencoded.addCallback(self.environKeyEqual('QUERY_STRING', '/=/'))
 
         # "?" is reserved in the <searchpart> portion of a URL.  However, it
-        # seems to be a common mistake of clients to forget to quote it. 
-        # So, make sure we handle that invalid case.
+        # seems to be a common mistake of clients to forget to quote it.  So,
+        # make sure we handle that invalid case.
         doubleQuestion = self.render(
             'GET', '1.1', [], [''], [('foo', '?bar')], safe='?')
         doubleQuestion.addCallback(
@@ -673,30 +674,76 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         return d
 
 
-    def test_headers(self):
+    def _headersTest(self, appHeaders, expectedHeaders):
         """
-        The headers passed to the I{start_response} callable are included in
-        the headers response.
+        Verify that if the response headers given by C{appHeaders} are passed
+        to the I{start_response} callable, then the response header lines given
+        by C{expectedHeaders} plus I{Server} and I{Date} header lines are
+        included in the response.
         """
+        # Make the Date header value deterministic
+        self.patch(http, 'datetimeToString', lambda: 'Tuesday')
+
         channel = DummyChannel()
 
         def applicationFactory():
             def application(environ, startResponse):
-                startResponse('200 OK', [('foo', 'bar'), ('baz', 'quux')])
+                startResponse('200 OK', appHeaders)
                 return iter(())
             return application
 
         d, requestFactory = self.requestFactoryFactory()
         def cbRendered(ignored):
-            responseLines = channel.transport.written.getvalue().split('\r\n')
-            self.assertIn('Foo: bar', responseLines)
-            self.assertIn('Baz: quux', responseLines)
+            response = channel.transport.written.getvalue()
+            headers, rest = response.split('\r\n\r\n', 1)
+            headerLines = headers.split('\r\n')[1:]
+            headerLines.sort()
+            allExpectedHeaders = expectedHeaders + [
+                'Date: Tuesday',
+                'Server: ' + version,
+                'Transfer-Encoding: chunked']
+            allExpectedHeaders.sort()
+            self.assertEqual(headerLines, allExpectedHeaders)
+
         d.addCallback(cbRendered)
 
         request = self.lowLevelRender(
             requestFactory, applicationFactory,
             lambda: channel, 'GET', '1.1', [], [''], None, [])
         return d
+
+
+    def test_headers(self):
+        """
+        The headers passed to the I{start_response} callable are included in
+        the response as are the required I{Date} and I{Server} headers and the
+        necessary connection (hop to hop) header I{Transfer-Encoding}.
+        """
+        return self._headersTest(
+            [('foo', 'bar'), ('baz', 'quux')],
+            ['Baz: quux', 'Foo: bar'])
+
+
+    def test_applicationProvidedContentType(self):
+        """
+        If I{Content-Type} is included in the headers passed to the
+        I{start_response} callable, one I{Content-Type} header is included in
+        the response.
+        """
+        return self._headersTest(
+            [('content-type', 'monkeys are great')],
+            ['Content-Type: monkeys are great'])
+
+
+    def test_applicationProvidedServerAndDate(self):
+        """
+        If either I{Server} or I{Date} is included in the headers passed to the
+        I{start_response} callable, they are disregarded.
+        """
+        return self._headersTest(
+            [('server', 'foo'), ('Server', 'foo'),
+             ('date', 'bar'), ('dATE', 'bar')],
+            [])
 
 
     def test_delayedUntilReturn(self):

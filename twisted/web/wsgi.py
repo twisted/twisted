@@ -256,8 +256,15 @@ class _WSGIResponse:
         code, message = self.status.split(None, 1)
         code = int(code)
         self.request.setResponseCode(code, message)
+
+        # twisted.web.server.Request.process always addes a content-type
+        # response header.  That's not appropriate for us.
+        self.request.responseHeaders.removeHeader('content-type')
+
         for name, value in self.headers:
-            self.request.responseHeaders.addRawHeader(name, value)
+            # Don't allow the application to control these required headers.
+            if name.lower() not in ('server', 'date'):
+                self.request.responseHeaders.addRawHeader(name, value)
 
 
     def start(self):
