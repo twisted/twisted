@@ -800,8 +800,7 @@ class IReactorPluggableResolver(Interface):
 
 class IReactorFDSet(Interface):
     """
-    Implement me to be able to use
-    L{FileDescriptor<twisted.internet.abstract.FileDescriptor>} type resources.
+    Implement me to be able to use L{IFileDescriptor} type resources.
 
     This assumes that your main-loop uses UNIX-style numeric file descriptors
     (or at least similarly opaque IDs returned from a .fileno() method)
@@ -917,12 +916,12 @@ class ILoggingContext(Interface):
 
 class IFileDescriptor(ILoggingContext):
     """
-    A file descriptor.
+    An interface representing a UNIX-style numeric file descriptor.
     """
 
     def fileno():
         """
-        @return: The platform-specified representation of a file-descriptor
+        @return: The platform-specified representation of a file descriptor
                  number.
         """
 
@@ -944,7 +943,13 @@ class IFileDescriptor(ILoggingContext):
                        failure may be of other classes as well.
         """
 
+
 class IReadDescriptor(IFileDescriptor):
+    """
+    An L{IFileDescriptor} that can read.
+
+    This interface is generally used in conjunction with L{IReactorFDSet}.
+    """
 
     def doRead():
         """
@@ -953,6 +958,11 @@ class IReadDescriptor(IFileDescriptor):
 
 
 class IWriteDescriptor(IFileDescriptor):
+    """
+    An L{IFileDescriptor} that can write.
+
+    This interface is generally used in conjunction with L{IReactorFDSet}.
+    """
 
     def doWrite():
         """
@@ -962,8 +972,7 @@ class IWriteDescriptor(IFileDescriptor):
 
 class IReadWriteDescriptor(IReadDescriptor, IWriteDescriptor):
     """
-    I am a L{FileDescriptor<twisted.internet.abstract.FileDescriptor>} that
-    can both read and write.
+    An L{IFileDescriptor} that can both read and write.
     """
 
 
