@@ -65,6 +65,7 @@ class ManConverter(object):
             self.lineReceived(line)
         self.closeTags()
         self.write('</body>\n</html>\n')
+        outf.flush()
 
 
     def lineReceived(self, line):
