@@ -41,8 +41,8 @@ like) are also remembered, and the sockets are created at startup time (when
 base="twisted.application.service">Application</code> is persisted, you can adapt
 it to <code class="API">twisted.persisted.sob.IPersistable</code> and use
 the <code class="python">setStyle(style)</code> method with
-a string like <q>pickle</q>, <q>xml</q>, or <q>source</q>. These use different serializers (and different
-extensions: <q>.tap</q>, <q>.tax</q>, and <q>.tas</q> respectively) for the
+a string like <q>pickle</q> or <q>source</q>. These use different serializers (and different
+extensions: <q>.tap</q> and <q>.tas</q> respectively) for the
 saved Application.</p>
 
 <p>You can manually cause the application to be saved by calling its

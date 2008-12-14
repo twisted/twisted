@@ -498,7 +498,7 @@ class ApplicationRunner(object):
 
 def getApplication(config, passphrase):
     s = [(config[t], t)
-           for t in ['python', 'xml', 'source', 'file'] if config[t]][0]
+           for t in ['python', 'source', 'file'] if config[t]][0]
     filename, style = s[0], {'file':'pickle'}.get(s[1],s[1])
     try:
         log.msg("Loading %s..." % filename)
@@ -586,7 +586,7 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
                  "the profiler."],
                 ['no_save','o',   "do not save state on shutdown"],
                 ['encrypted', 'e',
-                 "The specified tap/aos/xml file is encrypted."],
+                 "The specified tap/aos file is encrypted."],
                 ['nothotshot', None,
                  "DEPRECATED. Don't use the hotshot profiler even if "
                  "it's available."]]
@@ -603,9 +603,6 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
                      ['python','y', None,
                       "read an application from within a Python file "
                       "(implies -o)"],
-                     ['xml', 'x', None,
-                      "Read an application from a .tax file "
-                      "(Marmalade format)."],
                      ['source', 's', None,
                       "Read an application from a .tas file (AOT format)."],
                      ['rundir','d','.',
@@ -619,10 +616,9 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
 
     #zsh_altArgDescr = {"foo":"use this description for foo instead"}
     #zsh_multiUse = ["foo", "bar"]
-    zsh_mutuallyExclusive = [("file", "python", "xml", "source")]
+    zsh_mutuallyExclusive = [("file", "python", "source")]
     zsh_actions = {"file":'_files -g "*.tap"',
                    "python":'_files -g "*.(tac|py)"',
-                   "xml":'_files -g "*.tax"',
                    "source":'_files -g "*.tas"',
                    "rundir":"_dirs"}
     #zsh_actionDescr = {"logfile":"log file name", "random":"random seed"}

@@ -1,9 +1,13 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import sys, copy, os, pickle, warnings
-from StringIO import StringIO
+"""
+Tests for L{twisted.application} and its interaction with
+L{twisted.persisted.sob}.
+"""
 
+import sys, copy, os, pickle
+from StringIO import StringIO
 
 from twisted.trial import unittest, util
 from twisted.application import service, internet, app
@@ -15,15 +19,6 @@ from twisted.protocols import wire, basic
 from twisted.internet import protocol, reactor
 from twisted.internet.utils import getProcessOutputAndValue
 from twisted.application import reactors
-
-try:
-    from twisted.web import microdom
-    gotMicrodom = True
-except ImportError:
-    warnings.warn("Not testing xml persistence as twisted.web.microdom "
-                  "not available")
-    gotMicrodom = False
-
 
 oldAppSuppressions = [util.suppress(message='twisted.internet.app is deprecated',
                                     category=DeprecationWarning)]
@@ -232,9 +227,7 @@ class TestLoading(unittest.TestCase):
     def test_simpleStoreAndLoad(self):
         a = service.Application("hello")
         p = sob.IPersistable(a)
-        for style in 'xml source pickle'.split():
-            if style == 'xml' and not gotMicrodom:
-                continue
+        for style in 'source pickle'.split():
             p.setStyle(style)
             p.save()
             a1 = service.loadApplication("hello.ta"+style[0], style)
@@ -260,10 +253,8 @@ class TestAppSupport(unittest.TestCase):
         Test loading an application file in different dump format.
         """
         a = service.Application("hello")
-        baseconfig = {'file': None, 'xml': None, 'source': None, 'python':None}
-        for style in 'source xml pickle'.split():
-            if style == 'xml' and not gotMicrodom:
-                continue
+        baseconfig = {'file': None, 'source': None, 'python':None}
+        for style in 'source pickle'.split():
             config = baseconfig.copy()
             config[{'pickle': 'file'}.get(style, style)] = 'helloapplication'
             sob.IPersistable(a).setStyle(style)
@@ -281,18 +272,10 @@ class TestAppSupport(unittest.TestCase):
         a1 = app.getApplication(config, None)
         self.assertEqual(service.IService(a1).name, "hello")
 
-    testLoadApplication.suppress = [
-        util.suppress(message="twisted.persisted.marmalade is deprecated",
-                      category=DeprecationWarning)]
-
     def test_convertStyle(self):
         appl = service.Application("lala")
-        for instyle in 'xml source pickle'.split():
-            if instyle == 'xml' and not gotMicrodom:
-                continue
-            for outstyle in 'xml source pickle'.split():
-                if outstyle == 'xml' and not gotMicrodom:
-                    continue
+        for instyle in 'source pickle'.split():
+            for outstyle in 'source pickle'.split():
                 sob.IPersistable(appl).setStyle(instyle)
                 sob.IPersistable(appl).save(filename="converttest")
                 app.convertStyle("converttest", instyle, None,

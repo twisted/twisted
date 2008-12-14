@@ -46,7 +46,7 @@ class IPersistable(Interface):
     def setStyle(style):
         """Set desired format.
 
-        @type style: string (one of 'pickle', 'source' or 'xml')
+        @type style: string (one of 'pickle' or 'source')
         """
 
     def save(tag=None, filename=None, passphrase=None):
@@ -71,7 +71,7 @@ class Persistent:
     def setStyle(self, style):
         """Set desired format.
 
-        @type style: string (one of 'pickle', 'source' or 'xml')
+        @type style: string (one of 'pickle' or 'source')
         """
         self.style = style
 
@@ -98,10 +98,7 @@ class Persistent:
         f.close()
 
     def _getStyle(self):
-        if self.style == "xml":
-            from twisted.persisted.marmalade import jellyToXML as dumpFunc
-            ext = "tax"
-        elif self.style == "source":
+        if self.style == "source":
             from twisted.persisted.aot import jellyToSource as dumpFunc
             ext = "tas"
         else:
@@ -158,14 +155,12 @@ def load(filename, style, passphrase=None):
     Deserialize an object from a file. The file can be encrypted.
 
     @param filename: string
-    @param style: string (one of 'source', 'xml' or 'pickle')
+    @param style: string (one of 'pickle' or 'source')
     @param passphrase: string
     """
     mode = 'r'
     if style=='source':
         from twisted.persisted.aot import unjellyFromSource as _load
-    elif style=='xml':
-        from twisted.persisted.marmalade import unjellyFromXML as _load
     else:
         _load, mode = pickle.load, 'rb'
     if passphrase:
@@ -226,8 +221,6 @@ def guessType(filename):
         '.etap': 'pickle',
         '.tas': 'source',
         '.etas': 'source',
-        '.tax': 'xml',
-        '.etax': 'xml'
     }[ext]
 
 __all__ = ['loadValueFromFile', 'load', 'Persistent', 'Persistant',

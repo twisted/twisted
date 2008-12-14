@@ -276,7 +276,7 @@ class AOTUnjellier:
         self.afterUnjelly = []
 
     ##
-    # unjelly helpers (copied pretty much directly from marmalade XXX refactor)
+    # unjelly helpers (copied pretty much directly from (now deleted) marmalade)
     ##
     def unjellyLater(self, node):
         """Unjelly a node, later.

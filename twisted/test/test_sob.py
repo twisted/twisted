@@ -13,15 +13,6 @@ from twisted.trial import unittest
 from twisted.persisted import sob
 from twisted.python import components
 
-try:
-    from twisted.web import microdom
-    gotMicrodom = True
-except ImportError:
-    import warnings
-    warnings.warn("Not testing xml persistence as twisted.web.microdom "
-                  "not available")
-    gotMicrodom = False
-
 class Dummy(components.Componentized):
     pass
 
@@ -40,9 +31,7 @@ class PersistTestCase(unittest.TestCase):
     def testStyles(self):
         for o in objects:
             p = sob.Persistent(o, '')
-            for style in 'xml source pickle'.split():
-                if style == 'xml' and not gotMicrodom:
-                    continue
+            for style in 'source pickle'.split():
                 p.setStyle(style)
                 p.save(filename='persisttest.'+style)
                 o1 = sob.load('persisttest.'+style, style)
@@ -52,9 +41,7 @@ class PersistTestCase(unittest.TestCase):
         o = Dummy()
         o.foo = 5
         o.setComponent(sob.IPersistable, sob.Persistent(o, 'lala'))
-        for style in 'xml source pickle'.split():
-            if style == 'xml' and not gotMicrodom:
-                continue
+        for style in 'source pickle'.split():
             sob.IPersistable(o).setStyle(style)
             sob.IPersistable(o).save(filename='lala.'+style)
             o1 = sob.load('lala.'+style, style)
@@ -65,9 +52,7 @@ class PersistTestCase(unittest.TestCase):
     def testNames(self):
         o = [1,2,3]
         p = sob.Persistent(o, 'object')
-        for style in 'xml source pickle'.split():
-            if style == 'xml' and not gotMicrodom:
-                continue
+        for style in 'source pickle'.split():
             p.setStyle(style)
             p.save()
             o1 = sob.load('object.ta'+style[0], style)
@@ -81,9 +66,7 @@ class PersistTestCase(unittest.TestCase):
         for o in objects:
             phrase='once I was the king of spain'
             p = sob.Persistent(o, '')
-            for style in 'xml source pickle'.split():
-                if style == 'xml' and not gotMicrodom:
-                    continue
+            for style in 'source pickle'.split():
                 p.setStyle(style)
                 p.save(filename='epersisttest.'+style, passphrase=phrase)
                 o1 = sob.load('epersisttest.'+style, style, phrase)
@@ -118,9 +101,6 @@ class PersistTestCase(unittest.TestCase):
         self.assertEqual('pickle', sob.guessType("file.etap"))
         self.assertEqual('source', sob.guessType("file.tas"))
         self.assertEqual('source', sob.guessType("file.etas"))
-        if gotMicrodom:
-            self.assertEqual('xml', sob.guessType("file.tax"))
-            self.assertEqual('xml', sob.guessType("file.etax"))
 
     def testEverythingEphemeralGetattr(self):
         """
