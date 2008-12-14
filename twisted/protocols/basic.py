@@ -205,8 +205,15 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
     MAX_LENGTH = 16384
 
     def clearLineBuffer(self):
-        """Clear buffered data."""
+        """
+        Clear buffered data.
+
+        @return: All of the cleared buffered data.
+        @rtype: C{str}
+        """
+        b = self.__buffer
         self.__buffer = ""
+        return b
 
     def dataReceived(self, data):
         """Protocol.dataReceived.

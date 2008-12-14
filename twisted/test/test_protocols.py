@@ -280,6 +280,29 @@ a'''
                           ['produce', 'hello world', 'unproduce', 'goodbye'])
 
 
+    def test_clearLineBuffer(self):
+        """
+        L{LineReceiver.clearLineBuffer} removes all buffered data and returns
+        it as a C{str} and can be called from beneath C{dataReceived}.
+        """
+        class ClearingReceiver(basic.LineReceiver):
+            def lineReceived(self, line):
+                self.line = line
+                self.rest = self.clearLineBuffer()
+
+        protocol = ClearingReceiver()
+        protocol.dataReceived('foo\r\nbar\r\nbaz')
+        self.assertEqual(protocol.line, 'foo')
+        self.assertEqual(protocol.rest, 'bar\r\nbaz')
+
+        # Deliver another line to make sure the previously buffered data is
+        # really gone.
+        protocol.dataReceived('quux\r\n')
+        self.assertEqual(protocol.line, 'quux')
+        self.assertEqual(protocol.rest, '')
+
+
+
 class LineOnlyReceiverTestCase(unittest.TestCase):
     """
     Test line only receiveer.
