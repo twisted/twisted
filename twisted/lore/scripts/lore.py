@@ -14,8 +14,13 @@ class IProcessor(Interface):
     """
     """
 
-    factory = Attribute(
-        "")
+    name = Attribute("The user-facing name of this processor")
+
+    moduleName = Attribute(
+        "The fully qualified Python name of the object defining "
+        "this processor.  This object (typically a module) should "
+        "have a C{factory} attribute with C{generate_<output>} methods.")
+
 
 class Options(usage.Options):
 

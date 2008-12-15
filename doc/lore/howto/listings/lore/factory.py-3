@@ -1,5 +1,5 @@
 from twisted.lore import default
-import spitters
+from myhtml import spitters
 
 class MyProcessingFunctionFactory(default.ProcessingFunctionFactory):
     # 1. add the keys "chapter" and "section" to latexSpitters to handle the
@@ -13,7 +13,7 @@ class MyProcessingFunctionFactory(default.ProcessingFunctionFactory):
         checker = lint.getDefaultChecker()
         checker.allowedClasses = checker.allowedClasses.copy()
         oldSpan = checker.allowedClasses['span']
-        checkfunc=lambda cl: oldSpan(cl) or cl in ['marketinglie', 
+        checkfunc=lambda cl: oldSpan(cl) or cl in ['marketinglie',
                                                    'productname']
         checker.allowedClasses['span'] = checkfunc
         return checker

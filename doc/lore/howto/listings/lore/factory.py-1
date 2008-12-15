@@ -1,5 +1,5 @@
 from twisted.lore import default
-import spitters
+from myhtml import spitters
 
 class MyProcessingFunctionFactory(default.ProcessingFunctionFactory):
     latexSpitters={None: spitters.MyLatexSpitter,

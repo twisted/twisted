@@ -69,34 +69,24 @@ Template.  However, we also want these effects to work in LaTeX, and we want
 the output of lint to produce no warnings when it sees lines with these 2
 classes.  To make LaTeX and lint work, we start by creating a plugin.</p>
 
-<a href="listings/lore/plugins.tml" class="py-listing">
+<a href="listings/lore/a_lore_plugin.py" class="py-listing">
   Listing 1: The Plugin File</a>
 
-<p>Name this file <code class="py-filename">plugins.tml</code>, and put it in
-a new package directory named <code class="py-filename">myhtml</code>.  Also
-create an <code class="py-filename">__init__.py</code> file in your new
-package.  Note that <em>the __init__ file can contain nothing but a doc
-  string, but it must exist.</em>  If <code
-  class="py-filename">__init__.py</code> is empty, you will have problems with
-certain unzip programs that don't extract empty files.</p>
+  <p>Create this file in a <code class="shell">twisted/plugins/</code>
+  directory (<em>not</em> a package) which is located in a directory in the
+  Python module search path.  See the <a href="../../core/plugin.xhtml">Twisted
+  plugin howto</a> for more details on plugins.</p>
 
-  <p>The combination of plugin file and __init__ file causes the new package
-  to be treated like a Twisted plugin, one that Lore knows how to make use of.
-  The first three arguments to <code>register()</code> are the human-readable
-  name, module name, and description of your plugin.  The <code>type</code>
-  parameter makes this plugin visible to the Lore system (rather than some
-  other part of Twisted).  The <code>tapname</code> parameter is an arbitrary
-  filename with no extension; by convention you should use the lowercase
-  version of your first argument (the human-readable name).  Users of your
-  extension will pass this argument to lore with the <code
-    class="shell">--input</code> parameter on the command line.  (For more
-  details on plugins, read <a href="plugin.xhtml">Writing a New Plug-In for
-    Twisted</a>.)</p>
-
-<p>Let's look at that module name more closely: <code
-  class="python">myhtml.factory</code>.  We will be creating this file next,
-in the package named <code class="py-filename">myhtml</code>.  The purpose of
-the factory module is to tell Lore how to process your input.</p>
+  <p>Users of your extension will pass the value of your plugin's <code
+  class="python">name</code> attribute to lore with the <code
+  class="shell">--input</code> parameter on the command line to select it.  For
+  example, to select the plugin defined above, a user would pass <code
+  class="shell">--input myhtml</code>.  The <code
+  class="python">moduleName</code> attribute tells Lore where to find the code
+  implementing the plugin.  In particular, this module should have a <code
+  class="python">factory</code> attribute which defines a <code
+  class="python">generator_</code>-prefixed method for each output format it
+  supports.  Next we'll look at this module.</p>
 
 <a href="listings/lore/factory.py-1" class="py-listing">Listing 2: The Input
   Factory</a>
@@ -144,8 +134,9 @@ structure should look like this:</p>
 myhtml/
        __init__.py
        factory.py
-       plugins.tml
        spitters.py
+twisted/plugins/
+       a_lore_plugin.py
 </pre>
 
 <p>In the parent directory of myhtml (that is, <code>myhtml/..</code>), run
@@ -208,6 +199,7 @@ making these simple changes:</p>
   <li><a class="py-listing" href="listings/lore/spitters.py-2">spitters.py</a></li>
 </ul>
 
+<!--
 <h3>Creating New Outputs</h3>
 <p><div class="doit">write some stuff</div></p>
 
@@ -222,7 +214,7 @@ making these simple changes:</p>
 
 <h3>Support New File Formats</h3>
 <p><div class="doit">write some stuff</div></p>
-
+-->
 
 </body>
 </html>

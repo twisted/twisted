@@ -28,14 +28,20 @@ Full source code for finger module here: <a class="py-listing" href="listings/fi
 
 <p>And register it all:</p>
 
-<a href="listings/finger/finger/plugins.tml" class="py-listing">finger/plugins.tml</a>
+<a href="listings/finger/twisted/plugins/finger_tutorial.py" class="py-listing">
+twisted/plugins/finger_tutorial.py
+</a>
 
 <p>And now, the following works</p>
 
 <pre class="shell">
-% mktap finger --file=/etc/users --ircnick=fingerbot
-% sudo twistd -nf finger.tap
+% sudo twistd -n finger --file=/etc/users --ircnick=fingerbot
 </pre>
+
+<p>
+  For more details about this, see the <a href="../tap.xhtml">twistd plugin
+  documentation</a>.
+</p>
 
 <h2>OS Integration</h2>
 
