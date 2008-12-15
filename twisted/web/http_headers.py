@@ -135,9 +135,10 @@ class Headers(object):
     _caseMappings = {'www-authenticate': 'WWW-Authenticate'}
 
     def __init__(self, rawHeaders=None):
-        if rawHeaders is None:
-            rawHeaders = {}
-        self._rawHeaders = rawHeaders
+        self._rawHeaders = {}
+        if rawHeaders is not None:
+            for name, values in rawHeaders.iteritems():
+                self.setRawHeaders(name, values)
 
 
     def __cmp__(self, other):

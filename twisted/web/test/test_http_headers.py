@@ -16,6 +16,15 @@ class HeadersTests(TestCase):
     """
     Tests for L{Headers}.
     """
+    def test_initializer(self):
+        """
+        The header values passed to L{Headers.__init__} can be retrieved via
+        L{Headers.getRawHeaders}.
+        """
+        h = Headers({'Foo': ['bar']})
+        self.assertEqual(h.getRawHeaders('foo'), ['bar'])
+
+
     def test_setRawHeaders(self):
         """
         L{Headers.setRawHeaders} sets the header values for the given
