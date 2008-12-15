@@ -10,16 +10,19 @@ by each subprocess and not by the main web server (i.e. GET, POST etc.).
 """
 
 # System Imports
-import types, os, copy, string, cStringIO
-if (os.sys.platform != 'win32') and (os.name != 'java'):
+import types, os, copy, cStringIO
+try:
     import pwd
+except ImportError:
+    pwd = None
+
+from xml.dom.minidom import Element, Text
 
 # Twisted Imports
 from twisted.spread import pb
 from twisted.web import http
 from twisted.python import log
 from twisted.persisted import styles
-from twisted.web.woven import page
 from twisted.internet import address, reactor
 
 # Sibling Imports
@@ -199,7 +202,15 @@ class ResourcePublisher(pb.Root, styles.Versioned):
         log.msg( request )
         return res.render(request)
 
-class UserDirectory(page.Page):
+class UserDirectory(resource.Resource):
+    """
+    A resource which lists available user resources and serves them as
+    children.
+
+    @ivar _pwd: An object like L{pwd} which is used to enumerate users and
+        their home directories.
+    """
+
     userDirName = 'public_html'
     userSocketName = '.twistd-web-pb'
 
@@ -208,7 +219,7 @@ class UserDirectory(page.Page):
     <head>
     <title>twisted.web.distrib.UserDirectory</title>
     <style>
-    
+
     a
     {
         font-family: Lucida, Verdana, Helvetica, Arial, sans-serif;
@@ -234,44 +245,61 @@ class UserDirectory(page.Page):
         font-family: Lucida, Verdana, Helvetica, Arial, sans-serif;
         color: #000;
     }
-    
     </style>
-    <base view="Attributes" model="base" />
     </head>
 
     <body>
     <h1>twisted.web.distrib.UserDirectory</h1>
 
-    <ul view="List" model="directory">
-            <li pattern="listItem"><a view="Link" /> </li>
-    </ul>
+    %(users)s
 </body>
 </html>
-    """
+"""
 
-    def wmfactory_base(self, request):
-        return {'href':request.prePathURL()}
+    def __init__(self, userDatabase=None):
+        resource.Resource.__init__(self)
+        if userDatabase is None:
+            userDatabase = pwd
+        self._pwd = userDatabase
 
-    def wmfactory_directory(self, request):
-        m = []
-        for user in pwd.getpwall():
-            pw_name, pw_passwd, pw_uid, pw_gid, pw_gecos, pw_dir, pw_shell \
-                     = user
-            realname = string.split(pw_gecos,',')[0]
+
+    def _users(self):
+        """
+        Return a list of two-tuples giving links to user resources and text to
+        associate with those links.
+        """
+        users = []
+        for user in self._pwd.getpwall():
+            name, passwd, uid, gid, gecos, dir, shell = user
+            realname = gecos.split(',')[0]
             if not realname:
-                realname = pw_name
-            if os.path.exists(os.path.join(pw_dir, self.userDirName)):
-                m.append({
-                        'href':'%s/'%pw_name,
-                        'text':'%s (file)'%realname
-                })
-            twistdsock = os.path.join(pw_dir, self.userSocketName)
+                realname = name
+            if os.path.exists(os.path.join(dir, self.userDirName)):
+                users.append((name, realname + ' (file)'))
+            twistdsock = os.path.join(dir, self.userSocketName)
             if os.path.exists(twistdsock):
-                linknm = '%s.twistd' % pw_name
-                m.append({
-                        'href':'%s/'%linknm,
-                        'text':'%s (twistd)'%realname})
-        return m
+                linkName = name + '.twistd'
+                users.append((linkName, realname + ' (twistd)'))
+        return users
+
+
+    def render(self, request):
+        """
+        Render as HTML a listing of all known users with links to their
+        personal resources.
+        """
+        listing = Element('ul')
+        for link, text in self._users():
+            linkElement = Element('a')
+            linkElement.setAttribute('href', link + '/')
+            textNode = Text()
+            textNode.data = text
+            linkElement.appendChild(textNode)
+            item = Element('li')
+            item.appendChild(linkElement)
+            listing.appendChild(item)
+        return self.template % {'users': listing.toxml()}
+
 
     def getChild(self, name, request):
         if name == '':
@@ -287,7 +315,7 @@ class UserDirectory(page.Page):
             sub = 0
         try:
             pw_name, pw_passwd, pw_uid, pw_gid, pw_gecos, pw_dir, pw_shell \
-                     = pwd.getpwnam(username)
+                     = self._pwd.getpwnam(username)
         except KeyError:
             return error.NoResource()
         if sub:

@@ -10,10 +10,11 @@ import os
 
 from twisted.python.filepath import FilePath
 from twisted.python import log
-from twisted.internet.defer import succeed
 from twisted.trial.unittest import TestCase
-from twisted.web import static, http, server, script
+from twisted.web import static, http, script
 from twisted.web.test.test_web import DummyRequest
+from twisted.web.test._util import _render
+
 
 
 class StaticFileTests(TestCase):
@@ -21,18 +22,7 @@ class StaticFileTests(TestCase):
     Tests for the basic behavior of L{File}.
     """
     def _render(self, resource, request):
-        result = resource.render(request)
-        if isinstance(result, str):
-            request.write(result)
-            request.finish()
-            return succeed(None)
-        elif result is server.NOT_DONE_YET:
-            if request.finished:
-                return succeed(None)
-            else:
-                return request.notifyFinish()
-        else:
-            self.fail("Unexpected return value: %r" % (result,))
+        return _render(resource, request)
 
 
     def test_notFound(self):
