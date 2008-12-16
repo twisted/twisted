@@ -85,11 +85,33 @@ Via: SIP/2.0/UDP 10.0.0.1:5060;rport
 
 """.replace("\n", "\r\n")
 
+trickyRequest = """\
+INVITE sip:bob@10.0.0.2 SIP/2.0\r
+Via: SIP/2.0/UDP proxy2.org:5060\r
+     ;branch=z9hG4bKc97e87daf80295082a8208b5db61beab\r
+Via: SIP/2.0/UDP proxy1.org:5060\r
+     ;branch=z9hG4bKcab2bd111444e23321d67d33584580b3\r
+     ;received=10.1.0.1\r
+Via: SIP/2.0/UDP client.com:5060;branch=z9hG4bK74bf9;received=10.0.0.1\r
+Max-Forwards: 68\r
+Record-Route: <sip:proxy2.org:5060;lr>,"Awesome Proxy" <sip:proxy1.org:5060>;lr\r
+From: Alice <sip:alice@proxy1.org>;tag=9fxced76sl\r
+To: Bob <sip:bob@proxy2.org>\r
+Call-ID: 3848276298220188511@client.com\r
+CSeq: 1 INVITE\r
+Contact: <sip:alice@client.com>\r
+\r
+"""
+
 class TestRealm:
     def requestAvatar(self, avatarId, mind, *interfaces):
         return sip.IContact, None, lambda: None
 
+
 class MessageParsingTestCase(unittest.TestCase):
+    """
+    Tests for L{sip.MessagesParser}.
+    """
     def setUp(self):
         self.l = []
         self.parser = sip.MessagesParser(self.l.append)
@@ -155,7 +177,7 @@ class MessageParsingTestCase(unittest.TestCase):
         self.validateMessage(l[0], "INVITE", "sip:foo",
                              {"from": ["mo"], "to": ["joe"], "content-length": ["4"]},
                              "abcd")
-        
+
     def testSimpleResponse(self):
         l = self.l
         self.feedMessage(response1)
@@ -166,6 +188,27 @@ class MessageParsingTestCase(unittest.TestCase):
         self.assertEquals(m.headers, {"from": ["foo"], "to": ["bar"], "content-length": ["0"]})
         self.assertEquals(m.body, "")
         self.assertEquals(m.finished, 1)
+
+    def testMultiHeaders(self):
+        self.feedMessage(trickyRequest)
+        m = self.l[0]
+        self.assertEquals(m.headers['record-route'], ["<sip:proxy2.org:5060;lr>", '"Awesome Proxy" <sip:proxy1.org:5060>;lr'])
+    def testContinuationLines(self):
+        self.feedMessage(trickyRequest)
+        m = self.l[0]
+        self.assertEquals(m.headers['via'], ["SIP/2.0/UDP proxy2.org:5060;branch=z9hG4bKc97e87daf80295082a8208b5db61beab",
+                          "SIP/2.0/UDP proxy1.org:5060;branch=z9hG4bKcab2bd111444e23321d67d33584580b3;received=10.1.0.1",
+                          "SIP/2.0/UDP client.com:5060;branch=z9hG4bK74bf9;received=10.0.0.1"])
+
+
+    def test_incomplete(self):
+        """
+        If the body is shorter than the content length given in the header,
+        the message should be regarded as corrupt and ignored.
+        """
+        self.feedMessage(request4[:-1])
+        self.assertEquals(len(self.l), 2)
+
 
 
 class MessageParsingTestCase2(MessageParsingTestCase):
@@ -294,6 +337,19 @@ class ParseTestCase(unittest.TestCase):
             self.assertEquals(name, gname)
             self.assertEquals(gurl.toString(), urls)
             self.assertEquals(gparams, params)
+
+
+    def testHeaderSplitting(self):
+        """
+        L{sip.MessagesParser._splitMultiHeader} should produce a list of items
+        from the right-hand side of a multi-valued SIP header.
+        """
+        mp = sip.MessagesParser(None)
+        self.assertEquals(mp._splitMultiHeader(
+                r'"fu\\" <sip:foo@example.com>, sip:bar@example.com'),
+                          [r'"fu\\" <sip:foo@example.com>',
+                            ' sip:bar@example.com'])
+
 
 
 class DummyLocator:

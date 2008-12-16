@@ -491,35 +491,66 @@ class Response(Message):
 
 
 class MessagesParser(basic.LineReceiver):
-    """A SIP messages parser.
+    """
+    A SIP messages parser.
 
-    Expects dataReceived, dataDone repeatedly,
-    in that order. Shouldn't be connected to actual transport.
+    Expects dataReceived, dataDone repeatedly, in that order. Shouldn't be
+    connected to actual transport.
+
+    @ivar messageReceived: A one-argument callable, to be invoked when a
+    complete message has been parsed.
+
+    @ivar state: An indicator of what the parser expects next. One of
+    "firstline", "headers", "body", or "invalid".
     """
 
-    version = "SIP/2.0"
     acceptResponses = 1
     acceptRequests = 1
     state = "firstline" # or "headers", "body" or "invalid"
-    
-    debug = 0
-    
+    multiheaders = ['accept','accept-encoding', 'accept-language',
+                    'alert-info', 'allow', 'authentication-info',
+                    'call-info',  'content-encoding', 'content-language',
+                    'error-info', 'in-reply-to', 'proxy-require',  'require',
+                    'supported', 'unsupported', 'via', 'warning']
+    multiAddressHeaders = ['route', 'record-route', 'contact']
+
+
     def __init__(self, messageReceivedCallback):
+        """
+        @param messageReceivedCallback: A one-argument callable, to be invoked
+        when a complete message has been parsed.
+        """
         self.messageReceived = messageReceivedCallback
         self.reset()
 
+
     def reset(self, remainingData=""):
+        """
+        Prepare the parser to accept a new message.
+        """
         self.state = "firstline"
         self.length = None # body length
         self.bodyReceived = 0 # how much of the body we received
         self.message = None
         self.setLineMode(remainingData)
-    
-    def invalidMessage(self):
-        self.state = "invalid"
-        self.setRawMode()
-    
+
+
+    def invalidMessage(self, exc=None):
+        """
+        Raise an exception, indicating failure to parse a valid SIP message.
+        """
+        self.dataDone()
+        if isinstance(exc, SIPError):
+            raise exc
+        else:
+            raise SIPError(400)
+
+
     def dataDone(self):
+        """
+        Signal the end of the message if a complete message has been received,
+        and reset internal state to prepare for a new message.
+        """
         # clear out any buffered data that may be hanging around
         self.clearLineBuffer()
         if self.state == "firstline":
@@ -530,28 +561,37 @@ class MessagesParser(basic.LineReceiver):
         if self.length == None:
             # no content-length header, so end of data signals message done
             self.messageDone()
-        elif self.length < self.bodyReceived:
+        elif self.length > self.bodyReceived:
             # aborted in the middle
             self.reset()
         else:
-            # we have enough data and message wasn't finished? something is wrong
-            raise RuntimeError, "this should never happen"
-    
+            # we have enough data and message wasn't finished? something is
+            # wrong.
+            raise RuntimeError, "corrupted or overflowed SIP packet"
+
+
     def dataReceived(self, data):
+        """
+        Parse input lines, raising L{SIPError} on failure.
+        """
         try:
             basic.LineReceiver.dataReceived(self, data)
-        except:
+        except Exception, e:
             log.err()
-            self.invalidMessage()
-    
-    def handleFirstLine(self, line):
-        """Expected to create self.message."""
-        raise NotImplementedError
+            self.invalidMessage(e)
+
 
     def lineLengthExceeded(self, line):
+        """
+        Raise L{SIPError} if lines of ridiculous length are received.
+        """
         self.invalidMessage()
-    
+
+
     def lineReceived(self, line):
+        """
+        Handle a single SIP message line.
+        """
         if self.state == "firstline":
             while line.startswith("\n") or line.startswith("\r"):
                 line = line[1:]
@@ -576,43 +616,101 @@ class MessagesParser(basic.LineReceiver):
                 self.invalidMessage()
                 return
             self.state = "headers"
+            self.prevline = None
             return
         else:
             assert self.state == "headers"
         if line:
-            # XXX support multi-line headers
-            try:
-                name, value = line.split(":", 1)
-            except ValueError:
-                self.invalidMessage()
-                return
-            self.message.addHeader(name, value.lstrip())
-            if name.lower() == "content-length":
-                try:
-                    self.length = int(value.lstrip())
-                except ValueError:
-                    self.invalidMessage()
-                    return
+            x = line.lstrip()
+            if line != x:
+                #leading whitespace: this is a continuation line.
+                self.prevline += x
+            else:
+                #new header
+                if self.prevline:
+                    try:
+                        self.processHeaderLine(self.prevline)
+                    except ValueError:
+                        self.invalidMessage()
+                        return
+                self.prevline = line
+
         else:
             # CRLF, we now have message body until self.length bytes,
             # or if no length was given, until there is no more data
             # from the connection sending us data.
             self.state = "body"
+            try:
+                self.processHeaderLine(self.prevline)
+            except ValueError:
+                self.invalidMessage()
+                return
             if self.length == 0:
                 self.messageDone()
                 return
             self.setRawMode()
 
+
+    def _splitMultiHeader(self, s):
+        """
+        Split a header on commas, ignoring commas in quotes and escaped quotes.
+        """
+        headers = []
+        last = 0
+        quoted = False
+        for i in xrange(len(s)):
+            if s[i] == '"':
+                quoted = ~quoted
+                if i == 0: continue
+                j = i-1
+                while s[j] == '\\':
+                    quoted = ~quoted
+                    j = j-1
+            if not quoted and s[i] == ',':
+                headers.append(s[last:i])
+                last = i+1
+        headers.append(s[last:])
+        return headers
+
+
+    def processHeaderLine(self, line):
+        """
+        Parse a single SIP header.
+        """
+        name, value = line.split(":", 1)
+        name, value = name.rstrip().lower(), value.lstrip()
+
+        if name in self.multiheaders:
+            multi = value.split(',')
+            if multi:
+                for v in multi:
+                    self.message.addHeader(name, v.strip())
+            else:
+                self.message.addHeader(v)
+        elif name in self.multiAddressHeaders:
+            for val in self._splitMultiHeader(value):
+                self.message.addHeader(name, val)
+        else:
+            self.message.addHeader(name, value)
+        if name.lower() == "content-length":
+            self.length = int(value.lstrip())
+
+
     def messageDone(self, remainingData=""):
+        """
+        Invoke the C{messageReceived} callback with the completed message
+        object and prepare to receive a new message.
+        """
         assert self.state == "body"
         self.message.creationFinished()
         self.messageReceived(self.message)
         self.reset(remainingData)
-    
+
+
     def rawDataReceived(self, data):
-        assert self.state in ("body", "invalid")
-        if self.state == "invalid":
-            return
+        """
+        Handle message body data.
+        """
         if self.length == None:
             self.message.bodyDataReceived(data)
         else:
