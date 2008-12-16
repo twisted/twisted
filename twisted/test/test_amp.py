@@ -654,9 +654,6 @@ SWITCH_CLIENT_DATA = 'Success!'
 SWITCH_SERVER_DATA = 'No, really.  Success.'
 
 
-from twisted.test.proto_helpers import StringTransport
-
-
 class BinaryProtocolTests(unittest.TestCase):
     """
     Tests for L{amp.BinaryBoxProtocol}.
@@ -2221,6 +2218,38 @@ class CommandTestCase(unittest.TestCase):
                              ({"weird": argument}, client))
         response.addCallback(gotResponse)
         return response
+
+
+    def test_extraArgumentsDisallowed(self):
+        """
+        L{Command.makeArguments} raises L{amp.InvalidSignature} if the objects
+        dictionary passed to it includes a key which does not correspond to the
+        Python identifier for a defined argument.
+        """
+        self.assertRaises(
+            amp.InvalidSignature,
+            Hello.makeArguments,
+            dict(hello="hello", bogusArgument=object()), None)
+
+
+    def test_wireSpellingDisallowed(self):
+        """
+        If a command argument conflicts with a Python keyword, the
+        untransformed argument name is not allowed as a key in the dictionary
+        passed to L{Command.makeArguments}.  If it is supplied,
+        L{amp.InvalidSignature} is raised.
+
+        This may be a pointless implementation restriction which may be lifted.
+        The current behavior is tested to verify that such arguments are not
+        silently dropped on the floor (the previous behavior).
+        """
+        self.assertRaises(
+            amp.InvalidSignature,
+            Hello.makeArguments,
+            dict(hello="required", **{"print": "print value"}),
+            None)
+
+
 
 if not interfaces.IReactorSSL.providedBy(reactor):
     skipMsg = 'This test case requires SSL support in the reactor'

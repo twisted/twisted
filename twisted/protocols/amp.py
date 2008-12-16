@@ -167,6 +167,7 @@ from struct import pack
 
 from zope.interface import Interface, implements
 
+from twisted.python.compat import set
 from twisted.python.reflect import accumulateClassDict
 from twisted.python.failure import Failure
 from twisted.python import log, filepath
@@ -1435,6 +1436,14 @@ class Command:
 
         @return: An instance of this L{Command}'s C{commandType}.
         """
+        allowedNames = set()
+        for (argName, ignored) in cls.arguments:
+            allowedNames.add(_wireNameToPythonIdentifier(argName))
+
+        for intendedArg in objects:
+            if intendedArg not in allowedNames:
+                raise InvalidSignature(
+                    "%s is not a valid argument" % (intendedArg,))
         return _objectsToStrings(objects, cls.arguments, cls.commandType(),
                                  proto)
     makeArguments = classmethod(makeArguments)
