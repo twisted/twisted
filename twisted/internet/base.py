@@ -460,12 +460,13 @@ class ReactorBase(object):
         return oldResolver
 
     def wakeUp(self):
-        """Wake up the event loop."""
-        if not threadable.isInIOThread():
-            if self.waker:
-                self.waker.wakeUp()
-            # if the waker isn't installed, the reactor isn't running, and
-            # therefore doesn't need to be woken up
+        """
+        Wake up the event loop.
+        """
+        if self.waker:
+            self.waker.wakeUp()
+        # if the waker isn't installed, the reactor isn't running, and
+        # therefore doesn't need to be woken up
 
     def doIteration(self, delay):
         """
@@ -734,8 +735,7 @@ class ReactorBase(object):
                     break
             del self.threadCallQueue[:count]
             if self.threadCallQueue:
-                if self.waker:
-                    self.waker.wakeUp()
+                self.waker.wakeUp()
 
         # insert new delayed calls now
         self._insertNewDelayedCalls()
