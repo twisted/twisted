@@ -1,18 +1,8 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Core 8.2.0pre2 (2008-11-20)
-===========================
-
-Fixes
------
- - TLS Session Tickets are now disabled by default, allowing connections to
-   certain servers which hang when an empty session ticket is received (like 
-   GTalk) (#3463)
-
-
-Core 8.2.0pre1 (2008-11-16)
-===========================
+Core 8.2.0 (2008-12-16)
+=======================
 
 Features
 --------
@@ -53,6 +43,9 @@ Features
 
 Fixes
 -----
+ - TLS Session Tickets are now disabled by default, allowing connections to
+   certain servers which hang when an empty session ticket is received (like 
+   GTalk) (#3463)
  - twisted.enterprise.adbapi.ConnectionPool's noisy attribute now defaults to
    False, as documented (#1806)
  - Error handling and logging in adbapi is now much improved (#3244)
