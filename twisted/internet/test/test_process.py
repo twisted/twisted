@@ -21,16 +21,34 @@ from twisted.internet.error import ProcessDone, PotentialZombieWarning
 from twisted.internet.error import ProcessTerminated
 
 
+class _ShutdownCallbackProcessProtocol(ProcessProtocol):
+    """
+    An L{IProcessProtocol} which fires a Deferred when the process it is
+    associated with ends.
+    """
+    def __init__(self, whenFinished):
+        self.whenFinished = whenFinished
+
+
+    def processEnded(self, reason):
+        self.whenFinished.callback(None)
+
+
+
 class ProcessTestsBuilderBase(ReactorBuilder):
     def spawnProcess(self, reactor):
         """
         Call C{reactor.spawnProcess} with some simple arguments.  Do this here
         so that code object referenced by the stack frame has a C{co_filename}
         attribute set to this file so that L{TestCase.assertWarns} can be used.
+
+        Return a L{Deferred} which fires when the process has exited.
         """
+        onConnection = Deferred()
         reactor.spawnProcess(
-            ProcessProtocol(), sys.executable, [sys.executable, "-c", ""],
-            usePTY=self.usePTY)
+            _ShutdownCallbackProcessProtocol(onConnection), sys.executable,
+            [sys.executable, "-c", ""], usePTY=self.usePTY)
+        return onConnection
 
 
     def test_spawnProcessTooEarlyWarns(self):
@@ -43,10 +61,27 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         warning and this test.
         """
         reactor = self.buildReactor()
-        self.assertWarns(
+        whenFinished = self.assertWarns(
             PotentialZombieWarning,
             PotentialZombieWarning.MESSAGE, __file__,
             self.spawnProcess, reactor)
+
+        def check():
+            # Handle the exact problem the warning we're testing for is about.
+            # If the SIGCHLD arrives before we install our SIGCHLD handler,
+            # we'll never see the process exit.  So after the SIGCHLD handler
+            # is installed, try to reap children, just in case.
+            from twisted.internet.process import reapAllProcesses
+            reapAllProcesses()
+        reactor.callWhenRunning(check)
+
+        # Now wait for the process to exit before finishing the test.  If we
+        # don't do this, tearDown might close the PTY before the child is done
+        # with it.
+        whenFinished.addCallback(
+            lambda ignored: reactor.callWhenRunning(reactor.stop))
+
+        self.runReactor(reactor)
 
 
     def test_callWhenRunningSpawnProcessWarningFree(self):
@@ -54,13 +89,16 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         L{PotentialZombieWarning} is not emitted when the reactor is run after
         C{reactor.callWhenRunning(reactor.spawnProcess, ...)} has been called.
         """
-        events = []
-        self.patch(warnings, 'warn', lambda *a, **kw: events.append(a))
         reactor = self.buildReactor()
-        reactor.callWhenRunning(self.spawnProcess, reactor)
-        reactor.callWhenRunning(reactor.stop)
+        def spawnProcess():
+            whenFinished = self.spawnProcess(reactor)
+            # Wait for the process to exit before finishing the test.  If we
+            # don't do this, tearDown might close the PTY before the child is
+            # done with it.
+            whenFinished.addCallback(lambda ign: reactor.stop())
+        reactor.callWhenRunning(spawnProcess)
         self.runReactor(reactor)
-        self.assertFalse(events)
+        self.assertEqual(self.flushWarnings(), [])
 
 
     if getattr(signal, 'SIGCHLD', None) is None:
