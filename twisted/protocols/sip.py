@@ -109,6 +109,8 @@ statusCodes = {
     606: "Not Acceptable",
 }
 
+BAD_REQUEST = 400
+
 specialCases = {
     'cseq': 'CSeq',
     'call-id': 'Call-ID',
@@ -535,7 +537,6 @@ class MessagesParser(basic.LineReceiver):
         Prepare the parser to accept a new message.
         """
         self.state = "firstline"
-        self.length = None # body length
         self.bodyReceived = 0 # how much of the body we received
         self.message = None
         self.setLineMode(remainingData)
@@ -564,12 +565,16 @@ class MessagesParser(basic.LineReceiver):
         if self.state != "body":
             self.reset()
             return
-        if self.length == None:
+        if self.message.length == None:
             # no content-length header, so end of data signals message done
             self.messageDone()
-        elif self.length > self.bodyReceived:
+        elif self.message.length > self.bodyReceived:
             # aborted in the middle
+            msg = self.message
             self.reset()
+            # RFC 3261, section 18.3
+            if isinstance(msg, Request):
+                raise SIPError(BAD_REQUEST)
 
 
     def lineLengthExceeded(self, line):
@@ -627,7 +632,7 @@ class MessagesParser(basic.LineReceiver):
                 self.prevline = line
 
         else:
-            # CRLF, we now have message body until self.length bytes,
+            # CRLF, we now have message body until self.message.length bytes,
             # or if no length was given, until there is no more data
             # from the connection sending us data.
             self.state = "body"
@@ -636,7 +641,7 @@ class MessagesParser(basic.LineReceiver):
             except ValueError:
                 self.invalidMessage()
                 return
-            if self.length == 0:
+            if self.message.length == 0:
                 self.messageDone()
                 return
             self.setRawMode()
@@ -684,8 +689,6 @@ class MessagesParser(basic.LineReceiver):
                 self.message.addHeader(name, val)
         else:
             self.message.addHeader(name, value)
-        if name.lower() == "content-length":
-            self.length = int(value.lstrip())
 
 
     def messageDone(self, remainingData=""):
@@ -703,11 +706,11 @@ class MessagesParser(basic.LineReceiver):
         """
         Handle message body data.
         """
-        if self.length == None:
+        if self.message.length == None:
             self.message.bodyDataReceived(data)
         else:
             dataLen = len(data)
-            expectedLen = self.length - self.bodyReceived
+            expectedLen = self.message.length - self.bodyReceived
             if dataLen > expectedLen:
                 self.message.bodyDataReceived(data[:expectedLen])
                 self.messageDone(data[expectedLen:])
@@ -715,7 +718,7 @@ class MessagesParser(basic.LineReceiver):
             else:
                 self.bodyReceived += dataLen
                 self.message.bodyDataReceived(data)
-                if self.bodyReceived == self.length:
+                if self.bodyReceived == self.message.length:
                     self.messageDone()
 
 

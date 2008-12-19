@@ -71,6 +71,16 @@ Content-Length: 0
 
 """.replace("\n", "\r\n")
 
+# response, with content
+response2 = """SIP/2.0 200 OK
+From:  foo
+To:bar
+Record-Route: <sip:proxy2.org:5060;lr>
+Content-Length: 4
+
+efgh""".replace("\n", "\r\n")
+
+
 # short header version
 request_short = """\
 INVITE sip:foo SIP/2.0
@@ -212,6 +222,17 @@ class MessageParsingTestCase(unittest.TestCase):
         self.assertEquals(m.finished, 1)
 
 
+    def test_responseContents(self):
+        """
+        Responses with bodies parse correctly.
+        """
+        l = self.l
+        self.feedMessage(response2)
+        self.assertEquals(len(l), 1)
+        m = l[0]
+        self.assertEquals(m.body, "efgh")
+
+
     def test_multiHeaders(self):
         """
         Headers with multiple comma-separated values should be parsed as
@@ -238,13 +259,27 @@ class MessageParsingTestCase(unittest.TestCase):
          "SIP/2.0/UDP client.com:5060;branch=z9hG4bK74bf9;received=10.0.0.1"])
 
 
-    def test_incomplete(self):
+    def test_incompleteRequest(self):
         """
-        If the body is shorter than the content length given in the header,
-        the message should be regarded as corrupt and ignored.
+        If the body of a request is shorter than the content length given in
+        the header, the message should be regarded as corrupt and raise a
+        SIPError.
         """
-        self.feedMessage(request4[:-1])
-        self.assertEquals(len(self.l), 2)
+        e = self.assertRaises(sip.SIPError,
+                              self.feedMessage, request_short[:-1])
+        self.assertEqual(e.code, 400)
+
+
+    def test_incompleteResponse(self):
+        """
+        If the body of a response is shorter than the content length given in
+        the header, the message should be regarded as corrupt and silently
+        dropped.
+        """
+        self.feedMessage(response2[:-2])
+        self.assertEquals(len(self.l), 0)
+
+
 
 
     def test_invalidMessage(self):
