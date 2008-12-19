@@ -212,7 +212,6 @@ class MessageParsingTestCase(unittest.TestCase):
         self.assertEquals(m.finished, 1)
 
 
-
     def test_multiHeaders(self):
         """
         Headers with multiple comma-separated values should be parsed as
