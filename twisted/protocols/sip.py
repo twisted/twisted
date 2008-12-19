@@ -501,18 +501,24 @@ class MessagesParser(basic.LineReceiver):
     complete message has been parsed.
 
     @ivar state: An indicator of what the parser expects next. One of
-    "firstline", "headers", "body", or "invalid".
+    "firstline", "headers", or "body".
+
+    @cvar _multiheaders: List of names of headers which can contain
+    multiple comma-separated values.
+
+    @cvar _multiAddressHeaders: List of names of headers which can contain
+    multiple addresses separated by commas.
     """
 
     acceptResponses = 1
     acceptRequests = 1
-    state = "firstline" # or "headers", "body" or "invalid"
-    multiheaders = ['accept','accept-encoding', 'accept-language',
+    state = "firstline" # or "headers", "body"
+    _multiheaders = ['accept','accept-encoding', 'accept-language',
                     'alert-info', 'allow', 'authentication-info',
                     'call-info',  'content-encoding', 'content-language',
                     'error-info', 'in-reply-to', 'proxy-require',  'require',
                     'supported', 'unsupported', 'via', 'warning']
-    multiAddressHeaders = ['route', 'record-route', 'contact']
+    _multiAddressHeaders = ['route', 'record-route', 'contact']
 
 
     def __init__(self, messageReceivedCallback):
@@ -564,21 +570,6 @@ class MessagesParser(basic.LineReceiver):
         elif self.length > self.bodyReceived:
             # aborted in the middle
             self.reset()
-        else:
-            # we have enough data and message wasn't finished? something is
-            # wrong.
-            raise RuntimeError, "corrupted or overflowed SIP packet"
-
-
-    def dataReceived(self, data):
-        """
-        Parse input lines, raising L{SIPError} on failure.
-        """
-        try:
-            basic.LineReceiver.dataReceived(self, data)
-        except Exception, e:
-            log.err()
-            self.invalidMessage(e)
 
 
     def lineLengthExceeded(self, line):
@@ -661,10 +652,11 @@ class MessagesParser(basic.LineReceiver):
         for i in xrange(len(s)):
             if s[i] == '"':
                 quoted = ~quoted
-                if i == 0: continue
+                if i == 0:
+                    continue
                 j = i-1
                 while s[j] == '\\':
-                    quoted = ~quoted
+                    quoted = not quoted
                     j = j-1
             if not quoted and s[i] == ',':
                 headers.append(s[last:i])
@@ -680,14 +672,14 @@ class MessagesParser(basic.LineReceiver):
         name, value = line.split(":", 1)
         name, value = name.rstrip().lower(), value.lstrip()
 
-        if name in self.multiheaders:
+        if name in self._multiheaders:
             multi = value.split(',')
             if multi:
                 for v in multi:
                     self.message.addHeader(name, v.strip())
             else:
                 self.message.addHeader(v)
-        elif name in self.multiAddressHeaders:
+        elif name in self._multiAddressHeaders:
             for val in self._splitMultiHeader(value):
                 self.message.addHeader(name, val)
         else:

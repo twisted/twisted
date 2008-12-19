@@ -66,6 +66,7 @@ Content-Length: 4
 response1 = """SIP/2.0 200 OK
 From:  foo
 To:bar
+Record-Route: <sip:proxy2.org:5060;lr>
 Content-Length: 0
 
 """.replace("\n", "\r\n")
@@ -100,6 +101,20 @@ To: Bob <sip:bob@proxy2.org>\r
 Call-ID: 3848276298220188511@client.com\r
 CSeq: 1 INVITE\r
 Contact: <sip:alice@client.com>\r
+\r
+"""
+
+brokenRequest1 = """\
+INVITE sip:foo SIP/2.0\r
+From mo\r
+To: Joe\r
+\r
+"""
+
+brokenRequest2 = """\
+INVITE sip:foo SIP/2.0\r
+From: mo\r
+To Joe\r
 \r
 """
 
@@ -178,27 +193,50 @@ class MessageParsingTestCase(unittest.TestCase):
                              {"from": ["mo"], "to": ["joe"], "content-length": ["4"]},
                              "abcd")
 
-    def testSimpleResponse(self):
+
+    def test_simpleResponse(self):
+        """
+        A simple message with no body parses correctly.
+        """
         l = self.l
         self.feedMessage(response1)
         self.assertEquals(len(l), 1)
         m = l[0]
         self.assertEquals(m.code, 200)
         self.assertEquals(m.phrase, "OK")
-        self.assertEquals(m.headers, {"from": ["foo"], "to": ["bar"], "content-length": ["0"]})
+        self.assertEquals(m.headers,
+                          {"from": ["foo"], "to": ["bar"],
+                           "content-length": ["0"],
+                           "record-route": ["<sip:proxy2.org:5060;lr>"]})
         self.assertEquals(m.body, "")
         self.assertEquals(m.finished, 1)
 
-    def testMultiHeaders(self):
+
+
+    def test_multiHeaders(self):
+        """
+        Headers with multiple comma-separated values should be parsed as
+        separate header lines.
+        """
         self.feedMessage(trickyRequest)
         m = self.l[0]
-        self.assertEquals(m.headers['record-route'], ["<sip:proxy2.org:5060;lr>", '"Awesome Proxy" <sip:proxy1.org:5060>;lr'])
-    def testContinuationLines(self):
+        self.assertEquals(m.headers['record-route'],
+                          ["<sip:proxy2.org:5060;lr>",
+                           '"Awesome Proxy" <sip:proxy1.org:5060>;lr'])
+
+
+    def test_continuationLines(self):
+        """
+        Headers using continuation lines should be joined into a single value.
+        """
         self.feedMessage(trickyRequest)
         m = self.l[0]
-        self.assertEquals(m.headers['via'], ["SIP/2.0/UDP proxy2.org:5060;branch=z9hG4bKc97e87daf80295082a8208b5db61beab",
-                          "SIP/2.0/UDP proxy1.org:5060;branch=z9hG4bKcab2bd111444e23321d67d33584580b3;received=10.1.0.1",
-                          "SIP/2.0/UDP client.com:5060;branch=z9hG4bK74bf9;received=10.0.0.1"])
+        self.assertEquals(m.headers['via'],
+        ["SIP/2.0/UDP proxy2.org:5060;"
+         "branch=z9hG4bKc97e87daf80295082a8208b5db61beab",
+         "SIP/2.0/UDP proxy1.org:5060;"
+         "branch=z9hG4bKcab2bd111444e23321d67d33584580b3;received=10.1.0.1",
+         "SIP/2.0/UDP client.com:5060;branch=z9hG4bK74bf9;received=10.0.0.1"])
 
 
     def test_incomplete(self):
@@ -208,6 +246,28 @@ class MessageParsingTestCase(unittest.TestCase):
         """
         self.feedMessage(request4[:-1])
         self.assertEquals(len(self.l), 2)
+
+
+    def test_invalidMessage(self):
+        """
+        Receipt of invalid messages results in a L{sip.SIPError}.
+        """
+        e = self.assertRaises(sip.SIPError, self.feedMessage,
+                              "Not a SIP message at all\r\n")
+        self.assertEqual(e.code, 400)
+
+
+    def test_invalidHeader(self):
+        """
+        Receipt of messages with invalid header lines results in a
+        L{sip.SIPError}.
+        """
+        e = self.assertRaises(sip.SIPError, self.feedMessage,
+                              brokenRequest1)
+        self.assertEqual(e.code, 400)
+        e = self.assertRaises(sip.SIPError, self.feedMessage,
+                              brokenRequest2)
+        self.assertEqual(e.code, 400)
 
 
 
@@ -339,7 +399,7 @@ class ParseTestCase(unittest.TestCase):
             self.assertEquals(gparams, params)
 
 
-    def testHeaderSplitting(self):
+    def test_headerSplitting(self):
         """
         L{sip.MessagesParser._splitMultiHeader} should produce a list of items
         from the right-hand side of a multi-valued SIP header.
