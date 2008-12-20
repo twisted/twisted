@@ -11,7 +11,7 @@ Features
 
 Fixes
 -----
- - A file descriptor leak has been fixed (#3213, 1789)
+ - A file descriptor leak has been fixed (#3213, #1789)
  - "File Already Exists" errors are now handled more correctly (#3033)
  - Handling of CR IAC in TelnetClient is now improved (#3305)
  - SSHAgent is no longer completely unusable (#3332)

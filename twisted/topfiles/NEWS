@@ -38,7 +38,7 @@ Features
  - FTPClient now has a 'makeDirectory' method (#3500)
  - FTPClient now has a 'removeFile' method (#3491)
  - flushWarnings, A new Trial method for testing warnings, has been added
-   (#3487, #3427, #2820, #3506)
+   (#3487, #3427, #3506)
  - The log observer can now be configured in .tac files (#3534)
 
 Fixes
