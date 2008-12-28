@@ -1,3 +1,39 @@
+Ticket numbers in this file can be looked up by visiting
+http://twistedmatrix.com/trac/ticket/<number>
+
+Words 8.2.0 (2008-12-16)
+========================
+
+Feature
+-------
+ - There is now a standalone XMPP router included in twisted.words: it can be
+   used with the 'twistd xmpp-router' command line (#3407)
+ - A server factory for Jabber XML Streams has been added (#3435)
+ - Domish now allows for iterating child elements with specific qualified names
+   (#2429)
+ - IRCClient now has a 'back' method which removes the away status (#3366)
+ - IRCClient now has a 'whois' method (#3133)
+
+Fixes
+-----
+ - The IRC Client implementation can now deal with compound mode changes (#3230)
+ - The MSN protocol implementation no longer requires the CVR0 protocol to
+   be included in the VER command (#3394)
+ - In the IRC server implementation, topic messages will no longer be sent for
+   a group which has no topic (#2204)
+ - An infinite loop (which caused infinite memory usage) in irc.split has been
+   fixed.  This was triggered any time a message that starts with a delimiter
+   was sent (#3446)
+ - Jabber's toResponse now generates a valid stanza even when stanzaType is not
+   specified (#3467)
+ - The lifetime of authenticator instances in XmlStreamServerFactory is no
+   longer artificially extended (#3464)
+
+Other
+-----
+ - #3365
+
+
 8.1.0 (2008-05-18)
 ==================
 

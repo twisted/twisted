@@ -1,3 +1,44 @@
+Ticket numbers in this file can be looked up by visiting
+http://twistedmatrix.com/trac/ticket/<number>
+
+Web 8.2.0 (2008-12-16)
+======================
+
+Features
+--------
+ - The web server can now deal with multi-value headers in the new attributes of
+   Request, requestHeaders and responseHeaders (#165)
+ - There is now a resource-wrapper which implements HTTP Basic and Digest auth
+   in terms of twisted.cred (#696)
+ - It's now possible to limit the number of redirects that client.getPage will
+   follow (#2412)
+ - The directory-listing code no longer uses Woven (#3257)
+ - static.File now supports Range headers with a single range (#1493)
+ - twisted.web now has a rudimentary WSGI container (#2753)
+ - The web server now supports chunked encoding in requests (#3385)
+
+Fixes
+-----
+ - The xmlrpc client now raises an error when the server sends an empty
+   response (#3399)
+ - HTTPPageGetter no longer duplicates default headers when they're explicitly
+   overridden in the headers parameter (#1382)
+ - The server will no longer timeout clients which are still sending request
+   data (#1903)
+ - microdom's isEqualToNode now returns False when the nodes aren't equal
+   (#2542)
+
+Deprecations and Removals
+-------------------------
+
+ - Request.headers and Request.received_headers are not quite deprecated, but
+   they are discouraged in favor of requestHeaders and responseHeaders (#165)
+
+Other
+-----
+ - #909, #687, #2938, #1152, #2930, #2025, #2683, #3471
+
+
 8.1.0 (2008-05-18)
 ==================
 

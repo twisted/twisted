@@ -1,3 +1,28 @@
+Ticket numbers in this file can be looked up by visiting
+http://twistedmatrix.com/trac/ticket/<number>
+
+Names 8.2.0 (2008-12-16)
+========================
+
+Features
+--------
+ - The NAPTR record type is now supported (#2276)
+
+Fixes
+-----
+ - Make client.Resolver less vulnerable to the Birthday Paradox attack by
+   avoiding sending duplicate queries when it's not necessary (#3347)
+ - client.Resolver now uses a random source port for each DNS request (#3342)
+ - client.Resolver now uses a full 16 bits of randomness for message IDs,
+   instead of 10 which it previously used (#3342)
+ - All record types now have value-based equality and a string representation
+   (#2935)
+
+Other
+-----
+ - #1622, #3424
+
+
 8.1.0 (2008-05-18)
 ==================
 

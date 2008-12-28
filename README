@@ -1,18 +1,18 @@
-Twisted 8.1.0
+Twisted 8.2.0
 
 Quote of the Release:
 
-  <tazle> what should I read before poking at AMP?
-  <therve> William Faulkner
+  <itamar> exarkun: how exactly are you approaching the web2/web tickets?
+  <exarkun> three man teams, radio silence, weapons-free rules of engagement
 
-For information on what's new in Twisted 8.1.0, see the NEWS file that
+For information on what's new in Twisted 8.2.0, see the NEWS file that
 comes with the distribution.
 
 What is this?
 =============
 
   Twisted is an event-based framework for internet applications which works on
-  Python 2.3, 2.4, and 2.5.  The following are some of the modules included
+  Python 2.3 through 2.6.  The following are some of the modules included
   with Twisted::
 
   - twisted.application

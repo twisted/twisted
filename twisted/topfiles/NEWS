@@ -1,6 +1,128 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Core 8.2.0 (2008-12-16)
+=======================
+
+Features
+--------
+ - Reactors are slowly but surely becoming more isolated, thus improving
+   testability (#3198)
+ - FilePath has gained a realpath method, and FilePath.walk no longer infinitely
+   recurses in the case of a symlink causing a self-recursing filesystem tree
+   (#3098)
+ - FilePath's moveTo and copyTo methods now have an option to disable following
+   of symlinks (#3105)
+ - Private APIs are now included in the API documentation (#3268)
+ - hotshot is now the default profiler for the twistd --profile parameter and
+   using cProfile is now documented (#3355, #3356)
+ - Process protocols can now implement a processExited method, which is
+   distinct from processEnded in that it is called immediately when the child
+   has died, instead of waiting for all the file descriptors to be closed
+   (#1291)
+ - twistd now has a --umask option (#966, #3024)
+ - A new deferToThreadPool function exists in twisted.internet.threads (#2845)
+ - There is now an example of writing an FTP server in examples/ftpserver.py
+   (#1579)
+ - A new runAsEffectiveUser function has been added to twisted.python.util
+   (#2607)
+ - twisted.internet.utils.getProcessOutput now offers a mechanism for
+   waiting for the process to actually end, in the event of data received on
+   stderr (#3239)
+ - A fullyQualifiedName function has been added to twisted.python.reflect
+   (#3254)
+ - strports now defaults to managing access to a UNIX socket with a lock;
+   lockfile=0 can be included in the strports specifier to disable this
+   behavior (#2295)
+ - FTPClient now has a 'rename' method (#3335)
+ - FTPClient now has a 'makeDirectory' method (#3500)
+ - FTPClient now has a 'removeFile' method (#3491)
+ - flushWarnings, A new Trial method for testing warnings, has been added
+   (#3487, #3427, #3506)
+ - The log observer can now be configured in .tac files (#3534)
+
+Fixes
+-----
+ - TLS Session Tickets are now disabled by default, allowing connections to
+   certain servers which hang when an empty session ticket is received (like 
+   GTalk) (#3463)
+ - twisted.enterprise.adbapi.ConnectionPool's noisy attribute now defaults to
+   False, as documented (#1806)
+ - Error handling and logging in adbapi is now much improved (#3244)
+ - TCP listeners can now be restarted (#2913)
+ - Doctests can now be rerun with trial's --until-failure option (#2713)
+ - Some memory leaks have been fixed in trial's --until-failure
+   implementation (#3119, #3269)
+ - Trial's summary reporter now prints correct runtime information and handles
+   the case of 0 tests (#3184)
+ - Trial and any other user of the 'namedAny' function now has better error
+   reporting in the case of invalid module names (#3259)
+ - Multiple instances of trial can now run in parallel in the same directory
+   by creating _trial_temp directories with an incremental suffix (#2338)
+ - Trial's failUnlessWarns method now works on Python 2.6 (#3223)
+ - twisted.python.log now hooks into the warnings system in a way compatible
+   with Python 2.6 (#3211)
+ - The GTK2 reactor is now better supported on Windows, but still not passing
+   the entire test suite (#3203)
+ - low-level failure handling in spawnProcess has been improved and no longer
+   leaks file descriptors (#2305, #1410)
+ - Perspective Broker avatars now have their logout functions called in more
+   cases (#392)
+ - Log observers which raise exceptions are no longer removed (#1069)
+ - transport.getPeer now always includes an IP address in the Address returned
+   instead of a hostname (#3059)
+ - Functions in twisted.internet.utils which spawn processes now avoid calling
+   chdir in the case where no working directory is passed, to avoid some
+   obscure permission errors (#3159)
+ - twisted.spread.publish.Publishable no longer corrupts line endings on
+   Windows (#2327)
+ - SelectReactor now properly detects when a TLS/TCP connection has been
+   disconnected (#3218)
+ - twisted.python.lockfile no longer raises an EEXIST OSError and is much
+   better supported on Windows (#3367)
+ - When ITLSTransport.startTLS is called while there is data in the write
+   buffer, TLS negotiation will now be delayed instead of the method raising
+   an exception (#686)
+ - The userAnonymous argument to FTPFactory is now honored (#3390)
+ - twisted.python.modules no longer tries to "fix" sys.modules after an import
+   error, which was just causing problems (#3388)
+ - setup.py no longer attempts to build extension modules when run with Jython
+   (#3410)
+ - AMP boxes can now be sent in IBoxReceiver.startReceivingBoxes (#3477)
+ - AMP connections are closed as soon as a key length larger than 255 is
+   received (#3478)
+ - Log events with timezone offsets between -1 and -59 minutes are now
+   correctly reported as negative (#3515)
+
+Deprecations and Removals
+-------------------------
+ - Trial's setUpClass and tearDownClass methods are now deprecated (#2903)
+ - problemsFromTransport has been removed in favor of the argument passed to
+   connectionLost (#2874)
+ - The mode parameter to methods of IReactorUNIX and IReactorUNIXDatagram are
+   deprecated in favor of applications taking other security precautions, since
+   the mode of a Unix socket is often not respected (#1068)
+ - Index access on instances of twisted.internet.defer.FirstError has been
+   removed in favor of the subFailure attribute (#3298)
+ - The 'changeDirectory' method of FTPClient has been deprecated in favor of
+   the 'cwd' method (#3491)
+
+Other
+-----
+
+ - #3202, #2869, #3225, #2955, #3237, #3196, #2355, #2881, #3054, #2374, #2918,
+   #3210, #3052, #3267, #3288, #2985, #3295, #3297, #2512, #3302, #1222, #2631,
+   #3306, #3116, #3215, #1489, #3319, #3320, #3321, #1255, #2169, #3182, #3323,
+   #3301, #3318, #3029, #3338, #3346, #1144, #3173, #3165, #685, #3357, #2582,
+   #3370, #2438, #1253, #637, #1971, #2208, #979, #1790, #1888, #1882, #1793,
+   #754, #1890, #1931, #1246, #1025, #3177, #2496, #2567, #3400, #2213, #2027,
+   #3415, #1262, #3422, #2500, #3414, #3045, #3111, #2974, #2947, #3222, #2878,
+   #3402, #2909, #3423, #1328, #1852, #3382, #3393, #2029, #3489, #1853, #2026,
+   #2375, #3502, #3482, #3504, #3505, #3507, #2605, #3519, #3520, #3121, #3484,
+   #3439, #3216, #3511, #3524, #3521, #3197, #2486, #2449, #2748, #3381, #3236,
+   #671
+
+
 8.1.0 (2008-05-18)
 ==================
 

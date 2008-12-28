@@ -1,3 +1,20 @@
+Ticket numbers in this file can be looked up by visiting
+http://twistedmatrix.com/trac/ticket/<number>
+
+Web2 8.2.0 (2008-12-16)
+=======================
+
+Note: Twisted Web2 is being phased out in preference for Twisted Web, but some
+maintenance changes have been made.
+
+Fixes
+-----
+ - The main twisted.web2 docstring now indicates the current state of the
+   project (#2028)
+ - Headers which require unusual bytes are now quoted (#2346)
+ - Some links in the introduction documentation have been fixed (#2552)
+
+
 8.1.0 (2008-05-18)
 ==================
 

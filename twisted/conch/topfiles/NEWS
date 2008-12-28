@@ -1,3 +1,33 @@
+Ticket numbers in this file can be looked up by visiting
+http://twistedmatrix.com/trac/ticket/<number>
+
+Conch 8.2.0 (2008-12-16)
+========================
+
+Features
+--------
+ - The type of the protocols instantiated by SSHFactory is now parameterized
+   (#3443)
+
+Fixes
+-----
+ - A file descriptor leak has been fixed (#3213, #1789)
+ - "File Already Exists" errors are now handled more correctly (#3033)
+ - Handling of CR IAC in TelnetClient is now improved (#3305)
+ - SSHAgent is no longer completely unusable (#3332)
+ - The performance of insults.ClientProtocol is now greatly increased by
+   delivering more than one byte at a time to application code (#3386)
+ - Manhole and the conch server no longer need to be run as root when not
+   necessary (#2607)
+ - The value of FILEXFER_ATTR_ACMODTIME has been corrected (#2902)
+ - The management of known_hosts and host key verification has been overhauled
+   (#1376, #1301, #3494, #3496, #1292, #3499)
+
+Other
+-----
+ - #3193, #1633
+
+
 8.1.0 (2008-05-18)
 ==================
 

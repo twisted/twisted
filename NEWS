@@ -1,6 +1,283 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Core 8.2.0 (2008-12-16)
+=======================
+
+Features
+--------
+ - Reactors are slowly but surely becoming more isolated, thus improving
+   testability (#3198)
+ - FilePath has gained a realpath method, and FilePath.walk no longer infinitely
+   recurses in the case of a symlink causing a self-recursing filesystem tree
+   (#3098)
+ - FilePath's moveTo and copyTo methods now have an option to disable following
+   of symlinks (#3105)
+ - Private APIs are now included in the API documentation (#3268)
+ - hotshot is now the default profiler for the twistd --profile parameter and
+   using cProfile is now documented (#3355, #3356)
+ - Process protocols can now implement a processExited method, which is
+   distinct from processEnded in that it is called immediately when the child
+   has died, instead of waiting for all the file descriptors to be closed
+   (#1291)
+ - twistd now has a --umask option (#966, #3024)
+ - A new deferToThreadPool function exists in twisted.internet.threads (#2845)
+ - There is now an example of writing an FTP server in examples/ftpserver.py
+   (#1579)
+ - A new runAsEffectiveUser function has been added to twisted.python.util
+   (#2607)
+ - twisted.internet.utils.getProcessOutput now offers a mechanism for
+   waiting for the process to actually end, in the event of data received on
+   stderr (#3239)
+ - A fullyQualifiedName function has been added to twisted.python.reflect
+   (#3254)
+ - strports now defaults to managing access to a UNIX socket with a lock;
+   lockfile=0 can be included in the strports specifier to disable this
+   behavior (#2295)
+ - FTPClient now has a 'rename' method (#3335)
+ - FTPClient now has a 'makeDirectory' method (#3500)
+ - FTPClient now has a 'removeFile' method (#3491)
+ - flushWarnings, A new Trial method for testing warnings, has been added
+   (#3487, #3427, #3506)
+ - The log observer can now be configured in .tac files (#3534)
+
+Fixes
+-----
+ - TLS Session Tickets are now disabled by default, allowing connections to
+   certain servers which hang when an empty session ticket is received (like
+   GTalk) (#3463)
+ - twisted.enterprise.adbapi.ConnectionPool's noisy attribute now defaults to
+   False, as documented (#1806)
+ - Error handling and logging in adbapi is now much improved (#3244)
+ - TCP listeners can now be restarted (#2913)
+ - Doctests can now be rerun with trial's --until-failure option (#2713)
+ - Some memory leaks have been fixed in trial's --until-failure
+   implementation (#3119, #3269)
+ - Trial's summary reporter now prints correct runtime information and handles
+   the case of 0 tests (#3184)
+ - Trial and any other user of the 'namedAny' function now has better error
+   reporting in the case of invalid module names (#3259)
+ - Multiple instances of trial can now run in parallel in the same directory
+   by creating _trial_temp directories with an incremental suffix (#2338)
+ - Trial's failUnlessWarns method now works on Python 2.6 (#3223)
+ - twisted.python.log now hooks into the warnings system in a way compatible
+   with Python 2.6 (#3211)
+ - The GTK2 reactor is now better supported on Windows, but still not passing
+   the entire test suite (#3203)
+ - low-level failure handling in spawnProcess has been improved and no longer
+   leaks file descriptors (#2305, #1410)
+ - Perspective Broker avatars now have their logout functions called in more
+   cases (#392)
+ - Log observers which raise exceptions are no longer removed (#1069)
+ - transport.getPeer now always includes an IP address in the Address returned
+   instead of a hostname (#3059)
+ - Functions in twisted.internet.utils which spawn processes now avoid calling
+   chdir in the case where no working directory is passed, to avoid some
+   obscure permission errors (#3159)
+ - twisted.spread.publish.Publishable no longer corrupts line endings on
+   Windows (#2327)
+ - SelectReactor now properly detects when a TLS/TCP connection has been
+   disconnected (#3218)
+ - twisted.python.lockfile no longer raises an EEXIST OSError and is much
+   better supported on Windows (#3367)
+ - When ITLSTransport.startTLS is called while there is data in the write
+   buffer, TLS negotiation will now be delayed instead of the method raising
+   an exception (#686)
+ - The userAnonymous argument to FTPFactory is now honored (#3390)
+ - twisted.python.modules no longer tries to "fix" sys.modules after an import
+   error, which was just causing problems (#3388)
+ - setup.py no longer attempts to build extension modules when run with Jython
+   (#3410)
+ - AMP boxes can now be sent in IBoxReceiver.startReceivingBoxes (#3477)
+ - AMP connections are closed as soon as a key length larger than 255 is
+   received (#3478)
+ - Log events with timezone offsets between -1 and -59 minutes are now
+   correctly reported as negative (#3515)
+
+Deprecations and Removals
+-------------------------
+ - Trial's setUpClass and tearDownClass methods are now deprecated (#2903)
+ - problemsFromTransport has been removed in favor of the argument passed to
+   connectionLost (#2874)
+ - The mode parameter to methods of IReactorUNIX and IReactorUNIXDatagram are
+   deprecated in favor of applications taking other security precautions, since
+   the mode of a Unix socket is often not respected (#1068)
+ - Index access on instances of twisted.internet.defer.FirstError has been
+   removed in favor of the subFailure attribute (#3298)
+ - The 'changeDirectory' method of FTPClient has been deprecated in favor of
+   the 'cwd' method (#3491)
+
+Other
+-----
+
+ - #3202, #2869, #3225, #2955, #3237, #3196, #2355, #2881, #3054, #2374, #2918,
+   #3210, #3052, #3267, #3288, #2985, #3295, #3297, #2512, #3302, #1222, #2631,
+   #3306, #3116, #3215, #1489, #3319, #3320, #3321, #1255, #2169, #3182, #3323,
+   #3301, #3318, #3029, #3338, #3346, #1144, #3173, #3165, #685, #3357, #2582,
+   #3370, #2438, #1253, #637, #1971, #2208, #979, #1790, #1888, #1882, #1793,
+   #754, #1890, #1931, #1246, #1025, #3177, #2496, #2567, #3400, #2213, #2027,
+   #3415, #1262, #3422, #2500, #3414, #3045, #3111, #2974, #2947, #3222, #2878,
+   #3402, #2909, #3423, #1328, #1852, #3382, #3393, #2029, #3489, #1853, #2026,
+   #2375, #3502, #3482, #3504, #3505, #3507, #2605, #3519, #3520, #3121, #3484,
+   #3439, #3216, #3511, #3524, #3521, #3197, #2486, #2449, #2748, #3381, #3236,
+   #671
+
+
+Conch 8.2.0 (2008-12-16)
+========================
+
+Features
+--------
+ - The type of the protocols instantiated by SSHFactory is now parameterized
+   (#3443)
+
+Fixes
+-----
+ - A file descriptor leak has been fixed (#3213, #1789)
+ - "File Already Exists" errors are now handled more correctly (#3033)
+ - Handling of CR IAC in TelnetClient is now improved (#3305)
+ - SSHAgent is no longer completely unusable (#3332)
+ - The performance of insults.ClientProtocol is now greatly increased by
+   delivering more than one byte at a time to application code (#3386)
+ - Manhole and the conch server no longer need to be run as root when not
+   necessary (#2607)
+ - The value of FILEXFER_ATTR_ACMODTIME has been corrected (#2902)
+ - The management of known_hosts and host key verification has been overhauled
+   (#1376, #1301, #3494, #3496, #1292, #3499)
+
+Other
+-----
+ - #3193, #1633
+
+
+Lore 8.2.0 (2008-12-16)
+=======================
+
+Other
+-----
+ - #2207, #2514
+
+
+Mail 8.2.0 (2008-12-16)
+=======================
+
+Fixes
+-----
+ - The mailmail tool now provides better error messages for usage errors (#3339)
+ - The SMTP protocol implementation now works on PyPy (#2976)
+
+Other
+-----
+ - #3475
+
+
+Names 8.2.0 (2008-12-16)
+========================
+
+Features
+--------
+ - The NAPTR record type is now supported (#2276)
+
+Fixes
+-----
+ - Make client.Resolver less vulnerable to the Birthday Paradox attack by
+   avoiding sending duplicate queries when it's not necessary (#3347)
+ - client.Resolver now uses a random source port for each DNS request (#3342)
+ - client.Resolver now uses a full 16 bits of randomness for message IDs,
+   instead of 10 which it previously used (#3342)
+ - All record types now have value-based equality and a string representation
+   (#2935)
+
+Other
+-----
+ - #1622, #3424
+
+
+Web 8.2.0 (2008-12-16)
+======================
+
+Features
+--------
+ - The web server can now deal with multi-value headers in the new attributes of
+   Request, requestHeaders and responseHeaders (#165)
+ - There is now a resource-wrapper which implements HTTP Basic and Digest auth
+   in terms of twisted.cred (#696)
+ - It's now possible to limit the number of redirects that client.getPage will
+   follow (#2412)
+ - The directory-listing code no longer uses Woven (#3257)
+ - static.File now supports Range headers with a single range (#1493)
+ - twisted.web now has a rudimentary WSGI container (#2753)
+ - The web server now supports chunked encoding in requests (#3385)
+
+Fixes
+-----
+ - The xmlrpc client now raises an error when the server sends an empty
+   response (#3399)
+ - HTTPPageGetter no longer duplicates default headers when they're explicitly
+   overridden in the headers parameter (#1382)
+ - The server will no longer timeout clients which are still sending request
+   data (#1903)
+ - microdom's isEqualToNode now returns False when the nodes aren't equal
+   (#2542)
+
+Deprecations and Removals
+-------------------------
+
+ - Request.headers and Request.received_headers are not quite deprecated, but
+   they are discouraged in favor of requestHeaders and responseHeaders (#165)
+
+Other
+-----
+ - #909, #687, #2938, #1152, #2930, #2025, #2683, #3471
+
+
+Web2 8.2.0 (2008-12-16)
+=======================
+
+Note: Twisted Web2 is being phased out in preference for Twisted Web, but some
+maintenance changes have been made.
+
+Fixes
+-----
+ - The main twisted.web2 docstring now indicates the current state of the
+   project (#2028)
+ - Headers which require unusual bytes are now quoted (#2346)
+ - Some links in the introduction documentation have been fixed (#2552)
+
+
+Words 8.2.0 (2008-12-16)
+========================
+
+Feature
+-------
+ - There is now a standalone XMPP router included in twisted.words: it can be
+   used with the 'twistd xmpp-router' command line (#3407)
+ - A server factory for Jabber XML Streams has been added (#3435)
+ - Domish now allows for iterating child elements with specific qualified names
+   (#2429)
+ - IRCClient now has a 'back' method which removes the away status (#3366)
+ - IRCClient now has a 'whois' method (#3133)
+
+Fixes
+-----
+ - The IRC Client implementation can now deal with compound mode changes (#3230)
+ - The MSN protocol implementation no longer requires the CVR0 protocol to
+   be included in the VER command (#3394)
+ - In the IRC server implementation, topic messages will no longer be sent for
+   a group which has no topic (#2204)
+ - An infinite loop (which caused infinite memory usage) in irc.split has been
+   fixed.  This was triggered any time a message that starts with a delimiter
+   was sent (#3446)
+ - Jabber's toResponse now generates a valid stanza even when stanzaType is not
+   specified (#3467)
+ - The lifetime of authenticator instances in XmlStreamServerFactory is no
+   longer artificially extended (#3464)
+
+Other
+-----
+ - #3365
+
+
 Core 8.1.0 (2008-05-18)
 =======================
 
