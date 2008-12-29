@@ -138,18 +138,22 @@ def fontifyPythonNode(node):
     """
     Syntax color the given node containing Python source code.
 
+    The node must have a parent.
+
     @return: C{None}
     """
     oldio = cStringIO.StringIO()
     latex.getLatexText(node, oldio.write,
                        entities={'lt': '<', 'gt': '>', 'amp': '&'})
     oldio = cStringIO.StringIO(oldio.getvalue().strip()+'\n')
+    howManyLines = len(oldio.getvalue().splitlines())
     newio = cStringIO.StringIO()
     htmlizer.filter(oldio, newio, writer=htmlizer.SmallerHTMLWriter)
-    newio.seek(0)
-    newel = microdom.parse(newio).documentElement
+    lineLabels = _makeLineNumbers(howManyLines)
+    newel = microdom.parseString(newio.getvalue()).documentElement
     newel.setAttribute("class", "python")
     node.parentNode.replaceChild(newel, node)
+    newel.insertBefore(lineLabels, newel.firstChild())
 
 
 
@@ -180,12 +184,37 @@ def addPyListings(document, dir):
         filename = node.getAttribute("href")
         outfile = cStringIO.StringIO()
         lines = map(string.rstrip, open(os.path.join(dir, filename)).readlines())
-        data = '\n'.join(lines[int(node.getAttribute('skipLines', 0)):])
+        lines = lines[int(node.getAttribute('skipLines', 0)):]
+        howManyLines = len(lines)
+        data = '\n'.join(lines)
         data = cStringIO.StringIO(text.removeLeadingTrailingBlanks(data))
         htmlizer.filter(data, outfile, writer=htmlizer.SmallerHTMLWriter)
-        val = outfile.getvalue()
-        _replaceWithListing(node, val, filename, "py-listing")
+        sourceNode = microdom.parseString(outfile.getvalue()).documentElement
+        sourceNode.insertBefore(_makeLineNumbers(howManyLines), sourceNode.firstChild())
+        _replaceWithListing(node, sourceNode.toxml(), filename, "py-listing")
 
+
+
+def _makeLineNumbers(howMany):
+    """
+    Return an element which will render line numbers for a source listing.
+
+    @param howMany: The number of lines in the source listing.
+    @type howMany: C{int}
+
+    @return: An L{microdom.Element} which can be added to the document before
+        the source listing to add line numbers to it.
+    """
+    # Figure out how many digits wide the widest line number label will be.
+    width = len(str(howMany))
+
+    # Render all the line labels with appropriate padding
+    labels = ['%*d' % (width, i) for i in range(1, howMany + 1)]
+
+    # Create a p element with the right style containing the labels
+    p = microdom.Element('p', {'class': 'py-linenumber'})
+    p.appendChild(microdom.Text('\n'.join(labels) + '\n'))
+    return p
 
 
 def _replaceWithListing(node, val, filename, class_):

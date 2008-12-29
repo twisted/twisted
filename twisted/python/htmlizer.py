@@ -1,7 +1,11 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.python.test.test_htmlizer -*-
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
+"""
+HTML rendering of Python source.
+"""
+
 import tokenize, cgi, keyword
 import reflect
 
@@ -71,7 +75,7 @@ class SmallerHTMLWriter(HTMLWriter):
     noSpan = ["endmarker", "indent", "dedent", "op", "newline", "nl"]
 
 def filter(inp, out, writer=HTMLWriter):
-    out.write('<pre>\n')
+    out.write('<pre>')
     printer = TokenPrinter(writer(out.write).write).printtoken
     try:
         tokenize.tokenize(inp.readline, printer)

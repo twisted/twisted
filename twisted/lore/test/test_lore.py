@@ -40,6 +40,7 @@ from twisted.lore.default import factory
 from twisted.lore.latex import LatexSpitter
 
 from twisted.python.util import sibpath
+from twisted.python.filepath import FilePath
 
 from twisted.lore.scripts import lore
 
@@ -328,6 +329,74 @@ class TestFactory(unittest.TestCase):
                                                  "class",
                                                  "index-link"))
 
+
+    def test_makeLineNumbers(self):
+        """
+        L{tree._makeLineNumbers} takes an integer and returns a I{p} tag with
+        that number of line numbers in it.
+        """
+        numbers = tree._makeLineNumbers(1)
+        self.assertEqual(numbers.tagName, 'p')
+        self.assertEqual(numbers.getAttribute('class'), 'py-linenumber')
+        self.assertIsInstance(numbers.firstChild(), microdom.Text)
+        self.assertEqual(numbers.firstChild().nodeValue, '1\n')
+
+        numbers = tree._makeLineNumbers(10)
+        self.assertEqual(numbers.tagName, 'p')
+        self.assertEqual(numbers.getAttribute('class'), 'py-linenumber')
+        self.assertIsInstance(numbers.firstChild(), microdom.Text)
+        self.assertEqual(
+            numbers.firstChild().nodeValue,
+            ' 1\n 2\n 3\n 4\n 5\n'
+            ' 6\n 7\n 8\n 9\n10\n')
+
+
+    def test_fontifyPythonNode(self):
+        """
+        L{tree.fontifyPythonNode} accepts a text node and replaces it in its
+        parent with a syntax colored and line numbered version of the Python
+        source it contains.
+        """
+        parent = microdom.Element('div')
+        source = microdom.Text('def foo():\n    pass\n')
+        parent.appendChild(source)
+
+        tree.fontifyPythonNode(source)
+
+        expected = """\
+<div><pre class="python"><p class="py-linenumber">1
+2
+</p><span class="py-src-keyword">def</span> <span class="py-src-identifier">foo</span>():
+    <span class="py-src-keyword">pass</span>
+</pre></div>"""
+
+        self.assertEqual(parent.toxml(), expected)
+
+
+    def test_addPyListings(self):
+        """
+        L{tree.addPyListings} accepts a document with nodes with their I{class}
+        attribute set to I{py-listing} and replaces those nodes with Python
+        source listings from the file given by the node's I{href} attribute.
+        """
+        listingPath = FilePath(self.mktemp())
+        listingPath.setContent('def foo():\n    pass\n')
+
+        parent = microdom.Element('div')
+        listing = microdom.Element(
+            'a', {'href': listingPath.basename(), 'class': 'py-listing'})
+        parent.appendChild(listing)
+
+        tree.addPyListings(parent, listingPath.dirname())
+
+        expected = """\
+<div><div class="py-listing"><pre><p class="py-linenumber">1
+2
+</p><span class="py-src-keyword">def</span> <span class="py-src-identifier">foo</span>():
+    <span class="py-src-keyword">pass</span>
+</pre><div class="caption"> - <a href="temp"><span class="filename">temp</span></a></div></div></div>"""
+
+        self.assertEqual(parent.toxml(), expected)
 
 
 
