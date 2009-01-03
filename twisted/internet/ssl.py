@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_ssl -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -46,11 +46,8 @@ supported = False
 from OpenSSL import SSL
 from zope.interface import implements, implementsOnly, implementedBy
 
-# sibling imports
-import tcp, interfaces
-
 # Twisted imports
-from twisted.internet import base, address
+from twisted.internet import tcp, interfaces, base, address
 
 
 class ContextFactory:
@@ -65,6 +62,9 @@ class ContextFactory:
 
 class DefaultOpenSSLContextFactory(ContextFactory):
 
+    _contextFactory = SSL.Context
+    _context = None
+
     def __init__(self, privateKeyFileName, certificateFileName,
                  sslmethod=SSL.SSLv23_METHOD):
         """
@@ -75,26 +75,33 @@ class DefaultOpenSSLContextFactory(ContextFactory):
         self.privateKeyFileName = privateKeyFileName
         self.certificateFileName = certificateFileName
         self.sslmethod = sslmethod
-        self.cacheContext()
+
 
     def cacheContext(self):
-        ctx = SSL.Context(self.sslmethod)
-        ctx.use_certificate_file(self.certificateFileName)
-        ctx.use_privatekey_file(self.privateKeyFileName)
-        self._context = ctx
+        if self._context is None:
+            ctx = self._contextFactory(self.sslmethod)
+            # Disallow SSLv2!  It's insecure!  SSLv3 has been around since
+            # 1996.  It's time to move on.
+            ctx.set_options(SSL.OP_NO_SSLv2)
+            ctx.use_certificate_file(self.certificateFileName)
+            ctx.use_privatekey_file(self.privateKeyFileName)
+            self._context = ctx
+
 
     def __getstate__(self):
         d = self.__dict__.copy()
         del d['_context']
         return d
 
+
     def __setstate__(self, state):
         self.__dict__ = state
-        self.cacheContext()
+
 
     def getContext(self):
         """Create an SSL context.
         """
+        self.cacheContext()
         return self._context
 
 
@@ -102,10 +109,19 @@ class ClientContextFactory:
     """A context factory for SSL clients."""
 
     isClient = 1
-    method = SSL.SSLv3_METHOD
+
+    # SSLv23_METHOD allows SSLv2, SSLv3, and TLSv1.  We disable SSLv2 below,
+    # though.
+    method = SSL.SSLv23_METHOD
+
+    _contextFactory = SSL.Context
 
     def getContext(self):
-        return SSL.Context(self.method)
+        ctx = self._contextFactory(self.method)
+        # See comment in DefaultOpenSSLContextFactory about SSLv2.
+        ctx.set_options(SSL.OP_NO_SSLv2)
+        return ctx
+
 
 
 class Client(tcp.Client):

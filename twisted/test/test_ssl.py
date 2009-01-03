@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -547,9 +547,83 @@ class ConnectionLostTestCase(unittest.TestCase, ContextGeneratingMixin):
 
 
 
+class FakeContext:
+    """
+    L{OpenSSL.SSL.Context} double which can more easily be inspected.
+    """
+    def __init__(self, method):
+        self._method = method
+        self._options = 0
+
+
+    def set_options(self, options):
+        self._options |= options
+
+
+    def use_certificate_file(self, fileName):
+        pass
+
+
+    def use_privatekey_file(self, fileName):
+        pass
+
+
+
+class DefaultOpenSSLContextFactoryTests(unittest.TestCase):
+    """
+    Tests for L{ssl.DefaultOpenSSLContextFactory}.
+    """
+    def setUp(self):
+        self.contextFactory = ssl.DefaultOpenSSLContextFactory(certPath, certPath)
+        # pyOpenSSL Context objects aren't introspectable enough.
+        self.contextFactory._contextFactory = FakeContext
+        self.context = self.contextFactory.getContext()
+
+
+    def test_method(self):
+        """
+        L{ssl.DefaultOpenSSLContextFactory.getContext} returns an SSL context
+        which can use SSLv3 or TLSv1 but not SSLv2.
+        """
+        # SSLv23_METHOD allows SSLv2, SSLv3, or TLSv1
+        self.assertEqual(self.context._method, SSL.SSLv23_METHOD)
+
+        # And OP_NO_SSLv2 disables the SSLv2 support.
+        self.assertTrue(self.context._options & SSL.OP_NO_SSLv2)
+
+        # Make sure SSLv3 and TLSv1 aren't disabled though.
+        self.assertFalse(self.context._options & SSL.OP_NO_SSLv3)
+        self.assertFalse(self.context._options & SSL.OP_NO_TLSv1)
+
+
+
+class ClientContextFactoryTests(unittest.TestCase):
+    """
+    Tests for L{ssl.ClientContextFactory}.
+    """
+    def setUp(self):
+        self.contextFactory = ssl.ClientContextFactory()
+        self.contextFactory._contextFactory = FakeContext
+        self.context = self.contextFactory.getContext()
+
+
+    def test_method(self):
+        """
+        L{ssl.ClientContextFactory.getContext} returns a context which can use
+        SSLv3 or TLSv1 but not SSLv2.
+        """
+        self.assertEqual(self.context._method, SSL.SSLv23_METHOD)
+        self.assertTrue(self.context._options & SSL.OP_NO_SSLv2)
+        self.assertFalse(self.context._options & SSL.OP_NO_SSLv3)
+        self.assertFalse(self.context._options & SSL.OP_NO_TLSv1)
+
+
+
 if interfaces.IReactorSSL(reactor, None) is None:
     for tCase in [StolenTCPTestCase, TLSTestCase, SpammyTLSTestCase,
-                  BufferingTestCase, ConnectionLostTestCase]:
+                  BufferingTestCase, ConnectionLostTestCase,
+                  DefaultOpenSSLContextFactoryTests,
+                  ClientContextFactoryTests]:
         tCase.skip = "Reactor does not support SSL, cannot run SSL tests"
 
 # Otherwise trial will run this test here
