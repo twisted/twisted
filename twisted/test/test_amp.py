@@ -6,6 +6,8 @@
 Tests for L{twisted.protocols.amp}.
 """
 
+from zope.interface.verify import verifyObject
+
 from twisted.python import filepath
 from twisted.python.failure import Failure
 from twisted.protocols import amp
@@ -2111,8 +2113,14 @@ class ProtocolIncludingCommandWithDifferentCommandType(
 
 class CommandTestCase(unittest.TestCase):
     """
-    Tests for L{amp.Command}.
+    Tests for L{amp.Argument} and L{amp.Command}.
     """
+    def test_argumentInterface(self):
+        """
+        L{Argument} instances provide L{amp.IArgumentType}.
+        """
+        self.assertTrue(verifyObject(amp.IArgumentType, amp.Argument()))
+
 
     def test_parseResponse(self):
         """

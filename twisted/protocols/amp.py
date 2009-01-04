@@ -192,6 +192,71 @@ MAX_KEY_LENGTH = 0xff
 MAX_VALUE_LENGTH = 0xffff
 
 
+class IArgumentType(Interface):
+    """
+    An L{IArgumentType} can serialize a Python object into an AMP box and
+    deserialize information from an AMP box back into a Python object.
+
+    @since: 9.0
+    """
+    def fromBox(name, strings, objects, proto):
+        """
+        Given an argument name and an AMP box containing serialized values,
+        extract one or more Python objects and add them to the C{objects}
+        dictionary.
+
+        @param name: The name associated with this argument.  Most commonly,
+            this is the key which can be used to find a serialized value in
+            C{strings} and which should be used as the key in C{objects} to
+            associate with a structured Python object.
+        @type name: C{str}
+
+        @param strings: The AMP box from which to extract one or more
+            values.
+        @type strings: C{dict}
+
+        @param objects: The output dictionary to populate with the value for
+            this argument.
+        @type objects: C{dict}
+
+        @param proto: The protocol instance which received the AMP box being
+            interpreted.  Most likely this is an instance of L{AMP}, but
+            this is not guaranteed.
+
+        @return: C{None}
+        """
+
+
+    def toBox(name, strings, objects, proto):
+        """
+        Given an argument name and a dictionary containing structured Python
+        objects, serialize values into one or more strings and add them to
+        the C{strings} dictionary.
+
+        @param name: The name associated with this argument.  Most commonly,
+            this is the key which can be used to find an object in
+            C{objects} and which should be used as the key in C{strings} to
+            associate with a C{str} giving the serialized form of that
+            object.
+        @type name: C{str}
+
+        @param strings: The AMP box into which to insert one or more
+            strings.
+        @type strings: C{dict}
+
+        @param objects: The input dictionary from which to extract Python
+            objects to serialize.
+        @type objects: C{dict}
+
+        @param proto: The protocol instance which will send the AMP box once
+            it is fully populated.  Most likely this is an instance of
+            L{AMP}, but this is not guaranteed.
+
+        @return: C{None}
+        """
+
+
+
 class IBoxSender(Interface):
     """
     A transport which can send L{AmpBox} objects.
@@ -1043,7 +1108,14 @@ class Argument:
     """
     Base-class of all objects that take values from Amp packets and convert
     them into objects for Python functions.
+
+    This implementation of L{IArgumentType} provides several higher-level
+    hooks for subclasses to override.  See L{toString} and L{fromString}
+    which will be used to define the behavior of L{IArgumentType.toBox} and
+    L{IArgumentType.fromBox}, respectively.
     """
+    implements(IArgumentType)
+
     optional = False
 
 
