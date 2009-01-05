@@ -844,6 +844,9 @@ class APIBuilderTestCase(TestCase):
             quuxPath.getContent())
         self.assertIn(privateDocstring, quuxPath.getContent())
 
+        # There should also be a page for the foo function in quux.
+        self.assertTrue(quuxPath.sibling('quux.foo.html').exists())
+
         self.assertEqual(stdout.getvalue(), '')
 
 

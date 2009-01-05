@@ -436,7 +436,7 @@ class APIBuilder(object):
              "--html-viewsource-base", sourceURL,
              "--add-package", packagePath.path,
              "--html-output", outputPath.path,
-             "--quiet", "--make-html"])
+             "--html-write-function-pages", "--quiet", "--make-html"])
 
 
 
