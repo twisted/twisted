@@ -2,7 +2,6 @@
 # Copyright (c) 2001-2005 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
 Implements a AOL Instant Messenger TOC server and client, using the Twisted
 framework.
@@ -15,6 +14,14 @@ This module is deprecated.
 
 Maintainer: Paul Swartz
 """
+
+import warnings
+warnings.warn(
+    "twisted.words.protocols.toc is deprecated since Twisted 9.0.  "
+    "Use twisted.words.protocols.oscar instead.",
+    category=DeprecationWarning,
+    stacklevel=2)
+
 
 # twisted imports
 from twisted.internet import reactor, protocol
