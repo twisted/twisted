@@ -7,8 +7,8 @@ from zope.interface import Interface, Attribute
 
 from twisted.lore import process, indexer, numberer, htmlbook
 
-from twisted.python import usage, plugin as oldplugin, reflect
-from twisted import plugin as newplugin
+from twisted.python import usage, reflect
+from twisted import plugin as plugin
 
 class IProcessor(Interface):
     """
@@ -63,24 +63,18 @@ class Options(usage.Options):
 
 
 def getProcessor(input, output, config):
-    plugins = oldplugin._getPlugIns("lore")
+    plugins = plugin.getPlugins(IProcessor)
     for plug in plugins:
-        if plug.tapname == input:
-            module = plug.load()
+        if plug.name == input:
+            module = reflect.namedModule(plug.moduleName)
             break
     else:
-        plugins = newplugin.getPlugins(IProcessor)
-        for plug in plugins:
-            if plug.name == input:
-                module = reflect.namedModule(plug.moduleName)
-                break
-        else:
-            # try treating it as a module name
-            try:
-                module = reflect.namedModule(input)
-            except ImportError:
-                print '%s: no such input: %s' % (sys.argv[0], input)
-                return
+        # try treating it as a module name
+        try:
+            module = reflect.namedModule(input)
+        except ImportError:
+            print '%s: no such input: %s' % (sys.argv[0], input)
+            return
     try:
         return process.getProcessor(module, output, config)
     except process.NoProcessorError, e:

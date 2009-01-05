@@ -414,3 +414,18 @@ class LatexSpitterTestCase(unittest.TestCase):
         spitter = LatexSpitter(out.write)
         spitter.visitNode(dom)
         self.assertEqual(out.getvalue(), u'\\index{name}\n')
+
+
+
+class ScriptTests(unittest.TestCase):
+    """
+    Tests for L{twisted.lore.scripts.lore}, the I{lore} command's
+    implementation,
+    """
+    def test_getProcessor(self):
+        """
+        L{lore.getProcessor} loads the specified output plugin from the
+        specified input plugin.
+        """
+        processor = lore.getProcessor("lore", "html", options)
+        self.assertNotIdentical(processor, None)

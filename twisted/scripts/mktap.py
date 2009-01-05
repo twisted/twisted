@@ -7,8 +7,8 @@ import warnings, sys, os
 
 from twisted.application import service, app
 from twisted.persisted import sob
-from twisted.python import usage, util, plugin as oldplugin
-from twisted import plugin as newplugin
+from twisted.python import usage, util
+from twisted import plugin
 from twisted.python.util import uidFromString, gidFromString
 
 # API COMPATIBILITY
@@ -56,15 +56,7 @@ def getid(uid, gid):
 def loadPlugins(debug = None, progress = None):
     tapLookup = {}
 
-    plugins = oldplugin._getPlugIns("tap", debug, progress)
-    for plug in plugins:
-        if hasattr(plug, 'tapname'):
-            shortTapName = plug.tapname
-        else:
-            shortTapName = plug.module.split('.')[-1]
-        tapLookup[shortTapName] = plug
-
-    plugins = newplugin.getPlugins(IServiceMaker)
+    plugins = plugin.getPlugins(IServiceMaker)
     for plug in plugins:
         tapLookup[plug.tapname] = plug
 

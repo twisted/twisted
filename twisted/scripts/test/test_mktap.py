@@ -13,9 +13,10 @@ except ImportError:
 
 from twisted.trial.unittest import TestCase
 
-from twisted.scripts.mktap import run, getid
+from twisted.scripts.mktap import run, getid, loadPlugins
 from twisted.application.service import IProcess, loadApplication
 from twisted.test.test_twistd import patchUserDatabase
+from twisted.plugins.twisted_ftp import TwistedFTP
 
 
 class RunTests(TestCase):
@@ -105,3 +106,17 @@ class HelperTests(TestCase):
         uid = 1234
         gid = 4321
         self.assertEqual(getid(str(uid), str(gid)), (uid, gid))
+
+
+    def test_loadPlugins(self):
+        """
+        L{loadPlugins} returns a C{dict} mapping tap names to tap plugins.
+        """
+        plugins = loadPlugins()
+        self.assertTrue(plugins, "There should be at least one plugin.")
+        # Make sure the mapping is set up properly.
+        for k, v in plugins.iteritems():
+            self.assertEqual(k, v.tapname)
+
+        # Make sure one of the always-available builtin plugins is there. 
+        self.assertIdentical(plugins['ftp'], TwistedFTP)
