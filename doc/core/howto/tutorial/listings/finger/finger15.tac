@@ -7,25 +7,34 @@ import cgi
 
 class FingerProtocol(basic.LineReceiver):
     def lineReceived(self, user):
-        self.factory.getUser(user
-        ).addErrback(lambda _: "Internal error in server"
-        ).addCallback(lambda m:
-                      (self.transport.write(m+"\r\n"),
-                       self.transport.loseConnection()))
+        d = self.factory.getUser(user)
 
-class MotdResource(resource.Resource):
-    
+        def onError(err):
+            return 'Internal error in server'
+        d.addErrback(onError)
+
+        def writeResponse(message):
+            self.transport.write(message + '\r\n')
+            self.transport.loseConnection()
+        d.addCallback(writeResponse)
+
+class FingerResource(resource.Resource):
+
     def __init__(self, users):
         self.users = users
         resource.Resource.__init__(self)
 
     # we treat the path as the username
     def getChild(self, username, request):
-        motd = self.users.get(username)
+        """
+        'username' is a string.
+        'request' is a 'twisted.web.server.Request'.
+        """
+        messagevalue = self.users.get(username)
         username = cgi.escape(username)
-        if motd is not None:
-            motd = cgi.escape(motd)
-            text = '<h1>%s</h1><p>%s</p>' % (username,motd)
+        if messagevalue is not None:
+            messagevalue = cgi.escape(messagevalue)
+            text = '<h1>%s</h1><p>%s</p>' % (username,messagevalue)
         else:
             text = '<h1>%s</h1><p>No such user</p>' % username
         return static.Data(text, 'text/html')
@@ -34,6 +43,7 @@ class FingerService(service.Service):
     def __init__(self, filename):
         self.filename = filename
         self._read()
+
     def _read(self):
         self.users = {}
         for line in file(self.filename):
@@ -42,18 +52,21 @@ class FingerService(service.Service):
             status = status.strip()
             self.users[user] = status
         self.call = reactor.callLater(30, self._read)
+
     def getUser(self, user):
         return defer.succeed(self.users.get(user, "No such user"))
+
     def getFingerFactory(self):
         f = protocol.ServerFactory()
-        f.protocol, f.getUser = FingerProtocol, self.getUser
+        f.protocol = FingerProtocol
+        f.getUser = self.getUser
         f.startService = self.startService
         return f
-    
+
     def getResource(self):
-        r = MotdResource(self.users)
+        r = FingerResource(self.users)
         return r
-    
+
 application = service.Application('finger', uid=1, gid=1)
 f = FingerService('/etc/users')
 serviceCollection = service.IServiceCollection(application)
@@ -61,9 +74,3 @@ internet.TCPServer(79, f.getFingerFactory()
                    ).setServiceParent(serviceCollection)
 internet.TCPServer(8000, server.Site(f.getResource())
                    ).setServiceParent(serviceCollection)
-
-
-
-
-
-

@@ -20,18 +20,6 @@ class FingerProtocol(basic.LineReceiver):
         d.addCallback(writeValue)
 
 
-class FingerSetterProtocol(basic.LineReceiver):
-
-    def connectionMade(self):
-        self.lines = []
-
-    def lineReceived(self, line):
-        self.lines.append(line)
-
-    def connectionLost(self, reason):
-        self.factory.setUser(*self.lines[:2])
-
-
 class IRCReplyBot(irc.IRCClient):
 
     def connectionMade(self):
@@ -135,6 +123,7 @@ class FingerService(service.Service):
         f.nickname = nickname
         f.getUser = self.getUser
         return f
+
 
 application = service.Application('finger', uid=1, gid=1)
 f = FingerService('/etc/users')
