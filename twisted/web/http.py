@@ -517,6 +517,8 @@ class Request:
     sentLength = 0 # content-length of response, or total bytes sent via chunking
     etag = None
     lastModified = None
+    args = None
+    path = None
     _forceSSL = 0
 
     def __init__(self, channel, queued):
@@ -1017,7 +1019,8 @@ class Request:
 
 
     def getHost(self):
-        """Get my originally requesting transport's host.
+        """
+        Get my originally requesting transport's host.
 
         Don't rely on the 'transport' attribute, since Request objects may be
         copied remotely.  For information on this method's return value, see

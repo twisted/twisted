@@ -17,6 +17,9 @@ import copy
 import time
 import os
 from urllib import quote
+
+from zope.interface import implements
+
 try:
     from twisted.protocols._c_urlarg import unquote
 except ImportError:
@@ -28,7 +31,7 @@ NOT_DONE_YET = 1
 # Twisted Imports
 from twisted.spread import pb
 from twisted.internet import defer, address, task
-from twisted.web import http
+from twisted.web import iweb, http
 from twisted.python import log, reflect, failure, components
 from twisted import copyright
 
@@ -81,6 +84,7 @@ def _addressToTuple(addr):
         return tuple(addr)
 
 class Request(pb.Copyable, http.Request, components.Componentized):
+    implements(iweb.IRequest)
 
     site = None
     appRootURL = None

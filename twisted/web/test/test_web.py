@@ -8,13 +8,14 @@ Tests for various parts of L{twisted.web}.
 from cStringIO import StringIO
 
 from zope.interface import implements
+from zope.interface.verify import verifyObject
 
 from twisted.trial import unittest
 from twisted.internet.address import IPv4Address
 from twisted.internet.defer import Deferred
 from twisted.web import server, resource, util
 from twisted.internet import defer, interfaces, error, task
-from twisted.web import http, http_headers
+from twisted.web import iweb, http, http_headers
 from twisted.python import log
 
 
@@ -400,7 +401,20 @@ class GoogleTestCase(unittest.TestCase):
 
 
 
-class TestRequest(unittest.TestCase):
+
+
+class RequestTests(unittest.TestCase):
+    """
+    Tests for the HTTP request class, L{server.Request}.
+    """
+
+    def test_interface(self):
+        """
+        L{server.Request} instances provide L{iweb.IRequest}.
+        """
+        self.assertTrue(
+            verifyObject(iweb.IRequest, server.Request(DummyChannel(), True)))
+
 
     def testChildLink(self):
         request = server.Request(DummyChannel(), 1)
