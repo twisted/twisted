@@ -16,11 +16,41 @@ from twisted.python import log, runtime
 from twisted.python.filepath import FilePath
 from twisted.trial import unittest
 from twisted.conch.error import ConchError
+try:
+    from twisted.conch.scripts.conch import SSHSession as StdioInteractingSession
+except ImportError:
+    StdioInteractingSession = None
 from twisted.conch.test.test_ssh import ConchTestRealm
 from twisted.python.procutils import which
 
 from twisted.conch.test.keydata import publicRSA_openssh, privateRSA_openssh
 from twisted.conch.test.keydata import publicDSA_openssh, privateDSA_openssh
+
+
+
+class StdioInteractingSessionTests(unittest.TestCase):
+    """
+    Tests for L{twisted.conch.scripts.conch.SSHSession}.
+    """
+    if StdioInteractingSession is None:
+        skip = "twisted.conch.scripts.conch not importable"
+
+    def test_eofReceived(self):
+        """
+        L{twisted.conch.scripts.conch.SSHSession.eofReceived} loses the
+        write half of its stdio connection.
+        """
+        class FakeStdio:
+            writeConnLost = False
+
+            def loseWriteConnection(self):
+                self.writeConnLost = True
+
+        stdio = FakeStdio()
+        channel = StdioInteractingSession()
+        channel.stdio = stdio
+        channel.eofReceived()
+        self.assertTrue(stdio.writeConnLost)
 
 
 

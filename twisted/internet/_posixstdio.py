@@ -40,6 +40,8 @@ class StandardIO(object):
         self.protocol.makeConnection(self)
 
     # ITransport
+
+    # XXX Actually, see #3597.
     def loseWriteConnection(self):
         if self._writer is not None:
             self._writer.loseConnection()
