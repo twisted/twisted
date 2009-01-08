@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.web.test -*-
-# Copyright (c) 2008 Twisted Matrix Laboratories.
+# Copyright (c) 2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -7,7 +7,7 @@ Interface definitions for L{twisted.web}.
 """
 
 from zope.interface import Interface, Attribute
-
+from twisted.cred.credentials import IUsernameDigestHash
 
 class IRequest(Interface):
     """
@@ -352,18 +352,4 @@ class ICredentialFactory(Interface):
         @return: The credentials represented by the given response.
         """
 
-
-
-class IUsernameDigestHash(Interface):
-    """
-    This credential is used when a CredentialChecker has access to the hash
-    of the username:realm:password as in an Apache .htdigest file.
-    """
-    def checkHash(digestHash):
-        """
-        @param digestHash: The hashed username:realm:password to check against.
-
-        @return: C{True} if the credentials represented by this object match
-            the given hash, C{False} if they do not, or a L{Deferred} which
-            will be called back with one of these values.
-        """
+__all__ = ["IUsernameDigestHash", "ICredentialFactory", "IRequest"]
