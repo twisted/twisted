@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.test.test_sip -*-
 
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -8,27 +8,23 @@
 
 Documented in RFC 2543.
 [Superceded by 3261]
-
-
-This module contains a deprecated implementation of HTTP Digest authentication.
-See L{twisted.cred.credentials} and L{twisted.cred._digest} for its new home.
 """
 
 # system imports
-import socket, time, sys, random, warnings
+import socket
+import random
+import time
+import sys
 from zope.interface import implements, Interface
 
 # twisted imports
 from twisted.python import log, util
-from twisted.python.deprecate import deprecated
-from twisted.python.versions import Version
 from twisted.python.hashlib import md5
 from twisted.internet import protocol, defer, reactor
 
 from twisted import cred
+import twisted.cred.credentials
 import twisted.cred.error
-from twisted.cred.credentials import UsernameHashedPassword, UsernamePassword
-
 
 # sibling imports
 from twisted.protocols import basic
@@ -153,9 +149,6 @@ def DigestCalcHA1(
         HA1 = m.digest()
     return HA1.encode('hex')
 
-
-DigestCalcHA1 = deprecated(Version("Twisted", 9, 0, 0))(DigestCalcHA1)
-
 def DigestCalcResponse(
     HA1,
     pszNonce,
@@ -190,9 +183,6 @@ def DigestCalcResponse(
     m.update(HA2)
     hash = m.digest().encode('hex')
     return hash
-
-
-DigestCalcResponse = deprecated(Version("Twisted", 9, 0, 0))(DigestCalcResponse)
 
 class Via:
     """A SIP Via header."""
@@ -895,7 +885,7 @@ class IAuthorizer(Interface):
         
         @type response: C{str}
         """
-
+ 
 class BasicAuthorizer:
     """Authorizer for insecure Basic (base64-encoded plaintext) authentication.
     
@@ -903,18 +893,7 @@ class BasicAuthorizer:
     """
 
     implements(IAuthorizer)
-
-    def __init__(self):
-        """
-        This method exists solely to issue a deprecation warning.
-        """
-        warnings.warn(
-            "twisted.protocols.sip.BasicAuthorizer was deprecated "
-            "in Twisted 9.0.0",
-            category=DeprecationWarning,
-            stacklevel=2)
-
-
+    
     def getChallenge(self, peer):
         return None
     
@@ -932,20 +911,14 @@ class BasicAuthorizer:
             raise SIPError(400)
         p = creds.split(':', 1)
         if len(p) == 2:
-            return UsernamePassword(*p)
+            return cred.credentials.UsernamePassword(*p)
         raise SIPError(400)
 
 
-
-class DigestedCredentials(UsernameHashedPassword):
+class DigestedCredentials(cred.credentials.UsernameHashedPassword):
     """Yet Another Simple Digest-MD5 authentication scheme"""
     
     def __init__(self, username, fields, challenges):
-        warnings.warn(
-            "twisted.protocols.sip.DigestedCredentials was deprecated "
-            "in Twisted 9.0.0",
-            category=DeprecationWarning,
-            stacklevel=2)
         self.username = username
         self.fields = fields
         self.challenges = challenges
@@ -982,16 +955,8 @@ class DigestAuthorizer:
     implements(IAuthorizer)
     
     def __init__(self):
-        warnings.warn(
-            "twisted.protocols.sip.DigestAuthorizer was deprecated "
-            "in Twisted 9.0.0",
-            category=DeprecationWarning,
-            stacklevel=2)
-
         self.outstanding = {}
-
-
-
+    
     def generateNonce(self):
         c = tuple([random.randrange(sys.maxint) for _ in range(3)])
         c = '%d%d%d' % c
@@ -1038,7 +1003,7 @@ class RegisterProxy(Proxy):
     authorizers = {
         'digest': DigestAuthorizer(),
     }
-
+    
     def __init__(self, *args, **kw):
         Proxy.__init__(self, *args, **kw)
         self.liveChallenges = {}
@@ -1077,7 +1042,7 @@ class RegisterProxy(Proxy):
             m.headers.setdefault('www-authenticate', []).append(value)
         self.deliverResponse(m)
 
-
+ 
     def login(self, message, host, port):
         parts = message.headers['authorization'][0].split(None, 1)
         a = self.authorizers.get(parts[0].lower())
@@ -1102,7 +1067,7 @@ class RegisterProxy(Proxy):
     def _cbLogin(self, (i, a, l), message, host, port):
         # It's stateless, matey.  What a joke.
         self.register(message, host, port)
-
+    
     def _ebLogin(self, failure, message, host, port):
         failure.trap(cred.error.UnauthorizedLogin)
         self.unauthorized(message, host, port)

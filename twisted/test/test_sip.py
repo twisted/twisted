@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_sip -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -8,7 +8,6 @@
 from twisted.trial import unittest
 from twisted.protocols import sip
 from twisted.internet import defer, reactor
-from twisted.python.versions import Version
 
 from twisted.test import proto_helpers
 
@@ -739,47 +738,3 @@ class AuthorizationTestCase(unittest.TestCase):
             self.transport.written[-1],
             ((okResponse, ("127.0.0.1", 5632)))
         )
-
-
-
-class DeprecationTests(unittest.TestCase):
-    """
-    Tests for deprecation of obsolete components of L{twisted.protocols.sip}.
-    """
-
-    def test_deprecatedDigestCalcHA1(self):
-        """
-        L{sip.DigestCalcHA1} is deprecated.
-        """
-        self.callDeprecated(Version("Twisted", 9, 0, 0),
-                            sip.DigestCalcHA1, '', '', '', '', '', '')
-
-
-    def test_deprecatedDigestCalcResponse(self):
-        """
-        L{sip.DigestCalcResponse} is deprecated.
-        """
-        self.callDeprecated(Version("Twisted", 9, 0, 0),
-                            sip.DigestCalcResponse, '', '', '', '', '', '', '',
-                            '')
-
-    def test_deprecatedBasicAuthorizer(self):
-        """
-        L{sip.BasicAuthorizer} is deprecated.
-        """
-        self.callDeprecated(Version("Twisted", 9, 0, 0), sip.BasicAuthorizer)
-
-
-    def test_deprecatedDigestAuthorizer(self):
-        """
-        L{sip.DigestAuthorizer} is deprecated.
-        """
-        self.callDeprecated(Version("Twisted", 9, 0, 0), sip.DigestAuthorizer)
-
-
-    def test_deprecatedDigestedCredentials(self):
-        """
-        L{sip.DigestedCredentials} is deprecated.
-        """
-        self.callDeprecated(Version("Twisted", 9, 0, 0),
-                            sip.DigestedCredentials, '', {}, {})
