@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.web.test.test_woven -*-
+# -*- test-case-name: twisted.web.test.test_domhelpers -*-
 # Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 

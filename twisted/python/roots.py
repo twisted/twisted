@@ -1,20 +1,11 @@
 # -*- test-case-name: twisted.test.test_roots -*-
-#
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 Twisted Python Roots: an abstract hierarchy representation for Twisted.
 
 Maintainer: Glyph Lefkowitz
-
-Future Plans: Removing distinction between 'static' and 'dynamic' entities,
-which never made much sense anyway and bloats the API horribly.  This probably
-involves updating all of Coil to have tree widgets that can be dynamically
-expanded, which probably involves porting all of Coil to Woven, so it might not
-happen for a while.
-
 """
 
 # System imports

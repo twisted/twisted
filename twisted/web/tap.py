@@ -152,13 +152,6 @@ demo webserver that has the Test class from twisted.web.demo in it."""
                                    "after --path.")
         self['root'].ignoreExt(ext)
 
-    def opt_flashconduit(self, port=None):
-        """Start a flashconduit on the specified port.
-        """
-        if not port:
-            port = "4321"
-        self['flashconduit'] = port
-
     def postOptions(self):
         """
         Set up conditional defaults and check for dependencies.
@@ -229,9 +222,4 @@ def makeService(config):
             i.setServiceParent(s)
         strports.service(config['port'], site).setServiceParent(s)
 
-    flashport = config.get('flashconduit', None)
-    if flashport:
-        from twisted.web.woven.flashconduit import FlashConduitFactory
-        i = internet.TCPServer(int(flashport), FlashConduitFactory(site))
-        i.setServiceParent(s)
     return s

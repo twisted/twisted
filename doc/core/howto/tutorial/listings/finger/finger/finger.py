@@ -2,16 +2,15 @@
 
 from zope.interface import Interface, implements
 
-from twisted.application import internet, service, strports
+from twisted.application import internet, service
 from twisted.internet import protocol, reactor, defer
 from twisted.words.protocols import irc
 from twisted.protocols import basic
-from twisted.python import components
-from twisted.web import resource, server, static, xmlrpc, microdom
-from twisted.web.woven import page, model, interfaces
+from twisted.python import components, log
+from twisted.web import resource, server, xmlrpc
 from twisted.spread import pb
+
 from OpenSSL import SSL
-import cgi
 
 class IFingerService(Interface):
 
@@ -148,52 +147,70 @@ components.registerAdapter(IRCClientFactoryFromService,
                            IFingerService,
                            IIRCClientFactory)
 
-class UsersModel(model.MethodModel):
-
-    def initialize(self, *args, **kwargs):
-        self.service=args[0]
-
-    def wmfactory_users(self, request):
-        return self.service.getUsers()
-
-components.registerAdapter(UsersModel, IFingerService, interfaces.IModel)
-
-class UserStatusTree(page.Page):
+class UserStatusTree(resource.Resource):
 
     template = """<html><head><title>Users</title></head><body>
     <h1>Users</h1>
-    <ul model="users" view="List">
-    <li pattern="listItem"><a view="Anchor" /></li>
-    </ul></body></html>"""
+    <ul>
+    %(users)s
+    </ul>
+    </body>
+    </html>"""
 
-    def initialize(self, *args, **kwargs):
-        self.service=args[0]
+    def __init__(self, service):
+        resource.Resource.__init__(self)
+        self.service = service
 
-    def getDynamicChild(self, path, request):
-        return UserStatus(user=path, service=self.service)
+    def getChild(self, path, request):
+        if path == '':
+            return self
+        elif path == 'RPC2':
+            return UserStatusXR(self.service)
+        else:
+            return UserStatus(path, self.service)
 
-    def wchild_RPC2 (self, request):
-        return UserStatusXR(self.service)
+    def render_GET(self, request):
+        users = self.service.getUsers()
+        def cbUsers(users):
+            request.write(self.template % {'users': ''.join([
+                    # Name should be quoted properly these uses.
+                    '<li><a href="%s">%s</a></li>' % (name, name)
+                    for name in users])})
+            request.finish()
+        users.addCallback(cbUsers)
+        def ebUsers(err):
+            log.err(err, "UserStatusTree failed")
+            request.finish()
+        users.addErrback(ebUsers)
+        return server.NOT_DONE_YET
 
 components.registerAdapter(UserStatusTree, IFingerService, resource.IResource)
 
 
-class UserStatus(page.Page):
+class UserStatus(resource.Resource):
 
-    template='''<html><head><title view="Text" model="user"/></head>
-    <body><h1 view="Text" model="user"/>
-    <p model="status" view="Text" />
-    </body></html>'''
+    template='''<html><head><title>%(title)s</title></head>
+    <body><h1>%(name)s</h1><p>%(status)s</p></body></html>'''
 
-    def initialize(self, **kwargs):
-        self.user = kwargs['user']
-        self.service = kwargs['service']
+    def __init__(self, user, service):
+        resource.Resource.__init__(self)
+        self.user = user
+        self.service = service
 
-    def wmfactory_user(self, request):
-        return self.user
-
-    def wmfactory_status(self, request):
-        return self.service.getUser(self.user)
+    def render_GET(self, request):
+        status = self.service.getUser(self.user)
+        def cbStatus(status):
+            request.write(self.template % {
+                'title': self.user,
+                'name': self.user,
+                'status': status})
+            request.finish()
+        status.addCallback(cbStatus)
+        def ebStatus(err):
+            log.err(err, "UserStatus failed")
+            request.finish()
+        status.addErrback(ebStatus)
+        return server.NOT_DONE_YET
 
 
 class UserStatusXR(xmlrpc.XMLRPC):
@@ -280,7 +297,7 @@ def makeService(config):
     # finger on port 79
     s = service.MultiService()
     f = FingerService(config['file'])
-    h = internet.TCPServer(79, IFingerFactory(f))
+    h = internet.TCPServer(1079, IFingerFactory(f))
     h.setServiceParent(s)
 
 

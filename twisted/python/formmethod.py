@@ -7,7 +7,7 @@
 Form-based method objects.
 
 This module contains support for descriptive method signatures that can be used
-to format methods.  Currently this is only used by woven.
+to format methods.
 """
 
 import calendar

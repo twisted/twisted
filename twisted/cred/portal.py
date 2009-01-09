@@ -95,9 +95,10 @@ class Portal:
             would have to be relayed as a single mail message in an
             otherwise-empty mailbox. However, in a web-based mail system, or a
             PB-based client, the ``mind'' object inside the web server
-            (implemented with a dynamic page-viewing mechanism such as woven)
-            or on the user's client program may be intelligent enough to
-            respond to several ``server''-side interfaces.
+            (implemented with a dynamic page-viewing mechanism such as a
+            Twisted Web Resource) or on the user's client program may be
+            intelligent enough to respond to several ``server''-side
+            interfaces.
 
         @return: A deferred which will fire a tuple of (interface,
             avatarAspect, logout).  The interface will be one of the interfaces
