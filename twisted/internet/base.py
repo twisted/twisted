@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_internet -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -625,10 +625,7 @@ class ReactorBase(object):
         guarantee is that it will be on its way to the running state.
         """
         if self._started:
-            warnings.warn(
-                    "Reactor already running! This behavior is deprecated "
-                    "since Twisted 8.0",
-                    category=DeprecationWarning, stacklevel=4)
+            raise error.ReactorAlreadyRunning()
         self._started = True
         self._stopped = False
         threadable.registerAsIOThread()

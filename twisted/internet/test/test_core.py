@@ -1,4 +1,4 @@
-# Copyright (c) 2008 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -9,6 +9,7 @@ __metaclass__ = type
 
 import signal
 
+from twisted.internet.error import ReactorAlreadyRunning
 from twisted.internet.defer import Deferred
 from twisted.internet.test.reactormixins import ReactorBuilder
 
@@ -148,18 +149,12 @@ class SystemEventTestsBuilder(ReactorBuilder):
 
     def test_multipleRun(self):
         """
-        C{reactor.run()} emits a warning when called when the reactor is
-        already running.  The re-entrant run blocks until the reactor is
-        stopped.  Stopping the reactor causes all calls to run to return.
+        C{reactor.run()} raises L{ReactorAlreadyRunning} when called when
+        the reactor is already running.
         """
         events = []
         def reentrantRun():
-            self.assertWarns(
-                DeprecationWarning,
-                "Reactor already running! This behavior is deprecated since "
-                "Twisted 8.0",
-                __file__,
-                lambda: reactor.run())
+            self.assertRaises(ReactorAlreadyRunning, reactor.run)
             events.append("tested")
         reactor = self.buildReactor()
         reactor.callWhenRunning(reentrantRun)
