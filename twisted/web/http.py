@@ -262,7 +262,8 @@ def _logDateTimeStop():
 def timegm(year, month, day, hour, minute, second):
     """Convert time tuple in GMT to seconds since epoch, GMT"""
     EPOCH = 1970
-    assert year >= EPOCH
+    if year < EPOCH:
+        raise ValueError("Years prior to %d not supported" % (EPOCH,))
     assert 1 <= month <= 12
     days = 365*(year-EPOCH) + calendar.leapdays(EPOCH, year)
     for i in range(1, month):
@@ -945,10 +946,14 @@ class Request:
         if (not self.lastModified) or (self.lastModified < when):
             self.lastModified = when
 
-        modified_since = self.getHeader('if-modified-since')
-        if modified_since:
-            modified_since = stringToDatetime(modified_since.split(';', 1)[0])
-            if modified_since >= when:
+        modifiedSince = self.getHeader('if-modified-since')
+        if modifiedSince:
+            firstPart = modifiedSince.split(';', 1)[0]
+            try:
+                modifiedSince = stringToDatetime(firstPart)
+            except ValueError:
+                return None
+            if modifiedSince >= when:
                 self.setResponseCode(NOT_MODIFIED)
                 return CACHED
         return None

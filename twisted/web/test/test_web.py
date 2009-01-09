@@ -328,7 +328,9 @@ def httpCode(whole):
     return int(l1.split()[1])
 
 class ConditionalTest(unittest.TestCase):
-    """web.server's handling of conditional requests for cache validation."""
+    """
+    web.server's handling of conditional requests for cache validation.
+    """
 
     # XXX: test web.distrib.
 
@@ -354,23 +356,85 @@ class ConditionalTest(unittest.TestCase):
     def tearDown(self):
         self.channel.connectionLost(None)
 
-    def test_modified(self):
-        """If-Modified-Since cache validator (positive)"""
-        self.channel.lineReceived("If-Modified-Since: %s"
-                                  % http.datetimeToString(1))
+
+    def _modifiedTest(self, modifiedSince):
+        """
+        Given the value C{modifiedSince} for the I{If-Modified-Since}
+        header, verify that a response with a 200 code and the resource as
+        the body is returned.
+        """
+        self.channel.lineReceived("If-Modified-Since: " + modifiedSince)
         self.channel.lineReceived('')
         result = self.transport.getvalue()
         self.failUnlessEqual(httpCode(result), http.OK)
         self.failUnlessEqual(httpBody(result), "correct")
 
+
+    def test_modified(self):
+        """
+        If a request is made with an I{If-Modified-Since} header value with
+        a timestamp indicating a time before the last modification of the
+        requested resource, a 200 response is returned along with a response
+        body containing the resource.
+        """
+        self._modifiedTest(http.datetimeToString(1))
+
+
     def test_unmodified(self):
-        """If-Modified-Since cache validator (negative)"""
+        """
+        If a request is made with an I{If-Modified-Since} header value with
+        a timestamp indicating a time after the last modification of the
+        request resource, a 304 response is returned along with an empty
+        response body.
+        """
         self.channel.lineReceived("If-Modified-Since: %s"
                                   % http.datetimeToString(100))
         self.channel.lineReceived('')
         result = self.transport.getvalue()
         self.failUnlessEqual(httpCode(result), http.NOT_MODIFIED)
         self.failUnlessEqual(httpBody(result), "")
+
+
+    def test_invalidTimestamp(self):
+        """
+        If a request is made with an I{If-Modified-Since} header value which
+        cannot be parsed, the header is treated as not having been present
+        and a normal 200 response is returned with a response body
+        containing the resource.
+        """
+        self._modifiedTest("like, maybe a week ago, I guess?")
+
+
+    def test_invalidTimestampYear(self):
+        """
+        If a request is made with an I{If-Modified-Since} header value which
+        contains a string in the year position which is not an integer, the
+        header is treated as not having been present and a normal 200
+        response is returned with a response body containing the resource.
+        """
+        self._modifiedTest("Thu, 01 Jan blah 00:00:10 GMT")
+
+
+    def test_invalidTimestampTooLongAgo(self):
+        """
+        If a request is made with an I{If-Modified-Since} header value which
+        contains a year before the epoch, the header is treated as not
+        having been present and a normal 200 response is returned with a
+        response body containing the resource.
+        """
+        self._modifiedTest("Thu, 01 Jan 1899 00:00:10 GMT")
+
+
+    def test_invalidTimestampMonth(self):
+        """
+        If a request is made with an I{If-Modified-Since} header value which
+        contains a string in the month position which is not a recognized
+        month abbreviation, the header is treated as not having been present
+        and a normal 200 response is returned with a response body
+        containing the resource.
+        """
+        self._modifiedTest("Thu, 01 Blah 1970 00:00:10 GMT")
+
 
     def test_etagMatchedNot(self):
         """If-None-Match ETag cache validator (positive)"""
