@@ -15,7 +15,7 @@ from zope.interface import implements
 
 from twisted.trial import unittest, util
 from twisted.protocols import basic
-from twisted.internet import reactor, protocol, defer, error
+from twisted.internet import reactor, task, protocol, defer, error
 from twisted.internet.interfaces import IConsumer
 from twisted.cred import portal, checkers, credentials
 from twisted.python import failure, filepath
@@ -535,6 +535,143 @@ class FTPServerPortDataConnectionTestCase(FTPServerPasvDataConnectionTestCase):
                 'PORT ' + ftp.encodeHostPort('127.0.0.1', portNum),
                 ["425 Can't open data connection."])
         return d.addCallback(gotPortNum)
+
+
+
+class DTPFactoryTests(unittest.TestCase):
+    """
+    Tests for L{ftp.DTPFactory}.
+    """
+    def setUp(self):
+        """
+        Create a fake protocol interpreter and a L{ftp.DTPFactory} instance to
+        test.
+        """
+        self.reactor = task.Clock()
+
+        class ProtocolInterpreter(object):
+            dtpInstance = None
+
+        self.protocolInterpreter = ProtocolInterpreter()
+        self.factory = ftp.DTPFactory(
+            self.protocolInterpreter, None, self.reactor)
+
+
+    def test_setTimeout(self):
+        """
+        L{ftp.DTPFactory.setTimeout} uses the reactor passed to its initializer
+        to set up a timed event to time out the DTP setup after the specified
+        number of seconds.
+        """
+        # Make sure the factory's deferred fails with the right exception, and
+        # make it so we can tell exactly when it fires.
+        finished = []
+        d = self.assertFailure(self.factory.deferred, ftp.PortConnectionError)
+        d.addCallback(finished.append)
+
+        self.factory.setTimeout(6)
+
+        # Advance the clock almost to the timeout
+        self.reactor.advance(5)
+
+        # Nothing should have happened yet.
+        self.assertFalse(finished)
+
+        # Advance it to the configured timeout.
+        self.reactor.advance(1)
+
+        # Now the Deferred should have failed with TimeoutError.
+        self.assertTrue(finished)
+
+        # There should also be no calls left in the reactor.
+        self.assertFalse(self.reactor.calls)
+
+
+    def test_buildProtocolOnce(self):
+        """
+        A L{ftp.DTPFactory} instance's C{buildProtocol} method can be used once
+        to create a L{ftp.DTP} instance.
+        """
+        protocol = self.factory.buildProtocol(None)
+        self.assertIsInstance(protocol, ftp.DTP)
+
+        # A subsequent call returns None.
+        self.assertIdentical(self.factory.buildProtocol(None), None)
+
+
+    def test_timeoutAfterConnection(self):
+        """
+        If a timeout has been set up using L{ftp.DTPFactory.setTimeout}, it is
+        cancelled by L{ftp.DTPFactory.buildProtocol}.
+        """
+        self.factory.setTimeout(10)
+        protocol = self.factory.buildProtocol(None)
+        # Make sure the call is no longer active.
+        self.assertFalse(self.reactor.calls)
+
+
+    def test_connectionAfterTimeout(self):
+        """
+        If L{ftp.DTPFactory.buildProtocol} is called after the timeout
+        specified by L{ftp.DTPFactory.setTimeout} has elapsed, C{None} is
+        returned.
+        """
+        # Handle the error so it doesn't get logged.
+        d = self.assertFailure(self.factory.deferred, ftp.PortConnectionError)
+
+        # Set up the timeout and then cause it to elapse so the Deferred does
+        # fail.
+        self.factory.setTimeout(10)
+        self.reactor.advance(10)
+
+        # Try to get a protocol - we should not be able to.
+        self.assertIdentical(self.factory.buildProtocol(None), None)
+
+        # Make sure the Deferred is doing the right thing.
+        return d
+
+
+    def test_timeoutAfterConnectionFailed(self):
+        """
+        L{ftp.DTPFactory.deferred} fails with L{PortConnectionError} when
+        L{ftp.DTPFactory.clientConnectionFailed} is called.  If the timeout
+        specified with L{ftp.DTPFactory.setTimeout} expires after that, nothing
+        additional happens.
+        """
+        finished = []
+        d = self.assertFailure(self.factory.deferred, ftp.PortConnectionError)
+        d.addCallback(finished.append)
+
+        self.factory.setTimeout(10)
+        self.assertFalse(finished)
+        self.factory.clientConnectionFailed(None, None)
+        self.assertTrue(finished)
+        self.reactor.advance(10)
+        return d
+
+
+    def test_connectionFailedAfterTimeout(self):
+        """
+        If L{ftp.DTPFactory.clientConnectionFailed} is called after the timeout
+        specified by L{ftp.DTPFactory.setTimeout} has elapsed, nothing beyond
+        the normal timeout before happens.
+        """
+        # Handle the error so it doesn't get logged.
+        d = self.assertFailure(self.factory.deferred, ftp.PortConnectionError)
+
+        # Set up the timeout and then cause it to elapse so the Deferred does
+        # fail.
+        self.factory.setTimeout(10)
+        self.reactor.advance(10)
+
+        # Now fail the connection attempt.  This should do nothing.  In
+        # particular, it should not raise an exception.
+        self.factory.clientConnectionFailed(None, defer.TimeoutError("foo"))
+
+        # Give the Deferred to trial so it can make sure it did what we
+        # expected.
+        return d
+
 
 
 # -- Client Tests -----------------------------------------------------------
