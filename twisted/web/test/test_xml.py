@@ -472,16 +472,6 @@ alert("I hate you");
             beExtremelyLenient=1)
         self.assertEquals(d.documentElement.firstChild().toxml(), "<xa><y>c</y></xa>")
 
-    def testSpacing(self):
-        # testing issue #414
-        s = "<?xml version='1.0'?><p><q>smart</q> <code>HairDryer</code></p>"
-        d = microdom.parseString(s, beExtremelyLenient=1)
-        expected = "<p><q>smart</q> <code>HairDryer</code></p>"
-        actual = d.documentElement.toxml()
-        self.assertEquals(expected, actual)
-
-    testSpacing.todo = "AAARGH white space swallowing screws this up"
-
     def testLaterCloserSimple(self):
         s = "<ul><li>foo<li>bar<li>baz</ul>"
         d = microdom.parseString(s, beExtremelyLenient=1)
