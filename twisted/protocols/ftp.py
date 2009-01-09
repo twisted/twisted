@@ -1281,7 +1281,7 @@ class FTPFactory(policies.LimitTotalConnectionsFactory):
         if p is not None:
             p.wrappedProtocol.portal = self.portal
             p.wrappedProtocol.timeOut = self.timeOut
-            p.passivePortRange = self.passivePortRange
+            p.wrappedProtocol.passivePortRange = self.passivePortRange
         return p
 
     def stopFactory(self):

@@ -62,6 +62,7 @@ class _BufferingProtocol(protocol.Protocol):
         self.d.callback(self)
 
 
+
 class FTPServerTestCase(unittest.TestCase):
     """
     Simple tests for an FTP server with the default settings.
@@ -90,6 +91,9 @@ class FTPServerTestCase(unittest.TestCase):
         buildProtocol = self.factory.buildProtocol
         d1 = defer.Deferred()
         def _rememberProtocolInstance(addr):
+            # Done hooking this.
+            del self.factory.buildProtocol
+
             protocol = buildProtocol(addr)
             self.serverProtocol = protocol.wrappedProtocol
             def cleanupServer():
@@ -366,6 +370,18 @@ class BasicFTPServerTestCase(FTPServerTestCase):
         self.assertRaises(error.CannotListenError,
                           self.serverProtocol.getDTPPort,
                           protocol.Factory())
+
+
+    def test_portRangeInheritedFromFactory(self):
+        """
+        The L{FTP} instances created by L{ftp.FTPFactory.buildProtocol} have
+        their C{passivePortRange} attribute set to the same object the
+        factory's C{passivePortRange} attribute is set to.
+        """
+        portRange = xrange(2017, 2031)
+        self.factory.passivePortRange = portRange
+        protocol = self.factory.buildProtocol(None)
+        self.assertEqual(portRange, protocol.wrappedProtocol.passivePortRange)
 
 
 
