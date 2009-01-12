@@ -732,7 +732,7 @@ class ReactorBase(object):
                     break
             del self.threadCallQueue[:count]
             if self.threadCallQueue:
-                self.waker.wakeUp()
+                self.wakeUp()
 
         # insert new delayed calls now
         self._insertNewDelayedCalls()
