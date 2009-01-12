@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -9,8 +9,12 @@ from urlparse import urlparse, urlunsplit, clear_cache
 import random, urllib, cgi
 
 from twisted.python.compat import set
+from twisted.python.failure import Failure
 from twisted.trial import unittest
+from twisted.trial.unittest import TestCase
 from twisted.web import http, http_headers
+from twisted.web.http import PotentialDataLoss, _DataLoss
+from twisted.web.http import _IdentityTransferDecoder
 from twisted.protocols import loopback
 from twisted.internet.task import Clock
 from twisted.test.proto_helpers import StringTransport
@@ -298,19 +302,159 @@ class PersistenceTestCase(unittest.TestCase):
 
 
 
+class IdentityTransferEncodingTests(TestCase):
+    """
+    Tests for L{_IdentityTransferDecoder}.
+    """
+    def setUp(self):
+        """
+        Create an L{_IdentityTransferDecoder} with callbacks hooked up so that
+        calls to them can be inspected.
+        """
+        self.data = []
+        self.finish = []
+        self.contentLength = 10
+        self.decoder = _IdentityTransferDecoder(
+            self.contentLength, self.data.append, self.finish.append)
+
+
+    def test_exactAmountReceived(self):
+        """
+        If L{_IdentityTransferDecoder.dataReceived} is called with a string
+        with length equal to the content length passed to
+        L{_IdentityTransferDecoder}'s initializer, the data callback is invoked
+        with that string and the finish callback is invoked with a zero-length
+        string.
+        """
+        self.decoder.dataReceived('x' * self.contentLength)
+        self.assertEqual(self.data, ['x' * self.contentLength])
+        self.assertEqual(self.finish, [''])
+
+
+    def test_shortStrings(self):
+        """
+        If L{_IdentityTransferDecoder.dataReceived} is called multiple times
+        with strings which, when concatenated, are as long as the content
+        length provided, the data callback is invoked with each string and the
+        finish callback is invoked only after the second call.
+        """
+        self.decoder.dataReceived('x')
+        self.assertEqual(self.data, ['x'])
+        self.assertEqual(self.finish, [])
+        self.decoder.dataReceived('y' * (self.contentLength - 1))
+        self.assertEqual(self.data, ['x', 'y' * (self.contentLength - 1)])
+        self.assertEqual(self.finish, [''])
+
+
+    def test_longString(self):
+        """
+        If L{_IdentityTransferDecoder.dataReceived} is called with a string
+        with length greater than the provided content length, only the prefix
+        of that string up to the content length is passed to the data callback
+        and the remainder is passed to the finish callback.
+        """
+        self.decoder.dataReceived('x' * self.contentLength + 'y')
+        self.assertEqual(self.data, ['x' * self.contentLength])
+        self.assertEqual(self.finish, ['y'])
+
+
+    def test_rejectDataAfterFinished(self):
+        """
+        If data is passed to L{_IdentityTransferDecoder.dataReceived} after the
+        finish callback has been invoked, L{RuntimeError} is raised.
+        """
+        failures = []
+        def finish(bytes):
+            try:
+                decoder.dataReceived('foo')
+            except:
+                failures.append(Failure())
+        decoder = _IdentityTransferDecoder(5, self.data.append, finish)
+        decoder.dataReceived('x' * 4)
+        self.assertEqual(failures, [])
+        decoder.dataReceived('y')
+        failures[0].trap(RuntimeError)
+        self.assertEqual(
+            str(failures[0].value),
+            "_IdentityTransferDecoder cannot decode data after finishing")
+
+
+    def test_unknownContentLength(self):
+        """
+        If L{_IdentityTransferDecoder} is constructed with C{None} for the
+        content length, it passes all data delivered to it through to the data
+        callback.
+        """
+        data = []
+        finish = []
+        decoder = _IdentityTransferDecoder(None, data.append, finish.append)
+        decoder.dataReceived('x')
+        self.assertEqual(data, ['x'])
+        decoder.dataReceived('y')
+        self.assertEqual(data, ['x', 'y'])
+        self.assertEqual(finish, [])
+
+
+    def _verifyCallbacksUnreferenced(self, decoder):
+        """
+        Check the decoder's data and finish callbacks and make sure they are
+        None in order to help avoid references cycles.
+        """
+        self.assertIdentical(decoder.dataCallback, None)
+        self.assertIdentical(decoder.finishCallback, None)
+
+
+    def test_earlyConnectionLose(self):
+        """
+        L{_IdentityTransferDecoder.noMoreData} raises L{_DataLoss} if it is
+        called and the content length is known but not enough bytes have been
+        delivered.
+        """
+        self.decoder.dataReceived('x' * (self.contentLength - 1))
+        self.assertRaises(_DataLoss, self.decoder.noMoreData)
+        self._verifyCallbacksUnreferenced(self.decoder)
+
+
+    def test_unknownContentLengthConnectionLose(self):
+        """
+        L{_IdentityTransferDecoder.noMoreData} calls the finish callback and
+        raises L{PotentialDataLoss} if it is called and the content length is
+        unknown.
+        """
+        body = []
+        finished = []
+        decoder = _IdentityTransferDecoder(None, body.append, finished.append)
+        self.assertRaises(PotentialDataLoss, decoder.noMoreData)
+        self.assertEqual(body, [])
+        self.assertEqual(finished, [''])
+        self._verifyCallbacksUnreferenced(decoder)
+
+
+    def test_finishedConnectionLose(self):
+        """
+        L{_IdentityTransferDecoder.noMoreData} does not raise any exception if
+        it is called when the content length is known and that many bytes have
+        been delivered.
+        """
+        self.decoder.dataReceived('x' * self.contentLength)
+        self.decoder.noMoreData()
+        self._verifyCallbacksUnreferenced(self.decoder)
+
+
+
 class ChunkedTransferEncodingTests(unittest.TestCase):
     """
-    Tests for L{_ChunkedTransferEncoding}, which turns a byte stream encoded
+    Tests for L{_ChunkedTransferDecoder}, which turns a byte stream encoded
     using HTTP I{chunked} C{Transfer-Encoding} back into the original byte
     stream.
     """
     def test_decoding(self):
         """
-        L{_ChunkedTransferEncoding.dataReceived} decodes chunked-encoded data
+        L{_ChunkedTransferDecoder.dataReceived} decodes chunked-encoded data
         and passes the result to the specified callback.
         """
         L = []
-        p = http._ChunkedTransferEncoding(L.append, None)
+        p = http._ChunkedTransferDecoder(L.append, None)
         p.dataReceived('3\r\nabc\r\n5\r\n12345\r\n')
         p.dataReceived('a\r\n0123456789\r\n')
         self.assertEqual(L, ['abc', '12345', '0123456789'])
@@ -318,12 +462,12 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
 
     def test_short(self):
         """
-        L{_ChunkedTransferEncoding.dataReceived} decodes chunks broken up and
+        L{_ChunkedTransferDecoder.dataReceived} decodes chunks broken up and
         delivered in multiple calls.
         """
         L = []
         finished = []
-        p = http._ChunkedTransferEncoding(L.append, finished.append)
+        p = http._ChunkedTransferDecoder(L.append, finished.append)
         for s in '3\r\nabc\r\n5\r\n12345\r\n0\r\n\r\n':
             p.dataReceived(s)
         self.assertEqual(L, ['a', 'b', 'c', '1', '2', '3', '4', '5'])
@@ -332,57 +476,101 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
 
     def test_newlines(self):
         """
-        L{_ChunkedTransferEncoding.dataReceived} doesn't treat CR LF pairs
+        L{_ChunkedTransferDecoder.dataReceived} doesn't treat CR LF pairs
         embedded in chunk bodies specially.
         """
         L = []
-        p = http._ChunkedTransferEncoding(L.append, None)
+        p = http._ChunkedTransferDecoder(L.append, None)
         p.dataReceived('2\r\n\r\n\r\n')
         self.assertEqual(L, ['\r\n'])
 
 
     def test_extensions(self):
         """
-        L{_ChunkedTransferEncoding.dataReceived} disregards chunk-extension
+        L{_ChunkedTransferDecoder.dataReceived} disregards chunk-extension
         fields.
         """
         L = []
-        p = http._ChunkedTransferEncoding(L.append, None)
+        p = http._ChunkedTransferDecoder(L.append, None)
         p.dataReceived('3; x-foo=bar\r\nabc\r\n')
         self.assertEqual(L, ['abc'])
 
 
     def test_finish(self):
         """
-        L{_ChunkedTransferEncoding.dataReceived} interprets a zero-length
+        L{_ChunkedTransferDecoder.dataReceived} interprets a zero-length
         chunk as the end of the chunked data stream and calls the completion
         callback.
         """
         finished = []
-        p = http._ChunkedTransferEncoding(None, finished.append)
+        p = http._ChunkedTransferDecoder(None, finished.append)
         p.dataReceived('0\r\n\r\n')
         self.assertEqual(finished, [''])
 
 
     def test_extra(self):
         """
-        L{_ChunkedTransferEncoding.dataReceived} passes any bytes which come
+        L{_ChunkedTransferDecoder.dataReceived} passes any bytes which come
         after the terminating zero-length chunk to the completion callback.
         """
         finished = []
-        p = http._ChunkedTransferEncoding(None, finished.append)
+        p = http._ChunkedTransferDecoder(None, finished.append)
         p.dataReceived('0\r\n\r\nhello')
         self.assertEqual(finished, ['hello'])
 
 
     def test_afterFinished(self):
         """
-        L{_ChunkedTransferEncoding.dataReceived} raises L{RuntimeError} if it
+        L{_ChunkedTransferDecoder.dataReceived} raises L{RuntimeError} if it
         is called after it has seen the last chunk.
         """
-        p = http._ChunkedTransferEncoding(None, lambda bytes: None)
+        p = http._ChunkedTransferDecoder(None, lambda bytes: None)
         p.dataReceived('0\r\n\r\n')
         self.assertRaises(RuntimeError, p.dataReceived, 'hello')
+
+
+    def test_earlyConnectionLose(self):
+        """
+        L{_ChunkedTransferDecoder.noMoreData} raises L{_DataLoss} if it is
+        called and the end of the last trailer has not yet been received.
+        """
+        parser = http._ChunkedTransferDecoder(None, lambda bytes: None)
+        parser.dataReceived('0\r\n\r')
+        exc = self.assertRaises(_DataLoss, parser.noMoreData)
+        self.assertEqual(
+            str(exc),
+            "Chunked decoder in 'trailer' state, still expecting more data "
+            "to get to finished state.")
+
+
+    def test_finishedConnectionLose(self):
+        """
+        L{_ChunkedTransferDecoder.noMoreData} does not raise any exception if
+        it is called after the terminal zero length chunk is received.
+        """
+        parser = http._ChunkedTransferDecoder(None, lambda bytes: None)
+        parser.dataReceived('0\r\n\r\n')
+        parser.noMoreData()
+
+
+    def test_reentrantFinishedNoMoreData(self):
+        """
+        L{_ChunkedTransferDecoder.noMoreData} can be called from the finished
+        callback without raising an exception.
+        """
+        errors = []
+        successes = []
+        def finished(extra):
+            try:
+                parser.noMoreData()
+            except:
+                errors.append(Failure())
+            else:
+                successes.append(True)
+        parser = http._ChunkedTransferDecoder(None, finished)
+        parser.dataReceived('0\r\n\r\n')
+        self.assertEqual(errors, [])
+        self.assertEqual(successes, [True])
 
 
 

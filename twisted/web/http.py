@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.web.test.test_http -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -361,6 +361,7 @@ def parseContentRange(header):
     else:
         realLength = int(realLength)
     return (start, end, realLength)
+
 
 
 class StringTransport:
@@ -1162,14 +1163,114 @@ class Request:
 
 
 
-class _ChunkedTransferEncoding(object):
+
+class _DataLoss(Exception):
     """
-    Protocol for decoding chunked Transfer-Encoding, as defined by RFC 2616,
+    L{_DataLoss} indicates that not all of a message body was received. This
+    is only one of several possible exceptions which may indicate that data
+    was lost.  Because of this, it should not be checked for by
+    specifically; any unexpected exception should be treated as having
+    caused data loss.
+    """
+
+
+
+class PotentialDataLoss(Exception):
+    """
+    L{PotentialDataLoss} may be raised by a transfer encoding decoder's
+    C{noMoreData} method to indicate that it cannot be determined if the
+    entire response body has been delivered.  This only occurs when making
+    requests to HTTP servers which do not set I{Content-Length} or a
+    I{Transfer-Encoding} in the response because in this case the end of the
+    response is indicated by the connection being closed, an event which may
+    also be due to a transient network problem or other error.
+    """
+
+
+
+class _IdentityTransferDecoder(object):
+    """
+    Protocol for accumulating bytes up to a specified length.  This handles the
+    case where no I{Transfer-Encoding} is specified.
+
+    @ivar contentLength: Counter keeping track of how many more bytes there are
+        to receive.
+
+    @ivar dataCallback: A one-argument callable which will be invoked each
+        time application data is received.
+
+    @ivar finishCallback: A one-argument callable which will be invoked when
+        the terminal chunk is received.  It will be invoked with all bytes
+        which were delivered to this protocol which came after the terminal
+        chunk.
+    """
+    def __init__(self, contentLength, dataCallback, finishCallback):
+        self.contentLength = contentLength
+        self.dataCallback = dataCallback
+        self.finishCallback = finishCallback
+
+
+    def dataReceived(self, data):
+        """
+        Interpret the next chunk of bytes received.  Either deliver them to the
+        data callback or invoke the finish callback if enough bytes have been
+        received.
+
+        @raise RuntimeError: If the finish callback has already been invoked
+            during a previous call to this methood.
+        """
+        if self.dataCallback is None:
+            raise RuntimeError(
+                "_IdentityTransferDecoder cannot decode data after finishing")
+
+        if self.contentLength is None:
+            self.dataCallback(data)
+        elif len(data) < self.contentLength:
+            self.contentLength -= len(data)
+            self.dataCallback(data)
+        else:
+            # Make the state consistent before invoking any code belonging to
+            # anyone else in case noMoreData ends up being called beneath this
+            # stack frame.
+            contentLength = self.contentLength
+            dataCallback = self.dataCallback
+            finishCallback = self.finishCallback
+            self.dataCallback = self.finishCallback = None
+            self.contentLength = 0
+
+            dataCallback(data[:contentLength])
+            finishCallback(data[contentLength:])
+
+
+    def noMoreData(self):
+        """
+        All data which will be delivered to this decoder has been.  Check to
+        make sure as much data as was expected has been received.
+
+        @raise PotentialDataLoss: If the content length is unknown.
+        @raise _DataLoss: If the content length is known and fewer than that
+            many bytes have been delivered.
+
+        @return: C{None}
+        """
+        finishCallback = self.finishCallback
+        self.dataCallback = self.finishCallback = None
+        if self.contentLength is None:
+            finishCallback('')
+            raise PotentialDataLoss()
+        elif self.contentLength != 0:
+            raise _DataLoss()
+
+
+
+class _ChunkedTransferDecoder(object):
+    """
+    Protocol for decoding I{chunked} Transfer-Encoding, as defined by RFC 2616,
     section 3.6.1.  This protocol can interpret the contents of a request or
     response body which uses the I{chunked} Transfer-Encoding.  It cannot
     interpret any of the rest of the HTTP protocol.
 
-    It may make sense for _ChunkedTransferEncoding to be an actual IProtocol
+    It may make sense for _ChunkedTransferDecoder to be an actual IProtocol
     implementation.  Currently, the only user of this class will only ever
     call dataReceived on it.  However, it might be an improvement if the
     user could connect this to a transport and deliver connection lost
@@ -1237,8 +1338,8 @@ class _ChunkedTransferEncoding(object):
                 if data.startswith('\r\n'):
                     data = data[2:]
                     if self.finish:
-                        self.finishCallback(data)
                         self.state = 'finished'
+                        self.finishCallback(data)
                         data = ''
                     else:
                         self.state = 'chunk-length'
@@ -1256,9 +1357,19 @@ class _ChunkedTransferEncoding(object):
                     data = ''
             elif self.state == 'finished':
                 raise RuntimeError(
-                    "_ChunkedTransferEncoding.dataReceived called after last "
+                    "_ChunkedTransferDecoder.dataReceived called after last "
                     "chunk was processed")
 
+
+    def noMoreData(self):
+        """
+        Verify that all data has been received.  If it has not been, raise
+        L{_DataLoss}.
+        """
+        if self.state != 'finished':
+            raise _DataLoss(
+                "Chunked decoder in %r state, still expecting more data to "
+                "get to finished state." % (self.state,))
 
 
 
@@ -1267,7 +1378,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     A receiver for HTTP requests.
 
     @ivar _transferDecoder: C{None} or an instance of
-        L{_ChunkedTransferEncoding} if the request body uses the I{chunked}
+        L{_ChunkedTransferDecoder} if the request body uses the I{chunked}
         Transfer-Encoding.
     """
 
@@ -1360,9 +1471,11 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         data = data.strip()
         if header == 'content-length':
             self.length = int(data)
+            self._transferDecoder = _IdentityTransferDecoder(
+                self.length, self.requests[-1].handleContentChunk, self._finishRequestBody)
         elif header == 'transfer-encoding' and data.lower() == 'chunked':
             self.length = None
-            self._transferDecoder = _ChunkedTransferEncoding(
+            self._transferDecoder = _ChunkedTransferDecoder(
                 self.requests[-1].handleContentChunk, self._finishRequestBody)
 
         reqHeaders = self.requests[-1].requestHeaders
@@ -1400,14 +1513,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
     def rawDataReceived(self, data):
         self.resetTimeout()
-        if self._transferDecoder is not None:
-            self._transferDecoder.dataReceived(data)
-        elif len(data) < self.length:
-            self.requests[-1].handleContentChunk(data)
-            self.length = self.length - len(data)
-        else:
-            self.requests[-1].handleContentChunk(data[:self.length])
-            self._finishRequestBody(data[self.length:])
+        self._transferDecoder.dataReceived(data)
 
 
     def allHeadersReceived(self):
