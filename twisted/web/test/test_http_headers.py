@@ -1,4 +1,4 @@
-# Copyright (c) 2008 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -178,6 +178,28 @@ class HeadersTests(TestCase):
         self.assertNotEqual(h, ())
         self.assertNotEqual(h, object())
         self.assertNotEqual(h, "foo")
+
+
+    def test_repr(self):
+        """
+        The L{repr} of a L{Headers} instance shows the names and values of all
+        the headers it contains.
+        """
+        self.assertEqual(
+            repr(Headers({"foo": ["bar", "baz"]})),
+            "Headers({'foo': ['bar', 'baz']})")
+
+
+    def test_subclassRepr(self):
+        """
+        The L{repr} of an instance of a subclass of L{Headers} uses the name
+        of the subclass instead of the string C{"Headers"}.
+        """
+        class FunnyHeaders(Headers):
+            pass
+        self.assertEqual(
+            repr(FunnyHeaders({"foo": ["bar", "baz"]})),
+            "FunnyHeaders({'foo': ['bar', 'baz']})")
 
 
 

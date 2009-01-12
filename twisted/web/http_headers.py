@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.web.test.test_http_headers
-# Copyright (c) 2008 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -139,6 +139,13 @@ class Headers(object):
         if rawHeaders is not None:
             for name, values in rawHeaders.iteritems():
                 self.setRawHeaders(name, values)
+
+
+    def __repr__(self):
+        """
+        Return a string fully describing the headers set on this object.
+        """
+        return '%s(%r)' % (self.__class__.__name__, self._rawHeaders,)
 
 
     def __cmp__(self, other):
