@@ -1037,6 +1037,8 @@ class IConsumer(Interface):
         @param streaming: C{True} if C{producer} provides L{IPushProducer},
         C{False} if C{producer} provides L{IPullProducer}.
 
+        @raise RuntimeError: If a producer is already registered.
+
         @return: C{None}
         """
 
