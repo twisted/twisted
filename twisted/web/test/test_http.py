@@ -17,6 +17,7 @@ from twisted.web.http import PotentialDataLoss, _DataLoss
 from twisted.web.http import _IdentityTransferDecoder
 from twisted.protocols import loopback
 from twisted.internet.task import Clock
+from twisted.internet.error import ConnectionLost
 from twisted.test.proto_helpers import StringTransport
 from twisted.web.test.test_web import DummyChannel
 
@@ -1248,3 +1249,25 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         req.parseCookies()
         self.assertEquals(req.received_cookies, {"test": '"lemur"',
                                                  "test2": '"panda"'})
+
+
+    def test_connectionLost(self):
+        """
+        L{http.Request.connectionLost} closes L{Request.content} and drops the
+        reference to the L{HTTPChannel} to assist with garbage collection.
+        """
+        req = http.Request(DummyChannel(), None)
+
+        # Cause Request.content to be created at all.
+        req.gotLength(10)
+
+        # Grab a reference to content in case the Request drops it later on.
+        content = req.content
+
+        # Put some bytes into it
+        req.handleContentChunk("hello")
+
+        # Then something goes wrong and content should get closed.
+        req.connectionLost(Failure(ConnectionLost("Finished")))
+        self.assertTrue(content.closed)
+        self.assertIdentical(req.channel, None)

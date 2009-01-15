@@ -568,12 +568,18 @@ class RequestTests(unittest.TestCase):
         self.assertEqual(request.prePathURL(), 'http://example.com/foo%2Fbar')
 
 
-    def testNotifyFinishConnectionLost(self):
+    def test_connectionLost(self):
+        """
+        L{server.Request.connectionLost} triggers all finish notification
+        Deferreds and cleans up per-request state.
+        """
         d = DummyChannel()
         request = server.Request(d, 1)
         finished = request.notifyFinish()
         request.connectionLost(error.ConnectionDone("Connection done"))
+        self.assertIdentical(request.channel, None)
         return self.assertFailure(finished, error.ConnectionDone)
+
 
 
 class RootResource(resource.Resource):

@@ -258,6 +258,7 @@ class Request(pb.Copyable, http.Request, components.Componentized):
         return self.notifications[-1]
 
     def connectionLost(self, reason):
+        http.Request.connectionLost(self, reason)
         for d in self.notifications:
             d.errback(reason)
         self.notifications = []

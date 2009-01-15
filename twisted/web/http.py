@@ -521,6 +521,7 @@ class Request:
     lastModified = None
     args = None
     path = None
+    content = None
     _forceSSL = 0
 
     def __init__(self, channel, queued):
@@ -1158,9 +1159,13 @@ class Request:
         return names[0]
 
     def connectionLost(self, reason):
-        """connection was lost"""
-        pass
-
+        """
+        There is no longer a connection for this request to respond over.
+        Clean up anything which can't be useful anymore.
+        """
+        self.channel = None
+        if self.content is not None:
+            self.content.close()
 
 
 
