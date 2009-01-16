@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.web.test.test_webclient -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -323,7 +323,9 @@ class HTTPDownloader(HTTPClientFactory):
 
     def __init__(self, url, fileOrName,
                  method='GET', postdata=None, headers=None,
-                 agent="Twisted client", supportPartial=0):
+                 agent="Twisted client", supportPartial=0,
+                 timeout=0, cookies=None, followRedirect=1,
+                 redirectLimit=20):
         self.requestedPartial = 0
         if isinstance(fileOrName, types.StringTypes):
             self.fileName = fileOrName
@@ -337,11 +339,14 @@ class HTTPDownloader(HTTPClientFactory):
                     headers["range"] = "bytes=%d-" % fileLength
         else:
             self.file = fileOrName
-        HTTPClientFactory.__init__(self, url, method=method, postdata=postdata, headers=headers, agent=agent)
-        self.deferred = defer.Deferred()
-        self.waiting = 1
+        HTTPClientFactory.__init__(
+            self, url, method=method, postdata=postdata, headers=headers,
+            agent=agent, timeout=timeout, cookies=cookies,
+            followRedirect=followRedirect, redirectLimit=redirectLimit)
+
 
     def gotHeaders(self, headers):
+        HTTPClientFactory.gotHeaders(self, headers)
         if self.requestedPartial:
             contentRange = headers.get("content-range", None)
             if not contentRange:
@@ -369,7 +374,6 @@ class HTTPDownloader(HTTPClientFactory):
         if partialContent and not self.requestedPartial:
             raise ValueError, "we shouldn't get partial content response if we didn't want it!"
         if self.waiting:
-            self.waiting = 0
             try:
                 if not self.file:
                     self.file = self.openFile(partialContent)
@@ -388,6 +392,7 @@ class HTTPDownloader(HTTPClientFactory):
             self.deferred.errback(failure.Failure())
 
     def pageEnd(self):
+        self.waiting = 0
         if not self.file:
             return
         try:

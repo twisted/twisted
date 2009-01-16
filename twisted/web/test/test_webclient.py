@@ -1,11 +1,11 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
 Tests for L{twisted.web.client}.
 """
 
-import os
+import StringIO, os
 
 from urlparse import urlparse
 
@@ -23,7 +23,17 @@ except:
 
 
 class ForeverTakingResource(resource.Resource):
+    """
+    L{ForeverTakingResource} is a resource which never finishes responding
+    to requests.
+    """
+    def __init__(self, write=False):
+        resource.Resource.__init__(self)
+        self._write = write
+
     def render(self, request):
+        if self._write:
+            request.write('some bytes')
         return server.NOT_DONE_YET
 
 
@@ -211,11 +221,13 @@ class WebClientTestCase(unittest.TestCase):
         self.infiniteRedirectResource = CountingRedirect("/infiniteRedirect")
         r.putChild("infiniteRedirect", self.infiniteRedirectResource)
         r.putChild("wait", ForeverTakingResource())
+        r.putChild("write-then-wait", ForeverTakingResource(write=True))
         r.putChild("error", ErrorResource())
         r.putChild("nolength", NoLengthResource())
         r.putChild("host", HostHeaderResource())
         r.putChild("payload", PayloadResource())
         r.putChild("broken", BrokenDownloadResource())
+        r.putChild("cookiemirror", CookieMirrorResource())
         self.site = server.Site(r, timeout=None)
         self.wrapper = WrappingFactory(self.site)
         self.port = self._listen(self.wrapper)
@@ -409,13 +421,13 @@ class WebClientTestCase(unittest.TestCase):
         page request fails with L{InfiniteRedirection}.
         """
         def checkRedirectCount(*a):
-            self.assertEquals(f._redirectCount, 20)
-            self.assertEquals(self.infiniteRedirectResource.count, 20)
+            self.assertEquals(f._redirectCount, 13)
+            self.assertEquals(self.infiniteRedirectResource.count, 13)
 
         f = client._makeGetterFactory(
             self.getURL('infiniteRedirect'),
             client.HTTPClientFactory,
-            redirectLimit=20)
+            redirectLimit=13)
         d = self.assertFailure(f.deferred, error.InfiniteRedirection)
         d.addCallback(checkRedirectCount)
         return d
@@ -460,6 +472,89 @@ class WebClientTestCase(unittest.TestCase):
     def _cbPartialTest(self, ignored, expectedData, filename):
         bytes = file(filename, "rb").read()
         self.assertEquals(bytes, expectedData)
+
+
+    def test_downloadTimeout(self):
+        """
+        If the timeout indicated by the C{timeout} parameter to
+        L{client.HTTPDownloader.__init__} elapses without the complete response
+        being received, the L{defer.Deferred} returned by
+        L{client.downloadPage} fires with a L{Failure} wrapping a
+        L{defer.TimeoutError}.
+        """
+        # Verify the behavior if no bytes are ever written.
+        first = client.downloadPage(
+            self.getURL("wait"),
+            self.mktemp(), timeout=0.01)
+
+        # Verify the behavior if some bytes are written but then the request
+        # never completes.
+        second = client.downloadPage(
+            self.getURL("write-then-wait"),
+            self.mktemp(), timeout=0.01)
+
+        return defer.gatherResults([
+            self.assertFailure(first, defer.TimeoutError),
+            self.assertFailure(second, defer.TimeoutError)])
+
+
+    def test_downloadHeaders(self):
+        """
+        After L{client.HTTPDownloader.deferred} fires, the
+        L{client.HTTPDownloader} instance's C{status} and C{response_headers}
+        attributes are populated with the values from the response.
+        """
+        def checkHeaders(factory):
+            self.assertEquals(factory.status, '200')
+            self.assertEquals(factory.response_headers['content-type'][0], 'text/html')
+            self.assertEquals(factory.response_headers['content-length'][0], '10')
+            os.unlink(factory.fileName)
+        factory = client._makeGetterFactory(
+            self.getURL('file'),
+            client.HTTPDownloader,
+            fileOrName=self.mktemp())
+        return factory.deferred.addCallback(lambda _: checkHeaders(factory))
+
+
+    def test_downloadCookies(self):
+        """
+        The C{cookies} dict passed to the L{client.HTTPDownloader}
+        initializer is used to populate the I{Cookie} header included in the
+        request sent to the server.
+        """
+        output = self.mktemp()
+        factory = client._makeGetterFactory(
+            self.getURL('cookiemirror'),
+            client.HTTPDownloader,
+            fileOrName=output,
+            cookies={'foo': 'bar'})
+        def cbFinished(ignored):
+            self.assertEqual(
+                FilePath(output).getContent(),
+                "[('foo', 'bar')]")
+        factory.deferred.addCallback(cbFinished)
+        return factory.deferred
+
+
+    def test_downloadRedirectLimit(self):
+        """
+        When more than C{redirectLimit} HTTP redirects are encountered, the
+        page request fails with L{InfiniteRedirection}.
+        """
+        def checkRedirectCount(*a):
+            self.assertEquals(f._redirectCount, 7)
+            self.assertEquals(self.infiniteRedirectResource.count, 7)
+
+        f = client._makeGetterFactory(
+            self.getURL('infiniteRedirect'),
+            client.HTTPDownloader,
+            fileOrName=self.mktemp(),
+            redirectLimit=7)
+        d = self.assertFailure(f.deferred, error.InfiniteRedirection)
+        d.addCallback(checkRedirectCount)
+        return d
+
+
 
 class WebClientSSLTestCase(WebClientTestCase):
     def _listen(self, site):
