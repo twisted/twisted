@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.trial.test.test_tests -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -12,6 +12,34 @@ Maintainer: Jonathan Lange
 import doctest, inspect
 import os, warnings, sys, tempfile, gc, types
 from pprint import pformat
+try:
+    from dis import findlinestarts as _findlinestarts
+except ImportError:
+    # Definition copied from Python's Lib/dis.py - findlinestarts was not
+    # available in Python 2.3.  This function is copyright Python Software
+    # Foundation, released under the Python license:
+    # http://www.python.org/psf/license/
+    def _findlinestarts(code):
+        """Find the offsets in a byte code which are start of lines in the source.
+
+        Generate pairs (offset, lineno) as described in Python/compile.c.
+
+        """
+        byte_increments = [ord(c) for c in code.co_lnotab[0::2]]
+        line_increments = [ord(c) for c in code.co_lnotab[1::2]]
+
+        lastlineno = None
+        lineno = code.co_firstlineno
+        addr = 0
+        for byte_incr, line_incr in zip(byte_increments, line_increments):
+            if byte_incr:
+                if lineno != lastlineno:
+                    yield (addr, lineno)
+                    lastlineno = lineno
+                addr += byte_incr
+            lineno += line_incr
+        if lineno != lastlineno:
+            yield (addr, lineno)
 
 from twisted.internet import defer, utils
 from twisted.python import components, failure, log, monkey
@@ -1015,12 +1043,6 @@ class TestCase(_Assertions):
         @raise ValueError: If C{offendingFunctions} is not C{None} and includes
             an object which is not a L{FunctionType} or L{MethodType} instance.
 
-        @raise IOError: If the source file (.py) for one of the functions in
-            C{offendingFunctions} is not available, its lines cannot be
-            determined and L{IOError} will be raised.  (It may be possible to
-            implement this function without requiring source files by using the
-            co_lnotab attribute of code objects.)
-
         @return: A C{list}, each element of which is a C{dict} giving
             information about one warning which was flushed by this call.  The
             keys of each C{dict} are:
@@ -1047,21 +1069,35 @@ class TestCase(_Assertions):
             self._warnings[:] = []
         else:
             toFlush = []
-            for w in self._warnings:
+            for aWarning in self._warnings:
                 for aFunction in offendingFunctions:
                     if not isinstance(aFunction, (
                             types.FunctionType, types.MethodType)):
                         raise ValueError("%r is not a function or method" % (
                                 aFunction,))
-                    filename = inspect.getabsfile(aFunction)
-                    if os.path.normcase(filename) != os.path.normcase(w.filename):
+
+                    # inspect.getabsfile(aFunction) sometimes returns a
+                    # filename which disagrees with the filename the warning
+                    # system generates.  This seems to be because a
+                    # function's code object doesn't deal with source files
+                    # being renamed.  inspect.getabsfile(module) seems
+                    # better (or at least agrees with the warning system
+                    # more often), and does some normalization for us which
+                    # is desirable.  inspect.getmodule() is attractive, but
+                    # somewhat broken in Python 2.3.  See Python bug 4845.
+                    aModule = sys.modules[aFunction.__module__]
+                    filename = inspect.getabsfile(aModule)
+
+                    if filename != os.path.normcase(aWarning.filename):
                         continue
-                    lines, start = inspect.getsourcelines(aFunction)
-                    if not (start <= w.lineno <= start + len(lines)):
+                    lineStarts = list(_findlinestarts(aFunction.func_code))
+                    first = lineStarts[0][1]
+                    last = lineStarts[-1][1]
+                    if not (first <= aWarning.lineno <= last):
                         continue
                     # The warning points to this function, flush it and move on
                     # to the next warning.
-                    toFlush.append(w)
+                    toFlush.append(aWarning)
                     break
             # Remove everything which is being flushed.
             map(self._warnings.remove, toFlush)

@@ -1,4 +1,4 @@
-# Copyright (c) 2008 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -244,6 +244,21 @@ class FlushWarningsTests(TestCase):
             [{'category': secondCategory, 'message': secondMessage}])
 
 
+    def test_functionBoundaries(self):
+        """
+        Verify that warnings emitted at the very edges of a function are still
+        determined to be emitted from that function.
+        """
+        def warner():
+            warnings.warn("first line warning")
+            warnings.warn("internal line warning")
+            warnings.warn("last line warning")
+
+        warner()
+        self.assertEqual(
+            len(self.flushWarnings(offendingFunctions=[warner])), 3)
+
+
     def test_invalidFilter(self):
         """
         If an object which is neither a function nor a method is included in
@@ -257,9 +272,8 @@ class FlushWarningsTests(TestCase):
 
     def test_missingSource(self):
         """
-        If a function the source of which is not available is including in the
-        C{offendingFunctions} list, L{TestCase.flushWarnings} raises
-        L{IOError}.  Such a call flushes no warnings.
+        Warnings emitted by a function the source code of which is not
+        available can still be flushed.
         """
         package = FilePath(self.mktemp()).child('twisted_private_helper')
         package.makedirs()
@@ -277,9 +291,52 @@ def foo():
         package.child('missingsourcefile.py').remove()
 
         missingsourcefile.foo()
-        self.assertRaises(
-            IOError, self.flushWarnings, [missingsourcefile.foo])
-        self.assertEqual(len(self.flushWarnings()), 1)
+        self.assertEqual(len(self.flushWarnings([missingsourcefile.foo])), 1)
+
+
+    def test_renamedSource(self):
+        """
+        Warnings emitted by a function defined in a file which has been renamed
+        since it was initially compiled can still be flushed.
+
+        This is testing the code which specifically supports working around the
+        unfortunate behavior of CPython to write a .py source file name into
+        the .pyc files it generates and then trust that it is correct in
+        various places.  If source files are renamed, .pyc files may not be
+        regenerated, but they will contain incorrect filenames.
+        """
+        package = FilePath(self.mktemp()).child('twisted_private_helper')
+        package.makedirs()
+        package.child('__init__.py').setContent('')
+        package.child('module.py').setContent('''
+import warnings
+def foo():
+    warnings.warn("oh no")
+''')
+        sys.path.insert(0, package.parent().path)
+        self.addCleanup(sys.path.remove, package.parent().path)
+
+        # Import it to cause pycs to be generated
+        from twisted_private_helper import module
+
+        # Clean up the state resulting from that import; we're not going to use
+        # this module, so it should go away.
+        del sys.modules['twisted_private_helper']
+        del sys.modules[module.__name__]
+
+        # Rename the source directory
+        package.moveTo(package.sibling('twisted_renamed_helper'))
+
+        # Import the newly renamed version
+        from twisted_renamed_helper import module
+        self.addCleanup(sys.modules.pop, 'twisted_renamed_helper')
+        self.addCleanup(sys.modules.pop, module.__name__)
+
+        # Generate the warning
+        module.foo()
+
+        # Flush it
+        self.assertEqual(len(self.flushWarnings([module.foo])), 1)
 
 
 
