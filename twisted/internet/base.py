@@ -17,16 +17,12 @@ import warnings
 import operator
 from heapq import heappush, heappop, heapify
 
-try:
-    import fcntl
-except ImportError:
-    fcntl = None
 import traceback
 
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorThreads
 from twisted.internet.interfaces import IResolverSimple, IReactorPluggableResolver
 from twisted.internet.interfaces import IConnector, IDelayedCall
-from twisted.internet import main, error, abstract, defer, threads
+from twisted.internet import fdesc, main, error, abstract, defer, threads
 from twisted.python import log, failure, reflect
 from twisted.python.runtime import seconds as runtimeSeconds, platform, platformType
 from twisted.internet.defer import Deferred, DeferredList
@@ -1019,9 +1015,7 @@ class BasePort(abstract.FileDescriptor):
     def createInternetSocket(self):
         s = socket.socket(self.addressFamily, self.socketType)
         s.setblocking(0)
-        if fcntl and hasattr(fcntl, 'FD_CLOEXEC'):
-            old = fcntl.fcntl(s.fileno(), fcntl.F_GETFD)
-            fcntl.fcntl(s.fileno(), fcntl.F_SETFD, old | fcntl.FD_CLOEXEC)
+        fdesc._setCloseOnExec(s.fileno())
         return s
 
 

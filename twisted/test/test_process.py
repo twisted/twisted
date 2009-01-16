@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -17,7 +17,10 @@ import stat
 try:
     import fcntl
 except ImportError:
-    fcntl = None
+    fcntl = process = None
+else:
+    from twisted.internet import process
+
 
 from zope.interface.verify import verifyObject
 
@@ -25,11 +28,6 @@ from twisted.internet import reactor, protocol, error, interfaces, defer
 from twisted.trial import unittest
 from twisted.python import util, runtime, procutils
 from twisted.python.compat import set
-
-try:
-    from twisted.internet import process
-except ImportError:
-    process = None
 
 
 

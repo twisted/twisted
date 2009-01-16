@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_process -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -636,10 +636,7 @@ class Process(_BaseProcess):
             if target == child:
                 # fd is already in place
                 if debug: print >>errfd, "%d already in place" % target
-                if fcntl and hasattr(fcntl, 'FD_CLOEXEC'):
-                    old = fcntl.fcntl(child, fcntl.F_GETFD)
-                    fcntl.fcntl(child,
-                                fcntl.F_SETFD, old & ~fcntl.FD_CLOEXEC)
+                fdesc._unsetCloseOnExec(child)
             else:
                 if child in fdmap.values():
                     # we can't replace child-fd yet, as some other mapping

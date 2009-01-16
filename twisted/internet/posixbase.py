@@ -1,6 +1,5 @@
 # -*- test-case-name: twisted.test.test_internet -*-
-#
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -120,7 +119,9 @@ class _UnixWaker(log.Logger, styles.Ephemeral):
         self.reactor = reactor
         self.i, self.o = os.pipe()
         fdesc.setNonBlocking(self.i)
+        fdesc._setCloseOnExec(self.i)
         fdesc.setNonBlocking(self.o)
+        fdesc._setCloseOnExec(self.o)
         self.fileno = lambda: self.i
 
     def doRead(self):

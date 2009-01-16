@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_tcp -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -18,10 +18,6 @@ import socket
 import sys
 import operator
 
-try:
-    import fcntl
-except ImportError:
-    fcntl = None
 from zope.interface import implements, classImplements
 
 try:
@@ -75,7 +71,7 @@ else:
 from errno import errorcode
 
 # Twisted Imports
-from twisted.internet import defer, base, address
+from twisted.internet import defer, base, address, fdesc
 from twisted.python import log, failure, reflect
 from twisted.python.util import unsignedID
 from twisted.internet.error import CannotListenError
@@ -602,9 +598,7 @@ class BaseClient(Connection):
         """
         s = socket.socket(self.addressFamily, self.socketType)
         s.setblocking(0)
-        if fcntl and hasattr(fcntl, 'FD_CLOEXEC'):
-            old = fcntl.fcntl(s.fileno(), fcntl.F_GETFD)
-            fcntl.fcntl(s.fileno(), fcntl.F_SETFD, old | fcntl.FD_CLOEXEC)
+        fdesc._setCloseOnExec(s.fileno())
         return s
 
     def resolveAddress(self):
@@ -931,6 +925,7 @@ class Port(base.BasePort, _SocketCloser):
                         break
                     raise
 
+                fdesc._setCloseOnExec(skt.fileno())
                 protocol = self.factory.buildProtocol(self._buildAddr(addr))
                 if protocol is None:
                     skt.close()

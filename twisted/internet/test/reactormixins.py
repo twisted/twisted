@@ -1,4 +1,4 @@
-# Copyright (c) 2008 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -11,14 +11,15 @@ import signal
 
 from twisted.internet.defer import TimeoutError
 from twisted.trial.unittest import TestCase, SkipTest
+from twisted.python.runtime import platformType
 from twisted.python.reflect import namedAny
 from twisted.python import log
 from twisted.python.failure import Failure
 
 # Access private APIs.
-try:
+if platformType == 'posix':
     from twisted.internet import process
-except ImportError:
+else:
     process = None
 
 
@@ -57,7 +58,7 @@ class ReactorBuilder:
         Clear the SIGCHLD handler, if there is one, to ensure an environment
         like the one which exists prior to a call to L{reactor.run}.
         """
-        if getattr(signal, 'SIGCHLD', None) is not None:
+        if platformType == 'posix':
             self.originalHandler = signal.signal(signal.SIGCHLD, signal.SIG_DFL)
 
 

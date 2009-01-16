@@ -1,19 +1,22 @@
-# Copyright (c) 2007 Twisted Matrix Laboratories.
+# Copyright (c) 2007-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
 Tests for L{twisted.internet.fdesc}.
 """
 
-import os
+import os, sys
 import errno
 
-from twisted.trial import unittest
-
 try:
-    from twisted.internet import fdesc
+    import fcntl
 except ImportError:
-    fdesc = None
+    skip = "not supported on this platform"
+else:
+    from twisted.internet import fdesc
+
+from twisted.python.util import untilConcludes
+from twisted.trial import unittest
 
 
 class ReadWriteTestCase(unittest.TestCase):
@@ -172,5 +175,61 @@ class ReadWriteTestCase(unittest.TestCase):
             os.write = oldOsWrite
 
 
-if fdesc is None:
-    ReadWriteTestCase.skip = "not supported on this platform"
+
+class CloseOnExecTests(unittest.TestCase):
+    """
+    Tests for L{fdesc._setCloseOnExec} and L{fdesc._unsetCloseOnExec}.
+    """
+    program = '''
+import os, errno
+try:
+    os.write(%d, 'lul')
+except OSError, e:
+    if e.errno == errno.EBADF:
+        os._exit(0)
+    os._exit(5)
+except:
+    os._exit(10)
+else:
+    os._exit(20)
+'''
+
+    def _execWithFileDescriptor(self, fObj):
+        pid = os.fork()
+        if pid == 0:
+            try:
+                os.execv(sys.executable, [sys.executable, '-c', self.program % (fObj.fileno(),)])
+            except:
+                import traceback
+                traceback.print_exc()
+                os._exit(30)
+        else:
+            # On Linux wait(2) doesn't seem ever able to fail with EINTR but
+            # POSIX seems to allow it and on OS X it happens quite a lot.
+            return untilConcludes(os.waitpid, pid, 0)[1]
+
+
+    def test_setCloseOnExec(self):
+        """
+        A file descriptor passed to L{fdesc._setCloseOnExec} is not inherited
+        by a new process image created with one of the exec family of
+        functions.
+        """
+        fObj = file(self.mktemp(), 'w')
+        fdesc._setCloseOnExec(fObj.fileno())
+        status = self._execWithFileDescriptor(fObj)
+        self.assertTrue(os.WIFEXITED(status))
+        self.assertEqual(os.WEXITSTATUS(status), 0)
+
+
+    def test_unsetCloseOnExec(self):
+        """
+        A file descriptor passed to L{fdesc._unsetCloseOnExec} is inherited by
+        a new process image created with one of the exec family of functions.
+        """
+        fObj = file(self.mktemp(), 'w')
+        fdesc._setCloseOnExec(fObj.fileno())
+        fdesc._unsetCloseOnExec(fObj.fileno())
+        status = self._execWithFileDescriptor(fObj)
+        self.assertTrue(os.WIFEXITED(status))
+        self.assertEqual(os.WEXITSTATUS(status), 20)
