@@ -124,7 +124,7 @@ class _ListSerializer:
             write("'")
 
         # Serialize attributes
-        for k, v in elem.attributes.items():
+        for k, v in elem.attributes.iteritems():
             # If the attribute name is a tuple, it's a qualified attribute
             if isinstance(k, TupleType):
                 attr_uri, attr_name = k
