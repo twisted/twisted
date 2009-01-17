@@ -11,7 +11,7 @@ and serializing such structures to an XML string representation, optimized
 for use in streaming XML applications.
 """
 
-import types
+from types import StringTypes, TupleType
 
 from zope.interface import implements, Interface, Attribute
 
@@ -66,7 +66,7 @@ class _ListSerializer:
             return
 
         # Shortcut, check to see if elem is actually a string (aka Cdata)
-        if isinstance(elem, types.StringTypes):
+        if isinstance(elem, StringTypes):
             write(escapeToXml(elem))
             return
 
@@ -93,39 +93,64 @@ class _ListSerializer:
             inScope = self.prefixInScope(prefix)
 
         # Create the starttag
-
+        write("<")
         if not prefix:
-            write("<%s" % (name))
+            write(name)
         else:
-            write("<%s:%s" % (prefix, name))
+            write(prefix)
+            write(":")
+            write(name)
 
             if not inScope:
-                write(" xmlns:%s='%s'" % (prefix, uri))
+                write(" xmlns:")
+                write(prefix)
+                write("='")
+                write(uri)
+                write("'")
                 self.prefixStack[-1].append(prefix)
                 inScope = True
 
         if defaultUri != currentDefaultUri and \
            (uri != defaultUri or not prefix or not inScope):
-            write(" xmlns='%s'" % (defaultUri))
+            write(" xmlns='")
+            write(defaultUri)
+            write("'")
 
         for p, u in elem.localPrefixes.iteritems():
-            write(" xmlns:%s='%s'" % (p, u))
+            write(" xmlns:")
+            write(p)
+            write("='")
+            write(u)
+            write("'")
 
         # Serialize attributes
-        for k,v in elem.attributes.items():
+        for k, v in elem.attributes.items():
             # If the attribute name is a tuple, it's a qualified attribute
-            if isinstance(k, types.TupleType):
+            if isinstance(k, TupleType):
                 attr_uri, attr_name = k
                 attr_prefix = self.getPrefix(attr_uri)
 
                 if not self.prefixInScope(attr_prefix):
-                    write(" xmlns:%s='%s'" % (attr_prefix, attr_uri))
+                    write(" xmlns:")
+                    write(attr_prefix)
+                    write("='")
+                    write(attr_uri)
+                    write("'")
                     self.prefixStack[-1].append(attr_prefix)
 
-                write(" %s:%s='%s'" % (attr_prefix, attr_name,
-                                       escapeToXml(v, 1)))
+                write(" ")
+                write(attr_prefix)
+                write(":")
+                write(attr_name)
+                write("='")
+                write(escapeToXml(v, 1))
+                write("'")
             else:
-                write((" %s='%s'" % ( k, escapeToXml(v, 1))))
+                write(" ")
+                write(k)
+                write("='")
+                write(escapeToXml(v, 1))
+                write("'")
 
         # Shortcut out if this is only going to return
         # the element (i.e. no children)
@@ -139,19 +164,19 @@ class _ListSerializer:
             for c in elem.children:
                 self.serialize(c, defaultUri=defaultUri)
             # Add closing tag
-            if not prefix:
-                write("</%s>" % (name))
-            else:
-                write("</%s:%s>" % (prefix, name))
+            write("</")
+            if prefix:
+                write(prefix)
+                write(":")
+            write(name)
+            write(">")
         else:
             write("/>")
 
         self.prefixStack.pop()
 
-
 SerializerClass = _ListSerializer
-
-def escapeToXml(text, isattrib = 0):
+def escapeToXml(text, isattrib = 0,cache = {}):
     """ Escape text to proper XML form, per section 2.3 in the XML specification.
 
     @type text: L{str}
@@ -161,12 +186,21 @@ def escapeToXml(text, isattrib = 0):
     @param isattrib: Triggers escaping of characters necessary for use as
                      attribute values
     """
+    if len(cache) > 1000000:
+        cache.clear()
+        
+    try:
+        return cache[text]
+    except:
+        pass
+    itext = text
     text = text.replace("&", "&amp;")
     text = text.replace("<", "&lt;")
     text = text.replace(">", "&gt;")
     if isattrib == 1:
         text = text.replace("'", "&apos;")
         text = text.replace("\"", "&quot;")
+    cache[itext] = text
     return text
 
 def unescapeFromXml(text):
@@ -437,12 +471,12 @@ class Element(object):
         """ Retrieve the first CData (content) node
         """
         for n in self.children:
-            if isinstance(n, types.StringTypes): return n
+            if isinstance(n, StringTypes): return n
         return ""
 
     def _dqa(self, attr):
         """ Dequalify an attribute key as needed """
-        if isinstance(attr, types.TupleType) and not attr[0]:
+        if isinstance(attr, TupleType) and not attr[0]:
             return attr[1]
         else:
             return attr
@@ -479,7 +513,7 @@ class Element(object):
     def addContent(self, text):
         """ Add some text data to this Element. """
         c = self.children
-        if len(c) > 0 and isinstance(c[-1], types.StringTypes):
+        if len(c) > 0 and isinstance(c[-1], StringTypes):
             c[-1] = c[-1] + text
         else:
             c.append(text)
