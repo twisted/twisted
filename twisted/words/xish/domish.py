@@ -59,6 +59,8 @@ class _ListSerializer:
     def serialize(self, elem, closeElement=1, defaultUri=''):
         # Optimization shortcuts
         write = self.writelist.append
+        tuple_ = tuple
+        type_ = type
 
         # Shortcut, check to see if elem is actually a chunk o' serialized XML
         if isinstance(elem, SerializedXML):
@@ -126,7 +128,7 @@ class _ListSerializer:
         # Serialize attributes
         for k, v in elem.attributes.iteritems():
             # If the attribute name is a tuple, it's a qualified attribute
-            if isinstance(k, TupleType):
+            if type_(k) is tuple_:
                 attr_uri, attr_name = k
                 attr_prefix = self.getPrefix(attr_uri)
 
