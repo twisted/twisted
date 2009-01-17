@@ -161,7 +161,7 @@ class _ListSerializer:
             return
 
         # Serialize children
-        if len(elem.children) > 0:
+        if elem.children:
             write(">")
             for c in elem.children:
                 self.serialize(c, 1, defaultUri)
@@ -176,8 +176,9 @@ class _ListSerializer:
             write("/>")
 
         self.prefixStack.pop()
-
 SerializerClass = _ListSerializer
+
+
 def escapeToXml(text, isattrib = 0,cache = {}):
     """ Escape text to proper XML form, per section 2.3 in the XML specification.
 
