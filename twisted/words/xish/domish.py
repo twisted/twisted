@@ -73,7 +73,6 @@ class _ListSerializer:
             return
 
         # Further optimizations
-        parent = elem.parent
         name = elem.name
         uri = elem.uri
         defaultUri, currentDefaultUri = elem.defaultUri, defaultUri
