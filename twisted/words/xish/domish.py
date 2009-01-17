@@ -164,7 +164,7 @@ class _ListSerializer:
         if len(elem.children) > 0:
             write(">")
             for c in elem.children:
-                self.serialize(c, defaultUri=defaultUri)
+                self.serialize(c, 1, defaultUri)
             # Add closing tag
             write("</")
             if prefix:
@@ -576,7 +576,7 @@ class Element(object):
                     prefixesInScope=None):
         """ Serialize this Element and all children to a string. """
         s = SerializerClass(prefixes=prefixes, prefixesInScope=prefixesInScope)
-        s.serialize(self, closeElement=closeElement, defaultUri=defaultUri)
+        s.serialize(self, closeElement, defaultUri)
         return s.getValue()
 
     def firstChildElement(self):
