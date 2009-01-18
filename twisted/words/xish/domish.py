@@ -192,7 +192,7 @@ def escapeToXml(text, isattrib = 0,cache = {}):
         cache.clear()
         
     try:
-        return cache[text]
+        return cache[(text, isattrib)]
     except:
         pass
     itext = text
@@ -202,7 +202,7 @@ def escapeToXml(text, isattrib = 0,cache = {}):
     if isattrib == 1:
         text = text.replace("'", "&apos;")
         text = text.replace("\"", "&quot;")
-    cache[itext] = text
+    cache[(itext, isattrib)] = text
     return text
 
 def unescapeFromXml(text):
