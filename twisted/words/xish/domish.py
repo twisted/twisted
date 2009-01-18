@@ -69,7 +69,7 @@ class _ListSerializer:
 
         # Shortcut, check to see if elem is actually a string (aka Cdata)
         if isinstance(elem, StringTypes):
-            write(escapeToXml(elem))
+            write(escapeToXml(elem, 0))
             return
 
         # Further optimizations
@@ -177,8 +177,14 @@ class _ListSerializer:
         self.prefixStack.pop()
 SerializerClass = _ListSerializer
 
+# Stuff that hasn't been used as recently
+_g1 = {}
 
-def escapeToXml(text, isattrib = 0,cache = {}):
+# Stuff that has been used pretty recently
+_g2 = {}
+
+
+def escapeToXml(text, isattrib):
     """ Escape text to proper XML form, per section 2.3 in the XML specification.
 
     @type text: L{str}
@@ -188,22 +194,31 @@ def escapeToXml(text, isattrib = 0,cache = {}):
     @param isattrib: Triggers escaping of characters necessary for use as
                      attribute values
     """
-    if len(cache) > 1000000:
-        cache.clear()
-        
+    global _g1, _g2
     try:
-        return cache[(text, isattrib)]
-    except:
-        pass
-    itext = text
-    text = text.replace("&", "&amp;")
-    text = text.replace("<", "&lt;")
-    text = text.replace(">", "&gt;")
-    if isattrib == 1:
-        text = text.replace("'", "&apos;")
-        text = text.replace("\"", "&quot;")
-    cache[(itext, isattrib)] = text
-    return text
+        key = (text, isattrib)
+        try:
+            return _g2[key]
+        except KeyError:
+            try:
+                result = _g2[key] = _g1[key]
+            except KeyError:
+                text = text.replace("&", "&amp;")
+                text = text.replace("<", "&lt;")
+                text = text.replace(">", "&gt;")
+                if isattrib == 1:
+                    text = text.replace("'", "&apos;")
+                    text = text.replace("\"", "&quot;")
+                _g2[key] = text
+                return text
+            else:
+                return result
+    finally:
+        if len(_g2) > 1000:
+            _g1 = _g2
+            _g2 = {}
+
+
 
 def unescapeFromXml(text):
     text = text.replace("&lt;", "<")
