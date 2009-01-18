@@ -61,14 +61,15 @@ class _ListSerializer:
         write = self.writelist.append
         tuple_ = tuple
         type_ = type
+        elemType = type_(elem)
 
         # Shortcut, check to see if elem is actually a chunk o' serialized XML
-        if isinstance(elem, SerializedXML):
+        if elemType is SerializedXML:
             write(elem)
             return
 
         # Shortcut, check to see if elem is actually a string (aka Cdata)
-        if isinstance(elem, StringTypes):
+        if elemType is str or elemType is unicode:
             write(escapeToXml(elem, 0))
             return
 
@@ -76,10 +77,11 @@ class _ListSerializer:
         name = elem.name
         uri = elem.uri
         defaultUri, currentDefaultUri = elem.defaultUri, defaultUri
+        localPrefixes = elem.localPrefixes
 
-        for p, u in elem.localPrefixes.iteritems():
+        for p, u in localPrefixes.iteritems():
             self.prefixes[u] = p
-        self.prefixStack.append(elem.localPrefixes.keys())
+        self.prefixStack.append(localPrefixes.keys())
 
         # Inherit the default namespace
         if defaultUri is None:
@@ -117,7 +119,7 @@ class _ListSerializer:
             write(defaultUri)
             write("'")
 
-        for p, u in elem.localPrefixes.iteritems():
+        for p, u in localPrefixes.iteritems():
             write(" xmlns:")
             write(p)
             write("='")
@@ -160,10 +162,12 @@ class _ListSerializer:
             return
 
         # Serialize children
-        if elem.children:
+        children = elem.children
+        if children:
+            serialize = self.serialize
             write(">")
-            for c in elem.children:
-                self.serialize(c, 1, defaultUri)
+            for c in children:
+                serialize(c, 1, defaultUri)
             # Add closing tag
             write("</")
             if prefix:
