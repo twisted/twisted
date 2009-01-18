@@ -177,13 +177,8 @@ class _ListSerializer:
         self.prefixStack.pop()
 SerializerClass = _ListSerializer
 
-# Stuff that hasn't been used as recently
-_g1 = {}
 
-# Stuff that has been used pretty recently
-_g2 = {}
-
-
+_cache = {}
 def escapeToXml(text, isattrib):
     """ Escape text to proper XML form, per section 2.3 in the XML specification.
 
@@ -194,30 +189,20 @@ def escapeToXml(text, isattrib):
     @param isattrib: Triggers escaping of characters necessary for use as
                      attribute values
     """
-    global _g1, _g2
-    try:
-        key = (text, isattrib)
+    if isattrib:
         try:
-            return _g2[key]
+            return _cache[text]
         except KeyError:
-            try:
-                result = _g2[key] = _g1[key]
-            except KeyError:
-                text = text.replace("&", "&amp;")
-                text = text.replace("<", "&lt;")
-                text = text.replace(">", "&gt;")
-                if isattrib == 1:
-                    text = text.replace("'", "&apos;")
-                    text = text.replace("\"", "&quot;")
-                _g2[key] = text
-                return text
-            else:
-                return result
-    finally:
-        if len(_g2) > 1000:
-            _g1 = _g2
-            _g2 = {}
+            pass
 
+    otext = text.replace("&", "&amp;")
+    otext = otext.replace("<", "&lt;")
+    otext = otext.replace(">", "&gt;")
+    if isattrib == 1:
+        otext = otext.replace("'", "&apos;")
+        otext = otext.replace("\"", "&quot;")
+        _cache[text] = otext
+    return otext
 
 
 def unescapeFromXml(text):
