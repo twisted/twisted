@@ -188,7 +188,7 @@ _g1 = {}
 _g2 = {}
 
 
-def escapeToXml(text, isattrib):
+def escapeToXml(text, isattrib=0):
     """ Escape text to proper XML form, per section 2.3 in the XML specification.
 
     @type text: L{str}
