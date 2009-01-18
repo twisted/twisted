@@ -69,7 +69,7 @@ class _ListSerializer:
 
         # Shortcut, check to see if elem is actually a string (aka Cdata)
         if isinstance(elem, StringTypes):
-            write(escapeToXml(elem, 0))
+            write(escapeToXml(elem))
             return
 
         # Further optimizations
@@ -178,8 +178,7 @@ class _ListSerializer:
 SerializerClass = _ListSerializer
 
 
-_cache = {}
-def escapeToXml(text, isattrib):
+def escapeToXml(text, isattrib = 0,cache = {}):
     """ Escape text to proper XML form, per section 2.3 in the XML specification.
 
     @type text: L{str}
@@ -189,21 +188,22 @@ def escapeToXml(text, isattrib):
     @param isattrib: Triggers escaping of characters necessary for use as
                      attribute values
     """
-    if isattrib:
-        try:
-            return _cache[text]
-        except KeyError:
-            pass
-
-    otext = text.replace("&", "&amp;")
-    otext = otext.replace("<", "&lt;")
-    otext = otext.replace(">", "&gt;")
+    if len(cache) > 1000000:
+        cache.clear()
+        
+    try:
+        return cache[text]
+    except:
+        pass
+    itext = text
+    text = text.replace("&", "&amp;")
+    text = text.replace("<", "&lt;")
+    text = text.replace(">", "&gt;")
     if isattrib == 1:
-        otext = otext.replace("'", "&apos;")
-        otext = otext.replace("\"", "&quot;")
-        _cache[text] = otext
-    return otext
-
+        text = text.replace("'", "&apos;")
+        text = text.replace("\"", "&quot;")
+    cache[itext] = text
+    return text
 
 def unescapeFromXml(text):
     text = text.replace("&lt;", "<")
