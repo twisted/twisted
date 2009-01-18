@@ -55,6 +55,7 @@ class AbstractFilePathTestCase(unittest.TestCase):
         f = self.subfile("sub3", "file3.ext3")
         f.close()
         self.path = filepath.FilePath(cmn)
+        self.root = filepath.FilePath("/")
 
 
     def test_segmentsFromPositive(self):
@@ -81,6 +82,23 @@ class AbstractFilePathTestCase(unittest.TestCase):
         """
         x = [foo.path for foo in self.path.walk()]
         self.assertEquals(set(x), set(self.all))
+
+
+    def test_parents(self):
+        """
+        L{FilePath.parents()} should return an iterator of every ancestor of
+        the L{FilePath} in question.
+        """
+        L = []
+        pathobj = self.path.child("a").child("b").child("c")
+        fullpath = pathobj.path
+        lastpath = fullpath
+        thispath = os.path.dirname(fullpath)
+        while lastpath != self.root.path:
+            L.append(thispath)
+            lastpath = thispath
+            thispath = os.path.dirname(thispath)
+        self.assertEquals([x.path for x in pathobj.parents()], L)
 
 
     def test_validSubdir(self):
@@ -262,6 +280,7 @@ class ZipFilePathTestCase(AbstractFilePathTestCase):
         AbstractFilePathTestCase.setUp(self)
         zipit(self.cmn, self.cmn+'.zip')
         self.path = ZipArchive(self.cmn+'.zip')
+        self.root = self.path
         self.all = [x.replace(self.cmn, self.cmn+'.zip') for x in self.all]
 
 

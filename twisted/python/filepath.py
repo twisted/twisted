@@ -133,6 +133,21 @@ class _PathHelper:
     def getContent(self):
         return self.open().read()
 
+
+    def parents(self):
+        """
+        @return: an iterator of all the ancestors of this path, from the most
+        recent (its immediate parent) to the root of its filesystem.
+        """
+        path = self
+        parent = path.parent()
+        # root.parent() == root, so this means "are we the root"
+        while path != parent:
+            yield parent
+            path = parent
+            parent = parent.parent()
+
+
     def children(self):
         """
         List the chilren of this path object.
