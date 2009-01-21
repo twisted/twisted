@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.web.test.test_xmlrpc -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -9,8 +9,7 @@ Maintainer: Itamar Shtull-Trauring
 """
 
 # System Imports
-import xmlrpclib
-import urlparse
+import sys, xmlrpclib, urlparse
 
 # Sibling Imports
 from twisted.web import resource, server, http
@@ -27,6 +26,12 @@ Fault = xmlrpclib.Fault
 Binary = xmlrpclib.Binary
 Boolean = xmlrpclib.Boolean
 DateTime = xmlrpclib.DateTime
+
+# On Python 2.4 and earlier, DateTime.decode returns unicode.
+if sys.version_info[:2] < (2, 5):
+    _decode = DateTime.decode
+    DateTime.decode = lambda self, value: _decode(self, value.encode('ascii'))
+
 
 class NoSuchFunction(Fault):
     """
@@ -115,12 +120,11 @@ class XMLRPC(resource.Resource):
             except Fault, f:
                 self._cbRender(f, request)
             else:
-                defer.maybeDeferred(function, *args).addErrback(
-                    self._ebRender
-                ).addCallback(
-                    self._cbRender, request
-                )
+                d = defer.maybeDeferred(function, *args)
+                d.addErrback(self._ebRender)
+                d.addCallback(self._cbRender, request)
         return server.NOT_DONE_YET
+
 
     def _cbRender(self, result, request):
         if isinstance(result, Handler):
@@ -128,15 +132,21 @@ class XMLRPC(resource.Resource):
         if not isinstance(result, Fault):
             result = (result,)
         try:
-            s = xmlrpclib.dumps(result, methodresponse=True,
-                                allow_none=self.allowNone)
-        except Exception, e:
-            f = Fault(self.FAILURE, "Can't serialize output: %s" % (e,))
-            s = xmlrpclib.dumps(f, methodresponse=True,
-                                allow_none=self.allowNone)
-        request.setHeader("content-length", str(len(s)))
-        request.write(s)
+            try:
+                content = xmlrpclib.dumps(
+                    result, methodresponse=True,
+                    allow_none=self.allowNone)
+            except Exception, e:
+                f = Fault(self.FAILURE, "Can't serialize output: %s" % (e,))
+                content = xmlrpclib.dumps(f, methodresponse=True,
+                                          allow_none=self.allowNone)
+
+            request.setHeader("content-length", str(len(content)))
+            request.write(content)
+        except:
+            log.err()
         request.finish()
+
 
     def _ebRender(self, failure):
         if isinstance(failure.value, Fault):

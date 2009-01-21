@@ -1,22 +1,16 @@
 # -*- test-case-name: twisted.web.test.test_xmlrpc -*-
-#
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
-Test XML-RPC support.
+Tests for  XML-RPC support in L{twisted.web.xmlrpc}.
 """
 
-try:
-    import xmlrpclib
-except ImportError:
-    xmlrpclib = None
-    class XMLRPC: pass
-else:
-    from twisted.web import xmlrpc
-    from twisted.web.xmlrpc import XMLRPC, addIntrospection, _QueryFactory
+import xmlrpclib
 
 from twisted.trial import unittest
+from twisted.web import xmlrpc
+from twisted.web.xmlrpc import XMLRPC, addIntrospection, _QueryFactory
 from twisted.web import server, static, client, error, http
 from twisted.internet import reactor, defer
 from twisted.internet.error import ConnectionDone
@@ -33,9 +27,15 @@ class TestValueError(ValueError):
 
 class Test(XMLRPC):
 
+    # If you add xmlrpc_ methods to this class, go change test_listMethods
+    # below.
+
     FAILURE = 666
     NOT_FOUND = 23
     SESSION_EXPIRED = 42
+
+    def xmlrpc_echo(self, arg):
+        return arg
 
     # the doc string is part of the test
     def xmlrpc_add(self, a, b):
@@ -79,6 +79,7 @@ class Test(XMLRPC):
 
     def xmlrpc_dict(self, map, key):
         return map[key]
+    xmlrpc_dict.help = 'Help for dict.'
 
     def _getFunction(self, functionPath):
         try:
@@ -90,7 +91,6 @@ class Test(XMLRPC):
             else:
                 raise
 
-    xmlrpc_dict.help = 'Help for dict.'
 
 class TestAuthHeader(Test):
     """
@@ -216,6 +216,45 @@ class XMLRPCTestCase(unittest.TestCase):
         return d
 
 
+    def test_datetimeRoundtrip(self):
+        """
+        If an L{xmlrpclib.DateTime} is passed as an argument to an XML-RPC
+        call and then returned by the server unmodified, the result should
+        be equal to the original object.
+        """
+        when = xmlrpclib.DateTime()
+        d = self.proxy().callRemote("echo", when)
+        d.addCallback(self.assertEqual, when)
+        return d
+
+
+    def test_doubleEncodingError(self):
+        """
+        If it is not possible to encode a response to the request (for example,
+        because L{xmlrpclib.dumps} raises an exception when encoding a
+        L{Fault}) the exception which prevents the response from being
+        generated is logged and the request object is finished anyway.
+        """
+        d = self.proxy().callRemote("echo", "")
+
+        # *Now* break xmlrpclib.dumps.  Hopefully the client already used it.
+        def fakeDumps(*args, **kwargs):
+            raise RuntimeError("Cannot encode anything at all!")
+        self.patch(xmlrpclib, 'dumps', fakeDumps)
+
+        # It doesn't matter how it fails, so long as it does.  Also, it happens
+        # to fail with an implementation detail exception right now, not
+        # something suitable as part of a public interface.
+        d = self.assertFailure(d, Exception)
+
+        def cbFailed(ignored):
+            # The fakeDumps exception should have been logged.
+            self.assertEqual(len(self.flushLoggedErrors(RuntimeError)), 1)
+        d.addCallback(cbFailed)
+        return d
+
+
+
 class XMLRPCTestCase2(XMLRPCTestCase):
     """
     Test with proxy that doesn't add a slash.
@@ -326,10 +365,10 @@ class XMLRPCTestIntrospection(XMLRPCTestCase):
 
         def cbMethods(meths):
             meths.sort()
-            self.failUnlessEqual(
+            self.assertEqual(
                 meths,
                 ['add', 'complex', 'defer', 'deferFail',
-                 'deferFault', 'dict', 'fail', 'fault',
+                 'deferFault', 'dict', 'echo', 'fail', 'fault',
                  'pair', 'system.listMethods',
                  'system.methodHelp',
                  'system.methodSignature'])
