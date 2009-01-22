@@ -624,10 +624,20 @@ class IReactorThreads(Interface):
     Internally, this should use a thread pool and dispatch methods to them.
     """
 
+    def getThreadPool():
+        """
+        Return the threadpool used by L{callInThread}.  Create it first if
+        necessary.
+
+        @rtype: L{twisted.python.threadpool.ThreadPool}
+        """
+
+
     def callInThread(callable, *args, **kwargs):
         """
         Run the callable object in a separate thread.
         """
+
 
     def callFromThread(callable, *args, **kw):
         """
@@ -643,6 +653,7 @@ class IReactorThreads(Interface):
         want to call a function in the next mainloop iteration, but you're in
         the same thread, use L{callLater} with a delay of 0.
         """
+
 
     def suggestThreadPoolSize(size):
         """

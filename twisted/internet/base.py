@@ -2,7 +2,6 @@
 # Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
 Very basic functionality for a Reactor implementation.
 
@@ -188,21 +187,34 @@ class DelayedCall(styles.Ephemeral):
         return "".join(L)
 
 
-class ThreadedResolver:
+class ThreadedResolver(object):
+    """
+    L{ThreadedResolver} uses a reactor, a threadpool, and
+    L{socket.gethostbyname} to perform name lookups without blocking the
+    reactor thread.  It also supports timeouts indepedently from whatever
+    timeout logic L{socket.gethostbyname} might have.
+
+    @ivar reactor: The reactor the threadpool of which will be used to call
+        L{socket.gethostbyname} and the I/O thread of which the result will be
+        delivered.
+    """
     implements(IResolverSimple)
 
     def __init__(self, reactor):
         self.reactor = reactor
         self._runningQueries = {}
 
+
     def _fail(self, name, err):
         err = error.DNSLookupError("address %r not found: %s" % (name, err))
         return failure.Failure(err)
+
 
     def _cleanup(self, name, lookupDeferred):
         userDeferred, cancelCall = self._runningQueries[lookupDeferred]
         del self._runningQueries[lookupDeferred]
         userDeferred.errback(self._fail(name, "timeout error"))
+
 
     def _checkTimeout(self, result, name, lookupDeferred):
         try:
@@ -218,18 +230,30 @@ class ThreadedResolver:
             else:
                 userDeferred.callback(result)
 
+
     def getHostByName(self, name, timeout = (1, 3, 11, 45)):
+        """
+        See L{twisted.internet.interfaces.IResolverSimple.getHostByName}.
+
+        Note that the elements of C{timeout} are summed and the result is used
+        as a timeout for the lookup.  Any intermediate timeout or retry logic
+        is left up to the platform via L{socket.gethostbyname}.
+        """
         if timeout:
             timeoutDelay = reduce(operator.add, timeout)
         else:
             timeoutDelay = 60
         userDeferred = defer.Deferred()
-        lookupDeferred = threads.deferToThread(socket.gethostbyname, name)
+        lookupDeferred = threads.deferToThreadPool(
+            self.reactor, self.reactor.getThreadPool(),
+            socket.gethostbyname, name)
         cancelCall = self.reactor.callLater(
             timeoutDelay, self._cleanup, name, lookupDeferred)
         self._runningQueries[lookupDeferred] = (userDeferred, cancelCall)
         lookupDeferred.addBoth(self._checkTimeout, name, lookupDeferred)
         return userDeferred
+
+
 
 class BlockingResolver:
     implements(IResolverSimple)
@@ -890,23 +914,27 @@ class ReactorBase(object):
             self.threadpool.stop()
             self.threadpool = None
 
+
+        def getThreadPool(self):
+            """
+            See L{twisted.internet.interfaces.IReactorThreads.getThreadPool}.
+            """
+            if self.threadpool is None:
+                self._initThreadPool()
+            return self.threadpool
+
+
         def callInThread(self, _callable, *args, **kwargs):
             """
             See L{twisted.internet.interfaces.IReactorThreads.callInThread}.
             """
-            if self.threadpool is None:
-                self._initThreadPool()
-            self.threadpool.callInThread(_callable, *args, **kwargs)
+            self.getThreadPool().callInThread(_callable, *args, **kwargs)
 
         def suggestThreadPoolSize(self, size):
             """
             See L{twisted.internet.interfaces.IReactorThreads.suggestThreadPoolSize}.
             """
-            if size == 0 and self.threadpool is None:
-                return
-            if self.threadpool is None:
-                self._initThreadPool()
-            self.threadpool.adjustPoolsize(maxthreads=size)
+            self.getThreadPool().adjustPoolsize(maxthreads=size)
     else:
         # This is for signal handlers.
         def callFromThread(self, f, *args, **kw):

@@ -8,12 +8,55 @@ Tests for implementations of L{IReactorThreads}.
 __metaclass__ = type
 
 from twisted.internet.test.reactormixins import ReactorBuilder
+from twisted.python.threadpool import ThreadPool
 
 
 class ThreadTestsBuilder(ReactorBuilder):
     """
     Builder for defining tests relating to L{IReactorThreads}.
     """
+    def test_getThreadPool(self):
+        """
+        C{reactor.getThreadPool()} returns an instance of L{ThreadPool} which
+        starts when C{reactor.run()} is called and stops before it returns.
+        """
+        state = []
+        reactor = self.buildReactor()
+
+        pool = reactor.getThreadPool()
+        self.assertIsInstance(pool, ThreadPool)
+        self.assertFalse(
+            pool.started, "Pool should not start before reactor.run")
+
+        def f():
+            # Record the state for later assertions
+            state.append(pool.started)
+            state.append(pool.joined)
+            reactor.stop()
+
+        reactor.callWhenRunning(f)
+        self.runReactor(reactor, 2)
+
+        self.assertTrue(
+            state[0], "Pool should start after reactor.run")
+        self.assertFalse(
+            state[1], "Pool should not be joined before reactor.stop")
+        self.assertTrue(
+            pool.joined,
+            "Pool should be stopped after reactor.run returns")
+
+
+    def test_suggestThreadPoolSize(self):
+        """
+        C{reactor.suggestThreadPoolSize()} sets the maximum size of the reactor
+        threadpool.
+        """
+        reactor = self.buildReactor()
+        reactor.suggestThreadPoolSize(17)
+        pool = reactor.getThreadPool()
+        self.assertEqual(pool.max, 17)
+
+
     def test_delayedCallFromThread(self):
         """
         A function scheduled with L{IReactorThreads.callFromThread} invoked

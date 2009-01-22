@@ -64,9 +64,7 @@ def deferToThread(f, *args, **kwargs):
     an exception.
     """
     from twisted.internet import reactor
-    if reactor.threadpool is None:
-        reactor._initThreadPool()
-    return deferToThreadPool(reactor, reactor.threadpool,
+    return deferToThreadPool(reactor, reactor.getThreadPool(),
                              f, *args, **kwargs)
 
 
