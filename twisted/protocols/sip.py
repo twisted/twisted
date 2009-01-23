@@ -625,7 +625,7 @@ class MessagesParser(basic.LineReceiver):
                 #new header
                 if self.prevline:
                     try:
-                        self.processHeaderLine(self.prevline)
+                        self._processHeaderLine(self.prevline)
                     except ValueError:
                         self.invalidMessage()
                         return
@@ -637,7 +637,7 @@ class MessagesParser(basic.LineReceiver):
             # from the connection sending us data.
             self.state = "body"
             try:
-                self.processHeaderLine(self.prevline)
+                self._processHeaderLine(self.prevline)
             except ValueError:
                 self.invalidMessage()
                 return
@@ -670,7 +670,7 @@ class MessagesParser(basic.LineReceiver):
         return headers
 
 
-    def processHeaderLine(self, line):
+    def _processHeaderLine(self, line):
         """
         Parse a single SIP header.
         """
