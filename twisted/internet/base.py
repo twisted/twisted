@@ -4,8 +4,6 @@
 
 """
 Very basic functionality for a Reactor implementation.
-
-Maintainer: Itamar Shtull-Trauring
 """
 
 import socket # needed only for sync-dns
@@ -18,6 +16,7 @@ from heapq import heappush, heappop, heapify
 
 import traceback
 
+from twisted.python.compat import set
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorThreads
 from twisted.internet.interfaces import IResolverSimple, IReactorPluggableResolver
 from twisted.internet.interfaces import IConnector, IDelayedCall
@@ -452,6 +451,8 @@ class ReactorBase(object):
         self.running = False
         self._started = False
         self._justStopped = False
+        # reactor internal readers, e.g. the waker.
+        self._internalReaders = set()
         self.waker = None
 
         # Arrange for the running attribute to change to True at the right time

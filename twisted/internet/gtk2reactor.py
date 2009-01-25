@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.internet.test.test_gtk2reactor -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -18,8 +18,6 @@ intended to be called directly.
 When installing the reactor, you can choose whether to use the glib
 event loop or the GTK+ event loop which is based on it but adds GUI
 integration.
-
-Maintainer: Itamar Shtull-Trauring
 """
 
 # System Imports
@@ -134,6 +132,7 @@ class Gtk2Reactor(posixbase.PosixReactorBase):
 
     def removeAll(self):
         return self._removeAll(self._reads, self._writes)
+
 
     def removeReader(self, reader):
         if reader in self._reads:

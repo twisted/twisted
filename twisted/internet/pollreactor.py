@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -10,8 +10,6 @@ listeners or connectors are added)::
 
     from twisted.internet import pollreactor
     pollreactor.install()
-
-Maintainer: Itamar Shtull-Trauring
 """
 
 # System imports
@@ -136,20 +134,13 @@ class PollReactor(posixbase.PosixReactorBase):
         return self._dictRemove(writer, self._writes)
 
     def removeAll(self):
-        """Remove all selectables, and return a list of them."""
-        if self.waker is not None:
-            self.removeReader(self.waker)
-        result = self._selectables.values()
-        fds = self._selectables.keys()
-        self._reads.clear()
-        self._writes.clear()
-        self._selectables.clear()
-        for fd in fds:
-            self._poller.unregister(fd)
+        """
+        Remove all selectables, and return a list of them.
+        """
+        return self._removeAll(
+            [self._selectables[fd] for fd in self._reads],
+            [self._selectables[fd] for fd in self._writes])
 
-        if self.waker is not None:
-            self.addReader(self.waker)
-        return result
 
     def doPoll(self, timeout):
         """Poll the poller for new events."""

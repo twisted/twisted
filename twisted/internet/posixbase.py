@@ -2,11 +2,8 @@
 # Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
 Posix reactor base class
-
-Maintainer: Itamar Shtull-Trauring
 """
 
 import warnings
@@ -16,6 +13,7 @@ import os
 
 from zope.interface import implements, classImplements
 
+from twisted.python.compat import set
 from twisted.internet.interfaces import IReactorUNIX, IReactorUNIXDatagram
 from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL, IReactorArbitrary
 from twisted.internet.interfaces import IReactorProcess, IReactorMulticast
@@ -101,7 +99,7 @@ class _Win32Waker(log.Logger, styles.Ephemeral):
     def connectionLost(self, reason):
         self.r.close()
         self.w.close()
-        self.reactor.waker = None
+
 
 class _UnixWaker(log.Logger, styles.Ephemeral):
     """This class provides a simple interface to wake up the event loop.
@@ -152,7 +150,6 @@ class _UnixWaker(log.Logger, styles.Ephemeral):
             except IOError:
                 pass
         del self.i, self.o
-        self.reactor.waker = None
 
 
 if platformType == 'posix':
@@ -205,6 +202,7 @@ class PosixReactorBase(_SignalReactorMixin, ReactorBase):
         """
         if not self.waker:
             self.waker = _Waker(self)
+            self._internalReaders.add(self.waker)
             self.addReader(self.waker)
 
 
@@ -397,32 +395,25 @@ class PosixReactorBase(_SignalReactorMixin, ReactorBase):
 
     def _removeAll(self, readers, writers):
         """
-        Remove all readers and writers, and return list of Selectables.
+        Remove all readers and writers, and list of removed L{IReadDescriptor}s
+        and L{IWriteDescriptor}s.
 
         Meant for calling from subclasses, to implement removeAll, like::
 
           def removeAll(self):
-              return self._removeAll(reads, writes)
+              return self._removeAll(self._reads, self._writes)
 
-        where C{reads} and C{writes} are iterables.
+        where C{self._reads} and C{self._writes} are iterables.
         """
-        readers = [reader for reader in readers if
-                   reader is not self.waker]
-
-        readers_dict = {}
-        for reader in readers:
-            readers_dict[reader] = 1
-
-        for reader in readers:
+        removedReaders = set(readers) - self._internalReaders
+        for reader in removedReaders:
             self.removeReader(reader)
-            self.removeWriter(reader)
 
-        writers = [writer for writer in writers if
-                   writer not in readers_dict]
-        for writer in writers:
+        removedWriters = set(writers)
+        for writer in removedWriters:
             self.removeWriter(writer)
 
-        return readers+writers
+        return list(removedReaders | removedWriters)
 
 
 if sslEnabled:

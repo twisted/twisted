@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -9,8 +9,6 @@ listeners or connectors are added)::
 
     from twisted.internet import epollreactor
     epollreactor.install()
-
-Maintainer: Jp Calderone
 """
 
 import sys, errno
@@ -150,28 +148,9 @@ class EPollReactor(posixbase.PosixReactorBase):
         """
         Remove all selectables, and return a list of them.
         """
-        if self.waker is not None:
-            fd = self.waker.fileno()
-            if fd in self._reads:
-                del self._reads[fd]
-                del self._selectables[fd]
-        result = self._selectables.values()
-        fds = self._selectables.keys()
-        self._reads.clear()
-        self._writes.clear()
-        self._selectables.clear()
-        for fd in fds:
-            try:
-                # Actually, we'll ignore all errors from this, since it's
-                # just last-chance cleanup.
-                self._poller._control(_epoll.CTL_DEL, fd, 0)
-            except IOError:
-                pass
-        if self.waker is not None:
-            fd = self.waker.fileno()
-            self._reads[fd] = 1
-            self._selectables[fd] = self.waker
-        return result
+        return self._removeAll(
+            [self._selectables[fd] for fd in self._reads],
+            [self._selectables[fd] for fd in self._writes])
 
 
     def getReaders(self):

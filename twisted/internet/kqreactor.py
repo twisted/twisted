@@ -1,6 +1,5 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 A kqueue()/kevent() based implementation of the Twisted main loop.
@@ -13,8 +12,6 @@ listeners or connectors are added)::
 
 This reactor only works on FreeBSD and requires PyKQueue 1.3, which is
 available at:  U{http://people.freebsd.org/~dwhite/PyKQueue/}
-
-Maintainer: Itamar Shtull-Trauring
 
 
 
@@ -154,20 +151,12 @@ class KQueueReactor(posixbase.PosixReactorBase):
             self._updateRegistration(fd, EVFILT_WRITE, EV_DELETE)
 
     def removeAll(self):
-        """Remove all selectables, and return a list of them."""
-        if self.waker is not None:
-            self.removeReader(self.waker)
-        result = self._selectables.values()
-        for fd in self._reads.keys():
-            self._updateRegistration(fd, EVFILT_READ, EV_DELETE)
-        for fd in self._writes.keys():
-            self._updateRegistration(fd, EVFILT_WRITE, EV_DELETE)
-        self._reads.clear()
-        self._writes.clear()
-        self._selectables.clear()
-        if self.waker is not None:
-            self.addReader(self.waker)
-        return result
+        """
+        Remove all selectables, and return a list of them.
+        """
+        return self._removeAll(
+            [self._selectables[fd] for fd in self._reads],
+            [self._selectables[fd] for fd in self._writes])
 
 
     def getReaders(self):

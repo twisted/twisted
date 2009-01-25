@@ -51,6 +51,7 @@ class ReactorBuilder:
 
     reactorFactory = None
     originalHandler = None
+    requiredInterface = None
     skippedReactors = {}
 
     def setUp(self):
@@ -84,15 +85,18 @@ class ReactorBuilder:
         """
         # Chris says:
         #
-        # XXX These explicit calls to clean up the waker should become obsolete
-        # when bug #3063 is fixed. -radix, 2008-02-29. Fortunately it should
-        # probably cause an error when bug #3063 is fixed, so it should be
-        # removed in the same branch that fixes it.
+        # XXX These explicit calls to clean up the waker (and any other
+        # internal readers) should become obsolete when bug #3063 is
+        # fixed. -radix, 2008-02-29. Fortunately it should probably cause an
+        # error when bug #3063 is fixed, so it should be removed in the same
+        # branch that fixes it.
         #
         # -exarkun
-        if getattr(reactor, 'waker', None) is not None:
-            reactor.removeReader(reactor.waker)
-            reactor.waker.connectionLost(None)
+        if getattr(reactor, '_internalReaders', None) is not None:
+            for reader in reactor._internalReaders:
+                reactor.removeReader(reader)
+                reader.connectionLost(None)
+            reactor._internalReaders.clear()
 
         # Here's an extra thing unrelated to wakers but necessary for
         # cleaning up after the reactors we make.  -exarkun
@@ -117,6 +121,13 @@ class ReactorBuilder:
             # reactor.  So we catch some more here and skip the test if
             # necessary.
             raise SkipTest(Failure().getErrorMessage())
+        else:
+            if self.requiredInterface is not None:
+                if not self.requiredInterface.providedBy(reactor):
+                    self.unbuildReactor(reactor)
+                    raise SkipTest(
+                        "%r does not provide %r" % (
+                            reactor, self.requiredInterface))
         self.addCleanup(self.unbuildReactor, reactor)
         return reactor
 

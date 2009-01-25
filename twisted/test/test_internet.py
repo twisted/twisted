@@ -1,11 +1,17 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+Tests for lots of functionality provided by L{twisted.internet}.
+"""
+
+import os
+import sys
+import time
 
 from twisted.trial import unittest
 from twisted.internet import reactor, protocol, error, abstract, defer
 from twisted.internet import interfaces, base
-from twisted.internet.tcp import Connection
 
 from twisted.test.time_helpers import Clock
 
@@ -18,11 +24,6 @@ if ssl and not ssl.supported:
 
 from twisted.internet.defer import Deferred, maybeDeferred
 from twisted.python import util, runtime
-
-import os
-import sys
-import time
-import socket
 
 
 
@@ -1006,53 +1007,6 @@ class ReactorCoreTestCase(unittest.TestCase):
         elapsed = stop - start
         self.failUnless(elapsed < 8)
         t.cancel()
-
-
-
-class ReactorFDTestCase(unittest.TestCase):
-    """
-    Tests for L{interfaces.IReactorFDSet}.
-    """
-
-    def test_getReaders(self):
-        """
-        Check that L{interfaces.IReactorFDSet.getReaders} reflects the actions
-        made with L{interfaces.IReactorFDSet.addReader} and
-        L{interfaces.IReactorFDSet.removeReader}.
-        """
-        s = socket.socket()
-        self.addCleanup(s.close)
-
-        c = Connection(s, protocol.Protocol())
-        self.assertNotIn(c, reactor.getReaders())
-
-        reactor.addReader(c)
-        self.assertIn(c, reactor.getReaders())
-
-        reactor.removeReader(c)
-        self.assertNotIn(c, reactor.getReaders())
-
-
-    def test_getWriters(self):
-        """
-        Check that L{interfaces.IReactorFDSet.getWriters} reflects the actions
-        made with L{interfaces.IReactorFDSet.addWriter} and
-        L{interfaces.IReactorFDSet.removeWriter}.
-        """
-        s = socket.socket()
-        self.addCleanup(s.close)
-
-        c = Connection(s, protocol.Protocol())
-        self.assertNotIn(c, reactor.getWriters())
-
-        reactor.addWriter(c)
-        self.assertIn(c, reactor.getWriters())
-
-        reactor.removeWriter(c)
-        self.assertNotIn(c, reactor.getWriters())
-
-if not interfaces.IReactorFDSet.providedBy(reactor):
-    ReactorFDTestCase.skip = "Reactor not providing IReactorFDSet"
 
 
 

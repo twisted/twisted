@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -11,8 +11,6 @@ In order to use this support, simply do the following::
 
 Then use twisted.internet APIs as usual.  The other methods here are not
 intended to be called directly.
-
-Maintainer: Itamar Shtull-Trauring
 """
 
 import sys
@@ -79,6 +77,7 @@ class GtkReactor(posixbase.PosixReactorBase):
 
     def removeAll(self):
         return self._removeAll(self._reads, self._writes)
+
 
     def removeReader(self, reader):
         if reader in self._reads:
