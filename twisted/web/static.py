@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.web.test.test_web -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -13,7 +13,6 @@ import itertools
 import cgi
 
 from twisted.web import server
-from twisted.web import error
 from twisted.web import resource
 from twisted.web import http
 from twisted.web.util import redirectTo
@@ -26,7 +25,7 @@ from twisted.python.util import InsensitiveDict
 from twisted.python.runtime import platformType
 
 
-dangerousPathError = error.NoResource("Invalid request URL.")
+dangerousPathError = resource.NoResource("Invalid request URL.")
 
 def isDangerous(path):
     return path == '..' or '/' in path or os.sep in path
@@ -231,7 +230,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         """
         self.ignoredExts.append(ext)
 
-    childNotFound = error.NoResource("File not found.")
+    childNotFound = resource.NoResource("File not found.")
 
     def directoryListing(self):
         return DirectoryLister(self.path,
@@ -401,7 +400,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         except IOError, e:
             import errno
             if e[0] == errno.EACCES:
-                return error.ForbiddenResource().render(request)
+                return resource.ForbiddenResource().render(request)
             else:
                 raise
 

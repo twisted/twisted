@@ -1,20 +1,15 @@
-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.web.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-"""I am a virtual hosts implementation.
 """
-
-# System Imports
-import string
+I am a virtual hosts implementation.
+"""
 
 # Twisted Imports
 from twisted.python import roots
+from twisted.web import resource
 
-# Sibling Imports
-import resource
-import error
 
 class VirtualHostCollection(roots.Homogenous):
     """Wrapper for virtual hosts collection.
@@ -25,13 +20,13 @@ class VirtualHostCollection(roots.Homogenous):
 
     def __init__(self, nvh):
         self.nvh = nvh
-    
+
     def listStaticEntities(self):
         return self.nvh.hosts.items()
-    
+
     def getStaticEntity(self, name):
         return self.nvh.hosts.get(self)
-    
+
     def reallyPutEntity(self, name, entity):
         self.nvh.addHost(name, entity)
 
@@ -76,17 +71,17 @@ class NameVirtualHost(resource.Resource):
     def removeHost(self, name):
         """Remove a host."""
         del self.hosts[name]
-    
+
     def _getResourceForRequest(self, request):
         """(Internal) Get the appropriate resource for the given host.
         """
         hostHeader = request.getHeader('host')
         if hostHeader == None:
-            return self.default or error.NoResource()
+            return self.default or resource.NoResource()
         else:
-            host = string.split(string.lower(hostHeader),':')[0]
+            host = hostHeader.lower().split(':', 1)[0]
         return (self.hosts.get(host, self.default)
-                or error.NoResource("host %s not in vhost map" % repr(host)))
+                or resource.NoResource("host %s not in vhost map" % repr(host)))
 
     def render(self, request):
         """Implementation of resource.Resource's render method.
@@ -138,4 +133,3 @@ class VHostMonsterResource(resource.Resource):
         elif path == 'https':
             request.isSecure = lambda: 1
         return _HostResource()
-

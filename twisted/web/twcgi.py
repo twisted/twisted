@@ -1,9 +1,10 @@
 # -*- test-case-name: twisted.web.test.test_cgi -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""I hold resource classes and helper classes that deal with CGI scripts.
+"""
+I hold resource classes and helper classes that deal with CGI scripts.
 """
 
 # System Imports
@@ -17,14 +18,8 @@ from twisted.web import http
 from twisted.internet import reactor, protocol
 from twisted.spread import pb
 from twisted.python import log, filepath
+from twisted.web import resource, server, static
 
-# Sibling Imports
-import server
-import error
-import html
-import resource
-import static
-from server import NOT_DONE_YET
 
 class CGIDirectory(resource.Resource, filepath.FilePath):
     def __init__(self, pathname):
@@ -39,10 +34,12 @@ class CGIDirectory(resource.Resource, filepath.FilePath):
             return CGIDirectory(fnp.path)
         else:
             return CGIScript(fnp.path)
-        return error.NoResource()
+        return resource.NoResource()
 
     def render(self, request):
-        return error.NoResource("CGI directories do not support directory listing.").render(request)
+        notFound = resource.NoResource(
+            "CGI directories do not support directory listing.")
+        return notFound.render(request)
 
 class CGIScript(resource.Resource):
     """I represent a CGI script.
@@ -117,7 +114,7 @@ class CGIScript(resource.Resource):
                 env[key] = value
         # And they're off!
         self.runProcess(env, request, qargs)
-        return NOT_DONE_YET
+        return server.NOT_DONE_YET
 
     def runProcess(self, env, request, qargs=[]):
         p = CGIProcessProtocol(request)
@@ -249,8 +246,8 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
         if self.handling_headers:
             log.msg("Premature end of headers in %s: %s" % (self.request.uri, self.headertext))
             self.request.write(
-                error.ErrorPage(http.INTERNAL_SERVER_ERROR,
-                                "CGI Script Error",
-                                "Premature end of script headers.").render(self.request))
+                resource.ErrorPage(http.INTERNAL_SERVER_ERROR,
+                                   "CGI Script Error",
+                                   "Premature end of script headers.").render(self.request))
         self.request.unregisterProducer()
         self.request.finish()

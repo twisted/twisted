@@ -1,12 +1,14 @@
 # -*- test-case-name: twisted.web.test -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
-Exception and error resource definitions for L{twisted.web}.
+Exception definitions for L{twisted.web}.
 """
 
-from twisted.web import resource, http
+import operator, warnings
+
+from twisted.web import http
 
 
 class Error(Exception):
@@ -58,39 +60,73 @@ class InfiniteRedirection(Error):
         self.location = location
 
 
+class UnsupportedMethod(Exception):
+    """
+    Raised by a resource when faced with a strange request method.
 
-class ErrorPage(resource.Resource):
-    def __init__(self, status, brief, detail):
-        resource.Resource.__init__(self)
-        self.code = status
-        self.brief = brief
-        self.detail = detail
+    RFC 2616 (HTTP 1.1) gives us two choices when faced with this situtation:
+    If the type of request is known to us, but not allowed for the requested
+    resource, respond with NOT_ALLOWED.  Otherwise, if the request is something
+    we don't know how to deal with in any case, respond with NOT_IMPLEMENTED.
 
-    def render(self, request):
-        request.setResponseCode(self.code)
-        request.setHeader("content-type", "text/html")
-        return ("""<html>
-        <head><title>%s - %s</title></head>
-        <body><h1>%s</h1>
-            <p>%s</p>
-        </body></html>\n\n""" %
-                (self.code, self.brief, self.brief, self.detail))
+    When this exception is raised by a Resource's render method, the server
+    will make the appropriate response.
 
-    def getChild(self, chnam, request):
-        return self
+    This exception's first argument MUST be a sequence of the methods the
+    resource *does* support.
+    """
+
+    allowedMethods = ()
+
+    def __init__(self, allowedMethods, *args):
+        Exception.__init__(self, allowedMethods, *args)
+        self.allowedMethods = allowedMethods
+
+        if not operator.isSequenceType(allowedMethods):
+            why = "but my first argument is not a sequence."
+            s = ("First argument must be a sequence of"
+                 " supported methods, %s" % (why,))
+            raise TypeError, s
 
 
-class NoResource(ErrorPage):
-    def __init__(self, message="Sorry. No luck finding that resource."):
-        ErrorPage.__init__(self, http.NOT_FOUND,
-                           "No Such Resource",
-                           message)
+from twisted.web import resource as _resource
 
-class ForbiddenResource(ErrorPage):
-    def __init__(self, message="Sorry, resource is forbidden."):
-        ErrorPage.__init__(self, http.FORBIDDEN,
-                           "Forbidden Resource",
-                           message)
+class ErrorPage(_resource.ErrorPage):
+    """
+    Deprecated alias for L{twisted.web.resource.ErrorPage}.
+    """
+    def __init__(self, *args, **kwargs):
+        warnings.warn(
+            "twisted.web.error.ErrorPage is deprecated since Twisted 9.0.  "
+            "See twisted.web.resource.ErrorPage.", DeprecationWarning,
+            stacklevel=2)
+        _resource.ErrorPage.__init__(self, *args, **kwargs)
+
+
+
+class NoResource(_resource.NoResource):
+    """
+    Deprecated alias for L{twisted.web.resource.NoResource}.
+    """
+    def __init__(self, *args, **kwargs):
+        warnings.warn(
+            "twisted.web.error.NoResource is deprecated since Twisted 9.0.  "
+            "See twisted.web.resource.NoResource.", DeprecationWarning,
+            stacklevel=2)
+        _resource.NoResource.__init__(self, *args, **kwargs)
+
+
+
+class ForbiddenResource(_resource.ForbiddenResource):
+    """
+    Deprecated alias for L{twisted.web.resource.ForbiddenResource}.
+    """
+    def __init__(self, *args, **kwargs):
+        warnings.warn(
+            "twisted.web.error.ForbiddenResource is deprecated since Twisted "
+            "9.0.  See twisted.web.resource.ForbiddenResource.",
+            DeprecationWarning, stacklevel=2)
+        _resource.ForbiddenResource.__init__(self, *args, **kwargs)
 
 
 __all__ = [

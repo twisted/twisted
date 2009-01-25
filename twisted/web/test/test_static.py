@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.web.test.test_web -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -8,6 +8,7 @@ Tests for L{twisted.web.static}.
 
 import os
 
+from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
 from twisted.python import log
 from twisted.trial.unittest import TestCase
@@ -63,6 +64,30 @@ class StaticFileTests(TestCase):
             self.assertEqual(request.responseCode, 404)
         d.addCallback(cbRendered)
         return d
+
+
+    def test_forbiddenResource(self):
+        """
+        If the file in the filesystem which would satisfy a request cannot be
+        read, L{File.render} sets the HTTP response code to I{FORBIDDEN}.
+        """
+        base = FilePath(self.mktemp())
+        base.setContent('')
+        # Make sure we can delete the file later.
+        self.addCleanup(base.chmod, 0700)
+
+        # Get rid of our own read permission.
+        base.chmod(0)
+
+        file = static.File(base.path)
+        request = DummyRequest([''])
+        d = self._render(file, request)
+        def cbRendered(ignored):
+            self.assertEqual(request.responseCode, 403)
+        d.addCallback(cbRendered)
+        return d
+    if platform.isWindows():
+        test_forbiddenResource.skip = "Cannot remove read permission on Windows"
 
 
     def test_indexNames(self):

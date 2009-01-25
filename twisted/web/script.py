@@ -1,27 +1,21 @@
-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.web.test.test_script -*-
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-"""I contain PythonScript, which is a very simple python script resource.
+"""
+I contain PythonScript, which is a very simple python script resource.
 """
 
-import server
-import resource
-import html
-import error
+import os, traceback
 
 try:
     import cStringIO as StringIO
 except ImportError:
     import StringIO
 
-from twisted.web import http
 from twisted import copyright
-import traceback
-import os
-from twisted.web import resource
-from twisted.web import static
+from twisted.web import http, server, static, resource, html
+
 
 rpyNoResource = """<p>You forgot to assign to the variable "resource" in your script. For example:</p>
 <pre>
@@ -52,7 +46,7 @@ class CacheScanner:
     def recache(self):
         self.doCache = 1
 
-noRsrc = error.ErrorPage(500, "Whoops! Internal Error", rpyNoResource)
+noRsrc = resource.ErrorPage(500, "Whoops! Internal Error", rpyNoResource)
 
 def ResourceScript(path, registry):
     """
@@ -79,8 +73,8 @@ def ResourceTemplate(path, registry):
     from quixote import ptl_compile
 
     glob = {'__file__': path,
-            'resource': error.ErrorPage(500, "Whoops! Internal Error",
-                                        rpyNoResource),
+            'resource': resource.ErrorPage(500, "Whoops! Internal Error",
+                                           rpyNoResource),
             'registry': registry}
 
     e = ptl_compile.compile_template(open(path), path)
@@ -106,6 +100,18 @@ class ResourceScriptWrapper(resource.Resource):
 
 
 class ResourceScriptDirectory(resource.Resource):
+    """
+    L{ResourceScriptDirectory} is a resource which serves scripts from a
+    filesystem directory.  File children of a L{ResourceScriptDirectory} will
+    be served using L{ResourceScript}.  Directory children will be served using
+    another L{ResourceScriptDirectory}.
+
+    @ivar path: A C{str} giving the filesystem path in which children will be
+        looked up.
+
+    @ivar registry: A L{static.Registry} instance which will be used to decide
+        how to interpret scripts found as children of this resource.
+    """
     def __init__(self, pathname, registry=None):
         resource.Resource.__init__(self)
         self.path = pathname
@@ -118,10 +124,10 @@ class ResourceScriptDirectory(resource.Resource):
             return ResourceScriptDirectory(fn, self.registry)
         if os.path.exists(fn):
             return ResourceScript(fn, self.registry)
-        return error.NoResource()
+        return resource.NoResource()
 
     def render(self, request):
-        return error.NoResource().render(request)
+        return resource.NoResource().render(request)
 
 
 class PythonScript(resource.Resource):
@@ -154,7 +160,7 @@ class PythonScript(resource.Resource):
         except IOError, e:
             if e.errno == 2: #file not found
                 request.setResponseCode(http.NOT_FOUND)
-                request.write(error.NoResource("File not found.").render(request))
+                request.write(resource.NoResource("File not found.").render(request))
         except:
             io = StringIO.StringIO()
             traceback.print_exc(file=io)

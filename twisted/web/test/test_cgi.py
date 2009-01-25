@@ -1,10 +1,19 @@
+# Copyright (c) 2009 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Tests for L{twisted.web.twcgi}.
+"""
+
 import sys, os
 
 from twisted.trial import unittest
-from twisted.internet import reactor, interfaces
-from twisted.python import util
-from twisted.web import static, twcgi, server, resource
-from twisted.web import client
+from twisted.internet import reactor, interfaces, error
+from twisted.python import util, failure
+from twisted.web.http import NOT_FOUND, INTERNAL_SERVER_ERROR
+from twisted.web import client, twcgi, server, resource
+from twisted.web.test._util import _render
+from twisted.web.test.test_web import DummyRequest
 
 DUMMY_CGI = '''\
 print "Header: OK"
@@ -43,6 +52,13 @@ class PythonScript(twcgi.FilteredScript):
     filters = sys.executable,  # web2's version
 
 class CGI(unittest.TestCase):
+    """
+    Tests for L{twcgi.FilteredScript}.
+    """
+
+    if not interfaces.IReactorProcess.providedBy(reactor):
+        skip = "CGI tests require a functional reactor.spawnProcess()"
+
     def startServer(self, cgi):
         root = resource.Resource()
         cgipath = util.sibpath(__file__, cgi)
@@ -117,5 +133,58 @@ class CGI(unittest.TestCase):
     def _testReadAllInput_1(self, res):
         self.failUnlessEqual(res, "readallinput ok%s" % os.linesep)
 
-if not interfaces.IReactorProcess.providedBy(reactor):
-    CGI.skip = "CGI tests require a functional reactor.spawnProcess()"
+
+
+class CGIDirectoryTests(unittest.TestCase):
+    """
+    Tests for L{twcgi.CGIDirectory}.
+    """
+    def test_render(self):
+        """
+        L{twcgi.CGIDirectory.render} sets the HTTP response code to I{NOT
+        FOUND}.
+        """
+        resource = twcgi.CGIDirectory(self.mktemp())
+        request = DummyRequest([''])
+        d = _render(resource, request)
+        def cbRendered(ignored):
+            self.assertEqual(request.responseCode, NOT_FOUND)
+        d.addCallback(cbRendered)
+        return d
+
+
+    def test_notFoundChild(self):
+        """
+        L{twcgi.CGIDirectory.getChild} returns a resource which renders an
+        response with the HTTP I{NOT FOUND} status code if the indicated child
+        does not exist as an entry in the directory used to initialized the
+        L{twcgi.CGIDirectory}.
+        """
+        path = self.mktemp()
+        os.makedirs(path)
+        resource = twcgi.CGIDirectory(path)
+        request = DummyRequest(['foo'])
+        child = resource.getChild("foo", request)
+        d = _render(child, request)
+        def cbRendered(ignored):
+            self.assertEqual(request.responseCode, NOT_FOUND)
+        d.addCallback(cbRendered)
+        return d
+
+
+
+class CGIProcessProtocolTests(unittest.TestCase):
+    """
+    Tests for L{twcgi.CGIProcessProtocol}.
+    """
+    def test_prematureEndOfHeaders(self):
+        """
+        If the process communicating with L{CGIProcessProtocol} ends before
+        finishing writing out headers, the response has I{INTERNAL SERVER
+        ERROR} as its status code.
+        """
+        request = DummyRequest([''])
+        protocol = twcgi.CGIProcessProtocol(request)
+        protocol.processEnded(failure.Failure(error.ProcessTerminated()))
+        self.assertEqual(request.responseCode, INTERNAL_SERVER_ERROR)
+

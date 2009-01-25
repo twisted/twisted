@@ -1,4 +1,4 @@
-# Copyright (c) 2008 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -41,10 +41,12 @@ class DistribTest(unittest.TestCase):
     port1 = None
     port2 = None
     sub = None
+    f1 = None
 
     def tearDown(self):
         dl = [defer.Deferred(), defer.Deferred()]
-        self.f1.proto.notifyOnDisconnect(lambda: dl[0].callback(None))
+        if self.f1 is not None:
+            self.f1.proto.notifyOnDisconnect(lambda: dl[0].callback(None))
         if self.sub is not None:
             self.sub.publisher.broker.notifyOnDisconnect(
                 lambda: dl[1].callback(None))
@@ -72,6 +74,29 @@ class DistribTest(unittest.TestCase):
         d = client.getPage("http://127.0.0.1:%d/here/there" % \
                            self.port2.getHost().port)
         d.addCallback(self.failUnlessEqual, 'root')
+        return d
+
+
+    def test_connectionLost(self):
+        """
+        If there is an error issuing the request to the remote publisher, an
+        error response is returned.
+        """
+        # Using pb.Root as a publisher will cause request calls to fail with an
+        # error every time.  Just what we want to test.
+        self.f1 = serverFactory = PBServerFactory(pb.Root())
+        self.port1 = serverPort = reactor.listenTCP(0, serverFactory)
+
+        self.sub = subscription = distrib.ResourceSubscription(
+            "127.0.0.1", serverPort.getHost().port)
+        request = DummyRequest([''])
+        d = _render(subscription, request)
+        def cbRendered(ignored):
+            self.assertEqual(request.responseCode, 500)
+            # This is the error we caused the request to fail with.  It should
+            # have been logged.
+            self.assertEqual(len(self.flushLoggedErrors(pb.NoSuchMethod)), 1)
+        d.addCallback(cbRendered)
         return d
 
 

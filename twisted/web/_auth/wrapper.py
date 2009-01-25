@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.web.test.test_httpauth -*-
-# Copyright (c) 2008 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -15,10 +15,9 @@ from zope.interface import implements
 
 from twisted.python import log
 from twisted.python.components import proxyForInterface
-from twisted.web.resource import IResource
+from twisted.web.resource import IResource, ErrorPage
 from twisted.web import util
-from twisted.web.error import ErrorPage
-from twisted.cred import error as credError
+from twisted.cred import error
 
 
 class UnauthorizedResource(object):
@@ -113,7 +112,7 @@ class HTTPAuthSessionWrapper(object):
             return UnauthorizedResource(self._credentialFactories)
         try:
             credentials = factory.decode(respString, request)
-        except credError.LoginFailed:
+        except error.LoginFailed:
             return UnauthorizedResource(self._credentialFactories)
         except:
             log.err(None, "Unexpected failure from credentials factory")
@@ -175,7 +174,7 @@ class HTTPAuthSessionWrapper(object):
         expected authentication/authorization-related failures) or a server
         error page (for anything else).
         """
-        if result.check(credError.Unauthorized, credError.LoginFailed):
+        if result.check(error.Unauthorized, error.LoginFailed):
             return UnauthorizedResource(self._credentialFactories)
         else:
             log.err(

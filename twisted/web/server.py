@@ -1,10 +1,10 @@
 # -*- test-case-name: twisted.web.test.test_web -*-
-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""This is a web-server which integrates with the twisted.internet
+"""
+This is a web-server which integrates with the twisted.internet
 infrastructure.
 """
 
@@ -12,7 +12,6 @@ infrastructure.
 
 import string
 import types
-import operator
 import copy
 import time
 import os
@@ -34,11 +33,8 @@ from twisted.internet import defer, address, task
 from twisted.web import iweb, http
 from twisted.python import log, reflect, failure, components
 from twisted import copyright
-
-# Sibling Imports
-import error, resource
-from twisted.web import util as webutil
-
+from twisted.web import util as webutil, resource
+from twisted.web.error import UnsupportedMethod
 
 # backwards compatability
 date_time_string = http.datetimeToString
@@ -47,33 +43,6 @@ string_date_time = http.stringToDatetime
 # Support for other methods may be implemented on a per-resource basis.
 supportedMethods = ('GET', 'HEAD', 'POST')
 
-
-class UnsupportedMethod(Exception):
-    """Raised by a resource when faced with a strange request method.
-
-    RFC 2616 (HTTP 1.1) gives us two choices when faced with this situtation:
-    If the type of request is known to us, but not allowed for the requested
-    resource, respond with NOT_ALLOWED.  Otherwise, if the request is something
-    we don't know how to deal with in any case, respond with NOT_IMPLEMENTED.
-
-    When this exception is raised by a Resource's render method, the server
-    will make the appropriate response.
-
-    This exception's first argument MUST be a sequence of the methods the
-    resource *does* support.
-    """
-
-    allowedMethods = ()
-
-    def __init__(self, allowedMethods, *args):
-        Exception.__init__(self, allowedMethods, *args)
-        self.allowedMethods = allowedMethods
-
-        if not operator.isSequenceType(allowedMethods):
-            why = "but my first argument is not a sequence."
-            s = ("First argument must be a sequence of"
-                 " supported methods, %s" % (why,))
-            raise TypeError, s
 
 def _addressToTuple(addr):
     if isinstance(addr, address.IPv4Address):
@@ -194,25 +163,25 @@ class Request(pb.Copyable, http.Request, components.Componentized):
                     'plural': ((len(allowedMethods) > 1) and 's') or '',
                     'allowed': string.join(allowedMethods, ', ')
                     })
-                epage = error.ErrorPage(http.NOT_ALLOWED,
-                                        "Method Not Allowed", s)
+                epage = resource.ErrorPage(http.NOT_ALLOWED,
+                                           "Method Not Allowed", s)
                 body = epage.render(self)
             else:
-                epage = error.ErrorPage(http.NOT_IMPLEMENTED, "Huh?",
-                                        """I don't know how to treat a"""
-                                        """ %s request."""
-                                        % (self.method))
+                epage = resource.ErrorPage(http.NOT_IMPLEMENTED, "Huh?",
+                                           "I don't know how to treat a"
+                                           " %s request." % (self.method,))
                 body = epage.render(self)
         # end except UnsupportedMethod
 
         if body == NOT_DONE_YET:
             return
         if type(body) is not types.StringType:
-            body = error.ErrorPage(http.INTERNAL_SERVER_ERROR,
+            body = resource.ErrorPage(
+                http.INTERNAL_SERVER_ERROR,
                 "Request did not return a string",
-                "Request: "+html.PRE(reflect.safe_repr(self))+"<br />"+
-                "Resource: "+html.PRE(reflect.safe_repr(resrc))+"<br />"+
-                "Value: "+html.PRE(reflect.safe_repr(body))).render(self)
+                "Request: " + html.PRE(reflect.safe_repr(self)) + "<br />" +
+                "Resource: " + html.PRE(reflect.safe_repr(resrc)) + "<br />" +
+                "Value: " + html.PRE(reflect.safe_repr(body))).render(self)
 
         if self.method == "HEAD":
             if len(body) > 0:

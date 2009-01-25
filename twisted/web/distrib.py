@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.web.test.test_web -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -20,18 +20,11 @@ from xml.dom.minidom import Element, Text
 
 # Twisted Imports
 from twisted.spread import pb
-from twisted.web import http
+from twisted.web import http, resource, server, html, static
 from twisted.python import log
 from twisted.persisted import styles
 from twisted.internet import address, reactor
 
-# Sibling Imports
-import resource
-import server
-import error
-import html
-import static
-from server import NOT_DONE_YET
 
 class _ReferenceableProducerWrapper(pb.Referenceable):
     def __init__(self, producer):
@@ -87,7 +80,7 @@ class Issue:
         self.request = request
 
     def finished(self, result):
-        if result != NOT_DONE_YET:
+        if result != server.NOT_DONE_YET:
             assert isinstance(result, types.StringType),\
                    "return value not a string"
             self.request.write(result)
@@ -97,10 +90,10 @@ class Issue:
         #XXX: Argh. FIXME.
         failure = str(failure)
         self.request.write(
-            error.ErrorPage(http.INTERNAL_SERVER_ERROR,
-                            "Server Connection Lost",
-                            "Connection to distributed server lost:" +
-                            html.PRE(failure)).
+            resource.ErrorPage(http.INTERNAL_SERVER_ERROR,
+                               "Server Connection Lost",
+                               "Connection to distributed server lost:" +
+                               html.PRE(failure)).
             render(self.request))
         self.request.finish()
         log.msg(failure)
@@ -179,7 +172,7 @@ class ResourceSubscription(resource.Resource):
         else:
             i = Issue(request)
             self.publisher.callRemote('request', request).addCallbacks(i.finished, i.failed)
-        return NOT_DONE_YET
+        return server.NOT_DONE_YET
 
 class ResourcePublisher(pb.Root, styles.Versioned):
     def __init__(self, site):
@@ -317,7 +310,7 @@ class UserDirectory(resource.Resource):
             pw_name, pw_passwd, pw_uid, pw_gid, pw_gecos, pw_dir, pw_shell \
                      = self._pwd.getpwnam(username)
         except KeyError:
-            return error.NoResource()
+            return resource.NoResource()
         if sub:
             twistdsock = os.path.join(pw_dir, self.userSocketName)
             rs = ResourceSubscription('unix',twistdsock)
@@ -326,5 +319,5 @@ class UserDirectory(resource.Resource):
         else:
             path = os.path.join(pw_dir, self.userDirName)
             if not os.path.exists(path):
-                return error.NoResource()
+                return resource.NoResource()
             return static.File(path)
