@@ -715,6 +715,7 @@ class Request:
                         self.channel.transport.loseConnection()
                         return
                     raise
+            self.content.seek(0, 0)
 
         self.process()
 

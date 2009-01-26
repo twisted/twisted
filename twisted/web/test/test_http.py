@@ -793,7 +793,14 @@ GET /?key=value&multiple=two+words&multiple=more%20words&empty= HTTP/1.0
         self.runRequest(httpRequest, MyRequest)
 
 
-    def testPOST(self):
+    def test_formPOSTRequest(self):
+        """
+        The request body of a I{POST} request with a I{Content-Type} header
+        of I{application/x-www-form-urlencoded} is parsed according to that
+        content type and made available in the C{args} attribute of the
+        request object.  The original bytes of the request may still be read
+        from the C{content} attribute.
+        """
         query = 'key=value&multiple=two+words&multiple=more%20words&empty='
         httpRequest = '''\
 POST / HTTP/1.0
@@ -809,6 +816,10 @@ Content-Type: application/x-www-form-urlencoded
                 testcase.assertEquals(self.args["key"], ["value"])
                 testcase.assertEquals(self.args["empty"], [""])
                 testcase.assertEquals(self.args["multiple"], ["two words", "more words"])
+
+                # Reading from the content file-like must produce the entire
+                # request body.
+                testcase.assertEquals(self.content.read(), query)
                 testcase.didRequest = 1
                 self.finish()
 
