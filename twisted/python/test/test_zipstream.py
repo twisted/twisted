@@ -8,6 +8,7 @@ import sys
 import random
 import zipfile
 
+from twisted.python.compat import set
 from twisted.python import zipstream, filepath
 from twisted.python.hashlib import md5
 from twisted.trial import unittest
@@ -302,15 +303,73 @@ class ZipstreamTest(unittest.TestCase):
             self.assertEquals(child.open().read(), contents[num])
 
 
+    def test_unzipIterChunky(self):
+        """
+        L{twisted.python.zipstream.unzipIterChunky} returns an iterator which
+        must be exhausted to completely unzip the input archive.
+        """
+        numfiles = 10
+        contents = ['This is test file %d!' % i for i in range(numfiles)]
+        zpfilename = self.makeZipFile(contents)
+        list(zipstream.unzipIterChunky(zpfilename, self.unzipdir.path))
+        self.assertEquals(
+            set(self.unzipdir.listdir()),
+            set(map(str, range(numfiles))))
+
+        for child in self.unzipdir.children():
+            num = int(child.basename())
+            self.assertEquals(child.getContent(), contents[num])
+
+
+    def test_unzipIterChunkyDirectory(self):
+        """
+        The path to which a file is extracted by L{zipstream.unzipIterChunky}
+        is determined by joining the C{directory} argument to C{unzip} with the
+        path within the archive of the file being extracted.
+        """
+        numfiles = 10
+        contents = ['This is test file %d!' % i for i in range(numfiles)]
+        zpfilename = self.makeZipFile(contents, 'foo')
+        list(zipstream.unzipIterChunky(zpfilename, self.unzipdir.path))
+        self.assertEquals(
+            set(self.unzipdir.child('foo').listdir()),
+            set(map(str, range(numfiles))))
+
+        for child in self.unzipdir.child('foo').children():
+            num = int(child.basename())
+            self.assertEquals(child.getContent(), contents[num])
+
+
     def test_unzip(self):
         """
         L{twisted.python.zipstream.unzip} should extract all files from a zip
         archive
         """
         numfiles = 3
-        zpfilename = self.makeZipFile([''] * numfiles)
+        zpfilename = self.makeZipFile([str(i) for i in range(numfiles)])
         zipstream.unzip(zpfilename, self.unzipdir.path)
-        self.assertEquals(len(list(self.unzipdir.children())), numfiles)
+        self.assertEqual(
+            set(self.unzipdir.listdir()),
+            set(map(str, range(numfiles))))
+        for i in range(numfiles):
+            self.assertEqual(self.unzipdir.child(str(i)).getContent(), str(i))
+
+
+    def test_unzipDirectory(self):
+        """
+        The path to which a file is extracted by L{zipstream.unzip} is
+        determined by joining the C{directory} argument to C{unzip} with the
+        path within the archive of the file being extracted.
+        """
+        numfiles = 3
+        zpfilename = self.makeZipFile([str(i) for i in range(numfiles)], 'foo')
+        zipstream.unzip(zpfilename, self.unzipdir.path)
+        self.assertEqual(
+            set(self.unzipdir.child('foo').listdir()),
+            set(map(str, range(numfiles))))
+        for i in range(numfiles):
+            self.assertEqual(
+                self.unzipdir.child('foo').child(str(i)).getContent(), str(i))
 
 
     def test_overwrite(self):

@@ -279,7 +279,7 @@ def unzipIter(filename, directory='.', overwrite=0):
             # since we can't guarantee it exists
             fdir = os.path.split(f)[0]
             if not os.path.exists(fdir):
-                os.makedirs(f)
+                os.makedirs(fdir)
             if overwrite or not os.path.exists(f):
                 outfile = file(f, 'wb')
                 outfile.write(zf.read(entry))
@@ -359,7 +359,7 @@ def unzipIterChunky(filename, directory='.', overwrite=0,
             # since we can't guarantee it exists
             fdir = os.path.split(f)[0]
             if not os.path.exists(fdir):
-                os.makedirs(f)
+                os.makedirs(fdir)
             if overwrite or not os.path.exists(f):
                 outfile = file(f, 'wb')
                 fp = czf.readfile(entry)
