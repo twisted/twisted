@@ -10,6 +10,7 @@ infrastructure.
 
 # System Imports
 
+import warnings
 import string
 import types
 import copy
@@ -357,38 +358,48 @@ class Session(components.Componentized):
     This utility class contains no functionality, but is used to
     represent a session.
 
+    @ivar _reactor: An object providing L{IReactorTime} to use for scheduling
+        expiration.
     @ivar sessionTimeout: timeout of a session, in seconds.
-    @ivar loopFactory: factory for creating L{task.LoopingCall}. Mainly for
-        testing.
+    @ivar loopFactory: Deprecated in Twisted 9.0.  Does nothing.  Do not use.
     """
     sessionTimeout = 900
     loopFactory = task.LoopingCall
 
-    def __init__(self, site, uid):
+    _expireCall = None
+
+    def __init__(self, site, uid, reactor=None):
         """
         Initialize a session with a unique ID for that session.
         """
         components.Componentized.__init__(self)
+
+        if reactor is None:
+            from twisted.internet import reactor
+        self._reactor = reactor
+
         self.site = site
         self.uid = uid
         self.expireCallbacks = []
-        self.checkExpiredLoop = None
         self.touch()
         self.sessionNamespaces = {}
 
 
-    def startCheckingExpiration(self, lifetime):
+    def startCheckingExpiration(self, lifetime=None):
         """
         Start expiration tracking.
 
-        @type lifetime: C{int} or C{float}
-        @param lifetime: The number of seconds this session is allowed to be
-        idle before it expires.
+        @param lifetime: Ignored; deprecated.
 
         @return: C{None}
         """
-        self.checkExpiredLoop = self.loopFactory(self.checkExpired)
-        self.checkExpiredLoop.start(lifetime, now=False)
+        if lifetime is not None:
+            warnings.warn(
+                "The lifetime parameter to startCheckingExpiration is "
+                "deprecated since Twisted 9.0.  See Session.sessionTimeout "
+                "instead.", DeprecationWarning, stacklevel=2)
+        self._expireCall = self._reactor.callLater(
+            self.sessionTimeout, self.expire)
 
 
     def notifyOnExpire(self, callback):
@@ -406,37 +417,29 @@ class Session(components.Componentized):
         for c in self.expireCallbacks:
             c()
         self.expireCallbacks = []
-        if self.checkExpiredLoop is not None:
-            self.checkExpiredLoop.stop()
+        if self._expireCall and self._expireCall.active():
+            self._expireCall.cancel()
             # Break reference cycle.
-            self.checkExpiredLoop = None
-
-
-    def _getTime(self):
-        """
-        Return current time used for session validity.
-        """
-        return time.time()
+            self._expireCall = None
 
 
     def touch(self):
         """
         Notify session modification.
         """
-        self.lastModified = self._getTime()
+        self.lastModified = self._reactor.seconds()
+        if self._expireCall is not None:
+            self._expireCall.reset(self.sessionTimeout)
 
 
     def checkExpired(self):
         """
-        Is it time for me to expire?
-
-        If I haven't been touched in fifteen minutes, I will call my
-        expire method.
+        Deprecated; does nothing.
         """
-        # If I haven't been touched in 15 minutes:
-        if self._getTime() - self.lastModified > self.sessionTimeout:
-            if self.uid in self.site.sessions:
-                self.expire()
+        warnings.warn(
+            "Session.checkExpired is deprecated since Twisted 9.0; sessions "
+            "check themselves now, you don't need to.",
+            stacklevel=2, category=DeprecationWarning)
 
 
 version = "TwistedWeb/%s" % copyright.version
@@ -445,14 +448,14 @@ version = "TwistedWeb/%s" % copyright.version
 class Site(http.HTTPFactory):
     """
     A web site: manage log, sessions, and resources.
-    
+
     @ivar counter: increment value used for generating unique sessions ID.
     @ivar requestFactory: factory creating requests objects. Default to
         L{Request}.
     @ivar displayTracebacks: if set, Twisted internal errors are displayed on
         rendered pages. Default to C{True}.
     @ivar sessionFactory: factory for sessions objects. Default to L{Session}.
-    @ivar sessionCheckTime: interval between each check of session expiration.
+    @ivar sessionCheckTime: Deprecated.  See L{Session.sessionTimeout} instead.
     """
     counter = 0
     requestFactory = Request
@@ -492,7 +495,7 @@ class Site(http.HTTPFactory):
         """
         uid = self._mkuid()
         session = self.sessions[uid] = self.sessionFactory(self, uid)
-        session.startCheckingExpiration(self.sessionCheckTime)
+        session.startCheckingExpiration()
         return session
 
     def getSession(self, uid):

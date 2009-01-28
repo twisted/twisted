@@ -11,6 +11,7 @@ from zope.interface import implements
 from zope.interface.verify import verifyObject
 
 from twisted.trial import unittest
+from twisted.internet import reactor
 from twisted.internet.address import IPv4Address
 from twisted.internet.defer import Deferred
 from twisted.web import server, resource, util
@@ -233,74 +234,132 @@ class SiteTest(unittest.TestCase):
 
 
 class SessionTest(unittest.TestCase):
-
+    """
+    Tests for L{server.Session}.
+    """
     def setUp(self):
         """
-        Set up a session using a simulated scheduler. Creates a
-        C{times} attribute which specifies the return values of the
-        session's C{_getTime} method.
+        Create a site with one active session using a deterministic, easily
+        controlled clock.
         """
-        clock = self.clock = task.Clock()
-        times = self.times = []
-
-        class MockSession(server.Session):
-            """
-            A mock L{server.Session} object which fakes out scheduling
-            with the C{clock} attribute and fakes out the current time
-            to be the elements of L{SessionTest}'s C{times} attribute.
-            """
-            def loopFactory(self, *a, **kw):
-                """
-                Create a L{task.LoopingCall} which uses
-                L{SessionTest}'s C{clock} attribute.
-                """
-                call = task.LoopingCall(*a, **kw)
-                call.clock = clock
-                return call
-
-            def _getTime(self):
-                return times.pop(0)
-
-        self.site = server.Site(SimpleResource())
-        self.site.sessionFactory = MockSession
+        self.clock = task.Clock()
+        self.uid = 'unique'
+        self.site = server.Site(resource.Resource())
+        self.session = server.Session(self.site, self.uid, self.clock)
+        self.site.sessions[self.uid] = self.session
 
 
-    def test_basicExpiration(self):
+    def test_defaultReactor(self):
         """
-        Test session expiration: setup a session, and simulate an expiration
-        time.
+        If not value is passed to L{server.Session.__init__}, the global
+        reactor is used.
         """
-        self.times.extend([0, server.Session.sessionTimeout + 1])
-        session = self.site.makeSession()
-        hasExpired = [False]
-        def cbExpire():
-            hasExpired[0] = True
-        session.notifyOnExpire(cbExpire)
-        self.clock.advance(server.Site.sessionCheckTime - 1)
-        # Looping call should not have been executed
-        self.failIf(hasExpired[0])
+        session = server.Session(server.Site(resource.Resource()), '123')
+        self.assertIdentical(session._reactor, reactor)
 
+
+    def test_startCheckingExpiration(self):
+        """
+        L{server.Session.startCheckingExpiration} causes the session to expire
+        after L{server.Session.sessionTimeout} seconds without activity.
+        """
+        self.session.startCheckingExpiration()
+
+        # Advance to almost the timeout - nothing should happen.
+        self.clock.advance(self.session.sessionTimeout - 1)
+        self.assertIn(self.uid, self.site.sessions)
+
+        # Advance to the timeout, the session should expire.
         self.clock.advance(1)
+        self.assertNotIn(self.uid, self.site.sessions)
 
-        self.failUnless(hasExpired[0])
+        # There should be no calls left over, either.
+        self.assertFalse(self.clock.calls)
 
 
-    def test_delayedCallCleanup(self):
+    def test_expire(self):
         """
-        Checking to make sure Sessions do not leave extra DelayedCalls.
+        L{server.Session.expire} expires the session.
         """
-        self.times.extend([0, 100])
+        self.session.expire()
+        # It should be gone from the session dictionary.
+        self.assertNotIn(self.uid, self.site.sessions)
+        # And there should be no pending delayed calls.
+        self.assertFalse(self.clock.calls)
 
-        session = self.site.makeSession()
-        loop = session.checkExpiredLoop
-        session.touch()
-        self.failUnless(loop.running)
 
-        session.expire()
+    def test_expireWhileChecking(self):
+        """
+        L{server.Session.expire} expires the session even if the timeout call
+        isn't due yet.
+        """
+        self.session.startCheckingExpiration()
+        self.test_expire()
 
-        self.failIf(self.clock.calls)
-        self.failIf(loop.running)
 
+    def test_notifyOnExpire(self):
+        """
+        A function registered with L{server.Session.notifyOnExpire} is called
+        when the session expires.
+        """
+        callbackRan = [False]
+        def expired():
+            callbackRan[0] = True
+        self.session.notifyOnExpire(expired)
+        self.session.expire()
+        self.assertTrue(callbackRan[0])
+
+
+    def test_touch(self):
+        """
+        L{server.Session.touch} updates L{server.Session.lastModified} and
+        delays session timeout.
+        """
+        # Make sure it works before startCheckingExpiration
+        self.clock.advance(3)
+        self.session.touch()
+        self.assertEqual(self.session.lastModified, 3)
+
+        # And after startCheckingExpiration
+        self.session.startCheckingExpiration()
+        self.clock.advance(self.session.sessionTimeout - 1)
+        self.session.touch()
+        self.clock.advance(self.session.sessionTimeout - 1)
+        self.assertIn(self.uid, self.site.sessions)
+
+        # It should have advanced it by just sessionTimeout, no more.
+        self.clock.advance(1)
+        self.assertNotIn(self.uid, self.site.sessions)
+
+
+    def test_startCheckingExpirationParameterDeprecated(self):
+        """
+        L{server.Session.startCheckingExpiration} emits a deprecation warning
+        if it is invoked with a parameter.
+        """
+        self.session.startCheckingExpiration(123)
+        warnings = self.flushWarnings([
+                self.test_startCheckingExpirationParameterDeprecated])
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warnings[0]['message'],
+            "The lifetime parameter to startCheckingExpiration is deprecated "
+            "since Twisted 9.0.  See Session.sessionTimeout instead.")
+
+
+    def test_checkExpiredDeprecated(self):
+        """
+        L{server.Session.checkExpired} is deprecated.
+        """
+        self.session.checkExpired()
+        warnings = self.flushWarnings([self.test_checkExpiredDeprecated])
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warnings[0]['message'],
+            "Session.checkExpired is deprecated since Twisted 9.0; sessions "
+            "check themselves now, you don't need to.")
+        self.assertEqual(len(warnings), 1)
 
 
 # Conditional requests:
