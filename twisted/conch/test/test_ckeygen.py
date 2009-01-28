@@ -8,10 +8,16 @@ Tests for L{twisted.conch.scripts.ckeygen}.
 import sys
 from StringIO import StringIO
 
+try:
+    import Crypto
+except ImportError:
+    skip = "PyCrypto required for twisted.conch.scripts.ckeygen."
+else:
+    from twisted.conch.ssh.keys import Key
+    from twisted.conch.scripts.ckeygen import printFingerprint, _saveKey
+
 from twisted.python.filepath import FilePath
 from twisted.trial.unittest import TestCase
-from twisted.conch.ssh.keys import Key
-from twisted.conch.scripts.ckeygen import printFingerprint, _saveKey
 from twisted.conch.test.keydata import publicRSA_openssh, privateRSA_openssh
 
 

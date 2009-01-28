@@ -6,23 +6,26 @@ Tests for L{twisted.conch.client.knownhosts}.
 """
 
 import os
+from binascii import Error as BinasciiError, b2a_base64, a2b_base64
+
+try:
+    import Crypto
+except ImportError:
+    skip = "PyCrypto required for twisted.conch.knownhosts."
+else:
+    from twisted.conch.ssh.keys import Key, BadKeyError
+    from twisted.conch.client.knownhosts import \
+        PlainEntry, HashedEntry, KnownHostsFile, UnparsedEntry, ConsoleUI
+    from twisted.conch.client import default
 
 from zope.interface.verify import verifyObject
 
 from twisted.python.filepath import FilePath
-
 from twisted.trial.unittest import TestCase
-
 from twisted.internet.defer import Deferred
-
 from twisted.conch.interfaces import IKnownHostEntry
 from twisted.conch.error import HostKeyChanged, UserRejectedKey, InvalidEntry
-from twisted.conch.ssh.keys import Key, BadKeyError
-from twisted.conch.client.knownhosts import \
-    PlainEntry, HashedEntry, KnownHostsFile, UnparsedEntry, ConsoleUI
-from binascii import Error as BinasciiError, b2a_base64, a2b_base64
 
-from twisted.conch.client import default
 
 sampleEncodedKey = (
     'AAAAB3NzaC1yc2EAAAABIwAAAQEAsV0VMRbGmzhqxxayLRHmvnFvtyNqgbNKV46dU1bVFB+3y'
