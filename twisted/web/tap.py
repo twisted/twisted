@@ -8,7 +8,7 @@ Support for creating a service which runs a web server.
 import os
 
 # Twisted Imports
-from twisted.web import server, static, twcgi, script, demo, distrib, trp, wsgi
+from twisted.web import server, static, twcgi, script, demo, distrib, wsgi
 from twisted.internet import interfaces, reactor
 from twisted.python import usage, reflect, threadpool
 from twisted.spread import pb
@@ -74,6 +74,12 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         php3, epy, or rpy files or any other files that you want to be served
         up raw.
         """
+        def trp(*args, **kwargs):
+            # Help avoid actually importing twisted.web.trp until it is really
+            # needed.  This avoids getting a deprecation warning if you're not
+            # using deprecated functionality.
+            from twisted.web import trp
+            return trp.ResourceUnpickler(*args, **kwargs)
 
         self['root'] = static.File(os.path.abspath(path))
         self['root'].processors = {
@@ -82,7 +88,7 @@ demo webserver that has the Test class from twisted.web.demo in it."""
             '.php': twcgi.PHPScript,
             '.epy': script.PythonScript,
             '.rpy': script.ResourceScript,
-            '.trp': trp.ResourceUnpickler,
+            '.trp': trp,
             }
 
     def opt_processor(self, proc):

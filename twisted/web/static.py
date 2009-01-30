@@ -445,6 +445,11 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         return map(lambda fileName, self=self: self.createSimilarFile(os.path.join(self.path, fileName)), self.listNames())
 
     def createPickleChild(self, name, child):
+        warnings.warn(
+            "File.createPickleChild is deprecated since Twisted 9.0.  "
+            "Resource persistence is beyond the scope of Twisted Web.",
+            DeprecationWarning, stacklevel=2)
+
         if not os.path.isdir(self.path):
             resource.Resource.putChild(self, name, child)
         # xxx use a file-extension-to-save-function dictionary instead

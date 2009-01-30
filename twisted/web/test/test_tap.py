@@ -5,9 +5,10 @@
 Tests for L{twisted.web.tap}.
 """
 
-import os, stat
+import os, stat, pickle
 
 from twisted.python.usage import UsageError
+from twisted.python.filepath import FilePath
 from twisted.internet.interfaces import IReactorUNIX
 from twisted.internet import reactor
 from twisted.python.threadpool import ThreadPool
@@ -15,10 +16,13 @@ from twisted.trial.unittest import TestCase
 from twisted.application import strports
 
 from twisted.web.server import Site
-from twisted.web.static import Data
+from twisted.web.static import Data, File
 from twisted.web.distrib import ResourcePublisher, UserDirectory
 from twisted.web.wsgi import WSGIResource
 from twisted.web.tap import Options, makePersonalServerFactory, makeService
+from twisted.web.twcgi import CGIScript, PHP3Script, PHPScript
+from twisted.web.script import PythonScript
+
 
 from twisted.spread.pb import PBServerFactory
 
@@ -28,6 +32,125 @@ class ServiceTests(TestCase):
     """
     Tests for the service creation APIs in L{twisted.web.tap}.
     """
+    def _pathOption(self):
+        """
+        Helper for the I{--path} tests which creates a directory and creates
+        an L{Options} object which uses that directory as its static
+        filesystem root.
+
+        @return: A two-tuple of a L{FilePath} referring to the directory and
+            the value associated with the C{'root'} key in the L{Options}
+            instance after parsing a I{--path} option.
+        """
+        path = FilePath(self.mktemp())
+        path.makedirs()
+        options = Options()
+        options.parseOptions(['--path', path.path])
+        root = options['root']
+        return path, root
+
+
+    def test_path(self):
+        """
+        The I{--path} option causes L{Options} to create a root resource
+        which serves responses from the specified path.
+        """
+        path, root = self._pathOption()
+        self.assertIsInstance(root, File)
+        self.assertEqual(root.path, path.path)
+
+
+    def test_cgiProcessor(self):
+        """
+        The I{--path} option creates a root resource which serves a
+        L{CGIScript} instance for any child with the C{".cgi"} extension.
+        """
+        path, root = self._pathOption()
+        path.child("foo.cgi").setContent("")
+        self.assertIsInstance(root.getChild("foo.cgi", None), CGIScript)
+
+
+    def test_php3Processor(self):
+        """
+        The I{--path} option creates a root resource which serves a
+        L{PHP3Script} instance for any child with the C{".php3"} extension.
+        """
+        path, root = self._pathOption()
+        path.child("foo.php3").setContent("")
+        self.assertIsInstance(root.getChild("foo.php3", None), PHP3Script)
+
+
+    def test_phpProcessor(self):
+        """
+        The I{--path} option creates a root resource which serves a
+        L{PHPScript} instance for any child with the C{".php"} extension.
+        """
+        path, root = self._pathOption()
+        path.child("foo.php").setContent("")
+        self.assertIsInstance(root.getChild("foo.php", None), PHPScript)
+
+
+    def test_epyProcessor(self):
+        """
+        The I{--path} option creates a root resource which serves a
+        L{PythonScript} instance for any child with the C{".epy"} extension.
+        """
+        path, root = self._pathOption()
+        path.child("foo.epy").setContent("")
+        self.assertIsInstance(root.getChild("foo.epy", None), PythonScript)
+
+
+    def test_rpyProcessor(self):
+        """
+        The I{--path} option creates a root resource which serves the
+        C{resource} global defined by the Python source in any child with
+        the C{".rpy"} extension.
+        """
+        path, root = self._pathOption()
+        path.child("foo.rpy").setContent(
+            "from twisted.web.static import Data\n"
+            "resource = Data('content', 'major/minor')\n")
+        child = root.getChild("foo.rpy", None)
+        self.assertIsInstance(child, Data)
+        self.assertEqual(child.data, 'content')
+        self.assertEqual(child.type, 'major/minor')
+
+
+    def test_trpProcessor(self):
+        """
+        The I{--path} option creates a root resource which serves the
+        pickled resource out of any child with the C{".rpy"} extension.
+        """
+        path, root = self._pathOption()
+        path.child("foo.trp").setContent(pickle.dumps(Data("foo", "bar")))
+        child = root.getChild("foo.trp", None)
+        self.assertIsInstance(child, Data)
+        self.assertEqual(child.data, 'foo')
+        self.assertEqual(child.type, 'bar')
+
+        warnings = self.flushWarnings()
+
+        # If the trp module hadn't been imported before this test ran, there
+        # will be two deprecation warnings; one for the module, one for the
+        # function.  If the module has already been imported, the
+        # module-scope deprecation won't be emitted again.
+        if len(warnings) == 2:
+            self.assertEqual(warnings[0]['category'], DeprecationWarning)
+            self.assertEqual(
+                warnings[0]['message'],
+                "twisted.web.trp is deprecated as of Twisted 9.0.  Resource "
+                "persistence is beyond the scope of Twisted Web.")
+            warning = warnings[1]
+        else:
+            warning = warnings[0]
+
+        self.assertEqual(warning['category'], DeprecationWarning)
+        self.assertEqual(
+            warning['message'],
+            "twisted.web.trp.ResourceUnpickler is deprecated as of Twisted "
+            "9.0.  Resource persistence is beyond the scope of Twisted Web.")
+
+
     def test_makePersonalServerFactory(self):
         """
         L{makePersonalServerFactory} returns a PB server factory which has
