@@ -46,6 +46,7 @@ from twisted.python._release import VERSION_OFFSET, DocBuilder, ManBuilder
 from twisted.python._release import NoDocumentsFound, filePathDelta
 from twisted.python._release import CommandFailed, BookBuilder
 from twisted.python._release import DistributionBuilder, APIBuilder
+from twisted.python._release import BuildAPIDocsScript
 from twisted.python._release import buildAllTarballs, runCommand
 from twisted.python._release import UncleanWorkingDirectory, NotWorkingDirectory
 from twisted.python._release import ChangeVersionsScript, BuildTarballsScript
@@ -602,7 +603,6 @@ with this."""
 
 
 
-
 class DocBuilderTestCase(TestCase, BuilderTestsMixin):
     """
     Tests for L{DocBuilder}.
@@ -787,6 +787,7 @@ class APIBuilderTestCase(TestCase):
     if pydoctor is None or getattr(pydoctor, "version_info", (0,)) < (0, 1):
         skip = "APIBuilder requires Pydoctor 0.1 or newer"
 
+
     def test_build(self):
         """
         L{APIBuilder.build} writes an index file which includes the name of the
@@ -836,9 +837,6 @@ class APIBuilderTestCase(TestCase):
             '<a href="%s/%s">View Source</a>' % (sourceURL, packageName),
             quuxPath.getContent())
         self.assertIn(
-            '<a href="%s/%s">View Source</a>' % (sourceURL, packageName),
-            quuxPath.getContent())
-        self.assertIn(
             '<a href="%s/%s/__init__.py#L1" class="functionSourceLink">' % (
                 sourceURL, packageName),
             quuxPath.getContent())
@@ -848,6 +846,78 @@ class APIBuilderTestCase(TestCase):
         self.assertTrue(quuxPath.sibling('quux.foo.html').exists())
 
         self.assertEqual(stdout.getvalue(), '')
+
+
+    def test_buildWithPolicy(self):
+        """
+        L{BuildAPIDocsScript.buildAPIDocs} builds the API docs with values
+        appropriate for the Twisted project.
+        """
+        stdout = StringIO()
+        self.patch(sys, 'stdout', stdout)
+        docstring = "text in docstring"
+
+        projectRoot = FilePath(self.mktemp())
+        packagePath = projectRoot.child("twisted")
+        packagePath.makedirs()
+        packagePath.child("__init__.py").setContent(
+            "def foo():\n"
+            "    '%s'\n" % (docstring,))
+        packagePath.child("_version.py").setContent(
+            genVersion("twisted", 1, 0, 0))
+        outputPath = FilePath(self.mktemp())
+
+        script = BuildAPIDocsScript()
+        script.buildAPIDocs(projectRoot, outputPath)
+
+        indexPath = outputPath.child("index.html")
+        self.assertTrue(
+            indexPath.exists(),
+            "API index %r did not exist." % (outputPath.path,))
+        self.assertIn(
+            '<a href="http://twistedmatrix.com/">Twisted</a>',
+            indexPath.getContent(),
+            "Project name/location not in file contents.")
+
+        twistedPath = outputPath.child("twisted.html")
+        self.assertTrue(
+            twistedPath.exists(),
+            "Package documentation file %r did not exist."
+            % (twistedPath.path,))
+        self.assertIn(
+            docstring, twistedPath.getContent(),
+            "Docstring not in package documentation file.")
+        #Here we check that it figured out the correct version based on the
+        #source code.
+        self.assertIn(
+            '<a href="http://twistedmatrix.com/trac/browser/tags/releases/'
+            'twisted-1.0.0/twisted">View Source</a>',
+            twistedPath.getContent())
+
+        self.assertEqual(stdout.getvalue(), '')
+
+
+    def test_apiBuilderScriptMainRequiresTwoArguments(self):
+        """
+        SystemExit is raised when the incorrect number of command line
+        arguments are passed to the API building script.
+        """
+        script = BuildAPIDocsScript()
+        self.assertRaises(SystemExit, script.main, [])
+        self.assertRaises(SystemExit, script.main, ["foo"])
+        self.assertRaises(SystemExit, script.main, ["foo", "bar", "baz"])
+
+
+    def test_apiBuilderScriptMain(self):
+        """
+        The API building script invokes the same code that
+        L{test_buildWithPolicy} tests.
+        """
+        script = BuildAPIDocsScript()
+        calls = []
+        script.buildAPIDocs = lambda a, b: calls.append((a, b))
+        script.main(["hello", "there"])
+        self.assertEquals(calls, [(FilePath("hello"), FilePath("there"))])
 
 
 

@@ -402,7 +402,8 @@ class APIBuilder(object):
     pydoctor to be installed and usable (which means you won't be able to
     use it with Python 2.3).
     """
-    def build(self, projectName, projectURL, sourceURL, packagePath, outputPath):
+    def build(self, projectName, projectURL, sourceURL, packagePath,
+              outputPath):
         """
         Call pydoctor's entry point with options which will generate HTML
         documentation for the specified package's API.
@@ -994,3 +995,45 @@ class BuildTarballsScript(object):
             sys.exit("Must specify two arguments: "
                      "Twisted checkout and destination path")
         self.buildAllTarballs(FilePath(args[0]), FilePath(args[1]))
+
+
+
+class BuildAPIDocsScript(object):
+    """
+    A thing for building API documentation. See L{main}.
+    """
+
+    def buildAPIDocs(self, projectRoot, output):
+        """
+        Build the API documentation of Twisted, with our project policy.
+
+        @param projectRoot: A L{FilePath} representing the root of the Twisted
+            checkout.
+        @param output: A L{FilePath} pointing to the desired output directory.
+        """
+        version = Project(projectRoot.child("twisted")).getVersion()
+        versionString = version.base()
+        sourceURL = ("http://twistedmatrix.com/trac/browser/tags/releases/"
+                     "twisted-%s" % (versionString,))
+        apiBuilder = APIBuilder()
+        apiBuilder.build(
+            "Twisted",
+            "http://twistedmatrix.com/",
+            sourceURL,
+            projectRoot.child("twisted"),
+            output)
+
+
+    def main(self, args):
+        """
+        Build API documentation.
+
+        @type args: list of str
+        @param args: The command line arguments to process.  This must contain
+            two strings: the path to the root of the Twisted checkout, and a
+            path to an output directory.
+        """
+        if len(args) != 2:
+            sys.exit("Must specify two arguments: "
+                     "Twisted checkout and distination path")
+        self.buildAPIDocs(FilePath(args[0]), FilePath(args[1]))
