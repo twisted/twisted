@@ -7,6 +7,7 @@ Test cases for twisted.mail.smtp module.
 
 from zope.interface import implements
 
+from twisted.python.util import LineLog
 from twisted.trial import unittest, util
 from twisted.protocols import basic, loopback
 from twisted.mail import smtp
@@ -202,6 +203,26 @@ class FakeSMTPServer(basic.LineReceiver):
 
 
 class SMTPClientTestCase(unittest.TestCase, LoopbackMixin):
+
+    def test_timeoutConnection(self):
+        """
+        L{smtp.SMTPClient.timeoutConnection} calls the C{sendError} hook with a
+        fatal L{SMTPTimeoutError} with the current line log.
+        """
+        error = []
+        client = MySMTPClient()
+        client.sendError = error.append
+        client.makeConnection(StringTransport())
+        client.lineReceived("220 hello")
+        client.timeoutConnection()
+        self.assertIsInstance(error[0], smtp.SMTPTimeoutError)
+        self.assertTrue(error[0].isFatal)
+        self.assertEqual(
+            str(error[0]),
+            "Timeout waiting for SMTP server response\n"
+            "<<< 220 hello\n"
+            ">>> HELO foo.baz\n")
+
 
     expected_output = [
         'HELO foo.baz', 'MAIL FROM:<moshez@foo.bar>',
@@ -1099,3 +1120,42 @@ class ESMTPAuthenticationTestCase(unittest.TestCase):
             ['501 Syntax error in parameters or arguments'])
 
         self.assertEqual(loginArgs, [])
+
+
+
+class SMTPClientErrorTestCase(unittest.TestCase):
+    """
+    Tests for L{smtp.SMTPClientError}.
+    """
+    def test_str(self):
+        """
+        The string representation of a L{SMTPClientError} instance includes
+        the response code and response string.
+        """
+        err = smtp.SMTPClientError(123, "some text")
+        self.assertEquals(str(err), "123 some text")
+
+
+    def test_strWithNegativeCode(self):
+        """
+        If the response code supplied to L{SMTPClientError} is negative, it
+        is excluded from the string representation.
+        """
+        err = smtp.SMTPClientError(-1, "foo bar")
+        self.assertEquals(str(err), "foo bar")
+
+
+    def test_strWithLog(self):
+        """
+        If a line log is supplied to L{SMTPClientError}, its contents are
+        included in the string representation of the exception instance.
+        """
+        log = LineLog(10)
+        log.append("testlog")
+        log.append("secondline")
+        err = smtp.SMTPClientError(100, "test error", log=log.str())
+        self.assertEquals(
+            str(err),
+            "100 test error\n"
+            "testlog\n"
+            "secondline\n")

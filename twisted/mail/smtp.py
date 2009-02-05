@@ -129,13 +129,18 @@ class SMTPClientError(SMTPError):
         """
         @param code: The SMTP response code associated with this error.
         @param resp: The string response associated with this error.
-        @param log: A string log of the exchange leading up to and including the error.
 
-        @param isFatal: A boolean indicating whether this connection can proceed
-        or not.  If True, the connection will be dropped.
-        @param retry: A boolean indicating whether the delivery should be retried.
-        If True and the factory indicates further retries are desirable, they will
-        be attempted, otherwise the delivery will be failed.
+        @param log: A string log of the exchange leading up to and including
+            the error.
+        @type log: L{str}
+
+        @param isFatal: A boolean indicating whether this connection can
+            proceed or not.  If True, the connection will be dropped.
+
+        @param retry: A boolean indicating whether the delivery should be
+            retried.  If True and the factory indicates further retries are
+            desirable, they will be attempted, otherwise the delivery will
+            be failed.
         """
         self.code = code
         self.resp = resp
@@ -144,14 +149,15 @@ class SMTPClientError(SMTPError):
         self.isFatal = isFatal
         self.retry = retry
 
+
     def __str__(self):
         if self.code > 0:
             res = ["%.3d %s" % (self.code, self.resp)]
         else:
             res = [self.resp]
         if self.log:
-            res.append('')
             res.append(self.log)
+            res.append('')
         return '\n'.join(res)
 
 
@@ -1018,9 +1024,9 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
 
     def timeoutConnection(self):
         self.sendError(
-            SMTPTimeoutError(-1,
-                             "Timeout waiting for SMTP server response",
-                             self.log))
+            SMTPTimeoutError(
+                -1, "Timeout waiting for SMTP server response",
+                 self.log.str()))
 
     def lineReceived(self, line):
         self.resetTimeout()
