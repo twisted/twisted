@@ -42,20 +42,56 @@ try:
 except ImportError:
     from StringIO import StringIO
 
+
 def spameater(*spam, **eggs):
     return None
 
-class DummyMessage:
 
+
+class BrokenMessage(object):
+    """
+    L{BrokenMessage} is an L{IMessage} which raises an unexpected exception
+    from its C{eomReceived} method.  This is useful for creating a server which
+    can be used to test client retry behavior.
+    """
+    implements(smtp.IMessage)
+
+    def __init__(self, user):
+        pass
+
+
+    def lineReceived(self, line):
+        pass
+
+
+    def eomReceived(self):
+        raise RuntimeError("Some problem, delivery is failing.")
+
+
+    def connectionLost(self):
+        pass
+
+
+
+class DummyMessage(object):
+    """
+    L{BrokenMessage} is an L{IMessage} which saves the message delivered to it
+    to its domain object.
+
+    @ivar domain: A L{DummyDomain} which will be used to store the message once
+        it is received.
+    """
     def __init__(self, domain, user):
         self.domain = domain
         self.user = user
         self.buffer = []
 
+
     def lineReceived(self, line):
         # Throw away the generated Received: header
         if not re.match('Received: From yyy.com \(\[.*\]\) by localhost;', line):
             self.buffer.append(line)
+
 
     def eomReceived(self):
         message = '\n'.join(self.buffer) + '\n'
@@ -65,20 +101,28 @@ class DummyMessage:
         return deferred
 
 
-class DummyDomain:
 
-   def __init__(self, names):
-       self.messages = {}
-       for name in names:
-           self.messages[name] = []
+class DummyDomain(object):
+    """
+    L{DummyDomain} is an L{IDomain} which keeps track of messages delivered to
+    it in memory.
+    """
+    def __init__(self, names):
+        self.messages = {}
+        for name in names:
+            self.messages[name] = []
 
-   def exists(self, user):
-       if self.messages.has_key(user.dest.local):
-           return defer.succeed(lambda: self.startMessage(user))
-       return defer.fail(smtp.SMTPBadRcpt(user))
 
-   def startMessage(self, user):
-       return DummyMessage(self, user)
+    def exists(self, user):
+        if user.dest.local in self.messages:
+            return defer.succeed(lambda: self.startMessage(user))
+        return defer.fail(smtp.SMTPBadRcpt(user))
+
+
+    def startMessage(self, user):
+        return DummyMessage(self, user)
+
+
 
 class SMTPTestCase(unittest.TestCase):
 
@@ -258,6 +302,8 @@ class DummySMTPMessage:
         self.protocol.message[tuple(recipients)] = (helo, origin, recipients, message)
         return defer.succeed("saved")
 
+
+
 class DummyProto:
     def connectionMade(self):
         self.dummyMixinBase.connectionMade(self)
@@ -270,11 +316,13 @@ class DummyProto:
         return None
 
     def validateTo(self, user):
-        self.delivery = DummyDelivery()
+        self.delivery = SimpleDelivery(None)
         return lambda: self.startMessage([user])
 
     def validateFrom(self, helo, origin):
         return origin
+
+
 
 class DummySMTP(DummyProto, smtp.SMTP):
     dummyMixinBase = smtp.SMTP
@@ -396,21 +444,37 @@ class DummyChecker:
             return username
         raise cred.error.UnauthorizedLogin()
 
-class DummyDelivery:
+
+
+class SimpleDelivery(object):
+    """
+    L{SimpleDelivery} is a message delivery factory with no interesting
+    behavior.
+    """
     implements(smtp.IMessageDelivery)
 
-    def validateTo(self, user):
-        return user
+    def __init__(self, messageFactory):
+        self._messageFactory = messageFactory
+
+
+    def receivedHeader(self, helo, origin, recipients):
+        return None
+
 
     def validateFrom(self, helo, origin):
         return origin
 
-    def receivedHeader(*args):
-        return None
+
+    def validateTo(self, user):
+        return lambda: self._messageFactory(user)
+
+
 
 class DummyRealm:
     def requestAvatar(self, avatarId, mind, *interfaces):
-        return smtp.IMessageDelivery, DummyDelivery(), lambda: None
+        return smtp.IMessageDelivery, SimpleDelivery(None), lambda: None
+
+
 
 class AuthTestCase(unittest.TestCase, LoopbackMixin):
     def testAuth(self):
@@ -682,6 +746,83 @@ class TimeoutTestCase(unittest.TestCase, LoopbackMixin):
             # test doesn't really care about it.
             "RSET\r\n")
 
+
+
+class MultipleDeliveryFactorySMTPServerFactory(protocol.ServerFactory):
+    """
+    L{MultipleDeliveryFactorySMTPServerFactory} creates SMTP server protocol
+    instances with message delivery factory objects supplied to it.  Each
+    factory is used for one connection and then discarded.  Factories are used
+    in the order they are supplied.
+    """
+    def __init__(self, messageFactories):
+        self._messageFactories = messageFactories
+
+
+    def buildProtocol(self, addr):
+        p = protocol.ServerFactory.buildProtocol(self, addr)
+        p.delivery = SimpleDelivery(self._messageFactories.pop(0))
+        return p
+
+
+
+class SMTPSenderFactoryRetryTestCase(unittest.TestCase):
+    """
+    Tests for the retry behavior of L{smtp.SMTPSenderFactory}.
+    """
+    def test_retryAfterDisconnect(self):
+        """
+        If the protocol created by L{SMTPSenderFactory} loses its connection
+        before receiving confirmation of message delivery, it reconnects and
+        tries to deliver the message again.
+        """
+        recipient = 'alice'
+        message = "some message text"
+        domain = DummyDomain([recipient])
+
+        class CleanSMTP(smtp.SMTP):
+            """
+            An SMTP subclass which ensures that its transport will be
+            disconnected before the test ends.
+            """
+            def makeConnection(innerSelf, transport):
+                self.addCleanup(transport.loseConnection)
+                smtp.SMTP.makeConnection(innerSelf, transport)
+
+        # Create a server which will fail the first message deliver attempt to
+        # it with a 500 and a disconnect, but which will accept a message
+        # delivered over the 2nd connection to it.
+        serverFactory = MultipleDeliveryFactorySMTPServerFactory([
+                BrokenMessage,
+                lambda user: DummyMessage(domain, user)])
+        serverFactory.protocol = CleanSMTP
+        serverPort = reactor.listenTCP(0, serverFactory, interface='127.0.0.1')
+        serverHost = serverPort.getHost()
+        self.addCleanup(serverPort.stopListening)
+
+        # Set up a client to try to deliver a message to the above created
+        # server.
+        sentDeferred = defer.Deferred()
+        clientFactory = smtp.SMTPSenderFactory(
+            "bob@example.org", recipient + "@example.com",
+            StringIO(message), sentDeferred)
+        clientFactory.domain = "example.org"
+        clientConnector = reactor.connectTCP(
+            serverHost.host, serverHost.port, clientFactory)
+        self.addCleanup(clientConnector.disconnect)
+
+        def cbSent(ignored):
+            """
+            Verify that the message was successfully delivered and flush the
+            error which caused the first attempt to fail.
+            """
+            self.assertEquals(
+                domain.messages,
+                {recipient: ["\n%s\n" % (message,)]})
+            # Flush the RuntimeError that BrokenMessage caused to be logged.
+            self.assertEqual(len(self.flushLoggedErrors(RuntimeError)), 1)
+        sentDeferred.addCallback(cbSent)
+        return sentDeferred
 
 
 

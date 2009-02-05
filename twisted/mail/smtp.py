@@ -1667,7 +1667,7 @@ class SMTPSenderFactory(protocol.ClientFactory):
             toEmail = [toEmail]
         self.fromEmail = Address(fromEmail)
         self.nEmails = len(toEmail)
-        self.toEmail = iter(toEmail)
+        self.toEmail = toEmail
         self.file = file
         self.result = deferred
         self.result.addBoth(self._removeDeferred)
@@ -1690,6 +1690,9 @@ class SMTPSenderFactory(protocol.ClientFactory):
         if self.retries < self.sendFinished <= 0:
             log.msg("SMTP Client retrying server. Retry: %s" % -self.retries)
 
+            # Rewind the file in case part of it was read while attempting to
+            # send the message.
+            self.file.seek(0, 0)
             connector.connect()
             self.retries += 1
         elif self.sendFinished <= 0:
