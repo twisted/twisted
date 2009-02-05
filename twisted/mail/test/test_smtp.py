@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -579,6 +579,88 @@ class TimeoutTestCase(unittest.TestCase, LoopbackMixin):
             StringIO("Message body"), onDone,
             retries=0, timeout=0.5)
         return self._timeoutTest(onDone, clientFactory)
+
+
+    def test_resetTimeoutWhileSending(self):
+        """
+        The timeout is not allowed to expire after the server has accepted a
+        DATA command and the client is actively sending data to it.
+        """
+        class SlowFile:
+            """
+            A file-like which returns one byte from each read call until the
+            specified number of bytes have been returned.
+            """
+            def __init__(self, size):
+                self._size = size
+
+            def read(self, max=None):
+                if self._size:
+                    self._size -= 1
+                    return 'x'
+                return ''
+
+        failed = []
+        onDone = defer.Deferred()
+        onDone.addErrback(failed.append)
+        clientFactory = smtp.SMTPSenderFactory(
+            'source@address', 'recipient@address',
+            SlowFile(1), onDone, retries=0, timeout=3)
+        clientFactory.domain = "example.org"
+        clock = task.Clock()
+        client = clientFactory.buildProtocol(
+            address.IPv4Address('TCP', 'example.net', 25))
+        client.callLater = clock.callLater
+        transport = StringTransport()
+        client.makeConnection(transport)
+
+        client.dataReceived(
+            "220 Ok\r\n" # Greet the client
+            "250 Ok\r\n" # Respond to HELO
+            "250 Ok\r\n" # Respond to MAIL FROM
+            "250 Ok\r\n" # Respond to RCPT TO
+            "354 Ok\r\n" # Respond to DATA
+            )
+
+        # Now the client is producing data to the server.  Any time
+        # resumeProducing is called on the producer, the timeout should be
+        # extended.  First, a sanity check.  This test is only written to
+        # handle pull producers.
+        self.assertNotIdentical(transport.producer, None)
+        self.assertFalse(transport.streaming)
+
+        # Now, allow 2 seconds (1 less than the timeout of 3 seconds) to
+        # elapse.
+        clock.advance(2)
+
+        # The timeout has not expired, so the failure should not have happened.
+        self.assertEqual(failed, [])
+
+        # Let some bytes be produced, extending the timeout.  Then advance the
+        # clock some more and verify that the timeout still hasn't happened.
+        transport.producer.resumeProducing()
+        clock.advance(2)
+        self.assertEqual(failed, [])
+
+        # The file has been completely produced - the next resume producing
+        # finishes the upload, successfully.
+        transport.producer.resumeProducing()
+        client.dataReceived("250 Ok\r\n")
+        self.assertEqual(failed, [])
+
+        # Verify that the client actually did send the things expected.
+        self.assertEqual(
+            transport.value(),
+            "HELO example.org\r\n"
+            "MAIL FROM:<source@address>\r\n"
+            "RCPT TO:<recipient@address>\r\n"
+            "DATA\r\n"
+            "x\r\n"
+            ".\r\n"
+            # This RSET is just an implementation detail.  It's nice, but this
+            # test doesn't really care about it.
+            "RSET\r\n")
+
 
 
 

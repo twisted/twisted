@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.mail.test.test_smtp -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -1134,6 +1134,14 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
     ## Helpers for FileSender
     ##
     def transformChunk(self, chunk):
+        """
+        Perform the necessary local to network newline conversion and escape
+        leading periods.
+
+        This method also resets the idle timeout so that as long as process is
+        being made sending the message body, the client will not time out.
+        """
+        self.resetTimeout()
         return chunk.replace('\n', '\r\n').replace('\r\n.', '\r\n..')
 
     def finishedFileTransfer(self, lastsent):
