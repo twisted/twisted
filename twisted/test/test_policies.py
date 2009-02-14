@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -8,15 +8,11 @@ Test code for policies.
 from StringIO import StringIO
 
 from twisted.trial import unittest
+from twisted.test.proto_helpers import StringTransport
 from twisted.test.proto_helpers import StringTransportWithDisconnection
 
 from twisted.internet import protocol, reactor, address, defer, task
 from twisted.protocols import policies
-
-
-
-class StringIOWithoutClosing(StringIO):
-    def close(self): pass
 
 
 
@@ -472,8 +468,7 @@ class TestTimeout(unittest.TestCase):
         Check that the protocol does timeout at the time specified by its
         C{timeOut} attribute.
         """
-        s = StringIOWithoutClosing()
-        self.proto.makeConnection(protocol.FileWrapper(s))
+        self.proto.makeConnection(StringTransport())
 
         # timeOut value is 3
         self.clock.pump([0, 0.5, 1.0, 1.0])
@@ -486,8 +481,7 @@ class TestTimeout(unittest.TestCase):
         """
         Check that receiving data is delaying the timeout of the connection.
         """
-        s = StringIOWithoutClosing()
-        self.proto.makeConnection(protocol.FileWrapper(s))
+        self.proto.makeConnection(StringTransport())
 
         self.clock.pump([0, 0.5, 1.0, 1.0])
         self.failIf(self.proto.timedOut)
@@ -504,8 +498,7 @@ class TestTimeout(unittest.TestCase):
         and install a new timeout.
         """
         self.proto.timeOut = None
-        s = StringIOWithoutClosing()
-        self.proto.makeConnection(protocol.FileWrapper(s))
+        self.proto.makeConnection(StringTransport())
 
         self.proto.setTimeout(1)
         self.assertEquals(self.proto.timeOut, 1)
@@ -521,8 +514,7 @@ class TestTimeout(unittest.TestCase):
         Setting the timeout to C{None} cancel any timeout operations.
         """
         self.proto.timeOut = 5
-        s = StringIOWithoutClosing()
-        self.proto.makeConnection(protocol.FileWrapper(s))
+        self.proto.makeConnection(StringTransport())
 
         self.proto.setTimeout(None)
         self.assertEquals(self.proto.timeOut, None)

@@ -13,7 +13,6 @@ from twisted.protocols import basic, loopback
 from twisted.mail import smtp
 from twisted.internet import defer, protocol, reactor, interfaces
 from twisted.internet import address, error, task
-from twisted.test.test_protocols import StringIOWithoutClosing
 from twisted.test.proto_helpers import StringTransport
 
 from twisted import cred
@@ -135,11 +134,15 @@ Someone set up us the bomb!\015
     mbox = {'foo': ['Subject: urgent\n\nSomeone set up us the bomb!\n']}
 
     def setUp(self):
+        """
+        Create an in-memory mail domain to which messages may be delivered by
+        tests and create a factory and transport to do the delivering.
+        """
         self.factory = smtp.SMTPFactory()
         self.factory.domains = {}
         self.factory.domains['baz.com'] = DummyDomain(['foo'])
-        self.output = StringIOWithoutClosing()
-        self.transport = protocol.FileWrapper(self.output)
+        self.transport = StringTransport()
+
 
     def testMessages(self):
         from twisted.mail import protocols
@@ -474,19 +477,25 @@ To: foo
                            (helo_, realfrom, realto, msg))))
 
 
-    def testBuffer(self):
-        output = StringIOWithoutClosing()
+    def test_buffer(self):
+        """
+        Exercise a lot of the SMTP client code.  This is a "shotgun" style unit
+        test.  It does a lot of things and hopes that something will go really
+        wrong if it is going to go wrong.  This test should be replaced with a
+        suite of nicer tests.
+        """
+        transport = StringTransport()
         a = self.serverClass()
         class fooFactory:
             domain = 'foo.com'
 
         a.factory = fooFactory()
-        a.makeConnection(protocol.FileWrapper(output))
+        a.makeConnection(transport)
         for (send, expect, msg, msgexpect) in self.data:
             if send:
                 a.dataReceived(send)
-            data = output.getvalue()
-            output.truncate(0)
+            data = transport.value()
+            transport.clear()
             if not re.match(expect, data):
                 raise AssertionError, (send, expect, data)
             if data[:3] == '354':
@@ -497,8 +506,8 @@ To: foo
                 a.dataReceived('.\r\n')
                 # Special case for DATA. Now we want a 250, and then
                 # we compare the messages
-                data = output.getvalue()
-                output.truncate()
+                data = transport.value()
+                transport.clear()
                 resp, msgdata = msgexpect
                 if not re.match(resp, data):
                     raise AssertionError, (resp, data)
@@ -694,15 +703,18 @@ if not interfaces.IReactorSSL.providedBy(reactor):
         case.skip = "Reactor doesn't support SSL"
 
 class EmptyLineTestCase(unittest.TestCase):
-    def testEmptyLineSyntaxError(self):
+    def test_emptyLineSyntaxError(self):
+        """
+        If L{smtp.SMTP} receives an empty line, it responds with a 500 error
+        response code and a message about a syntax error.
+        """
         proto = smtp.SMTP()
-        output = StringIOWithoutClosing()
-        transport = protocol.FileWrapper(output)
+        transport = StringTransport()
         proto.makeConnection(transport)
         proto.lineReceived('')
         proto.setTimeout(None)
 
-        out = output.getvalue().splitlines()
+        out = transport.value().splitlines()
         self.assertEquals(len(out), 2)
         self.failUnless(out[0].startswith('220'))
         self.assertEquals(out[1], "500 Error: bad syntax")

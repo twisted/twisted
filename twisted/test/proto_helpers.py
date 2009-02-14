@@ -6,10 +6,7 @@
 Assorted functionality which is commonly useful when writing unit tests.
 """
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+from StringIO import StringIO
 
 from zope.interface import implements
 
@@ -202,3 +199,13 @@ class StringTransportWithDisconnection(StringTransport):
             self.connected = False
             self.protocol.connectionLost(error.ConnectionDone("Bye."))
 
+
+
+class StringIOWithoutClosing(StringIO):
+    """
+    A StringIO that can't be closed.
+    """
+    def close(self):
+        """
+        Do nothing.
+        """

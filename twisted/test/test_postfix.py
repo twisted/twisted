@@ -1,19 +1,14 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
-#
 
 """
 Test cases for twisted.protocols.postfix module.
 """
 
 from twisted.trial import unittest
-from twisted import protocols
-from twisted import internet
-from twisted.protocols import loopback
 from twisted.protocols import postfix
-from twisted.internet import defer, protocol
-from twisted.test.test_protocols import StringIOWithoutClosing
+from twisted.test.proto_helpers import StringTransport
+
 
 class PostfixTCPMapQuoteTestCase(unittest.TestCase):
     data = [
@@ -45,10 +40,14 @@ class PostfixTCPMapServerTestCase:
         # (input, expected_output),
         ]
 
-    def testChat(self):
+    def test_chat(self):
+        """
+        Test that I{get} and I{put} commands are responded to correctly by
+        L{postfix.PostfixTCPMapServer} when its factory is an instance of
+        L{postifx.PostfixTCPMapDictServerFactory}.
+        """
         factory = postfix.PostfixTCPMapDictServerFactory(self.data)
-        output = StringIOWithoutClosing()
-        transport = internet.protocol.FileWrapper(output)
+        transport = StringTransport()
 
         protocol = postfix.PostfixTCPMapServer()
         protocol.service = factory
@@ -57,18 +56,22 @@ class PostfixTCPMapServerTestCase:
 
         for input, expected_output in self.chat:
             protocol.lineReceived(input)
-            # self.runReactor(1)
-            self.assertEquals(output.getvalue(), expected_output,
-                              'For %r, expected %r but got %r' % (
-                input, expected_output, output.getvalue()
-                ))
-            output.truncate(0)
+            self.assertEquals(
+                transport.value(), expected_output,
+                'For %r, expected %r but got %r' % (
+                    input, expected_output, transport.value()))
+            transport.clear()
         protocol.setTimeout(None)
 
-    def testDeferredChat(self):
+
+    def test_deferredChat(self):
+        """
+        Test that I{get} and I{put} commands are responded to correctly by
+        L{postfix.PostfixTCPMapServer} when its factory is an instance of
+        L{postifx.PostfixTCPMapDeferringDictServerFactory}.
+        """
         factory = postfix.PostfixTCPMapDeferringDictServerFactory(self.data)
-        output = StringIOWithoutClosing()
-        transport = internet.protocol.FileWrapper(output)
+        transport = StringTransport()
 
         protocol = postfix.PostfixTCPMapServer()
         protocol.service = factory
@@ -77,13 +80,14 @@ class PostfixTCPMapServerTestCase:
 
         for input, expected_output in self.chat:
             protocol.lineReceived(input)
-            # self.runReactor(1)
-            self.assertEquals(output.getvalue(), expected_output,
-                              'For %r, expected %r but got %r' % (
-                input, expected_output, output.getvalue()
-                ))
-            output.truncate(0)
+            self.assertEquals(
+                transport.value(), expected_output,
+                'For %r, expected %r but got %r' % (
+                    input, expected_output, transport.value()))
+            transport.clear()
         protocol.setTimeout(None)
+
+
 
 class Valid(PostfixTCPMapServerTestCase, unittest.TestCase):
     data = {
