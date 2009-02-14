@@ -170,25 +170,43 @@ Goodbye
 '''
 
 class MyClient:
-    def __init__(self):
-        self.mail = 'moshez@foo.bar', ['moshez@foo.bar'], mail
+    def __init__(self, messageInfo=None):
+        if messageInfo is None:
+            messageInfo = (
+                'moshez@foo.bar', ['moshez@foo.bar'], StringIO(mail))
+        self._sender = messageInfo[0]
+        self._recipient = messageInfo[1]
+        self._data = messageInfo[2]
+
 
     def getMailFrom(self):
-        return self.mail[0]
+        return self._sender
+
 
     def getMailTo(self):
-        return self.mail[1]
+        return self._recipient
+
 
     def getMailData(self):
-        return StringIO(self.mail[2])
+        return self._data
+
+
+    def sendError(self, exc):
+        self._error = exc
+
 
     def sentMail(self, code, resp, numOk, addresses, log):
-        self.mail = None, None, None
+        # Prevent another mail from being sent.
+        self._sender = None
+        self._recipient = None
+        self._data = None
+
+
 
 class MySMTPClient(MyClient, smtp.SMTPClient):
-    def __init__(self):
+    def __init__(self, messageInfo=None):
         smtp.SMTPClient.__init__(self, 'foo.baz')
-        MyClient.__init__(self)
+        MyClient.__init__(self, messageInfo)
 
 class MyESMTPClient(MyClient, smtp.ESMTPClient):
     def __init__(self, secret = '', contextFactory = None):
@@ -247,6 +265,9 @@ class FakeSMTPServer(basic.LineReceiver):
 
 
 class SMTPClientTestCase(unittest.TestCase, LoopbackMixin):
+    """
+    Tests for L{smtp.SMTPClient}.
+    """
 
     def test_timeoutConnection(self):
         """
@@ -274,14 +295,90 @@ class SMTPClientTestCase(unittest.TestCase, LoopbackMixin):
         'Subject: hello', '', 'Goodbye', '.', 'RSET'
     ]
 
-    def testMessages(self):
-        # this test is disabled temporarily
+    def test_messages(self):
+        """
+        L{smtp.SMTPClient} sends I{HELO}, I{MAIL FROM}, I{RCPT TO}, and I{DATA}
+        commands based on the return values of its C{getMailFrom},
+        C{getMailTo}, and C{getMailData} methods.
+        """
         client = MySMTPClient()
         server = FakeSMTPServer()
         d = self.loopback(server, client)
         d.addCallback(lambda x :
                       self.assertEquals(server.buffer, self.expected_output))
         return d
+
+
+    def test_transferError(self):
+        """
+        If there is an error while producing the message body to the
+        connection, the C{sendError} callback is invoked.
+        """
+        client = MySMTPClient(
+            ('alice@example.com', ['bob@example.com'], StringIO("foo")))
+        transport = StringTransport()
+        client.makeConnection(transport)
+        client.dataReceived(
+            '220 Ok\r\n' # Greeting
+            '250 Ok\r\n' # EHLO response
+            '250 Ok\r\n' # MAIL FROM response
+            '250 Ok\r\n' # RCPT TO response
+            '354 Ok\r\n' # DATA response
+            )
+
+        # Sanity check - a pull producer should be registered now.
+        self.assertNotIdentical(transport.producer, None)
+        self.assertFalse(transport.streaming)
+
+        # Now stop the producer prematurely, meaning the message was not sent.
+        transport.producer.stopProducing()
+
+        # The sendError hook should have been invoked as a result.
+        self.assertIsInstance(client._error, Exception)
+
+
+    def test_sendFatalError(self):
+        """
+        If L{smtp.SMTPClient.sendError} is called with an L{SMTPClientError}
+        which is fatal, it disconnects its transport without writing anything
+        more to it.
+        """
+        client = smtp.SMTPClient(None)
+        transport = StringTransport()
+        client.makeConnection(transport)
+        client.sendError(smtp.SMTPClientError(123, "foo", isFatal=True))
+        self.assertEqual(transport.value(), "")
+        self.assertTrue(transport.disconnecting)
+
+
+    def test_sendNonFatalError(self):
+        """
+        If L{smtp.SMTPClient.sendError} is called with an L{SMTPClientError}
+        which is not fatal, it sends C{"QUIT"} and waits for the server to
+        close the connection.
+        """
+        client = smtp.SMTPClient(None)
+        transport = StringTransport()
+        client.makeConnection(transport)
+        client.sendError(smtp.SMTPClientError(123, "foo", isFatal=False))
+        self.assertEqual(transport.value(), "QUIT\r\n")
+        self.assertFalse(transport.disconnecting)
+
+
+    def test_sendOtherError(self):
+        """
+        If L{smtp.SMTPClient.sendError} is called with an exception which is
+        not an L{SMTPClientError}, it disconnects its transport without
+        writing anything more to it.
+        """
+        client = smtp.SMTPClient(None)
+        transport = StringTransport()
+        client.makeConnection(transport)
+        client.sendError(Exception("foo"))
+        self.assertEqual(transport.value(), "")
+        self.assertTrue(transport.disconnecting)
+
+
 
 class DummySMTPMessage:
 

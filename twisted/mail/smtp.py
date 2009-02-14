@@ -122,6 +122,8 @@ class IMessageDeliveryFactory(Interface):
 class SMTPError(Exception):
     pass
 
+
+
 class SMTPClientError(SMTPError):
     """Base class for SMTP client errors.
     """
@@ -1119,11 +1121,14 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
 
     def smtpState_data(self, code, resp):
         s = basic.FileSender()
-        s.beginFileTransfer(
-            self.getMailData(), self.transport, self.transformChunk
-        ).addCallback(self.finishedFileTransfer)
+        d = s.beginFileTransfer(
+            self.getMailData(), self.transport, self.transformChunk)
+        def ebTransfer(err):
+            self.sendError(err.value)
+        d.addCallbacks(self.finishedFileTransfer, ebTransfer)
         self._expected = SUCCESS
         self._okresponse = self.smtpState_msgSent
+
 
     def smtpState_msgSent(self, code, resp):
         if self._from is not None:
@@ -1156,8 +1161,8 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         else:
             line = '.'
         self.sendLine(line)
-    ##
 
+    ##
     # these methods should be overriden in subclasses
     def getMailFrom(self):
         """Return the email address the mail is from."""
@@ -1183,14 +1188,13 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         @param exc: The SMTPClientError (or child class) raised
         @type exc: C{SMTPClientError}
         """
-        assert isinstance(exc, SMTPClientError)
-
-        if exc.isFatal:
-            # If the error was fatal then the communication channel with the SMTP Server is
-            # broken so just close the transport connection
-            self.smtpState_disconnect(-1, None)
-        else:
+        if isinstance(exc, SMTPClientError) and not exc.isFatal:
             self._disconnectFromServer()
+        else:
+            # If the error was fatal then the communication channel with the
+            # SMTP Server is broken so just close the transport connection
+            self.smtpState_disconnect(-1, None)
+
 
     def sentMail(self, code, resp, numOk, addresses, log):
         """Called when an attempt to send an email is completed.
@@ -1212,6 +1216,8 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         self._expected = xrange(0, 1000)
         self._okresponse = self.smtpState_disconnect
         self.sendLine('QUIT')
+
+
 
 class ESMTPClient(SMTPClient):
     # Fall back to HELO if the server does not support EHLO
