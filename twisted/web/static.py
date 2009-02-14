@@ -637,6 +637,7 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
                  contentTypes=File.contentTypes,
                  contentEncodings=File.contentEncodings,
                  defaultType='text/html'):
+        resource.Resource.__init__(self)
         self.contentTypes = contentTypes
         self.contentEncodings = contentEncodings
         self.defaultType = defaultType

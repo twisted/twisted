@@ -12,7 +12,7 @@ from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
 from twisted.python import log
 from twisted.trial.unittest import TestCase
-from twisted.web import static, http, script
+from twisted.web import static, http, script, resource
 from twisted.web.test.test_web import DummyRequest
 from twisted.web.test._util import _render
 
@@ -37,13 +37,28 @@ class StaticFileTests(TestCase):
         file = static.File(base.path)
 
         request = DummyRequest(['foobar'])
-        child = file.getChild("foobar", request)
+        child = resource.getChildForRequest(file, request)
 
         d = self._render(child, request)
         def cbRendered(ignored):
             self.assertEqual(request.responseCode, 404)
         d.addCallback(cbRendered)
         return d
+
+
+    def test_emptyChild(self):
+        """
+        The C{''} child of a L{File} which corresponds to a directory in the
+        filesystem is a L{DirectoryLister}.
+        """
+        base = FilePath(self.mktemp())
+        base.makedirs()
+        file = static.File(base.path)
+
+        request = DummyRequest([''])
+        child = resource.getChildForRequest(file, request)
+        self.assertIsInstance(child, static.DirectoryLister)
+        self.assertEqual(child.path, base.path)
 
 
     def test_securityViolationNotFound(self):
@@ -57,7 +72,7 @@ class StaticFileTests(TestCase):
         file = static.File(base.path)
 
         request = DummyRequest(['..'])
-        child = file.getChild("..", request)
+        child = resource.getChildForRequest(file, request)
 
         d = self._render(child, request)
         def cbRendered(ignored):
@@ -104,7 +119,7 @@ class StaticFileTests(TestCase):
         file.indexNames = ['foo.bar']
 
         request = DummyRequest([''])
-        child = file.getChild("", request)
+        child = resource.getChildForRequest(file, request)
 
         d = self._render(child, request)
         def cbRendered(ignored):
@@ -126,7 +141,7 @@ class StaticFileTests(TestCase):
         file = static.File(base.path)
 
         request = DummyRequest(['foo.bar'])
-        child = file.getChild("foo.bar", request)
+        child = resource.getChildForRequest(file, request)
 
         d = self._render(child, request)
         def cbRendered(ignored):
@@ -152,7 +167,7 @@ class StaticFileTests(TestCase):
         file = static.File(base.path)
         file.processors = {'.bar': script.ResourceScript}
         request = DummyRequest(["foo.bar"])
-        child = file.getChild("foo.bar", request)
+        child = resource.getChildForRequest(file, request)
 
         d = self._render(child, request)
         def cbRendered(ignored):
@@ -191,7 +206,7 @@ class StaticFileTests(TestCase):
         file = static.File(base.path, ignoredExts=(".bar",))
 
         request = DummyRequest(["foo"])
-        child = file.getChild("foo", request)
+        child = resource.getChildForRequest(file, request)
 
         d = self._render(child, request)
         def cbRendered(ignored):
@@ -557,8 +572,8 @@ class DirectoryListerTest(TestCase):
 
     def test_renderDirectories(self):
         """
-        L{static.DirectoryListerTest} is able to list all the directories
-        inside a directory.
+        L{static.DirectoryLister} is able to list all the directories inside
+        a directory.
         """
         path = FilePath(self.mktemp())
         path.makedirs()
@@ -584,7 +599,7 @@ class DirectoryListerTest(TestCase):
 
     def test_renderFiltered(self):
         """
-        L{static.DirectoryListerTest} takes a optional C{dirs} argument that
+        L{static.DirectoryLister} takes a optional C{dirs} argument that
         filter out the list of of directories and files printed.
         """
         path = FilePath(self.mktemp())
@@ -697,9 +712,26 @@ class DirectoryListerTest(TestCase):
         test_brokenSymlink.skip = "No symlink support"
 
 
+    def test_childrenNotFound(self):
+        """
+        Any child resource of L{static.DirectoryLister} renders an HTTP
+        I{NOT FOUND} response code.
+        """
+        path = FilePath(self.mktemp())
+        path.makedirs()
+        lister = static.DirectoryLister(path.path)
+        request = self._request('')
+        child = resource.getChildForRequest(lister, request)
+        result = _render(child, request)
+        def cbRendered(ignored):
+            self.assertEquals(request.responseCode, http.NOT_FOUND)
+        result.addCallback(cbRendered)
+        return result
+
+
     def test_repr(self):
         """
-        L{static.DirectoryListerTest.__repr__} gives the path of the lister.
+        L{static.DirectoryLister.__repr__} gives the path of the lister.
         """
         path = FilePath(self.mktemp())
         lister = static.DirectoryLister(path.path)
