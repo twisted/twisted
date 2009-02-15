@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.conch.test.test_telnet -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -427,9 +427,17 @@ class Telnet(protocol.Protocol):
             self._dont(option)
             return d
 
+
     def requestNegotiation(self, about, bytes):
+        """
+        Send a negotiation message for the option C{about} with C{bytes} as the
+        payload.
+
+        @see: L{ITelnetTransport.requestNegotiation}
+        """
         bytes = bytes.replace(IAC, IAC * 2)
-        self._write(IAC + SB + bytes + IAC + SE)
+        self._write(IAC + SB + about + bytes + IAC + SE)
+
 
     def dataReceived(self, data):
         appDataBuffer = []

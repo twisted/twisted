@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.conch.test.test_telnet -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -14,6 +14,7 @@ from twisted.conch import telnet
 
 from twisted.trial import unittest
 from twisted.test import proto_helpers
+
 
 class TestProtocol:
     implements(telnet.ITelnetProtocol)
@@ -575,6 +576,37 @@ class TelnetTests(unittest.TestCase):
         override disableRemote.
         """
         self.assertRaises(NotImplementedError, self.protocol.disableRemote, '\0')
+
+
+    def test_requestNegotiation(self):
+        """
+        L{telnet.Telnet.requestNegotiation} formats the feature byte and the
+        payload bytes into the subnegotiation format and sends them.
+
+        See RFC 855.
+        """
+        transport = proto_helpers.StringTransport()
+        self.protocol.makeConnection(transport)
+        self.protocol.requestNegotiation('\x01', '\x02\x03')
+        self.assertEqual(
+            transport.value(),
+            # IAC SB feature bytes IAC SE
+            '\xff\xfa\x01\x02\x03\xff\xf0')
+
+
+    def test_requestNegotiationEscapesIAC(self):
+        """
+        If the payload for a subnegotiation includes I{IAC}, it is escaped by
+        L{telnet.Telnet.requestNegotiation} with another I{IAC}.
+
+        See RFC 855.
+        """
+        transport = proto_helpers.StringTransport()
+        self.protocol.makeConnection(transport)
+        self.protocol.requestNegotiation('\x01', '\xff')
+        self.assertEqual(
+            transport.value(),
+            '\xff\xfa\x01\xff\xff\xff\xf0')
 
 
     def _deliver(self, bytes, *expected):
