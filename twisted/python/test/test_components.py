@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -638,12 +638,12 @@ class ProxyForInterfaceTests(unittest.TestCase):
             "twisted.python.test.test_components.IProxiedInterface)")
 
 
-    def test_provides(self):
+    def test_implements(self):
         """
-        The resulting proxy provides the Interface that it proxies.
+        The resulting proxy implements the interface that it proxies.
         """
         proxy = proxyForInterface(IProxiedInterface)
-        self.assertTrue(IProxiedInterface.providedBy(proxy))
+        self.assertTrue(IProxiedInterface.implementedBy(proxy))
 
 
     def test_proxyDescriptorGet(self):

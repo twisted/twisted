@@ -1,6 +1,5 @@
 # -*- test-case-name: twisted.python.test.test_components -*-
-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -21,27 +20,31 @@ you need is in the top-level of the zope.interface package, e.g.::
    print IFoo.implementedBy(Foo) # True
    print IFoo.providedBy(Foo()) # True
 
-The one exception is L{twisted.python.components.registerAdapter}, which is
-still the way to register adapters (at least, if you want Twisted's global
-adapter registry).
-"""
+L{twisted.python.components.registerAdapter} from this module may be used to
+add to Twisted's global adapter registry. 
 
-# twisted imports
-from twisted.python import reflect
-from twisted.persisted import styles
+L{twisted.python.components.proxyForInterface} is a factory for classes
+which allow access to only the parts of another class defined by a specified
+interface.
+"""
 
 # system imports
 import warnings
 
 # zope3 imports
-from zope.interface import directlyProvides, interface, declarations
+from zope.interface import interface, declarations
 from zope.interface.adapter import AdapterRegistry
 
+# twisted imports
+from twisted.python import reflect
+from twisted.persisted import styles
 
 
 class ComponentsDeprecationWarning(DeprecationWarning):
-    """Nothing emits this warning anymore."""
-    pass
+    """
+    Nothing emits this warning anymore.
+    """
+
 
 # Twisted's global adapter registry
 globalRegistry = AdapterRegistry()
@@ -348,7 +351,7 @@ def proxyForInterface(iface, originalAttribute='original'):
         contents[name] = _ProxyDescriptor(name, originalAttribute)
     proxy = type("(Proxy for %s)"
                  % (reflect.qual(iface),), (object,), contents)
-    directlyProvides(proxy, iface)
+    declarations.classImplements(proxy, iface)
     return proxy
 
 
