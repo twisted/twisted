@@ -140,9 +140,9 @@ standard input of our process and then close standard input, to the let the
 process know we are done writing to it.</p>
 
 <pre class="python">
-    def connectionMade(self):
-        self.transport.write(self.text)
-        self.transport.closeStdin()
+def connectionMade(self):
+    self.transport.write(self.text)
+    self.transport.closeStdin()
 </pre>
 
 <p>At this point, the process has receieved the data, and it's time for us
@@ -151,13 +151,13 @@ data from standard output is received in <code>outReceived</code>. This is
 to distinguish it from data on standard error.</p>
 
 <pre class="python">
-    def outReceived(self, data):
-        fieldLength = len(data) / 3
-        lines = int(data[:fieldLength])
-        words = int(data[fieldLength:fieldLength*2])
-        chars = int(data[fieldLength*2:])
-        self.transport.loseConnection()
-        self.receiveCounts(lines, words, chars)
+def outReceived(self, data):
+    fieldLength = len(data) / 3
+    lines = int(data[:fieldLength])
+    words = int(data[fieldLength:fieldLength*2])
+    chars = int(data[fieldLength*2:])
+    self.transport.loseConnection()
+    self.receiveCounts(lines, words, chars)
 </pre>
 
 <p>Now, the process has parsed the output, and ended the connection to the
@@ -166,11 +166,11 @@ This is for users of the class to override, so as to do other things with
 the data. For our demonstration, we will just print the results.</p>
 
 <pre class="python">
-    def receiveCounts(self, lines, words, chars):
-        print 'Received counts from wc.'
-        print 'Lines:', lines
-        print 'Words:', words
-        print 'Characters:', chars
+def receiveCounts(self, lines, words, chars):
+    print 'Received counts from wc.'
+    print 'Lines:', lines
+    print 'Words:', words
+    print 'Characters:', chars
 </pre>
 
 <p>We're done! To use our WCProcessProtocol, we create an instance, and pass
@@ -476,8 +476,6 @@ is started. It simply performs reads and writes to these fd numbers.</p>
 like the following:</p>
 
 <pre class="python">
-
-
 class GPGProtocol(ProcessProtocol):
     def __init__(self, crypttext):
         self.crypttext = crypttext
