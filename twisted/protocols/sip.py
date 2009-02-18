@@ -119,6 +119,7 @@ specialCases = {
     'www-authenticate': 'WWW-Authenticate',
 }
 
+
 def dashCapitalize(s):
     ''' Capitalize a string, making sure to treat - as a word seperator '''
     return '-'.join([ x.capitalize() for x in s.split('-')])
@@ -194,36 +195,144 @@ def DigestCalcResponse(
 
 DigestCalcResponse = deprecated(Version("Twisted", 9, 0, 0))(DigestCalcResponse)
 
-class Via:
-    """A SIP Via header."""
+_absent = object()
 
-    def __init__(self, host, port=PORT, transport="UDP", ttl=None, hidden=False,
-                 received=None, rport=None, branch=None, maddr=None):
+class Via(object):
+    """
+    A L{Via} is a SIP Via header, representing a segment of the path taken by
+    the request.
+
+    See RFC 3261, sections 8.1.1.7, 18.2.2, and 20.42.
+
+    @ivar transport: Network protocol used for this leg. (Probably either "TCP"
+    or "UDP".)
+    @type transport: C{str}
+    @ivar branch: Unique identifier for this request.
+    @type branch: C{str}
+    @ivar host: Hostname or IP for this leg.
+    @type host: C{str}
+    @ivar port: Port used for this leg.
+    @type port C{int}, or None.
+    @ivar rportRequested: Whether to request RFC 3581 client processing or not.
+    @type rportRequested: C{bool}
+    @ivar rportValue: Servers wishing to honor requests for RFC 3581 processing
+    should set this parameter to the source port the request was received
+    from.
+    @type rportValue: C{int}, or None.
+
+    @ivar ttl: Time-to-live for requests on multicast paths.
+    @type ttl: C{int}, or None.
+    @ivar maddr: The destination multicast address, if any.
+    @type maddr: C{str}, or None.
+    @ivar hidden: Obsolete in SIP 2.0.
+    @type hidden: C{bool}
+    @ivar otherParams: Any other parameters in the header.
+    @type otherParams: C{dict}
+    """
+
+    def __init__(self, host, port=PORT, transport="UDP", ttl=None,
+                 hidden=False, received=None, rport=_absent, branch=None,
+                 maddr=None, **kw):
+        """
+        Set parameters of this Via header. All arguments correspond to
+        attributes of the same name.
+
+        To maintain compatibility with old SIP
+        code, the 'rport' argument is used to determine the values of
+        C{rportRequested} and C{rportValue}. If None, C{rportRequested} is set
+        to True. (The deprecated method for doing this is to pass True.) If an
+        integer, C{rportValue} is set to the given value.
+
+        Any arguments not explicitly named here are collected into the
+        C{otherParams} dict.
+        """
         self.transport = transport
         self.host = host
         self.port = port
         self.ttl = ttl
         self.hidden = hidden
         self.received = received
-        self.rport = rport
+        if rport is True:
+            warnings.warn(
+                "rport=True is deprecated since Twisted 9.0.",
+                DeprecationWarning,
+                stacklevel=2)
+            self.rportValue = None
+            self.rportRequested = True
+        elif rport is None:
+            self.rportValue = None
+            self.rportRequested = True
+        elif rport is _absent:
+            self.rportValue = None
+            self.rportRequested = False
+        else:
+            self.rportValue = rport
+            self.rportRequested = False
+
         self.branch = branch
         self.maddr = maddr
+        self.otherParams = kw
+
+
+    def _getrport(self):
+        """
+        Returns the rport value expected by the old SIP code.
+        """
+        if self.rportRequested == True:
+            return True
+        elif self.rportValue is not None:
+            return self.rportValue
+        else:
+            return None
+
+
+    def _setrport(self, newRPort):
+        """
+        L{Base._fixupNAT} sets C{rport} directly, so this method sets
+        C{rportValue} based on that.
+
+        @param newRPort: The new rport value.
+        @type newRPort: C{int}
+        """
+        self.rportValue = newRPort
+        self.rportRequested = False
+
+
+    rport = property(_getrport, _setrport)
 
     def toString(self):
+        """
+        Serialize this header for use in a request or response.
+        """
         s = "SIP/2.0/%s %s:%s" % (self.transport, self.host, self.port)
         if self.hidden:
             s += ";hidden"
-        for n in "ttl", "branch", "maddr", "received", "rport":
+        for n in "ttl", "branch", "maddr", "received":
             value = getattr(self, n)
-            if value == True:
-                s += ";" + n
-            elif value != None:
+            if value is not None:
                 s += ";%s=%s" % (n, value)
+        if self.rportRequested:
+            s += ";rport"
+        elif self.rportValue is not None:
+            s += ";rport=%s" % (self.rport,)
+
+        etc = self.otherParams.items()
+        etc.sort()
+        for k, v in etc:
+            if v is None:
+                s += ";" + k
+            else:
+                s += ";%s=%s" % (k, v)
         return s
 
 
 def parseViaHeader(value):
-    """Parse a Via header, returning Via class instance."""
+    """
+    Parse a Via header.
+
+    @return: The parsed version of this header.
+    @rtype: L{Via}
+    """
     parts = value.split(";")
     sent, params = parts[0], parts[1:]
     protocolinfo, by = sent.split(" ", 1)
@@ -251,7 +360,7 @@ def parseViaHeader(value):
             continue
         parts = p.split("=", 1)
         if len(parts) == 1:
-            name, value = parts[0], True
+            name, value = parts[0], None
         else:
             name, value = parts
             if name in ("rport", "ttl"):

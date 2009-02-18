@@ -210,30 +210,44 @@ class ViaTestCase(unittest.TestCase):
         self.assertEquals(v1.host, v2.host)
         self.assertEquals(v1.port, v2.port)
     
-    def testComplex(self):
-        s = "SIP/2.0/UDP first.example.com:4000;ttl=16;maddr=224.2.0.1 ;branch=a7c6a8dlze (Example)"
+    def test_complex(self):
+        """
+        Test parsing a Via header with one of everything.
+        """
+        s = ("SIP/2.0/UDP first.example.com:4000;ttl=16;maddr=224.2.0.1"
+             " ;branch=a7c6a8dlze (Example)")
         v = sip.parseViaHeader(s)
         self.assertEquals(v.transport, "UDP")
         self.assertEquals(v.host, "first.example.com")
         self.assertEquals(v.port, 4000)
+        self.assertEquals(v.rport, None)
+        self.assertEquals(v.rportValue, None)
+        self.assertEquals(v.rportRequested, False)
         self.assertEquals(v.ttl, 16)
         self.assertEquals(v.maddr, "224.2.0.1")
         self.assertEquals(v.branch, "a7c6a8dlze")
         self.assertEquals(v.hidden, 0)
         self.assertEquals(v.toString(),
-                          "SIP/2.0/UDP first.example.com:4000;ttl=16;branch=a7c6a8dlze;maddr=224.2.0.1")
+                          "SIP/2.0/UDP first.example.com:4000"
+                          ";ttl=16;branch=a7c6a8dlze;maddr=224.2.0.1")
         self.checkRoundtrip(v)
     
-    def testSimple(self):
+    def test_simple(self):
+        """
+        Test parsing a simple Via header.
+        """
         s = "SIP/2.0/UDP example.com;hidden"
         v = sip.parseViaHeader(s)
         self.assertEquals(v.transport, "UDP")
         self.assertEquals(v.host, "example.com")
         self.assertEquals(v.port, 5060)
+        self.assertEquals(v.rport, None)
+        self.assertEquals(v.rportValue, None)
+        self.assertEquals(v.rportRequested, False)
         self.assertEquals(v.ttl, None)
         self.assertEquals(v.maddr, None)
         self.assertEquals(v.branch, None)
-        self.assertEquals(v.hidden, 1)
+        self.assertEquals(v.hidden, True)
         self.assertEquals(v.toString(),
                           "SIP/2.0/UDP example.com:5060;hidden")
         self.checkRoundtrip(v)
@@ -242,9 +256,51 @@ class ViaTestCase(unittest.TestCase):
         v = sip.Via("example.com")
         self.checkRoundtrip(v)
 
-    def testRPort(self):
+
+    def test_deprecatedRPort(self):
+        """
+        Setting rport to True is deprecated, but still produces a Via header
+        with the expected properties.
+        """
         v = sip.Via("foo.bar", rport=True)
-        self.assertEquals(v.toString(), "SIP/2.0/UDP foo.bar:5060;rport")
+
+        warnings = self.flushWarnings(
+            offendingFunctions=[self.test_deprecatedRPort])
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(
+            warnings[0]['message'],
+            'rport=True is deprecated since Twisted 9.0.')
+        self.assertEqual(
+            warnings[0]['category'],
+            DeprecationWarning)
+
+        self.assertEqual(v.toString(), "SIP/2.0/UDP foo.bar:5060;rport")
+        self.assertEqual(v.rport, True)
+        self.assertEqual(v.rportRequested, True)
+        self.assertEqual(v.rportValue, None)
+
+
+    def test_rport(self):
+        """
+        An rport setting of None should insert the parameter with no value.
+        """
+        v = sip.Via("foo.bar", rport=None)
+        self.assertEqual(v.toString(), "SIP/2.0/UDP foo.bar:5060;rport")
+        self.assertEqual(v.rportRequested, True)
+        self.assertEqual(v.rportValue, None)
+
+
+    def test_rportValue(self):
+        """
+        An rport numeric setting should insert the parameter with the number
+        value given.
+        """
+        v = sip.Via("foo.bar", rport=1)
+        self.assertEqual(v.toString(), "SIP/2.0/UDP foo.bar:5060;rport=1")
+        self.assertEqual(v.rportRequested, False)
+        self.assertEqual(v.rportValue, 1)
+        self.assertEqual(v.rport, 1)
+
 
     def testNAT(self):
         s = "SIP/2.0/UDP 10.0.0.1:5060;received=22.13.1.5;rport=12345"
@@ -256,6 +312,17 @@ class ViaTestCase(unittest.TestCase):
         self.assertEquals(v.rport, 12345)
         
         self.assertNotEquals(v.toString().find("rport=12345"), -1)
+
+
+    def test_unknownParams(self):
+       """
+       Parsing and serializing Via headers with unknown parameters should work.
+       """
+       s = "SIP/2.0/UDP example.com:5060;branch=a12345b;bogus;pie=delicious"
+       v = sip.parseViaHeader(s)
+       self.assertEqual(v.toString(), s)
+
+
 
 class URLTestCase(unittest.TestCase):
 
