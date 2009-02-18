@@ -507,10 +507,10 @@ class MessagesParser(basic.LineReceiver):
     @ivar state: An indicator of what the parser expects next. One of
     "firstline", "headers", or "body".
 
-    @cvar _multiheaders: List of names of headers which can contain
+    @ivar _multiheaders: List of names of headers which can contain
     multiple comma-separated values.
 
-    @cvar _multiAddressHeaders: List of names of headers which can contain
+    @ivar _multiAddressHeaders: List of names of headers which can contain
     multiple addresses separated by commas.
     """
 
@@ -544,7 +544,7 @@ class MessagesParser(basic.LineReceiver):
         self.setLineMode(remainingData)
 
 
-    def invalidMessage(self, exc=None):
+    def invalidMessage(self):
         """
         Raise an exception, indicating failure to parse a valid SIP message.
         """
@@ -578,7 +578,8 @@ class MessagesParser(basic.LineReceiver):
 
     def lineLengthExceeded(self, line):
         """
-        Raise L{SIPError} if lines of ridiculous length are received.
+        Raise L{SIPError} if lines longer than L{LineReceiver.MAX_LENGTH} are
+        received.
         """
         self.invalidMessage()
 

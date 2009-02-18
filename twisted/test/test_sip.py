@@ -6,7 +6,7 @@
 """Session Initialization Protocol tests."""
 
 from twisted.trial import unittest
-from twisted.protocols import sip
+from twisted.protocols import sip, basic
 from twisted.internet import defer, reactor
 
 from twisted.test import proto_helpers
@@ -312,6 +312,16 @@ class MessageParsingTestCase(unittest.TestCase):
         e = self.assertRaises(sip.SIPError, self.feedMessage,
                               brokenRequest)
         self.assertEqual(e.code, sip.UNSUPPORTED_URI)
+
+
+    def test_lineTooLong(self):
+        """
+        Attempting to parse a message with lines longer than
+        L{LineReceiver.MAX_LENGTH} should fail with L{sip.SIPError}.
+        """
+        brokenRequest = request1.replace("joe", "x" * basic.LineReceiver.MAX_LENGTH)
+        self.assertRaises(sip.SIPError, self.feedMessage,
+                          brokenRequest)
 
 
 class MessageParsingTestCase2(MessageParsingTestCase):
