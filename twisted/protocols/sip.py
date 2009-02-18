@@ -597,14 +597,12 @@ class MessagesParser(basic.LineReceiver):
                 a, b, c = line.split(" ", 2)
             except ValueError:
                 self.invalidMessage()
-                return
             if a == "SIP/2.0" and self.acceptResponses:
                 # response
                 try:
                     code = int(b)
                 except ValueError:
                     self.invalidMessage()
-                    return
                 self.message = Response(code, c)
             elif c == "SIP/2.0" and self.acceptRequests:
                 if not b.startswith("sip:"):
@@ -630,7 +628,6 @@ class MessagesParser(basic.LineReceiver):
                         self._processHeaderLine(self.prevline)
                     except ValueError:
                         self.invalidMessage()
-                        return
                 self.prevline = line
 
         else:
