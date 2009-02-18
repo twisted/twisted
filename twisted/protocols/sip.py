@@ -109,7 +109,9 @@ statusCodes = {
     606: "Not Acceptable",
 }
 
+#SIP symbolic error codes
 BAD_REQUEST = 400
+UNSUPPORTED_URI = 416
 
 specialCases = {
     'cseq': 'CSeq',
@@ -547,10 +549,7 @@ class MessagesParser(basic.LineReceiver):
         Raise an exception, indicating failure to parse a valid SIP message.
         """
         self.dataDone()
-        if isinstance(exc, SIPError):
-            raise exc
-        else:
-            raise SIPError(400)
+        raise SIPError(400)
 
 
     def dataDone(self):
@@ -607,6 +606,8 @@ class MessagesParser(basic.LineReceiver):
                     return
                 self.message = Response(code, c)
             elif c == "SIP/2.0" and self.acceptRequests:
+                if not b.startswith("sip:"):
+                    raise SIPError(416)
                 self.message = Request(a, b)
             else:
                 self.invalidMessage()

@@ -304,6 +304,15 @@ class MessageParsingTestCase(unittest.TestCase):
         self.assertEqual(e.code, 400)
 
 
+    def test_wrongURIScheme(self):
+        """
+        Receipt of messages with non-SIP URIs results in a L{sip.SIPError}.
+        """
+        brokenRequest = request1.replace("sip:", "mailto:")
+        e = self.assertRaises(sip.SIPError, self.feedMessage,
+                              brokenRequest)
+        self.assertEqual(e.code, sip.UNSUPPORTED_URI)
+
 
 class MessageParsingTestCase2(MessageParsingTestCase):
     """Same as base class, but feed data char by char."""
