@@ -1,14 +1,17 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
+"""
+LaTeX output support for Lore.
+"""
 
-from twisted.web import microdom, domhelpers
-from twisted.python import text, procutils
-import os, os.path, re, string
+from xml.dom import minidom as microdom
+import os.path, re, string
 from cStringIO import StringIO
-
 import urlparse
+
+from twisted.web import domhelpers
+from twisted.python import text, procutils
 
 import tree
 
@@ -28,9 +31,9 @@ def _escapeMatch(match):
     else:
         return '\\' + c
 
-def latexEscape(text):
-    text = escapingRE.sub(_escapeMatch, text)
-    return text.replace('\n', ' ')
+def latexEscape(txt):
+    txt = escapingRE.sub(_escapeMatch, txt)
+    return txt.replace('\n', ' ')
 
 entities = {'amp': '\&', 'gt': '>', 'lt': '<', 'quot': '"',
             'copy': '\\copyright', 'mdash': '---', 'rdquo': '``', 
@@ -41,8 +44,6 @@ def realpath(path):
     # Normalise path
     cwd = os.getcwd()
     path = os.path.normpath(os.path.join(cwd, path))
-    if path.startswith(cwd + '/'):
-        path = path[len(cwd)+1:]
     return path.replace('\\', '/') # windows slashes make LaTeX blow up
 
 
@@ -50,7 +51,11 @@ def getLatexText(node, writer, filter=lambda x:x, entities=entities):
     if hasattr(node, 'eref'):
         return writer(entities.get(node.eref, ''))
     if hasattr(node, 'data'):
-        return writer(filter(node.data))
+        if isinstance(node.data, unicode):
+            data = node.data.encode('utf-8')
+        else:
+            data = node.data
+        return writer(filter(data))
     for child in node.childNodes:
         getLatexText(child, writer, filter, entities)
 
@@ -118,8 +123,8 @@ class LatexSpitter(BaseLatexSpitter):
             self.writer('\\author{')
             authors = []
             for aNode in authorNodes:
-                name = aNode.getAttribute('title', '')
-                href = aNode.getAttribute('href', '')
+                name = aNode.getAttribute('title')
+                href = aNode.getAttribute('href')
                 if href.startswith('mailto:'):
                     href = href[7:]
                 if href:
@@ -203,7 +208,8 @@ class LatexSpitter(BaseLatexSpitter):
         fileName = os.path.join(self.currDir, node.getAttribute('href'))
         self.writer('\\begin{verbatim}\n')
         lines = map(string.rstrip, open(fileName).readlines())
-        lines = lines[int(node.getAttribute('skipLines', 0)):]
+        skipLines = int(node.getAttribute('skipLines') or 0)
+        lines = lines[skipLines:]
         self.writer(text.removeLeadingTrailingBlanks('\n'.join(lines)))
         self.writer('\\end{verbatim}')
 
@@ -249,10 +255,8 @@ class LatexSpitter(BaseLatexSpitter):
             self.writer('\\loreref{%s}' % ref)
 
     def visitNode_a_name(self, node):
-        #self.writer('\\label{%sHASH%s}' % (os.path.basename(self.filename),
-        #                                   node.getAttribute('name')))
-        self.writer('\\label{%sHASH%s}' % (realpath(self.filename),
-                                           node.getAttribute('name')))
+        self.writer('\\label{%sHASH%s}' % (
+                realpath(self.filename), node.getAttribute('name')))
         self.visitNodeDefault(node)
 
     def visitNode_table(self, node):
@@ -444,7 +448,9 @@ class BookLatexSpitter(LatexSpitter):
 
 
 def processFile(spitter, fin):
-    dom = microdom.parse(fin).documentElement
+    # XXX Use Inversion Of Control Pattern to orthogonalize the parsing API
+    # from the Visitor Pattern application. (EnterPrise)
+    dom = tree.parseFileAndReport(fin.name, lambda x: fin).documentElement
     spitter.visitNode(dom)
 
 

@@ -1,12 +1,16 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
-from __future__ import nested_scopes
+"""
+LaTeX-defined image support for Lore documents.
+"""
 
 import os, tempfile
-from twisted.web import domhelpers, microdom
+from xml.dom import minidom as microdom
+
+from twisted.web import domhelpers
 import latex, tree, lint, default
+
 
 class MathLatexSpitter(latex.LatexSpitter):
 
@@ -20,7 +24,7 @@ class MathLatexSpitter(latex.LatexSpitter):
         self.writer(domhelpers.getNodeText(node))
         self.writer('\]')
 
-def formulaeToImages(document, dir):
+def formulaeToImages(document, dir, _system=os.system):
     # gather all macros
     macros = ''
     for node in domhelpers.findElementsWithAttribute(document, 'class',
@@ -33,19 +37,22 @@ def formulaeToImages(document, dir):
         latexText='''\\documentclass[12pt]{amsart}%s
                      \\begin{document}\[%s\]
                      \\end{document}''' % (macros, domhelpers.getNodeText(node))
+        # This file really should be cleaned up by this function, or placed
+        # somewhere such that the calling code can find it and clean it up.
         file = tempfile.mktemp()
         f = open(file+'.tex', 'w')
         f.write(latexText)
         f.close()
-        os.system('latex %s.tex' % file)
-        os.system('dvips %s.dvi -o %s.ps' % (os.path.basename(file), file))
+        _system('latex %s.tex' % file)
+        _system('dvips %s.dvi -o %s.ps' % (os.path.basename(file), file))
         baseimgname = 'latexformula%d.png' % i
         imgname = os.path.join(dir, baseimgname)
         i += 1
-        os.system('pstoimg -type png -crop a -trans -interlace -out '
+        _system('pstoimg -type png -crop a -trans -interlace -out '
                   '%s %s.ps' % (imgname, file))
-        newNode = microdom.parseString('<span><br /><img src="%s" /><br /></span>' %
-                                       baseimgname)
+        newNode = microdom.parseString(
+            '<span><br /><img src="%s" /><br /></span>' % (
+                baseimgname,)).documentElement
         node.parentNode.replaceChild(newNode, node)
 
 

@@ -1,8 +1,9 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.lore.test.test_slides -*-
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
-"""Rudimentary slide support for Lore.
+"""
+Rudimentary slide support for Lore.
 
 TODO:
     - Complete mgp output target
@@ -41,20 +42,20 @@ Example input file::
 
     </html>
 """
-from __future__ import nested_scopes
+
+from xml.dom import minidom as microdom
+import os.path, re
+from cStringIO import StringIO
 
 from twisted.lore import default
-from twisted.web import domhelpers, microdom
+from twisted.web import domhelpers
 from twisted.python import text
 # These should be factored out
-from twisted.lore.latex import BaseLatexSpitter, LatexSpitter, processFile, \
-                               getLatexText, HeadingLatexSpitter
+from twisted.lore.latex import BaseLatexSpitter, LatexSpitter, processFile
+from twisted.lore.latex import getLatexText, HeadingLatexSpitter
 from twisted.lore.tree import getHeaders
-from tree import removeH1, fixAPI, fontifyPython, \
-                     addPyListings, addHTMLListings, setTitle
-
-import os, os.path, re
-from cStringIO import StringIO
+from twisted.lore.tree import removeH1, fixAPI, fontifyPython
+from twisted.lore.tree import addPyListings, addHTMLListings, setTitle
 
 hacked_entities = { 'amp': ' &', 'gt': ' >', 'lt': ' <', 'quot': ' "',
                     'copy': ' (c)'}
@@ -217,7 +218,9 @@ def insertPrevNextLinks(slides, filename, ext):
                         node.setAttribute('href', '%s-%d%s'
                                           % (filename[0], slide.pos+offset, ext))
                     else:
-                        node.appendChild(microdom.Text(slides[slide.pos+offset].title))
+                        text = microdom.Text()
+                        text.data = slides[slide.pos+offset].title
+                        node.appendChild(text)
             else:
                 for node in domhelpers.findElementsWithAttribute(slide.dom, "class", name):
                     pos = 0
@@ -252,7 +255,9 @@ def munge(document, template, linkrel, d, fullpath, ext, url, config):
     pos = 0
     for title, slide in splitIntoSlides(document):
         t = template.cloneNode(1)
-        setTitle(t, [microdom.Text(title)])
+        text = microdom.Text()
+        text.data = title
+        setTitle(t, [text])
         tmplbody = domhelpers.findElementsWithAttribute(t, "class", "body")[0]
         tmplbody.childNodes = slide
         tmplbody.setAttribute("class", "content")

@@ -1,4 +1,4 @@
-# Copyright (c) 2008 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 # ++ single anchor added to individual output file
@@ -30,21 +30,23 @@
 # __ put all of our test files someplace neat and tidy
 #
 
-import os, shutil
+import os, shutil, errno, time
 from StringIO import StringIO
+from xml.dom import minidom as microdom
 
 from twisted.trial import unittest
+from twisted.python.filepath import FilePath
+from twisted.python.versions import Version
 
 from twisted.lore import tree, process, indexer, numberer, htmlbook, default
 from twisted.lore.default import factory
 from twisted.lore.latex import LatexSpitter
 
 from twisted.python.util import sibpath
-from twisted.python.filepath import FilePath
 
 from twisted.lore.scripts import lore
 
-from twisted.web import microdom, domhelpers
+from twisted.web import domhelpers
 
 def sp(originalFileName):
     return sibpath(__file__, originalFileName)
@@ -52,14 +54,21 @@ def sp(originalFileName):
 options = {"template" : sp("template.tpl"), 'baseurl': '%s', 'ext': '.xhtml' }
 d = options
 
-def filenameGenerator(originalFileName, outputExtension):
-    return os.path.splitext(originalFileName)[0]+"1"+outputExtension
 
-def filenameGenerator2(originalFileName, outputExtension):
-    return os.path.splitext(originalFileName)[0]+"2"+outputExtension
+class _XMLAssertionMixin:
+    """
+    Test mixin defining a method for comparing serialized XML documents.
+    """
+    def assertXMLEqual(self, first, second):
+        """
+        Verify that two strings represent the same XML document.
+        """
+        self.assertEqual(
+            microdom.parseString(first).toxml(),
+            microdom.parseString(second).toxml())
 
 
-class TestFactory(unittest.TestCase):
+class TestFactory(unittest.TestCase, _XMLAssertionMixin):
 
     file = sp('simple.html')
     linkrel = ""
@@ -76,16 +85,7 @@ class TestFactory(unittest.TestCase):
 
     def assertEqualsFile(self, exp, act):
         expected = open(sp(exp)).read()
-        self.assertEqualsString(expected, act)
-
-    def assertEqualsString(self, expected, act):
-        if len(expected) != len(act): print "Actual: " + act ##d
-        self.assertEquals(len(expected), len(act))
-        for i in range(len(expected)):
-            e = expected[i]
-            a = act[i]
-            self.assertEquals(e, a, "differ at %d: %s vs. %s" % (i, e, a))
-        self.assertEquals(expected, act)
+        self.assertEqual(expected, act)
 
     def makeTemp(self, *filenames):
         tmp = self.mktemp()
@@ -102,53 +102,214 @@ class TestFactory(unittest.TestCase):
         numberer.reset()
 
     def testProcessingFunctionFactory(self):
+        base = FilePath(self.mktemp())
+        base.makedirs()
+
+        simple = base.child('simple.html')
+        FilePath(__file__).sibling('simple.html').copyTo(simple)
+
         htmlGenerator = factory.generate_html(options)
-        htmlGenerator(self.file, self.linkrel)
-        self.assertEqualFiles('good_simple.xhtml', 'simple.xhtml')
+        htmlGenerator(simple.path, self.linkrel)
+
+        self.assertXMLEqual(
+            """\
+<?xml version="1.0" ?><!DOCTYPE html  PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN'  'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'><html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+  <head><title>Twisted Documentation: My Test Lore Input</title></head>
+  <body bgcolor="white">
+    <h1 class="title">My Test Lore Input</h1>
+    <div class="content">
+<span/>
+<p>A Body.</p>
+</div>
+    <a href="index.xhtml">Index</a>
+  </body>
+</html>""",
+            simple.sibling('simple.xhtml').getContent())
+
 
     def testProcessingFunctionFactoryWithFilenameGenerator(self):
-        htmlGenerator = factory.generate_html(options, filenameGenerator2)
+        base = FilePath(self.mktemp())
+        base.makedirs()
+
+        def filenameGenerator(originalFileName, outputExtension):
+            name = os.path.splitext(FilePath(originalFileName).basename())[0]
+            return base.child(name + outputExtension).path
+
+        htmlGenerator = factory.generate_html(options, filenameGenerator)
         htmlGenerator(self.file, self.linkrel)
-        self.assertEqualFiles('good_simple.xhtml', 'simple2.xhtml')
+        self.assertXMLEqual(
+            """\
+<?xml version="1.0" ?><!DOCTYPE html  PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN'  'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'><html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+  <head><title>Twisted Documentation: My Test Lore Input</title></head>
+  <body bgcolor="white">
+    <h1 class="title">My Test Lore Input</h1>
+    <div class="content">
+<span/>
+<p>A Body.</p>
+</div>
+    <a href="index.xhtml">Index</a>
+  </body>
+</html>""",
+            base.child("simple.xhtml").getContent())
+
 
     def test_doFile(self):
+        base = FilePath(self.mktemp())
+        base.makedirs()
+
+        simple = base.child('simple.html')
+        FilePath(__file__).sibling('simple.html').copyTo(simple)
+
         templ = microdom.parse(open(d['template']))
 
-        tree.doFile(self.file, self.linkrel, d['ext'], d['baseurl'], templ, d)
-        self.assertEqualFiles('good_simple.xhtml', 'simple.xhtml')
+        tree.doFile(simple.path, self.linkrel, d['ext'], d['baseurl'], templ, d)
+        self.assertXMLEqual(
+            """\
+<?xml version="1.0" ?><!DOCTYPE html  PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN'  'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'><html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+  <head><title>Twisted Documentation: My Test Lore Input</title></head>
+  <body bgcolor="white">
+    <h1 class="title">My Test Lore Input</h1>
+    <div class="content">
+<span/>
+<p>A Body.</p>
+</div>
+    <a href="index.xhtml">Index</a>
+  </body>
+</html>""",
+            base.child("simple.xhtml").getContent())
+
 
     def test_doFile_withFilenameGenerator(self):
-        templ = microdom.parse(open(d['template']))
+        base = FilePath(self.mktemp())
+        base.makedirs()
 
+        def filenameGenerator(originalFileName, outputExtension):
+            name = os.path.splitext(FilePath(originalFileName).basename())[0]
+            return base.child(name + outputExtension).path
+
+        templ = microdom.parse(open(d['template']))
         tree.doFile(self.file, self.linkrel, d['ext'], d['baseurl'], templ, d, filenameGenerator)
-        self.assertEqualFiles('good_simple.xhtml', 'simple1.xhtml')
+
+        self.assertXMLEqual(
+            """\
+<?xml version="1.0" ?><!DOCTYPE html  PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN'  'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'><html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+  <head><title>Twisted Documentation: My Test Lore Input</title></head>
+  <body bgcolor="white">
+    <h1 class="title">My Test Lore Input</h1>
+    <div class="content">
+<span/>
+<p>A Body.</p>
+</div>
+    <a href="index.xhtml">Index</a>
+  </body>
+</html>""",
+            base.child("simple.xhtml").getContent())
+
 
     def test_munge(self):
         indexer.setIndexFilename("lore_index_file.html")
         doc = microdom.parse(open(self.file))
-        templ = microdom.parse(open(d['template']))
-        node = templ.cloneNode(1)
+        node = microdom.parse(open(d['template']))
         tree.munge(doc, node, self.linkrel,
                    os.path.dirname(self.file),
                    self.file,
                    d['ext'], d['baseurl'], d)
-        self.assertEqualsFile('good_internal.xhtml', node.toprettyxml())
+
+        self.assertXMLEqual(
+            """\
+<?xml version="1.0" ?><!DOCTYPE html  PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN'  'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'><html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+  <head><title>Twisted Documentation: My Test Lore Input</title></head>
+  <body bgcolor="white">
+    <h1 class="title">My Test Lore Input</h1>
+    <div class="content">
+<span/>
+<p>A Body.</p>
+</div>
+    <a href="lore_index_file.html">Index</a>
+  </body>
+</html>""",
+            node.toxml())
+
+
+    def test_mungeAuthors(self):
+        """
+        If there is a node with a I{class} attribute set to C{"authors"},
+        L{tree.munge} adds anchors as children to it, takeing the necessary
+        information from any I{link} nodes in the I{head} with their I{rel}
+        attribute set to C{"author"}.
+        """
+        document = microdom.parseString(
+            """\
+<html>
+  <head>
+    <title>munge authors</title>
+    <link rel="author" title="foo" href="bar"/>
+    <link rel="author" title="baz" href="quux"/>
+    <link rel="author" title="foobar" href="barbaz"/>
+  </head>
+  <body>
+    <h1>munge authors</h1>
+  </body>
+</html>""")
+        template = microdom.parseString(
+            """\
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <title />
+  </head>
+
+  <body>
+    <div class="body" />
+    <div class="authors" />
+  </body>
+</html>
+""")
+        tree.munge(
+            document, template, self.linkrel, os.path.dirname(self.file),
+            self.file, d['ext'], d['baseurl'], d)
+
+        self.assertXMLEqual(
+            template.toxml(),
+            """\
+<?xml version="1.0" ?><html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>munge authors</title>
+  <link href="bar" rel="author" title="foo"/><link href="quux" rel="author" title="baz"/><link href="barbaz" rel="author" title="foobar"/></head>
+
+  <body>
+    <div class="content">
+    <span/>
+  </div>
+    <div class="authors"><span><a href="bar">foo</a>, <a href="quux">baz</a>, and <a href="barbaz">foobar</a></span></div>
+  </body>
+</html>""")
+
 
     def test_getProcessor(self):
+
+        base = FilePath(self.mktemp())
+        base.makedirs()
+        input = base.child("simple3.html")
+        FilePath(__file__).sibling("simple3.html").copyTo(input)
+
         options = { 'template': sp('template.tpl'), 'ext': '.xhtml', 'baseurl': 'burl',
                     'filenameMapping': None }
         p = process.getProcessor(default, "html", options)
-        p(sp('simple3.html'), self.linkrel)
-        self.assertEqualFiles('good_simple.xhtml', 'simple3.xhtml')
-
-    def test_getProcessorWithFilenameGenerator(self):
-        options = { 'template': sp('template.tpl'),
-                    'ext': '.xhtml',
-                    'baseurl': 'burl',
-                    'filenameMapping': 'addFoo' }
-        p = process.getProcessor(default, "html", options)
-        p(sp('simple4.html'), self.linkrel)
-        self.assertEqualFiles('good_simple.xhtml', 'simple4foo.xhtml')
+        p(input.path, self.linkrel)
+        self.assertXMLEqual(
+            """\
+<?xml version="1.0" ?><!DOCTYPE html  PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN'  'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'><html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+  <head><title>Twisted Documentation: My Test Lore Input</title></head>
+  <body bgcolor="white">
+    <h1 class="title">My Test Lore Input</h1>
+    <div class="content">
+<span/>
+<p>A Body.</p>
+</div>
+    <a href="index.xhtml">Index</a>
+  </body>
+</html>""",
+            base.child("simple3.xhtml").getContent())
 
     def test_outputdirGenerator(self):
         normp = os.path.normpath; join = os.path.join
@@ -173,6 +334,7 @@ class TestFactory(unittest.TestCase):
         self.failUnless(os.path.exists(dirname), 'should have created dir')
         os.rmdir(dirname)
 
+
     def test_indexAnchorsAdded(self):
         indexer.setIndexFilename('theIndexFile.html')
         # generate the output file
@@ -181,8 +343,33 @@ class TestFactory(unittest.TestCase):
 
         tree.doFile(os.path.join(tmp, 'lore_index_test.xhtml'),
                     self.linkrel, '.html', d['baseurl'], templ, d)
-        self.assertEqualFiles1("lore_index_test_out.html",
-                               os.path.join(tmp, "lore_index_test.html"))
+
+        self.assertXMLEqual(
+            """\
+<?xml version="1.0" ?><!DOCTYPE html  PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN'  'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'><html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+  <head><title>Twisted Documentation: The way of the program</title></head>
+  <body bgcolor="white">
+    <h1 class="title">The way of the program</h1>
+    <div class="content">
+
+<span/>
+
+<p>The first paragraph.</p>
+
+
+<h2>The Python programming language<a name="auto0"/></h2>
+<a name="index01"/>
+<a name="index02"/>
+
+<p>The second paragraph.</p>
+
+
+</div>
+    <a href="theIndexFile.html">Index</a>
+  </body>
+</html>""",
+            FilePath(tmp).child("lore_index_test.html").getContent())
+
 
     def test_indexEntriesAdded(self):
         indexer.addEntry('lore_index_test.html', 'index02', 'language of programming', '1.3')
@@ -229,6 +416,7 @@ class TestFactory(unittest.TestCase):
         self.assertEquals(None, result)
         self.assertEqualFiles1("lore_index_file_unnumbered_out.html", indexFilename + ".html")
 
+
     def test_runningLoreMultipleFiles(self):
         tmp = self.makeTemp('lore_index_test.xhtml', 'lore_index_test2.xhtml')
         templateFilename = sp('template.tpl')
@@ -249,11 +437,71 @@ class TestFactory(unittest.TestCase):
                               ])
         result = lore.runGivenOptions(options)
         self.assertEquals(None, result)
-        self.assertEqualFiles1("lore_index_file_unnumbered_multiple_out.html", indexFilename + ".html")
-        self.assertEqualFiles1("lore_index_test_out.html",
-                               os.path.join(tmp, "lore_index_test.html"))
-        self.assertEqualFiles1("lore_index_test_out2.html",
-                               os.path.join(tmp, "lore_index_test2.html"))
+
+        self.assertEqual(
+            # XXX This doesn't seem like a very good index file.
+            """\
+aahz: <a href="lore_index_test2.html#index03">link</a><br />
+aahz2: <a href="lore_index_test2.html#index02">link</a><br />
+language of programming: <a href="lore_index_test.html#index02">link</a>, <a href="lore_index_test2.html#index01">link</a><br />
+programming language: <a href="lore_index_test.html#index01">link</a><br />
+""",
+            file(FilePath(indexFilename + ".html").path).read())
+
+        self.assertXMLEqual(
+            """\
+<?xml version="1.0" ?><!DOCTYPE html  PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN'  'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'><html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+  <head><title>Twisted Documentation: The way of the program</title></head>
+  <body bgcolor="white">
+    <h1 class="title">The way of the program</h1>
+    <div class="content">
+
+<span/>
+
+<p>The first paragraph.</p>
+
+
+<h2>The Python programming language<a name="auto0"/></h2>
+<a name="index01"/>
+<a name="index02"/>
+
+<p>The second paragraph.</p>
+
+
+</div>
+    <a href="theIndexFile.html">Index</a>
+  </body>
+</html>""",
+            FilePath(tmp).child("lore_index_test.html").getContent())
+
+        self.assertXMLEqual(
+            """\
+<?xml version="1.0" ?><!DOCTYPE html  PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN'  'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'><html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+  <head><title>Twisted Documentation: The second page to index</title></head>
+  <body bgcolor="white">
+    <h1 class="title">The second page to index</h1>
+    <div class="content">
+
+<span/>
+
+<p>The first paragraph of the second page.</p>
+
+
+<h2>The Jython programming language<a name="auto0"/></h2>
+<a name="index01"/>
+<a name="index02"/>
+<a name="index03"/>
+
+<p>The second paragraph of the second page.</p>
+
+
+</div>
+    <a href="theIndexFile.html">Index</a>
+  </body>
+</html>""",
+            FilePath(tmp).child("lore_index_test2.html").getContent())
+
+
 
     def XXXtest_NumberedSections(self):
         # run two files through lore, with numbering turned on
@@ -280,6 +528,54 @@ class TestFactory(unittest.TestCase):
         #                       VVV change to new, numbered files
         self.assertEqualFiles("lore_numbering_test_out.html", "lore_numbering_test.tns")
         self.assertEqualFiles("lore_numbering_test_out2.html", "lore_numbering_test2.tns")
+
+
+    def test_setTitle(self):
+        """
+        L{tree.setTitle} inserts the given title into the first I{title}
+        element and the first element with the I{title} class in the given
+        template.
+        """
+        parent = microdom.Element('div')
+        firstTitle = microdom.Element('title')
+        parent.appendChild(firstTitle)
+        secondTitle = microdom.Element('span')
+        secondTitle.setAttribute('class', 'title')
+        parent.appendChild(secondTitle)
+
+        titleNodes = [microdom.Text()]
+        # minidom has issues with cloning documentless-nodes.  See Python issue
+        # 4851.
+        titleNodes[0].ownerDocument = microdom.Document()
+        titleNodes[0].data = 'foo bar'
+
+        tree.setTitle(parent, titleNodes, None)
+        self.assertEqual(firstTitle.toxml(), '<title>foo bar</title>')
+        self.assertEqual(
+            secondTitle.toxml(), '<span class="title">foo bar</span>')
+
+
+    def test_setTitleWithChapter(self):
+        """
+        L{tree.setTitle} includes a chapter number if it is passed one.
+        """
+        document = microdom.Document()
+
+        parent = microdom.Element('div')
+        parent.ownerDocument = document
+
+        title = microdom.Element('title')
+        parent.appendChild(title)
+
+        titleNodes = [microdom.Text()]
+        titleNodes[0].ownerDocument = document
+        titleNodes[0].data = 'foo bar'
+
+        # Oh yea.  The numberer has to agree to put the chapter number in, too.
+        numberer.setNumberSections(True)
+
+        tree.setTitle(parent, titleNodes, '13')
+        self.assertEqual(title.toxml(), '<title>13. foo bar</title>')
 
 
     def test_setIndexLink(self):
@@ -330,6 +626,26 @@ class TestFactory(unittest.TestCase):
                                                  "index-link"))
 
 
+    def test_addMtime(self):
+        """
+        L{tree.addMtime} inserts a text node giving the last modification time
+        of the specified file wherever it encounters an element with the
+        I{mtime} class.
+        """
+        path = FilePath(self.mktemp())
+        path.setContent('')
+        when = time.ctime(path.getModificationTime())
+
+        parent = microdom.Element('div')
+        mtime = microdom.Element('span')
+        mtime.setAttribute('class', 'mtime')
+        parent.appendChild(mtime)
+
+        tree.addMtime(parent, path.path)
+        self.assertEqual(
+            mtime.toxml(), '<span class="mtime">' + when + '</span>')
+
+
     def test_makeLineNumbers(self):
         """
         L{tree._makeLineNumbers} takes an integer and returns a I{p} tag with
@@ -338,15 +654,15 @@ class TestFactory(unittest.TestCase):
         numbers = tree._makeLineNumbers(1)
         self.assertEqual(numbers.tagName, 'p')
         self.assertEqual(numbers.getAttribute('class'), 'py-linenumber')
-        self.assertIsInstance(numbers.firstChild(), microdom.Text)
-        self.assertEqual(numbers.firstChild().nodeValue, '1\n')
+        self.assertIsInstance(numbers.firstChild, microdom.Text)
+        self.assertEqual(numbers.firstChild.nodeValue, '1\n')
 
         numbers = tree._makeLineNumbers(10)
         self.assertEqual(numbers.tagName, 'p')
         self.assertEqual(numbers.getAttribute('class'), 'py-linenumber')
-        self.assertIsInstance(numbers.firstChild(), microdom.Text)
+        self.assertIsInstance(numbers.firstChild, microdom.Text)
         self.assertEqual(
-            numbers.firstChild().nodeValue,
+            numbers.firstChild.nodeValue,
             ' 1\n 2\n 3\n 4\n 5\n'
             ' 6\n 7\n 8\n 9\n10\n')
 
@@ -358,7 +674,8 @@ class TestFactory(unittest.TestCase):
         source it contains.
         """
         parent = microdom.Element('div')
-        source = microdom.Text('def foo():\n    pass\n')
+        source = microdom.Text()
+        source.data = 'def foo():\n    pass\n'
         parent.appendChild(source)
 
         tree.fontifyPythonNode(source)
@@ -383,8 +700,9 @@ class TestFactory(unittest.TestCase):
         listingPath.setContent('def foo():\n    pass\n')
 
         parent = microdom.Element('div')
-        listing = microdom.Element(
-            'a', {'href': listingPath.basename(), 'class': 'py-listing'})
+        listing = microdom.Element('a')
+        listing.setAttribute('href', listingPath.basename())
+        listing.setAttribute('class', 'py-listing')
         parent.appendChild(listing)
 
         tree.addPyListings(parent, listingPath.dirname())
@@ -397,6 +715,456 @@ class TestFactory(unittest.TestCase):
 </pre><div class="caption"> - <a href="temp"><span class="filename">temp</span></a></div></div></div>"""
 
         self.assertEqual(parent.toxml(), expected)
+
+
+    def test_addPyListingsSkipLines(self):
+        """
+        If a node with the I{py-listing} class also has a I{skipLines}
+        attribute, that number of lines from the beginning of the source
+        listing are omitted.
+        """
+        listingPath = FilePath(self.mktemp())
+        listingPath.setContent('def foo():\n    pass\n')
+
+        parent = microdom.Element('div')
+        listing = microdom.Element('a')
+        listing.setAttribute('href', listingPath.basename())
+        listing.setAttribute('class', 'py-listing')
+        listing.setAttribute('skipLines', 1)
+        parent.appendChild(listing)
+
+        tree.addPyListings(parent, listingPath.dirname())
+
+        expected = """\
+<div><div class="py-listing"><pre><p class="py-linenumber">1
+</p>    <span class="py-src-keyword">pass</span>
+</pre><div class="caption"> - <a href="temp"><span class="filename">temp</span></a></div></div></div>"""
+
+        self.assertEqual(parent.toxml(), expected)
+
+
+    def test_fixAPI(self):
+        """
+        The element passed to L{tree.fixAPI} has all of its children with the
+        I{API} class rewritten to contain links to the API which is referred to
+        by the text they contain.
+        """
+        parent = microdom.Element('div')
+        link = microdom.Element('span')
+        link.setAttribute('class', 'API')
+        text = microdom.Text()
+        text.data = 'foo'
+        link.appendChild(text)
+        parent.appendChild(link)
+
+        tree.fixAPI(parent, 'http://example.com/%s')
+        self.assertEqual(
+            parent.toxml(),
+            '<div><span class="API">'
+            '<a href="http://example.com/foo" title="foo">foo</a>'
+            '</span></div>')
+
+
+    def test_fixAPIBase(self):
+        """
+        If a node with the I{API} class and a value for the I{base} attribute
+        is included in the DOM passed to L{tree.fixAPI}, the link added to that
+        node refers to the API formed by joining the value of the I{base}
+        attribute to the text contents of the node.
+        """
+        parent = microdom.Element('div')
+        link = microdom.Element('span')
+        link.setAttribute('class', 'API')
+        link.setAttribute('base', 'bar')
+        text = microdom.Text()
+        text.data = 'baz'
+        link.appendChild(text)
+        parent.appendChild(link)
+
+        tree.fixAPI(parent, 'http://example.com/%s')
+
+        self.assertEqual(
+            parent.toxml(),
+            '<div><span class="API">'
+            '<a href="http://example.com/bar.baz" title="bar.baz">baz</a>'
+            '</span></div>')
+
+
+    def test_fixLinks(self):
+        """
+        Links in the nodes of the DOM passed to L{tree.fixLinks} have their
+        extensions rewritten to the given extension.
+        """
+        parent = microdom.Element('div')
+        link = microdom.Element('a')
+        link.setAttribute('href', 'foo.html')
+        parent.appendChild(link)
+
+        tree.fixLinks(parent, '.xhtml')
+
+        self.assertEqual(parent.toxml(), '<div><a href="foo.xhtml"/></div>')
+
+
+    def test_setVersion(self):
+        """
+        Nodes of the DOM passed to L{tree.setVersion} which have the I{version}
+        class have the given version added to them a child.
+        """
+        parent = microdom.Element('div')
+        version = microdom.Element('span')
+        version.setAttribute('class', 'version')
+        parent.appendChild(version)
+
+        tree.setVersion(parent, '1.2.3')
+
+        self.assertEqual(
+            parent.toxml(), '<div><span class="version">1.2.3</span></div>')
+
+
+    def test_footnotes(self):
+        """
+        L{tree.footnotes} finds all of the nodes with the I{footnote} class in
+        the DOM passed to it and adds a footnotes section to the end of the
+        I{body} element which includes them.  It also inserts links to those
+        footnotes from the original definition location.
+        """
+        parent = microdom.Element('div')
+        body = microdom.Element('body')
+        footnote = microdom.Element('span')
+        footnote.setAttribute('class', 'footnote')
+        text = microdom.Text()
+        text.data = 'this is the footnote'
+        footnote.appendChild(text)
+        body.appendChild(footnote)
+        body.appendChild(microdom.Element('p'))
+        parent.appendChild(body)
+
+        tree.footnotes(parent)
+
+        self.assertEqual(
+            parent.toxml(),
+            '<div><body>'
+            '<a href="#footnote-1" title="this is the footnote">'
+            '<super>1</super>'
+            '</a>'
+            '<p/>'
+            '<h2>Footnotes</h2>'
+            '<ol><li><a name="footnote-1">'
+            '<span class="footnote">this is the footnote</span>'
+            '</a></li></ol>'
+            '</body></div>')
+
+
+    def test_generateTableOfContents(self):
+        """
+        L{tree.generateToC} returns an element which contains a table of
+        contents generated from the headers in the document passed to it.
+        """
+        parent = microdom.Element('body')
+        header = microdom.Element('h2')
+        text = microdom.Text()
+        text.data = u'header & special character'
+        header.appendChild(text)
+        parent.appendChild(header)
+        subheader = microdom.Element('h3')
+        text = microdom.Text()
+        text.data = 'subheader'
+        subheader.appendChild(text)
+        parent.appendChild(subheader)
+
+        tableOfContents = tree.generateToC(parent)
+        self.assertEqual(
+            tableOfContents.toxml(),
+            '<ol><li><a href="#auto0">header &amp; special character</a></li><ul><li><a href="#auto1">subheader</a></li></ul></ol>')
+
+        self.assertEqual(
+            header.toxml(),
+            '<h2>header &amp; special character<a name="auto0"/></h2>')
+
+        self.assertEqual(
+            subheader.toxml(),
+            '<h3>subheader<a name="auto1"/></h3>')
+
+
+    def test_putInToC(self):
+        """
+        L{tree.putInToC} replaces all of the children of the first node with
+        the I{toc} class with the given node representing a table of contents.
+        """
+        parent = microdom.Element('div')
+        toc = microdom.Element('span')
+        toc.setAttribute('class', 'toc')
+        toc.appendChild(microdom.Element('foo'))
+        parent.appendChild(toc)
+
+        tree.putInToC(parent, microdom.Element('toc'))
+
+        self.assertEqual(toc.toxml(), '<span class="toc"><toc/></span>')
+
+
+    def test_invalidTableOfContents(self):
+        """
+        If passed a document with I{h3} elements before any I{h2} element,
+        L{tree.generateToC} raises L{ValueError} explaining that this is not a
+        valid document.
+        """
+        parent = microdom.Element('body')
+        parent.appendChild(microdom.Element('h3'))
+        err = self.assertRaises(ValueError, tree.generateToC, parent)
+        self.assertEqual(
+            str(err), "No H3 element is allowed until after an H2 element")
+
+
+    def test_notes(self):
+        """
+        L{tree.notes} inserts some additional markup before the first child of
+        any node with the I{note} class.
+        """
+        parent = microdom.Element('div')
+        noteworthy = microdom.Element('span')
+        noteworthy.setAttribute('class', 'note')
+        noteworthy.appendChild(microdom.Element('foo'))
+        parent.appendChild(noteworthy)
+
+        tree.notes(parent)
+
+        self.assertEqual(
+            noteworthy.toxml(),
+            '<span class="note"><strong>Note: </strong><foo/></span>')
+
+
+    def test_findNodeJustBefore(self):
+        """
+        L{tree.findNodeJustBefore} returns the previous sibling of the node it
+        is passed.  The list of nodes passed in is ignored.
+        """
+        parent = microdom.Element('div')
+        result = microdom.Element('foo')
+        target = microdom.Element('bar')
+        parent.appendChild(result)
+        parent.appendChild(target)
+
+        self.assertIdentical(
+            tree.findNodeJustBefore(target, [parent, result]),
+            result)
+
+        # Also, support other configurations.  This is a really not nice API.
+        newTarget = microdom.Element('baz')
+        target.appendChild(newTarget)
+        self.assertIdentical(
+            tree.findNodeJustBefore(newTarget, [parent, result]),
+            result)
+
+
+    def test_getSectionNumber(self):
+        """
+        L{tree.getSectionNumber} accepts an I{H2} element and returns its text
+        content.
+        """
+        header = microdom.Element('foo')
+        text = microdom.Text()
+        text.data = 'foobar'
+        header.appendChild(text)
+        self.assertEqual(tree.getSectionNumber(header), 'foobar')
+
+
+    def test_numberDocument(self):
+        """
+        L{tree.numberDocument} inserts section numbers into the text of each
+        header.
+        """
+        parent = microdom.Element('foo')
+        section = microdom.Element('h2')
+        text = microdom.Text()
+        text.data = 'foo'
+        section.appendChild(text)
+        parent.appendChild(section)
+
+        tree.numberDocument(parent, '7')
+
+        self.assertEqual(section.toxml(), '<h2>7.1 foo</h2>')
+
+
+    def test_parseFileAndReport(self):
+        """
+        L{tree.parseFileAndReport} parses the contents of the filename passed
+        to it and returns the corresponding DOM.
+        """
+        path = FilePath(self.mktemp())
+        path.setContent('<foo bar="baz">hello</foo>\n')
+
+        document = tree.parseFileAndReport(path.path)
+        self.assertXMLEqual(
+            document.toxml(),
+            '<?xml version="1.0" ?><foo bar="baz">hello</foo>')
+
+
+    def test_parseFileAndReportMismatchedTags(self):
+        """
+        If the contents of the file passed to L{tree.parseFileAndReport}
+        contain a mismatched tag, L{process.ProcessingFailure} is raised
+        indicating the location of the open and close tags which were
+        mismatched.
+        """
+        path = FilePath(self.mktemp())
+        path.setContent('  <foo>\n\n  </bar>')
+
+        err = self.assertRaises(
+            process.ProcessingFailure, tree.parseFileAndReport, path.path)
+        self.assertEqual(
+            str(err),
+            "mismatched close tag at line 3, column 4; expected </foo> "
+            "(from line 1, column 2)")
+
+        # Test a case which requires involves proper close tag handling.
+        path.setContent('<foo><bar></bar>\n  </baz>')
+
+        err = self.assertRaises(
+            process.ProcessingFailure, tree.parseFileAndReport, path.path)
+        self.assertEqual(
+            str(err),
+            "mismatched close tag at line 2, column 4; expected </foo> "
+            "(from line 1, column 0)")
+
+
+    def test_parseFileAndReportParseError(self):
+        """
+        If the contents of the file passed to L{tree.parseFileAndReport} cannot
+        be parsed for a reason other than mismatched tags,
+        L{process.ProcessingFailure} is raised with a string describing the
+        parse error.
+        """
+        path = FilePath(self.mktemp())
+        path.setContent('\n   foo')
+
+        err = self.assertRaises(
+            process.ProcessingFailure, tree.parseFileAndReport, path.path)
+        self.assertEqual(str(err), 'syntax error at line 2, column 3')
+
+
+    def test_parseFileAndReportIOError(self):
+        """
+        If an L{IOError} is raised while reading from the file specified to
+        L{tree.parseFileAndReport}, a L{process.ProcessingFailure} is raised
+        indicating what the error was.  The file should be closed by the
+        time the exception is raised to the caller.
+        """
+        class FakeFile:
+            _open = True
+            def read(self, bytes=None):
+                raise IOError(errno.ENOTCONN, 'socket not connected')
+
+            def close(self):
+                self._open = False
+
+        theFile = FakeFile()
+        def fakeOpen(filename):
+            return theFile
+
+        err = self.assertRaises(
+            process.ProcessingFailure, tree.parseFileAndReport, "foo", fakeOpen)
+        self.assertEqual(str(err), "socket not connected, filename was 'foo'")
+        self.assertFalse(theFile._open)
+
+
+
+class XMLParsingTests(unittest.TestCase):
+    """
+    Tests for various aspects of parsing a Lore XML input document using
+    L{tree.parseFileAndReport}.
+    """
+    def _parseTest(self, xml):
+        path = FilePath(self.mktemp())
+        path.setContent(xml)
+        return tree.parseFileAndReport(path.path)
+
+
+    def test_withoutDocType(self):
+        """
+        A Lore XML input document may omit a I{DOCTYPE} declaration.  If it
+        does so, the XHTML1 Strict DTD is used.
+        """
+        # Parsing should succeed.
+        document = self._parseTest("<foo>uses an xhtml entity: &copy;</foo>")
+        # But even more than that, the &copy; entity should be turned into the
+        # appropriate unicode codepoint.
+        self.assertEqual(
+            domhelpers.gatherTextNodes(document.documentElement),
+            u"uses an xhtml entity: \N{COPYRIGHT SIGN}")
+
+
+    def test_withTransitionalDocType(self):
+        """
+        A Lore XML input document may include a I{DOCTYPE} declaration
+        referring to the XHTML1 Transitional DTD.
+        """
+        # Parsing should succeed.
+        document = self._parseTest("""\
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<foo>uses an xhtml entity: &copy;</foo>
+""")
+        # But even more than that, the &copy; entity should be turned into the
+        # appropriate unicode codepoint.
+        self.assertEqual(
+            domhelpers.gatherTextNodes(document.documentElement),
+            u"uses an xhtml entity: \N{COPYRIGHT SIGN}")
+
+
+    def test_withStrictDocType(self):
+        """
+        A Lore XML input document may include a I{DOCTYPE} declaration
+        referring to the XHTML1 Strict DTD.
+        """
+        # Parsing should succeed.
+        document = self._parseTest("""\
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<foo>uses an xhtml entity: &copy;</foo>
+""")
+        # But even more than that, the &copy; entity should be turned into the
+        # appropriate unicode codepoint.
+        self.assertEqual(
+            domhelpers.gatherTextNodes(document.documentElement),
+            u"uses an xhtml entity: \N{COPYRIGHT SIGN}")
+
+
+    def test_withDisallowedDocType(self):
+        """
+        A Lore XML input document may not include a I{DOCTYPE} declaration
+        referring to any DTD other than XHTML1 Transitional or XHTML1 Strict.
+        """
+        self.assertRaises(
+            process.ProcessingFailure,
+            self._parseTest,
+            """\
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-frameset.dtd">
+<foo>uses an xhtml entity: &copy;</foo>
+""")
+
+
+
+class XMLSerializationTests(unittest.TestCase, _XMLAssertionMixin):
+    """
+    Tests for L{tree._writeDocument}.
+    """
+    def test_nonASCIIData(self):
+        """
+        A document which contains non-ascii characters is serialized to a
+        file using UTF-8.
+        """
+        document = microdom.Document()
+        parent = microdom.Element('foo')
+        text = microdom.Text()
+        text.data = u'\N{SNOWMAN}'
+        parent.appendChild(text)
+        document.appendChild(parent)
+        outFile = self.mktemp()
+        tree._writeDocument(outFile, document)
+        self.assertXMLEqual(
+            FilePath(outFile).getContent(),
+            u'<foo>\N{SNOWMAN}</foo>'.encode('utf-8'))
 
 
 
@@ -429,3 +1197,32 @@ class ScriptTests(unittest.TestCase):
         """
         processor = lore.getProcessor("lore", "html", options)
         self.assertNotIdentical(processor, None)
+
+
+
+class DeprecationTests(unittest.TestCase):
+    """
+    Tests for deprecated APIs in L{twisted.lore.tree}.
+    """
+    def test_comparePosition(self):
+        """
+        L{tree.comparePosition} is deprecated.
+        """
+        from twisted.web.microdom import parseString
+        element = parseString('<foo/>').documentElement
+        self.assertEqual(
+            self.callDeprecated(
+                Version('Twisted', 9, 0, 0),
+                tree.comparePosition, element, element),
+            0)
+
+
+    def test_compareMarkPos(self):
+        """
+        L{tree.compareMarkPos} is deprecated.
+        """
+        self.assertEqual(
+            self.callDeprecated(
+                Version('Twisted', 9, 0, 0),
+                tree.compareMarkPos, [0, 1], [1, 2]),
+            -1)

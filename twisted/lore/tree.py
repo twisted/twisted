@@ -1,13 +1,21 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
+from itertools import count
 import re, os, cStringIO, time, cgi, string, urlparse
-from twisted import copyright
+from xml.dom import minidom as microdom
+from xml.sax.handler import ErrorHandler, feature_validation
+from xml.dom.pulldom import SAX2DOM
+from xml.sax import make_parser
+from xml.sax.xmlreader import InputSource
+
 from twisted.python import htmlizer, text
-from twisted.web import microdom, domhelpers
+from twisted.python.filepath import FilePath
+from twisted.python.deprecate import deprecated
+from twisted.python.versions import Version
+from twisted.web import domhelpers
 import process, latex, indexer, numberer, htmlbook
-from twisted.python.util import InsensitiveDict
 
 # relative links to html files
 def fixLinks(document, ext):
@@ -36,9 +44,9 @@ def fixLinks(document, ext):
         href = node.getAttribute("href")
         if urlparse.urlparse(href)[0] in supported_schemes:
             continue
-        if node.getAttribute("class", "") == "absolute":
+        if node.getAttribute("class") == "absolute":
             continue
-        if node.getAttribute("class", "").find('listing') != -1:
+        if node.getAttribute("class").find('listing') != -1:
             continue
 
         # This is a relative link, so it should be munged.
@@ -66,7 +74,9 @@ def addMtime(document, fullpath):
     @return: C{None}
     """
     for node in domhelpers.findElementsWithAttribute(document, "class","mtime"):
-        node.appendChild(microdom.Text(time.ctime(os.path.getmtime(fullpath))))
+        txt = microdom.Text()
+        txt.data = time.ctime(os.path.getmtime(fullpath))
+        node.appendChild(txt)
 
 
 
@@ -108,10 +118,16 @@ def fixAPI(document, url):
     # API references
     for node in domhelpers.findElementsWithAttribute(document, "class", "API"):
         fullname = _getAPI(node)
-        node2 = microdom.Element('a', {'href': url%fullname, 'title': fullname})
-        node2.childNodes = node.childNodes
-        node.childNodes = [node2]
-        node.removeAttribute('base')
+        anchor = microdom.Element('a')
+        anchor.setAttribute('href', url % (fullname,))
+        anchor.setAttribute('title', fullname)
+        while node.childNodes:
+            child = node.childNodes[0]
+            node.removeChild(child)
+            anchor.appendChild(child)
+        node.appendChild(anchor)
+        if node.hasAttribute('base'):
+            node.removeAttribute('base')
 
 
 
@@ -153,7 +169,7 @@ def fontifyPythonNode(node):
     newel = microdom.parseString(newio.getvalue()).documentElement
     newel.setAttribute("class", "python")
     node.parentNode.replaceChild(newel, node)
-    newel.insertBefore(lineLabels, newel.firstChild())
+    newel.insertBefore(lineLabels, newel.firstChild)
 
 
 
@@ -184,13 +200,16 @@ def addPyListings(document, dir):
         filename = node.getAttribute("href")
         outfile = cStringIO.StringIO()
         lines = map(string.rstrip, open(os.path.join(dir, filename)).readlines())
-        lines = lines[int(node.getAttribute('skipLines', 0)):]
+
+        skip = node.getAttribute('skipLines') or 0
+        lines = lines[int(skip):]
         howManyLines = len(lines)
         data = '\n'.join(lines)
+
         data = cStringIO.StringIO(text.removeLeadingTrailingBlanks(data))
         htmlizer.filter(data, outfile, writer=htmlizer.SmallerHTMLWriter)
         sourceNode = microdom.parseString(outfile.getvalue()).documentElement
-        sourceNode.insertBefore(_makeLineNumbers(howManyLines), sourceNode.firstChild())
+        sourceNode.insertBefore(_makeLineNumbers(howManyLines), sourceNode.firstChild)
         _replaceWithListing(node, sourceNode.toxml(), filename, "py-listing")
 
 
@@ -212,8 +231,11 @@ def _makeLineNumbers(howMany):
     labels = ['%*d' % (width, i) for i in range(1, howMany + 1)]
 
     # Create a p element with the right style containing the labels
-    p = microdom.Element('p', {'class': 'py-linenumber'})
-    p.appendChild(microdom.Text('\n'.join(labels) + '\n'))
+    p = microdom.Element('p')
+    p.setAttribute('class', 'py-linenumber')
+    t = microdom.Text()
+    t.data = '\n'.join(labels) + '\n'
+    p.appendChild(t)
     return p
 
 
@@ -307,21 +329,44 @@ def generateToC(document):
     @return: a Node containing a table of contents based on the headers of the
     given document.
     """
-    toc, level, id = '\n<ol>\n', 0, 0
+    subHeaders = None
+    headers = []
     for element in getHeaders(document):
-        elementLevel = int(element.tagName[1])-2
-        toc += (level-elementLevel)*'</ul>\n'
-        toc += (elementLevel-level)*'<ul>'
-        toc += '<li><a href="#auto%d">' % id
-        toc += domhelpers.getNodeText(element)
-        toc += '</a></li>\n'
-        level = elementLevel
-        anchor = microdom.parseString('<a name="auto%d" />' % id).documentElement
-        element.childNodes.append(anchor)
-        id += 1
-    toc += '</ul>\n' * level
-    toc += '</ol>\n'
-    return microdom.parseString(toc).documentElement
+        if element.tagName == 'h2':
+            subHeaders = []
+            headers.append((element, subHeaders))
+        elif subHeaders is None:
+            raise ValueError(
+                "No H3 element is allowed until after an H2 element")
+        else:
+            subHeaders.append(element)
+
+    auto = count().next
+
+    def addItem(headerElement, parent):
+        anchor = microdom.Element('a')
+        name = 'auto%d' % (auto(),)
+        anchor.setAttribute('href', '#' + name)
+        text = microdom.Text()
+        text.data = domhelpers.getNodeText(headerElement)
+        anchor.appendChild(text)
+        headerNameItem = microdom.Element('li')
+        headerNameItem.appendChild(anchor)
+        parent.appendChild(headerNameItem)
+        anchor = microdom.Element('a')
+        anchor.setAttribute('name', name)
+        headerElement.appendChild(anchor)
+
+    toc = microdom.Element('ol')
+    for headerElement, subHeaders in headers:
+        addItem(headerElement, toc)
+        if subHeaders:
+            subtoc = microdom.Element('ul')
+            toc.appendChild(subtoc)
+            for subHeaderElement in subHeaders:
+                addItem(subHeaderElement, subtoc)
+
+    return toc
 
 
 
@@ -389,7 +434,8 @@ def footnotes(document):
                                     % vars()).documentElement
         text = ' '.join(domhelpers.getNodeText(footnote).split())
         href.setAttribute('title', text)
-        target = microdom.Element('a', attributes={'name': 'footnote-%d' % id})
+        target = microdom.Element('a')
+        target.setAttribute('name', 'footnote-%d' % (id,))
         target.childNodes = [footnote]
         footnoteContent = microdom.Element('li')
         footnoteContent.childNodes = [target]
@@ -428,13 +474,12 @@ def notes(document):
 def compareMarkPos(a, b):
     """
     Perform in every way identically to L{cmp} for valid inputs.
-
-    XXX - replace this with L{cmp}
     """
     linecmp = cmp(a[0], b[0])
     if linecmp:
         return linecmp
     return cmp(a[1], b[1])
+compareMarkPos = deprecated(Version('Twisted', 9, 0, 0))(compareMarkPos)
 
 
 
@@ -449,25 +494,28 @@ def comparePosition(firstElement, secondElement):
     @return: C{-1}, C{0}, or C{1}, with the same meanings as the return value
     of L{cmp}.
     """
-    return compareMarkPos(firstElement._markpos, secondElement._markpos)
+    return cmp(firstElement._markpos, secondElement._markpos)
+comparePosition = deprecated(Version('Twisted', 9, 0, 0))(comparePosition)
 
 
 
 def findNodeJustBefore(target, nodes):
     """
-    Find the node in C{nodes} which appeared immediately before C{target} in
-    the input document.
+    Find the last Element which is a sibling of C{target} and is in C{nodes}.
 
-    @type target: L{twisted.web.microdom.Element}
-    @type nodes: C{list} of L{twisted.web.microdom.Element}
-    @return: An element from C{nodes}
+    @param target: A node the previous sibling of which to return.
+    @param nodes: A list of nodes which might be the right node.
+
+    @return: The previous sibling of C{target}.
     """
-    result = None
-    for node in nodes:
-        if comparePosition(target, node) < 0:
-            return result
-        result = node
-    return result
+    while target is not None:
+        node = target.previousSibling
+        while node is not None:
+            if node in nodes:
+                return node
+            node = node.previousSibling
+        target = target.parentNode
+    raise RuntimeError("Oops")
 
 
 
@@ -495,15 +543,18 @@ def getSectionNumber(header):
     """
     Retrieve the section number of the given node.
 
+    This is probably intended to interact in a rather specific way with
+    L{numberDocument}.
+
     @type header: A DOM Node or L{None}
     @param header: The section from which to extract a number.  The section
-    number is the value of this node's first child.
+        number is the value of this node's first child.
 
     @return: C{None} or a C{str} giving the section number.
     """
     if not header:
         return None
-    return header.childNodes[0].value.strip()
+    return domhelpers.gatherTextNodes(header.childNodes[0])
 
 
 
@@ -560,10 +611,12 @@ def index(document, filename, chapterReference):
             ref = getSectionReference(entry) or chapterReference
         else:
             ref = 'link'
-        indexer.addEntry(filename, anchor, entry.attributes['value'], ref)
+        indexer.addEntry(filename, anchor, entry.getAttribute('value'), ref)
         # does nodeName even affect anything?
         entry.nodeName = entry.tagName = entry.endTagName = 'a'
-        entry.attributes = InsensitiveDict({'name': anchor})
+        for attrName in entry.attributes.keys():
+            entry.removeAttribute(attrName)
+        entry.setAttribute('name', anchor)
 
 
 
@@ -592,7 +645,9 @@ def setIndexLink(template, indexFilename):
             link.parentNode.removeChild(link)
         else:
             link.nodeName = link.tagName = link.endTagName = 'a'
-            link.attributes = InsensitiveDict({'href': indexFilename})
+            for attrName in link.attributes.keys():
+                link.removeAttribute(attrName)
+            link.setAttribute('href', indexFilename)
 
 
 
@@ -602,6 +657,9 @@ def numberDocument(document, chapterNumber):
 
     A dot-separated chapter, section number is added to the beginning of each
     section, as defined by C{h2} nodes.
+
+    This is probably intended to interact in a rather specific way with
+    L{getSectionNumber}.
 
     @type document: A DOM Node or Document
     @param document: The input document which contains all of the content to be
@@ -615,7 +673,9 @@ def numberDocument(document, chapterNumber):
     """
     i = 1
     for node in domhelpers.findNodesNamed(document, "h2"):
-        node.childNodes = [microdom.Text("%s.%d " % (chapterNumber, i))] + node.childNodes
+        label = microdom.Text()
+        label.data = "%s.%d " % (chapterNumber, i)
+        node.insertBefore(label, node.firstChild)
         i += 1
 
 
@@ -663,13 +723,20 @@ def setTitle(template, title, chapterNumber):
 
     @return: C{None}
     """
+    if numberer.getNumberSections() and chapterNumber:
+        titleNode = microdom.Text()
+        # This is necessary in order for cloning below to work.  See Python
+        # isuse 4851.
+        titleNode.ownerDocument = template.ownerDocument
+        titleNode.data = '%s. ' % (chapterNumber,)
+        title.insert(0, titleNode)
+
     for nodeList in (domhelpers.findNodesNamed(template, "title"),
                      domhelpers.findElementsWithAttribute(template, "class",
                                                           'title')):
         if nodeList:
-            if numberer.getNumberSections() and chapterNumber:
-                nodeList[0].childNodes.append(microdom.Text('%s. ' % chapterNumber))
-            nodeList[0].childNodes.extend(title)
+            for titleNode in title:
+                nodeList[0].appendChild(titleNode.cloneNode(True))
 
 
 
@@ -691,25 +758,34 @@ def setAuthors(template, authors):
 
     @return: C{None}
     """
-    # First, similarly to setTitle, insert text into an <div class="authors">
-    text = ''
-    for name, href in authors:
-        # FIXME: Do proper quoting/escaping (is it ok to use
-        # xml.sax.saxutils.{escape,quoteattr}?)
-        anchor = '<a href="%s">%s</a>' % (href, name)
-        if (name, href) == authors[-1]:
-            if len(authors) == 1:
-                text = anchor
-            else:
-                text += 'and ' + anchor
-        else:
-            text += anchor + ','
-
-    childNodes = microdom.parseString('<span>' + text +'</span>').childNodes
 
     for node in domhelpers.findElementsWithAttribute(template,
                                                      "class", 'authors'):
-        node.childNodes.extend(childNodes)
+
+        # First, similarly to setTitle, insert text into an <div
+        # class="authors">
+        container = microdom.Element('span')
+        for name, href in authors:
+            anchor = microdom.Element('a')
+            anchor.setAttribute('href', href)
+            anchorText = microdom.Text()
+            anchorText.data = name
+            anchor.appendChild(anchorText)
+            if (name, href) == authors[-1]:
+                if len(authors) == 1:
+                    container.appendChild(anchor)
+                else:
+                    andText = microdom.Text()
+                    andText.data = 'and '
+                    container.appendChild(andText)
+                    container.appendChild(anchor)
+            else:
+                container.appendChild(anchor)
+                commaText = microdom.Text()
+                commaText.data = ', '
+                container.appendChild(commaText)
+
+        node.appendChild(container)
 
     # Second, add appropriate <link rel="author" ...> tags to the <head>.
     head = domhelpers.findNodesNamed(template, 'head')[0]
@@ -735,7 +811,9 @@ def setVersion(template, version):
     """
     for node in domhelpers.findElementsWithAttribute(template, "class",
                                                                "version"):
-        node.appendChild(microdom.Text(version))
+        text = microdom.Text()
+        text.data = version
+        node.appendChild(text)
 
 
 
@@ -834,8 +912,10 @@ def munge(document, template, linkrel, dir, fullpath, ext, url, config, outfileG
           htmlbook.getReference(fullpath))
 
     authors = domhelpers.findNodesNamed(document, 'link')
-    authors = [(node.getAttribute('title',''), node.getAttribute('href', ''))
-               for node in authors if node.getAttribute('rel', '') == 'author']
+    authors = [(node.getAttribute('title') or '',
+                node.getAttribute('href') or '')
+               for node in authors
+               if node.getAttribute('rel') == 'author']
     setAuthors(template, authors)
 
     body = domhelpers.findNodesNamed(document, "body")[0]
@@ -845,7 +925,100 @@ def munge(document, template, linkrel, dir, fullpath, ext, url, config, outfileG
     tmplbody.setAttribute("class", "content")
 
 
-def parseFileAndReport(filename):
+class _LocationReportingErrorHandler(ErrorHandler):
+    """
+    Define a SAX error handler which can report the location of fatal
+    errors.
+
+    Unlike the errors reported during parsing by other APIs in the xml
+    package, this one tries to mismatched tag errors by including the
+    location of both the relevant opening and closing tags.
+    """
+    def __init__(self, contentHandler):
+        self.contentHandler = contentHandler
+
+    def fatalError(self, err):
+        # Unfortunately, the underlying expat error code is only exposed as
+        # a string.  I surely do hope no one ever goes and localizes expat.
+        if err.getMessage() == 'mismatched tag':
+            expect, begLine, begCol = self.contentHandler._locationStack[-1]
+            endLine, endCol = err.getLineNumber(), err.getColumnNumber()
+            raise process.ProcessingFailure(
+                "mismatched close tag at line %d, column %d; expected </%s> "
+                "(from line %d, column %d)" % (
+                    endLine, endCol, expect, begLine, begCol))
+        raise process.ProcessingFailure(
+            '%s at line %d, column %d' % (err.getMessage(),
+                                          err.getLineNumber(),
+                                          err.getColumnNumber()))
+
+
+class _TagTrackingContentHandler(SAX2DOM):
+    """
+    Define a SAX content handler which keeps track of the start location of
+    all open tags.  This information is used by the above defined error
+    handler to report useful locations when a fatal error is encountered.
+    """
+    def __init__(self):
+        SAX2DOM.__init__(self)
+        self._locationStack = []
+
+    def setDocumentLocator(self, locator):
+        self._docLocator = locator
+        SAX2DOM.setDocumentLocator(self, locator)
+
+    def startElement(self, name, attrs):
+        self._locationStack.append((name, self._docLocator.getLineNumber(), self._docLocator.getColumnNumber()))
+        SAX2DOM.startElement(self, name, attrs)
+
+    def endElement(self, name):
+        self._locationStack.pop()
+        SAX2DOM.endElement(self, name)
+
+
+class _LocalEntityResolver(object):
+    """
+    Implement DTD loading (from a local source) for the limited number of
+    DTDs which are allowed for Lore input documents.
+
+    @ivar filename: The name of the file containing the lore input
+        document.
+
+    @ivar knownDTDs: A mapping from DTD system identifiers to L{FilePath}
+        instances pointing to the corresponding DTD.
+    """
+    s = FilePath(__file__).sibling
+
+    knownDTDs = {
+        None: s("xhtml1-strict.dtd"),
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd": s("xhtml1-strict.dtd"),
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd": s("xhtml1-transitional.dtd"),
+        "xhtml-lat1.ent": s("xhtml-lat1.ent"),
+        "xhtml-symbol.ent": s("xhtml-symbol.ent"),
+        "xhtml-special.ent": s("xhtml-special.ent"),
+        }
+    del s
+
+    def __init__(self, filename):
+        self.filename = filename
+
+
+    def resolveEntity(self, publicId, systemId):
+        source = InputSource()
+        source.setSystemId(systemId)
+        try:
+            dtdPath = self.knownDTDs[systemId]
+        except KeyError:
+            raise process.ProcessingFailure(
+                "Invalid DTD system identifier (%r) in %s.  Only "
+                "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd "
+                "is allowed." % (systemId, self.filename))
+        source.setByteStream(dtdPath.open())
+        return source
+
+
+
+def parseFileAndReport(filename, _open=file):
     """
     Parse and return the contents of the given lore XHTML document.
 
@@ -859,18 +1032,49 @@ def parseFileAndReport(filename):
     @rtype: A DOM Document
     @return: The document contained in C{filename}.
     """
+    content = _TagTrackingContentHandler()
+    error = _LocationReportingErrorHandler(content)
+    parser = make_parser()
+    parser.setContentHandler(content)
+    parser.setErrorHandler(error)
+
+    # In order to call a method on the expat parser which will be used by this
+    # parser, we need the expat parser to be created.  This doesn't happen
+    # until reset is called, normally by the parser's parse method.  That's too
+    # late for us, since it will then go on to parse the document without
+    # letting us do any extra set up.  So, force the expat parser to be created
+    # here, and then disable reset so that the parser created is the one
+    # actually used to parse our document.  Resetting is only needed if more
+    # than one document is going to be parsed, and that isn't the case here.
+    parser.reset()
+    parser.reset = lambda: None
+
+    # This is necessary to make the xhtml1 transitional declaration optional.
+    # It causes LocalEntityResolver.resolveEntity(None, None) to be called.
+    # LocalEntityResolver handles that case by giving out the xhtml1
+    # transitional dtd.  Unfortunately, there is no public API for manipulating
+    # the expat parser when using xml.sax.  Using the private _parser attribute
+    # may break.  It's also possible that make_parser will return a parser
+    # which doesn't use expat, but uses some other parser.  Oh well. :(
+    # -exarkun
+    parser._parser.UseForeignDTD(True)
+    parser.setEntityResolver(_LocalEntityResolver(filename))
+
+    # This is probably no-op because expat is not a validating parser.  Who
+    # knows though, maybe you figured out a way to not use expat.
+    parser.setFeature(feature_validation, False)
+
+    fObj = _open(filename)
     try:
-        return microdom.parse(open(filename))
-    except microdom.MismatchedTags, e:
-        raise process.ProcessingFailure(
-              "%s:%s: begin mismatched tags <%s>/</%s>" %
-               (e.begLine, e.begCol, e.got, e.expect),
-              "%s:%s: end mismatched tags <%s>/</%s>" %
-               (e.endLine, e.endCol, e.got, e.expect))
-    except microdom.ParseError, e:
-        raise process.ProcessingFailure("%s:%s:%s" % (e.line, e.col, e.message))
-    except IOError, e:
-        raise process.ProcessingFailure(e.strerror + ", filename was '" + filename + "'")
+        try:
+            parser.parse(fObj)
+        except IOError, e:
+            raise process.ProcessingFailure(
+                e.strerror + ", filename was '" + filename + "'")
+    finally:
+        fObj.close()
+    return content.document
+
 
 def makeSureDirectoryExists(filename):
     filename = os.path.abspath(filename)
@@ -926,7 +1130,23 @@ def doFile(filename, linkrel, ext, url, templ, options={}, outfileGenerator=getO
     munge(doc, clonedNode, linkrel, os.path.dirname(filename), filename, ext,
           url, options, outfileGenerator)
     newFilename = outfileGenerator(filename, ext)
+    _writeDocument(newFilename, clonedNode)
+
+
+
+def _writeDocument(newFilename, clonedNode):
+    """
+    Serialize the given node to XML into the named file.
+
+    @param newFilename: The name of the file to which the XML will be
+        written.  If this is in a directory which does not exist, the
+        directory will be created.
+
+    @param clonedNode: The root DOM node which will be serialized.
+
+    @return: C{None}
+    """
     makeSureDirectoryExists(newFilename)
-    f = open(newFilename, 'wb')
-    clonedNode.writexml(f)
+    f = open(newFilename, 'w')
+    f.write(clonedNode.toxml('utf-8'))
     f.close()

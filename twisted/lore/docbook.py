@@ -1,13 +1,15 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-# 
+"""
+DocBook output support for Lore.
+"""
 
-from cStringIO import StringIO
-import os, re, cgi
-from twisted.python import text
-from twisted.web import domhelpers, microdom
-import latex, tree
+import os, cgi
+from xml.dom import minidom as microdom
+
+from twisted.lore import latex
+
 
 class DocbookSpitter(latex.BaseLatexSpitter):
 

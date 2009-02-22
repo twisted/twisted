@@ -1,7 +1,6 @@
 # -*- test-case-name: twisted.lore.test.test_man2lore -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 man2lore: Converts man page source (i.e. groff) into lore-compatible html.
@@ -109,6 +108,10 @@ class ManConverter(object):
 
 
     def macro_TH(self, line):
+        self.write(
+            '<?xml version="1.0"?>\n'
+            '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"\n'
+            '    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">\n')
         self.write('<html><head>\n')
         parts = [stripQuotes(x) for x in line.split(' ', 2)] + ['', '']
         title, manSection = parts[:2]

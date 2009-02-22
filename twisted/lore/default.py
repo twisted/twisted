@@ -1,11 +1,14 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
-from __future__ import nested_scopes
+"""
+Default processing factory plugin.
+"""
+
+from xml.dom import minidom as microdom
 
 from twisted.lore import tree, latex, lint, process
-from twisted.web import sux, microdom
+from twisted.web import sux
 
 htmlDefault = {'template': 'template.tpl', 'baseurl': '%s', 'ext': '.html'}
 

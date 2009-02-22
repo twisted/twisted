@@ -1,4 +1,4 @@
-# Copyright (c) 2008 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -12,6 +12,12 @@ from twisted.trial.unittest import TestCase
 
 from twisted.lore.man2lore import ManConverter
 
+
+_TRANSITIONAL_XHTML_DTD = ("""\
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+""")
 
 
 class ManConverterTestCase(TestCase):
@@ -44,7 +50,8 @@ class ManConverterTestCase(TestCase):
         inputFile.seek(0)
         outputFile = StringIO()
         self.converter.convert(inputFile, outputFile)
-        self.assertEquals(outputFile.getvalue(), expectedOutput)
+        self.assertEquals(
+            outputFile.getvalue(), _TRANSITIONAL_XHTML_DTD + expectedOutput)
 
 
     def test_convert(self):

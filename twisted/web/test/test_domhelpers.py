@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.web.test.test_domhelpers -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -22,7 +22,6 @@ class DOMHelpersTestsMixin:
     subclass.
     """
     dom = None
-
 
     def test_getElementsByTagName(self):
         doc1 = self.dom.parseString('<foo/>')
@@ -226,6 +225,15 @@ class DOMHelpersTestsMixin:
         self.assertEqual(domhelpers.unescape(j), expected)
 
 
+    def test_getNodeText(self):
+        """
+        L{getNodeText} returns the concatenation of all the text data at or
+        beneath the node passed to it.
+        """
+        node = self.dom.parseString('<foo><bar>baz</bar><bar>quux</bar></foo>')
+        self.assertEqual(domhelpers.getNodeText(node), "bazquux")
+
+
 
 class MicroDOMHelpersTests(DOMHelpersTestsMixin, TestCase):
     dom = microdom
@@ -280,3 +288,19 @@ class MiniDOMHelpersTests(DOMHelpersTestsMixin, TestCase):
         actual=domhelpers.gatherTextNodes(doc5.documentElement)
         self.assertEqual(actual, expected)
 
+
+    def test_getNodeUnicodeText(self):
+        """
+        L{domhelpers.getNodeText} returns a C{unicode} string when text
+        nodes are represented in the DOM with unicode, whether or not there
+        are non-ASCII characters present.
+        """
+        node = self.dom.parseString("<foo>bar</foo>")
+        text = domhelpers.getNodeText(node)
+        self.assertEqual(text, u"bar")
+        self.assertIsInstance(text, unicode)
+
+        node = self.dom.parseString(u"<foo>\N{SNOWMAN}</foo>".encode('utf-8'))
+        text = domhelpers.getNodeText(node)
+        self.assertEqual(text, u"\N{SNOWMAN}")
+        self.assertIsInstance(text, unicode)

@@ -1,4 +1,4 @@
-# Copyright (c) 2007-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2007-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -10,6 +10,7 @@ import operator
 import os, sys, signal
 from StringIO import StringIO
 import tarfile
+from xml.dom import minidom as dom
 
 try:
     from popen2 import Popen4
@@ -63,15 +64,9 @@ def genVersion(*args, **kwargs):
 
     @param args: Arguments to pass to L{Version}.
     @param kwargs: Keyword arguments to pass to L{Version}.
-    @type output: C{bool}
-    @param output: If passed as a keyword argument with a True value, replace
-        line endings with the platform's convention.
     """
-    output = kwargs.pop("output", False)
-    data = generateVersionFileData(Version(*args, **kwargs))
-    if output:
-        data = data.replace("\n", os.linesep)
-    return data
+    return generateVersionFileData(Version(*args, **kwargs))
+
 
 
 class StructureAssertingMixin(object):
@@ -89,8 +84,13 @@ class StructureAssertingMixin(object):
 
         @param dirDict: The dict defining the structure. Keys should be strings
             naming files, values should be strings describing file contents OR
-            dicts describing subdirectories. For example: C{{"foofile":
-            "foocontents", "bardir": {"barfile": "barcontents"}}}
+            dicts describing subdirectories.  All files are written in binary
+            mode.  Any string values are assumed to describe text files and
+            will have their newlines replaced with the platform-native newline
+            convention.  For example::
+
+                {"foofile": "foocontents",
+                 "bardir": {"barfile": "bar\ncontents"}}
         @type dirDict: C{dict}
         """
         for x in dirDict:
@@ -99,7 +99,7 @@ class StructureAssertingMixin(object):
                 child.createDirectory()
                 self.createStructure(child, dirDict[x])
             else:
-                child.setContent(dirDict[x])
+                child.setContent(dirDict[x].replace('\n', os.linesep))
 
     def assertStructure(self, root, dirDict):
         """
@@ -120,7 +120,7 @@ class StructureAssertingMixin(object):
                                 % (child.path,))
                 self.assertStructure(child, dirDict[x])
             else:
-                a = child.getContent()
+                a = child.getContent().replace(os.linesep, '\n')
                 self.assertEquals(a, dirDict[x], child.path)
             children.remove(x)
         if children:
@@ -242,12 +242,11 @@ class ChangeVersionTest(TestCase, StructureAssertingMixin):
                 "topfiles": {
                     "README": "Hi this is 1.0.2"},
                 "_version.py":
-                    genVersion("twisted", 1, 0, 2, output=True),
+                    genVersion("twisted", 1, 0, 2),
                 "web": {
                     "topfiles": {
                         "README": "Hi this is 1.0.2"},
-                    "_version.py": genVersion("twisted.web", 1, 0, 2,
-                                              output=True)
+                    "_version.py": genVersion("twisted.web", 1, 0, 2),
                     }}}
         self.assertStructure(root, outStructure)
 
@@ -488,6 +487,15 @@ class BuilderTestsMixin(object):
         self.docCounter = 0
 
 
+    def assertXMLEqual(self, first, second):
+        """
+        Verify that two strings represent the same XML document.
+        """
+        self.assertEqual(
+            dom.parseString(first).toxml(),
+            dom.parseString(second).toxml())
+
+
     def getArbitraryOutput(self, version, counter, prefix="", apiBaseURL="%s"):
         """
         Get the correct HTML output for the arbitrary input returned by
@@ -498,16 +506,20 @@ class BuilderTestsMixin(object):
         @param counter: A counter to include in the output.
         @type counter: C{int}
         """
-        document = ('<?xml version="1.0"?><html><head>'
-                    '<title>Yo:Hi! Title: %(count)s</title></head>'
-                    '<body><div class="content">Hi! %(count)s'
-                    '<div class="API"><a href="%(foobarLink)s" title="foobar">'
-                    'foobar</a></div></div><a href="%(prefix)sindex.html">'
-                    'Index</a><span class="version">Version: %(version)s'
-                    '</span></body></html>')
-        return document % {"count": counter, "prefix": prefix,
-                           "version": version,
-                           "foobarLink": apiBaseURL % ("foobar",)}
+        document = """\
+<?xml version="1.0"?><html>
+    <head><title>Yo:Hi! Title: %(count)d</title></head>
+    <body>
+    <div class="content">Hi! %(count)d<div class="API"><a href="%(foobarLink)s" title="foobar">foobar</a></div></div>
+    <a href="%(prefix)sindex.html">Index</a>
+    <span class="version">Version: %(version)s</span>
+    </body>
+    </html>"""
+        # Try to normalize irrelevant whitespace.
+        return dom.parseString(
+            document % {"count": counter, "prefix": prefix,
+                        "version": version,
+                        "foobarLink": apiBaseURL % ("foobar",)}).toxml('utf-8')
 
 
     def getArbitraryLoreInput(self, counter):
@@ -568,15 +580,34 @@ with this."""
         Get an arbitrary lore input document which represents man-to-lore
         output based on the man page returned from L{getArbitraryManInput}
         """
-        return ("<html><head>\n<title>MANHOLE.1</title>"
-            "</head>\n<body>\n\n<h1>MANHOLE.1</h1>\n\n<h2>NAME</h2>\n\n"
-            "<p>manhole - Connect to a Twisted Manhole service\n</p>\n\n"
-            "<h2>SYNOPSIS</h2>\n\n<p><strong>manhole</strong> </p>\n\n"
-            "<h2>DESCRIPTION</h2>\n\n<p>manhole is a GTK interface to Twisted "
-            "Manhole services. You can execute python\ncode as if at an "
-            "interactive Python console inside a running Twisted process\nwith"
-            " this.</p>\n\n</body>\n</html>\n")
+        return """\
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html><head>
+<title>MANHOLE.1</title></head>
+<body>
 
+<h1>MANHOLE.1</h1>
+
+<h2>NAME</h2>
+
+<p>manhole - Connect to a Twisted Manhole service
+</p>
+
+<h2>SYNOPSIS</h2>
+
+<p><strong>manhole</strong> </p>
+
+<h2>DESCRIPTION</h2>
+
+<p>manhole is a GTK interface to Twisted Manhole services. You can execute python
+code as if at an interactive Python console inside a running Twisted process
+with this.</p>
+
+</body>
+</html>
+"""
 
     def getArbitraryManHTMLOutput(self, version, prefix=""):
         """
@@ -589,17 +620,37 @@ with this."""
         @param prefix: The prefix to include in the link to the index.
         @type prefix: C{str}
         """
-        return ('<?xml version="1.0"?><html><head>'
-            '<title>Yo:MANHOLE.1</title></head><body><div class="content">'
-            '<span></span><h2>NAME<a name="auto0"></a></h2><p>manhole - '
-            'Connect to a Twisted Manhole service\n</p><h2>SYNOPSIS<a '
-            'name="auto1"></a></h2><p><strong>manhole</strong></p><h2>'
-            'DESCRIPTION<a name="auto2"></a></h2><p>manhole is a GTK '
-            'interface to Twisted Manhole services. You can execute '
-            'python\ncode as if at an interactive Python console inside a '
-            'running Twisted process\nwith this.</p></div><a '
-            'href="%sindex.html">Index</a><span class="version">Version: '
-            '%s</span></body></html>' % (prefix, version))
+        # Try to normalize the XML a little bit.
+        return dom.parseString("""\
+<?xml version="1.0" ?><html>
+    <head><title>Yo:MANHOLE.1</title></head>
+    <body>
+    <div class="content">
+
+<span/>
+
+<h2>NAME<a name="auto0"/></h2>
+
+<p>manhole - Connect to a Twisted Manhole service
+</p>
+
+<h2>SYNOPSIS<a name="auto1"/></h2>
+
+<p><strong>manhole</strong> </p>
+
+<h2>DESCRIPTION<a name="auto2"/></h2>
+
+<p>manhole is a GTK interface to Twisted Manhole services. You can execute python
+code as if at an interactive Python console inside a running Twisted process
+with this.</p>
+
+</div>
+    <a href="%(prefix)sindex.html">Index</a>
+    <span class="version">Version: %(version)s</span>
+    </body>
+    </html>""" % {
+            'prefix': prefix, 'version': version}).toxml("utf-8")
+
 
 
 
@@ -649,8 +700,8 @@ class DocBuilderTestCase(TestCase, BuilderTestsMixin):
                            self.templateFile)
         out1 = self.howtoDir.child('one.html')
         out2 = self.howtoDir.child('two.html')
-        self.assertEquals(out1.getContent(), output1)
-        self.assertEquals(out2.getContent(), output2)
+        self.assertXMLEqual(out1.getContent(), output1)
+        self.assertXMLEqual(out2.getContent(), output2)
 
 
     def test_noDocumentsFound(self):
@@ -978,17 +1029,37 @@ class ManBuilderTestCase(TestCase, BuilderTestsMixin):
         docBuilder.build("1.2.3", self.manDir, self.manDir,
                          templateFile)
         output = self.manDir.child('test1-man.html').getContent()
-        self.assertEquals(output, '<?xml version="1.0"?><html><head>'
-            '<title>Yo:MANHOLE.1</title></head><body><div class="content">'
-            '<span></span><h2>NAME<a name="auto0"></a></h2><p>manhole - '
-            'Connect to a Twisted Manhole service\n</p><h2>SYNOPSIS<a '
-            'name="auto1"></a></h2><p><strong>manhole</strong></p><h2>'
-            'DESCRIPTION<a name="auto2"></a></h2><p>manhole is a GTK '
-            'interface to Twisted Manhole services. You can execute '
-            'python\ncode as if at an interactive Python console inside a '
-            'running Twisted process\nwith this.</p></div><a '
-            'href="index.html">Index</a><span class="version">Version: '
-            '1.2.3</span></body></html>')
+
+        self.assertXMLEqual(
+            output,
+            """\
+<?xml version="1.0" ?><html>
+    <head><title>Yo:MANHOLE.1</title></head>
+    <body>
+    <div class="content">
+
+<span/>
+
+<h2>NAME<a name="auto0"/></h2>
+
+<p>manhole - Connect to a Twisted Manhole service
+</p>
+
+<h2>SYNOPSIS<a name="auto1"/></h2>
+
+<p><strong>manhole</strong> </p>
+
+<h2>DESCRIPTION<a name="auto2"/></h2>
+
+<p>manhole is a GTK interface to Twisted Manhole services. You can execute python
+code as if at an interactive Python console inside a running Twisted process
+with this.</p>
+
+</div>
+    <a href="index.html">Index</a>
+    <span class="version">Version: 1.2.3</span>
+    </body>
+    </html>""")
 
 
 
@@ -1022,7 +1093,6 @@ class BookBuilderTests(TestCase, BuilderTestsMixin):
         returned by C{self.getArbitraryLoreInput(counter)}.
         """
         path = self.howtoDir.child("%d.xhtml" % (counter,)).path
-        path = path[len(os.getcwd()) + 1:]
         return (
             r'\section{Hi! Title: %(count)s\label{%(path)s}}'
             '\n'
@@ -1995,4 +2065,4 @@ if lore is None:
     BookBuilderTests.skip = skipMessage
     DocBuilderTestCase.skip = skipMessage
     ManBuilderTestCase.skip = skipMessage
-    DistributionBuilderTests.skip = skipMessage
+    DistributionBuilderTest.skip = skipMessage

@@ -1,13 +1,17 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-# 
+"""
+Checker for common errors in Lore documents.
+"""
+
+from xml.dom import minidom as microdom
+import parser, urlparse, os.path
 
 from twisted.lore import tree, process
-from twisted.web import domhelpers, microdom
+from twisted.web import domhelpers
 from twisted.python import reflect
 
-import parser, urlparse, os.path
 
 # parser.suite in Python 2.3 raises SyntaxError, <2.3 raises parser.ParserError
 parserErrors = (SyntaxError, parser.ParserError)
