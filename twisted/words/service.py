@@ -175,7 +175,12 @@ class User(object):
 
 
 NICKSERV = 'NickServ!NickServ@services'
+
+
 class IRCUser(irc.IRC):
+    """
+    Protocol instance representing an IRC user connected to the server.
+    """
     implements(iwords.IChatClient)
 
     # A list of IGroups in which I am participating
@@ -196,6 +201,8 @@ class IRCUser(irc.IRC):
     # Twisted callbacks
     def connectionMade(self):
         self.irc_PRIVMSG = self.irc_NICKSERV_PRIVMSG
+        self.realm = self.factory.realm
+        self.hostname = self.realm.name
 
 
     def connectionLost(self, reason):
@@ -292,8 +299,13 @@ class IRCUser(irc.IRC):
             self.transport.loseConnection()
             return
 
+        self.nickname = nickname
+        self.name = nickname
+
+        for code, text in self._motdMessages:
+            self.sendMessage(code, text % self.factory._serverInfo)
+
         if self.password is None:
-            self.nickname = nickname
             self.privmsg(
                 NICKSERV,
                 nickname,
@@ -359,9 +371,15 @@ class IRCUser(irc.IRC):
         (irc.RPL_MYINFO,
          # w and n are the currently supported channel and user modes
          # -- specify this better
-         "%(serviceName)s %(serviceVersion)s w n"),
+         "%(serviceName)s %(serviceVersion)s w n")
         ]
 
+    _motdMessages = [
+        (irc.RPL_MOTDSTART,
+         ":- %(serviceName)s Message of the Day - "),
+        (irc.RPL_ENDOFMOTD,
+         ":End of /MOTD command.")
+        ]
 
     def _cbLogin(self, (iface, avatar, logout)):
         assert iface is iwords.IUser, "Realm is buggy, got %r" % (iface,)
@@ -371,16 +389,8 @@ class IRCUser(irc.IRC):
 
         self.avatar = avatar
         self.logout = logout
-        self.realm = avatar.realm
-        self.hostname = self.realm.name
-
-        info = {
-            "serviceName": self.hostname,
-            "serviceVersion": copyright.version,
-            "creationDate": ctime(), # XXX
-            }
         for code, text in self._welcomeMessages:
-            self.sendMessage(code, text % info)
+            self.sendMessage(code, text % self.factory._serverInfo)
 
 
     def _ebLogin(self, err, nickname):
@@ -860,11 +870,25 @@ class IRCUser(irc.IRC):
 
 
 class IRCFactory(protocol.ServerFactory):
+    """
+    IRC server that creates instances of the L{IRCUser} protocol.
+    
+    @ivar _serverInfo: A dictionary mapping:
+        "serviceName" to the name of the server,
+        "serviceVersion" to the copyright version,
+        "creationDate" to the time that the server was started.
+    """
     protocol = IRCUser
 
     def __init__(self, realm, portal):
         self.realm = realm
         self.portal = portal
+        self._serverInfo = {
+            "serviceName": self.realm.name,
+            "serviceVersion": copyright.version,
+            "creationDate": ctime()
+            }
+
 
 
 class PBMind(pb.Referenceable):

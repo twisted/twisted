@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -155,7 +155,7 @@ class RealmTestCase(unittest.TestCase):
         self.assertIdentical(p, group)
     testGroupAddition = dG(testGroupAddition)
 
-    
+
     def testGroupUsernameCollision(self):
         """
         Try creating a group with the same name as an existing user and
@@ -213,6 +213,7 @@ class TestPortal(object):
     def __init__(self):
         self.logins = []
 
+
     def login(self, credentials, mind, *interfaces):
         d = Deferred()
         self.logins.append((credentials, mind, interfaces, d))
@@ -228,6 +229,7 @@ class TestCaseUserAgg(object):
         self.user.mind = self.protocol
         self.protocol.makeConnection(self.transport)
 
+
     def write(self, stuff):
         if isinstance(stuff, unicode):
             stuff = stuff.encode('utf-8')
@@ -238,6 +240,7 @@ class IRCProtocolTestCase(unittest.TestCase):
     STATIC_USERS = [
         u'useruser', u'otheruser', u'someguy', u'firstuser', u'username',
         u'userone', u'usertwo', u'userthree', u'someuser']
+
 
     def setUp(self):
         self.realm = service.InMemoryWordsRealm("realmname")
@@ -253,14 +256,19 @@ class IRCProtocolTestCase(unittest.TestCase):
 
 
     def _assertGreeting(self, user):
+        """
+        The user has been greeted with the four messages that are (usually)
+        considered to start an IRC session.
+        
+        Asserts that the required responses were received.
+        """
         # Make sure we get 1-4 at least
         response = self._response(user)
-        expected = range(1, 5)
+        expected = [irc.RPL_WELCOME, irc.RPL_YOURHOST, irc.RPL_CREATED,
+                    irc.RPL_MYINFO]
         for (prefix, command, args) in response:
-            try:
-                expected.remove(int(command))
-            except KeyError:
-                pass
+            if command in expected:
+                expected.remove(command)
         self.failIf(expected, "Missing responses for %r" % (expected,))
 
 
@@ -281,10 +289,18 @@ class IRCProtocolTestCase(unittest.TestCase):
     _loggedInUser = dG(_loggedInUser)
 
 
-    def _response(self, user):
+    def _response(self, user, messageType=None):
+        """
+        Extracts the user's response, and returns a list of parsed lines.
+        If messageType is defined, only messages of that type will be returned.
+        """
         response = user.transport.value().splitlines()
         user.transport.clear()
-        return map(irc.parsemsg, response)
+        result = []
+        for message in map(irc.parsemsg, response):
+            if messageType is None or message[1] == messageType:
+                result.append(message)
+        return result
 
 
     def testPASSLogin(self):
@@ -295,14 +311,19 @@ class IRCProtocolTestCase(unittest.TestCase):
     testPASSLogin = dG(testPASSLogin)
 
 
-    def testNickServLogin(self):
+    def test_nickServLogin(self):
+        """
+        Sending NICK without PASS will prompt the user for their password.
+        When the user sends their password to NickServ, it will respond with a
+        Greeting.
+        """
         firstuser = wFD(self.realm.lookupUser(u'firstuser'))
         yield firstuser
         firstuser = firstuser.getResult()
 
         user = TestCaseUserAgg(firstuser, self.realm, self.factory)
         user.write('NICK firstuser extrainfo\r\n')
-        response = self._response(user)
+        response = self._response(user, 'PRIVMSG')
         self.assertEquals(len(response), 1)
         self.assertEquals(response[0][0], service.NICKSERV)
         self.assertEquals(response[0][1], 'PRIVMSG')
@@ -311,7 +332,7 @@ class IRCProtocolTestCase(unittest.TestCase):
 
         user.write('PRIVMSG nickserv firstuser_password\r\n')
         self._assertGreeting(user)
-    testNickServLogin = dG(testNickServLogin)
+    test_nickServLogin = dG(test_nickServLogin)
 
 
     def testFailedLogin(self):
@@ -321,7 +342,7 @@ class IRCProtocolTestCase(unittest.TestCase):
 
         user = TestCaseUserAgg(firstuser, self.realm, self.factory)
         self._login(user, "firstuser", "wrongpass")
-        response = self._response(user)
+        response = self._response(user, "PRIVMSG")
         self.assertEquals(len(response), 1)
         self.assertEquals(response[0][2], ['firstuser', 'Login failed.  Goodbye.'])
     testFailedLogin = dG(testFailedLogin)
@@ -885,11 +906,14 @@ class TestMind(service.PBMind):
     def remote_userJoined(self, user, group):
         self.joins.append((user, group))
 
+
     def remote_userLeft(self, user, group, reason):
         self.parts.append((user, group, reason))
 
+
     def remote_receive(self, sender, recipient, message):
         self.messages.append((sender, recipient, message))
+
 
     def remote_groupMetaUpdate(self, group, meta):
         self.meta.append((group, meta))
@@ -913,9 +937,11 @@ class PBProtocolTestCase(unittest.TestCase):
             self.serverPort.getHost().port,
             self.clientFactory)
 
+
     def _protocolFactory(self, *args, **kw):
         self._serverProtocol = pb.Broker(0)
         return self._serverProtocol
+
 
     def tearDown(self):
         d3 = Deferred()
@@ -924,12 +950,14 @@ class PBProtocolTestCase(unittest.TestCase):
             maybeDeferred(self.serverPort.stopListening),
             maybeDeferred(self.clientConn.disconnect), d3])
 
+
     def _loggedInAvatar(self, name, password, mind):
         creds = credentials.UsernamePassword(name, password)
         self.checker.addUser(name.encode('ascii'), password)
         d = self.realm.createUser(name)
         d.addCallback(lambda ign: self.clientFactory.login(creds, mind))
         return d
+
 
     def testGroups(self):
         mindone = TestMind()
