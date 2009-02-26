@@ -72,6 +72,7 @@ from errno import errorcode
 
 # Twisted Imports
 from twisted.internet import defer, base, address, fdesc
+from twisted.internet.task import deferLater
 from twisted.python import log, failure, reflect
 from twisted.python.util import unsignedID
 from twisted.internet.error import CannotListenError
@@ -956,13 +957,13 @@ class Port(base.BasePort, _SocketCloser):
 
         This will shut down the socket and call self.connectionLost().  It
         returns a deferred which will fire successfully when the port is
-        actually closed.
+        actually closed, or with a failure if an error occurs shutting down.
         """
         self.disconnecting = True
         self.stopReading()
         if self.connected:
-            self.deferred = defer.Deferred()
-            self.reactor.callLater(0, self.connectionLost, connDone)
+            self.deferred = deferLater(
+                self.reactor, 0, self.connectionLost, connDone)
             return self.deferred
 
     stopListening = loseConnection
@@ -974,10 +975,6 @@ class Port(base.BasePort, _SocketCloser):
         """
         log.msg('(Port %s Closed)' % self._realPortNumber)
         self._realPortNumber = None
-        d = None
-        if hasattr(self, "deferred"):
-            d = self.deferred
-            del self.deferred
 
         base.BasePort.connectionLost(self, reason)
         self.connected = False
@@ -987,16 +984,8 @@ class Port(base.BasePort, _SocketCloser):
 
         try:
             self.factory.doStop()
-        except:
+        finally:
             self.disconnecting = False
-            if d is not None:
-                d.errback(failure.Failure())
-            else:
-                raise
-        else:
-            self.disconnecting = False
-            if d is not None:
-                d.callback(None)
 
 
     def logPrefix(self):

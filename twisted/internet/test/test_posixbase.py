@@ -2,12 +2,14 @@
 # See LICENSE for details.
 
 """
-Tests for L{twisted.internet.posixbase}.
+Tests for L{twisted.internet.posixbase} and supporting code.
 """
 
 from twisted.python.compat import set
 from twisted.trial.unittest import TestCase
 from twisted.internet.posixbase import PosixReactorBase, _Waker
+from twisted.internet.protocol import ServerFactory
+from twisted.internet.tcp import Port
 
 
 class TrivialReactor(PosixReactorBase):
@@ -83,3 +85,22 @@ class PosixReactorBaseTests(TestCase):
         self.assertEqual(set(removed), set([reader, writer]))
         self.assertNotIn(reader, reactor._readers)
         self.assertNotIn(writer, reactor._writers)
+
+
+
+class TCPPortTests(TestCase):
+    """
+    Tests for L{twisted.internet.tcp.Port}.
+    """
+    def test_connectionLostFailed(self):
+        """
+        L{Port.stopListening} returns a L{Deferred} which errbacks if
+        L{Port.connectionLost} raises an exception.
+        """
+        class UniqueExceptionType(Exception):
+            pass
+
+        port = Port(12345, ServerFactory())
+        port.connected = True
+        port.connectionLost = lambda reason: 1 / 0
+        return self.assertFailure(port.stopListening(), ZeroDivisionError)

@@ -9,6 +9,7 @@ __metaclass__ = type
 
 import signal
 
+from twisted.internet.abstract import FileDescriptor
 from twisted.internet.error import ReactorAlreadyRunning
 from twisted.internet.defer import Deferred
 from twisted.internet.test.reactormixins import ReactorBuilder
@@ -145,6 +146,38 @@ class SystemEventTestsBuilder(ReactorBuilder):
         self.assertEqual(events, [])
         reactor.run()
         self.assertEqual(events, ["stopped", "before shutdown"])
+
+
+    def test_shutdownDisconnectsCleanly(self):
+        """
+        A L{IFileDescriptor.connectionLost} implementation which raises an
+        exception does not prevent the remaining L{IFileDescriptor}s from
+        having their C{connectionLost} method called.
+        """
+        lostOK = [False]
+
+        # Subclass FileDescriptor to get logPrefix
+        class ProblematicFileDescriptor(FileDescriptor):
+            def connectionLost(self, reason):
+                raise RuntimeError("simulated connectionLost error")
+
+        class OKFileDescriptor(FileDescriptor):
+            def connectionLost(self, reason):
+                lostOK[0] = True
+
+        reactor = self.buildReactor()
+
+        # Unfortunately, it is necessary to patch removeAll to directly control
+        # the order of the returned values.  The test is only valid if
+        # ProblematicFileDescriptor comes first.  Also, return these
+        # descriptors only the first time removeAll is called so that if it is
+        # called again the file descriptors aren't re-disconnected.
+        fds = iter([ProblematicFileDescriptor(), OKFileDescriptor()])
+        reactor.removeAll = lambda: fds
+        reactor.callWhenRunning(reactor.stop)
+        self.runReactor(reactor)
+        self.assertEqual(len(self.flushLoggedErrors(RuntimeError)), 1)
+        self.assertTrue(lostOK[0])
 
 
     def test_multipleRun(self):
