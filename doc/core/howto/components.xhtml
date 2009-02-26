@@ -312,9 +312,9 @@ whether an object implements an interface or not:</p>
 True
 &gt;&gt;&gt; IAmericanSocket.implementedBy(ForeignSocket)
 False
-&gt;&gt;&gt; as = AmericanSocket() 
+&gt;&gt;&gt; am = AmericanSocket() 
 &gt;&gt;&gt; fs = ForeignSocket()
-&gt;&gt;&gt; IAmericanSocket.providedBy(as)
+&gt;&gt;&gt; IAmericanSocket.providedBy(am)
 True
 &gt;&gt;&gt; IAmericanSocket.providedBy(fs)
 False
@@ -344,7 +344,7 @@ which already implements <code>IAmericanSocket</code>? We simply get back the
 original instance:</p>
 
 <pre class="python-interpreter">
-&gt;&gt;&gt; IAmericanSocket(as)
+&gt;&gt;&gt; IAmericanSocket(am)
 &lt;__main__.AmericanSocket instance at 0x36bff0&gt;
 </pre>
 
@@ -365,10 +365,10 @@ adapt itself automatically depending on the type of socket it is plugged in
 to:</p>
 
 <pre class="python-interpreter">
-&gt;&gt;&gt; as = AmericanSocket()
+&gt;&gt;&gt; am = AmericanSocket()
 &gt;&gt;&gt; fs = ForeignSocket()
 &gt;&gt;&gt; hd = HairDryer()
-&gt;&gt;&gt; hd.plug(as)
+&gt;&gt;&gt; hd.plug(am)
 I was plugged in properly and am operating
 &gt;&gt;&gt; hd.plug(fs)
 I was plugged in properly and am operating
