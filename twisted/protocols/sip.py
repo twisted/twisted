@@ -116,6 +116,7 @@ statusCodes = {
 TRYING = 100
 OK = 200
 RINGING = 180
+BAD_REQUEST = 400
 UNAUTHORIZED = 401
 NOT_FOUND = 404
 TIMEOUT = 408
@@ -631,7 +632,7 @@ class Response(Message):
         """
         response = cls(code)
         for name in ("via", "to", "from", "call-id", "cseq"):
-            response.headers[name] = request.headers.get(name, [])[:]
+            response.headers[name] = request.headers[name][:]
         return response
 
 
@@ -1561,11 +1562,34 @@ class SIPTransport(protocol.DatagramProtocol):
 
     def _handleRequest(self, msg, addr):
         """
-        Match up a received request to a server transaction for processing. If
-        there is none, deliver it to the transaction user, and if it returns a
-        new server transaction, register it. See RFC 3261 sections 18.2.1 and
-        17.2.3.
+        Make sure a received request is valid, then match it up with a server
+        transaction for processing. If there is none, deliver it to the
+        transaction user, and if it returns a new server transaction, register
+        it. See RFC 3261 sections 18.2.1 and 17.2.3.
         """
+        def _badRequest(err):
+            if err.check(SIPError):
+                code = err.value.code
+            else:
+                code = INTERNAL_ERROR
+            response = Response.fromRequest(code, msg)
+            st = ServerTransaction(self, self._transportUser, self._clock)
+            st.messageReceivedFromTU(response)
+            return st
+
+        invalidRequest = False
+        for header in ('to', 'from', 'call-id', 'via', 'max-forwards',
+                       'cseq'):
+            if header not in msg.headers:
+                invalidRequest = True
+                if header == 'via':
+                    msg.addHeader('via',
+                                  Via(host=addr[0], port=addr[1],
+                                      branch=msg.computeBranch()).toString())
+                else:
+                    msg.addHeader(header, '')
+        if invalidRequest:
+            return defer.fail(SIPError(BAD_REQUEST)).addErrback(_badRequest)
 
         via = parseViaHeader(msg.headers['via'][0])
 
@@ -1584,25 +1608,15 @@ class SIPTransport(protocol.DatagramProtocol):
             st = self._serverTransactions.get((via.branch, via.host,
                                                via.port, method))
 
+        def addNewServerTransaction(st):
+            if st:
+                if msg.method == 'INVITE':
+                    st.messageReceivedFromTU(Response.fromRequest(100, msg))
+                self._newServerTransaction(st, msg, via)
+
         if st:
             st.messageReceived(msg)
         else:
-            def addNewServerTransaction(st):
-                if st:
-                    if msg.method == 'INVITE':
-                        st.messageReceivedFromTU(Response.fromRequest(100, msg))
-                    self._newServerTransaction(st, msg, via)
-
-            def _badRequest(err):
-                if err.check(SIPError):
-                    code = err.value.code
-                else:
-                    code = INTERNAL_ERROR
-                response = Response.fromRequest(code, msg)
-                st = ServerTransaction(self, self._transportUser, self._clock)
-                st.messageReceivedFromTU(response)
-                return st
-
             return defer.maybeDeferred(self._transportUser.requestReceived, msg, addr
                                        ).addErrback(_badRequest
                                        ).addCallback(addNewServerTransaction

@@ -302,6 +302,15 @@ class MakeMessageTestCase(unittest.TestCase):
         self.assertEqual(response1.headers, response2.headers)
         self.assertEqual(response1.code, response2.code)
 
+    def test_fromRequestUniqueHeaders(self):
+        """
+        L{sip.Response.fromRequest} copies headers from the given request.
+        """
+        request = parseMessage(aliceInvite)
+        response = sip.Response.fromRequest(sip.REQUEST_TERMINATED, request)
+        for h in response.headers.keys():
+            self.assertNotIdentical(response.headers[h], request.headers[h])
+
 
 
 class ViaTestCase(unittest.TestCase):
@@ -856,6 +865,27 @@ class TransportTestCase(unittest.TestCase):
         """
         transport = sip.SIPTransport(None, ['example.org'], 5065, None)
         self.assertTrue(verifyObject(sip.ISIPTransport, transport))
+
+
+    def test_rejectIncompleteRequests(self):
+        """
+        Reject requests that don't have all the headers required to be valid.
+        See RFC 3261, section 8.1.1.
+        """
+        clock = Clock()
+        siptransport = sip.SIPTransport(None, ['example.org'], 5065, clock)
+        siptransport.transport = FakeDatagramTransport()
+        ds = []
+        def _check(st):
+            self.assertEqual(st._lastResponse.code, sip.BAD_REQUEST)
+        for header in ('to', 'from', 'call-id', 'via', 'max-forwards', 'cseq'):
+            msg = parseMessage(aliceInvite)
+            del msg.headers[header]
+            d = siptransport._handleRequest(msg, self.testAddr)
+            d.addCallback(_check)
+            ds.append(d)
+        return defer.gatherResults(ds)
+
 
 
 
@@ -2205,6 +2235,7 @@ To: <sip:exarkun@intarweb.us:50609>\r
 Contact: "exarkun" <sip:exarkun@192.168.1.100:50609>\r
 Call-ID: 94E7E5DAF39111D791C6000393764646@intarweb.us\r
 CSeq: 9898 REGISTER\r
+Max-Forwards: 70\r
 Expires: 500\r
 User-Agent: X-Lite build 1061\r
 Content-Length: 0\r
@@ -2231,6 +2262,7 @@ To: <sip:exarkun@intarweb.us:50609>\r
 Contact: "exarkun" <sip:exarkun@192.168.1.100:50609>\r
 Call-ID: 94E7E5DAF39111D791C6000393764646@intarweb.us\r
 CSeq: 9898 REGISTER\r
+Max-Forwards: 70\r
 Expires: 500\r
 User-Agent: X-Lite build 1061\r
 Content-Length: 0\r
