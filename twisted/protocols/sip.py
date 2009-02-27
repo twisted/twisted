@@ -1456,8 +1456,8 @@ class SIPTransport(protocol.DatagramProtocol):
         messages are received, and its `clientTransactionTerminated` method
         will be called when client transactions it has created terminate.
     @type _transactionUser: an provider of L{ITransactionUser}.
-    @ivar hosts: A sequence of hostnames this element is authoritative for.
-    @ivar port: The port number this element listens on.
+    @ivar hosts: A sequence of hostnames this transport is authoritative for.
+    @ivar port: The port number this transport listens on.
     @ivar _parser: A L{MessagesParser}.
     @ivar _messages: A list of L{Message}s not yet processed.
     @ivar _serverTransactions: A mapping of (branch, host, port, method) to
