@@ -1451,7 +1451,11 @@ class SIPTransport(protocol.DatagramProtocol):
     The UDP version of the transport layer of the SIP protocol. See RFC 3261
     section 18.
 
-    @ivar _transactionUser: an implementor of L{ITransactionUser}.
+    @ivar _transactionUser: A transaction user. Its `requestReceived` and
+        `responseReceived` methods will be called when (non-retransmitted)
+        messages are received, and its `clientTransactionTerminated` method
+        will be called when client transactions it has created terminate.
+    @type _transactionUser: an provider of L{ITransactionUser}.
     @ivar hosts: A sequence of hostnames this element is authoritative for.
     @ivar port: The port number this element listens on.
     @ivar _parser: A L{MessagesParser}.
@@ -1577,7 +1581,7 @@ class SIPTransport(protocol.DatagramProtocol):
             else:
                 code = INTERNAL_ERROR
             response = Response.fromRequest(code, msg)
-            st = ServerTransaction(self, self._transactionUser, self._clock)
+            st = ServerTransaction(self, self._clock)
             st.messageReceivedFromTU(response)
             return st
 
@@ -1739,10 +1743,9 @@ class ServerTransaction(object):
     have been sent.
     """
 
-    def __init__(self, transport, tu, clock):
+    def __init__(self, transport, clock):
         self._clock = clock
         self._transport = transport
-        self._transactionUser = tu
         self._mode = 'trying'
         self._lastResponse = None
 
@@ -1821,7 +1824,6 @@ class ServerInviteTransaction(object):
     17.2.1.
 
     @ivar _transport: The SIP transport protocol.
-    @ivar _transactionUser: An implementor if L{ITransactionUser}.
     @ivar clock: A provider of L{twisted.internet.interfaces.IReactorTime}.
     @ivar _mode: One of 'proceeding', 'completed', or 'terminated'.
     @ivar _lastResponse: The most recent response sent by the TU. None if none
@@ -1831,13 +1833,12 @@ class ServerInviteTransaction(object):
     @ivar _timerGTries: Number of retransmission attempts triggered by timer G.
     """
 
-    def __init__(self, transport, tu, clock):
+    def __init__(self, transport, clock):
         """
         @param transport: A L{SIPTransport}.
         """
         self._clock = clock
         self._transport = transport
-        self._transactionUser = tu
         self._mode = 'proceeding'
         self._timerG = None
         self._timerH = None
@@ -1914,7 +1915,8 @@ class ClientTransaction(object):
     17.1.2.
 
     @ivar _transport: The SIP transport protocol.
-    @ivar _transactionUser: An implementor if L{ITransactionUser}.
+    @ivar _transactionUser: The transaction user.
+    @type _transactionUser: A provider of L{ITransactionUser}
     @ivar clock: A provider of L{twisted.internet.interfaces.IReactorTime}.
     @ivar branch: A string to use as the 'branch' parameter in the Via header
     this transaction will insert when sending the request.
@@ -2032,7 +2034,8 @@ class ClientInviteTransaction(object):
     Implementation of INVITE client transactions. See RFC 3261, section 17.1.1.
 
     @ivar _transport: The SIP transport protocol.
-    @ivar _transactionUser: An implementor if L{ITransactionUser}.
+    @ivar _transactionUser: The transaction user.
+    @type _transactionUser: A provider of L{ITransactionUser}.
     @ivar clock: A provider of L{twisted.internet.interfaces.IReactorTime}.
     @ivar branch: A string to use as the 'branch' parameter in the Via header
     this transaction will insert when sending the request.

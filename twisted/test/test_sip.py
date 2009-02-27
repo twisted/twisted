@@ -751,7 +751,7 @@ class TransportTestCase(unittest.TestCase):
         class TU(object):
             def requestReceived(tu, msg, addr):
                 return sip.ServerInviteTransaction(self.siptransport,
-                                                   tu, clock)
+                                                   clock)
         self.siptransport = sip.SIPTransport(TU(), ['example.org'], 5060, clock)
         self.siptransport.sendResponse = lambda r: sent.append(r)
         self.siptransport.datagramReceived(aliceInvite, self.testAddr)
@@ -949,7 +949,7 @@ class ServerTransactionTestCase(unittest.TestCase):
         """
         msg = parseMessage(registerRequest2)
         tu = StubTransactionUser()
-        st = sip.ServerTransaction(None, tu, None)
+        st = sip.ServerTransaction(None, None)
         self.assertEqual(st._mode, 'trying')
         st.messageReceived(msg)
         self.assertEqual(st._mode, 'trying')
@@ -964,7 +964,7 @@ class ServerTransactionTestCase(unittest.TestCase):
         sent = []
         req = parseMessage(registerRequest2)
         response = sip.Response.fromRequest(sip.TRYING, req)
-        st = sip.ServerTransaction(StubTransport(sent), None, None)
+        st = sip.ServerTransaction(StubTransport(sent), None)
         st.messageReceivedFromTU(response)
         self.assertEqual(st._mode, 'proceeding')
         st.messageReceivedFromTU(response)
@@ -982,7 +982,7 @@ class ServerTransactionTestCase(unittest.TestCase):
         req = parseMessage(registerRequest2)
         response = sip.Response.fromRequest(sip.TRYING, req)
 
-        st = sip.ServerTransaction(StubTransport(sent), None, None)
+        st = sip.ServerTransaction(StubTransport(sent), None)
         st.messageReceivedFromTU(response)
         st.messageReceived(req)
         self.assertEqual(sent, [response, response])
@@ -999,7 +999,7 @@ class ServerTransactionTestCase(unittest.TestCase):
         req = parseMessage(registerRequest2)
         response1 = sip.Response.fromRequest(sip.TRYING, req)
         response2 = sip.Response.fromRequest(sip.UNAUTHORIZED, req)
-        st = sip.ServerTransaction(StubTransport(sent), None, clock)
+        st = sip.ServerTransaction(StubTransport(sent), clock)
         st.messageReceivedFromTU(response1)
         st.messageReceivedFromTU(response2)
         self.assertEqual(st._mode, 'completed')
@@ -1016,7 +1016,7 @@ class ServerTransactionTestCase(unittest.TestCase):
         sent = []
         req = parseMessage(registerRequest2)
         response = sip.Response.fromRequest(sip.UNAUTHORIZED, req)
-        st = sip.ServerTransaction(StubTransport(sent), None, clock)
+        st = sip.ServerTransaction(StubTransport(sent), clock)
         st.messageReceivedFromTU(response)
         self.assertEqual(st._mode, 'completed')
         self.assertEqual(sent, [response])
@@ -1033,14 +1033,12 @@ class ServerTransactionTestCase(unittest.TestCase):
         reliableTransport.reliable = True
         unreliableTransport = StubTransport([])
         unreliableTransport.reliable = False
-        tu = StubTransactionUser()
-        st = sip.ServerTransaction(unreliableTransport, tu, clock)
+        st = sip.ServerTransaction(unreliableTransport, clock)
         st._complete()
         self.assertEqual(st._mode, 'completed')
         clock.advance(64*sip._T1)
         self.assertEqual(st._mode, 'terminated')
-        st2 = sip.ServerTransaction(reliableTransport, StubTransactionUser(),
-                                    clock)
+        st2 = sip.ServerTransaction(reliableTransport, clock)
         st2._complete()
         self.assertEqual(st2._mode, 'terminated')
 
@@ -1055,7 +1053,7 @@ class ServerTransactionTestCase(unittest.TestCase):
         sent = []
         req = parseMessage(registerRequest2)
         response = sip.Response.fromRequest(sip.UNAUTHORIZED, req)
-        st = sip.ServerTransaction(StubTransport(sent), None, clock)
+        st = sip.ServerTransaction(StubTransport(sent), clock)
         st.messageReceivedFromTU(response)
         st.messageReceived(req)
         self.assertEqual(sent, [response, response])
@@ -1071,7 +1069,7 @@ class ServerTransactionTestCase(unittest.TestCase):
         req = parseMessage(registerRequest2)
         response = sip.Response.fromRequest(sip.UNAUTHORIZED, req)
         response2 = sip.Response.fromRequest(sip.INTERNAL_ERROR, req)
-        st = sip.ServerTransaction(StubTransport(sent), None, clock)
+        st = sip.ServerTransaction(StubTransport(sent), clock)
         st.messageReceivedFromTU(response)
         st.messageReceivedFromTU(response2)
         self.assertEqual(sent, [response])
@@ -1087,7 +1085,7 @@ class ServerTransactionTestCase(unittest.TestCase):
         response = sip.Response.fromRequest(sip.UNAUTHORIZED, req)
         t = StubTransport([])
         t.serverTransactionTerminated = lambda st: terminated.append(st)
-        st = sip.ServerTransaction(t, None, None)
+        st = sip.ServerTransaction(t, None)
         st._terminate()
         self.assertRaises(RuntimeError, st.messageReceived, req)
         self.assertRaises(RuntimeError, st.messageReceivedFromTU, response)
@@ -1102,7 +1100,7 @@ class ServerInviteTransactionTestCase(unittest.TestCase):
         """
         The initial state is "proceeding".
         """
-        st = sip.ServerInviteTransaction(None, None, None)
+        st = sip.ServerInviteTransaction(None, None)
         self.assertEqual(st._mode, 'proceeding')
 
 
@@ -1113,7 +1111,7 @@ class ServerInviteTransactionTestCase(unittest.TestCase):
         """
         sent = []
         req = parseMessage(aliceInvite)
-        st = sip.ServerInviteTransaction(StubTransport(sent), None, None)
+        st = sip.ServerInviteTransaction(StubTransport(sent), None)
         response = sip.Response.fromRequest(sip.RINGING, req)
         st.messageReceivedFromTU(response)
         self.assertIdentical(sent[0], response)
@@ -1126,7 +1124,7 @@ class ServerInviteTransactionTestCase(unittest.TestCase):
         """
         sent = []
         req = parseMessage(aliceInvite)
-        st = sip.ServerInviteTransaction(StubTransport(sent), None, None)
+        st = sip.ServerInviteTransaction(StubTransport(sent), None)
         trying = sip.Response.fromRequest(sip.TRYING, req)
         st.messageReceivedFromTU(trying)
         st.messageReceived(req)
@@ -1143,8 +1141,7 @@ class ServerInviteTransactionTestCase(unittest.TestCase):
         """
         sent = []
         req = parseMessage(aliceInvite)
-        tu = StubTransactionUser()
-        st = sip.ServerInviteTransaction(StubTransport(sent), tu, None)
+        st = sip.ServerInviteTransaction(StubTransport(sent), None)
         ok = sip.Response.fromRequest(sip.OK, req)
         st.messageReceivedFromTU(ok)
         self.assertIdentical(sent[0], ok)
@@ -1159,7 +1156,7 @@ class ServerInviteTransactionTestCase(unittest.TestCase):
         """
         sent = []
         req = parseMessage(aliceInvite)
-        st = sip.ServerInviteTransaction(StubTransport(sent), None, Clock())
+        st = sip.ServerInviteTransaction(StubTransport(sent), Clock())
         ok = sip.Response.fromRequest(sip.UNAUTHORIZED, req)
         st.messageReceivedFromTU(ok)
         self.assertIdentical(sent[0], ok)
@@ -1178,7 +1175,7 @@ class ServerInviteTransactionTestCase(unittest.TestCase):
         unreliableTransport.reliable = False
         sent = []
         req = parseMessage(aliceInvite)
-        st = sip.ServerInviteTransaction(StubTransport(sent), None, clock)
+        st = sip.ServerInviteTransaction(StubTransport(sent), clock)
         ok = sip.Response.fromRequest(sip.UNAUTHORIZED, req)
         st.messageReceivedFromTU(ok)
         clock.advance(sip._T1)
@@ -1209,7 +1206,7 @@ class ServerInviteTransactionTestCase(unittest.TestCase):
         reliableTransport.reliable = True
         req = parseMessage(aliceInvite)
         tu = StubTransactionUser()
-        st = sip.ServerInviteTransaction(reliableTransport, tu, clock)
+        st = sip.ServerInviteTransaction(reliableTransport, clock)
         st.messageReceivedFromTU(sip.Response.fromRequest(sip.UNAUTHORIZED,
                                                           req))
         clock.advance(64*sip._T1)
@@ -1226,7 +1223,7 @@ class ServerInviteTransactionTestCase(unittest.TestCase):
         sent = []
         req = parseMessage(aliceInvite)
         tu = StubTransactionUser()
-        st = sip.ServerInviteTransaction(StubTransport(sent), tu, clock)
+        st = sip.ServerInviteTransaction(StubTransport(sent), clock)
         ok = sip.Response.fromRequest(sip.UNAUTHORIZED, req)
         st.messageReceivedFromTU(ok)
         clock.advance(64*sip._T1)
@@ -1241,7 +1238,7 @@ class ServerInviteTransactionTestCase(unittest.TestCase):
         clock = Clock()
         sent = []
         req = parseMessage(aliceInvite)
-        st = sip.ServerInviteTransaction(StubTransport(sent), None, clock)
+        st = sip.ServerInviteTransaction(StubTransport(sent), clock)
         unauthorized = sip.Response.fromRequest(sip.UNAUTHORIZED, req)
         st.messageReceivedFromTU(unauthorized)
         st.messageReceived(req)
@@ -1259,7 +1256,7 @@ class ServerInviteTransactionTestCase(unittest.TestCase):
         sent = []
         req = parseMessage(aliceInvite)
         tu = StubTransactionUser()
-        st = sip.ServerInviteTransaction(StubTransport(sent), tu, clock)
+        st = sip.ServerInviteTransaction(StubTransport(sent), clock)
         err = sip.Response.fromRequest(sip.REQUEST_TERMINATED, req)
         st.messageReceivedFromTU(err)
         ack = parseMessage(alice487Ack)
@@ -1280,7 +1277,7 @@ class ServerInviteTransactionTestCase(unittest.TestCase):
         sent = []
         req = parseMessage(aliceInvite)
         tu = StubTransactionUser()
-        st = sip.ServerInviteTransaction(StubTransport(sent), tu, clock)
+        st = sip.ServerInviteTransaction(StubTransport(sent), clock)
         err = sip.Response.fromRequest(sip.REQUEST_TERMINATED, req)
         st.messageReceivedFromTU(err)
         ack = parseMessage(alice487Ack)
@@ -1300,7 +1297,7 @@ class ServerInviteTransactionTestCase(unittest.TestCase):
         t = StubTransport(sent)
         t.reliable = True
         tu = StubTransactionUser()
-        st = sip.ServerInviteTransaction(t, tu, clock)
+        st = sip.ServerInviteTransaction(t, clock)
         err = sip.Response.fromRequest(sip.REQUEST_TERMINATED, req)
         st.messageReceivedFromTU(err)
         ack = parseMessage(alice487Ack)
@@ -1319,7 +1316,7 @@ class ServerInviteTransactionTestCase(unittest.TestCase):
         response = sip.Response.fromRequest(sip.UNAUTHORIZED, req)
         t = StubTransport([])
         t.serverTransactionTerminated = lambda st: terminated.append(st)
-        st = sip.ServerInviteTransaction(t, None, None)
+        st = sip.ServerInviteTransaction(t, None)
         st._terminate()
         self.assertRaises(RuntimeError, st.messageReceived, req)
         self.assertRaises(RuntimeError, st.messageReceivedFromTU, response)
