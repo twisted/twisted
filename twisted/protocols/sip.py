@@ -16,7 +16,7 @@ See L{twisted.cred.credentials} and L{twisted.cred._digest} for its new home.
 
 # system imports
 import socket, time, sys, random, warnings
-from zope.interface import implements, Interface
+from zope.interface import implements, Interface, Attribute
 
 # twisted imports
 from twisted.python import log, util
@@ -1386,14 +1386,68 @@ class InMemoryRegistry:
 
 
 
+class ISIPTransport(Interface):
+    """
+    The transport layer of the SIP protocol. See RFC 3261
+    section 18.
+    """
+    hosts = Attribute("""
+                      A sequence of hostnames this transport is
+                      authoritative for.
+                      """)
+
+    port = Attribute("""
+                     The port number this transport listens on.
+                     """)
+
+    def isReliable():
+        """
+        Returns whether this transport uses a reliable protocol or not.
+
+        @rtype: C{bool}
+        """
+
+
+    def defaultHostname():
+        """
+        Returns the hostname used on outgoing messages to identify this
+        transport. Must be an item from C{hosts}.
+
+        @rtype: C{str}
+        """
+
+
+    def sendRequest(msg, target):
+        """
+        Send a request to a remote host. The top Via header is modified to
+        include sent-by information.
+
+        @param msg: The SIP request to be sent.
+        @type msg: L{Request}
+
+        @param target: A (host, port) tuple.
+        @type target: Tuple of (C{str}, C{int}).
+        """
+
+
+    def sendResponse(msg):
+        """
+        Send a response to a request, delivering it to the host the request was
+        received from.
+
+        @param msg: The SIP response to be sent.
+        @type msg: L{Response}
+        """
+
+
+
 class SIPTransport(protocol.DatagramProtocol):
     """
     The UDP version of the transport layer of the SIP protocol. See RFC 3261
     section 18.
 
     @ivar _transportUser: an implementor of L{ITransactionUser}.
-    @ivar hosts: A sequence of hostnames this element is authoritative for. The
-    first is used as the name for outgoing messages.
+    @ivar hosts: A sequence of hostnames this element is authoritative for.
     @ivar port: The port number this element listens on.
     @ivar _parser: A L{MessagesParser}.
     @ivar _messages: A list of L{Message}s not yet processed.
@@ -1408,13 +1462,13 @@ class SIPTransport(protocol.DatagramProtocol):
     @ivar _clock: A provider of L{twisted.internet.interfaces.IReactorTime}.
     """
 
+    implements(ISIPTransport)
 
     def __init__(self, tu, hosts, port, clock):
         """
         Set initial values.
         """
         self.hosts = hosts
-        self.host = self.hosts[0]
         self.port = port
         self._messages = []
         self._parser = MessagesParser(self._messages.append)
@@ -1424,10 +1478,18 @@ class SIPTransport(protocol.DatagramProtocol):
         self._clientTransactions = {}
         self._clock = clock
 
+    def defaultHostname(self):
+        """
+        @see: L{ISIPTransport.defaultHostname}
+        """
+        return self.hosts[0]
+
 
     def isReliable(self):
         """
-        Whether this SIP transport uses a protocol with reliable delivery.
+        UDP transports are unreliable.
+
+        @return: False
         """
         return False
 
@@ -1548,12 +1610,11 @@ class SIPTransport(protocol.DatagramProtocol):
 
     def sendRequest(self, msg, target):
         """
-        Add sent-by information to the top Via header in this message and send
-        it to the (host, port) target.
+        @see: L{ISIPTransport.sendRequest}
         """
 
         via = parseViaHeader(msg.headers['via'][0])
-        via.host = self.host
+        via.host = self.defaultHostname()
         via.port = self.port
         msg.headers['via'][0] = via.toString()
         txt = msg.toString()
@@ -1582,7 +1643,7 @@ class SIPTransport(protocol.DatagramProtocol):
 
     def sendResponse(self, msg):
         """
-        Determine the target for the response and send it.
+        @see: L{ISIPTransport.sendResponse}
         """
         via = parseViaHeader(msg.headers['via'][0])
         host = via.received or via.host

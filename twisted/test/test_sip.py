@@ -5,6 +5,8 @@
 
 """Session Initialization Protocol tests."""
 
+from zope.interface.verify import verifyObject
+
 from twisted.trial import unittest, util
 from twisted.protocols import sip
 from twisted.internet import defer, reactor
@@ -846,6 +848,15 @@ class TransportTestCase(unittest.TestCase):
                           siptransport.sendResponse, response)
         self.assertRaises(NotImplementedError,
                           siptransport.sendRequest, request, self.testAddr)
+
+
+    def test_implementsISIPTransport(self):
+        """
+        L{sip.SIPTransport} implements L{sip.ISIPTransport}.
+        """
+        transport = sip.SIPTransport(None, ['example.org'], 5065, None)
+        self.assertTrue(verifyObject(sip.ISIPTransport, transport))
+
 
 
 class StubTransport(object):
