@@ -587,7 +587,7 @@ class Message:
         section 8.1.1.7.  Proxies that want to support loop detection need to
         do more than this: see section 16.6.8.
         """
-        return VIA_COOKIE + ''.join(["%02x" % (random.randrange(0, 255),)
+        return VIA_COOKIE + ''.join(["%02x" % (random.randrange(256),)
                                      for _ in range(8)])
 
 
