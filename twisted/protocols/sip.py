@@ -605,9 +605,13 @@ class Request(Message):
         else:
             self.uri = parseURL(uri)
             cleanRequestURL(self.uri)
-    
+
+
     def __repr__(self):
-        return "<SIP Request %d:%s %s>" % (id(self), self.method, self.uri.toString())
+        return "<SIP Request %s:%s %s>" % (hex(util.unsignedID(self)),
+                                           self.method,
+                                           self.uri.toString())
+
 
     def _getHeaderLine(self):
         return "%s %s SIP/2.0" % (self.method, self.uri.toString())
@@ -650,7 +654,7 @@ class Response(Message):
         """
         Compact printable representation of a response.
         """
-        return "<SIP Response %d:%s>" % (id(self), self.code)
+        return "<SIP Response %s:%s>" % (hex(util.unsignedID(self)), self.code)
 
 
     def _getHeaderLine(self):

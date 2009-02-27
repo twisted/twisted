@@ -11,6 +11,7 @@ from twisted.trial import unittest, util
 from twisted.protocols import sip
 from twisted.internet import defer, reactor
 from twisted.python.versions import Version
+from twisted.python.util import unsignedID
 from twisted.internet.task import Clock
 from twisted.test.proto_helpers import FakeDatagramTransport
 
@@ -259,13 +260,20 @@ class MessageParsingTestCase2(MessageParsingTestCase):
 
 class MakeMessageTestCase(unittest.TestCase):
 
-    def testRequest(self):
+    def test_request(self):
+        """
+        Test creation of L{Request} objects and their string representation.
+        """
         r = sip.Request("INVITE", "sip:foo")
         r.addHeader("foo", "bar")
-        self.assertEquals(r.toString(), "INVITE sip:foo SIP/2.0\r\nFoo: bar\r\n\r\n")
+        self.assertEquals(r.toString(),
+                          "INVITE sip:foo SIP/2.0\r\nFoo: bar\r\n\r\n")
+        self.assertEquals(repr(r),
+                          "<SIP Request %s:INVITE sip:foo>" % (
+                hex(unsignedID(r)),))
 
 
-    def testResponse(self):
+    def test_response(self):
         """
         Test creation of L{Response} objects and their properties.
         """
@@ -276,7 +284,8 @@ class MakeMessageTestCase(unittest.TestCase):
         self.assertEquals(r.toString(),
                           "SIP/2.0 200 OK\r\nFoo: bar\r\nContent-Length: 4"
                           "\r\n\r\n1234")
-        self.assertEquals(repr(r), "<SIP Response %d:200>" % (id(r),))
+        self.assertEquals(repr(r),
+                          "<SIP Response %s:200>" % (hex(unsignedID(r),)))
 
 
     def testStatusCode(self):
