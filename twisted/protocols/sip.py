@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_sip -*-
+# -*- test-name: twisted.test.test_sip -*-
 
 # Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
@@ -1451,7 +1451,7 @@ class SIPTransport(protocol.DatagramProtocol):
     The UDP version of the transport layer of the SIP protocol. See RFC 3261
     section 18.
 
-    @ivar _transportUser: an implementor of L{ITransactionUser}.
+    @ivar _transactionUser: an implementor of L{ITransactionUser}.
     @ivar hosts: A sequence of hostnames this element is authoritative for.
     @ivar port: The port number this element listens on.
     @ivar _parser: A L{MessagesParser}.
@@ -1477,7 +1477,7 @@ class SIPTransport(protocol.DatagramProtocol):
         self.port = port
         self._messages = []
         self._parser = MessagesParser(self._messages.append)
-        self._transportUser = tu
+        self._transactionUser = tu
         self._serverTransactions = {}
         self._oldStyleServerTransactions = []
         self._clientTransactions = {}
@@ -1577,7 +1577,7 @@ class SIPTransport(protocol.DatagramProtocol):
             else:
                 code = INTERNAL_ERROR
             response = Response.fromRequest(code, msg)
-            st = ServerTransaction(self, self._transportUser, self._clock)
+            st = ServerTransaction(self, self._transactionUser, self._clock)
             st.messageReceivedFromTU(response)
             return st
 
@@ -1621,7 +1621,7 @@ class SIPTransport(protocol.DatagramProtocol):
         if st:
             st.messageReceived(msg)
         else:
-            return defer.maybeDeferred(self._transportUser.requestReceived, msg, addr
+            return defer.maybeDeferred(self._transactionUser.requestReceived, msg, addr
                                        ).addErrback(_badRequest
                                        ).addCallback(addNewServerTransaction
                                        ).addErrback(log.err)
@@ -1656,7 +1656,7 @@ class SIPTransport(protocol.DatagramProtocol):
             ct.request.headers['cseq'][0].split(' ')[1]):
             ct.messageReceived(msg)
         else:
-            self._transportUser.responseReceived(msg, None)
+            self._transactionUser.responseReceived(msg, None)
 
 
     def sendResponse(self, msg):
@@ -1742,7 +1742,7 @@ class ServerTransaction(object):
     def __init__(self, transport, tu, clock):
         self._clock = clock
         self._transport = transport
-        self._transportUser = tu
+        self._transactionUser = tu
         self._mode = 'trying'
         self._lastResponse = None
 
@@ -1821,7 +1821,7 @@ class ServerInviteTransaction(object):
     17.2.1.
 
     @ivar _transport: The SIP transport protocol.
-    @ivar tu: An implementor if L{ITransactionUser}.
+    @ivar _transactionUser: An implementor if L{ITransactionUser}.
     @ivar clock: A provider of L{twisted.internet.interfaces.IReactorTime}.
     @ivar _mode: One of 'proceeding', 'completed', or 'terminated'.
     @ivar _lastResponse: The most recent response sent by the TU. None if none
@@ -1837,7 +1837,7 @@ class ServerInviteTransaction(object):
         """
         self._clock = clock
         self._transport = transport
-        self._transportUser = tu
+        self._transactionUser = tu
         self._mode = 'proceeding'
         self._timerG = None
         self._timerH = None
@@ -1914,7 +1914,7 @@ class ClientTransaction(object):
     17.1.2.
 
     @ivar _transport: The SIP transport protocol.
-    @ivar tu: An implementor if L{ITransactionUser}.
+    @ivar _transactionUser: An implementor if L{ITransactionUser}.
     @ivar clock: A provider of L{twisted.internet.interfaces.IReactorTime}.
     @ivar branch: A string to use as the 'branch' parameter in the Via header
     this transaction will insert when sending the request.
@@ -1931,7 +1931,7 @@ class ClientTransaction(object):
         """
         self._clock = clock
         self._transport = transport
-        self._transportUser = tu
+        self._transactionUser = tu
         self.request = request
         self.target = target
         self._mode = 'trying'
@@ -1968,7 +1968,7 @@ class ClientTransaction(object):
         appropriate timeout/cancel error code.
         """
         self._stopTimers()
-        self._transportUser.responseReceived(Response.fromRequest(408,
+        self._transactionUser.responseReceived(Response.fromRequest(408,
                                                                   self.request),
                                         self)
         self._terminate()
@@ -1999,7 +1999,7 @@ class ClientTransaction(object):
                 del self._transport._clientTransactions[k]
                 break
 
-        self._transportUser.clientTransactionTerminated(self)
+        self._transactionUser.clientTransactionTerminated(self)
 
 
     def messageReceived(self, msg):
@@ -2023,7 +2023,7 @@ class ClientTransaction(object):
                 self._terminate()
             else:
                 self._timerK = self._clock.callLater(_T4, self._terminate)
-        self._transportUser.responseReceived(msg, self)
+        self._transactionUser.responseReceived(msg, self)
 
 
 
@@ -2032,7 +2032,7 @@ class ClientInviteTransaction(object):
     Implementation of INVITE client transactions. See RFC 3261, section 17.1.1.
 
     @ivar _transport: The SIP transport protocol.
-    @ivar tu: An implementor if L{ITransactionUser}.
+    @ivar _transactionUser: An implementor if L{ITransactionUser}.
     @ivar clock: A provider of L{twisted.internet.interfaces.IReactorTime}.
     @ivar branch: A string to use as the 'branch' parameter in the Via header
     this transaction will insert when sending the request.
@@ -2048,7 +2048,7 @@ class ClientInviteTransaction(object):
     def __init__(self, transport, tu, request, target, clock):
         self._clock = clock
         self._transport = transport
-        self._transportUser = tu
+        self._transactionUser = tu
         self.request = request
         self.target = target
         self._mode = 'calling'
@@ -2077,7 +2077,7 @@ class ClientInviteTransaction(object):
         appropriate timeout/cancel error code.
         """
         self._stopTimers()
-        self._transportUser.responseReceived(Response.fromRequest(408,
+        self._transactionUser.responseReceived(Response.fromRequest(408,
                                                                   self.request),
                                         self)
         self._terminate()
@@ -2108,7 +2108,7 @@ class ClientInviteTransaction(object):
                 del self._transport._clientTransactions[k]
                 break
 
-        self._transportUser.clientTransactionTerminated(self)
+        self._transactionUser.clientTransactionTerminated(self)
 
 
     def _ack(self, msg):
@@ -2150,7 +2150,7 @@ class ClientInviteTransaction(object):
             else:
                 self._terminate()
         self._stopTimers()
-        self._transportUser.responseReceived(msg, self)
+        self._transactionUser.responseReceived(msg, self)
 
 
     def cancel(self):
@@ -2171,7 +2171,7 @@ class ClientInviteTransaction(object):
                                     self._transport.port,
                                     branch=self.branch).toString())
 
-        cancelCT = ClientTransaction(self._transport, self._transportUser,
+        cancelCT = ClientTransaction(self._transport, self._transactionUser,
                                      cancel, self.target, self._clock)
         self._cancelDeferred.callback(cancelCT)
         return self._cancelDeferred
