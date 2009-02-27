@@ -1217,7 +1217,7 @@ class ServerInviteTransactionTestCase(unittest.TestCase):
         self.assertEquals(st._mode, 'confirmed')
         st.messageReceived(ack)
         st.messageReceived(ack)
-        st.clock.advance(64*sip._T1)
+        st._clock.advance(64*sip._T1)
         self.assertEquals(len(sent), 1)
 
 
@@ -1235,7 +1235,7 @@ class ServerInviteTransactionTestCase(unittest.TestCase):
         st.messageReceivedFromTU(err)
         ack = parseMessage(alice487Ack)
         st.messageReceived(ack)
-        st.clock.advance(sip._T4)
+        st._clock.advance(sip._T4)
         self.assertEquals(st._mode, 'terminated')
 
 
@@ -1255,7 +1255,7 @@ class ServerInviteTransactionTestCase(unittest.TestCase):
         st.messageReceivedFromTU(err)
         ack = parseMessage(alice487Ack)
         st.messageReceived(ack)
-        st.clock.advance(sip._T4)
+        st._clock.advance(sip._T4)
         self.assertEquals(st._mode, 'terminated')
 
 

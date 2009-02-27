@@ -1391,12 +1391,12 @@ class SIPTransport(protocol.DatagramProtocol):
     The UDP version of the transport layer of the SIP protocol. See RFC 3261
     section 18.
 
-    @ivar tu: an implementor of L{ITransactionUser}.
+    @ivar _transportUser: an implementor of L{ITransactionUser}.
     @ivar hosts: A sequence of hostnames this element is authoritative for. The
     first is used as the name for outgoing messages.
     @ivar port: The port number this element listens on.
-    @ivar parser: A L{MessagesParser}.
-    @ivar messages: A list of L{Message}s not yet processed.
+    @ivar _parser: A L{MessagesParser}.
+    @ivar _messages: A list of L{Message}s not yet processed.
     @ivar _serverTransactions: A mapping of (branch, host, port, method) to
     L{ServerTransaction} or L{ServerInviteTransaction} instances.
     @ivar _oldStyleServerTransactions: A list of pairs of Requests from
@@ -1405,7 +1405,7 @@ class SIPTransport(protocol.DatagramProtocol):
 
     @ivar _clientTransactions: A mapping of branch strings (from Via headers) to
     L{ClientTransaction} or L{ClientInviteTransaction} instances.
-    @ivar clock: A provider of L{twisted.internet.interfaces.IReactorTime}.
+    @ivar _clock: A provider of L{twisted.internet.interfaces.IReactorTime}.
     """
 
 
@@ -1413,16 +1413,16 @@ class SIPTransport(protocol.DatagramProtocol):
         """
         Set initial values.
         """
-        self.messages = []
-        self.parser = MessagesParser(self.messages.append)
-        self.tu = tu
         self.hosts = hosts
         self.host = self.hosts[0]
         self.port = port
+        self._messages = []
+        self._parser = MessagesParser(self._messages.append)
+        self._transportUser = tu
         self._serverTransactions = {}
         self._oldStyleServerTransactions = []
         self._clientTransactions = {}
-        self.clock = clock
+        self._clock = clock
 
 
     def isReliable(self):
@@ -1436,14 +1436,14 @@ class SIPTransport(protocol.DatagramProtocol):
         """
         Feed received datagrams to the SIP parser.
         """
-        self.parser.dataReceived(data)
-        self.parser.dataDone()
-        for m in self.messages:
+        self._parser.dataReceived(data)
+        self._parser.dataDone()
+        for m in self._messages:
             if isinstance(m, Request):
                 self._handleRequest(m, addr)
             else:
                 self._handleResponse(m, addr)
-        del self.messages[:]
+        del self._messages[:]
 
 
     def _newServerTransaction(self, st, msg, via):
@@ -1537,11 +1537,11 @@ class SIPTransport(protocol.DatagramProtocol):
                 else:
                     code = INTERNAL_ERROR
                 response = Response.fromRequest(code, msg)
-                st = ServerTransaction(self, self.tu, self.clock)
+                st = ServerTransaction(self, self._transportUser, self._clock)
                 st.messageReceivedFromTU(response)
                 return st
 
-            return defer.maybeDeferred(self.tu.requestReceived, msg, addr
+            return defer.maybeDeferred(self._transportUser.requestReceived, msg, addr
                                        ).addErrback(_badRequest
                                        ).addCallback(addNewServerTransaction
                                        ).addErrback(log.err)
@@ -1577,7 +1577,7 @@ class SIPTransport(protocol.DatagramProtocol):
             ct.request.headers['cseq'][0].split(' ')[1]):
             ct.messageReceived(msg)
         else:
-            self.tu.responseReceived(msg, None)
+            self._transportUser.responseReceived(msg, None)
 
 
     def sendResponse(self, msg):
@@ -1652,18 +1652,18 @@ class ServerTransaction(object):
     """
     Non-INVITE server transactions, as defined in RFC 3261, section 17.2.2.
 
-    @ivar transport: The L{SIPTransport} this transaction sends responses to
+    @ivar _transport: The L{SIPTransport} this transaction sends responses to
     and receives requests from.
-    @ivar clock: A provider of L{twisted.internet.interfaces.IReactorTime}.
+    @ivar _clock: A provider of L{twisted.internet.interfaces.IReactorTime}.
     @ivar _mode: One of 'trying', 'proceeding', 'completed', or 'terminated'.
     @ivar _lastResponse: The most recent response sent by the TU. None if none
     have been sent.
     """
 
     def __init__(self, transport, tu, clock):
-        self.clock = clock
-        self.transport = transport
-        self.tu = tu
+        self._clock = clock
+        self._transport = transport
+        self._transportUser = tu
         self._mode = 'trying'
         self._lastResponse = None
 
@@ -1674,7 +1674,7 @@ class ServerTransaction(object):
 
         @type msg: L{Response}
         """
-        self.transport.sendResponse(msg)
+        self._transport.sendResponse(msg)
         self._lastResponse = msg
 
 
@@ -1687,7 +1687,7 @@ class ServerTransaction(object):
         if self._mode == 'trying':
             pass
         elif self._mode in ['proceeding', 'completed']:
-            self.transport.sendResponse(self._lastResponse)
+            self._transport.sendResponse(self._lastResponse)
         elif self._mode == 'terminated':
             raise RuntimeError('No further requests should be directed to'
                                ' this transaction.')
@@ -1720,11 +1720,11 @@ class ServerTransaction(object):
         transport, and set the timer for termination. Otherwise change it to
         'terminated'.
         """
-        if self.transport.isReliable():
+        if self._transport.isReliable():
             self._terminate()
         else:
             self._mode = 'completed'
-            self.clock.callLater(64*_T1, self._terminate)
+            self._clock.callLater(64*_T1, self._terminate)
 
 
     def _terminate(self):
@@ -1732,7 +1732,7 @@ class ServerTransaction(object):
         Switch this transaction to the 'terminated' state and inform the TU.
         """
         self._mode = 'terminated'
-        self.transport.serverTransactionTerminated(self)
+        self._transport.serverTransactionTerminated(self)
 
 
 
@@ -1741,7 +1741,7 @@ class ServerInviteTransaction(object):
     Implementation of INVITE server transactions.  See RFC 3261, section
     17.2.1.
 
-    @ivar transport: The SIP transport protocol.
+    @ivar _transport: The SIP transport protocol.
     @ivar tu: An implementor if L{ITransactionUser}.
     @ivar clock: A provider of L{twisted.internet.interfaces.IReactorTime}.
     @ivar _mode: One of 'proceeding', 'completed', or 'terminated'.
@@ -1756,9 +1756,9 @@ class ServerInviteTransaction(object):
         """
         @param transport: A L{SIPTransport}.
         """
-        self.clock = clock
-        self.transport = transport
-        self.tu = tu
+        self._clock = clock
+        self._transport = transport
+        self._transportUser = tu
         self._mode = 'proceeding'
         self._timerG = None
         self._timerH = None
@@ -1776,24 +1776,24 @@ class ServerInviteTransaction(object):
             raise RuntimeError('No further responses can be sent in this '
                                'transaction.')
         self._lastResponse = msg
-        self.transport.sendResponse(msg)
+        self._transport.sendResponse(msg)
         if 200 <= msg.code < 300:
             self._terminate()
         elif msg.code >= 300:
             self._mode = 'completed'
             def timerGRetry():
                 self._timerGTries +=1
-                self.transport.sendResponse(self._lastResponse)
-                self._timerG = self.clock.callLater(
+                self._transport.sendResponse(self._lastResponse)
+                self._timerG = self._clock.callLater(
                     min((2**self._timerGTries)*_T1, _T2), timerGRetry)
-            if not self.transport.isReliable():
-                self._timerG = self.clock.callLater(_T1, timerGRetry)
+            if not self._transport.isReliable():
+                self._timerG = self._clock.callLater(_T1, timerGRetry)
             def _doTimerH():
                 if self._timerG is not None:
                     self._timerG.cancel()
                     self._timerG = None
                 self._terminate()
-            self._timerH = self.clock.callLater(64*_T1, _doTimerH)
+            self._timerH = self._clock.callLater(64*_T1, _doTimerH)
 
 
     def messageReceived(self, msg):
@@ -1812,12 +1812,12 @@ class ServerInviteTransaction(object):
             if self._timerG is not None:
                 self._timerG.cancel()
                 self._timerG = None
-            if not self.transport.isReliable():
-                self._timerI = self.clock.callLater(_T4, self._terminate)
+            if not self._transport.isReliable():
+                self._timerI = self._clock.callLater(_T4, self._terminate)
             else:
                 self._terminate()
         else:
-            self.transport.sendResponse(self._lastResponse)
+            self._transport.sendResponse(self._lastResponse)
 
 
     def _terminate(self):
@@ -1825,7 +1825,7 @@ class ServerInviteTransaction(object):
         Switch this transaction to the 'terminated' state and inform the TU.
         """
         self._mode = 'terminated'
-        self.transport.serverTransactionTerminated(self)
+        self._transport.serverTransactionTerminated(self)
 
 
 
@@ -1834,7 +1834,7 @@ class ClientTransaction(object):
     Implementation of non-INVITE client transactions. See RFC 3261, section
     17.1.2.
 
-    @ivar transport: The SIP transport protocol.
+    @ivar _transport: The SIP transport protocol.
     @ivar tu: An implementor if L{ITransactionUser}.
     @ivar clock: A provider of L{twisted.internet.interfaces.IReactorTime}.
     @ivar branch: A string to use as the 'branch' parameter in the Via header
@@ -1850,26 +1850,26 @@ class ClientTransaction(object):
         """
         Set up initial values and add a Via header to the request.
         """
-        self.clock = clock
-        self.transport = transport
-        self.tu = tu
+        self._clock = clock
+        self._transport = transport
+        self._transportUser = tu
         self.request = request
         self.target = target
         self._mode = 'trying'
         self._timerETries = 1
         self._timerE = None
         def timerERetry():
-            self.transport.sendRequest(self.request, self.target)
+            self._transport.sendRequest(self.request, self.target)
             if self._mode == 'proceeding':
                 later = _T2
             elif self._mode == 'trying':
                 self._timerETries +=1
                 later = min((2**self._timerETries)*_T1, _T2)
-            self._timerE = self.clock.callLater(
+            self._timerE = self._clock.callLater(
                 later, timerERetry)
-        if not self.transport.isReliable():
-            self._timerE = self.clock.callLater(_T1, timerERetry)
-        self._timerF = self.clock.callLater(64*_T1, self._doTimeout)
+        if not self._transport.isReliable():
+            self._timerE = self._clock.callLater(_T1, timerERetry)
+        self._timerF = self._clock.callLater(64*_T1, self._doTimeout)
 
         if self.request.method in ('ACK', 'CANCEL'):
             # code constructing ACKs and CANCELs are responsible for inserting
@@ -1879,8 +1879,8 @@ class ClientTransaction(object):
             self.branch = request.computeBranch()
             self.request.headers['via'].insert(0, Via(None, branch=self.branch
                                                       ).toString())
-        self.transport._clientTransactions[self.branch] = self
-        self.transport.sendRequest(self.request, self.target)
+        self._transport._clientTransactions[self.branch] = self
+        self._transport.sendRequest(self.request, self.target)
 
 
     def _doTimeout(self):
@@ -1889,7 +1889,8 @@ class ClientTransaction(object):
         appropriate timeout/cancel error code.
         """
         self._stopTimers()
-        self.tu.responseReceived(Response.fromRequest(408, self.request),
+        self._transportUser.responseReceived(Response.fromRequest(408,
+                                                                  self.request),
                                         self)
         self._terminate()
 
@@ -1914,12 +1915,12 @@ class ClientTransaction(object):
         transport and inform the TU.
         """
         self._mode = 'terminated'
-        for k, v in self.transport._clientTransactions.iteritems():
+        for k, v in self._transport._clientTransactions.iteritems():
             if v is self:
-                del self.transport._clientTransactions[k]
+                del self._transport._clientTransactions[k]
                 break
 
-        self.tu.clientTransactionTerminated(self)
+        self._transportUser.clientTransactionTerminated(self)
 
 
     def messageReceived(self, msg):
@@ -1939,11 +1940,11 @@ class ClientTransaction(object):
         else:
             self._mode = 'completed'
             self._stopTimers()
-            if self.transport.isReliable():
+            if self._transport.isReliable():
                 self._terminate()
             else:
-                self._timerK = self.clock.callLater(_T4, self._terminate)
-        self.tu.responseReceived(msg, self)
+                self._timerK = self._clock.callLater(_T4, self._terminate)
+        self._transportUser.responseReceived(msg, self)
 
 
 
@@ -1951,7 +1952,7 @@ class ClientInviteTransaction(object):
     """
     Implementation of INVITE client transactions. See RFC 3261, section 17.1.1.
 
-    @ivar transport: The SIP transport protocol.
+    @ivar _transport: The SIP transport protocol.
     @ivar tu: An implementor if L{ITransactionUser}.
     @ivar clock: A provider of L{twisted.internet.interfaces.IReactorTime}.
     @ivar branch: A string to use as the 'branch' parameter in the Via header
@@ -1966,27 +1967,27 @@ class ClientInviteTransaction(object):
     """
 
     def __init__(self, transport, tu, request, target, clock):
-        self.clock = clock
-        self.transport = transport
-        self.tu = tu
+        self._clock = clock
+        self._transport = transport
+        self._transportUser = tu
         self.request = request
         self.target = target
         self._mode = 'calling'
         self._timerATries = 0
         self._timerA = None
         self.branch = request.computeBranch()
-        self.transport._clientTransactions[self.branch] = self
+        self._transport._clientTransactions[self.branch] = self
         self.request.headers['via'].insert(0, Via(None, branch=self.branch))
 
         def timerARetry():
-            self.transport.sendRequest(self.request, self.target)
+            self._transport.sendRequest(self.request, self.target)
             if not transport.isReliable():
-                self._timerA = self.clock.callLater((2**self._timerATries)*_T1,
+                self._timerA = self._clock.callLater((2**self._timerATries)*_T1,
                                                     timerARetry)
                 self._timerATries +=1
 
         timerARetry()
-        self._timerB = self.clock.callLater(64*_T1, self._doTimeout)
+        self._timerB = self._clock.callLater(64*_T1, self._doTimeout)
         self._timerD = None
         self._cancelDeferred = None
 
@@ -1997,7 +1998,8 @@ class ClientInviteTransaction(object):
         appropriate timeout/cancel error code.
         """
         self._stopTimers()
-        self.tu.responseReceived(Response.fromRequest(408, self.request),
+        self._transportUser.responseReceived(Response.fromRequest(408,
+                                                                  self.request),
                                         self)
         self._terminate()
 
@@ -2022,12 +2024,12 @@ class ClientInviteTransaction(object):
         transport and inform the TU.
         """
         self._mode = 'terminated'
-        for k, v in self.transport._clientTransactions.iteritems():
+        for k, v in self._transport._clientTransactions.iteritems():
             if v is self:
-                del self.transport._clientTransactions[k]
+                del self._transport._clientTransactions[k]
                 break
 
-        self.tu.clientTransactionTerminated(self)
+        self._transportUser.clientTransactionTerminated(self)
 
 
     def _ack(self, msg):
@@ -2042,7 +2044,7 @@ class ClientInviteTransaction(object):
         ack.addHeader('cseq', cseq + " ACK")
         ack.headers['to'] = msg.headers['to']
         ack.addHeader('via', self.request.headers['via'][0])
-        self.transport.sendRequest(ack, self.target)
+        self._transport.sendRequest(ack, self.target)
 
 
     def messageReceived(self, msg):
@@ -2064,12 +2066,12 @@ class ClientInviteTransaction(object):
         else:
             self._mode = 'completed'
             self._ack(msg)
-            if not self.transport.isReliable():
-                self.timerD = self.clock.callLater(32, self._terminate)
+            if not self._transport.isReliable():
+                self.timerD = self._clock.callLater(32, self._terminate)
             else:
                 self._terminate()
         self._stopTimers()
-        self.tu.responseReceived(msg, self)
+        self._transportUser.responseReceived(msg, self)
 
 
     def cancel(self):
@@ -2086,12 +2088,12 @@ class ClientInviteTransaction(object):
             cancel.addHeader(hdr, self.request.headers[hdr][0])
         cseq = self.request.headers['cseq'][0].split(' ',1)[0]
         cancel.addHeader('cseq', cseq + " CANCEL")
-        cancel.addHeader('via', Via(self.transport.host,
-                                    self.transport.port,
+        cancel.addHeader('via', Via(self._transport.host,
+                                    self._transport.port,
                                     branch=self.branch).toString())
 
-        cancelCT = ClientTransaction(self.transport, self.tu, cancel,
-                                     self.target, self.clock)
+        cancelCT = ClientTransaction(self._transport, self._transportUser,
+                                     cancel, self.target, self._clock)
         self._cancelDeferred.callback(cancelCT)
         return self._cancelDeferred
 
