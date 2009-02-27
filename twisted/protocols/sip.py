@@ -1461,13 +1461,13 @@ class SIPTransport(protocol.DatagramProtocol):
     @ivar _parser: A L{MessagesParser}.
     @ivar _messages: A list of L{Message}s not yet processed.
     @ivar _serverTransactions: A mapping of (branch, host, port, method) to
-    L{ServerTransaction} or L{ServerInviteTransaction} instances.
+        L{ServerTransaction} or L{ServerInviteTransaction} instances.
     @ivar _oldStyleServerTransactions: A list of pairs of Requests from
-    non-RFC3261-compliant user agents, and L{ServerTransaction} or
-    L{ServerInviteTransaction} instances.
+        non-RFC3261-compliant user agents, and L{ServerTransaction} or
+        L{ServerInviteTransaction} instances.
 
     @ivar _clientTransactions: A mapping of branch strings (from Via headers) to
-    L{ClientTransaction} or L{ClientInviteTransaction} instances.
+        L{ClientTransaction} or L{ClientInviteTransaction} instances.
     @ivar _clock: A provider of L{twisted.internet.interfaces.IReactorTime}.
     """
 
@@ -1736,7 +1736,7 @@ class ServerTransaction(object):
     Non-INVITE server transactions, as defined in RFC 3261, section 17.2.2.
 
     @ivar _transport: The L{SIPTransport} this transaction sends responses to
-    and receives requests from.
+        and receives requests from.
     @ivar _clock: A provider of L{twisted.internet.interfaces.IReactorTime}.
     @ivar _mode: One of 'trying', 'proceeding', 'completed', or 'terminated'.
     @ivar _lastResponse: The most recent response sent by the TU. None if none
@@ -1827,7 +1827,7 @@ class ServerInviteTransaction(object):
     @ivar clock: A provider of L{twisted.internet.interfaces.IReactorTime}.
     @ivar _mode: One of 'proceeding', 'completed', or 'terminated'.
     @ivar _lastResponse: The most recent response sent by the TU. None if none
-    have been sent.
+        have been sent.
     @ivar _timerG: A L{twisted.internet.base.DelayedCall}, or None.
     @ivar _timerH: A L{twisted.internet.base.DelayedCall}, or None.
     @ivar _timerGTries: Number of retransmission attempts triggered by timer G.
@@ -1919,7 +1919,7 @@ class ClientTransaction(object):
     @type _transactionUser: A provider of L{ITransactionUser}
     @ivar clock: A provider of L{twisted.internet.interfaces.IReactorTime}.
     @ivar branch: A string to use as the 'branch' parameter in the Via header
-    this transaction will insert when sending the request.
+        this transaction will insert when sending the request.
     @ivar _mode: One of 'proceeding', 'completed', or 'terminated'.
     @ivar _timerETries: Number of retransmission attempts triggered by timer E.
     @ivar _timerE: A L{twisted.internet.base.DelayedCall}, or None.
@@ -2038,14 +2038,14 @@ class ClientInviteTransaction(object):
     @type _transactionUser: A provider of L{ITransactionUser}.
     @ivar clock: A provider of L{twisted.internet.interfaces.IReactorTime}.
     @ivar branch: A string to use as the 'branch' parameter in the Via header
-    this transaction will insert when sending the request.
+        this transaction will insert when sending the request.
     @ivar _mode: One of 'proceeding', 'completed', or 'terminated'.
     @ivar _timerA: A L{twisted.internet.base.DelayedCall}, or None.
     @ivar _timerB: A L{twisted.internet.base.DelayedCall}, or None.
     @ivar _timerD: A L{twisted.internet.base.DelayedCall}, or None.
     @ivar _timerATries: Number of retransmission attempts triggered by timer A.
     @ivar _cancelDeferred: When a cancellation is pending, a Deferred to be
-    fired when the CANCEL message is sent, otherwise None.
+        fired when the CANCEL message is sent, otherwise None.
     """
 
     def __init__(self, transport, tu, request, target, clock):
