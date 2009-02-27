@@ -113,12 +113,22 @@ statusCodes = {
     606: "Not Acceptable",
 }
 
+TRYING = 100
+OK = 200
+RINGING = 180
+UNAUTHORIZED = 401
+NOT_FOUND = 404
+TIMEOUT = 408
+REQUEST_TERMINATED = 487
+INTERNAL_ERROR = 500
+
 specialCases = {
     'cseq': 'CSeq',
     'call-id': 'Call-ID',
     'www-authenticate': 'WWW-Authenticate',
 }
 
+VIA_COOKIE = "z9hG4bK"
 
 def dashCapitalize(s):
     ''' Capitalize a string, making sure to treat - as a word seperator '''
@@ -571,6 +581,16 @@ class Message:
     def _getHeaderLine(self):
         raise NotImplementedError
 
+    def computeBranch(self):
+        """
+        Create a branch tag to uniquely identify this message.  See RFC3261
+        section 8.1.1.7.  Proxies that want to support loop detection need to
+        do more than this: see section 16.6.8.
+        """
+        return VIA_COOKIE + ''.join(["%02x" % (random.randrange(0, 255),)
+                                     for _ in range(8)])
+
+
 
 class Request(Message):
     """A Request for a URI"""
@@ -592,21 +612,52 @@ class Request(Message):
         return "%s %s SIP/2.0" % (self.method, self.uri.toString())
 
 
-class Response(Message):
-    """A Response to a URI Request"""
 
-    def __init__(self, code, phrase=None, version="SIP/2.0"):
+class Response(Message):
+    """
+    A SIP response message. See RFC 3261, section 7.2.
+
+    @param code: The response code.
+    @param phrase: A description of the response status.
+    """
+
+    def fromRequest(cls, code, request):
+        """
+        Create a response to a request, copying the essential headers from the
+        given request as per the rules in RFC 3261, section 8.2.6.2.
+
+        @param code: The SIP response code to use.
+        @param request: The request to respond to.
+        """
+        response = cls(code)
+        for name in ("via", "to", "from", "call-id", "cseq"):
+            response.headers[name] = request.headers.get(name, [])[:]
+        return response
+
+
+    fromRequest = classmethod(fromRequest)
+
+    def __init__(self, code, phrase=None):
         Message.__init__(self)
         self.code = code
         if phrase == None:
             phrase = statusCodes[code]
         self.phrase = phrase
 
+
     def __repr__(self):
+        """
+        Compact printable representation of a response.
+        """
         return "<SIP Response %d:%s>" % (id(self), self.code)
 
+
     def _getHeaderLine(self):
+        """
+        Returns the first line of the response message.
+        """
         return "SIP/2.0 %s %s" % (self.code, self.phrase)
+
 
 
 class MessagesParser(basic.LineReceiver):
@@ -1332,3 +1383,726 @@ class InMemoryRegistry:
 
     def unregisterAddress(self, domainURL, logicalURL, physicalURL):
         return self._expireRegistration(logicalURL.username)
+
+
+
+class SIPTransport(protocol.DatagramProtocol):
+    """
+    The UDP version of the transport layer of the SIP protocol. See RFC 3261
+    section 18.
+
+    @ivar tu: an implementor of L{ITransactionUser}.
+    @ivar hosts: A sequence of hostnames this element is authoritative for. The
+    first is used as the name for outgoing messages.
+    @ivar port: The port number this element listens on.
+    @ivar parser: A L{MessagesParser}.
+    @ivar messages: A list of L{Message}s not yet processed.
+    @ivar _serverTransactions: A mapping of (branch, host, port, method) to
+    L{ServerTransaction} or L{ServerInviteTransaction} instances.
+    @ivar _oldStyleServerTransactions: A list of pairs of Requests from
+    non-RFC3261-compliant user agents, and L{ServerTransaction} or
+    L{ServerInviteTransaction} instances.
+
+    @ivar _clientTransactions: A mapping of branch strings (from Via headers) to
+    L{ClientTransaction} or L{ClientInviteTransaction} instances.
+    @ivar clock: A provider of L{twisted.internet.interfaces.IReactorTime}.
+    """
+
+
+    def __init__(self, tu, hosts, port, clock):
+        """
+        Set initial values.
+        """
+        self.messages = []
+        self.parser = MessagesParser(self.messages.append)
+        self.tu = tu
+        self.hosts = hosts
+        self.host = self.hosts[0]
+        self.port = port
+        self._serverTransactions = {}
+        self._oldStyleServerTransactions = []
+        self._clientTransactions = {}
+        self.clock = clock
+
+
+    def isReliable(self):
+        """
+        Whether this SIP transport uses a protocol with reliable delivery.
+        """
+        return False
+
+
+    def datagramReceived(self, data, addr):
+        """
+        Feed received datagrams to the SIP parser.
+        """
+        self.parser.dataReceived(data)
+        self.parser.dataDone()
+        for m in self.messages:
+            if isinstance(m, Request):
+                self._handleRequest(m, addr)
+            else:
+                self._handleResponse(m, addr)
+        del self.messages[:]
+
+
+    def _newServerTransaction(self, st, msg, via):
+        """
+        Store a server transaction created by the TU so it can be matched up
+        with retransmissions of requests later.
+        """
+        if (via.branch and via.branch.startswith(VIA_COOKIE)):
+            self._serverTransactions[(via.branch, via.host,
+                                     via.port, msg.method)] = st
+        else:
+            self._oldStyleServerTransactions.append((st, msg))
+
+    def _matchOldStyleRequest(self, msg, via):
+        """
+        Requests sent by RFC 2543-compliant implementations do not have unique
+        branch parameters, so various elements of the message must be compared
+        to match it to a transaction.
+
+        @return: The matched server transaction, or None.
+        """
+
+        for (st, original) in self._oldStyleServerTransactions:
+            if original.method == "INVITE":
+                if msg.method in  ("INVITE", "CANCEL"):
+                    originalToTag = parseAddress(
+                        original.headers['to'][0])[2].get('tag','')
+                elif msg.method == "ACK":
+                    originalToTag = parseAddress(
+                        st._lastResponse.headers['to'][0])[2].get('tag','')
+                else:
+                    continue
+            else:
+                if original.method == msg.method:
+                    originalToTag = parseAddress(
+                        original.headers['to'][0])[2].get('tag','')
+                else:
+                    continue
+            #XXX URI comparison: #3582
+            if (original.uri.toString() == msg.uri.toString() and
+                (parseAddress(msg.headers['to'][0])[2].get('tag','') ==
+                 originalToTag) and
+                (parseAddress(msg.headers['from'][0])[2].get('tag','') ==
+                 parseAddress(original.headers['from'][0])[2].get('tag','')) and
+                original.headers['call-id'][0] == msg.headers['call-id'][0] and
+                (original.headers['cseq'][0].split(' ',1)[0] ==
+                 msg.headers['cseq'][0].split(' ',1)[0]) and
+                original.headers['via'][0] == msg.headers['via'][0]):
+                return st
+
+        return None
+
+
+    def _handleRequest(self, msg, addr):
+        """
+        Match up a received request to a server transaction for processing. If
+        there is none, deliver it to the transaction user, and if it returns a
+        new server transaction, register it. See RFC 3261 sections 18.2.1 and
+        17.2.3.
+        """
+
+        via = parseViaHeader(msg.headers['via'][0])
+
+        if via.host != addr[0]:
+            via.received = addr[0]
+        if via.rport is True:
+            via.rport = addr[1]
+        msg.headers['via'][0] = via.toString()
+
+        if not (via.branch and via.branch.startswith(VIA_COOKIE)):
+            st = self._matchOldStyleRequest(msg, via)
+        else:
+            method = msg.method
+            if method in ("ACK", "CANCEL"):
+                method = "INVITE"
+            st = self._serverTransactions.get((via.branch, via.host,
+                                               via.port, method))
+
+        if st:
+            st.messageReceived(msg)
+        else:
+            def addNewServerTransaction(st):
+                if st:
+                    if msg.method == 'INVITE':
+                        st.messageReceivedFromTU(Response.fromRequest(100, msg))
+                    self._newServerTransaction(st, msg, via)
+
+            def _badRequest(err):
+                if err.check(SIPError):
+                    code = err.value.code
+                else:
+                    code = INTERNAL_ERROR
+                response = Response.fromRequest(code, msg)
+                st = ServerTransaction(self, self.tu, self.clock)
+                st.messageReceivedFromTU(response)
+                return st
+
+            return defer.maybeDeferred(self.tu.requestReceived, msg, addr
+                                       ).addErrback(_badRequest
+                                       ).addCallback(addNewServerTransaction
+                                       ).addErrback(log.err)
+
+    def sendRequest(self, msg, target):
+        """
+        Add sent-by information to the top Via header in this message and send
+        it to the (host, port) target.
+        """
+
+        via = parseViaHeader(msg.headers['via'][0])
+        via.host = self.host
+        via.port = self.port
+        msg.headers['via'][0] = via.toString()
+        txt = msg.toString()
+        if len(txt) > 1300:
+            #XXX add support for TCP: #3626
+            raise NotImplementedError, "Message too big for UDP."
+        self.transport.write(txt, target)
+
+
+    def _handleResponse(self, msg, target):
+        """
+        Deliver responses to client transactions, if any match. Otherwise
+        deliver directly to the transaction user.
+        """
+        via = parseViaHeader(msg.headers['via'][0])
+        if not (via.host in self.hosts and via.port == self.port):
+            #drop silently
+            return
+        ct = self._clientTransactions.get(via.branch)
+        if (ct and msg.headers['cseq'][0].split(' ')[1] ==
+            ct.request.headers['cseq'][0].split(' ')[1]):
+            ct.messageReceived(msg)
+        else:
+            self.tu.responseReceived(msg, None)
+
+
+    def sendResponse(self, msg):
+        """
+        Determine the target for the response and send it.
+        """
+        via = parseViaHeader(msg.headers['via'][0])
+        host = via.received or via.host
+        if via.rport is not None:
+            port = via.rport
+        else:
+            port = via.port or PORT
+        txt = msg.toString()
+        if len(txt) > 1300:
+            #XXX add support for TCP: #3626
+            raise NotImplementedError, "Message too big for UDP."
+        self.transport.write(txt, (host, port))
+
+
+
+class ITransactionUser(Interface):
+    """
+    Providers of this interface fill the 'Transaction User' role, as described
+    in RFC3261, section 5.
+    """
+
+    def start(transport):
+        """Connects the transport to the TU.
+
+        @param transport: a L{SIPTransport} instance.
+        """
+
+
+    def requestReceived(msg, addr):
+        """
+        Processes a message, after the transport and transaction layer are
+        finished with it. May return a L{ServerTransaction} (or
+        L{ServerInviteTransaction}), which will handle subsequent messages from
+        that SIP transaction.
+
+        @param msg: a L{Message} instance
+        @param addr: a C{(host, port)} tuple
+        """
+
+
+    def responseReceived(msg, ct=None):
+        """
+        Processes a response received from the transport, along with the client
+        transaction it is a part of, if any.
+
+        @param msg: a L{Message} instance.
+
+        @param ct: a L{ClientTransaction} or L{ClientInviteTransaction}
+        instance that represents the SIP transaction the given message is a
+        part of.
+        """
+
+
+    def clientTransactionTerminated(ct):
+        """
+        Called when a client transaction created by this TU transitions to the
+        'terminated' state.
+
+        @param ct: a L{ClientTransaction} or L{ClientInviteTransaction}
+        instance that has been terminated, either by a timeout or by a message
+        separately sent to C{responseReceived}.
+        """
+
+
+
+class ServerTransaction(object):
+    """
+    Non-INVITE server transactions, as defined in RFC 3261, section 17.2.2.
+
+    @ivar transport: The L{SIPTransport} this transaction sends responses to
+    and receives requests from.
+    @ivar clock: A provider of L{twisted.internet.interfaces.IReactorTime}.
+    @ivar _mode: One of 'trying', 'proceeding', 'completed', or 'terminated'.
+    @ivar _lastResponse: The most recent response sent by the TU. None if none
+    have been sent.
+    """
+
+    def __init__(self, transport, tu, clock):
+        self.clock = clock
+        self.transport = transport
+        self.tu = tu
+        self._mode = 'trying'
+        self._lastResponse = None
+
+
+    def _respond(self, msg):
+        """
+        Send a response to the transport.
+
+        @type msg: L{Response}
+        """
+        self.transport.sendResponse(msg)
+        self._lastResponse = msg
+
+
+    def messageReceived(self, msg):
+        """
+        Deal with requests received from the transport.
+
+        @param msg: A L{Request}.
+        """
+        if self._mode == 'trying':
+            pass
+        elif self._mode in ['proceeding', 'completed']:
+            self.transport.sendResponse(self._lastResponse)
+        elif self._mode == 'terminated':
+            raise RuntimeError('No further requests should be directed to'
+                               ' this transaction.')
+
+
+    def messageReceivedFromTU(self, msg):
+        """
+        Deal with responses sent by the transaction user.
+
+        @param msg: A L{Response}.
+        """
+        if self._mode == 'trying':
+            self._respond(msg)
+            if 100 <= msg.code < 200:
+                self._mode = 'proceeding'
+            else:
+                self._complete()
+        elif self._mode == 'proceeding':
+            self._respond(msg)
+            if msg.code >= 200:
+                self._complete()
+        elif self._mode == 'terminated':
+            raise RuntimeError('No further responses can be sent in this '
+                               'transaction.')
+
+
+    def _complete(self):
+        """
+        Change the transaction's state to 'completed', if on an unreliable
+        transport, and set the timer for termination. Otherwise change it to
+        'terminated'.
+        """
+        if self.transport.isReliable():
+            self._terminate()
+        else:
+            self._mode = 'completed'
+            self.clock.callLater(64*_T1, self._terminate)
+
+
+    def _terminate(self):
+        """
+        Switch this transaction to the 'terminated' state and inform the TU.
+        """
+        self._mode = 'terminated'
+        self.transport.serverTransactionTerminated(self)
+
+
+
+class ServerInviteTransaction(object):
+    """
+    Implementation of INVITE server transactions.  See RFC 3261, section
+    17.2.1.
+
+    @ivar transport: The SIP transport protocol.
+    @ivar tu: An implementor if L{ITransactionUser}.
+    @ivar clock: A provider of L{twisted.internet.interfaces.IReactorTime}.
+    @ivar _mode: One of 'proceeding', 'completed', or 'terminated'.
+    @ivar _lastResponse: The most recent response sent by the TU. None if none
+    have been sent.
+    @ivar _timerG: A L{twisted.internet.base.DelayedCall}, or None.
+    @ivar _timerH: A L{twisted.internet.base.DelayedCall}, or None.
+    @ivar _timerGTries: Number of retransmission attempts triggered by timer G.
+    """
+
+    def __init__(self, transport, tu, clock):
+        """
+        @param transport: A L{SIPTransport}.
+        """
+        self.clock = clock
+        self.transport = transport
+        self.tu = tu
+        self._mode = 'proceeding'
+        self._timerG = None
+        self._timerH = None
+        self._timerGTries = 1
+        self._lastResponse = None
+
+
+    def messageReceivedFromTU(self, msg):
+        """
+        Deal with responses sent by the transaction user.
+
+        @param msg: A L{Response}.
+        """
+        if self._mode == 'terminated':
+            raise RuntimeError('No further responses can be sent in this '
+                               'transaction.')
+        self._lastResponse = msg
+        self.transport.sendResponse(msg)
+        if 200 <= msg.code < 300:
+            self._terminate()
+        elif msg.code >= 300:
+            self._mode = 'completed'
+            def timerGRetry():
+                self._timerGTries +=1
+                self.transport.sendResponse(self._lastResponse)
+                self._timerG = self.clock.callLater(
+                    min((2**self._timerGTries)*_T1, _T2), timerGRetry)
+            if not self.transport.isReliable():
+                self._timerG = self.clock.callLater(_T1, timerGRetry)
+            def _doTimerH():
+                if self._timerG is not None:
+                    self._timerG.cancel()
+                    self._timerG = None
+                self._terminate()
+            self._timerH = self.clock.callLater(64*_T1, _doTimerH)
+
+
+    def messageReceived(self, msg):
+        """
+        Deal with requests received from the transport.
+
+        @param msg: A L{Request}.
+        """
+        if self._mode == 'terminated':
+            raise RuntimeError('No further requests should be directed to'
+                               ' this transaction.')
+        if self._mode == 'confirmed':
+            return
+        if msg.method == 'ACK':
+            self._mode = 'confirmed'
+            if self._timerG is not None:
+                self._timerG.cancel()
+                self._timerG = None
+            if not self.transport.isReliable():
+                self._timerI = self.clock.callLater(_T4, self._terminate)
+            else:
+                self._terminate()
+        else:
+            self.transport.sendResponse(self._lastResponse)
+
+
+    def _terminate(self):
+        """
+        Switch this transaction to the 'terminated' state and inform the TU.
+        """
+        self._mode = 'terminated'
+        self.transport.serverTransactionTerminated(self)
+
+
+
+class ClientTransaction(object):
+    """
+    Implementation of non-INVITE client transactions. See RFC 3261, section
+    17.1.2.
+
+    @ivar transport: The SIP transport protocol.
+    @ivar tu: An implementor if L{ITransactionUser}.
+    @ivar clock: A provider of L{twisted.internet.interfaces.IReactorTime}.
+    @ivar branch: A string to use as the 'branch' parameter in the Via header
+    this transaction will insert when sending the request.
+    @ivar _mode: One of 'proceeding', 'completed', or 'terminated'.
+    @ivar _timerETries: Number of retransmission attempts triggered by timer E.
+    @ivar _timerE: A L{twisted.internet.base.DelayedCall}, or None.
+    @ivar _timerF: A L{twisted.internet.base.DelayedCall}, or None.
+    @ivar _timerK: A L{twisted.internet.base.DelayedCall}, or None.
+    """
+
+    def __init__(self, transport, tu, request, target, clock):
+        """
+        Set up initial values and add a Via header to the request.
+        """
+        self.clock = clock
+        self.transport = transport
+        self.tu = tu
+        self.request = request
+        self.target = target
+        self._mode = 'trying'
+        self._timerETries = 1
+        self._timerE = None
+        def timerERetry():
+            self.transport.sendRequest(self.request, self.target)
+            if self._mode == 'proceeding':
+                later = _T2
+            elif self._mode == 'trying':
+                self._timerETries +=1
+                later = min((2**self._timerETries)*_T1, _T2)
+            self._timerE = self.clock.callLater(
+                later, timerERetry)
+        if not self.transport.isReliable():
+            self._timerE = self.clock.callLater(_T1, timerERetry)
+        self._timerF = self.clock.callLater(64*_T1, self._doTimeout)
+
+        if self.request.method in ('ACK', 'CANCEL'):
+            # code constructing ACKs and CANCELs are responsible for inserting
+            # the Via header from the request they are associated with.
+            self.branch = None
+        else:
+            self.branch = request.computeBranch()
+            self.request.headers['via'].insert(0, Via(None, branch=self.branch
+                                                      ).toString())
+        self.transport._clientTransactions[self.branch] = self
+        self.transport.sendRequest(self.request, self.target)
+
+
+    def _doTimeout(self):
+        """
+        If timer F fires, terminate the transaction and send the
+        appropriate timeout/cancel error code.
+        """
+        self._stopTimers()
+        self.tu.responseReceived(Response.fromRequest(408, self.request),
+                                        self)
+        self._terminate()
+
+
+    def _stopTimers(self):
+        """
+        Stop timers E and F, if they are running.
+        """
+        if self._timerE is not None:
+            if self._timerE.active():
+                self._timerE.cancel()
+            self._timerE = None
+        if self._timerF is not None:
+            if self._timerF.active():
+                self._timerF.cancel()
+            self._timerF = None
+
+
+    def _terminate(self):
+        """
+        Switch this transaction to the 'terminated' state, unregister from the
+        transport and inform the TU.
+        """
+        self._mode = 'terminated'
+        for k, v in self.transport._clientTransactions.iteritems():
+            if v is self:
+                del self.transport._clientTransactions[k]
+                break
+
+        self.tu.clientTransactionTerminated(self)
+
+
+    def messageReceived(self, msg):
+        """
+        Deal with responses received from the transport.
+
+        @param msg: A L{Response}.
+        """
+        if self._mode == 'terminated':
+            raise RuntimeError('No further responses should be directed to'
+                               ' this transaction.')
+        if self._mode == 'completed':
+            return
+        if msg.code < 200:
+            if self._mode == 'trying':
+                self._mode = 'proceeding'
+        else:
+            self._mode = 'completed'
+            self._stopTimers()
+            if self.transport.isReliable():
+                self._terminate()
+            else:
+                self._timerK = self.clock.callLater(_T4, self._terminate)
+        self.tu.responseReceived(msg, self)
+
+
+
+class ClientInviteTransaction(object):
+    """
+    Implementation of INVITE client transactions. See RFC 3261, section 17.1.1.
+
+    @ivar transport: The SIP transport protocol.
+    @ivar tu: An implementor if L{ITransactionUser}.
+    @ivar clock: A provider of L{twisted.internet.interfaces.IReactorTime}.
+    @ivar branch: A string to use as the 'branch' parameter in the Via header
+    this transaction will insert when sending the request.
+    @ivar _mode: One of 'proceeding', 'completed', or 'terminated'.
+    @ivar _timerA: A L{twisted.internet.base.DelayedCall}, or None.
+    @ivar _timerB: A L{twisted.internet.base.DelayedCall}, or None.
+    @ivar _timerD: A L{twisted.internet.base.DelayedCall}, or None.
+    @ivar _timerATries: Number of retransmission attempts triggered by timer A.
+    @ivar _cancelDeferred: When a cancellation is pending, a Deferred to be
+    fired when the CANCEL message is sent, otherwise None.
+    """
+
+    def __init__(self, transport, tu, request, target, clock):
+        self.clock = clock
+        self.transport = transport
+        self.tu = tu
+        self.request = request
+        self.target = target
+        self._mode = 'calling'
+        self._timerATries = 0
+        self._timerA = None
+        self.branch = request.computeBranch()
+        self.transport._clientTransactions[self.branch] = self
+        self.request.headers['via'].insert(0, Via(None, branch=self.branch))
+
+        def timerARetry():
+            self.transport.sendRequest(self.request, self.target)
+            if not transport.isReliable():
+                self._timerA = self.clock.callLater((2**self._timerATries)*_T1,
+                                                    timerARetry)
+                self._timerATries +=1
+
+        timerARetry()
+        self._timerB = self.clock.callLater(64*_T1, self._doTimeout)
+        self._timerD = None
+        self._cancelDeferred = None
+
+
+    def _doTimeout(self):
+        """
+        If timer B fires, terminate the transaction and send the
+        appropriate timeout/cancel error code.
+        """
+        self._stopTimers()
+        self.tu.responseReceived(Response.fromRequest(408, self.request),
+                                        self)
+        self._terminate()
+
+
+    def _stopTimers(self):
+        """
+        Stop timers A and B, if they are running.
+        """
+        if self._timerB is not None:
+            if self._timerB.active():
+                self._timerB.cancel()
+            self._timerB = None
+        if self._timerA is not None:
+            if self._timerA.active():
+                self._timerA.cancel()
+            self._timerA = None
+
+
+    def _terminate(self):
+        """
+        Switch this transaction to the 'terminated' state, unregister from the
+        transport and inform the TU.
+        """
+        self._mode = 'terminated'
+        for k, v in self.transport._clientTransactions.iteritems():
+            if v is self:
+                del self.transport._clientTransactions[k]
+                break
+
+        self.tu.clientTransactionTerminated(self)
+
+
+    def _ack(self, msg):
+        """
+        Send an ACK message to the response received.  See RFC3261, section
+        17.1.1.3.
+        """
+        ack = Request('ACK',self.request.uri)
+        for name in ("from", "call-id", 'route'):
+            ack.headers[name] = self.request.headers.get(name, [])[:]
+        cseq = self.request.headers['cseq'][0].split(' ',1)[0]
+        ack.addHeader('cseq', cseq + " ACK")
+        ack.headers['to'] = msg.headers['to']
+        ack.addHeader('via', self.request.headers['via'][0])
+        self.transport.sendRequest(ack, self.target)
+
+
+    def messageReceived(self, msg):
+        """
+        Deal with responses received from the transport.
+
+        @param msg: A L{Response}.
+        """
+        if self._mode == 'terminated':
+            raise RuntimeError('No further responses should be directed to'
+                               ' this transaction.')
+        if self._mode == 'completed':
+            return
+        if msg.code < 200:
+            if self._mode == 'calling':
+                self._mode = 'proceeding'
+        elif 200 <= msg.code < 300:
+            self._terminate()
+        else:
+            self._mode = 'completed'
+            self._ack(msg)
+            if not self.transport.isReliable():
+                self.timerD = self.clock.callLater(32, self._terminate)
+            else:
+                self._terminate()
+        self._stopTimers()
+        self.tu.responseReceived(msg, self)
+
+
+    def cancel(self):
+        """
+        Send a CANCEL message to the target of this INVITE, in its own
+        transaction.
+
+        @return: A Deferred which fires with the new L{ClientTransaction} for
+        the CANCEL, after it has been sent.
+        """
+        self._cancelDeferred = defer.Deferred()
+        cancel = Request("CANCEL", self.request.uri)
+        for hdr in ('from','to','call-id'):
+            cancel.addHeader(hdr, self.request.headers[hdr][0])
+        cseq = self.request.headers['cseq'][0].split(' ',1)[0]
+        cancel.addHeader('cseq', cseq + " CANCEL")
+        cancel.addHeader('via', Via(self.transport.host,
+                                    self.transport.port,
+                                    branch=self.branch).toString())
+
+        cancelCT = ClientTransaction(self.transport, self.tu, cancel,
+                                     self.target, self.clock)
+        self._cancelDeferred.callback(cancelCT)
+        return self._cancelDeferred
+
+
+
+#Timer values defined in RFC 3261, section 30.
+_T1 = 0.5 # An estimate of round-trip time.
+
+_T2 = 4 # Maximum interval between retransmission attempts.
+
+_T4 = 5 # The amount of time the network will take to clear messages between
+        # client and server transactions.
+
+
