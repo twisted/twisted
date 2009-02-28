@@ -1473,10 +1473,11 @@ class SIPTransport(protocol.DatagramProtocol):
     @ivar _messages: A list of L{Message}s not yet processed.
     @ivar _serverTransactions: A mapping of (branch, host, port, method) to
         L{ServerTransaction} or L{ServerInviteTransaction} instances.
-    @ivar _oldStyleServerTransactions: A list of pairs of Requests from
-        non-RFC3261-compliant user agents, and L{ServerTransaction} or
-        L{ServerInviteTransaction} instances.
-
+    @ivar _oldStyleServerTransactions: A list of (request, server transaction)
+        pairs, containing L{Request}s from non-RFC3261-compliant user agents
+        and L{ServerTransaction} or L{ServerInviteTransaction} instances
+        associated with them.  Used to match retransmissions of requests
+        without a unique branch tag with their transactions.
     @ivar _clientTransactions: A mapping of branch strings (from Via headers) to
         L{ClientTransaction} or L{ClientInviteTransaction} instances.
     @ivar _clock: A provider of L{twisted.internet.interfaces.IReactorTime}.
