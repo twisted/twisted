@@ -772,6 +772,7 @@ class TransportTestCase(unittest.TestCase):
         siptransport.transport = fdt
         ct = sip.ClientTransaction(siptransport, tu, request,
                                    destAddr, clock)
+        ct.send()
         self.assertEqual(len(fdt.written), 1)
         self.assertEqual(fdt.written[0][1], destAddr)
         sentRequest = parseMessage(fdt.written[0][0])
@@ -1373,6 +1374,7 @@ class ClientTransactionTestCase(unittest.TestCase):
                                         self.request,
                                         self.testAddr,
                                         self.clock)
+        self.ct.send()
 
     def test_initialState(self):
         """
@@ -1455,6 +1457,7 @@ class ClientTransactionTestCase(unittest.TestCase):
                                         self.request,
                                         self.testAddr,
                                         self.clock)
+        self.ct.send()
         self.clock.advance(64 * sip._T1)
         self.assertEquals(sent, [self.request])
 
@@ -1599,6 +1602,7 @@ class ClientTransactionTestCase(unittest.TestCase):
                                         self.request,
                                         self.testAddr,
                                         self.clock)
+        self.ct.send()
         self.ct.messageReceived(response)
         self.assertEqual(self.ct._mode, 'terminated')
 
@@ -1634,6 +1638,7 @@ class ClientInviteTransactionTestCase(unittest.TestCase):
                                               self.request,
                                               self.testAddr,
                                               self.clock)
+        self.ct.send()
 
 
     def test_initialState(self):
@@ -1700,6 +1705,7 @@ class ClientInviteTransactionTestCase(unittest.TestCase):
                                               self.request,
                                               self.testAddr,
                                               self.clock)
+        self.ct.send()
         self.clock.advance(64 * sip._T1)
         self.assertEquals(sent, [self.request])
 
@@ -1826,6 +1832,7 @@ class ClientInviteTransactionTestCase(unittest.TestCase):
                                               self.request,
                                               self.testAddr,
                                               self.clock)
+        self.ct.send()
         rcvd = []
         def responseReceived(msg, ct):
             rcvd.append(msg)

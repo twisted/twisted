@@ -1938,6 +1938,8 @@ class ClientTransaction(object):
     @ivar _transport: The SIP transport protocol.
     @ivar _transactionUser: The transaction user.
     @type _transactionUser: A provider of L{ITransactionUser}
+    @ivar request: The L{Request} creating this client transaction.
+    @ivar target: The (host, port) pair the request will be sent to.
     @ivar clock: A provider of L{twisted.internet.interfaces.IReactorTime}.
     @ivar branch: A string to use as the 'branch' parameter in the Via header
         this transaction will insert when sending the request.
@@ -1981,6 +1983,11 @@ class ClientTransaction(object):
             self.branch = request.computeBranch()
             self.request.headers['via'].insert(0, Via(None, branch=self.branch
                                                       ).toString())
+
+    def send(self):
+        """
+        Send this message to the target.
+        """
         self._transport._clientTransactions[self.branch] = self
         self._transport.sendRequest(self.request, self.target)
 
@@ -2057,6 +2064,8 @@ class ClientInviteTransaction(object):
     @ivar _transport: The SIP transport protocol.
     @ivar _transactionUser: The transaction user.
     @type _transactionUser: A provider of L{ITransactionUser}.
+    @ivar request: The L{Request} creating this client transaction.
+    @ivar target: The (host, port) pair the request will be sent to.
     @ivar clock: A provider of L{twisted.internet.interfaces.IReactorTime}.
     @ivar branch: A string to use as the 'branch' parameter in the Via header
         this transaction will insert when sending the request.
@@ -2081,18 +2090,23 @@ class ClientInviteTransaction(object):
         self.branch = request.computeBranch()
         self._transport._clientTransactions[self.branch] = self
         self.request.headers['via'].insert(0, Via(None, branch=self.branch))
+        self._timerD = None
+        self._cancelDeferred = None
 
+
+    def send(self):
+        """
+        Send the request to the target.
+        """
         def timerARetry():
             self._transport.sendRequest(self.request, self.target)
-            if not transport.isReliable():
+            if not self._transport.isReliable():
                 self._timerA = self._clock.callLater((2**self._timerATries)*_T1,
                                                     timerARetry)
                 self._timerATries +=1
 
         timerARetry()
         self._timerB = self._clock.callLater(64*_T1, self._doTimeout)
-        self._timerD = None
-        self._cancelDeferred = None
 
 
     def _doTimeout(self):
