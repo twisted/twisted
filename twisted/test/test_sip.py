@@ -852,6 +852,27 @@ class TransportTestCase(unittest.TestCase):
         self.assertEqual(fdt.written[1][1], ('client.com', 5060))
 
 
+
+    def test_cleanupServerTransactions(self):
+        """
+        Server transactions that have terminated are no longer tracked by the
+        transport.
+        """
+        fdt = FakeDatagramTransport()
+        clock = Clock()
+        class TU(object):
+            def requestReceived(tu, msg, addr):
+                return sip.ServerInviteTransaction(self.siptransport,
+                                                   clock)
+
+        siptransport = sip.SIPTransport(TU(), ['example.org'], 5065, clock)
+        siptransport.transport = fdt
+        siptransport.datagramReceived(aliceInvite, self.testAddr)
+        self.assertEqual(len(siptransport._serverTransactions), 1)
+        siptransport._serverTransactions.values()[0]._terminate()
+        self.assertEqual(len(siptransport._serverTransactions), 0)
+
+
     def test_messageTooBig(self):
         """
         Until TCP support is added, sending a message larger than 1300 bytes

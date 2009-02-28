@@ -1445,6 +1445,17 @@ class ISIPTransport(Interface):
         """
 
 
+    def serverTransactionTerminated(st):
+        """
+        Called by L{ServerTransaction} and L{ServerInviteTransaction} objects
+        when they enter the 'terminated' state.
+
+        @param st: A server transaction.
+        @type st: L{ServerTransaction} or L{ServerInviteTransaction}.
+        """
+        pass
+
+
 
 class SIPTransport(protocol.DatagramProtocol):
     """
@@ -1679,6 +1690,15 @@ class SIPTransport(protocol.DatagramProtocol):
             raise NotImplementedError, "Message too big for UDP."
         self.transport.write(txt, (host, port))
 
+
+    def serverTransactionTerminated(self, st):
+        """
+        @see: {ISIPTransport.serverTransactionTerminated}
+        """
+        for k,v in self._serverTransactions.iteritems():
+            if st == v:
+                del self._serverTransactions[k]
+                break
 
 
 class ITransactionUser(Interface):
