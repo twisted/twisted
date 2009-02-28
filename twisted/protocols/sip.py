@@ -1616,6 +1616,9 @@ class SIPTransport(protocol.DatagramProtocol):
         transaction for processing. If there is none, deliver it to the
         transaction user, and if it returns a new server transaction, register
         it. See RFC 3261 sections 18.2.1 and 17.2.3.
+
+        @param msg: A L{Request} object.
+        @param addr: A (host, port) tuple.
         """
         def _badRequest(err):
             if err.check(SIPError):
@@ -1657,6 +1660,7 @@ class SIPTransport(protocol.DatagramProtocol):
                 method = "INVITE"
             st = self._serverTransactions.get((via.branch, via.host,
                                                via.port, method))
+
 
         def addNewServerTransaction(st):
             if st:
