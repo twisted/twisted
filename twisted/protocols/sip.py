@@ -1425,12 +1425,13 @@ class ISIPTransport(Interface):
     def sendRequest(msg, target):
         """
         Send a request to a remote host. The top Via header is modified to
-        include sent-by information.
+        include sent-by information.  See RFC 3261, section 18.1.1.
 
         @param msg: The SIP request to be sent.
         @type msg: L{Request}
 
-        @param target: A (host, port) tuple.
+        @param target: A (host, port) tuple. The host should be specified as an
+            IP address, not a hostname.
         @type target: Tuple of (C{str}, C{int}).
         """
 
@@ -1438,7 +1439,7 @@ class ISIPTransport(Interface):
     def sendResponse(msg):
         """
         Send a response to a request, delivering it to the host the request was
-        received from.
+        received from.  See RFC 3261, section 18.2.2.
 
         @param msg: The SIP response to be sent.
         @type msg: L{Response}
@@ -1674,8 +1675,9 @@ class SIPTransport(protocol.DatagramProtocol):
     def sendRequest(self, msg, target):
         """
         @see: L{ISIPTransport.sendRequest}
-        """
 
+        See RFC 3261, section 18.1.1.
+        """
         via = parseViaHeader(msg.headers['via'][0])
         via.host = self.defaultHostname()
         via.port = self.port
