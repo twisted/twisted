@@ -1457,6 +1457,42 @@ class ISIPTransport(Interface):
 
 
 
+class _BetterMessagesParser(MessagesParser):
+    """
+    Tweak L{MessagesParser} to deliver distinct callbacks for requests and
+    responses.  This is a hack to avoid editing MessagesParser directly, since
+    old code depends on its behaviour.  When the deprecated SIP code is
+    removed, this class should be removed as well and its behaviour
+    incorporated into MessagesParser.
+
+    @ivar _requestCallback: A function to be called with a L{Request} object.
+    @ivar _responseCallback: A function to be called with a L{Response} object.
+    @ivar _addr: The address the last message was received from.
+    """
+    def __init__(self, requestCallback, responseCallback):
+        self._requestCallback = requestCallback
+        self._responseCallback = responseCallback
+        self.reset()
+
+    def dataReceived(self, data, addr):
+        """
+        Remember C{addr}, for passing to the callback.
+        """
+        self.addr = addr
+        MessagesParser.dataReceived(self, data)
+
+    def messageReceived(self, msg):
+        """
+        Dispatch to the correct callback depending on type.
+        """
+        if isinstance(msg, Request):
+            self._requestCallback(msg, self.addr)
+        else:
+            self._responseCallback(msg, self.addr)
+
+
+
+
 class SIPTransport(protocol.DatagramProtocol):
     """
     The UDP version of the transport layer of the SIP protocol. See RFC 3261
@@ -1470,7 +1506,6 @@ class SIPTransport(protocol.DatagramProtocol):
     @ivar hosts: A sequence of hostnames this transport is authoritative for.
     @ivar port: The port number this transport listens on.
     @ivar _parser: A L{MessagesParser}.
-    @ivar _messages: A list of L{Message}s not yet processed.
     @ivar _serverTransactions: A mapping of (branch, host, port, method) to
         L{ServerTransaction} or L{ServerInviteTransaction} instances.
     @ivar _oldStyleServerTransactions: A list of (request, server transaction)
@@ -1491,8 +1526,8 @@ class SIPTransport(protocol.DatagramProtocol):
         """
         self.hosts = hosts
         self.port = port
-        self._messages = []
-        self._parser = MessagesParser(self._messages.append)
+        self._parser = _BetterMessagesParser(self._handleRequest,
+                                             self._handleResponse)
         self._transactionUser = tu
         self._serverTransactions = {}
         self._oldStyleServerTransactions = []
@@ -1519,14 +1554,8 @@ class SIPTransport(protocol.DatagramProtocol):
         """
         Feed received datagrams to the SIP parser.
         """
-        self._parser.dataReceived(data)
+        self._parser.dataReceived(data, addr)
         self._parser.dataDone()
-        for m in self._messages:
-            if isinstance(m, Request):
-                self._handleRequest(m, addr)
-            else:
-                self._handleResponse(m, addr)
-        del self._messages[:]
 
 
     def _newServerTransaction(self, st, msg, via):
