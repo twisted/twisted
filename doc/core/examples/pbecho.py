@@ -1,6 +1,10 @@
-
 # Copyright (c) 2001-2006 Twisted Matrix Laboratories.
 # See LICENSE for details.
+
+if __name__ == '__main__':
+    # Avoid using any names defined in the "__main__" module.
+    from pbecho import main
+    raise SystemExit(main())
 
 from zope.interface import implements
 
@@ -35,7 +39,7 @@ class SimpleRealm:
             raise NotImplementedError("no interface")
 
 
-if __name__ == '__main__':
+def main():
     from twisted.internet import reactor
     from twisted.cred.portal import Portal
     from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
