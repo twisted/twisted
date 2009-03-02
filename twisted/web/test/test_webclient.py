@@ -6,6 +6,7 @@ Tests for L{twisted.web.client}.
 """
 
 import StringIO, os
+from errno import ENOSPC
 
 from urlparse import urlparse
 
@@ -245,12 +246,54 @@ class WebClientTestCase(unittest.TestCase):
             ).addCallback(self.assertEquals, s
             )
 
-    def testBrokenDownload(self):
-        # test what happens when download gets disconnected in the middle
+
+    def test_getPageBrokenDownload(self):
+        """
+        If the connection is closed before the number of bytes indicated by
+        I{Content-Length} have been received, the L{Deferred} returned by
+        L{getPage} fails with L{PartialDownloadError}.
+        """
         d = client.getPage(self.getURL("broken"))
         d = self.assertFailure(d, client.PartialDownloadError)
         d.addCallback(lambda exc: self.assertEquals(exc.response, "abc"))
         return d
+
+
+    def test_downloadPageBrokenDownload(self):
+        """
+        If the connection is closed before the number of bytes indicated by
+        I{Content-Length} have been received, the L{Deferred} returned by
+        L{downloadPage} fails with L{PartialDownloadError}.
+        """
+        # test what happens when download gets disconnected in the middle
+        path = FilePath(self.mktemp())
+        d = client.downloadPage(self.getURL("broken"), path.path)
+        d = self.assertFailure(d, client.PartialDownloadError)
+        def cbFailed(ignored):
+            self.assertEquals(path.getContent(), "abc")
+        d.addCallback(cbFailed)
+        return d
+
+
+    def test_downloadPageLogsFileCloseError(self):
+        """
+        If there is an exception closing the file being written to after the
+        connection is prematurely closed, that exception is logged.
+        """
+        class BrokenFile:
+            def write(self, bytes):
+                pass
+
+            def close(self):
+                raise IOError(ENOSPC, "No file left on device")
+
+        d = client.downloadPage(self.getURL("broken"), BrokenFile())
+        d = self.assertFailure(d, client.PartialDownloadError)
+        def cbFailed(ignored):
+            self.assertEquals(len(self.flushLoggedErrors(IOError)), 1)
+        d.addCallback(cbFailed)
+        return d
+
 
     def testHostHeader(self):
         # if we pass Host header explicitly, it should be used, otherwise

@@ -9,6 +9,7 @@ HTTP client.
 import os, types
 from urlparse import urlunparse
 
+from twisted.python import log
 from twisted.web import http
 from twisted.internet import defer, protocol, reactor
 from twisted.python import failure
@@ -178,6 +179,11 @@ class HTTPPageDownloader(HTTPPageGetter):
             self.factory.pagePart(data)
 
     def handleResponseEnd(self):
+        if self.length:
+            self.transmittingPage = 0
+            self.factory.noPage(
+                failure.Failure(
+                    PartialDownloadError(None)))
         if self.transmittingPage:
             self.factory.pageEnd()
             self.transmittingPage = 0
@@ -358,6 +364,7 @@ class HTTPDownloader(HTTPClientFactory):
                 # server is acting wierdly
                 self.requestedPartial = 0
 
+
     def openFile(self, partialContent):
         if partialContent:
             file = open(self.fileName, 'rb+')
@@ -391,6 +398,22 @@ class HTTPDownloader(HTTPClientFactory):
             self.file = None
             self.deferred.errback(failure.Failure())
 
+
+    def noPage(self, reason):
+        """
+        Close the storage file and errback the waiting L{Deferred} with the
+        given reason.
+        """
+        if self.waiting:
+            self.waiting = 0
+            if self.file:
+                try:
+                    self.file.close()
+                except:
+                    log.err(None, "Error closing HTTPDownloader file")
+            self.deferred.errback(reason)
+
+
     def pageEnd(self):
         self.waiting = 0
         if not self.file:
@@ -401,6 +424,7 @@ class HTTPDownloader(HTTPClientFactory):
             self.deferred.errback(failure.Failure())
             return
         self.deferred.callback(self.value)
+
 
 
 def _parse(url, defaultPort=None):
