@@ -151,6 +151,37 @@ class StaticFileTests(TestCase):
         return d
 
 
+    def test_staticFileDeletedGetChild(self):
+        """
+        A L{static.File} created for a directory which does not exist should
+        return childNotFound from L{static.File.getChild}.
+        """
+        staticFile = static.File(self.mktemp())
+        request = DummyRequest(['foo.bar'])
+        child = staticFile.getChild("foo.bar", request)
+        self.assertEquals(child, staticFile.childNotFound)
+
+
+    def test_staticFileDeletedRender(self):
+        """
+        A L{static.File} created for a file which does not exist should render
+        its C{childNotFound} page.
+        """
+        staticFile = static.File(self.mktemp())
+        request = DummyRequest(['foo.bar'])
+        request2 = DummyRequest(['foo.bar'])
+        d = self._render(staticFile, request)
+        d2 = self._render(staticFile.childNotFound, request2)
+        def cbRendered2(ignored):
+            def cbRendered(ignored):
+                self.assertEquals(''.join(request.written),
+                                  ''.join(request2.written))
+            d.addCallback(cbRendered)
+            return d
+        d2.addCallback(cbRendered2)
+        return d2
+
+
     def test_processors(self):
         """
         If a request is made which encounters a L{File} before a final segment

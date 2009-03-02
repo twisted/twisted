@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.web.test.test_web -*-
+# -*- test-case-name: twisted.web.test.test_static -*-
 # Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -239,10 +239,15 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
                                self.contentEncodings,
                                self.defaultType)
 
+
     def getChild(self, path, request):
-        """See twisted.web.Resource.getChild.
         """
-        self.restat()
+        If this L{File}'s path refers to a directory, return a L{File}
+        referring to the file named C{path} in that directory.
+
+        If C{path} is the empty string, return a L{DirectoryLister} instead.
+        """
+        self.restat(reraise=False)
 
         if not self.isdir():
             return self.childNotFound
@@ -271,6 +276,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         if processor:
             return resource.IResource(processor(fpath.path, self.registry))
         return self.createSimilarFile(fpath.path)
+
 
     # methods to allow subclasses to e.g. decrypt files on the fly:
     def openForReading(self):
@@ -373,8 +379,11 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
 
 
     def render(self, request):
-        """You know what you doing."""
-        self.restat()
+        """
+        Begin sending the contents of this L{File} (or a subset of the
+        contents, based on the 'range' header) to the given request.
+        """
+        self.restat(False)
 
         if self.type is None:
             self.type, self.encoding = getTypeAndEncoding(self.basename(),
@@ -388,7 +397,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         if self.isdir():
             return self.redirect(request)
 
-        request.setHeader('accept-ranges','bytes')
+        request.setHeader('accept-ranges', 'bytes')
 
         if self.type:
             request.setHeader('content-type', self.type)
