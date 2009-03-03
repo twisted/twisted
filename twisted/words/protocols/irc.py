@@ -519,9 +519,12 @@ class IRCClient(basic.LineReceiver):
     @ivar lineRate: Minimum delay between lines sent to the server.  If
         C{None}, no delay will be imposed.
     @type lineRate: Number of Seconds.
-    """
 
-    motd = ""
+    @ivar motd: Either L{None} or, between receipt of I{RPL_MOTDSTART} and
+        I{RPL_ENDOFMOTD}, a L{list} of L{str}, each of which is the content
+        of an I{RPL_MOTD} message.
+    """
+    motd = None
     nickname = 'irc'
     password = None
     realname = None
@@ -1333,10 +1336,20 @@ class IRCClient(basic.LineReceiver):
     def irc_RPL_MOTD(self, prefix, params):
         if params[-1].startswith("- "):
             params[-1] = params[-1][2:]
+        if self.motd is None:
+            self.motd = []
         self.motd.append(params[-1])
 
+
     def irc_RPL_ENDOFMOTD(self, prefix, params):
-        self.receivedMOTD(self.motd)
+        """
+        I{RPL_ENDOFMOTD} indicates the end of the message of the day
+        messages.  Deliver the accumulated lines to C{receivedMOTD}.
+        """
+        motd = self.motd
+        self.motd = None
+        self.receivedMOTD(motd)
+
 
     def irc_RPL_CREATED(self, prefix, params):
         self.created(params[1])

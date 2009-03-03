@@ -424,7 +424,11 @@ class ModeTestCase(unittest.TestCase):
                              info=msg)
 
 
-    def testMOTD(self):
+    def test_receivedMOTD(self):
+        """
+        Lines received in I{RPL_MOTDSTART} and I{RPL_MOTD} are delivered to
+        L{IRCClient.receivedMOTD} when I{RPL_ENDOFMOTD} is received.
+        """
         lines = [
             ":host.name 375 nickname :- host.name Message of the Day -",
             ":host.name 372 nickname :- Welcome to host.name",
@@ -436,6 +440,28 @@ class ModeTestCase(unittest.TestCase):
         self.assertEquals(
             self.client.calls,
             [("receivedMOTD", {"motd": ["host.name Message of the Day -", "Welcome to host.name"]})])
+
+        # After the motd is delivered, the tracking variable should be
+        # reset.
+        self.assertIdentical(self.client.motd, None)
+
+
+    def test_withoutMOTDSTART(self):
+        """
+        If L{IRCClient} receives I{RPL_MOTD} and I{RPL_ENDOFMOTD} without
+        receiving I{RPL_MOTDSTART}, L{IRCClient.receivedMOTD} is still
+        called with a list of MOTD lines.
+        """
+        lines = [
+            ":host.name 372 nickname :- Welcome to host.name",
+            ":host.name 376 nickname :End of /MOTD command."]
+
+        for L in lines:
+            self.client.dataReceived(L + '\r\n')
+
+        self.assertEquals(
+            self.client.calls,
+            [("receivedMOTD", {"motd": ["Welcome to host.name"]})])
 
 
     def _clientTestImpl(self, sender, group, type, msg, func, **kw):
