@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.mail.test.test_imap -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -3824,33 +3824,44 @@ def splitQuoted(s):
     """
     s = s.strip()
     result = []
-    inQuote = inWord = start = 0
-    for (i, c) in zip(range(len(s)), s):
-        if c == '"' and not inQuote:
-            inQuote = 1
-            start = i + 1
-        elif c == '"' and inQuote:
-            inQuote = 0
-            result.append(s[start:i])
-            start = i + 1
+    word = []
+    inQuote = inWord = False
+    for i, c in enumerate(s):
+        if c == '"':
+            if i and s[i-1] == '\\':
+                word.pop()
+                word.append('"')
+            elif not inQuote:
+                inQuote = True
+            else:
+                inQuote = False
+                result.append(''.join(word))
+                word = []
         elif not inWord and not inQuote and c not in ('"' + string.whitespace):
-            inWord = 1
-            start = i
+            inWord = True
+            word.append(c)
         elif inWord and not inQuote and c in string.whitespace:
-            if s[start:i] == 'NIL':
+            w = ''.join(word)
+            if w == 'NIL':
                 result.append(None)
             else:
-                result.append(s[start:i])
-            start = i
-            inWord = 0
+                result.append(w)
+            word = []
+            inWord = False
+        elif inWord or inQuote:
+            word.append(c)
+
     if inQuote:
         raise MismatchedQuoting(s)
     if inWord:
-        if s[start:] == 'NIL':
+        w = ''.join(word)
+        if w == 'NIL':
             result.append(None)
         else:
-            result.append(s[start:])
+            result.append(w)
+
     return result
+
 
 
 def splitOn(sequence, predicate, transformers):
@@ -3925,7 +3936,7 @@ def parseNestedParens(s, handleLiteral = 1):
             c = s[i]
             if inQuote:
                 if c == '\\':
-                    contentStack[-1].append(s[i+1])
+                    contentStack[-1].append(s[i:i+2])
                     i += 2
                     continue
                 elif c == '"':

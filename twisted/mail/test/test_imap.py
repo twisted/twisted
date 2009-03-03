@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.mail.test.test_imap -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -336,6 +336,16 @@ class IMAP4HelperTestCase(unittest.TestCase):
             '''foo NIL "baz buz" bar''',
             '''foo "NIL" "baz buz" bar''',
             '''"NIL" bar "baz buz" foo''',
+            'oo \\"oo\\" oo',
+            '"oo \\"oo\\" oo"',
+            'oo \t oo',
+            '"oo \t oo"',
+            'oo \\t oo',
+            '"oo \\t oo"',
+            'oo \o oo',
+            '"oo \o oo"',
+            'oo \\o oo',
+            '"oo \\o oo"',
         ]
 
         answers = [
@@ -348,6 +358,17 @@ class IMAP4HelperTestCase(unittest.TestCase):
             ['foo', None, 'baz buz', 'bar'],
             ['foo', 'NIL', 'baz buz', 'bar'],
             ['NIL', 'bar', 'baz buz', 'foo'],
+            ['oo', '"oo"', 'oo'],
+            ['oo "oo" oo'],
+            ['oo', 'oo'],
+            ['oo \t oo'],
+            ['oo', '\\t', 'oo'],
+            ['oo \\t oo'],
+            ['oo', '\o', 'oo'],
+            ['oo \o oo'],
+            ['oo', '\\o', 'oo'],
+            ['oo \\o oo'],
+
         ]
 
         errors = [
@@ -416,6 +437,14 @@ class IMAP4HelperTestCase(unittest.TestCase):
             '("John Klensin" NIL KLENSIN INFOODS.MIT.EDU)) NIL NIL '
             '<B27397-0100000@cac.washington.edu>) '
             'BODY (TEXT PLAIN (CHARSET US-ASCII) NIL NIL 7BIT 3028 92))',
+            '("oo \\"oo\\" oo")',
+            '("oo \\\\ oo")',
+            '("oo \\ oo")',
+            '("oo \\o")',
+            '("oo \o")',
+            '(oo \o)',
+            '(oo \\o)',
+
         ]
 
         answers = [
@@ -433,6 +462,13 @@ class IMAP4HelperTestCase(unittest.TestCase):
             "INFOODS.MIT.EDU"]], None, None,
             "<B27397-0100000@cac.washington.edu>"], "BODY", ["TEXT", "PLAIN",
             ["CHARSET", "US-ASCII"], None, None, "7BIT", "3028", "92"]],
+            ['oo "oo" oo'],
+            ['oo \\\\ oo'],
+            ['oo \\ oo'],
+            ['oo \\o'],
+            ['oo \o'],
+            ['oo', '\o'],
+            ['oo', '\\o'],
         ]
 
         for (case, expected) in zip(cases, answers):
