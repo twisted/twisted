@@ -1,4 +1,4 @@
-# Copyright (c) 2007 Twisted Matrix Laboratories.
+# Copyright (c) 2007-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -187,6 +187,19 @@ class MemCacheTestCase(TestCase):
         resulting L{Deferred} with a dictionary of the received statistics.
         """
         return self._test(self.proto.stats(), "stats\r\n",
+            "STAT foo bar\r\nSTAT egg spam\r\nEND\r\n",
+            {"foo": "bar", "egg": "spam"})
+
+
+    def test_statsWithArgument(self):
+        """
+
+        L{MemCacheProtocol.stats} takes an optional C{str} argument which,
+        if specified, is sent along with the I{STAT} command.  The I{STAT}
+        responses from the server are parsed as key/value pairs and returned
+        as a C{dict} (as in the case where the argument is not specified).
+        """
+        return self._test(self.proto.stats("blah"), "stats blah\r\n",
             "STAT foo bar\r\nSTAT egg spam\r\nEND\r\n",
             {"foo": "bar", "egg": "spam"})
 

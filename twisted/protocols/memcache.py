@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_memcache -*-
-# Copyright (c) 2007 Twisted Matrix Laboratories.
+# Copyright (c) 2007-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -589,15 +589,24 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         return cmdObj._deferred
 
 
-    def stats(self):
+    def stats(self, arg=None):
         """
         Get some stats from the server. It will be available as a dict.
+
+        @param arg: An optional additional string which will be sent along
+            with the I{stats} command.  The interpretation of this value by
+            the server is left undefined by the memcache protocol
+            specification.
+        @type arg: L{NoneType} or L{str}
 
         @return: a deferred that will fire with a C{dict} of the available
             statistics.
         @rtype: L{Deferred}
         """
-        self.sendLine("stats")
+        cmd = "stats"
+        if arg:
+            cmd = "stats " + arg
+        self.sendLine(cmd)
         cmdObj = Command("stats", values={})
         self._current.append(cmdObj)
         return cmdObj._deferred
