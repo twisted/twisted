@@ -76,6 +76,17 @@ class FileTestsMixin:
         fObj.close()
 
 
+    def test_closedFlag(self):
+        """
+        The L{closed} attribute on an open file is L{False}; on a closed file
+        it is L{True}.
+        """
+        fObj = self.open("foo", "w")
+        self.assertEqual(fObj.closed, False)
+        fObj.close()
+        self.assertEqual(fObj.closed, True)
+
+
     def test_write(self):
         """
         I{write} adds bytes to a file.

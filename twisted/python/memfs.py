@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_paths.MemoryFilesystemTests,twisted.test.test_paths.FileTests -*-
+# -*- test-case-name: twisted.python.test.test_memfs -*-
 
 """
 An in-memory implementation of various filesystem APIs.
@@ -32,13 +32,15 @@ class MemoryFile(object):
     semantics, so you can tell what the same operations would have done on a
     filesystem.
 
+    @ivar closed: A boolean indicating whether this file has been closed yet.
+
+    @type closed: C{bool}
+
     @ivar filesystem: A reference to an instance of a class like
         L{POSIXFilesystem} which defines filesystem behavior which isn't
         localized to a single file.
 
     @ivar fd: An C{int} giving this file's descriptor number.
-
-    @ivar state: A C{str}, either C{'open'} or C{'closed'}.
 
     @ivar fpos: An C{int} giving the current position of this file.
 
@@ -56,18 +58,26 @@ class MemoryFile(object):
     def __init__(self, filesystem, fd, filesystemState):
         self.filesystem = filesystem
         self.fd = fd
-        self.state = 'open'
         self.fpos = 0
         self.appBuffer = array('c')
         self.dirty = []
         self.filesystemState = filesystemState
 
 
+    def _isClosed(self):
+        """
+        Is this file descriptor closed?
+        """
+        return self.fd not in self.filesystem.byDescriptor
+
+    closed = property(_isClosed, doc=_isClosed.__doc__)
+
+
     def _checkClosed(self):
         """
         Raise L{ValueError} if the file is closed.
         """
-        if self.state == "closed":
+        if self.closed:
             raise ValueError("I/O operation on closed MemoryFile")
 
 
@@ -84,10 +94,9 @@ class MemoryFile(object):
         Flush the I{application-level} buffer and invalidate this file object
         for further operations.
         """
-        if self.state == 'closed':
+        if self.closed:
             return
         self.flush()
-        self.state = 'closed'
         del self.filesystem.byDescriptor[self.fd]
 
 
