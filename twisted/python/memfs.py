@@ -1,6 +1,12 @@
 # -*- test-case-name: twisted.test.test_paths.MemoryFilesystemTests,twisted.test.test_paths.FileTests -*-
+
 """
 An in-memory implementation of various filesystem APIs.
+
+This can be used to force code that uses Python's built-in file I/O APIs to
+write to an in-memory data structure.  For easier inspection and testing, this
+structure preserves numerous details about the state of stream buffers,
+filesystem buffers, and hypothetical disk contents.
 """
 
 import errno
