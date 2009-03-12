@@ -128,6 +128,17 @@ class FileTestsMixin:
         self.assertEqual(infile.read(), "helworld.\0\0zoop")
 
 
+    def test_writeSeekRead(self):
+        """
+        If you write some bytes, then seek back to their beginning, then read
+        them, you will get them back.
+        """
+        outfile = self.open("out", "w+")
+        outfile.write("foobar")
+        outfile.seek(3)
+        self.assertEqual(outfile.read(), "bar")
+
+
     def test_read(self):
         """
         I{read} with no arguments returns the entire current contents of a
