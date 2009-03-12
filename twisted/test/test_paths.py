@@ -404,7 +404,7 @@ class FilePathTestCase(AbstractFilePathTestCase):
         contents = fObj.read()
         fObj.close()
         self.assertEqual(contents, bytes)
-        self.assertEqual(fs.byDescriptor, {})
+        self.assertEqual(fs.willLoseData(), False)
 
 
     def _setContentTest(self, fs):
