@@ -13,7 +13,7 @@ from twisted.python import filepath
 from twisted.python.zippath import ZipArchive
 from twisted.python.runtime import platform
 
-from twisted.python.mempath import SEEK_SET, SEEK_CUR, SEEK_END, POSIXFilesystem
+from twisted.python.memfs import SEEK_SET, SEEK_CUR, SEEK_END, POSIXFilesystem
 
 from twisted.trial import unittest
 
