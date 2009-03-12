@@ -366,4 +366,28 @@ class MemoryFilesystemTests(TestCase, FileTestsMixin):
         return self.fs.rename(oldname, newname)
 
 
+    def test_writeConsistency(self):
+        """
+        L{POSIXFilesystem.willLoseData} will return True if there is any data
+        stored in either stream buffers or filesystem buffers.
+        """
+        f = self.open("test.txt", "w")
+        f.write("some data")
+        self.assertEqual(self.fs.willLoseData(), True)
+        f.flush()
+        self.assertEqual(self.fs.willLoseData(), True)
+        self.fsync(f.fileno())
+        self.assertEqual(self.fs.willLoseData(), False)
+        f.close()
+        self.assertEqual(self.fs.willLoseData(), False)
 
+
+    def test_closeStillInconsistent(self):
+        """
+        Since C{close} does not imply C{fsync}, closing a file without syncing
+        it first will cause L{POSIXFilesystem.willLoseData} to return True.
+        """
+        f = self.open("test.txt", "w")
+        f.write("some data")
+        f.close()
+        self.assertEqual(self.fs.willLoseData(), True)

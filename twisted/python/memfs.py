@@ -275,6 +275,28 @@ class POSIXFilesystem(object):
         return fObj
 
 
+    def willLoseData(self):
+        """
+        Will the application using this filesystem lose any data that it has
+        written to it at this point in execution, in the event of power-loss,
+        device removal, or network disconnection?  Possible causes include
+        writing data to a file and not flush()ing it, and flush()ing a file
+        without sync()ing it.
+
+        @return: L{True} if the application might lose data, L{False} if all
+        the buffers have been properly synchronized.
+
+        @rtype: L{bool}
+        """
+        for memFile in self.byDescriptor.itervalues():
+            if memFile._streamBuffer:
+                return True
+        for fsState in self.byName.itervalues():
+            if fsState.fsBuffer != fsState.device:
+                return True
+        return False
+
+
     def fsync(self, fd):
         """
         Flush any data known by the filesystem (but ignoring data known only by
@@ -291,7 +313,6 @@ class POSIXFilesystem(object):
         Change the name of a file.
         """
         self.byName[newname] = self.byName.pop(oldname)
-
 
 
 
