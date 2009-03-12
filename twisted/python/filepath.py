@@ -642,15 +642,21 @@ class FilePath(_PathHelper):
         Make the contents of the file represented by this path the given bytes,
         replacing whatever is in the file already if it exists.
         """
-        sib = self.siblingExtension(ext)
-        fObj = sib.open('w')
+        # XXX wrong wrong wrong, if I die
+        fObj = self.open("w")
+        #                    ^ here, I lose all my data
         fObj.write(content)
         fObj.flush()
         os.fsync(fObj.fileno())
-        fObj.close()
-        if platform.isWindows() and exists(self.path):
-            os.unlink(self.path)
-        os.rename(sib.path, self.path)
+#         sib = self.siblingExtension(ext)
+#         fObj = sib.open('w')
+#         fObj.write(content)
+#         fObj.flush()
+#         os.fsync(fObj.fileno())
+#         fObj.close()
+#         if platform.isWindows() and exists(self.path):
+#             os.unlink(self.path)
+#         os.rename(sib.path, self.path)
 
     # new in 2.2.0
 
