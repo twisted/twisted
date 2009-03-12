@@ -6,6 +6,7 @@ Test cases covering L{twisted.python.filepath} and L{twisted.python.zippath}.
 """
 
 import os, time, pickle, errno, zipfile, stat
+from array import array
 
 from twisted.python.compat import set
 from twisted.python.win32 import WindowsError, ERROR_DIRECTORY
@@ -14,6 +15,509 @@ from twisted.python.zippath import ZipArchive
 from twisted.python.runtime import platform
 
 from twisted.trial import unittest
+
+# /* Seek from beginning of file.  */
+SEEK_SET = 0
+# /* Seek from current position.  */
+SEEK_CUR = 1
+# /* Seek from end of file.  */
+SEEK_END = 2
+
+class FakeFile(object):
+    """
+    An in-memory implementation of part of the Python file API.
+
+    Even though this class is defined in a test module, you B{must} write unit
+    tests for any changes you make to it.  See L{FileTestsMixin}.
+
+    @ivar filesystem: A reference to an instance of a class like
+        L{POSIXFilesystem} which defines filesystem behavior which isn't
+        localized to a single file.
+
+    @ivar fd: An C{int} giving this file's descriptor number.
+
+    @ivar state: A C{str}, either C{'open'} or C{'closed'}.
+
+    @ivar fpos: An C{int} giving the current position of this file.
+
+    @ivar appBuffer: An array giving the data which has been written to this
+        file but not yet flushed to the underlying descriptor.
+
+    @ivar dirty: A list of two-tuples giving offsets and lengths of slices of
+        C{appBuffer} which are dirty and must be written to the underlying file
+        descriptor when a flush occurs.
+
+    @ivar filesystemState: A L{_POSIXFilesystemFileState} instance giving the
+        low-level storage state for this file.
+    """
+    def __init__(self, filesystem, fd, filesystemState):
+        self.filesystem = filesystem
+        self.fd = fd
+        self.state = 'open'
+        self.fpos = 0
+        self.appBuffer = array('c')
+        self.dirty = []
+        self.filesystemState = filesystemState
+
+
+    def _checkClosed(self):
+        """
+        Raise L{ValueError} if the file is closed.
+        """
+        if self.state == "closed":
+            raise ValueError("I/O operation on closed FakeFile")
+
+
+    def fileno(self):
+        """
+        Return the integer file descriptor for this file object.
+        """
+        self._checkClosed()
+        return self.fd
+
+
+    def close(self):
+        """
+        Flush the I{application-level} buffer and invalidate this file object
+        for further operations.
+        """
+        if self.state == 'closed':
+            return
+        self.flush()
+        self.state = 'closed'
+        del self.filesystem.byDescriptor[self.fd]
+
+
+    def tell(self):
+        """
+        Return the current file position pointer for this file.
+        """
+        self._checkClosed()
+        return self.fpos
+
+
+    def seek(self, offset, whence=SEEK_SET):
+        """
+        Change the current file position pointer.
+        """
+        self.flush()
+        if whence == SEEK_SET:
+            self.fpos = offset
+        elif whence == SEEK_CUR:
+            self.fpos += offset
+        elif whence == SEEK_END:
+            self.fpos = self.filesystemState.size() + offset
+
+
+    def write(self, bytes):
+        """
+        Add the given bytes to an I{application-level} buffer.
+        """
+        self._checkClosed()
+        padding = self.fpos - len(self.appBuffer)
+        if padding > 0:
+            self.appBuffer.extend('\0' * padding)
+        self.appBuffer[self.fpos:self.fpos + len(bytes)] = array('c', bytes)
+        self.dirty.append((self.fpos, self.fpos + len(bytes)))
+        self.fpos += len(bytes)
+
+
+    def read(self, size=None):
+        """
+        Read some bytes from the file at the current position.
+        """
+        self._checkClosed()
+        end = None
+        if size is not None and size >= 0:
+            end = self.fpos + size
+        return self.filesystemState.fsBuffer.tostring()[self.fpos:end]
+
+
+    def flush(self):
+        """
+        Flush any bytes in the I{application-level} buffer into the
+        I{filesystem-level} buffer.
+        """
+        self._checkClosed()
+        for (start, end) in self.dirty:
+            self.filesystemState.pwrite(start, self.appBuffer[start:end])
+        self.appBuffer = array('c')
+        self.dirty = []
+
+
+    def _fsync(self):
+        """
+        Flush the underlying filesystem state for this file to the object
+        representing the underlying hardware device.
+        """
+        self.filesystemState.fsync()
+
+
+
+class _POSIXFilesystemFileState(object):
+    """
+    Represent the state of one file.
+
+    @ivar fsBuffer: An L{array} representing the contents of this file as known
+        by the filesystem, potentially representing changes which only exist in
+        memory so far.
+
+    @ivar device: An L{array} representing the contents of this file as known
+        by a hypothetical hardware storage device.
+    """
+    def __init__(self):
+        self.fsBuffer = array('c')
+        self.device = array('c')
+
+
+    def size(self):
+        """
+        Return the size of this file.
+        """
+        # Not directly tested, but FakeFile seek tests require this to work
+        # right.
+        return len(self.fsBuffer)
+
+
+    def fsync(self):
+        """
+        Flush all data in C{fsBuffer} to C{device}.
+        """
+        # Unfortunately, I don't have any idea how to verify this fake
+        # implementation of fsync(2).  In fact, this probably isn't even a very
+        # realistic fsync(2) implementation, since it actually synchronizes the
+        # filesystem cache with the underlying device, which real fsync(2)
+        # implementations aren't well-known for doing. -exarkun
+        self.device = self.fsBuffer[:]
+
+
+    def pwrite(self, pos, bytes):
+        """
+        Write some data to this file.  This data goes to C{fsBuffer} until it
+        C{fsync} is called.
+        """
+        # Not directly unit tested, but the FakeFile tests definitely depend on
+        # this working correctly.  It might be nice to add direct unit tests
+        # for this code, anyway.
+        padding = pos - len(self.fsBuffer)
+        if padding > 0:
+            self.fsBuffer.extend('\0' * padding)
+        self.fsBuffer[pos:pos + len(bytes)] = bytes
+
+
+
+class POSIXFilesystem(object):
+    """
+    An in-memory implementation of a filesystem.
+
+    @ivar byName: C{dict} mapping filenames to L{FakeFile} instances.
+    @ivar byDescriptor: C{dict} mapping integer file descriptors to open
+        L{FakeFile} instances.
+    """
+    def __init__(self):
+        self.byName = {}
+        self.byDescriptor = {}
+
+
+    _fdCounter = 3
+    def _descriptorCounter(self):
+        self._fdCounter += 1
+        return self._fdCounter
+
+
+    def open(self, name, mode='r'):
+        if mode[-1:] == 'b':
+            style = 'binary'
+            mode = mode[:-1]
+        else:
+            style = 'text'
+            if mode[-1:] == 't':
+                mode = mode[:-1]
+        if mode not in ('r', 'w', 'r+', 'w+', 'a', 'a+'):
+            raise Exception("Illegal mode %r" % (mode,))
+        if 'r' in mode:
+            if name not in self.byName:
+                raise Exception("No such file %r" % (name,))
+        if '+' in mode:
+            if name in self.byName:
+                raise Exception("Opening an existing file for reading is unsupported")
+
+        descriptor = self._descriptorCounter()
+        if name not in self.byName:
+            self.byName[name] = _POSIXFilesystemFileState()
+        fsState = self.byName[name]
+        fObj = FakeFile(self, descriptor, fsState)
+        self.byDescriptor[descriptor] = fObj
+        return fObj
+
+
+    def fsync(self, fd):
+        """
+        Flush any data known by the filesystem (but ignoring data known only by
+        application buffers) to the object representing the underlying
+        hardware.
+        """
+        if fd not in self.byDescriptor:
+            raise OSError(errno.EBADF, None)
+        self.byDescriptor[fd]._fsync()
+
+
+    def rename(self, oldname, newname):
+        """
+        Change the name of a file.
+        """
+        self.byName[newname] = self.byName.pop(oldname)
+
+
+
+
+class FileTestsMixin:
+    """
+    Tests for an object like L{file}.
+    """
+    def open(self, name, mode):
+        """
+        Return a file-like object to be tested.
+        """
+        raise NotImplementedError("%s did not implement open" % (self,))
+
+
+    def fsync(self, fd):
+        """
+        Call the appropriate fsync implementation on the given file descriptor.
+        """
+        raise NotImplementedError("%s did not implement fsync" % (self,))
+
+
+    def rename(self, oldname, newname):
+        """
+        Call the appropriate rename implementation with the given parameters.
+        """
+        raise NotImplementedError("%s did not implement rename" % (self,))
+
+
+    def test_fileno(self):
+        """
+        I{fileno} returns an integer value unique among open files.
+        """
+        first = self.open("foo", "w")
+        self.addCleanup(first.close)
+
+        self.assertTrue(isinstance(first.fileno(), int))
+        second = self.open("bar", "w")
+        self.addCleanup(second.close)
+
+        self.assertTrue(isinstance(first.fileno(), int))
+        self.assertNotEqual(first.fileno(), second.fileno())
+
+
+    def test_closed(self):
+        """
+        I{fileno}, I{write}, I{read}, I{tell}, and I{flush} raise L{ValueError}
+        when called on a closed file.  I{fsync} raises L{OSerror}.  I{close}
+        does nothing.
+        """
+        fObj = self.open("foo", "w")
+        fd = fObj.fileno()
+        fObj.close()
+        self.assertRaises(ValueError, fObj.fileno)
+        self.assertRaises(ValueError, fObj.write, '')
+        self.assertRaises(ValueError, fObj.read)
+        self.assertRaises(ValueError, fObj.flush)
+        self.assertRaises(ValueError, fObj.tell)
+        self.assertRaises(OSError, self.fsync, fd)
+        fObj.close()
+
+
+    def test_write(self):
+        """
+        I{write} adds bytes to a file.
+        """
+        outfile = self.open("foo", "w")
+        self.addCleanup(outfile.close)
+
+        infile = self.open("foo", "r")
+        self.addCleanup(infile.close)
+
+        # A boring write at the beginning of the file puts the bytes at the
+        # beginning of the file.
+        outfile.write("hello")
+        outfile.flush()
+        self.assertEqual(infile.read(), "hello")
+
+        # A write somewhere in the middle of the file overwrites some of the
+        # file.
+        outfile.seek(3)
+        outfile.write("world")
+        outfile.flush()
+        infile.seek(0)
+        self.assertEqual(infile.read(), "helworld")
+
+        # A write exactly at the end of the file appends the given bytes to the
+        # file.
+        outfile.seek(8)
+        outfile.write(".")
+        outfile.flush()
+        infile.seek(0)
+        self.assertEqual(infile.read(), "helworld.")
+
+        # A write past the end of the file inserts 0s to fill the gap and
+        # appends the given bytes.
+        outfile.seek(11)
+        outfile.write("zoop")
+        outfile.flush()
+        infile.seek(0)
+        self.assertEqual(infile.read(), "helworld.\0\0zoop")
+
+
+    def test_read(self):
+        """
+        I{read} with no arguments returns the entire current contents of a
+        file.
+        """
+        bytes = "bytes"
+        outfile = self.open("out", "w")
+        outfile.write(bytes)
+        outfile.close()
+
+        infile = self.open("out", "r")
+        self.addCleanup(infile.close)
+
+        self.assertEqual(infile.read(), bytes)
+
+        infile.seek(1)
+        self.assertEqual(infile.read(), bytes[1:])
+
+        infile.seek(1)
+        self.assertEqual(infile.read(1), bytes[1])
+
+        infile.seek(1)
+        self.assertEqual(infile.read(-3), bytes[1:])
+
+        infile.seek(1)
+        self.assertEqual(infile.read(0), '')
+
+
+    def test_flush(self):
+        """
+        Data written to a file before a call to I{flush} is visible to another
+        file object which refers to the same file.
+        """
+        bytes = "bytes"
+        outfile = self.open("out", "w")
+        self.addCleanup(outfile.close)
+
+        outfile.write(bytes)
+        outfile.flush()
+        infile = self.open("out", "r")
+        self.addCleanup(infile.close)
+        self.assertEqual(bytes, infile.read())
+
+
+    def test_tell(self):
+        """
+        The I{tell} method returns the current file position.
+        """
+        fObj = self.open("foo", "w")
+        fObj.write("hello")
+        self.assertEqual(fObj.tell(), 5)
+        fObj.write("world")
+        self.assertEqual(fObj.tell(), 10)
+
+
+    def test_seek(self):
+        """
+        The I{seek} method changes the current file position to the specified
+        value.
+        """
+        fObj = self.open("foo", "w")
+        fObj.write("hello")
+        fObj.seek(1)
+        self.assertEqual(fObj.tell(), 1)
+        fObj.seek(2)
+        self.assertEqual(fObj.tell(), 2)
+        fObj.seek(3, SEEK_SET)
+        self.assertEqual(fObj.tell(), 3)
+        fObj.seek(1, SEEK_CUR)
+        self.assertEqual(fObj.tell(), 4)
+        fObj.seek(1, SEEK_END)
+        self.assertEqual(fObj.tell(), 6)
+
+
+    def test_seekFlushes(self):
+        """
+        Using the I{seek} method also flushes the contents of the application
+        buffer.
+        """
+        writer = self.open("foo", "w")
+        self.addCleanup(writer.close)
+
+        reader = self.open("foo", "r")
+        self.addCleanup(reader.close)
+
+        writer.write("foo")
+
+        # Sanity check
+        self.assertEqual(reader.read(), "")
+
+        # Seek, causing a flush, causing the bytes to be visible elsewhere.
+        writer.seek(0)
+        self.assertEqual(reader.read(), "foo")
+
+
+    def test_rename(self):
+        """
+        The I{rename} method changes the name by which a file is accessible.
+        """
+        fObj = self.open("foo", "w")
+        fObj.write("bytes")
+        fObj.close()
+        self.rename("foo", "bar")
+        fObj = self.open("bar", "r")
+        self.addCleanup(fObj.close)
+        self.assertEqual(fObj.read(), "bytes")
+
+
+
+class FileTests(unittest.TestCase, FileTestsMixin):
+    def setUp(self):
+        self.base = self.mktemp()
+        os.makedirs(self.base)
+
+
+    def localFilename(self, name):
+        return os.path.join(self.base, name)
+
+    def open(self, name, mode):
+        return file(self.localFilename(name), mode)
+
+
+    def fsync(self, fd):
+        return os.fsync(fd)
+
+
+    def rename(self, oldname, newname):
+        return os.rename(
+            self.localFilename(oldname), self.localFilename(newname))
+
+
+
+class FakeFileTests(unittest.TestCase, FileTestsMixin):
+    def setUp(self):
+        self.fs = POSIXFilesystem()
+
+
+    def open(self, name, mode):
+        return self.fs.open(name, mode)
+
+
+    def fsync(self, fd):
+        return self.fs.fsync(fd)
+
+
+    def rename(self, oldname, newname):
+        return self.fs.rename(oldname, newname)
+
 
 
 class AbstractFilePathTestCase(unittest.TestCase):
@@ -284,7 +788,17 @@ class ZipFilePathTestCase(AbstractFilePathTestCase):
         self.all = [x.replace(self.cmn, self.cmn+'.zip') for x in self.all]
 
 
+
 class FilePathTestCase(AbstractFilePathTestCase):
+    def _patchFilesystem(self, fs):
+        """
+        Hook file creation and other file manipulation APIs so they go through
+        the given filesystem object.
+        """
+        self.patch(filepath.FilePath, '_open', fs.open)
+        self.patch(os, 'fsync', fs.fsync)
+        self.patch(os, 'rename', fs.rename)
+
 
     def test_chmod(self):
         """
@@ -379,6 +893,64 @@ class FilePathTestCase(AbstractFilePathTestCase):
             return not path.islink()
         x = [foo.path for foo in self.path.walk(descend=noSymLinks)]
         self.assertEquals(set(x), set(self.all))
+
+
+
+    def _testSetContent(self, fs):
+        """
+        Set the contents of a file and then make sure they got set.
+        """
+        bytes = "the bytes"
+        self.path.setContent(bytes)
+        fObj = fs.open(self.path.path)
+        contents = fObj.read()
+        fObj.close()
+        self.assertEqual(contents, bytes)
+        self.assertEqual(fs.byDescriptor, {})
+
+
+    def _setContentTest(self, fs):
+        """
+        Set the contents of a file with L{FilePath.setContent}.
+        """
+        self._patchFilesystem(fs)
+        self._testSetContent(fs)
+
+
+    def test_setContentPOSIX(self):
+        """
+        L{FilePath.setContent} rewrites the contents of a file such that the
+        opportunity for inconsistent state or lost data is minimized::
+
+            - It flushes after writing to ensure the data is sent to the
+              filesystem and not kept in an application buffer.
+            - It fsyncs after flushing to ensure the data is sent to the
+              hardware and not kept in an operating system buffer.
+
+        Additionally, it closes the file it opens before returning.
+        """
+        self._setContentTest(POSIXFilesystem())
+
+
+    def _replaceContentTest(self, fs):
+        """
+        Create a file using the given filesystem object and then replace its
+        contents with L{FilePath.setContent}.
+        """
+        self._patchFilesystem(fs)
+        self.path.setContent("foo")
+        self._testSetContent(fs)
+
+
+    def test_replaceContentPOSIX(self):
+        """
+        If there is already a file at the path represented by a L{FilePath}
+        instance, the C{setContent} method behaves in the same way as if there
+        were not.
+
+        @see L{test_setContentPOSIX}.
+        """
+        self._replaceContentTest(POSIXFilesystem())
 
 
     def test_getAndSet(self):
@@ -831,4 +1403,3 @@ class URLPathTestCase(unittest.TestCase):
         # here should be equivalent to '.'
         self.assertEquals(str(self.path.here()), 'http://example.com/foo/')
         self.assertEquals(str(self.path.child('').here()), 'http://example.com/foo/bar/')
-

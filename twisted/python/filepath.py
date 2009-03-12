@@ -3,7 +3,11 @@
 # See LICENSE for details.
 
 """
-Object-oriented filesystem path representation.
+Structured filesystem path representation.
+
+L{FilePath} represents the components of a path in a way which is intended to
+reduce unintentional behavior allowed by naive string-based manipulation of
+paths.
 """
 
 import os
@@ -322,7 +326,6 @@ class FilePath(_PathHelper):
     @ivar alwaysCreate: When opening this file, only succeed if the file does not
     already exist.
     """
-
     statinfo = None
     path = None
 
@@ -441,11 +444,12 @@ class FilePath(_PathHelper):
         os.symlink(self.path, linkFilePath.path)
 
 
+    _open = file
     def open(self, mode='r'):
         if self.alwaysCreate:
             assert 'a' not in mode, "Appending not supported when alwaysCreate == True"
             return self.create()
-        return open(self.path, mode+'b')
+        return self._open(self.path, mode+'b')
 
     # stat methods below
 
@@ -634,10 +638,16 @@ class FilePath(_PathHelper):
         return self.clonePath(self.dirname())
 
     def setContent(self, content, ext='.new'):
+        """
+        Make the contents of the file represented by this path the given bytes,
+        replacing whatever is in the file already if it exists.
+        """
         sib = self.siblingExtension(ext)
-        f = sib.open('w')
-        f.write(content)
-        f.close()
+        fObj = sib.open('w')
+        fObj.write(content)
+        fObj.flush()
+        os.fsync(fObj.fileno())
+        fObj.close()
         if platform.isWindows() and exists(self.path):
             os.unlink(self.path)
         os.rename(sib.path, self.path)
