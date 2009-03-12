@@ -167,6 +167,26 @@ class FileTestsMixin:
         self.assertEqual(infile.read(0), '')
 
 
+    def test_consecutiveReads(self):
+        """
+        Consecutive limited-length reads from a file should result in portions
+        of its contents being returned, and advance the file position.
+        """
+        f = self.open("out", "w")
+        f.write("abcdefg")
+        f.close()
+        f2 = self.open("out", "r")
+        self.assertEqual(f2.read(2), "ab")
+        self.assertEqual(f2.tell(), 2)
+        self.assertEqual(f2.read(2), "cd")
+        self.assertEqual(f2.tell(), 4)
+        self.assertEqual(f2.read(2), "ef")
+        self.assertEqual(f2.tell(), 6)
+        self.assertEqual(f2.read(2), "g")
+        self.assertEqual(f2.tell(), 7)
+        self.assertEqual(f2.read(2), "")
+
+
     def test_flush(self):
         """
         Data written to a file before a call to I{flush} is visible to another

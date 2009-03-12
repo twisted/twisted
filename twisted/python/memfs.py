@@ -142,7 +142,9 @@ class MemoryFile(object):
         end = None
         if size is not None and size >= 0:
             end = self._fpos + size
-        return self._filesystemState.fsBuffer.tostring()[self._fpos:end]
+        data = self._filesystemState.fsBuffer.tostring()[self._fpos:end]
+        self._fpos += len(data)
+        return data
 
 
     def flush(self):
