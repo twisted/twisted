@@ -36,39 +36,39 @@ class MemoryFile(object):
 
     @type closed: C{bool}
 
-    @ivar filesystem: A reference to an instance of a class like
+    @ivar _filesystem: A reference to an instance of a class like
         L{POSIXFilesystem} which defines filesystem behavior which isn't
         localized to a single file.
 
-    @ivar fd: An C{int} giving this file's descriptor number.
+    @ivar _fd: An C{int} giving this file's descriptor number.
 
-    @ivar fpos: An C{int} giving the current position of this file.
+    @ivar _fpos: An C{int} giving the current position of this file.
 
-    @ivar appBuffer: An array giving the data which has been written to this
+    @ivar _streamBuffer: An array giving the data which has been written to this
         file but not yet flushed to the underlying descriptor.
 
-    @ivar dirty: A list of two-tuples giving offsets and lengths of slices of
-        C{appBuffer} which are dirty and must be written to the underlying file
+    @ivar _dirty: A list of two-tuples giving offsets and lengths of slices of
+        C{_streamBuffer} which are dirty and must be written to the underlying file
         descriptor when a flush occurs.
 
-    @ivar filesystemState: A L{_POSIXFilesystemFileState} instance giving the
+    @ivar _filesystemState: A L{_POSIXFilesystemFileState} instance giving the
         low-level storage state for this file.
     """
 
     def __init__(self, filesystem, fd, filesystemState):
-        self.filesystem = filesystem
-        self.fd = fd
-        self.fpos = 0
-        self.appBuffer = array('c')
-        self.dirty = []
-        self.filesystemState = filesystemState
+        self._filesystem = filesystem
+        self._fd = fd
+        self._fpos = 0
+        self._streamBuffer = array('c')
+        self._dirty = []
+        self._filesystemState = filesystemState
 
 
     def _isClosed(self):
         """
         Is this file descriptor closed?
         """
-        return self.fd not in self.filesystem.byDescriptor
+        return self._fd not in self._filesystem.byDescriptor
 
     closed = property(_isClosed, doc=_isClosed.__doc__)
 
@@ -86,7 +86,7 @@ class MemoryFile(object):
         Return the integer file descriptor for this file object.
         """
         self._checkClosed()
-        return self.fd
+        return self._fd
 
 
     def close(self):
@@ -97,7 +97,7 @@ class MemoryFile(object):
         if self.closed:
             return
         self.flush()
-        del self.filesystem.byDescriptor[self.fd]
+        del self._filesystem.byDescriptor[self._fd]
 
 
     def tell(self):
@@ -105,7 +105,7 @@ class MemoryFile(object):
         Return the current file position pointer for this file.
         """
         self._checkClosed()
-        return self.fpos
+        return self._fpos
 
 
     def seek(self, offset, whence=SEEK_SET):
@@ -114,11 +114,11 @@ class MemoryFile(object):
         """
         self.flush()
         if whence == SEEK_SET:
-            self.fpos = offset
+            self._fpos = offset
         elif whence == SEEK_CUR:
-            self.fpos += offset
+            self._fpos += offset
         elif whence == SEEK_END:
-            self.fpos = self.filesystemState.size() + offset
+            self._fpos = self._filesystemState.size() + offset
 
 
     def write(self, bytes):
@@ -126,12 +126,12 @@ class MemoryFile(object):
         Add the given bytes to an I{application-level} buffer.
         """
         self._checkClosed()
-        padding = self.fpos - len(self.appBuffer)
+        padding = self._fpos - len(self._streamBuffer)
         if padding > 0:
-            self.appBuffer.extend('\0' * padding)
-        self.appBuffer[self.fpos:self.fpos + len(bytes)] = array('c', bytes)
-        self.dirty.append((self.fpos, self.fpos + len(bytes)))
-        self.fpos += len(bytes)
+            self._streamBuffer.extend('\0' * padding)
+        self._streamBuffer[self._fpos:self._fpos + len(bytes)] = array('c', bytes)
+        self._dirty.append((self._fpos, self._fpos + len(bytes)))
+        self._fpos += len(bytes)
 
 
     def read(self, size=None):
@@ -141,8 +141,8 @@ class MemoryFile(object):
         self._checkClosed()
         end = None
         if size is not None and size >= 0:
-            end = self.fpos + size
-        return self.filesystemState.fsBuffer.tostring()[self.fpos:end]
+            end = self._fpos + size
+        return self._filesystemState.fsBuffer.tostring()[self._fpos:end]
 
 
     def flush(self):
@@ -151,10 +151,10 @@ class MemoryFile(object):
         I{filesystem-level} buffer.
         """
         self._checkClosed()
-        for (start, end) in self.dirty:
-            self.filesystemState.pwrite(start, self.appBuffer[start:end])
-        self.appBuffer = array('c')
-        self.dirty = []
+        for (start, end) in self._dirty:
+            self._filesystemState.pwrite(start, self._streamBuffer[start:end])
+        self._streamBuffer = array('c')
+        self._dirty = []
 
 
     def _fsync(self):
@@ -162,7 +162,7 @@ class MemoryFile(object):
         Flush the underlying filesystem state for this file to the object
         representing the underlying hardware device.
         """
-        self.filesystemState.fsync()
+        self._filesystemState.fsync()
 
 
 
