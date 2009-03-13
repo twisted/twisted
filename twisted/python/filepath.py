@@ -3,11 +3,39 @@
 # See LICENSE for details.
 
 """
-Structured filesystem path representation.
+Filesystem path representation.
 
-L{FilePath} represents the components of a path in a way which is intended to
-reduce unintentional behavior allowed by naive string-based manipulation of
-paths.
+L{FilePath} is a location on a filesystem.  This module provides several
+advantages over the normal Python string-based representation of paths:
+
+    * security: if you want to provide access to a directory, but not its
+      parents, you can call "child".  Unlike os.path.join, L{FilePath.child}
+      will not let you access paths (including, but not limited, to "..") which
+      are not actually children of the path in question.
+
+    * convenience: L{FilePath} can be inspected with normal documentation tools
+      to easily discover what's possible with paths, rather than sprawling
+      across several different modules (shutil, os, builtins).
+
+    * testability: Since L{FilePath} is one object rather than a bunch of free
+      functions, it's easier to apply a customizing wrapper, or fake in unit
+      tests.
+
+    * correctness: methods like L{FilePath.setContent} and L{FilePath.create}
+      allow you to perform commonly desirable operations (like replacing a file
+      without losing data) without becoming a filesystem semantics wizard.
+
+    * polymorphism: although a formal interface is still in the works, many
+      operations work the same with L{FilePath} and
+      L{twisted.python.zippath.ZipArchive}, a virtual filesystem wrapper around
+      zip files.
+
+    * portability: L{FilePath} tries to provide more consistent behavior,
+      especially between Windows and POSIX filesystems.  For example, one can
+      much more easily determine why a path cannot be listed using
+      L{FilePath.children} than L{os.listdir}.
+
+
 """
 
 import os
@@ -644,10 +672,10 @@ class FilePath(_PathHelper):
         replacing whatever is in the file already if it exists.
         """
         sib = self.siblingExtension(ext)
-        fObj = sib.open('w')
-        fObj.write(content)
-        fObj.flush()
-        os.fsync(fObj.fileno())
+        f = sib.open('w')
+        f.write(content)
+        f.flush()
+        os.fsync(f.fileno())
         os.rename(sib.path, self.path)
 
 
