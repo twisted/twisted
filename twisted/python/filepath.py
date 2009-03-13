@@ -354,6 +354,7 @@ class FilePath(_PathHelper):
     @ivar alwaysCreate: When opening this file, only succeed if the file does not
     already exist.
     """
+
     statinfo = None
     path = None
 
