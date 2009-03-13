@@ -9,6 +9,8 @@ structure preserves numerous details about the state of stream buffers,
 filesystem buffers, and hypothetical disk contents.
 """
 
+from twisted.python.monkey import MonkeyPatcher
+
 import os
 import errno
 from array import array
@@ -237,7 +239,10 @@ class _POSIXFilesystemFileState(object):
         """
         del self.fsBuffer[pos:]
 
+_patchedOSNames = ['fsync', 'rename']
 
+_patchedBuiltins = {"open": "open",
+                    "file": "open"}
 
 class _OSModuleProxy(object):
     """
@@ -249,8 +254,17 @@ class _OSModuleProxy(object):
         Create a proxy for the 'os' module wrapped around the filesystem.
         """
         self._filesystem = filesystem
-        self.rename = self._filesystem.rename
-        self.fsync = self._filesystem.fsync
+
+
+    def __getattribute__(self, name):
+        """
+        Get an attribute from 'os', or from my L{POSIXFilesystem}.
+        """
+        if name in _patchedOSNames:
+            return getattr(
+                super(_OSModuleProxy, self).__getattribute__('_filesystem'),
+                name)
+        return getattr(os, name)
 
 
 
@@ -379,17 +393,19 @@ class POSIXFilesystem(object):
 
         to avoid accidentally leaving a module's output redirected.
         """
-        module.open = self.open
-        module.file = self.open
-        module.os = _OSModuleProxy(self)
-        module.rename = self.rename
-        module.fsync = self.fsync
+        for name in _patchedBuiltins:
+            setattr(module, name, getattr(self, _patchedBuiltins[name]))
+        patcher = MonkeyPatcher()
+        patches = [(name, getattr(self, name)) for name in _patchedOSNames]
+        patches.append(['os', _OSModuleProxy(self)])
+        for name, patch in patches:
+            if getattr(module, name, None) is not None:
+                patcher.addPatch(module, name, patch)
+        patcher.patch()
         def cleanup():
-            module.os = os
-            module.rename = os.rename
-            module.fsync = os.fsync
-            del module.open
-            del module.file
+            for name in _patchedBuiltins:
+                delattr(module, name)
+            patcher.restore()
         return cleanup
 
 

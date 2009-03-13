@@ -609,3 +609,11 @@ class PatchingTest(TestCase):
             syncer(self.filename, somedata)
             self.assertEqual(self.fs.bytesOnDeviceFor(self.filename),
                              somedata)
+
+
+    def test_otherAttributes(self):
+        """
+        Other attributes of the 'os' module should remain unchanged.
+        """
+        self.patchIt()
+        self.assertEqual(iostub.os.name, os.name)
