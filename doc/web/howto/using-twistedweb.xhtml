@@ -551,6 +551,77 @@ resource.processors = {".pl": PerlScript} # Files that end with .pl will be
 resource.indexNames = ['index.pl']
 </pre>
 
+<h3>Serving WSGI Applications</h3>
+
+<p><a href="http://wsgi.org/wsgi/">WSGI</a> is the Web Server Gateway
+Interface. It is a specification for web servers and application servers to
+communicate with Python web applications. All modern Python web frameworks
+support the WSGI interface.</p>
+
+<p>The easiest way to get started with WSGI application is to use the twistd
+command:</p>
+
+<pre class="shell">
+% twistd -n web --wsgi=helloworld.application
+</pre>
+
+<p>This assumes that you have a WSGI application called application in
+your helloworld module/package, which might look like this:</p>
+
+<pre class="python">
+def application(environ, start_response):
+    """Basic WSGI Application"""
+    start_response('200 OK', [('Content-type','text/plain')])
+    return ['Hello World!']
+</pre>
+
+<p>The above setup will be suitable for many applications where all that is
+needed is to server the WSGI application at the site's root. However, for
+greater control, Twisted provides support for using WSGI applications as
+resources <code class="api">twisted.web.wsgi.WSGIResource</code>.</p>
+
+<p>Here is an example of a WSGI application being served as the root resource
+for a site, in the following tac file:</p>
+
+<pre class="python">
+from twisted.web import server
+from twisted.web.wsgi import WSGIResource
+from twisted.python.threadpool import ThreadPool
+from twisted.internet import reactor
+from twisted.application import service, strports
+
+# Create and start a thread pool,
+wsgiThreadPool = ThreadPool()
+wsgiThreadPool.start()
+
+# ensuring that it will be stopped when the reactor shuts down
+reactor.addSystemEventTrigger('after', 'shutdown', wsgiThreadPool.stop)
+
+def application(environ, start_response):
+    """A basic WSGI application"""
+    start_response('200 OK', [('Content-type','text/plain')])
+    return ['Hello World!']
+
+# Create the WSGI resource
+wsgiAppAsResource = WSGIResource(reactor, wsgiThreadPool, application)
+
+# Hooks for twistd
+application = service.Application('Twisted.web.wsgi Hello World Example')
+server = strports.service('tcp:8080', server.Site(wsgiAppAsResource))
+server.setServiceParent(application)
+</pre>
+
+<p>This can then be run like any other .tac file:</p>
+
+<pre class="shell">
+% twistd -ny myapp.tac
+</pre>
+
+<p>Because of the synchronous nature of WSGI, each application call (for
+each request) is called within a thread, and the result is written back to the
+web server. For this, a <code class="api">twisted.python.threadpool.ThreadPool</code>
+instance is used.</p>
+
 <h3>Using VHostMonster</h3>
 
 <p>It is common to use one server (for example, Apache) on a site with multiple
