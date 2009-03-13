@@ -45,7 +45,7 @@ class FileTestsMixin:
 
     def test_fileno(self):
         """
-        I{fileno} returns an integer value unique among open files.
+        C{fileno} returns an integer value unique among open files.
         """
         first = self.open("foo", "w")
         self.addCleanup(first.close)
@@ -60,8 +60,8 @@ class FileTestsMixin:
 
     def test_closed(self):
         """
-        I{fileno}, I{write}, I{read}, I{tell}, and I{flush} raise L{ValueError}
-        when called on a closed file.  I{fsync} raises L{OSerror}.  I{close}
+        C{fileno}, C{write}, C{read}, C{tell}, and C{flush} raise L{ValueError}
+        when called on a closed file.  C{fsync} raises L{OSerror}.  C{close}
         does nothing.
         """
         fObj = self.open("foo", "w")
@@ -89,7 +89,7 @@ class FileTestsMixin:
 
     def test_write(self):
         """
-        I{write} adds bytes to a file.
+        C{write} adds bytes to a file.
         """
         outfile = self.open("foo", "w")
         self.addCleanup(outfile.close)
@@ -141,7 +141,7 @@ class FileTestsMixin:
 
     def test_read(self):
         """
-        I{read} with no arguments returns the entire current contents of a
+        C{read} with no arguments returns the entire current contents of a
         file.
         """
         bytes = "bytes"
@@ -189,7 +189,7 @@ class FileTestsMixin:
 
     def test_flush(self):
         """
-        Data written to a file before a call to I{flush} is visible to another
+        Data written to a file before a call to C{flush} is visible to another
         file object which refers to the same file.
         """
         bytes = "bytes"
@@ -205,7 +205,7 @@ class FileTestsMixin:
 
     def test_tell(self):
         """
-        The I{tell} method returns the current file position.
+        The C{tell} method returns the current file position.
         """
         fObj = self.open("foo", "w")
         fObj.write("hello")
@@ -216,7 +216,7 @@ class FileTestsMixin:
 
     def test_seek(self):
         """
-        The I{seek} method changes the current file position to the specified
+        The C{seek} method changes the current file position to the specified
         value.
         """
         fObj = self.open("foo", "w")
@@ -235,7 +235,7 @@ class FileTestsMixin:
 
     def test_seekFlushes(self):
         """
-        Using the I{seek} method also flushes the contents of the application
+        Using the C{seek} method also flushes the contents of the application
         buffer.
         """
         writer = self.open("foo", "w")
@@ -256,7 +256,7 @@ class FileTestsMixin:
 
     def test_rename(self):
         """
-        The I{rename} method changes the name by which a file is accessible.
+        The C{rename} method changes the name by which a file is accessible.
         """
         fObj = self.open("foo", "w")
         fObj.write("bytes")
