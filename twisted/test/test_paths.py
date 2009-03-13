@@ -914,3 +914,4 @@ class URLPathTestCase(unittest.TestCase):
         # here should be equivalent to '.'
         self.assertEquals(str(self.path.here()), 'http://example.com/foo/')
         self.assertEquals(str(self.path.child('').here()), 'http://example.com/foo/bar/')
+
