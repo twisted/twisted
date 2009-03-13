@@ -17,6 +17,8 @@ from twisted.trial.unittest import TestCase
 
 from twisted.python.memfs import SEEK_SET, SEEK_CUR, SEEK_END, POSIXFilesystem
 
+from twisted.python.test import iostub, blankmodule
+
 
 class FileTestsMixin:
     """
@@ -474,3 +476,136 @@ class MemoryFilesystemTests(TestCase, FileTestsMixin):
         f.close()
         f = self.open("test.txt", "r")
         self.assertEqual(f.read(), "")
+
+
+origStubDict = iostub.__dict__.copy()
+
+class PatchingTest(TestCase):
+    """
+    These tests cover various cases for L{POSIXFilesystem.redirect} to alter
+    the behavior of a module.
+    """
+
+    def setUp(self):
+        """
+        Create a L{POSIXFilesystem} for testing.
+        """
+        self.filename = self.mktemp()
+        self.fs = POSIXFilesystem()
+        self.unpatcher = None
+
+
+    def patchIt(self):
+        """
+        Patch the 'iostub' module.
+        """
+        self.unpatcher = self.fs.redirect(iostub)
+
+
+    def unpatchIt(self):
+        """
+        Unpatch the 'iostub' module if it is currently patched.
+        """
+        if self.unpatcher is not None:
+            unpatcher = self.unpatcher
+            self.unpatcher = None
+            unpatcher()
+
+
+    def tearDown(self):
+        """
+        Unpatch the 'iostub' module.
+        """
+        self.unpatchIt()
+
+
+    def test_simpleWrite(self):
+        """
+        A function defined in a module which simply uses the 'open' built-in
+        will write to a file in my L{POSIXFilesystem}, not the real filesystem.
+        """
+        self.patchIt()
+        for thunk, data in ((iostub.writeWithOpen, "foo"),
+                            (iostub.writeWithFile, "bar")):
+            thunk(self.filename, data)
+            self.assertEqual(self.fs.open(self.filename).read(), data)
+            self.assertRaises(IOError, open, self.filename)
+
+
+    def test_unpatching(self):
+        """
+        When the callable returned from L{POSIXFilesystem.redirect} is invoked,
+        all patches should be removed from the target module.
+        """
+        # Make sure we start the test in an unmolested state (since other test
+        # methods do patching).
+        self.assertClean()
+        self.patchIt()
+        self.unpatchIt()
+        self.assertClean()
+
+
+    def test_unpatchingEmpty(self):
+        """
+        Unpatching a module which is empty should leave the module in a
+        pristine state; new names should not be added by the patch/unpatch
+        process.
+        """
+        origNamespace = blankmodule.__dict__.copy()
+        self.fs.redirect(blankmodule)()
+        self.assertEqualNamespace(origNamespace, blankmodule.__dict__)
+
+
+    def assertEqualNamespace(self, a, b):
+        """
+        a (a module global namespace) should equal b (another global
+        namespace).  Assert that and produce a helpful message if not.
+        """
+        messages = []
+        allkeys = set(a.keys()).union(set(b.keys()))
+        for k in allkeys:
+            if k == '__warningregistry__':
+                continue
+            if k not in a:
+                messages.append("%r added" % (k,))
+            elif k not in b:
+                messages.append("%r removed" % (k,))
+            elif a[k] != b[k]:
+                messages.append("%r changed" % (k,))
+        if messages:
+            self.fail(', '.join(messages))
+
+
+    def assertClean(self):
+        """
+        Make sure that the 'iostub' module is in a pristine state.
+        """
+        self.assertEqualNamespace(origStubDict, iostub.__dict__)
+
+
+    def test_rename(self):
+        """
+        'os.rename' should rename a file in the redirected filesystem.
+        """
+        self.patchIt()
+        for renamer, uniquename in ([
+                (iostub.rename_moduleImport, "foo"),
+                (iostub.rename_functionImport, "bar")]):
+            self.fs.open(uniquename, "w").close()
+            newname = uniquename+".new"
+            renamer(uniquename, newname)
+            self.assertEqual(self.fs.exists(uniquename), False)
+            self.assertEqual(self.fs.exists(newname), True)
+
+
+    def test_fsync(self):
+        """
+        'os.fsync' should sync the buffers in the redirected filesystem.
+        """
+        self.patchIt()
+        for syncer, somedata in ([
+                (iostub.fsync_moduleImport, "some data"),
+                (iostub.fsync_functionImport, "some other data")]):
+            syncer(self.filename, somedata)
+            self.assertEqual(self.fs.bytesOnDeviceFor(self.filename),
+                             somedata)

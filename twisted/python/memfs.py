@@ -239,6 +239,21 @@ class _POSIXFilesystemFileState(object):
 
 
 
+class _OSModuleProxy(object):
+    """
+    A proxy for the 'os' module.
+    """
+
+    def __init__(self, filesystem):
+        """
+        Create a proxy for the 'os' module wrapped around the filesystem.
+        """
+        self._filesystem = filesystem
+        self.rename = self._filesystem.rename
+        self.fsync = self._filesystem.fsync
+
+
+
 class POSIXFilesystem(object):
     """
     An in-memory implementation of a filesystem.
@@ -326,6 +341,56 @@ class POSIXFilesystem(object):
         Change the name of a file.
         """
         self.byName[newname] = self.byName.pop(oldname)
+
+
+    def exists(self, name):
+        """
+        Does a file with the given name exist?
+        """
+        return name in self.byName
+
+
+    def redirect(self, module):
+        """
+        Redirect the file I/O operations on C{module} - and I{only} on
+        C{module}, not on global or shared modules - to point at this
+        L{POSIXFilesystem} rather than the __builtin__ and os modules.
+
+        Given that L{POSIXFilesystem} is not a complete implementation of file
+        I/O, there are many operations that it lacks, and will not patch.
+        These missing operations include, but are not limited to: os.listdir,
+        os.stat, os.open, os.write, os.read, os.unlink (i.e. os.remove),
+        os.curdur (and by extension os.path.abspath).
+
+        Please do not depend on these operations being unsupported.  As
+        L{POSIXFilesystem} becomes more complete, these operations will be
+        patched as well.
+
+        This method will deal with different import styles, e.g. 'from os
+        import fsync', 'import os', but only deals with the global scope of the
+        module it is passed.  However, it will not inspect attributes on
+        classes or functions, nor local imports inside functions.
+
+        It returns a 0-argument callable that will restore the module to its
+        original state.  In unit tests, idiomatic usage should be::
+
+            fs = POSIXFilesystem()
+            testCase.addCleanup(fs.redirect(mymodule))
+
+        to avoid accidentally leaving a module's output redirected.
+        """
+        module.open = self.open
+        module.file = self.open
+        module.os = _OSModuleProxy(self)
+        module.rename = self.rename
+        module.fsync = self.fsync
+        def cleanup():
+            module.os = os
+            module.rename = os.rename
+            module.fsync = os.fsync
+            del module.open
+            del module.file
+        return cleanup
 
 
 
