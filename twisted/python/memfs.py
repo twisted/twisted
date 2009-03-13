@@ -219,6 +219,13 @@ class _POSIXFilesystemFileState(object):
         self.fsBuffer[pos:pos + len(bytes)] = bytes
 
 
+    def truncate(self, pos):
+        """
+        Truncate the buffer to the given length.
+        """
+        del self.fsBuffer[pos:]
+
+
 
 class POSIXFilesystem(object):
     """
@@ -261,17 +268,17 @@ class POSIXFilesystem(object):
         if 'r' in mode:
             if name not in self.byName:
                 raise Exception("No such file %r" % (name,))
-        if '+' in mode:
-            if name in self.byName:
-                raise Exception(
-                    "Opening an existing file for reading is unsupported")
 
         descriptor = self._descriptorCounter()
         if name not in self.byName:
             self.byName[name] = _POSIXFilesystemFileState()
         fsState = self.byName[name]
+        if 'w' in mode:
+            fsState.truncate(0)
         fObj = MemoryFile(self, descriptor, fsState)
         self.byDescriptor[descriptor] = fObj
+        if 'a' in mode:
+            fObj.seek(0, SEEK_END)
         return fObj
 
 

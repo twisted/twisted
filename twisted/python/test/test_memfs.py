@@ -254,6 +254,46 @@ class FileTestsMixin:
         self.assertEqual(reader.read(), "foo")
 
 
+    def test_writeOpenTruncates(self, addMode=''):
+        """
+        If a file already exists with a given name, C{open} in 'w' mode
+        immediately truncates that file.
+        """
+        writer = self.open("foo", "w")
+        writer.write("some data that you don't want")
+        writer.flush()
+        self.fsync(writer.fileno())
+        writer2 = self.open("foo", "w"+addMode)
+        writer2.write("information")
+        writer2.close()
+        reader = self.open("foo", "r")
+        self.assertEqual(reader.read(), "information")
+
+
+    def test_writePlusOpenTruncates(self):
+        """
+        If a file already exists with a given name, C{open} in 'w+' mode
+        immediately truncates that file.
+        """
+        self.test_writeOpenTruncates("+")
+
+
+    def test_appendOpenDoesntTruncate(self):
+        """
+        If a file already exists with a given name, C{open} in 'w' mode
+        immediately truncates that file.
+        """
+        writer = self.open("foo", "w")
+        writer.write("alpha")
+        writer.flush()
+        self.fsync(writer.fileno())
+        writer2 = self.open("foo", "a")
+        writer2.write(" beta gamma")
+        writer2.close()
+        reader = self.open("foo", "r")
+        self.assertEqual(reader.read(), "alpha beta gamma")
+
+
     def test_rename(self):
         """
         The C{rename} method changes the name by which a file is accessible.
