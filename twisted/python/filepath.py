@@ -637,6 +637,7 @@ class FilePath(_PathHelper):
     def parent(self):
         return self.clonePath(self.dirname())
 
+
     def setContent(self, content, ext='.new'):
         """
         Make the contents of the file represented by this path the given bytes,
@@ -646,9 +647,9 @@ class FilePath(_PathHelper):
         fObj = sib.open('w')
         fObj.write(content)
         fObj.flush()
-        # XXX still broken
-        # os.fsync(fObj.fileno())
+        os.fsync(fObj.fileno())
         os.rename(sib.path, self.path)
+
 
     # new in 2.2.0
 

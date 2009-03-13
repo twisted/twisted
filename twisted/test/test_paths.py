@@ -399,9 +399,7 @@ class FilePathTestCase(AbstractFilePathTestCase):
         """
         bytes = "the bytes"
         self.path.setContent(bytes)
-        fObj = fs.open(self.path.path)
-        contents = fObj.read()
-        fObj.close()
+        contents = fs.bytesOnDeviceFor(self.path.path)
         self.assertEquals(contents, bytes)
 
 
