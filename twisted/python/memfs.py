@@ -9,6 +9,7 @@ structure preserves numerous details about the state of stream buffers,
 filesystem buffers, and hypothetical disk contents.
 """
 
+import os
 import errno
 from array import array
 
@@ -153,10 +154,15 @@ class MemoryFile(object):
         I{filesystem-level} buffer.
         """
         self._checkClosed()
-        for (start, end) in self._dirty:
-            self._filesystemState.pwrite(start, self._streamBuffer[start:end])
+        # If any exceptions are thrown below, we actually want to discard the
+        # buffer; this is what the real flush() implementation effectively
+        # does.
+        streamBuffer = self._streamBuffer
+        dirty = self._dirty
         self._streamBuffer = array('c')
         self._dirty = []
+        for (start, end) in dirty:
+            self._filesystemState.pwrite(start, streamBuffer[start:end])
 
 
     def _fsync(self):
@@ -178,10 +184,14 @@ class _POSIXFilesystemFileState(object):
 
     @ivar device: An L{array} representing the contents of this file as known
         by a hypothetical hardware storage device, i.e. a hard disk.
+
+    @ivar fs: The L{POSIXFilesystem} that this L{_POSIXFilesystemFileState} is
+        a part of.
     """
-    def __init__(self):
+    def __init__(self, fs):
         self.fsBuffer = array('c')
         self.device = array('c')
+        self.fs = fs
 
 
     def size(self):
@@ -213,6 +223,8 @@ class _POSIXFilesystemFileState(object):
         # Not directly unit tested, but the MemoryFile tests definitely depend on
         # this working correctly.  It might be nice to add direct unit tests
         # for this code, anyway.
+        if self.fs.full:
+            raise IOError(errno.ENOSPC, os.strerror(errno.ENOSPC))
         padding = pos - len(self.fsBuffer)
         if padding > 0:
             self.fsBuffer.extend('\0' * padding)
@@ -232,10 +244,17 @@ class POSIXFilesystem(object):
     An in-memory implementation of a filesystem.
 
     @ivar byName: C{dict} mapping filenames to L{MemoryFile} instances.
+
     @ivar byDescriptor: C{dict} mapping integer file descriptors to open
         L{MemoryFile} instances.
+
+    @ivar full: A boolean indicating whether to reject writing data to the
+        filesystem with an ENOSPC error.  Normally C{False}.  Set to C{True} if
+        you want this filesystem to behave as though it's full.
     """
+
     def __init__(self):
+        self.full = False
         self.byName = {}
         self.byDescriptor = {}
 
@@ -248,7 +267,7 @@ class POSIXFilesystem(object):
 
     def open(self, name, mode='r'):
         """
-        Implement a copy of the Python builtn "open" to behave in a way which
+        Implement a copy of the Python builtin "open" to behave in a way which
         allows inspection of the resulting state without touching the actual
         filesystem.
 
@@ -271,7 +290,7 @@ class POSIXFilesystem(object):
 
         descriptor = self._descriptorCounter()
         if name not in self.byName:
-            self.byName[name] = _POSIXFilesystemFileState()
+            self.byName[name] = _POSIXFilesystemFileState(self)
         fsState = self.byName[name]
         if 'w' in mode:
             fsState.truncate(0)

@@ -11,6 +11,7 @@ behaving the same as the real implementation.
 
 import sys
 import os
+from errno import ENOSPC
 
 from twisted.trial.unittest import TestCase
 
@@ -431,3 +432,43 @@ class MemoryFilesystemTests(TestCase, FileTestsMixin):
         f.write("some data")
         f.close()
         self.assertEqual(self.fs.willLoseData(), True)
+
+
+    def test_fullFilesystem(self):
+        """
+        A full filesystem rejects actual writes (i.e. flush() calls) with
+        ENOSPC.  A filesystem 'full' in this manner will still allow creation
+        of new files.
+
+        Setting the C{full} attribute to C{True} on L{POSIXFilesystem} will
+        cause it to behave as if it is full.
+
+        I can't think of an automated to verify that this actually happens on
+        the real filesystem implementation, but you can verify this for
+        yourself on linux with::
+
+            sudo mke2fs -m 0 /dev/ram0
+            mkdir ramdisk
+            sudo mount /dev/ram0 ramdisk
+            cd ramdisk
+            sudo chown $(id -u).$(id -g) .
+            dd if=/dev/zero of=fillme
+            python
+            >>> f = file("full.txt", "w")
+            >>> f.write("data")
+            >>> f.flush()
+
+        or, alternately, C{f.close()}.
+
+        Doing a C{flush()} while the filesystem is full will empty the stream
+        buffer while it raises this exception, so
+        """
+        self.fs.full = True
+        f = self.open("test.txt", "w+")
+        f.write("some data")
+        ioe = self.assertRaises(IOError, f.flush)
+        self.assertEqual(ioe.errno, ENOSPC)
+        self.assertEqual(ioe.strerror, os.strerror(ENOSPC))
+        f.close()
+        f = self.open("test.txt", "r")
+        self.assertEqual(f.read(), "")
