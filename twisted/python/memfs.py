@@ -260,6 +260,7 @@ class POSIXFilesystem(object):
 
 
     _fdCounter = 3
+
     def _descriptorCounter(self):
         self._fdCounter += 1
         return self._fdCounter
@@ -301,26 +302,12 @@ class POSIXFilesystem(object):
         return fObj
 
 
-    def willLoseData(self):
+    def bytesOnDeviceFor(self, filename):
         """
-        Will the application using this filesystem lose any data that it has
-        written to it at this point in execution, in the event of power-loss,
-        device removal, or network disconnection?  Possible causes include
-        writing data to a file and not flush()ing it, and flush()ing a file
-        without sync()ing it.
-
-        @return: L{True} if the application might lose data, L{False} if all
-        the buffers have been properly synchronized.
-
-        @rtype: L{bool}
+        Retrieve the bytes fully sent to the underlying device by the sequence
+        of API calls that have been made on this filesystem.
         """
-        for memFile in self.byDescriptor.itervalues():
-            if memFile._streamBuffer:
-                return True
-        for fsState in self.byName.itervalues():
-            if fsState.fsBuffer != fsState.device:
-                return True
-        return False
+        return self.byName[filename].device.tostring()
 
 
     def fsync(self, fd):

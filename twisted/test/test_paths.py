@@ -393,7 +393,6 @@ class FilePathTestCase(AbstractFilePathTestCase):
         self.assertEquals(set(x), set(self.all))
 
 
-
     def _testSetContent(self, fs):
         """
         Set the contents of a file and then make sure they got set.
@@ -403,8 +402,7 @@ class FilePathTestCase(AbstractFilePathTestCase):
         fObj = fs.open(self.path.path)
         contents = fObj.read()
         fObj.close()
-        self.assertEqual(contents, bytes)
-        self.assertEqual(fs.willLoseData(), False)
+        self.assertEquals(contents, bytes)
 
 
     def _setContentTest(self, fs):
@@ -413,6 +411,23 @@ class FilePathTestCase(AbstractFilePathTestCase):
         """
         self._patchFilesystem(fs)
         self._testSetContent(fs)
+
+
+    def test_setContentWriteError(self):
+        """
+        L{FilePath.setContent} will handle errors writing its file without
+        losing the data that was previously written to disk.
+        """
+        fs = POSIXFilesystem()
+        self._patchFilesystem(fs)
+        f = fs.open(self.path.path, "w")
+        f.write("some bytes")
+        f.flush()
+        fs.fsync(f.fileno())
+        self.path.setContent("some bytes")
+        fs.full = True
+        self.assertRaises(IOError, self.path.setContent, "other bytes")
+        self.assertEquals(self.path.getContent(), "some bytes")
 
 
     def test_setContentPOSIX(self):

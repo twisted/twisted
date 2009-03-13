@@ -409,29 +409,31 @@ class MemoryFilesystemTests(TestCase, FileTestsMixin):
 
     def test_writeConsistency(self):
         """
-        L{POSIXFilesystem.willLoseData} will return True if there is any data
-        stored in either stream buffers or filesystem buffers.
+        L{POSIXFilesystem.bytesOnDeviceFor} will return the bytes that have
+        been written and synced to disk for a given filename.
         """
-        f = self.open("test.txt", "w")
+        name = "test.txt"
+        f = self.open(name, "w")
         f.write("some data")
-        self.assertEqual(self.fs.willLoseData(), True)
+        self.assertEqual(self.fs.bytesOnDeviceFor(name), "")
         f.flush()
-        self.assertEqual(self.fs.willLoseData(), True)
+        self.assertEqual(self.fs.bytesOnDeviceFor(name), "")
         self.fsync(f.fileno())
-        self.assertEqual(self.fs.willLoseData(), False)
+        self.assertEqual(self.fs.bytesOnDeviceFor(name), "some data")
         f.close()
-        self.assertEqual(self.fs.willLoseData(), False)
+        self.assertEqual(self.fs.bytesOnDeviceFor(name), "some data")
 
 
     def test_closeStillInconsistent(self):
         """
         Since C{close} does not imply C{fsync}, closing a file without syncing
-        it first will cause L{POSIXFilesystem.willLoseData} to return True.
+        will cause L{POSIXFilesystem.bytesOnDeviceFor} to return the empty
+        string.
         """
         f = self.open("test.txt", "w")
         f.write("some data")
         f.close()
-        self.assertEqual(self.fs.willLoseData(), True)
+        self.assertEqual(self.fs.bytesOnDeviceFor("test.txt"), "")
 
 
     def test_fullFilesystem(self):
