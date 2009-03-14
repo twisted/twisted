@@ -19,42 +19,30 @@ from twisted.python.memfs import SEEK_SET, SEEK_CUR, SEEK_END, POSIXFilesystem
 
 from twisted.python.test import iostub, blankmodule
 
+from twisted.python import realfs
+
+
 
 class FileTestsMixin:
     """
     Tests for an object like L{file}.
+
+    @ivar filesystem: A provider of L{IFileSystem}.  This should be set in the
+        C{setUp} of subclasses.
     """
 
-    def open(self, name, mode):
-        """
-        Return a file-like object to be tested.
-        """
-        raise NotImplementedError("%s did not implement open" % (self,))
-
-
-    def fsync(self, fd):
-        """
-        Call the appropriate fsync implementation on the given file descriptor.
-        """
-        raise NotImplementedError("%s did not implement fsync" % (self,))
-
-
-    def rename(self, oldname, newname):
-        """
-        Call the appropriate rename implementation with the given parameters.
-        """
-        raise NotImplementedError("%s did not implement rename" % (self,))
+    filesystem = None
 
 
     def test_fileno(self):
         """
         C{fileno} returns an integer value unique among open files.
         """
-        first = self.open("foo", "w")
+        first = self.filesystem.open("foo", "w")
         self.addCleanup(first.close)
 
         self.assertTrue(isinstance(first.fileno(), int))
-        second = self.open("bar", "w")
+        second = self.filesystem.open("bar", "w")
         self.addCleanup(second.close)
 
         self.assertTrue(isinstance(first.fileno(), int))
@@ -67,7 +55,7 @@ class FileTestsMixin:
         when called on a closed file.  C{fsync} raises L{OSerror}.  C{close}
         does nothing.
         """
-        fObj = self.open("foo", "w")
+        fObj = self.filesystem.open("foo", "w")
         fd = fObj.fileno()
         fObj.close()
         self.assertRaises(ValueError, fObj.fileno)
@@ -75,7 +63,7 @@ class FileTestsMixin:
         self.assertRaises(ValueError, fObj.read)
         self.assertRaises(ValueError, fObj.flush)
         self.assertRaises(ValueError, fObj.tell)
-        self.assertRaises(OSError, self.fsync, fd)
+        self.assertRaises(OSError, self.filesystem.fsync, fd)
         fObj.close()
 
 
@@ -84,7 +72,7 @@ class FileTestsMixin:
         The L{closed} attribute on an open file is L{False}; on a closed file
         it is L{True}.
         """
-        fObj = self.open("foo", "w")
+        fObj = self.filesystem.open("foo", "w")
         self.assertEqual(fObj.closed, False)
         fObj.close()
         self.assertEqual(fObj.closed, True)
@@ -94,10 +82,10 @@ class FileTestsMixin:
         """
         C{write} adds bytes to a file.
         """
-        outfile = self.open("foo", "w")
+        outfile = self.filesystem.open("foo", "w")
         self.addCleanup(outfile.close)
 
-        infile = self.open("foo", "r")
+        infile = self.filesystem.open("foo", "r")
         self.addCleanup(infile.close)
 
         # A boring write at the beginning of the file puts the bytes at the
@@ -136,7 +124,7 @@ class FileTestsMixin:
         If you write some bytes, then seek back to their beginning, then read
         them, you will get them back.
         """
-        outfile = self.open("out", "w+")
+        outfile = self.filesystem.open("out", "w+")
         outfile.write("foobar")
         outfile.seek(3)
         self.assertEqual(outfile.read(), "bar")
@@ -148,11 +136,11 @@ class FileTestsMixin:
         file.
         """
         bytes = "bytes"
-        outfile = self.open("out", "w")
+        outfile = self.filesystem.open("out", "w")
         outfile.write(bytes)
         outfile.close()
 
-        infile = self.open("out", "r")
+        infile = self.filesystem.open("out", "r")
         self.addCleanup(infile.close)
 
         self.assertEqual(infile.read(), bytes)
@@ -175,10 +163,10 @@ class FileTestsMixin:
         Consecutive limited-length reads from a file should result in portions
         of its contents being returned, and advance the file position.
         """
-        f = self.open("out", "w")
+        f = self.filesystem.open("out", "w")
         f.write("abcdefg")
         f.close()
-        f2 = self.open("out", "r")
+        f2 = self.filesystem.open("out", "r")
         self.assertEqual(f2.read(2), "ab")
         self.assertEqual(f2.tell(), 2)
         self.assertEqual(f2.read(2), "cd")
@@ -196,12 +184,12 @@ class FileTestsMixin:
         file object which refers to the same file.
         """
         bytes = "bytes"
-        outfile = self.open("out", "w")
+        outfile = self.filesystem.open("out", "w")
         self.addCleanup(outfile.close)
 
         outfile.write(bytes)
         outfile.flush()
-        infile = self.open("out", "r")
+        infile = self.filesystem.open("out", "r")
         self.addCleanup(infile.close)
         self.assertEqual(bytes, infile.read())
 
@@ -210,7 +198,7 @@ class FileTestsMixin:
         """
         The C{tell} method returns the current file position.
         """
-        fObj = self.open("foo", "w")
+        fObj = self.filesystem.open("foo", "w")
         fObj.write("hello")
         self.assertEqual(fObj.tell(), 5)
         fObj.write("world")
@@ -222,7 +210,7 @@ class FileTestsMixin:
         The C{seek} method changes the current file position to the specified
         value.
         """
-        fObj = self.open("foo", "w")
+        fObj = self.filesystem.open("foo", "w")
         fObj.write("hello")
         fObj.seek(1)
         self.assertEqual(fObj.tell(), 1)
@@ -241,10 +229,10 @@ class FileTestsMixin:
         Using the C{seek} method also flushes the contents of the application
         buffer.
         """
-        writer = self.open("foo", "w")
+        writer = self.filesystem.open("foo", "w")
         self.addCleanup(writer.close)
 
-        reader = self.open("foo", "r")
+        reader = self.filesystem.open("foo", "r")
         self.addCleanup(reader.close)
 
         writer.write("foo")
@@ -262,14 +250,14 @@ class FileTestsMixin:
         If a file already exists with a given name, C{open} in 'w' mode
         immediately truncates that file.
         """
-        writer = self.open("foo", "w")
+        writer = self.filesystem.open("foo", "w")
         writer.write("some data that you don't want")
         writer.flush()
-        self.fsync(writer.fileno())
-        writer2 = self.open("foo", "w"+addMode)
+        self.filesystem.fsync(writer.fileno())
+        writer2 = self.filesystem.open("foo", "w"+addMode)
         writer2.write("information")
         writer2.close()
-        reader = self.open("foo", "r")
+        reader = self.filesystem.open("foo", "r")
         self.assertEqual(reader.read(), "information")
 
 
@@ -286,14 +274,14 @@ class FileTestsMixin:
         If a file already exists with a given name, C{open} in 'w' mode
         immediately truncates that file.
         """
-        writer = self.open("foo", "w")
+        writer = self.filesystem.open("foo", "w")
         writer.write("alpha")
         writer.flush()
-        self.fsync(writer.fileno())
-        writer2 = self.open("foo", "a")
+        self.filesystem.fsync(writer.fileno())
+        writer2 = self.filesystem.open("foo", "a")
         writer2.write(" beta gamma")
         writer2.close()
-        reader = self.open("foo", "r")
+        reader = self.filesystem.open("foo", "r")
         self.assertEqual(reader.read(), "alpha beta gamma")
 
 
@@ -301,11 +289,11 @@ class FileTestsMixin:
         """
         The C{rename} method changes the name by which a file is accessible.
         """
-        fObj = self.open("foo", "w")
+        fObj = self.filesystem.open("foo", "w")
         fObj.write("bytes")
         fObj.close()
-        self.rename("foo", "bar")
-        fObj = self.open("bar", "r")
+        self.filesystem.rename("foo", "bar")
+        fObj = self.filesystem.open("bar", "r")
         self.addCleanup(fObj.close)
         self.assertEqual(fObj.read(), "bytes")
 
@@ -324,39 +312,16 @@ class RealFileTests(TestCase, FileTestsMixin):
         """
         self.base = self.mktemp()
         os.makedirs(self.base)
+        self.originalWorkingDirectory = os.getcwd()
+        os.chdir(self.base)
+        self.filesystem = realfs
 
 
-    def localFilename(self, name):
+    def tearDown(self):
         """
-        Make a given file-name relative to the base temporary location for this
-        test, so that we can test the real filesystem without going outside our
-        directory.
+        Restore the directory.
         """
-        return os.path.join(self.base, name)
-
-
-    def open(self, name, mode):
-        """
-        Implement L{FileTestsMixin.open} to open a real file with L{file}.
-        """
-        return file(self.localFilename(name), mode)
-
-
-    def fsync(self, fd):
-        """
-        Implement L{FileTestsMixin.fsync} to call L{os.fsync} and thereby
-        really sync data to disk.
-        """
-        return os.fsync(fd)
-
-
-    def rename(self, oldname, newname):
-        """
-        Implement L{FileTestsMixin.rename} to call L{os.rename} on C{oldname}
-        and C{newname}, as relative to this test's temporary path.
-        """
-        return os.rename(
-            self.localFilename(oldname), self.localFilename(newname))
+        os.chdir(self.originalWorkingDirectory)
 
 
     def test_seekFlushes(self):
@@ -384,29 +349,7 @@ class MemoryFilesystemTests(TestCase, FileTestsMixin):
         """
         Set up a L{POSIXFilesystem} to test.
         """
-        self.fs = POSIXFilesystem()
-
-
-    def open(self, name, mode):
-        """
-        Implement L{FileTestsMixin} with L{POSIXFilesystem.open}, returning a
-        L{MemoryFile}.
-        """
-        return self.fs.open(name, mode)
-
-
-    def fsync(self, fd):
-        """
-        Implement L{FileTestsMixin.fsync} with L{POSIXFilesystem.fsync}.
-        """
-        return self.fs.fsync(fd)
-
-
-    def rename(self, oldname, newname):
-        """
-        Implement L{FileTestsMixin.rename} with L{POSIXFilesystem.rename}.
-        """
-        return self.fs.rename(oldname, newname)
+        self.filesystem = POSIXFilesystem()
 
 
     def test_writeConsistency(self):
@@ -415,15 +358,15 @@ class MemoryFilesystemTests(TestCase, FileTestsMixin):
         been written and synced to disk for a given filename.
         """
         name = "test.txt"
-        f = self.open(name, "w")
+        f = self.filesystem.open(name, "w")
         f.write("some data")
-        self.assertEqual(self.fs.bytesOnDeviceFor(name), "")
+        self.assertEqual(self.filesystem.bytesOnDeviceFor(name), "")
         f.flush()
-        self.assertEqual(self.fs.bytesOnDeviceFor(name), "")
-        self.fsync(f.fileno())
-        self.assertEqual(self.fs.bytesOnDeviceFor(name), "some data")
+        self.assertEqual(self.filesystem.bytesOnDeviceFor(name), "")
+        self.filesystem.fsync(f.fileno())
+        self.assertEqual(self.filesystem.bytesOnDeviceFor(name), "some data")
         f.close()
-        self.assertEqual(self.fs.bytesOnDeviceFor(name), "some data")
+        self.assertEqual(self.filesystem.bytesOnDeviceFor(name), "some data")
 
 
     def test_closeStillInconsistent(self):
@@ -432,10 +375,10 @@ class MemoryFilesystemTests(TestCase, FileTestsMixin):
         will cause L{POSIXFilesystem.bytesOnDeviceFor} to return the empty
         string.
         """
-        f = self.open("test.txt", "w")
+        f = self.filesystem.open("test.txt", "w")
         f.write("some data")
         f.close()
-        self.assertEqual(self.fs.bytesOnDeviceFor("test.txt"), "")
+        self.assertEqual(self.filesystem.bytesOnDeviceFor("test.txt"), "")
 
 
     def test_fullFilesystem(self):
@@ -467,18 +410,19 @@ class MemoryFilesystemTests(TestCase, FileTestsMixin):
         Doing a C{flush()} while the filesystem is full will empty the stream
         buffer while it raises this exception, so
         """
-        self.fs.full = True
-        f = self.open("test.txt", "w+")
+        self.filesystem.full = True
+        f = self.filesystem.open("test.txt", "w+")
         f.write("some data")
         ioe = self.assertRaises(IOError, f.flush)
         self.assertEqual(ioe.errno, ENOSPC)
         self.assertEqual(ioe.strerror, os.strerror(ENOSPC))
         f.close()
-        f = self.open("test.txt", "r")
+        f = self.filesystem.open("test.txt", "r")
         self.assertEqual(f.read(), "")
 
 
-origStubDict = iostub.__dict__.copy()
+
+iostubOriginalNamespace = iostub.__dict__.copy()
 
 class PatchingTest(TestCase):
     """
@@ -491,7 +435,7 @@ class PatchingTest(TestCase):
         Create a L{POSIXFilesystem} for testing.
         """
         self.filename = self.mktemp()
-        self.fs = POSIXFilesystem()
+        self.filesystem = POSIXFilesystem()
         self.unpatcher = None
 
 
@@ -499,7 +443,7 @@ class PatchingTest(TestCase):
         """
         Patch the 'iostub' module.
         """
-        self.unpatcher = self.fs.redirect(iostub)
+        self.unpatcher = self.filesystem.redirect(iostub)
 
 
     def unpatchIt(self):
@@ -528,7 +472,7 @@ class PatchingTest(TestCase):
         for thunk, data in ((iostub.writeWithOpen, "foo"),
                             (iostub.writeWithFile, "bar")):
             thunk(self.filename, data)
-            self.assertEqual(self.fs.open(self.filename).read(), data)
+            self.assertEqual(self.filesystem.open(self.filename).read(), data)
             self.assertRaises(IOError, open, self.filename)
 
 
@@ -552,7 +496,7 @@ class PatchingTest(TestCase):
         process.
         """
         origNamespace = blankmodule.__dict__.copy()
-        self.fs.redirect(blankmodule)()
+        self.filesystem.redirect(blankmodule)()
         self.assertEqualNamespace(origNamespace, blankmodule.__dict__)
 
 
@@ -580,7 +524,7 @@ class PatchingTest(TestCase):
         """
         Make sure that the 'iostub' module is in a pristine state.
         """
-        self.assertEqualNamespace(origStubDict, iostub.__dict__)
+        self.assertEqualNamespace(iostubOriginalNamespace, iostub.__dict__)
 
 
     def test_rename(self):
@@ -591,11 +535,11 @@ class PatchingTest(TestCase):
         for renamer, uniquename in ([
                 (iostub.rename_moduleImport, "foo"),
                 (iostub.rename_functionImport, "bar")]):
-            self.fs.open(uniquename, "w").close()
+            self.filesystem.open(uniquename, "w").close()
             newname = uniquename+".new"
             renamer(uniquename, newname)
-            self.assertEqual(self.fs.exists(uniquename), False)
-            self.assertEqual(self.fs.exists(newname), True)
+            self.assertEqual(self.filesystem.exists(uniquename), False)
+            self.assertEqual(self.filesystem.exists(newname), True)
 
 
     def test_fsync(self):
@@ -607,7 +551,7 @@ class PatchingTest(TestCase):
                 (iostub.fsync_moduleImport, "some data"),
                 (iostub.fsync_functionImport, "some other data")]):
             syncer(self.filename, somedata)
-            self.assertEqual(self.fs.bytesOnDeviceFor(self.filename),
+            self.assertEqual(self.filesystem.bytesOnDeviceFor(self.filename),
                              somedata)
 
 

@@ -58,6 +58,8 @@ from stat import S_ISREG, S_ISDIR
 from twisted.python.runtime import platform
 from twisted.python.hashlib import sha1
 
+from twisted.python import realfs
+
 from twisted.python.win32 import ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND
 from twisted.python.win32 import ERROR_INVALID_NAME, ERROR_DIRECTORY
 from twisted.python.win32 import WindowsError
@@ -352,11 +354,19 @@ class FilePath(_PathHelper):
 
     @type alwaysCreate: C{bool}
     @ivar alwaysCreate: When opening this file, only succeed if the file does not
-    already exist.
+        already exist.
+
+    @ivar _filesystem: An object which provides the filesystem APIs from
+        L{twisted.python.realfs}.  This is private because not all filesystem
+        operations are yet available in that module; it should be made public
+        once all operations on L{FilePath} are implemented in terms of it, and
+        it is properly propagated between instances if customized.
     """
 
     statinfo = None
     path = None
+
+    _filesystem = realfs
 
     def __init__(self, path, alwaysCreate=False):
         self.path = abspath(path)
@@ -473,12 +483,15 @@ class FilePath(_PathHelper):
         os.symlink(self.path, linkFilePath.path)
 
 
-    _open = file
     def open(self, mode='r'):
+        """
+        Open this path, returning a file-like object for either reading or
+        writing, depending on mode.
+        """
         if self.alwaysCreate:
             assert 'a' not in mode, "Appending not supported when alwaysCreate == True"
             return self.create()
-        return self._open(self.path, mode+'b')
+        return self._filesystem.open(self.path, mode+'b')
 
     # stat methods below
 
@@ -676,8 +689,8 @@ class FilePath(_PathHelper):
         f = sib.open('w')
         f.write(content)
         f.flush()
-        os.fsync(f.fileno())
-        os.rename(sib.path, self.path)
+        self._filesystem.fsync(f.fileno())
+        sib.moveTo(self)
 
 
     # new in 2.2.0
@@ -807,7 +820,7 @@ class FilePath(_PathHelper):
             filesystems)
         """
         try:
-            os.rename(self.path, destination.path)
+            self._filesystem.rename(self.path, destination.path)
             self.restat(False)
         except OSError, ose:
             if ose.errno == errno.EXDEV:

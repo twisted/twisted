@@ -7,15 +7,18 @@ Test cases covering L{twisted.python.filepath} and L{twisted.python.zippath}.
 
 import os, time, pickle, errno, zipfile, stat
 
+
 from twisted.python.compat import set
 from twisted.python.win32 import WindowsError, ERROR_DIRECTORY
 from twisted.python import filepath
 from twisted.python.zippath import ZipArchive
 from twisted.python.runtime import platform
+from twisted.python.components import proxyForInterface
 
 from twisted.trial import unittest
 
 from twisted.python.memfs import POSIXFilesystem
+from twisted.python.realfs import IFileSystem
 
 
 class AbstractFilePathTestCase(unittest.TestCase):
@@ -287,15 +290,48 @@ class ZipFilePathTestCase(AbstractFilePathTestCase):
 
 
 
+class FaultyRenamingFilesystem(proxyForInterface(IFileSystem, 'fs')):
+    """
+    A filesystem with a faulty L{rename} implementation that raises EXDEV.
+    """
+
+    def __init__(self, *a, **k):
+        super(FaultyRenamingFilesystem, self).__init__(*a, **k)
+        self.invokedWith = []
+
+    def rename(self, src, dest):
+        """
+        Override rename().
+        """
+        self.invokedWith.append((src, dest))
+        if len(self.invokedWith) == 1:
+            raise OSError(errno.EXDEV, 'Test-induced failure simulating '
+                                       'cross-device rename failure')
+        return self.fs.rename(src, dest)
+
+
+
+
 class FilePathTestCase(AbstractFilePathTestCase):
-    def _patchFilesystem(self, fs):
+    def setUpMemoryFilesystem(self, fs):
         """
         Hook file creation and other file manipulation APIs so they go through
         the given filesystem object.
         """
-        self.patch(filepath.FilePath, '_open', fs.open)
-        self.patch(os, 'fsync', fs.fsync)
-        self.patch(os, 'rename', fs.rename)
+        self.patch(filepath.FilePath, '_filesystem', fs)
+
+
+    def setUpFaultyRename(self):
+        """
+        Set up a C{os.rename} that will fail with L{errno.EXDEV} on first call.
+        This is used to simulate a cross-device rename failure.
+
+        @return: a list of pair (src, dest) of calls to C{os.rename}
+        @rtype: C{list} of C{tuple}
+        """
+        faulty = FaultyRenamingFilesystem(filepath.FilePath._filesystem)
+        self.setUpMemoryFilesystem(faulty)
+        return faulty.invokedWith
 
 
     def test_chmod(self):
@@ -403,21 +439,13 @@ class FilePathTestCase(AbstractFilePathTestCase):
         self.assertEquals(contents, bytes)
 
 
-    def _setContentTest(self, fs):
-        """
-        Set the contents of a file with L{FilePath.setContent}.
-        """
-        self._patchFilesystem(fs)
-        self._testSetContent(fs)
-
-
     def test_setContentWriteError(self):
         """
         L{FilePath.setContent} will handle errors writing its file without
         losing the data that was previously written to disk.
         """
         fs = POSIXFilesystem()
-        self._patchFilesystem(fs)
+        self.setUpMemoryFilesystem(fs)
         f = fs.open(self.path.path, "w")
         f.write("some bytes")
         f.flush()
@@ -440,7 +468,9 @@ class FilePathTestCase(AbstractFilePathTestCase):
 
         Additionally, it closes the file it opens before returning.
         """
-        self._setContentTest(POSIXFilesystem())
+        fs = POSIXFilesystem()
+        self.setUpMemoryFilesystem(fs)
+        self._testSetContent(fs)
 
 
     def _replaceContentTest(self, fs):
@@ -448,7 +478,7 @@ class FilePathTestCase(AbstractFilePathTestCase):
         Create a file using the given filesystem object and then replace its
         contents with L{FilePath.setContent}.
         """
-        self._patchFilesystem(fs)
+        self.setUpMemoryFilesystem(fs)
         self.path.setContent("foo")
         self._testSetContent(fs)
 
@@ -708,28 +738,8 @@ class FilePathTestCase(AbstractFilePathTestCase):
         IOError if you want to move a path into one of its child. It's simply
         the error raised by the underlying rename system call.
         """
-        self.assertRaises((OSError, IOError), self.path.moveTo, self.path.child('file1'))
-
-
-    def setUpFaultyRename(self):
-        """
-        Set up a C{os.rename} that will fail with L{errno.EXDEV} on first call.
-        This is used to simulate a cross-device rename failure.
-
-        @return: a list of pair (src, dest) of calls to C{os.rename}
-        @rtype: C{list} of C{tuple}
-        """
-        invokedWith = []
-        def faultyRename(src, dest):
-            invokedWith.append((src, dest))
-            if len(invokedWith) == 1:
-                raise OSError(errno.EXDEV, 'Test-induced failure simulating '
-                                           'cross-device rename failure')
-            return originalRename(src, dest)
-
-        originalRename = os.rename
-        self.patch(os, "rename", faultyRename)
-        return invokedWith
+        self.assertRaises((OSError, IOError), self.path.moveTo,
+                          self.path.child('file1'))
 
 
     def test_crossMountMoveTo(self):
