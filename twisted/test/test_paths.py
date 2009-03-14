@@ -495,6 +495,9 @@ class FilePathTestCase(AbstractFilePathTestCase):
 
 
     def test_getAndSet(self):
+        """
+        setContent should be able to replace an existing file.
+        """
         content = 'newcontent'
         self.path.child('new').setContent(content)
         newcontent = self.path.child('new').getContent()

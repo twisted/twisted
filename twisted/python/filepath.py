@@ -690,6 +690,9 @@ class FilePath(_PathHelper):
         f.write(content)
         f.flush()
         self._filesystem.fsync(f.fileno())
+        f.close()
+        if platform.isWindows() and self.exists():
+            self.remove()
         sib.moveTo(self)
 
 
