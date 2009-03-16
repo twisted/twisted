@@ -35,7 +35,6 @@ advantages over the normal Python string-based representation of paths:
       much more easily determine why a path cannot be listed using
       L{FilePath.children} than L{os.listdir}.
 
-
 """
 
 import os
