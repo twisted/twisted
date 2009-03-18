@@ -9,8 +9,6 @@ structure preserves numerous details about the state of stream buffers,
 filesystem buffers, and hypothetical disk contents.
 """
 
-from twisted.python.monkey import MonkeyPatcher
-
 import os
 import errno
 from array import array
