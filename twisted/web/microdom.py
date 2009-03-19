@@ -542,8 +542,26 @@ class Element(Node):
     def hasAttribute(self, name):
         return name in self.attributes
 
+
     def writexml(self, stream, indent='', addindent='', newl='', strip=0,
                  nsprefixes={}, namespace=''):
+        """
+        Serialize this L{Element} to the given stream.
+
+        @param stream: A file-like object to which this L{Element} will be
+            written.
+
+        @param nsprefixes: A C{dict} mapping namespace URIs as C{str} to
+            prefixes as C{str}.  This defines the prefixes which are already in
+            scope in the document at the point at which this L{Element} exists.
+            This is essentially an implementation detail for namespace support.
+            Applications should not try to use it.
+
+        @param namespace: The namespace URI as a C{str} which is the default at
+            the point in the document at which this L{Element} exists.  This is
+            essentially an implementation detail for namespace support.
+            Applications should not try to use it.
+        """
         # write beginning
         ALLOWSINGLETON = ('img', 'br', 'hr', 'base', 'meta', 'link', 'param',
                           'area', 'input', 'col', 'basefont', 'isindex',
@@ -573,15 +591,39 @@ class Element(Node):
             begin = [newl, indent] + begin
         bext = begin.extend
         writeattr = lambda _atr, _val: bext((' ', _atr, '="', escape(_val), '"'))
+
+        # Make a local for tracking what end tag will be used.  If namespace
+        # prefixes are involved, this will be changed to account for that
+        # before it's actually used.
+        endTagName = self.endTagName
+
         if namespace != self.namespace and self.namespace is not None:
-            if nsprefixes.has_key(self.namespace):
+            # If the current default namespace is not the namespace of this tag
+            # (and this tag has a namespace at all) then we'll write out
+            # something related to namespaces.
+            if self.namespace in nsprefixes:
+                # This tag's namespace already has a prefix bound to it.  Use
+                # that prefix.
                 prefix = nsprefixes[self.namespace]
-                bext(prefix+':'+self.tagName)
+                bext(prefix + ':' + self.tagName)
+                # Also make sure we use it for the end tag.
+                endTagName = prefix + ':' + self.endTagName
             else:
+                # This tag's namespace has no prefix bound to it.  Change the
+                # default namespace to this tag's namespace so we don't need
+                # prefixes.  Alternatively, we could add a new prefix binding.
+                # I'm not sure why the code was written one way rather than the
+                # other. -exarkun
                 bext(self.tagName)
                 writeattr("xmlns", self.namespace)
+                # The default namespace just changed.  Make sure any children
+                # know about this.
+                namespace = self.namespace
         else:
+            # This tag has no namespace or its namespace is already the default
+            # namespace.  Nothing extra to do here.
             bext(self.tagName)
+
         j = ''.join
         for attr, val in self.attributes.iteritems():
             if isinstance(attr, tuple):
@@ -613,15 +655,15 @@ class Element(Node):
                    self.tagName in FORMATNICELY:
                     w(j((newl, newindent)))
                 child.writexml(stream, newindent, addindent, newl, strip,
-                               downprefixes, self.namespace)
+                               downprefixes, namespace)
             if self.tagName in BLOCKELEMENTS:
                 w(j((newl, indent)))
-            w(j(("</", self.endTagName, '>')))
-
+            w(j(('</', endTagName, '>')))
         elif self.tagName.lower() not in ALLOWSINGLETON:
-            w(j(('></', self.endTagName, '>')))
+            w(j(('></', endTagName, '>')))
         else:
             w(" />")
+
 
     def __repr__(self):
         rep = "Element(%s" % repr(self.nodeName)

@@ -683,6 +683,109 @@ alert("I hate you");
         self.assertEquals(parent.toxml(),
                           '<div xmlns="http://www.w3.org/1999/xhtml"><ol></ol></div>')
 
+    def test_prefixedTags(self):
+        """
+        XML elements with a prefixed name as per upper level tag definition
+        have a start-tag of C{"<prefix:tag>"} and an end-tag of
+        C{"</prefix:tag>"}.
+
+        Refer to U{http://www.w3.org/TR/xml-names/#ns-using} for details.
+        """
+        outerNamespace = "http://example.com/outer"
+        innerNamespace = "http://example.com/inner"
+
+        document = microdom.Document()
+        # Create the root in one namespace.  Microdom will probably make this
+        # the default namespace.
+        root = document.createElement("root", namespace=outerNamespace)
+
+        # Give the root some prefixes to use.
+        root.addPrefixes({innerNamespace: "inner"})
+
+        # Append a child to the root from the namespace that prefix is bound
+        # to.
+        tag = document.createElement("tag", namespace=innerNamespace)
+
+        # Give that tag a child too.  This way we test rendering of tags with
+        # children and without children.
+        child = document.createElement("child", namespace=innerNamespace)
+
+        tag.appendChild(child)
+        root.appendChild(tag)
+        document.appendChild(root)
+
+        # ok, the xml should appear like this
+        xmlOk = (
+            '<?xml version="1.0"?>'
+            '<root xmlns="http://example.com/outer" '
+            'xmlns:inner="http://example.com/inner">'
+            '<inner:tag><inner:child></inner:child></inner:tag>'
+            '</root>')
+
+        xmlOut = document.toxml()
+        self.assertEquals(xmlOut, xmlOk)
+
+
+    def test_prefixPropagation(self):
+        """
+        Children of prefixed tags respect the default namespace at the point
+        where they are rendered.  Specifically, they are not influenced by the
+        prefix of their parent as that prefix has no bearing on them.
+
+        See U{http://www.w3.org/TR/xml-names/#scoping} for details.
+
+        To further clarify the matter, the following::
+
+            <root xmlns="http://example.com/ns/test">
+                <mytag xmlns="http://example.com/ns/mytags">
+                    <mysubtag xmlns="http://example.com/ns/mytags">
+                        <element xmlns="http://example.com/ns/test"></element>
+                    </mysubtag>
+                </mytag>
+            </root>
+
+        Should become this after all the namespace declarations have been
+        I{moved up}::
+
+            <root xmlns="http://example.com/ns/test"
+                  xmlns:mytags="http://example.com/ns/mytags">
+                <mytags:mytag>
+                    <mytags:mysubtag>
+                        <element></element>
+                    </mytags:mysubtag>
+                </mytags:mytag>
+            </root>
+        """
+        outerNamespace = "http://example.com/outer"
+        innerNamespace = "http://example.com/inner"
+
+        document = microdom.Document()
+        # creates a root element
+        root = document.createElement("root", namespace=outerNamespace)
+        document.appendChild(root)
+
+        # Create a child with a specific namespace with a prefix bound to it.
+        root.addPrefixes({innerNamespace: "inner"})
+        mytag = document.createElement("mytag",namespace=innerNamespace)
+        root.appendChild(mytag)
+
+        # Create a child of that which has the outer namespace.
+        mysubtag = document.createElement("mysubtag", namespace=outerNamespace)
+        mytag.appendChild(mysubtag)
+
+        xmlOk = (
+            '<?xml version="1.0"?>'
+            '<root xmlns="http://example.com/outer" '
+            'xmlns:inner="http://example.com/inner">'
+            '<inner:mytag>'
+            '<mysubtag></mysubtag>'
+            '</inner:mytag>'
+            '</root>'
+        )
+        xmlOut = document.toxml()
+        self.assertEquals(xmlOut, xmlOk)
+
+
 
 class TestBrokenHTML(TestCase):
     """
