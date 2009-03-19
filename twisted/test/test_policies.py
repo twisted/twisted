@@ -5,6 +5,8 @@
 Test code for policies.
 """
 
+from zope.interface import Interface, implements
+
 from StringIO import StringIO
 
 from twisted.trial import unittest
@@ -118,32 +120,11 @@ class TestableTimeoutFactory(policies.TimeoutFactory):
 
 
 
-class PausableStringTransport(StringTransportWithDisconnection):
-    """
-    A string transport saving the current production state.
-
-    @ivar paused: whether the production is paused or not.
-    @type paused: C{bool}
-    """
-    paused = False
-
-    def pauseProducing(self):
-        """
-        Notification of production pause: set C{self.paused}.
-        """
-        self.paused = True
-
-
-    def resumeProducing(self):
-        """
-        Notification of production restart: unset C{self.paused}.
-        """
-        self.paused = False
-
-
-
 class WrapperTestCase(unittest.TestCase):
-    def testProtocolFactoryAttribute(self):
+    """
+    Tests for L{WrappingFactory} and L{ProtocolWrapper}.
+    """
+    def test_protocolFactoryAttribute(self):
         """
         Make sure protocol.factory is the wrapped factory, not the wrapping
         factory.
@@ -152,6 +133,24 @@ class WrapperTestCase(unittest.TestCase):
         wf = policies.WrappingFactory(f)
         p = wf.buildProtocol(address.IPv4Address('TCP', '127.0.0.1', 35))
         self.assertIdentical(p.wrappedProtocol.factory, f)
+
+
+    def test_transportInterfaces(self):
+        """
+        The transport wrapper passed to the wrapped protocol's
+        C{makeConnection} provides the same interfaces as are provided by the
+        original transport.
+        """
+        class IStubTransport(Interface):
+            pass
+
+        class StubTransport:
+            implements(IStubTransport)
+
+        proto = protocol.Protocol()
+        wrapper = policies.ProtocolWrapper(policies.WrappingFactory(None), proto)
+        wrapper.makeConnection(StubTransport())
+        self.assertTrue(IStubTransport.providedBy(proto.transport))
 
 
 
@@ -236,7 +235,7 @@ class ThrottlingTestCase(unittest.TestCase):
         server = Server()
         tServer = TestableThrottlingFactory(task.Clock(), server, writeLimit=10)
         port = tServer.buildProtocol(address.IPv4Address('TCP', '127.0.0.1', 0))
-        tr = PausableStringTransport()
+        tr = StringTransportWithDisconnection()
         tr.protocol = port
         port.makeConnection(tr)
         port.producer = port.wrappedProtocol
@@ -267,7 +266,7 @@ class ThrottlingTestCase(unittest.TestCase):
         server = Server()
         tServer = TestableThrottlingFactory(task.Clock(), server, readLimit=10)
         port = tServer.buildProtocol(address.IPv4Address('TCP', '127.0.0.1', 0))
-        tr = PausableStringTransport()
+        tr = StringTransportWithDisconnection()
         tr.protocol = port
         port.makeConnection(tr)
 
@@ -278,11 +277,11 @@ class ThrottlingTestCase(unittest.TestCase):
 
         tServer.clock.advance(1.05)
         self.assertEquals(tServer.readThisSecond, 0)
-        self.assertTrue(tr.paused)
+        self.assertEquals(tr.producerState, 'paused')
 
         tServer.clock.advance(1.05)
         self.assertEquals(tServer.readThisSecond, 0)
-        self.assertFalse(tr.paused)
+        self.assertEquals(tr.producerState, 'producing')
 
         tr.clear()
         port.dataReceived("0123456789")
@@ -292,11 +291,11 @@ class ThrottlingTestCase(unittest.TestCase):
 
         tServer.clock.advance(1.05)
         self.assertEquals(tServer.readThisSecond, 0)
-        self.assertTrue(tr.paused)
+        self.assertEquals(tr.producerState, 'paused')
 
         tServer.clock.advance(1.05)
         self.assertEquals(tServer.readThisSecond, 0)
-        self.assertFalse(tr.paused)
+        self.assertEquals(tr.producerState, 'producing')
 
 
 

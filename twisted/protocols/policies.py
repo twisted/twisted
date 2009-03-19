@@ -1,7 +1,6 @@
 # -*- test-case-name: twisted.test.test_policies -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 Resource limiting policies.
@@ -16,11 +15,18 @@ import sys, operator
 from twisted.internet.protocol import ServerFactory, Protocol, ClientFactory
 from twisted.internet import reactor, error
 from twisted.python import log
-from zope.interface import providedBy, directlyProvides
 
 
 class ProtocolWrapper(Protocol):
-    """Wraps protocol instances and acts as their transport as well."""
+    """
+    Wraps protocol instances and acts as their transport as well.
+
+    @ivar wrappedProtocol: An L{IProtocol} provider to which L{IProtocol}
+        method calls onto this L{ProtocolWrapper} will be proxied.
+
+    @ivar factory: The L{WrappingFactory} which created this
+        L{ProtocolWrapper}.
+    """
 
     disconnecting = 0
 
@@ -29,8 +35,9 @@ class ProtocolWrapper(Protocol):
         self.factory = factory
 
     def makeConnection(self, transport):
-        directlyProvides(self, *providedBy(self) + providedBy(transport))
         Protocol.makeConnection(self, transport)
+        self.factory.registerProtocol(self)
+        self.wrappedProtocol.makeConnection(self)
 
     # Transport relaying
 
@@ -63,10 +70,6 @@ class ProtocolWrapper(Protocol):
         return getattr(self.transport, name)
 
     # Protocol relaying
-
-    def connectionMade(self):
-        self.factory.registerProtocol(self)
-        self.wrappedProtocol.makeConnection(self)
 
     def dataReceived(self, data):
         self.wrappedProtocol.dataReceived(data)
