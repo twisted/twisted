@@ -1,6 +1,5 @@
 # -*- test-case-name: twisted.test.test_defer -*-
-#
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -9,7 +8,6 @@ Support for results that aren't immediately available.
 Maintainer: Glyph Lefkowitz
 """
 
-from __future__ import nested_scopes, generators
 import traceback
 import warnings
 
@@ -1114,6 +1112,7 @@ __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
            "AlreadyCalledError", "TimeoutError", "gatherResults",
            "maybeDeferred",
            "waitForDeferred", "deferredGenerator", "inlineCallbacks",
+           "returnValue",
            "DeferredLock", "DeferredSemaphore", "DeferredQueue",
            "DeferredFilesystemLock", "AlreadyTryingToLockError",
           ]
