@@ -681,14 +681,65 @@ class FilePath(_PathHelper):
 
     def setContent(self, content, ext='.new'):
         """
-        Make the contents of the file represented by this path the given bytes,
-        replacing whatever is in the file already if it exists.
+        Replace the file at this path with a new file that contains the given
+        bytes, trying very hard to avoid data-loss in the meanwhile.
+
+        On UNIX-like platforms, this will attempt to atomically replace the
+        contents of the file, under the following assumptions:
+
+            - rename() is atomic
+
+            - the contents of the file are allocated and synced to disk by your
+              filesystem before a rename() is executed.
+
+        On a journaled filesystem, this method does its best to ensure that by
+        the time this method returns, either the old contents I{or} the new
+        contents of the file will be present for subsequent readers, regardless
+        of power loss or device removal.  (Note that this may not work on some,
+        arguably buggy, filesystems: see
+        U{http://mjg59.livejournal.com/108257.html} for more detail.)
+
+        See L{FilePath.syncContent} for a version of this method which will use
+        C{fsync} to do its best to ensure that by the time it returns, in the
+        event of power loss or premature device removal, the bytes will
+        I{always} be the new bytes for subsequent readers.
+
+        On most versions of Windows it is unfortunately impossible to even
+        attempt this, so this method does not even try.  See
+        U{http://bit.ly/win32-overwrite} for more information.  There is
+        therefore a small window where the file at this path may be deleted
+        before the new file is moved to replace it: however, the new file will
+        be fully written and flushed beforehand so it should be possible for
+        the user to recover their data.
+
+        Please note that this method does not (yet) support multiple
+        concurrent writers to the same file.
+
+        @param content: The desired contents of the file at this path.
+
+        @type content: L{str}
         """
-        sib = self.siblingExtension(ext)
+        self._doSetContent(content, ext, False)
+
+
+    def syncContent(self, content):
+        """
+        Similar to L{FilePath.setContent}, this will set the content of a file.
+        """
+        self._doSetContent(content, '.new', True)
+
+
+    def _doSetContent(self, content, extension, doSync):
+        """
+        The implementation of both L{FilePaths.setContent} and
+        L{FilePath.syncContent}.
+        """
+        sib = self.siblingExtension(extension)
         f = sib.open('w')
         f.write(content)
         f.flush()
-        self._filesystem.fsync(f.fileno())
+        if doSync:
+            self._filesystem.fsync(f.fileno())
         f.close()
         if platform.isWindows() and self.exists():
             self.remove()

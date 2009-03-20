@@ -432,11 +432,30 @@ class FilePathTestCase(AbstractFilePathTestCase):
     def _testSetContent(self, fs):
         """
         Set the contents of a file and then make sure they got set.
+
+        Make sure they *didn't* get fsync'd, since that would be slow.
         """
         bytes = "the bytes"
         self.path.setContent(bytes)
-        contents = fs.bytesOnDeviceFor(self.path.path)
-        self.assertEquals(contents, bytes)
+        self.assertEquals(fs.open(self.path.path).read(),
+                          bytes)
+        self.assertEquals(fs.lastSyncedBytesFor(self.path.path),
+                          "")
+
+
+    def test_syncContentSyncs(self):
+        """
+        Setting the contents of a file with L{FilePath.syncContent} will use
+        fsync to sync the contents of the file to disk.
+        """
+        fs = POSIXFilesystem()
+        self.setUpMemoryFilesystem(fs)
+        bytes = "the bytes"
+        self.path.syncContent(bytes)
+        self.assertEquals(fs.open(self.path.path).read(),
+                          bytes)
+        self.assertEquals(fs.lastSyncedBytesFor(self.path.path),
+                          bytes)
 
 
     def test_setContentWriteError(self):
