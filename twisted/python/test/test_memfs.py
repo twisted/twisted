@@ -340,9 +340,19 @@ class RealFileTests(TestCase, FileTestsMixin):
         FileTestsMixin.test_seekFlushes(self)
 
 
-    if sys.platform == 'darwin':
+    if os.uname()[0] in ["FreeBSD", "Darwin"]:
         test_seekFlushes.todo = (
-            "OS X appears to violate POSIX: seek() does not imply flush()")
+            "BSD-derived operationg systems appear to violate POSIX")
+        """
+        Specifically, the POSIX requirement in question is documented here -
+        http://www.opengroup.org/onlinepubs/007908799/xsh/fseek.html - which
+        reads, in part:
+
+            If the stream is writable and buffered data had not been written to
+            the underlying file, fseek() will cause the unwritten data to be
+            written to the file and mark the st_ctime and st_mtime fields of
+            the file for update.
+        """
 
 
 
