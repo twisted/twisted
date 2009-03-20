@@ -340,7 +340,7 @@ class RealFileTests(TestCase, FileTestsMixin):
         FileTestsMixin.test_seekFlushes(self)
 
 
-    if os.uname()[0] in ["FreeBSD", "Darwin"]:
+    if sys.platform == 'darwin' or sys.platform.startswith("freebsd"):
         test_seekFlushes.todo = (
             "BSD-derived operationg systems appear to violate POSIX")
         """
