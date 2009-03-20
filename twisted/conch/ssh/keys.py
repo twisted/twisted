@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.conch.test.test_keys -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -547,16 +547,21 @@ class Key(object):
 
     def toString(self, type, extra=None):
         """
-        Create a string representation of this key.  If the key is a
-        private key and you want the represenation of its public key,
-        use .public().toString().  type maps to a _toString_* method.
-        The extra paramater allows passing data to some of the method.
-        For public OpenSSH keys, it represents a comment.
-        For private OpenSSH keys, it represents a passphrase.
+        Create a string representation of this key.  If the key is a private
+        key and you want the represenation of its public key, use
+        C{key.public().toString()}.  type maps to a _toString_* method.
 
-        @type type: C{str}
-        @type extra: C{str}
-        @rtype: C{str}
+        @param type: The type of string to emit.  Currently supported values
+            are C{'OPENSSH'}, C{'LSH'}, and C{'AGENTV3'}.
+        @type type: L{str}
+
+        @param extra: Any extra data supported by the selected format which
+            is not part of the key itself.  For public OpenSSH keys, this is
+            a comment.  For private OpenSSH keys, this is a passphrase to
+            encrypt with.
+        @type extra: L{str} or L{NoneType}
+
+        @rtype: L{str}
         """
         method = getattr(self, '_toString_%s' % type.upper(), None)
         if method is None:
