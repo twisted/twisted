@@ -129,7 +129,7 @@ class MemoryFile(object):
         self._checkClosed()
         padding = self._fpos - len(self._streamBuffer)
         if padding > 0:
-            self._streamBuffer.extend('\0' * padding)
+            self._streamBuffer.extend(array('c', '\0' * padding))
         self._streamBuffer[self._fpos:self._fpos + len(bytes)] = array('c', bytes)
         self._dirty.append((self._fpos, self._fpos + len(bytes)))
         self._fpos += len(bytes)
@@ -227,7 +227,7 @@ class _POSIXFilesystemFileState(object):
             raise IOError(errno.ENOSPC, os.strerror(errno.ENOSPC))
         padding = pos - len(self.fsBuffer)
         if padding > 0:
-            self.fsBuffer.extend('\0' * padding)
+            self.fsBuffer.extend(array('c', '\0' * padding))
         self.fsBuffer[pos:pos + len(bytes)] = bytes
 
 
