@@ -5471,12 +5471,20 @@ class StreamReader(codecs.StreamReader):
         return decoder(s)
 
 class StreamWriter(codecs.StreamWriter):
-    def decode(self, s, errors='strict'):
+    def encode(self, s, errors='strict'):
         return encoder(s)
+
+_codecInfo = (encoder, decoder, StreamReader, StreamWriter)
+try:
+    _codecInfoClass = codecs.CodecInfo
+except AttributeError:
+    pass
+else:
+    _codecInfo = _codecInfoClass(*_codecInfo)
 
 def imap4_utf_7(name):
     if name == 'imap4-utf-7':
-        return (encoder, decoder, StreamReader, StreamWriter)
+        return _codecInfo
 codecs.register(imap4_utf_7)
 
 __all__ = [

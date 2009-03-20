@@ -14,6 +14,7 @@ except ImportError:
 
 import os
 import types
+import codecs
 
 from zope.interface import implements
 
@@ -87,22 +88,57 @@ class IMAP4UTF7TestCase(unittest.TestCase):
             bytes.decode('imap4-utf-7'))
 
 
-    def testEncode(self):
+    def test_getreader(self):
+        """
+        C{codecs.getreader('imap4-utf-7')} returns the I{imap4-utf-7} stream
+        reader class.
+        """
+        reader = codecs.getreader('imap4-utf-7')(StringIO('Hello&AP8-world'))
+        self.assertEquals(reader.read(), u'Hello\xffworld')
+
+
+    def test_getwriter(self):
+        """
+        C{codecs.getwriter('imap4-utf-7')} returns the I{imap4-utf-7} stream
+        writer class.
+        """
+        output = StringIO()
+        writer = codecs.getwriter('imap4-utf-7')(output)
+        writer.write(u'Hello\xffworld')
+        self.assertEquals(output.getvalue(), 'Hello&AP8-world')
+
+
+    def test_encode(self):
+        """
+        The I{imap4-utf-7} can be used to encode a unicode string into a byte
+        string according to the IMAP4 modified UTF-7 encoding rules.
+        """
         for (input, output) in self.tests:
             self.assertEquals(input.encode('imap4-utf-7'), output)
 
-    def testDecode(self):
-        for (input, output) in self.tests:
-            # XXX - Piece of *crap* 2.1
-            self.assertEquals(input, imap4.decoder(output)[0])
 
-    def testPrintableSingletons(self):
+    def test_decode(self):
+        """
+        The I{imap4-utf-7} can be used to decode a byte string into a unicode
+        string according to the IMAP4 modified UTF-7 encoding rules.
+        """
+        for (input, output) in self.tests:
+            self.assertEquals(input, output.decode('imap4-utf-7'))
+
+
+    def test_printableSingletons(self):
+        """
+        The IMAP4 modified UTF-7 implementation encodes all printable
+        characters which are in ASCII using the corresponding ASCII byte.
+        """
         # All printables represent themselves
         for o in range(0x20, 0x26) + range(0x27, 0x7f):
             self.failUnlessEqual(chr(o), chr(o).encode('imap4-utf-7'))
             self.failUnlessEqual(chr(o), chr(o).decode('imap4-utf-7'))
         self.failUnlessEqual('&'.encode('imap4-utf-7'), '&-')
         self.failUnlessEqual('&-'.decode('imap4-utf-7'), '&')
+
+
 
 class BufferingConsumer:
     def __init__(self):
