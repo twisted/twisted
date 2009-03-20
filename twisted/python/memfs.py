@@ -329,7 +329,7 @@ class POSIXFilesystem(object):
         return fObj
 
 
-    def bytesOnDeviceFor(self, filename):
+    def lastSyncedBytesFor(self, filename):
         """
         Retrieve the bytes fully sent to the underlying device by the sequence
         of API calls that have been made on this filesystem.
@@ -352,6 +352,8 @@ class POSIXFilesystem(object):
         """
         Change the name of a file.
         """
+        if oldname not in self.byName:
+            raise OSError(errno.ENOENT, None)
         self.byName[newname] = self.byName.pop(oldname)
 
 

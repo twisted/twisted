@@ -11,7 +11,7 @@ behaving the same as the real implementation.
 
 import sys
 import os
-from errno import ENOSPC
+from errno import ENOSPC, ENOENT
 
 from twisted.trial.unittest import TestCase
 
@@ -296,6 +296,16 @@ class FileTestsMixin:
         self.assertEqual(fObj.read(), "bytes")
 
 
+    def test_renameNonExistent(self):
+        """
+        The C{rename} method will raise an C{OSError} with C{ENOENT} if the
+        source file does not exist.
+        """
+        ose = self.assertRaises(OSError, self.filesystem.rename,
+                                "does-not-exist", "also-does-not-exist")
+        self.assertEqual(ose.errno, ENOENT)
+
+
 
 class RealFileTests(TestCase, FileTestsMixin):
     """
@@ -352,31 +362,31 @@ class MemoryFilesystemTests(TestCase, FileTestsMixin):
 
     def test_writeConsistency(self):
         """
-        L{POSIXFilesystem.bytesOnDeviceFor} will return the bytes that have
+        L{POSIXFilesystem.lastSyncedBytesFor} will return the bytes that have
         been written and synced to disk for a given filename.
         """
         name = "test.txt"
         f = self.filesystem.open(name, "w")
         f.write("some data")
-        self.assertEqual(self.filesystem.bytesOnDeviceFor(name), "")
+        self.assertEqual(self.filesystem.lastSyncedBytesFor(name), "")
         f.flush()
-        self.assertEqual(self.filesystem.bytesOnDeviceFor(name), "")
+        self.assertEqual(self.filesystem.lastSyncedBytesFor(name), "")
         self.filesystem.fsync(f.fileno())
-        self.assertEqual(self.filesystem.bytesOnDeviceFor(name), "some data")
+        self.assertEqual(self.filesystem.lastSyncedBytesFor(name), "some data")
         f.close()
-        self.assertEqual(self.filesystem.bytesOnDeviceFor(name), "some data")
+        self.assertEqual(self.filesystem.lastSyncedBytesFor(name), "some data")
 
 
     def test_closeStillInconsistent(self):
         """
         Since C{close} does not imply C{fsync}, closing a file without syncing
-        will cause L{POSIXFilesystem.bytesOnDeviceFor} to return the empty
+        will cause L{POSIXFilesystem.lastSyncedBytesFor} to return the empty
         string.
         """
         f = self.filesystem.open("test.txt", "w")
         f.write("some data")
         f.close()
-        self.assertEqual(self.filesystem.bytesOnDeviceFor("test.txt"), "")
+        self.assertEqual(self.filesystem.lastSyncedBytesFor("test.txt"), "")
 
 
     def test_fullFilesystem(self):
