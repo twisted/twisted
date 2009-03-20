@@ -570,7 +570,9 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
 
         @return: A deferred that will fire with the tuple (flags, value) if
             C{withIdentifier} is C{False}, or (flags, cas identifier, value)
-            if C{True}.
+            if C{True}.  If the server indicates there is no value
+            associated with C{key}, the returned value will be C{None} and
+            the returned flags will be C{0}.
         @rtype: L{Deferred}
         """
         if not isinstance(key, str):
