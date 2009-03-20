@@ -8,29 +8,29 @@ Filesystem path representation.
 L{FilePath} is a location on a filesystem.  This module provides several
 advantages over the normal Python string-based representation of paths:
 
-    * security: if you want to provide access to a directory, but not its
+    - security: if you want to provide access to a directory, but not its
       parents, you can call "child".  Unlike os.path.join, L{FilePath.child}
       will not let you access paths (including, but not limited, to "..") which
       are not actually children of the path in question.
 
-    * convenience: L{FilePath} can be inspected with normal documentation tools
+    - convenience: L{FilePath} can be inspected with normal documentation tools
       to easily discover what's possible with paths, rather than sprawling
       across several different modules (shutil, os, builtins).
 
-    * testability: Since L{FilePath} is one object rather than a bunch of free
+    - testability: Since L{FilePath} is one object rather than a bunch of free
       functions, it's easier to apply a customizing wrapper, or fake in unit
       tests.
 
-    * correctness: methods like L{FilePath.setContent} and L{FilePath.create}
+    - correctness: methods like L{FilePath.setContent} and L{FilePath.create}
       allow you to perform commonly desirable operations (like replacing a file
       without losing data) without becoming a filesystem semantics wizard.
 
-    * polymorphism: although a formal interface is still in the works, many
+    - polymorphism: although a formal interface is still in the works, many
       operations work the same with L{FilePath} and
       L{twisted.python.zippath.ZipArchive}, a virtual filesystem wrapper around
       zip files.
 
-    * portability: L{FilePath} tries to provide more consistent behavior,
+    - portability: L{FilePath} tries to provide more consistent behavior,
       especially between Windows and POSIX filesystems.  For example, one can
       much more easily determine why a path cannot be listed using
       L{FilePath.children} than L{os.listdir}.
@@ -195,7 +195,7 @@ class _PathHelper:
         OSError subclass L{UnlistableError} is raised instead.
 
         @return: an iterable of all currently-existing children of this object
-        accessible with L{_PathHelper.child}.
+        accessible with L{FilePath.child}.
         """
         try:
             subnames = self.listdir()
@@ -276,7 +276,7 @@ class _PathHelper:
         @param ancestor: an instance of the same class as self, ostensibly an
         ancestor of self.
 
-        @raise: ValueError if the 'ancestor' parameter is not actually an
+        @raise ValueError: if the 'ancestor' parameter is not actually an
         ancestor, i.e. a path for /x/y/z is passed as an ancestor for /a/b/c/d.
 
         @return: a list of strs
@@ -682,38 +682,42 @@ class FilePath(_PathHelper):
     def setContent(self, content, ext='.new'):
         """
         Replace the file at this path with a new file that contains the given
-        bytes, trying very hard to avoid data-loss in the meanwhile.
+        bytes, trying to avoid data-loss in the meanwhile.
 
-        On UNIX-like platforms, this will attempt to atomically replace the
-        contents of the file, under the following assumptions:
+        On UNIX-like platforms, this method does its best to ensure that by the
+        time this method returns, either the old contents I{or} the new
+        contents of the file will be present at this path for subsequent
+        readers regardless of premature device removal, program crash, or power
+        loss, making the following assumptions:
 
-            - rename() is atomic
+            - your filesystem is journaled (i.e. your filesystem will not
+              I{itself} lose data due to power loss)
 
-            - the contents of the file are allocated and synced to disk by your
-              filesystem before a rename() is executed.
+            - your filesystem's C{rename()} is atomic
 
-        On a journaled filesystem, this method does its best to ensure that by
-        the time this method returns, either the old contents I{or} the new
-        contents of the file will be present for subsequent readers, regardless
-        of power loss or device removal.  (Note that this may not work on some,
-        arguably buggy, filesystems: see
-        U{http://mjg59.livejournal.com/108257.html} for more detail.)
+            - there are no concurrent writers (this method is not (yet)
+              multiprocess safe)
+
+            - your filesystem will not discard new data while preserving new
+              metadata (see U{http://mjg59.livejournal.com/108257.html} for
+              more detail)
 
         See L{FilePath.syncContent} for a version of this method which will use
-        C{fsync} to do its best to ensure that by the time it returns, in the
-        event of power loss or premature device removal, the bytes will
-        I{always} be the new bytes for subsequent readers.
+        C{fsync} to ensure that by the time it returns, in the event of power
+        loss or premature device removal, the bytes will I{always} be the new
+        bytes for subsequent readers.  Note that most applications should
+        prefer C{setContent}, since using C{fsync} will require the disk to be
+        spun up immediately and will therefore be slow and cause unnecessary
+        power drain, especially on laptops.
 
-        On most versions of Windows it is unfortunately impossible to even
-        attempt this, so this method does not even try.  See
-        U{http://bit.ly/win32-overwrite} for more information.  There is
-        therefore a small window where the file at this path may be deleted
-        before the new file is moved to replace it: however, the new file will
-        be fully written and flushed beforehand so it should be possible for
-        the user to recover their data.
-
-        Please note that this method does not (yet) support multiple
-        concurrent writers to the same file.
+        On most versions of Windows there is no atomic C{rename()} (see
+        U{http://bit.ly/win32-overwrite} for more information), so this method
+        is slightly less helpful.  There is a small window where the file at
+        this path may be deleted before the new file is moved to replace it:
+        however, the new file will be fully written and flushed beforehand so
+        in the unlikely event that there is a crash at that point, it should be
+        possible for the user to manually recover the new version of their
+        data.
 
         @param content: The desired contents of the file at this path.
 
@@ -731,7 +735,7 @@ class FilePath(_PathHelper):
 
     def _doSetContent(self, content, extension, doSync):
         """
-        The implementation of both L{FilePaths.setContent} and
+        The implementation of both L{FilePath.setContent} and
         L{FilePath.syncContent}.
         """
         sib = self.siblingExtension(extension)
