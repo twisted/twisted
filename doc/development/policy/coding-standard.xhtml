@@ -15,9 +15,7 @@
     <p>Try to choose names which are both easy to remember and
     meaningful. Some silliness is OK at the module naming level
     (see <code class="API">twisted.spread</code>...) but when
-    choosing class names, be as precise as possible. Write code
-    with a dictionary and thesaurus open on the table next to
-    you.</p>
+    choosing class names, be as precise as possible.</p>
 
     <p>Try to avoid overloaded terms. This rule is often broken,
     since it is incredibly difficult, as most normal words have
@@ -248,15 +246,8 @@ def foo(x):
 
     <h2>Docstrings</h2>
 
-    <p>Wherever possible, docstrings should be used to describe the
-    purpose of methods, functions, classes, and modules. In cases
-    where it's desirable to avoid documenting thoroughly -- for
-    example, an evolving interface -- insert a placeholder
-    docstring (<code class="py-src-string">"UNDOCUMENTED"</code> is preferred),
-    so that the
-    auto-generated API documentation will not pick up an extraneous
-    comment as the documentation for that
-    module/class/function.</p>
+    <p>Docstrings should always be used to describe the
+    purpose of methods, functions, classes, and modules.</p>
 
     <p>Docstrings are <em>never</em> to be used to provide semantic
     information about an object; this rule may be violated if the
@@ -657,9 +648,8 @@ def callRemote(self, _name, *args, **kw):
     <p>Twisted currently uses Subversion for source control.  All
     development <strong>should</strong> occur using branches; when a task is
     considered complete another Twisted developer may review it and if no
-    problems are found, it may be merged into trunk (TODO: Describe this
-    more thoroughly (Divmod wiki has <a
-    href="http://divmod.org/trac/wiki/BranchBasedDevelopment">a start</a>)).
+    problems are found, it may be merged into trunk. The Twisted wiki has <a
+    href="http://twistedmatrix.com/trac/wiki/TwistedDevelopment">a start</a>.
     Branches <strong>must</strong> be used for major development.  Branches
     should be managed using <a
     href="http://divmod.org/trac/wiki/DivmodCombinator">Combinator</a> (but
@@ -706,12 +696,11 @@ global-ignores = dropin.cache *.pyc *.pyo *.o *.lo *.la #*# .*.rej *.rej .*~
     code can't be easily checked for compliance) but are a good
     idea to keep in mind while working on Twisted.</p>
 
-    <p>If you're going to work on a fragment of the Twisted
-    codebase, please consider finding a way that you would <em>use</em>
-    such a fragment in daily life. I use the Twisted Web server on
-    the main TML website, and aside from being good PR, this
-    encourages you to actively maintain and improve your code, as
-    the little everyday issues with using it become apparent.</p>
+    <p>If you're going to work on a fragment of the Twisted 
+    codebase, please consider finding a way that you would <em>use</em> 
+    such a fragment in daily life. Using a Twisted Web server on your
+    website  encourages you to actively maintain and improve your code,
+    as the little everyday issues with using it become apparent.</p> 
 
     <p>Twisted is a <strong>big</strong> codebase! If you're
     refactoring something, please make sure to recursively grep for
