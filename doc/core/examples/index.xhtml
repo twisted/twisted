@@ -33,12 +33,19 @@
         <li><a href="echoclient_ssl.py">echoclient_ssl.py</a> - simple SSL client</li>
     </ul>
 
+    <h2>AMP server &amp; client variants</h2>
+    <ul>
+        <li><a href="ampserver.py">ampserver.py</a></li>
+        <li><a href="ampclient.py">ampclient.py</a></li>
+    </ul>
+
     <h2>Perspective Broker</h2>
     <ul>
         <li><a href="pbbenchclient.py">pbbenchclient.py</a> - benchmarking client</li>
         <li><a href="pbbenchserver.py">pbbenchserver.py</a> - benchmarking server</li>
         <li><a href="pbecho.py">pbecho.py</a> - echo server that uses login</li>
         <li><a href="pbechoclient.py">pbechoclient.py</a> - echo client using login</li>
+        <li><a href="pb_exceptions.py">pb_exceptions.py</a></li>
         <li><a href="pbgtk2.py">pbgtk2.py</a> - example of using GTK2 with PB</li>
         <li><a href="pbinterop.py">pbinterop.py</a> - shows off various types supported by PB</li>
         <li><a href="pbsimple.py">pbsimple.py</a> - simplest possible server</li>
@@ -48,7 +55,8 @@
 
     <h2>ROW (Twisted Enterprise)</h2>
     <ul>
-        <li><a href="row_example.py">row_example.py</a></li>
+        <li><a href="row_example.py">row_example.py</a> - using twisted.enterpise.row to load objects
+        from a database and manipulate them.</li>
         <li><a href="row_schema.sql">row_schema.sql</a></li>
         <li><a href="row_util.py">row_util.py</a></li>
         <li><a href="row_xml.py">row_xml.py</a></li>
@@ -56,19 +64,21 @@
 
     <h2>Cred</h2>
     <ul>
-        <li><a href="cred.py">cred.py</a></li>
+        <li><a href="cred.py">cred.py</a> - Authenticate a user with an in-memory username/password
+        database</li>
+        <li><a href="dbcred.py">dbcred.py</a> - Using a database backend to authenticate a user</li>
     </ul>
 
     <h2>GUI</h2>
     <ul>
-        <li><a href="wxdemo.py">wxdemo.py</a> - wxPython</li>
+        <li><a href="wxdemo.py">wxdemo.py</a> - demo of wxPython integration with Twisted</li>
         <li><a href="pbgtk2.py">pbgtk2.py</a> - example of using GTK2 with PB</li>
         <li><a href="pyuidemo.py">pyuidemo.py</a> - PyUI</li>
     </ul>
 
     <h2>FTP examples</h2>
     <ul>
-        <li><a href="ftpclient.py">ftpclient.py</a></li>
+        <li><a href="ftpclient.py">ftpclient.py</a> - example of using the FTP client</li>
         <li><a href="ftpserver.py">ftpserver.py</a> - create an FTP server which
         serves files for anonymous users from the working directory and serves
         files for authenticated users from <code class="shell">/home</code>.</li>
@@ -78,21 +88,28 @@
     <ul>
         <li><a href="twistd-logging.tac">twistd-logging.tac</a></li>
         <li><a href="testlogging.py">testlogging.py</a></li>
-        <li><a href="rotatinglog.py">rotatinglog.py</a></li>
+        <li><a href="rotatinglog.py">rotatinglog.py</a> - example of log file rotation</li>
     </ul>
 
     <h2>Miscellaenous</h2>
     <ul>
-        <li><a href="stdiodemo.py">stdiodemo.py</a></li>
-        <li><a href="mouse.py">mouse.py</a></li>
-        <li><a href="ptyserv.py">ptyserv.py</a></li>
-        <li><a href="courier.py">courier.py</a></li>
-        <li><a href="example.html">example.html</a></li>
-        <li><a href="longex.py">longex.py</a></li>
-        <li><a href="longex2.py">longex2.py</a></li>
-        <li><a href="stdin.py">stdin.py</a></li>
+        <li><a href="shaper.py">shaper.py</a> - example of rate-limiting your web server</li>
+        <li><a href="stdiodemo.py">stdiodemo.py</a> - example using stdio, Deferreds, LineReceiver
+        and twisted.web.client.</li>
+        <li><a href="mouse.py">mouse.py</a> - example using MouseMan protocol with the SerialPort
+        transport</li>
+        <li><a href="ptyserv.py">ptyserv.py</a> - serve shells in pseudo-terminals over TCP</li>
+        <li><a href="courier.py">courier.py</a> - example of interfacing to Courier's mail filter
+        interface</li>
+        <li><a href="longex.py">longex.py</a> - example of doing arbitarily long calculations nicely
+        in Twisted</li>
+        <li><a href="longex2.py">longex2.py</a> - using generators to do long calculations</li>
+        <li><a href="stdin.py">stdin.py</a> - reading a line at a time from standard input
+        without blocking the reactor.</li>
         <li><a href="filewatch.py">filewatch.py</a></li>
-        <li><a href="gpsfix.py">gpsfix.py</a></li>
+        <li><a href="gpsfix.py">gpsfix.py</a> - example using the SerialPort transport and GPS
+        protocols to display fix data as it is received from the device</li>
+        <li><a href="wxacceptance.py">wxacceptance.py</a> - acceptance tests for wxreactor</li>
     </ul>
     
 </body>
