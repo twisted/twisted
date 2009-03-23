@@ -1,10 +1,9 @@
-# -*- Python -*-
-# $Id: gtk2manhole.py,v 1.9 2003/09/07 19:58:09 acapnotic Exp $
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.manhole.ui.test.test_gtk2manhole -*-
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-"""Manhole client with a GTK v2.x front-end.
+"""
+Manhole client with a GTK v2.x front-end.
 """
 
 __version__ = '$Revision: 1.9 $'[11:-2]
@@ -12,6 +11,7 @@ __version__ = '$Revision: 1.9 $'[11:-2]
 from twisted import copyright
 from twisted.internet import reactor
 from twisted.python import components, failure, log, util
+from twisted.python.reflect import prefixedMethodNames
 from twisted.spread import pb
 from twisted.spread.ui import gtk2util
 
@@ -206,18 +206,16 @@ class History:
 
 
 class ConsoleInput:
-    toplevel, rkeymap = None, None 
+    toplevel, rkeymap = None, None
     __debug = False
 
     def __init__(self, textView):
         self.textView=textView
         self.rkeymap = {}
         self.history = History()
-        for name in dir(gtk.keysyms):
-            try:
-                self.rkeymap[getattr(gtk.keysyms, name)] = name
-            except TypeError:
-                pass
+        for name in prefixedMethodNames(self.__class__, "key_"):
+            keysymName = name.split("_")[-1]
+            self.rkeymap[getattr(gtk.keysyms, keysymName)] = keysymName
 
     def _on_key_press_event(self, entry, event):
         stopSignal = False
@@ -298,7 +296,7 @@ class ConsoleInput:
 
     def key_ctrl_shift_F9(self, entry, event):
         if self.__debug:
-            import pdb; pdb.set_trace() 
+            import pdb; pdb.set_trace()
 
     def clear(self):
         buffer = self.textView.get_buffer()
