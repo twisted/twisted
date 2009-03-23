@@ -358,17 +358,11 @@ class Command:
             names = parseNestedParens(L)
             N = len(names)
             if (N >= 1 and names[0] in self._1_RESPONSES or
+                N >= 2 and names[1] in self._2_RESPONSES or
                 N >= 2 and names[0] == 'OK' and isinstance(names[1], types.ListType) and names[1][0] in self._OK_RESPONSES):
-                send.append(L)
-            elif N >= 3 and names[1] in self._2_RESPONSES:
-                if isinstance(names[2], list) and len(names[2]) >= 1 and names[2][0] == 'FLAGS' and 'FLAGS' not in self.args:
-                    unuse.append(L)
-                else:
-                    send.append(L)
-            elif N >= 2 and names[1] in self._2_RESPONSES:
-                send.append(L)
+                send.append(names)
             else:
-                unuse.append(L)
+                unuse.append(names)
         d, self.defer = self.defer, None
         d.callback((send, lastLine))
         if unuse:
@@ -2195,7 +2189,9 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
             b, e = rest.find('['), rest.find(']')
             if b != -1 and e != -1:
-                self.serverGreeting(self.__cbCapabilities(([rest[b:e]], None)))
+                self.serverGreeting(
+                    self.__cbCapabilities(
+                        ([parseNestedParens(rest[b + 1:e])], None)))
             else:
                 self.serverGreeting(None)
         else:
@@ -2207,7 +2203,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
     def _defaultHandler(self, tag, rest):
         if tag == '*' or tag == '+':
             if not self.waiting:
-                self._extraInfo([rest])
+                self._extraInfo([parseNestedParens(rest)])
             else:
                 cmd = self.tags[self.waiting]
                 if tag == '+':
@@ -2246,23 +2242,23 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         #       invocations of IMailboxListener methods, where possible.
         flags = {}
         recent = exists = None
-        for L in lines:
-            if L.find('EXISTS') != -1:
-                exists = int(L.split()[0])
-            elif L.find('RECENT') != -1:
-                recent = int(L.split()[0])
-            elif L.find('READ-ONLY') != -1:
-                self.modeChanged(0)
-            elif L.find('READ-WRITE') != -1:
-                self.modeChanged(1)
-            elif L.find('FETCH') != -1:
-                for (mId, fetched) in self.__cbFetch(([L], None)).iteritems():
-                    sum = []
-                    for f in fetched.get('FLAGS', []):
-                        sum.append(f)
-                    flags.setdefault(mId, []).extend(sum)
+        for response in lines:
+            elements = len(response)
+            if elements == 1 and response[0] == ['READ-ONLY']:
+                self.modeChanged(False)
+            elif elements == 1 and response[0] == ['READ-WRITE']:
+                self.modeChanged(True)
+            elif elements == 2 and response[1] == 'EXISTS':
+                exists = int(response[0])
+            elif elements == 2 and response[1] == 'RECENT':
+                recent = int(response[0])
+            elif elements == 3 and response[1] == 'FETCH':
+                mId = int(response[0])
+                values = self._parseFetchPairs(response[2])
+                flags.setdefault(mId, []).extend(values.get('FLAGS', ()))
             else:
-                log.msg('Unhandled unsolicited response: ' + repr(L))
+                log.msg('Unhandled unsolicited response: %s' % (response,))
+
         if flags:
             self.flagsChanged(flags)
         if recent is not None or exists is not None:
@@ -2307,8 +2303,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
     def __cbCapabilities(self, (lines, tagline)):
         caps = {}
         for rest in lines:
-            rest = rest.split()[1:]
-            for cap in rest:
+            for cap in rest[1:]:
                 parts = cap.split('=', 1)
                 if len(parts) == 1:
                     category, value = parts[0], None
@@ -2573,13 +2568,9 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         return d
 
     def __cbNamespace(self, (lines, last)):
-        for line in lines:
-            parts = line.split(None, 1)
-            if len(parts) == 2:
-                if parts[0] == 'NAMESPACE':
-                    # XXX UGGG parsing hack :(
-                    r = parseNestedParens('(' + parts[1] + ')')[0]
-                    return [e or [] for e in r]
+        for parts in lines:
+            if len(parts) == 4 and parts[0] == 'NAMESPACE':
+                return [e or [] for e in parts[1:]]
         log.err("No NAMESPACE response to NAMESPACE command")
         return [[], [], []]
 
@@ -2659,63 +2650,69 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         d.addCallback(self.__cbSelect, 0)
         return d
 
+
+    def _intOrRaise(self, value, phrase):
+        """
+        Parse C{value} as an integer and return the result or raise
+        L{IllegalServerResponse} with C{phrase} as an argument if C{value}
+        cannot be parsed as an integer.
+        """
+        try:
+            return int(value)
+        except ValueError:
+            raise IllegalServerResponse(phrase)
+
+
     def __cbSelect(self, (lines, tagline), rw):
+        """
+        Handle lines received in response to a SELECT or EXAMINE command.
+
+        See RFC 3501, section 6.3.1.
+        """
         # In the absense of specification, we are free to assume:
         #   READ-WRITE access
         datum = {'READ-WRITE': rw}
-        lines.append(tagline)
-        for parts in lines:
-            split = parts.split()
-            if len(split) == 2:
-                if split[1].upper().strip() == 'EXISTS':
-                    try:
-                        datum['EXISTS'] = int(split[0])
-                    except ValueError:
-                        raise IllegalServerResponse(parts)
-                elif split[1].upper().strip() == 'RECENT':
-                    try:
-                        datum['RECENT'] = int(split[0])
-                    except ValueError:
-                        raise IllegalServerResponse(parts)
+        lines.append(parseNestedParens(tagline))
+        for split in lines:
+            if len(split) > 0 and split[0].upper() == 'OK':
+                # Handle all the kinds of OK response.
+                content = split[1]
+                key = content[0].upper()
+                if key == 'READ-ONLY':
+                    datum['READ-WRITE'] = False
+                elif key == 'READ-WRITE':
+                    datum['READ-WRITE'] = True
+                elif key == 'UIDVALIDITY':
+                    datum['UIDVALIDITY'] = self._intOrRaise(
+                        content[1], split)
+                elif key == 'UNSEEN':
+                    datum['UNSEEN'] = self._intOrRaise(content[1], split)
+                elif key == 'UIDNEXT':
+                    datum['UIDNEXT'] = self._intOrRaise(content[1], split)
+                elif key == 'PERMANENTFLAGS':
+                    datum['PERMANENTFLAGS'] = tuple(content[1])
                 else:
-                    log.err('Unhandled SELECT response (1): ' + parts)
-            elif split[0].upper().strip() == 'FLAGS':
-                split = parts.split(None, 1)
-                datum['FLAGS'] = tuple(parseNestedParens(split[1])[0])
-            elif split[0].upper().strip() == 'OK':
-                begin = parts.find('[')
-                end = parts.find(']')
-                if begin == -1 or end == -1:
-                    raise IllegalServerResponse(parts)
-                else:
-                    content = parts[begin+1:end].split(None, 1)
-                    if len(content) >= 1:
-                        key = content[0].upper()
-                        if key == 'READ-ONLY':
-                            datum['READ-WRITE'] = 0
-                        elif key == 'READ-WRITE':
-                            datum['READ-WRITE'] = 1
-                        elif key == 'UIDVALIDITY':
-                            try:
-                                datum['UIDVALIDITY'] = int(content[1])
-                            except ValueError:
-                                raise IllegalServerResponse(parts)
-                        elif key == 'UNSEEN':
-                            try:
-                                datum['UNSEEN'] = int(content[1])
-                            except ValueError:
-                                raise IllegalServerResponse(parts)
-                        elif key == 'UIDNEXT':
-                            datum['UIDNEXT'] = int(content[1])
-                        elif key == 'PERMANENTFLAGS':
-                            datum['PERMANENTFLAGS'] = tuple(parseNestedParens(content[1])[0])
-                        else:
-                            log.err('Unhandled SELECT response (2): ' + parts)
+                    log.err('Unhandled SELECT response (2): %s' % (split,))
+            elif len(split) == 2:
+                # Handle FLAGS, EXISTS, and RECENT
+                if split[0].upper() == 'FLAGS':
+                    datum['FLAGS'] = tuple(split[1])
+                elif isinstance(split[1], str):
+                    # Must make sure things are strings before treating them as
+                    # strings since some other forms of response have nesting in
+                    # places which results in lists instead.
+                    if split[1].upper() == 'EXISTS':
+                        datum['EXISTS'] = self._intOrRaise(split[0], split)
+                    elif split[1].upper() == 'RECENT':
+                        datum['RECENT'] = self._intOrRaise(split[0], split)
                     else:
-                        log.err('Unhandled SELECT response (3): ' + parts)
+                        log.err('Unhandled SELECT response (0): %s' % (split,))
+                else:
+                    log.err('Unhandled SELECT response (1): %s' % (split,))
             else:
-                log.err('Unhandled SELECT response (4): ' + parts)
+                log.err('Unhandled SELECT response (4): %s' % (split,))
         return datum
+
 
     def create(self, name):
         """Create a new mailbox on the server
@@ -2839,11 +2836,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
     def __cbList(self, (lines, last), command):
         results = []
-        for L in lines:
-            parts = parseNestedParens(L)
-            if len(parts) != 4:
-                raise IllegalServerResponse, L
-            if parts[0] == command:
+        for parts in lines:
+            if len(parts) == 4 and parts[0] == command:
                 parts[1] = tuple(parts[1])
                 results.append(tuple(parts[1:]))
         return results
@@ -2878,8 +2872,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
     def __cbStatus(self, (lines, last)):
         status = {}
-        for line in lines:
-            parts = parseNestedParens(line)
+        for parts in lines:
             if parts[0] == 'STATUS':
                 items = parts[2]
                 items = [items[i:i+2] for i in range(0, len(items), 2)]
@@ -2967,6 +2960,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         """
         return self.sendCommand(Command('CLOSE'))
 
+
     def expunge(self):
         """Return the connection to the Authenticate state.
 
@@ -2987,17 +2981,14 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         d.addCallback(self.__cbExpunge)
         return d
 
+
     def __cbExpunge(self, (lines, last)):
         ids = []
-        for line in lines:
-            parts = line.split(None, 1)
-            if len(parts) == 2:
-                if parts[1] == 'EXPUNGE':
-                    try:
-                        ids.append(int(parts[0]))
-                    except ValueError:
-                        raise IllegalServerResponse, line
+        for parts in lines:
+            if len(parts) == 2 and parts[1] == 'EXPUNGE':
+                ids.append(self._intOrRaise(parts[0], parts))
         return ids
+
 
     def search(self, *queries, **kwarg):
         """Search messages in the currently selected mailbox
@@ -3025,17 +3016,14 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         d.addCallback(self.__cbSearch)
         return d
 
+
     def __cbSearch(self, (lines, end)):
         ids = []
-        for line in lines:
-            parts = line.split(None, 1)
-            if len(parts) == 2:
-                if parts[0] == 'SEARCH':
-                    try:
-                        ids.extend(map(int, parts[1].split()))
-                    except ValueError:
-                        raise IllegalServerResponse, line
+        for parts in lines:
+            if len(parts) > 0 and parts[0] == 'SEARCH':
+                ids.extend([self._intOrRaise(p, parts) for p in parts[1:]])
         return ids
+
 
     def fetchUID(self, messages, uid=0):
         """Retrieve the unique identifier for one or more messages
@@ -3054,9 +3042,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         message sequence numbers to unique message identifiers, or whose
         errback is invoked if there is an error.
         """
-        d = self._fetch(messages, useUID=uid, uid=1)
-        d.addCallback(self.__cbFetch)
-        return d
+        return self._fetch(messages, useUID=uid, uid=1)
+
 
     def fetchFlags(self, messages, uid=0):
         """Retrieve the flags for one or more messages
@@ -3075,9 +3062,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         message numbers to lists of flags, or whose errback is invoked if
         there is an error.
         """
-        d = self._fetch(str(messages), useUID=uid, flags=1)
-        d.addCallback(self.__cbFetch)
-        return d
+        return self._fetch(str(messages), useUID=uid, flags=1)
+
 
     def fetchInternalDate(self, messages, uid=0):
         """Retrieve the internal date associated with one or more messages
@@ -3097,9 +3083,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         if there is an error.  Date strings take the format of
         \"day-month-year time timezone\".
         """
-        d = self._fetch(str(messages), useUID=uid, internaldate=1)
-        d.addCallback(self.__cbFetch)
-        return d
+        return self._fetch(str(messages), useUID=uid, internaldate=1)
+
 
     def fetchEnvelope(self, messages, uid=0):
         """Retrieve the envelope data for one or more messages
@@ -3124,9 +3109,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         of a sequence of name, source route, mailbox name, and hostname.
         Fields which are not present for a particular address may be C{None}.
         """
-        d = self._fetch(str(messages), useUID=uid, envelope=1)
-        d.addCallback(self.__cbFetch)
-        return d
+        return self._fetch(str(messages), useUID=uid, envelope=1)
+
 
     def fetchBodyStructure(self, messages, uid=0):
         """Retrieve the structure of the body of one or more messages
@@ -3154,9 +3138,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         may also be included; if present, they are: the MD5 hash of the body,
         body disposition, body language.
         """
-        d = self._fetch(messages, useUID=uid, bodystructure=1)
-        d.addCallback(self.__cbFetch)
-        return d
+        return self._fetch(messages, useUID=uid, bodystructure=1)
+
 
     def fetchSimplifiedBody(self, messages, uid=0):
         """Retrieve the simplified body structure of one or more messages
@@ -3177,9 +3160,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         as the body structure, except that extension fields will never be
         present.
         """
-        d = self._fetch(messages, useUID=uid, body=1)
-        d.addCallback(self.__cbFetch)
-        return d
+        return self._fetch(messages, useUID=uid, body=1)
+
 
     def fetchMessage(self, messages, uid=0):
         """Retrieve one or more entire messages
@@ -3202,9 +3184,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             message.  The text of the message is a C{str} associated with the
             C{'RFC822'} key in each dictionary.
         """
-        d = self._fetch(messages, useUID=uid, rfc822=1)
-        d.addCallback(self.__cbFetch)
-        return d
+        return self._fetch(messages, useUID=uid, rfc822=1)
+
 
     def fetchHeaders(self, messages, uid=0):
         """Retrieve headers of one or more messages
@@ -3223,9 +3204,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         message numbers to dicts of message headers, or whose errback is
         invoked if there is an error.
         """
-        d = self._fetch(messages, useUID=uid, rfc822header=1)
-        d.addCallback(self.__cbFetch)
-        return d
+        return self._fetch(messages, useUID=uid, rfc822header=1)
+
 
     def fetchBody(self, messages, uid=0):
         """Retrieve body text of one or more messages
@@ -3244,9 +3224,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         message numbers to file-like objects containing body text, or whose
         errback is invoked if there is an error.
         """
-        d = self._fetch(messages, useUID=uid, rfc822text=1)
-        d.addCallback(self.__cbFetch)
-        return d
+        return self._fetch(messages, useUID=uid, rfc822text=1)
+
 
     def fetchSize(self, messages, uid=0):
         """Retrieve the size, in octets, of one or more messages
@@ -3265,9 +3244,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         message numbers to sizes, or whose errback is invoked if there is
         an error.
         """
-        d = self._fetch(messages, useUID=uid, rfc822size=1)
-        d.addCallback(self.__cbFetch)
-        return d
+        return self._fetch(messages, useUID=uid, rfc822size=1)
+
 
     def fetchFull(self, messages, uid=0):
         """Retrieve several different fields of one or more messages
@@ -3290,12 +3268,10 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         errback is invoked if there is an error.  They dictionary keys
         are "flags", "date", "size", "envelope", and "body".
         """
-        d = self._fetch(
+        return self._fetch(
             messages, useUID=uid, flags=1, internaldate=1,
-            rfc822size=1, envelope=1, body=1
-        )
-        d.addCallback(self.__cbFetch)
-        return d
+            rfc822size=1, envelope=1, body=1)
+
 
     def fetchAll(self, messages, uid=0):
         """Retrieve several different fields of one or more messages
@@ -3317,12 +3293,10 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         errback is invoked if there is an error.  They dictionary keys
         are "flags", "date", "size", and "envelope".
         """
-        d = self._fetch(
+        return self._fetch(
             messages, useUID=uid, flags=1, internaldate=1,
-            rfc822size=1, envelope=1
-        )
-        d.addCallback(self.__cbFetch)
-        return d
+            rfc822size=1, envelope=1)
+
 
     def fetchFast(self, messages, uid=0):
         """Retrieve several different fields of one or more messages
@@ -3344,36 +3318,130 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         errback is invoked if there is an error.  They dictionary keys are
         "flags", "date", and "size".
         """
-        d = self._fetch(
-            messages, useUID=uid, flags=1, internaldate=1, rfc822size=1
-        )
-        d.addCallback(self.__cbFetch)
-        return d
+        return self._fetch(
+            messages, useUID=uid, flags=1, internaldate=1, rfc822size=1)
 
-    def __cbFetch(self, (lines, last)):
-        flags = {}
-        for line in lines:
-            parts = line.split(None, 2)
-            if len(parts) == 3:
-                if parts[1] == 'FETCH':
-                    try:
-                        id = int(parts[0])
-                    except ValueError:
-                        raise IllegalServerResponse, line
-                    else:
-                        data = parseNestedParens(parts[2])
-                        while len(data) == 1 and isinstance(data, types.ListType):
-                            data = data[0]
-                        while data:
-                            if len(data) < 2:
-                                raise IllegalServerResponse("Not enough arguments", data)
-                            flags.setdefault(id, {})[data[0]] = data[1]
-                            del data[:2]
+
+    def _parseFetchPairs(self, fetchResponseList):
+        """
+        Given the result of parsing a single I{FETCH} response, construct a
+        C{dict} mapping response keys to response values.
+
+        @param fetchResponseList: The result of parsing a I{FETCH} response
+            with L{parseNestedParens} and extracting just the response data
+            (that is, just the part that comes after C{"FETCH"}).  The form
+            of this input (and therefore the output of this method) is very
+            disagreable.  A valuable improvement would be to enumerate the
+            possible keys (representing them as structured objects of some
+            sort) rather than using strings and tuples of tuples of strings
+            and so forth.  This would allow the keys to be documented more
+            easily and would allow for a much simpler application-facing API
+            (one not based on looking up somewhat hard to predict keys in a
+            dict).  Since C{fetchResponseList} notionally represents a
+            flattened sequence of pairs (identifying keys followed by their
+            associated values), collapsing such complex elements of this
+            list as C{["BODY", ["HEADER.FIELDS", ["SUBJECT"]]]} into a
+            single object would also greatly simplify the implementation of
+            this method.
+
+        @return: A C{dict} of the response data represented by C{pairs}.  Keys
+            in this dictionary are things like C{"RFC822.TEXT"}, C{"FLAGS"}, or
+            C{("BODY", ("HEADER.FIELDS", ("SUBJECT",)))}.  Values are entirely
+            dependent on the key with which they are associated, but retain the
+            same structured as produced by L{parseNestedParens}.
+        """
+        values = {}
+        responseParts = iter(fetchResponseList)
+        while True:
+            try:
+                key = responseParts.next()
+            except StopIteration:
+                break
+
+            try:
+                value = responseParts.next()
+            except StopIteration:
+                raise IllegalServerResponse(
+                    "Not enough arguments", fetchResponseList)
+
+            # The parsed forms of responses like:
+            #
+            # BODY[] VALUE
+            # BODY[TEXT] VALUE
+            # BODY[HEADER.FIELDS (SUBJECT)] VALUE
+            # BODY[HEADER.FIELDS (SUBJECT)]<N.M> VALUE
+            #
+            # are:
+            #
+            # ["BODY", [], VALUE]
+            # ["BODY", ["TEXT"], VALUE]
+            # ["BODY", ["HEADER.FIELDS", ["SUBJECT"]], VALUE]
+            # ["BODY", ["HEADER.FIELDS", ["SUBJECT"]], "<N.M>", VALUE]
+            #
+            # Here, check for these cases and grab as many extra elements as
+            # necessary to retrieve the body information.
+            if key in ("BODY", "BODY.PEEK") and isinstance(value, list) and len(value) < 3:
+                if len(value) < 2:
+                    key = (key, tuple(value))
                 else:
-                    print '(2)Ignoring ', parts
-            else:
-                print '(3)Ignoring ', parts
-        return flags
+                    key = (key, (value[0], tuple(value[1])))
+                try:
+                    value = responseParts.next()
+                except StopIteration:
+                    raise IllegalServerResponse(
+                        "Not enough arguments", fetchResponseList)
+
+                # Handle partial ranges
+                if value.startswith('<') and value.endswith('>'):
+                    key = key + (value,)
+                    try:
+                        value = responseParts.next()
+                    except StopIteration:
+                        raise IllegalServerResponse(
+                            "Not enough arguments", fetchResponseList)
+
+            values[key] = value
+        return values
+
+
+    def _cbFetch(self, (lines, last), requestedParts, structured):
+        info = {}
+        for parts in lines:
+            if len(parts) == 3 and parts[1] == 'FETCH':
+                id = self._intOrRaise(parts[0], parts)
+                if id not in info:
+                    info[id] = [parts[2]]
+                else:
+                    info[id][0].extend(parts[2])
+
+        results = {}
+        for (messageId, values) in info.iteritems():
+            mapping = self._parseFetchPairs(values[0])
+            results.setdefault(messageId, {}).update(mapping)
+
+        flagChanges = {}
+        for messageId in results.keys():
+            values = results[messageId]
+            for part in values.keys():
+                if part not in requestedParts and part == 'FLAGS':
+                    flagChanges[messageId] = values['FLAGS']
+                    # Find flags in the result and get rid of them.
+                    for i in range(len(info[messageId][0])):
+                        if info[messageId][0][i] == 'FLAGS':
+                            del info[messageId][0][i:i+2]
+                            break
+                    del values['FLAGS']
+                    if not values:
+                        del results[messageId]
+
+        if flagChanges:
+            self.flagsChanged(flagChanges)
+
+        if structured:
+            return results
+        else:
+            return info
+
 
     def fetchSpecific(self, messages, uid=0, headerType=None,
                       headerNumber=None, headerArgs=None, peek=None,
@@ -3425,17 +3493,17 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         fmt = '%s BODY%s[%s%s%s]%s'
         if headerNumber is None:
             number = ''
-        elif isinstance(headerNumber, types.IntType):
+        elif isinstance(headerNumber, int):
             number = str(headerNumber)
         else:
-            number = '.'.join(headerNumber)
+            number = '.'.join(map(str, headerNumber))
         if headerType is None:
             header = ''
         elif number:
             header = '.' + headerType
         else:
             header = headerType
-        if header:
+        if header and headerType not in ('TEXT', 'MIME'):
             if headerArgs is not None:
                 payload = ' (%s)' % ' '.join(headerArgs)
             else:
@@ -3449,22 +3517,9 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         fetch = uid and 'UID FETCH' or 'FETCH'
         cmd = fmt % (messages, peek and '.PEEK' or '', number, header, payload, extra)
         d = self.sendCommand(Command(fetch, cmd, wantResponse=('FETCH',)))
-        d.addCallback(self.__cbFetchSpecific)
+        d.addCallback(self._cbFetch, (), False)
         return d
 
-    def __cbFetchSpecific(self, (lines, last)):
-        info = {}
-        for line in lines:
-            parts = line.split(None, 2)
-            if len(parts) == 3:
-                if parts[1] == 'FETCH':
-                    try:
-                        id = int(parts[0])
-                    except ValueError:
-                        raise IllegalServerResponse, line
-                    else:
-                        info[id] = parseNestedParens(parts[2])
-        return info
 
     def _fetch(self, messages, useUID=0, **terms):
         fetch = useUID and 'UID FETCH' or 'FETCH'
@@ -3481,6 +3536,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         cmd = '%s (%s)' % (messages, ' '.join([s.upper() for s in terms.keys()]))
         d = self.sendCommand(Command(fetch, cmd, wantResponse=('FETCH',)))
+        d.addCallback(self._cbFetch, map(str.upper, terms.keys()), True)
         return d
 
     def setFlags(self, messages, flags, silent=1, uid=0):
@@ -3507,7 +3563,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         the server's responses (C{[]} if C{silent} is true) or whose
         errback is invoked if there is an error.
         """
-        return self._store(str(messages), silent and 'FLAGS.SILENT' or 'FLAGS', flags, uid)
+        return self._store(str(messages), 'FLAGS', silent, flags, uid)
 
     def addFlags(self, messages, flags, silent=1, uid=0):
         """Add to the set flags for one or more messages.
@@ -3533,7 +3589,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         the server's responses (C{[]} if C{silent} is true) or whose
         errback is invoked if there is an error.
         """
-        return self._store(str(messages), silent and '+FLAGS.SILENT' or '+FLAGS', flags, uid)
+        return self._store(str(messages),'+FLAGS', silent, flags, uid)
 
     def removeFlags(self, messages, flags, silent=1, uid=0):
         """Remove from the set flags for one or more messages.
@@ -3559,14 +3615,21 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         the server's responses (C{[]} if C{silent} is true) or whose
         errback is invoked if there is an error.
         """
-        return self._store(str(messages), silent and '-FLAGS.SILENT' or '-FLAGS', flags, uid)
+        return self._store(str(messages), '-FLAGS', silent, flags, uid)
 
-    def _store(self, messages, cmd, flags, uid):
+
+    def _store(self, messages, cmd, silent, flags, uid):
+        if silent:
+            cmd = cmd + '.SILENT'
         store = uid and 'UID STORE' or 'STORE'
         args = ' '.join((messages, cmd, '(%s)' % ' '.join(flags)))
         d = self.sendCommand(Command(store, args, wantResponse=('FETCH',)))
-        d.addCallback(self.__cbFetch)
+        expected = ()
+        if not silent:
+            expected = ('FLAGS',)
+        d.addCallback(self._cbFetch, expected, True)
         return d
+
 
     def copy(self, messages, mailbox, uid):
         """Copy the specified messages to the specified mailbox.

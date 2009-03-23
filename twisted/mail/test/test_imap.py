@@ -910,40 +910,7 @@ class SimpleClient(imap4.IMAP4Client):
         self.events.append(['newMessages', exists, recent])
         self.transport.loseConnection()
 
-    def fetchBodyParts(self, message, parts):
-        """Fetch some parts of the body.
 
-        @param message: message with parts to fetch
-        @type message: C{str}
-        @param parts: a list of int/str
-        @type parts: C{list}
-        """
-        cmd = "%s (BODY[%s]" % (message, parts[0])
-        for p in parts[1:]:
-            cmd += " BODY[%s]" % p
-        cmd += ")"
-        d = self.sendCommand(imap4.Command("FETCH", cmd,
-                                           wantResponse=("FETCH",)))
-        d.addCallback(self.__cb_fetchBodyParts)
-        return d
-
-    def __cb_fetchBodyParts(self, (lines, last)):
-        info = {}
-        for line in lines:
-            parts = line.split(None, 2)
-            if len(parts) == 3:
-                if parts[1] == "FETCH":
-                    try:
-                        mail_id = int(parts[0])
-                    except ValueError:
-                        raise imap4.IllegalServerResponse, line
-                    else:
-                        body_parts = imap4.parseNestedParens(parts[2])[0]
-                        dict_parts = {}
-                        for i in range(len(body_parts)/3):
-                            dict_parts[body_parts[3*i+1][0]] = body_parts[3*i+2]
-                        info[mail_id] = dict_parts
-        return info
 
 class IMAP4HelperMixin:
     serverCTX = None
@@ -971,9 +938,7 @@ class IMAP4HelperMixin:
     def _ebGeneral(self, failure):
         self.client.transport.loseConnection()
         self.server.transport.loseConnection()
-        failure.printTraceback(open('failure.log', 'w'))
-        failure.printTraceback()
-        raise failure.value
+        failure.raiseException()
 
     def loopback(self):
         return loopback.loopbackAsync(self.server, self.client)
@@ -1161,8 +1126,7 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
         self.assertEquals(self.examinedArgs, {
             'EXISTS': 9, 'RECENT': 3, 'UIDVALIDITY': 42,
             'FLAGS': ('\\Flag1', 'Flag2', '\\AnotherSysFlag', 'LastFlag'),
-            'READ-WRITE': 0
-        })
+            'READ-WRITE': False})
 
 
     def testCreate(self):
@@ -1930,6 +1894,19 @@ class ClientCapabilityTests(unittest.TestCase):
 
 
 
+class StillSimplerClient(imap4.IMAP4Client):
+    """
+    An IMAP4 client which keeps track of unsolicited flag changes.
+    """
+    def __init__(self):
+        imap4.IMAP4Client.__init__(self)
+        self.flags = {}
+
+
+    def flagsChanged(self, newFlags):
+        self.flags.update(newFlags)
+
+
 
 class HandCraftedTestCase(IMAP4HelperMixin, unittest.TestCase):
     def testTrailingLiteral(self):
@@ -1955,6 +1932,7 @@ class HandCraftedTestCase(IMAP4HelperMixin, unittest.TestCase):
         d.addCallback(cbLogin)
         return d
 
+
     def testPathelogicalScatteringOfLiterals(self):
         self.server.checker.addUser('testuser', 'password-test')
         transport = StringTransport()
@@ -1975,13 +1953,15 @@ class HandCraftedTestCase(IMAP4HelperMixin, unittest.TestCase):
 
         self.server.connectionLost(error.ConnectionDone("Connection done."))
 
-    def testUnsolicitedResponseMixedWithSolicitedResponse(self):
 
-        class StillSimplerClient(imap4.IMAP4Client):
-            events = []
-            def flagsChanged(self, newFlags):
-                self.events.append(['flagsChanged', newFlags])
-
+    def test_unsolicitedResponseMixedWithSolicitedResponse(self):
+        """
+        If unsolicited data is received along with solicited data in the
+        response to a I{FETCH} command issued by L{IMAP4Client.fetchSpecific},
+        the unsolicited data is passed to the appropriate callback and not
+        included in the result with wihch the L{Deferred} returned by
+        L{IMAP4Client.fetchSpecific} fires.
+        """
         transport = StringTransport()
         c = StillSimplerClient()
         c.makeConnection(transport)
@@ -2018,7 +1998,7 @@ class HandCraftedTestCase(IMAP4HelperMixin, unittest.TestCase):
                     'Subject: What you been doing. Order your meds here . ,. handcuff madsen\r\n\r\n']]
             })
 
-            self.assertEquals(c.events, [['flagsChanged', {1: ['\\Seen']}]])
+            self.assertEquals(c.flags, {1: ['\\Seen']})
 
         return login(
             ).addCallback(strip(select)
@@ -2098,8 +2078,143 @@ class HandCraftedTestCase(IMAP4HelperMixin, unittest.TestCase):
         return d
 
 
+    def test_flagsChangedInsideFetchSpecificResponse(self):
+        """
+        Any unrequested flag information received along with other requested
+        information in an untagged I{FETCH} received in response to a request
+        issued with L{IMAP4Client.fetchSpecific} is passed to the
+        C{flagsChanged} callback.
+        """
+        transport = StringTransport()
+        c = StillSimplerClient()
+        c.makeConnection(transport)
+        c.lineReceived('* OK [IMAP4rev1]')
 
-class IMAP4ClientExamineTests(unittest.TestCase):
+        def login():
+            d = c.login('blah', 'blah')
+            c.dataReceived('0001 OK LOGIN\r\n')
+            return d
+        def select():
+            d = c.select('inbox')
+            c.lineReceived('0002 OK SELECT')
+            return d
+        def fetch():
+            d = c.fetchSpecific('1:*',
+                headerType='HEADER.FIELDS',
+                headerArgs=['SUBJECT'])
+            # This response includes FLAGS after the requested data.
+            c.dataReceived('* 1 FETCH (BODY[HEADER.FIELDS ("SUBJECT")] {22}\r\n')
+            c.dataReceived('Subject: subject one\r\n')
+            c.dataReceived(' FLAGS (\\Recent))\r\n')
+            # And this one includes it before!  Either is possible.
+            c.dataReceived('* 2 FETCH (FLAGS (\\Seen) BODY[HEADER.FIELDS ("SUBJECT")] {22}\r\n')
+            c.dataReceived('Subject: subject two\r\n')
+            c.dataReceived(')\r\n')
+            c.dataReceived('0003 OK FETCH completed\r\n')
+            return d
+
+        def test(res):
+            self.assertEquals(res, {
+                1: [['BODY', ['HEADER.FIELDS', ['SUBJECT']],
+                    'Subject: subject one\r\n']],
+                2: [['BODY', ['HEADER.FIELDS', ['SUBJECT']],
+                    'Subject: subject two\r\n']]
+            })
+
+            self.assertEquals(c.flags, {1: ['\\Recent'], 2: ['\\Seen']})
+
+        return login(
+            ).addCallback(strip(select)
+            ).addCallback(strip(fetch)
+            ).addCallback(test)
+
+
+    def test_flagsChangedInsideFetchMessageResponse(self):
+        """
+        Any unrequested flag information received along with other requested
+        information in an untagged I{FETCH} received in response to a request
+        issued with L{IMAP4Client.fetchMessage} is passed to the
+        C{flagsChanged} callback.
+        """
+        transport = StringTransport()
+        c = StillSimplerClient()
+        c.makeConnection(transport)
+        c.lineReceived('* OK [IMAP4rev1]')
+
+        def login():
+            d = c.login('blah', 'blah')
+            c.dataReceived('0001 OK LOGIN\r\n')
+            return d
+        def select():
+            d = c.select('inbox')
+            c.lineReceived('0002 OK SELECT')
+            return d
+        def fetch():
+            d = c.fetchMessage('1:*')
+            c.dataReceived('* 1 FETCH (RFC822 {24}\r\n')
+            c.dataReceived('Subject: first subject\r\n')
+            c.dataReceived(' FLAGS (\Seen))\r\n')
+            c.dataReceived('* 2 FETCH (FLAGS (\Recent \Seen) RFC822 {25}\r\n')
+            c.dataReceived('Subject: second subject\r\n')
+            c.dataReceived(')\r\n')
+            c.dataReceived('0003 OK FETCH completed\r\n')
+            return d
+
+        def test(res):
+            self.assertEquals(res, {
+                1: {'RFC822': 'Subject: first subject\r\n'},
+                2: {'RFC822': 'Subject: second subject\r\n'}})
+
+            self.assertEquals(
+                c.flags, {1: ['\\Seen'], 2: ['\\Recent', '\\Seen']})
+
+        return login(
+            ).addCallback(strip(select)
+            ).addCallback(strip(fetch)
+            ).addCallback(test)
+
+
+
+class PreauthIMAP4ClientMixin:
+    """
+    Mixin for L{unittest.TestCase} subclasses which provides a C{setUp} method
+    which creates an L{IMAP4Client} connected to a L{StringTransport} and puts
+    it into the I{authenticated} state.
+
+    @ivar transport: A L{StringTransport} to which C{client} is connected.
+    @ivar client: An L{IMAP4Client} which is connected to C{transport}.
+    """
+    clientProtocol = imap4.IMAP4Client
+
+    def setUp(self):
+        """
+        Create an IMAP4Client connected to a fake transport and in the
+        authenticated state.
+        """
+        self.transport = StringTransport()
+        self.client = self.clientProtocol()
+        self.client.makeConnection(self.transport)
+        self.client.dataReceived('* PREAUTH Hello unittest\r\n')
+
+
+    def _result(self, d):
+        """
+        Synchronously extract the result of the given L{Deferred}.  Fail the
+        test if that is not possible.
+        """
+        result = []
+        error = []
+        d.addCallbacks(result.append, error.append)
+        if result:
+            return result[0]
+        elif error:
+            error[0].raiseException()
+        else:
+            self.fail("Expected result not available")
+
+
+
+class IMAP4ClientExamineTests(PreauthIMAP4ClientMixin, unittest.TestCase):
     """
     Tests for the L{IMAP4Client.examine} method.
 
@@ -2113,21 +2228,7 @@ class IMAP4ClientExamineTests(unittest.TestCase):
         S: * FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)
         S: * OK [PERMANENTFLAGS ()] No permanent flags permitted
         S: A932 OK [READ-ONLY] EXAMINE completed
-
-    @ivar transport: A L{StringTransport} to which C{client} is connected.
-    @ivar client: An L{IMAP4Client} which is connected to C{transport}.
     """
-    def setUp(self):
-        """
-        Create an IMAP4Client connected to a fake transport and in the
-        authenticated state.
-        """
-        self.transport = StringTransport()
-        self.client = imap4.IMAP4Client()
-        self.client.makeConnection(self.transport)
-        self.client.dataReceived('* PREAUTH Hello unittest\r\n')
-
-
     def _examine(self):
         """
         Issue an examine command, assert that the correct bytes are written to
@@ -2150,16 +2251,6 @@ class IMAP4ClientExamineTests(unittest.TestCase):
         self.client.dataReceived('0001 OK [READ-ONLY] EXAMINE completed\r\n')
 
 
-    def _result(self, d):
-        """
-        Synchronously extract the result of the given L{Deferred}.  Raise
-        L{IndexError} if that is not possible.
-        """
-        result = []
-        d.addCallback(result.append)
-        return result[0]
-
-
     def test_exists(self):
         """
         If the server response to an I{EXAMINE} command includes an I{EXISTS}
@@ -2169,6 +2260,18 @@ class IMAP4ClientExamineTests(unittest.TestCase):
         d = self._examine()
         self._response('* 3 EXISTS')
         self.assertEqual(self._result(d), {'READ-WRITE': False, 'EXISTS': 3})
+
+
+    def test_nonIntegerExists(self):
+        """
+        If the server returns a non-integer EXISTS value in its response to an
+        I{EXAMINE} command, the L{Deferred} returned by L{IMAP4Client.examine}
+        fails with L{IllegalServerResponse}.
+        """
+        d = self._examine()
+        self._response('* foo EXISTS')
+        self.assertRaises(
+            imap4.IllegalServerResponse, self._result, d)
 
 
     def test_recent(self):
@@ -2182,6 +2285,18 @@ class IMAP4ClientExamineTests(unittest.TestCase):
         self.assertEqual(self._result(d), {'READ-WRITE': False, 'RECENT': 5})
 
 
+    def test_nonIntegerRecent(self):
+        """
+        If the server returns a non-integer RECENT value in its response to an
+        I{EXAMINE} command, the L{Deferred} returned by L{IMAP4Client.examine}
+        fails with L{IllegalServerResponse}.
+        """
+        d = self._examine()
+        self._response('* foo RECENT')
+        self.assertRaises(
+            imap4.IllegalServerResponse, self._result, d)
+
+
     def test_unseen(self):
         """
         If the server response to an I{EXAMINE} command includes an I{UNSEEN}
@@ -2191,6 +2306,18 @@ class IMAP4ClientExamineTests(unittest.TestCase):
         d = self._examine()
         self._response('* OK [UNSEEN 8] Message 8 is first unseen')
         self.assertEqual(self._result(d), {'READ-WRITE': False, 'UNSEEN': 8})
+
+
+    def test_nonIntegerUnseen(self):
+        """
+        If the server returns a non-integer UNSEEN value in its response to an
+        I{EXAMINE} command, the L{Deferred} returned by L{IMAP4Client.examine}
+        fails with L{IllegalServerResponse}.
+        """
+        d = self._examine()
+        self._response('* OK [UNSEEN foo] Message foo is first unseen')
+        self.assertRaises(
+            imap4.IllegalServerResponse, self._result, d)
 
 
     def test_uidvalidity(self):
@@ -2206,6 +2333,18 @@ class IMAP4ClientExamineTests(unittest.TestCase):
             self._result(d), {'READ-WRITE': False, 'UIDVALIDITY': 12345})
 
 
+    def test_nonIntegerUIDVALIDITY(self):
+        """
+        If the server returns a non-integer UIDVALIDITY value in its response
+        to an I{EXAMINE} command, the L{Deferred} returned by
+        L{IMAP4Client.examine} fails with L{IllegalServerResponse}.
+        """
+        d = self._examine()
+        self._response('* OK [UIDVALIDITY foo] UIDs valid')
+        self.assertRaises(
+            imap4.IllegalServerResponse, self._result, d)
+
+
     def test_uidnext(self):
         """
         If the server response to an I{EXAMINE} command includes an I{UIDNEXT}
@@ -2216,6 +2355,18 @@ class IMAP4ClientExamineTests(unittest.TestCase):
         self._response('* OK [UIDNEXT 4392] Predicted next UID')
         self.assertEqual(
             self._result(d), {'READ-WRITE': False, 'UIDNEXT': 4392})
+
+
+    def test_nonIntegerUIDNEXT(self):
+        """
+        If the server returns a non-integer UIDNEXT value in its response to an
+        I{EXAMINE} command, the L{Deferred} returned by L{IMAP4Client.examine}
+        fails with L{IllegalServerResponse}.
+        """
+        d = self._examine()
+        self._response('* OK [UIDNEXT foo] Predicted next UID')
+        self.assertRaises(
+            imap4.IllegalServerResponse, self._result, d)
 
 
     def test_flags(self):
@@ -2248,6 +2399,503 @@ class IMAP4ClientExamineTests(unittest.TestCase):
             self._result(d), {
                 'READ-WRITE': False,
                 'PERMANENTFLAGS': ('\\Starred',)})
+
+
+    def test_unrecognizedOk(self):
+        """
+        If the server response to an I{EXAMINE} command includes an I{OK} with
+        unrecognized response code text, parsing does not fail.
+        """
+        d = self._examine()
+        self._response(
+            '* OK [X-MADE-UP] I just made this response text up.')
+        # The value won't show up in the result.  It would be okay if it did
+        # someday, perhaps.  This shouldn't ever happen, though.
+        self.assertEquals(self._result(d), {'READ-WRITE': False})
+
+
+    def test_bareOk(self):
+        """
+        If the server response to an I{EXAMINE} command includes an I{OK} with
+        no response code text, parsing does not fail.
+        """
+        d = self._examine()
+        self._response('* OK')
+        self.assertEquals(self._result(d), {'READ-WRITE': False})
+
+
+
+class IMAP4ClientExpungeTests(PreauthIMAP4ClientMixin, unittest.TestCase):
+    """
+    Tests for the L{IMAP4Client.expunge} method.
+
+    An example of usage of the EXPUNGE command from RFC 3501, section 6.4.3::
+
+        C: A202 EXPUNGE
+        S: * 3 EXPUNGE
+        S: * 3 EXPUNGE
+        S: * 5 EXPUNGE
+        S: * 8 EXPUNGE
+        S: A202 OK EXPUNGE completed
+    """
+    def _expunge(self):
+        d = self.client.expunge()
+        self.assertEquals(self.transport.value(), '0001 EXPUNGE\r\n')
+        self.transport.clear()
+        return d
+
+
+    def _response(self, sequenceNumbers):
+        for number in sequenceNumbers:
+            self.client.lineReceived('* %s EXPUNGE' % (number,))
+        self.client.lineReceived('0001 OK EXPUNGE COMPLETED')
+
+
+    def test_expunge(self):
+        """
+        L{IMAP4Client.expunge} sends the I{EXPUNGE} command and returns a
+        L{Deferred} which fires with a C{list} of message sequence numbers
+        given by the server's response.
+        """
+        d = self._expunge()
+        self._response([3, 3, 5, 8])
+        self.assertEquals(self._result(d), [3, 3, 5, 8])
+
+
+    def test_nonIntegerExpunged(self):
+        """
+        If the server responds with a non-integer where a message sequence
+        number is expected, the L{Deferred} returned by L{IMAP4Client.expunge}
+        fails with L{IllegalServerResponse}.
+        """
+        d = self._expunge()
+        self._response([3, 3, 'foo', 8])
+        self.assertRaises(imap4.IllegalServerResponse, self._result, d)
+
+
+
+class IMAP4ClientSearchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
+    """
+    Tests for the L{IMAP4Client.search} method.
+
+    An example of usage of the SEARCH command from RFC 3501, section 6.4.4::
+
+        C: A282 SEARCH FLAGGED SINCE 1-Feb-1994 NOT FROM "Smith"
+        S: * SEARCH 2 84 882
+        S: A282 OK SEARCH completed
+        C: A283 SEARCH TEXT "string not in mailbox"
+        S: * SEARCH
+        S: A283 OK SEARCH completed
+        C: A284 SEARCH CHARSET UTF-8 TEXT {6}
+        C: XXXXXX
+        S: * SEARCH 43
+        S: A284 OK SEARCH completed
+    """
+    def _search(self):
+        d = self.client.search(imap4.Query(text="ABCDEF"))
+        self.assertEquals(
+            self.transport.value(), '0001 SEARCH (TEXT "ABCDEF")\r\n')
+        return d
+
+
+    def _response(self, messageNumbers):
+        self.client.lineReceived(
+            "* SEARCH " + " ".join(map(str, messageNumbers)))
+        self.client.lineReceived("0001 OK SEARCH completed")
+
+
+    def test_search(self):
+        """
+        L{IMAP4Client.search} sends the I{SEARCH} command and returns a
+        L{Deferred} which fires with a C{list} of message sequence numbers
+        given by the server's response.
+        """
+        d = self._search()
+        self._response([2, 5, 10])
+        self.assertEquals(self._result(d), [2, 5, 10])
+
+
+    def test_nonIntegerFound(self):
+        """
+        If the server responds with a non-integer where a message sequence
+        number is expected, the L{Deferred} returned by L{IMAP4Client.search}
+        fails with L{IllegalServerResponse}.
+        """
+        d = self._search()
+        self._response([2, "foo", 10])
+        self.assertRaises(imap4.IllegalServerResponse, self._result, d)
+
+
+
+class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
+    """
+    Tests for the L{IMAP4Client.fetch} method.
+
+    See RFC 3501, section 6.4.5.
+    """
+    def test_fetchUID(self):
+        """
+        L{IMAP4Client.fetchUID} sends the I{FETCH UID} command and returns a
+        L{Deferred} which fires with a C{dict} mapping message sequence numbers
+        to C{dict}s mapping C{'UID'} to that message's I{UID} in the server's
+        response.
+        """
+        d = self.client.fetchUID('1:7')
+        self.assertEquals(self.transport.value(), '0001 FETCH 1:7 (UID)\r\n')
+        self.client.lineReceived('* 2 FETCH (UID 22)')
+        self.client.lineReceived('* 3 FETCH (UID 23)')
+        self.client.lineReceived('* 4 FETCH (UID 24)')
+        self.client.lineReceived('* 5 FETCH (UID 25)')
+        self.client.lineReceived('0001 OK FETCH completed')
+        self.assertEquals(
+            self._result(d), {
+                2: {'UID': '22'},
+                3: {'UID': '23'},
+                4: {'UID': '24'},
+                5: {'UID': '25'}})
+
+
+    def test_fetchUIDNonIntegerFound(self):
+        """
+        If the server responds with a non-integer where a message sequence
+        number is expected, the L{Deferred} returned by L{IMAP4Client.fetchUID}
+        fails with L{IllegalServerResponse}.
+        """
+        d = self.client.fetchUID('1')
+        self.assertEquals(self.transport.value(), '0001 FETCH 1 (UID)\r\n')
+        self.client.lineReceived('* foo FETCH (UID 22)')
+        self.client.lineReceived('0001 OK FETCH completed')
+        self.assertRaises(imap4.IllegalServerResponse, self._result, d)
+
+
+    def test_incompleteFetchUIDResponse(self):
+        """
+        If the server responds with an incomplete I{FETCH} response line, the
+        L{Deferred} returned by L{IMAP4Client.fetchUID} fails with
+        L{IllegalServerResponse}.
+        """
+        d = self.client.fetchUID('1:7')
+        self.assertEquals(self.transport.value(), '0001 FETCH 1:7 (UID)\r\n')
+        self.client.lineReceived('* 2 FETCH (UID 22)')
+        self.client.lineReceived('* 3 FETCH (UID)')
+        self.client.lineReceived('* 4 FETCH (UID 24)')
+        self.client.lineReceived('0001 OK FETCH completed')
+        self.assertRaises(imap4.IllegalServerResponse, self._result, d)
+
+
+    def test_fetchBody(self):
+        """
+        L{IMAP4Client.fetchBody} sends the I{FETCH BODY} command and returns a
+        L{Deferred} which fires with a C{dict} mapping message sequence numbers
+        to C{dict}s mapping C{'RFC822.TEXT'} to that message's body as given in
+        the server's response.
+        """
+        d = self.client.fetchBody('3')
+        self.assertEquals(
+            self.transport.value(), '0001 FETCH 3 (RFC822.TEXT)\r\n')
+        self.client.lineReceived('* 3 FETCH (RFC822.TEXT "Message text")')
+        self.client.lineReceived('0001 OK FETCH completed')
+        self.assertEquals(
+            self._result(d), {3: {'RFC822.TEXT': 'Message text'}})
+
+
+    def test_fetchSpecific(self):
+        """
+        L{IMAP4Client.fetchSpecific} sends the I{BODY[]} command if no
+        parameters beyond the message set to retrieve are given.  It returns a
+        L{Deferred} which fires with a C{dict} mapping message sequence numbers
+        to C{list}s of corresponding message data given by the server's
+        response.
+        """
+        d = self.client.fetchSpecific('7')
+        self.assertEquals(
+            self.transport.value(), '0001 FETCH 7 BODY[]\r\n')
+        self.client.lineReceived('* 7 FETCH (BODY[] "Some body")')
+        self.client.lineReceived('0001 OK FETCH completed')
+        self.assertEquals(
+            self._result(d), {7: [['BODY', [], "Some body"]]})
+
+
+    def test_fetchSpecificPeek(self):
+        """
+        L{IMAP4Client.fetchSpecific} issues a I{BODY.PEEK[]} command if passed
+        C{True} for the C{peek} parameter.
+        """
+        d = self.client.fetchSpecific('6', peek=True)
+        self.assertEquals(
+            self.transport.value(), '0001 FETCH 6 BODY.PEEK[]\r\n')
+        # BODY.PEEK responses are just BODY
+        self.client.lineReceived('* 6 FETCH (BODY[] "Some body")')
+        self.client.lineReceived('0001 OK FETCH completed')
+        self.assertEquals(
+            self._result(d), {6: [['BODY', [], "Some body"]]})
+
+
+    def test_fetchSpecificNumbered(self):
+        """
+        L{IMAP4Client.fetchSpecific}, when passed a sequence for for
+        C{headerNumber}, sends the I{BODY[N.M]} command.  It returns a
+        L{Deferred} which fires with a C{dict} mapping message sequence numbers
+        to C{list}s of corresponding message data given by the server's
+        response.
+        """
+        d = self.client.fetchSpecific('7', headerNumber=(1, 2, 3))
+        self.assertEquals(
+            self.transport.value(), '0001 FETCH 7 BODY[1.2.3]\r\n')
+        self.client.lineReceived('* 7 FETCH (BODY[1.2.3] "Some body")')
+        self.client.lineReceived('0001 OK FETCH completed')
+        self.assertEquals(
+            self._result(d), {7: [['BODY', ['1.2.3'], "Some body"]]})
+
+
+    def test_fetchSpecificText(self):
+        """
+        L{IMAP4Client.fetchSpecific}, when passed C{'TEXT'} for C{headerType},
+        sends the I{BODY[TEXT]} command.  It returns a L{Deferred} which fires
+        with a C{dict} mapping message sequence numbers to C{list}s of
+        corresponding message data given by the server's response.
+        """
+        d = self.client.fetchSpecific('8', headerType='TEXT')
+        self.assertEquals(
+            self.transport.value(), '0001 FETCH 8 BODY[TEXT]\r\n')
+        self.client.lineReceived('* 8 FETCH (BODY[TEXT] "Some body")')
+        self.client.lineReceived('0001 OK FETCH completed')
+        self.assertEquals(
+            self._result(d), {8: [['BODY', ['TEXT'], "Some body"]]})
+
+
+    def test_fetchSpecificNumberedText(self):
+        """
+        If passed a value for the C{headerNumber} parameter and C{'TEXT'} for
+        the C{headerType} parameter, L{IMAP4Client.fetchSpecific} sends a
+        I{BODY[number.TEXT]} request and returns a L{Deferred} which fires with
+        a C{dict} mapping message sequence numbers to C{list}s of message data
+        given by the server's response.
+        """
+        d = self.client.fetchSpecific('4', headerType='TEXT', headerNumber=7)
+        self.assertEquals(
+            self.transport.value(), '0001 FETCH 4 BODY[7.TEXT]\r\n')
+        self.client.lineReceived('* 4 FETCH (BODY[7.TEXT] "Some body")')
+        self.client.lineReceived('0001 OK FETCH completed')
+        self.assertEquals(
+            self._result(d), {4: [['BODY', ['7.TEXT'], "Some body"]]})
+
+
+    def test_incompleteFetchSpecificTextResponse(self):
+        """
+        If the server responds to a I{BODY[TEXT]} request with a I{FETCH} line
+        which is truncated after the I{BODY[TEXT]} tokens, the L{Deferred}
+        returned by L{IMAP4Client.fetchUID} fails with
+        L{IllegalServerResponse}.
+        """
+        d = self.client.fetchSpecific('8', headerType='TEXT')
+        self.assertEquals(
+            self.transport.value(), '0001 FETCH 8 BODY[TEXT]\r\n')
+        self.client.lineReceived('* 8 FETCH (BODY[TEXT])')
+        self.client.lineReceived('0001 OK FETCH completed')
+        self.assertRaises(imap4.IllegalServerResponse, self._result, d)
+
+
+    def test_fetchSpecificMIME(self):
+        """
+        L{IMAP4Client.fetchSpecific}, when passed C{'MIME'} for C{headerType},
+        sends the I{BODY[MIME]} command.  It returns a L{Deferred} which fires
+        with a C{dict} mapping message sequence numbers to C{list}s of
+        corresponding message data given by the server's response.
+        """
+        d = self.client.fetchSpecific('8', headerType='MIME')
+        self.assertEquals(
+            self.transport.value(), '0001 FETCH 8 BODY[MIME]\r\n')
+        self.client.lineReceived('* 8 FETCH (BODY[MIME] "Some body")')
+        self.client.lineReceived('0001 OK FETCH completed')
+        self.assertEquals(
+            self._result(d), {8: [['BODY', ['MIME'], "Some body"]]})
+
+
+    def test_fetchSpecificPartial(self):
+        """
+        L{IMAP4Client.fetchSpecific}, when passed C{offset} and C{length},
+        sends a partial content request (like I{BODY[TEXT]<offset.length>}).
+        It returns a L{Deferred} which fires with a C{dict} mapping message
+        sequence numbers to C{list}s of corresponding message data given by the
+        server's response.
+        """
+        d = self.client.fetchSpecific(
+            '9', headerType='TEXT', offset=17, length=3)
+        self.assertEquals(
+            self.transport.value(), '0001 FETCH 9 BODY[TEXT]<17.3>\r\n')
+        self.client.lineReceived('* 9 FETCH (BODY[TEXT]<17> "foo")')
+        self.client.lineReceived('0001 OK FETCH completed')
+        self.assertEquals(
+            self._result(d), {9: [['BODY', ['TEXT'], '<17>', 'foo']]})
+
+
+    def test_incompleteFetchSpecificPartialResponse(self):
+        """
+        If the server responds to a I{BODY[TEXT]} request with a I{FETCH} line
+        which is truncated after the I{BODY[TEXT]<offset>} tokens, the
+        L{Deferred} returned by L{IMAP4Client.fetchUID} fails with
+        L{IllegalServerResponse}.
+        """
+        d = self.client.fetchSpecific('8', headerType='TEXT')
+        self.assertEquals(
+            self.transport.value(), '0001 FETCH 8 BODY[TEXT]\r\n')
+        self.client.lineReceived('* 8 FETCH (BODY[TEXT]<17>)')
+        self.client.lineReceived('0001 OK FETCH completed')
+        self.assertRaises(imap4.IllegalServerResponse, self._result, d)
+
+
+
+class IMAP4ClientStoreTests(PreauthIMAP4ClientMixin, unittest.TestCase):
+    """
+    Tests for the L{IMAP4Client.setFlags}, L{IMAP4Client.addFlags}, and
+    L{IMAP4Client.removeFlags} methods.
+
+    An example of usage of the STORE command, in terms of which these three
+    methods are implemented, from RFC 3501, section 6.4.6::
+
+        C: A003 STORE 2:4 +FLAGS (\Deleted)
+        S: * 2 FETCH (FLAGS (\Deleted \Seen))
+        S: * 3 FETCH (FLAGS (\Deleted))
+        S: * 4 FETCH (FLAGS (\Deleted \Flagged \Seen))
+        S: A003 OK STORE completed
+    """
+    clientProtocol = StillSimplerClient
+
+    def _flagsTest(self, method, item):
+        """
+        Test a non-silent flag modifying method.  Call the method, assert that
+        the correct bytes are sent, deliver a I{FETCH} response, and assert
+        that the result of the Deferred returned by the method is correct.
+
+        @param method: The name of the method to test.
+        @param item: The data item which is expected to be specified.
+        """
+        d = getattr(self.client, method)('3', ('\\Read', '\\Seen'), False)
+        self.assertEquals(
+            self.transport.value(),
+            '0001 STORE 3 ' + item + ' (\\Read \\Seen)\r\n')
+        self.client.lineReceived('* 3 FETCH (FLAGS (\\Read \\Seen))')
+        self.client.lineReceived('0001 OK STORE completed')
+        self.assertEquals(
+            self._result(d), {3: {'FLAGS': ['\\Read', '\\Seen']}})
+
+
+    def _flagsSilentlyTest(self, method, item):
+        """
+        Test a silent flag modifying method.  Call the method, assert that the
+        correct bytes are sent, deliver an I{OK} response, and assert that the
+        result of the Deferred returned by the method is correct.
+
+        @param method: The name of the method to test.
+        @param item: The data item which is expected to be specified.
+        """
+        d = getattr(self.client, method)('3', ('\\Read', '\\Seen'), True)
+        self.assertEquals(
+            self.transport.value(),
+            '0001 STORE 3 ' + item + ' (\\Read \\Seen)\r\n')
+        self.client.lineReceived('0001 OK STORE completed')
+        self.assertEquals(self._result(d), {})
+
+
+    def _flagsSilentlyWithUnsolicitedDataTest(self, method, item):
+        """
+        Test unsolicited data received in response to a silent flag modifying
+        method.  Call the method, assert that the correct bytes are sent,
+        deliver the unsolicited I{FETCH} response, and assert that the result
+        of the Deferred returned by the method is correct.
+
+        @param method: The name of the method to test.
+        @param item: The data item which is expected to be specified.
+        """
+        d = getattr(self.client, method)('3', ('\\Read', '\\Seen'), True)
+        self.assertEquals(
+            self.transport.value(),
+            '0001 STORE 3 ' + item + ' (\\Read \\Seen)\r\n')
+        self.client.lineReceived('* 2 FETCH (FLAGS (\\Read \\Seen))')
+        self.client.lineReceived('0001 OK STORE completed')
+        self.assertEquals(self._result(d), {})
+        self.assertEquals(self.client.flags, {2: ['\\Read', '\\Seen']})
+
+
+    def test_setFlags(self):
+        """
+        When passed a C{False} value for the C{silent} parameter,
+        L{IMAP4Client.setFlags} sends the I{STORE} command with a I{FLAGS} data
+        item and returns a L{Deferred} which fires with a C{dict} mapping
+        message sequence numbers to C{dict}s mapping C{'FLAGS'} to the new
+        flags of those messages.
+        """
+        self._flagsTest('setFlags', 'FLAGS')
+
+
+    def test_setFlagsSilently(self):
+        """
+        When passed a C{True} value for the C{silent} parameter,
+        L{IMAP4Client.setFlags} sends the I{STORE} command with a
+        I{FLAGS.SILENT} data item and returns a L{Deferred} which fires with an
+        empty dictionary.
+        """
+        self._flagsSilentlyTest('setFlags', 'FLAGS.SILENT')
+
+
+    def test_setFlagsSilentlyWithUnsolicitedData(self):
+        """
+        If unsolicited flag data is received in response to a I{STORE}
+        I{FLAGS.SILENT} request, that data is passed to the C{flagsChanged}
+        callback.
+        """
+        self._flagsSilentlyWithUnsolicitedDataTest('setFlags', 'FLAGS.SILENT')
+
+
+    def test_addFlags(self):
+        """
+        L{IMAP4Client.addFlags} is like L{IMAP4Client.setFlags}, but sends
+        I{+FLAGS} instead of I{FLAGS}.
+        """
+        self._flagsTest('addFlags', '+FLAGS')
+
+
+    def test_addFlagsSilently(self):
+        """
+        L{IMAP4Client.addFlags} with a C{True} value for C{silent} behaves like
+        L{IMAP4Client.setFlags} with a C{True} value for C{silent}, but it
+        sends I{+FLAGS.SILENT} instead of I{FLAGS.SILENT}.
+        """
+        self._flagsSilentlyTest('addFlags', '+FLAGS.SILENT')
+
+
+    def test_addFlagsSilentlyWithUnsolicitedData(self):
+        """
+        L{IMAP4Client.addFlags} behaves like L{IMAP4Client.setFlags} when used
+        in silent mode and unsolicited data is received.
+        """
+        self._flagsSilentlyWithUnsolicitedDataTest('addFlags', '+FLAGS.SILENT')
+
+
+    def test_removeFlags(self):
+        """
+        L{IMAP4Client.removeFlags} is like L{IMAP4Client.setFlags}, but sends
+        I{-FLAGS} instead of I{FLAGS}.
+        """
+        self._flagsTest('removeFlags', '-FLAGS')
+
+
+    def test_removeFlagsSilently(self):
+        """
+        L{IMAP4Client.removeFlags} with a C{True} value for C{silent} behaves
+        like L{IMAP4Client.setFlags} with a C{True} value for C{silent}, but it
+        sends I{-FLAGS.SILENT} instead of I{FLAGS.SILENT}.
+        """
+        self._flagsSilentlyTest('removeFlags', '-FLAGS.SILENT')
+
+
+    def test_removeFlagsSilentlyWithUnsolicitedData(self):
+        """
+        L{IMAP4Client.removeFlags} behaves like L{IMAP4Client.setFlags} when
+        used in silent mode and unsolicited data is received.
+        """
+        self._flagsSilentlyWithUnsolicitedDataTest('removeFlags', '-FLAGS.SILENT')
 
 
 
@@ -2600,9 +3248,11 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
         return self.testFetchBody(1)
 
     def testFetchBodyParts(self):
-        self.function = self.client.fetchBodyParts
+        """
+        Test the server's handling of requests for specific body sections.
+        """
+        self.function = self.client.fetchSpecific
         self.messages = '1'
-        parts = [1, 2]
         outerBody = ''
         innerBody1 = 'Contained body message text.  Squarge.'
         innerBody2 = 'Secondary <i>message</i> text of squarge body.'
@@ -2622,13 +3272,13 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
             [FakeyMessage(innerHeaders, (), None, innerBody1, None, None),
              FakeyMessage(innerHeaders2, (), None, innerBody2, None, None)])]
         self.expected = {
-            0: {'1': innerBody1, '2': innerBody2},
-        }
+            0: [['BODY', ['1'], 'Contained body message text.  Squarge.']]}
 
         def result(R):
             self.result = R
 
-        self.connected.addCallback(lambda _: self.function(self.messages, parts))
+        self.connected.addCallback(
+            lambda _: self.function(self.messages, headerNumber=1))
         self.connected.addCallback(result)
         self.connected.addCallback(self._cbStopClient)
         self.connected.addErrback(self._ebGeneral)
@@ -2645,7 +3295,7 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
         requesting part 1 of a text/plain message receives the body of the
         text/plain part.
         """
-        self.function = self.client.fetchBodyParts
+        self.function = self.client.fetchSpecific
         self.messages = '1'
         parts = [1]
         outerBody = 'DA body'
@@ -2657,14 +3307,13 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.msgObjs = [FakeyMessage(
             headers, (), None, outerBody, 123, None)]
 
-        self.expected = {
-            0: {'1': outerBody},
-        }
+        self.expected = {0: [['BODY', ['1'], 'DA body']]}
 
         def result(R):
             self.result = R
 
-        self.connected.addCallback(lambda _: self.function(self.messages, parts))
+        self.connected.addCallback(
+            lambda _: self.function(self.messages, headerNumber=parts))
         self.connected.addCallback(result)
         self.connected.addCallback(self._cbStopClient)
         self.connected.addErrback(self._ebGeneral)
@@ -3111,7 +3760,7 @@ class Timeout(IMAP4HelperMixin, unittest.TestCase):
         SimpleServer.theAccount.addMailbox('mailbox-test')
 
         self.server.setTimeout(1)
-        
+
         def login():
             return self.client.login('testuser', 'password-test')
         def select():
