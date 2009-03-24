@@ -574,9 +574,10 @@ class DefaultOpenSSLContextFactoryTests(unittest.TestCase):
     Tests for L{ssl.DefaultOpenSSLContextFactory}.
     """
     def setUp(self):
-        self.contextFactory = ssl.DefaultOpenSSLContextFactory(certPath, certPath)
-        # pyOpenSSL Context objects aren't introspectable enough.
-        self.contextFactory._contextFactory = FakeContext
+        # pyOpenSSL Context objects aren't introspectable enough.  Pass in
+        # an alternate context factory so we can inspect what is done to it.
+        self.contextFactory = ssl.DefaultOpenSSLContextFactory(
+            certPath, certPath, _contextFactory=FakeContext)
         self.context = self.contextFactory.getContext()
 
 
@@ -594,6 +595,28 @@ class DefaultOpenSSLContextFactoryTests(unittest.TestCase):
         # Make sure SSLv3 and TLSv1 aren't disabled though.
         self.assertFalse(self.context._options & SSL.OP_NO_SSLv3)
         self.assertFalse(self.context._options & SSL.OP_NO_TLSv1)
+
+
+    def test_missingCertificateFile(self):
+        """
+        Instantiating L{ssl.DefaultOpenSSLContextFactory} with a certificate
+        filename which does not identify an existing file results in the
+        initializer raising L{OpenSSL.SSL.Error}.
+        """
+        self.assertRaises(
+            SSL.Error,
+            ssl.DefaultOpenSSLContextFactory, certPath, self.mktemp())
+
+
+    def test_missingPrivateKeyFile(self):
+        """
+        Instantiating L{ssl.DefaultOpenSSLContextFactory} with a private key
+        filename which does not identify an existing file results in the
+        initializer raising L{OpenSSL.SSL.Error}.
+        """
+        self.assertRaises(
+            SSL.Error,
+            ssl.DefaultOpenSSLContextFactory, self.mktemp(), certPath)
 
 
 

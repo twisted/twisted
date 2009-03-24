@@ -61,12 +61,18 @@ class ContextFactory:
 
 
 class DefaultOpenSSLContextFactory(ContextFactory):
+    """
+    L{DefaultOpenSSLContextFactory} is a factory for server-side SSL context
+    objects.  These objects define certain parameters related to SSL
+    handshakes and the subsequent connection.
 
-    _contextFactory = SSL.Context
+    @ivar _contextFactory: A callable which will be used to create new
+        context objects.  This is typically L{SSL.Context}.
+    """
     _context = None
 
     def __init__(self, privateKeyFileName, certificateFileName,
-                 sslmethod=SSL.SSLv23_METHOD):
+                 sslmethod=SSL.SSLv23_METHOD, _contextFactory=SSL.Context):
         """
         @param privateKeyFileName: Name of a file containing a private key
         @param certificateFileName: Name of a file containing a certificate
@@ -75,6 +81,12 @@ class DefaultOpenSSLContextFactory(ContextFactory):
         self.privateKeyFileName = privateKeyFileName
         self.certificateFileName = certificateFileName
         self.sslmethod = sslmethod
+        self._contextFactory = _contextFactory
+
+        # Create a context object right now.  This is to force validation of
+        # the given parameters so that errors are detected earlier rather
+        # than later.
+        self.cacheContext()
 
 
     def cacheContext(self):
@@ -99,9 +111,9 @@ class DefaultOpenSSLContextFactory(ContextFactory):
 
 
     def getContext(self):
-        """Create an SSL context.
         """
-        self.cacheContext()
+        Return an SSL context.
+        """
         return self._context
 
 
