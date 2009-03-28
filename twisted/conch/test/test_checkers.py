@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -14,7 +14,10 @@ import os, base64
 
 from twisted.trial.unittest import TestCase
 from twisted.python.filepath import FilePath
-from twisted.cred.credentials import UsernamePassword
+from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
+from twisted.cred.credentials import UsernamePassword, IUsernamePassword, \
+    SSHPrivateKey, ISSHPrivateKey
+from twisted.cred.error import UnhandledCredentials, UnauthorizedLogin
 from twisted.test.test_process import MockOS
 
 try:
@@ -22,11 +25,13 @@ try:
 except ImportError:
     SSHPublicKeyDatabase = None
 else:
-    from twisted.conch.checkers import SSHPublicKeyDatabase
+    from twisted.conch.ssh import keys
+    from twisted.conch.checkers import SSHPublicKeyDatabase, SSHProtocolChecker
+    from twisted.conch.error import NotEnoughAuthentication, ValidPublicKey
+    from twisted.conch.test import keydata
 
 
-
-class SSHPublicKeyDatabaseTests(TestCase):
+class SSHPublicKeyDatabaseTestCase(TestCase):
     """
     Tests for L{SSHPublicKeyDatabase}.
     """
@@ -105,3 +110,157 @@ class SSHPublicKeyDatabaseTests(TestCase):
         self.assertTrue(self.checker.checkKey(user))
         self.assertEquals(self.mockos.seteuidCalls, [0, 1, 0, os.getuid()])
         self.assertEquals(self.mockos.setegidCalls, [2, os.getgid()])
+
+
+    def test_requestAvatarId(self):
+        """
+        L{SSHPublicKeyDatabase.requestAvatarId} should return the avatar id
+        passed in if its C{_checkKey} method returns True.
+        """
+        def _checkKey(ignored):
+            return True
+        self.patch(self.checker, 'checkKey', _checkKey)
+        credentials = SSHPrivateKey('test', 'ssh-rsa', keydata.publicRSA_openssh,
+                                    'foo', keys.Key.fromString(keydata.privateRSA_openssh).sign('foo'))
+        d = self.checker.requestAvatarId(credentials)
+        def _verify(avatarId):
+            self.assertEquals(avatarId, 'test')
+        return d.addCallback(_verify)
+
+
+    def test_requestAvatarId_without_signature(self):
+        """
+        L{SSHPublicKeyDatabase.requestAvatarId} should raise L{ValidPublicKey}
+        if the credentials represent a valid key without a signature.  This
+        tells the user that the key is valid for login, but does not actually
+        allow that user to do so without a signature.
+        """
+        def _checkKey(ignored):
+            return True
+        self.patch(self.checker, 'checkKey', _checkKey)
+        credentials = SSHPrivateKey('test', 'ssh-rsa', keydata.publicRSA_openssh, None, None)
+        d = self.checker.requestAvatarId(credentials)
+        return self.assertFailure(d, ValidPublicKey)
+
+
+    def test_requestAvatarId_invalid_key(self):
+        """
+        If L{SSHPublicKeyDatabase.checkKey} returns False,
+        C{_cbRequestAvatarId} should raise L{UnauthorizedLogin}.
+        """
+        def _checkKey(ignored):
+            return False
+        self.patch(self.checker, 'checkKey', _checkKey)
+        d = self.checker.requestAvatarId(None);
+        return self.assertFailure(d, UnauthorizedLogin)
+
+
+    def test_requestAvatarId_invalid_signature(self):
+        """
+        Valid keys with invalid signatures should cause L{SSHPublicKeyDatabase.requestAvatarId} to return a {UnauthorizedLogin} failure
+        """
+        def _checkKey(ignored):
+            return True
+        self.patch(self.checker, 'checkKey', _checkKey)
+        credentials = SSHPrivateKey('test', 'ssh-rsa', keydata.publicRSA_openssh,
+                                    'foo', keys.Key.fromString(keydata.privateDSA_openssh).sign('foo'))
+        d = self.checker.requestAvatarId(credentials)
+        return self.assertFailure(d, UnauthorizedLogin)
+
+
+    def test_requestAvatarId_normalize_exception(self):
+        """
+        Exceptions raised while verifying the key should be normalized into an
+        C{UnauthorizedLogin} failure.
+        """
+        def _checkKey(ignored):
+            return True
+        self.patch(self.checker, 'checkKey', _checkKey)
+        credentials = SSHPrivateKey('test', None, 'blob', 'sigData', 'sig')
+        d = self.checker.requestAvatarId(credentials)
+        def _verifyLoggedException(failure):
+            errors = self.flushLoggedErrors(keys.BadKeyError)
+            self.assertEqual(len(errors), 1)
+            return failure
+        d.addErrback(_verifyLoggedException)
+        return self.assertFailure(d, UnauthorizedLogin)
+
+
+class SSHProtocolCheckerTestCase(TestCase):
+    """
+    Tests for L{SSHProtocolChecker}.
+    """
+
+    def test_registerChecker(self):
+        """
+        L{SSHProcotolChecker.registerChecker} should add the given checker to
+        the list of registered checkers.
+        """
+        checker = SSHProtocolChecker()
+        self.assertEquals(checker.credentialInterfaces, [])
+        checker.registerChecker(SSHPublicKeyDatabase(), )
+        self.assertEquals(checker.credentialInterfaces, [ISSHPrivateKey])
+        self.assertIsInstance(checker.checkers[ISSHPrivateKey],
+                              SSHPublicKeyDatabase)
+
+
+    def test_registerChecker_with_interface(self):
+        """
+        If a apecific interface is passed into
+        L{SSHProtocolChecker.registerChecker}, that interface should be
+        registered instead of what the checker specifies in
+        credentialIntefaces.
+        """
+        checker = SSHProtocolChecker()
+        self.assertEquals(checker.credentialInterfaces, [])
+        checker.registerChecker(SSHPublicKeyDatabase(), IUsernamePassword)
+        self.assertEquals(checker.credentialInterfaces, [IUsernamePassword])
+        self.assertIsInstance(checker.checkers[IUsernamePassword],
+                              SSHPublicKeyDatabase)
+
+
+    def test_requestAvatarId(self):
+        """
+        L{SSHProtocolChecker.requestAvatarId} should defer to one if its
+        registered checkers to authenticate a user.
+        """
+        checker = SSHProtocolChecker()
+        passwordDatabase = InMemoryUsernamePasswordDatabaseDontUse()
+        passwordDatabase.addUser('test', 'test')
+        checker.registerChecker(passwordDatabase)
+        d = checker.requestAvatarId(UsernamePassword('test', 'test'))
+        def _callback(avatarId):
+            self.assertEquals(avatarId, 'test')
+        return d.addCallback(_callback)
+
+
+    def test_requestAvatarId_with_not_enough_authentication(self):
+        """
+        """
+        checker = SSHProtocolChecker()
+        def _areDone(avatarId):
+            return False
+        self.patch(checker, 'areDone', _areDone)
+
+        passwordDatabase = InMemoryUsernamePasswordDatabaseDontUse()
+        passwordDatabase.addUser('test', 'test')
+        checker.registerChecker(passwordDatabase)
+        d = checker.requestAvatarId(UsernamePassword('test', 'test'))
+        return self.assertFailure(d, NotEnoughAuthentication)
+
+
+    def test_requestAvatarId_invalid_credential(self):
+        """
+        If the passed credentials aren't handled by any registered checker,
+        L{SSHProtocolChecker} should raise L{UnhandledCredentials}.
+        """
+        checker = SSHProtocolChecker()
+        d = checker.requestAvatarId(UsernamePassword('test', 'test'))
+        return self.assertFailure(d, UnhandledCredentials)
+
+
+    def test_areDone(self):
+        """
+        The default L{SSHProcotolChecker.areDone} should simply return True.
+        """
+        self.assertEquals(SSHProtocolChecker().areDone(None), True)

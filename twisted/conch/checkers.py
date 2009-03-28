@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.conch.test.test_checkers -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -21,7 +21,7 @@ except:
     shadow = None
 
 try:
-    import pamauth
+    from twisted.cred import pamauth
 except ImportError:
     pamauth = None
 
@@ -52,7 +52,7 @@ class UNIXPasswordDatabase:
             try:
                 cryptedPass = pwd.getpwnam(credentials.username)[1]
             except KeyError:
-                return defer.fail(UnauthorizedLogin())
+                return defer.fail(UnauthorizedLogin("invalid username"))
             else:
                 if cryptedPass not in ['*', 'x'] and \
                     verifyCryptedPassword(cryptedPass, credentials.password):
@@ -67,14 +67,14 @@ class UNIXPasswordDatabase:
             except KeyError:
                 os.setegid(gid)
                 os.seteuid(uid)
-                return defer.fail(UnauthorizedLogin())
+                return defer.fail(UnauthorizedLogin("invalid username"))
             os.setegid(gid)
             os.seteuid(uid)
             if verifyCryptedPassword(shadowPass, credentials.password):
                 return defer.succeed(credentials.username)
-            return defer.fail(UnauthorizedLogin())
+            return defer.fail(UnauthorizedLogin("invalid password"))
 
-        return defer.fail(UnauthorizedLogin())
+        return defer.fail(UnauthorizedLogin("unable to verify password"))
 
 
 class SSHPublicKeyDatabase:
@@ -114,20 +114,18 @@ class SSHPublicKeyDatabase:
         @return: The user's username, if authentication was successful.
         """
         if not validKey:
-            return failure.Failure(UnauthorizedLogin())
+            return failure.Failure(UnauthorizedLogin("invalid key"))
         if not credentials.signature:
             return failure.Failure(error.ValidPublicKey())
         else:
             try:
-                pubKey = keys.getPublicKeyObject(data = credentials.blob)
-                if keys.verifySignature(pubKey, credentials.signature,
-                                        credentials.sigData):
+                pubKey = keys.Key.fromString(credentials.blob)
+                if pubKey.verify(credentials.signature, credentials.sigData):
                     return credentials.username
             except: # any error should be treated as a failed login
-                f = failure.Failure()
                 log.err()
-                return f
-        return failure.Failure(UnauthorizedLogin())
+                return failure.Failure(UnauthorizedLogin('error while verifying key'))
+        return failure.Failure(UnauthorizedLogin("unable to verify key"))
 
     def checkKey(self, credentials):
         """
@@ -165,16 +163,27 @@ class SSHPublicKeyDatabase:
     def _ebRequestAvatarId(self, f):
         if not f.check(UnauthorizedLogin):
             log.msg(f)
-            return failure.Failure(UnauthorizedLogin())
+            return failure.Failure(UnauthorizedLogin("unable to get avatar id"))
         return f
 
 
 class SSHProtocolChecker:
+    """
+    SSHProtocolChecker is a checker that requires multiple authentications
+    to succeed.  To add a checker, call my registerChecker method with
+    the checker and the interface.
+
+    After each successful authenticate, I call my areDone method with the
+    avatar id.  To get a list of the successful credentials for an avatar id,
+    use C{SSHProcotolChecker.successfulCredentials[avatarId]}.  If L{areDone}
+    returns True, the authentication has succeeded.
+    """
+
     implements(ICredentialsChecker)
 
-    checkers = {}
-
-    successfulCredentials = {}
+    def __init__(self):
+        self.checkers = {}
+        self.successfulCredentials = {}
 
     def get_credentialInterfaces(self):
         return self.checkers.keys()
@@ -188,16 +197,33 @@ class SSHProtocolChecker:
             self.checkers[credentialInterface] = checker
 
     def requestAvatarId(self, credentials):
+        """
+        Part of the L{ICredentialsChecker} interface.  Called by a portal with
+        some credentials to check if they'll authenticate a user.  We check the
+        interfaces that the credentials provide against our list of acceptable
+        checkers.  If one of them matches, we ask that checker to verify the
+        credentials.  If they're valid, we call our L{_cbGoodAuthentication}
+        method to continue.
+
+        @param credentials: the credentials the L{Portal} wants us to verify
+        """
         ifac = providedBy(credentials)
         for i in ifac:
             c = self.checkers.get(i)
             if c is not None:
-                return c.requestAvatarId(credentials).addCallback(
-                    self._cbGoodAuthentication, credentials)
+                d = defer.maybeDeferred(c.requestAvatarId, credentials)
+                return d.addCallback(self._cbGoodAuthentication,
+                        credentials)
         return defer.fail(UnhandledCredentials("No checker for %s" % \
-            ', '.join(map(reflect.qal, ifac))))
+            ', '.join(map(reflect.qual, ifac))))
 
     def _cbGoodAuthentication(self, avatarId, credentials):
+        """
+        Called if a checker has verified the credentials.  We call our
+        L{areDone} method to see if the whole of the successful authentications
+        are enough.  If they are, we return the avatar ID returned by the first
+        checker.
+        """
         if avatarId not in self.successfulCredentials:
             self.successfulCredentials[avatarId] = []
         self.successfulCredentials[avatarId].append(credentials)
@@ -208,8 +234,13 @@ class SSHProtocolChecker:
             raise error.NotEnoughAuthentication()
 
     def areDone(self, avatarId):
-        """Override to determine if the authentication is finished for a given
-        avatarId.
         """
-        return 1
+        Override to determine if the authentication is finished for a given
+        avatarId.
+
+        @param avatarId: the avatar returned by the first checker.  For
+            this checker to function correctly, all the checkers must
+            return the same avatar ID.
+        """
+        return True
 
