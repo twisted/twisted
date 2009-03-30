@@ -1164,7 +1164,7 @@ class AMPTest(unittest.TestCase):
         p.flush()
         self.failIf(tl.isKey)
         self.failUnless(tl.isLocal)
-        self.failUnlessIdentical(tl.keyName, 'hello')
+        self.assertEquals(tl.keyName, 'hello')
         self.failUnlessIdentical(tl.value, x)
         self.failUnless(str(len(x)) in repr(tl))
         self.failUnless("value" in repr(tl))
