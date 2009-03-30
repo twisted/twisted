@@ -118,6 +118,7 @@ class HTTPAuthSessionWrapper(object):
             log.err(None, "Unexpected failure from credentials factory")
             return ErrorPage(500, None, None)
         else:
+            request.postpath.insert(0, request.prepath.pop())
             return util.DeferredResource(self._login(credentials))
 
 

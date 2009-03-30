@@ -18,7 +18,7 @@ from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
 from twisted.cred.credentials import IUsernamePassword
 
 from twisted.web.iweb import ICredentialFactory
-from twisted.web.resource import IResource, Resource
+from twisted.web.resource import IResource, Resource, getChildForRequest
 from twisted.web._auth import basic, digest
 from twisted.web._auth.wrapper import HTTPAuthSessionWrapper, UnauthorizedResource
 from twisted.web._auth.basic import BasicCredentialFactory
@@ -331,21 +331,21 @@ class HTTPAuthHeaderTests(unittest.TestCase):
             self.portal, self.credentialFactories)
 
 
-    def _authorizedBasicLogin(self, request, creds=None):
-        if creds is None:
-            username, password = self.username, self.password
-        else:
-            username, password = creds
-        authorization = b64encode(username + ':' + password)
+    def _authorizedBasicLogin(self, request):
+        """
+        Add an I{basic authorization} header to the given request and then
+        dispatch it, starting from C{self.wrapper} and returning the resulting
+        L{IResource}.
+        """
+        authorization = b64encode(self.username + ':' + self.password)
         request.headers['authorization'] = 'Basic ' + authorization
-        child = self.wrapper.getChildWithDefault(request.postpath[0], request)
-        return child
+        return getChildForRequest(self.wrapper, request)
 
 
     def test_getChildWithDefault(self):
         """
-        L{HTTPAuthSessionWrapper.getChildWithDefault} returns an
-        L{UnauthorizedResource} instance when called with a request which does
+        Resource traversal which encounters an L{HTTPAuthSessionWrapper}
+        results in an L{UnauthorizedResource} instance when the request does
         not have the required I{Authorization} headers.
         """
         request = self.makeRequest([self.childName])
@@ -354,10 +354,16 @@ class HTTPAuthHeaderTests(unittest.TestCase):
 
 
     def _invalidAuthorizationTest(self, response):
+        """
+        Create a request with the given value as the value of an
+        I{Authorization} header and perform resource traversal with it,
+        starting at C{self.wrapper}.  Assert that the result is a 401 response
+        code.  Return a L{Deferred} which fires when this is all done.
+        """
         self.credentialFactories.append(BasicCredentialFactory('example.com'))
         request = self.makeRequest([self.childName])
         request.headers['authorization'] = response
-        child = self.wrapper.getChildWithDefault(self.childName, request)
+        child = getChildForRequest(self.wrapper, request)
         d = request.notifyFinish()
         def cbFinished(result):
             self.assertEqual(request.responseCode, 401)
@@ -368,19 +374,19 @@ class HTTPAuthHeaderTests(unittest.TestCase):
 
     def test_getChildWithDefaultUnauthorizedUser(self):
         """
-        If L{HTTPAuthSessionWrapper.getChildWithDefault} is called with a
-        request with an I{Authorization} header with a user which does not
-        exist, an L{IResource} which renders a 401 response code is returned.
+        Resource traversal which enouncters an L{HTTPAuthSessionWrapper}
+        results in an L{UnauthorizedResource} when the request has an
+        I{Authorization} header with a user which does not exist.
         """
         return self._invalidAuthorizationTest('Basic ' + b64encode('foo:bar'))
 
 
     def test_getChildWithDefaultUnauthorizedPassword(self):
         """
-        If L{HTTPAuthSessionWrapper.getChildWithDefault} is called with a
-        request with an I{Authorization} header with a user which exists and
-        the wrong password, an L{IResource} which renders a 401 response code
-        is returned.
+        Resource traversal which enouncters an L{HTTPAuthSessionWrapper}
+        results in an L{UnauthorizedResource} when the request has an
+        I{Authorization} header with a user which exists and the wrong
+        password.
         """
         return self._invalidAuthorizationTest(
             'Basic ' + b64encode(self.username + ':bar'))
@@ -388,18 +394,19 @@ class HTTPAuthHeaderTests(unittest.TestCase):
 
     def test_getChildWithDefaultUnrecognizedScheme(self):
         """
-        If L{HTTPAuthSessionWrapper.getChildWithDefault} is called with a
-        request with an I{Authorization} header with an unrecognized scheme, an
-        L{IResource} which renders a 401 response code is returned.
+        Resource traversal which enouncters an L{HTTPAuthSessionWrapper}
+        results in an L{UnauthorizedResource} when the request has an
+        I{Authorization} header with an unrecognized scheme.
         """
         return self._invalidAuthorizationTest('Quux foo bar baz')
 
 
     def test_getChildWithDefaultAuthorized(self):
         """
-        When called with a request with a valid I{Authorization} header,
-        L{HTTPAuthSessionWrapper.getChildWithDefault} returns an L{IResource}
-        which renders the L{IResource} avatar retrieved from the portal.
+        Resource traversal which enouncters an L{HTTPAuthSessionWrapper}
+        results in an L{IResource} which renders the L{IResource} avatar
+        retrieved from the portal when the request has a valid I{Authorization}
+        header.
         """
         self.credentialFactories.append(BasicCredentialFactory('example.com'))
         request = self.makeRequest([self.childName])
@@ -432,7 +439,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         factory = DumbCredentialFactory()
         self.credentialFactories.append(factory)
         request = self.makeRequest([self.childName])
-        child = self.wrapper.getChildWithDefault(request.postpath[0], request)
+        child = getChildForRequest(self.wrapper, request)
         d = request.notifyFinish()
         def cbFinished(ignored):
             self.assertEqual(factory.requests, [request])
@@ -462,14 +469,14 @@ class HTTPAuthHeaderTests(unittest.TestCase):
 
     def test_decodeRaises(self):
         """
-        L{HTTPAuthSessionWrapper.getChildWithDefault} returns an
-        L{UnauthorizedResource} instance when called with a request which has a
-        I{Basic Authorization} header which cannot be decoded using base64.
+        Resource traversal which enouncters an L{HTTPAuthSessionWrapper}
+        results in an L{UnauthorizedResource} when the request has a I{Basic
+        Authorization} header which cannot be decoded using base64.
         """
         self.credentialFactories.append(BasicCredentialFactory('example.com'))
         request = self.makeRequest([self.childName])
         request.headers['authorization'] = 'Basic decode should fail'
-        child = self.wrapper.getChildWithDefault(self.childName, request)
+        child = getChildForRequest(self.wrapper, request)
         self.assertIsInstance(child, UnauthorizedResource)
 
 
@@ -511,7 +518,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         self.credentialFactories.append(BadFactory())
         request = self.makeRequest([self.childName])
         request.headers['authorization'] = 'Bad abc'
-        child = self.wrapper.getChildWithDefault(self.childName, request)
+        child = getChildForRequest(self.wrapper, request)
         render(child, request)
         self.assertEqual(request.responseCode, 500)
         self.assertEqual(len(self.flushLoggedErrors(UnexpectedException)), 1)
