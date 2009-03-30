@@ -332,8 +332,9 @@ def str_xor(s, b):
     return ''.join([chr(ord(c) ^ b) for c in s])
 
 def keyed_md5(secret, challenge):
-    """Create the keyed MD5 string for the given secret and challenge."""
-    import warnings
+    """
+    Create the keyed MD5 string for the given secret and challenge.
+    """
     warnings.warn(
         "keyed_md5() is deprecated.  Use the stdlib module hmac instead.",
         DeprecationWarning, stacklevel=2
@@ -716,38 +717,13 @@ class SubclassableCStringIO(object):
 
 def moduleMovedForSplit(origModuleName, newModuleName, moduleDesc,
                         projectName, projectURL, globDict):
-    from twisted.python import reflect
-    modoc = """
-%(moduleDesc)s
-
-This module is DEPRECATED. It has been split off into a third party
-package, Twisted %(projectName)s. Please see %(projectURL)s.
-
-This is just a place-holder that imports from the third-party %(projectName)s
-package for backwards compatibility. To use it, you need to install
-that package.
-""" % {'moduleDesc': moduleDesc,
-       'projectName': projectName,
-       'projectURL': projectURL}
-
-    #origModule = reflect.namedModule(origModuleName)
-    try:
-        newModule = reflect.namedModule(newModuleName)
-    except ImportError:
-        raise ImportError("You need to have the Twisted %s "
-                          "package installed to use %s. "
-                          "See %s."
-                          % (projectName, origModuleName, projectURL))
-
-    # Populate the old module with the new module's contents
-    for k,v in vars(newModule).items():
-        globDict[k] = v
-    globDict['__doc__'] = modoc
-    import warnings
-    warnings.warn("%s has moved to %s. See %s." % (origModuleName, newModuleName,
-                                                   projectURL),
-                  DeprecationWarning, stacklevel=3)
-    return
+    """
+    No-op function; only present for backwards compatibility.  There is no
+    reason to call this function.
+    """
+    warnings.warn(
+        "moduleMovedForSplit is deprecated since Twisted 9.0.",
+        DeprecationWarning, stacklevel=2)
 
 
 def untilConcludes(f, *a, **kw):
@@ -951,5 +927,5 @@ __all__ = [
     "raises", "IntervalDifferential", "FancyStrMixin", "FancyEqMixin",
     "dsu", "switchUID", "SubclassableCStringIO", "moduleMovedForSplit",
     "unsignedID", "mergeFunctionMetadata", "nameToLabel", "uidFromString",
-    "gidFromString", "runAsEffectiveUser",
+    "gidFromString", "runAsEffectiveUser", "moduleMovedForSplit",
 ]

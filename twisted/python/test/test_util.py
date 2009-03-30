@@ -126,6 +126,20 @@ class UtilTestCase(unittest.TestCase):
             "Group Name/GID conversion requires the grp module.")
 
 
+    def test_moduleMovedForSplitDeprecation(self):
+        """
+        Calling L{moduleMovedForSplit} results in a deprecation warning.
+        """
+        util.moduleMovedForSplit("foo", "bar", "baz", "quux", "corge", {})
+        warnings = self.flushWarnings(
+            offendingFunctions=[self.test_moduleMovedForSplitDeprecation])
+        self.assertEquals(
+            warnings[0]['message'],
+            "moduleMovedForSplit is deprecated since Twisted 9.0.")
+        self.assertEquals(warnings[0]['category'], DeprecationWarning)
+        self.assertEquals(len(warnings), 1)
+
+
 
 class TestMergeFunctionMetadata(unittest.TestCase):
     """
