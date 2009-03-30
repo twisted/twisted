@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.test.test_amp -*-
 # Copyright (c) 2005 Divmod, Inc.
-# Copyright (c) 2007-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2007-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -177,7 +177,17 @@ from twisted.internet.error import PeerVerifyError, ConnectionLost
 from twisted.internet.error import ConnectionClosed
 from twisted.internet.defer import Deferred, maybeDeferred, fail
 from twisted.protocols.basic import Int16StringReceiver, StatefulStringProtocol
-from twisted.internet.ssl import CertificateOptions, Certificate, DN, KeyPair
+
+try:
+    from twisted.internet import ssl
+except ImportError:
+    ssl = None
+
+if ssl and not ssl.supported:
+    ssl = None
+
+if ssl is not None:
+    from twisted.internet.ssl import CertificateOptions, Certificate, DN, KeyPair
 
 ASK = '_ask'
 ANSWER = '_answer'
@@ -784,7 +794,10 @@ class BoxDispatcher:
         # In other words, the fact that commandType is instantiated here is an
         # implementation detail.  Don't rely on it.
 
-        co = commandType(*a, **kw)
+        try:
+            co = commandType(*a, **kw)
+        except:
+            return fail()
         return co._doCommand(self)
 
 
@@ -1490,8 +1503,11 @@ class Command:
 
         @return: an L{AmpBox}.
         """
-        return _objectsToStrings(objects, cls.response, cls.responseType(),
-                                 proto)
+        try:
+            responseType = cls.responseType()
+        except:
+            return fail()
+        return _objectsToStrings(objects, cls.response, responseType, proto)
     makeResponse = classmethod(makeResponse)
 
 
@@ -1679,6 +1695,12 @@ class _TLSBox(AmpBox):
     """
     __slots__ = []
 
+    def __init__(self):
+        if ssl is None:
+            raise RemoteAmpError("TLS_ERROR", "TLS not available")
+        AmpBox.__init__(self)
+
+
     def _keyprop(k, default):
         return property(lambda self: self.get(k, default))
 
@@ -1750,6 +1772,8 @@ class StartTLS(Command):
         @param tls_verifyAuthorities: a list of Certificate objects which
         represent root certificates to verify our peer with.
         """
+        if ssl is None:
+            raise RuntimeError("TLS not available.")
         self.certificate = kw.pop('tls_localCertificate', _NoCertificate(True))
         self.authorities = kw.pop('tls_verifyAuthorities', None)
         Command.__init__(self, **kw)

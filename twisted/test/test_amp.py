@@ -1,5 +1,5 @@
 # Copyright (c) 2005 Divmod, Inc.
-# Copyright (c) 2007-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2007-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -15,6 +15,18 @@ from twisted.trial import unittest
 from twisted.internet import protocol, defer, error, reactor, interfaces
 from twisted.test import iosim
 from twisted.test.proto_helpers import StringTransport
+
+try:
+    from twisted.internet import ssl
+except ImportError:
+    ssl = None
+if ssl and not ssl.supported:
+    ssl = None
+
+if ssl is None:
+    skipSSL = "SSL not available"
+else:
+    skipSSL = None
 
 
 class TestProto(protocol.Protocol):
@@ -1083,7 +1095,6 @@ class AMPTest(unittest.TestCase):
         self.failUnlessIn('None', repr(L[0].value))
 
 
-
     def test_unknownArgument(self):
         """
         Verify that unknown arguments are ignored, and not passed to a Python
@@ -1107,11 +1118,20 @@ class AMPTest(unittest.TestCase):
         """
         Verify that the various Box objects repr properly, for debugging.
         """
-        self.assertEquals(type(repr(amp._TLSBox())), str)
         self.assertEquals(type(repr(amp._SwitchBox('a'))), str)
         self.assertEquals(type(repr(amp.QuitBox())), str)
         self.assertEquals(type(repr(amp.AmpBox())), str)
         self.failUnless("AmpBox" in repr(amp.AmpBox()))
+
+
+    def test_simpleSSLRepr(self):
+        """
+        L{amp._TLSBox.__repr__} returns a string.
+        """
+        self.assertEquals(type(repr(amp._TLSBox())), str)
+
+    test_simpleSSLRepr.skip = skipSSL
+
 
     def test_keyTooLong(self):
         """
@@ -1703,6 +1723,68 @@ class TLSTest(unittest.TestCase):
         # reasonable.
         self.assertFailure(d, error.PeerVerifyError)
 
+    skip = skipSSL
+
+
+
+class TLSNotAvailableTest(unittest.TestCase):
+    """
+    Tests what happened when ssl is not available in current installation.
+    """
+
+    def setUp(self):
+        """
+        Disable ssl in amp.
+        """
+        self.ssl = amp.ssl
+        amp.ssl = None
+
+
+    def tearDown(self):
+        """
+        Restore ssl module.
+        """
+        amp.ssl = self.ssl
+
+
+    def test_callRemoteError(self):
+        """
+        Check that callRemote raises an exception when called with a
+        L{amp.StartTLS}.
+        """
+        cli, svr, p = connectedServerAndClient(
+            ServerClass=SecurableProto,
+            ClientClass=SecurableProto)
+
+        okc = OKCert()
+        svr.certFactory = lambda : okc
+
+        return self.assertFailure(cli.callRemote(
+            amp.StartTLS, tls_localCertificate=okc,
+            tls_verifyAuthorities=[PretendRemoteCertificateAuthority()]),
+            RuntimeError)
+
+
+    def test_messageReceivedError(self):
+        """
+        When a client with SSL enabled talks to a server without SSL, it
+        should return a meaningful error.
+        """
+        svr = SecurableProto()
+        okc = OKCert()
+        svr.certFactory = lambda : okc
+        box = amp.Box()
+        box['_command'] = 'StartTLS'
+        box['_ask'] = '1'
+        boxes = []
+        svr.sendBox = boxes.append
+        svr.makeConnection(StringTransport())
+        svr.ampBoxReceived(box)
+        self.assertEquals(boxes,
+            [{'_error_code': 'TLS_ERROR',
+              '_error': '1',
+              '_error_description': 'TLS not available'}])
+
 
 
 class InheritedError(Exception):
@@ -1907,7 +1989,8 @@ def tempSelfSigned():
     cert = key.newCertificate(sscrd)
     return cert
 
-tempcert = tempSelfSigned()
+if ssl is not None:
+    tempcert = tempSelfSigned()
 
 
 class LiveFireTLSTestCase(LiveFireBase, unittest.TestCase):
@@ -1945,6 +2028,9 @@ class LiveFireTLSTestCase(LiveFireBase, unittest.TestCase):
                                    tls_localCertificate=cert,
                                    tls_verifyAuthorities=[cert]).addCallback(secured)
 
+    skip = skipSSL
+
+
 
 class SlightlySmartTLS(SimpleSymmetricCommandProtocol):
     """
@@ -1973,6 +2059,9 @@ class PlainVanillaLiveFire(LiveFireBase, unittest.TestCase):
             return self.cli.callRemote(SecuredPing)
         return self.cli.callRemote(amp.StartTLS).addCallback(secured)
 
+    skip = skipSSL
+
+
 
 class WithServerTLSVerification(LiveFireBase, unittest.TestCase):
     clientProto = SimpleSymmetricCommandProtocol
@@ -1987,6 +2076,8 @@ class WithServerTLSVerification(LiveFireBase, unittest.TestCase):
         return self.cli.callRemote(amp.StartTLS,
                                    tls_verifyAuthorities=[tempcert]
             ).addCallback(secured)
+
+    skip = skipSSL
 
 
 

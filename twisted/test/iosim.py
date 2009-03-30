@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_amp.TLSTest -*-
-# Copyright (c) 2008 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -8,7 +8,10 @@ Utilities and helpers for simulating a network
 
 import itertools
 
-from OpenSSL.SSL import Error as NativeOpenSSLError
+try:
+    from OpenSSL.SSL import Error as NativeOpenSSLError
+except ImportError:
+    pass
 
 from zope.interface import implements, directlyProvides
 
