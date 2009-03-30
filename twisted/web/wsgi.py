@@ -155,9 +155,12 @@ class _WSGIResponse:
         self.application = application
         self.request = request
 
-        if not request.prepath and request.postpath == ['']:
-            pathInfo = ''
-        elif request.postpath:
+        if request.prepath:
+            scriptName = '/' + '/'.join(request.prepath)
+        else:
+            scriptName = ''
+
+        if request.postpath:
             pathInfo = '/' + '/'.join(request.postpath)
         else:
             pathInfo = ''
@@ -170,7 +173,7 @@ class _WSGIResponse:
 
         self.environ = {
             'REQUEST_METHOD': request.method,
-            'SCRIPT_NAME': '/' + '/'.join(request.prepath),
+            'SCRIPT_NAME': scriptName,
             'PATH_INFO': pathInfo,
             'QUERY_STRING': queryString,
             'CONTENT_TYPE': request.getHeader('content-type') or '',

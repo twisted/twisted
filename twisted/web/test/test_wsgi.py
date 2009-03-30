@@ -242,7 +242,7 @@ class EnvironTests(WSGITestsMixin, TestCase):
         resource (RFC 3875, section 4.1.13).
         """
         root = self.render('GET', '1.1', [], [''])
-        root.addCallback(self.environKeyEqual('SCRIPT_NAME', '/'))
+        root.addCallback(self.environKeyEqual('SCRIPT_NAME', ''))
 
         emptyChild = self.render('GET', '1.1', [''], [''])
         emptyChild.addCallback(self.environKeyEqual('SCRIPT_NAME', '/'))
@@ -277,7 +277,7 @@ class EnvironTests(WSGITestsMixin, TestCase):
         assertKeyEmpty = self.environKeyEqual('PATH_INFO', '')
 
         root = self.render('GET', '1.1', [], [''])
-        root.addCallback(assertKeyEmpty)
+        root.addCallback(self.environKeyEqual('PATH_INFO', '/'))
 
         emptyChild = self.render('GET', '1.1', [''], [''])
         emptyChild.addCallback(assertKeyEmpty)
