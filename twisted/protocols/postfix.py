@@ -1,25 +1,22 @@
 # -*- test-case-name: twisted.test.test_postfix -*-
-#
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
-
-"""Postfix mail transport agent related protocols."""
+"""
+Postfix mail transport agent related protocols.
+"""
 
 import sys
+import UserDict
+import urllib
 
-# Twisted imports
 from twisted.protocols import basic
 from twisted.protocols import policies
 from twisted.internet import protocol, defer
 from twisted.python import log
-import UserDict
-import urllib
 
 # urllib's quote functions just happen to match
 # the postfix semantics.
-
 def quote(s):
     return urllib.quote(s)
 
@@ -113,20 +110,3 @@ class PostfixTCPMapDeferringDictServerFactory(protocol.ServerFactory):
 
     def get(self, key):
         return defer.succeed(self.data.get(key))
-
-if __name__ == '__main__':
-    """Test app for PostfixTCPMapServer. Call with parameters
-    KEY1=VAL1 KEY2=VAL2 ..."""
-    from twisted.internet import reactor
-    log.startLogging(sys.stdout)
-    d = {}
-    for arg in sys.argv[1:]:
-        try:
-            k,v = arg.split('=', 1)
-        except ValueError:
-            k = arg
-            v = ''
-        d[k]=v
-    f=PostfixTCPMapDictServerFactory(d)
-    port = reactor.listenTCP(4242, f, interface='127.0.0.1')
-    reactor.run()
