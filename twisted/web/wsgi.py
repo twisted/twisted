@@ -1,4 +1,4 @@
-# Copyright (c) 2008 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -173,6 +173,7 @@ class _WSGIResponse:
 
         self.environ = {
             'REQUEST_METHOD': request.method,
+            'REMOTE_ADDR': request.getClientIP(),
             'SCRIPT_NAME': scriptName,
             'PATH_INFO': pathInfo,
             'QUERY_STRING': queryString,

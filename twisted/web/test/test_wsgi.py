@@ -1,4 +1,4 @@
-# Copyright (c) 2008 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -418,6 +418,16 @@ class EnvironTests(WSGITestsMixin, TestCase):
 
         return gatherResults([old, new])
 
+
+    def test_remoteAddr(self):
+        """
+        The C{'REMOTE_ADDR'} key of the C{environ} C{dict} passed to the
+        application contains the address of the client making the request.
+        """
+        d = self.render('GET', '1.1', [], [''])
+        d.addCallback(self.environKeyEqual('REMOTE_ADDR', '192.168.1.1'))
+
+        return d
 
     def test_headers(self):
         """
