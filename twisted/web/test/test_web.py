@@ -540,6 +540,9 @@ class RequestTests(unittest.TestCase):
 
 
     def testChildLink(self):
+        """
+        L{server.Request.childLink} returns the correct relative link
+        """
         request = server.Request(DummyChannel(), 1)
         request.gotLength(0)
         request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
@@ -549,14 +552,24 @@ class RequestTests(unittest.TestCase):
         request.requestReceived('GET', '/foo/bar/', 'HTTP/1.0')
         self.assertEqual(request.childLink('baz'), 'baz')
 
+
     def testPrePathURLSimple(self):
+        """
+        L{server.Request.prePathURL} returns the complete URL for the given
+        request.
+        """
         request = server.Request(DummyChannel(), 1)
         request.gotLength(0)
         request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
         request.setHost('example.com', 80)
         self.assertEqual(request.prePathURL(), 'http://example.com/foo/bar')
 
+
     def testPrePathURLNonDefault(self):
+        """
+        L{server.Request.prePathURL} returns the complete URL when using a
+        non-default port number.
+        """
         d = DummyChannel()
         d.transport.port = 81
         request = server.Request(d, 1)
@@ -565,7 +578,12 @@ class RequestTests(unittest.TestCase):
         request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
         self.assertEqual(request.prePathURL(), 'http://example.com:81/foo/bar')
 
+
     def testPrePathURLSSLPort(self):
+        """
+        L{server.Request.prePathURL} returns the complete http:// URL when the
+        SSL Port is used without an SSL transport.
+        """
         d = DummyChannel()
         d.transport.port = 443
         request = server.Request(d, 1)
@@ -574,7 +592,12 @@ class RequestTests(unittest.TestCase):
         request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
         self.assertEqual(request.prePathURL(), 'http://example.com:443/foo/bar')
 
+
     def testPrePathURLSSLPortAndSSL(self):
+        """
+        L{server.Request.prePathURL} returns an https:// URL without a port
+        component when the default SSL port is used with the SSL transport.
+        """
         d = DummyChannel()
         d.transport = DummyChannel.SSL()
         d.transport.port = 443
@@ -584,7 +607,12 @@ class RequestTests(unittest.TestCase):
         request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
         self.assertEqual(request.prePathURL(), 'https://example.com/foo/bar')
 
+
     def testPrePathURLHTTPPortAndSSL(self):
+        """
+        L{server.Request.prePathURL} returns an https:// URL with a port
+        component when the default HTTP port is used.
+        """
         d = DummyChannel()
         d.transport = DummyChannel.SSL()
         d.transport.port = 80
@@ -594,7 +622,12 @@ class RequestTests(unittest.TestCase):
         request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
         self.assertEqual(request.prePathURL(), 'https://example.com:80/foo/bar')
 
+
     def testPrePathURLSSLNonDefault(self):
+        """
+        L{server.Request.prePathURL} returns an https:// URL with a port
+        component when using a non-default port.
+        """
         d = DummyChannel()
         d.transport = DummyChannel.SSL()
         d.transport.port = 81
@@ -604,7 +637,12 @@ class RequestTests(unittest.TestCase):
         request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
         self.assertEqual(request.prePathURL(), 'https://example.com:81/foo/bar')
 
+
     def testPrePathURLSetSSLHost(self):
+        """
+        L{server.Request.prePathURL} returns an HTTPS url when the ssl argument
+        to setHost is 1.
+        """
         d = DummyChannel()
         d.transport.port = 81
         request = server.Request(d, 1)
@@ -616,8 +654,8 @@ class RequestTests(unittest.TestCase):
 
     def test_prePathURLQuoting(self):
         """
-        L{Request.prePathURL} quotes special characters in the URL segments to
-        preserve the original meaning.
+        L{server.Request.prePathURL} quotes special characters in the URL
+        segments to preserve the original meaning.
         """
         d = DummyChannel()
         request = server.Request(d, 1)
