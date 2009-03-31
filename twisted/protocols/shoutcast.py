@@ -1,19 +1,21 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-"""Chop up shoutcast stream into MP3s and metadata, if available."""
+"""
+Chop up shoutcast stream into MP3s and metadata, if available.
+"""
 
 from twisted.web import http
 from twisted import copyright
 
 
 class ShoutcastClient(http.HTTPClient):
-    """Shoutcast HTTP stream.
+    """
+    Shoutcast HTTP stream.
 
     Modes can be 'length', 'meta' and 'mp3'.
 
-    See http://www.smackfu.com/stuff/programming/shoutcast.html
+    See U{http://www.smackfu.com/stuff/programming/shoutcast.html}
     for details on the protocol.
     """
 
@@ -107,14 +109,3 @@ class ShoutcastClient(http.HTTPClient):
     def gotMP3Data(self, data):
         """Called with chunk of MP3 data."""
         raise NotImplementedError, "implement in subclass"
-
-
-if __name__ == '__main__':
-    class Test(ShoutcastClient):
-        def gotMetaData(self, data): print "meta:", data
-        def gotMP3Data(self, data): pass
-    
-    from twisted.internet import protocol, reactor
-    import sys
-    protocol.ClientCreator(reactor, Test).connectTCP(sys.argv[1], int(sys.argv[2]))
-    reactor.run()
