@@ -662,8 +662,9 @@ class TestCase(_Assertions):
     raised in a test. Useful for testing deprecated code. See also
     L{util.suppress}.
 
-    @ivar timeout: C{None} or a real number of seconds. If set, the test will
+    @ivar timeout: A real number of seconds. If set, the test will
     raise an error if it takes longer than C{timeout} seconds.
+    If not set, util.DEFAULT_TIMEOUT_DURATION is used.
 
     @ivar todo: C{None}, a string or a tuple of C{(errors, reason)} where
     C{errors} is either an exception class or an iterable of exception
