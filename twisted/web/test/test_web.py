@@ -696,6 +696,143 @@ class RequestTests(unittest.TestCase):
         request = server.Request(DummyChannel(), 1)
         self.assertEquals(request.isSecure(), False)
 
+
+    def test_getRequestHostname(self):
+        """
+        L{server.Request.getRequestHostname} should return the hostname
+        in the Host header.
+        """
+        request = server.Request(DummyChannel(), 1)
+        request.requestHeaders.addRawHeader('Host', 'example.com')
+        self.assertEqual(request.getRequestHostname(), 'example.com')
+
+
+    def test_getRequestHostnameWithPort(self):
+        """
+        L{server.Request.getRequestHostname} should return the hostname
+        in the Host header without any port part.
+        """
+        request = server.Request(DummyChannel(), 1)
+        request.requestHeaders.addRawHeader('Host', 'example.com:8080')
+        self.assertEqual(request.getRequestHostname(), 'example.com')
+
+
+    def test_getRequestHostnameNoHost(self):
+        """
+        L{server.Request.getRequestHostname} should return the host we are
+        listening on if the Host header is unavailable.
+        """
+        request = server.Request(DummyChannel(), 1)
+        request.setHost('example.com', 80)
+        self.assertEqual(request.getRequestHostname(), 'example.com')
+
+
+    def test_getAllHeaders(self):
+        """
+        L{server.Request.getAllHeaders} returns a C{dict} of all received
+        headers.
+        """
+        request = server.Request(DummyChannel(), 1)
+        request.requestHeaders.addRawHeader('Host', 'example.com')
+        request.requestHeaders.addRawHeader('Accept', 'text/html')
+        request.requestHeaders.addRawHeader('Referrer', 'foo.com')
+        headers = request.getAllHeaders()
+        self.assertEquals(headers['host'], 'example.com')
+        self.assertEquals(headers['accept'], 'text/html')
+        self.assertEquals(headers['referrer'], 'foo.com')
+
+
+    def test_getAllHeadersLastValue(self):
+        """
+        L{server.Request.getAllHeaders} returns a C{dict} containing the
+        last value of all headers.
+        """
+        request = server.Request(DummyChannel(), 1)
+        request.requestHeaders.addRawHeader('Accept', 'text/html')
+        request.requestHeaders.addRawHeader('Accept', 'text/css')
+        headers = request.getAllHeaders()
+        self.assertEquals(headers['accept'], 'text/css')
+
+
+    def test_getHeader(self):
+        """
+        L{server.Request.getHeader} returns the named header as a C{str} or
+        C{None}
+        """
+        request = server.Request(DummyChannel(), 1)
+        request.requestHeaders.addRawHeader('Accept', 'text/html')
+        accept = request.getHeader('accept')
+        self.assertEquals(accept, 'text/html')
+
+        noheader = request.getHeader('x-no-header')
+        self.assertEquals(noheader, None)
+
+
+    def test_getCookie(self):
+        """
+        L{server.Request.getCookie} returns the named cookie
+        """
+        request = server.Request(DummyChannel(), 1)
+        request.requestHeaders.addRawHeader('Cookie', 'foo=bar; baz=bax');
+        request.parseCookies()
+        foo = request.getCookie('foo')
+        self.assertEquals(foo, 'bar')
+
+        baz = request.getCookie('baz')
+        self.assertEquals(baz, 'bax')
+
+
+    def test_getHost(self):
+        """
+        L{server.Request.getHost} should return an L{IAddress} associated with
+        the transport's host.
+        """
+        request = server.Request(DummyChannel(), 1)
+        request.gotLength(0)
+        request.requestReceived('GET', '/', 'HTTP/1.0')
+        host = request.getHost()
+        self.failUnless(interfaces.IAddress.providedBy(host))
+
+        self.assertEqual(host.host, '10.0.0.1')
+
+
+    def test_getClientIP(self):
+        """
+        L{server.Request.getClientIP} should return the IP Address of the
+        client as a C{str}
+        """
+        request = server.Request(DummyChannel(), 1)
+        request.gotLength(0)
+        request.requestReceived('GET', '/', 'HTTP/1.0')
+        self.assertEqual(request.getClientIP(), '192.168.1.1')
+
+
+    def test_getUser(self):
+        """
+        L{server.Request.getUser} should return the HTTP username for this
+        request.
+        """
+        request = server.Request(DummyChannel(), 1)
+        request.gotLength(0)
+        request.requestHeaders.addRawHeader('Authorization',
+                                            'Basic Zm9vOmJhcg==')
+        request.requestReceived('GET', '/', 'HTTP/1.0')
+        self.assertEqual(request.getUser(), 'foo')
+
+
+    def test_getPassword(self):
+        """
+        L{server.Request.getPassword} should return the HTTP password for this
+        request.
+        """
+        request = server.Request(DummyChannel(), 1)
+        request.gotLength(0)
+        request.requestHeaders.addRawHeader('Authorization',
+                                            'Basic Zm9vOmJhcg==')
+        request.requestReceived('GET', '/', 'HTTP/1.0')
+        self.assertEqual(request.getPassword(), 'bar')
+
+
     def test_connectionLost(self):
         """
         L{server.Request.connectionLost} triggers all finish notification
