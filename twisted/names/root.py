@@ -1,7 +1,6 @@
 # -*- test-case-name: twisted.names.test.test_rootresolve -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 Resolver implementation for querying successive authoritative servers to
@@ -15,11 +14,6 @@ todo::
     documentation
 """
 
-from __future__ import generators
-
-import sys
-
-from twisted.python import log
 from twisted.internet import defer
 from twisted.names import dns
 from twisted.names import common
@@ -194,15 +188,3 @@ def bootstrap(resolver):
     d = defer.DeferredList(L)
     d.addCallback(lambda r: Resolver([e[1] for e in r if e[0]]))
     return DeferredResolver(d)
-
-if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print 'Specify a domain'
-    else:
-        log.startLogging(sys.stdout)
-        from twisted.names.client import ThreadedResolver
-        r = bootstrap(ThreadedResolver())
-        d = r.lookupAddress(sys.argv[1])
-        d.addCallbacks(log.msg, log.err).addBoth(lambda _: reactor.stop())
-        from twisted.internet import reactor
-        reactor.run()
