@@ -17,7 +17,7 @@ from twisted.internet.defer import Deferred
 from twisted.web import server, resource, util
 from twisted.internet import defer, interfaces, error, task
 from twisted.web import iweb, http, http_headers
-from twisted.python import log
+from twisted.python import log, urlpath
 
 
 class DummyRequest:
@@ -664,6 +664,37 @@ class RequestTests(unittest.TestCase):
         request.requestReceived('GET', '/foo%2Fbar', 'HTTP/1.0')
         self.assertEqual(request.prePathURL(), 'http://example.com/foo%2Fbar')
 
+
+    def test_URLPath(self):
+        """
+        L{server.Request.URLPath} returns a L{URLPath} instance that
+        identifies the URL for this request.
+        """
+        request = server.Request(DummyChannel(), 1)
+        request.setHost('example.com', 80)
+        request.gotLength(0)
+        request.requestReceived('GET', '/foo/bar?baz=bax', 'HTTP/1.0')
+        u = request.URLPath()
+        self.failUnless(isinstance(u, urlpath.URLPath))
+        self.assertEquals(u.scheme, 'http')
+        self.assertEquals(u.netloc, 'example.com')
+        self.assertEquals(u.query, '')
+        self.assertEquals(u.fragment, '')
+
+
+    def test_isSecure(self):
+        """
+        L{server.Request.isSecure} returns True if this request's channel
+        is using a transport that implements ISSLTransport.  Otherwise it
+        returns False
+        """
+        d = DummyChannel()
+        d.transport = DummyChannel.SSL()
+        request = server.Request(d, 1)
+        self.assertEquals(request.isSecure(), True)
+
+        request = server.Request(DummyChannel(), 1)
+        self.assertEquals(request.isSecure(), False)
 
     def test_connectionLost(self):
         """
