@@ -1,0 +1,5 @@
+#!/bin/sh
+#
+#  Create cache files.
+
+python -c 'from twisted.plugin import IPlugin, getPlugins; list(getPlugins(IPlugin))'
