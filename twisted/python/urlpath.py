@@ -18,7 +18,7 @@ class URLPath:
 
     _qpathlist = None
     _uqpathlist = None
-    
+
     def pathList(self, unquote=0, copy=1):
         if self._qpathlist is None:
             self._qpathlist = self.path.split('/')
@@ -101,7 +101,7 @@ class URLPath:
                 l = self.pathList()
                 l[-1] = path
                 path = '/'.join(l)
-        
+
         return URLPath(scheme,
                         netloc,
                         path,
@@ -109,7 +109,7 @@ class URLPath:
                         fragment)
 
 
-    
+
     def __str__(self):
         x = urlparse.urlunsplit((
             self.scheme, self.netloc, self.path,
