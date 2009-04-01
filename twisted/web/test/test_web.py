@@ -842,7 +842,11 @@ class RequestTests(unittest.TestCase):
         def sessionFactory(site, uid):
             return server.Session(site, uid, reactor=task.Clock())
 
+        def mkuid():
+            return 'hello'
+
         d.site.sessionFactory = sessionFactory
+        d.site._mkuid = mkuid
 
         request = server.Request(d, 1)
         request.gotLength(0)
@@ -853,10 +857,11 @@ class RequestTests(unittest.TestCase):
         self.assertNotEquals(session, None)
         self.assertNotEquals(request.session, None)
         self.assertEquals(session, request.session)
+        self.assertEquals(session.uid, 'hello')
 
         session2 = request.getSession()
+        self.assertEquals(session2.uid, 'hello')
         self.assertEquals(session, session2)
-
 
     def test_connectionLost(self):
         """
