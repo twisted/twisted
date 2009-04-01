@@ -215,6 +215,8 @@ class DummyChannel:
         pass
 
 
+
+
 class SiteTest(unittest.TestCase):
     def test_simplestSite(self):
         """
@@ -829,33 +831,6 @@ class RequestTests(unittest.TestCase):
                                             'Basic Zm9vOmJhcg==')
         request.requestReceived('GET', '/', 'HTTP/1.0')
         self.assertEqual(request.getPassword(), 'bar')
-
-
-    def test_getSession(self):
-        """
-        L{server.Request.getSession} should create a new session if there is
-        not one and return the associated session on subsequent calls.
-        """
-        d = DummyChannel()
-        d.site = server.Site(RootResource())
-
-        def sessionFactory(site, uid):
-            return server.Session(site, uid, reactor=task.Clock())
-
-        d.site.sessionFactory = sessionFactory
-
-        request = server.Request(d, 1)
-        request.gotLength(0)
-        request.requestReceived('GET', '/', 'HTTP/1.0')
-        self.assertEquals(request.session, None)
-
-        session = request.getSession()
-        self.assertNotEquals(session, None)
-        self.assertNotEquals(request.session, None)
-        self.assertEquals(session, request.session)
-
-        session2 = request.getSession()
-        self.assertEquals(session, session2)
 
 
     def test_connectionLost(self):
