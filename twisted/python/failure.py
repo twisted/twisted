@@ -282,15 +282,15 @@ class Failure:
         automatically re-raised if it is not a type that you expect.
 
         The reason for having this particular API is because it's very useful
-        in Deferred errback chains:
+        in Deferred errback chains::
 
-        | def _ebFoo(self, failure):
-        |     r = failure.trap(Spam, Eggs)
-        |     print 'The Failure is due to either Spam or Eggs!'
-        |     if r == Spam:
-        |         print 'Spam did it!'
-        |     elif r == Eggs:
-        |         print 'Eggs did it!'
+            def _ebFoo(self, failure):
+                r = failure.trap(Spam, Eggs)
+                print 'The Failure is due to either Spam or Eggs!'
+                if r == Spam:
+                    print 'Spam did it!'
+                elif r == Eggs:
+                    print 'Eggs did it!'
 
         If the failure is not a Spam or an Eggs, then the Failure
         will be 'passed on' to the next errback.
