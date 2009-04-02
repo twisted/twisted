@@ -128,7 +128,7 @@ class SSHPublicKeyDatabaseTestCase(TestCase):
         return d.addCallback(_verify)
 
 
-    def test_requestAvatarId_without_signature(self):
+    def test_requestAvatarIdWithoutSignature(self):
         """
         L{SSHPublicKeyDatabase.requestAvatarId} should raise L{ValidPublicKey}
         if the credentials represent a valid key without a signature.  This
@@ -143,7 +143,7 @@ class SSHPublicKeyDatabaseTestCase(TestCase):
         return self.assertFailure(d, ValidPublicKey)
 
 
-    def test_requestAvatarId_invalid_key(self):
+    def test_requestAvatarIdInvalidKey(self):
         """
         If L{SSHPublicKeyDatabase.checkKey} returns False,
         C{_cbRequestAvatarId} should raise L{UnauthorizedLogin}.
@@ -155,9 +155,11 @@ class SSHPublicKeyDatabaseTestCase(TestCase):
         return self.assertFailure(d, UnauthorizedLogin)
 
 
-    def test_requestAvatarId_invalid_signature(self):
+    def test_requestAvatarIdInvalidSignature(self):
         """
-        Valid keys with invalid signatures should cause L{SSHPublicKeyDatabase.requestAvatarId} to return a {UnauthorizedLogin} failure
+        Valid keys with invalid signatures should cause
+        L{SSHPublicKeyDatabase.requestAvatarId} to return a {UnauthorizedLogin}
+        failure
         """
         def _checkKey(ignored):
             return True
@@ -168,7 +170,7 @@ class SSHPublicKeyDatabaseTestCase(TestCase):
         return self.assertFailure(d, UnauthorizedLogin)
 
 
-    def test_requestAvatarId_normalize_exception(self):
+    def test_requestAvatarIdNormalizeException(self):
         """
         Exceptions raised while verifying the key should be normalized into an
         C{UnauthorizedLogin} failure.
@@ -191,6 +193,9 @@ class SSHProtocolCheckerTestCase(TestCase):
     Tests for L{SSHProtocolChecker}.
     """
 
+    if SSHPublicKeyDatabase is None:
+        skip = "Cannot run without PyCrypto"
+
     def test_registerChecker(self):
         """
         L{SSHProcotolChecker.registerChecker} should add the given checker to
@@ -204,7 +209,7 @@ class SSHProtocolCheckerTestCase(TestCase):
                               SSHPublicKeyDatabase)
 
 
-    def test_registerChecker_with_interface(self):
+    def test_registerCheckerWithInterface(self):
         """
         If a apecific interface is passed into
         L{SSHProtocolChecker.registerChecker}, that interface should be
@@ -234,8 +239,11 @@ class SSHProtocolCheckerTestCase(TestCase):
         return d.addCallback(_callback)
 
 
-    def test_requestAvatarId_with_not_enough_authentication(self):
+    def test_requestAvatarIdWithNotEnoughAuthentication(self):
         """
+        If the client indicates that it is never satisfied, by always returning
+        False from _areDone, then L{SSHProtocolChecker} should raise
+        L{NotEnoughAuthentication}.
         """
         checker = SSHProtocolChecker()
         def _areDone(avatarId):
@@ -249,7 +257,7 @@ class SSHProtocolCheckerTestCase(TestCase):
         return self.assertFailure(d, NotEnoughAuthentication)
 
 
-    def test_requestAvatarId_invalid_credential(self):
+    def test_requestAvatarIdInvalidCredential(self):
         """
         If the passed credentials aren't handled by any registered checker,
         L{SSHProtocolChecker} should raise L{UnhandledCredentials}.
