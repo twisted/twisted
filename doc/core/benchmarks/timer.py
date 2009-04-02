@@ -1,19 +1,24 @@
+# Copyright (c) 2007-2009 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
-"""Helper stuff for things"""
+"""
+Helper stuff for benchmarks.
+"""
 
 import gc
 gc.disable()
 print 'Disabled GC'
 
 def timeit(func, iter = 1000, *args, **kwargs):
-    """timeit(func, iter = 1000 *args, **kwargs) -> elapsed time
+    """
+    timeit(func, iter = 1000 *args, **kwargs) -> elapsed time
     
     calls func iter times with args and kwargs, returns time elapsed
     """
 
-    import time
+    from time import time as currentTime
     r = range(iter)
-    t = time.time()
+    t = currentTime()
     for i in r:
         func(*args, **kwargs)
-    return time.time() - t
+    return currentTime() - t
