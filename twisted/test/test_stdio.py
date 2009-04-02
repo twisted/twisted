@@ -5,6 +5,7 @@ import os, sys
 
 from twisted.trial import unittest
 from twisted.python import filepath
+from twisted.python.runtime import platform
 from twisted.internet import error, defer, protocol, reactor
 
 
@@ -14,6 +15,14 @@ from twisted.internet import error, defer, protocol, reactor
 # for in the output from stdio_test_lastwrite.py and if it is found at
 # the end, the functionality works.
 UNIQUE_LAST_WRITE_STRING = 'xyz123abc Twisted is great!'
+
+skipWindowsNopywin32 = None
+if platform.isWindows():
+    try:
+        import win32process
+    except ImportError:
+        skipWindowsNopywin32 = ("On windows, spawnProcess is not available "
+                                "in the absence of win32process.")
 
 
 class StandardIOTestProcessProtocol(protocol.ProcessProtocol):
@@ -120,6 +129,7 @@ class StandardInputOutputTestCase(unittest.TestCase):
             self.failIfIn(1, p.data)
             reason.trap(error.ProcessDone)
         return self._requireFailure(d, processEnded)
+    test_loseConnection.skip = skipWindowsNopywin32
 
 
     def test_lastWriteReceived(self):
@@ -159,6 +169,7 @@ class StandardInputOutputTestCase(unittest.TestCase):
                     p.data,))
             reason.trap(error.ProcessDone)
         return self._requireFailure(p.onCompletion, processEnded)
+    test_lastWriteReceived.skip = skipWindowsNopywin32
 
 
     def test_hostAndPeer(self):
@@ -176,6 +187,7 @@ class StandardInputOutputTestCase(unittest.TestCase):
             self.failUnless(peer)
             reason.trap(error.ProcessDone)
         return self._requireFailure(d, processEnded)
+    test_hostAndPeer.skip = skipWindowsNopywin32
 
 
     def test_write(self):
@@ -192,6 +204,7 @@ class StandardInputOutputTestCase(unittest.TestCase):
             self.assertEquals(p.data[1], 'ok!')
             reason.trap(error.ProcessDone)
         return self._requireFailure(d, processEnded)
+    test_write.skip = skipWindowsNopywin32
 
 
     def test_writeSequence(self):
@@ -208,6 +221,7 @@ class StandardInputOutputTestCase(unittest.TestCase):
             self.assertEquals(p.data[1], 'ok!')
             reason.trap(error.ProcessDone)
         return self._requireFailure(d, processEnded)
+    test_writeSequence.skip = skipWindowsNopywin32
 
 
     def _junkPath(self):
@@ -245,6 +259,7 @@ class StandardInputOutputTestCase(unittest.TestCase):
             self.failIf(toWrite, "Connection lost with %d writes left to go." % (len(toWrite),))
             reason.trap(error.ProcessDone)
         return self._requireFailure(d, processEnded)
+    test_producer.skip = skipWindowsNopywin32
 
 
     def test_consumer(self):
@@ -263,3 +278,4 @@ class StandardInputOutputTestCase(unittest.TestCase):
             self.assertEquals(p.data[1], file(junkPath).read())
             reason.trap(error.ProcessDone)
         return self._requireFailure(d, processEnded)
+    test_consumer.skip = skipWindowsNopywin32

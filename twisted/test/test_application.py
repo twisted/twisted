@@ -14,6 +14,7 @@ from twisted.application import service, internet, app
 from twisted.persisted import sob
 from twisted.python import usage
 from twisted.python.util import sibpath
+from twisted.python.runtime import platform
 from twisted.internet import interfaces, defer
 from twisted.protocols import wire, basic
 from twisted.internet import protocol, reactor
@@ -22,6 +23,14 @@ from twisted.application import reactors
 
 oldAppSuppressions = [util.suppress(message='twisted.internet.app is deprecated',
                                     category=DeprecationWarning)]
+
+skipWindowsNopywin32 = None
+if platform.isWindows():
+    try:
+        import win32process
+    except ImportError:
+        skipWindowsNopywin32 = ("On windows, spawnProcess is not available "
+                                "in the absence of win32process.")
 
 class Dummy:
     processName=None
@@ -869,6 +878,7 @@ class PluggableReactorTestCase(unittest.TestCase):
             env=None)
         result.addCallback(_checkOutput)
         return result
+    test_qtStub.skip = skipWindowsNopywin32
 
 
 

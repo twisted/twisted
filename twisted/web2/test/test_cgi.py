@@ -3,9 +3,18 @@ import sys, os
 from twisted.trial import unittest
 from twisted.internet import reactor, interfaces, defer
 from twisted.python import util
+from twisted.python.runtime import platform
 from twisted.web2 import twcgi, server, http, iweb
 from twisted.web2 import stream
 from twisted.web2.test.test_server import SimpleRequest
+
+skipWindowsNopywin32 = None
+if platform.isWindows():
+    try:
+        import win32process
+    except ImportError:
+        skipWindowsNopywin32 = ("On windows, spawnProcess is not available "
+                                "in the absence of win32process.")
 
 DUMMY_CGI = '''
 print "Header: OK"
@@ -298,3 +307,4 @@ class CGIDirectoryTest(CGITestBase):
         d.addCallback(_secondRequest)
 
         return d
+    test_scriptsExecute.skip = skipWindowsNopywin32

@@ -6,7 +6,12 @@ from twisted.trial import unittest
 import os
 if os.name == 'nt':
 
-    from twisted.python import shortcut
+    skipWindowsNopywin32 = None
+    try:
+        from twisted.python import shortcut
+    except ImportError:
+        skipWindowsNopywin32 = ("On windows, twisted.python.shortcut is not "
+                                "available in the absence of win32com.")
     import os.path
     import sys
 
@@ -18,3 +23,4 @@ if os.name == 'nt':
             self.assert_(os.path.exists(tempname))
             sc=shortcut.open(tempname)
             self.assert_(sc.GetPath(0)[0].endswith('test_shortcut.py'))
+    ShortcutTest.skip = skipWindowsNopywin32

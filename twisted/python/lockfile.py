@@ -25,25 +25,29 @@ try:
     _windows = False
 except:
     _windows = True
-    from win32api import OpenProcess
-    import pywintypes
 
-    ERROR_ACCESS_DENIED = 5
-    ERROR_INVALID_PARAMETER = 87
+    try:
+        from win32api import OpenProcess
+        import pywintypes
+    except ImportError:
+        kill = None
+    else:
+        ERROR_ACCESS_DENIED = 5
+        ERROR_INVALID_PARAMETER = 87
+
+        def kill(pid, signal):
+            try:
+                OpenProcess(0, 0, pid)
+            except pywintypes.error, e:
+                if e.args[0] == ERROR_ACCESS_DENIED:
+                    return
+                elif e.args[0] == ERROR_INVALID_PARAMETER:
+                    raise OSError(errno.ESRCH, None)
+                raise
+            else:
+                raise RuntimeError("OpenProcess is required to fail.")
 
     _open = file
-
-    def kill(pid, signal):
-        try:
-            OpenProcess(0, 0, pid)
-        except pywintypes.error, e:
-            if e.args[0] == ERROR_ACCESS_DENIED:
-                return
-            elif e.args[0] == ERROR_INVALID_PARAMETER:
-                raise OSError(errno.ESRCH, None)
-            raise
-        else:
-            raise RuntimeError("OpenProcess is required to fail.")
 
     # XXX Implement an atomic thingamajig for win32
     def symlink(value, filename):
@@ -144,7 +148,8 @@ class FilesystemLock:
                             return False
                         raise
                     try:
-                        kill(int(pid), 0)
+                        if kill is not None:
+                            kill(int(pid), 0)
                     except OSError, e:
                         if e.errno == errno.ESRCH:
                             # The owner has vanished, try to claim it in the next

@@ -20,6 +20,13 @@ from twisted.internet.protocol import ProcessProtocol
 from twisted.internet.error import ProcessDone, PotentialZombieWarning
 from twisted.internet.error import ProcessTerminated
 
+skipWindowsNopywin32 = None
+if platform.isWindows():
+    try:
+        import win32process
+    except ImportError:
+        skipWindowsNopywin32 = ("On windows, spawnProcess is not available "
+                                "in the absence of win32process.")
 
 class _ShutdownCallbackProcessProtocol(ProcessProtocol):
     """
@@ -340,6 +347,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         self.runReactor(reactor)
 
 
+ProcessTestsBuilder.skip = skipWindowsNopywin32
 globals().update(ProcessTestsBuilder.makeTestCaseClasses())
 
 
