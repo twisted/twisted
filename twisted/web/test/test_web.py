@@ -537,7 +537,7 @@ class RequestTests(unittest.TestCase):
             verifyObject(iweb.IRequest, server.Request(DummyChannel(), True)))
 
 
-    def testChildLink(self):
+    def test_childLink(self):
         """
         L{server.Request.childLink} returns the correct relative link
         """
@@ -551,7 +551,7 @@ class RequestTests(unittest.TestCase):
         self.assertEqual(request.childLink('baz'), 'baz')
 
 
-    def testPrePathURLSimple(self):
+    def test_prePathURLSimple(self):
         """
         L{server.Request.prePathURL} returns the complete URL for the given
         request.
@@ -563,7 +563,7 @@ class RequestTests(unittest.TestCase):
         self.assertEqual(request.prePathURL(), 'http://example.com/foo/bar')
 
 
-    def testPrePathURLNonDefault(self):
+    def test_prePathURLNonDefault(self):
         """
         L{server.Request.prePathURL} returns the complete URL when using a
         non-default port number.
@@ -577,7 +577,7 @@ class RequestTests(unittest.TestCase):
         self.assertEqual(request.prePathURL(), 'http://example.com:81/foo/bar')
 
 
-    def testPrePathURLSSLPort(self):
+    def test_prePathURLSSLPort(self):
         """
         L{server.Request.prePathURL} returns the complete http:// URL when the
         SSL Port is used without an SSL transport.
@@ -591,7 +591,7 @@ class RequestTests(unittest.TestCase):
         self.assertEqual(request.prePathURL(), 'http://example.com:443/foo/bar')
 
 
-    def testPrePathURLSSLPortAndSSL(self):
+    def test_prePathURLSSLPortAndSSL(self):
         """
         L{server.Request.prePathURL} returns an https:// URL without a port
         component when the default SSL port is used with the SSL transport.
@@ -606,7 +606,7 @@ class RequestTests(unittest.TestCase):
         self.assertEqual(request.prePathURL(), 'https://example.com/foo/bar')
 
 
-    def testPrePathURLHTTPPortAndSSL(self):
+    def test_prePathURLHTTPPortAndSSL(self):
         """
         L{server.Request.prePathURL} returns an https:// URL with a port
         component when the default HTTP port is used.
@@ -621,7 +621,7 @@ class RequestTests(unittest.TestCase):
         self.assertEqual(request.prePathURL(), 'https://example.com:80/foo/bar')
 
 
-    def testPrePathURLSSLNonDefault(self):
+    def test_prePathURLSSLNonDefault(self):
         """
         L{server.Request.prePathURL} returns an https:// URL with a port
         component when using a non-default port.
@@ -636,7 +636,7 @@ class RequestTests(unittest.TestCase):
         self.assertEqual(request.prePathURL(), 'https://example.com:81/foo/bar')
 
 
-    def testPrePathURLSetSSLHost(self):
+    def test_prePathURLSetSSLHost(self):
         """
         L{server.Request.prePathURL} returns an HTTPS url when the ssl argument
         to setHost is 1.
@@ -863,6 +863,7 @@ class RequestTests(unittest.TestCase):
         self.assertEquals(session2.uid, 'hello')
         self.assertEquals(session, session2)
 
+
     def test_connectionLost(self):
         """
         L{server.Request.connectionLost} triggers all finish notification
@@ -875,6 +876,64 @@ class RequestTests(unittest.TestCase):
         self.assertIdentical(request.channel, None)
         return self.assertFailure(finished, error.ConnectionDone)
 
+
+    def test_setHost(self):
+        """
+        L{server.Request.setHost} should change the host and port this
+        request thinks it's on.
+        """
+        request = server.Request(DummyChannel(), 1)
+        request.setHost('foobar.com', 8080)
+        host = request.getHost()
+        self.assertEquals(host.host, 'foobar.com')
+        self.assertEquals(host.port, 8080)
+
+
+    def test_setHeader(self):
+        """
+        L{server.Request.setHeader} should set the the given value for the
+        named header.
+        """
+        request = server.Request(DummyChannel(), 1)
+        request.setHeader('Accept', 'text/html')
+        accept = request.responseHeaders.getRawHeaders('accept')
+        self.assertEquals(accept, ['text/html'])
+
+
+    def test_setETag(self):
+        """
+        L{server.Request.setETag} should set the entity tag for the outgoing
+        response.
+        """
+        request = server.Request.makeRequest(
+            DummyChannel(), 1, 'GET', '/', 'HTTP/1.0')
+        request.gotLength(0)
+        request.setResponseCode(200)
+        request.setETag('foo')
+        request.write('')
+        written = request.transport.getvalue()
+        self.assertEquals(written, 'HTTP/1.0 200 OK\r\nEtag: foo\r\n\r\n')
+
+
+    def test_makeRequest(self):
+        """
+        L{server.Request.makeRequest} should return an instance of an object
+        providing L{IRequest} that is fully initialized.
+        """
+        request = server.Request.makeRequest(
+            DummyChannel(), 1,
+            'GET', '/foo/bar?foo=bar', 'HTTP/1.0',
+            requestHeaders={'Referrer': ['foo.com']},
+            prepath=['foo'],
+            postpath=['bar'])
+
+        self.assertEquals(request.method, 'GET')
+        self.assertEquals(request.uri, '/foo/bar?foo=bar')
+        self.assertEquals(request.path, '/foo/bar')
+        self.assertEquals(request.args, {'foo': ['bar']})
+        self.assertEquals(request.clientproto, 'HTTP/1.0')
+        self.assertEquals(request.requestHeaders,
+                          http_headers.Headers({'Referrer': ['foo.com']}))
 
 
 class RootResource(resource.Resource):

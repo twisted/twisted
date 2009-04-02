@@ -524,6 +524,36 @@ class Request:
     content = None
     _forceSSL = 0
 
+
+    def makeRequest(klass, channel, queued, method, uri, version, **kwargs):
+        """
+        Initialize a request with the arguments given.
+        """
+        request = klass(channel, queued)
+        request.method = method
+        request.uri = uri
+        request.clientproto = version
+
+        request.path, request.args = request._parseURI(request.uri)
+
+        if 'args' in kwargs:
+            request.args.update(kwargs['args'])
+
+        if 'requestHeaders' in kwargs:
+            for k,v in kwargs['requestHeaders'].iteritems():
+                request.requestHeaders.setRawHeaders(k, v)
+
+        if 'prepath' in kwargs:
+            request.prepath = kwargs['prepath']
+
+        if 'postpath' in kwargs:
+            request.postpath = kwargs['postpath']
+
+        return request
+
+    makeRequest = classmethod(makeRequest)
+
+
     def __init__(self, channel, queued):
         """
         @param channel: the channel we're connected to.
@@ -655,6 +685,27 @@ class Request:
         self.content.write(data)
 
 
+    def _parseURI(self, uri):
+        """
+        Parse the given URI string to the C{path} C{str} and the C{args} C{dict}
+
+        @type uri: C{str}
+        @param uri: A request URI to be parsed
+
+        @return: A C{tuple} of two elements the encoded path as a C{str} and
+             the query arguments as a C{dict}
+        """
+        x = uri.split('?', 1)
+
+        if len(x) == 1:
+            return uri, {}
+        else:
+            path, argstring = x
+            args = parse_qs(argstring, 1)
+
+        return path, args
+
+
     def requestReceived(self, command, path, version):
         """
         Called by channel when all data has been received.
@@ -677,13 +728,7 @@ class Request:
 
         self.method, self.uri = command, path
         self.clientproto = version
-        x = self.uri.split('?', 1)
-
-        if len(x) == 1:
-            self.path = self.uri
-        else:
-            self.path, argstring = x
-            self.args = parse_qs(argstring, 1)
+        self.path, self.args = self._parseURI(self.uri)
 
         # cache the client and server information, we'll need this later to be
         # serialized and sent with the request so CGIs will work remotely
