@@ -99,6 +99,38 @@ class Hello(Resource):
 resource = Hello()
 </pre>
 
+<p>Here is an example using putChild to directly place a leaf node of a different class
+(still inheriting <code class="API">twisted.web.resource.Resource</code>) into our existing site:</p>
+
+<pre class="python">
+from twisted.web.resource import Resource
+
+class HelloJohn(Resource):
+    isLeaf = True
+    def render_GET(self, request):
+        return "Hello, world! I am John!"
+
+root.putChild('john', HelloJohn())
+</pre>
+
+<p>Now visiting <code>http://example.com/</code> will render:
+<code>"Hello, world! I am located at ['']."</code>.</p>
+
+<p>Whereas <code>http://example.com/john</code> will render:
+<code>"Hello, world! I am John!"</code>.</p>
+
+<p>Note that even if the <code>HelloJohn()</code> class had a <code>getChild()</code> method declared,
+it would never be called because <code>HelloJohn()</code> is a leaf node (as <code>isLeaf</code> is set to true).
+The caveat here is that the following code:</p>
+
+<pre class="python">
+root = HelloJohn()
+root.putChild('fred', Hello())
+root.putChild('bob', Hello())
+</pre>
+
+<p>Will always produce the output <code>"Hello, world! I am John!"</code>, no matter the path used to access the site.</p>
+
 <h3>Resource Trees</h3>
 <a name="trees" />
 
@@ -118,7 +150,6 @@ root.putChild('bob', Hello())
 <li><code>http://example.com/bob</code></li>
 <li><code>http://example.com/fred/</code></li>
 <li><code>http://example.com/bob/</code></li>
-
 </ul>
 
 <h3>.rpy scripts</h3>
@@ -492,8 +523,8 @@ class Counter:
 
 <p>
 The
-<a href="http://www.divmod.org/projects/nevow">Nevow</a> framework, available as
-part of the <a href="http://www.divmod.org/projects/quotient">Quotient</a> project,
+<a href="http://www.divmod.org/trac/wiki/DivmodNevow">Nevow</a> framework, available as
+part of the <a href="http://www.divmod.org/trac/wiki/DivmodQuotient">Quotient</a> project,
 is an advanced system for giving Web UIs to your application. Nevow uses Twisted Web but is
 not itself part of Twisted.
 </p>
