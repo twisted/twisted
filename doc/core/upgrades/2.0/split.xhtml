@@ -12,23 +12,23 @@
 <p>
 <a href="http://twistedmatrix.com/">Twisted</a> is very large. At last
 count, it has around 80 thousand lines of code (yes, that <em>is</em> very
-large for a Python project, maybe not so for a C++ project. ;). We are
-breaking it into several smaller packages before the 2.0 release.
+large for a Python project, maybe not so for a C++ project. ;). We broke it
+into several smaller packages with the 2.0 release.
 </p>
 
-<h2>Why is Twisted being split?</h2>
+<h2>Why was Twisted being split?</h2>
 
 <p>
-The biggest reason is to make our release process more
-agile. Currently it is very slow. A regression in twisted.names, for
-example, could hold up the release of the entire thing, when really it
-should only be holding up the release of twisted.names.
+The biggest reason was to make our release process more
+agile. A regression in twisted.names, for example, could hold up the release
+of the entire thing, when really it should only be holding up the release of
+twisted.names.
 </p>
 
 <p>
 The other big reason is visibility. Twisted has a ton of
 functionality, but many people miss out on it because they don't know
-where it is hidden inside Twisted. The Twisted split will give every
+where it is hidden inside Twisted. The Twisted split gave every
 sub-project its own web site and thus more visibility.
 </p>
 
@@ -117,11 +117,8 @@ and, ahem, FTP.</p>
 
 <p>
 No existing code should <em>break</em>, however, many modules were
-moved. Backwards compatibility support <em>does exist</em>; you will
-get a DeprecationWarning if you try to import, e.g.,
-twisted.protocols.http notifying you that it has been moved to
-twisted.web.http.
-</p>
+moved. Backwards compatibility support <em>does exist</em> in older versions of
+Twisted, but was removed in Twisted 9.0.</p>
 
 <h2>What about my deployments? What will I have to do to have the new packages?</h2>
 
@@ -146,36 +143,8 @@ sub-project.
 <p>
 This is controversial. While this does mean that there is a
 mashed-together namespace under <code>twisted.</code>, it's also the
-simplest thing to do, and means less breakage for user-code, so we're
-doing that.
+simplest thing to do, and means less breakage for user-code, so we did that.
 </p>
-
-
-<h2>When will 2.0 be released?</h2>
-
-<p>
-That's hard to tell. I (Christopher Armstrong) am doing most of the
-work of the split, but I'm in the middle of a move to Australia and a
-new full-time job. Unfortunately doing this split requires a lot of
-specific knowledge of how things work, but if you are willing to help,
-please see the next question.
-</p>
-
-<h2>Where can I see a progress report?</h2>
-
-<p>
-<a href="http://twistedmatrix.com/bugs/issue567">http://twistedmatrix.com/bugs/issue567</a>.
-</p>
-
-
-<h2>Can I help?</h2>
-
-<p>
-Really, there's not a whole lot to be delegated, unless your name is
-Fred Drake. However, talk to <a
-href="http://radix.twistedmatrix.com/">Christopher Armstrong</a> via
-<a href="mailto:radix@twistedmatrix.com">email</a> or IRC ('radix' on
-irc.freenode.net) if you're interested.  </p>
 
 <h2>What does this mean for existing Twisted developers?</h2>
 
