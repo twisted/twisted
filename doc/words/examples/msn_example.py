@@ -1,9 +1,7 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
-#
 
 # Twisted Imports
 from twisted.internet import reactor

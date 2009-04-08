@@ -1,5 +1,10 @@
-#!/usr/bin/python
-"""Example using stdio, Deferreds, LineReceiver and twisted.web.client.
+#!/usr/bin/env python
+
+# Copyright (c) 2009 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Example using stdio, Deferreds, LineReceiver and twisted.web.client.
 
 Note that the WebCheckerCommandProtocol protocol could easily be used in e.g.
 a telnet server instead; see the comments for details.

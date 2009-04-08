@@ -158,7 +158,7 @@ ServerName example.com
       standalone python script is necessary</p>
 
     <pre class="python">
-  #!/usr/bin/python
+  #!/usr/bin/env python
   from twisted.web2 import channel, server, static
   toplevel = static.File(&quot;/tmp&quot;)
   site = server.Site(toplevel)

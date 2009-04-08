@@ -1,6 +1,10 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
-"""Simple PB Words client demo
+# Copyright (c) 2009 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Simple PB Words client demo
 
 This connects to a server (host/port specified by argv[1]/argv[2]),
 authenticates with a username and password (given by argv[3] and argv[4]),

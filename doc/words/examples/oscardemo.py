@@ -1,4 +1,8 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+
+# Copyright (c) 2009 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 from twisted.words.protocols import oscar
 from twisted.internet import protocol, reactor
 import getpass

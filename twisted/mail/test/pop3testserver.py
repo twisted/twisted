@@ -1,5 +1,8 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- test-case-name: twisted.mail.test.test_pop3client -*-
+
+# Copyright (c) 2009 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 from twisted.internet.protocol import Factory
 from twisted.protocols import basic

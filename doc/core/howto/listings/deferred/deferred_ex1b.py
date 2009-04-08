@@ -1,10 +1,13 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+
+# Copyright (c) 2009 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 from twisted.internet import defer
 from twisted.python import failure, util
 
 """
-here we have a slightly more involved case. The deferred is called back with a
+Here we have a slightly more involved case. The deferred is called back with a
 result. the first callback returns a value, the second callback, however
 raises an exception, which is handled by the errback.
 """

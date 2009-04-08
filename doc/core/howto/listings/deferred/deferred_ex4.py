@@ -1,11 +1,13 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+
+# Copyright (c) 2009 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 from twisted.internet import defer
 from twisted.python import failure, util
 
 """
-now we'll see what happens when you use 'addBoth'
-
+Now we'll see what happens when you use 'addBoth'.
 """
 
 class Counter(object):

@@ -1,4 +1,7 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+
+# Copyright (c) 2009 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 """
 This is an example of integrating curses with the twisted underlying    

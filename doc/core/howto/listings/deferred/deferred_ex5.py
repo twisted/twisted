@@ -1,13 +1,15 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+
+# Copyright (c) 2009 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 from twisted.internet import defer
 from twisted.python import failure, util
 
 """
-now comes the more nuanced addCallbacks, which allows us to make a
+Now comes the more nuanced addCallbacks, which allows us to make a
 yes/no (branching) decision based on whether the result at a given point is
 a failure or not.
-
 """
 
 class Counter(object):

@@ -1,11 +1,12 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
-# Twisted, the Framework of Your Internet
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""This script attempts to send some email."""
+"""
+This script attempts to send some email.
+"""
 
 ### Twisted Preamble
 # This makes sure that users don't have to set up their environment

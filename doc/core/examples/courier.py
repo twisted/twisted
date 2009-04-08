@@ -1,5 +1,11 @@
-#!/usr/bin/python
-"""Example of a interfacing to Courier's mail filter interface"""
+#!/usr/bin/env python
+
+# Copyright (c) 2009 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Example of a interfacing to Courier's mail filter interface.
+"""
 
 LOGFILE = '/tmp/filter.log'
 

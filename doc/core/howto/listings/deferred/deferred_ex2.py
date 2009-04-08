@@ -1,16 +1,18 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+
+# Copyright (c) 2009 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 from twisted.internet import defer
 from twisted.python import failure, util
 
 """
-this example shows an important concept that many deferred newbies
+This example shows an important concept that many deferred newbies
 (myself included) have trouble understanding. 
 
 when an error occurs in a callback, the first errback after the error
 occurs will be the next method called. (in the next example we'll
-see what happens in the 'chain' after an errback)
-
+see what happens in the 'chain' after an errback).
 """
 
 class Counter(object):

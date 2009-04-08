@@ -1,7 +1,12 @@
-"""PB copy receiver example.
+# Copyright (c) 2009 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+PB copy receiver example.
 
 This is a Twisted Application Configuration (tac) file.  Run with e.g.
    twistd -ny copy_receiver.tac
+
 See the twistd(1) man page or
 http://twistedmatrix.com/documents/current/howto/application for details.
 """

@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2006 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import sys

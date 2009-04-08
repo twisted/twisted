@@ -1,10 +1,13 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+
+# Copyright (c) 2009 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 from twisted.internet import defer
 from twisted.python import failure, util
 
 """
-this example is analogous to a function calling .errback(failure)
+This example is analogous to a function calling .errback(failure)
 """
 
 

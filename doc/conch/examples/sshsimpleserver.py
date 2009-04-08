@@ -1,4 +1,8 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+
+# Copyright (c) 2009 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 from twisted.cred import portal, checkers
 from twisted.conch import error, avatar
 from twisted.conch.checkers import SSHPublicKeyDatabase
@@ -9,7 +13,8 @@ from zope.interface import implements
 import sys
 log.startLogging(sys.stderr)
 
-"""Example of running another protocol over an SSH channel.
+"""
+Example of running another protocol over an SSH channel.
 log in with username "user" and password "password".
 """
 

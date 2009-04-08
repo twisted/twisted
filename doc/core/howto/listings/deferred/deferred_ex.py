@@ -1,10 +1,13 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+
+# Copyright (c) 2009 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 from twisted.internet import defer
 from twisted.python import failure, util
 
 """
-here we have the simplest case, a single callback and a single errback
+Here we have the simplest case, a single callback and a single errback.
 """
 
 num = 0

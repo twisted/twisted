@@ -1,4 +1,8 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+
+# Copyright (c) 2009 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 from twisted.conch.ssh import transport, userauth, connection, common, keys, channel
 from twisted.internet import defer, protocol, reactor
 from twisted.python import log

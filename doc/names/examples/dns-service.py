@@ -1,6 +1,11 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
-"""Sample app to lookup SRV records in DNS."""
+# Copyright (c) 2009 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Sample app to lookup SRV records in DNS.
+"""
 
 from twisted.names import client
 from twisted.internet import reactor

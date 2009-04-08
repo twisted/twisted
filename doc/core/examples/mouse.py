@@ -1,6 +1,10 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+
+# Copyright (c) 2009 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 """
-Example using MouseMan protocol with the SerialPort transport
+Example using MouseMan protocol with the SerialPort transport.
 """
 
 # TODO set tty modes, etc.

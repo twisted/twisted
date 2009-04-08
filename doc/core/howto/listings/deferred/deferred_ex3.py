@@ -1,13 +1,15 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+
+# Copyright (c) 2009 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 from twisted.internet import defer
 from twisted.python import failure, util
 
 """
-now we see how an errback can handle errors. if an errback
+Now we see how an errback can handle errors. if an errback
 does not raise an exception, the next callback in the chain 
-will be called
-
+will be called.
 """
 
 class Counter(object):

@@ -1,4 +1,6 @@
-#
+# Copyright (c) 2009 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 # Originally written by Darryl Vandorp
 # http://randomthoughts.vandorp.ca/
 

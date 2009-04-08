@@ -1,8 +1,9 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-"""An example IRC log bot - logs a channel's events to a file.
+"""
+An example IRC log bot - logs a channel's events to a file.
 
 If someone says the bot's name in the channel followed by a ':',
 e.g.

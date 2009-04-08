@@ -1,9 +1,14 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 #  based off the tap2deb code
 #  tap2rpm built by Sean Reifschneider, <jafo@tummy.com>
 
-"""tap2rpm"""
+"""
+tap2rpm
+"""
 
 ### Twisted Preamble
 # This makes sure that users don't have to set up their environment

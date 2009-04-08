@@ -1,16 +1,18 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+
+# Copyright (c) 2009 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 from twisted.internet import defer
 from twisted.python import failure, util
 
 """
-now comes the more nuanced addCallbacks, which allows us to make a
+Now comes the more nuanced addCallbacks, which allows us to make a
 yes/no (branching) decision based on whether the result at a given point is
 a failure or not.
 
 here, we return the failure from noDecisionPassthru, the errback argument to
-the first addCallbacks method invocation, and see what happens
-
+the first addCallbacks method invocation, and see what happens.
 """
 
 class Counter(object):

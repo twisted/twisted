@@ -1,8 +1,7 @@
-#!/usr/bin/python
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
-# See LICENSE for details.
+#!/usr/bin/env python
 
-#
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 from twisted.internet.protocol import DatagramProtocol
 from twisted.internet import reactor

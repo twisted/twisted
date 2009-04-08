@@ -1,6 +1,12 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 """
-GPSTest is a simple example using the SerialPort transport and the NMEA 0183 and Rockwell Zodiac GPS protocols to display fix data as it is received from the device.
+GPSTest is a simple example using the SerialPort transport and the NMEA 0183
+and Rockwell Zodiac GPS protocols to display fix data as it is received from
+the device.
 """
 from twisted.python import log, usage
 import sys
@@ -12,12 +18,15 @@ if sys.platform == 'win32':
 
 class GPSFixLogger:
     def handle_fix(self, *args):
-      """handle_fix gets called whenever either rockwell.Zodiac or nmea.NMEAReceiver receives
-      and decodes fix data.  Generally, GPS receivers will report a fix at 1hz.  
-      Implementing only this method is sufficient for most purposes unless tracking of ground speed,
-      course, utc date, or detailed satellite information is necessary.
+      """
+      handle_fix gets called whenever either rockwell.Zodiac or nmea.NMEAReceiver
+      receives and decodes fix data.  Generally, GPS receivers will report a
+      fix at 1hz. Implementing only this method is sufficient for most purposes
+      unless tracking of ground speed, course, utc date, or detailed satellite
+      information is necessary.
 
-      For example, plotting a map from MapQuest or a similar service only requires longitude and latitude.
+      For example, plotting a map from MapQuest or a similar service only
+      requires longitude and latitude.
       """
       log.msg('fix:\n' + 
       '\n'.join(map(lambda n: '  %s = %s' % tuple(n), zip(('utc', 'lon', 'lat', 'fix', 'sat', 'hdp', 'alt', 'geo', 'dgp'), map(repr, args)))))
