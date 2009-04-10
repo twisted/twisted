@@ -20,6 +20,7 @@ better caching, respect timeouts
 
 import os
 import errno
+import warnings
 
 from zope.interface import implements
 
@@ -494,7 +495,11 @@ class ThreadedResolver(_ThreadedResolverImpl):
         if reactor is None:
             from twisted.internet import reactor
         _ThreadedResolverImpl.__init__(self, reactor)
-        # warnings.warn("twisted.names.client.ThreadedResolver is deprecated, use XXX instead.")
+        warnings.warn(
+            "twisted.names.client.ThreadedResolver is deprecated since "
+            "Twisted 9.0, use twisted.internet.base.ThreadedResolver "
+            "instead.",
+            category=DeprecationWarning, stacklevel=2)
 
 class DNSClientFactory(protocol.ClientFactory):
     def __init__(self, controller, timeout = 10):
