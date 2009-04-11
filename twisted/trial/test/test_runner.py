@@ -12,7 +12,7 @@ from twisted.trial.itrial import IReporter, ITestCase
 from twisted.trial import unittest, runner, reporter, util
 from twisted.python import failure, log, reflect
 from twisted.scripts import trial
-from twisted.plugins import twisted_trial
+from twisted.plugins import twisted_core
 from twisted import plugin
 from twisted.internet import defer
 
@@ -273,7 +273,7 @@ class TestRunner(unittest.TestCase):
         parts = reflect.qual(CapturingReporter).split('.')
         package = '.'.join(parts[:-1])
         klass = parts[-1]
-        plugins = [twisted_trial._Reporter(
+        plugins = [twisted_core._Reporter(
             "Test Helper Reporter",
             package,
             description="Utility for unit testing.",

@@ -16,7 +16,7 @@ from twisted.trial.unittest import TestCase
 from twisted.scripts.mktap import run, getid, loadPlugins
 from twisted.application.service import IProcess, loadApplication
 from twisted.test.test_twistd import patchUserDatabase
-from twisted.plugins.twisted_ftp import TwistedFTP
+from twisted.plugins.twisted_core import TwistedFTP
 
 
 class RunTests(TestCase):

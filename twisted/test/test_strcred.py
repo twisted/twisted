@@ -11,7 +11,7 @@ import StringIO
 from twisted import plugin
 from twisted.trial import unittest
 from twisted.cred import credentials, checkers, error, strcred
-from twisted.plugins import cred_file, cred_anonymous
+from twisted.plugins import twisted_core
 from twisted.python import usage
 from twisted.python.filepath import FilePath
 
@@ -82,7 +82,7 @@ class TestStrcredFunctions(unittest.TestCase):
         available for a given authentication type.
         """
         self.assertIdentical(strcred.findCheckerFactory('file'),
-                             cred_file.theFileCheckerFactory)
+                             twisted_core.theFileCheckerFactory)
 
 
 
@@ -324,12 +324,12 @@ class TestFileDBChecker(unittest.TestCase):
         When the file auth plugin is given a file that doesn't exist, it
         should produce a warning.
         """
-        oldOutput = cred_file.theFileCheckerFactory.errorOutput
+        oldOutput = twisted_core.theFileCheckerFactory.errorOutput
         newOutput = StringIO.StringIO()
-        cred_file.theFileCheckerFactory.errorOutput = newOutput
+        twisted_core.theFileCheckerFactory.errorOutput = newOutput
         checker = strcred.makeChecker('file:' + self._fakeFilename())
-        cred_file.theFileCheckerFactory.errorOutput = oldOutput
-        self.assertIn(cred_file.invalidFileWarning, newOutput.getvalue())
+        twisted_core.theFileCheckerFactory.errorOutput = oldOutput
+        self.assertIn(twisted_core.invalidFileWarning, newOutput.getvalue())
 
 
 
@@ -439,7 +439,7 @@ class TestCheckerOptions(unittest.TestCase):
         options.authOutput = newStdout
         self.assertRaises(
             SystemExit, options.parseOptions, ['--help-auth-type', 'file'])
-        for line in cred_file.theFileCheckerFactory.authHelp:
+        for line in twisted_core.theFileCheckerFactory.authHelp:
             if line.strip():
                 self.assertIn(line.strip(), newStdout.getvalue())
 
@@ -539,8 +539,8 @@ class TestLimitingInterfaces(unittest.TestCase):
         Test that the supportsCheckerFactory method behaves appropriately.
         """
         options = OptionsForUsernamePassword()
-        fileCF = cred_file.theFileCheckerFactory
-        anonCF = cred_anonymous.theAnonymousCheckerFactory
+        fileCF = twisted_core.theFileCheckerFactory
+        anonCF = twisted_core.theAnonymousCheckerFactory
         self.assertTrue(options.supportsCheckerFactory(fileCF))
         self.assertFalse(options.supportsCheckerFactory(anonCF))
 
@@ -578,7 +578,7 @@ class TestLimitingInterfaces(unittest.TestCase):
         gets a checker we don't support.
         """
         options = OptionsSupportsNoInterfaces()
-        authType = cred_anonymous.theAnonymousCheckerFactory.authType
+        authType = twisted_core.theAnonymousCheckerFactory.authType
         self.assertRaises(
             usage.UsageError,
             options.parseOptions, ['--auth', authType])
