@@ -98,7 +98,7 @@ notSupportedWarning = ("WARNING: This authType is not supported by "
 
 def findCheckerFactories():
     """
-    Find all objects that implement L{ICheckerFactory}.
+    Find all plugin objects that provide L{ICheckerFactory}.
     """
     return getPlugins(ICheckerFactory)
 
@@ -272,7 +272,14 @@ class AuthOptionMixin:
         raise SystemExit(0)
 
 
-unixCheckerFactoryHelp = """
+
+class UNIXCheckerFactory(object):
+    """
+    A factory for L{UNIXChecker}.
+    """
+    implements(ICheckerFactory, IPlugin)
+    authType = 'unix'
+    authHelp = """
 This checker will attempt to use every resource available to
 authenticate against the list of users on the local UNIX system.
 (This does not support Windows servers for very obvious reasons.)
@@ -284,16 +291,6 @@ Right now, this includes support for:
 
 Future versions may include support for PAM authentication.
 """
-
-
-
-class UNIXCheckerFactory(object):
-    """
-    A factory for L{UNIXChecker}.
-    """
-    implements(ICheckerFactory, IPlugin)
-    authType = 'unix'
-    authHelp = unixCheckerFactoryHelp
     argStringFormat = 'No argstring required.'
     credentialInterfaces = UNIXChecker.credentialInterfaces
 
@@ -304,16 +301,6 @@ class UNIXCheckerFactory(object):
         UNIX environment.
         """
         return UNIXChecker()
-
-
-
-inMemoryCheckerFactoryHelp = """
-A checker that uses an in-memory user database.
-
-This is only of use in one-off test programs or examples which
-don't want to focus too much on how credentials are verified. You
-really don't want to use this for anything else. It is a toy.
-"""
 
 
 
@@ -330,7 +317,13 @@ class InMemoryCheckerFactory(object):
     """
     implements(ICheckerFactory, IPlugin)
     authType = 'memory'
-    authHelp = inMemoryCheckerFactoryHelp
+    authHelp = """
+A checker that uses an in-memory user database.
+
+This is only of use in one-off test programs or examples which
+don't want to focus too much on how credentials are verified. You
+really don't want to use this for anything else. It is a toy.
+"""
     argStringFormat = 'A colon-separated list (name:password:...)'
     credentialInterfaces = (IUsernamePassword, IUsernameHashedPassword)
 
@@ -354,16 +347,7 @@ class InMemoryCheckerFactory(object):
         return checker
 
 
-
-
-
-fileCheckerFactoryHelp = """
-This checker expects to receive the location of a file that
-conforms to the FilePasswordDB format. Each line in the file
-should be of the format 'username:password', in plain text.
-"""
-
-invalidFileWarning = 'Warning: not a valid file'
+_invalidFileWarning = 'Warning: not a valid file'
 
 class FileCheckerFactory(object):
     """
@@ -371,7 +355,11 @@ class FileCheckerFactory(object):
     """
     implements(ICheckerFactory, IPlugin)
     authType = 'file'
-    authHelp = fileCheckerFactoryHelp
+    authHelp = """
+This checker expects to receive the location of a file that
+conforms to the FilePasswordDB format. Each line in the file
+should be of the format 'username:password', in plain text.
+"""
     argStringFormat = 'Location of a FilePasswordDB-formatted file.'
     # Explicitly defined here because FilePasswordDB doesn't do it for us
     credentialInterfaces = (IUsernamePassword, IUsernameHashedPassword)
@@ -389,13 +377,9 @@ class FileCheckerFactory(object):
         if not argstring.strip():
             raise ValueError, '%r requires a filename' % self.authType
         elif not FilePath(argstring).isfile():
-            self.errorOutput.write('%s: %s\n' % (invalidFileWarning, argstring))
+            self.errorOutput.write('%s: %s\n' % (_invalidFileWarning, argstring))
         return FilePasswordDB(argstring)
 
-
-anonymousCheckerFactoryHelp = """
-This allows anonymous authentication for servers that support it.
-"""
 
 
 class AnonymousCheckerFactory(object):
@@ -404,7 +388,9 @@ class AnonymousCheckerFactory(object):
     """
     implements(ICheckerFactory, IPlugin)
     authType = 'anonymous'
-    authHelp = anonymousCheckerFactoryHelp
+    authHelp = """
+This allows anonymous authentication for servers that support it.
+"""
     argStringFormat = 'No argstring required.'
     credentialInterfaces = (IAnonymous,)
 

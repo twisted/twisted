@@ -329,7 +329,7 @@ class TestFileDBChecker(unittest.TestCase):
         twisted_core.theFileCheckerFactory.errorOutput = newOutput
         checker = strcred.makeChecker('file:' + self._fakeFilename())
         twisted_core.theFileCheckerFactory.errorOutput = oldOutput
-        self.assertIn(twisted_core.invalidFileWarning, newOutput.getvalue())
+        self.assertIn(strcred._invalidFileWarning, newOutput.getvalue())
 
 
 
