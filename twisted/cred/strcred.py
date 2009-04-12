@@ -16,11 +16,13 @@ Examples:
 
 import sys
 
-from zope.interface import Interface, Attribute
+from zope.interface import Interface, Attribute, implements
 
-from twisted.plugin import getPlugins
+from twisted.plugin import IPlugin, getPlugins
 from twisted.python import usage
-
+from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
+from twisted.cred.checkers import UNIXChecker, FilePasswordDB, AllowAnonymousAccess
+from twisted.cred.credentials import IAnonymous, IUsernamePassword, IUsernameHashedPassword
 
 
 class ICheckerFactory(Interface):
@@ -268,3 +270,143 @@ class AuthOptionMixin:
             self.authOutput.write('  %s\n' % notSupportedWarning)
             self.authOutput.write('\n')
         raise SystemExit(0)
+
+
+unixCheckerFactoryHelp = """
+This checker will attempt to use every resource available to
+authenticate against the list of users on the local UNIX system.
+(This does not support Windows servers for very obvious reasons.)
+
+Right now, this includes support for:
+
+  * Python's pwd module (which checks /etc/passwd)
+  * Python's spwd module (which checks /etc/shadow)
+
+Future versions may include support for PAM authentication.
+"""
+
+
+
+class UNIXCheckerFactory(object):
+    """
+    A factory for L{UNIXChecker}.
+    """
+    implements(ICheckerFactory, IPlugin)
+    authType = 'unix'
+    authHelp = unixCheckerFactoryHelp
+    argStringFormat = 'No argstring required.'
+    credentialInterfaces = UNIXChecker.credentialInterfaces
+
+    def generateChecker(self, argstring):
+        """
+        This checker factory ignores the argument string. Everything
+        needed to generate a user database is pulled out of the local
+        UNIX environment.
+        """
+        return UNIXChecker()
+
+
+
+inMemoryCheckerFactoryHelp = """
+A checker that uses an in-memory user database.
+
+This is only of use in one-off test programs or examples which
+don't want to focus too much on how credentials are verified. You
+really don't want to use this for anything else. It is a toy.
+"""
+
+
+
+class InMemoryCheckerFactory(object):
+    """
+    A factory for in-memory credentials checkers.
+
+    This is only of use in one-off test programs or examples which don't
+    want to focus too much on how credentials are verified.
+
+    You really don't want to use this for anything else.  It is, at best, a
+    toy.  If you need a simple credentials checker for a real application,
+    see L{cred_passwd.PasswdCheckerFactory}.
+    """
+    implements(ICheckerFactory, IPlugin)
+    authType = 'memory'
+    authHelp = inMemoryCheckerFactoryHelp
+    argStringFormat = 'A colon-separated list (name:password:...)'
+    credentialInterfaces = (IUsernamePassword, IUsernameHashedPassword)
+
+    def generateChecker(self, argstring):
+        """
+        This checker factory expects to get a list of
+        username:password pairs, with each pair also separated by a
+        colon. For example, the string 'alice:f:bob:g' would generate
+        two users, one named 'alice' and one named 'bob'.
+        """
+        checker = InMemoryUsernamePasswordDatabaseDontUse()
+        if argstring:
+            pieces = argstring.split(':')
+            if len(pieces) % 2:
+                from twisted.cred.strcred import InvalidAuthArgumentString
+                raise InvalidAuthArgumentString(
+                    "argstring must be in format U:P:...")
+            for i in range(0, len(pieces), 2):
+                username, password = pieces[i], pieces[i+1]
+                checker.addUser(username, password)
+        return checker
+
+
+
+
+
+fileCheckerFactoryHelp = """
+This checker expects to receive the location of a file that
+conforms to the FilePasswordDB format. Each line in the file
+should be of the format 'username:password', in plain text.
+"""
+
+invalidFileWarning = 'Warning: not a valid file'
+
+class FileCheckerFactory(object):
+    """
+    A factory for instances of L{FilePasswordDB}.
+    """
+    implements(ICheckerFactory, IPlugin)
+    authType = 'file'
+    authHelp = fileCheckerFactoryHelp
+    argStringFormat = 'Location of a FilePasswordDB-formatted file.'
+    # Explicitly defined here because FilePasswordDB doesn't do it for us
+    credentialInterfaces = (IUsernamePassword, IUsernameHashedPassword)
+
+    errorOutput = sys.stderr
+
+    def generateChecker(self, argstring):
+        """
+        This checker factory expects to get the location of a file.
+        The file should conform to the format required by
+        L{FilePasswordDB} (using defaults for all
+        initialization parameters).
+        """
+        from twisted.python.filepath import FilePath
+        if not argstring.strip():
+            raise ValueError, '%r requires a filename' % self.authType
+        elif not FilePath(argstring).isfile():
+            self.errorOutput.write('%s: %s\n' % (invalidFileWarning, argstring))
+        return FilePasswordDB(argstring)
+
+
+anonymousCheckerFactoryHelp = """
+This allows anonymous authentication for servers that support it.
+"""
+
+
+class AnonymousCheckerFactory(object):
+    """
+    Generates checkers that will authenticate an anonymous request.
+    """
+    implements(ICheckerFactory, IPlugin)
+    authType = 'anonymous'
+    authHelp = anonymousCheckerFactoryHelp
+    argStringFormat = 'No argstring required.'
+    credentialInterfaces = (IAnonymous,)
+
+    def generateChecker(self, argstring=''):
+        return AllowAnonymousAccess()
