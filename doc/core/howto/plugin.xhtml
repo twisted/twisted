@@ -156,7 +156,9 @@ brassPlate = SimpleMaterial(1.03421359e11, 1.4 + 0.5j)
     <code class="shell">PYTHONPATH</code> environment variable) contains a
     <em>directory</em> named <code class="shell">twisted/plugins/</code>,
     each <code class="shell">.py</code> file in that directory will be loaded
-    as a source of plugins.  This directory <em>must not</em> be a Python
+    as a source of plugins (these files are called <em>dropins</em>; for reasons
+    of performance, it is recommended that each project define all of its
+    plugins in a single dropin).  This directory <em>must not</em> be a Python
     package: including <code class="shell">__init__.py</code> will cause the
     directory to be skipped and no plugins loaded from it.  Second, each
     module in the installed version of Twisted's <code class="shell">
