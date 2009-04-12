@@ -313,7 +313,7 @@ class InMemoryCheckerFactory(object):
 
     You really don't want to use this for anything else.  It is, at best, a
     toy.  If you need a simple credentials checker for a real application,
-    see L{cred_passwd.PasswdCheckerFactory}.
+    see L{UNIXCheckerFactory} or L{FileCheckerFactory}.
     """
     implements(ICheckerFactory, IPlugin)
     authType = 'memory'
