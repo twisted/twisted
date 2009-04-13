@@ -207,11 +207,35 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
             del self.indexName
 
     def __init__(self, path, defaultType="text/html", ignoredExts=(), registry=None, allowExt=0):
-        """Create a file with the given path.
+        """
+        Create a file with the given path.
+
+        @param path: The filename of the file from which this L{File} will
+            serve data.
+        @type path: C{str}
+
+        @param defaultType: A I{major/minor}-style MIME type specifier
+            indicating the I{Content-Type} with which this L{File}'s data
+            will be served if a MIME type cannot be determined based on
+            C{path}'s extension.
+        @type defaultType: C{str}
+
+        @param ignoredExts: A sequence giving the extensions of paths in the
+            filesystem which will be ignored for the purposes of child
+            lookup.  For example, if C{ignoredExts} is C{(".bar",)} and
+            C{path} is a directory containing a file named C{"foo.bar"}, a
+            request for the C{"foo"} child of this resource will succeed
+            with a L{File} pointing to C{"foo.bar"}.
+
+        @param registry: The registry object being used to handle this
+            request.  If C{None}, one will be created.
+        @type registry: L{Registry}
+
+        @param allowExt: Ignored parameter, only present for backwards
+            compatibility.  Do not pass a value for this parameter.
         """
         resource.Resource.__init__(self)
         filepath.FilePath.__init__(self, path)
-        # Remove the dots from the path to split
         self.defaultType = defaultType
         if ignoredExts in (0, 1) or allowExt:
             warnings.warn("ignoredExts should receive a list, not a boolean")
@@ -222,6 +246,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         else:
             self.ignoredExts = list(ignoredExts)
         self.registry = registry or Registry()
+
 
     def ignoreExt(self, ext):
         """Ignore the given extension.
