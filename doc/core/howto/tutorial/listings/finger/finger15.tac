@@ -60,7 +60,6 @@ class FingerService(service.Service):
         f = protocol.ServerFactory()
         f.protocol = FingerProtocol
         f.getUser = self.getUser
-        f.startService = self.startService
         return f
 
     def getResource(self):
