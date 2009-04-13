@@ -333,7 +333,7 @@ class PrivateCertificate(Certificate):
     def _setPrivateKey(self, privateKey):
         if not privateKey.matches(self.getPublicKey()):
             raise VerifyError(
-                "Sanity check failed: Your certificate was not properly signed.")
+                "Certificate public and private keys do not match.")
         self.privateKey = privateKey
         return self
 
