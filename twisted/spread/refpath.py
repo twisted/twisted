@@ -1,26 +1,22 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
-
-__version__ = "$Revision: 1.17 $"[11:-2]
 
 """
 Path-based references for PB, and other reference-based protocols.
 
 Maintainer: Glyph Lefkowitz
-
-Future Plans: None at this point besides a final overview and finalization
-pass.
 """
 
 
-from twisted.python import log
-
-from flavors import Referenceable, Viewable
 from copy import copy
-import os
+import os, warnings
 
+from twisted.python import log
+from twisted.spread.flavors import Referenceable, Viewable
 
+warnings.warn(
+    "twisted.spread.refpath is deprecated since Twisted 9.0.",
+    category=DeprecationWarning, stacklevel=2)
 
 ### "Server"-side objects
 
