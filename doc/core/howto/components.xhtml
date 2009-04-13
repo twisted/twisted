@@ -382,10 +382,8 @@ I was plugged in properly and am operating
 subclass declares that it implements another interface, the implements will be
 inherited by default.</p>
 
-<p>For example, <code base="twisted.spread">pb.Root</code> (actually defined
-in <code class="API" base="twisted.spread">flavors.Root</code>) is a class
-which implements <code class="API"
-base="twisted.spread.flavors">IPBRoot</code>. This interface indicates that an
+<p>For example, <code class="API" base="twisted.spread">pb.Root</code> is a class
+which implements <code class="API" base="twisted.spread.pb">IPBRoot</code>. This interface indicates that an
 object has remotely-invokable methods and can be used as the initial object
 served by a new Broker instance. It has an <code>implements</code> setting
 like:</p>
@@ -447,7 +445,7 @@ class MyThing(pb.Root):
 </pre>
 
 <pre class="python-interpreter">
-&gt;&gt;&gt; from twisted.spread.flavors import IPBRoot
+&gt;&gt;&gt; from twisted.spread.pb import IPBRoot
 &gt;&gt;&gt; IPBRoot.implementedBy(MyThing)
 False
 </pre>
