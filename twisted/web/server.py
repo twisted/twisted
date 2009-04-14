@@ -14,6 +14,7 @@ import warnings
 import string
 import types
 import copy
+import time
 import os
 from urllib import quote
 
@@ -79,9 +80,6 @@ class Request(pb.Copyable, http.Request, components.Componentized):
         # Address objects aren't jellyable
         x['host'] = _addressToTuple(x['host'])
         x['client'] = _addressToTuple(x['client'])
-
-        # Header objects also aren't jellyable.
-        x['requestHeaders'] = list(x['requestHeaders'].getAllRawHeaders())
 
         return x
 

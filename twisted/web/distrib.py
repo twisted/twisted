@@ -21,7 +21,6 @@ from xml.dom.minidom import Element, Text
 # Twisted Imports
 from twisted.spread import pb
 from twisted.web import http, resource, server, html, static
-from twisted.web.http_headers import Headers
 from twisted.python import log
 from twisted.persisted import styles
 from twisted.internet import address, reactor
@@ -51,7 +50,6 @@ class Request(pb.RemoteCopy, server.Request):
                                                        _bwHack='INET'),
                     'UNIX': lambda: address.UNIXAddress(tup[1])}[addrdesc]()
             state[k] = addr
-        state['requestHeaders'] = Headers(dict(state['requestHeaders']))
         pb.RemoteCopy.setCopyableState(self, state)
         # Emulate the local request interface --
         self.content = cStringIO.StringIO(self.content_data)
