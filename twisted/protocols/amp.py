@@ -168,6 +168,7 @@ from struct import pack
 from zope.interface import Interface, implements
 
 from twisted.python.compat import set
+from twisted.python.util import unsignedID
 from twisted.python.reflect import accumulateClassDict
 from twisted.python.failure import Failure
 from twisted.python import log, filepath
@@ -2187,9 +2188,12 @@ class AMP(BinaryBoxProtocol, BoxDispatcher,
         A verbose string representation which gives us information about this
         AMP connection.
         """
-        return '<%s %s at 0x%x>' % (
-            self.__class__.__name__,
-            self.innerProtocol, id(self))
+        if self.innerProtocol is not None:
+            innerRepr = ' inner %r' % (self.innerProtocol,)
+        else:
+            innerRepr = ''
+        return '<%s%s at 0x%x>' % (
+            self.__class__.__name__, innerRepr, unsignedID(self))
 
 
     def makeConnection(self, transport):

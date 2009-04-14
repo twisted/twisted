@@ -8,6 +8,7 @@ Tests for L{twisted.protocols.amp}.
 
 from zope.interface.verify import verifyObject
 
+from twisted.python.util import unsignedID
 from twisted.python import filepath
 from twisted.python.failure import Failure
 from twisted.protocols import amp
@@ -30,9 +31,21 @@ else:
 
 
 class TestProto(protocol.Protocol):
+    """
+    A trivial protocol for use in testing where a L{Protocol} is expected.
+
+    @ivar instanceId: the id of this instance
+    @ivar onConnLost: deferred that will fired when the connection is lost
+    @ivar dataToSend: data to send on the protocol
+    """
+
+    instanceCount = 0
+
     def __init__(self, onConnLost, dataToSend):
         self.onConnLost = onConnLost
         self.dataToSend = dataToSend
+        self.instanceId = TestProto.instanceCount
+        TestProto.instanceCount = TestProto.instanceCount + 1
 
     def connectionMade(self):
         self.data = []
@@ -44,6 +57,19 @@ class TestProto(protocol.Protocol):
 
     def connectionLost(self, reason):
         self.onConnLost.callback(self.data)
+
+
+    def __repr__(self):
+        """
+        Custom repr for testing to avoid coupling amp tests with repr from 
+        L{Protocol}
+        
+        Returns a string which contains a unique identifier that can be looked
+        up using the instanceId property::
+
+            <TestProto #3>
+        """
+        return "<TestProto #%d>" % (self.instanceId,)
 
 
 
@@ -1122,6 +1148,27 @@ class AMPTest(unittest.TestCase):
         self.assertEquals(type(repr(amp.QuitBox())), str)
         self.assertEquals(type(repr(amp.AmpBox())), str)
         self.failUnless("AmpBox" in repr(amp.AmpBox()))
+
+
+    def test_innerProtocolInRepr(self):
+        """
+        Verify that L{AMP} objects output their innerProtocol when set.
+        """
+        otherProto = TestProto(None, "outgoing data")
+        a = amp.AMP()
+        a.innerProtocol = otherProto
+
+        self.assertEquals(repr(a), "<AMP inner <TestProto #%d> at 0x%x>" % (
+            otherProto.instanceId, unsignedID(a)))
+
+
+    def test_innerProtocolNotInRepr(self):
+        """
+        Verify that L{AMP} objects do not output 'inner' when no innerProtocol
+        is set.
+        """
+        a = amp.AMP()
+        self.assertEquals(repr(a), "<AMP at 0x%x>" % (unsignedID(a),))
 
 
     def test_simpleSSLRepr(self):
