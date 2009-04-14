@@ -1,6 +1,0 @@
-Twisted Flow 8.2.0
-
-Flow was recently split out of Twisted.
-
-Twisted Flow depends on twisted.web if you want to use the
-twisted.flow.web module.

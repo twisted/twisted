@@ -12,7 +12,7 @@ from distutils.errors import CompileError
 from distutils import core
 from distutils.core import Extension
 
-twisted_subprojects = ["conch", "flow", "lore", "mail", "names",
+twisted_subprojects = ["conch", "lore", "mail", "names",
                        "news", "pair", "runner", "web", "web2",
                        "words", "vfs"]
 
