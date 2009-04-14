@@ -47,10 +47,14 @@ class DistribTest(unittest.TestCase):
         dl = [defer.Deferred(), defer.Deferred()]
         if self.f1 is not None:
             self.f1.proto.notifyOnDisconnect(lambda: dl[0].callback(None))
+        else:
+            dl[0].callback(None)
         if self.sub is not None:
             self.sub.publisher.broker.notifyOnDisconnect(
                 lambda: dl[1].callback(None))
             self.sub.publisher.broker.transport.loseConnection()
+        else:
+            dl[1].callback(None)
         http._logDateTimeStop()
         if self.port1 is not None:
             dl.append(self.port1.stopListening())
@@ -75,6 +79,45 @@ class DistribTest(unittest.TestCase):
                            self.port2.getHost().port)
         d.addCallback(self.failUnlessEqual, 'root')
         return d
+
+
+    def test_requestHeaders(self):
+        """
+        The request headers are available on the request object passed to a
+        distributed resource's C{render} method.
+        """
+        requestHeaders = {}
+
+        class ReportRequestHeaders(resource.Resource):
+            def render(self, request):
+                requestHeaders.update(
+                    request.requestHeaders.getAllRawHeaders())
+                return ""
+
+        distribRoot = resource.Resource()
+        distribRoot.putChild("headers", ReportRequestHeaders())
+        distribSite = server.Site(distribRoot)
+        self.f1 = distribFactory = PBServerFactory(
+            distrib.ResourcePublisher(distribSite))
+        distribPort = reactor.listenTCP(
+            0, distribFactory, interface="127.0.0.1")
+        self.addCleanup(distribPort.stopListening)
+        addr = distribPort.getHost()
+
+        self.sub = mainRoot = distrib.ResourceSubscription(
+            addr.host, addr.port)
+        mainSite = server.Site(mainRoot)
+        mainPort = reactor.listenTCP(0, mainSite, interface="127.0.0.1")
+        self.addCleanup(mainPort.stopListening)
+        mainAddr = mainPort.getHost()
+
+        request = client.getPage("http://%s:%s/headers" % (
+            mainAddr.host, mainAddr.port),
+            headers={'foo': 'bar'})
+        def cbRequested(result):
+            self.assertEquals(requestHeaders['Foo'], ['bar'])
+        request.addCallback(cbRequested)
+        return request
 
 
     def test_connectionLost(self):
