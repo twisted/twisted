@@ -40,10 +40,11 @@ class IRCReplyBot(irc.IRCClient):
 class FingerService(service.Service):
     def __init__(self, filename):
         self.filename = filename
+        self.users = {}
         self._read()
 
     def _read(self):
-        self.users = {}
+        self.users.clear()
         for line in file(self.filename):
             user, status = line.split(':', 1)
             user = user.strip()
