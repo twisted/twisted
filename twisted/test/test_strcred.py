@@ -78,9 +78,15 @@ class TestStrcredFunctions(unittest.TestCase):
 
     def test_findCheckerFactory(self):
         """
-        Test that findCheckerFactory returns the first plugin
-        available for a given authentication type.
+        Test that findCheckerFactory returns the first plugin available for a
+        given authentication type.
         """
+        self.assertIdentical(strcred.findCheckerFactory('memory'),
+                             twisted_core.theInMemoryCheckerFactory)
+        self.assertIdentical(strcred.findCheckerFactory('unix'),
+                             twisted_core.theUnixCheckerFactory)
+        self.assertIdentical(strcred.findCheckerFactory('anonymous'),
+                             twisted_core.theAnonymousCheckerFactory)
         self.assertIdentical(strcred.findCheckerFactory('file'),
                              twisted_core.theFileCheckerFactory)
 

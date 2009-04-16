@@ -19,7 +19,7 @@ import sys
 from zope.interface import Interface, Attribute, implements
 
 from twisted.plugin import IPlugin, getPlugins
-from twisted.python import usage
+from twisted.python import usage, filepath
 from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
 from twisted.cred.checkers import UNIXChecker, FilePasswordDB, AllowAnonymousAccess
 from twisted.cred.credentials import IAnonymous, IUsernamePassword, IUsernameHashedPassword
@@ -338,7 +338,6 @@ really don't want to use this for anything else. It is a toy.
         if argstring:
             pieces = argstring.split(':')
             if len(pieces) % 2:
-                from twisted.cred.strcred import InvalidAuthArgumentString
                 raise InvalidAuthArgumentString(
                     "argstring must be in format U:P:...")
             for i in range(0, len(pieces), 2):
@@ -373,10 +372,9 @@ should be of the format 'username:password', in plain text.
         L{FilePasswordDB} (using defaults for all
         initialization parameters).
         """
-        from twisted.python.filepath import FilePath
         if not argstring.strip():
             raise ValueError, '%r requires a filename' % self.authType
-        elif not FilePath(argstring).isfile():
+        elif not filepath.FilePath(argstring).isfile():
             self.errorOutput.write('%s: %s\n' % (_invalidFileWarning, argstring))
         return FilePasswordDB(argstring)
 
