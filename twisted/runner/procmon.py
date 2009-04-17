@@ -1,7 +1,6 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
 """
 ProcessMonitor: run processes, monitor progress, and restart when
 they die.
@@ -49,9 +48,9 @@ The following attributes on the monitor can be set to configure behaviour
 """
 
 import os, time
-from signal import SIGTERM, SIGKILL
+
 from twisted.python import log
-from twisted.internet import protocol, reactor, process
+from twisted.internet import error, protocol, reactor
 from twisted.application import service
 from twisted.protocols import basic
 
@@ -123,19 +122,38 @@ class ProcessMonitor(service.Service):
             proc = protocol.transport
             try:
                 proc.signalProcess(0)
-            except (OSError, process.ProcessExitedAlready):
+            except (OSError, error.ProcessExitedAlready):
                 log.msg("Lost process %r somehow, restarting." % name)
                 del self.protocols[name]
                 self.startProcess(name)
         self.consistency = reactor.callLater(self.consistencyDelay,
                                              self._checkConsistency)
 
-    def addProcess(self, name, args, uid=None, gid=None):
-        if self.processes.has_key(name):
+
+    def addProcess(self, name, args, uid=None, gid=None, env={}):
+        """
+        Add a new process to launch, monitor, and restart when necessary.
+
+        @param name: A label for this process.  This value must be unique
+            across all processes added to this monitor.
+
+        @param args: The argv sequence for the process to launch.
+        @param uid: The user ID to use to run the process.  If C{None}, the
+            current UID is used.
+        @type uid: C{int}
+        @param gid: The group ID to use to run the process.  If C{None}, the
+            current GID is used.
+        @type uid: C{int}
+        @param env: The environment to give to the launched process.  See
+            L{IReactorProcess.spawnProcess}'s C{env} parameter.
+        @type env: C{dict}
+        """
+        if name in self.processes:
             raise KeyError("remove %s first" % name)
-        self.processes[name] = args, uid, gid
+        self.processes[name] = args, uid, gid, env
         if self.active:
             self.startProcess(name)
+
 
     def removeProcess(self, name):
         del self.processes[name]
@@ -175,14 +193,14 @@ class ProcessMonitor(service.Service):
         p = self.protocols[name] = LoggingProtocol()
         p.service = self
         p.name = name
-        args, uid, gid = self.processes[name]
+        args, uid, gid, env = self.processes[name]
         self.timeStarted[name] = time.time()
-        reactor.spawnProcess(p, args[0], args, uid=uid, gid=gid)
+        reactor.spawnProcess(p, args[0], args, uid=uid, gid=gid, env=env)
 
     def _forceStopProcess(self, proc):
         try:
-            proc.signalProcess(SIGKILL)
-        except process.ProcessExitedAlready:
+            proc.signalProcess('KILL')
+        except error.ProcessExitedAlready:
             pass
 
     def stopProcess(self, name):
@@ -191,8 +209,8 @@ class ProcessMonitor(service.Service):
         proc = self.protocols[name].transport
         del self.protocols[name]
         try:
-            proc.signalProcess(SIGTERM)
-        except process.ProcessExitedAlready:
+            proc.signalProcess('TERM')
+        except error.ProcessExitedAlready:
             pass
         else:
             self.murder[name] = reactor.callLater(self.killTime, self._forceStopProcess, proc)
@@ -218,6 +236,7 @@ class ProcessMonitor(service.Service):
                 + '>')
 
 def main():
+    from signal import SIGTERM
     mon = ProcessMonitor()
     mon.addProcess('foo', ['/bin/sh', '-c', 'sleep 2;echo hello'])
     mon.addProcess('qux', ['/bin/sh', '-c', 'sleep 2;printf pilim'])
