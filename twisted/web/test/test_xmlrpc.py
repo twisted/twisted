@@ -410,7 +410,9 @@ class XMLRPCClientErrorHandling(unittest.TestCase):
     Test error handling on the xmlrpc client.
     """
     def setUp(self):
-        self.resource = static.File(__file__)
+        self.resource = static.Data(
+            "This text is not a valid XML-RPC response.",
+            "text/plain")
         self.resource.isLeaf = True
         self.port = reactor.listenTCP(0, server.Site(self.resource),
                                                      interface='127.0.0.1')
