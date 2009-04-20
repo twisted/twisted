@@ -18,7 +18,7 @@ from twisted.python.util import dsu
 from twisted.python.compat import set
 from twisted.python.lockfile import FilesystemLock
 
-from twisted.internet import defer, interfaces
+from twisted.internet import defer
 from twisted.trial import util, unittest
 from twisted.trial.itrial import ITestCase
 from twisted.trial.reporter import UncleanWarningsReporterWrapper
@@ -277,9 +277,6 @@ class TrialSuite(TestSuite):
         reactor.addSystemEventTrigger('after', 'shutdown',
                                       lambda: d.callback(None))
         reactor.fireSystemEvent('shutdown') # radix's suggestion
-        treactor = interfaces.IReactorThreads(reactor, None)
-        if treactor is not None:
-            treactor.suggestThreadPoolSize(0)
         # As long as TestCase does crap stuff with the reactor we need to
         # manually shutdown the reactor here, and that requires util.wait
         # :(
