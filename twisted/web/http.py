@@ -1649,18 +1649,22 @@ class HTTPFactory(protocol.ServerFactory):
             return r[1:-1].replace('"', '\\"').replace("\\'", "'")
         return r[1:-1]
 
+
+    def formatCLFEntry(self, request):
+        return '%s - - %s "%s" %d %s "%s" "%s"\n' % (
+            request.getClientIP(),
+            # request.getUser() or "-", # the remote user is almost never important
+            _logDateTime,
+            '%s %s %s' % (self._escape(request.method),
+                          self._escape(request.uri),
+                          self._escape(request.clientproto)),
+            request.code,
+            request.sentLength or "-",
+            self._escape(request.getHeader("referer") or "-"),
+            self._escape(request.getHeader("user-agent") or "-"))
+
+
     def log(self, request):
         """Log a request's result to the logfile, by default in combined log format."""
         if hasattr(self, "logFile"):
-            line = '%s - - %s "%s" %d %s "%s" "%s"\n' % (
-                request.getClientIP(),
-                # request.getUser() or "-", # the remote user is almost never important
-                _logDateTime,
-                '%s %s %s' % (self._escape(request.method),
-                              self._escape(request.uri),
-                              self._escape(request.clientproto)),
-                request.code,
-                request.sentLength or "-",
-                self._escape(request.getHeader("referer") or "-"),
-                self._escape(request.getHeader("user-agent") or "-"))
-            self.logFile.write(line)
+            self.logFile.write(self.formatCLFEntry(request))

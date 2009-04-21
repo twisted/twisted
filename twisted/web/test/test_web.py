@@ -755,66 +755,94 @@ class DummyRequestForLogTest(DummyRequest):
 
 
 class TestLogEscaping(unittest.TestCase):
+    """
+    Tests for L{http.HTTPFactory}'s request logging.
+    """
     def setUp(self):
         self.site = http.HTTPFactory()
         self.site.logFile = StringIO()
         self.request = DummyRequestForLogTest(self.site, False)
-
-    def testSimple(self):
         http._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
             25, 'Oct', 2004, 12, 31, 59)
-        self.site.log(self.request)
-        self.site.logFile.seek(0)
-        self.assertEqual(
-            self.site.logFile.read(),
-            '1.2.3.4 - - [25/Oct/2004:12:31:59 +0000] "GET /dummy HTTP/1.0" 123 - "-" "-"\n')
 
-    def testMethodQuote(self):
-        http._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
-            25, 'Oct', 2004, 12, 31, 59)
+
+    def test_simple(self):
+        """
+        L{http.HTTPFactory.formatCLFEntry} returns a C{str} which represents
+        the given request object in common log format.
+        """
+        self.assertEquals(
+            self.site.formatCLFEntry(self.request),
+            '1.2.3.4 - - [25/Oct/2004:12:31:59 +0000] "GET /dummy '
+            'HTTP/1.0" 123 - "-" "-"\n')
+
+
+    def test_methodQuote(self):
+        """
+        L{http.HTTPFactory.formatCLFEntry} escapes quotes in the request
+        method.
+        """
         self.request.method = 'G"T'
-        self.site.log(self.request)
-        self.site.logFile.seek(0)
-        self.assertEqual(
-            self.site.logFile.read(),
-            '1.2.3.4 - - [25/Oct/2004:12:31:59 +0000] "G\\"T /dummy HTTP/1.0" 123 - "-" "-"\n')
+        self.assertEquals(
+            self.site.formatCLFEntry(self.request),
+            '1.2.3.4 - - [25/Oct/2004:12:31:59 +0000] "G\\"T /dummy '
+            'HTTP/1.0" 123 - "-" "-"\n')
 
-    def testRequestQuote(self):
-        http._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
-            25, 'Oct', 2004, 12, 31, 59)
-        self.request.uri='/dummy"withquote'
-        self.site.log(self.request)
-        self.site.logFile.seek(0)
-        self.assertEqual(
-            self.site.logFile.read(),
-            '1.2.3.4 - - [25/Oct/2004:12:31:59 +0000] "GET /dummy\\"withquote HTTP/1.0" 123 - "-" "-"\n')
 
-    def testProtoQuote(self):
-        http._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
-            25, 'Oct', 2004, 12, 31, 59)
-        self.request.clientproto='HT"P/1.0'
-        self.site.log(self.request)
-        self.site.logFile.seek(0)
-        self.assertEqual(
-            self.site.logFile.read(),
-            '1.2.3.4 - - [25/Oct/2004:12:31:59 +0000] "GET /dummy HT\\"P/1.0" 123 - "-" "-"\n')
+    def test_requestQuote(self):
+        """
+        L{http.HTTPFactory.formatCLFEntry} escapes quotes in the request URI.
+        """
+        self.request.uri = '/dummy"withquote'
+        self.assertEquals(
+            self.site.formatCLFEntry(self.request),
+            '1.2.3.4 - - [25/Oct/2004:12:31:59 +0000] '
+            '"GET /dummy\\"withquote HTTP/1.0" 123 - "-" "-"\n')
 
-    def testRefererQuote(self):
-        http._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
-            25, 'Oct', 2004, 12, 31, 59)
+
+    def test_protoQuote(self):
+        """
+        L{http.HTTPFactory.formatCLFEntry} escapes quotes in the request
+        protocol.
+        """
+        self.request.clientproto = 'HT"P/1.0'
+        self.assertEquals(
+            self.site.formatCLFEntry(self.request),
+            '1.2.3.4 - - [25/Oct/2004:12:31:59 +0000] "GET /dummy '
+            'HT\\"P/1.0" 123 - "-" "-"\n')
+
+
+    def test_refererQuote(self):
+        """
+        L{http.HTTPFactory.formatCLFEntry} escapes quotes in the value of
+        the I{Referer} request header.
+        """
         self.request.headers['referer'] = 'http://malicious" ".website.invalid'
-        self.site.log(self.request)
-        self.site.logFile.seek(0)
-        self.assertEqual(
-            self.site.logFile.read(),
-            '1.2.3.4 - - [25/Oct/2004:12:31:59 +0000] "GET /dummy HTTP/1.0" 123 - "http://malicious\\" \\".website.invalid" "-"\n')
+        self.assertEquals(
+            self.site.formatCLFEntry(self.request),
+            '1.2.3.4 - - [25/Oct/2004:12:31:59 +0000] "GET /dummy '
+            'HTTP/1.0" 123 - "http://malicious\\" \\".website.invalid" "-"\n')
 
-    def testUserAgentQuote(self):
-        http._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
-            25, 'Oct', 2004, 12, 31, 59)
+
+    def test_userAgentQuote(self):
+        """
+        L{http.HTTPFactory.formatCLFEntry} escapes quotes in the value of
+        the I{User-Agent} request header.
+        """
         self.request.headers['user-agent'] = 'Malicious Web" Evil'
+        self.assertEquals(
+            self.site.formatCLFEntry(self.request),
+            '1.2.3.4 - - [25/Oct/2004:12:31:59 +0000] "GET /dummy '
+            'HTTP/1.0" 123 - "-" "Malicious Web\\" Evil"\n')
+
+
+    def test_logFile(self):
+        """
+        L{http.HTTPFactory.log} formats a CLF entry line for the request
+        passed to it and writes it to its log file.
+        """
         self.site.log(self.request)
-        self.site.logFile.seek(0)
-        self.assertEqual(
-            self.site.logFile.read(),
-            '1.2.3.4 - - [25/Oct/2004:12:31:59 +0000] "GET /dummy HTTP/1.0" 123 - "-" "Malicious Web\\" Evil"\n')
+        self.assertEquals(
+            self.site.logFile.getvalue(),
+            '1.2.3.4 - - [25/Oct/2004:12:31:59 +0000] "GET /dummy '
+            'HTTP/1.0" 123 - "-" "-"\n')
