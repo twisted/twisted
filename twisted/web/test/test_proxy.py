@@ -7,13 +7,12 @@ Test for L{twisted.web.proxy}.
 
 from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import StringTransportWithDisconnection
-from twisted.internet.error import ConnectionDone
 
 from twisted.web.resource import Resource
 from twisted.web.server import Site
 from twisted.web.proxy import ReverseProxyResource, ProxyClientFactory
 from twisted.web.proxy import ProxyClient, ProxyRequest, ReverseProxyRequest
-
+from twisted.web.test.test_web import DummyRequest
 
 
 class FakeReactor(object):
@@ -119,23 +118,6 @@ class ReverseProxyResourceTestCase(TestCase):
 
 
 
-class DummyParent(object):
-    """
-    A dummy parent request that holds a channel and its transport.
-
-    @ivar channel: the request channel.
-    @ivar transport: the transport of the channel.
-    """
-
-    def __init__(self, channel):
-        """
-        Hold a reference to the channel and its transport.
-        """
-        self.channel = channel
-        self.transport = channel.transport
-
-
-
 class DummyChannel(object):
     """
     A dummy HTTP channel, that does nothing but holds a transport and saves
@@ -166,20 +148,18 @@ class ProxyClientTestCase(TestCase):
     Tests for L{ProxyClient}.
     """
 
-    def _testDataForward(self, data, method="GET", body=""):
+    def _testDataForward(self, code, message, headers, body, method="GET",
+                         requestBody="", loseConnection=True):
         """
         Build a fake proxy connection, and send C{data} over it, checking that
         it's forwarded to the originating request.
         """
-        # Connect everything
-        clientTransport = StringTransportWithDisconnection()
-        serverTransport = StringTransportWithDisconnection()
-        channel = DummyChannel(serverTransport)
-        parent = DummyParent(channel)
-        serverTransport.protocol = channel
+        request = DummyRequest(['foo'])
 
+        # Connect a proxy client to a fake transport.
+        clientTransport = StringTransportWithDisconnection()
         client = ProxyClient(method, '/foo', 'HTTP/1.0',
-                             {"accept": "text/html"}, body, parent)
+                             {"accept": "text/html"}, requestBody, request)
         clientTransport.protocol = client
         client.makeConnection(clientTransport)
 
@@ -187,16 +167,35 @@ class ProxyClientTestCase(TestCase):
         self.assertEquals(clientTransport.value(),
             "%s /foo HTTP/1.0\r\n"
             "connection: close\r\n"
-            "accept: text/html\r\n\r\n%s" % (method, body))
+            "accept: text/html\r\n\r\n%s" % (method, requestBody))
 
         # Fake an answer
-        client.dataReceived(data)
+        client.dataReceived("HTTP/1.0 %d %s\r\n" % (code, message))
+        for (header, values) in headers:
+            for value in values:
+                client.dataReceived("%s: %s\r\n" % (header, value))
+        client.dataReceived("\r\n" + body)
 
-        # Check that the data has been forwarded
-        self.assertEquals(serverTransport.value(), data)
+        # Check that the response data has been forwarded back to the original
+        # requester.
+        self.assertEquals(request.responseCode, code)
+        self.assertEquals(request.responseMessage, message)
+        receivedHeaders = list(request.responseHeaders.getAllRawHeaders())
+        receivedHeaders.sort()
+        expectedHeaders = headers[:]
+        expectedHeaders.sort()
+        self.assertEquals(receivedHeaders, expectedHeaders)
+        self.assertEquals(''.join(request.written), body)
 
-        clientTransport.loseConnection()
-        self.assertIsInstance(channel.lostReason, ConnectionDone)
+        # Check that when the response is done, the request is finished.
+        if loseConnection:
+            clientTransport.loseConnection()
+
+        # Even if we didn't call loseConnection, the transport should be
+        # disconnected.  This lets us not rely on the server to close our
+        # sockets for us.
+        self.assertFalse(clientTransport.connected)
+        self.assertEquals(request.finished, 1)
 
 
     def test_forward(self):
@@ -205,7 +204,8 @@ class ProxyClientTestCase(TestCase):
         request, with modifications of the headers, and then forward the result
         to the parent request.
         """
-        return self._testDataForward("200 OK\r\nFoo: bar\r\n\r\nSome data\r\n")
+        return self._testDataForward(
+            200, "OK", [("Foo", ["bar", "baz"])], "Some data\r\n")
 
 
     def test_postData(self):
@@ -214,7 +214,7 @@ class ProxyClientTestCase(TestCase):
         forward the body of the request.
         """
         return self._testDataForward(
-            "200 OK\r\nFoo: bar\r\n\r\nSome data\r\n", "POST", "Some content")
+            200, "OK", [("Foo", ["bar"])], "Some data\r\n", "POST", "Some content")
 
 
     def test_statusWithMessage(self):
@@ -222,7 +222,29 @@ class ProxyClientTestCase(TestCase):
         If the response contains a status with a message, it should be
         forwarded to the parent request with all the information.
         """
-        return self._testDataForward("404 Not Found\r\n")
+        return self._testDataForward(
+            404, "Not Found", [], "")
+
+
+    def test_contentLength(self):
+        """
+        If the response contains a I{Content-Length} header, the inbound
+        request object should still only have C{finish} called on it once.
+        """
+        data = "foo bar baz"
+        return self._testDataForward(
+            200, "OK", [("Content-Length", [str(len(data))])], data)
+
+
+    def test_losesConnection(self):
+        """
+        If the response contains a I{Content-Length} header, the outgoing
+        connection is closed when all response body data has been received.
+        """
+        data = "foo bar baz"
+        return self._testDataForward(
+            200, "OK", [("Content-Length", [str(len(data))])], data,
+            loseConnection=False)
 
 
     def test_headersCleanups(self):
@@ -248,19 +270,20 @@ class ProxyClientFactoryTestCase(TestCase):
         Check that L{ProxyClientFactory.clientConnectionFailed} produces
         a B{501} response to the parent request.
         """
-        serverTransport = StringTransportWithDisconnection()
-        channel = DummyChannel(serverTransport)
-        parent = DummyParent(channel)
-        serverTransport.protocol = channel
+        request = DummyRequest(['foo'])
         factory = ProxyClientFactory('GET', '/foo', 'HTTP/1.0',
-                                     {"accept": "text/html"}, '', parent)
+                                     {"accept": "text/html"}, '', request)
 
         factory.clientConnectionFailed(None, None)
-        self.assertEquals(serverTransport.value(),
-                "HTTP/1.0 501 Gateway error\r\n"
-                "Content-Type: text/html\r\n\r\n"
-                "<H1>Could not connect</H1>")
-        self.assertIsInstance(channel.lostReason, ConnectionDone)
+        self.assertEquals(request.responseCode, 501)
+        self.assertEquals(request.responseMessage, "Gateway error")
+        self.assertEquals(
+            list(request.responseHeaders.getAllRawHeaders()),
+            [("Content-Type", ["text/html"])])
+        self.assertEquals(
+            ''.join(request.written),
+            "<H1>Could not connect</H1>")
+        self.assertEquals(request.finished, 1)
 
 
     def test_buildProtocol(self):

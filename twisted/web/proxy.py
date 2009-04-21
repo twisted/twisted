@@ -33,7 +33,11 @@ from twisted.web.http import HTTPClient, Request, HTTPChannel
 class ProxyClient(HTTPClient):
     """
     Used by ProxyClientFactory to implement a simple web proxy.
+
+    @ivar _finished: A flag which indicates whether or not the original request
+        has been finished yet.
     """
+    _finished = False
 
     def __init__(self, command, rest, version, headers, data, father):
         self.father = father
@@ -55,28 +59,26 @@ class ProxyClient(HTTPClient):
 
 
     def handleStatus(self, version, code, message):
-        if message:
-            # Add a whitespace to message, this allows empty messages
-            # transparently
-            message = " %s" % (message,)
-        self.father.transport.write("%s %s%s\r\n" % (version, code, message))
+        self.father.setResponseCode(int(code), message)
 
 
     def handleHeader(self, key, value):
-        self.father.transport.write("%s: %s\r\n" % (key, value))
-
-
-    def handleEndHeaders(self):
-        self.father.transport.write("\r\n")
+        self.father.responseHeaders.addRawHeader(key, value)
 
 
     def handleResponsePart(self, buffer):
-        self.father.transport.write(buffer)
+        self.father.write(buffer)
 
 
     def handleResponseEnd(self):
-        self.transport.loseConnection()
-        self.father.channel.transport.loseConnection()
+        """
+        Finish the original request, indicating that the response has been
+        completely written to it, and disconnect the outgoing transport.
+        """
+        if not self._finished:
+            self._finished = True
+            self.father.finish()
+            self.transport.loseConnection()
 
 
 
@@ -103,11 +105,14 @@ class ProxyClientFactory(ClientFactory):
 
 
     def clientConnectionFailed(self, connector, reason):
-        self.father.transport.write("HTTP/1.0 501 Gateway error\r\n")
-        self.father.transport.write("Content-Type: text/html\r\n")
-        self.father.transport.write("\r\n")
-        self.father.transport.write('''<H1>Could not connect</H1>''')
-        self.father.transport.loseConnection()
+        """
+        Report a connection failure in a response to the incoming request as
+        an error.
+        """
+        self.father.setResponseCode(501, "Gateway error")
+        self.father.responseHeaders.addRawHeader("Content-Type", "text/html")
+        self.father.write("<H1>Could not connect</H1>")
+        self.father.finish()
 
 
 

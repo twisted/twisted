@@ -426,6 +426,11 @@ class HTTPClient(basic.LineReceiver):
         self.handleResponseEnd()
 
     def handleResponseEnd(self):
+        """
+        The response has been completely received.
+
+        This callback may be invoked more than once per request.
+        """
         if self.__buffer is not None:
             b = self.__buffer.getvalue()
             self.__buffer = None

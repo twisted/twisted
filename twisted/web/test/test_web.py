@@ -140,13 +140,14 @@ class DummyRequest:
         self.args[name] = [value]
 
 
-    def setResponseCode(self, code):
+    def setResponseCode(self, code, message=None):
         """
         Set the HTTP status response code, but takes care that this is called
         before any data is written.
         """
         assert not self.written, "Response code cannot be set after data has been written: %s." % "@@@@".join(self.written)
         self.responseCode = code
+        self.responseMessage = message
 
 
     def setLastModified(self, when):
