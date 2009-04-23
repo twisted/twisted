@@ -1,6 +1,5 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 Test cases for L{jelly} object serialization.
@@ -162,6 +161,36 @@ class JellyTestCase(unittest.TestCase):
         m = jelly.unjelly(c)
         self.assertIsInstance(m, D)
         self.assertIdentical(m.n2, m.n3)
+
+
+    def test_typeOldStyle(self):
+        """
+        Test that an old style class type can be jellied and unjellied
+        to the original type.
+        """
+        t = [C]
+        r = jelly.unjelly(jelly.jelly(t))
+        self.assertEquals(t, r)
+
+
+    def test_typeNewStyle(self):
+        """
+        Test that a new style class type can be jellied and unjellied
+        to the original type.
+        """
+        t = [D]
+        r = jelly.unjelly(jelly.jelly(t))
+        self.assertEquals(t, r)
+
+
+    def test_typeBuiltin(self):
+        """
+        Test that a builtin type can be jellied and unjellied to the original
+        type.
+        """
+        t = [str]
+        r = jelly.unjelly(jelly.jelly(t))
+        self.assertEquals(t, r)
 
 
     def test_dateTime(self):

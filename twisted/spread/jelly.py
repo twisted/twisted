@@ -864,7 +864,8 @@ class _Unjellier:
         if not self.taster.isModuleAllowed(modName):
             raise InsecureJelly("module %s not allowed" % modName)
         klaus = namedObject(rest[0])
-        if type(klaus) is not types.ClassType:
+        objType = type(klaus)
+        if objType not in (types.ClassType, types.TypeType):
             raise InsecureJelly(
                 "class %r unjellied to something that isn't a class: %r" % (
                     rest[0], klaus))
