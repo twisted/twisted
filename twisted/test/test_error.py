@@ -1,13 +1,16 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
+import socket, errno
+
 from twisted.trial import unittest
 from twisted.internet import error
-import socket
+
 
 class TestStringification(unittest.TestCase):
-    """Test that the exceptions have useful stringifications.
+    """
+    Test that the exceptions have useful stringifications.
     """
 
     listOfTests = [
@@ -135,7 +138,10 @@ class TestStringification(unittest.TestCase):
 
         ]
 
-    def testThemAll(self):
+    def test_themAll(self):
+        """
+        Test output string of all error classes.
+        """
         for entry in self.listOfTests:
             output = entry[0]
             exception = entry[1]
@@ -168,3 +174,13 @@ class TestStringification(unittest.TestCase):
         self.assertTrue(issubclass(error.ConnectionDone,
                                    error.ConnectionClosed))
 
+
+    def test_getDetailedConnectorError(self):
+        """
+        Test for L{errors.getDetailedError}.
+        """
+        exception = error.getDetailedConnectError(
+            errno.ECONNREFUSED, "Foo", "Bar", ("egg.com", 12345))
+        output = ("Connection was refused by other side: 111: "
+                  "'Foo' by factory Bar on address ('egg.com', 12345).")
+        self.assertEquals(str(exception), output)

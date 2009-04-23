@@ -625,7 +625,9 @@ class BaseClient(Connection):
 
         err = self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
         if err:
-            self.failIfNotConnected(error.getConnectError((err, strerror(err))))
+            self.failIfNotConnected(
+                error.getDetailedConnectError(err, strerror(err),
+                    self.connector.factory, self.realAddress))
             return
 
 
@@ -651,7 +653,9 @@ class BaseClient(Connection):
                 self.startWriting()
                 return
             else:
-                self.failIfNotConnected(error.getConnectError((connectResult, strerror(connectResult))))
+                self.failIfNotConnected(error.getDetailedConnectError(
+                        connectResult, strerror(connectResult),
+                        self.connector.factory, self.realAddress))
                 return
 
         # If I have reached this point without raising or returning, that means

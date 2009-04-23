@@ -1,4 +1,5 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.test.test_error -*-
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -156,8 +157,11 @@ try:
 except ImportError:
     errnoMapping = {}
 
+
 def getConnectError(e):
-    """Given a socket exception, return connection error."""
+    """
+    Given a socket exception, return connection error.
+    """
     try:
         number, string = e
     except ValueError:
@@ -169,6 +173,23 @@ def getConnectError(e):
     else:
         klass = errnoMapping.get(number, ConnectError)
     return klass(number, string)
+
+
+def getDetailedConnectError(number, errString, factory, address):
+    """
+    Build a detailed error string given the parameters.
+
+    @param number: the errno number.
+    @type number: C{int}.
+    @param errString: string representation of the error.
+    @type errString: C{str}.
+    @param factory: factory passed to connectTCP.
+    @type factory: C{protocol.ClientFactory}.
+    @param address: address it failed to connect to.
+    @type address: C{tuple}.
+    """
+    return getConnectError((number, "'%s' by factory %s on address %s" %
+                                    (errString, factory, address)))
 
 
 
@@ -305,4 +326,3 @@ class ReactorAlreadyRunning(RuntimeError):
     """
     Error raised when trying to start the reactor multiple times.
     """
-
