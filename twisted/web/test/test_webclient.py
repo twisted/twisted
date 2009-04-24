@@ -221,6 +221,10 @@ class WebClientTestCase(unittest.TestCase):
         r.putChild("redirect", util.Redirect("/file"))
         self.infiniteRedirectResource = CountingRedirect("/infiniteRedirect")
         r.putChild("infiniteRedirect", self.infiniteRedirectResource)
+        subdir = resource.Resource()
+        subdir.putChild("redirect-target", static.Data("success", "text/plain"))
+        subdir.putChild("relative-redirect", util.Redirect("redirect-target"))
+        r.putChild("subdir", subdir)
         r.putChild("wait", ForeverTakingResource())
         r.putChild("write-then-wait", ForeverTakingResource(write=True))
         r.putChild("error", ErrorResource())
@@ -488,6 +492,19 @@ class WebClientTestCase(unittest.TestCase):
             ).addCallback(lambda dummy: d1)
         return d
 
+    def test_relativeRedirect(self):
+        """
+        When a server replies with a relative redirect ('file.html') instead
+        of an absolute redirect ('/subdir/file.html') the redirect is joined
+        with the previous URL.
+        """
+        d = client.getPage(self.getURL("subdir/relative-redirect"))
+        d.addCallback(self._cbRelativeRedirect)
+        return d
+
+    def _cbRelativeRedirect(self, page):
+        self.assertEqual(page, "success")
+        return page
 
     def testPartial(self):
         name = self.mktemp()

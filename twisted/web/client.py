@@ -7,7 +7,7 @@ HTTP client.
 """
 
 import os, types
-from urlparse import urlunparse
+from urlparse import urlunparse, urljoin
 
 from twisted.python import log
 from twisted.web import http
@@ -94,6 +94,8 @@ class HTTPPageGetter(http.HTTPClient):
                 _parse(url, defaultPort=self.transport.getPeer().port)
 
             self.factory._redirectCount += 1
+            if not host and not path.startswith('/'):
+                url = urljoin(self.factory.path, path)
             if self.factory._redirectCount >= self.factory.redirectLimit:
                 err = error.InfiniteRedirection(
                     self.status,
