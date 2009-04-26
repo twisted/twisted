@@ -5,8 +5,6 @@
 from twisted.conch.ssh.transport import SSHClientTransport, SSHCiphers
 from twisted.python import usage
 
-import connect
-
 import sys
 
 class ConchOptions(usage.Options):
@@ -15,7 +13,6 @@ class ConchOptions(usage.Options):
                      ['identity', 'i', None],
                      ['ciphers', 'c', None],
                      ['macs', 'm', None],
-                     ['connection-usage', 'K', None],
                      ['port', 'p', None, 'Connect to this port.  Server must be on the same port.'],
                      ['option', 'o', None, 'Ignored OpenSSH options'],
                      ['host-key-algorithms', '', None],
@@ -27,7 +24,6 @@ class ConchOptions(usage.Options):
     optFlags = [['version', 'V', 'Display version number only.'],
                 ['compress', 'C', 'Enable compression.'],
                 ['log', 'v', 'Enable logging (defaults to stderr)'],
-                ['nocache', 'I', 'Do not allow connection sharing over this connection.'],
                 ['nox11', 'x', 'Disable X11 connection forwarding (default)'],
                 ['agent', 'A', 'Enable authentication agent forwarding'],
                 ['noagent', 'a', 'Disable authentication agent forwarding (default)'],
@@ -43,8 +39,6 @@ class ConchOptions(usage.Options):
                        " ".join(SSHCiphers.macMap.keys()),
                    "host-key-algorithms":"_values -s , 'host key algorithms to choose from' %s" %
                        " ".join(SSHClientTransport.supportedPublicKeys),
-                   "connection-usage":"_values -s , 'connection types to choose from' %s" %
-                       " ".join(connect.connectTypes.keys()),
                    #"user-authentications":"_values -s , 'user authentication types to choose from' %s" %
                    #    " ".join(???),
                    }
@@ -90,14 +84,6 @@ class ConchOptions(usage.Options):
         "Choose how to authenticate to the remote server"
         self['user-authentications'] = uas.split(',')
 
-    def opt_connection_usage(self, conns):
-        conns = conns.split(',')
-        connTypes = connect.connectTypes.keys()
-        for conn in conns:
-            if conn not in connTypes:
-                sys.exit("Unknown connection type '%s'" % conn)
-        self.conns = conns
-        
 #    def opt_compress(self):
 #        "Enable compression"
 #        self.enableCompression = 1

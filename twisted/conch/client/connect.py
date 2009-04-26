@@ -2,13 +2,12 @@
 # See LICENSE for details.
 
 #
-import direct, unix
+import direct
 
-connectTypes = {"direct" : direct.connect,
-                "unix" : unix.connect}
+connectTypes = {"direct" : direct.connect}
 
 def connect(host, port, options, verifyHostKey, userAuthObject):
-    useConnects = options.conns or ['unix', 'direct']
+    useConnects = ['direct']
     return _ebConnect(None, useConnects, host, port, options, verifyHostKey,
                       userAuthObject)
 

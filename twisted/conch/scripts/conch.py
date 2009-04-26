@@ -8,20 +8,20 @@
 
 #""" Implementation module for the `conch` command.
 #"""
-from twisted.conch.client import agent, connect, default, options
+from twisted.conch.client import connect, default, options
 from twisted.conch.error import ConchError
 from twisted.conch.ssh import connection, common
 from twisted.conch.ssh import session, forwarding, channel
-from twisted.internet import reactor, stdio, defer, task
+from twisted.internet import reactor, stdio, task
 from twisted.python import log, usage
 
-import os, sys, getpass, struct, tty, fcntl, base64, signal, stat, errno
+import os, sys, getpass, struct, tty, fcntl, signal
 
 class ClientOptions(options.ConchOptions):
-    
+
     synopsis = """Usage:   conch [options] host [command]
 """
-    
+
     optParameters = [['escape', 'e', '~'],
                       ['localforward', 'L', None, 'listen-port:host:port   Forward local port to remote address'],
                       ['remoteforward', 'R', None, 'listen-port:host:port   Forward remote port to local address'],
@@ -161,7 +161,7 @@ def doConnect():
         options.identitys = ['~/.ssh/id_rsa', '~/.ssh/id_dsa']
     host = options['host']
     if not options['user']:
-        options['user'] = getpass.getuser() 
+        options['user'] = getpass.getuser()
     if not options['port']:
         options['port'] = 22
     else:
@@ -273,7 +273,7 @@ class SSHConnection(connection.SSHConnection):
 
     def requestRemoteForwarding(self, remotePort, hostport):
         data = forwarding.packGlobal_tcpip_forward(('0.0.0.0', remotePort))
-        d = self.sendGlobalRequest('tcpip-forward', data, 
+        d = self.sendGlobalRequest('tcpip-forward', data,
                                    wantReply=1)
         log.msg('requesting remote forwarding %s:%s' %(remotePort, hostport))
         d.addCallback(self._cbRemoteForwarding, remotePort, hostport)
@@ -283,7 +283,7 @@ class SSHConnection(connection.SSHConnection):
         log.msg('accepted remote forwarding %s:%s' % (remotePort, hostport))
         self.remoteForwards[remotePort] = hostport
         log.msg(repr(self.remoteForwards))
-    
+
     def _ebRemoteForwarding(self, f, remotePort, hostport):
         log.msg('remote forwarding %s:%s failed' % (remotePort, hostport))
         log.msg(f)
@@ -324,13 +324,13 @@ class SSHConnection(connection.SSHConnection):
     def channelClosed(self, channel):
         log.msg('connection closing %s' % channel)
         log.msg(self.channels)
-        if len(self.channels) == 1 and not (options['noshell'] and not options['nocache']): # just us left
+        if len(self.channels) == 1: # just us left
             log.msg('stopping connection')
             stopConnection()
         else:
             # because of the unix thing
             self.__class__.__bases__[0].channelClosed(self, channel)
- 
+
 class SSHSession(channel.SSHChannel):
 
     name = 'session'
@@ -426,7 +426,7 @@ class SSHSession(channel.SSHChannel):
     def eofReceived(self):
         log.msg('got eof')
         self.stdio.loseWriteConnection()
-    
+
     def closeReceived(self):
         log.msg('remote side closed %s' % self)
         self.conn.sendClose(self)
@@ -435,23 +435,6 @@ class SSHSession(channel.SSHChannel):
         global old
         log.msg('closed %s' % self)
         log.msg(repr(self.conn.channels))
-        if not options['nocache']: # fork into the background
-            if os.fork():
-                if old:
-                    fd = sys.stdin.fileno()
-                    tty.tcsetattr(fd, tty.TCSANOW, old)
-                if (options['command'] and options['tty']) or \
-                    not options['notty']:
-                    signal.signal(signal.SIGWINCH, signal.SIG_DFL)
-                os._exit(0)
-            os.setsid()
-            for i in range(3):
-                try:
-                    os.close(i)
-                except OSError, e:
-                    import errno
-                    if e.errno != errno.EBADF:
-                        raise
 
     def request_exit_status(self, data):
         global exitStatus
@@ -472,7 +455,7 @@ class SSHSession(channel.SSHChannel):
         winSize = struct.unpack('4H', winsz)
         newSize = winSize[1], winSize[0], winSize[2], winSize[3]
         self.conn.sendRequest(self, 'window-change', struct.pack('!4L', *newSize))
-           
+
 
 class SSHListenClientForwardingChannel(forwarding.SSHListenClientForwardingChannel): pass
 class SSHConnectForwardingChannel(forwarding.SSHConnectForwardingChannel): pass
@@ -504,7 +487,7 @@ def _enterRawMode():
             new[0] = new[0] & ~tty.IUCLC
 
         # lflag
-        new[3] = new[3] & ~(tty.ISIG | tty.ICANON | tty.ECHO | tty.ECHO | 
+        new[3] = new[3] & ~(tty.ISIG | tty.ICANON | tty.ECHO | tty.ECHO |
                             tty.ECHOE | tty.ECHOK | tty.ECHONL)
         if hasattr(tty, 'IEXTEN'):
             new[3] = new[3] & ~tty.IEXTEN

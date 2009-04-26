@@ -12,7 +12,6 @@ except ImportError:
 try:
     from twisted.conch import unix
     from twisted.conch.scripts import cftp
-    from twisted.conch.client import connect, default, options
     from twisted.conch.test.test_filetransfer import FileTransferForTestAvatar
 except ImportError:
     unix = None
@@ -339,9 +338,8 @@ class TestOurServerCmdLineClient(CFTPClientTestBase):
                '--known-hosts kh_test '
                '--user-authentications publickey '
                '--host-key-algorithms ssh-rsa '
-               '-K direct '
                '-i dsa_test '
-               '-a --nocache '
+               '-a '
                '-v '
                '127.0.0.1')
         port = self.server.getHost().port
@@ -684,9 +682,8 @@ class TestOurServerBatchFile(CFTPClientTestBase):
                     '--known-hosts kh_test '
                     '--user-authentications publickey '
                     '--host-key-algorithms ssh-rsa '
-                    '-K direct '
                     '-i dsa_test '
-                    '-a --nocache '
+                    '-a '
                     '-v -b %s 127.0.0.1') % (port, fn)
         cmds = test_conch._makeArgs(cmds.split(), mod='cftp')[1:]
         log.msg('running %s %s' % (sys.executable, cmds))
@@ -755,80 +752,6 @@ exit
         return d
 
 
-class TestOurServerUnixClient(test_conch._UnixFixHome, CFTPClientTestBase):
-
-    def setUp(self):
-        test_conch._UnixFixHome.setUp(self)
-        CFTPClientTestBase.setUp(self)
-        self.startServer()
-        cmd1 = ('-p %i -l testuser '
-                '--known-hosts kh_test '
-                '--host-key-algorithms ssh-rsa '
-                '-a '
-                '-K direct '
-                '-i dsa_test '
-                '127.0.0.1'
-                )
-        port = self.server.getHost().port
-        cmds1 = (cmd1 % port).split()
-        o = options.ConchOptions()
-        def _(host, *args):
-            o['host'] = host
-        o.parseArgs = _
-        o.parseOptions(cmds1)
-        vhk = default.verifyHostKey
-        self.conn = conn = test_conch.SSHTestConnectionForUnix(None)
-        uao = default.SSHUserAuthClient(o['user'], o, conn)
-        return connect.connect(o['host'], int(o['port']), o, vhk, uao)
-
-    def tearDown(self):
-        CFTPClientTestBase.tearDown(self)
-        d = defer.maybeDeferred(self.conn.transport.loseConnection)
-        d.addCallback(lambda x : self.stopServer())
-        def clean(ign):
-            test_conch._UnixFixHome.tearDown(self)
-            return ign
-        return defer.gatherResults([d, self.conn.stopDeferred]).addBoth(clean)
-
-    def _getBatchOutput(self, f):
-        fn = self.mktemp()
-        open(fn, 'w').write(f)
-        port = self.server.getHost().port
-        cmds = ('-p %i -l testuser '
-                    '-K unix '
-                    '-a '
-                    '-v -b %s 127.0.0.1') % (port, fn)
-        cmds = test_conch._makeArgs(cmds.split(), mod='cftp')[1:]
-        log.msg('running %s %s' % (sys.executable, cmds))
-        env = os.environ.copy()
-        env['PYTHONPATH'] = os.pathsep.join(sys.path)
-
-        self.server.factory.expectedLoseConnection = 1
-
-        d = getProcessOutputAndValue(sys.executable, cmds, env=env)
-
-        def _cleanup(res):
-            os.remove(fn)
-            return res
-
-        d.addCallback(lambda res: res[0])
-        d.addBoth(_cleanup)
-
-        return d
-
-    def testBatchFile(self):
-        """Test that the client works even over a UNIX connection.
-        """
-        cmds = """pwd
-exit
-"""
-        d = self._getBatchOutput(cmds)
-        d.addCallback(
-            lambda res : self.failIf(res.find(self.testDir) == -1,
-                                     "%s not in %r" % (self.testDir, res)))
-        return d
-
-
 
 class TestOurServerSftpClient(CFTPClientTestBase):
     """
@@ -882,7 +805,6 @@ class TestOurServerSftpClient(CFTPClientTestBase):
 if not unix or not Crypto or not interfaces.IReactorProcess(reactor, None):
     TestOurServerCmdLineClient.skip = "don't run w/o spawnprocess or PyCrypto"
     TestOurServerBatchFile.skip = "don't run w/o spawnProcess or PyCrypto"
-    TestOurServerUnixClient.skip = "don't run w/o spawnProcess or PyCrypto"
     TestOurServerSftpClient.skip = "don't run w/o spawnProcess or PyCrypto"
 else:
     from twisted.python.procutils import which

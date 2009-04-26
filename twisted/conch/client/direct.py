@@ -2,14 +2,10 @@
 # See LICENSE for details.
 
 
-import os
-
 from twisted.internet import defer, protocol, reactor
 from twisted.conch import error
 from twisted.conch.ssh import transport
 from twisted.python import log
-
-from twisted.conch.client import unix
 
 
 
@@ -94,19 +90,6 @@ class SSHClientTransport(transport.SSHClientTransport):
     def setService(self, service):
         log.msg('setting client server to %s' % service)
         transport.SSHClientTransport.setService(self, service)
-        if service.name == 'ssh-connection':
-            # listen for UNIX
-            if not self.factory.options['nocache']:
-                user = self.factory.userAuthObject.user
-                peer = self.transport.getPeer()
-                filename = os.path.expanduser("~/.conch-%s-%s-%i" % (user, peer.host, peer.port))
-                u = unix.SSHUnixServerFactory(service)
-                try:
-                    self.unixServer = reactor.listenUNIX(filename, u, mode=0600, wantPID=1)
-                except:
-                    if self.factory.d is not None:
-                        d, self.factory.d = self.factory.d, None
-                        d.errback(None)
         if service.name != 'ssh-userauth' and self.factory.d is not None:
             d, self.factory.d = self.factory.d, None
             d.callback(None)
