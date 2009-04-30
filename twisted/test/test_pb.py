@@ -357,7 +357,9 @@ class NewStyleTestCase(unittest.TestCase):
         """
         Create a pb server using L{Echoer} protocol and connect a client to it.
         """
-        self.server = reactor.listenTCP(0, pb.PBServerFactory(Echoer()))
+        self.serverFactory = pb.PBServerFactory(Echoer())
+        self.wrapper = WrappingFactory(self.serverFactory)
+        self.server = reactor.listenTCP(0, self.wrapper)
         clientFactory = pb.PBClientFactory()
         reactor.connectTCP("localhost", self.server.getHost().port,
                            clientFactory)
@@ -375,6 +377,9 @@ class NewStyleTestCase(unittest.TestCase):
         NewStyleCopy2.initialized = 0
         NewStyleCopy2.value = 1
         self.ref.broker.transport.loseConnection()
+        # Disconnect any server-side connections too.
+        for proto in self.wrapper.protocols:
+            proto.transport.loseConnection()
         return self.server.stopListening()
 
     def test_newStyle(self):
