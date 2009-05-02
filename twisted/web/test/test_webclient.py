@@ -14,6 +14,7 @@ from twisted.trial import unittest
 from twisted.web import server, static, client, error, util, resource
 from twisted.internet import reactor, defer, interfaces
 from twisted.python.filepath import FilePath
+from twisted.python.log import msg
 from twisted.protocols.policies import WrappingFactory
 from twisted.test.proto_helpers import StringTransport
 
@@ -214,6 +215,7 @@ class WebClientTestCase(unittest.TestCase):
         return reactor.listenTCP(0, site, interface="127.0.0.1")
 
     def setUp(self):
+        self.cleanupServerConnections = 0
         name = self.mktemp()
         os.mkdir(name)
         FilePath(name).child("file").setContent("0123456789")
@@ -235,6 +237,18 @@ class WebClientTestCase(unittest.TestCase):
         self.portno = self.port.getHost().port
 
     def tearDown(self):
+        # If the test indicated it might leave some server-side connections
+        # around, clean them up.
+        connections = self.wrapper.protocols.keys()
+        # If there are fewer server-side connections than requested,
+        # that's okay.  Some might have noticed that the client closed
+        # the connection and cleaned up after themselves.
+        for n in range(min(len(connections), self.cleanupServerConnections)):
+            proto = connections.pop()
+            msg("Closing %r" % (proto,))
+            proto.transport.loseConnection()
+        if connections:
+            msg("Some left-over connections; this test is probably buggy.")
         return self.port.stopListening()
 
     def getURL(self, path):
@@ -343,20 +357,11 @@ class WebClientTestCase(unittest.TestCase):
         seconds elapse before the server responds to the request. the
         L{Deferred} is errbacked with a L{error.TimeoutError}.
         """
-        finished = self.assertFailure(
+        # This will probably leave some connections around.
+        self.cleanupServerConnections = 1
+        return self.assertFailure(
             client.getPage(self.getURL("wait"), timeout=0.000001),
             defer.TimeoutError)
-        def cleanup(passthrough):
-            # Clean up the server which is hanging around not doing
-            # anything.
-            connected = self.wrapper.protocols.keys()
-            # There might be nothing here if the server managed to already see
-            # that the connection was lost.
-            if connected:
-                connected[0].transport.loseConnection()
-            return passthrough
-        finished.addBoth(cleanup)
-        return finished
 
 
     def testDownloadPage(self):
@@ -525,6 +530,7 @@ class WebClientTestCase(unittest.TestCase):
         L{client.downloadPage} fires with a L{Failure} wrapping a
         L{defer.TimeoutError}.
         """
+        self.cleanupServerConnections = 2
         # Verify the behavior if no bytes are ever written.
         first = client.downloadPage(
             self.getURL("wait"),
