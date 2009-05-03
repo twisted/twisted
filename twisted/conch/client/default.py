@@ -1,5 +1,5 @@
-# -*- test-case-name: twisted.conch.test.test_knownhosts -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.conch.test.test_knownhosts,twisted.conch.test.test_default -*-
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -112,6 +112,8 @@ def isInKnownHosts(host, pubKey, options):
             retVal = 2
     return retVal
 
+
+
 class SSHUserAuthClient(userauth.SSHUserAuthClient):
 
     def __init__(self, user, options, *args):
@@ -166,7 +168,12 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         except ConchError:
             return defer.fail()
 
+
     def getPublicKey(self):
+        """
+        Get a public key from the key agent if possible, otherwise look in
+        the next configured identity file for one.
+        """
         if self.keyAgent:
             blob = self.keyAgent.getPublicKey()
             if blob:
@@ -188,11 +195,20 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         except:
             return self.getPublicKey() # try again
 
+
     def signData(self, publicKey, signData):
+        """
+        Extend the base signing behavior by using an SSH agent to sign the
+        data, if one is available.
+
+        @type publicKey: L{Key}
+        @type signData: C{str}
+        """
         if not self.usedFiles: # agent key
-            return self.keyAgent.signData(publicKey, signData)
+            return self.keyAgent.signData(publicKey.blob(), signData)
         else:
             return userauth.SSHUserAuthClient.signData(self, publicKey, signData)
+
 
     def getPrivateKey(self):
         file = os.path.expanduser(self.usedFiles[-1])
@@ -216,6 +232,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             print
             reactor.stop()
 
+
     def getGenericAnswers(self, name, instruction, prompts):
         responses = []
         try:
@@ -230,6 +247,6 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
                     responses.append(raw_input(prompt))
                 else:
                     responses.append(getpass.getpass(prompt))
-        finally: 
+        finally:
             sys.stdout,sys.stdin=oldout,oldin
         return defer.succeed(responses)

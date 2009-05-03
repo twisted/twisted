@@ -406,12 +406,12 @@ class SSHUserAuthClient(service.SSHService):
     @type instance: L{service.SSHService}
     @ivar authenticatedWith: a list of strings of authentication methods we've tried
     @type authenticatedWith: C{list} of C{str}
-    @ivar triedPublicKeys: a list of public key blobs that we've tried to
+    @ivar triedPublicKeys: a list of public key objects that we've tried to
         authenticate with
-    @type triedPublicKeys: C{list}
-    @ivar lastPublicKey: the last public key blob we've tried to authenticate
+    @type triedPublicKeys: C{list} of L{Key}
+    @ivar lastPublicKey: the last public key object we've tried to authenticate
         with
-    @type lastPublicKey: C{str}
+    @type lastPublicKey: L{Key}
     """
 
 
@@ -713,14 +713,17 @@ class SSHUserAuthClient(service.SSHService):
 
     def signData(self, publicKey, signData):
         """
-        Sign the given data with the given public key blob.
-        By default, this will call getPrivateKey to get the private key,
-        the sign the data using Key.sign().
-        However, this is factored out so that it can use alternate methods,
-        such as a key agent.
+        Sign the given data with the given public key.
 
-        @param publicKey: the public key blob returned from self.getPublicKey()
-        @type publicKey: C{str}
+        By default, this will call getPrivateKey to get the private key,
+        then sign the data using Key.sign().
+
+        This method is factored out so that it can be overridden to use
+        alternate methods, such as a key agent.
+
+        @param publicKey: The public key object returned from L{getPublicKey}
+        @type publicKey: L{keys.Key}
+
         @param signData: the data to be signed by the private key.
         @type signData: C{str}
         @return: a Deferred that's called back with the signature
@@ -756,9 +759,12 @@ class SSHUserAuthClient(service.SSHService):
     def getPublicKey(self):
         """
         Return a public key for the user.  If no more public keys are
-        available, return None.
+        available, return C{None}.
 
-        @rtype: C{str}/C{None}
+        This implementation always returns C{None}.  Override it in a
+        subclass to actually find and return a public key object.
+
+        @rtype: L{Key} or L{NoneType}
         """
         return None
 
@@ -769,7 +775,7 @@ class SSHUserAuthClient(service.SSHService):
         object corresponding to the last public key from getPublicKey().
         If the private key is not available, errback on the Deferred.
 
-        @rtype: L{Deferred} called back with L{Crypto.PublicKey.pubkey.pubkey}
+        @rtype: L{Deferred} called back with L{Key}
         """
         return defer.fail(NotImplementedError())
 
