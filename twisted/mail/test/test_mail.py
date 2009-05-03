@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -435,7 +435,30 @@ class MaildirTestCase(unittest.TestCase):
         self.failUnless(os.path.isdir(os.path.join(trash, 'cur')))
         self.failUnless(os.path.isdir(os.path.join(trash, 'tmp')))
 
-    def testMailbox(self):
+
+    def test_nameGenerator(self):
+        """
+        Each call to L{_MaildirNameGenerator.generate} returns a unique
+        string suitable for use as the basename of a new message file.  The
+        names are ordered such that those generated earlier sort less than
+        those generated later.
+        """
+        clock = task.Clock()
+        clock.advance(0.05)
+        generator = mail.maildir._MaildirNameGenerator(clock)
+
+        firstName = generator.generate()
+        clock.advance(0.05)
+        secondName = generator.generate()
+
+        self.assertTrue(firstName < secondName)
+
+
+    def test_mailbox(self):
+        """
+        Exercise the methods of L{IMailbox} as implemented by
+        L{MaildirMailbox}.
+        """
         j = os.path.join
         n = mail.maildir._generateMaildirName
         msgs = [j(b, n()) for b in ('cur', 'new') for x in range(5)]
@@ -443,9 +466,9 @@ class MaildirTestCase(unittest.TestCase):
         # Toss a few files into the mailbox
         i = 1
         for f in msgs:
-            f = file(j(self.d, f), 'w')
-            f.write('x' * i)
-            f.close()
+            fObj = file(j(self.d, f), 'w')
+            fObj.write('x' * i)
+            fObj.close()
             i = i + 1
 
         mb = mail.maildir.MaildirMailbox(self.d)

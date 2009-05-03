@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.mail.test.test_mail -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -44,21 +44,37 @@ Subject: An Error Occurred
 '''
 
 class _MaildirNameGenerator:
-    """Utility class to generate a unique maildir name
+    """
+    Utility class to generate a unique maildir name
+
+    @ivar _clock: An L{IReactorTime} provider which will be used to learn
+        the current time to include in names returned by L{generate} so that
+        they sort properly.
     """
     n = 0
     p = os.getpid()
     s = socket.gethostname().replace('/', r'\057').replace(':', r'\072')
 
+    def __init__(self, clock):
+        self._clock = clock
+
     def generate(self):
+        """
+        Return a string which is intended to unique across all calls to this
+        function (across all processes, reboots, etc).
+
+        Strings returned by earlier calls to this method will compare less
+        than strings returned by later calls as long as the clock provided
+        doesn't go backwards.
+        """
         self.n = self.n + 1
-        t = time.time()
+        t = self._clock.seconds()
         seconds = str(int(t))
-        microseconds = str(int((t-int(t))*10e6))
+        microseconds = '%07d' % (int((t - int(t)) * 10e6),)
         return '%s.M%sP%sQ%s.%s' % (seconds, microseconds,
                                     self.p, self.n, self.s)
 
-_generateMaildirName = _MaildirNameGenerator().generate
+_generateMaildirName = _MaildirNameGenerator(reactor).generate
 
 def initializeMaildir(dir):
     if not os.path.isdir(dir):
