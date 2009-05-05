@@ -3677,17 +3677,27 @@ class TLSTestCase(IMAP4HelperMixin, unittest.TestCase):
         d.addCallback(lambda x : self.assertEquals(len(success), 1))
         return d
 
-    def testStartTLS(self):
+
+    def test_startTLS(self):
+        """
+        L{IMAP4Client.startTLS} triggers TLS negotiation and returns a
+        L{Deferred} which fires after the client's transport is using
+        encryption.
+        """
         success = []
         self.connected.addCallback(lambda _: self.client.startTLS())
-        self.connected.addCallback(lambda _: self.assertNotEquals(-1, self.client.transport.__class__.__name__.find('TLS')))
+        def checkSecure(ignored):
+            self.assertTrue(
+                interfaces.ISSLTransport.providedBy(self.client.transport))
+        self.connected.addCallback(checkSecure)
         self.connected.addCallback(self._cbStopClient)
         self.connected.addCallback(success.append)
         self.connected.addErrback(self._ebGeneral)
 
         d = self.loopback()
         d.addCallback(lambda x : self.failUnless(success))
-        return d
+        return defer.gatherResults([d, self.connected])
+
 
     def testFailedStartTLS(self):
         failure = []
