@@ -1,7 +1,6 @@
 # -*- test-case-name: twisted.test.test_loopback -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 Testing support for protocols -- loopback between client and server.
@@ -71,7 +70,7 @@ class _LoopbackTransport(object):
 
     def loseConnection(self):
         self.q.disconnect = True
-        self.q.put('')
+        self.q.put(None)
 
     def getPeer(self):
         return _LoopbackAddress()
@@ -96,7 +95,42 @@ class _LoopbackTransport(object):
 
 
 
-def loopbackAsync(server, client):
+def identityPumpPolicy(queue, target):
+    """
+    L{identityPumpPolicy} is a policy which delivers each chunk of data written
+    to the given queue as-is to the target.
+
+    This isn't a particularly realistic policy.
+
+    @see: L{loopbackAsync}
+    """
+    while queue:
+        bytes = queue.get()
+        if bytes is None:
+            break
+        target.dataReceived(bytes)
+
+
+
+def collapsingPumpPolicy(queue, target):
+    """
+    L{collapsingPumpPolicy} is a policy which collapses all outstanding chunks
+    into a single string and delivers it to the target.
+
+    @see: L{loopbackAsync}
+    """
+    bytes = []
+    while queue:
+        chunk = queue.get()
+        if chunk is None:
+            break
+        bytes.append(chunk)
+    if bytes:
+        target.dataReceived(''.join(bytes))
+
+
+
+def loopbackAsync(server, client, pumpPolicy=identityPumpPolicy):
     """
     Establish a connection between C{server} and C{client} then transfer data
     between them until the connection is closed. This is often useful for
@@ -108,6 +142,18 @@ def loopbackAsync(server, client):
     @param client: The protocol instance representing the client-side of this
         connection.
 
+    @param pumpPolicy: When either C{server} or C{client} writes to its
+        transport, the string passed in is added to a queue of data for the
+        other protocol.  Eventually, C{pumpPolicy} will be called with one such
+        queue and the corresponding protocol object.  The pump policy callable
+        is responsible for emptying the queue and passing the strings it
+        contains to the given protocol's C{dataReceived} method.  The signature
+        of C{pumpPolicy} is C{(queue, protocol)}.  C{queue} is an object with a
+        C{get} method which will return the next string written to the
+        transport, or C{None} if the transport has been disconnected, and which
+        evaluates to C{True} if and only if there are more items to be
+        retrieved via C{get}.
+
     @return: A L{Deferred} which fires when the connection has been closed and
         both sides have received notification of this.
     """
@@ -117,11 +163,13 @@ def loopbackAsync(server, client):
     server.makeConnection(_LoopbackTransport(serverToClient))
     client.makeConnection(_LoopbackTransport(clientToServer))
 
-    return _loopbackAsyncBody(server, serverToClient, client, clientToServer)
+    return _loopbackAsyncBody(
+        server, serverToClient, client, clientToServer, pumpPolicy)
 
 
 
-def _loopbackAsyncBody(server, serverToClient, client, clientToServer):
+def _loopbackAsyncBody(server, serverToClient, client, clientToServer,
+                       pumpPolicy):
     """
     Transfer bytes from the output queue of each protocol to the input of the other.
 
@@ -135,20 +183,20 @@ def _loopbackAsyncBody(server, serverToClient, client, clientToServer):
 
     @param clientToServer: The L{_LoopbackQueue} holding the client's output.
 
+    @param pumpPolicy: See L{loopbackAsync}.
+
     @return: A L{Deferred} which fires when the connection has been closed and
-    both sides have received notification of this.
+        both sides have received notification of this.
     """
     def pump(source, q, target):
         sent = False
-        while q:
+        if q:
+            pumpPolicy(q, target)
             sent = True
-            bytes = q.get()
-            if bytes:
-                target.dataReceived(bytes)
-
-        # A write buffer has now been emptied.  Give any producer on that side
-        # an opportunity to produce more data.
-        source.transport._pollProducer()
+        if sent and not q:
+            # A write buffer has now been emptied.  Give any producer on that
+            # side an opportunity to produce more data.
+            source.transport._pollProducer()
 
         return sent
 
@@ -162,8 +210,12 @@ def _loopbackAsyncBody(server, serverToClient, client, clientToServer):
         if not clientSent and not serverSent:
             # Neither side wrote any data.  Wait for some new data to be added
             # before trying to do anything further.
-            d = clientToServer._notificationDeferred = serverToClient._notificationDeferred = defer.Deferred()
-            d.addCallback(_loopbackAsyncContinue, server, serverToClient, client, clientToServer)
+            d = defer.Deferred()
+            clientToServer._notificationDeferred = d
+            serverToClient._notificationDeferred = d
+            d.addCallback(
+                _loopbackAsyncContinue,
+                server, serverToClient, client, clientToServer, pumpPolicy)
             return d
         if serverToClient.disconnect:
             # The server wants to drop the connection.  Flush any remaining
@@ -183,10 +235,12 @@ def _loopbackAsyncBody(server, serverToClient, client, clientToServer):
 
 
 
-def _loopbackAsyncContinue(ignored, server, serverToClient, client, clientToServer):
+def _loopbackAsyncContinue(ignored, server, serverToClient, client,
+                           clientToServer, pumpPolicy):
     # Clear the Deferred from each message queue, since it has already fired
     # and cannot be used again.
-    clientToServer._notificationDeferred = serverToClient._notificationDeferred = None
+    clientToServer._notificationDeferred = None
+    serverToClient._notificationDeferred = None
 
     # Schedule some more byte-pushing to happen.  This isn't done
     # synchronously because no actual transport can re-enter dataReceived as
@@ -195,7 +249,8 @@ def _loopbackAsyncContinue(ignored, server, serverToClient, client, clientToServ
     from twisted.internet import reactor
     return deferLater(
         reactor, 0,
-        _loopbackAsyncBody, server, serverToClient, client, clientToServer)
+        _loopbackAsyncBody,
+        server, serverToClient, client, clientToServer, pumpPolicy)
 
 
 

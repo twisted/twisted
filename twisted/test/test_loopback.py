@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -346,6 +346,79 @@ class LoopbackAsyncTestCase(LoopbackTestCase):
             self.assertTrue(client.wasReady)
         d.addCallback(cbFinished)
         return d
+
+
+    def test_pumpPolicy(self):
+        """
+        The callable passed as the value for the C{pumpPolicy} parameter to
+        L{loopbackAsync} is called with a L{_LoopbackQueue} of pending bytes
+        and a protocol to which they should be delivered.
+        """
+        pumpCalls = []
+        def dummyPolicy(queue, target):
+            bytes = []
+            while queue:
+                bytes.append(queue.get())
+            pumpCalls.append((target, bytes))
+
+        client = Protocol()
+        server = Protocol()
+
+        finished = loopback.loopbackAsync(server, client, dummyPolicy)
+        self.assertEquals(pumpCalls, [])
+
+        client.transport.write("foo")
+        client.transport.write("bar")
+        server.transport.write("baz")
+        server.transport.write("quux")
+        server.transport.loseConnection()
+
+        def cbComplete(ignored):
+            self.assertEquals(
+                pumpCalls,
+                # The order here is somewhat arbitrary.  The implementation
+                # happens to always deliver data to the client first.
+                [(client, ["baz", "quux", None]),
+                 (server, ["foo", "bar"])])
+        finished.addCallback(cbComplete)
+        return finished
+
+
+    def test_identityPumpPolicy(self):
+        """
+        L{identityPumpPolicy} is a pump policy which calls the target's
+        C{dataReceived} method one for each string in the queue passed to it.
+        """
+        bytes = []
+        client = Protocol()
+        client.dataReceived = bytes.append
+        queue = loopback._LoopbackQueue()
+        queue.put("foo")
+        queue.put("bar")
+        queue.put(None)
+
+        loopback.identityPumpPolicy(queue, client)
+
+        self.assertEquals(bytes, ["foo", "bar"])
+
+
+    def test_collapsingPumpPolicy(self):
+        """
+        L{collapsingPumpPolicy} is a pump policy which calls the target's
+        C{dataReceived} only once with all of the strings in the queue passed
+        to it joined together.
+        """
+        bytes = []
+        client = Protocol()
+        client.dataReceived = bytes.append
+        queue = loopback._LoopbackQueue()
+        queue.put("foo")
+        queue.put("bar")
+        queue.put(None)
+
+        loopback.collapsingPumpPolicy(queue, client)
+
+        self.assertEquals(bytes, ["foobar"])
 
 
 
