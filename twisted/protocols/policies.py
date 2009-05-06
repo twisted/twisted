@@ -11,6 +11,8 @@ Resource limiting policies.
 # system imports
 import sys, operator
 
+from zope.interface import directlyProvides, providedBy
+
 # twisted imports
 from twisted.internet.protocol import ServerFactory, Protocol, ClientFactory
 from twisted.internet import reactor, error
@@ -35,6 +37,12 @@ class ProtocolWrapper(Protocol):
         self.factory = factory
 
     def makeConnection(self, transport):
+        """
+        When a connection is made, register this wrapper with its factory,
+        save the real transport, and connect the wrapped protocol to this
+        L{ProtocolWrapper} to intercept any transport calls it makes.
+        """
+        directlyProvides(self, providedBy(transport))
         Protocol.makeConnection(self, transport)
         self.factory.registerProtocol(self)
         self.wrappedProtocol.makeConnection(self)

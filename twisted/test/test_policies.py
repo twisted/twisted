@@ -5,7 +5,7 @@
 Test code for policies.
 """
 
-from zope.interface import Interface, implements
+from zope.interface import Interface, implements, implementedBy
 
 from StringIO import StringIO
 
@@ -147,8 +147,18 @@ class WrapperTestCase(unittest.TestCase):
         class StubTransport:
             implements(IStubTransport)
 
+        # Looking up what ProtocolWrapper implements also mutates the class.
+        # It adds __implemented__ and __providedBy__ attributes to it.  These
+        # prevent __getattr__ from causing the IStubTransport.providedBy call
+        # below from returning True.  If, by accident, nothing else causes
+        # these attributes to be added to ProtocolWrapper, the test will pass,
+        # but the interface will only be provided until something does trigger
+        # their addition.  So we just trigger it right now to be sure.
+        implementedBy(policies.ProtocolWrapper)
+
         proto = protocol.Protocol()
         wrapper = policies.ProtocolWrapper(policies.WrappingFactory(None), proto)
+
         wrapper.makeConnection(StubTransport())
         self.assertTrue(IStubTransport.providedBy(proto.transport))
 
