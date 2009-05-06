@@ -878,6 +878,8 @@ class ReactorBase(object):
     # IReactorThreads
     if platform.supportsThreads():
         threadpool = None
+        # ID of the trigger starting the threadpool
+        _threadpoolStartupID = None
         # ID of the trigger stopping the threadpool
         threadpoolShutdownID = None
 
@@ -902,15 +904,27 @@ class ReactorBase(object):
             Create the threadpool accessible with callFromThread.
             """
             from twisted.python import threadpool
-            self.threadpool = threadpool.ThreadPool(0, 10, 'twisted.internet.reactor')
-            self.callWhenRunning(self.threadpool.start)
+            self.threadpool = threadpool.ThreadPool(
+                0, 10, 'twisted.internet.reactor')
+            self._threadpoolStartupID = self.callWhenRunning(
+                self.threadpool.start)
             self.threadpoolShutdownID = self.addSystemEventTrigger(
                 'during', 'shutdown', self._stopThreadPool)
 
         def _stopThreadPool(self):
             """
-            Stop the reactor threadpool.
+            Stop the reactor threadpool.  This method is only valid if there
+            is currently a threadpool (created by L{_initThreadPool}).  It
+            is not intended to be called directly; instead, it will be
+            called by a shutdown trigger created in L{_initThreadPool}.
             """
+            triggers = [self._threadpoolStartupID, self.threadpoolShutdownID]
+            for trigger in filter(None, triggers):
+                try:
+                    self.removeSystemEventTrigger(trigger)
+                except ValueError:
+                    pass
+            self._threadpoolStartupID = None
             self.threadpoolShutdownID = None
             self.threadpool.stop()
             self.threadpool = None

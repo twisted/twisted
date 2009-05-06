@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.trial.test.test_util -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 #
 
@@ -188,15 +188,11 @@ class _Janitor(object):
     def _cleanThreads(self):
         reactor = self._getReactor()
         if interfaces.IReactorThreads.providedBy(reactor):
-            reactor.suggestThreadPoolSize(0)
-            if getattr(reactor, 'threadpool', None) is not None:
-                try:
-                    reactor.removeSystemEventTrigger(
-                        reactor.threadpoolShutdownID)
-                except KeyError:
-                    pass
-                # Remove the threadpool, and let the reactor put it back again
-                # later like a good boy
+            if reactor.threadpool is not None:
+                # Stop the threadpool now so that a new one is created. 
+                # This improves test isolation somewhat (although this is a
+                # post class cleanup hook, so it's only isolating classes
+                # from each other, not methods from each other).
                 reactor._stopThreadPool()
 
     def _cleanReactor(self):

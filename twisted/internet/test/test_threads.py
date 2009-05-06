@@ -7,6 +7,9 @@ Tests for implementations of L{IReactorThreads}.
 
 __metaclass__ = type
 
+from weakref import ref
+import gc
+
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.threadpool import ThreadPool
 
@@ -98,6 +101,63 @@ class ThreadTestsBuilder(ReactorBuilder):
         # schedule this process for 30 seconds, then the test might fail even
         # if callFromThread is working.
         self.assertTrue(after - before < 30)
+
+
+    def test_stopThreadPool(self):
+        """
+        When the reactor stops, L{ReactorBase._stopThreadPool} drops the
+        reactor's direct reference to its internal threadpool and removes
+        the associated startup and shutdown triggers.
+
+        This is the case of the thread pool being created before the reactor
+        is run.
+        """
+        reactor = self.buildReactor()
+        threadpool = ref(reactor.getThreadPool())
+        reactor.callWhenRunning(reactor.stop)
+        self.runReactor(reactor)
+        gc.collect()
+        self.assertIdentical(threadpool(), None)
+
+
+    def test_stopThreadPoolWhenStartedAfterReactorRan(self):
+        """
+        We must handle the case of shutting down the thread pool when it was
+        started after the reactor was run in a special way.
+
+        Some implementation background: The thread pool is started with
+        callWhenRunning, which only returns a system trigger ID when it is
+        invoked before the reactor is started.
+
+        This is the case of the thread pool being created after the reactor
+        is started.
+        """
+        reactor = self.buildReactor()
+        threadPoolRefs = []
+        def acquireThreadPool():
+            threadPoolRefs.append(ref(reactor.getThreadPool()))
+            reactor.stop()
+        reactor.callWhenRunning(acquireThreadPool)
+        self.runReactor(reactor)
+        gc.collect()
+        self.assertIdentical(threadPoolRefs[0](), None)
+
+
+    def test_cleanUpThreadPoolEvenBeforeReactorIsRun(self):
+        """
+        When the reactor has its shutdown event fired before it is run, the
+        thread pool is completely destroyed.
+
+        For what it's worth, the reason we support this behavior at all is
+        because Trial does this.
+
+        This is the case of the thread pool being created without the reactor
+        being started at al.
+        """
+        reactor = self.buildReactor()
+        threadPoolRef = ref(reactor.getThreadPool())
+        reactor.fireSystemEvent("shutdown")
+        self.assertIdentical(threadPoolRef(), None)
 
 
 globals().update(ThreadTestsBuilder.makeTestCaseClasses())
