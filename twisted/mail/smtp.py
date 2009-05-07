@@ -987,7 +987,16 @@ class SMTPFactory(protocol.ServerFactory):
         return p
 
 class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
-    """SMTP client for sending emails."""
+    """
+    SMTP client for sending emails.
+    
+    After the client has connected to the SMTP server, it repeatedly calls
+    L{SMTPClient.getMailFrom}, L{SMTPClient.getMailTo} and
+    L{SMTPClient.getMailData} and uses this information to send an email.
+    It then calls L{SMTPClient.getMailFrom} again; if it returns C{None}, the
+    client will disconnect, otherwise it will continue as normal i.e. call
+    L{SMTPClient.getMailTo} and L{SMTPClient.getMailData} and send a new email.
+    """
 
     # If enabled then log SMTP client server communication
     debug = True
@@ -1636,7 +1645,10 @@ class SenderMixin:
 
 
 class SMTPSender(SenderMixin, SMTPClient):
-    pass
+    """
+    SMTP protocol that sends a single email based on information it 
+    gets from its factory, a L{SMTPSenderFactory}.
+    """
 
 
 class SMTPSenderFactory(protocol.ClientFactory):
