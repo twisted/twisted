@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -15,6 +15,26 @@ class Foo: pass
 class Bar(Foo): pass
 class Baz(object): pass
 class Buz(Bar, Baz): pass
+
+class HashRaisesRuntimeError:
+    """
+    Things that don't hash (raise an Exception) should be ignored by the
+    rebuilder.
+
+    @ivar hashCalled: C{bool} set to True when __hash__ is called.
+    """
+    def __init__(self):
+        self.hashCalled = False
+
+    def __hash__(self):
+        self.hashCalled = True
+        raise RuntimeError('not a TypeError!')
+
+
+
+unhashableObject = None # set in test_hashException
+
+
 
 class RebuildTestCase(unittest.TestCase):
     """
@@ -124,6 +144,21 @@ class RebuildTestCase(unittest.TestCase):
         from twisted.python import rebuild
         from twisted.spread import banana
         rebuild.latestClass(banana.Banana)
+
+
+    def test_hashException(self):
+        """
+        Rebuilding something that has a __hash__ that raises a non-TypeError
+        shouldn't cause rebuild to die.
+        """
+        global unhashableObject
+        unhashableObject = HashRaisesRuntimeError()
+        def _cleanup():
+            global unhashableObject
+            unhashableObject = None
+        self.addCleanup(_cleanup)
+        rebuild.rebuild(rebuild)
+        self.assertEquals(unhashableObject.hashCalled, True)
 
 
 

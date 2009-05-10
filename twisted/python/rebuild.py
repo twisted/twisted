@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_rebuild -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -231,7 +231,7 @@ def rebuild(module, doLog=1):
         for k, v in mod.__dict__.items():
             try:
                 hash(v)
-            except TypeError:
+            except Exception:
                 continue
             if fromOldModule(v):
                 if type(v) == types.ClassType:
