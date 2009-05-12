@@ -5,7 +5,7 @@
 Default processing factory plugin.
 """
 
-from xml.dom import minidom as microdom
+from xml.dom import minidom as dom
 
 from twisted.lore import tree, latex, lint, process
 from twisted.web import sux
@@ -23,7 +23,7 @@ class ProcessingFunctionFactory:
         options = n
         try:
             fp = open(options['template'])
-            templ = microdom.parse(fp)
+            templ = dom.parse(fp)
         except IOError, e:
             raise process.NoProcessorError(e.filename+": "+e.strerror)
         except sux.ParseError, e:

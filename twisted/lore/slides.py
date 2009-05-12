@@ -43,7 +43,7 @@ Example input file::
     </html>
 """
 
-from xml.dom import minidom as microdom
+from xml.dom import minidom as dom
 import os.path, re
 from cStringIO import StringIO
 
@@ -198,7 +198,7 @@ def splitIntoSlides(document):
     slide = []
     title = '(unset)'
     for child in body.childNodes:
-        if isinstance(child, microdom.Element) and child.tagName == 'h2':
+        if isinstance(child, dom.Element) and child.tagName == 'h2':
             if slide:
                 slides.append((title, slide))
                 slide = []
@@ -218,7 +218,7 @@ def insertPrevNextLinks(slides, filename, ext):
                         node.setAttribute('href', '%s-%d%s'
                                           % (filename[0], slide.pos+offset, ext))
                     else:
-                        text = microdom.Text()
+                        text = dom.Text()
                         text.data = slides[slide.pos+offset].title
                         node.appendChild(text)
             else:
@@ -255,7 +255,7 @@ def munge(document, template, linkrel, d, fullpath, ext, url, config):
     pos = 0
     for title, slide in splitIntoSlides(document):
         t = template.cloneNode(1)
-        text = microdom.Text()
+        text = dom.Text()
         text.data = title
         setTitle(t, [text])
         tmplbody = domhelpers.findElementsWithAttribute(t, "class", "body")[0]

@@ -4,7 +4,7 @@
 
 from itertools import count
 import re, os, cStringIO, time, cgi, string, urlparse
-from xml.dom import minidom as microdom
+from xml.dom import minidom as dom
 from xml.sax.handler import ErrorHandler, feature_validation
 from xml.dom.pulldom import SAX2DOM
 from xml.sax import make_parser
@@ -74,7 +74,7 @@ def addMtime(document, fullpath):
     @return: C{None}
     """
     for node in domhelpers.findElementsWithAttribute(document, "class","mtime"):
-        txt = microdom.Text()
+        txt = dom.Text()
         txt.data = time.ctime(os.path.getmtime(fullpath))
         node.appendChild(txt)
 
@@ -118,7 +118,7 @@ def fixAPI(document, url):
     # API references
     for node in domhelpers.findElementsWithAttribute(document, "class", "API"):
         fullname = _getAPI(node)
-        anchor = microdom.Element('a')
+        anchor = dom.Element('a')
         anchor.setAttribute('href', url % (fullname,))
         anchor.setAttribute('title', fullname)
         while node.childNodes:
@@ -166,7 +166,7 @@ def fontifyPythonNode(node):
     newio = cStringIO.StringIO()
     htmlizer.filter(oldio, newio, writer=htmlizer.SmallerHTMLWriter)
     lineLabels = _makeLineNumbers(howManyLines)
-    newel = microdom.parseString(newio.getvalue()).documentElement
+    newel = dom.parseString(newio.getvalue()).documentElement
     newel.setAttribute("class", "python")
     node.parentNode.replaceChild(newel, node)
     newel.insertBefore(lineLabels, newel.firstChild)
@@ -208,7 +208,7 @@ def addPyListings(document, dir):
 
         data = cStringIO.StringIO(text.removeLeadingTrailingBlanks(data))
         htmlizer.filter(data, outfile, writer=htmlizer.SmallerHTMLWriter)
-        sourceNode = microdom.parseString(outfile.getvalue()).documentElement
+        sourceNode = dom.parseString(outfile.getvalue()).documentElement
         sourceNode.insertBefore(_makeLineNumbers(howManyLines), sourceNode.firstChild)
         _replaceWithListing(node, sourceNode.toxml(), filename, "py-listing")
 
@@ -221,7 +221,7 @@ def _makeLineNumbers(howMany):
     @param howMany: The number of lines in the source listing.
     @type howMany: C{int}
 
-    @return: An L{microdom.Element} which can be added to the document before
+    @return: An L{dom.Element} which can be added to the document before
         the source listing to add line numbers to it.
     """
     # Figure out how many digits wide the widest line number label will be.
@@ -231,9 +231,9 @@ def _makeLineNumbers(howMany):
     labels = ['%*d' % (width, i) for i in range(1, howMany + 1)]
 
     # Create a p element with the right style containing the labels
-    p = microdom.Element('p')
+    p = dom.Element('p')
     p.setAttribute('class', 'py-linenumber')
-    t = microdom.Text()
+    t = dom.Text()
     t.data = '\n'.join(labels) + '\n'
     p.appendChild(t)
     return p
@@ -246,7 +246,7 @@ def _replaceWithListing(node, val, filename, class_):
     text = ('<div class="%s">%s<div class="caption">%s - '
             '<a href="%s"><span class="filename">%s</span></a></div></div>' %
             (class_, val, captionTitle, filename, filename))
-    newnode = microdom.parseString(text).documentElement
+    newnode = dom.parseString(text).documentElement
     node.parentNode.replaceChild(newnode, node)
 
 
@@ -344,24 +344,24 @@ def generateToC(document):
     auto = count().next
 
     def addItem(headerElement, parent):
-        anchor = microdom.Element('a')
+        anchor = dom.Element('a')
         name = 'auto%d' % (auto(),)
         anchor.setAttribute('href', '#' + name)
-        text = microdom.Text()
+        text = dom.Text()
         text.data = domhelpers.getNodeText(headerElement)
         anchor.appendChild(text)
-        headerNameItem = microdom.Element('li')
+        headerNameItem = dom.Element('li')
         headerNameItem.appendChild(anchor)
         parent.appendChild(headerNameItem)
-        anchor = microdom.Element('a')
+        anchor = dom.Element('a')
         anchor.setAttribute('name', name)
         headerElement.appendChild(anchor)
 
-    toc = microdom.Element('ol')
+    toc = dom.Element('ol')
     for headerElement, subHeaders in headers:
         addItem(headerElement, toc)
         if subHeaders:
-            subtoc = microdom.Element('ul')
+            subtoc = dom.Element('ul')
             toc.appendChild(subtoc)
             for subHeaderElement in subHeaders:
                 addItem(subHeaderElement, subtoc)
@@ -401,7 +401,7 @@ def removeH1(document):
     @return: C{None}
     """
     h1 = domhelpers.findNodesNamed(document, 'h1')
-    empty = microdom.Element('span')
+    empty = dom.Element('span')
     for node in h1:
         node.parentNode.replaceChild(empty, node)
 
@@ -426,24 +426,24 @@ def footnotes(document):
                                                      "footnote")
     if not footnotes:
         return
-    footnoteElement = microdom.Element('ol')
+    footnoteElement = dom.Element('ol')
     id = 1
     for footnote in footnotes:
-        href = microdom.parseString('<a href="#footnote-%(id)d">'
-                                    '<super>%(id)d</super></a>'
-                                    % vars()).documentElement
+        href = dom.parseString('<a href="#footnote-%(id)d">'
+                               '<super>%(id)d</super></a>'
+                               % vars()).documentElement
         text = ' '.join(domhelpers.getNodeText(footnote).split())
         href.setAttribute('title', text)
-        target = microdom.Element('a')
+        target = dom.Element('a')
         target.setAttribute('name', 'footnote-%d' % (id,))
         target.childNodes = [footnote]
-        footnoteContent = microdom.Element('li')
+        footnoteContent = dom.Element('li')
         footnoteContent.childNodes = [target]
         footnoteElement.childNodes.append(footnoteContent)
         footnote.parentNode.replaceChild(href, footnote)
         id += 1
     body = domhelpers.findNodesNamed(document, "body")[0]
-    header = microdom.parseString('<h2>Footnotes</h2>').documentElement
+    header = dom.parseString('<h2>Footnotes</h2>').documentElement
     body.childNodes.append(header)
     body.childNodes.append(footnoteElement)
 
@@ -465,7 +465,7 @@ def notes(document):
     @return: C{None}
     """
     notes = domhelpers.findElementsWithAttribute(document, "class", "note")
-    notePrefix = microdom.parseString('<strong>Note: </strong>').documentElement
+    notePrefix = dom.parseString('<strong>Note: </strong>').documentElement
     for note in notes:
         note.childNodes.insert(0, notePrefix)
 
@@ -488,8 +488,8 @@ def comparePosition(firstElement, secondElement):
     Compare the two elements given by their position in the document or
     documents they were parsed from.
 
-    @type firstElement: C{twisted.web.microdom.Element}
-    @type secondElement: C{twisted.web.microdom.Element}
+    @type firstElement: C{dom.Element}
+    @type secondElement: C{dom.Element}
 
     @return: C{-1}, C{0}, or C{1}, with the same meanings as the return value
     of L{cmp}.
@@ -673,7 +673,7 @@ def numberDocument(document, chapterNumber):
     """
     i = 1
     for node in domhelpers.findNodesNamed(document, "h2"):
-        label = microdom.Text()
+        label = dom.Text()
         label.data = "%s.%d " % (chapterNumber, i)
         node.insertBefore(label, node.firstChild)
         i += 1
@@ -724,7 +724,7 @@ def setTitle(template, title, chapterNumber):
     @return: C{None}
     """
     if numberer.getNumberSections() and chapterNumber:
-        titleNode = microdom.Text()
+        titleNode = dom.Text()
         # This is necessary in order for cloning below to work.  See Python
         # isuse 4851.
         titleNode.ownerDocument = template.ownerDocument
@@ -764,24 +764,24 @@ def setAuthors(template, authors):
 
         # First, similarly to setTitle, insert text into an <div
         # class="authors">
-        container = microdom.Element('span')
+        container = dom.Element('span')
         for name, href in authors:
-            anchor = microdom.Element('a')
+            anchor = dom.Element('a')
             anchor.setAttribute('href', href)
-            anchorText = microdom.Text()
+            anchorText = dom.Text()
             anchorText.data = name
             anchor.appendChild(anchorText)
             if (name, href) == authors[-1]:
                 if len(authors) == 1:
                     container.appendChild(anchor)
                 else:
-                    andText = microdom.Text()
+                    andText = dom.Text()
                     andText.data = 'and '
                     container.appendChild(andText)
                     container.appendChild(anchor)
             else:
                 container.appendChild(anchor)
-                commaText = microdom.Text()
+                commaText = dom.Text()
                 commaText.data = ', '
                 container.appendChild(commaText)
 
@@ -789,8 +789,8 @@ def setAuthors(template, authors):
 
     # Second, add appropriate <link rel="author" ...> tags to the <head>.
     head = domhelpers.findNodesNamed(template, 'head')[0]
-    authors = [microdom.parseString('<link rel="author" href="%s" title="%s"/>'
-                                    % (href, name)).childNodes[0]
+    authors = [dom.parseString('<link rel="author" href="%s" title="%s"/>'
+                               % (href, name)).childNodes[0]
                for name, href in authors]
     head.childNodes.extend(authors)
 
@@ -811,7 +811,7 @@ def setVersion(template, version):
     """
     for node in domhelpers.findElementsWithAttribute(template, "class",
                                                                "version"):
-        text = microdom.Text()
+        text = dom.Text()
         text.data = version
         node.appendChild(text)
 

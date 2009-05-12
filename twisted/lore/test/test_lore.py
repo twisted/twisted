@@ -32,7 +32,7 @@
 
 import os, shutil, errno, time
 from StringIO import StringIO
-from xml.dom import minidom as microdom
+from xml.dom import minidom as dom
 
 from twisted.trial import unittest
 from twisted.python.filepath import FilePath
@@ -64,8 +64,8 @@ class _XMLAssertionMixin:
         Verify that two strings represent the same XML document.
         """
         self.assertEqual(
-            microdom.parseString(first).toxml(),
-            microdom.parseString(second).toxml())
+            dom.parseString(first).toxml(),
+            dom.parseString(second).toxml())
 
 
 class TestFactory(unittest.TestCase, _XMLAssertionMixin):
@@ -160,7 +160,7 @@ class TestFactory(unittest.TestCase, _XMLAssertionMixin):
         simple = base.child('simple.html')
         FilePath(__file__).sibling('simple.html').copyTo(simple)
 
-        templ = microdom.parse(open(d['template']))
+        templ = dom.parse(open(d['template']))
 
         tree.doFile(simple.path, self.linkrel, d['ext'], d['baseurl'], templ, d)
         self.assertXMLEqual(
@@ -187,7 +187,7 @@ class TestFactory(unittest.TestCase, _XMLAssertionMixin):
             name = os.path.splitext(FilePath(originalFileName).basename())[0]
             return base.child(name + outputExtension).path
 
-        templ = microdom.parse(open(d['template']))
+        templ = dom.parse(open(d['template']))
         tree.doFile(self.file, self.linkrel, d['ext'], d['baseurl'], templ, d, filenameGenerator)
 
         self.assertXMLEqual(
@@ -208,8 +208,8 @@ class TestFactory(unittest.TestCase, _XMLAssertionMixin):
 
     def test_munge(self):
         indexer.setIndexFilename("lore_index_file.html")
-        doc = microdom.parse(open(self.file))
-        node = microdom.parse(open(d['template']))
+        doc = dom.parse(open(self.file))
+        node = dom.parse(open(d['template']))
         tree.munge(doc, node, self.linkrel,
                    os.path.dirname(self.file),
                    self.file,
@@ -238,7 +238,7 @@ class TestFactory(unittest.TestCase, _XMLAssertionMixin):
         information from any I{link} nodes in the I{head} with their I{rel}
         attribute set to C{"author"}.
         """
-        document = microdom.parseString(
+        document = dom.parseString(
             """\
 <html>
   <head>
@@ -251,7 +251,7 @@ class TestFactory(unittest.TestCase, _XMLAssertionMixin):
     <h1>munge authors</h1>
   </body>
 </html>""")
-        template = microdom.parseString(
+        template = dom.parseString(
             """\
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en">
   <head>
@@ -338,7 +338,7 @@ class TestFactory(unittest.TestCase, _XMLAssertionMixin):
     def test_indexAnchorsAdded(self):
         indexer.setIndexFilename('theIndexFile.html')
         # generate the output file
-        templ = microdom.parse(open(d['template']))
+        templ = dom.parse(open(d['template']))
         tmp = self.makeTemp('lore_index_test.xhtml')
 
         tree.doFile(os.path.join(tmp, 'lore_index_test.xhtml'),
@@ -536,17 +536,17 @@ programming language: <a href="lore_index_test.html#index01">link</a><br />
         element and the first element with the I{title} class in the given
         template.
         """
-        parent = microdom.Element('div')
-        firstTitle = microdom.Element('title')
+        parent = dom.Element('div')
+        firstTitle = dom.Element('title')
         parent.appendChild(firstTitle)
-        secondTitle = microdom.Element('span')
+        secondTitle = dom.Element('span')
         secondTitle.setAttribute('class', 'title')
         parent.appendChild(secondTitle)
 
-        titleNodes = [microdom.Text()]
+        titleNodes = [dom.Text()]
         # minidom has issues with cloning documentless-nodes.  See Python issue
         # 4851.
-        titleNodes[0].ownerDocument = microdom.Document()
+        titleNodes[0].ownerDocument = dom.Document()
         titleNodes[0].data = 'foo bar'
 
         tree.setTitle(parent, titleNodes, None)
@@ -559,15 +559,15 @@ programming language: <a href="lore_index_test.html#index01">link</a><br />
         """
         L{tree.setTitle} includes a chapter number if it is passed one.
         """
-        document = microdom.Document()
+        document = dom.Document()
 
-        parent = microdom.Element('div')
+        parent = dom.Element('div')
         parent.ownerDocument = document
 
-        title = microdom.Element('title')
+        title = dom.Element('title')
         parent.appendChild(title)
 
-        titleNodes = [microdom.Text()]
+        titleNodes = [dom.Text()]
         titleNodes[0].ownerDocument = document
         titleNodes[0].data = 'foo bar'
 
@@ -583,7 +583,7 @@ programming language: <a href="lore_index_test.html#index01">link</a><br />
         Tests to make sure that index links are processed when an index page
         exists and removed when there is not.
         """
-        templ = microdom.parse(open(d['template']))
+        templ = dom.parse(open(d['template']))
         indexFilename = 'theIndexFile'
         numLinks = len(domhelpers.findElementsWithAttribute(templ,
                                                             "class",
@@ -609,7 +609,7 @@ programming language: <a href="lore_index_test.html#index01">link</a><br />
                                                           indexFilename)
         self.assertTrue(len(indexLinks) >= numLinks)
 
-        templ = microdom.parse(open(d['template']))
+        templ = dom.parse(open(d['template']))
         self.assertNotEquals(
             [],
             domhelpers.findElementsWithAttribute(templ,
@@ -636,8 +636,8 @@ programming language: <a href="lore_index_test.html#index01">link</a><br />
         path.setContent('')
         when = time.ctime(path.getModificationTime())
 
-        parent = microdom.Element('div')
-        mtime = microdom.Element('span')
+        parent = dom.Element('div')
+        mtime = dom.Element('span')
         mtime.setAttribute('class', 'mtime')
         parent.appendChild(mtime)
 
@@ -654,13 +654,13 @@ programming language: <a href="lore_index_test.html#index01">link</a><br />
         numbers = tree._makeLineNumbers(1)
         self.assertEqual(numbers.tagName, 'p')
         self.assertEqual(numbers.getAttribute('class'), 'py-linenumber')
-        self.assertIsInstance(numbers.firstChild, microdom.Text)
+        self.assertIsInstance(numbers.firstChild, dom.Text)
         self.assertEqual(numbers.firstChild.nodeValue, '1\n')
 
         numbers = tree._makeLineNumbers(10)
         self.assertEqual(numbers.tagName, 'p')
         self.assertEqual(numbers.getAttribute('class'), 'py-linenumber')
-        self.assertIsInstance(numbers.firstChild, microdom.Text)
+        self.assertIsInstance(numbers.firstChild, dom.Text)
         self.assertEqual(
             numbers.firstChild.nodeValue,
             ' 1\n 2\n 3\n 4\n 5\n'
@@ -673,8 +673,8 @@ programming language: <a href="lore_index_test.html#index01">link</a><br />
         parent with a syntax colored and line numbered version of the Python
         source it contains.
         """
-        parent = microdom.Element('div')
-        source = microdom.Text()
+        parent = dom.Element('div')
+        source = dom.Text()
         source.data = 'def foo():\n    pass\n'
         parent.appendChild(source)
 
@@ -699,8 +699,8 @@ programming language: <a href="lore_index_test.html#index01">link</a><br />
         listingPath = FilePath(self.mktemp())
         listingPath.setContent('def foo():\n    pass\n')
 
-        parent = microdom.Element('div')
-        listing = microdom.Element('a')
+        parent = dom.Element('div')
+        listing = dom.Element('a')
         listing.setAttribute('href', listingPath.basename())
         listing.setAttribute('class', 'py-listing')
         parent.appendChild(listing)
@@ -726,8 +726,8 @@ programming language: <a href="lore_index_test.html#index01">link</a><br />
         listingPath = FilePath(self.mktemp())
         listingPath.setContent('def foo():\n    pass\n')
 
-        parent = microdom.Element('div')
-        listing = microdom.Element('a')
+        parent = dom.Element('div')
+        listing = dom.Element('a')
         listing.setAttribute('href', listingPath.basename())
         listing.setAttribute('class', 'py-listing')
         listing.setAttribute('skipLines', 1)
@@ -749,10 +749,10 @@ programming language: <a href="lore_index_test.html#index01">link</a><br />
         I{API} class rewritten to contain links to the API which is referred to
         by the text they contain.
         """
-        parent = microdom.Element('div')
-        link = microdom.Element('span')
+        parent = dom.Element('div')
+        link = dom.Element('span')
         link.setAttribute('class', 'API')
-        text = microdom.Text()
+        text = dom.Text()
         text.data = 'foo'
         link.appendChild(text)
         parent.appendChild(link)
@@ -772,11 +772,11 @@ programming language: <a href="lore_index_test.html#index01">link</a><br />
         node refers to the API formed by joining the value of the I{base}
         attribute to the text contents of the node.
         """
-        parent = microdom.Element('div')
-        link = microdom.Element('span')
+        parent = dom.Element('div')
+        link = dom.Element('span')
         link.setAttribute('class', 'API')
         link.setAttribute('base', 'bar')
-        text = microdom.Text()
+        text = dom.Text()
         text.data = 'baz'
         link.appendChild(text)
         parent.appendChild(link)
@@ -795,8 +795,8 @@ programming language: <a href="lore_index_test.html#index01">link</a><br />
         Links in the nodes of the DOM passed to L{tree.fixLinks} have their
         extensions rewritten to the given extension.
         """
-        parent = microdom.Element('div')
-        link = microdom.Element('a')
+        parent = dom.Element('div')
+        link = dom.Element('a')
         link.setAttribute('href', 'foo.html')
         parent.appendChild(link)
 
@@ -810,8 +810,8 @@ programming language: <a href="lore_index_test.html#index01">link</a><br />
         Nodes of the DOM passed to L{tree.setVersion} which have the I{version}
         class have the given version added to them a child.
         """
-        parent = microdom.Element('div')
-        version = microdom.Element('span')
+        parent = dom.Element('div')
+        version = dom.Element('span')
         version.setAttribute('class', 'version')
         parent.appendChild(version)
 
@@ -828,15 +828,15 @@ programming language: <a href="lore_index_test.html#index01">link</a><br />
         I{body} element which includes them.  It also inserts links to those
         footnotes from the original definition location.
         """
-        parent = microdom.Element('div')
-        body = microdom.Element('body')
-        footnote = microdom.Element('span')
+        parent = dom.Element('div')
+        body = dom.Element('body')
+        footnote = dom.Element('span')
         footnote.setAttribute('class', 'footnote')
-        text = microdom.Text()
+        text = dom.Text()
         text.data = 'this is the footnote'
         footnote.appendChild(text)
         body.appendChild(footnote)
-        body.appendChild(microdom.Element('p'))
+        body.appendChild(dom.Element('p'))
         parent.appendChild(body)
 
         tree.footnotes(parent)
@@ -860,14 +860,14 @@ programming language: <a href="lore_index_test.html#index01">link</a><br />
         L{tree.generateToC} returns an element which contains a table of
         contents generated from the headers in the document passed to it.
         """
-        parent = microdom.Element('body')
-        header = microdom.Element('h2')
-        text = microdom.Text()
+        parent = dom.Element('body')
+        header = dom.Element('h2')
+        text = dom.Text()
         text.data = u'header & special character'
         header.appendChild(text)
         parent.appendChild(header)
-        subheader = microdom.Element('h3')
-        text = microdom.Text()
+        subheader = dom.Element('h3')
+        text = dom.Text()
         text.data = 'subheader'
         subheader.appendChild(text)
         parent.appendChild(subheader)
@@ -891,13 +891,13 @@ programming language: <a href="lore_index_test.html#index01">link</a><br />
         L{tree.putInToC} replaces all of the children of the first node with
         the I{toc} class with the given node representing a table of contents.
         """
-        parent = microdom.Element('div')
-        toc = microdom.Element('span')
+        parent = dom.Element('div')
+        toc = dom.Element('span')
         toc.setAttribute('class', 'toc')
-        toc.appendChild(microdom.Element('foo'))
+        toc.appendChild(dom.Element('foo'))
         parent.appendChild(toc)
 
-        tree.putInToC(parent, microdom.Element('toc'))
+        tree.putInToC(parent, dom.Element('toc'))
 
         self.assertEqual(toc.toxml(), '<span class="toc"><toc/></span>')
 
@@ -908,8 +908,8 @@ programming language: <a href="lore_index_test.html#index01">link</a><br />
         L{tree.generateToC} raises L{ValueError} explaining that this is not a
         valid document.
         """
-        parent = microdom.Element('body')
-        parent.appendChild(microdom.Element('h3'))
+        parent = dom.Element('body')
+        parent.appendChild(dom.Element('h3'))
         err = self.assertRaises(ValueError, tree.generateToC, parent)
         self.assertEqual(
             str(err), "No H3 element is allowed until after an H2 element")
@@ -920,10 +920,10 @@ programming language: <a href="lore_index_test.html#index01">link</a><br />
         L{tree.notes} inserts some additional markup before the first child of
         any node with the I{note} class.
         """
-        parent = microdom.Element('div')
-        noteworthy = microdom.Element('span')
+        parent = dom.Element('div')
+        noteworthy = dom.Element('span')
         noteworthy.setAttribute('class', 'note')
-        noteworthy.appendChild(microdom.Element('foo'))
+        noteworthy.appendChild(dom.Element('foo'))
         parent.appendChild(noteworthy)
 
         tree.notes(parent)
@@ -938,9 +938,9 @@ programming language: <a href="lore_index_test.html#index01">link</a><br />
         L{tree.findNodeJustBefore} returns the previous sibling of the node it
         is passed.  The list of nodes passed in is ignored.
         """
-        parent = microdom.Element('div')
-        result = microdom.Element('foo')
-        target = microdom.Element('bar')
+        parent = dom.Element('div')
+        result = dom.Element('foo')
+        target = dom.Element('bar')
         parent.appendChild(result)
         parent.appendChild(target)
 
@@ -949,7 +949,7 @@ programming language: <a href="lore_index_test.html#index01">link</a><br />
             result)
 
         # Also, support other configurations.  This is a really not nice API.
-        newTarget = microdom.Element('baz')
+        newTarget = dom.Element('baz')
         target.appendChild(newTarget)
         self.assertIdentical(
             tree.findNodeJustBefore(newTarget, [parent, result]),
@@ -961,8 +961,8 @@ programming language: <a href="lore_index_test.html#index01">link</a><br />
         L{tree.getSectionNumber} accepts an I{H2} element and returns its text
         content.
         """
-        header = microdom.Element('foo')
-        text = microdom.Text()
+        header = dom.Element('foo')
+        text = dom.Text()
         text.data = 'foobar'
         header.appendChild(text)
         self.assertEqual(tree.getSectionNumber(header), 'foobar')
@@ -973,9 +973,9 @@ programming language: <a href="lore_index_test.html#index01">link</a><br />
         L{tree.numberDocument} inserts section numbers into the text of each
         header.
         """
-        parent = microdom.Element('foo')
-        section = microdom.Element('h2')
-        text = microdom.Text()
+        parent = dom.Element('foo')
+        section = dom.Element('h2')
+        text = dom.Text()
         text.data = 'foo'
         section.appendChild(text)
         parent.appendChild(section)
@@ -1154,9 +1154,9 @@ class XMLSerializationTests(unittest.TestCase, _XMLAssertionMixin):
         A document which contains non-ascii characters is serialized to a
         file using UTF-8.
         """
-        document = microdom.Document()
-        parent = microdom.Element('foo')
-        text = microdom.Text()
+        document = dom.Document()
+        parent = dom.Element('foo')
+        text = dom.Text()
         text.data = u'\N{SNOWMAN}'
         parent.appendChild(text)
         document.appendChild(parent)
@@ -1177,10 +1177,10 @@ class LatexSpitterTestCase(unittest.TestCase):
         Test processing of a span tag with an index class results in a latex
         \\index directive the correct value.
         """
-        dom = microdom.parseString('<span class="index" value="name" />').documentElement
+        doc = dom.parseString('<span class="index" value="name" />').documentElement
         out = StringIO()
         spitter = LatexSpitter(out.write)
-        spitter.visitNode(dom)
+        spitter.visitNode(doc)
         self.assertEqual(out.getvalue(), u'\\index{name}\n')
 
 

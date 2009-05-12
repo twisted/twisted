@@ -5,7 +5,7 @@
 LaTeX output support for Lore.
 """
 
-from xml.dom import minidom as microdom
+from xml.dom import minidom as dom
 import os.path, re, string
 from cStringIO import StringIO
 import urlparse
@@ -67,7 +67,7 @@ class BaseLatexSpitter:
         self.filename = filename
 
     def visitNode(self, node):
-        if isinstance(node, microdom.Comment):
+        if isinstance(node, dom.Comment):
             return
         if not hasattr(node, 'tagName'):
             self.writeNodeData(node)

@@ -6,7 +6,7 @@ DocBook output support for Lore.
 """
 
 import os, cgi
-from xml.dom import minidom as microdom
+from xml.dom import minidom as dom
 
 from twisted.lore import latex
 
@@ -46,7 +46,7 @@ class DocbookSpitter(latex.BaseLatexSpitter):
     def visitNode_li(self, node):
         for child in node.childNodes:
             if getattr(child, 'tagName', None) != 'p':
-                new = microdom.Element('p')
+                new = dom.Element('p')
                 new.childNodes = [child]
                 node.replaceChild(new, child)
         self.visitNodeDefault(node)

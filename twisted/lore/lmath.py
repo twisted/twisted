@@ -6,7 +6,7 @@ LaTeX-defined image support for Lore documents.
 """
 
 import os, tempfile
-from xml.dom import minidom as microdom
+from xml.dom import minidom as dom
 
 from twisted.web import domhelpers
 import latex, tree, lint, default
@@ -50,7 +50,7 @@ def formulaeToImages(document, dir, _system=os.system):
         i += 1
         _system('pstoimg -type png -crop a -trans -interlace -out '
                   '%s %s.ps' % (imgname, file))
-        newNode = microdom.parseString(
+        newNode = dom.parseString(
             '<span><br /><img src="%s" /><br /></span>' % (
                 baseimgname,)).documentElement
         node.parentNode.replaceChild(newNode, node)

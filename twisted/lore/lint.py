@@ -5,7 +5,7 @@
 Checker for common errors in Lore documents.
 """
 
-from xml.dom import minidom as microdom
+from xml.dom import minidom as dom
 import parser, urlparse, os.path
 
 from twisted.lore import tree, process
@@ -56,13 +56,13 @@ class DefaultTagChecker(TagChecker):
             self._reportError(filename, element,
                               'unknown class %s' %element.getAttribute('class'))
 
-    def check_quote(self, dom, filename):
+    def check_quote(self, doc, filename):
         def matcher(node):
             return ('"' in getattr(node, 'data', '') and
-                    not isinstance(node, microdom.Comment) and
+                    not isinstance(node, dom.Comment) and
                     not  [1 for n in domhelpers.getParents(node)[1:-1]
                            if n.tagName in ('pre', 'code')])
-        for node in domhelpers.findNodes(dom, matcher):
+        for node in domhelpers.findNodes(doc, matcher):
             self._reportError(filename, node.parentNode, 'contains quote')
 
     def check_styleattr(self, dom, filename):
@@ -213,6 +213,6 @@ def getDefaultChecker():
     return DefaultTagChecker(tags.has_key, allowed)
 
 def doFile(file, checker):
-    dom = tree.parseFileAndReport(file)
-    if dom:
-        checker.check(dom, file)
+    doc = tree.parseFileAndReport(file)
+    if doc:
+        checker.check(doc, file)
