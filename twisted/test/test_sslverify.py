@@ -353,8 +353,8 @@ class OpenSSLOptions(unittest.TestCase):
             # Win32 fails to report the SSL Error, and report a connection lost
             # instead: there is a race condition so that's not totally
             # surprising (see ticket #2877 in the tracker)
-            cResult.trap(SSL.Error, ConnectionLost)
-            sResult.trap(SSL.Error)
+            self.assertIsInstance(cResult.value, (SSL.Error, ConnectionLost))
+            self.assertIsInstance(sResult.value, SSL.Error)
 
         return d.addCallback(afterLost)
 

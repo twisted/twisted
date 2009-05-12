@@ -9,6 +9,7 @@ from twisted.trial import unittest
 from twisted.internet import protocol, reactor, interfaces, defer
 from twisted.protocols import basic
 from twisted.python import util
+from twisted.python.reflect import getClass, fullyQualifiedName
 from twisted.python.runtime import platform
 from twisted.test.test_tcp import WriteDataTestCase, ProperlyCloseFilesMixin
 
@@ -268,7 +269,7 @@ if SSL is not None:
 
 
 
-class StolenTCPTestCase(ProperlyCloseFilesMixin, WriteDataTestCase):
+class StolenTCPTestCase(ProperlyCloseFilesMixin, unittest.TestCase):
     """
     For SSL transports, test many of the same things which are tested for
     TCP transports.
@@ -301,6 +302,8 @@ class StolenTCPTestCase(ProperlyCloseFilesMixin, WriteDataTestCase):
         return SSL.Error
 
 
+    _iocp = 'twisted.internet.iocpreactor.reactor.IOCPReactor'
+
     def getHandleErrorCode(self):
         """
         Return the argument L{SSL.Error} will be constructed with for this
@@ -309,8 +312,16 @@ class StolenTCPTestCase(ProperlyCloseFilesMixin, WriteDataTestCase):
         this.
         """
         # Windows 2000 SP 4 and Windows XP SP 2 give back WSAENOTSOCK for
-        # SSL.Connection.write for some reason.
-        if platform.getType() == 'win32':
+        # SSL.Connection.write for some reason.  The twisted.protocols.tls
+        # implementation of IReactorSSL doesn't suffer from this imprecation,
+        # though, since it is isolated from the Windows I/O layer (I suppose?).
+
+        # If test_properlyCloseFiles waited for the SSL handshake to complete
+        # and performed an orderly shutdown, then this would probably be a
+        # little less weird: writing to a shutdown SSL connection has a more
+        # well-defined failure mode (or at least it should).
+        name = fullyQualifiedName(getClass(reactor))
+        if platform.getType() == 'win32' and name != self._iocp:
             return errno.WSAENOTSOCK
         # This is terribly implementation-specific.
         return [('SSL routines', 'SSL_write', 'protocol is shutdown')]

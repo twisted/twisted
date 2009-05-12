@@ -1,24 +1,35 @@
 # -*- test-case-name: twisted.internet.test.test_iocp -*-
-
-# Copyright (c) 2008 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 Reactor that uses IO completion ports
 """
 
+import warnings, socket, sys
+
+from zope.interface import implements
 
 from twisted.internet import base, interfaces, main, error
 from twisted.python import log, failure
 from twisted.internet._dumbwin32proc import Process
 
-from zope.interface import implements
-import socket, sys
-
 from twisted.internet.iocpreactor import iocpsupport as _iocp
 from twisted.internet.iocpreactor.const import WAIT_TIMEOUT
 from twisted.internet.iocpreactor import tcp, udp
+
+try:
+    from twisted.protocols.tls import TLSMemoryBIOFactory
+except ImportError:
+    # Either pyOpenSSL isn't installed, or it is too old for this code to work.
+    # The reactor won't provide IReactorSSL.
+    TLSMemoryBIOFactory = None
+    _extraInterfaces = ()
+    warnings.warn(
+        "pyOpenSSL 0.10 or newer is required for SSL support in iocpreactor. "
+        "It is missing, so the reactor will not support SSL APIs.")
+else:
+    _extraInterfaces = (interfaces.IReactorSSL,)
 
 from twisted.python.compat import set
 
@@ -37,7 +48,8 @@ _NO_FILEDESC = error.ConnectionFdescWentAway('Filedescriptor went away')
 
 class IOCPReactor(base._SignalReactorMixin, base.ReactorBase):
     implements(interfaces.IReactorTCP, interfaces.IReactorUDP,
-               interfaces.IReactorMulticast, interfaces.IReactorProcess)
+               interfaces.IReactorMulticast, interfaces.IReactorProcess,
+               *_extraInterfaces)
 
     port = None
 
@@ -148,6 +160,50 @@ class IOCPReactor(base._SignalReactorMixin, base.ReactorBase):
         c = tcp.Connector(host, port, factory, timeout, bindAddress, self)
         c.connect()
         return c
+
+
+    if TLSMemoryBIOFactory is not None:
+        def listenSSL(self, port, factory, contextFactory, backlog=50, interface=''):
+            """
+            @see: twisted.internet.interfaces.IReactorSSL.listenSSL
+            """
+            return self.listenTCP(
+                port,
+                TLSMemoryBIOFactory(contextFactory, False, factory),
+                backlog, interface)
+
+
+        def connectSSL(self, host, port, factory, contextFactory, timeout=30, bindAddress=None):
+            """
+            @see: twisted.internet.interfaces.IReactorSSL.connectSSL
+            """
+            return self.connectTCP(
+                host, port,
+                TLSMemoryBIOFactory(contextFactory, True, factory),
+                timeout, bindAddress)
+    else:
+        def listenSSL(self, port, factory, contextFactory, backlog=50, interface=''):
+            """
+            Non-implementation of L{IReactorSSL.listenSSL}.  Some dependency
+            is not satisfied.  This implementation always raises
+            L{NotImplementedError}.
+            """
+            raise NotImplementedError(
+                "pyOpenSSL 0.10 or newer is required for SSL support in "
+                "iocpreactor. It is missing, so the reactor does not support "
+                "SSL APIs.")
+
+
+        def connectSSL(self, host, port, factory, contextFactory, timeout=30, bindAddress=None):
+            """
+            Non-implementation of L{IReactorSSL.connectSSL}.  Some dependency
+            is not satisfied.  This implementation always raises
+            L{NotImplementedError}.
+            """
+            raise NotImplementedError(
+                "pyOpenSSL 0.10 or newer is required for SSL support in "
+                "iocpreactor. It is missing, so the reactor does not support "
+                "SSL APIs.")
 
 
     def listenUDP(self, port, protocol, interface='', maxPacketSize=8192):

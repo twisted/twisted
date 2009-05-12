@@ -15,7 +15,7 @@ from zope.interface import directlyProvides, providedBy
 
 # twisted imports
 from twisted.internet.protocol import ServerFactory, Protocol, ClientFactory
-from twisted.internet import reactor, error
+from twisted.internet import error
 from twisted.python import log
 
 
@@ -195,6 +195,7 @@ class ThrottlingFactory(WrappingFactory):
         """
         Wrapper around L{reactor.callLater} for test purpose.
         """
+        from twisted.internet import reactor
         return reactor.callLater(period, func)
 
 
@@ -492,6 +493,7 @@ class TimeoutFactory(WrappingFactory):
         """
         Wrapper around L{reactor.callLater} for test purpose.
         """
+        from twisted.internet import reactor
         return reactor.callLater(period, func)
 
 
@@ -602,6 +604,7 @@ class TimeoutMixin:
     __timeoutCall = None
 
     def callLater(self, period, func):
+        from twisted.internet import reactor
         return reactor.callLater(period, func)
 
 

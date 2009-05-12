@@ -1,19 +1,19 @@
-# Copyright (c) 2008 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 TCP support for IOCP reactor
 """
+
+import socket, operator, errno, struct
+
+from zope.interface import implements, directlyProvides
 
 from twisted.internet import interfaces, error, address, main, defer
 from twisted.internet.abstract import isIPAddress
 from twisted.internet.tcp import _SocketCloser, Connector as TCPConnector
 from twisted.persisted import styles
 from twisted.python import log, failure, reflect, util
-
-from zope.interface import implements
-import socket, operator, errno, struct
 
 from twisted.internet.iocpreactor import iocpsupport as _iocp, abstract
 from twisted.internet.iocpreactor.interfaces import IReadWriteHandle
@@ -23,6 +23,14 @@ from twisted.internet.iocpreactor.const import SO_UPDATE_ACCEPT_CONTEXT
 from twisted.internet.iocpreactor.const import ERROR_CONNECTION_REFUSED
 from twisted.internet.iocpreactor.const import ERROR_NETWORK_UNREACHABLE
 
+try:
+    from twisted.protocols.tls import TLSMemoryBIOFactory, TLSMemoryBIOProtocol
+except ImportError:
+    TLSMemoryBIOProtocol = TLSMemoryBIOFactory = None
+    _extraInterfaces = ()
+else:
+    _extraInterfaces = (interfaces.ITLSTransport,)
+
 # ConnectEx returns these. XXX: find out what it does for timeout
 connectExErrors = {
         ERROR_CONNECTION_REFUSED: errno.WSAECONNREFUSED,
@@ -30,11 +38,54 @@ connectExErrors = {
         }
 
 
+class _BypassTLS(object):
+    """
+    L{_BypassTLS} is used as the transport object for the TLS protocol object
+    used to implement C{startTLS}.  Its methods skip any TLS logic which
+    C{startTLS} enables.
+
+    @ivar _connection: A L{Connection} which TLS has been started on which will
+        be proxied to by this object.  Any method which has its behavior
+        altered after C{startTLS} will be skipped in favor of the base class's
+        implementation.  This allows the TLS protocol object to have direct
+        access to the transport, necessary to actually implement TLS.
+    """
+    def __init__(self, connection):
+        self._connection = connection
+
+
+    def __getattr__(self, name):
+        return getattr(self._connection, name)
+
+
+    def write(self, data):
+        return abstract.FileHandle.write(self._connection, data)
+
+
+    def writeSequence(self, iovec):
+        return abstract.FileHandle.writeSequence(self._connection, iovec)
+
+
+    def loseConnection(self, reason=None):
+        return abstract.FileHandle.loseConnection(self._connection, reason)
+
+
 
 class Connection(abstract.FileHandle, _SocketCloser):
-    implements(IReadWriteHandle, interfaces.ITCPTransport,
-               interfaces.ISystemHandle)
+    """
+    @ivar _tls: C{False} to indicate the connection is in normal TCP mode,
+        C{True} to indicate that TLS has been started and that operations must
+        be routed through the L{TLSMemoryBIOProtocol} instance.
 
+    @ivar _tlsClientDefault: A flag which must be set by a subclass.  If set to
+        C{True}, L{startTLS} will default to initiating SSL as a client.  If
+        set to C{False}, L{startTLS} will default to initiating SSL as a
+        server.
+    """
+    implements(IReadWriteHandle, interfaces.ITCPTransport,
+               interfaces.ISystemHandle, *_extraInterfaces)
+
+    _tls = False
 
     def __init__(self, sock, proto, reactor=None):
         abstract.FileHandle.__init__(self, reactor)
@@ -122,11 +173,86 @@ class Connection(abstract.FileHandle, _SocketCloser):
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, enabled)
 
 
+    if TLSMemoryBIOFactory is not None:
+        def startTLS(self, contextFactory, normal=True):
+            """
+            @see: L{ITLSTransport.startTLS}
+            """
+            # Figure out which direction the SSL goes in.  If normal is True,
+            # we'll go in the direction indicated by the subclass.  Otherwise,
+            # we'll go the other way (client = not normal ^ _tlsClientDefault,
+            # in other words).
+            if normal:
+                client = self._tlsClientDefault
+            else:
+                client = not self._tlsClientDefault
+
+            tlsFactory = TLSMemoryBIOFactory(contextFactory, client, None)
+            tlsProtocol = TLSMemoryBIOProtocol(tlsFactory, self.protocol, False)
+            self.protocol = tlsProtocol
+
+            self.getHandle = tlsProtocol.getHandle
+            self.getPeerCertificate = tlsProtocol.getPeerCertificate
+
+            # Mark the transport as secure.
+            directlyProvides(self, interfaces.ISSLTransport)
+
+            # Remember we did this so that write and writeSequence can send the
+            # data to the right place.
+            self._tls = True
+
+            # Hook it up
+            self.protocol.makeConnection(_BypassTLS(self))
+
+
+    def write(self, data):
+        """
+        Write some data, either directly to the underlying handle or, if TLS
+        has been started, to the L{TLSMemoryBIOProtocol} for it to encrypt and
+        send.
+
+        @see: L{ITCPTransport.write}
+        """
+        if self._tls:
+            self.protocol.write(data)
+        else:
+            abstract.FileHandle.write(self, data)
+
+
+    def writeSequence(self, iovec):
+        """
+        Write some data, either directly to the underlying handle or, if TLS
+        has been started, to the L{TLSMemoryBIOProtocol} for it to encrypt and
+        send.
+
+        @see: L{ITCPTransport.writeSequence}
+        """
+        if self._tls:
+            self.protocol.writeSequence(iovec)
+        else:
+            abstract.FileHandle.writeSequence(self, iovec)
+
+
+    def loseConnection(self, reason=None):
+        """
+        Close the underlying handle or, if TLS has been started, first shut it
+        down.
+
+        @see: L{ITCPTransport.loseConnection}
+        """
+        if self._tls:
+            if self.connected and not self.disconnecting:
+                self.protocol.loseConnection()
+        else:
+            abstract.FileHandle.loseConnection(self, reason)
+
+
 
 class Client(Connection):
     addressFamily = socket.AF_INET
     socketType = socket.SOCK_STREAM
 
+    _tlsClientDefault = True
 
     def __init__(self, host, port, bindAddress, connector, reactor):
         self.connector = connector
@@ -264,6 +390,8 @@ class Server(Connection):
     I am a serverside network connection transport; a socket which came from an
     accept() on a server.
     """
+
+    _tlsClientDefault = False
 
 
     def __init__(self, sock, protocol, clientAddr, serverAddr, sessionno, reactor):
