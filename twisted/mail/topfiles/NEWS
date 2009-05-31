@@ -1,6 +1,33 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Mail 9.0.0 (2008-05-30)
+===============================
+
+Features
+--------
+ - Support deletion, undeletion, and syncing in the in-memory maildir
+   implementation (#3547)
+ - SMTPClient's callbacks are now more completely documented (#684)
+
+Fixes
+-----
+ - The deprecated md5 and sha modules are no longer used if the stdlib hashlib
+   module is available (#2763)
+ - Parse UNSEEN response data and include it in the result of
+   IMAP4Client.examine (#3550)
+ - The IMAP4 client now delivers more unsolicited server responses to callbacks
+   rather than ignoring them (#1105)
+ - Several bugs in the SMTP client's idle timeout support were fixed (#3641,
+   #1219)
+ - A case where the SMTP client could skip some recipients when retrying
+   delivery has been fixed (#3638)
+
+Other
+-----
+ - #3642, #3647, #3659, #3663, #3750, #3812, #3819
+
+
 Mail 8.2.0 (2008-12-16)
 =======================
 
