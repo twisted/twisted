@@ -1,6 +1,30 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Conch 9.0.0pre1 (2009-05-30)
+====================================
+
+Fixes
+-----
+ - Misreporting of the modification time of files over sftp was fixed (#3503)
+ - The deprecated md5 and sha modules are no longer used if the stdlib hashlib
+   module is available (#2763)
+ - The "cftp" sftp client now truncates files it is uploading over (#2519)
+ - The telnet protocol now emits correct subnegotiation messages (#3655)
+ - The quality of the SSHv2 server implementation was improved (#2682)
+
+Other
+-----
+ - #3548, #3537, #3551, #3220, #3568, #3689, #3709, #3809
+
+Deprecations and Removals
+-------------------------
+ - The buggy SSH connection sharing feature of the SSHv2 client was removed
+   (#3498)
+ - Use of strings and PyCrypto objects to represent keys is deprecated in favor
+   of using Conch Key objects (#2682)
+
+
 Conch 8.2.0 (2008-12-16)
 ========================
 
