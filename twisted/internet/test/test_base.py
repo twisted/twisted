@@ -11,9 +11,10 @@ from Queue import Queue
 from zope.interface import implements
 
 from twisted.python.threadpool import ThreadPool
+from twisted.python.util import setIDFunction
 from twisted.internet.interfaces import IReactorTime, IReactorThreads
 from twisted.internet.error import DNSLookupError
-from twisted.internet.base import ThreadedResolver
+from twisted.internet.base import ThreadedResolver, DelayedCall
 from twisted.internet.task import Clock
 from twisted.trial.unittest import TestCase
 
@@ -150,3 +151,29 @@ class ThreadedResolverTests(TestCase):
         # Eventually the socket.gethostbyname does finish - in this case, with
         # an exception.  Nobody cares, though.
         result.put(IOError("The I/O was errorful"))
+
+
+
+class DelayedCallTests(TestCase):
+    """
+    Tests for L{DelayedCall}.
+    """
+    def test_str(self):
+        """
+        The string representation of a L{DelayedCall} instance, as returned by
+        C{str}, includes the unsigned id of the instance, as well as its state,
+        the function to be called, and the function arguments.
+        """
+        def nothing():
+            pass
+        dc = DelayedCall(12, nothing, (3, ), {"A": 5}, None, None, lambda: 1.5)
+        ids = {dc: 200}
+        def fakeID(obj):
+            try:
+                return ids[obj]
+            except (TypeError, KeyError):
+                return id(obj)
+        self.addCleanup(setIDFunction, setIDFunction(fakeID))
+        self.assertEquals(
+            str(dc),
+            "<DelayedCall 0xc8 [10.5s] called=0 cancelled=0 nothing(3, A=5)>")

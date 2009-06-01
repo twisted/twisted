@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_util -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import os.path, sys
@@ -56,17 +56,6 @@ class UtilTestCase(unittest.TestCase):
         self.calls = 0
         self.assertEquals(util.untilConcludes(f, 2, 3), 5)
         self.assertEquals(self.calls, 3)
-
-    def testUnsignedID(self):
-        util.id = lambda x: x
-        try:
-            for i in range(1, 100):
-                self.assertEquals(util.unsignedID(i), i)
-            top = (sys.maxint + 1L) * 2L
-            for i in range(-100, -1):
-                self.assertEquals(util.unsignedID(i), top + i)
-        finally:
-            del util.id
 
     def testNameToLabel(self):
         """
@@ -727,3 +716,58 @@ class RunAsEffectiveUserTests(unittest.TestCase):
         self._testUIDGIDSwitch(1, 1, 2, 1, [0, 2, 0, 1], [])
         self._testUIDGIDSwitch(1, 1, 1, 2, [0, 1, 0, 1], [2, 1])
         self._testUIDGIDSwitch(1, 1, 2, 2, [0, 2, 0, 1], [2, 1])
+
+
+
+class UnsignedIDTests(unittest.TestCase):
+    """
+    Tests for L{util.unsignedID} and L{util.setIDFunction}.
+    """
+    def setUp(self):
+        """
+        Save the value of L{util._idFunction} and arrange for it to be restored
+        after the test runs.
+        """
+        self.addCleanup(setattr, util, '_idFunction', util._idFunction)
+
+
+    def test_setIDFunction(self):
+        """
+        L{util.setIDFunction} returns the last value passed to it.
+        """
+        value = object()
+        previous = util.setIDFunction(value)
+        result = util.setIDFunction(previous)
+        self.assertIdentical(value, result)
+
+
+    def test_unsignedID(self):
+        """
+        L{util.unsignedID} uses the function passed to L{util.setIDFunction} to
+        determine the unique integer id of an object and then adjusts it to be
+        positive if necessary.
+        """
+        foo = object()
+        bar = object()
+
+        # A fake object identity mapping
+        objects = {foo: 17, bar: -73}
+        def fakeId(obj):
+            return objects[obj]
+
+        util.setIDFunction(fakeId)
+
+        self.assertEquals(util.unsignedID(foo), 17)
+        self.assertEquals(util.unsignedID(bar), (sys.maxint + 1) * 2 - 73)
+
+
+    def test_defaultIDFunction(self):
+        """
+        L{util.unsignedID} uses the built in L{id} by default.
+        """
+        obj = object()
+        idValue = id(obj)
+        if idValue < 0:
+            idValue += (sys.maxint + 1) * 2
+
+        self.assertEquals(util.unsignedID(obj), idValue)

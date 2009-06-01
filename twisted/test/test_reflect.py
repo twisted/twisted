@@ -1,6 +1,5 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 Test cases for twisted.reflect module.
@@ -540,17 +539,17 @@ class SafeRepr(unittest.TestCase):
         """
         class X(BTBase):
             breakRepr = True
-        util.id = lambda x: 100
-        try:
-            xRepr = reflect.safe_repr(X)
-            self.assertIn("0x64", xRepr)
-            util.id = lambda x: -100
-            xRepr = reflect.safe_repr(X)
-            # We can't check for the whole id, as it can be different in 32 or
-            # 64 bits
-            self.assertIn("ffffff9c", xRepr)
-        finally:
-            del util.id
+
+        ids = {X: 100}
+        def fakeID(obj):
+            try:
+                return ids[obj]
+            except (TypeError, KeyError):
+                return id(obj)
+        self.addCleanup(util.setIDFunction, util.setIDFunction(fakeID))
+
+        xRepr = reflect.safe_repr(X)
+        self.assertIn("0x64", xRepr)
 
 
     def test_brokenClassStr(self):

@@ -8,7 +8,7 @@ Tests for L{twisted.protocols.amp}.
 
 from zope.interface.verify import verifyObject
 
-from twisted.python.util import unsignedID
+from twisted.python.util import setIDFunction
 from twisted.python import filepath
 from twisted.python.failure import Failure
 from twisted.protocols import amp
@@ -1157,9 +1157,13 @@ class AMPTest(unittest.TestCase):
         otherProto = TestProto(None, "outgoing data")
         a = amp.AMP()
         a.innerProtocol = otherProto
+        def fakeID(obj):
+            return {a: 0x1234}.get(obj, id(obj))
+        self.addCleanup(setIDFunction, setIDFunction(fakeID))
 
-        self.assertEquals(repr(a), "<AMP inner <TestProto #%d> at 0x%x>" % (
-            otherProto.instanceId, unsignedID(a)))
+        self.assertEquals(
+            repr(a), "<AMP inner <TestProto #%d> at 0x1234>" % (
+                otherProto.instanceId,))
 
 
     def test_innerProtocolNotInRepr(self):
@@ -1168,7 +1172,10 @@ class AMPTest(unittest.TestCase):
         is set.
         """
         a = amp.AMP()
-        self.assertEquals(repr(a), "<AMP at 0x%x>" % (unsignedID(a),))
+        def fakeID(obj):
+            return {a: 0x4321}.get(obj, id(obj))
+        self.addCleanup(setIDFunction, setIDFunction(fakeID))
+        self.assertEquals(repr(a), "<AMP at 0x4321>")
 
 
     def test_simpleSSLRepr(self):

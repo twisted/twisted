@@ -17,6 +17,7 @@ from heapq import heappush, heappop, heapify
 import traceback
 
 from twisted.python.compat import set
+from twisted.python.util import unsignedID
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorThreads
 from twisted.internet.interfaces import IResolverSimple, IReactorPluggableResolver
 from twisted.internet.interfaces import IConnector, IDelayedCall
@@ -153,6 +154,7 @@ class DelayedCall(styles.Ephemeral):
     def __le__(self, other):
         return self.time <= other.time
 
+
     def __str__(self):
         if self._str is not None:
             return self._str
@@ -167,8 +169,9 @@ class DelayedCall(styles.Ephemeral):
             func = None
 
         now = self.seconds()
-        L = ["<DelayedCall %s [%ss] called=%s cancelled=%s" % (
-                id(self), self.time - now, self.called, self.cancelled)]
+        L = ["<DelayedCall 0x%x [%ss] called=%s cancelled=%s" % (
+                unsignedID(self), self.time - now, self.called,
+                self.cancelled)]
         if func is not None:
             L.extend((" ", func, "("))
             if self.args:
@@ -184,6 +187,7 @@ class DelayedCall(styles.Ephemeral):
         L.append('>')
 
         return "".join(L)
+
 
 
 class ThreadedResolver(object):

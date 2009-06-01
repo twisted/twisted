@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.python.test.test_util -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import os, sys, hmac, errno, new, inspect, warnings
@@ -735,6 +735,23 @@ def untilConcludes(f, *a, **kw):
                 continue
             raise
 
+_idFunction = id
+
+def setIDFunction(idFunction):
+    """
+    Change the function used by L{unsignedID} to determine the integer id value
+    of an object.  This is largely useful for testing to give L{unsignedID}
+    deterministic, easily-controlled behavior.
+
+    @param idFunction: A function with the signature of L{id}.
+    @return: The previous function being used by L{unsignedID}.
+    """
+    global _idFunction
+    oldIDFunction = _idFunction
+    _idFunction = idFunction
+    return oldIDFunction
+
+
 # A value about twice as large as any Python int, to which negative values
 # from id() will be added, moving them into a range which should begin just
 # above where positive values from id() leave off.
@@ -742,12 +759,19 @@ _HUGEINT = (sys.maxint + 1L) * 2L
 def unsignedID(obj):
     """
     Return the id of an object as an unsigned number so that its hex
-    representation makes sense
+    representation makes sense.
+
+    This is mostly necessary in Python 2.4 which implements L{id} to sometimes
+    return a negative value.  Python 2.3 shares this behavior, but also
+    implements hex and the %x format specifier to represent negative values as
+    though they were positive ones, obscuring the behavior of L{id}.  Python
+    2.5's implementation of L{id} always returns positive values.
     """
-    rval = id(obj)
+    rval = _idFunction(obj)
     if rval < 0:
         rval += _HUGEINT
     return rval
+
 
 def mergeFunctionMetadata(f, g):
     """
