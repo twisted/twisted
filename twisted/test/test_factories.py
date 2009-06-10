@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -7,11 +7,14 @@ Test code for basic Factory classes.
 
 import pickle
 
-from twisted.trial import unittest
+from twisted.trial.unittest import TestCase
 
 from twisted.internet import reactor, defer
+from twisted.internet.task import Clock
 from twisted.internet.protocol import Factory, ReconnectingClientFactory
 from twisted.protocols.basic import Int16StringReceiver
+
+
 
 class In(Int16StringReceiver):
     def __init__(self):
@@ -29,6 +32,8 @@ class In(Int16StringReceiver):
         self.factory.allMessages.append(self.msgs)
         if len(self.factory.allMessages) >= self.factory.goal:
             self.factory.d.callback(None)
+
+
 
 class Out(Int16StringReceiver):
     msgs = dict([(x, 'X' * x) for x in range(10)])
@@ -51,10 +56,25 @@ class Out(Int16StringReceiver):
 
 
 
-class ReconnectingFactoryTestCase(unittest.TestCase):
+class FakeConnector(object):
+    """
+    A fake connector class, to be used to mock connections failed or lost.
+    """
+
+    def stopConnecting(self):
+        pass
+
+
+    def connect(self):
+        pass
+
+
+
+class ReconnectingFactoryTestCase(TestCase):
     """
     Tests for L{ReconnectingClientFactory}.
     """
+
     def testStopTrying(self):
         f = Factory()
         f.protocol = In
@@ -98,25 +118,45 @@ class ReconnectingFactoryTestCase(unittest.TestCase):
         self.assertEqual(original.__dict__, reconstituted.__dict__)
 
 
+    def test_serializeWithClock(self):
+        """
+        The clock attribute of L{ReconnectingClientFactory} is not serialized,
+        and the restored value sets it to the default value, the reactor.
+        """
+        clock = Clock()
+        original = ReconnectingClientFactory()
+        original.clock = clock
+        reconstituted = pickle.loads(pickle.dumps(original))
+        self.assertIdentical(reconstituted.clock, None)
+
+
     def test_deserializationResetsParameters(self):
         """
         A L{ReconnectingClientFactory} which is unpickled does not have an
-        L{IConnector} and has its reconnectioning timing parameters reset to
-        their initial values.
+        L{IConnector} and has its reconnecting timing parameters reset to their
+        initial values.
         """
-        class FakeConnector(object):
-            def stopConnecting(self):
-                pass
-
         factory = ReconnectingClientFactory()
         factory.clientConnectionFailed(FakeConnector(), None)
-        try:
-            serialized = pickle.dumps(factory)
-            unserialized = pickle.loads(serialized)
-            self.assertEqual(unserialized.connector, None)
-            self.assertEqual(unserialized._callID, None)
-            self.assertEqual(unserialized.retries, 0)
-            self.assertEqual(unserialized.delay, factory.initialDelay)
-            self.assertEqual(unserialized.continueTrying, True)
-        finally:
-            factory.stopTrying()
+        self.addCleanup(factory.stopTrying)
+
+        serialized = pickle.dumps(factory)
+        unserialized = pickle.loads(serialized)
+        self.assertEqual(unserialized.connector, None)
+        self.assertEqual(unserialized._callID, None)
+        self.assertEqual(unserialized.retries, 0)
+        self.assertEqual(unserialized.delay, factory.initialDelay)
+        self.assertEqual(unserialized.continueTrying, True)
+
+
+    def test_parametrizedClock(self):
+        """
+        The clock used by L{ReconnectingClientFactory} can be parametrized, so
+        that one can cleanly test reconnections.
+        """
+        clock = Clock()
+        factory = ReconnectingClientFactory()
+        factory.clock = clock
+
+        factory.clientConnectionLost(FakeConnector(), None)
+        self.assertEquals(len(clock.calls), 1)

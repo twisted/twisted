@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.test.test_factories -*-
 #
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -196,7 +196,8 @@ class ClientCreator:
 
 
 class ReconnectingClientFactory(ClientFactory):
-    """My clients auto-reconnect with an exponential back-off.
+    """
+    Factory which auto-reconnects clients with an exponential back-off.
 
     Note that clients should call my resetDelay method after they have
     connected successfully.
@@ -206,6 +207,10 @@ class ReconnectingClientFactory(ClientFactory):
     @ivar factor: a multiplicitive factor by which the delay grows
     @ivar jitter: percentage of randomness to introduce into the delay length
         to prevent stampeding.
+    @ivar clock: the clock used to schedule reconnection. It's mainly useful to
+        be parametrized in tests. If the factory is serialized, this attribute
+        will not be serialized, and the default value (the reactor) will be
+        restored when deserialized.
     """
     maxDelay = 3600
     initialDelay = 1.0
@@ -223,21 +228,26 @@ class ReconnectingClientFactory(ClientFactory):
     maxRetries = None
     _callID = None
     connector = None
+    clock = None
 
     continueTrying = 1
+
 
     def clientConnectionFailed(self, connector, reason):
         if self.continueTrying:
             self.connector = connector
             self.retry()
 
+
     def clientConnectionLost(self, connector, unused_reason):
         if self.continueTrying:
             self.connector = connector
             self.retry()
 
+
     def retry(self, connector=None):
-        """Have this connector connect again, after a suitable delay.
+        """
+        Have this connector connect again, after a suitable delay.
         """
         if not self.continueTrying:
             if self.noisy:
@@ -264,15 +274,19 @@ class ReconnectingClientFactory(ClientFactory):
 
         if self.noisy:
             log.msg("%s will retry in %d seconds" % (connector, self.delay,))
-        from twisted.internet import reactor
 
         def reconnector():
             self._callID = None
             connector.connect()
-        self._callID = reactor.callLater(self.delay, reconnector)
+        if self.clock is None:
+            from twisted.internet import reactor
+            self.clock = reactor
+        self._callID = self.clock.callLater(self.delay, reconnector)
+
 
     def stopTrying(self):
-        """I put a stop to any attempt to reconnect in progress.
+        """
+        Put a stop to any attempt to reconnect in progress.
         """
         # ??? Is this function really stopFactory?
         if self._callID:
@@ -287,10 +301,11 @@ class ReconnectingClientFactory(ClientFactory):
                 pass
         self.continueTrying = 0
 
-    def resetDelay(self):
-        """Call me after a successful connection to reset.
 
-        I reset the delay and the retry counter.
+    def resetDelay(self):
+        """
+        Call this method after a successful connection: it resets the delay and
+        the retry counter.
         """
         self.delay = self.initialDelay
         self.retries = 0
@@ -307,7 +322,7 @@ class ReconnectingClientFactory(ClientFactory):
         """
         state = self.__dict__.copy()
         for key in ['connector', 'retries', 'delay',
-                    'continueTrying', '_callID']:
+                    'continueTrying', '_callID', 'clock']:
             if key in state:
                 del state[key]
         return state
