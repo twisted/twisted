@@ -1,5 +1,5 @@
-# -*- test-case-name: twisted.test.test_task,twisted.test.test_cooperator -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.test.test_task -*-
+# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -15,7 +15,6 @@ import time
 from zope.interface import implements
 
 from twisted.python import reflect
-from twisted.python.failure import Failure
 
 from twisted.internet import base, defer
 from twisted.internet.interfaces import IReactorTime
@@ -154,58 +153,10 @@ class LoopingCall:
 
 
 
-class SchedulerError(Exception):
-    """
-    The operation could not be completed because the scheduler or one of its
-    tasks was in an invalid state.  This exception should not be raised
-    directly, but is a superclass of various scheduler-state-related
-    exceptions.
-    """
-
-
-
-class SchedulerStopped(SchedulerError):
+class SchedulerStopped(Exception):
     """
     The operation could not complete because the scheduler was stopped in
     progress or was already stopped.
-    """
-
-
-
-class TaskFinished(SchedulerError):
-    """
-    The operation could not complete because the task was already completed,
-    stopped, encountered an error or otherwise permanently stopped running.
-    """
-
-
-
-class TaskDone(TaskFinished):
-    """
-    The operation could not complete because the task was already completed.
-    """
-
-
-
-class TaskStopped(TaskFinished):
-    """
-    The operation could not complete because the task was stopped.
-    """
-
-
-
-class TaskFailed(TaskFinished):
-    """
-    The operation could not complete because the task died with an unhandled
-    error.
-    """
-
-
-
-class NotPaused(SchedulerError):
-    """
-    This exception is raised when a task is resumed which was not previously
-    paused.
     """
 
 
@@ -225,161 +176,6 @@ _EPSILON = 0.00000001
 def _defaultScheduler(x):
     from twisted.internet import reactor
     return reactor.callLater(_EPSILON, x)
-
-
-class CooperativeTask(object):
-    """
-    A L{CooperativeTask} is a task object inside a L{Cooperator}, which can be
-    paused, resumed, and stopped.  It can also have its completion (or
-    termination) monitored.
-
-    @see: L{CooperativeTask.cooperate}
-
-    @ivar _iterator: the iterator to iterate when this L{CooperativeTask} is asked
-        to do work.
-
-    @ivar _cooperator: the L{Cooperator} that this L{CooperativeTask}
-        participates in, which is used to re-insert it upon resume.
-
-    @ivar _deferreds: the list of L{defer.Deferred}s to fire when this task
-        completes, fails, or finishes.
-
-    @type _deferreds: L{list}
-
-    @type _cooperator: L{Cooperator}
-
-    @ivar _pauseCount: the number of times that this L{CooperativeTask} has
-        been paused; if 0, it is running.
-
-    @type _pauseCount: L{int}
-
-    @ivar _completionState: The completion-state of this L{CooperativeTask}.
-        C{None} if the task is not yet completed, an instance of L{TaskStopped}
-        if C{stop} was called to stop this task early, of L{TaskFailed} if the
-        application code in the iterator raised an exception which caused it to
-        terminate, and of L{TaskDone} if it terminated normally via raising
-        L{StopIteration}.
-
-    @type _completionState: L{TaskFinished}
-    """
-
-    def __init__(self, iterator, cooperator):
-        """
-        A private constructor: to create a new L{CooperativeTask}, see
-        L{Cooperator.cooperate}.
-        """
-        self._iterator = iterator
-        self._cooperator = cooperator
-        self._deferreds = []
-        self._pauseCount = 0
-        self._completionState = None
-        self._completionResult = None
-        cooperator._addTask(self)
-
-
-    def whenDone(self):
-        """
-        Get a L{defer.Deferred} notification of when this task is complete.
-
-        @return: a L{defer.Deferred} that fires with the C{iterator} that this
-            L{CooperativeTask} was created with when the iterator has been
-            exhausted (i.e. its C{next} method has raised L{StopIteration}), or
-            fails with the exception raised by C{next} if it raises some other
-            exception.
-
-        @rtype: L{defer.Deferred}
-        """
-        d = defer.Deferred()
-        if self._completionState is None:
-            self._deferreds.append(d)
-        else:
-            d.callback(self._completionResult)
-        return d
-
-
-    def pause(self):
-        """
-        Pause this L{CooperativeTask}.  Stop doing work until
-        L{CooperativeTask.resume} is called.  If C{pause} is called more than
-        once, C{resume} must be called an equal number of times to resume this
-        task.
-
-        @raise TaskFinished: if this task has already finished or completed.
-        """
-        self._checkFinish()
-        self._pauseCount += 1
-        if self._pauseCount == 1:
-            self._cooperator._removeTask(self)
-
-
-    def resume(self):
-        """
-        Resume processing of a paused L{CooperativeTask}.
-
-        @raise NotPaused: if this L{CooperativeTask} is not paused.
-        """
-        if self._pauseCount == 0:
-            raise NotPaused()
-        self._pauseCount -= 1
-        if self._pauseCount == 0 and self._completionState is None:
-            self._cooperator._addTask(self)
-
-
-    def _completeWith(self, completionState, deferredResult):
-        """
-        @param completionState: a L{TaskFinished} exception or a subclass
-            thereof, indicating what exception should be raised when subsequent
-            operations are performed.
-
-        @param deferredResult: the result to fire all the deferreds with.
-        """
-        self._completionState = completionState
-        self._completionResult = deferredResult
-        for d in self._deferreds:
-            d.callback(deferredResult)
-        if not self._pauseCount:
-            self._cooperator._removeTask(self)
-
-
-    def stop(self):
-        """
-        Stop further processing of this task.
-
-        @raise TaskFinished: if this L{CooperativeTask} has previously
-            completed, via C{stop}, completion, or failure.
-        """
-        self._checkFinish()
-        self._completeWith(TaskStopped(), Failure(TaskStopped()))
-
-
-    def _checkFinish(self):
-        """
-        If this task has been stopped, raise the appropriate subclass of
-        L{TaskFinished}.
-        """
-        if self._completionState is not None:
-            raise self._completionState
-
-
-    def _oneWorkUnit(self):
-        """
-        Perform one unit of work for this task, retrieving one item from its
-        iterator, stopping if there are no further items in the iterator, and
-        pausing if the result was a L{defer.Deferred}.
-        """
-        try:
-            result = self._iterator.next()
-        except StopIteration:
-            self._completeWith(TaskDone(), self._iterator)
-        except:
-            self._completeWith(TaskFailed(), Failure())
-        else:
-            if isinstance(result, defer.Deferred):
-                self.pause()
-                def failLater(f):
-                    self._completeWith(TaskFailed(), f)
-                result.addCallbacks(lambda result: self.resume(),
-                                    failLater)
 
 
 
@@ -409,7 +205,7 @@ class Cooperator(object):
         stepped as soon as they are added, or if they will be queued up until
         L{Cooperator.start} is called.
         """
-        self._tasks = []
+        self.iterators = []
         self._metarator = iter(())
         self._terminationPredicateFactory = terminationPredicateFactory
         self._scheduler = scheduler
@@ -420,65 +216,28 @@ class Cooperator(object):
 
     def coiterate(self, iterator, doneDeferred=None):
         """
-        Add an iterator to the list of iterators this L{Cooperator} is
-        currently running.
-
-        @param doneDeferred: If specified, this will be the Deferred used as
-            the completion deferred.  It is suggested that you use the default,
-            which creates a new Deferred for you.
+        Add an iterator to the list of iterators I am currently running.
 
         @return: a Deferred that will fire when the iterator finishes.
         """
         if doneDeferred is None:
             doneDeferred = defer.Deferred()
-        CooperativeTask(iterator, self).whenDone().chainDeferred(doneDeferred)
+        if self._stopped:
+            doneDeferred.errback(SchedulerStopped())
+            return doneDeferred
+        self.iterators.append((iterator, doneDeferred))
+        self._reschedule()
         return doneDeferred
 
 
-    def cooperate(self, iterator):
-        """
-        Start running the given iterator as a long-running cooperative task, by
-        calling next() on it as a periodic timed event.
-
-        @param iterator: the iterator to invoke.
-
-        @return: a L{CooperativeTask} object representing this task.
-        """
-        return CooperativeTask(iterator, self)
-
-
-    def _addTask(self, task):
-        """
-        Add a L{CooperativeTask} object to this L{Cooperator}.
-        """
-        if self._stopped:
-            self._tasks.append(task) # XXX silly, I know, but _completeWith
-                                     # does the inverse
-            task._completeWith(SchedulerStopped(), Failure(SchedulerStopped()))
-        else:
-            self._tasks.append(task)
-            self._reschedule()
-
-
-    def _removeTask(self, task):
-        """
-        Remove a L{CooperativeTask} from this L{Cooperator}.
-        """
-        self._tasks.remove(task)
-
-
-    def _tasksWhileNotStopped(self):
-        """
-        Yield all L{CooperativeTask} objects in a loop as long as this
-        L{Cooperator}'s termination condition has not been met.
-        """
+    def _tasks(self):
         terminator = self._terminationPredicateFactory()
-        while self._tasks:
-            for t in self._metarator:
-                yield t
+        while self.iterators:
+            for i in self._metarator:
+                yield i
                 if terminator():
                     return
-            self._metarator = iter(self._tasks)
+            self._metarator = iter(self.iterators)
 
 
     def _tick(self):
@@ -486,8 +245,22 @@ class Cooperator(object):
         Run one scheduler tick.
         """
         self._delayedCall = None
-        for taskObj in self._tasksWhileNotStopped():
-            taskObj._oneWorkUnit()
+        for taskObj in self._tasks():
+            iterator, doneDeferred = taskObj
+            try:
+                result = iterator.next()
+            except StopIteration:
+                self.iterators.remove(taskObj)
+                doneDeferred.callback(iterator)
+            except:
+                self.iterators.remove(taskObj)
+                doneDeferred.errback()
+            else:
+                if isinstance(result, defer.Deferred):
+                    self.iterators.remove(taskObj)
+                    def cbContinue(result, taskObj=taskObj):
+                        self.coiterate(*taskObj)
+                    result.addCallbacks(cbContinue, doneDeferred.errback)
         self._reschedule()
 
 
@@ -496,7 +269,7 @@ class Cooperator(object):
         if not self._started:
             self._mustScheduleOnStart = True
             return
-        if self._delayedCall is None and self._tasks:
+        if self._delayedCall is None and self.iterators:
             self._delayedCall = self._scheduler(self._tick)
 
 
@@ -517,10 +290,9 @@ class Cooperator(object):
         iterators which have been added and forget about them.
         """
         self._stopped = True
-        for taskObj in self._tasks:
-            taskObj._completeWith(SchedulerStopped(),
-                                  Failure(SchedulerStopped()))
-        self._tasks = []
+        for iterator, doneDeferred in self.iterators:
+            doneDeferred.errback(SchedulerStopped())
+        self.iterators = []
         if self._delayedCall is not None:
             self._delayedCall.cancel()
             self._delayedCall = None
@@ -528,7 +300,6 @@ class Cooperator(object):
 
 
 _theCooperator = Cooperator()
-
 def coiterate(iterator):
     """
     Cooperatively iterate over the given iterator, dividing runtime between it
@@ -536,20 +307,6 @@ def coiterate(iterator):
     exhausted.
     """
     return _theCooperator.coiterate(iterator)
-
-
-
-def cooperate(iterator):
-    """
-    Start running the given iterator as a long-running cooperative task, by
-    calling next() on it as a periodic timed event.
-
-    @param iterator: the iterator to invoke.
-
-    @return: a L{CooperativeTask} object representing this task.
-    """
-    return _theCooperator.cooperate(iterator)
-
 
 
 
