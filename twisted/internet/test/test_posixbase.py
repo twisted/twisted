@@ -10,6 +10,7 @@ from twisted.trial.unittest import TestCase
 from twisted.internet.posixbase import PosixReactorBase, _Waker
 from twisted.internet.protocol import ServerFactory
 from twisted.internet.tcp import Port
+from twisted.internet import reactor
 
 
 class TrivialReactor(PosixReactorBase):
@@ -40,6 +41,7 @@ class PosixReactorBaseTests(TestCase):
     """
     Tests for L{PosixReactorBase}.
     """
+
     def _checkWaker(self, reactor):
         self.assertIsInstance(reactor.waker, _Waker)
         self.assertIn(reactor.waker, reactor._internalReaders)
@@ -92,14 +94,15 @@ class TCPPortTests(TestCase):
     """
     Tests for L{twisted.internet.tcp.Port}.
     """
+
+    if not isinstance(reactor, PosixReactorBase):
+        skip = "Non-posixbase reactor"
+
     def test_connectionLostFailed(self):
         """
         L{Port.stopListening} returns a L{Deferred} which errbacks if
         L{Port.connectionLost} raises an exception.
         """
-        class UniqueExceptionType(Exception):
-            pass
-
         port = Port(12345, ServerFactory())
         port.connected = True
         port.connectionLost = lambda reason: 1 / 0
