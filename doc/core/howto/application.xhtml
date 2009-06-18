@@ -56,7 +56,7 @@ done through Services.</p>
 <p>By <q>Service</q>, we mean anything in your application that can be started
 and stopped.  Typical services include web servers, FTP servers and SSH
 clients.  Your Application object can contain many services, and can even
-contain structured heirarchies of Services using <code class="API"
+contain structured hierarchies of Services using <code class="API"
 base="twisted.application.service">IServiceCollection</code>s.</p>
 
 <p>Here's a simple example of constructing an Application object which
@@ -79,12 +79,12 @@ echoService.setServiceParent(application)
 <p>See <a href="servers.xhtml">Writing Servers</a> for an explanation of
 EchoFactory.</p>
 
-<p>This example creates a simple heirarchy:
+<p>This example creates a simple hierarchy:
 <pre>
    application
    |
    `- echoService
-</pre> More complicated heirarchies of services can be created using
+</pre> More complicated hierarchies of services can be created using
 IServiceCollection.  You will most likely want to do this to manage Services
 which are dependent on other Services.  For example, a proxying Twisted
 application might want its server Service to only start up after the associated
