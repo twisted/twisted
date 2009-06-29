@@ -11,6 +11,9 @@ import warnings
 import urllib
 import itertools
 import cgi
+import time
+
+from zope.interface import implements
 
 from twisted.web import server
 from twisted.web import resource
@@ -18,7 +21,7 @@ from twisted.web import http
 from twisted.web.util import redirectTo
 
 from twisted.python import components, filepath, log
-from twisted.internet import abstract
+from twisted.internet import abstract, interfaces
 from twisted.spread import pb
 from twisted.persisted import styles
 from twisted.python.util import InsensitiveDict
@@ -308,6 +311,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         """Open a file and return it."""
         return self.open()
 
+
     def getFileSize(self):
         """Return file size."""
         return self.getsize()
@@ -315,9 +319,15 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
 
     def _parseRangeHeader(self, range):
         """
-        Return a two-tuple of the start and stop value from the given range
-        header.  Raise ValueError if the header is syntactically invalid or
-        if the Bytes-Unit is anything other than "bytes".
+        Parse the value of a Range header into (start, stop) pairs.
+
+        In a given pair, either of start or stop can be None, signifying that
+        no value was provided, but not both.
+
+        @return: A list C{[(start, stop)]} of pairs of length at least one.
+
+        @raise ValueError: if the header is syntactically invalid or if the
+            Bytes-Unit is anything other than 'bytes'.
         """
         try:
             kind, value = range.split('=', 1)
@@ -326,81 +336,249 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         kind = kind.strip()
         if kind != 'bytes':
             raise ValueError("Unsupported Bytes-Unit: %r" % (kind,))
-        byteRanges = filter(None, map(str.strip, value.split(',')))
-        if len(byteRanges) > 1:
-            # Support for multiple ranges should be added later.  For now, this
-            # implementation gives up.
-            raise ValueError("Multiple Byte-Ranges not supported")
-        firstRange = byteRanges[0]
-        try:
-            start, end = firstRange.split('-', 1)
-        except ValueError:
-            raise ValueError("Invalid Byte-Range: %r" % (firstRange,))
-        if start:
+        unparsedRanges = filter(None, map(str.strip, value.split(',')))
+        parsedRanges = []
+        for byteRange in unparsedRanges:
             try:
-                start = int(start)
+                start, end = byteRange.split('-', 1)
             except ValueError:
-                raise ValueError("Invalid Byte-Range: %r" % (firstRange,))
-        else:
-            start = None
-        if end:
-            try:
-                end = int(end)
-            except ValueError:
-                raise ValueError("Invalid Byte-Range: %r" % (firstRange,))
-        else:
-            end = None
-        if start is not None:
-            if end is not None and start > end:
-                # Start must be less than or equal to end or it is invalid.
-                raise ValueError("Invalid Byte-Range: %r" % (firstRange,))
-        elif end is None:
-            # One or both of start and end must be specified.  Omitting both is
-            # invalid.
-            raise ValueError("Invalid Byte-Range: %r" % (firstRange,))
-        return start, end
+                raise ValueError("Invalid Byte-Range: %r" % (byteRange,))
+            if start:
+                try:
+                    start = int(start)
+                except ValueError:
+                    raise ValueError("Invalid Byte-Range: %r" % (byteRange,))
+            else:
+                start = None
+            if end:
+                try:
+                    end = int(end)
+                except ValueError:
+                    raise ValueError("Invalid Byte-Range: %r" % (byteRange,))
+            else:
+                end = None
+            if start is not None:
+                if end is not None and start > end:
+                    # Start must be less than or equal to end or it is invalid.
+                    raise ValueError("Invalid Byte-Range: %r" % (byteRange,))
+            elif end is None:
+                # One or both of start and end must be specified.  Omitting
+                # both is invalid.
+                raise ValueError("Invalid Byte-Range: %r" % (byteRange,))
+            parsedRanges.append((start, end))
+        return parsedRanges
 
 
-
-    def _doRangeRequest(self, request, (start, end)):
+    def _rangeToOffsetAndSize(self, start, end):
         """
-        Responds to simple Range-Header requests. Simple means that only the
-        first byte range is handled.
+        Convert a start and end from a Range header to an offset and size.
 
-        @raise ValueError: If the given Byte-Ranges-Specifier was invalid
+        This method checks that the resulting range overlaps with the resource
+        being served (and so has the value of C{getFileSize()} as an indirect
+        input).
 
-        @return: A three-tuple of the start, length, and end byte of the
-            response.
+        Either but not both of start or end can be C{None}:
+
+         - Omitted start means that the end value is actually a start value
+           relative to the end of the resource.
+
+         - Omitted end means the end of the resource should be the end of
+           the range.
+
+        End is interpreted as inclusive, as per RFC 2616.
+
+        If this range doesn't overlap with any of this resource, C{(0, 0)} is
+        returned, which is not otherwise a value return value.
+
+        @param start: The start value from the header, or C{None} if one was
+            not present.
+        @param end: The end value from the header, or C{None} if one was not
+            present.
+        @return: C{(offset, size)} where offset is how far into this resource
+            this resource the range begins and size is how long the range is,
+            or C{(0, 0)} if the range does not overlap this resource.
         """
         size = self.getFileSize()
         if start is None:
-            # Omitted start means that the end value is actually a start value
-            # relative to the end of the resource.
             start = size - end
             end = size
         elif end is None:
-            # Omitted end means the end of the resource should be the end of
-            # the range.
             end = size
         elif end < size:
-            # If the end was specified (this is an else for `end is None`) and
-            # there's room, bump the value by one to compensate for the
-            # disagreement between Python and the HTTP RFC on whether the
-            # closing index of the range is inclusive (HTTP) or exclusive
-            # (Python).
             end += 1
+        elif end > size:
+            end = size
         if start >= size:
+            start = end = 0
+        return start, (end - start)
+
+
+    def _contentRange(self, offset, size):
+        """
+        Return a string suitable for the value of a Content-Range header for a
+        range with the given offset and size.
+
+        The offset and size are not sanity checked in any way.
+
+        @param offset: How far into this resource the range begins.
+        @param size: How long the range is.
+        @return: The value as appropriate for the value of a Content-Range
+            header.
+        """
+        return 'bytes %d-%d/%d' % (
+            offset, offset + size - 1, self.getFileSize())
+
+
+    def _doSingleRangeRequest(self, request, (start, end)):
+        """
+        Set up the response for Range headers that specify a single range.
+
+        This method checks if the request is satisfiable and sets the response
+        code and Content-Range header appropriately.  The return value
+        indicates which part of the resource to return.
+
+        @param request: The Request object.
+        @param start: The start of the byte range as specified by the header.
+        @param end: The end of the byte range as specified by the header.  At
+            most one of C{start} and C{end} may be C{None}.
+        @return: A 2-tuple of the offset and size of the range to return.
+            offset == size == 0 indicates that the request is not satisfiable.
+        """
+        offset, size  = self._rangeToOffsetAndSize(start, end)
+        if offset == size == 0:
             # This range doesn't overlap with any of this resource, so the
             # request is unsatisfiable.
             request.setResponseCode(http.REQUESTED_RANGE_NOT_SATISFIABLE)
             request.setHeader(
-                'content-range', 'bytes */%d' % (size,))
-            start = end = 0
+                'content-range', 'bytes */%d' % (self.getFileSize(),))
         else:
             request.setResponseCode(http.PARTIAL_CONTENT)
             request.setHeader(
-                'content-range', 'bytes %d-%d/%d' % (start, end - 1, size))
-        return start, (end - start), end
+                'content-range', self._contentRange(offset, size))
+        return offset, size
+
+
+    def _doMultipleRangeRequest(self, request, byteRanges):
+        """
+        Set up the response for Range headers that specify a single range.
+
+        This method checks if the request is satisfiable and sets the response
+        code and Content-Type and Content-Length headers appropriately.  The
+        return value, which is a little complicated, indicates which parts of
+        the resource to return and the boundaries that should separate the
+        parts.
+
+        In detail, the return value is a tuple rangeInfo C{rangeInfo} is a
+        list of 3-tuples C{(partSeparator, partOffset, partSize)}.  The
+        response to this request should be, for each element of C{rangeInfo},
+        C{partSeparator} followed by C{partSize} bytes of the resource
+        starting at C{partOffset}.  Each C{partSeparator} includes the
+        MIME-style boundary and the part-specific Content-type and
+        Content-range headers.  It is convenient to return the separator as a
+        concrete string from this method, becasue this method needs to compute
+        the number of bytes that will make up the response to be able to set
+        the Content-Length header of the response accurately.
+
+        @param request: The Request object.
+        @param byteRanges: A list of C{(start, end)} values as specified by
+            the header.  For each range, at most one of C{start} and C{end}
+            may be C{None}.
+        @return: See above.
+        """
+        matchingRangeFound = False
+        rangeInfo = []
+        contentLength = 0
+        boundary = "%x%x" % (int(time.time()*1000000), os.getpid())
+        if self.type:
+            contentType = self.type
+        else:
+            contentType = 'bytes' # It's what Apache does...
+        for start, end in byteRanges:
+            partOffset, partSize = self._rangeToOffsetAndSize(start, end)
+            if partOffset == partSize == 0:
+                continue
+            contentLength += partSize
+            matchingRangeFound = True
+            partContentRange = self._contentRange(partOffset, partSize)
+            partSeparator = (
+                "\r\n"
+                "--%s\r\n"
+                "Content-type: %s\r\n"
+                "Content-range: %s\r\n"
+                "\r\n") % (boundary, contentType, partContentRange)
+            contentLength += len(partSeparator)
+            rangeInfo.append((partSeparator, partOffset, partSize))
+        if not matchingRangeFound:
+            request.setResponseCode(http.REQUESTED_RANGE_NOT_SATISFIABLE)
+            request.setHeader(
+                'content-length', '0')
+            request.setHeader(
+                'content-range', 'bytes */%d' % (self.getFileSize(),))
+            return [], ''
+        finalBoundary = "\r\n--" + boundary + "--\r\n"
+        rangeInfo.append((finalBoundary, 0, 0))
+        request.setResponseCode(http.PARTIAL_CONTENT)
+        request.setHeader(
+            'content-type', 'multipart/byteranges; boundary="%s"' % (boundary,))
+        request.setHeader(
+            'content-length', contentLength + len(finalBoundary))
+        return rangeInfo
+
+
+    def _setContentHeaders(self, request, size=None):
+        """
+        Set the Content-length and Content-type headers for this request.
+
+        This method is not appropriate for requests for multiple byte ranges;
+        L{_doMultipleRangeRequest} will set these headers in that case.
+
+        @param request: The L{Request} object.
+        @param size: The size of the response.  If not specified, default to
+            C{self.getFileSize()}.
+        """
+        if size is None:
+            size = self.getFileSize()
+        request.setHeader('content-length', str(size))
+        if self.type:
+            request.setHeader('content-type', self.type)
+        if self.encoding:
+            request.setHeader('content-encoding', self.encoding)
+
+
+    def makeProducer(self, request, fileForReading):
+        """
+        Make a L{StaticProducer} that will produce the body of this response.
+
+        This method will also set the response code and Content-* headers.
+
+        @param request: The L{Request} object.
+        @param fileForReading: The file object containing the resource.
+        @return: A L{StaticProducer}.  Calling C{.start()} on this will begin
+            producing the response.
+        """
+        byteRange = request.getHeader('range')
+        if byteRange is None:
+            self._setContentHeaders(request)
+            request.setResponseCode(http.OK)
+            return NoRangeStaticProducer(request, fileForReading)
+        try:
+            parsedRanges = self._parseRangeHeader(byteRange)
+        except ValueError:
+            log.msg("Ignoring malformed Range header %r" % (byteRange,))
+            self._setContentHeaders(request)
+            request.setResponseCode(http.OK)
+            return NoRangeStaticProducer(request, fileForReading)
+
+        if len(parsedRanges) == 1:
+            offset, size = self._doSingleRangeRequest(
+                request, parsedRanges[0])
+            self._setContentHeaders(request, size)
+            return SingleRangeStaticProducer(
+                request, fileForReading, offset, size)
+        else:
+            rangeInfo = self._doMultipleRangeRequest(request, parsedRanges)
+            return MultipleRangeStaticProducer(
+                request, fileForReading, rangeInfo)
 
 
     def render(self, request):
@@ -424,13 +602,8 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
 
         request.setHeader('accept-ranges', 'bytes')
 
-        if self.type:
-            request.setHeader('content-type', self.type)
-        if self.encoding:
-            request.setHeader('content-encoding', self.encoding)
-
         try:
-            f = self.openForReading()
+            fileForReading = self.openForReading()
         except IOError, e:
             import errno
             if e[0] == errno.EACCES:
@@ -441,26 +614,13 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         if request.setLastModified(self.getmtime()) is http.CACHED:
             return ''
 
-        # set the stop byte, and content-length
-        contentLength = stop = self.getFileSize()
 
-        byteRange = request.getHeader('range')
-        if byteRange is not None:
-            try:
-                start, contentLength, stop = self._doRangeRequest(
-                    request, self._parseRangeHeader(byteRange))
-            except ValueError, e:
-                log.msg("Ignoring malformed Range header %r" % (byteRange,))
-                request.setResponseCode(http.OK)
-            else:
-                f.seek(start)
+        producer = self.makeProducer(request, fileForReading)
 
-        request.setHeader('content-length', str(contentLength))
         if request.method == 'HEAD':
             return ''
 
-        # return data
-        FileTransfer(f, stop, request)
+        producer.start()
         # and make sure the connection doesn't get closed
         return server.NOT_DONE_YET
 
@@ -507,6 +667,163 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         f.childNotFound = self.childNotFound
         return f
 
+
+
+class StaticProducer(object):
+    """
+    Superclass for classes that implement the business of producing.
+    """
+
+    implements(interfaces.IPullProducer)
+
+    bufferSize = abstract.FileDescriptor.bufferSize
+
+    def start(self):
+        raise NotImplementedError(self.start)
+
+    def resumeProducing(self):
+        raise NotImplementedError(self.resumeProducing)
+
+
+
+class NoRangeStaticProducer(StaticProducer):
+    """
+    A L{StaticProducer} that writes the entire file to the request.
+    """
+
+    def __init__(self, request, fileObject):
+        """
+        Initialize the instance.
+
+        @param request: The L{IRequest} to write the contents of the file to.
+        @param fileObject: The file the contents of which to write to the
+            request.
+        """
+        self.request = request
+        self.fileObject = fileObject
+
+    def start(self):
+        self.request.registerProducer(self, False)
+
+    def resumeProducing(self):
+        if not self.request:
+            return
+        data = self.fileObject.read(self.bufferSize)
+        if data:
+            # this .write will spin the reactor, calling .doWrite and then
+            # .resumeProducing again, so be prepared for a re-entrant call
+            self.request.write(data)
+        else:
+            self.request.unregisterProducer()
+            self.request.finish()
+            self.request = None
+
+
+
+class SingleRangeStaticProducer(StaticProducer):
+    """
+    A L{StaticProducer} that writes a single chunk of a file to the request.
+    """
+
+    def __init__(self, request, fileObject, offset, size):
+        """
+        Initialize the instance.
+
+        @param request: The L{IRequest} to write a chunk of the file to.
+        @param fileObject: The file a chunk of the contents of which to write
+            to the request.
+        @param offset: The offset into the file of the chunk to be written.
+        @param size: The size of the chunk to write.
+        """
+        self.request = request
+        self.fileObject = fileObject
+        self.offset = offset
+        self.size = size
+
+    def start(self):
+        self.fileObject.seek(self.offset)
+        self.bytesWritten = 0
+        self.request.registerProducer(self, 0)
+
+    def resumeProducing(self):
+        if not self.request:
+            return
+        data = self.fileObject.read(
+            min(self.bufferSize, self.size - self.bytesWritten))
+        if data:
+            self.bytesWritten += len(data)
+            # this .write will spin the reactor, calling .doWrite and then
+            # .resumeProducing again, so be prepared for a re-entrant call
+            self.request.write(data)
+        if self.request and self.bytesWritten == self.size:
+            self.request.unregisterProducer()
+            self.request.finish()
+            self.request = None
+
+
+
+class MultipleRangeStaticProducer(StaticProducer):
+    """
+    A L{StaticProducer} that writes several chunks of a file to the request.
+    """
+
+    def __init__(self, request, fileObject, rangeInfo):
+        """
+        Initialize the instance.
+
+        @param request: The L{IRequest} to write the contents of the file to.
+        @param fileObject: The file the contents of which to write to the
+            request.
+        @param rangeInfo: A list of tuples C{[(boundary, offset, size)]}
+            where:
+             - C{boundary} will be written to the request first.
+             - C{offset} the offset into the file of chunk to write.
+             - C{size} the size of the chunk to write.
+        """
+        self.request = request
+        self.fileObject = fileObject
+        self.rangeInfo = rangeInfo
+
+    def start(self):
+        self.rangeIter = iter(self.rangeInfo)
+        self._nextRange()
+        self.request.registerProducer(self, 0)
+
+    def _nextRange(self):
+        self.partBoundary, partOffset, self._partSize = self.rangeIter.next()
+        self._partBytesWritten = 0
+        self.fileObject.seek(partOffset)
+
+    def resumeProducing(self):
+        if not self.request:
+            return
+        data = []
+        dataLength = 0
+        done = False
+        while dataLength < self.bufferSize:
+            if self.partBoundary:
+                dataLength += len(self.partBoundary)
+                data.append(self.partBoundary)
+                self.partBoundary = None
+            p = self.fileObject.read(
+                min(self.bufferSize - dataLength,
+                    self._partSize - self._partBytesWritten))
+            self._partBytesWritten += len(p)
+            dataLength += len(p)
+            data.append(p)
+            if self.request and self._partBytesWritten == self._partSize:
+                try:
+                    self._nextRange()
+                except StopIteration:
+                    done = True
+                    break
+        self.request.write(''.join(data))
+        if done:
+            self.request.unregisterProducer()
+            self.request.finish()
+            self.request = None
+
+
 class FileTransfer(pb.Viewable):
     """
     A class to represent the transfer of a file over the network.
@@ -514,6 +831,10 @@ class FileTransfer(pb.Viewable):
     request = None
 
     def __init__(self, file, size, request):
+        warnings.warn(
+            "FileTransfer is deprecated since Twisted 9.0. "
+            "Use a subclass of StaticProducer instead.",
+            DeprecationWarning, stacklevel=2)
         self.file = file
         self.size = size
         self.request = request
