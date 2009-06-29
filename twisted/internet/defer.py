@@ -98,20 +98,17 @@ def maybeDeferred(f, *args, **kw):
     @return: The result of the function call, wrapped in a C{Deferred} if
     necessary.
     """
-    deferred = None
-
     try:
         result = f(*args, **kw)
     except:
         return fail(failure.Failure())
+
+    if isinstance(result, Deferred):
+        return result
+    elif isinstance(result, failure.Failure):
+        return fail(result)
     else:
-        if isinstance(result, Deferred):
-            return result
-        elif isinstance(result, failure.Failure):
-            return fail(result)
-        else:
-            return succeed(result)
-    return deferred
+        return succeed(result)
 
 def timeout(deferred):
     deferred.errback(failure.Failure(TimeoutError("Callback timed out")))
