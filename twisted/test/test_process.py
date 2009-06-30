@@ -486,7 +486,7 @@ class ProcessTestCase(unittest.TestCase):
         exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_echoer.py")
         procTrans = reactor.spawnProcess(p, exe,
-                                    [exe, "-u", scriptPath], env=None)
+                                    [exe, scriptPath], env=None)
         self.failUnless(procTrans.pid)
 
         def afterProcessEnd(ignored):
@@ -551,13 +551,19 @@ class ProcessTestCase(unittest.TestCase):
         deferredList.addCallback(_check, protocols)
         return deferredList
 
-    def testEcho(self):
+
+    def test_echo(self):
+        """
+        A spawning a subprocess which echoes its stdin to its stdout via
+        C{reactor.spawnProcess} will result in that echoed output being
+        delivered to outReceived.
+        """
         finished = defer.Deferred()
         p = EchoProtocol(finished)
 
         exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_echoer.py")
-        reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=None)
+        reactor.spawnProcess(p, exe, [exe, scriptPath], env=None)
 
         def asserts(ignored):
             self.failIf(p.failure, p.failure)
@@ -569,9 +575,6 @@ class ProcessTestCase(unittest.TestCase):
             return err
 
         return finished.addCallback(asserts).addErrback(takedownProcess)
-    testEcho.timeout = 60 # XXX This should not be.  There is already a
-                          # global timeout value.  Why do you think this
-                          # test can complete more quickly?
 
 
     def testCommandLine(self):
