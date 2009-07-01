@@ -831,8 +831,22 @@ class SFTPError(Exception):
     def __init__(self, errorCode, errorMessage, lang = ''):
         Exception.__init__(self)
         self.code = errorCode
-        self.message = errorMessage
+        self._message = errorMessage
         self.lang = lang
+
+
+    def message(self):
+        """
+        A string received over the network that explains the error to a human.
+        """
+        # Python 2.6 deprecates assigning to the 'message' attribute of an
+        # exception. We define this read-only property here in order to
+        # prevent the warning about deprecation while maintaining backwards
+        # compatibility with object clients that rely on the 'message'
+        # attribute being set correctly. See bug #3897.
+        return self._message
+    message = property(message)
+
 
     def __str__(self):
         return 'SFTPError %s: %s' % (self.code, self.message)
