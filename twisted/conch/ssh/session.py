@@ -1,8 +1,6 @@
-# -*- test-case-name: twisted.conch.test.test_conch -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.conch.test.test_session -*-
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
-# 
 
 """
 This module contains the implementation of SSHSession, which (by default)
@@ -12,6 +10,9 @@ Maintainer: Paul Swartz
 """
 
 import struct
+import signal
+import sys
+import os
 
 from twisted.internet import protocol
 from twisted.python import log
@@ -170,9 +171,21 @@ def wrapProcessProtocol(inst):
 def wrapProtocol(proto):
     return _DummyTransport(proto)
 
+
+
+# SUPPORTED_SIGNALS is a list of signals that every session channel is supposed
+# to accept.  See RFC 4254
+SUPPORTED_SIGNALS = ["ABRT", "ALRM", "FPE", "HUP", "ILL", "INT", "KILL",
+                     "PIPE", "QUIT", "SEGV", "TERM", "USR1", "USR2"]
+
+
+
 class SSHSessionProcessProtocol(protocol.ProcessProtocol):
 
-#    __implements__ = I
+    # once initialized, a dictionary mapping signal values to strings
+    # that follow RFC 4254.
+    _signalValuesToNames = None
+
     def __init__(self, session):
         self.session = session
 
@@ -193,10 +206,52 @@ class SSHSessionProcessProtocol(protocol.ProcessProtocol):
     def connectionLost(self, reason = None):
         self.session.loseConnection()
 
-    def processEnded(self, reason = None):
-        if reason and hasattr(reason.value, 'exitCode'):
-            log.msg('exitCode: %s' % repr(reason.value.exitCode))
-            self.session.conn.sendRequest(self.session, 'exit-status', struct.pack('!L', reason.value.exitCode))
+
+    def _getSignalName(self, signum):
+        """
+        Get a signal name given a signal number.
+        """
+        if self._signalValuesToNames is None:
+            self._signalValuesToNames = {}
+            # make sure that the POSIX ones are the defaults
+            for signame in SUPPORTED_SIGNALS:
+                signame = 'SIG' + signame
+                sigvalue = getattr(signal, signame, None)
+                if sigvalue is not None:
+                    self._signalValuesToNames[sigvalue] = signame
+            for k, v in signal.__dict__.items():
+                # Check for platform specific signals, ignoring Python specific
+                # SIG_DFL and SIG_IGN
+                if k.startswith('SIG') and not k.startswith('SIG_'):
+                    if v not in self._signalValuesToNames:
+                        self._signalValuesToNames[v] = k + '@' + sys.platform
+        return self._signalValuesToNames[signum]
+
+
+    def processEnded(self, reason=None):
+        """
+        When we are told the process ended, try to notify the other side about
+        how the process ended using the exit-signal or exit-status requests.
+        Also, close the channel.
+        """
+        if reason is not None:
+            err = reason.value
+            if err.signal is not None:
+                signame = self._getSignalName(err.signal)
+                if (getattr(os, 'WCOREDUMP', None) is not None and
+                    os.WCOREDUMP(err.status)):
+                    log.msg('exitSignal: %s (core dumped)' % (signame,))
+                    coreDumped = 1
+                else:
+                    log.msg('exitSignal: %s' % (signame,))
+                    coreDumped = 0
+                self.session.conn.sendRequest(self.session, 'exit-signal',
+                        common.NS(signame[3:]) + chr(coreDumped) +
+                        common.NS('') + common.NS(''))
+            elif err.exitCode is not None:
+                log.msg('exitCode: %r' % (err.exitCode,))
+                self.session.conn.sendRequest(self.session, 'exit-status',
+                        struct.pack('>L', err.exitCode))
         self.session.loseConnection()
 
     # transport stuff (we are also a transport!)
