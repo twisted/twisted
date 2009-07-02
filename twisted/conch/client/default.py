@@ -175,9 +175,9 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         the next configured identity file for one.
         """
         if self.keyAgent:
-            blob = self.keyAgent.getPublicKey()
-            if blob:
-                return blob
+            key = self.keyAgent.getPublicKey()
+            if key is not None:
+                return key
         files = [x for x in self.options.identitys if x not in self.usedFiles]
         log.msg(str(self.options.identitys))
         log.msg(str(files))
@@ -191,8 +191,8 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         if not os.path.exists(file):
             return self.getPublicKey() # try again
         try:
-            return keys.getPublicKeyString(file)
-        except:
+            return keys.Key.fromFile(file)
+        except keys.BadKeyError:
             return self.getPublicKey() # try again
 
 
@@ -211,21 +211,25 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
 
 
     def getPrivateKey(self):
+        """
+        Try to load the private key from the last used file identified by
+        C{getPublicKey}, potentially asking for the passphrase if the key is
+        encrypted.
+        """
         file = os.path.expanduser(self.usedFiles[-1])
         if not os.path.exists(file):
             return None
         try:
-            return defer.succeed(keys.getPrivateKeyObject(file))
-        except keys.BadKeyError, e:
-            if e.args[0] == 'encrypted key with no passphrase':
-                for i in range(3):
-                    prompt = "Enter passphrase for key '%s': " % \
-                           self.usedFiles[-1]
-                    try:
-                        p = self._getPassword(prompt)
-                        return defer.succeed(keys.getPrivateKeyObject(file, passphrase = p))
-                    except (keys.BadKeyError, ConchError):
-                        pass
+            return defer.succeed(keys.Key.fromFile(file))
+        except keys.EncryptedKeyError:
+            for i in range(3):
+                prompt = "Enter passphrase for key '%s': " % \
+                    self.usedFiles[-1]
+                try:
+                    p = self._getPassword(prompt)
+                    return defer.succeed(keys.Key.fromFile(file, passphrase=p))
+                except (keys.BadKeyError, ConchError):
+                    pass
                 return defer.fail(ConchError('bad password'))
             raise
         except KeyboardInterrupt:

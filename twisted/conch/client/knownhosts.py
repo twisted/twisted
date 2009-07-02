@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.conch.test.test_knownhosts -*-
-# Copyright (c) 2008 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -8,12 +8,12 @@ An implementation of the OpenSSH known_hosts database.
 @since: 8.2
 """
 
-import sha
 from binascii import Error as DecodeError, b2a_base64
 
 from zope.interface import implements
 
 from Crypto.Hash.HMAC import HMAC
+from Crypto.Hash import SHA
 
 from twisted.python.randbytes import secureRandom
 
@@ -202,7 +202,7 @@ def _hmacedString(key, string):
     """
     Return the SHA-1 HMAC hash of the given key and string.
     """
-    hash = HMAC(key, digestmod=sha)
+    hash = HMAC(key, digestmod=SHA)
     hash.update(string)
     return hash.digest()
 
