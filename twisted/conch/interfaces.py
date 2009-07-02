@@ -1,4 +1,4 @@
-# Copyright (c) 2007-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2007-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -35,14 +35,6 @@ class IConchUser(Interface):
         @rtype:             subclass of L{SSHChannel}/C{tuple}
         """
 
-    def lookupSubsystem(subsystem, data):
-        """
-        The other side requested a subsystem.
-        subsystem is the name of the subsystem being requested.
-        data is any other packet data (often nothing).
-
-        We return a L{Protocol}.
-        """
 
     def gotGlobalRequest(requestType, data):
         """
@@ -54,13 +46,18 @@ class IConchUser(Interface):
         The method is called with arguments of windowSize, maxPacket, data.
         """
 
+
 class ISession(Interface):
+    """
+    The old, deprecated interface for implementing SSH session applications.
+    Please don't use this for anything.  Deprecated in Twisted 9.0.
+    """
 
     def getPty(term, windowSize, modes):
         """
-        Get a psuedo-terminal for use by a shell or command.
+        Get a pseudo-terminal for use by a shell or command.
 
-        If a psuedo-terminal is not available, or the request otherwise
+        If a pseudo-terminal is not available, or the request otherwise
         fails, raise an exception.
         """
 
@@ -92,6 +89,142 @@ class ISession(Interface):
         """
         Called when the session is closed.
         """
+
+
+
+
+class ISessionApplicationFactory(Interface):
+    """
+    The new, good interface for implementing an SSH session.  Use this to
+    implement the application side of an SSH server session.
+
+    @ivar channel: the L{SSHChannel} object to which this application is
+    connected.  Use this attribute to send data, etc.
+    """
+
+    def getPTY(term, windowSize, modes):
+        """
+        Get a psuedo-terminal for use by a shell or command.
+
+        If a psuedo-terminal is not available, or the request otherwise
+        fails, raise an Exception.
+        """
+
+
+    def lookupSubsystem(subsystem, data):
+        """
+        The other side requested a subsystem.
+
+        @param subsystem: the name of the subsystem being requested.
+        @param data: any other packet data (often nothing).
+
+        @return: something that implements I{IConchApplication}
+        @raises: If the subsystem is unavailable, raise an Exception.
+        """
+
+
+    def openShell():
+        """
+        The other side requested a shell.
+
+        @return: something that implements I{IConchApplication}
+        @raises: If the subsystem is unavailable, raise an Exception.
+        """
+
+
+    def execCommand(command):
+        """
+        The other side requested a shell.
+
+        @param command: the command the other side wants us to execute
+        @type command: C{str}
+
+        @return: something that implements I{IConchApplication}
+        @raises: If the subsystem is unavailable, raise an Exception.
+        """
+
+
+    def windowChanged(newWindowSize):
+        """
+        Called when the size of the remote screen has changed.
+
+        @param newWindowSize: a tuple of (rows, columns, xPixels, yPixels)
+        @type newWindowSize: C{tuple}
+        """
+
+
+    def eofReceived():
+        """
+        Called when the other side has indicated no more data will be sent.
+        """
+
+
+    def closeReceived():
+        """
+        Called when the other side has indicated it wants no more data.
+        """
+
+
+    def closed():
+        """
+        Called when the session channel is closed.
+        """
+
+
+
+class ISessionApplication(Interface):
+    """
+    Objects which are returned by an ISessionApplicationFactory implementor
+    should implement this class.  It receives data from the channel and can
+    send it back.
+    """
+
+
+    def makeConnection(channel):
+        """
+        Called when this application is connected to the channel.
+
+        @param channel: the channel to which this application is connected
+        @type channel: C{twisted.conch.ssh.channel.SSHChannel}
+        """
+
+
+    def dataReceived(data):
+        """
+        Called when data is received from the other side.
+
+        @type data: C{str}
+        """
+
+
+    def extendedDataReceived(extendedDataType, extendedData):
+        """
+        Called when extended data is received from the other side.
+
+        @param extendedDataType: the type of extended data.  Typically, this
+            is connection.EXTENDED_DATA_STDERR.
+        @type extendedDataType: C{int}
+        @type extendedData: C{str}
+        """
+
+
+    def eofReceived():
+        """
+        Called when the other side has said it will not send any more data.
+        """
+
+
+    def closeReceived():
+        """
+        Called when the other side has said it will not accept any more data.
+        """
+
+
+    def closed():
+        """
+        Called when the application is closed on both sides.
+        """
+
 
 
 class ISFTPServer(Interface):
@@ -398,5 +531,3 @@ class ISFTPFile(Interface):
         @param attrs: a dictionary in the same format as the attrs argument to
         L{openFile}.
         """
-
-

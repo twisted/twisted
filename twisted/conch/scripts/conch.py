@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.conch.test.test_conch -*-
 #
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 #
@@ -15,7 +15,8 @@ from twisted.conch.ssh import session, forwarding, channel
 from twisted.internet import reactor, stdio, task
 from twisted.python import log, usage
 
-import os, sys, getpass, struct, tty, fcntl, signal
+import os, sys, getpass, struct, tty, fcntl, signal, errno
+
 
 class ClientOptions(options.ConchOptions):
 
@@ -23,8 +24,12 @@ class ClientOptions(options.ConchOptions):
 """
 
     optParameters = [['escape', 'e', '~'],
-                      ['localforward', 'L', None, 'listen-port:host:port   Forward local port to remote address'],
-                      ['remoteforward', 'R', None, 'listen-port:host:port   Forward remote port to local address'],
+                     ['localforward', 'L', None,
+                      'listen-port:host:port   '
+                      'Forward local port to remote address'],
+                     ['remoteforward', 'R', None,
+                      'listen-port:host:port   '
+                      'Forward remote port to local address'],
                      ]
 
     optFlags = [['null', 'n', 'Redirect input from /dev/null.'],
@@ -81,7 +86,7 @@ conn = None
 exitStatus = 0
 old = None
 _inRawMode = 0
-_savedRawMode = None
+_savedMode = None
 
 def run():
     global options, old
@@ -210,7 +215,6 @@ def onConnect():
             try:
                 os.close(i)
             except OSError, e:
-                import errno
                 if e.errno != errno.EBADF:
                     raise
 
@@ -360,7 +364,7 @@ class SSHSession(channel.SSHChannel):
                 term = os.environ['TERM']
                 winsz = fcntl.ioctl(fd, tty.TIOCGWINSZ, '12345678')
                 winSize = struct.unpack('4H', winsz)
-                ptyReqData = session.packRequest_pty_req(term, winSize, '')
+                ptyReqData = session.packRequest_pty_req(term, winSize, [])
                 self.conn.sendRequest(self, 'pty-req', ptyReqData)
                 signal.signal(signal.SIGWINCH, self._windowResized)
             self.conn.sendRequest(self, 'exec', \
@@ -370,7 +374,7 @@ class SSHSession(channel.SSHChannel):
                 term = os.environ['TERM']
                 winsz = fcntl.ioctl(fd, tty.TIOCGWINSZ, '12345678')
                 winSize = struct.unpack('4H', winsz)
-                ptyReqData = session.packRequest_pty_req(term, winSize, '')
+                ptyReqData = session.packRequest_pty_req(term, winSize, [])
                 self.conn.sendRequest(self, 'pty-req', ptyReqData)
                 signal.signal(signal.SIGWINCH, self._windowResized)
             self.conn.sendRequest(self, 'shell', '')
@@ -408,7 +412,8 @@ class SSHSession(channel.SSHChannel):
                 channels = self.conn.channels.keys()
                 channels.sort()
                 for channelId in channels:
-                    self.stdio.write('  #%i %s\r\n' % (channelId, str(self.conn.channels[channelId])))
+                    self.stdio.write('  #%i %s\r\n' % (channelId,
+                        str(self.conn.channels[channelId])))
                 return
             self.write('~' + char)
         else:

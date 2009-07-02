@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.conch.test.test_filetransfer -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE file for details.
 
 
@@ -56,11 +56,6 @@ class FileTransferTestAvatar(TestAvatar):
     def getHomeDir(self):
         return os.path.join(os.getcwd(), self.homeDir)
 
-
-class ConchSessionForTestAvatar:
-
-    def __init__(self, avatar):
-        self.avatar = avatar
 
 if unix:
     if not hasattr(unix, 'SFTPServerForUnixConchUser'):
@@ -522,7 +517,7 @@ class TestFileTransferClose(unittest.TestCase):
         self.interceptConnectionLost(sftpServer)
 
         # close session
-        testSession.closeReceived()
+        testSession.closed()
 
         self.assertSFTPConnectionLost()
 

@@ -1,23 +1,24 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 from twisted.cred import portal
 from twisted.python import components, log
 from twisted.internet.error import ProcessExitedAlready
 from zope import interface
-from ssh import session, forwarding, filetransfer
-from ssh.filetransfer import FXF_READ, FXF_WRITE, FXF_APPEND, FXF_CREAT, FXF_TRUNC, FXF_EXCL
+from twisted.conch.ssh import session, forwarding, filetransfer
+from twisted.conch.ssh.filetransfer import FXF_READ, FXF_WRITE, FXF_APPEND
+from twisted.conch.ssh.filetransfer import FXF_CREAT, FXF_TRUNC, FXF_EXCL
 from twisted.conch.ls import lsLine
 
-from avatar import ConchUser
-from error import ConchError
-from interfaces import ISession, ISFTPServer, ISFTPFile
+from twisted.conch.avatar import ConchUser
+from twisted.conch.error import ConchError
+from twisted.conch.interfaces import ISession, ISFTPServer, ISFTPFile
+from twisted.conch import ttymodes
 
 import struct, os, time, socket
 import fcntl, tty
 import pwd, grp
 import pty
-import ttymodes
 
 try:
     import utmp
@@ -48,9 +49,6 @@ class UnixConchUser(ConchUser):
                 {"session": session.SSHSession,
                  "direct-tcpip": forwarding.openConnectForwardingClient})
 
-        self.subsystemLookup.update(
-                {"sftp": filetransfer.FileTransferServer})
-
     def getUserGroupId(self):
         return self.pwdData[2:4]
 
@@ -67,10 +65,10 @@ class UnixConchUser(ConchUser):
         hostToBind, portToBind = forwarding.unpackGlobal_tcpip_forward(data)
         from twisted.internet import reactor
         try: listener = self._runAsUser(
-                            reactor.listenTCP, portToBind, 
+                            reactor.listenTCP, portToBind,
                             forwarding.SSHListenForwardingFactory(self.conn,
                                 (hostToBind, portToBind),
-                                forwarding.SSHListenServerForwardingChannel), 
+                                forwarding.SSHListenServerForwardingChannel),
                             interface = hostToBind)
         except:
             return 0
@@ -95,7 +93,8 @@ class UnixConchUser(ConchUser):
         # remove all listeners
         for listener in self.listeners.itervalues():
             self._runAsUser(listener.stopListening)
-        log.msg('avatar %s logging out (%i)' % (self.username, len(self.listeners)))
+        log.msg('avatar %s logging out (%i)' % (self.username,
+            len(self.listeners)))
 
     def _runAsUser(self, f, *args, **kw):
         euid = os.geteuid()
@@ -160,7 +159,6 @@ class SSHSessionForUnixConchUser:
         b = utmp.UtmpRecord(utmp.WTMP_FILE)
         b.pututline(entry)
         b.endutent()
-                            
 
     def getPty(self, term, windowSize, modes):
         self.environ['TERM'] = term
@@ -168,8 +166,12 @@ class SSHSessionForUnixConchUser:
         self.modes = modes
         master, slave = pty.openpty()
         ttyname = os.ttyname(slave)
-        self.environ['SSH_TTY'] = ttyname 
+        self.environ['SSH_TTY'] = ttyname
         self.ptyTuple = (master, slave, ttyname)
+
+    def lookupSubsystem(subsystem, data):
+        if subsystem == 'sftp':
+            return filetransfer.FileTransferServer(data)
 
     def openShell(self, proto):
         from twisted.internet import reactor
@@ -191,7 +193,7 @@ class SSHSessionForUnixConchUser:
                   shell, ['-%s' % shellExec], self.environ, homeDir, uid, gid,
                    usePTY = self.ptyTuple)
         self.addUTMPEntry()
-        fcntl.ioctl(self.pty.fileno(), tty.TIOCSWINSZ, 
+        fcntl.ioctl(self.pty.fileno(), tty.TIOCSWINSZ,
                     struct.pack('4H', *self.winSize))
         if self.modes:
             self.setModes()
@@ -232,7 +234,7 @@ class SSHSessionForUnixConchUser:
         finally:
             os.setegid(egid)
             os.seteuid(euid)
-        
+
     def setModes(self):
         pty = self.pty
         attr = tty.tcgetattr(pty.fileno())
@@ -276,7 +278,7 @@ class SSHSessionForUnixConchUser:
 
     def windowChanged(self, winSize):
         self.winSize = winSize
-        fcntl.ioctl(self.pty.fileno(), tty.TIOCSWINSZ, 
+        fcntl.ioctl(self.pty.fileno(), tty.TIOCSWINSZ,
                         struct.pack('4H', *self.winSize))
 
     def _writeHack(self, data):
