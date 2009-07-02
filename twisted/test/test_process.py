@@ -1225,16 +1225,16 @@ class MockOS(object):
 
     def __init__(self):
         """
-        Initialiaze data structures.
+        Initialize data structures.
         """
         self.actions = []
         self.closed = []
         self.pipeCount = 0
-        self.O_RDWR = os.O_RDWR
-        self.O_NOCTTY = os.O_NOCTTY
-        self.WNOHANG = os.WNOHANG
-        self.WEXITSTATUS = os.WEXITSTATUS
-        self.WIFEXITED = os.WIFEXITED
+        self.O_RDWR = -1
+        self.O_NOCTTY = -2
+        self.WNOHANG = -4
+        self.WEXITSTATUS = lambda x: 0
+        self.WIFEXITED = lambda x: 1
         self.seteuidCalls = []
         self.setegidCalls = []
 
