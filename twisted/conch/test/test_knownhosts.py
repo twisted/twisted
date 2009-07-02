@@ -10,8 +10,9 @@ from binascii import Error as BinasciiError, b2a_base64, a2b_base64
 
 try:
     import Crypto
+    import pyasn1
 except ImportError:
-    skip = "PyCrypto required for twisted.conch.knownhosts."
+    skip = "PyCrypto and PyASN1 required for twisted.conch.knownhosts."
 else:
     from twisted.conch.ssh.keys import Key, BadKeyError
     from twisted.conch.client.knownhosts import \
@@ -549,9 +550,7 @@ class KnownHostsDatabaseTests(TestCase):
         hostsFile.addHostKey("1.2.3.4", Key.fromString(sampleKey))
         d = hostsFile.verifyHostKey(
             ui, "www.twistedmatrix.com", "1.2.3.4", wrongKey)
-        l = []
-        d.addErrback(l.append)
-        hkc = l[0].trap(HostKeyChanged)
+        return self.assertFailure(d, HostKeyChanged)
 
 
     def verifyNonPresentKey(self):
@@ -621,14 +620,11 @@ class KnownHostsDatabaseTests(TestCase):
         HostKeyChanged failure.
         """
         hostsFile = self.loadSampleHostsFile()
-        rightKey = Key.fromString(sampleKey)
         wrongKey = Key.fromString(thirdSampleKey)
         ui = FakeUI()
-        l = []
         d = hostsFile.verifyHostKey(
             ui, "www.twistedmatrix.com", "4.3.2.1", wrongKey)
-        d.addErrback(l.append)
-        l[0].trap(HostKeyChanged)
+        return self.assertFailure(d, HostKeyChanged)
 
 
     def test_verifyKeyForHostAndIP(self):
@@ -780,9 +776,8 @@ class ConsoleUITests(TestCase):
         def raiseIt():
             raise IOError()
         ui = ConsoleUI(raiseIt)
-        l = []
-        ui.prompt("This is a test.").addErrback(l.append)
-        l[0].trap(IOError)
+        d = ui.prompt("This is a test.")
+        return self.assertFailure(d, IOError)
 
 
     def test_warn(self):
@@ -960,18 +955,17 @@ class DefaultAPITests(TestCase):
         C{0} when passed a unknown host that the user refuses to acknowledge.
         """
         self.fakeTransport.factory.options['host'] = 'fake.example.com'
-        l = []
         self.fakeFile.inlines.append("no")
-        default.verifyHostKey(self.fakeTransport, "9.8.7.6", otherSampleKey,
-                              "No fingerprint!").addErrback(l.append)
-        self.assertEqual([
-                "The authenticity of host 'fake.example.com (9.8.7.6)' "
-                "can't be established.\n"
-                "RSA key fingerprint is "
-                "57:a1:c2:a1:07:a0:2b:f4:ce:b5:e5:b7:ae:cc:e1:99.\n"
-                "Are you sure you want to continue connecting (yes/no)? "],
-                         self.fakeFile.outchunks)
-        l[0].trap(UserRejectedKey)
+        d = default.verifyHostKey(
+            self.fakeTransport, "9.8.7.6", otherSampleKey, "No fingerprint!")
+        self.assertEqual(
+            ["The authenticity of host 'fake.example.com (9.8.7.6)' "
+             "can't be established.\n"
+             "RSA key fingerprint is "
+             "57:a1:c2:a1:07:a0:2b:f4:ce:b5:e5:b7:ae:cc:e1:99.\n"
+              "Are you sure you want to continue connecting (yes/no)? "],
+             self.fakeFile.outchunks)
+        return self.assertFailure(d, UserRejectedKey)
 
 
     def test_verifyBadKey(self):
@@ -979,8 +973,7 @@ class DefaultAPITests(TestCase):
         L{default.verifyHostKey} should return a L{Deferred} which fails with
         L{HostKeyChanged} if the host key is incorrect.
         """
-        l = []
-        default.verifyHostKey(self.fakeTransport, "4.3.2.1", otherSampleKey,
-                              "Again, not required.").addErrback(l.append)
-        l[0].trap(HostKeyChanged)
-
+        d = default.verifyHostKey(
+            self.fakeTransport, "4.3.2.1", otherSampleKey,
+            "Again, not required.")
+        return self.assertFailure(d, HostKeyChanged)

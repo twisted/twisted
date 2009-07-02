@@ -22,6 +22,7 @@ from twisted.test.test_process import MockOS
 
 try:
     import Crypto.Cipher.DES3
+    import pyasn1
 except ImportError:
     SSHPublicKeyDatabase = None
 else:
@@ -39,7 +40,7 @@ class SSHPublicKeyDatabaseTestCase(TestCase):
     if pwd is None:
         skip = "Cannot run without pwd module"
     elif SSHPublicKeyDatabase is None:
-        skip = "Cannot run without PyCrypto"
+        skip = "Cannot run without PyCrypto or PyASN1"
 
     def setUp(self):
         self.checker = SSHPublicKeyDatabase()

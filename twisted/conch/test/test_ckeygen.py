@@ -10,8 +10,9 @@ from StringIO import StringIO
 
 try:
     import Crypto
+    import pyasn1
 except ImportError:
-    skip = "PyCrypto required for twisted.conch.scripts.ckeygen."
+    skip = "PyCrypto and pyasn1 required for twisted.conch.scripts.ckeygen."
 else:
     from twisted.conch.ssh.keys import Key
     from twisted.conch.scripts.ckeygen import printFingerprint, _saveKey

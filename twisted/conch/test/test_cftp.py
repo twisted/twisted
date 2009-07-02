@@ -10,16 +10,21 @@ except ImportError:
     Crypto = None
 
 try:
-    from twisted.conch import unix
-    from twisted.conch.scripts import cftp
-    from twisted.conch.test.test_filetransfer import FileTransferForTestAvatar
+    import pyasn1
 except ImportError:
-    unix = None
+    pyasn1 = None
+
+if Crypto and pyasn1:
     try:
-        del sys.modules['twisted.conch.unix'] # remove the bad import
-    except KeyError:
-        # In Python 2.4, the bad import has already been cleaned up for us.
-        pass
+        from twisted.conch import unix
+        from twisted.conch.scripts import cftp
+        from twisted.conch.test.test_filetransfer import FileTransferForTestAvatar
+    except ImportError:
+        # Python 2.3 compatibility fix
+        sys.modules.pop("twisted.conch.unix", None)
+        unix = None
+else:
+    unix = None
 
 
 from twisted.trial.unittest import TestCase
@@ -676,7 +681,6 @@ class TestOurServerBatchFile(CFTPClientTestBase):
     def _getBatchOutput(self, f):
         fn = self.mktemp()
         open(fn, 'w').write(f)
-        l = []
         port = self.server.getHost().port
         cmds = ('-p %i -l testuser '
                     '--known-hosts kh_test '
@@ -802,7 +806,7 @@ class TestOurServerSftpClient(CFTPClientTestBase):
 
 
 
-if not unix or not Crypto or not interfaces.IReactorProcess(reactor, None):
+if not unix or not Crypto or not pyasn1 or not interfaces.IReactorProcess(reactor, None):
     TestOurServerCmdLineClient.skip = "don't run w/o spawnprocess or PyCrypto"
     TestOurServerBatchFile.skip = "don't run w/o spawnProcess or PyCrypto"
     TestOurServerSftpClient.skip = "don't run w/o spawnProcess or PyCrypto"

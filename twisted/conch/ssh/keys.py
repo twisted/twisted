@@ -11,18 +11,22 @@ Maintainer: U{Paul Swartz}
 # base library imports
 import base64
 import warnings
+import itertools
 
 # external library imports
 from Crypto.Cipher import DES3
 from Crypto.PublicKey import RSA, DSA
 from Crypto import Util
+from pyasn1.type import univ
+from pyasn1.codec.ber import decoder as berDecoder
+from pyasn1.codec.ber import encoder as berEncoder
 
 # twisted
 from twisted.python import randbytes
 from twisted.python.hashlib import md5, sha1
 
 # sibling imports
-from twisted.conch.ssh import asn1, common, sexpy
+from twisted.conch.ssh import common, sexpy
 
 
 class BadKeyError(Exception):
@@ -213,20 +217,25 @@ class Key(object):
             removeLen = ord(keyData[-1])
             keyData = keyData[:-removeLen]
         else:
-            keyData = base64.decodestring(''.join(lines[1:-1]))
+            b64Data = ''.join(lines[1:-1])
+            keyData = base64.decodestring(b64Data)
         try:
-            decodedKey = asn1.parse(keyData)
+            decodedKey = berDecoder.decode(keyData)[0]
         except Exception, e:
             raise BadKeyError, 'something wrong with decode'
         if kind == 'RSA':
             if len(decodedKey) == 2: # alternate RSA key
                 decodedKey = decodedKey[0]
-            n, e, d, p, q = decodedKey[1:6]
+            if len(decodedKey) < 6:
+                raise BadKeyError('RSA key failed to decode properly')
+            n, e, d, p, q = [long(value) for value in decodedKey[1:6]]
             if p > q: # make p smaller than q
                 p, q = q, p
             return Class(RSA.construct((n, e, d, p, q)))
         elif kind == 'DSA':
-            p, q, g, y, x = decodedKey[1: 6]
+            p, q, g, y, x = [long(value) for value in decodedKey[1: 6]]
+            if len(decodedKey) < 6:
+                raise BadKeyError('DSA key failed to decode properly')
             return Class(DSA.construct((y, g, p, q, x)))
     _fromString_PRIVATE_OPENSSH = classmethod(_fromString_PRIVATE_OPENSSH)
 
@@ -597,6 +606,10 @@ class Key(object):
             else:
                 objData = (0, data['p'], data['q'], data['g'], data['y'],
                     data['x'])
+            asn1Sequence = univ.Sequence()
+            for index, value in itertools.izip(itertools.count(), objData):
+                asn1Sequence.setComponentByPosition(index, univ.Integer(value))
+            asn1Data = berEncoder.encode(asn1Sequence)
             if extra:
                 iv = randbytes.secureRandom(8)
                 hexiv = ''.join(['%02X' % ord(x) for x in iv])
@@ -605,8 +618,6 @@ class Key(object):
                 ba = md5(extra + iv).digest()
                 bb = md5(ba + extra + iv).digest()
                 encKey = (ba + bb)[:24]
-            asn1Data = asn1.pack([objData])
-            if extra:
                 padLen = 8 - (len(asn1Data) % 8)
                 asn1Data += (chr(padLen) * padLen)
                 asn1Data = DES3.new(encKey, DES3.MODE_CBC,

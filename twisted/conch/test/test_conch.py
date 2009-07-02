@@ -9,16 +9,20 @@ try:
 except:
     Crypto = None
 
+try:
+    import pyasn1
+except ImportError:
+    pyasn1 = None
+
 from twisted.cred import portal
 from twisted.internet import reactor, defer, protocol
 from twisted.internet.error import ProcessExitedAlready
 from twisted.python import log, runtime
-from twisted.python.filepath import FilePath
 from twisted.trial import unittest
 from twisted.conch.error import ConchError
-try:
+if Crypto and pyasn1:
     from twisted.conch.scripts.conch import SSHSession as StdioInteractingSession
-except ImportError:
+else:
     StdioInteractingSession = None
 from twisted.conch.test.test_ssh import ConchTestRealm
 from twisted.python.procutils import which
@@ -232,8 +236,7 @@ class ConchTestForwardingPort(protocol.Protocol):
 
 
 
-if Crypto:
-    from twisted.conch.client import options, default, connect
+if Crypto is not None and pyasn1 is not None:
     from twisted.conch.ssh import forwarding
     from twisted.conch.ssh import connection
 
@@ -346,6 +349,9 @@ class ForwardingTestBase:
 
     if not Crypto:
         skip = "can't run w/o PyCrypto"
+
+    if not pyasn1:
+        skip = "can't run w/o PyASN1"
 
     def _createFiles(self):
         for f in ['rsa_test','rsa_test.pub','dsa_test','dsa_test.pub',

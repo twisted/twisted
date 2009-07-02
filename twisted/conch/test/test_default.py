@@ -6,8 +6,9 @@ Tests for L{twisted.conch.client.default}.
 """
 try:
     import Crypto.Cipher.DES3
+    import pyasn1
 except ImportError:
-    skip = "PyCrypto required for twisted.conch.client.default."
+    skip = "PyCrypto and PyASN1 required for twisted.conch.client.default."
 else:
     from twisted.conch.client.agent import SSHAgentClient
     from twisted.conch.client.default import SSHUserAuthClient

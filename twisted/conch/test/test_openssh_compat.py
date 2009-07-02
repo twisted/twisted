@@ -13,6 +13,7 @@ from twisted.python.compat import set
 
 try:
     import Crypto.Cipher.DES3
+    import pyasn1
 except ImportError:
     OpenSSHFactory = None
 else:
@@ -29,7 +30,7 @@ class OpenSSHFactoryTests(TestCase):
     if getattr(os, "geteuid", None) is None:
         skip = "geteuid/seteuid not available"
     elif OpenSSHFactory is None:
-        skip = "Cannot run without PyCrypto"
+        skip = "Cannot run without PyCrypto or PyASN1"
 
     def setUp(self):
         self.factory = OpenSSHFactory()

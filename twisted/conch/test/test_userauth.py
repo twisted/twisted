@@ -23,6 +23,7 @@ from twisted.trial import unittest
 
 try:
     import Crypto.Cipher.DES3, Crypto.Cipher.XOR
+    import pyasn1
 except ImportError:
     keys = None
 
@@ -512,8 +513,7 @@ class SSHUserAuthServerTestCase(unittest.TestCase):
         """
         packet = (NS('foo') + NS('none') + NS('keyboard-interactive')
                 + NS('') + NS(''))
-        response = '\x00\x00\x00\x02' + NS('bar') + NS('bar')
-        d = self.authServer.ssh_USERAUTH_REQUEST(packet)
+        self.authServer.ssh_USERAUTH_REQUEST(packet)
         self.authServer.ssh_USERAUTH_REQUEST(packet)
         self.assertEquals(self.authServer.transport.packets[-1][0],
                 transport.MSG_DISCONNECT)
@@ -828,7 +828,7 @@ class SSHUserAuthClientTestCase(unittest.TestCase):
                          userauth.__file__, oldAuth.tryAuth, 'publickey')
         self.assertEquals(oldAuth.transport.packets, [
                 (userauth.MSG_USERAUTH_REQUEST, NS('foo') + NS('nancy') +
-                 NS('publickey') + '\x00' + NS('ssh-rsa') + 
+                 NS('publickey') + '\x00' + NS('ssh-rsa') +
                  NS(keys.Key.fromString(keydata.publicRSA_openssh).blob()))])
 
 
@@ -996,7 +996,7 @@ class LoopbackTestCase(unittest.TestCase):
 
 
     if keys is None:
-        skip = "cannot run w/o PyCrypto"
+        skip = "cannot run w/o PyCrypto or PyASN1"
 
 
     class Factory:

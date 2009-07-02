@@ -19,9 +19,17 @@ else:
 try:
     import Crypto.Cipher.DES3
 except ImportError:
-    keys = agent = None
-else:
+    Crypto = None
+
+try:
+    import pyasn1
+except ImportError:
+    pyasn1 = None
+
+if Crypto and pyasn1:
     from twisted.conch.ssh import keys, agent
+else:
+    keys = agent = None
 
 from twisted.conch.test import keydata
 from twisted.conch.error import ConchError, MissingKeyStoreError
@@ -44,7 +52,7 @@ class AgentTestBase(unittest.TestCase):
     if iosim is None:
         skip = "iosim requires SSL, but SSL is not available"
     elif agent is None or keys is None:
-        skip = "Cannot run without PyCrypto"
+        skip = "Cannot run without PyCrypto or PyASN1"
 
     def setUp(self):
         # wire up our client <-> server
@@ -182,7 +190,7 @@ class TestAgentKeyAddition(AgentTestBase):
         """
         L{SSHAgentClient.addIdentity} adds the private key it is called
         with to the SSH agent server to which it is connected, associating
-        it with the comment it is called with.  
+        it with the comment it is called with.
 
         This test asserts that ommitting the comment produces an
         empty string for the comment on the server.
@@ -200,7 +208,7 @@ class TestAgentKeyAddition(AgentTestBase):
         """
         L{SSHAgentClient.addIdentity} adds the private key it is called
         with to the SSH agent server to which it is connected, associating
-        it with the comment it is called with.  
+        it with the comment it is called with.
 
         This test asserts that ommitting the comment produces an
         empty string for the comment on the server.
@@ -218,7 +226,7 @@ class TestAgentKeyAddition(AgentTestBase):
         """
         L{SSHAgentClient.addIdentity} adds the private key it is called
         with to the SSH agent server to which it is connected, associating
-        it with the comment it is called with.  
+        it with the comment it is called with.
 
         This test asserts that the server receives/stores the comment
         as sent by the client.
@@ -237,7 +245,7 @@ class TestAgentKeyAddition(AgentTestBase):
         """
         L{SSHAgentClient.addIdentity} adds the private key it is called
         with to the SSH agent server to which it is connected, associating
-        it with the comment it is called with.  
+        it with the comment it is called with.
 
         This test asserts that the server receives/stores the comment
         as sent by the client.

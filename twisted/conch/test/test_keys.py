@@ -8,9 +8,16 @@ Tests for L{twisted.conch.ssh.keys}.
 try:
     import Crypto.Cipher.DES3
 except ImportError:
+    # we'll have to skip these tests without PyCypto and pyasn1
     Crypto = None
-else:
-    from twisted.conch.ssh import keys, common, sexpy, asn1
+
+try:
+    import pyasn1
+except ImportError:
+    pyasn1 = None
+
+if Crypto and pyasn1:
+    from twisted.conch.ssh import asn1, keys, common, sexpy
 
 import os, base64
 from twisted.conch.test import keydata
@@ -26,6 +33,8 @@ class SSHKeysHandlingTestCase(unittest.TestCase):
 
     if Crypto is None:
         skip = "cannot run w/o PyCrypto"
+    if pyasn1 is None:
+        skip = "cannot run w/o/ PyASN1"
 
     def setUp(self):
         self.tmpdir = self.mktemp()
@@ -314,6 +323,8 @@ class HelpersTestCase(unittest.TestCase):
 
     if Crypto is None:
         skip = "cannot run w/o PyCrypto"
+    if pyasn1 is None:
+        skip = "cannot run w/o/ PyASN1"
 
     def setUp(self):
         self._secureRandom = randbytes.secureRandom
@@ -408,6 +419,20 @@ class HelpersTestCase(unittest.TestCase):
         handled.
         """
         self.assertRaises(ValueError, asn1.pack, [object()])
+        self.assertEquals(len(self.flushWarnings()), 1)
+
+    def test_asn1DeprecationWarnings(self):
+        """
+        L{asn1.pack} and L{asn1.parse} were deprecated in Twisted 9.0.0.  Make
+        sure that they tell their callers.
+        """
+        self.assertEquals(
+            self.callDeprecated(asn1.Twisted9point0, asn1.pack, []),
+            '0\x00')
+        self.assertEquals(
+            len(self.callDeprecated(asn1.Twisted9point0, asn1.parse,
+                                '\x10\x00\x00')),
+            0)
 
     def test_printKey(self):
         """
@@ -456,6 +481,8 @@ class KeyTestCase(unittest.TestCase):
 
     if Crypto is None:
         skip = "cannot run w/o PyCrypto"
+    if pyasn1 is None:
+        skip = "cannot run w/o/ PyASN1"
 
     def setUp(self):
         self.rsaObj = Crypto.PublicKey.RSA.construct((1L, 2L, 3L, 4L, 5L))
@@ -549,6 +576,27 @@ class KeyTestCase(unittest.TestCase):
         self._testPublicPrivateFromString(keydata.publicDSA_openssh,
                 keydata.privateDSA_openssh, 'DSA', keydata.DSAData)
 
+    def test_fromOpenSSH_with_whitespace(self):
+        """
+        If key strings have trailing whitespace, it should be ignored.
+        """
+        # from bug #3391, since our test key data doesn't have
+        # an issue with appended newlines
+        privateDSAData = """-----BEGIN DSA PRIVATE KEY-----
+MIIBuwIBAAKBgQDylESNuc61jq2yatCzZbenlr9llG+p9LhIpOLUbXhhHcwC6hrh
+EZIdCKqTO0USLrGoP5uS9UHAUoeN62Z0KXXWTwOWGEQn/syyPzNJtnBorHpNUT9D
+Qzwl1yUa53NNgEctpo4NoEFOx8PuU6iFLyvgHCjNn2MsuGuzkZm7sI9ZpQIVAJiR
+9dPc08KLdpJyRxz8T74b4FQRAoGAGBc4Z5Y6R/HZi7AYM/iNOM8su6hrk8ypkBwR
+a3Dbhzk97fuV3SF1SDrcQu4zF7c4CtH609N5nfZs2SUjLLGPWln83Ysb8qhh55Em
+AcHXuROrHS/sDsnqu8FQp86MaudrqMExCOYyVPE7jaBWW+/JWFbKCxmgOCSdViUJ
+esJpBFsCgYEA7+jtVvSt9yrwsS/YU1QGP5wRAiDYB+T5cK4HytzAqJKRdC5qS4zf
+C7R0eKcDHHLMYO39aPnCwXjscisnInEhYGNblTDyPyiyNxAOXuC8x7luTmwzMbNJ
+/ow0IqSj0VF72VJN9uSoPpFd4lLT0zN8v42RWja0M8ohWNf+YNJluPgCFE0PT4Vm
+SUrCyZXsNh6VXwjs3gKQ
+-----END DSA PRIVATE KEY-----"""
+        self.assertEquals(keys.Key.fromString(privateDSAData),
+                         keys.Key.fromString(privateDSAData + '\n'))
+
     def test_fromLSH(self):
         """
         Test that keys are correctly generated from LSH strings.
@@ -577,15 +625,19 @@ class KeyTestCase(unittest.TestCase):
 
     def test_fromStringErrors(self):
         """
-        Test that fromString raises errors appropriately.
+        keys.Key.fromString should raise BadKeyError when the key is invalid.
         """
         self.assertRaises(keys.BadKeyError, keys.Key.fromString, '')
+        # no key data with a bad key type
         self.assertRaises(keys.BadKeyError, keys.Key.fromString, '',
                 'bad_type')
+        # trying to decrypt a key which doesn't support encryption
         self.assertRaises(keys.BadKeyError, keys.Key.fromString,
                 keydata.publicRSA_lsh, passphrase = 'unencrypted')
+        # trying to decrypt an unencrypted key
         self.assertRaises(keys.EncryptedKeyError, keys.Key.fromString,
                 keys.Key(self.rsaObj).toString('openssh', 'encrypted'))
+        # key with no key data
         self.assertRaises(keys.BadKeyError, keys.Key.fromString,
                 '-----BEGIN RSA KEY-----\nwA==\n')
 
@@ -818,6 +870,8 @@ class WarningsTestCase(unittest.TestCase):
     """
     if Crypto is None:
         skip = "cannot run w/o PyCrypto"
+    if pyasn1 is None:
+        skip = "cannot run w/o/ PyASN1"
 
     def setUp(self):
         self.keyObject = keys.Key.fromString(keydata.privateRSA_lsh).keyObject

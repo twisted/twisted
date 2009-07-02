@@ -9,6 +9,11 @@ try:
 except ImportError:
     Crypto = None
 
+try:
+    import pyasn1
+except ImportError:
+    pyasn1 = None
+
 from twisted.conch.ssh import common, session, forwarding
 from twisted.conch import avatar, error
 from twisted.conch.test.keydata import publicRSA_openssh, privateRSA_openssh
@@ -73,7 +78,7 @@ class ConchTestAvatar(avatar.ConchUser):
         return 1
 
     def logout(self):
-        loggedOut = True
+        self.loggedOut = True
         for listener in self.listeners.values():
             log.msg('stopListening %s' % listener)
             listener.stopListening()
@@ -229,7 +234,7 @@ class SuperEchoTransport:
         self.proto.processEnded(failure.Failure(ProcessTerminated(0, None, None)))
 
 
-if Crypto: # stuff that needs PyCrypto to even import
+if Crypto is not None and pyasn1 is not None:
     from twisted.conch import checkers
     from twisted.conch.ssh import channel, connection, factory, keys
     from twisted.conch.ssh import transport, userauth
@@ -691,6 +696,9 @@ class SSHProtocolTestCase(unittest.TestCase):
     if not Crypto:
         skip = "can't run w/o PyCrypto"
 
+    if not pyasn1:
+        skip = "can't run w/o PyASN1"
+
     def testOurServerOurClient(self):
         """test the Conch server against the Conch client
         """
@@ -724,6 +732,9 @@ class TestSSHFactory(unittest.TestCase):
     if not Crypto:
         skip = "can't run w/o PyCrypto"
 
+    if not pyasn1:
+        skip = "can't run w/o PyASN1"
+
     def makeSSHFactory(self, primes=None):
         sshFactory = factory.SSHFactory()
         gpk = lambda: {'ssh-rsa' : keys.Key(None)}
@@ -754,7 +765,7 @@ class TestSSHFactory(unittest.TestCase):
             return transport.SSHServerTransport()
         factory = self.makeSSHFactory()
         factory.protocol = makeProtocol
-        protocol = factory.buildProtocol(None)
+        factory.buildProtocol(None)
         self.assertEquals([()], calls)
 
 
@@ -798,6 +809,9 @@ class MPTestCase(unittest.TestCase):
 
     if not Crypto:
         skip = "can't run w/o PyCrypto"
+
+    if not pyasn1:
+        skip = "can't run w/o PyASN1"
 
 
     def test_getMP(self):

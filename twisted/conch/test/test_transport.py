@@ -6,9 +6,16 @@ Tests for ssh/transport.py and the classes therein.
 """
 
 try:
+    import pyasn1
+except ImportError:
+    pyasn1 = None
+
+try:
     import Crypto.Cipher.DES3
 except ImportError:
     Crypto = None
+
+if pyasn1 is None or Crypto is None:
     class transport: # fictional modules to make classes work
         class SSHTransportBase: pass
         class SSHServerTransport: pass
@@ -301,6 +308,9 @@ class TransportTestCase(unittest.TestCase):
 
     if Crypto is None:
         skip = "cannot run w/o PyCrypto"
+
+    if pyasn1 is None:
+        skip = "cannot run w/o PyASN1"
 
 
     def setUp(self):
@@ -1610,6 +1620,9 @@ class SSHCiphersTestCase(unittest.TestCase):
     if Crypto is None:
         skip = "cannot run w/o PyCrypto"
 
+    if pyasn1 is None:
+        skip = "cannot run w/o PyASN1"
+
 
     def test_init(self):
         """
@@ -1716,6 +1729,9 @@ class CounterTestCase(unittest.TestCase):
     if Crypto is None:
         skip = "cannot run w/o PyCrypto"
 
+    if pyasn1 is None:
+        skip = "cannot run w/o PyASN1"
+
 
     def test_init(self):
         """
@@ -1745,6 +1761,9 @@ class TransportLoopbackTestCase(unittest.TestCase):
     """
     if Crypto is None:
         skip = "cannot run w/o PyCrypto"
+
+    if pyasn1 is None:
+        skip = "cannot run w/o PyASN1"
 
 
     def _runClientServer(self, mod):
@@ -1864,6 +1883,9 @@ class OldFactoryTestCase(unittest.TestCase):
 
     if Crypto is None:
         skip = "cannot run w/o PyCrypto"
+
+    if pyasn1 is None:
+        skip = "cannot run w/o PyASN1"
 
 
     def test_getPublicKeysWarning(self):
