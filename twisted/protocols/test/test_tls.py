@@ -15,14 +15,14 @@ else:
     # imports will work.
     from OpenSSL.crypto import X509Type
     from OpenSSL.SSL import TLSv1_METHOD, Error, Context, ConnectionType
+    from twisted.internet.ssl import ClientContextFactory, PrivateCertificate
+    from twisted.internet.ssl import DefaultOpenSSLContextFactory
 
 from twisted.python.filepath import FilePath
 from twisted.internet.interfaces import ISystemHandle, ISSLTransport
 from twisted.internet.error import ConnectionDone
 from twisted.internet.defer import Deferred, gatherResults
 from twisted.internet.protocol import Protocol, ClientFactory, ServerFactory
-from twisted.internet.ssl import ClientContextFactory, PrivateCertificate
-from twisted.internet.ssl import DefaultOpenSSLContextFactory
 from twisted.protocols.loopback import loopbackAsync, collapsingPumpPolicy
 from twisted.trial.unittest import TestCase
 from twisted.test.test_tcp import ConnectionLostNotifyingProtocol
@@ -563,3 +563,4 @@ class TLSMemoryBIOTests(TestCase):
             self.assertTrue(clientProtocol.transport.q.disconnect)
         handshakeDeferred.addCallback(cbConnectionDone)
         return handshakeDeferred
+
