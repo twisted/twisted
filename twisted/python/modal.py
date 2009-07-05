@@ -1,4 +1,4 @@
-# -*- test-case-name: epsilon.test.test_modes -*-
+# -*- test-case-name: twisted.test.test_modal -*-
 
 import new
 

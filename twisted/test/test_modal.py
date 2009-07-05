@@ -1,7 +1,7 @@
 
 from twisted.trial import unittest
 
-from epsilon.modal import mode, Modal
+from twisted.python.modal import mode, Modal
 
 class ModalTestClass(Modal):
 
