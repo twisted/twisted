@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.test.test_modal -*-
 
-import new
+import inspect, new
 
 class ModalMethod(object):
     """A descriptor wrapping multiple implementations of a particular method.
@@ -55,11 +55,13 @@ class mode(object):
         """
         The mode has just been exited.
         """
+        pass
 
     def __enter__(self):
         """
         The mode has just been entered.
         """
+        pass
 
 def _getInheritedAttribute(classname, attrname, bases, attrs):
     try:
@@ -76,6 +78,33 @@ def _getInheritedAttribute(classname, attrname, bases, attrs):
             raise TypeError('%r does not define required attribute %r' %
                             (classname,
                              attrname))
+
+
+
+def getInheritedModalMethods(methName, bases, attrs):
+
+    try:
+        modalMethod = _getInheritedAttribute(None, methName, bases, attrs)
+    except TypeError:
+        return {}
+    else:
+        return dict(modalMethod.methods)
+
+
+
+def getMethods(cls):
+    """
+    Get method definitions from a class and its bases.
+    """
+
+    methods = {}
+
+    for base in inspect.getmro(cls):
+        for name, definition in base.__dict__.iteritems():
+           if name not in methods and inspect.isfunction(definition):
+                methods[name] = definition
+
+    return methods
 
 
 
@@ -102,13 +131,15 @@ class ModalType(type):
         keepAttrs = {'mode': initialMode}
         for (k, v) in attrs.iteritems():
             if isinstance(v, type) and issubclass(v, mode):
-                for (methName, methDef) in v.__dict__.iteritems():
-                    if methName not in ('__module__', '__file__', '__name__'):
-                        implementations.setdefault(methName, {})[k] = methDef
+                methods = getMethods(v)
+                for (methName, methDef) in methods.iteritems():
+                    implementations.setdefault(methName, {})[k] = methDef
             keepAttrs[k] = v
 
         for (methName, methDefs) in implementations.iteritems():
-            keepAttrs[methName] = ModalMethod(methName, methDefs, modeAttribute)
+            inh = getInheritedModalMethods(methName, bases, {})
+            inh.update(methDefs)
+            keepAttrs[methName] = ModalMethod(methName, inh, modeAttribute)
 
         return super(ModalType, cls).__new__(cls, name, bases, keepAttrs)
 
