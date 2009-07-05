@@ -1,9 +1,19 @@
 # -*- test-case-name: twisted.test.test_modal -*-
+# Copyright (c) 2005-2006 Divmod, Inc.
+# Copyright (c) 2009 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Utilities for writing state machines.
+
+@since: 9.0.
+"""
 
 import inspect, new
 
 class ModalMethod(object):
-    """A descriptor wrapping multiple implementations of a particular method.
+    """
+    A descriptor wrapping multiple implementations of a particular method.
 
     When called on an instance, the implementation used will be
     selected based on an attribute of the instance.  There are no
@@ -39,17 +49,17 @@ class ModalMethod(object):
 
         return new.instancemethod(func, instance, owner)
 
+
+
 class mode(object):
     """
-    Base class for mode definitions.  Subclass this in classes of type
-    ModalType and provide the implementations of various methods for
-    that particular mode as methods of the mode subclass.  The
-    subclass should have the same name as the mode it is defining.
-    """
+    Base class for mode definitions.
 
-    # XXX fix the simple, but wrong, __dict__ magic in ModalType.__new__ so
-    # that this __enter__ and __exit__ are actually called, maybe we can even
-    # do some logging or something.
+    Subclass this in classes of type ModalType and provide the implementations
+    of various methods for that particular mode as methods of the mode
+    subclass. The subclass should have the same name as the mode it is
+    defining.
+    """
 
     def __exit__(self):
         """
@@ -62,6 +72,8 @@ class mode(object):
         The mode has just been entered.
         """
         pass
+
+
 
 def _getInheritedAttribute(classname, attrname, bases, attrs):
     try:
@@ -81,10 +93,12 @@ def _getInheritedAttribute(classname, attrname, bases, attrs):
 
 
 
-def getInheritedModalMethods(methName, bases, attrs):
-
+def _getInheritedModalMethods(attrname, bases, attrs):
+    """
+    Get modal methods inherited from bases.
+    """
     try:
-        modalMethod = _getInheritedAttribute(None, methName, bases, attrs)
+        modalMethod = _getInheritedAttribute(None, attrname, bases, attrs)
     except TypeError:
         return {}
     else:
@@ -95,8 +109,16 @@ def getInheritedModalMethods(methName, bases, attrs):
 def getMethods(cls):
     """
     Get method definitions from a class and its bases.
-    """
 
+    This walks the method resolution order to find the function definitions
+    of methods in the given class and its bases.
+
+    @param cls: Class definition.
+    @type cls: C{type} or C{classobj}
+
+    @return: A mapping of method name to function definition.
+    @rtype: C{dict}
+    """
     methods = {}
 
     for base in inspect.getmro(cls):
@@ -109,16 +131,18 @@ def getMethods(cls):
 
 
 class ModalType(type):
-    """Metaclass for defining modal classes.
+    """
+    Metaclass for defining modal classes.
 
     @type modeAttribute: C{str}
-    @ivar modeAttribute: The attribute to which the current mode is
-    bound.  Classes should not define the attribute this names; it
-    will be bound automatically to the value of initialMode.
+    @ivar modeAttribute: The attribute to which the current mode is bound.
+        Classes should not define the attribute this names; it will be bound
+        automatically to the value of initialMode.
 
     @type initialMode: C{str} (for now)
     @ivar initialMode: The mode in which instances will start.
     """
+
     def __new__(cls, name, bases, attrs):
         modeAttribute = _getInheritedAttribute(name, 'modeAttribute', bases, attrs)
         initialMode = attrs['initialMode'] = _getInheritedAttribute(name, 'initialMode', bases, attrs)
@@ -137,13 +161,24 @@ class ModalType(type):
             keepAttrs[k] = v
 
         for (methName, methDefs) in implementations.iteritems():
-            inh = getInheritedModalMethods(methName, bases, {})
+            inh = _getInheritedModalMethods(methName, bases, {})
             inh.update(methDefs)
             keepAttrs[methName] = ModalMethod(methName, inh, modeAttribute)
 
         return super(ModalType, cls).__new__(cls, name, bases, keepAttrs)
 
+
+
 class Modal(object):
+    """
+    Modal base class.
+
+    This class can be used as a base for state machines. The meta class is
+    L{ModalType}.
+
+    This uses the C{'mode'} attribute for storing the current mode and defines
+    an initial, empty mode C{'nil'}.
+    """
 
     __metaclass__ = ModalType
     modeAttribute = 'mode'
@@ -156,7 +191,16 @@ class Modal(object):
             pass
 
     def transitionTo(self, stateName):
+        """
+        Transition to a state.
+
+        This calls the C{__exit__} method for the current state, changes the
+        current state to L{stateName} and then calls C{__enter__} for the new
+        state.
+
+        @param stateName: The name of the state to move to.
+        @type stateName: C{str}
+        """
         self.__exit__()
         self.mode = stateName
         self.__enter__()
-
