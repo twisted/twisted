@@ -1,14 +1,9 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.conch.test.test_tap -*-
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
-# 
-# Twisted, the Framework of Your Internet
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
-# See LICENSE for details.
-
 
 """
-I am a support module for making SSH servers with twistd.
+Support module for making SSH servers with twistd.
 """
 
 from twisted.conch import checkers, unix
@@ -16,6 +11,11 @@ from twisted.conch.openssh_compat import factory
 from twisted.cred import portal
 from twisted.python import usage
 from twisted.application import strports
+try:
+    from twisted.cred import pamauth
+except ImportError:
+    pamauth = None
+
 
 
 class Options(usage.Options):
@@ -36,8 +36,9 @@ def makeService(config):
     t.portal = portal.Portal(unix.UnixSSHRealm())
     t.portal.registerChecker(checkers.UNIXPasswordDatabase())
     t.portal.registerChecker(checkers.SSHPublicKeyDatabase())
-    if checkers.pamauth:
-        t.portal.registerChecker(checkers.PluggableAuthenticationModulesChecker())
+    if pamauth is not None:
+        from twisted.cred.checkers import PluggableAuthenticationModulesChecker
+        t.portal.registerChecker(PluggableAuthenticationModulesChecker())
     t.dataRoot = config['data']
     t.moduliRoot = config['moduli'] or config['data']
     port = config['port']
