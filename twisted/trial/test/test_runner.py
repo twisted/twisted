@@ -1,4 +1,4 @@
-# Copyright (c) 2005-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2005-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 #
 # Maintainer: Jonathan Lange
@@ -475,6 +475,23 @@ class TestRunner(unittest.TestCase):
         result = my_runner.run(suite)
         self.assertEqual(self.standardReport, result._calls)
         self.assertEqual(['runcall'], debugger._calls)
+
+
+    def test_noMarker(self):
+        """
+        Specifying a temp directory that does not have a trial marker results
+        in an exception and does not remove the specified directory.
+        """
+        tempPath = self.mktemp()
+        # Create our working directory outside of trial.
+        os.mkdir(tempPath)
+        self.parseOptions(['--temp-directory', tempPath,
+                           'twisted.trial.test.sample'])
+        myRunner = self.getRunner()
+        loader = runner.TestLoader()
+        suite = loader.loadByName('twisted.trial.test.sample', True)
+        self.assertRaises(runner._NoTrialMarker, myRunner.run, suite)
+        self.assertTrue(os.path.exists(tempPath))
 
 
 
