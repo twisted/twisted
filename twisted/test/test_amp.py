@@ -186,6 +186,14 @@ class GetList(amp.Command):
     arguments = [('length', amp.Integer())]
     response = [('body', amp.AmpList([('x', amp.Integer())]))]
 
+class DontRejectMe(amp.Command):
+    commandName = 'dontrejectme'
+    arguments = [
+            ('magicWord', amp.Unicode()),
+            ('list', amp.AmpList([('name', amp.Unicode())], optional=True)),
+            ]
+    response = [('response', amp.Unicode())]
+
 class SecuredPing(amp.Command):
     # XXX TODO: actually make this refuse to send over an insecure connection
     response = [('pinged', amp.Boolean())]
@@ -266,6 +274,10 @@ class SimpleSymmetricCommandProtocol(FactoryNotifier):
     def cmdGetlist(self, length):
         return {'body': [dict(x=1)] * length}
     GetList.responder(cmdGetlist)
+
+    def okiwont(self, magicWord, list):
+        return dict(response=u'%s accepted' % (list[0]['name']))
+    DontRejectMe.responder(okiwont)
 
     def waitforit(self):
         self.waiting = defer.Deferred()
@@ -1403,6 +1415,31 @@ class AMPTest(unittest.TestCase):
         p.flush()
         values = L.pop().get('body')
         self.assertEquals(values, [{'x': 1}] * 10)
+
+
+    def test_optionalAmpListOmitted(self):
+        """
+        Test that sending a command with an omitted AmpList argument that is
+        designated as optional does not raise an InvalidSignature error.
+        """
+        dontRejectMeCommand = DontRejectMe(magicWord=u'please')
+   
+
+    def test_optionalAmpListPresent(self):
+        """
+        Sanity check that optional AmpList arguments are processed normally.
+        """
+        dontRejectMeCommand = DontRejectMe(magicWord=u'please',
+                list=[{'name': 'foo'}])
+        c, s, p = connectedServerAndClient(
+            ServerClass=SimpleSymmetricCommandProtocol,
+            ClientClass=SimpleSymmetricCommandProtocol)
+        L = []
+        c.callRemote(DontRejectMe, magicWord=u'please',
+                list=[{'name': 'foo'}]).addCallback(L.append)
+        p.flush()
+        response = L.pop().get('response')
+        self.assertEquals(response, 'foo accepted')
 
 
     def test_failEarlyOnArgSending(self):

@@ -1370,14 +1370,18 @@ class AmpList(Argument):
         AmpList([('a', Integer()),
                  ('b', Unicode())])
     """
-    def __init__(self, subargs):
+    def __init__(self, subargs, optional=False):
         """
         Create an AmpList.
 
         @param subargs: a list of 2-tuples of ('name', argument) describing the
         schema of the dictionaries in the sequence of amp boxes.
+        
+        @param optional: a boolean indicating whether this argument can be
+        omitted in the protocol.
         """
         self.subargs = subargs
+        Argument.__init__(self, optional)
 
 
     def fromStringProto(self, inString, proto):
