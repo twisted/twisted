@@ -12,15 +12,19 @@
 
     <p>
     This HOWTO introduces the Twisted reactor, describes the basics of the
-    reactor and links to 
+    reactor and links to the various reactor interfaces.
     </p>
   
     <h2>Reactor Basics</h2>
 
-    <p> The reactor is the core of the event loop within Twisted -- the loop
-    which drives applications using Twisted. The reactor
-    provides basic interfaces to a number of services, including
-    network communications, threading, and event dispatching.
+    <p>The reactor is the core of the event loop within Twisted -- the loop
+    which drives applications using Twisted. The event loop is a programming
+    construct that waits for and dispatches events or messages in a program.
+    It works by calling some internal or external "event provider", which
+    generally blocks until an event has arrived, and then calls the relevant
+    event handler ("dispatches the event"). The reactor provides basic
+    interfaces to a number of services, including network communications,
+    threading, and event dispatching.
     </p>
 
     <p>
@@ -37,11 +41,11 @@
     <li><a href="threading.xhtml">Using threads</a>.</li>
     </ul>
 
-    <p> There are multiple implementations of the reactor, each
+    <p>There are multiple implementations of the reactor, each
     modified to provide better support for specialized features
     over the default implementation.  More information about these
     and how to use a particular implementation is available via
-    <a href="choosing-reactor.xhtml">Choosing a Reactor</a>. </p>
+    <a href="choosing-reactor.xhtml">Choosing a Reactor</a>.</p>
 
     
     <p>
@@ -55,16 +59,16 @@
 
     <h2>Using the reactor object</h2>
 
-    <p> You can get to the <code class="API"
+    <p>You can get to the <code class="API"
     base="twisted.internet">reactor</code> object using the following code:</p>
 
 <pre class="python">
 from twisted.internet import reactor
 </pre>
 
-    <p> The reactor usually implements a set of interfaces, but 
+    <p>The reactor usually implements a set of interfaces, but 
        depending on the chosen reactor and the platform, some of
-       the interfaces may not be implemented: </p>
+       the interfaces may not be implemented:</p>
 
     <ul>
       <li><code class="API" base="twisted.internet.interfaces"
