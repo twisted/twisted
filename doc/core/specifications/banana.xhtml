@@ -127,9 +127,9 @@
     <p>
       The <code>"pb"</code> profile is intended for use with the Perspective Broker protocol, that runs on top
       of Banana. Basically, it converts commonly used PB strings into shorter versions, thus
-      minimizing bandwidth usage. It does this by adding an additional delimiter byte, 0x87.
-      This byte should not be prefixed by a length. It should be followed by a single byte, which
-      tells us to which string element to convert it:
+      minimizing bandwidth usage. It starts with a single byte, which tells us to which string element
+      to convert it, and ends with the delimiter byte, <code>0x87</code>, which should not be prefixed
+      by a length.
     </p>
     
     <dl>
