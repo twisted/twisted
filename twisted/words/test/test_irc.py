@@ -723,3 +723,46 @@ class ClientTests(TestCase):
                 username, hostname, servername, self.protocol.realname),
             '']
         self.assertEquals(self.transport.value().split('\r\n'), expected)
+
+
+    def test_describe(self):
+        """
+        L{IRCClient.desrcibe} sends a CTCP ACTION message to the target
+        specified.
+        """
+        target = 'foo'
+        channel = '#bar'
+        action = 'waves'
+        self.protocol.describe(target, action)
+        self.protocol.describe(channel, action)
+        expected = [
+            'PRIVMSG %s :\01ACTION %s\01' % (target, action),
+            'PRIVMSG %s :\01ACTION %s\01' % (channel, action),
+            '']
+        self.assertEquals(self.transport.value().split('\r\n'), expected)
+
+
+    def test_me(self):
+        """
+        L{IRCClient.me} sends a CTCP ACTION message to the target channel
+        specified.
+        If the target does not begin with a standard channel prefix,
+        '#' is prepended.
+        """
+        target = 'foo'
+        channel = '#bar'
+        action = 'waves'
+        self.protocol.me(target, action)
+        self.protocol.me(channel, action)
+        expected = [
+            'PRIVMSG %s :\01ACTION %s\01' % ('#' + target, action),
+            'PRIVMSG %s :\01ACTION %s\01' % (channel, action),
+            '']
+        self.assertEquals(self.transport.value().split('\r\n'), expected)
+        warnings = self.flushWarnings(
+            offendingFunctions=[self.test_me])
+        self.assertEquals(
+            warnings[0]['message'],
+            "me() is deprecated since Twisted 9.0. Use IRCClient.describe().")
+        self.assertEquals(warnings[0]['category'], DeprecationWarning)
+        self.assertEquals(len(warnings), 2)

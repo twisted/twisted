@@ -30,6 +30,7 @@ Test coverage needs to be better.
 
 import errno, os, random, re, stat, struct, sys, time, types, traceback
 import string, socket
+import warnings
 from os import path
 
 from twisted.internet import reactor, protocol
@@ -1067,9 +1068,25 @@ class IRCClient(basic.LineReceiver):
 
     ### user input commands, client->client
 
+    def describe(self, channel, action):
+        """
+        Strike a pose.
+
+        @type channel: C{str}
+        @param channel: The name of the channel to have an action on. If it
+            has no prefix, it is sent to the user of that name.
+        @type action: C{str}
+        @param action: The action to preform.
+        @since: 9.0
+        """
+        self.ctcpMakeQuery(channel, [('ACTION', action)])
+
+
     def me(self, channel, action):
         """
         Strike a pose.
+
+        This function is deprecated since Twisted 9.0. Use describe().
 
         @type channel: C{str}
         @param channel: The name of the channel to have an action on. If it
@@ -1077,8 +1094,12 @@ class IRCClient(basic.LineReceiver):
         @type action: C{str}
         @param action: The action to preform.
         """
+        warnings.warn("me() is deprecated since Twisted 9.0. Use IRCClient.describe().",
+                DeprecationWarning, stacklevel=2)
+
         if channel[0] not in '&#!+': channel = '#' + channel
-        self.ctcpMakeQuery(channel, [('ACTION', action)])
+        self.describe(channel, action)
+
 
     _pings = None
     _MAX_PINGRING = 12
