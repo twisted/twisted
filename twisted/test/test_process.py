@@ -2070,6 +2070,56 @@ class Win32ProcessTestCase(unittest.TestCase):
         return self._testSignal('KILL')
 
 
+    def test_closeHandles(self):
+        """
+        The win32 handles should be properly closed when the process exits.
+        """
+        import win32api
+
+        connected = defer.Deferred()
+        ended = defer.Deferred()
+
+        class SimpleProtocol(protocol.ProcessProtocol):
+            """
+            A protocol that fires deferreds when connected and disconnected.
+            """
+            def makeConnection(self, transport):
+                connected.callback(transport)
+
+            def processEnded(self, reason):
+                ended.callback(None)
+
+        p = SimpleProtocol()
+
+        pyExe = sys.executable
+        pyArgs = [pyExe, "-u", "-c", "print 'hello'"]
+        proc = reactor.spawnProcess(p, pyExe, pyArgs)
+
+        def cbConnected(transport):
+            self.assertIdentical(transport, proc)
+            # perform a basic validity test on the handles
+            win32api.GetHandleInformation(proc.hProcess)
+            win32api.GetHandleInformation(proc.hThread)
+            # And save their values for later
+            self.hProcess = proc.hProcess
+            self.hThread = proc.hThread
+        connected.addCallback(cbConnected)
+
+        def checkTerminated(ignored):
+            # The attributes on the process object must be reset...
+            self.assertIdentical(proc.pid, None)
+            self.assertIdentical(proc.hProcess, None)
+            self.assertIdentical(proc.hThread, None)
+            # ...and the handles must be closed.
+            self.assertRaises(win32api.error,
+                              win32api.GetHandleInformation, self.hProcess)
+            self.assertRaises(win32api.error,
+                              win32api.GetHandleInformation, self.hThread)
+        ended.addCallback(checkTerminated)
+
+        return defer.gatherResults([connected, ended])
+
+
 
 class Dumbwin32procPidTest(unittest.TestCase):
     """

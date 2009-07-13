@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_process -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -205,8 +205,6 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
                                     origcmd, sheb))
                         raise OSError(pwte2)
 
-        win32file.CloseHandle(self.hThread)
-
         # close handles which only the child will use
         win32file.CloseHandle(hStderrW)
         win32file.CloseHandle(hStdoutW)
@@ -310,6 +308,10 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
 
     def maybeCallProcessEnded(self):
         if self.closedNotifies == 3 and self.lostProcess:
+            win32file.CloseHandle(self.hProcess)
+            win32file.CloseHandle(self.hThread)
+            self.hProcess = None
+            self.hThread = None
             BaseProcess.maybeCallProcessEnded(self)
 
 
