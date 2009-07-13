@@ -23,8 +23,7 @@
     try to avoid meaningless words. In particular, words like
     <q>handler</q>, <q>processor</q>, <q>engine</q>, <q>manager</q>
     and <q>component</q> don't really indicate what something does,
-    only that it does
-    <em>something</em>.</p>
+    only that it does <em>something</em>.</p>
 
     <p>Use American spelling in both names and docstrings.  For compound
      technical terms such as 'filesystem', use a non-hyphenated spelling in
@@ -349,6 +348,16 @@ def foo2bar(f):
 <pre class="python">
 #!/usr/bin/env python
 </pre></li>
+
+      <p>To make sure that the script is portable across different UNIX like
+      operating systems we use the <code>/usr/bin/env</code> command. The env
+      command allows you to run a program in a modified environment. That way
+      you don't have to search for a program via the <code>PATH</code> environment
+      variable. This makes the script more portable but note that it is not a
+      foolproof method. Always make sure that <code>/usr/bin/env</code> exists or
+      use a softlink/symbolic link to point it to the correct path. Python's
+      distutils will rewrite the shebang line upon installation so this policy
+      only covers the source files in version control.</p>
 
       <li>Add the Twisted running-from-SVN header:
 <pre class="python">
