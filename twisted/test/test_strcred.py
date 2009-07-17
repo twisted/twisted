@@ -1,8 +1,8 @@
-# Copyright (c) 2007-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2007-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
-Tests for L{strcred}.
+Tests for L{twisted.cred.strcred}.
 """
 
 import os
@@ -14,6 +14,7 @@ from twisted.cred import credentials, checkers, error, strcred
 from twisted.plugins import cred_file, cred_anonymous
 from twisted.python import usage
 from twisted.python.filepath import FilePath
+from twisted.python.fakepwd import UserDatabase
 
 try:
     import crypt
@@ -174,11 +175,6 @@ class TestUnixChecker(unittest.TestCase):
         }
 
 
-    def _pwd(self, username):
-        return (username, crypt.crypt(self.users[username], 'F/'),
-                1000, 1000, username, '/home/'+username, '/bin/sh')
-
-
     def _spwd(self, username):
         return (username, crypt.crypt(self.users[username], 'F/'),
                 0, 0, 99999, 7, -1, -1, -1)
@@ -190,19 +186,22 @@ class TestUnixChecker(unittest.TestCase):
         self.badPass = credentials.UsernamePassword('alice', 'foobar')
         self.badUser = credentials.UsernamePassword('x', 'yz')
         self.checker = strcred.makeChecker('unix')
+
         # Hack around the pwd and spwd modules, since we can't really
         # go about reading your /etc/passwd or /etc/shadow files
         if pwd:
-            self._pwd_getpwnam = pwd.getpwnam
-            pwd.getpwnam = self._pwd
+            database = UserDatabase()
+            for username, password in self.users.items():
+                database.addUser(
+                    username, crypt.crypt(password, 'F/'),
+                    1000, 1000, username, '/home/' + username, '/bin/sh')
+            self.patch(pwd, 'getpwnam', database.getpwnam)
         if spwd:
             self._spwd_getspnam = spwd.getspnam
             spwd.getspnam = self._spwd
 
 
     def tearDown(self):
-        if pwd:
-            pwd.getpwnam = self._pwd_getpwnam
         if spwd:
             spwd.getspnam = self._spwd_getspnam
 

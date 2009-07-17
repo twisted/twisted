@@ -1,4 +1,4 @@
-# Copyright (c) 2007-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2007-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -25,6 +25,7 @@ from twisted.python.log import ILogObserver
 from twisted.python.versions import Version
 from twisted.python.components import Componentized
 from twisted.internet.defer import Deferred
+from twisted.python.fakepwd import UserDatabase
 
 try:
     from twisted.python import syslog
@@ -89,12 +90,10 @@ def patchUserDatabase(patch, user, uid, group, gid):
     pwent = pwd.getpwuid(os.getuid())
     grent = grp.getgrgid(os.getgid())
 
-    def getpwnam(name):
-        result = list(pwent)
-        result[result.index(pwent.pw_name)] = user
-        result[result.index(pwent.pw_uid)] = uid
-        result = tuple(result)
-        return {user: result}[name]
+    database = UserDatabase()
+    database.addUser(
+        user, pwent.pw_passwd, uid, pwent.pw_gid,
+        pwent.pw_gecos, pwent.pw_dir, pwent.pw_shell)
 
     def getgrnam(name):
         result = list(grent)
@@ -103,7 +102,7 @@ def patchUserDatabase(patch, user, uid, group, gid):
         result = tuple(result)
         return {group: result}[name]
 
-    patch(pwd, "getpwnam", getpwnam)
+    patch(pwd, "getpwnam", database.getpwnam)
     patch(grp, "getgrnam", getgrnam)
 
 

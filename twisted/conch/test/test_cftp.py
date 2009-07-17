@@ -1,8 +1,12 @@
 # -*- test-case-name: twisted.conch.test.test_cftp -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE file for details.
 
-import time, sys, os, operator
+"""
+Tests for L{twisted.conch.scripts.cftp}.
+"""
+
+import time, sys, os, operator, getpass
 
 try:
     import Crypto.Cipher.DES3
@@ -27,12 +31,14 @@ else:
     unix = None
 
 
+from twisted.python.fakepwd import UserDatabase
 from twisted.trial.unittest import TestCase
 from twisted.cred import portal
 from twisted.internet import reactor, protocol, interfaces, defer, error
 from twisted.internet.utils import getProcessOutputAndValue
 from twisted.python import log
 from twisted.conch import ls
+from twisted.test.proto_helpers import StringTransport
 
 from twisted.conch.test import test_ssh, test_conch
 from twisted.conch.test.test_filetransfer import SFTPTestBase
@@ -58,7 +64,8 @@ class ListingTests(TestCase):
             return self.now
         self.patch(ls, 'time', fakeTime)
 
-        # Make sure that the timezone ends up the same after these tests as it was before.
+        # Make sure that the timezone ends up the same after these tests as
+        # it was before.
         if 'TZ' in os.environ:
             self.addCleanup(operator.setitem, os.environ, 'TZ', os.environ['TZ'])
             self.addCleanup(time.tzset)
@@ -156,6 +163,70 @@ class ListingTests(TestCase):
             self._lsInTimezone('Pacific/Auckland', stat),
             '!---------    0 0        0               0 Sep 02 09:33 foo')
 
+
+
+class StdioClientTests(TestCase):
+    """
+    Tests for L{cftp.StdioClient}.
+    """
+    def setUp(self):
+        """
+        Create a L{cftp.StdioClient} hooked up to dummy transport and a fake
+        user database.
+        """
+        class Connection:
+            pass
+
+        conn = Connection()
+        conn.transport = StringTransport()
+        conn.transport.localClosed = False
+
+        self.client = cftp.StdioClient(conn)
+        self.database = self.client._pwd = UserDatabase()
+
+        # Intentionally bypassing makeConnection - that triggers some code
+        # which uses features not provided by our dumb Connection fake.
+        self.client.transport = StringTransport()
+
+
+    def test_exec(self):
+        """
+        The I{exec} command runs its arguments locally in a child process
+        using the user's shell.
+        """
+        self.database.addUser(
+            getpass.getuser(), 'secret', os.getuid(), 1234, 'foo', 'bar',
+            sys.executable)
+
+        d = self.client._dispatchCommand("exec print 1 + 2")
+        d.addCallback(self.assertEquals, "3\n")
+        return d
+
+
+    def test_execWithoutShell(self):
+        """
+        If the local user has no shell, the I{exec} command runs its arguments
+        using I{/bin/sh}.
+        """
+        self.database.addUser(
+            getpass.getuser(), 'secret', os.getuid(), 1234, 'foo', 'bar', '')
+
+        d = self.client._dispatchCommand("exec echo hello")
+        d.addCallback(self.assertEquals, "hello\n")
+        return d
+
+
+    def test_bang(self):
+        """
+        The I{exec} command is run for lines which start with C{"!"}.
+        """
+        self.database.addUser(
+            getpass.getuser(), 'secret', os.getuid(), 1234, 'foo', 'bar',
+            '/bin/sh')
+
+        d = self.client._dispatchCommand("!echo hello")
+        d.addCallback(self.assertEquals, "hello\n")
+        return d
 
 
 
@@ -664,10 +735,6 @@ class TestOurServerCmdLineClient(CFTPClientTestBase):
         return d
 
 
-    def testCommand(self):
-        d = self.runCommand('!echo hello')
-        return d.addCallback(self.assertEqual, 'hello')
-
 
 class TestOurServerBatchFile(CFTPClientTestBase):
     def setUp(self):
@@ -807,9 +874,11 @@ class TestOurServerSftpClient(CFTPClientTestBase):
 
 
 if not unix or not Crypto or not pyasn1 or not interfaces.IReactorProcess(reactor, None):
-    TestOurServerCmdLineClient.skip = "don't run w/o spawnprocess or PyCrypto"
-    TestOurServerBatchFile.skip = "don't run w/o spawnProcess or PyCrypto"
-    TestOurServerSftpClient.skip = "don't run w/o spawnProcess or PyCrypto"
+    _msg = "don't run w/o spawnProcess or PyCrypto"
+    TestOurServerCmdLineClient.skip = _msg
+    TestOurServerBatchFile.skip = _msg
+    TestOurServerSftpClient.skip = _msg
+    StdioClientTests.skip = _msg
 else:
     from twisted.python.procutils import which
     if not which('sftp'):

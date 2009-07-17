@@ -1,23 +1,20 @@
 # -*- test-case-name: twisted.conch.test.test_cftp -*-
-#
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
-# $Id: cftp.py,v 1.65 2004/03/11 00:29:14 z3p Exp $
+"""
+Implementation module for the I{cftp} command.
+"""
 
-#""" Implementation module for the `cftp` command.
-#"""
-from twisted.conch.client import agent, connect, default, options
-from twisted.conch.error import ConchError
+import os, sys, getpass, struct, tty, fcntl, stat
+import fnmatch, pwd, time, glob
+
+from twisted.conch.client import connect, default, options
 from twisted.conch.ssh import connection, common
 from twisted.conch.ssh import channel, filetransfer
 from twisted.protocols import basic
 from twisted.internet import reactor, stdio, defer, utils
 from twisted.python import log, usage, failure
-
-import os, sys, getpass, struct, tty, fcntl, base64, signal, stat, errno
-import fnmatch, pwd, time, glob
 
 class ClientOptions(options.ConchOptions):
     
@@ -73,7 +70,6 @@ def run():
 #    prof.close()
 
 def handleError():
-    from twisted.python import failure
     global exitStatus
     exitStatus = 2
     try:
@@ -128,6 +124,8 @@ class FileWrapper:
 
 class StdioClient(basic.LineReceiver):
 
+    _pwd = pwd
+
     ps = 'cftp> '
     delimiter = '\n'
 
@@ -157,6 +155,13 @@ class StdioClient(basic.LineReceiver):
             line = line[1:]
         else:
             self.ignoreErrors = 0
+        d = self._dispatchCommand(line)
+        if d is not None:
+            d.addCallback(self._cbCommand)
+            d.addErrback(self._ebCommand)
+
+
+    def _dispatchCommand(self, line):
         if ' ' in line:
             command, rest = line.split(' ', 1)
             rest = rest.lstrip()
@@ -170,9 +175,7 @@ class StdioClient(basic.LineReceiver):
             log.msg('looking up cmd %s' % command)
             f = getattr(self, 'cmd_%s' % command, None)
         if f is not None:
-            d = defer.maybeDeferred(f, rest)
-            d.addCallback(self._cbCommand)
-            d.addErrback(self._ebCommand)
+            return defer.maybeDeferred(f, rest)
         else:
             self._ebCommand(failure.Failure(NotImplementedError(
                 "No command called `%s'" % command)))
@@ -611,8 +614,13 @@ version                         Print the SFTP version.
         return "%ssing progess bar." % (self.useProgressBar and "U" or "Not u")
 
     def cmd_EXEC(self, rest):
-        shell = pwd.getpwnam(getpass.getuser())[6]
-        print repr(rest)
+        """
+        Run C{rest} using the user's shell (or /bin/sh if they do not have
+        one).
+        """
+        shell = self._pwd.getpwnam(getpass.getuser())[6]
+        if not shell:
+            shell = '/bin/sh'
         if rest:
             cmds = ['-c', rest]
             return utils.getProcessOutput(shell, cmds, errortoo=1)
