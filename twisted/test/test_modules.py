@@ -1,4 +1,4 @@
-# Copyright (c) 2006-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2006-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -12,6 +12,7 @@ import itertools
 import zipfile
 import compileall
 
+import twisted
 from twisted.trial.unittest import TestCase
 
 from twisted.python import modules
@@ -345,7 +346,7 @@ class ZipPathModificationTest(PathModificationTest):
 class PythonPathTestCase(TestCase):
     """
     Tests for the class which provides the implementation for all of the
-    public API of L{twisted.python.modules}.
+    public API of L{twisted.python.modules}, L{PythonPath}.
     """
     def test_unhandledImporter(self):
         """
@@ -369,3 +370,22 @@ class PythonPathTestCase(TestCase):
         entries = list(space.iterEntries())
         self.assertEquals(len(entries), 1)
         self.assertRaises(KeyError, lambda: entries[0]['module'])
+
+
+    def test_inconsistentImporterCache(self):
+        """
+        If the path a module loaded with L{PythonPath.__getitem__} is not
+        present in the path importer cache, a warning is emitted, but the
+        L{PythonModule} is returned as usual.
+        """
+        space = modules.PythonPath([], sys.modules, [], {})
+        thisModule = space[__name__]
+        warnings = self.flushWarnings([self.test_inconsistentImporterCache])
+        self.assertEquals(warnings[0]['category'], UserWarning)
+        self.assertEquals(
+            warnings[0]['message'],
+            FilePath(twisted.__file__).parent().dirname() +
+            " (for module " + __name__ + ") not in path importer cache "
+            "(PEP 302 violation - check your local configuration).")
+        self.assertEquals(len(warnings), 1)
+        self.assertEquals(thisModule.name, __name__)

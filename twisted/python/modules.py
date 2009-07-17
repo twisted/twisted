@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_modules -*-
-# Copyright (c) 2006-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2006-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -61,6 +61,7 @@ from os.path import dirname, split as splitpath
 import sys
 import zipimport
 import inspect
+import warnings
 from zope.interface import Interface, implements
 
 from twisted.python.components import registerAdapter
@@ -621,13 +622,18 @@ class PythonPath:
             # the module is completely top-level, not within any packages.  The
             # path entry it's on is just its dirname.
             rval = dirname(topPackageObj.__file__)
+
         # There are probably some awful tricks that an importer could pull
         # which would break this, so let's just make sure... it's a loaded
         # module after all, which means that its path MUST be in
         # path_importer_cache according to PEP 302 -glyph
-        from pprint import pformat
-        assert rval in self.importerCache, '%r for %r not in import cache %s' % (
-            rval, modobj, pformat(self.importerCache))
+        if rval not in self.importerCache:
+            warnings.warn(
+                "%s (for module %s) not in path importer cache "
+                "(PEP 302 violation - check your local configuration)." % (
+                    rval, modobj.__name__),
+                stacklevel=3)
+
         return rval
 
     def _smartPath(self, pathName):
