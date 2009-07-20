@@ -8,25 +8,20 @@ Tests for L{twisted.conch.scripts.cftp}.
 
 import time, sys, os, operator, getpass
 
-try:
-    import Crypto.Cipher.DES3
-except ImportError:
-    Crypto = None
+from twisted.conch.test.test_ssh import Crypto, pyasn1
 
-try:
-    import pyasn1
-except ImportError:
-    pyasn1 = None
-
+_reason = None
 if Crypto and pyasn1:
     try:
         from twisted.conch import unix
         from twisted.conch.scripts import cftp
         from twisted.conch.test.test_filetransfer import FileTransferForTestAvatar
-    except ImportError:
+    except ImportError, e:
         # Python 2.3 compatibility fix
         sys.modules.pop("twisted.conch.unix", None)
         unix = None
+        _reason = str(e)
+        del e
 else:
     unix = None
 
@@ -873,12 +868,13 @@ class TestOurServerSftpClient(CFTPClientTestBase):
 
 
 
-if not unix or not Crypto or not pyasn1 or not interfaces.IReactorProcess(reactor, None):
-    _msg = "don't run w/o spawnProcess or PyCrypto"
-    TestOurServerCmdLineClient.skip = _msg
-    TestOurServerBatchFile.skip = _msg
-    TestOurServerSftpClient.skip = _msg
-    StdioClientTests.skip = _msg
+if unix is None or Crypto is None or pyasn1 is None or interfaces.IReactorProcess(reactor, None) is None:
+    if _reason is None:
+        _reason = "don't run w/o spawnProcess or PyCrypto or pyasn1"
+    TestOurServerCmdLineClient.skip = _reason
+    TestOurServerBatchFile.skip = _reason
+    TestOurServerSftpClient.skip = _reason
+    StdioClientTests.skip = _reason
 else:
     from twisted.python.procutils import which
     if not which('sftp'):

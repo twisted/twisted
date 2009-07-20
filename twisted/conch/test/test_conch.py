@@ -4,31 +4,31 @@
 
 import os, sys, socket
 
-try:
-    import Crypto.Cipher.DES3
-except:
-    Crypto = None
-
-try:
-    import pyasn1
-except ImportError:
-    pyasn1 = None
-
 from twisted.cred import portal
 from twisted.internet import reactor, defer, protocol
 from twisted.internet.error import ProcessExitedAlready
 from twisted.python import log, runtime
 from twisted.trial import unittest
 from twisted.conch.error import ConchError
-if Crypto and pyasn1:
+try:
     from twisted.conch.scripts.conch import SSHSession as StdioInteractingSession
-else:
+except ImportError, e:
     StdioInteractingSession = None
+    _reason = str(e)
+    del e
+
 from twisted.conch.test.test_ssh import ConchTestRealm
 from twisted.python.procutils import which
 
 from twisted.conch.test.keydata import publicRSA_openssh, privateRSA_openssh
 from twisted.conch.test.keydata import publicDSA_openssh, privateDSA_openssh
+
+from twisted.conch.test.test_ssh import Crypto, pyasn1
+try:
+    from twisted.conch.test.test_ssh import ConchTestServerFactory, \
+        ConchTestPublicKeyChecker
+except ImportError:
+    pass
 
 
 
@@ -37,7 +37,7 @@ class StdioInteractingSessionTests(unittest.TestCase):
     Tests for L{twisted.conch.scripts.conch.SSHSession}.
     """
     if StdioInteractingSession is None:
-        skip = "twisted.conch.scripts.conch not importable"
+        skip = _reason
 
     def test_eofReceived(self):
         """
@@ -236,85 +236,6 @@ class ConchTestForwardingPort(protocol.Protocol):
 
 
 
-if Crypto is not None and pyasn1 is not None:
-    from twisted.conch.ssh import forwarding
-    from twisted.conch.ssh import connection
-
-    from twisted.conch.test.test_ssh import ConchTestServerFactory
-    from twisted.conch.test.test_ssh import ConchTestPublicKeyChecker
-
-
-    class SSHTestConnectionForUnix(connection.SSHConnection):
-        """
-        @ivar stopDeferred: Deferred that will be fired when C{serviceStopped}
-            is called.
-        @type stopDeferred: C{defer.Deferred}
-        """
-
-        def __init__(self, p, exe=None, cmds=None):
-            connection.SSHConnection.__init__(self)
-            if p:
-                self.spawn = (p, exe, cmds)
-            else:
-                self.spawn = None
-            self.connected = 0
-            self.remoteForwards = {}
-            self.stopDeferred = defer.Deferred()
-
-        def serviceStopped(self):
-            self.stopDeferred.callback(None)
-
-        def serviceStarted(self):
-            if self.spawn:
-                env = os.environ.copy()
-                env['PYTHONPATH'] = os.pathsep.join(sys.path)
-                reactor.callLater(0,reactor.spawnProcess, env=env, *self.spawn)
-            self.connected = 1
-
-        def requestRemoteForwarding(self, remotePort, hostport):
-            data = forwarding.packGlobal_tcpip_forward(('0.0.0.0', remotePort))
-            d = self.sendGlobalRequest('tcpip-forward', data,
-                                       wantReply=1)
-            log.msg('requesting remote forwarding %s:%s' %(remotePort, hostport))
-            d.addCallback(self._cbRemoteForwarding, remotePort, hostport)
-            d.addErrback(self._ebRemoteForwarding, remotePort, hostport)
-
-        def _cbRemoteForwarding(self, result, remotePort, hostport):
-            log.msg('accepted remote forwarding %s:%s' % (remotePort, hostport))
-            self.remoteForwards[remotePort] = hostport
-            log.msg(repr(self.remoteForwards))
-
-        def _ebRemoteForwarding(self, f, remotePort, hostport):
-            log.msg('remote forwarding %s:%s failed' % (remotePort, hostport))
-            log.msg(f)
-
-        def cancelRemoteForwarding(self, remotePort):
-            data = forwarding.packGlobal_tcpip_forward(('0.0.0.0', remotePort))
-            self.sendGlobalRequest('cancel-tcpip-forward', data)
-            log.msg('cancelling remote forwarding %s' % remotePort)
-            try:
-                del self.remoteForwards[remotePort]
-            except:
-                pass
-            log.msg(repr(self.remoteForwards))
-
-        def channel_forwarded_tcpip(self, windowSize, maxPacket, data):
-            log.msg('%s %s' % ('FTCP', repr(data)))
-            remoteHP, origHP = forwarding.unpackOpen_forwarded_tcpip(data)
-            log.msg(self.remoteForwards)
-            log.msg(remoteHP)
-            if self.remoteForwards.has_key(remoteHP[1]):
-                connectHP = self.remoteForwards[remoteHP[1]]
-                log.msg('connect forwarding %s' % (connectHP,))
-                return forwarding.SSHConnectForwardingChannel(connectHP,
-                                                remoteWindow = windowSize,
-                                                remoteMaxPacket = maxPacket,
-                                                conn = self)
-            else:
-                raise ConchError(connection.OPEN_CONNECT_FAILED, "don't know about that port")
-
-
-
 def _makeArgs(args, mod="conch"):
     start = [sys.executable, '-c'
 """
@@ -451,6 +372,9 @@ class ForwardingTestBase:
 
 class OpenSSHClientTestCase(ForwardingTestBase, unittest.TestCase):
 
+    if not which('ssh'):
+        skip = "no ssh command-line client available"
+
     def execute(self, remoteCommand, process, sshArgs=''):
         """
         Connects to the SSH server started in L{ForwardingTestBase.setUp} by
@@ -484,11 +408,8 @@ class OpenSSHClientTestCase(ForwardingTestBase, unittest.TestCase):
 
 
 class CmdLineClientTestCase(ForwardingTestBase, unittest.TestCase):
-    def setUp(self):
-        if runtime.platformType == 'win32':
-            raise unittest.SkipTest("can't run cmdline client on win32")
-        ForwardingTestBase.setUp(self)
-
+    if runtime.platformType == 'win32':
+        skip = "can't run cmdline client on win32"
 
     def execute(self, remoteCommand, process, sshArgs=''):
         """
@@ -514,5 +435,3 @@ class CmdLineClientTestCase(ForwardingTestBase, unittest.TestCase):
 
 
 
-if not which('ssh'):
-    OpenSSHClientTestCase.skip = "no ssh command-line client available"
