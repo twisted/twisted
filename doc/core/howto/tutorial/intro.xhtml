@@ -52,6 +52,13 @@ running to respond.  Not very useful, perhaps &mdash; but this is the skeleton
 inside which the Twisted program will grow.
 </p>
 
+<p>As implied above, at various points in this tutorial you'll want to
+observe the behavior of the server being developed.  Unless you have a
+finger program which can use an alternate port, the easiest way to do this
+is with a telnet client.  <code>telnet localhost 1079</code> will connect to
+the local host on port 1079, where a finger server will eventually be
+listening.</p>
+
 <h3>The Reactor</h3>
 
 <p>
@@ -107,10 +114,20 @@ base="twisted.protocols.basic">LineReceiver</code>, so that we get data-based
 events on a line-by-line basis. We respond to the event of receiving the line
 with shutting down the connection.</p>
 
+<p>If you use a telnet client to interact with this server, the result will
+look something like this:</p>
+
+<pre class="shell">
+$ telnet localhost 1079
+Trying 127.0.0.1...
+Connected to localhost.localdomain.
+alice
+Connection closed by foreign host.
+</pre>
+
 <p>Congratulations, this is the first standard-compliant version of the code.
 However, usually people actually expect some data about users to be
 transmitted.</p>
-
 
 <h2>Read Username, Output Error, Drop Connections</h2>
 
