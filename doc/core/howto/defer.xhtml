@@ -21,12 +21,6 @@ programming, where instead of having blocking code in your program or using
 threads to run blocking code, you have functions that return immediately and
 then begin a callback chain when data is available.</p>
 
-<p>See these documents for more information:</p>
-
-<ul>
-<li><a href="async.xhtml">Asynchronous Programming with Twisted</a></li>
-</ul>
-
 <p>
 After reading this document, the reader should expect to be able to
 deal with most simple APIs in Twisted and Twisted-using code that
@@ -40,13 +34,21 @@ function call; and</li>
 code.</li>
 </ul>
 
-<p>Unless you're already very familiar with asynchronous programming,
-it's strongly recommended you read
-the <a href="async.xhtml#deferreds">Deferreds section</a> of the
-Asynchronous programming document to get an idea of why Deferreds
-exist.
-</p>
+<a name="deferreds" />
+<h2>Deferreds</h2>
 
+<p>Twisted uses the <code class="API"
+base="twisted.internet.defer">Deferred</code> object to manage the callback
+sequence. The client application attaches a series of functions to the
+deferred to be called in order when the results of the asychronous request are
+available (this series of functions is known as a series of
+<strong>callbacks</strong>, or a <strong>callback chain</strong>), together
+with a series of functions to be called if there is an error in the
+asychronous request (known as a series of <strong>errbacks</strong> or an
+<strong>errback chain</strong>). The asychronous library code calls the first
+callback when the result is available, or the first errback when an error
+occurs, and the <code>Deferred</code> object then hands the results of each
+callback or errback function to the next function in the chain.</p> 
 
 <h2>Callbacks</h2>
 
@@ -620,7 +622,6 @@ for its use.</p>
   </ul> </li>
   
 </ul>
-
 
 
 <h3>Chaining Deferreds</h3>
