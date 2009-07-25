@@ -76,6 +76,28 @@ class MemCacheTestCase(TestCase):
             "END\r\n", (0, None))
 
 
+    def test_getMultiple(self):
+        """
+        L{MemCacheProtocol.getMultiple} return a L{Deferred} which is called
+        back with a dictionary of flag, value for each given key.
+        """
+        return self._test(self.proto.getMultiple(['foo', 'cow']),
+            "get foo cow\r\n",
+            "VALUE foo 0 3\r\nbar\r\nVALUE cow 0 7\r\nchicken\r\nEND\r\n",
+            {'cow': (0, 'chicken'), 'foo': (0, 'bar')})
+
+
+    def test_getMultipleWithEmpty(self):
+        """
+        When L{MemCacheProtocol.getMultiple} is called with non-available keys,
+        the corresponding tuples are (0, None).
+        """
+        return self._test(self.proto.getMultiple(['foo', 'cow']),
+            "get foo cow\r\n",
+            "VALUE cow 1 3\r\nbar\r\nEND\r\n",
+            {'cow': (1, 'bar'), 'foo': (0, None)})
+
+
     def test_set(self):
         """
         L{MemCacheProtocol.set} should return a L{Deferred} which is
@@ -225,14 +247,27 @@ class MemCacheTestCase(TestCase):
 
     def test_invalidGetResponse(self):
         """
-        If the value returned doesn't match the expected key of the current, we
-        should get an error in L{MemCacheProtocol.dataReceived}.
+        If the value returned doesn't match the expected key of the current
+        C{get} command, an error is raised in L{MemCacheProtocol.dataReceived}.
         """
         self.proto.get("foo")
         s = "spamegg"
         self.assertRaises(RuntimeError,
             self.proto.dataReceived,
             "VALUE bar 0 %s\r\n%s\r\nEND\r\n" % (len(s), s))
+
+
+    def test_invalidMultipleGetResponse(self):
+        """
+        If the value returned doesn't match one the expected keys of the
+        current multiple C{get} command, an error is raised error in
+        L{MemCacheProtocol.dataReceived}.
+        """
+        self.proto.getMultiple(["foo", "bar"])
+        s = "spamegg"
+        self.assertRaises(RuntimeError,
+            self.proto.dataReceived,
+            "VALUE egg 0 %s\r\n%s\r\nEND\r\n" % (len(s), s))
 
 
     def test_timeOut(self):
@@ -357,9 +392,13 @@ class MemCacheTestCase(TestCase):
         d1 = self.assertFailure(self.proto.set("a" * 500, "bar"), ClientError)
         d2 = self.assertFailure(self.proto.increment("a" * 500), ClientError)
         d3 = self.assertFailure(self.proto.get("a" * 500), ClientError)
-        d4 = self.assertFailure(self.proto.append("a" * 500, "bar"), ClientError)
-        d5 = self.assertFailure(self.proto.prepend("a" * 500, "bar"), ClientError)
-        return gatherResults([d1, d2, d3, d4, d5])
+        d4 = self.assertFailure(
+            self.proto.append("a" * 500, "bar"), ClientError)
+        d5 = self.assertFailure(
+            self.proto.prepend("a" * 500, "bar"), ClientError)
+        d6 = self.assertFailure(
+            self.proto.getMultiple(["foo", "a" * 500]), ClientError)
+        return gatherResults([d1, d2, d3, d4, d5, d6])
 
 
     def test_invalidCommand(self):
@@ -421,7 +460,9 @@ class MemCacheTestCase(TestCase):
         d4 = self.assertFailure(self.proto.delete(u"bar"), ClientError)
         d5 = self.assertFailure(self.proto.append(u"foo", "bar"), ClientError)
         d6 = self.assertFailure(self.proto.prepend(u"foo", "bar"), ClientError)
-        return gatherResults([d1, d2, d3, d4, d5, d6])
+        d7 = self.assertFailure(
+            self.proto.getMultiple(["egg", 1]), ClientError)
+        return gatherResults([d1, d2, d3, d4, d5, d6, d7])
 
 
     def test_unicodeValue(self):
@@ -488,7 +529,7 @@ class MemCacheTestCase(TestCase):
 
     def test_gets(self):
         """
-        L{MemCacheProtocol.get} should handle an additional cas result when
+        L{MemCacheProtocol.get} handles an additional cas result when
         C{withIdentifier} is C{True} and forward it in the resulting
         L{Deferred}.
         """
@@ -498,11 +539,35 @@ class MemCacheTestCase(TestCase):
 
     def test_emptyGets(self):
         """
-        Test getting a non-available key with gets: it should succeed but
-        return C{None} as value, C{0} as flag and an empty cas value.
+        Test getting a non-available key with gets: it succeeds but return
+        C{None} as value, C{0} as flag and an empty cas value.
         """
         return self._test(self.proto.get("foo", True), "gets foo\r\n",
             "END\r\n", (0, "", None))
+
+
+    def test_getsMultiple(self):
+        """
+        L{MemCacheProtocol.getMultiple} handles an additional cas field in the
+        returned tuples if C{withIdentifier} is C{True}.
+        """
+        return self._test(self.proto.getMultiple(["foo", "bar"], True),
+            "gets foo bar\r\n",
+            "VALUE foo 0 3 1234\r\negg\r\nVALUE bar 0 4 2345\r\nspam\r\nEND\r\n",
+            {'bar': (0, '2345', 'spam'), 'foo': (0, '1234', 'egg')})
+
+
+    def test_getsMultipleWithEmpty(self):
+        """
+        When getting a non-available key with L{MemCacheProtocol.getMultiple}
+        when C{withIdentifier} is C{True}, the other keys are retrieved
+        correctly, and the non-available key gets a tuple of C{0} as flag,
+        C{None} as value, and an empty cas value.
+        """
+        return self._test(self.proto.getMultiple(["foo", "bar"], True),
+            "gets foo bar\r\n",
+            "VALUE foo 0 3 1234\r\negg\r\nEND\r\n",
+            {'bar': (0, '', None), 'foo': (0, '1234', 'egg')})
 
 
     def test_checkAndSet(self):
