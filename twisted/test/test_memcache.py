@@ -7,6 +7,7 @@ Test the memcache client protocol.
 
 from twisted.protocols.memcache import MemCacheProtocol, NoSuchCommand
 from twisted.protocols.memcache import ClientError, ServerError
+from twisted.protocols.memcache import MemCacheBinaryProtocol
 
 from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import StringTransportWithDisconnection
@@ -521,3 +522,314 @@ class MemCacheTestCase(TestCase):
         """
         return self._test(self.proto.checkAndSet("foo", "bar", cas="1234"),
             "cas foo 0 0 3 1234\r\nbar\r\n", "EXISTS\r\n", False)
+
+
+
+class MemCacheBinaryTestCase(TestCase):
+    """
+    Test client protocol class L{MemCacheBinaryProtocol}.
+    """
+
+    def setUp(self):
+        """
+        Create a memcache client, connect it to a string protocol, and make it
+        use a deterministic clock.
+        """
+        self.proto = MemCacheBinaryProtocol()
+        self.clock = Clock()
+        self.proto.callLater = self.clock.callLater
+        self.transport = StringTransportWithDisconnection()
+        self.transport.protocol = self.proto
+        self.proto.makeConnection(self.transport)
+
+
+    def _test(self, d, send, recv, result):
+        """
+        Shortcut method for classic tests.
+
+        @param d: the resulting deferred from the memcache command.
+        @type d: C{Deferred}
+
+        @param send: the expected data to be sent.
+        @type send: C{str}
+
+        @param recv: the data to simulate as reception.
+        @type recv: C{str}
+
+        @param result: the expected result.
+        @type result: C{any}
+        """
+        def cb(res):
+            self.assertEquals(res, result)
+        self.assertEquals(self.transport.value(), send)
+        d.addCallback(cb)
+        self.proto.dataReceived(recv)
+        return d
+
+    def _testQuiet(self, result, send):
+        """
+        """
+        self.assertIdentical(result, None)
+        self.assertEquals(self.transport.value(), send)
+
+
+    def test_get(self):
+        """
+        L{MemCacheProtocol.get} should return a L{Deferred} which is
+        called back with the value and the flag associated with the given key
+        if the server returns a successful result.
+        """
+        return self._test(self.proto.get("foo"),
+            "\x80\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x03"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00foo",
+            "\x81\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00bar",
+            (0, "bar"))
+
+
+    def test_set(self):
+        """
+        """
+        return self._test(self.proto.set("foo", "bar"),
+            "\x80\x01\x00\x03\x08\x00\x00\x00\x00\x00\x00\x0e\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+            "foobar",
+            "\x81\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x03", 3)
+
+
+    def test_quietSet(self):
+        """
+        """
+        return self._testQuiet(self.proto.set("foo", "bar", quiet=True),
+            "\x80\x11\x00\x03\x08\x00\x00\x00\x00\x00\x00\x0e\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+            "foobar")
+
+
+    def test_add(self):
+        """
+        """
+        return self._test(self.proto.add("foo", "bar"),
+            "\x80\x02\x00\x03\x08\x00\x00\x00\x00\x00\x00\x0e\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+            "foobar",
+            "\x81\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x02", 2)
+
+
+    def test_quietAdd(self):
+        """
+        """
+        return self._testQuiet(self.proto.add("foo", "bar", quiet=True),
+            "\x80\x12\x00\x03\x08\x00\x00\x00\x00\x00\x00\x0e\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+            "foobar")
+
+
+    def test_replace(self):
+        """
+        """
+        return self._test(self.proto.replace("foo", "bar"),
+            "\x80\x03\x00\x03\x08\x00\x00\x00\x00\x00\x00\x0e\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+            "foobar",
+            "\x81\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x02", 2)
+
+
+    def test_quietReplace(self):
+        """
+        """
+        return self._testQuiet(self.proto.replace("foo", "bar", quiet=True),
+            "\x80\x13\x00\x03\x08\x00\x00\x00\x00\x00\x00\x0e\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+            "foobar")
+
+
+    def test_delete(self):
+        """
+        """
+        return self._test(self.proto.delete("foo"),
+            "\x80\x04\x00\x03\x00\x00\x00\x00\x00\x00\x00\x03"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00foo",
+            "\x81\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+            True)
+
+    def test_quietDelete(self):
+        """
+        """
+        return self._testQuiet(self.proto.delete("foo", quiet=True),
+            "\x80\x14\x00\x03\x00\x00\x00\x00\x00\x00\x00\x03"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00foo")
+
+
+    def test_increment(self):
+        """
+        """
+        return self._test(self.proto.increment("foo"),
+            "\x80\x05\x00\x03\x14\x00\x00\x00\x00\x00\x00\x17\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00foo",
+            "\x81\x05\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x05\x00\x00\x00\x00\x00\x00\x00\x00",
+            (5, 0))
+
+
+    def test_quietIncrement(self):
+        """
+        """
+        return self._testQuiet(self.proto.increment("foo", quiet=True),
+            "\x80\x15\x00\x03\x14\x00\x00\x00\x00\x00\x00\x17\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00foo")
+
+
+    def test_decrement(self):
+        """
+        """
+        return self._test(self.proto.decrement("foo"),
+            "\x80\x06\x00\x03\x14\x00\x00\x00\x00\x00\x00\x17\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00foo",
+            "\x81\x06\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x05\x00\x00\x00\x00\x00\x00\x00\x00",
+            (5, 0))
+
+
+    def test_quietDecrement(self):
+        """
+        """
+        return self._testQuiet(self.proto.decrement("foo", quiet=True),
+            "\x80\x16\x00\x03\x14\x00\x00\x00\x00\x00\x00\x17\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00foo")
+
+
+    def test_flush(self):
+        """
+        """
+        return self._test(self.proto.flush(),
+            "\x80\x08\x00\x00\x04\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+            "\x81\x08\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x00",
+            True)
+
+
+    def test_quietFlush(self):
+        """
+        """
+        return self._testQuiet(self.proto.flush(quiet=True),
+            "\x80\x18\x00\x00\x04\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")
+
+
+    def test_noop(self):
+        """
+        """
+        return self._test(self.proto.noop(),
+            "\x80\x09\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x00",
+            "\x81\x09\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x05\x00\x00\x00\x00\x00\x00\x00\x00",
+            True)
+
+
+    def test_quit(self):
+        """
+        """
+        return self._test(self.proto.quit(),
+            "\x80\x07\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x00",
+            "\x81\x07\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x00",
+            True)
+
+
+    def test_quietQuit(self):
+        """
+        """
+        return self._testQuiet(self.proto.quit(quiet=True),
+            "\x80\x17\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x00")
+
+
+    def test_append(self):
+        """
+        """
+        return self._test(self.proto.append("foo", "bar"),
+            "\x80\x0e\x00\x03\x00\x00\x00\x00\x00\x00\x00\x06\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x00foobar",
+            "\x81\x0e\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x00", True)
+
+
+    def test_quietAppend(self):
+        """
+        """
+        return self._testQuiet(self.proto.append("foo", "bar", quiet=True),
+            "\x80\x19\x00\x03\x00\x00\x00\x00\x00\x00\x00\x06\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x00foobar")
+
+
+    def test_prepend(self):
+        """
+        """
+        return self._test(self.proto.prepend("foo", "bar"),
+            "\x80\x0f\x00\x03\x00\x00\x00\x00\x00\x00\x00\x06\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x00foobar",
+            "\x81\x0f\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x00", True)
+
+
+    def test_quietPrepend(self):
+        """
+        """
+        return self._testQuiet(self.proto.prepend("foo", "bar", quiet=True),
+            "\x80\x1a\x00\x03\x00\x00\x00\x00\x00\x00\x00\x06\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x00foobar")
+
+
+    def test_stat(self):
+        """
+        """
+        return self._test(self.proto.stat("pid"),
+            "\x80\x10\x00\x03\x00\x00\x00\x00\x00\x00\x00\x03"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00pid",
+            "\x81\x10\x00\x03\x00\x00\x00\x00\x00\x00\x00\x06"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00pidbar",
+            "bar")
+
+
+    def test_statAllKeys(self):
+        """
+        """
+        return self._test(self.proto.stat(),
+            "\x80\x10\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+            "\x81\x10\x00\x03\x00\x00\x00\x00\x00\x00\x00\x06"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00pid007"
+            "\x81\x10\x00\x03\x00\x00\x00\x00\x00\x00\x00\x06"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00mem123"
+            "\x81\x10\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+            "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+            {"pid": "007", "mem": "123"})
+
+
+    def test_timeOut(self):
+        """
+        """
+        d1 = self.proto.get("foo")
+        d2 = self.proto.get("bar")
+        d3 = Deferred()
+        self.proto.connectionLost = d3.callback
+
+        self.clock.advance(self.proto.persistentTimeOut + 1)
+        self.assertFailure(d1, TimeoutError)
+        self.assertFailure(d2, TimeoutError)
+        def checkMessage(error):
+            self.assertEquals(str(error), "Connection timeout")
+        d1.addCallback(checkMessage)
+        return gatherResults([d1, d2, d3])
