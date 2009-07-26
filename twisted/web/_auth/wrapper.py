@@ -6,9 +6,11 @@
 A guard implementation which supports HTTP header-based authentication
 schemes.
 
-If either no www-authenticate header is present in the request or the
-supplied response is invalid a status code of 401 will be sent in the
-response along with all accepted authentication schemes.
+If no I{Authorization} header is supplied, an anonymous login will be
+attempted by using a L{Anonymous} credentials object.  If such a header is
+supplied and does not contain allowed credentials, or if anonymous login is
+denied, a 401 will be sent in the response along with I{WWW-Authenticate}
+headers for each of the allowed authentication schemes.
 """
 
 from zope.interface import implements
@@ -18,6 +20,7 @@ from twisted.python.components import proxyForInterface
 from twisted.web.resource import IResource, ErrorPage
 from twisted.web import util
 from twisted.cred import error
+from twisted.cred.credentials import Anonymous
 
 
 class UnauthorizedResource(object):
@@ -105,7 +108,7 @@ class HTTPAuthSessionWrapper(object):
         """
         authheader = request.getHeader('authorization')
         if not authheader:
-            return UnauthorizedResource(self._credentialFactories)
+            return util.DeferredResource(self._login(Anonymous()))
 
         factory, respString = self._selectParseHeader(authheader)
         if factory is None:

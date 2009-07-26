@@ -15,6 +15,7 @@ from twisted.internet.address import IPv4Address
 
 from twisted.cred import error, portal
 from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
+from twisted.cred.checkers import ANONYMOUS, AllowAnonymousAccess
 from twisted.cred.credentials import IUsernamePassword
 
 from twisted.web.iweb import ICredentialFactory
@@ -350,7 +351,12 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         """
         request = self.makeRequest([self.childName])
         child = self.wrapper.getChildWithDefault(self.childName, request)
-        self.assertIsInstance(child, UnauthorizedResource)
+        d = request.notifyFinish()
+        def cbFinished(result):
+            self.assertEquals(request.responseCode, 401)
+        d.addCallback(cbFinished)
+        render(child, request)
+        return d
 
 
     def _invalidAuthorizationTest(self, response):
@@ -545,3 +551,28 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         render(child, request)
         self.assertEqual(request.responseCode, 500)
         self.assertEqual(len(self.flushLoggedErrors(UnexpectedException)), 1)
+
+
+    def test_anonymousAccess(self):
+        """
+        Anonymous requests are allowed if a L{Portal} has an anonymous checker
+        registered.
+        """
+        unprotectedContents = "contents of the unprotected child resource"
+
+        class UnprotectedResource(Resource):
+
+            def render_GET(self, request):
+                return unprotectedContents
+
+        self.avatars[ANONYMOUS] = UnprotectedResource()
+        self.portal.registerChecker(AllowAnonymousAccess())
+        self.credentialFactories.append(BasicCredentialFactory('example.com'))
+        request = self.makeRequest([self.childName])
+        child = getChildForRequest(self.wrapper, request)
+        d = request.notifyFinish()
+        def cbFinished(ignored):
+            self.assertEquals(request.written, [unprotectedContents])
+        d.addCallback(cbFinished)
+        render(child, request)
+        return d
