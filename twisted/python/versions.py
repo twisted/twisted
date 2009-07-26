@@ -187,7 +187,7 @@ class Version(object):
     # Add handlers for version 9 and 10 formats, which are the same as
     # version 8 as far as revision information is concerned.
     _parseSVNEntries_9 = _parseSVNEntries_8
-    _parseSVNEntries_10 = _parseSVNEntries_8
+    _parseSVNEntriesTenPlus = _parseSVNEntries_8
 
 
     def _getSVNVersion(self):
@@ -202,17 +202,25 @@ class Version(object):
         mod = sys.modules.get(self.package)
         if mod:
             svn = os.path.join(os.path.dirname(mod.__file__), '.svn')
+            if not os.path.exists(svn):
+                # It's not an svn working copy
+                return None
+
             formatFile = os.path.join(svn, 'format')
-            if not os.path.exists(formatFile):
-                return None
-            format = file(formatFile).read().strip()
-            ent = os.path.join(svn, 'entries')
-            if not os.path.exists(ent):
-                return None
-            parser = getattr(self, '_parseSVNEntries_' + format, None)
+            if os.path.exists(formatFile):
+                # It looks like a less-than-version-10 working copy.
+                format = file(formatFile).read().strip()
+                parser = getattr(self, '_parseSVNEntries_' + format, None)
+            else:
+                # It looks like a version-10-or-greater working copy, which
+                # has version information in the entries file.
+                parser = self._parseSVNEntriesTenPlus
+
             if parser is None:
                 return 'Unknown'
-            entries = file(ent)
+
+            entriesFile = os.path.join(svn, 'entries')
+            entries = file(entriesFile)
             try:
                 try:
                     return parser(entries)

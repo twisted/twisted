@@ -188,13 +188,13 @@ class VersionsTest(unittest.TestCase):
             version._parseSVNEntries_9(StringIO(VERSION_9_ENTRIES)), '22715')
         
         
-    def test_goodSVNEntries_10(self):
+    def test_goodSVNEntriesTenPlus(self):
         """
         Version should be able to parse an SVN format 10 entries file.
         """
         version = Version("dummy", 1, 0, 0)
         self.assertEqual(
-            version._parseSVNEntries_10(StringIO(VERSION_10_ENTRIES)), '22715')
+            version._parseSVNEntriesTenPlus(StringIO(VERSION_10_ENTRIES)), '22715')
 
 
     def test_getVersionString(self):
@@ -307,8 +307,13 @@ class FormatDiscoveryTests(unittest.TestCase):
         """
         Verify that version 10 format files will be properly detected and
         parsed.
+
+        Differing from previous formats, the version 10 format lacks a
+        I{format} file and B{only} has the version information on the first
+        line of the I{entries} file.
         """
-        self.checkSVNFormat("10", VERSION_10_ENTRIES, '22715')
+        self.svnEntries.child("entries").setContent(VERSION_10_ENTRIES)
+        self.assertEquals(self.getVersion()._getSVNVersion(), '22715')
 
 
     def test_detectUnknownVersion(self):
