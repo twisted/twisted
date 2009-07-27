@@ -182,7 +182,11 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             self._getBuffer = None
             self._bufferLength = None
             cmd = self._current[0]
-            cmd.value = val
+            if cmd.multiple:
+                flags, cas = cmd.values[cmd.currentKey]
+                cmd.values[cmd.currentKey] = (flags, cas, val)
+            else:
+                cmd.value = val
             self.setLineMode(rem)
 
 
@@ -207,9 +211,17 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         """
         cmd = self._current.popleft()
         if cmd.command == "get":
-            cmd.success((cmd.flags, cmd.value))
+            if cmd.multiple:
+                values = dict([(key, val[::2]) for key, val in
+                               cmd.values.iteritems()])
+                cmd.success(values)
+            else:
+                cmd.success((cmd.flags, cmd.value))
         elif cmd.command == "gets":
-            cmd.success((cmd.flags, cmd.cas, cmd.value))
+            if cmd.multiple:
+                cmd.success(cmd.values)
+            else:
+                cmd.success((cmd.flags, cmd.cas, cmd.value))
         elif cmd.command == "stats":
             cmd.success(cmd.values)
 
@@ -234,11 +246,16 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         self._lenExpected = int(length)
         self._getBuffer = []
         self._bufferLength = 0
-        if cmd.key != key:
-            raise RuntimeError("Unexpected commands answer.")
-        cmd.flags = int(flags)
-        cmd.length = self._lenExpected
-        cmd.cas = cas
+        if cmd.multiple:
+            if key not in cmd.keys:
+                raise RuntimeError("Unexpected commands answer.")
+            cmd.currentKey = key
+            cmd.values[key] = [int(flags), cas]
+        else:
+            if cmd.key != key:
+                raise RuntimeError("Unexpected commands answer.")
+            cmd.flags = int(flags)
+            cmd.cas = cas
         self.setRawMode()
 
 
@@ -575,21 +592,59 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             the returned flags will be C{0}.
         @rtype: L{Deferred}
         """
-        if not isinstance(key, str):
-            return fail(ClientError(
-                "Invalid type for key: %s, expecting a string" % (type(key),)))
-        if len(key) > self.MAX_KEY_LENGTH:
-            return fail(ClientError("Key too long"))
+        return self._get([key], withIdentifier, False)
+
+
+    def getMultiple(self, keys, withIdentifier=False):
+        """
+        Get the given list of C{keys}.  If C{withIdentifier} is set to C{True},
+        the command issued is a C{gets}, that will return the identifiers
+        associated with each values. This identifier has to be used when
+        issuing C{checkAndSet} update later, using the corresponding method.
+
+        @param keys: The keys to retrieve.
+        @type keys: C{list} of C{str}
+
+        @param withIdentifier: If set to C{True}, retrieve the identifiers
+            along with the values and the flags.
+        @type withIdentifier: C{bool}
+
+        @return: A deferred that will fire with a dictionary with the elements
+            of C{keys} as keys and the tuples (flags, value) as values if
+            C{withIdentifier} is C{False}, or (flags, cas identifier, value) if
+            C{True}.  If the server indicates there is no value associated with
+            C{key}, the returned values will be C{None} and the returned flags
+            will be C{0}.
+        @rtype: L{Deferred}
+
+        @since: 9.0
+        """
+        return self._get(keys, withIdentifier, True)
+
+    def _get(self, keys, withIdentifier, multiple):
+        """
+        Helper method for C{get} and C{getMultiple}.
+        """
+        for key in keys:
+            if not isinstance(key, str):
+                return fail(ClientError(
+                    "Invalid type for key: %s, expecting a string" % (type(key),)))
+            if len(key) > self.MAX_KEY_LENGTH:
+                return fail(ClientError("Key too long"))
         if withIdentifier:
             cmd = "gets"
         else:
             cmd = "get"
-        fullcmd = "%s %s" % (cmd, key)
+        fullcmd = "%s %s" % (cmd, " ".join(keys))
         self.sendLine(fullcmd)
-        cmdObj = Command(cmd, key=key, value=None, flags=0, cas="")
+        if multiple:
+            values = dict([(key, (0, "", None)) for key in keys])
+            cmdObj = Command(cmd, keys=keys, values=values, multiple=True)
+        else:
+            cmdObj = Command(cmd, key=keys[0], value=None, flags=0, cas="",
+                             multiple=False)
         self._current.append(cmdObj)
         return cmdObj._deferred
-
 
     def stats(self, arg=None):
         """
