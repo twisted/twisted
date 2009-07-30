@@ -747,7 +747,8 @@ class Request:
         self.producer = producer
 
         if self.queued:
-            producer.pauseProducing()
+            if streaming:
+                producer.pauseProducing()
         else:
             self.transport.registerProducer(producer, streaming)
 
