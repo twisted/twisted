@@ -189,31 +189,25 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
             self.ignoreExt("*")
         del self.allowExt
 
-
     def upgradeToVersion5(self):
         if not isinstance(self.registry, Registry):
             self.registry = Registry()
-
 
     def upgradeToVersion4(self):
         if not hasattr(self, 'registry'):
             self.registry = {}
 
-
     def upgradeToVersion3(self):
         if not hasattr(self, 'allowExt'):
             self.allowExt = 0
 
-
     def upgradeToVersion2(self):
         self.defaultType = "text/html"
-
 
     def upgradeToVersion1(self):
         if hasattr(self, 'indexName'):
             self.indexNames = [self.indexName]
             del self.indexName
-
 
     def __init__(self, path, defaultType="text/html", ignoredExts=(), registry=None, allowExt=0):
         """
@@ -634,7 +628,6 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
     def redirect(self, request):
         return redirectTo(addSlash(request), request)
 
-
     def listNames(self):
         if not self.isdir():
             return []
@@ -644,7 +637,6 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
 
     def listEntities(self):
         return map(lambda fileName, self=self: self.createSimilarFile(os.path.join(self.path, fileName)), self.listNames())
-
 
     def createPickleChild(self, name, child):
         warnings.warn(
@@ -667,7 +659,6 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
             pk.dump(child)
         fl.close()
 
-
     def createSimilarFile(self, path):
         f = self.__class__(path, self.defaultType, self.ignoredExts, self.registry)
         # refactoring by steps, here - constructor should almost certainly take these
@@ -681,42 +672,17 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
 class StaticProducer(object):
     """
     Superclass for classes that implement the business of producing.
-
-    @ivar request: The L{IRequest} to write the contents of the file to.
-    @ivar fileObject: The file the contents of which to write to the request.
     """
 
     implements(interfaces.IPullProducer)
 
     bufferSize = abstract.FileDescriptor.bufferSize
 
-
-    def __init__(self, request, fileObject):
-        """
-        Initialize the instance.
-        """
-        self.request = request
-        self.fileObject = fileObject
-
-
     def start(self):
         raise NotImplementedError(self.start)
 
-
     def resumeProducing(self):
         raise NotImplementedError(self.resumeProducing)
-
-
-    def stopProducing(self):
-        """
-        Stop producing data.
-
-        L{IPullProducer.stopProducing} is called when our consumer has died,
-        and subclasses also call this method when they are done producing
-        data.
-        """
-        self.fileObject.close()
-        self.request = None
 
 
 
@@ -725,9 +691,19 @@ class NoRangeStaticProducer(StaticProducer):
     A L{StaticProducer} that writes the entire file to the request.
     """
 
+    def __init__(self, request, fileObject):
+        """
+        Initialize the instance.
+
+        @param request: The L{IRequest} to write the contents of the file to.
+        @param fileObject: The file the contents of which to write to the
+            request.
+        """
+        self.request = request
+        self.fileObject = fileObject
+
     def start(self):
         self.request.registerProducer(self, False)
-
 
     def resumeProducing(self):
         if not self.request:
@@ -740,7 +716,7 @@ class NoRangeStaticProducer(StaticProducer):
         else:
             self.request.unregisterProducer()
             self.request.finish()
-            self.stopProducing()
+            self.request = None
 
 
 
@@ -753,21 +729,21 @@ class SingleRangeStaticProducer(StaticProducer):
         """
         Initialize the instance.
 
-        @param request: See L{StaticProducer}.
-        @param fileObject: See L{StaticProducer}.
+        @param request: The L{IRequest} to write a chunk of the file to.
+        @param fileObject: The file a chunk of the contents of which to write
+            to the request.
         @param offset: The offset into the file of the chunk to be written.
         @param size: The size of the chunk to write.
         """
-        StaticProducer.__init__(self, request, fileObject)
+        self.request = request
+        self.fileObject = fileObject
         self.offset = offset
         self.size = size
-
 
     def start(self):
         self.fileObject.seek(self.offset)
         self.bytesWritten = 0
         self.request.registerProducer(self, 0)
-
 
     def resumeProducing(self):
         if not self.request:
@@ -782,7 +758,7 @@ class SingleRangeStaticProducer(StaticProducer):
         if self.request and self.bytesWritten == self.size:
             self.request.unregisterProducer()
             self.request.finish()
-            self.stopProducing()
+            self.request = None
 
 
 
@@ -795,29 +771,28 @@ class MultipleRangeStaticProducer(StaticProducer):
         """
         Initialize the instance.
 
-        @param request: See L{StaticProducer}.
-        @param fileObject: See L{StaticProducer}.
+        @param request: The L{IRequest} to write the contents of the file to.
+        @param fileObject: The file the contents of which to write to the
+            request.
         @param rangeInfo: A list of tuples C{[(boundary, offset, size)]}
             where:
              - C{boundary} will be written to the request first.
              - C{offset} the offset into the file of chunk to write.
              - C{size} the size of the chunk to write.
         """
-        StaticProducer.__init__(self, request, fileObject)
+        self.request = request
+        self.fileObject = fileObject
         self.rangeInfo = rangeInfo
-
 
     def start(self):
         self.rangeIter = iter(self.rangeInfo)
         self._nextRange()
         self.request.registerProducer(self, 0)
 
-
     def _nextRange(self):
         self.partBoundary, partOffset, self._partSize = self.rangeIter.next()
         self._partBytesWritten = 0
         self.fileObject.seek(partOffset)
-
 
     def resumeProducing(self):
         if not self.request:

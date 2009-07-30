@@ -8,9 +8,7 @@ Tests for L{twisted.web.static}.
 
 import os, re, StringIO
 
-from zope.interface.verify import verifyObject
-
-from twisted.internet import abstract, interfaces
+from twisted.internet import abstract
 from twisted.python.compat import set
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
@@ -322,7 +320,7 @@ class StaticMakeProducerTests(TestCase):
         """
         resource = self.makeResourceWithContent('')
         request = DummyRequest([])
-        resource.makeProducer(request, resource.openForReading())
+        producer = resource.makeProducer(request, resource.openForReading())
         self.assertEqual(http.OK, request.responseCode)
 
 
@@ -337,7 +335,7 @@ class StaticMakeProducerTests(TestCase):
         resource = self.makeResourceWithContent(
             'a'*length, type=contentType, encoding=contentEncoding)
         request = DummyRequest([])
-        resource.makeProducer(request, resource.openForReading())
+        producer = resource.makeProducer(request, resource.openForReading())
         self.assertEqual(
             {'content-type': contentType, 'content-length': str(length),
              'content-encoding': contentEncoding},
@@ -364,7 +362,7 @@ class StaticMakeProducerTests(TestCase):
         request = DummyRequest([])
         request.headers['range'] = 'bytes=1-3'
         resource = self.makeResourceWithContent('abcdef')
-        resource.makeProducer(request, resource.openForReading())
+        producer = resource.makeProducer(request, resource.openForReading())
         self.assertEqual(
             http.PARTIAL_CONTENT, request.responseCode)
 
@@ -379,7 +377,7 @@ class StaticMakeProducerTests(TestCase):
         contentType = "text/plain"
         contentEncoding = 'gzip'
         resource = self.makeResourceWithContent('abcdef', type=contentType, encoding=contentEncoding)
-        resource.makeProducer(request, resource.openForReading())
+        producer = resource.makeProducer(request, resource.openForReading())
         self.assertEqual(
             {'content-type': contentType, 'content-encoding': contentEncoding,
              'content-range': 'bytes 1-3/6', 'content-length': '3'},
@@ -407,7 +405,7 @@ class StaticMakeProducerTests(TestCase):
         request = DummyRequest([])
         request.headers['range'] = 'bytes=4-10'
         resource = self.makeResourceWithContent('abc')
-        resource.makeProducer(request, resource.openForReading())
+        producer = resource.makeProducer(request, resource.openForReading())
         self.assertEqual(
             http.REQUESTED_RANGE_NOT_SATISFIABLE, request.responseCode)
 
@@ -421,7 +419,7 @@ class StaticMakeProducerTests(TestCase):
         request.headers['range'] = 'bytes=4-10'
         contentType = "text/plain"
         resource = self.makeResourceWithContent('abc', type=contentType)
-        resource.makeProducer(request, resource.openForReading())
+        producer = resource.makeProducer(request, resource.openForReading())
         self.assertEqual(
             {'content-type': 'text/plain', 'content-length': '0',
              'content-range': 'bytes */3'},
@@ -437,7 +435,7 @@ class StaticMakeProducerTests(TestCase):
         request.headers['range'] = 'bytes=2-10'
         contentType = "text/plain"
         resource = self.makeResourceWithContent('abc', type=contentType)
-        resource.makeProducer(request, resource.openForReading())
+        producer = resource.makeProducer(request, resource.openForReading())
         self.assertEqual(
             {'content-type': 'text/plain', 'content-length': '1',
              'content-range': 'bytes 2-2/3'},
@@ -465,7 +463,7 @@ class StaticMakeProducerTests(TestCase):
         request = DummyRequest([])
         request.headers['range'] = 'bytes=1-3,5-6'
         resource = self.makeResourceWithContent('abcdef')
-        resource.makeProducer(request, resource.openForReading())
+        producer = resource.makeProducer(request, resource.openForReading())
         self.assertEqual(
             http.PARTIAL_CONTENT, request.responseCode)
 
@@ -525,7 +523,7 @@ class StaticMakeProducerTests(TestCase):
         request = DummyRequest([])
         request.headers['range'] = 'bytes=10-12,15-20'
         resource = self.makeResourceWithContent('abc')
-        resource.makeProducer(request, resource.openForReading())
+        producer = resource.makeProducer(request, resource.openForReading())
         self.assertEqual(
             http.REQUESTED_RANGE_NOT_SATISFIABLE, request.responseCode)
 
@@ -540,13 +538,13 @@ class StaticMakeProducerTests(TestCase):
         contentType = "text/plain"
         request.headers['range'] = 'bytes=10-12,15-20'
         resource = self.makeResourceWithContent('abc', type=contentType)
-        resource.makeProducer(request, resource.openForReading())
+        producer = resource.makeProducer(request, resource.openForReading())
         self.assertEqual(
             {'content-length': '0', 'content-range': 'bytes */3'},
             self.contentHeaders(request))
 
 
-    def test_oneSatisfiableRangeIsEnough(self):
+    def test_oneSatisfiableRangeIsEnugh(self):
         """
         makeProducer when the Range header requests multiple ranges, at least
         one of which matches, sets the response code to 'Partial Content'.
@@ -554,38 +552,9 @@ class StaticMakeProducerTests(TestCase):
         request = DummyRequest([])
         request.headers['range'] = 'bytes=1-3,100-200'
         resource = self.makeResourceWithContent('abcdef')
-        resource.makeProducer(request, resource.openForReading())
+        producer = resource.makeProducer(request, resource.openForReading())
         self.assertEqual(
             http.PARTIAL_CONTENT, request.responseCode)
-
-
-
-class StaticProducerTests(TestCase):
-    """
-    Tests for the abstract L{StaticProducer}.
-    """
-
-    def test_stopProducingClosesFile(self):
-        """
-        L{StaticProducer.stopProducing} closes the file object the producer is
-        producing data from.
-        """
-        fileObject = StringIO.StringIO()
-        producer = static.StaticProducer(None, fileObject)
-        producer.stopProducing()
-        self.assertTrue(fileObject.closed)
-
-
-    def test_stopProducingSetsRequestToNone(self):
-        """
-        L{StaticProducer.stopProducing} sets the request instance variable to
-        None, which indicates to subclasses' resumeProducing methods that no
-        more data should be produced.
-        """
-        fileObject = StringIO.StringIO()
-        producer = static.StaticProducer(DummyRequest([]), fileObject)
-        producer.stopProducing()
-        self.assertIdentical(None, producer.request)
 
 
 
@@ -593,14 +562,6 @@ class NoRangeStaticProducerTests(TestCase):
     """
     Tests for L{NoRangeStaticProducer}.
     """
-
-    def test_implementsIPullProducer(self):
-        """
-        L{NoRangeStaticProducer} implements L{IPullProducer}.
-        """
-        verifyObject(
-            interfaces.IPullProducer,
-            static.NoRangeStaticProducer(None, None))
 
 
     def test_resumeProducingProducesContent(self):
@@ -663,14 +624,6 @@ class SingleRangeStaticProducerTests(TestCase):
     Tests for L{SingleRangeStaticProducer}.
     """
 
-    def test_implementsIPullProducer(self):
-        """
-        L{SingleRangeStaticProducer} implements L{IPullProducer}.
-        """
-        verifyObject(
-            interfaces.IPullProducer,
-            static.SingleRangeStaticProducer(None, None, None, None))
-
 
     def test_resumeProducingProducesContent(self):
         """
@@ -731,14 +684,6 @@ class MultipleRangeStaticProducerTests(TestCase):
     """
     Tests for L{MultipleRangeStaticProducer}.
     """
-
-    def test_implementsIPullProducer(self):
-        """
-        L{MultipleRangeStaticProducer} implements L{IPullProducer}.
-        """
-        verifyObject(
-            interfaces.IPullProducer,
-            static.MultipleRangeStaticProducer(None, None, None))
 
 
     def test_resumeProducingProducesContent(self):

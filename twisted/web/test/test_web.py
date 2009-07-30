@@ -189,7 +189,6 @@ class DummyChannel:
 
         def __init__(self):
             self.written = StringIO()
-            self.producers = []
 
         def getPeer(self):
             return IPv4Address("TCP", '192.168.1.1', 12344)
@@ -203,10 +202,6 @@ class DummyChannel:
 
         def getHost(self):
             return IPv4Address("TCP", '10.0.0.1', self.port)
-
-        def registerProducer(self, producer, streaming):
-            self.producers.append((producer, streaming))
-
 
     class SSL(TCP):
         implements(interfaces.ISSLTransport)
