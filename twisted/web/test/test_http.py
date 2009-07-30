@@ -19,6 +19,7 @@ from twisted.protocols import loopback
 from twisted.internet.task import Clock
 from twisted.internet.error import ConnectionLost
 from twisted.test.proto_helpers import StringTransport
+from twisted.test.test_internet import DummyProducer
 from twisted.web.test.test_web import DummyChannel
 
 
@@ -662,7 +663,7 @@ class ParsingTestCase(unittest.TestCase):
             "",
             ""]
 
-        channel = self.runRequest('\n'.join(requestLines), MyRequest, 0)
+        self.runRequest('\n'.join(requestLines), MyRequest, 0)
         [request] = processed
         self.assertEquals(
             request.requestHeaders.getRawHeaders('foo'), ['bar'])
@@ -1282,3 +1283,99 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         req.connectionLost(Failure(ConnectionLost("Finished")))
         self.assertTrue(content.closed)
         self.assertIdentical(req.channel, None)
+
+
+    def test_registerProducerTwiceFails(self):
+        """
+        Calling L{Request.registerProducer} when a producer is already
+        registered raises ValueError.
+        """
+        req = http.Request(DummyChannel(), None)
+        req.registerProducer(DummyProducer(), True)
+        self.assertRaises(
+            ValueError, req.registerProducer, DummyProducer(), True)
+
+
+    def test_registerProducerWhenQueuedPausesPushProducer(self):
+        """
+        Calling L{Request.registerProducer} with an IPushProducer when the
+        request is queued pauses the producer.
+        """
+        req = http.Request(DummyChannel(), True)
+        producer = DummyProducer()
+        req.registerProducer(producer, True)
+        self.assertEquals(['pause'], producer.events)
+
+
+    def test_registerProducerWhenQueuedDoesntPausePullProducer(self):
+        """
+        Calling L{Request.registerProducer} with an IPullProducer when the
+        request is queued does not pause the producer, because it doesn't make
+        sense to pause a pull producer.
+        """
+        req = http.Request(DummyChannel(), True)
+        producer = DummyProducer()
+        req.registerProducer(producer, False)
+        self.assertEquals([], producer.events)
+
+
+    def test_registerProducerWhenQueuedDoesntRegisterPushProducer(self):
+        """
+        Calling L{Request.registerProducer} with an IPushProducer when the
+        request is queued does not register the producer on the request's
+        transport.
+        """
+        self.assertIdentical(
+            None, getattr(http.StringTransport, 'registerProducer', None),
+            "StringTransport cannot implement registerProducer for this test "
+            "to be valid.")
+        req = http.Request(DummyChannel(), True)
+        producer = DummyProducer()
+        req.registerProducer(producer, True)
+        # This is a roundabout assertion: http.StringTransport doesn't
+        # implement registerProducer, so Request.registerProducer can't have
+        # tried to call registerProducer on the transport.
+        self.assertIsInstance(req.transport, http.StringTransport)
+
+
+    def test_registerProducerWhenQueuedDoesntRegisterPullProducer(self):
+        """
+        Calling L{Request.registerProducer} with an IPullProducer when the
+        request is queued does not register the producer on the request's
+        transport.
+        """
+        self.assertIdentical(
+            None, getattr(http.StringTransport, 'registerProducer', None),
+            "StringTransport cannot implement registerProducer for this test "
+            "to be valid.")
+        req = http.Request(DummyChannel(), True)
+        producer = DummyProducer()
+        req.registerProducer(producer, False)
+        # This is a roundabout assertion: http.StringTransport doesn't
+        # implement registerProducer, so Request.registerProducer can't have
+        # tried to call registerProducer on the transport.
+        self.assertIsInstance(req.transport, http.StringTransport)
+
+
+    def test_registerProducerWhenNotQueuedRegistersPushProducer(self):
+        """
+        Calling L{Request.registerProducer} with an IPushProducer when the
+        request is not queued registers the producer as a push producer on the
+        request's transport.
+        """
+        req = http.Request(DummyChannel(), False)
+        producer = DummyProducer()
+        req.registerProducer(producer, True)
+        self.assertEquals([(producer, True)], req.transport.producers)
+
+
+    def test_registerProducerWhenNotQueuedRegistersPullProducer(self):
+        """
+        Calling L{Request.registerProducer} with an IPullProducer when the
+        request is not queued registers the producer as a pull producer on the
+        request's transport.
+        """
+        req = http.Request(DummyChannel(), False)
+        producer = DummyProducer()
+        req.registerProducer(producer, False)
+        self.assertEquals([(producer, False)], req.transport.producers)
