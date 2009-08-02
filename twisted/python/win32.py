@@ -12,11 +12,6 @@ import exceptions
 import os
 
 try:
-    set
-except NameError:
-    from sets import Set as set
-
-try:
     import win32api
     import win32con
 except ImportError:
@@ -68,30 +63,20 @@ def getProgramFilesPath():
                                      keyname, 0, win32con.KEY_READ)
     return win32api.RegQueryValueEx(currentV, 'ProgramFilesDir')[0]
 
-
-
 _cmdLineQuoteRe = re.compile(r'(\\*)"')
 _cmdLineQuoteRe2 = re.compile(r'(\\+)\Z')
-_cmdLineQuoteChars = set(' \t"|')
 def cmdLineQuote(s):
     """
     Internal method for quoting a single command-line argument.
 
-    @type: C{str}
-    @param s: An unquoted string that you want to quote so that something that
-        does cmd.exe-style unquoting will interpret it as a single argument,
-        even if it contains spaces
+    @param s: an unquoted string that you want to quote so that something that
+    does cmd.exe-style unquoting will interpret it as a single argument, even
+    if it contains spaces.
 
-    @rtype: C{str}
-    @return: A cmd.exe-style quoted string
+    @return: a quoted string.
     """
-    quote = ''
-    if _cmdLineQuoteChars.intersection(s):
-        quote = '"'
-    return quote + _cmdLineQuoteRe2.sub(
-        r"\1\1", _cmdLineQuoteRe.sub(r'\1\1\\"', s)) + quote
-
-
+    quote = ((" " in s) or ("\t" in s) or ('"' in s)) and '"' or ''
+    return quote + _cmdLineQuoteRe2.sub(r"\1\1", _cmdLineQuoteRe.sub(r'\1\1\\"', s)) + quote
 
 def quoteArguments(arguments):
     """
@@ -99,14 +84,11 @@ def quoteArguments(arguments):
     a similar API.  This allows the list passed to C{reactor.spawnProcess} to
     match the child process's C{sys.argv} properly.
 
-    @type arguments: C{iterable} of C{str}
-    @param arguments: An iterable of unquoted arguments to quote
+    @param arglist: an iterable of C{str}, each unquoted.
 
-    @rtype: C{str}
-    @return: A space-delimited string containing quoted versions of L{arguments}
+    @return: a single string, with the given sequence quoted as necessary.
     """
-    return ' '.join(map(cmdLineQuote, arguments))
-
+    return ' '.join([cmdLineQuote(a) for a in arguments])
 
 
 class _ErrorFormatter(object):
