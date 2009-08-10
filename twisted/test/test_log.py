@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -25,9 +25,9 @@ class LogTest(unittest.TestCase):
 
     def setUp(self):
         self.catcher = []
-        observer = self.catcher.append
-        log.addObserver(observer)
-        self.addCleanup(log.removeObserver, observer)
+        self.observer = self.catcher.append
+        log.addObserver(self.observer)
+        self.addCleanup(log.removeObserver, self.observer)
 
 
     def testObservation(self):
@@ -120,7 +120,10 @@ class LogTest(unittest.TestCase):
         L{twisted.python.log.showwarning} emits the warning as a message
         to the Twisted logging system.
         """
-        log.showwarning(
+        publisher = log.LogPublisher()
+        publisher.addObserver(self.observer)
+
+        publisher.showwarning(
             FakeWarning("unique warning message"), FakeWarning,
             "warning-filename.py", 27)
         event = self.catcher.pop()
@@ -133,7 +136,7 @@ class LogTest(unittest.TestCase):
         # Python 2.6 requires that any function used to override the
         # warnings.showwarning API accept a "line" parameter or a
         # deprecation warning is emitted.
-        log.showwarning(
+        publisher.showwarning(
             FakeWarning("unique warning message"), FakeWarning,
             "warning-filename.py", 27, line=object())
         event = self.catcher.pop()

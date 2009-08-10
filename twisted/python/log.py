@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_log -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -87,15 +87,7 @@ def callWithLogger(logger, func, *args, **kw):
     except:
         err(system=lp)
 
-def showwarning(message, category, filename, lineno, file=None, line=None):
-    if file is None:
-        msg(warning=message, category=reflect.qual(category), filename=filename, lineno=lineno,
-            format="%(filename)s:%(lineno)s: %(category)s: %(warning)s")
-    else:
-        if sys.version_info < (2, 6):
-            _oldshowwarning(message, category, filename, lineno, file)
-        else:
-            _oldshowwarning(message, category, filename, lineno, file, line)
+
 
 _keepErrors = 0
 _keptErrors = []
@@ -303,6 +295,28 @@ class LogPublisher:
                 self.observers[i] = observer
 
 
+    def showwarning(self, message, category, filename, lineno, file=None,
+                    line=None):
+        """
+        Twisted-enabled wrapper around L{warnings.showwarning}.
+
+        If C{file} is C{None}, the default behaviour is to emit the warning to
+        the log system, otherwise the original L{warnings.showwarning} Python
+        function is called.
+        """
+        if file is None:
+            self.msg(warning=message, category=reflect.qual(category),
+                     filename=filename, lineno=lineno,
+                     format="%(filename)s:%(lineno)s: %(category)s: %(warning)s")
+        else:
+            if sys.version_info < (2, 6):
+                _oldshowwarning(message, category, filename, lineno, file)
+            else:
+                _oldshowwarning(message, category, filename, lineno, file, line)
+
+
+
+
 try:
     theLogPublisher
 except NameError:
@@ -310,6 +324,7 @@ except NameError:
     addObserver = theLogPublisher.addObserver
     removeObserver = theLogPublisher.removeObserver
     msg = theLogPublisher.msg
+    showwarning = theLogPublisher.showwarning
 
 
 def _safeFormat(fmtString, fmtDict):
