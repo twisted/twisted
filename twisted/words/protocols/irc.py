@@ -895,8 +895,7 @@ class IRCClient(basic.LineReceiver):
         The C{limit}, C{user}, and C{mask} parameters are mutually exclusive.
 
         @type chan: C{str}
-        @param chan: The name of the channel to operate on. If it has no
-            prefix, C{'#'} will to prepended to it.
+        @param chan: The name of the channel to operate on.
         @type set: C{bool}
         @param set: True to give the user or channel permissions and False to
             remove them.
