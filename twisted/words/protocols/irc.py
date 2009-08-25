@@ -685,18 +685,20 @@ class IRCClient(basic.LineReceiver):
         pass
 
     def joined(self, channel):
-        """Called when I finish joining a channel.
-
-        channel has the starting character (# or &) intact.
         """
-        pass
+        Called when I finish joining a channel.
+
+        channel has the starting character (C{'#'}, C{'&'}, C{'!'}, or C{'+'})
+        intact.
+        """
 
     def left(self, channel):
-        """Called when I have left a channel.
-
-        channel has the starting character (# or &) intact.
         """
-        pass
+        Called when I have left a channel.
+
+        channel has the starting character (C{'#'}, C{'&'}, C{'!'}, or C{'+'})
+        intact.
+        """
 
     def noticed(self, user, channel, message):
         """Called when I have a notice from a user to me or a channel.
@@ -821,12 +823,13 @@ class IRCClient(basic.LineReceiver):
         Join a channel.
 
         @type channel: C{str}
-        @param channel: The name of the channel to join. If it has no
-            prefix, C{'#'} will to prepended to it.
+        @param channel: The name of the channel to join. If it has no prefix,
+            C{'#'} will be prepended to it.
         @type key: C{str}
         @param key: If specified, the key used to join the channel.
         """
-        if channel[0] not in '&#!+': channel = '#' + channel
+        if channel[0] not in CHANNEL_PREFIXES:
+            channel = '#' + channel
         if key:
             self.sendLine("JOIN %s %s" % (channel, key))
         else:
@@ -837,12 +840,13 @@ class IRCClient(basic.LineReceiver):
         Leave a channel.
 
         @type channel: C{str}
-        @param channel: The name of the channel to leave. If it has no
-            prefix, C{'#'} will to prepended to it.
+        @param channel: The name of the channel to leave. If it has no prefix,
+            C{'#'} will be prepended to it.
         @type reason: C{str}
         @param reason: If given, the reason for leaving.
         """
-        if channel[0] not in '&#!+': channel = '#' + channel
+        if channel[0] not in CHANNEL_PREFIXES:
+            channel = '#' + channel
         if reason:
             self.sendLine("PART %s :%s" % (channel, reason))
         else:
@@ -853,14 +857,15 @@ class IRCClient(basic.LineReceiver):
         Attempt to kick a user from a channel.
 
         @type channel: C{str}
-        @param channel: The name of the channel to kick the user from. If it
-            has no prefix, C{'#'} will to prepended to it.
+        @param channel: The name of the channel to kick the user from. If it has
+            no prefix, C{'#'} will be prepended to it.
         @type user: C{str}
         @param user: The nick of the user to kick.
         @type reason: C{str}
         @param reason: If given, the reason for kicking the user.
         """
-        if channel[0] not in '&#!+': channel = '#' + channel
+        if channel[0] not in CHANNEL_PREFIXES:
+            channel = '#' + channel
         if reason:
             self.sendLine("KICK %s %s :%s" % (channel, user, reason))
         else:
@@ -869,20 +874,22 @@ class IRCClient(basic.LineReceiver):
     part = leave
 
     def topic(self, channel, topic=None):
-        """Attempt to set the topic of the given channel, or ask what it is.
+        """
+        Attempt to set the topic of the given channel, or ask what it is.
 
-        If topic is None, then I sent a topic query instead of trying to set
-        the topic. The server should respond with a TOPIC message containing
-        the current topic of the given channel.
+        If topic is None, then I sent a topic query instead of trying to set the
+        topic. The server should respond with a TOPIC message containing the
+        current topic of the given channel.
 
         @type channel: C{str}
         @param channel: The name of the channel to change the topic on. If it
-            has no prefix, C{'#'} will to prepended to it.
+            has no prefix, C{'#'} will be prepended to it.
         @type topic: C{str}
         @param topic: If specified, what to set the topic to.
         """
         # << TOPIC #xtestx :fff
-        if channel[0] not in '&#!+': channel = '#' + channel
+        if channel[0] not in CHANNEL_PREFIXES:
+            channel = '#' + channel
         if topic != None:
             self.sendLine("TOPIC %s :%s" % (channel, topic))
         else:
@@ -928,18 +935,20 @@ class IRCClient(basic.LineReceiver):
         Send a message to a channel
 
         @type channel: C{str}
-        @param channel: The channel to say the message on.
+        @param channel: The channel to say the message on. If it has no prefix,
+            C{'#'} will be prepended to it.
         @type message: C{str}
         @param message: The message to say.
         @type length: C{int}
-        @param length: The maximum number of octets to send at a time.  This
-            has the effect of turning a single call to C{msg()} into multiple
+        @param length: The maximum number of octets to send at a time.  This has
+            the effect of turning a single call to C{msg()} into multiple
             commands to the server.  This is useful when long messages may be
             sent that would otherwise cause the server to kick us off or
             silently truncate the text we are sending.  If None is passed, the
             entire message is always send in one command.
         """
-        if channel[0] not in '&#!+': channel = '#' + channel
+        if channel[0] not in CHANNEL_PREFIXES:
+            channel = '#' + channel
         self.msg(channel, message, length)
 
 
@@ -1089,14 +1098,15 @@ class IRCClient(basic.LineReceiver):
 
         @type channel: C{str}
         @param channel: The name of the channel to have an action on. If it
-            has no prefix, C{'#'} will to prepended to it.
+            has no prefix, C{'#'} will be prepended to it.
         @type action: C{str}
         @param action: The action to preform.
         """
         warnings.warn("me() is deprecated since Twisted 9.0. Use IRCClient.describe().",
                 DeprecationWarning, stacklevel=2)
 
-        if channel[0] not in '&#!+': channel = '#' + channel
+        if channel[0] not in CHANNEL_PREFIXES:
+            channel = '#' + channel
         self.describe(channel, action)
 
 
