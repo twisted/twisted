@@ -123,7 +123,11 @@ class HTTPPageGetter(http.HTTPClient):
         self.quietLoss = True
         self.transport.loseConnection()
 
-    handleStatus_302 = lambda self: self.handleStatus_301()
+    def handleStatus_302(self):
+        if self.afterFoundGet:
+            self.handleStatus_303()
+        self.handleStatus_301()
+
 
     def handleStatus_303(self):
         self.factory.method = 'GET'
@@ -226,6 +230,11 @@ class HTTPClientFactory(protocol.ClientFactory):
     @ivar redirectLimit: The maximum number of HTTP redirects that can occur
           before it is assumed that the redirection is endless.
 
+    @type afterFoundGet: C{bool}
+    @ivar afterFoundGet: Deviate from the HTTP 1.1 RFC by handling redirects
+        the same way as most web browsers; if the request method is POST and a
+        302 status is encountered, the redirect is followed with a GET method
+
     @type _redirectCount: int
     @ivar _redirectCount: The current number of HTTP redirects encountered.
     """
@@ -240,13 +249,14 @@ class HTTPClientFactory(protocol.ClientFactory):
 
     def __init__(self, url, method='GET', postdata=None, headers=None,
                  agent="Twisted PageGetter", timeout=0, cookies=None,
-                 followRedirect=True, redirectLimit=20):
+                 followRedirect=True, redirectLimit=20,
+                 afterFoundGet=False):
         self.followRedirect = followRedirect
         self.redirectLimit = redirectLimit
         self._redirectCount = 0
         self.timeout = timeout
         self.agent = agent
-
+        self.afterFoundGet = afterFoundGet
         if cookies is None:
             cookies = {}
         self.cookies = cookies
@@ -282,6 +292,7 @@ class HTTPClientFactory(protocol.ClientFactory):
     def buildProtocol(self, addr):
         p = protocol.ClientFactory.buildProtocol(self, addr)
         p.followRedirect = self.followRedirect
+        p.afterFoundGet = self.afterFoundGet
         if self.timeout:
             timeoutCall = reactor.callLater(self.timeout, p.timeout)
             self.deferred.addBoth(self._cancelTimeout, timeoutCall)

@@ -24,6 +24,46 @@ except:
     ssl = None
 
 
+
+class ExtendedRedirect(resource.Resource):
+    """
+    Redirection resource.
+
+    The HTTP status code is set according to the C{code} query parameter.
+
+    @type lastMethod: C{str}
+    @ivar lastMethod: Last handled HTTP request method
+    """
+    isLeaf = 1
+    lastMethod = None
+
+
+    def __init__(self, url):
+        resource.Resource.__init__(self)
+        self.url = url
+
+
+    def render(self, request):
+        if self.lastMethod:
+            self.lastMethod = request.method
+            return "OK Thnx!"
+        else:
+            self.lastMethod = request.method
+            code = int(request.args['code'][0])
+            return self.redirectTo(self.url, request, code)
+
+
+    def getChild(self, name, request):
+        return self
+    
+
+    def redirectTo(self, url, request, code):
+        request.setResponseCode(code)
+        request.setHeader("location", url)
+        return "OK Bye!"
+
+
+
 class ForeverTakingResource(resource.Resource):
     """
     L{ForeverTakingResource} is a resource which never finishes responding
@@ -231,6 +271,8 @@ class WebClientTestCase(unittest.TestCase):
         r.putChild("payload", PayloadResource())
         r.putChild("broken", BrokenDownloadResource())
         r.putChild("cookiemirror", CookieMirrorResource())
+        self.extendedRedirect = ExtendedRedirect('/extendedRedirect')
+        r.putChild("extendedRedirect", self.extendedRedirect)
         self.site = server.Site(r, timeout=None)
         self.wrapper = WrappingFactory(self.site)
         self.port = self._listen(self.wrapper)
@@ -494,6 +536,29 @@ class WebClientTestCase(unittest.TestCase):
         return d
 
 
+    def test_afterFoundGet(self):
+        """
+        Enabling unsafe redirection behaviour overwrites the method of
+        redirected C{POST} requests with C{GET}.
+        """
+        url = self.getURL('extendedRedirect?code=302')
+        f = client.HTTPClientFactory(url, followRedirect=True, method="POST")
+        self.assertFalse(
+            f.afterFoundGet,
+            "By default, afterFoundGet must be disabled")
+
+        def gotPage(page):
+            self.assertEquals(
+                self.extendedRedirect.lastMethod,
+                "GET",
+                "With afterFoundGet, the HTTP method must change to GET")
+        
+        d = client.getPage(
+            url, followRedirect=True, afterFoundGet=True, method="POST")
+        d.addCallback(gotPage)
+        return d
+
+    
     def testPartial(self):
         name = self.mktemp()
         f = open(name, "wb")
