@@ -15,6 +15,7 @@ you represent clients and servers in a Service hierarchy.
 They are as follows::
 
   TCPServer, TCPClient,
+  TCP6Server, TCP6Client,
   UNIXServer, UNIXClient,
   SSLServer, SSLClient,
   UDPServer, UDPClient,
@@ -58,11 +59,11 @@ class _AbstractServer(_VolatileDataService):
     @type volatile: C{list}
 
     @ivar method: the type of method to call on the reactor, one of B{TCP},
-        B{UDP}, B{SSL} or B{UNIX}.
+        B{TCP6}, B{UDP}, B{SSL} or B{UNIX}.
     @type method: C{str}
 
     @ivar reactor: the current running reactor.
-    @type reactor: a provider of C{IReactorTCP}, C{IReactorUDP},
+    @type reactor: a provider of C{IReactorTCP}, C{IReactorTCP6}, C{IReactorUDP},
         C{IReactorSSL} or C{IReactorUnix}.
 
     @ivar _port: instance of port set when the service is started.
@@ -125,11 +126,11 @@ class _AbstractClient(_VolatileDataService):
     @type volatile: C{list}
 
     @ivar method: the type of method to call on the reactor, one of B{TCP},
-        B{UDP}, B{SSL} or B{UNIX}.
+        B {TCP6}, B{UDP}, B{SSL} or B{UNIX}.
     @type method: C{str}
 
     @ivar reactor: the current running reactor.
-    @type reactor: a provider of C{IReactorTCP}, C{IReactorUDP},
+    @type reactor: a provider of C{IReactorTCP}, C{IReactorTCP6}, C{IReactorUDP},
         C{IReactorSSL} or C{IReactorUnix}.
 
     @ivar _connection: instance of connection set when the service is started.
@@ -194,7 +195,7 @@ on arguments to the reactor method.
 }
 
 import new
-for tran in 'Generic TCP UNIX SSL UDP UNIXDatagram Multicast'.split():
+for tran in 'Generic TCP TCP6 UNIX SSL UDP UNIXDatagram Multicast'.split():
     for side in 'Server Client'.split():
         if tran == "Multicast" and side == "Client":
             continue

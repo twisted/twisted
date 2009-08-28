@@ -367,6 +367,25 @@ class TestInternet2(unittest.TestCase):
         factory.d.addCallback(lambda x : TestEcho.d)
         return factory.d
 
+    def testTCP6(self):
+        s = service.MultiService()
+        s.startService()
+        factory = protocol.ServerFactory()
+        factory.protocol = TestEcho
+        TestEcho.d = defer.Deferred()
+        t = internet.TCP6Server(0, factory)
+        t.setServiceParent(s)
+        num = t._port.getHost().port
+        factory = protocol.ClientFactory()
+        factory.d = defer.Deferred()
+        factory.protocol = Foo
+        factory.line = None
+        internet.TCP6Client('::', num, factory).setServiceParent(s)
+        factory.d.addCallback(self.assertEqual, 'lalala')
+        factory.d.addCallback(lambda x : s.stopService())
+        factory.d.addCallback(lambda x : TestEcho.d)
+        return factory.d
+
 
     def test_UDP(self):
         """
