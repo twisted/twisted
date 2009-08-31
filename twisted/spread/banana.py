@@ -120,14 +120,16 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                         break
                 else:
                     # I can't speak any of those dialects.
-                    log.msg('error losing')
+                    log.msg("The client doesn't speak any of the protocols "
+                            "offered by the server: disconnecting.")
                     self.transport.loseConnection()
             else:
                 if obj in self.knownDialects:
                     self._selectDialect(obj)
                 else:
                     # the client just selected a protocol that I did not suggest.
-                    log.msg('freaky losing')
+                    log.msg("The client selected a protocol the server didn't "
+                            "suggest and doesn't know: disconnecting.")
                     self.transport.loseConnection()
 
 
