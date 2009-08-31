@@ -88,12 +88,17 @@ that the checker is able to check.</p>
 </li></ul>
 
     <h3>The CredentialChecker</h3>
+
 <p>This is an object implementing <code class="API"
 base="twisted.cred.checkers">ICredentialsChecker</code> which resolves some
-Credentials to an avatar ID.
-Some examples of CredentialChecker implementations would be:
-InMemoryUsernamePassword, ApacheStyleHTAccessFile,
-UNIXPasswordDatabase, SSHPublicKeyDatabase.  A credential checker
+credentials to an avatar ID.
+
+Whether the credentials are stored in an in-memory data structure, an
+Apache-style htaccess file, a UNIX password database, an SSH key database,
+or any other form, an implementation of <code>ICredentialsChecker</code> is
+how this data is connected to cred.
+
+A credential checker
 stipulates some requirements of the credentials it can check by
 specifying a credentialInterfaces attribute, which is a list of
 interfaces.  Credentials passed to its requestAvatarId method must
