@@ -1,4 +1,4 @@
-# Copyright (c) 2007 Twisted Matrix Laboratories.
+# Copyright (c) 2007-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -7,37 +7,13 @@ Test for L{twisted.web.proxy}.
 
 from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import StringTransportWithDisconnection
+from twisted.test.proto_helpers import MemoryReactor
 
 from twisted.web.resource import Resource
 from twisted.web.server import Site
 from twisted.web.proxy import ReverseProxyResource, ProxyClientFactory
 from twisted.web.proxy import ProxyClient, ProxyRequest, ReverseProxyRequest
 from twisted.web.test.test_web import DummyRequest
-
-
-class FakeReactor(object):
-    """
-    A fake reactor to be used in tests.
-
-    @ivar connect: a list that keeps track of connection attempts (ie, calls
-        to C{connectTCP}).
-    @type connect: C{list}
-    """
-
-    def __init__(self):
-        """
-        Initialize the C{connect} list.
-        """
-        self.connect = []
-
-
-    def connectTCP(self, host, port, factory):
-        """
-        Fake L{reactor.connectTCP}, that does nothing but log the call.
-        """
-        self.connect.append([host, port, factory])
-
-
 
 class ReverseProxyResourceTestCase(TestCase):
     """
@@ -50,7 +26,7 @@ class ReverseProxyResourceTestCase(TestCase):
         with the path of this request pointing at C{expectedURI}.
         """
         root = Resource()
-        reactor = FakeReactor()
+        reactor = MemoryReactor()
         resource = ReverseProxyResource("127.0.0.1", 1234, "/path", reactor)
         root.putChild('index', resource)
         site = Site(root)
@@ -65,12 +41,12 @@ class ReverseProxyResourceTestCase(TestCase):
                              (uri,))
 
         # Check that one connection has been created, to the good host/port
-        self.assertEquals(len(reactor.connect), 1)
-        self.assertEquals(reactor.connect[0][0], "127.0.0.1")
-        self.assertEquals(reactor.connect[0][1], 1234)
+        self.assertEquals(len(reactor.tcpClients), 1)
+        self.assertEquals(reactor.tcpClients[0][0], "127.0.0.1")
+        self.assertEquals(reactor.tcpClients[0][1], 1234)
 
         # Check the factory passed to the connect, and its given path
-        factory = reactor.connect[0][2]
+        factory = reactor.tcpClients[0][2]
         self.assertIsInstance(factory, ProxyClientFactory)
         self.assertEquals(factory.rest, expectedURI)
         self.assertEquals(factory.headers["host"], "127.0.0.1:1234")
@@ -316,18 +292,18 @@ class ProxyRequestTestCase(TestCase):
         """
         transport = StringTransportWithDisconnection()
         channel = DummyChannel(transport)
-        reactor = FakeReactor()
+        reactor = MemoryReactor()
         request = ProxyRequest(channel, False, reactor)
         request.gotLength(len(data))
         request.handleContentChunk(data)
         request.requestReceived(method, 'http://example.com%s' % (uri,),
                                 'HTTP/1.0')
 
-        self.assertEquals(len(reactor.connect), 1)
-        self.assertEquals(reactor.connect[0][0], "example.com")
-        self.assertEquals(reactor.connect[0][1], 80)
+        self.assertEquals(len(reactor.tcpClients), 1)
+        self.assertEquals(reactor.tcpClients[0][0], "example.com")
+        self.assertEquals(reactor.tcpClients[0][1], 80)
 
-        factory = reactor.connect[0][2]
+        factory = reactor.tcpClients[0][2]
         self.assertIsInstance(factory, ProxyClientFactory)
         self.assertEquals(factory.command, method)
         self.assertEquals(factory.version, 'HTTP/1.0')
@@ -375,16 +351,16 @@ class ProxyRequestTestCase(TestCase):
         """
         transport = StringTransportWithDisconnection()
         channel = DummyChannel(transport)
-        reactor = FakeReactor()
+        reactor = MemoryReactor()
         request = ProxyRequest(channel, False, reactor)
         request.gotLength(0)
         request.requestReceived('GET', 'http://example.com:1234/foo/bar',
                                 'HTTP/1.0')
 
         # That should create one connection, with the port parsed from the URL
-        self.assertEquals(len(reactor.connect), 1)
-        self.assertEquals(reactor.connect[0][0], "example.com")
-        self.assertEquals(reactor.connect[0][1], 1234)
+        self.assertEquals(len(reactor.tcpClients), 1)
+        self.assertEquals(reactor.tcpClients[0][0], "example.com")
+        self.assertEquals(reactor.tcpClients[0][1], 1234)
 
 
 
@@ -413,18 +389,18 @@ class ReverseProxyRequestTestCase(TestCase):
         """
         transport = StringTransportWithDisconnection()
         channel = DummyChannel(transport)
-        reactor = FakeReactor()
+        reactor = MemoryReactor()
         request = ReverseProxyRequest(channel, False, reactor)
         request.factory = DummyFactory("example.com", 1234)
         request.gotLength(0)
         request.requestReceived('GET', '/foo/bar', 'HTTP/1.0')
 
         # Check that one connection has been created, to the good host/port
-        self.assertEquals(len(reactor.connect), 1)
-        self.assertEquals(reactor.connect[0][0], "example.com")
-        self.assertEquals(reactor.connect[0][1], 1234)
+        self.assertEquals(len(reactor.tcpClients), 1)
+        self.assertEquals(reactor.tcpClients[0][0], "example.com")
+        self.assertEquals(reactor.tcpClients[0][1], 1234)
 
         # Check the factory passed to the connect, and its headers
-        factory = reactor.connect[0][2]
+        factory = reactor.tcpClients[0][2]
         self.assertIsInstance(factory, ProxyClientFactory)
         self.assertEquals(factory.headers, {'host': 'example.com'})

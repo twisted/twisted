@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -20,6 +20,8 @@ from twisted.protocols import wire, basic
 from twisted.internet import protocol, reactor
 from twisted.internet.utils import getProcessOutputAndValue
 from twisted.application import reactors
+from twisted.test.proto_helpers import MemoryReactor
+
 
 oldAppSuppressions = [util.suppress(message='twisted.internet.app is deprecated',
                                     category=DeprecationWarning)]
@@ -542,16 +544,12 @@ class TestInternet2(unittest.TestCase):
         that can be used to parametrize the reactor used to listen for
         connections.
         """
-        listen = []
-        class FakeReactor(object):
-            def listenTCP(self, portNumber, factory):
-                listen.append((portNumber, factory))
-        reactor = FakeReactor()
+        reactor = MemoryReactor()
 
         factory = object()
         t = internet.TCPServer(1234, factory, reactor=reactor)
         t.startService()
-        self.assertEquals(listen, [(1234, factory)])
+        self.assertEquals(reactor.tcpServers.pop()[:2], (1234, factory))
 
 
     def test_reactorParametrizationInClient(self):
@@ -560,16 +558,13 @@ class TestInternet2(unittest.TestCase):
         that can be used to parametrize the reactor used to create new client
         connections.
         """
-        connect = []
-        class FakeReactor(object):
-            def connectTCP(self, ip, portNumber, factory):
-                connect.append((ip, portNumber, factory))
-        reactor = FakeReactor()
+        reactor = MemoryReactor()
 
         factory = object()
         t = internet.TCPClient('127.0.0.1', 1234, factory, reactor=reactor)
         t.startService()
-        self.assertEquals(connect, [('127.0.0.1', 1234, factory)])
+        self.assertEquals(
+            reactor.tcpClients.pop()[:3], ('127.0.0.1', 1234, factory))
 
 
     def test_reactorParametrizationInServerMultipleStart(self):
@@ -577,19 +572,15 @@ class TestInternet2(unittest.TestCase):
         Like L{test_reactorParametrizationInServer}, but stop and restart the
         service and check that the given reactor is still used.
         """
-        listen = []
-        class FakeReactor(object):
-            def listenTCP(self, portNumber, factory):
-                listen.append((portNumber, factory))
-        reactor = FakeReactor()
+        reactor = MemoryReactor()
 
         factory = object()
         t = internet.TCPServer(1234, factory, reactor=reactor)
         t.startService()
-        self.assertEquals(listen, [(1234, factory)])
+        self.assertEquals(reactor.tcpServers.pop()[:2], (1234, factory))
         t.stopService()
         t.startService()
-        self.assertEquals(listen, [(1234, factory), (1234, factory)])
+        self.assertEquals(reactor.tcpServers.pop()[:2], (1234, factory))
 
 
     def test_reactorParametrizationInClientMultipleStart(self):
@@ -597,20 +588,17 @@ class TestInternet2(unittest.TestCase):
         Like L{test_reactorParametrizationInClient}, but stop and restart the
         service and check that the given reactor is still used.
         """
-        connect = []
-        class FakeReactor(object):
-            def connectTCP(self, ip, portNumber, factory):
-                connect.append((ip, portNumber, factory))
-        reactor = FakeReactor()
+        reactor = MemoryReactor()
 
         factory = object()
         t = internet.TCPClient('127.0.0.1', 1234, factory, reactor=reactor)
         t.startService()
-        self.assertEquals(connect, [('127.0.0.1', 1234, factory)])
+        self.assertEquals(
+            reactor.tcpClients.pop()[:3], ('127.0.0.1', 1234, factory))
         t.stopService()
         t.startService()
-        self.assertEquals(connect, [('127.0.0.1', 1234, factory),
-                                    ('127.0.0.1', 1234, factory)])
+        self.assertEquals(
+            reactor.tcpClients.pop()[:3], ('127.0.0.1', 1234, factory))
 
 
 

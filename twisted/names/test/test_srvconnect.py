@@ -1,4 +1,4 @@
-# Copyright (c) 2007 Twisted Matrix Laboratories.
+# Copyright (c) 2007-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -11,6 +11,8 @@ from twisted.names.common import ResolverBase
 from twisted.names.error import DNSNameError
 from twisted.internet.error import DNSLookupError
 from twisted.trial import unittest
+from twisted.test.proto_helpers import MemoryReactor
+
 
 class FakeResolver(ResolverBase):
     """
@@ -38,19 +40,7 @@ class FakeResolver(ResolverBase):
         else:
             return defer.fail(self.failure)
 
-class DummyReactor(object):
-    """
-    Dummy reactor with fake connectTCP that stores the passed parameters.
-    """
-    def __init__(self):
-        self.host = None
-        self.port = None
-        self.factory = None
 
-    def connectTCP(self, host, port, factory, timeout=30, bindaddress=None):
-        self.host = host
-        self.port = port
-        self.factory = factory
 
 class DummyFactory(protocol.ClientFactory):
     """
@@ -65,14 +55,12 @@ class DummyFactory(protocol.ClientFactory):
 class SRVConnectorTest(unittest.TestCase):
 
     def setUp(self):
-        client.theResolver = FakeResolver()
-        self.reactor = DummyReactor()
+        self.patch(client, 'theResolver', FakeResolver())
+        self.reactor = MemoryReactor()
         self.factory = DummyFactory()
         self.connector = srvconnect.SRVConnector(self.reactor, 'xmpp-server',
                                                  'example.org', self.factory)
 
-    def tearDown(self):
-        client.theResolver = None
 
     def test_SRVPresent(self):
         """
@@ -86,8 +74,9 @@ class SRVConnectorTest(unittest.TestCase):
         self.connector.connect()
 
         self.assertIdentical(None, self.factory.reason)
-        self.assertEqual('host.example.org', self.reactor.host)
-        self.assertEqual(6269, self.reactor.port)
+        self.assertEquals(
+            self.reactor.tcpClients.pop()[:2], ('host.example.org', 6269))
+
 
     def test_SRVNotPresent(self):
         """
@@ -97,8 +86,9 @@ class SRVConnectorTest(unittest.TestCase):
         self.connector.connect()
 
         self.assertIdentical(None, self.factory.reason)
-        self.assertEqual('example.org', self.reactor.host)
-        self.assertEqual('xmpp-server', self.reactor.port)
+        self.assertEquals(
+            self.reactor.tcpClients.pop()[:2], ('example.org', 'xmpp-server'))
+
 
     def test_SRVNoResult(self):
         """
@@ -108,8 +98,9 @@ class SRVConnectorTest(unittest.TestCase):
         self.connector.connect()
 
         self.assertIdentical(None, self.factory.reason)
-        self.assertEqual('example.org', self.reactor.host)
-        self.assertEqual('xmpp-server', self.reactor.port)
+        self.assertEquals(
+            self.reactor.tcpClients.pop()[:2], ('example.org', 'xmpp-server'))
+
 
     def test_SRVBadResult(self):
         """
@@ -122,8 +113,9 @@ class SRVConnectorTest(unittest.TestCase):
         self.connector.connect()
 
         self.assertIdentical(None, self.factory.reason)
-        self.assertEqual('example.org', self.reactor.host)
-        self.assertEqual('xmpp-server', self.reactor.port)
+        self.assertEquals(
+            self.reactor.tcpClients.pop()[:2], ('example.org', 'xmpp-server'))
+
 
     def test_SRVNoService(self):
         """
@@ -138,3 +130,4 @@ class SRVConnectorTest(unittest.TestCase):
 
         self.assertNotIdentical(None, self.factory.reason)
         self.factory.reason.trap(DNSLookupError)
+        self.assertEquals(self.reactor.tcpClients, [])

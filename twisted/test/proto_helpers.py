@@ -9,8 +9,10 @@ Assorted functionality which is commonly useful when writing unit tests.
 from StringIO import StringIO
 
 from zope.interface import implements
+from zope.interface.verify import verifyObject
 
 from twisted.internet.interfaces import ITransport, IConsumer, IPushProducer
+from twisted.internet.interfaces import IReactorTCP
 from twisted.protocols import basic
 from twisted.internet import error
 
@@ -209,3 +211,43 @@ class StringIOWithoutClosing(StringIO):
         """
         Do nothing.
         """
+
+
+class MemoryReactor(object):
+    """
+    A fake reactor to be used in tests.  This reactor doesn't actually do
+    much that's useful yet.  It accepts TCP connection setup attempts, but
+    they will never succeed.
+
+    @ivar tcpClients: a list that keeps track of connection attempts (ie, calls
+        to C{connectTCP}).
+    @type tcpClients: C{list}
+
+    @ivar tcpServers: a list that keeps track of server listen attempts (ie, calls
+        to C{listenTCP}).
+    @type tcpServers: C{list}
+    """
+    implements(IReactorTCP)
+
+    def __init__(self):
+        """
+        Initialize the tracking lists.
+        """
+        self.tcpClients = []
+        self.tcpServers = []
+
+
+    def listenTCP(self, port, factory, backlog=50, interface=''):
+        """
+        Fake L{reactor.listenTCP}, that does nothing but log the call.
+        """
+        self.tcpServers.append((port, factory, backlog, interface))
+
+
+    def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
+        """
+        Fake L{reactor.connectTCP}, that does nothing but log the call.
+        """
+        self.tcpClients.append((host, port, factory, timeout, bindAddress))
+
+verifyObject(IReactorTCP, MemoryReactor())
