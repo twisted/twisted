@@ -108,6 +108,7 @@ class HTTPAuthSessionWrapper(object):
         """
         authheader = request.getHeader('authorization')
         if not authheader:
+            request.postpath.insert(0, request.prepath.pop())
             return util.DeferredResource(self._login(Anonymous()))
 
         factory, respString = self._selectParseHeader(authheader)

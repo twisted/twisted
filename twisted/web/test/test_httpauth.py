@@ -350,7 +350,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         not have the required I{Authorization} headers.
         """
         request = self.makeRequest([self.childName])
-        child = self.wrapper.getChildWithDefault(self.childName, request)
+        child = getChildForRequest(self.wrapper, request)
         d = request.notifyFinish()
         def cbFinished(result):
             self.assertEquals(request.responseCode, 401)
@@ -558,15 +558,13 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         Anonymous requests are allowed if a L{Portal} has an anonymous checker
         registered.
         """
-        unprotectedContents = "contents of the unprotected child resource"
+        unprotectedContents = "contents of the unprotected child resource" 
 
-        class UnprotectedResource(Resource):
-
-            def render_GET(self, request):
-                return unprotectedContents
-
-        self.avatars[ANONYMOUS] = UnprotectedResource()
+        self.avatars[ANONYMOUS] = Resource()
+        self.avatars[ANONYMOUS].putChild(
+            self.childName, Data(unprotectedContents, 'text/plain'))
         self.portal.registerChecker(AllowAnonymousAccess())
+
         self.credentialFactories.append(BasicCredentialFactory('example.com'))
         request = self.makeRequest([self.childName])
         child = getChildForRequest(self.wrapper, request)
