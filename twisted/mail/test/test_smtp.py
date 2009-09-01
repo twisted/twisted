@@ -1409,3 +1409,33 @@ class SMTPClientErrorTestCase(unittest.TestCase):
             "100 test error\n"
             "testlog\n"
             "secondline\n")
+
+
+
+class SenderMixinSentMailTests(unittest.TestCase):
+    """
+    Tests for L{smtp.SenderMixin.sentMail}, used in particular by
+    L{smtp.SMTPSenderFactory} and L{smtp.ESMTPSenderFactory}.
+    """
+    def test_onlyLogFailedAddresses(self):
+        """
+        L{smtp.SenderMixin.sentMail} adds only the addresses with failing
+        SMTP response codes to the log passed to the factory's errback.
+        """
+        onDone = self.assertFailure(defer.Deferred(), smtp.SMTPDeliveryError)
+        onDone.addCallback(lambda e: self.assertEquals(
+                e.log, "bob@example.com: 199 Error in sending.\n"))
+
+        clientFactory = smtp.SMTPSenderFactory(
+            'source@address', 'recipient@address',
+            StringIO("Message body"), onDone,
+            retries=0, timeout=0.5)
+
+        client = clientFactory.buildProtocol(
+            address.IPv4Address('TCP', 'example.net', 25))
+
+        addresses = [("alice@example.com", 200, "No errors here!"),
+                     ("bob@example.com", 199, "Error in sending.")]
+        client.sentMail(199, "Test response", 1, addresses, client.log)
+
+        return onDone

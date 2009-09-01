@@ -1633,7 +1633,7 @@ class SenderMixin:
         if code not in SUCCESS:
             errlog = []
             for addr, acode, aresp in addresses:
-                if code not in SUCCESS:
+                if acode not in SUCCESS:
                     errlog.append("%s: %03d %s" % (addr, acode, aresp))
 
             errlog.append(log.str())
