@@ -5,7 +5,7 @@
 Tests for L{twisted.application.app} and L{twisted.scripts.twistd}.
 """
 
-import signal, inspect
+import signal, inspect, errno
 
 import os, sys, cPickle, StringIO
 try:
@@ -686,6 +686,41 @@ class UnixApplicationRunnerStartApplicationTests(unittest.TestCase):
 
 
 
+class UnixApplicationRunnerRemovePID(unittest.TestCase):
+    """
+    Tests for L{UnixApplicationRunner.removePID}.
+    """
+    if _twistd_unix is None:
+        skip = "twistd unix not available"
+
+
+    def test_removePID(self):
+        """
+        L{UnixApplicationRunner.removePID} deletes the file the name of
+        which is passed to it.
+        """
+        runner = UnixApplicationRunner({})
+        path = self.mktemp()
+        os.makedirs(path)
+        pidfile = os.path.join(path, "foo.pid")
+        file(pidfile, "w").close()
+        runner.removePID(pidfile)
+        self.assertFalse(os.path.exists(pidfile))
+
+
+    def test_removePIDErrors(self):
+        """
+        Calling L{UnixApplicationRunner.removePID} with a non-existent filename logs
+        an OSError.
+        """
+        runner = UnixApplicationRunner({})
+        runner.removePID("fakepid")
+        errors = self.flushLoggedErrors(OSError)
+        self.assertEquals(len(errors), 1)
+        self.assertEquals(errors[0].value.errno, errno.ENOENT)
+
+
+
 class DummyReactor(object):
     """
     A dummy reactor, only providing a C{run} method and checking that it
@@ -1321,9 +1356,6 @@ class UnixAppLoggerTestCase(unittest.TestCase):
 
     if syslog is None:
         test_getLogObserverSyslog.skip = "Syslog not available"
-
-
-
 
 
 

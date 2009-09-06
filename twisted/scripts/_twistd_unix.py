@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_twistd -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import os, errno, sys
@@ -224,11 +224,9 @@ class UnixApplicationRunner(app.ApplicationRunner):
             if e.errno == errno.EACCES or e.errno == errno.EPERM:
                 log.msg("Warning: No permission to delete pid file")
             else:
-                log.msg("Failed to unlink PID file:")
-                log.deferr()
+                log.err(e, "Failed to unlink PID file")
         except:
-            log.msg("Failed to unlink PID file:")
-            log.deferr()
+            log.err(None, "Failed to unlink PID file")
 
 
     def setupEnvironment(self, chroot, rundir, nodaemon, umask, pidfile):
