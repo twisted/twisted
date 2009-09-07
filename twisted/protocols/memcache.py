@@ -130,8 +130,12 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
 
     @ivar _bufferLength: the total amount of bytes in C{_getBuffer}.
     @type _bufferLength: C{int}
+
+    @ivar _disconnected: indicate if the connectionLost has been called or not.
+    @type _disconnected: C{bool}
     """
     MAX_KEY_LENGTH = 250
+    _disconnected = False
 
     def __init__(self, timeOut=60):
         """
@@ -148,13 +152,30 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         self.persistentTimeOut = self.timeOut = timeOut
 
 
+    def _cancelCommands(self, reason):
+        """
+        Cancel all the outstanding commands, making them fail with C{reason}.
+        """
+        while self._current:
+            cmd = self._current.popleft()
+            cmd.fail(reason)
+
+
     def timeoutConnection(self):
         """
         Close the connection in case of timeout.
         """
-        for cmd in self._current:
-            cmd.fail(TimeoutError("Connection timeout"))
+        self._cancelCommands(TimeoutError("Connection timeout"))
         self.transport.loseConnection()
+
+
+    def connectionLost(self, reason):
+        """
+        Cause any outstanding commands to fail.
+        """
+        self._disconnected = True
+        self._cancelCommands(reason)
+        LineReceiver.connectionLost(self, reason)
 
 
     def sendLine(self, line):
@@ -162,7 +183,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         Override sendLine to add a timeout to response.
         """
         if not self._current:
-           self.setTimeout(self.persistentTimeOut)
+            self.setTimeout(self.persistentTimeOut)
         LineReceiver.sendLine(self, line)
 
 
@@ -394,6 +415,8 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         """
         Internal wrapper for incr/decr.
         """
+        if self._disconnected:
+            return fail(RuntimeError("not connected"))
         if not isinstance(key, str):
             return fail(ClientError(
                 "Invalid type for key: %s, expecting a string" % (type(key),)))
@@ -511,6 +534,8 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         """
         Internal wrapper for setting values.
         """
+        if self._disconnected:
+            return fail(RuntimeError("not connected"))
         if not isinstance(key, str):
             return fail(ClientError(
                 "Invalid type for key: %s, expecting a string" % (type(key),)))
@@ -625,6 +650,8 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         """
         Helper method for C{get} and C{getMultiple}.
         """
+        if self._disconnected:
+            return fail(RuntimeError("not connected"))
         for key in keys:
             if not isinstance(key, str):
                 return fail(ClientError(
@@ -660,9 +687,12 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             statistics.
         @rtype: L{Deferred}
         """
-        cmd = "stats"
         if arg:
             cmd = "stats " + arg
+        else:
+            cmd = "stats"
+        if self._disconnected:
+            return fail(RuntimeError("not connected"))
         self.sendLine(cmd)
         cmdObj = Command("stats", values={})
         self._current.append(cmdObj)
@@ -677,6 +707,8 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             version.
         @rtype: L{Deferred}
         """
+        if self._disconnected:
+            return fail(RuntimeError("not connected"))
         self.sendLine("version")
         cmdObj = Command("version")
         self._current.append(cmdObj)
@@ -694,6 +726,8 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             was successfully deleted, or C{False} if not.
         @rtype: L{Deferred}
         """
+        if self._disconnected:
+            return fail(RuntimeError("not connected"))
         if not isinstance(key, str):
             return fail(ClientError(
                 "Invalid type for key: %s, expecting a string" % (type(key),)))
@@ -711,6 +745,8 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             operation has succeeded.
         @rtype: L{Deferred}
         """
+        if self._disconnected:
+            return fail(RuntimeError("not connected"))
         self.sendLine("flush_all")
         cmdObj = Command("flush_all")
         self._current.append(cmdObj)
@@ -720,4 +756,3 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
 
 __all__ = ["MemCacheProtocol", "DEFAULT_PORT", "NoSuchCommand", "ClientError",
            "ServerError"]
-

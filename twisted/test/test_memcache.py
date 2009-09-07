@@ -5,6 +5,8 @@
 Test the memcache client protocol.
 """
 
+from twisted.internet.error import ConnectionDone
+
 from twisted.protocols.memcache import MemCacheProtocol, NoSuchCommand
 from twisted.protocols.memcache import ClientError, ServerError
 
@@ -12,56 +14,28 @@ from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import StringTransportWithDisconnection
 from twisted.internet.task import Clock
 from twisted.internet.defer import Deferred, gatherResults, TimeoutError
+from twisted.internet.defer import DeferredList
 
 
 
-class MemCacheTestCase(TestCase):
+class CommandMixin:
     """
-    Test client protocol class L{MemCacheProtocol}.
+    Setup and tests for basic invocation of L{MemCacheProtocol} commands.
     """
-
-    def setUp(self):
-        """
-        Create a memcache client, connect it to a string protocol, and make it
-        use a deterministic clock.
-        """
-        self.proto = MemCacheProtocol()
-        self.clock = Clock()
-        self.proto.callLater = self.clock.callLater
-        self.transport = StringTransportWithDisconnection()
-        self.transport.protocol = self.proto
-        self.proto.makeConnection(self.transport)
-
 
     def _test(self, d, send, recv, result):
         """
-        Shortcut method for classic tests.
-
-        @param d: the resulting deferred from the memcache command.
-        @type d: C{Deferred}
-
-        @param send: the expected data to be sent.
-        @type send: C{str}
-
-        @param recv: the data to simulate as reception.
-        @type recv: C{str}
-
-        @param result: the expected result.
-        @type result: C{any}
+        Helper test method to test the resulting C{Deferred} of a
+        L{MemCacheProtocol} command.
         """
-        def cb(res):
-            self.assertEquals(res, result)
-        self.assertEquals(self.transport.value(), send)
-        d.addCallback(cb)
-        self.proto.dataReceived(recv)
-        return d
+        raise NotImplementedError()
 
 
     def test_get(self):
         """
-        L{MemCacheProtocol.get} should return a L{Deferred} which is
-        called back with the value and the flag associated with the given key
-        if the server returns a successful result.
+        L{MemCacheProtocol.get} returns a L{Deferred} which is called back with
+        the value and the flag associated with the given key if the server
+        returns a successful result.
         """
         return self._test(self.proto.get("foo"), "get foo\r\n",
             "VALUE foo 0 3\r\nbar\r\nEND\r\n", (0, "bar"))
@@ -69,8 +43,8 @@ class MemCacheTestCase(TestCase):
 
     def test_emptyGet(self):
         """
-        Test getting a non-available key: it should succeed but return C{None}
-        as value and C{0} as flag.
+        Test getting a non-available key: it succeeds but return C{None} as
+        value and C{0} as flag.
         """
         return self._test(self.proto.get("foo"), "get foo\r\n",
             "END\r\n", (0, None))
@@ -78,7 +52,7 @@ class MemCacheTestCase(TestCase):
 
     def test_getMultiple(self):
         """
-        L{MemCacheProtocol.getMultiple} return a L{Deferred} which is called
+        L{MemCacheProtocol.getMultiple} returns a L{Deferred} which is called
         back with a dictionary of flag, value for each given key.
         """
         return self._test(self.proto.getMultiple(['foo', 'cow']),
@@ -100,8 +74,8 @@ class MemCacheTestCase(TestCase):
 
     def test_set(self):
         """
-        L{MemCacheProtocol.set} should return a L{Deferred} which is
-        called back with C{True} when the operation succeeds.
+        L{MemCacheProtocol.set} returns a L{Deferred} which is called back with
+        C{True} when the operation succeeds.
         """
         return self._test(self.proto.set("foo", "bar"),
             "set foo 0 0 3\r\nbar\r\n", "STORED\r\n", True)
@@ -109,8 +83,8 @@ class MemCacheTestCase(TestCase):
 
     def test_add(self):
         """
-        L{MemCacheProtocol.add} should return a L{Deferred} which is
-        called back with C{True} when the operation succeeds.
+        L{MemCacheProtocol.add} returns a L{Deferred} which is called back with
+        C{True} when the operation succeeds.
         """
         return self._test(self.proto.add("foo", "bar"),
             "add foo 0 0 3\r\nbar\r\n", "STORED\r\n", True)
@@ -118,8 +92,8 @@ class MemCacheTestCase(TestCase):
 
     def test_replace(self):
         """
-        L{MemCacheProtocol.replace} should return a L{Deferred} which
-        is called back with C{True} when the operation succeeds.
+        L{MemCacheProtocol.replace} returns a L{Deferred} which is called back
+        with C{True} when the operation succeeds.
         """
         return self._test(self.proto.replace("foo", "bar"),
             "replace foo 0 0 3\r\nbar\r\n", "STORED\r\n", True)
@@ -129,7 +103,7 @@ class MemCacheTestCase(TestCase):
         """
         Test an erroneous add: if a L{MemCacheProtocol.add} is called but the
         key already exists on the server, it returns a B{NOT STORED} answer,
-        which should callback the resulting L{Deferred} with C{False}.
+        which calls back the resulting L{Deferred} with C{False}.
         """
         return self._test(self.proto.add("foo", "bar"),
             "add foo 0 0 3\r\nbar\r\n", "NOT STORED\r\n", False)
@@ -139,7 +113,7 @@ class MemCacheTestCase(TestCase):
         """
         Test an erroneous replace: if a L{MemCacheProtocol.replace} is called
         but the key doesn't exist on the server, it returns a B{NOT STORED}
-        answer, which should callback the resulting L{Deferred} with C{False}.
+        answer, which calls back the resulting L{Deferred} with C{False}.
         """
         return self._test(self.proto.replace("foo", "bar"),
             "replace foo 0 0 3\r\nbar\r\n", "NOT STORED\r\n", False)
@@ -147,8 +121,8 @@ class MemCacheTestCase(TestCase):
 
     def test_delete(self):
         """
-        L{MemCacheProtocol.delete} should return a L{Deferred} which is
-        called back with C{True} when the server notifies a success.
+        L{MemCacheProtocol.delete} returns a L{Deferred} which is called back
+        with C{True} when the server notifies a success.
         """
         return self._test(self.proto.delete("bar"), "delete bar\r\n",
             "DELETED\r\n", True)
@@ -157,8 +131,8 @@ class MemCacheTestCase(TestCase):
     def test_errorDelete(self):
         """
         Test a error during a delete: if key doesn't exist on the server, it
-        returns a B{NOT FOUND} answer which should callback the resulting
-        L{Deferred} with C{False}.
+        returns a B{NOT FOUND} answer which calls back the resulting L{Deferred}
+        with C{False}.
         """
         return self._test(self.proto.delete("bar"), "delete bar\r\n",
             "NOT FOUND\r\n", False)
@@ -166,9 +140,9 @@ class MemCacheTestCase(TestCase):
 
     def test_increment(self):
         """
-        Test incrementing a variable: L{MemCacheProtocol.increment} should
-        return a L{Deferred} which is called back with the incremented value of
-        the given key.
+        Test incrementing a variable: L{MemCacheProtocol.increment} returns a
+        L{Deferred} which is called back with the incremented value of the
+        given key.
         """
         return self._test(self.proto.increment("foo"), "incr foo 1\r\n",
             "4\r\n", 4)
@@ -176,9 +150,9 @@ class MemCacheTestCase(TestCase):
 
     def test_decrement(self):
         """
-        Test decrementing a variable: L{MemCacheProtocol.decrement} should
-        return a L{Deferred} which is called back with the decremented value of
-        the given key.
+        Test decrementing a variable: L{MemCacheProtocol.decrement} returns a
+        L{Deferred} which is called back with the decremented value of the
+        given key.
         """
         return self._test(
             self.proto.decrement("foo"), "decr foo 1\r\n", "5\r\n", 5)
@@ -187,7 +161,7 @@ class MemCacheTestCase(TestCase):
     def test_incrementVal(self):
         """
         L{MemCacheProtocol.increment} takes an optional argument C{value} which
-        should replace the default value of 1 when specified.
+        replaces the default value of 1 when specified.
         """
         return self._test(self.proto.increment("foo", 8), "incr foo 8\r\n",
             "4\r\n", 4)
@@ -196,7 +170,7 @@ class MemCacheTestCase(TestCase):
     def test_decrementVal(self):
         """
         L{MemCacheProtocol.decrement} takes an optional argument C{value} which
-        should replace the default value of 1 when specified.
+        replaces the default value of 1 when specified.
         """
         return self._test(self.proto.decrement("foo", 3), "decr foo 3\r\n",
             "5\r\n", 5)
@@ -205,7 +179,7 @@ class MemCacheTestCase(TestCase):
     def test_stats(self):
         """
         Test retrieving server statistics via the L{MemCacheProtocol.stats}
-        command: it should parse the data sent by the server and call back the
+        command: it parses the data sent by the server and calls back the
         resulting L{Deferred} with a dictionary of the received statistics.
         """
         return self._test(self.proto.stats(), "stats\r\n",
@@ -215,7 +189,6 @@ class MemCacheTestCase(TestCase):
 
     def test_statsWithArgument(self):
         """
-
         L{MemCacheProtocol.stats} takes an optional C{str} argument which,
         if specified, is sent along with the I{STAT} command.  The I{STAT}
         responses from the server are parsed as key/value pairs and returned
@@ -229,8 +202,8 @@ class MemCacheTestCase(TestCase):
     def test_version(self):
         """
         Test version retrieval via the L{MemCacheProtocol.version} command: it
-        should return a L{Deferred} which is called back with the version sent
-        by the server.
+        returns a L{Deferred} which is called back with the version sent by the
+        server.
         """
         return self._test(self.proto.version(), "version\r\n",
             "VERSION 1.1\r\n", "1.1")
@@ -238,11 +211,55 @@ class MemCacheTestCase(TestCase):
 
     def test_flushAll(self):
         """
-        L{MemCacheProtocol.flushAll} should return a L{Deferred} which is
-        called back with C{True} if the server acknowledges success.
+        L{MemCacheProtocol.flushAll} returns a L{Deferred} which is called back
+        with C{True} if the server acknowledges success.
         """
         return self._test(self.proto.flushAll(), "flush_all\r\n",
             "OK\r\n", True)
+
+
+
+class MemCacheTestCase(CommandMixin, TestCase):
+    """
+    Test client protocol class L{MemCacheProtocol}.
+    """
+
+    def setUp(self):
+        """
+        Create a memcache client, connect it to a string protocol, and make it
+        use a deterministic clock.
+        """
+        self.proto = MemCacheProtocol()
+        self.clock = Clock()
+        self.proto.callLater = self.clock.callLater
+        self.transport = StringTransportWithDisconnection()
+        self.transport.protocol = self.proto
+        self.proto.makeConnection(self.transport)
+
+
+    def _test(self, d, send, recv, result):
+        """
+        Implementation of C{_test} which checks that the command sends C{send}
+        data, and that upon reception of C{recv} the result is C{result}.
+
+        @param d: the resulting deferred from the memcache command.
+        @type d: C{Deferred}
+
+        @param send: the expected data to be sent.
+        @type send: C{str}
+
+        @param recv: the data to simulate as reception.
+        @type recv: C{str}
+
+        @param result: the expected result.
+        @type result: C{any}
+        """
+        def cb(res):
+            self.assertEquals(res, result)
+        self.assertEquals(self.transport.value(), send)
+        d.addCallback(cb)
+        self.proto.dataReceived(recv)
+        return d
 
 
     def test_invalidGetResponse(self):
@@ -273,8 +290,8 @@ class MemCacheTestCase(TestCase):
     def test_timeOut(self):
         """
         Test the timeout on outgoing requests: when timeout is detected, all
-        current commands should fail with a L{TimeoutError}, and the
-        connection should be closed.
+        current commands fail with a L{TimeoutError}, and the connection is
+        closed.
         """
         d1 = self.proto.get("foo")
         d2 = self.proto.get("bar")
@@ -292,8 +309,7 @@ class MemCacheTestCase(TestCase):
 
     def test_timeoutRemoved(self):
         """
-        When a request gets a response, no pending timeout call should remain
-        around.
+        When a request gets a response, no pending timeout call remains around.
         """
         d = self.proto.get("foo")
 
@@ -309,9 +325,9 @@ class MemCacheTestCase(TestCase):
 
     def test_timeOutRaw(self):
         """
-        Test the timeout when raw mode was started: the timeout should not be
-        reset until all the data has been received, so we can have a
-        L{TimeoutError} when waiting for raw data.
+        Test the timeout when raw mode was started: the timeout is not reset
+        until all the data has been received, so we can have a L{TimeoutError}
+        when waiting for raw data.
         """
         d1 = self.proto.get("foo")
         d2 = Deferred()
@@ -325,8 +341,8 @@ class MemCacheTestCase(TestCase):
 
     def test_timeOutStat(self):
         """
-        Test the timeout when stat command has started: the timeout should not
-        be reset until the final B{END} is received.
+        Test the timeout when stat command has started: the timeout is not
+        reset until the final B{END} is received.
         """
         d1 = self.proto.stats()
         d2 = Deferred()
@@ -340,8 +356,8 @@ class MemCacheTestCase(TestCase):
 
     def test_timeoutPipelining(self):
         """
-        When two requests are sent, a timeout call should remain around for the
-        second request, and its timeout time should be correct.
+        When two requests are sent, a timeout call remains around for the
+        second request, and its timeout time is correct.
         """
         d1 = self.proto.get("foo")
         d2 = self.proto.get("bar")
@@ -360,8 +376,8 @@ class MemCacheTestCase(TestCase):
         def checkTime(ignored):
             # Check that the timeout happened C{self.proto.persistentTimeOut}
             # after the last response
-            self.assertEquals(self.clock.seconds(),
-                    2 * self.proto.persistentTimeOut - 1)
+            self.assertEquals(
+                self.clock.seconds(), 2 * self.proto.persistentTimeOut - 1)
         d1.addCallback(check)
         return d1
 
@@ -383,11 +399,41 @@ class MemCacheTestCase(TestCase):
         return gatherResults([d1, d2, d3])
 
 
+    def test_timeoutCleanDeferreds(self):
+        """
+        C{timeoutConnection} cleans the list of commands that it fires with
+        C{TimeoutError}: C{connectionLost} doesn't try to fire them again, but
+        sets the disconnected state so that future commands fail with a
+        C{RuntimeError}.
+        """
+        d1 = self.proto.get("foo")
+        self.clock.advance(self.proto.persistentTimeOut)
+        self.assertFailure(d1, TimeoutError)
+        d2 = self.proto.get("bar")
+        self.assertFailure(d2, RuntimeError)
+        return gatherResults([d1, d2])
+
+
+    def test_connectionLost(self):
+        """
+        When disconnection occurs while commands are still outstanding, the
+        commands fail.
+        """
+        d1 = self.proto.get("foo")
+        d2 = self.proto.get("bar")
+        self.transport.loseConnection()
+        done = DeferredList([d1, d2], consumeErrors=True)
+        def checkFailures(results):
+            for success, result in results:
+                self.assertFalse(success)
+                result.trap(ConnectionDone)
+        return done.addCallback(checkFailures)
+
+
     def test_tooLongKey(self):
         """
-        Test that an error is raised when trying to use a too long key: the
-        called command should return a L{Deferred} which fail with a
-        L{ClientError}.
+        An error is raised when trying to use a too long key: the called
+        command returns a L{Deferred} which fails with a L{ClientError}.
         """
         d1 = self.assertFailure(self.proto.set("a" * 500, "bar"), ClientError)
         d2 = self.assertFailure(self.proto.increment("a" * 500), ClientError)
@@ -404,7 +450,7 @@ class MemCacheTestCase(TestCase):
     def test_invalidCommand(self):
         """
         When an unknown command is sent directly (not through public API), the
-        server answers with an B{ERROR} token, and the command should fail with
+        server answers with an B{ERROR} token, and the command fails with
         L{NoSuchCommand}.
         """
         d = self.proto._set("egg", "foo", "bar", 0, 0, "")
@@ -416,9 +462,9 @@ class MemCacheTestCase(TestCase):
 
     def test_clientError(self):
         """
-        Test the L{ClientError} error: when the server send a B{CLIENT_ERROR}
-        token, the originating command should fail with L{ClientError}, and the
-        error should contain the text sent by the server.
+        Test the L{ClientError} error: when the server sends a B{CLIENT_ERROR}
+        token, the originating command fails with L{ClientError}, and the error
+        contains the text sent by the server.
         """
         a = "eggspamm"
         d = self.proto.set("foo", a)
@@ -434,9 +480,9 @@ class MemCacheTestCase(TestCase):
 
     def test_serverError(self):
         """
-        Test the L{ServerError} error: when the server send a B{SERVER_ERROR}
-        token, the originating command should fail with L{ServerError}, and the
-        error should contain the text sent by the server.
+        Test the L{ServerError} error: when the server sends a B{SERVER_ERROR}
+        token, the originating command fails with L{ServerError}, and the error
+        contains the text sent by the server.
         """
         a = "eggspamm"
         d = self.proto.set("foo", a)
@@ -452,7 +498,7 @@ class MemCacheTestCase(TestCase):
 
     def test_unicodeKey(self):
         """
-        Using a non-string key as argument to commands should raise an error.
+        Using a non-string key as argument to commands raises an error.
         """
         d1 = self.assertFailure(self.proto.set(u"foo", "bar"), ClientError)
         d2 = self.assertFailure(self.proto.increment(u"egg"), ClientError)
@@ -467,15 +513,15 @@ class MemCacheTestCase(TestCase):
 
     def test_unicodeValue(self):
         """
-        Using a non-string value should raise an error.
+        Using a non-string value raises an error.
         """
         return self.assertFailure(self.proto.set("foo", u"bar"), ClientError)
 
 
     def test_pipelining(self):
         """
-        Test that multiple requests can be sent subsequently to the server, and
-        that the protocol order the responses correctly and dispatch to the
+        Multiple requests can be sent subsequently to the server, and the
+        protocol orders the responses correctly and dispatch to the
         corresponding client command.
         """
         d1 = self.proto.get("foo")
@@ -495,7 +541,7 @@ class MemCacheTestCase(TestCase):
     def test_getInChunks(self):
         """
         If the value retrieved by a C{get} arrive in chunks, the protocol
-        should be able to reconstruct it and to produce the good value.
+        is able to reconstruct it and to produce the good value.
         """
         d = self.proto.get("foo")
         d.addCallback(self.assertEquals, (0, "0123456789"))
@@ -510,8 +556,8 @@ class MemCacheTestCase(TestCase):
     def test_append(self):
         """
         L{MemCacheProtocol.append} behaves like a L{MemCacheProtocol.set}
-        method: it should return a L{Deferred} which is called back with
-        C{True} when the operation succeeds.
+        method: it returns a L{Deferred} which is called back with C{True} when
+        the operation succeeds.
         """
         return self._test(self.proto.append("foo", "bar"),
             "append foo 0 0 3\r\nbar\r\n", "STORED\r\n", True)
@@ -520,8 +566,8 @@ class MemCacheTestCase(TestCase):
     def test_prepend(self):
         """
         L{MemCacheProtocol.prepend} behaves like a L{MemCacheProtocol.set}
-        method: it should return a L{Deferred} which is called back with
-        C{True} when the operation succeeds.
+        method: it returns a L{Deferred} which is called back with C{True} when
+        the operation succeeds.
         """
         return self._test(self.proto.prepend("foo", "bar"),
             "prepend foo 0 0 3\r\nbar\r\n", "STORED\r\n", True)
@@ -572,8 +618,8 @@ class MemCacheTestCase(TestCase):
 
     def test_checkAndSet(self):
         """
-        L{MemCacheProtocol.checkAndSet} passes an additional cas identifier that the
-        server should handle to check if the data has to be updated.
+        L{MemCacheProtocol.checkAndSet} passes an additional cas identifier
+        that the server handles to check if the data has to be updated.
         """
         return self._test(self.proto.checkAndSet("foo", "bar", cas="1234"),
             "cas foo 0 0 3 1234\r\nbar\r\n", "STORED\r\n", True)
@@ -581,8 +627,37 @@ class MemCacheTestCase(TestCase):
 
     def test_casUnknowKey(self):
         """
-        When L{MemCacheProtocol.checkAndSet} response is C{EXISTS}, the resulting
-        L{Deferred} should fire with C{False}.
+        When L{MemCacheProtocol.checkAndSet} response is C{EXISTS}, the
+        resulting L{Deferred} fires with C{False}.
         """
         return self._test(self.proto.checkAndSet("foo", "bar", cas="1234"),
             "cas foo 0 0 3 1234\r\nbar\r\n", "EXISTS\r\n", False)
+
+
+
+class CommandFailureTests(CommandMixin, TestCase):
+    """
+    Tests for correct failure of commands on a disconnected
+    L{MemCacheProtocol}.
+    """
+
+    def setUp(self):
+        """
+        Create a disconnected memcache client, using a deterministic clock.
+        """
+        self.proto = MemCacheProtocol()
+        self.clock = Clock()
+        self.proto.callLater = self.clock.callLater
+        self.transport = StringTransportWithDisconnection()
+        self.transport.protocol = self.proto
+        self.proto.makeConnection(self.transport)
+        self.transport.loseConnection()
+
+
+    def _test(self, d, send, recv, result):
+        """
+        Implementation of C{_test} which checks that the command fails with
+        C{RuntimeError} because the transport is disconnected. All the
+        parameters except C{d} are ignored.
+        """
+        return self.assertFailure(d, RuntimeError)
