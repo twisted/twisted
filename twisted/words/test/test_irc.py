@@ -639,6 +639,13 @@ class ClientTests(TestCase):
         self.assertEquals(self.transport.value(), "")
 
 
+    def getLastLine(self, transport):
+        """
+        Return the last IRC message in the transport buffer.
+        """
+        return transport.value().split('\r\n')[-2]
+
+
     def test_away(self):
         """
         L{IRCCLient.away} sends an AWAY command with the specified message.
@@ -723,6 +730,74 @@ class ClientTests(TestCase):
                 username, hostname, servername, self.protocol.realname),
             '']
         self.assertEquals(self.transport.value().split('\r\n'), expected)
+
+
+    def test_registerWithTakenNick(self):
+        """
+        Verify that the client repeats the L{IRCClient.setNick} method with a
+        new value when presented with an C{ERR_NICKNAMEINUSE} while trying to
+        register.
+        """
+        username = 'testuser'
+        hostname = 'testhost'
+        servername = 'testserver'
+        self.protocol.realname = 'testname'
+        self.protocol.password = 'testpass'
+        self.protocol.register(username, hostname, servername)
+        self.protocol.irc_ERR_NICKNAMEINUSE('prefix', ['param'])
+        lastLine = self.getLastLine(self.transport)
+        self.assertNotEquals(lastLine, 'NICK %s' % (username,))
+
+        # Keep chaining underscores for each collision
+        self.protocol.irc_ERR_NICKNAMEINUSE('prefix', ['param'])
+        lastLine = self.getLastLine(self.transport)
+        self.assertEquals(lastLine, 'NICK %s' % (username + '__',))
+
+
+    def test_nickChange(self):
+        """
+        When a NICK command is sent after signon, C{IRCClient.nickname} is set
+        to the new nickname I{after} the server sends an acknowledgement.
+        """
+        oldnick = 'foo'
+        newnick = 'bar'
+        self.protocol.register(oldnick)
+        self.protocol.irc_RPL_WELCOME('prefix', ['param'])
+        self.protocol.setNick(newnick)
+        self.assertEquals(self.protocol.nickname, oldnick)
+        self.protocol.irc_NICK('%s!quux@qux' % (oldnick,), [newnick])
+        self.assertEquals(self.protocol.nickname, newnick)
+
+
+    def test_erroneousNick(self):
+        """
+        Trying to register an illegal nickname results in the default legal
+        nickname being set, and trying to change a nickname to an illegal
+        nickname results in the old nickname being kept.
+        """
+        # Registration case: change illegal nickname to erroneousNickFallback
+        badnick = 'foo'
+        self.assertEquals(self.protocol._registered, False)
+        self.protocol.register(badnick)
+        self.protocol.irc_ERR_ERRONEUSNICKNAME('prefix', ['param'])
+        lastLine = self.getLastLine(self.transport)
+        self.assertEquals(
+            lastLine, 'NICK %s' % (self.protocol.erroneousNickFallback,))
+        self.protocol.irc_RPL_WELCOME('prefix', ['param'])
+        self.assertEquals(self.protocol._registered, True)
+        self.protocol.setNick(self.protocol.erroneousNickFallback)
+        self.assertEquals(
+            self.protocol.nickname, self.protocol.erroneousNickFallback)
+
+        # Illegal nick change attempt after registration. Fall back to the old
+        # nickname instead of erroneousNickFallback.
+        oldnick = self.protocol.nickname
+        self.protocol.setNick(badnick)
+        self.protocol.irc_ERR_ERRONEUSNICKNAME('prefix', ['param'])
+        lastLine = self.getLastLine(self.transport)
+        self.assertEquals(
+            lastLine, 'NICK %s' % (badnick,))
+        self.assertEquals(self.protocol.nickname, oldnick)
 
 
     def test_describe(self):

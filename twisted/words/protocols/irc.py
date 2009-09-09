@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.words.test.test_irc -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -524,6 +524,20 @@ class IRCClient(basic.LineReceiver):
     @ivar motd: Either L{None} or, between receipt of I{RPL_MOTDSTART} and
         I{RPL_ENDOFMOTD}, a L{list} of L{str}, each of which is the content
         of an I{RPL_MOTD} message.
+
+    @ivar erroneousNickFallback: Default nickname assigned when an unregistered
+        client triggers an C{ERR_ERRONEUSNICKNAME} while trying to register
+        with an illegal nickname.
+    @type erroneousNickFallback: C{str}
+
+    @ivar _registered: Whether or not the user is registered. It becomes True
+        once a welcome has been received from the server.
+    @type _registered: C{bool}
+
+    @ivar _attemptedNick: The nickname that will try to get registered. It may
+        change if it is illegal or already taken. L{nickname} becomes the
+        L{_attemptedNick} that is successfully registered.
+    @type _attemptedNick:  C{str}
     """
     motd = None
     nickname = 'irc'
@@ -576,6 +590,9 @@ class IRCClient(basic.LineReceiver):
 
     __pychecker__ = 'unusednames=params,prefix,channel'
 
+    _registered = False
+    _attemptedNick = ''
+    erroneousNickFallback = 'defaultnick'
 
     def _reallySendLine(self, line):
         return basic.LineReceiver.sendLine(self, lowQuote(line) + '\r')
@@ -1060,7 +1077,7 @@ class IRCClient(basic.LineReceiver):
         @type nickname: C{str}
         @param nickname: The nickname to change to.
         """
-        self.nickname = nickname
+        self._attemptedNick = nickname
         self.sendLine("NICK %s" % nickname)
 
     def quit(self, message = ''):
@@ -1179,9 +1196,30 @@ class IRCClient(basic.LineReceiver):
 
     def irc_ERR_NICKNAMEINUSE(self, prefix, params):
         """
-        Called when we try to register an invalid nickname.
+        Called when we try to register or change to a nickname that is already
+        taken.
+
+        If we are in the process of registering, call self.setNick()
+        again with a hopefully sufficiently modified argument.
         """
-        self.register(self.nickname+'_')
+        self._attemptedNick = self._attemptedNick + '_'
+        self.setNick(self._attemptedNick)
+
+
+    def irc_ERR_ERRONEUSNICKNAME(self, prefix, params):
+        """
+        Called when we try to register or change to an illegal nickname.
+
+        The server should send this reply when the nickname contains any
+        disallowed characters.  The bot will stall, waiting for RPL_WELCOME, if
+        we don't handle this during sign-on.
+
+        @note: The method uses the spelling I{erroneus}, as it appears in
+            the RFC, section 6.1.
+        """
+        if not self._registered:
+            self.setNick(self.erroneousNickFallback)
+
 
     def irc_ERR_PASSWDMISMATCH(self, prefix, params):
         """
@@ -1193,6 +1231,8 @@ class IRCClient(basic.LineReceiver):
         """
         Called when we have received the welcome from the server.
         """
+        self._registered = True
+        self.nickname = self._attemptedNick
         self.signedOn()
 
     def irc_JOIN(self, prefix, params):
