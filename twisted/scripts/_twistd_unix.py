@@ -18,7 +18,6 @@ class ServerOptions(app.ServerOptions):
     synopsis = "Usage: twistd [options]"
 
     optFlags = [['nodaemon','n',  "don't daemonize, don't use default umask of 0077"],
-                ['quiet', 'q', "No-op for backwards compatibility."],
                 ['originalname', None, "Don't try to change the process name"],
                 ['syslog', None,   "Log to syslog, not to file"],
                 ['euid', '',
