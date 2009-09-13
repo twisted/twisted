@@ -1198,12 +1198,23 @@ class IRCClient(basic.LineReceiver):
         """
         Called when we try to register or change to a nickname that is already
         taken.
-
-        If we are in the process of registering, call self.setNick()
-        again with a hopefully sufficiently modified argument.
         """
-        self._attemptedNick = self._attemptedNick + '_'
+        self._attemptedNick = self.alterCollidedNick(self._attemptedNick)
         self.setNick(self._attemptedNick)
+
+
+    def alterCollidedNick(self, nickname):
+        """
+        Generate an altered version of a nickname that caused a collision in an
+        effort to create an unused related name for subsequent registration.
+
+        @param nickname: The nickname a user is attempting to register.
+        @type nickname: C{str}
+
+        @returns: A string that is in some way different from the nickname.
+        @rtype: C{str}
+        """
+        return nickname + '_'
 
 
     def irc_ERR_ERRONEUSNICKNAME(self, prefix, params):

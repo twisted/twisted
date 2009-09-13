@@ -109,6 +109,17 @@ class LogBot(irc.IRCClient):
         self.logger.log("%s is now known as %s" % (old_nick, new_nick))
 
 
+    # For fun, override the method that determines how a nickname is changed on
+    # collisions. The default method appends an underscore.
+    def alterCollidedNick(self, nickname):
+        """
+        Generate an altered version of a nickname that caused a collision in an
+        effort to create an unused related name for subsequent registration.
+        """
+        return nickname + '^'
+
+
+
 class LogBotFactory(protocol.ClientFactory):
     """A factory for LogBots.
 

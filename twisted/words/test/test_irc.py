@@ -754,6 +754,20 @@ class ClientTests(TestCase):
         self.assertEquals(lastLine, 'NICK %s' % (username + '__',))
 
 
+    def test_overrideAlterCollidedNick(self):
+        """
+        L{IRCClient.alterCollidedNick} determines how a nickname is altered upon
+        collision while a user is trying to change to that nickname.
+        """
+        nick = 'foo'
+        self.protocol.alterCollidedNick = lambda nick: nick + '***'
+        self.protocol.register(nick)
+        self.protocol.irc_ERR_NICKNAMEINUSE('prefix', ['param'])
+        lastLine = self.getLastLine(self.transport)
+        self.assertEquals(
+            lastLine, 'NICK %s' % (nick + '***',))
+
+
     def test_nickChange(self):
         """
         When a NICK command is sent after signon, C{IRCClient.nickname} is set
