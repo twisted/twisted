@@ -62,7 +62,7 @@
     <p><strong>IMPORTANT:</strong> installing a reactor should be the first thing
     done in the app, since any code that does
     <code class="python">from twisted.internet import reactor</code> will automatically
-    install the default reactor if the code hasen't already installed one.</p>
+    install the default reactor if the code hasn't already installed one.</p>
 
     <h2>Reactor Functionality</h2>
 
@@ -83,26 +83,23 @@
 
     <h3>Select()-based Reactor</h3><a name="select" />
 
-    <p>
-    The select reactor is currently the default reactor on all platforms.
-    The following code will install it, if no other reactor has been
-    installed:
-    </p>
+    <p>The <code>select</code> reactor is currently the default reactor on all
+    platforms. The following code will install it, if no other reactor has
+    been installed:</p>
 
 <pre class="python">
 from twisted.internet import reactor
 </pre>
 
-    <p>
-    In the future, if another reactor becomes the default, but the select
-    reactor is desired, it may be installed via:
-    </p>
+    <p>In the future, if another reactor becomes the default, but the
+    <code>select</code> reactor is desired, it may be installed via:</p>
 
 <pre class="python">
 from twisted.internet import selectreactor
 selectreactor.install()
-</pre>
 
+from twisted.internet import reactor
+</pre>
 
     <h3>Poll()-based Reactor</h3><a name="poll" />
 
@@ -116,6 +113,8 @@ selectreactor.install()
 <pre class="python">
 from twisted.internet import pollreactor
 pollreactor.install()
+
+from twisted.internet import reactor
 </pre>
 
     <h2>Platform-Specific Reactors</h2>
@@ -130,6 +129,8 @@ pollreactor.install()
 <pre class="python">
 from twisted.internet import kqreactor
 kqreactor.install()
+
+from twisted.internet import reactor
 </pre>
 
 
@@ -143,6 +144,8 @@ kqreactor.install()
 <pre class="python">
 from twisted.internet import win32eventreactor
 win32eventreactor.install()
+
+from twisted.internet import reactor
 </pre>
 
    <h3>Win32 (IOCP)</h3><a name="win32_iocp" />
@@ -157,6 +160,8 @@ win32eventreactor.install()
 <pre class="python">
 from twisted.internet import iocpreactor
 iocpreactor.install()
+
+from twisted.internet import reactor
 </pre>
 
     <h3>Epoll-based Reactor</h3><a name="epoll" />
@@ -169,13 +174,15 @@ iocpreactor.install()
 <pre class="python">
 from twisted.internet import epollreactor
 epollreactor.install()
+
+from twisted.internet import reactor
 </pre>
 
     <h2>GUI Integration Reactors</h2>
 
     <h3>GTK+</h3><a name="gtk" />
 
-    <p>Twisted integrates with <a href="http://www.daa.com.au/~james/pygtk/"
+    <p>Twisted integrates with <a href="http://www.pygtk.org/"
     >PyGTK</a>, versions 1.2 (<code>gtkreactor</code>) and 2.0
     (<code>gtk2reactor</code>). Sample applications using GTK+ and
     Twisted are available in the Twisted SVN.</p>
@@ -189,27 +196,36 @@ epollreactor.install()
 <pre class="python">
 from twisted.internet import gtkreactor # for gtk-1.2
 gtkreactor.install()
+
+from twisted.internet import reactor
 </pre>
 
 <pre class="python">
 from twisted.internet import gtk2reactor # for gtk-2.0
 gtk2reactor.install()
+
+from twisted.internet import reactor
 </pre>
 
 <pre class="python">
 from twisted.internet import glib2reactor # for non-GUI apps
 glib2reactor.install()
+
+from twisted.internet import reactor
 </pre>
 
     <h3>CoreFoundation</h3><a name="cfreactor" />
 
     <p>Twisted integrates with <a href="http://pyobjc.sf.net/"
     >PyObjC</a>, version 1.0.  Sample applications using Cocoa and Twisted
-    are available in the examples directory under <code>Cocoa</code>.</p>
+    are available in the examples directory under
+    <code>threadedselect/Cocoa</code>.</p>
 
 <pre class="python">
 from twisted.internet import cfreactor
 cfreactor.install()
+
+from twisted.internet import reactor
 </pre>
 
     <h2>Non-Reactor GUI Integration</h2>
@@ -289,7 +305,7 @@ from twisted.internet import pyuisupport, reactor
 pyuisupport.install(args=(640, 480), kw={'renderer': 'gl'})
 </pre>
 
-    <p>An example Twisted application that uses PyUI can bve found in <code
+    <p>An example Twisted application that uses PyUI can be found in <code
     class="py-filename">doc/examples/pyuidemo.py</code>.</p>
 
   </body>
