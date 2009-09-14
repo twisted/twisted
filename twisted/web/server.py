@@ -62,7 +62,6 @@ class Request(pb.Copyable, http.Request, components.Componentized):
     def __init__(self, *args, **kw):
         http.Request.__init__(self, *args, **kw)
         components.Componentized.__init__(self)
-        self.notifications = []
 
     def getStateToCopyFor(self, issuer):
         x = self.__dict__.copy()
@@ -217,29 +216,6 @@ class Request(pb.Copyable, http.Request, components.Componentized):
         self.write(body)
         self.finish()
         return reason
-
-    def notifyFinish(self):
-        """Notify when finishing the request
-
-        @return: A deferred. The deferred will be triggered when the
-        request is finished -- with a C{None} value if the request
-        finishes successfully or with an error if the request is stopped
-        by the client.
-        """
-        self.notifications.append(defer.Deferred())
-        return self.notifications[-1]
-
-    def connectionLost(self, reason):
-        http.Request.connectionLost(self, reason)
-        for d in self.notifications:
-            d.errback(reason)
-        self.notifications = []
-
-    def finish(self):
-        http.Request.finish(self)
-        for d in self.notifications:
-            d.callback(None)
-        self.notifications = []
 
     def view_write(self, issuer, data):
         """Remote version of write; same interface.

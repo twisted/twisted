@@ -1379,3 +1379,41 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         producer = DummyProducer()
         req.registerProducer(producer, False)
         self.assertEquals([(producer, False)], req.transport.producers)
+
+
+    def test_connectionLostNotification(self):
+        """
+        L{Request.connectionLost} triggers all finish notification Deferreds
+        and cleans up per-request state.
+        """
+        d = DummyChannel()
+        request = http.Request(d, True)
+        finished = request.notifyFinish()
+        request.connectionLost(Failure(ConnectionLost("Connection done")))
+        self.assertIdentical(request.channel, None)
+        return self.assertFailure(finished, ConnectionLost)
+
+
+    def test_finishNotification(self):
+        """
+        L{Request.finish} triggers all finish notification Deferreds.
+        """
+        request = http.Request(DummyChannel(), False)
+        finished = request.notifyFinish()
+        # Force the request to have a non-None content attribute.  This is
+        # probably a bug in Request.
+        request.gotLength(1)
+        request.finish()
+        return finished
+
+
+    def test_finishAfterConnectionLost(self):
+        """
+        Calling L{Request.finish} after L{Request.connectionLost} has been
+        called results in a L{RuntimeError} being raised.
+        """
+        channel = DummyChannel()
+        transport = channel.transport
+        req = http.Request(channel, False)
+        req.connectionLost(Failure(ConnectionLost("The end.")))
+        self.assertRaises(RuntimeError, req.finish)

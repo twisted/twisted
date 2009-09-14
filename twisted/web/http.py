@@ -32,6 +32,7 @@ from zope.interface import implements
 
 # twisted imports
 from twisted.internet import interfaces, reactor, protocol, address
+from twisted.internet.defer import Deferred
 from twisted.protocols import policies, basic
 from twisted.python import log
 try: # try importing the fast, C version
@@ -509,6 +510,16 @@ class Request:
         C{responseHeaders} instead.  C{headers} behaves mostly like a C{dict}
         and does not provide access to all header values nor does it allow
         multiple values for one header to be set.
+
+    @ivar notifications: A C{list} of L{Deferred}s which are waiting for
+        notification that the response to this request has been finished
+        (successfully or with an error).  Don't use this attribute directly,
+        instead use the L{Request.notifyFinish} method.
+
+    @ivar _disconnected: A flag which is C{False} until the connection over
+        which this request was received is closed and which is C{True} after
+        that.
+    @type _disconnected: C{bool}
     """
     implements(interfaces.IConsumer)
 
@@ -528,6 +539,7 @@ class Request:
     path = None
     content = None
     _forceSSL = 0
+    _disconnected = False
 
     def __init__(self, channel, queued):
         """
@@ -535,6 +547,7 @@ class Request:
         @param queued: are we in the request queue, or can we start writing to
             the transport?
         """
+        self.notifications = []
         self.channel = channel
         self.queued = queued
         self.requestHeaders = Headers()
@@ -585,6 +598,9 @@ class Request:
             # win32 suckiness, no idea why it does this
             pass
         del self.content
+        for d in self.notifications:
+            d.callback(None)
+        self.notifications = []
 
     # methods for channel - end users should not use these
 
@@ -788,8 +804,29 @@ class Request:
         return self.received_cookies.get(key)
 
 
+    def notifyFinish(self):
+        """
+        Notify when the response to this request has finished.
+
+        @rtype: L{Deferred}
+
+        @return: A L{Deferred} which will be triggered when the request is
+            finished -- with a C{None} value if the request finishes
+            successfully or with an error if the request is interrupted by an
+            error (for example, the client closing the connection prematurely).
+        """
+        self.notifications.append(Deferred())
+        return self.notifications[-1]
+
+
     def finish(self):
-        """We are finished writing data."""
+        """
+        Indicate that all response data has been written to this L{Request}.
+        """
+        if self._disconnected:
+            raise RuntimeError(
+                "Request.finish called on a request after its connection was lost; "
+                "use Request.notifyFinish to keep track of this.")
         if self.finished:
             warnings.warn("Warning! request.finish called twice.", stacklevel=2)
             return
@@ -1165,14 +1202,19 @@ class Request:
                 return name
         return names[0]
 
+
     def connectionLost(self, reason):
         """
         There is no longer a connection for this request to respond over.
         Clean up anything which can't be useful anymore.
         """
+        self._disconnected = True
         self.channel = None
         if self.content is not None:
             self.content.close()
+        for d in self.notifications:
+            d.errback(reason)
+        self.notifications = []
 
 
 
