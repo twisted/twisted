@@ -1345,14 +1345,15 @@ class UnixAppLoggerTestCase(unittest.TestCase):
         If C{syslog} is set to C{True}, L{UnixAppLogger._getLogObserver} starts
         a L{syslog.SyslogObserver} with given C{prefix}.
         """
-        class fakesyslog(object):
-            def openlog(self, prefix):
-                self.prefix = prefix
-        syslogModule = fakesyslog()
-        self.patch(syslog, "syslog", syslogModule)
+        class fakesyslogobserver(object):
+            def __init__(self, prefix):
+                fakesyslogobserver.prefix = prefix
+            def emit(self, eventDict):
+                pass
+        self.patch(syslog, "SyslogObserver", fakesyslogobserver)
         logger = UnixAppLogger({"syslog": True, "prefix": "test-prefix"})
         observer = logger._getLogObserver()
-        self.assertEquals(syslogModule.prefix, "test-prefix")
+        self.assertEquals(fakesyslogobserver.prefix, "test-prefix")
 
     if syslog is None:
         test_getLogObserverSyslog.skip = "Syslog not available"
