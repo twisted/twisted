@@ -1074,6 +1074,16 @@ class AMPTest(unittest.TestCase):
         self.assertEquals(L[0]['Print'], HELLO_UNICODE)
 
 
+    def test_callRemoteStringRequiresAnswerFalse(self):
+        """
+        L{BoxDispatcher.callRemoteString} returns C{None} if C{requiresAnswer}
+        is C{False}.
+        """
+        c, s, p = connectedServerAndClient()
+        ret = c.callRemoteString("WTF", requiresAnswer=False)
+        self.assertIdentical(ret, None)
+
+
     def test_unknownCommandLow(self):
         """
         Verify that unknown commands using low-level APIs will be rejected with an

@@ -755,7 +755,7 @@ class BoxDispatcher:
         this command, or None, as specified by requiresAnswer.
         """
         box = Box(kw)
-        return self._sendBoxCommand(command, box)
+        return self._sendBoxCommand(command, box, requiresAnswer)
 
 
     def callRemote(self, commandType, *a, **kw):
