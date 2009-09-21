@@ -317,11 +317,12 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         """
         self.username = 'foo bar'
         self.password = 'bar baz'
+        self.avatarContent = "contents of the avatar resource itself"
         self.childName = "foo-child"
         self.childContent = "contents of the foo child of the avatar"
         self.checker = InMemoryUsernamePasswordDatabaseDontUse()
         self.checker.addUser(self.username, self.password)
-        self.avatar = Resource()
+        self.avatar = Data(self.avatarContent, 'text/plain')
         self.avatar.putChild(
             self.childName, Data(self.childContent, 'text/plain'))
         self.avatars = {self.username: self.avatar}
@@ -409,7 +410,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
 
     def test_getChildWithDefaultAuthorized(self):
         """
-        Resource traversal which enouncters an L{HTTPAuthSessionWrapper}
+        Resource traversal which encounters an L{HTTPAuthSessionWrapper}
         results in an L{IResource} which renders the L{IResource} avatar
         retrieved from the portal when the request has a valid I{Authorization}
         header.
@@ -420,6 +421,25 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         d = request.notifyFinish()
         def cbFinished(ignored):
             self.assertEquals(request.written, [self.childContent])
+        d.addCallback(cbFinished)
+        render(child, request)
+        return d
+
+
+    def test_renderAuthorized(self):
+        """
+        Resource traversal which terminates at an L{HTTPAuthSessionWrapper}
+        and includes correct authentication headers results in the
+        L{IResource} avatar (not one of its children) retrieved from the
+        portal being rendered.
+        """
+        self.credentialFactories.append(BasicCredentialFactory('example.com'))
+        # Request it exactly, not any of its children.
+        request = self.makeRequest([])
+        child = self._authorizedBasicLogin(request)
+        d = request.notifyFinish()
+        def cbFinished(ignored):
+            self.assertEquals(request.written, [self.avatarContent])
         d.addCallback(cbFinished)
         render(child, request)
         return d
@@ -558,7 +578,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         Anonymous requests are allowed if a L{Portal} has an anonymous checker
         registered.
         """
-        unprotectedContents = "contents of the unprotected child resource" 
+        unprotectedContents = "contents of the unprotected child resource"
 
         self.avatars[ANONYMOUS] = Resource()
         self.avatars[ANONYMOUS].putChild(

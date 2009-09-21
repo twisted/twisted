@@ -94,21 +94,15 @@ class HTTPAuthSessionWrapper(object):
         self._credentialFactories = credentialFactories
 
 
-    def render(self, request):
-        raise NotImplementedError
-
-
-    def getChildWithDefault(self, path, request):
+    def _authorizedResource(self, request):
         """
-        Inspect the Authorization HTTP header, and return a deferred which,
-        when fired after successful authentication, will return an authorized
-        C{Avatar}. On authentication failure, an C{UnauthorizedResource} will
-        be returned, essentially halting further dispatch on the wrapped
-        resource and all children
+        Get the L{IResource} which the given request is authorized to receive.
+        If the proper authorization headers are present, the resource will be
+        requested from the portal.  If not, an anonymous login attempt will be
+        made.
         """
         authheader = request.getHeader('authorization')
         if not authheader:
-            request.postpath.insert(0, request.prepath.pop())
             return util.DeferredResource(self._login(Anonymous()))
 
         factory, respString = self._selectParseHeader(authheader)
@@ -122,8 +116,30 @@ class HTTPAuthSessionWrapper(object):
             log.err(None, "Unexpected failure from credentials factory")
             return ErrorPage(500, None, None)
         else:
-            request.postpath.insert(0, request.prepath.pop())
             return util.DeferredResource(self._login(credentials))
+
+
+    def render(self, request):
+        """
+        Find the L{IResource} avatar suitable for the given request, if
+        possible, and render it.  Otherwise, perhaps render an error page
+        requiring authorization or describing an internal server failure.
+        """
+        return self._authorizedResource(request).render(request)
+
+
+    def getChildWithDefault(self, path, request):
+        """
+        Inspect the Authorization HTTP header, and return a deferred which,
+        when fired after successful authentication, will return an authorized
+        C{Avatar}. On authentication failure, an C{UnauthorizedResource} will
+        be returned, essentially halting further dispatch on the wrapped
+        resource and all children
+        """
+        # Don't consume any segments of the request - this class should be
+        # transparent!
+        request.postpath.insert(0, request.prepath.pop())
+        return self._authorizedResource(request)
 
 
     def _login(self, credentials):
