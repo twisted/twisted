@@ -16,9 +16,11 @@ from zope.interface.verify import verifyObject
 
 from twisted.python.compat import set
 from twisted.python.log import addObserver, removeObserver
+from twisted.python.failure import Failure
 from twisted.python.threadpool import ThreadPool
 from twisted.internet.defer import Deferred, gatherResults
 from twisted.internet import reactor
+from twisted.internet.error import ConnectionLost
 from twisted.trial.unittest import TestCase
 from twisted.web import http
 from twisted.web.resource import IResource, Resource
@@ -1180,3 +1182,40 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             'GET', '1.1', [], [''])
 
         return d
+
+
+    def test_connectionClosedDuringIteration(self):
+        """
+        If the request connection is lost while the application object is being
+        iterated, iteration is stopped.
+        """
+        class UnreliableConnection(Request):
+            """
+            This is a request which pretends its connection is lost immediately
+            after the first write is done to it.
+            """
+            def write(self, bytes):
+                self.connectionLost(Failure(ConnectionLost("No more connection")))
+
+        self.badIter = False
+        def appIter():
+            yield "foo"
+            self.badIter = True
+            raise Exception("Should not have gotten here")
+
+        def applicationFactory():
+            def application(environ, startResponse):
+                startResponse('200 OK', [])
+                return appIter()
+            return application
+
+        d, requestFactory = self.requestFactoryFactory(UnreliableConnection)
+        def cbRendered(ignored):
+            self.assertFalse(self.badIter, "Should not have resumed iteration")
+        d.addCallback(cbRendered)
+
+        self.lowLevelRender(
+            requestFactory, applicationFactory, DummyChannel,
+            'GET', '1.1', [], [''])
+
+        return self.assertFailure(d, ConnectionLost)

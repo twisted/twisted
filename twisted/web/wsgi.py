@@ -147,13 +147,21 @@ class _WSGIResponse:
 
     @ivar headers: A list of HTTP response headers supplied to the WSGI
         I{start_response} callable by the application.
+
+    @ivar _requestFinished: A flag which indicates whether it is possible to
+        generate more response data or not.  This is C{False} until
+        L{Request.notifyFinish} tells us the request is done, then C{True}.
     """
+
+    _requestFinished = False
+
     def __init__(self, reactor, threadpool, application, request):
         self.started = False
         self.reactor = reactor
         self.threadpool = threadpool
         self.application = application
         self.request = request
+        self.request.notifyFinish().addBoth(self._finished)
 
         if request.prepath:
             scriptName = '/' + '/'.join(request.prepath)
@@ -214,6 +222,14 @@ class _WSGIResponse:
                 'wsgi.input': _InputStream(request.content)})
 
 
+    def _finished(self, ignored):
+        """
+        Record the end of the response generation for the request being
+        serviced.
+        """
+        self._requestFinished = True
+
+
     def startResponse(self, status, headers, excInfo=None):
         """
         The WSGI I{start_response} callable.  The given values are saved until
@@ -236,16 +252,12 @@ class _WSGIResponse:
 
         This will be called in a non-I/O thread.
         """
-        if self.started:
-            def wsgiWrite():
-                self.request.write(bytes)
-            self.reactor.callFromThread(wsgiWrite)
-        else:
-            def wsgiSendResponseHeadersAndWrite():
+        def wsgiWrite(started):
+            if not started:
                 self._sendResponseHeaders()
-                self.request.write(bytes)
-            self.started = True
-            self.reactor.callFromThread(wsgiSendResponseHeadersAndWrite)
+            self.request.write(bytes)
+        self.reactor.callFromThread(wsgiWrite, self.started)
+        self.started = True
 
 
     def _sendResponseHeaders(self):
@@ -291,19 +303,18 @@ class _WSGIResponse:
         for elem in appIterator:
             if elem:
                 self.write(elem)
+            if self._requestFinished:
+                break
         close = getattr(appIterator, 'close', None)
         if close is not None:
             close()
-        if self.started:
-            def wsgiFinish():
+        def wsgiFinish(started):
+            if not self._requestFinished:
+                if not started:
+                    self._sendResponseHeaders()
                 self.request.finish()
-            self.reactor.callFromThread(wsgiFinish)
-        else:
-            def wsgiSendResponseHeadersAndFinish():
-                self._sendResponseHeaders()
-                self.request.finish()
-            self.started = True
-            self.reactor.callFromThread(wsgiSendResponseHeadersAndFinish)
+        self.reactor.callFromThread(wsgiFinish, self.started)
+        self.started = True
 
 
 
