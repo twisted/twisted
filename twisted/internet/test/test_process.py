@@ -1,4 +1,4 @@
-# Copyright (c) 2008 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -7,6 +7,7 @@ Tests for implementations of L{IReactorProcess}.
 
 __metaclass__ = type
 
+import os
 import warnings, sys, signal
 
 from twisted.internet.test.reactormixins import ReactorBuilder
@@ -15,6 +16,7 @@ from twisted.python.log import msg, err
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
 from twisted.python.failure import Failure
+from twisted.internet import utils
 from twisted.internet.defer import Deferred
 from twisted.internet.protocol import ProcessProtocol
 from twisted.internet.error import ProcessDone, PotentialZombieWarning
@@ -344,6 +346,55 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         exited.addErrback(err)
         exited.addCallback(lambda ign: reactor.stop())
 
+        self.runReactor(reactor)
+
+
+    def makeSourceFile(self, sourceLines):
+        """
+        Write the given list of lines to a text file and return the absolute
+        path to it.
+        """
+        script = self.mktemp()
+        scriptFile = file(script, 'wt')
+        scriptFile.write(os.linesep.join(sourceLines) + os.linesep)
+        scriptFile.close()
+        return os.path.abspath(script)
+
+
+    def test_shebang(self):
+        """
+        Spawning a process with an executable which is a script starting
+        with an interpreter definition line (#!) uses that interpreter to
+        evaluate the script.
+        """
+        SHEBANG_OUTPUT = 'this is the shebang output'
+
+        scriptFile = self.makeSourceFile([
+                "#!%s" % (sys.executable,),
+                "import sys",
+                "sys.stdout.write('%s')" % (SHEBANG_OUTPUT,),
+                "sys.stdout.flush()"])
+        os.chmod(scriptFile, 0700)
+
+        reactor = self.buildReactor()
+
+        def cbProcessExited((out, err, code)):
+            msg("cbProcessExited((%r, %r, %d))" % (out, err, code))
+            self.assertEqual(out, SHEBANG_OUTPUT)
+            self.assertEqual(err, "")
+            self.assertEqual(code, 0)
+
+        def shutdown(passthrough):
+            reactor.stop()
+            return passthrough
+
+        def start():
+            d = utils.getProcessOutputAndValue(scriptFile, reactor=reactor)
+            d.addBoth(shutdown)
+            d.addCallback(cbProcessExited)
+            d.addErrback(err)
+
+        reactor.callWhenRunning(start)
         self.runReactor(reactor)
 
 

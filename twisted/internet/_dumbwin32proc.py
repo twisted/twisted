@@ -74,7 +74,7 @@ def _findShebang(filename):
 
     @return: a str representing another filename.
     """
-    f = file(filename, 'ru')
+    f = file(filename, 'rU')
     if f.read(2) == '#!':
         exe = f.readline(1024).strip('\n')
         return exe
