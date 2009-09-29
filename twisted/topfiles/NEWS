@@ -1,6 +1,43 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Core 9.0.0pre1 (2008-12-16)
+===================================
+
+Features
+--------
+ - LineReceiver.clearLineBuffer now returns the bytes that it cleared (#3573)
+ - twisted.protocols.amp now raises InvalidSignature when bad arguments are
+   passed to Command.makeArguments (#2808)
+ - IArgumentType was added to represent an existing but previously unspecified
+   interface in amp (#3468)
+ - Obscure python tricks have been removed from the finger tutorials (#2110)
+ - The digest auth implementations in twisted.web and twisted.protocolos.sip\
+   have been merged together in twisted.cred (#3575)
+
+Fixes
+-----
+ - The deprecated md5 and sha modules are no longer used if the stdlib hashlib
+   module is available (#2763)
+ - An obscure deadlock involving waking up the reactor within signal handlers
+   in particular threads was fixed (#1997)
+ - A spurious ftp thing happened (XXX: r25928)
+
+Deprecations and Removals
+-------------------------
+ - twisted.persisted.marmalade was deleted after a long period of deprecation
+   (#876)
+ - Some remaining references to the long-gone plugins.tml system were removed
+   (#3246)
+ - SSLv2 is now disabled by default, but it can be re-enabled explicitly
+   (#3330)
+ - twisted.python.plugin has been removed (#1911)
+
+Other
+-----
+
+ - #3545, #3490, #3544, #3537, #3455, #3315, #2281, #3564, #3570, #3571, #3486, #3241, #3599, #3220, #1522, 
+
 Core 8.2.0 (2008-12-16)
 =======================
 
