@@ -221,13 +221,19 @@ class _PathHelper:
         @return: a generator yielding FilePath-like objects.
         """
         yield self
-        if self.isdir() and (descend is None or descend(self)):
+        if self.isdir():
             for c in self.children():
-                for subc in c.walk(descend):
-                    if os.path.realpath(self.path).startswith(
-                        os.path.realpath(subc.path)):
-                        raise LinkError("Cycle in file graph.")
-                    yield subc
+                # we should first see if it's what we want, then we
+                # can walk through the directory
+                if (descend is None or descend(c)):
+                    for subc in c.walk(descend):
+                        if os.path.realpath(self.path).startswith(
+                            os.path.realpath(subc.path)):
+                            raise LinkError("Cycle in file graph.")
+                        yield subc
+                else:
+                    yield c
+
 
     def sibling(self, path):
         return self.parent().child(path)

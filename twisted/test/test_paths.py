@@ -369,6 +369,23 @@ class FilePathTestCase(AbstractFilePathTestCase):
         self.assertRaises(filepath.LinkError, iterateOverPath)
 
 
+    def test_walkObeysDescendWithCyclicalSymlinks(self):
+        """
+        Verify that, after making a path with cyclical symlinks, when the
+        supplied C{descend} predicate returns C{False}, the target is not
+        traversed, as if it was a simple symlink.
+        """
+        self.createLinks()
+        # we create cyclical symlinks
+        self.symlink(self.path.child("sub1").path,
+                     self.path.child("sub1").child("sub1.loopylink").path)
+        def noSymLinks(path):
+            return not path.islink()
+        def iterateOverPath():
+            return [foo.path for foo in self.path.walk(descend=noSymLinks)]
+        self.assertTrue(iterateOverPath())
+
+
     def test_walkObeysDescend(self):
         """
         Verify that when the supplied C{descend} predicate returns C{False},
