@@ -5,7 +5,7 @@
 Test cases for twisted.reflect module.
 """
 
-import weakref, os
+import weakref, os, types
 from ihooks import ModuleImporter
 
 try:
@@ -740,6 +740,153 @@ class FullyQualifiedNameTests(unittest.TestCase):
             "twisted.python.reflect.PropertyAccessor.reallyDel")
         self._checkFullyQualifiedName(reflect.PropertyAccessor().reallyDel,
             "twisted.python.reflect.PropertyAccessor.reallyDel")
+
+
+
+class ExampleClass1(object):
+    def prefix_class1_method(self):
+        pass
+
+
+class ExampleClass2(object):
+    def prefix_class2_method(self):
+        pass
+
+
+class ExampleClass3(ExampleClass1, ExampleClass2):
+
+
+    class ExampleMethodDescriptor(object):
+        """Decorator that returns a Descriptor that returns an attribute of type MethodType"""
+        def __init__(self, f):
+            self.f = f
+
+        def __get__(self, obj, objtype=None):
+            return types.MethodType(lambda x: True, obj, objtype)
+
+
+    class ExampleDescriptor(object):
+        """Decorator that returns a Descriptor that returns an attribute of type FunctionType"""
+        def __init__(self, f):
+            self.f = f
+
+        def __get__(self, obj, objtype=None):
+            def foo(x):
+                pass
+            return foo 
+
+
+    class ExampleDecoratorObject(object):
+        def __init__(self, f):
+            self.f = f
+            self.__name__ = f.__name__
+
+        def __call__(self):
+            return self.f()
+
+
+    def ExampleDecoratorFunc(f):
+        def _f(self):
+            return f(self)
+        return _f
+
+
+    # create a bunch of methods various ways
+
+    def prefix_def_method(self):
+        pass
+
+    prefix_class3_method = prefix_def_method
+    prefix_methdesc_method = ExampleMethodDescriptor(prefix_def_method)
+    prefix_desc_method = ExampleDescriptor(prefix_def_method)
+    prefix_decor_method = ExampleDecoratorObject(prefix_def_method)
+    prefix_fdecor_method = ExampleDecoratorFunc(prefix_def_method)
+    prefix_lambda_method = lambda self: True
+    prefix_builtin_method = dir
+
+    # a method with a different prefix
+
+    def foo_def_method(self):
+        pass
+
+    # not a method 
+
+    prefix_value_method = 42
+
+    # method name edge cases
+
+    prefix_ = prefix_def_method
+    prefix = prefix_def_method
+
+
+class AddMethodNamesToDictTests(unittest.TestCase):
+    """
+    Test for L{reflect.addMethodNamesToDict}.
+    """
+    non_base = object()
+    groups = ['def', 'fdecor', 'lambda', 'class1', 'class2', 'class3']
+    fail_groups = ['methdesc', 'decor', 'desc', 'builtin']
+    prefix = "prefix_"
+    postfix = "_method"
+
+    def test_simple_base(self):
+        dict = {}
+        reflect.addMethodNamesToDict(ExampleClass1, dict, self.prefix)
+        self.assertEqual(dict, {"class1"+self.postfix:1})
+
+    def test_non_base(self):
+        dict = {}
+        reflect.addMethodNamesToDict(ExampleClass3, dict, self.prefix, self.non_base)
+        self.assertEqual(dict, {})
+
+    def test_base_match_one(self):
+        dict = {}
+        reflect.addMethodNamesToDict(ExampleClass3, dict, self.prefix+"class", ExampleClass1)
+        self.assertEqual(dict, {"3"+self.postfix:1})
+
+    def test_base_match_many(self):
+        dict = {}
+        reflect.addMethodNamesToDict(ExampleClass3, dict, self.prefix+"class", object)
+        self.assertEqual(dict, {"1"+self.postfix:1, "2"+self.postfix:1})
+
+    def _test_method_groups(self, mid):
+        dict = {}
+        prefix = self.prefix + mid
+        reflect.addMethodNamesToDict(ExampleClass3, dict, prefix)
+        self.assertEqual(dict, {self.postfix:1}, prefix)
+
+    def _test_method_fail_groups(self, mid):
+        dict = {}
+        prefix = self.prefix + mid
+        reflect.addMethodNamesToDict(ExampleClass3, dict, prefix)
+        self.assertEqual(dict, {}, prefix)
+
+    def test_all(self):
+        expect = {}
+        for mid in self.groups:
+            expect[mid+self.postfix] = 1
+
+        dict = {}
+        reflect.addMethodNamesToDict(ExampleClass3, dict, self.prefix)
+        self.assertEqual(dict, expect)
+
+    def test_no_prefix_methods(self):
+        dict = {}
+        reflect.addMethodNamesToDict(ExampleClass3, dict, "foozle")
+        self.assertEqual(dict, {})
+
+for mid in AddMethodNamesToDictTests.groups:
+    def _func(self, mid=mid):
+        return AddMethodNamesToDictTests._test_method_groups(self, mid)
+    name = "test_%s_group_not_empty" % (mid,)
+    setattr(AddMethodNamesToDictTests, name, _func)
+
+for mid in AddMethodNamesToDictTests.fail_groups:
+    def _func(self, mid=mid):
+        return AddMethodNamesToDictTests._test_method_fail_groups(self, mid)
+    name = "test_%s_group_empty" % (mid,)
+    setattr(AddMethodNamesToDictTests, name, _func)
+
 
 
 class DeprecationTestCase(unittest.TestCase):
