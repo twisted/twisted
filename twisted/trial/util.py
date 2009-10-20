@@ -20,7 +20,7 @@ import traceback, sys
 from twisted.internet import defer, utils, interfaces
 from twisted.python.failure import Failure
 
-
+DUMMY = object()
 DEFAULT_TIMEOUT = object()
 DEFAULT_TIMEOUT_DURATION = 120.0
 
@@ -260,12 +260,14 @@ def profiled(f, outputFile):
     return _
 
 
-def getPythonContainers(meth):
+def getPythonContainers(meth, cls=DUMMY):
     """Walk up the Python tree from method 'meth', finding its class, its module
     and all containing packages."""
+    if cls == DUMMY:
+        cls = meth.im_class
     containers = []
-    containers.append(meth.im_class)
-    moduleName = meth.im_class.__module__
+    containers.append(cls)
+    moduleName = cls.__module__
     while moduleName is not None:
         module = sys.modules.get(moduleName, None)
         if module is None:

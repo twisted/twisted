@@ -695,7 +695,7 @@ class TestCase(_Assertions):
         self._testMethodName = methodName
         testMethod = getattr(self, methodName)
         self._parents = [testMethod, self]
-        self._parents.extend(util.getPythonContainers(testMethod))
+        self._parents.extend(util.getPythonContainers(testMethod, type(self)))
         self._shared = (hasattr(self, 'setUpClass') or
                         hasattr(self, 'tearDownClass'))
         if self._shared:
