@@ -824,8 +824,8 @@ class AddMethodNamesToDictTests(unittest.TestCase):
     Test for L{reflect.addMethodNamesToDict}.
     """
     non_base = object()
-    groups = ['def', 'fdecor', 'lambda', 'class1', 'class2', 'class3']
-    fail_groups = ['methdesc', 'decor', 'desc', 'builtin']
+    groups = ['def', 'fdecor', 'lambda', 'class1', 'class2', 'class3', 'methdesc']
+    fail_groups = ['decor', 'desc', 'builtin']
     prefix = "prefix_"
     postfix = "_method"
 
