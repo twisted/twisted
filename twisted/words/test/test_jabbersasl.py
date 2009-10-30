@@ -1,10 +1,10 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 from zope.interface import implements
 from twisted.internet import defer
 from twisted.trial import unittest
-from twisted.words.protocols.jabber import sasl, sasl_mechanisms, xmlstream
+from twisted.words.protocols.jabber import sasl, sasl_mechanisms, xmlstream, jid
 from twisted.words.xish import domish
 
 NS_XMPP_SASL = 'urn:ietf:params:xml:ns:xmpp-sasl'
@@ -55,7 +55,12 @@ class DummySASLInitiatingInitializer(sasl.SASLInitiatingInitializer):
     def setMechanism(self):
         self.mechanism = DummySASLMechanism(self.initialResponse)
 
+
+
 class SASLInitiatingInitializerTest(unittest.TestCase):
+    """
+    Tests for L{sasl.SASLInitiatingInitializer}
+    """
 
     def setUp(self):
         self.output = []
@@ -68,6 +73,7 @@ class SASLInitiatingInitializerTest(unittest.TestCase):
                         "xmlns:stream='http://etherx.jabber.org/streams' "
                         "from='example.com' id='12345' version='1.0'>")
         self.init = DummySASLInitiatingInitializer(self.xmlstream)
+
 
     def test_onFailure(self):
         """
@@ -84,6 +90,7 @@ class SASLInitiatingInitializerTest(unittest.TestCase):
                                                           e.condition))
         return self.init._deferred
 
+
     def test_sendAuthInitialResponse(self):
         """
         Test starting authentication with an initial response.
@@ -96,6 +103,7 @@ class SASLInitiatingInitializerTest(unittest.TestCase):
         self.assertEquals('DUMMY', auth['mechanism'])
         self.assertEquals('ZHVtbXk=', str(auth))
 
+
     def test_sendAuthNoInitialResponse(self):
         """
         Test starting authentication without an initial response.
@@ -105,6 +113,7 @@ class SASLInitiatingInitializerTest(unittest.TestCase):
         auth = self.output[0]
         self.assertEquals('', str(auth))
 
+
     def test_sendAuthEmptyInitialResponse(self):
         """
         Test starting authentication where the initial response is empty.
@@ -113,6 +122,7 @@ class SASLInitiatingInitializerTest(unittest.TestCase):
         self.init.start()
         auth = self.output[0]
         self.assertEquals('=', str(auth))
+
 
     def test_onChallenge(self):
         """
@@ -126,6 +136,7 @@ class SASLInitiatingInitializerTest(unittest.TestCase):
         self.init.onSuccess(None)
         return d
 
+
     def test_onChallengeEmpty(self):
         """
         Test receiving an empty challenge message.
@@ -136,6 +147,7 @@ class SASLInitiatingInitializerTest(unittest.TestCase):
         self.assertEqual('', self.init.mechanism.challenge)
         self.init.onSuccess(None)
         return d
+
 
     def test_onChallengeIllegalPadding(self):
         """
@@ -148,6 +160,7 @@ class SASLInitiatingInitializerTest(unittest.TestCase):
         self.assertFailure(d, sasl.SASLIncorrectEncodingError)
         return d
 
+
     def test_onChallengeIllegalCharacters(self):
         """
         Test receiving a challenge message with illegal characters.
@@ -159,6 +172,7 @@ class SASLInitiatingInitializerTest(unittest.TestCase):
         self.assertFailure(d, sasl.SASLIncorrectEncodingError)
         return d
 
+
     def test_onChallengeMalformed(self):
         """
         Test receiving a malformed challenge message.
@@ -169,3 +183,90 @@ class SASLInitiatingInitializerTest(unittest.TestCase):
         self.init.onChallenge(challenge)
         self.assertFailure(d, sasl.SASLIncorrectEncodingError)
         return d
+
+
+class SASLInitiatingInitializerSetMechanismTest(unittest.TestCase):
+    """
+    Test for L{sasl.SASLInitiatingInitializer.setMechanism}.
+    """
+
+    def setUp(self):
+        self.output = []
+
+        self.authenticator = xmlstream.Authenticator()
+        self.xmlstream = xmlstream.XmlStream(self.authenticator)
+        self.xmlstream.send = self.output.append
+        self.xmlstream.connectionMade()
+        self.xmlstream.dataReceived("<stream:stream xmlns='jabber:client' "
+                        "xmlns:stream='http://etherx.jabber.org/streams' "
+                        "from='example.com' id='12345' version='1.0'>")
+
+        self.init = sasl.SASLInitiatingInitializer(self.xmlstream)
+
+
+    def _setMechanism(self, name):
+        """
+        Set up the XML Stream to have a SASL feature with the given mechanism.
+        """
+        feature = domish.Element((NS_XMPP_SASL, 'mechanisms'))
+        feature.addElement('mechanism', content=name)
+        self.xmlstream.features[(feature.uri, feature.name)] = feature
+
+        self.init.setMechanism()
+        return self.init.mechanism.name
+
+
+    def test_anonymous(self):
+        """
+        Test setting ANONYMOUS as the authentication mechanism.
+        """
+        self.authenticator.jid = jid.JID('example.com')
+        self.authenticator.password = None
+        name = "ANONYMOUS"
+
+        self.assertEqual(name, self._setMechanism(name))
+
+
+    def test_plain(self):
+        """
+        Test setting PLAIN as the authentication mechanism.
+        """
+        self.authenticator.jid = jid.JID('test@example.com')
+        self.authenticator.password = 'secret'
+        name = "PLAIN"
+
+        self.assertEqual(name, self._setMechanism(name))
+
+
+    def test_digest(self):
+        """
+        Test setting DIGEST-MD5 as the authentication mechanism.
+        """
+        self.authenticator.jid = jid.JID('test@example.com')
+        self.authenticator.password = 'secret'
+        name = "DIGEST-MD5"
+
+        self.assertEqual(name, self._setMechanism(name))
+
+
+    def test_notAcceptable(self):
+        """
+        Test using an unacceptable SASL authentication mechanism.
+        """
+
+        self.authenticator.jid = jid.JID('test@example.com')
+        self.authenticator.password = 'secret'
+
+        self.assertRaises(sasl.SASLNoAcceptableMechanism,
+                          self._setMechanism, 'SOMETHING_UNACCEPTABLE')
+
+
+    def test_notAcceptableWithoutUser(self):
+        """
+        Test using an unacceptable SASL authentication mechanism with no JID.
+        """
+        self.authenticator.jid = jid.JID('example.com')
+        self.authenticator.password = 'secret'
+
+        self.assertRaises(sasl.SASLNoAcceptableMechanism,
+                          self._setMechanism, 'SOMETHING_UNACCEPTABLE')

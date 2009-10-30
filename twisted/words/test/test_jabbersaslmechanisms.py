@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -16,6 +16,21 @@ class PlainTest(unittest.TestCase):
         """
         m = sasl_mechanisms.Plain(None, 'test', 'secret')
         self.assertEquals(m.getInitialResponse(), '\x00test\x00secret')
+
+
+
+class AnonymousTest(unittest.TestCase):
+    """
+    Tests for L{twisted.words.protocols.jabber.sasl_mechanisms.Anonymous}.
+    """
+    def test_getInitialResponse(self):
+        """
+        Test the initial response to be empty.
+        """
+        m = sasl_mechanisms.Anonymous()
+        self.assertEquals(m.getInitialResponse(), None)
+
+
 
 class DigestMD5Test(unittest.TestCase):
     def setUp(self):

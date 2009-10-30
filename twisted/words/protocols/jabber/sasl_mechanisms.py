@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.words.test.test_jabbersaslmechanisms -*-
 #
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -34,6 +34,20 @@ class ISASLMechanism(Interface):
         @return: client response.
         @rtype: L{str}.
         """
+
+
+
+class Anonymous(object):
+    """
+    Implements the ANONYMOUS SASL authentication mechanism.
+
+    This mechanism is defined in RFC 2245.
+    """
+    implements(ISASLMechanism)
+    name = 'ANONYMOUS'
+
+    def getInitialResponse(self):
+        return None
 
 
 
