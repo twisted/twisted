@@ -12,8 +12,23 @@ Features
  - IArgumentType was added to represent an existing but previously unspecified
    interface in amp (#3468)
  - Obscure python tricks have been removed from the finger tutorials (#2110)
- - The digest auth implementations in twisted.web and twisted.protocolos.sip\
+ - The digest auth implementations in twisted.web and twisted.protocolos.sip
    have been merged together in twisted.cred (#3575)
+ - FilePath and ZipPath now has a parents() method which iterates up all of its
+   parents (#3588)
+ - reactors which support threads now have a getThreadPool method (#3591)
+ - The MemCache client implementation now allows arguments to the "stats"
+   command (#3661)
+ - The MemCache client now has a getMultiple method which allows fetching of
+   multiple values (#3171)
+ - twisted.spread.jelly can now unserialize some new-style classes (#2950)
+ - twisted.protocols.loopback.loopbackAsync now accepts a parameter to control
+   the data passed between client and server (#3820)
+ - The IOCP reactor now supports SSL (#593)
+ - Tasks in a twisted.internet.task.Cooperator can now be paused, resumed, and
+   cancelled (#2712)
+ - AmpList arguments can now be made optional (#3891)
+ - The syslog output observer now supports log levels (#3300)
 
 Fixes
 -----
@@ -21,7 +36,42 @@ Fixes
    module is available (#2763)
  - An obscure deadlock involving waking up the reactor within signal handlers
    in particular threads was fixed (#1997)
- - A spurious ftp thing happened (XXX: r25928)
+ - The passivePortRange attribute of FTPFactory is now honored (#3593)
+ - TestCase.flushWarnings now flushes warnings even if they were produced by a
+   file that was renamed while tests were being run (#3598)
+ - Some internal file descriptors are now marked as close-on-exec, so these will
+   no longer be leaked (#3576)
+ - twisted.python.zipstream now correctly extracts the first file in a directory
+   as a file, and not an empty directory (#3625)
+ - proxyForInterface now returns classes which correctly *implement* interfaces
+   rather than *providing* them (#3646)
+ - SIP Via header parameters should now be correctly generated (#2194)
+ - The Deferred returned by stopListening would sometimes previously never fire
+   if an exception was raised by the underlying file descriptor's connectionLost
+   method. Now the Deferred will fire with a failure (#3654)
+ - The command-line tool "manhole" should now work with newer versions of pygtk
+   (#2464)
+ - When a DefaultOpenSSLContextFactory is instantiated with invalid parameters,
+   it will now raise an exception immediately instead of waiting for the first
+   connection (#3700)
+ - Twisted command line scripts should now work when installed in a virtualenv
+   (#3750)
+ - Trial will no longer delete temp directories which it did not create (#3481)
+ - Processes started on Windows should now be cleaned up properly in more cases
+   (#3893)
+ - Certain misbehaving importers will no longer cause twisted.python.modules
+   (and thus trial) to raise an exception, but rather issue a warning (#3913)
+ - MemCache client protocol methods will now fail when the transport has been
+   disconnected (#3643)
+ - In the AMP method callRemoteString, the requiresAnswer parameter is now
+   honored (#3999)
+ - Spawning a "script" (a file which starts with a #! line) on Windows running
+   Python 2.6 will now work instead of raising an exception about file mode
+   "ru" (#3567)
+ - FilePath's walk method now calls its "descend" parameter even on the first
+   level of children, instead of only on grandchildren. This allows for better
+   symlink cycle detection (#3911)
+
 
 Deprecations and Removals
 -------------------------
@@ -32,11 +82,25 @@ Deprecations and Removals
  - SSLv2 is now disabled by default, but it can be re-enabled explicitly
    (#3330)
  - twisted.python.plugin has been removed (#1911)
+ - reactor.run will now raise a ReactorAlreadyRunning exception when it is
+   called reentrantly instead of warning a DeprecationWarning (#1785)
+ - twisted.spread.refpath is now deprecated because it is unmaintained,
+   untested, and has dubious value (#3723)
+ - The unused --quiet flag has been removed from the twistd command (#3003)
+
+ 
 
 Other
 -----
 
- - #3545, #3490, #3544, #3537, #3455, #3315, #2281, #3564, #3570, #3571, #3486, #3241, #3599, #3220, #1522, 
+ - #3545, #3490, #3544, #3537, #3455, #3315, #2281, #3564, #3570, #3571, #3486,
+   #3241, #3599, #3220, #1522, #3611, #3596, #3606, #3609, #3602, #3637, #3647,
+   #3632, #3675, #3673, #3686, #2217, #3685, #3688, #2456, #506, #3635, #2153,
+   #3581, #3708, #3714, #3717, #3698, #3747, #3704, #3707, #3713, #3720, #3692,
+   #3376, #3652, #3695, #3735, #3786, #3783, #3699, #3340, #3810, #3822, #3817,
+   #3791, #3859, #2459, #3677, #3883, #3894, #3861, #3822, #3852, #3875, #2722,
+   #3768, #3914, #3885, #2719, #3905, #3942, #2820, #3990, #3954, #1627, #2326,
+   #2972, #3253, 
 
 Core 8.2.0 (2008-12-16)
 =======================
