@@ -72,7 +72,6 @@ Fixes
    level of children, instead of only on grandchildren. This allows for better
    symlink cycle detection (#3911)
 
-
 Deprecations and Removals
 -------------------------
  - twisted.persisted.marmalade was deleted after a long period of deprecation
@@ -88,11 +87,8 @@ Deprecations and Removals
    untested, and has dubious value (#3723)
  - The unused --quiet flag has been removed from the twistd command (#3003)
 
- 
-
 Other
 -----
-
  - #3545, #3490, #3544, #3537, #3455, #3315, #2281, #3564, #3570, #3571, #3486,
    #3241, #3599, #3220, #1522, #3611, #3596, #3606, #3609, #3602, #3637, #3647,
    #3632, #3675, #3673, #3686, #2217, #3685, #3688, #2456, #506, #3635, #2153,
@@ -100,7 +96,7 @@ Other
    #3376, #3652, #3695, #3735, #3786, #3783, #3699, #3340, #3810, #3822, #3817,
    #3791, #3859, #2459, #3677, #3883, #3894, #3861, #3822, #3852, #3875, #2722,
    #3768, #3914, #3885, #2719, #3905, #3942, #2820, #3990, #3954, #1627, #2326,
-   #2972, #3253, 
+   #2972, #3253
 
 Core 8.2.0 (2008-12-16)
 =======================
