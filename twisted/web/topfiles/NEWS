@@ -50,8 +50,8 @@ Fixes
    serialization will no longer hang a twisted.web XMLRPC response (#2446)
  - request.content should now always be seeked to the beginning when
    request.process is called, so application code should never need to seek 
-   back manually(#3585)
- - Fetching a child of static.Child with a double-slash in the URL (such as
+   back manually (#3585)
+ - Fetching a child of static.File with a double-slash in the URL (such as
    "example//foo.html") should now return a 404 instead of a traceback and
    500 error (#3631)
  - downloadPage will now fire a Failure on its returned Deferred instead of
