@@ -199,13 +199,21 @@ class LoopTestCase(unittest.TestCase):
         call = task.LoopingCall(aCallback)
         call.clock = clock
 
+        # Start a LoopingCall with a 0.5 second increment, and immediately call
+        # the callable.
         callDuration = 2
         call.start(0.5)
+
+        # Verify that the callable was called, and since it was immediate, with
+        # no skips.
         self.assertEqual(times, [0])
-        self.assertEqual(clock.seconds(), 2)
+
+        # The callback should have advanced the clock by the callDuration.
+        self.assertEqual(clock.seconds(), callDuration)
 
         # An iteration should have occurred at 2, but since 2 is the present
         # and not the future, it is skipped.
+
         clock.advance(0)
         self.assertEqual(times, [0])
 
@@ -239,20 +247,115 @@ class LoopTestCase(unittest.TestCase):
         def aCallback():
             times.append(clock.seconds())
 
+        # Start a LoopingCall that tracks the time passed, with a 0.5 second
+        # increment.
         call = task.LoopingCall(aCallback)
         call.clock = clock
-
         call.start(0.5)
+
+        # Initially, no time should have passed!
         self.assertEqual(times, [0])
 
+        # Advance the clock by 2 seconds (2 seconds should have passed)
         clock.advance(2)
         self.assertEqual(times, [0, 2])
 
+        # Advance the clock by 1 second (3 total should have passed)
         clock.advance(1)
         self.assertEqual(times, [0, 2, 3])
 
+        # Advance the clock by 0 seconds (this should have no effect!)
         clock.advance(0)
         self.assertEqual(times, [0, 2, 3])
+
+
+    def test_reactorTimeCountSkips(self):
+        """
+        When L{LoopingCall} schedules itself to run again, if more than the
+        specified interval has passed, it should schedule the next call for the
+        next interval which is still in the future. If it was created
+        using L{LoopingCall.withCount}, a positional argument will be
+        inserted at the beginning of the argument list, indicating the number
+        of calls that should have been made. 
+        """
+        times = []
+        clock = task.Clock()
+        def aCallback(numCalls):
+            times.append((clock.seconds(), numCalls))
+
+        # Start a LoopingCall that tracks the time passed, and the number of
+        # skips, with a 0.5 second increment.
+        call = task.LoopingCall.withCount(aCallback)
+        call.clock = clock
+        INTERVAL = 0.5
+        REALISTIC_DELAY = 0.01
+        call.start(INTERVAL)
+
+        # Initially, no seconds should have passed, and one calls should have
+        # been made.
+        self.assertEqual(times, [(0, 1)])
+
+        # After the interval (plus a small delay, to account for the time that
+        # the reactor takes to wake up and process the LoopingCall), we should
+        # still have only made one call.
+        clock.advance(INTERVAL + REALISTIC_DELAY)
+        self.assertEqual(times, [(0, 1), (INTERVAL + REALISTIC_DELAY, 1)])
+
+        # After advancing the clock by three intervals (plus a small delay to
+        # account for the reactor), we should have skipped two calls; one less
+        # than the number of intervals which have completely elapsed. Along
+        # with the call we did actually make, the final number of calls is 3.
+        clock.advance((3 * INTERVAL) + REALISTIC_DELAY)
+        self.assertEqual(times,
+                         [(0, 1), (INTERVAL + REALISTIC_DELAY, 1),
+                          ((4 * INTERVAL) + (2 * REALISTIC_DELAY), 3)])
+
+        # Advancing the clock by 0 seconds should not cause any changes!
+        clock.advance(0)
+        self.assertEqual(times,
+                         [(0, 1), (INTERVAL + REALISTIC_DELAY, 1),
+                          ((4 * INTERVAL) + (2 * REALISTIC_DELAY), 3)])
+
+
+    def test_countLengthyIntervalCounts(self):
+        """
+        L{LoopingCall.withCount} counts only calls that were expected to be
+        made.  So, if more than one, but less than two intervals pass between
+        invocations, it won't increase the count above 1.  For example, a
+        L{LoopingCall} with interval T expects to be invoked at T, 2T, 3T, etc.
+        However, the reactor takes some time to get around to calling it, so in
+        practice it will be called at T+something, 2T+something, 3T+something;
+        and due to other things going on in the reactor, "something" is
+        variable.  It won't increase the count unless "something" is greater
+        than T.  So if the L{LoopingCall} is invoked at T, 2.75T, and 3T,
+        the count has not increased, even though the distance between
+        invocation 1 and invocation 2 is 1.75T.
+        """
+        times = []
+        clock = task.Clock()
+        def aCallback(count):
+            times.append((clock.seconds(), count))
+
+        # Start a LoopingCall that tracks the time passed, and the number of
+        # calls, with a 0.5 second increment.
+        call = task.LoopingCall.withCount(aCallback)
+        call.clock = clock
+        INTERVAL = 0.5
+        REALISTIC_DELAY = 0.01
+        call.start(INTERVAL)
+        self.assertEqual(times.pop(), (0, 1))
+
+        # About one interval... So far, so good
+        clock.advance(INTERVAL + REALISTIC_DELAY)
+        self.assertEqual(times.pop(), (INTERVAL + REALISTIC_DELAY, 1))
+
+        # Oh no, something delayed us for a while.
+        clock.advance(INTERVAL * 1.75)
+        self.assertEqual(times.pop(), ((2.75 * INTERVAL) + REALISTIC_DELAY, 1))
+
+        # Back on track!  We got invoked when we expected this time.
+        clock.advance(INTERVAL * 0.25)
+        self.assertEqual(times.pop(), ((3.0 * INTERVAL) + REALISTIC_DELAY, 1))
 
 
     def testBasicFunction(self):
@@ -437,6 +540,51 @@ class ReactorLoopTestCase(unittest.TestCase):
         clock.pump(timings)
         self.failIf(clock.calls)
         return d
+
+
+    def test_deferredWithCount(self):
+        """
+        In the case that the function passed to L{LoopingCall.withCount}
+        returns a deferred, which does not fire before the next interval
+        elapses, the function should not be run again. And if a function call
+        is skipped in this fashion, the appropriate count should be
+        provided.
+        """
+        testClock = task.Clock()
+        d = defer.Deferred()
+        deferredCounts = []
+
+        def countTracker(possibleCount):
+            # Keep a list of call counts
+            deferredCounts.append(possibleCount)
+            # Return a deferred, but only on the first request
+            if len(deferredCounts) == 1:
+                return d
+            else:
+                return None
+
+        # Start a looping call for our countTracker function
+        # Set the increment to 0.2, and do not call the function on startup.
+        lc = task.LoopingCall.withCount(countTracker)
+        lc.clock = testClock
+        d = lc.start(0.2, now=False)
+
+        # Confirm that nothing has happened yet.
+        self.assertEquals(deferredCounts, [])
+
+        # Advance the clock by 0.2 and then 0.4;
+        testClock.pump([0.2, 0.4])
+        # We should now have exactly one count (of 1 call)
+        self.assertEquals(len(deferredCounts), 1)
+
+        # Fire the deferred, and advance the clock by another 0.2
+        d.callback(None)
+        testClock.pump([0.2])
+        # We should now have exactly 2 counts...
+        self.assertEquals(len(deferredCounts), 2)
+        # The first count should be 1 (one call)
+        # The second count should be 3 (calls were missed at about 0.6 and 0.8)
+        self.assertEquals(deferredCounts, [1, 3])
 
 
 

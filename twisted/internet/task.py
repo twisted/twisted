@@ -36,16 +36,25 @@ class LoopingCall:
         something else, but it probably ought to be set *before*
         calling L{start}.
 
-    @type _lastTime: C{float}
-    @ivar _lastTime: The time at which this instance most recently scheduled
-        itself to run.
+    @type _expectNextCallAt: C{float}
+    @ivar _expectNextCallAt: The time at which this instance most recently
+        scheduled itself to run.
+
+    @type _realLastTime: C{float}
+    @ivar _realLastTime: When counting skips, the time at which the skip counter
+        was last invoked.
+
+    @type _runAtStart: C{bool}
+    @ivar _runAtStart: A flag indicating whether the 'now' argument was passed
+        to L{LoopingCall.start}.
     """
 
     call = None
     running = False
     deferred = None
     interval = None
-    _lastTime = 0.0
+    _expectNextCallAt = 0.0
+    _runAtStart = False
     starttime = None
 
     def __init__(self, f, *a, **kw):
@@ -56,8 +65,77 @@ class LoopingCall:
         self.clock = reactor
 
 
+    def withCount(cls, countCallable):
+        """
+        An alternate constructor for L{LoopingCall} that makes available the
+        number of calls which should have occurred since it was last invoked.
+
+        Note that this number is an C{int} value; It represents the discrete
+        number of calls that should have been made.  For example, if you are
+        using a looping call to display an animation with discrete frames, this
+        number would be the number of frames to advance.
+
+        The count is normally 1, but can be higher. For example, if the reactor
+        is blocked and takes too long to invoke the L{LoopingCall}, a Deferred
+        returned from a previous call is not fired before an interval has
+        elapsed, or if the callable itself blocks for longer than an interval,
+        preventing I{itself} from being called.
+
+        @param countCallable: A callable that will be invoked each time the
+            resulting LoopingCall is run, with an integer specifying the number
+            of calls that should have been invoked.
+
+        @type countCallable: 1-argument callable which takes an C{int}
+
+        @return: An instance of L{LoopingCall} with call counting enabled,
+            which provides the count as the first positional argument.
+
+        @rtype: L{LoopingCall}
+
+        @since: 9.1
+        """
+
+        def counter():
+            now = self.clock.seconds()
+            lastTime = self._realLastTime
+            if lastTime is None:
+                lastTime = self.starttime
+                if self._runAtStart:
+                    lastTime -= self.interval
+            self._realLastTime = now
+            lastInterval = self._intervalOf(lastTime)
+            thisInterval = self._intervalOf(now)
+            count = thisInterval - lastInterval
+            return countCallable(count)
+
+        self = cls(counter)
+
+        self._realLastTime = None
+
+        return self
+
+    withCount = classmethod(withCount)
+
+
+    def _intervalOf(self, t):
+        """
+        Determine the number of intervals passed as of the given point in
+        time.
+
+        @param t: The specified time (from the start of the L{LoopingCall}) to
+            be measured in intervals
+
+        @return: The C{int} number of intervals which have passed as of the
+            given point in time.
+        """
+        elapsedTime = t - self.starttime
+        intervalNum = int(elapsedTime / self.interval)
+        return intervalNum
+
+
     def start(self, interval, now=True):
-        """Start running function every interval seconds.
+        """
+        Start running function every interval seconds.
 
         @param interval: The number of seconds between calls.  May be
         less than one.  Precision will depend on the underlying
@@ -78,8 +156,9 @@ class LoopingCall:
         self.running = True
         d = self.deferred = defer.Deferred()
         self.starttime = self.clock.seconds()
-        self._lastTime = self.starttime
+        self._expectNextCallAt = self.starttime
         self.interval = interval
+        self._runAtStart = now
         if now:
             self()
         else:
@@ -127,16 +206,16 @@ class LoopingCall:
 
         currentTime = self.clock.seconds()
         # Find how long is left until the interval comes around again.
-        untilNextTime = (self._lastTime - currentTime) % self.interval
+        untilNextTime = (self._expectNextCallAt - currentTime) % self.interval
         # Make sure it is in the future, in case more than one interval worth
         # of time passed since the previous call was made.
         nextTime = max(
-            self._lastTime + self.interval, currentTime + untilNextTime)
+            self._expectNextCallAt + self.interval, currentTime + untilNextTime)
         # If the interval falls on the current time exactly, skip it and
         # schedule the call for the next interval.
         if nextTime == currentTime:
             nextTime += self.interval
-        self._lastTime = nextTime
+        self._expectNextCallAt = nextTime
         self.call = self.clock.callLater(nextTime - currentTime, self)
 
 
@@ -590,7 +669,7 @@ class Clock:
         """
         See L{twisted.internet.interfaces.IReactorTime.callLater}.
         """
-        dc =  base.DelayedCall(self.seconds() + when,
+        dc = base.DelayedCall(self.seconds() + when,
                                what, a, kw,
                                self.calls.remove,
                                lambda c: None,
