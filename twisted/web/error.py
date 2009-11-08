@@ -89,6 +89,14 @@ class UnsupportedMethod(Exception):
             raise TypeError, s
 
 
+
+class SchemeNotSupported(Exception):
+    """
+    The scheme of a URI was not one of the supported values.
+    """
+
+
+
 from twisted.web import resource as _resource
 
 class ErrorPage(_resource.ErrorPage):

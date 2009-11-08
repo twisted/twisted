@@ -11,12 +11,20 @@ from errno import ENOSPC
 from urlparse import urlparse
 
 from twisted.trial import unittest
-from twisted.web import server, static, client, error, util, resource
+from twisted.web import server, static, client, error, util, resource, http_headers
 from twisted.internet import reactor, defer, interfaces
 from twisted.python.filepath import FilePath
 from twisted.python.log import msg
 from twisted.protocols.policies import WrappingFactory
 from twisted.test.proto_helpers import StringTransport
+from twisted.test.proto_helpers import MemoryReactor
+from twisted.internet.address import IPv4Address
+from twisted.internet.task import Clock
+from twisted.internet.error import ConnectionRefusedError
+from twisted.internet.protocol import Protocol
+from twisted.internet.defer import Deferred
+from twisted.web.client import Request
+from twisted.web.error import SchemeNotSupported
 
 try:
     from twisted.internet import ssl
@@ -808,6 +816,197 @@ class CookieTestCase(unittest.TestCase):
             'PART_NUMBER': 'ROCKET_LAUNCHER_0001',
             'SHIPPING': 'FEDEX',
             })
+
+
+
+class StubHTTPProtocol(Protocol):
+    """
+    A protocol like L{HTTP11ClientProtocol} but which does not actually know
+    HTTP/1.1 and only collects requests in a list.
+
+    @ivar requests: A C{list} of two-tuples.  Each time a request is made, a
+        tuple consisting of the request and the L{Deferred} returned from the
+        request method is appended to this list.
+    """
+    def __init__(self):
+        self.requests = []
+
+
+    def request(self, request):
+        """
+        Capture the given request for later inspection.
+
+        @return: A L{Deferred} which this code will never fire.
+        """
+        result = Deferred()
+        self.requests.append((request, result))
+        return result
+
+
+
+class AgentTests(unittest.TestCase):
+    """
+    Tests for the new HTTP client API provided by L{Agent}.
+    """
+    def setUp(self):
+        """
+        Create an L{Agent} wrapped around a fake reactor.
+        """
+        class Reactor(MemoryReactor, Clock):
+            def __init__(self):
+                MemoryReactor.__init__(self)
+                Clock.__init__(self)
+
+        self.reactor = Reactor()
+        self.agent = client.Agent(self.reactor)
+
+
+    def completeConnection(self):
+        """
+        Do whitebox stuff to finish any outstanding connection attempts the
+        agent may have initiated.
+
+        This spins the fake reactor clock just enough to get L{ClientCreator},
+        which agent is implemented in terms of, to fire its Deferreds.
+        """
+        self.reactor.advance(0)
+
+
+    def _verifyAndCompleteConnectionTo(self, host, port):
+        """
+        Assert that the destination of the oldest unverified TCP connection
+        attempt is the given host and port.  Then pop it, create a protocol,
+        connect it to a L{StringTransport}, and return the protocol.
+        """
+        # Grab the connection attempt, make sure it goes to the right place,
+        # and cause it to succeed.
+        host, port, factory = self.reactor.tcpClients.pop()[:3]
+        self.assertEquals(host, host)
+        self.assertEquals(port, port)
+
+        protocol = factory.buildProtocol(IPv4Address('TCP', '10.0.0.3', 1234))
+        transport = StringTransport()
+        protocol.makeConnection(transport)
+        self.completeConnection()
+        return protocol
+
+
+    def test_unsupportedScheme(self):
+        """
+        L{Agent.request} returns a L{Deferred} which fails with
+        L{SchemeNotSupported} if the scheme of the URI passed to it is not
+        C{'http'}.
+        """
+        return self.assertFailure(
+            self.agent.request('GET', 'mailto:alice@example.com'),
+            SchemeNotSupported)
+
+
+    def test_connectionFailed(self):
+        """
+        The L{Deferred} returned by L{Agent.request} fires with a L{Failure} if
+        the TCP connection attempt fails.
+        """
+        result = self.agent.request('GET', 'http://foo/')
+
+        # Cause the connection to be refused
+        host, port, factory = self.reactor.tcpClients.pop()[:3]
+        factory.clientConnectionFailed(None, ConnectionRefusedError())
+        self.completeConnection()
+
+        return self.assertFailure(result, ConnectionRefusedError)
+
+
+    def test_request(self):
+        """
+        L{Agent.request} establishes a new connection to the host indicated by
+        the host part of the URI passed to it and issues a request using the
+        method, the path portion of the URI, the headers, and the body producer
+        passed to it.  It returns a L{Deferred} which fires with a L{Response}
+        from the server.
+        """
+        self.agent._protocol = StubHTTPProtocol
+
+        headers = http_headers.Headers({'foo': ['bar']})
+        # Just going to check the body for identity, so it doesn't need to be
+        # real.
+        body = object()
+        result = self.agent.request(
+            'GET', 'http://example.com:1234/foo?bar', headers, body)
+
+        protocol = self._verifyAndCompleteConnectionTo('example.com', 1234)
+
+        # The request should be issued.
+        self.assertEquals(len(protocol.requests), 1)
+        req, res = protocol.requests.pop()
+        self.assertTrue(isinstance(req, Request))
+        self.assertEquals(req.method, 'GET')
+        self.assertEquals(req.uri, '/foo?bar')
+        self.assertEquals(
+            req.headers,
+            http_headers.Headers({'foo': ['bar'],
+                                  'host': ['example.com:1234']}))
+        self.assertIdentical(req.bodyProducer, body)
+
+
+    def test_hostOverride(self):
+        """
+        If the headers passed to L{Agent.request} includes a value for the
+        I{Host} header, that value takes precedence over the one which would
+        otherwise be automatically provided.
+        """
+        self.agent._protocol = StubHTTPProtocol
+
+        headers = http_headers.Headers({'foo': ['bar'], 'host': ['quux']})
+        body = object()
+        result = self.agent.request(
+            'GET', 'http://example.com/baz', headers, body)
+
+        protocol = self._verifyAndCompleteConnectionTo('example.com', 80)
+
+        # The request should have been issued with the host header specified
+        # above, not one based on the request URI.
+        self.assertEquals(len(protocol.requests), 1)
+        req, res = protocol.requests.pop()
+        self.assertEquals(req.headers.getRawHeaders('host'), ['quux'])
+
+
+    def test_headersUnmodified(self):
+        """
+        If a I{Host} header must be added to the request, the L{Headers}
+        instance passed to L{Agent.request} is not modified.
+        """
+        self.agent._protocol = StubHTTPProtocol
+
+        headers = http_headers.Headers()
+        body = object()
+        result = self.agent.request(
+            'GET', 'http://example.com/foo', headers, body)
+
+        protocol = self._verifyAndCompleteConnectionTo('example.com', 80)
+
+        # The request should have been issued.
+        self.assertEquals(len(protocol.requests), 1)
+        # And the headers object passed in should not have changed.
+        self.assertEquals(headers, http_headers.Headers())
+
+
+    def test_hostValue(self):
+        """
+        L{Agent._computeHostValue} returns just the hostname it is passed if
+        the port number it is passed is the default for the scheme it is
+        passed, otherwise it returns a string containing both the host and port
+        separated by C{":"}.
+        """
+        self.assertEquals(
+            self.agent._computeHostValue('http', 'example.com', 80),
+            'example.com')
+
+        self.assertEquals(
+            self.agent._computeHostValue('http', 'example.com', 54321),
+            'example.com:54321')
+
+
 
 if ssl is None or not hasattr(ssl, 'DefaultOpenSSLContextFactory'):
     for case in [WebClientSSLTestCase, WebClientRedirectBetweenSSLandPlainText]:

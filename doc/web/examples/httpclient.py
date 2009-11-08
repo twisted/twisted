@@ -1,5 +1,5 @@
-#!/usr/bin/python
-# Copyright (c) 2008 Twisted Matrix Laboratories.
+#!/usr/bin/env python
+# Copyright (c) 2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import sys
@@ -9,13 +9,11 @@ from twisted import version
 from twisted.python import log
 from twisted.internet.defer import Deferred
 from twisted.internet import reactor
-from twisted.internet.protocol import ClientCreator, Protocol
+from twisted.internet.protocol import Protocol
 from twisted.web.iweb import UNKNOWN_LENGTH
-from twisted.web.client import _parse
 from twisted.web.http_headers import Headers
-# Use some private APIs for now.  They'll be exposed someplace public later
-# on.
-from twisted.web._newclient import ResponseDone, HTTP11ClientProtocol, Request
+from twisted.web.client import Agent, ResponseDone
+
 
 class WriteToStdout(Protocol):
     def connectionMade(self):
@@ -33,17 +31,10 @@ class WriteToStdout(Protocol):
 
 
 def main(reactor, url):
-    cc = ClientCreator(reactor, HTTP11ClientProtocol)
-    scheme, host, port, path = _parse(url)
-    if scheme != 'http':
-        raise SystemExit("Unsupported scheme: %r" % (scheme,))
-    d = cc.connectTCP(host, port)
-    def cbConnected(proto):
-        return proto.request(Request(
-                'GET', path,
-                Headers({'host': [host], 'user-agent': ['Twisted/%s (httpclient.py)' % (version.short(),)]}),
-                None))
-    d.addCallback(cbConnected)
+    userAgent = 'Twisted/%s (httpclient.py)' % (version.short(),)
+    agent = Agent(reactor)
+    d = agent.request(
+        'GET', url, Headers({'user-agent': [userAgent]}))
     def cbResponse(response):
         pprint(vars(response))
         proto = WriteToStdout()

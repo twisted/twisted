@@ -25,7 +25,7 @@ from twisted.web._newclient import BadHeaders, ResponseDone, PotentialDataLoss, 
 from twisted.web._newclient import TransportProxyProducer, LengthEnforcingConsumer, makeStatefulDispatcher
 from twisted.web.http_headers import Headers
 from twisted.web.http import _DataLoss
-from twisted.web.iweb import IEntityBodyProducer
+from twisted.web.iweb import IBodyProducer
 
 
 
@@ -1163,7 +1163,7 @@ class StringProducer:
         returned by that method.  L{StringProducer} will never fire this
         L{Deferred}.
     """
-    implements(IEntityBodyProducer)
+    implements(IBodyProducer)
 
     stopped = False
 
@@ -1523,7 +1523,7 @@ class RequestTests(TestCase):
     def test_sendRequestBodyWithError(self):
         """
         If the L{Deferred} returned from the C{startProducing} method of the
-        L{IEntityBodyProducer} passed to L{Request} fires with a L{Failure}, the
+        L{IBodyProducer} passed to L{Request} fires with a L{Failure}, the
         L{Deferred} returned from L{Request.writeTo} fails with that
         L{Failure}.
         """

@@ -6,7 +6,7 @@
 Interface definitions for L{twisted.web}.
 
 @var UNKNOWN_LENGTH: An opaque object which may be used as the value of
-    L{IEntityBodyProducer.length} to indicate that the length of the entity
+    L{IBodyProducer.length} to indicate that the length of the entity
     body is not known in advance.
 """
 
@@ -361,12 +361,12 @@ class ICredentialFactory(Interface):
 
 
 
-class IEntityBodyProducer(IPushProducer):
+class IBodyProducer(IPushProducer):
     """
-    Objects which provide L{IEntityBodyProducer} write bytes to an object which
+    Objects which provide L{IBodyProducer} write bytes to an object which
     provides L{IConsumer} by calling its C{write} method repeatedly.
 
-    L{IEntityBodyProducer} providers may start producing as soon as they have
+    L{IBodyProducer} providers may start producing as soon as they have
     an L{IConsumer} provider.  That is, they should not wait for a
     C{resumeProducing} call to begin writing data.
 
@@ -380,10 +380,18 @@ class IEntityBodyProducer(IPushProducer):
 
     @since: 9.0
     """
+
+    # Despite the restrictions above and the additional requirements of
+    # stopProducing documented below, this interface still needs to be an
+    # IPushProducer subclass.  Providers of it will be passed to IConsumer
+    # providers which only know about IPushProducer and IPullProducer, not
+    # about this interface.  This interface needs to remain close enough to one
+    # of those interfaces for consumers to work with it.
+
     length = Attribute(
         """
         C{length} is a C{int} indicating how many bytes in total this
-        L{IEntityBodyProducer} will write to the consumer or L{UNKNOWN_LENGTH}
+        L{IBodyProducer} will write to the consumer or L{UNKNOWN_LENGTH}
         if this is not known in advance.
         """)
 
@@ -408,6 +416,6 @@ UNKNOWN_LENGTH = u"twisted.web.iweb.UNKNOWN_LENGTH"
 
 __all__ = [
     "IUsernameDigestHash", "ICredentialFactory", "IRequest",
-    "IEntityBodyProducer",
+    "IBodyProducer",
 
     "UNKNOWN_LENGTH"]

@@ -1,0 +1,232 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>
+      Using the Twisted Web Client
+    </title>
+  </head>
+  <body>
+    <h1>
+      Using the Twisted Web Client
+    </h1>
+
+    <h2>
+      Overview
+    </h2>
+
+    <p>
+      This document describes how to use the HTTP client included in Twisted
+      Web.  After reading it, you should be able to make HTTP requests using
+      Twisted Web.  You will be able to specify the request method, headers,
+      and body and you will be able to retrieve the response code, headers, and
+      body.
+    </p>
+
+    <h3>
+      Prerequisites
+    </h3>
+
+    <p>
+      This document assumes that you are familiar with <a
+      href="../../core/howto/defer.xhtml">Deferreds and Failures</a>, and <a
+      href="../../core/howto/producers.xhtml">producers and consumers</a>. 
+      It also assumes you are familiar with the basic concepts of HTTP, such
+      as requests and responses, methods, headers, and message bodies.
+    </p>
+
+    <h2>
+      The Agent
+    </h2>
+
+    <h3>Issuing Requests</h3>
+
+    <p>
+      The <code class="API">twisted.web.client.Agent</code> class is the entry
+      point into the client API.  Requests are issued using the <code
+      class="API" base="twisted.web.client.Agent">request</code> method, which
+      takes as parameters a request method, a request URI, the request headers,
+      and an object which can produce the request body (if there is to be one).
+      The agent is responsible for connection setup.  Because of this, it
+      requires a reactor as an argument to its initializer.  An example of
+      creating an agent and issuing a request using it might look like this:
+    </p>
+
+    <a href="listings/client/request.py" class="py-listing">
+      Issue a request with an Agent
+    </a>
+
+    <p>
+      As may be obvious, this issues a new <em>GET</em> request for <em>/</em>
+      to the web server on <code>example.com</code>.  <code>Agent</code> is
+      responsible for resolving the hostname into an IP address and connecting
+      to it on port 80.  It is also responsible for cleaning up the connection
+      afterwards.  This code sends a request which includes one custom header,
+      I{User-Agent}.  The last argument passed to <code>Agent.request</code> is
+      <code>None</code>, though, so the request has no body.
+    </p>
+
+    <p>
+      Sending a request which does include a body requires passing an object
+      providing <code class="API">twisted.web.iweb.IBodyProducer</code>
+      to <code>Agent.request</code>.  This interface extends the more general
+      <code class="API" base="twisted.internet.interfaces">IPushProducer</code>
+      by adding a new <code>length</code> attribute and adding several
+      constraints to the way the producer and consumer interact.
+    </p>
+
+    <ul>
+      <li>
+        The length attribute must be a non-negative integer or the constant
+        <code class="API">twisted.web.iweb.UNKNOWN_LENGTH</code>.  If the
+        length is known, it will be used to specify the value for the
+        <em>Content-Length</em> header in the request.  If the length is
+        unknown the attribute should be set to <code>UNKNOWN_LENGTH</code>.
+        Since more servers support <em>Content-Length</em>, if a length can be
+        provided it should be.
+      </li>
+
+      <li>
+        An additional method is required on <code>IEntityBodyProvider</code>
+        implementations: <code>startProducing</code>.  This method is used to
+        associate a consumer with the producer.  It should return a
+        <code>Deferred</code> which fires when all data has been produced.
+      </li>
+
+      <li>
+        <code>IEntityBodyProvider</code> implementations should never call the
+        consumer's <code>unregisterProducer</code> method.  Instead, when it
+        has produced all of the data it is going to produce, it should only
+        fire the <code>Deferred</code> returned by <code>startProducing</code>.
+      </li>
+    </ul>
+
+    <p>
+      For additional details about the requirements of <code class="API"
+      base="twisted.web.iweb">IBodyProducer</code> implementations, see
+      the API documentation.
+    </p>
+
+    <p>
+      Here's a simple <code>IEntityBodyProvider</code> implementation which
+      writes an in-memory string to the consumer:
+    </p>
+
+    <a href="listings/client/stringprod.py" class="py-listing">
+      A string-based body producer.
+    </a>
+
+    <p>
+      This producer can be used to issue a request with a body:
+    </p>
+
+    <a href="listings/client/sendbody.py" class="py-listing">
+      Issue a request with a body.
+    </a>
+
+    <h3>
+      Receiving Responses
+    </h3>
+
+    <p>
+      So far, the examples have demonstrated how to issue a request.  However,
+      they have ignored the response, except for showing that it is a
+      <code>Deferred</code> which seems to fire when the response has been
+      received.  Next we'll cover what that response is and how to interpret
+      it.
+    </p>
+
+    <p>
+      <code>Agent.request</code>, as with most <code>Deferred</code>-returning
+      APIs, can return a <code>Deferred</code> which fires with a
+      <code>Failure</code>.  If the request fails somehow, this will be
+      reflected with a failure.  This may be due to a problem looking up the
+      host IP address, or it may be because the HTTP server is not accepting
+      connections, or it may be because of a problem parsing the response, or
+      any other problem which arises which prevents the response from being
+      received.  It does <em>not</em> include responses with an error status.
+    </p>
+
+    <p>
+      If the request succeeds, though, the <code>Deferred</code> will fire with
+      a <code class="API" base="twisted.web.client">Response</code>.  This
+      happens as soon as all the response headers have been received.  It
+      happens before any of the response body, if there is one, is processed.
+      The <code>Response</code> object has several attributes giving the
+      response information: its code, version, phrase, and headers, as well as
+      the length of the body to expect.  The <code>Response</code> object also
+      has a method which makes the response body available: <code class="API"
+      base="twisted.web._newclient.Response.deliverBody">deliverBody</code>.
+      Using the attributes of the response object and this method, here's an
+      example which displays part of the response to a request:
+    </p>
+
+    <a href="listings/client/response.py" class="py-listing">
+      Inspect the response.
+    </a>
+
+    <p>
+      The <code>BeginningPrinter</code> protocol in this example is passed to
+      <code>Response.deliverBody</code> and the response body is then delivered
+      to its <code>dataReceived</code> method as it arrives.  When the body has
+      been completely delivered, the protocol's <code>connectionLost</code>
+      method is called.  It is important to inspect the <code>Failure</code>
+      passed to <code>connectionLost</code>.  If the response body has been
+      completely received, the failure will wrap a <code
+      class="API">twisted.web.client.ResponseDone</code> exception.  This
+      indicates that it is <em>known</em> that all data has been received.  It
+      is also possible for the failure to wrap a <code
+      class="API">twisted.web.http.PotentialDataLoss</code> exception: this
+      indicates that the server framed the response such that there is no way
+      to know when the entire response body has been received.  Only
+      HTTP/1.0} servers should behave this way.  Finally, it is possible for
+      the exception to be of another type, indicating guaranteed data loss for
+      some reason (a lost connection, a memory error, etc).
+    </p>
+
+    <p>
+      Just as protocols associated with a TCP connection are given a transport,
+      so will be a protocol passed to <code>deliverBody</code>.  Since it makes
+      no sense to write more data to the connection at this stage of the
+      request, though, the transport <em>only</em> provides <code class="API"
+      base="twisted.internet.interfaces">IPushProducer</code>.  This allows the
+      protocol to control the flow of the response data: a call to the
+      transport's <code>pauseProducing</code> method will pause delivery; a
+      later call to <code>resumeProducing</code> will resume it.  If it is
+      decided that the rest of the response body is not desired,
+      <code>stopProducing</code> can be used to stop delivery permanently;
+      after this, the protocol's <code>connectionLost</code> method will be
+      called.
+    </p>
+
+    <p>
+      An important thing to keep in mind is that the body will only be read
+      from the connection after <code>Response.deliverBody</code> is called.
+      This also means that the connection will remain open until this is done
+      (and the body read).  So, in general, any response with a body
+      <em>must</em> have that body read using <code>deliverBody</code>.  If the
+      application is not interested in the body, it should issue a
+      <em>HEAD</em> request or use a protocol which immediately calls
+      <code>stopProducing</code> on its transport.
+    </p>
+
+    <h2>
+      Conclusion
+    </h2>
+
+    <p>
+      You should now understand the basics of the Twisted Web HTTP client.  In
+      particular, you should understand:
+    </p>
+
+    <ul>
+      <li>
+        How to issue requests with arbitrary methods, headers, and bodies.
+      </li>
+      <li>
+        How to access the response version, code, phrase, headers, and body.
+      </li>
+      <li>
+        How to control the streaming of the response body.
+      </li>
+    </ul>
+  </body>
+</html>

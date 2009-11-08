@@ -61,7 +61,7 @@ class BadHeaders(Exception):
 
 class ExcessWrite(Exception):
     """
-    The body L{IEntityBodyProducer} for a request tried to write data after
+    The body L{IBodyProducer} for a request tried to write data after
     indicating it had finished writing data.
     """
 
@@ -121,7 +121,7 @@ class RequestTransmissionFailed(_WrapperException):
 
 class WrongBodyLength(Exception):
     """
-    An L{IEntityBodyProducer} declared the number of bytes it was going to
+    An L{IBodyProducer} declared the number of bytes it was going to
     produce (via its C{length} attribute) and then produced a different number
     of bytes.
     """
@@ -514,7 +514,7 @@ class Request:
         is up to the HTTP Client to add required headers such as 'Host'.
     @type headers: L{twisted.web.http_headers.Headers}
 
-    @ivar bodyProducer: C{None} or an L{IEntityBodyProducer} provider which
+    @ivar bodyProducer: C{None} or an L{IBodyProducer} provider which
         produces the content body to send to the remote HTTP server.
     """
     def __init__(self, method, uri, headers, bodyProducer):
@@ -718,7 +718,7 @@ class LengthEnforcingConsumer:
 
     @ivar _length: The number of bytes remaining to be written.
 
-    @ivar _producer: The L{IEntityBodyProducer} which is writing to this
+    @ivar _producer: The L{IBodyProducer} which is writing to this
         consumer.
 
     @ivar _consumer: The consumer to which at most C{_length} bytes will be
@@ -816,6 +816,8 @@ class Response:
     """
     A L{Response} instance describes an HTTP response received from an HTTP
     server.
+
+    L{Response} should not be subclassed or instantiated.
 
     @ivar version: A three-tuple describing the protocol and protocol version
         of the response.  The first element is of type C{str}, the second and
