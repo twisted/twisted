@@ -17,6 +17,8 @@ from twisted.internet import error
 from twisted.internet.address import IPv4Address
 from twisted.internet.interfaces import IHalfCloseableProtocol, IPullProducer
 from twisted.protocols import policies
+from twisted.test.proto_helpers import AccumulatingProtocol
+
 
 def loopUntil(predicate, interval=0):
     """
@@ -57,36 +59,9 @@ class ClosingFactory(protocol.ServerFactory):
         return ClosingProtocol()
 
 
-class MyProtocol(protocol.Protocol):
-    made = closed = failed = 0
-
-    closedDeferred = None
-
-    data = ""
-
-    factory = None
-
-    def connectionMade(self):
-        self.made = 1
-        if (self.factory is not None and
-            self.factory.protocolConnectionMade is not None):
-            d = self.factory.protocolConnectionMade
-            self.factory.protocolConnectionMade = None
-            d.callback(self)
-
-    def dataReceived(self, data):
-        self.data += data
-
-    def connectionLost(self, reason):
-        self.closed = 1
-        if self.closedDeferred is not None:
-            d, self.closedDeferred = self.closedDeferred, None
-            d.callback(None)
-
-
 class MyProtocolFactoryMixin(object):
     """
-    Mixin for factories which create L{MyProtocol} instances.
+    Mixin for factories which create L{AccumulatingProtocol} instances.
 
     @type protocolFactory: no-argument callable
     @ivar protocolFactory: Factory for protocols - takes the place of the
@@ -94,18 +69,18 @@ class MyProtocolFactoryMixin(object):
         this class for something else).
 
     @type protocolConnectionMade: L{NoneType} or L{defer.Deferred}
-    @ivar protocolConnectionMade: When an instance of L{MyProtocol} is
-        connected, if this is not C{None}, the L{Deferred} will be called
+    @ivar protocolConnectionMade: When an instance of L{AccumulatingProtocol}
+        is connected, if this is not C{None}, the L{Deferred} will be called
         back with the protocol instance and the attribute set to C{None}.
 
     @type protocolConnectionLost: L{NoneType} or L{defer.Deferred}
-    @ivar protocolConnectionLost: When an instance of L{MyProtocol} is
-        created, this will be set as its C{closedDeferred} attribute and
-        then this attribute will be set to C{None} so the L{defer.Deferred}
-        is not used by more than one protocol.
+    @ivar protocolConnectionLost: When an instance of L{AccumulatingProtocol}
+        is created, this will be set as its C{closedDeferred} attribute and
+        then this attribute will be set to C{None} so the L{defer.Deferred} is
+        not used by more than one protocol.
 
-    @ivar protocol: The most recently created L{MyProtocol} instance which
-        was returned from C{buildProtocol}.
+    @ivar protocol: The most recently created L{AccumulatingProtocol} instance
+        which was returned from C{buildProtocol}.
 
     @type called: C{int}
     @ivar called: A counter which is incremented each time C{buildProtocol}
@@ -113,7 +88,7 @@ class MyProtocolFactoryMixin(object):
 
     @ivar peerAddresses: A C{list} of the addresses passed to C{buildProtocol}.
     """
-    protocolFactory = MyProtocol
+    protocolFactory = AccumulatingProtocol
 
     protocolConnectionMade = None
     protocolConnectionLost = None
@@ -126,7 +101,7 @@ class MyProtocolFactoryMixin(object):
 
     def buildProtocol(self, addr):
         """
-        Create a L{MyProtocol} and set it up to be able to perform
+        Create a L{AccumulatingProtocol} and set it up to be able to perform
         callbacks.
         """
         self.peerAddresses.append(addr)
@@ -142,14 +117,14 @@ class MyProtocolFactoryMixin(object):
 
 class MyServerFactory(MyProtocolFactoryMixin, protocol.ServerFactory):
     """
-    Server factory which creates L{MyProtocol} instances.
+    Server factory which creates L{AccumulatingProtocol} instances.
     """
 
 
 
 class MyClientFactory(MyProtocolFactoryMixin, protocol.ClientFactory):
     """
-    Client factory which creates L{MyProtocol} instances.
+    Client factory which creates L{AccumulatingProtocol} instances.
     """
     failed = 0
     stopped = 0
@@ -241,8 +216,9 @@ class ListeningTestCase(unittest.TestCase):
         self.addCleanup(connector.disconnect)
         def check((serverProto, clientProto)):
             portNumber = port.getHost().port
-            self.assertEquals(repr(serverProto.transport),
-                              "<MyProtocol #0 on %s>" % (portNumber,))
+            self.assertEquals(
+                repr(serverProto.transport),
+                "<AccumulatingProtocol #0 on %s>" % (portNumber,))
             serverProto.transport.loseConnection()
             clientProto.transport.loseConnection()
         return defer.gatherResults([serverConnMade, clientConnMade]
@@ -887,7 +863,7 @@ class CannotBindTestCase(unittest.TestCase):
 class MyOtherClientFactory(protocol.ClientFactory):
     def buildProtocol(self, address):
         self.address = address
-        self.protocol = MyProtocol()
+        self.protocol = AccumulatingProtocol()
         return self.protocol
 
 
@@ -1547,7 +1523,7 @@ class LargeBufferTestCase(unittest.TestCase):
         return d.addCallback(check)
 
 
-class MyHCProtocol(MyProtocol):
+class MyHCProtocol(AccumulatingProtocol):
 
     implements(IHalfCloseableProtocol)
 
@@ -1670,7 +1646,7 @@ class HalfClose2TestCase(unittest.TestCase):
         self.p = p = reactor.listenTCP(0, f, interface="127.0.0.1")
 
         # XXX we don't test server side yet since we don't do it yet
-        d = protocol.ClientCreator(reactor, MyProtocol).connectTCP(
+        d = protocol.ClientCreator(reactor, AccumulatingProtocol).connectTCP(
             p.getHost().host, p.getHost().port)
         d.addCallback(self._gotClient)
         return d
@@ -1814,7 +1790,7 @@ class LogTestCase(unittest.TestCase):
 
         def cb(ign):
             self.assertEquals(connector.transport.logstr,
-                              "MyProtocol,client")
+                              "AccumulatingProtocol,client")
         client.protocolConnectionMade.addCallback(cb)
         return client.protocolConnectionMade
 

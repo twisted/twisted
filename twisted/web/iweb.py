@@ -1,13 +1,20 @@
 # -*- test-case-name: twisted.web.test -*-
-# Copyright (c) 2009 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
 Interface definitions for L{twisted.web}.
+
+@var UNKNOWN_LENGTH: An opaque object which may be used as the value of
+    L{IEntityBodyProducer.length} to indicate that the length of the entity
+    body is not known in advance.
 """
 
 from zope.interface import Interface, Attribute
+
+from twisted.internet.interfaces import IPushProducer
 from twisted.cred.credentials import IUsernameDigestHash
+
 
 class IRequest(Interface):
     """
@@ -352,4 +359,55 @@ class ICredentialFactory(Interface):
         @return: The credentials represented by the given response.
         """
 
-__all__ = ["IUsernameDigestHash", "ICredentialFactory", "IRequest"]
+
+
+class IEntityBodyProducer(IPushProducer):
+    """
+    Objects which provide L{IEntityBodyProducer} write bytes to an object which
+    provides L{IConsumer} by calling its C{write} method repeatedly.
+
+    L{IEntityBodyProducer} providers may start producing as soon as they have
+    an L{IConsumer} provider.  That is, they should not wait for a
+    C{resumeProducing} call to begin writing data.
+
+    L{IConsumer.unregisterProducer} must not be called.  Instead, the
+    L{Deferred} returned from C{startProducing} must be fired when all bytes
+    have been written.
+
+    L{IConsumer.write} may synchronously invoke any of C{pauseProducing},
+    C{resumeProducing}, or C{stopProducing}.  These methods must be implemented
+    with this in mind.
+
+    @since: 9.0
+    """
+    length = Attribute(
+        """
+        C{length} is a C{int} indicating how many bytes in total this
+        L{IEntityBodyProducer} will write to the consumer or L{UNKNOWN_LENGTH}
+        if this is not known in advance.
+        """)
+
+    def startProducing(consumer):
+        """
+        Start producing to the given L{IConsumer} provider.
+
+        @return: A L{Deferred} which fires with C{None} when all bytes have
+            been produced or with a L{Failure} if there is any problem before
+            all bytes have been produced.
+        """
+
+
+    def stopProducing():
+        """
+        In addition to the standard behavior of L{IProducer.stopProducing}
+        (stop producing data), make sure the L{Deferred} returned by
+        C{startProducing} is never fired.
+        """
+
+UNKNOWN_LENGTH = u"twisted.web.iweb.UNKNOWN_LENGTH"
+
+__all__ = [
+    "IUsernameDigestHash", "ICredentialFactory", "IRequest",
+    "IEntityBodyProducer",
+
+    "UNKNOWN_LENGTH"]

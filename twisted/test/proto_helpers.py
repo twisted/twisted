@@ -14,7 +14,49 @@ from zope.interface.verify import verifyObject
 from twisted.internet.interfaces import ITransport, IConsumer, IPushProducer
 from twisted.internet.interfaces import IReactorTCP
 from twisted.protocols import basic
-from twisted.internet import error
+from twisted.internet import protocol, error
+
+
+class AccumulatingProtocol(protocol.Protocol):
+    """
+    L{AccumulatingProtocol} is an L{IProtocol} implementation which collects
+    the data delivered to it and can fire a Deferred when it is connected or
+    disconnected.
+
+    @ivar made: A flag indicating whether C{connectionMade} has been called.
+    @ivar data: A string giving all the data passed to C{dataReceived}.
+    @ivar closed: A flag indicated whether C{connectionLost} has been called.
+    @ivar closedReason: The value of the I{reason} parameter passed to
+        C{connectionLost}.
+    @ivar closedDeferred: If set to a L{Deferred}, this will be fired when
+        C{connectionLost} is called.
+    """
+    made = closed = 0
+    closedReason = None
+
+    closedDeferred = None
+
+    data = ""
+
+    factory = None
+
+    def connectionMade(self):
+        self.made = 1
+        if (self.factory is not None and
+            self.factory.protocolConnectionMade is not None):
+            d = self.factory.protocolConnectionMade
+            self.factory.protocolConnectionMade = None
+            d.callback(self)
+
+    def dataReceived(self, data):
+        self.data += data
+
+    def connectionLost(self, reason):
+        self.closed = 1
+        self.closedReason = reason
+        if self.closedDeferred is not None:
+            d, self.closedDeferred = self.closedDeferred, None
+            d.callback(None)
 
 
 class LineSendingProtocol(basic.LineReceiver):
