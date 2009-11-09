@@ -1,7 +1,9 @@
 Copyright (c) 2001-2009
 Allen Short
+Andy Gayton
 Andrew Bennetts
 Apple Computer, Inc.
+Antoine Pitrou
 Benjamin Bruheim
 Bob Ippolito
 Canonical Limited
@@ -9,13 +11,14 @@ Christopher Armstrong
 David Reid
 Donovan Preston
 Eric Mangold
+Eyal Lotem
 Itamar Shtull-Trauring
 James Knight
 Jason A. Mobarak
 Jean-Paul Calderone
 Jonathan Lange
 Jonathan D. Simms
-Jürgen Hermann
+Jurgen Hermann
 Kevin Turner
 Mary Gardiner
 Matthew Lefkowitz
@@ -28,9 +31,6 @@ Sean Riley
 Software Freedom Conservancy
 Travis B. Hartwell
 Thomas Herve
-Eyal Lotem
-Antoine Pitrou
-Andy Gayton
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
