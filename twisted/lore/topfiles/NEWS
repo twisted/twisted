@@ -1,6 +1,28 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Lore 9.0.0pre1 (?)
+==========================
+
+Features
+--------
+ - Python source listings now include line numbers (#3486)
+
+Fixes
+-----
+ - Lore now uses minidom instead of Twisted's microdom, which incidentally
+   fixes some Lore bugs such as throwing away certain whitespace
+   (#3560, #414, #3619)
+
+Deprecations and Removals
+-------------------------
+ - Lore no longer uses the ancient "tml" Twisted plugin system (#1911)
+
+Other
+-----
+ - #3565, #3246, #3540, #3750
+
+
 Lore 8.2.0 (2008-12-16)
 =======================
 
