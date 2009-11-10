@@ -17,6 +17,8 @@ Features
  - HTTPClientFactory now accepts a parameter to enable a common deviation from
    the HTTP 1.1 standard by responding to redirects in a POSTed request with a
    GET instead of another POST (#3624)
+ - A new basic HTTP/1.1 client API is included in twisted.web.client.Agent
+   (#886, #3987)
 
 Fixes
 -----
