@@ -1,5 +1,4 @@
-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -104,13 +103,16 @@ class EchoClient:
         w.add(vb)
         map(vb.add, [b, self.entry, self.outry])
         b.connect('clicked', self.clicked)
-        w.connect('destroy', reactor.stop)
+        w.connect('destroy', self.stop)
         w.show_all()
 
     def clicked(self, b):
         txt = self.entry.get_text()
         self.entry.set_text("")
         self.echoer.callRemote('echo',txt).addCallback(self.outry.set_text)
+
+    def stop(self, b):
+        reactor.stop()
 
 d = defer.Deferred()
 LoginDialog(d)
