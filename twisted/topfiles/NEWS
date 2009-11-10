@@ -29,6 +29,8 @@ Features
    cancelled (#2712)
  - AmpList arguments can now be made optional (#3891)
  - The syslog output observer now supports log levels (#3300)
+ - LoopingCall now supports reporting the number of intervals missed if it
+   isn't able to schedule calls fast enough (#3671)
 
 Fixes
 -----
@@ -96,7 +98,7 @@ Other
    #3376, #3652, #3695, #3735, #3786, #3783, #3699, #3340, #3810, #3822, #3817,
    #3791, #3859, #2459, #3677, #3883, #3894, #3861, #3822, #3852, #3875, #2722,
    #3768, #3914, #3885, #2719, #3905, #3942, #2820, #3990, #3954, #1627, #2326,
-   #2972, #3253
+   #2972, #3253, #3937
 
 
 Core 8.2.0 (2008-12-16)
