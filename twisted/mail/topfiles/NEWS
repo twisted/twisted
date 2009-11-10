@@ -1,31 +1,40 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Twisted Mail 9.0.0 (2008-05-30)
-===============================
+Twisted Mail 9.0.0pre1 (?)
+==========================
 
 Features
 --------
- - Support deletion, undeletion, and syncing in the in-memory maildir
-   implementation (#3547)
+ - maildir.StringListMailbox, an in-memory maildir mailbox, now supports
+   deletion, undeletion, and syncing (#3547)
  - SMTPClient's callbacks are now more completely documented (#684)
 
 Fixes
 -----
- - The deprecated md5 and sha modules are no longer used if the stdlib hashlib
-   module is available (#2763)
  - Parse UNSEEN response data and include it in the result of
    IMAP4Client.examine (#3550)
  - The IMAP4 client now delivers more unsolicited server responses to callbacks
-   rather than ignoring them (#1105)
+   rather than ignoring them, and also won't ignore solicited responses that
+   arrive on the same line as an unsolicited one (#1105)
  - Several bugs in the SMTP client's idle timeout support were fixed (#3641,
    #1219)
  - A case where the SMTP client could skip some recipients when retrying
    delivery has been fixed (#3638)
+ - Errors during certain data transfers will no longer be swallowed. They will
+   now bubble up to the higher-level API (such as the sendmail function) (#3642)
+ - Escape sequences inside quoted strings in IMAP4 should now be parsed
+   correctly by the IMAP4 server protocol (#3659)
+ - The "imap4-utf-7" codec that is registered by twisted.mail.imap4 had a number
+   of fixes that allow it to work better with the Python codecs system, and to
+   actually work (#3663)
+ - The Maildir implementation now ensures time-based ordering of filenames so
+   that the lexical sorting of messages matches the order in which they were
+   received (#3812)
 
 Other
 -----
- - #3642, #3647, #3659, #3663, #3750, #3812, #3819
+ - #2763, #3647, #3750, #3819, #3540, #3846, #2023
 
 
 Mail 8.2.0 (2008-12-16)
