@@ -1720,6 +1720,59 @@ class AuthenticatorTestCase(IMAP4HelperMixin, unittest.TestCase):
         self.assertEquals(self.server.account, None)
 
 
+
+class SASLPLAINTestCase(unittest.TestCase):
+    """
+    Tests for I{SASL PLAIN} authentication, as implemented by
+    L{imap4.PLAINAuthenticator} and L{imap4.PLAINCredentials}.
+
+    @see: U{http://www.faqs.org/rfcs/rfc2595.html}
+    @see: U{http://www.faqs.org/rfcs/rfc4616.html}
+    """
+    def test_authenticatorChallengeResponse(self):
+        """
+        L{PLAINAuthenticator.challengeResponse} returns challenge strings of
+        the form::
+
+            NUL<authn-id>NUL<secret>
+        """
+        username = 'testuser'
+        secret = 'secret'
+        chal = 'challenge'
+        cAuth = imap4.PLAINAuthenticator(username)
+        response = cAuth.challengeResponse(secret, chal)
+        self.assertEquals(response, '\0%s\0%s' % (username, secret))
+
+
+    def test_credentialsSetResponse(self):
+        """
+        L{PLAINCredentials.setResponse} parses challenge strings of the
+        form::
+
+            NUL<authn-id>NUL<secret>
+        """
+        cred = imap4.PLAINCredentials()
+        cred.setResponse('\0testuser\0secret')
+        self.assertEquals(cred.username, 'testuser')
+        self.assertEquals(cred.password, 'secret')
+
+
+    def test_credentialsInvalidResponse(self):
+        """
+        L{PLAINCredentials.setResponse} raises L{imap4.IllegalClientResponse}
+        when passed a string not of the expected form.
+        """
+        cred = imap4.PLAINCredentials()
+        self.assertRaises(
+            imap4.IllegalClientResponse, cred.setResponse, 'hello')
+        self.assertRaises(
+            imap4.IllegalClientResponse, cred.setResponse, 'hello\0world')
+        self.assertRaises(
+            imap4.IllegalClientResponse, cred.setResponse,
+            'hello\0world\0Zoom!\0')
+
+
+
 class UnsolicitedResponseTestCase(IMAP4HelperMixin, unittest.TestCase):
     def testReadWrite(self):
         def login():

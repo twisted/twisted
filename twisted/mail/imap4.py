@@ -391,10 +391,10 @@ class PLAINCredentials(cred.credentials.UsernamePassword):
         return ''
 
     def setResponse(self, response):
-        parts = response[:-1].split('\0', 1)
-        if len(parts) != 2:
+        parts = response.split('\0')
+        if len(parts) != 3:
             raise IllegalClientResponse("Malformed Response - wrong number of parts")
-        self.username, self.password = parts
+        useless, self.username, self.password = parts
 
     def moreChallenges(self):
         return False
@@ -4159,7 +4159,7 @@ class PLAINAuthenticator:
         return "PLAIN"
 
     def challengeResponse(self, secret, chal):
-        return '%s\0%s\0' % (self.user, secret)
+        return '\0%s\0%s' % (self.user, secret)
 
 
 class MailboxException(IMAP4Exception): pass
