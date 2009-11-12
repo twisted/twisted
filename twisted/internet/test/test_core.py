@@ -8,6 +8,7 @@ Tests for implementations of L{IReactorCore}.
 __metaclass__ = type
 
 import signal
+import time
 
 from twisted.internet.abstract import FileDescriptor
 from twisted.internet.error import ReactorAlreadyRunning
@@ -216,6 +217,21 @@ class SystemEventTestsBuilder(ReactorBuilder):
         reactor.addSystemEventTrigger('before', 'startup', trigger)
         reactor.run()
         self.assertEqual(events, ['trigger', 'callback'])
+
+
+    def test_iterate(self):
+        """
+        C{reactor.iterate()} does not block.
+        """
+        reactor = self.buildReactor()
+        t = reactor.callLater(5, reactor.crash)
+
+        start = time.time()
+        reactor.iterate(0) # Shouldn't block
+        elapsed = time.time() - start
+
+        self.failUnless(elapsed < 2)
+        t.cancel()
 
 
     def test_crash(self):

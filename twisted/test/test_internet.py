@@ -832,26 +832,6 @@ class TimeTestCase(unittest.TestCase):
         finally:
             d.cancel()
 
-    def testCallInNextIteration(self):
-        calls = []
-        def f1():
-            calls.append('f1')
-            reactor.callLater(0.0, f2)
-        def f2():
-            calls.append('f2')
-            reactor.callLater(0.0, f3)
-        def f3():
-            calls.append('f3')
-
-        reactor.callLater(0, f1)
-        self.assertEquals(calls, [])
-        reactor.iterate()
-        self.assertEquals(calls, ['f1'])
-        reactor.iterate()
-        self.assertEquals(calls, ['f1', 'f2'])
-        reactor.iterate()
-        self.assertEquals(calls, ['f1', 'f2', 'f3'])
-
     def testCallLaterOrder(self):
         l = []
         l2 = []
@@ -978,54 +958,12 @@ class CallFromThreadTests(unittest.TestCase):
         return d
 
 
-
-class ReactorCoreTestCase(unittest.TestCase):
-    """
-    Test core functionalities of the reactor.
-    """
-
-    def test_run(self):
-        """
-        Test that reactor.crash terminates reactor.run
-        """
-        for i in xrange(3):
-            reactor.callLater(0.01, reactor.crash)
-            reactor.run()
-
-
-    def test_iterate(self):
-        """
-        Test that reactor.iterate(0) doesn't block
-        """
-        start = time.time()
-        # twisted timers are distinct from the underlying event loop's
-        # timers, so this fail-safe probably won't keep a failure from
-        # hanging the test
-        t = reactor.callLater(10, reactor.crash)
-        reactor.iterate(0) # shouldn't block
-        stop = time.time()
-        elapsed = stop - start
-        self.failUnless(elapsed < 8)
-        t.cancel()
-
-
-
 class DelayedTestCase(unittest.TestCase):
     def setUp(self):
         self.finished = 0
         self.counter = 0
         self.timers = {}
         self.deferred = defer.Deferred()
-        # ick. Sometimes there are magic timers already running:
-        # popsicle.Freezer.tick . Kill off all such timers now so they won't
-        # interfere with the test. Of course, this kind of requires that
-        # getDelayedCalls already works, so certain failure modes won't be
-        # noticed.
-        if not hasattr(reactor, "getDelayedCalls"):
-            return
-        for t in reactor.getDelayedCalls():
-            t.cancel()
-        reactor.iterate() # flush timers
 
     def tearDown(self):
         for t in self.timers.values():
@@ -1088,11 +1026,23 @@ class DelayedTestCase(unittest.TestCase):
         self.deferred.addCallback(lambda x : self.checkTimers())
         return self.deferred
 
-    def testActive(self):
-        dcall = reactor.callLater(0, lambda: None)
-        self.assertEquals(dcall.active(), 1)
-        reactor.iterate()
-        self.assertEquals(dcall.active(), 0)
+
+    def test_active(self):
+        """
+        L{IDelayedCall.active} returns False once the call has run.
+        """
+        dcall = reactor.callLater(0.01, self.deferred.callback, True)
+        self.assertEquals(dcall.active(), True)
+
+        def checkDeferredCall(success):
+            self.assertEquals(dcall.active(), False)
+            return success
+
+        self.deferred.addCallback(checkDeferredCall)
+
+        return self.deferred
+
+
 
 resolve_helper = """
 import %(reactor)s
@@ -1174,72 +1124,86 @@ class Resolve(unittest.TestCase):
 if not interfaces.IReactorProcess(reactor, None):
     Resolve.skip = "cannot run test: reactor doesn't support IReactorProcess"
 
-class Counter:
-    index = 0
-
-    def add(self):
-        self.index = self.index + 1
-
-
-class Order:
-
-    stage = 0
-
-    def a(self):
-        if self.stage != 0: raise RuntimeError
-        self.stage = 1
-
-    def b(self):
-        if self.stage != 1: raise RuntimeError
-        self.stage = 2
-
-    def c(self):
-        if self.stage != 2: raise RuntimeError
-        self.stage = 3
 
 
 class CallFromThreadTestCase(unittest.TestCase):
-    """Task scheduling from threads tests."""
-
+    """
+    Task scheduling from threads tests.
+    """
     if interfaces.IReactorThreads(reactor, None) is None:
         skip = "Nothing to test without thread support"
 
+    def setUp(self):
+        self.counter = 0
+        self.deferred = Deferred()
+
+
     def schedule(self, *args, **kwargs):
-        """Override in subclasses."""
+        """
+        Override in subclasses.
+        """
         reactor.callFromThread(*args, **kwargs)
 
-    def testScheduling(self):
-        c = Counter()
-        for i in range(100):
-            self.schedule(c.add)
-        for i in range(100):
-            reactor.iterate()
-        self.assertEquals(c.index, 100)
 
-    def testCorrectOrder(self):
-        o = Order()
-        self.schedule(o.a)
-        self.schedule(o.b)
-        self.schedule(o.c)
-        reactor.iterate()
-        reactor.iterate()
-        reactor.iterate()
-        self.assertEquals(o.stage, 3)
+    def test_lotsOfThreadsAreScheduledCorrectly(self):
+        """
+        L{IReactorThreads.callFromThread} can be used to schedule a large
+        number of calls in the reactor thread.
+        """
+        def addAndMaybeFinish():
+            self.counter += 1
+            if self.counter == 100:
+                self.deferred.callback(True)
 
-    def testNotRunAtOnce(self):
-        c = Counter()
-        self.schedule(c.add)
-        # scheduled tasks should not be run at once:
-        self.assertEquals(c.index, 0)
-        reactor.iterate()
-        self.assertEquals(c.index, 1)
+        for i in xrange(100):
+            self.schedule(addAndMaybeFinish)
+
+        return self.deferred
+
+
+    def test_threadsAreRunInScheduledOrder(self):
+        """
+        Callbacks should be invoked in the order they were scheduled.
+        """
+        order = []
+
+        def check(_):
+            self.assertEquals(order, [1, 2, 3])
+
+        self.deferred.addCallback(check)
+        self.schedule(order.append, 1)
+        self.schedule(order.append, 2)
+        self.schedule(order.append, 3)
+        self.schedule(reactor.callFromThread, self.deferred.callback, None)
+
+        return self.deferred
+
+
+    def test_scheduledThreadsNotRunUntilReactorRuns(self):
+        """
+        Scheduled tasks should not be run until the reactor starts running.
+        """
+        def incAndFinish():
+            self.counter = 1
+            self.deferred.callback(True)
+        self.schedule(incAndFinish)
+
+        # Callback shouldn't have fired yet.
+        self.assertEquals(self.counter, 0)
+
+        return self.deferred
+
 
 
 class MyProtocol(protocol.Protocol):
-    """Sample protocol."""
+    """
+    Sample protocol.
+    """
 
 class MyFactory(protocol.Factory):
-    """Sample factory."""
+    """
+    Sample factory.
+    """
 
     protocol = MyProtocol
 
