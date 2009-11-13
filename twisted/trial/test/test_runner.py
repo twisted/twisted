@@ -7,6 +7,7 @@
 
 import StringIO, os
 from zope.interface import implements
+from zope.interface.verify import verifyClass
 
 from twisted.trial.itrial import IReporter, ITestCase
 from twisted.trial import unittest, runner, reporter, util
@@ -685,7 +686,61 @@ class TestErrorHolder(TestTestHolder):
             1/0
         except ZeroDivisionError:
             error = failure.Failure()
-        self.holder = runner.ErrorHolder(self.description, error)
+        self.error = error
+        self.holder = runner.ErrorHolder(self.description, self.error)
+        self.result = self.TestResultStub()
+
+
+    def test_holderImplementsITestCase(self):
+        """
+        L{runner.TestHolder} implements L{ITestCase}.
+        """
+        verifyClass(ITestCase, self.holder.__class__)
+
+
+    def test_run(self):
+        """
+        L{runner.ErrorHolder} adds an error to the result when run. 
+        """
+        self.holder.run(self.result)
+        self.assertEquals(self.result.errors, [(self.holder, self.error)])
+
+
+    def test_call(self):
+        """
+        L{runner.ErrorHolder} adds an error to the result when called.
+        """
+        self.holder(self.result)
+        self.assertEquals(self.result.errors, [(self.holder, self.error)])
+
+
+    def test_countTestCases(self):
+        """
+        L{runner.countTestCases} always returns 0.
+        """
+        self.assertEqual(self.holder.countTestCases(), 0)
+
+
+    def test_repr(self):
+        """
+        L{ErrorHolder.__repr__} returns a string describing the error it
+        holds.
+        """
+        self.assertEqual(repr(self.holder), 
+            "<ErrorHolder description='description' "
+            "error=<twisted.python.failure.Failure "
+                "<type 'exceptions.ZeroDivisionError'>>>")
+
+
+    class TestResultStub(object):
+        """
+        Stub for L{TestResult}.
+        """
+        def __init__(self):
+            self.errors = []
+
+        def addError(self, test, error):
+            self.errors.append((test, error))
 
 
 
