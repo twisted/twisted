@@ -5,7 +5,7 @@
 Tests for the behaviour of unit tests.
 """
 
-import gc, StringIO, sys, weakref
+import gc, StringIO, sys, weakref, types
 
 from twisted.internet import defer, reactor
 from twisted.trial import unittest, runner, reporter, util
@@ -87,6 +87,129 @@ class TestSuccess(unittest.TestCase):
         del test
         gc.collect()
         self.assertIdentical(ref(), None)
+
+
+class TestInit(unittest.TestCase):
+    """
+    Tests for L{unittest.TestCase}'s __init__.
+    """
+
+    class TestUnshared(unittest.TestCase):
+        """
+        Not treated as a 'shared' class by virtue of its lack of 
+        setUpClass/tearDownClass methods.
+        """
+        def runTest(self):
+            pass
+
+        def test_method(self):
+            pass
+
+        test_builtin = dir
+
+
+    class TestShared(unittest.TestCase):
+        """
+        Treated as a 'shared' class by virtue of its setUpClass method.
+        """
+        def setUpClass(self):
+            pass
+
+        def test_method(self):
+            pass
+
+
+    class NewStyleTest(TestUnshared, object):
+        """
+        New style version of TestUnshared.
+        """
+        pass
+
+
+    def test_default_name(self):
+        """
+        Initializing a L{unittest.TestCase} without parameters sets the 
+        _testMethodName to 'runTest'.
+        """
+        tc = self.TestUnshared()
+        self.assertEqual(tc._testMethodName, "runTest")
+        self.assertFalse(self._passed)
+        self.assertEqual(self._cleanups, [])
+
+
+    def test_nondefault_name(self):
+        """
+        Initializing a L{unittest.TestCase} with a parameter correctly sets 
+        _testMethodName.
+        """
+        tc = self.TestUnshared("test_method")
+        self.assertEqual(tc._testMethodName, "test_method")
+        self.assertFalse(self._passed)
+        self.assertEqual(self._cleanups, [])
+
+
+    def test_parents_oldstyle(self):
+        """
+        For old style classes, _parents is set correctly.
+        """
+        tc = self.TestUnshared()
+
+        self.assertEqual(type(tc), types.InstanceType)
+        module = sys.modules.get(tc.__class__.__module__, None)
+        self.assertEqual(tc._parents,  
+            [tc.runTest, tc, tc.__class__, module])
+
+    if type(unittest.TestCase) is type:
+        test_parents_oldstyle.skip = "unittest.TestCase is a new style class"
+
+
+    def test_parents_newstyle(self):
+        """
+        For new style classes, _parents is set correctly.
+        """
+        tc = self.NewStyleTest()
+
+        self.assertEqual(type(tc), self.NewStyleTest)
+        module = sys.modules.get(tc.__class__.__module__, None)
+        self.assertEqual(tc._parents,  
+            [tc.runTest, tc, tc.__class__, module])
+
+
+    def test_unshared(self):
+        """
+        For classes without setUpClass and tearDownClass methods, _instances 
+        and _testCaseInstance are not set.
+        """
+        tc = self.TestUnshared()
+        self.assertFalse(tc._shared)
+        self.assertFalse(hasattr(tc.__class__, '_instances'))
+        self.assertFalse(hasattr(tc.__class__, '_testCaseInstance'))
+
+
+    def test_shared(self):
+        """
+        For classes with setUpClass or tearDownClass methods, _instances and 
+        _testCaseInstance are correctly.
+        """
+        tc = self.TestShared()
+        self.assertTrue(tc._shared)
+        self.assertTrue(hasattr(tc.__class__, '_instances'))
+        self.assertIn(tc, tc.__class__._instances)
+        self.assertTrue(hasattr(tc.__class__, '_testCaseInstance'))
+        self.assertEqual(tc.__class__._testCaseInstance, tc)
+
+
+    def test_absent_im_class(self):
+        """
+        Test that a test case can be contructed that refers to a method that 
+        does not have an im_class property.
+        """
+        try:
+            tc = self.TestUnshared('test_builtin')
+        except AttributeError:
+            raise
+        else:
+            self.assertTrue(True)
 
 
 

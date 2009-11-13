@@ -619,7 +619,7 @@ def addMethodNamesToDict(classObj, dict, prefix, baseClass=None):
         for name in classObj.__dict__:
             method = getattr(classObj, name)
             optName = name[len(prefix):]
-            if (hasattr(method, "__call__")
+            if (getattr(method, "__call__", None) is not None
                 and (name[:len(prefix)] == prefix)
                 and (len(optName))):
                 dict[optName] = 1

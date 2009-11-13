@@ -744,20 +744,37 @@ class FullyQualifiedNameTests(unittest.TestCase):
 
 
 class ExampleClass1(object):
+    """
+    Creates a class hierarchy to permit testing the baseClass filtering 
+    functionality of L{reflect.addMethodNamesToDict}.
+    """
+
     def prefix_class1_method(self):
         pass
 
 
+
 class ExampleClass2(object):
+    """
+    Creates a class hierarchy to permit testing the baseClass filtering 
+    functionality of L{reflect.addMethodNamesToDict}.
+    """
+
     def prefix_class2_method(self):
         pass
 
 
-class ExampleClass3(ExampleClass1, ExampleClass2):
 
+class ExampleClass3(ExampleClass1, ExampleClass2):
+    """
+    Top level class that will be searched for methods by 
+    L{reflect.addMethodNamesToDict}.
+    """
 
     class ExampleMethodDescriptor(object):
-        """Decorator that returns a Descriptor that returns an attribute of type MethodType"""
+        """
+        A non-data descriptor that returns an object of type MethodType.
+        """
         def __init__(self, f):
             self.f = f
 
@@ -765,8 +782,10 @@ class ExampleClass3(ExampleClass1, ExampleClass2):
             return types.MethodType(lambda x: True, obj, objtype)
 
 
-    class ExampleDescriptor(object):
-        """Decorator that returns a Descriptor that returns an attribute of type FunctionType"""
+    class ExampleFunctionDescriptor(object):
+        """
+        A non-data descriptor that returns an object of type FunctionType.
+        """
         def __init__(self, f):
             self.f = f
 
@@ -776,7 +795,10 @@ class ExampleClass3(ExampleClass1, ExampleClass2):
             return foo 
 
 
-    class ExampleDecoratorObject(object):
+    class ExampleDecoratorClass(object):
+        """
+        A class based method decorator.
+        """
         def __init__(self, f):
             self.f = f
             self.__name__ = f.__name__
@@ -785,107 +807,223 @@ class ExampleClass3(ExampleClass1, ExampleClass2):
             return self.f()
 
 
-    def ExampleDecoratorFunc(f):
+    def exampleDecoratorFunc(f):
+        """
+        A function based method decorator.
+        """
         def _f(self):
             return f(self)
         return _f
 
 
-    # create a bunch of methods various ways
+    # Create a bunch of class properties using various objects (callable and 
+    # not callable).  The tests for addMethodNamesToDict will then
+    # check that each callable class property (aka method) is correctly found
+    # and the non-callable ones are not found. 
 
+
+    # A method defined using the def statement.
     def prefix_def_method(self):
         pass
 
+    # A method name starting with "prefix_class".
     prefix_class3_method = prefix_def_method
-    prefix_methdesc_method = ExampleMethodDescriptor(prefix_def_method)
-    prefix_desc_method = ExampleDescriptor(prefix_def_method)
-    prefix_decor_method = ExampleDecoratorObject(prefix_def_method)
-    prefix_fdecor_method = ExampleDecoratorFunc(prefix_def_method)
+
+    # A descriptor who's __get__ method returns a MethodType object.  This 
+    # is functionally the same as prefix_def_method in that 
+    # instance.prefix_method_descriptor_method and instance.prefix_def_method 
+    # have the same type.
+
+    prefix_method_descriptor_method = ExampleMethodDescriptor(
+        prefix_def_method)
+
+    # A descriptor who's __get__ method returns a FunctionType object.  
+    # Methods to which the staticmethod decorator have been applied have 
+    # the same type (FunctionType) as this.
+
+    prefix_function_descriptor_method = ExampleFunctionDescriptor(
+        prefix_def_method)
+
+    # A method defined by a class based decorator (aka an instance of a 
+    # callable class).  The extra underscore in the name is to prevent 
+    # matching "prefix_class". 
+
+    prefix__class_based_decorator_method = ExampleDecoratorClass(
+        prefix_def_method)
+
+    # A method created by a function decorator (aka a function that returns a 
+    # function)
+    prefix_function_based_decorator_method = exampleDecoratorFunc(
+        prefix_def_method)
+
+    # A method created from a lambda
     prefix_lambda_method = lambda self: True
+   
+    # A method created from a builtin 
     prefix_builtin_method = dir
 
-    # a method with a different prefix
-
+    # A method with a different prefix.  Given that none of the tests search 
+    # for a method with this prefix, it will never be found.
     def foo_def_method(self):
         pass
 
-    # not a method 
+    # A class property that has the correct prefix but is not callable.
 
     prefix_value_method = 42
 
-    # method name edge cases
+    # Method name edge cases.  These won't be found but their presence doesn't 
+    # cause things to crash either.
 
+    # A method name exactly the same length as the searched for prefix.
     prefix_ = prefix_def_method
+
+    # A method name shorter than the searched for prefix.
     prefix = prefix_def_method
+
 
 
 class AddMethodNamesToDictTests(unittest.TestCase):
     """
-    Test for L{reflect.addMethodNamesToDict}.
+    Tests for L{reflect.addMethodNamesToDict}.
     """
-    non_base = object()
-    groups = ['def', 'fdecor', 'lambda', 'class1', 'class2', 'class3', 'methdesc', 'decor', 'desc', 'builtin']
-    fail_groups = []
-    prefix = "prefix_"
-    postfix = "_method"
+
+    def setUp(self):
+        self.dict = {}
+        self.prefix = "prefix_"
+        self.postfix = "_method"
+
 
     def test_simple_base(self):
-        dict = {}
-        reflect.addMethodNamesToDict(ExampleClass1, dict, self.prefix)
-        self.assertEqual(dict, {"class1"+self.postfix:1})
+        """
+        Finds all the matching methods in an underived class (ExampleClass1).
+        """
+        reflect.addMethodNamesToDict(ExampleClass1, self.dict, self.prefix)
+        self.assertEqual(self.dict, {"class1"+self.postfix:1})
+
 
     def test_non_base(self):
-        dict = {}
-        reflect.addMethodNamesToDict(ExampleClass3, dict, self.prefix, self.non_base)
-        self.assertEqual(dict, {})
+        """
+        Finds no methods when the supplied baseClass is not an ancestor of
+        classObj.
+        """
+        non_base = type("SomeOtherClass", (object,), {}) 
+
+        reflect.addMethodNamesToDict(
+            ExampleClass3, self.dict, self.prefix, non_base)
+        self.assertEqual(self.dict, {})
+
 
     def test_base_match_one(self):
-        dict = {}
-        reflect.addMethodNamesToDict(ExampleClass3, dict, self.prefix+"class", ExampleClass1)
-        self.assertEqual(dict, {"3"+self.postfix:1})
+        """
+        If baseClass is supplied, only methods on classes which are an 
+        immediate ancestor of baseClass are found.
+
+        In this case only ExampleClass3 is a direct ancestor of ExampleClass1. 
+        As such none of the methods in ExampleClass2 or ExampleClass1, which 
+        would otherwise match the prefix ("prefix_class"), should be found.
+        """
+        reflect.addMethodNamesToDict(
+            ExampleClass3, self.dict, self.prefix+"class", ExampleClass1)
+        self.assertEqual(self.dict, {"3"+self.postfix:1})
+
 
     def test_base_match_many(self):
-        dict = {}
-        reflect.addMethodNamesToDict(ExampleClass3, dict, self.prefix+"class", object)
-        self.assertEqual(dict, {"1"+self.postfix:1, "2"+self.postfix:1})
+        """
+        If baseClass is supplied, only methods on classes which are an 
+        immediate ancestor of baseClass are found.
 
-    def _test_method_groups(self, mid):
-        dict = {}
-        prefix = self.prefix + mid
-        reflect.addMethodNamesToDict(ExampleClass3, dict, prefix)
-        self.assertEqual(dict, {self.postfix:1}, prefix)
+        In this case only ExampleClass1 and ExampleClass2 inherit directly 
+        from object.  ExampleClass3 does not inherit directly from object.  
+        As such only the methods in ExampleClass1 and ExampleClass2 should 
+        be found.
+        """
+        reflect.addMethodNamesToDict(
+            ExampleClass3, self.dict, self.prefix+"class", object)
+        self.assertEqual(self.dict, {"1"+self.postfix:1, "2"+self.postfix:1})
 
-    def _test_method_fail_groups(self, mid):
-        dict = {}
-        prefix = self.prefix + mid
-        reflect.addMethodNamesToDict(ExampleClass3, dict, prefix)
-        self.assertEqual(dict, {}, prefix)
 
-    def test_all(self):
-        expect = {}
-        for mid in self.groups:
-            expect[mid+self.postfix] = 1
+    def test_def_found(self):
+        """
+        Methods created with the def statement are found.
+        """
+        reflect.addMethodNamesToDict(
+            ExampleClass3, self.dict, self.prefix+"def")
+        self.assertEqual(self.dict, {self.postfix:1})
 
-        dict = {}
-        reflect.addMethodNamesToDict(ExampleClass3, dict, self.prefix)
-        self.assertEqual(dict, expect)
+
+    def test_lambda_found(self):
+        """
+        Methods defined by a lambda are found.
+        """
+        reflect.addMethodNamesToDict(
+            ExampleClass3, self.dict, self.prefix+"lambda")
+        self.assertEqual(self.dict, {self.postfix:1})
+
+
+    def test_builtin_found(self):
+        """
+        Methods which copy a builtin are found.
+        """
+        reflect.addMethodNamesToDict(
+            ExampleClass3, self.dict, self.prefix+"builtin")
+        self.assertEqual(self.dict, {self.postfix:1})
+
+
+    def test_method_descriptor_found(self):
+        """
+        Methods accessed through a descriptor that returns a MethodType
+        object are found.
+        """
+        reflect.addMethodNamesToDict(
+            ExampleClass3, self.dict, self.prefix+"method_descriptor")
+        self.assertEqual(self.dict, {self.postfix:1})
+
+
+    def test_function_descriptor_found(self):
+        """
+        Methods accessed through a descriptor that returns a FunctionType 
+        object are found.
+        """
+        reflect.addMethodNamesToDict(
+            ExampleClass3, self.dict, self.prefix+"function_descriptor")
+        self.assertEqual(self.dict, {self.postfix:1})
+
+
+    def test_class_found(self):
+        """
+        Methods scattered through out a class hierarchy are found.
+        """
+        reflect.addMethodNamesToDict(
+            ExampleClass3, self.dict, self.prefix+"class")
+        self.assertEqual(self.dict, 
+            { "1"+self.postfix:1, "2"+self.postfix:1, "3"+self.postfix:1 })
+
+
+    def test__class_based_decorator_found(self):
+        """
+        Methods decorated with a class are found.
+        """
+        reflect.addMethodNamesToDict(
+            ExampleClass3, self.dict, self.prefix+"_class_based_decorator")
+        self.assertEqual(self.dict, {self.postfix:1})
+
+
+    def test_function_based_decorator_found(self):
+        """
+        Methods decorated with a function are found.
+        """
+        reflect.addMethodNamesToDict(
+            ExampleClass3, self.dict, self.prefix+"function_based_decorator")
+        self.assertEqual(self.dict, {self.postfix:1})
+
 
     def test_no_prefix_methods(self):
-        dict = {}
-        reflect.addMethodNamesToDict(ExampleClass3, dict, "foozle")
-        self.assertEqual(dict, {})
-
-for mid in AddMethodNamesToDictTests.groups:
-    def _func(self, mid=mid):
-        return AddMethodNamesToDictTests._test_method_groups(self, mid)
-    name = "test_%s_group_not_empty" % (mid,)
-    setattr(AddMethodNamesToDictTests, name, _func)
-
-for mid in AddMethodNamesToDictTests.fail_groups:
-    def _func(self, mid=mid):
-        return AddMethodNamesToDictTests._test_method_fail_groups(self, mid)
-    name = "test_%s_group_empty" % (mid,)
-    setattr(AddMethodNamesToDictTests, name, _func)
+        """
+        No methods should be found when there are no method names which 
+        start with the prefix.
+        """
+        reflect.addMethodNamesToDict(ExampleClass3, self.dict, "foozle")
+        self.assertEqual(self.dict, {})
 
 
 
