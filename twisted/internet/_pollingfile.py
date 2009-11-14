@@ -1,17 +1,21 @@
-# -*- test-case-name: twisted.web2.test -*-
-"""
+# -*- test-case-name: twisted.internet.test.test_pollingfile -*-
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
+"""
 Implements a simple polling interface for file descriptors that don't work with
 select() - this is pretty much only useful on Windows.
-
 """
 
 from zope.interface import implements
 
 from twisted.internet.interfaces import IConsumer, IPushProducer
 
+
 MIN_TIMEOUT = 0.000000001
 MAX_TIMEOUT = 0.1
+
+
 
 class _PollableResource:
     active = True
@@ -19,8 +23,11 @@ class _PollableResource:
     def activate(self):
         self.active = True
 
+
     def deactivate(self):
         self.active = False
+
+
 
 class _PollingTimer:
     # Everything is private here because it is really an implementation detail.
@@ -202,7 +209,9 @@ class _PollableWritePipe(_PollableResource):
         FileDescriptor provides some infrastructure for producer methods.
         """
         if self.producer is not None:
-            raise RuntimeError("Cannot register producer %s, because producer %s was never unregistered." % (producer, self.producer))
+            raise RuntimeError(
+                "Cannot register producer %s, because producer %s was never "
+                "unregistered." % (producer, self.producer))
         if not self.active:
             producer.stopProducing()
         else:
@@ -249,6 +258,8 @@ class _PollableWritePipe(_PollableResource):
         while self.outQueue:
             data = self.outQueue.pop(0)
             errCode = 0
+            if isinstance(data, unicode):
+                raise TypeError("unicode not allowed")
             try:
                 errCode, nBytesWritten = win32file.WriteFile(self.writePipe,
                                                              data, None)
@@ -266,5 +277,3 @@ class _PollableWritePipe(_PollableResource):
             if not resumed and self.disconnecting:
                 self.writeConnectionLost()
         return numBytesWritten
-
-
