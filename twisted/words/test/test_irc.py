@@ -38,6 +38,456 @@ class QuotingTest(unittest.TestCase):
             self.failUnlessEqual(s, irc.ctcpDequote(irc.ctcpQuote(s)))
 
 
+
+class Dispatcher(irc._CommandDispatcherMixin):
+    """
+    A dispatcher that exposes one known command and handles unknown commands.
+    """
+    prefix = 'disp'
+
+    def disp_working(self, a, b):
+        """
+        A known command that returns its input.
+        """
+        return a, b
+
+
+    def disp_unknown(self, name, a, b):
+        """
+        Handle unknown commands by returning their name and inputs.
+        """
+        return name, a, b
+
+
+
+class DispatcherTests(unittest.TestCase):
+    """
+    Tests for L{irc._CommandDispatcherMixin}.
+    """
+    def test_dispatch(self):
+        """
+        Dispatching a command invokes the correct handler.
+        """
+        disp = Dispatcher()
+        args = (1, 2)
+        res = disp.dispatch('working', *args)
+        self.assertEquals(res, args)
+
+
+    def test_dispatchUnknown(self):
+        """
+        Dispatching an unknown command invokes the default handler.
+        """
+        disp = Dispatcher()
+        name = 'missing'
+        args = (1, 2)
+        res = disp.dispatch(name, *args)
+        self.assertEquals(res, (name,) + args)
+
+
+    def test_dispatchMissingUnknown(self):
+        """
+        Dispatching an unknown command, when no default handler is present,
+        results in an exception being raised.
+        """
+        disp = Dispatcher()
+        disp.disp_unknown = None
+        self.assertRaises(irc.UnhandledCommand, disp.dispatch, 'bar')
+
+
+
+class ServerSupportedFeatureTests(unittest.TestCase):
+    """
+    Tests for L{ServerSupportedFeatures} and related functions.
+    """
+    def test_intOrDefault(self):
+        """
+        L{_intOrDefault} converts values to C{int} if possible, otherwise
+        returns a default value.
+        """
+        self.assertEquals(irc._intOrDefault(None), None)
+        self.assertEquals(irc._intOrDefault([]), None)
+        self.assertEquals(irc._intOrDefault(''), None)
+        self.assertEquals(irc._intOrDefault('hello', 5), 5)
+        self.assertEquals(irc._intOrDefault('123'), 123)
+        self.assertEquals(irc._intOrDefault(123), 123)
+
+
+    def test_splitParam(self):
+        """
+        L{ServerSupportedFeatures._splitParam} splits ISUPPORT parameters
+        into key and values. Parameters without a separator are split into a
+        key and a list containing only the empty string. Escaped parameters
+        are unescaped.
+        """
+        params = [('FOO',         ('FOO', [''])),
+                  ('FOO=',        ('FOO', [''])),
+                  ('FOO=1',       ('FOO', ['1'])),
+                  ('FOO=1,2,3',   ('FOO', ['1', '2', '3'])),
+                  ('FOO=A\\x20B', ('FOO', ['A B'])),
+                  ('FOO=\\x5Cx',  ('FOO', ['\\x'])),
+                  ('FOO=\\',      ('FOO', ['\\'])),
+                  ('FOO=\\n',     ('FOO', ['\\n']))]
+
+        _splitParam = irc.ServerSupportedFeatures._splitParam
+
+        for param, expected in params:
+            res = _splitParam(param)
+            self.assertEquals(res, expected)
+
+        self.assertRaises(ValueError, _splitParam, 'FOO=\\x')
+        self.assertRaises(ValueError, _splitParam, 'FOO=\\xNN')
+        self.assertRaises(ValueError, _splitParam, 'FOO=\\xN')
+        self.assertRaises(ValueError, _splitParam, 'FOO=\\x20\\x')
+
+
+    def test_splitParamArgs(self):
+        """
+        L{ServerSupportedFeatures._splitParamArgs} splits ISUPPORT parameter
+        arguments into key and value.  Arguments without a separator are
+        split into a key and an empty string.
+        """
+        res = irc.ServerSupportedFeatures._splitParamArgs(['A:1', 'B:2', 'C:', 'D'])
+        self.assertEquals(res, [('A', '1'),
+                                ('B', '2'),
+                                ('C', ''),
+                                ('D', '')])
+
+
+    def test_splitParamArgsProcessor(self):
+        """
+        L{ServerSupportedFeatures._splitParamArgs} uses the argument processor
+        passed to to convert ISUPPORT argument values to some more suitable
+        form.
+        """
+        res = irc.ServerSupportedFeatures._splitParamArgs(['A:1', 'B:2', 'C'],
+                                           irc._intOrDefault)
+        self.assertEquals(res, [('A', 1),
+                                ('B', 2),
+                                ('C', None)])
+
+
+    def test_parsePrefixParam(self):
+        """
+        L{ServerSupportedFeatures._parsePrefixParam} parses the ISUPPORT PREFIX
+        parameter into a mapping from modes to prefix symbols, returns
+        C{None} if there is no parseable prefix parameter or raises
+        C{ValueError} if the prefix parameter is malformed.
+        """
+        _parsePrefixParam = irc.ServerSupportedFeatures._parsePrefixParam
+        self.assertEquals(_parsePrefixParam(''), None)
+        self.assertRaises(ValueError, _parsePrefixParam, 'hello')
+        self.assertEquals(_parsePrefixParam('(ov)@+'),
+                          {'o': ('@', 0),
+                           'v': ('+', 1)})
+
+
+    def test_parse(self):
+        """
+        L{ServerSupportedFeatures.parse} changes the internal state of the
+        instance to reflect the features indicated by the parsed ISUPPORT
+        parameters, including unknown parameters and unsetting previously set
+        parameters.
+        """
+        supported = irc.ServerSupportedFeatures()
+        supported.parse(['MODES=4',
+                        'CHANLIMIT=#:20,&:10',
+                        'INVEX',
+                        'EXCEPTS=Z',
+                        'UNKNOWN=A,B,C'])
+
+        self.assertEquals(supported.getFeature('MODES'), 4)
+        self.assertEquals(supported.getFeature('CHANLIMIT'),
+                          [('#', 20),
+                           ('&', 10)])
+        self.assertEquals(supported.getFeature('INVEX'), 'I')
+        self.assertEquals(supported.getFeature('EXCEPTS'), 'Z')
+        self.assertEquals(supported.getFeature('UNKNOWN'), ('A', 'B', 'C'))
+
+        self.assertTrue(supported.hasFeature('INVEX'))
+        supported.parse(['-INVEX'])
+        self.assertFalse(supported.hasFeature('INVEX'))
+        # Unsetting a previously unset parameter should not be a problem.
+        supported.parse(['-INVEX'])
+
+
+    def _parse(self, features):
+        """
+        Parse all specified features according to the ISUPPORT specifications.
+
+        @type features: C{list} of C{(featureName, value)}
+        @param features: Feature names and values to parse
+
+        @rtype: L{irc.ServerSupportedFeatures}
+        """
+        supported = irc.ServerSupportedFeatures()
+        features = ['%s=%s' % (name, value or '')
+                    for name, value in features]
+        supported.parse(features)
+        return supported
+
+
+    def _parseFeature(self, name, value=None):
+        """
+        Parse a feature, with the given name and value, according to the
+        ISUPPORT specifications and return the parsed value.
+        """
+        supported = self._parse([(name, value)])
+        return supported.getFeature(name)
+
+
+    def _testIntOrDefaultFeature(self, name, default=None):
+        """
+        Perform some common tests on a feature known to use L{_intOrDefault}.
+        """
+        self.assertEquals(
+            self._parseFeature(name, None),
+            default)
+        self.assertEquals(
+            self._parseFeature(name, 'notanint'),
+            default)
+        self.assertEquals(
+            self._parseFeature(name, '42'),
+            42)
+
+
+    def _testFeatureDefault(self, name, features=None):
+        """
+        Features known to have default values are reported as being present by
+        L{irc.ServerSupportedFeatures.hasFeature}, and their value defaults
+        correctly, when they don't appear in an ISUPPORT message.
+        """
+        default = irc.ServerSupportedFeatures()._features[name]
+
+        if features is None:
+            features = [('DEFINITELY_NOT', 'a_feature')]
+
+        supported = self._parse(features)
+        self.assertTrue(supported.hasFeature(name))
+        self.assertEquals(supported.getFeature(name), default)
+
+
+    def test_support_CHANMODES(self):
+        """
+        The CHANMODES ISUPPORT parameter is parsed into a C{dict} giving the
+        four mode categories, C{'addressModes'}, C{'param'}, C{'setParam'}, and
+        C{'noParam'}.
+        """
+        self.assertEquals(
+            self._parseFeature('CHANMODES', ''),
+            {'addressModes': '',
+             'param': '',
+             'setParam': '',
+             'noParam': ''})
+
+        self.assertEquals(
+            self._parseFeature('CHANMODES', ',A'),
+            {'addressModes': '',
+             'param': 'A',
+             'setParam': '',
+             'noParam': ''})
+
+        self.assertEquals(
+            self._parseFeature('CHANMODES', 'A,Bc,Def,Ghij'),
+            {'addressModes': 'A',
+             'param': 'Bc',
+             'setParam': 'Def',
+             'noParam': 'Ghij'})
+
+
+    def test_support_IDCHAN(self):
+        """
+        The IDCHAN support parameter is parsed into a sequence of two-tuples
+        giving channel prefix and ID length pairs.
+        """
+        self.assertEquals(
+            self._parseFeature('IDCHAN', '!:5'),
+            [('!', '5')])
+
+
+    def test_support_MAXLIST(self):
+        """
+        The MAXLIST support parameter is parsed into a sequence of two-tuples
+        giving modes and their limits.
+        """
+        self.assertEquals(
+            self._parseFeature('MAXLIST', 'b:25,eI:50'),
+            [('b', 25), ('eI', 50)])
+        # A non-integer parameter argument results in None.
+        self.assertEquals(
+            self._parseFeature('MAXLIST', 'b:25,eI:50,a:3.1415'),
+            [('b', 25), ('eI', 50), ('a', None)])
+        self.assertEquals(
+            self._parseFeature('MAXLIST', 'b:25,eI:50,a:notanint'),
+            [('b', 25), ('eI', 50), ('a', None)])
+
+
+    def test_support_NETWORK(self):
+        """
+        The NETWORK support parameter is parsed as the network name, as
+        specified by the server.
+        """
+        self.assertEquals(
+            self._parseFeature('NETWORK', 'IRCNet'),
+            'IRCNet')
+
+
+    def test_support_SAFELIST(self):
+        """
+        The SAFELIST support parameter is parsed into a boolean indicating
+        whether the safe "list" command is supported or not.
+        """
+        self.assertEquals(
+            self._parseFeature('SAFELIST'),
+            True)
+
+
+    def test_support_STATUSMSG(self):
+        """
+        The STATUSMSG support parameter is parsed into a string of channel
+        status that support the exclusive channel notice method.
+        """
+        self.assertEquals(
+            self._parseFeature('STATUSMSG', '@+'),
+            '@+')
+
+
+    def test_support_TARGMAX(self):
+        """
+        The TARGMAX support parameter is parsed into a dictionary, mapping
+        strings to integers, of the maximum number of targets for a particular
+        command.
+        """
+        self.assertEquals(
+            self._parseFeature('TARGMAX', 'PRIVMSG:4,NOTICE:3'),
+            {'PRIVMSG': 4,
+             'NOTICE': 3})
+        # A non-integer parameter argument results in None.
+        self.assertEquals(
+            self._parseFeature('TARGMAX', 'PRIVMSG:4,NOTICE:3,KICK:3.1415'),
+            {'PRIVMSG': 4,
+             'NOTICE': 3,
+             'KICK': None})
+        self.assertEquals(
+            self._parseFeature('TARGMAX', 'PRIVMSG:4,NOTICE:3,KICK:notanint'),
+            {'PRIVMSG': 4,
+             'NOTICE': 3,
+             'KICK': None})
+
+
+    def test_support_NICKLEN(self):
+        """
+        The NICKLEN support parameter is parsed into an integer value
+        indicating the maximum length of a nickname the client may use,
+        otherwise, if the parameter is missing or invalid, the default value
+        (as specified by RFC 1459) is used.
+        """
+        default = irc.ServerSupportedFeatures()._features['NICKLEN']
+        self._testIntOrDefaultFeature('NICKLEN', default)
+
+
+    def test_support_CHANNELLEN(self):
+        """
+        The CHANNELLEN support parameter is parsed into an integer value
+        indicating the maximum channel name length, otherwise, if the
+        parameter is missing or invalid, the default value (as specified by
+        RFC 1459) is used.
+        """
+        default = irc.ServerSupportedFeatures()._features['CHANNELLEN']
+        self._testIntOrDefaultFeature('CHANNELLEN', default)
+
+
+    def test_support_CHANTYPES(self):
+        """
+        The CHANTYPES support parameter is parsed into a tuple of
+        valid channel prefix characters.
+        """
+        self._testFeatureDefault('CHANTYPES')
+
+        self.assertEquals(
+            self._parseFeature('CHANTYPES', '#&%'),
+            ('#', '&', '%'))
+
+
+    def test_support_KICKLEN(self):
+        """
+        The KICKLEN support parameter is parsed into an integer value
+        indicating the maximum length of a kick message a client may use.
+        """
+        self._testIntOrDefaultFeature('KICKLEN')
+
+
+    def test_support_PREFIX(self):
+        """
+        The PREFIX support parameter is parsed into a dictionary mapping
+        modes to two-tuples of status symbol and priority.
+        """
+        self._testFeatureDefault('PREFIX')
+        self._testFeatureDefault('PREFIX', [('PREFIX', 'hello')])
+
+        self.assertEquals(
+            self._parseFeature('PREFIX', None),
+            None)
+        self.assertEquals(
+            self._parseFeature('PREFIX', '(ohv)@%+'),
+            {'o': ('@', 0),
+             'h': ('%', 1),
+             'v': ('+', 2)})
+        self.assertEquals(
+            self._parseFeature('PREFIX', '(hov)@%+'),
+            {'o': ('%', 1),
+             'h': ('@', 0),
+             'v': ('+', 2)})
+
+
+    def test_support_TOPICLEN(self):
+        """
+        The TOPICLEN support parameter is parsed into an integer value
+        indicating the maximum length of a topic a client may set.
+        """
+        self._testIntOrDefaultFeature('TOPICLEN')
+
+
+    def test_support_MODES(self):
+        """
+        The MODES support parameter is parsed into an integer value
+        indicating the maximum number of "variable" modes (defined as being
+        modes from C{addressModes}, C{param} or C{setParam} categories for
+        the C{CHANMODES} ISUPPORT parameter) which may by set on a channel
+        by a single MODE command from a client.
+        """
+        self._testIntOrDefaultFeature('MODES')
+
+
+    def test_support_EXCEPTS(self):
+        """
+        The EXCEPTS support parameter is parsed into the mode character
+        to be used for "ban exception" modes. If no parameter is specified
+        then the character C{e} is assumed.
+        """
+        self.assertEquals(
+            self._parseFeature('EXCEPTS', 'Z'),
+            'Z')
+        self.assertEquals(
+            self._parseFeature('EXCEPTS'),
+            'e')
+
+
+    def test_support_INVEX(self):
+        """
+        The INVEX support parameter is parsed into the mode character to be
+        used for "invite exception" modes. If no parameter is specified then
+        the character C{I} is assumed.
+        """
+        self.assertEquals(
+            self._parseFeature('INVEX', 'Z'),
+            'Z')
+        self.assertEquals(
+            self._parseFeature('INVEX'),
+            'I')
+
+
+
 class IRCClientWithoutLogin(irc.IRCClient):
     performLogin = 0
 
@@ -80,7 +530,7 @@ class CTCPTest(unittest.TestCase):
         del self.client
         del self.transport
 
-class NoticingClient(object, IRCClientWithoutLogin):
+class NoticingClient(IRCClientWithoutLogin, object):
     methods = {
         'created': ('when',),
         'yourHost': ('info',),
@@ -112,7 +562,11 @@ class NoticingClient(object, IRCClientWithoutLogin):
 
 
     def __init__(self, *a, **kw):
-        object.__init__(self)
+        # It is important that IRCClient.__init__ is not called since
+        # traditionally it did not exist, so it is important that nothing is
+        # initialised there that would prevent subclasses that did not (or
+        # could not) invoke the base implementation. Any protocol
+        # initialisation should happen in connectionMode.
         self.calls = []
 
 
@@ -400,7 +854,7 @@ class ModeTestCase(unittest.TestCase):
 
     def testBounce(self):
         msg = "Try server some.host, port 321"
-        self._serverTestImpl("005", msg, "bounce",
+        self._serverTestImpl("010", msg, "bounce",
                              info=msg)
 
 
