@@ -62,6 +62,9 @@ class _LoopbackTransport(object):
     def __init__(self, q):
         self.q = q
 
+    def logPrefix(self):
+        return "loopback"
+
     def write(self, bytes):
         self.q.put(bytes)
 

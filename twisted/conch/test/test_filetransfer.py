@@ -466,9 +466,26 @@ class TestOurServerOurClient(SFTPTestBase):
         return self.assertFailure(d, NotImplementedError)
 
 
+
 class FakeConn:
+    """
+    A dummy C{SSHConnection} object to be used by C{SSHChannel}.
+    """
+
+    def logPrefix(self):
+        """
+        Return a log prefix used when C{callWithContext} is called with this
+        connection.
+        """
+        return 'Fake Connection'
+
+
     def sendClose(self, channel):
-        pass
+        """
+        Close the attached channel.
+        """
+        channel.closed()
+
 
 
 class TestFileTransferClose(unittest.TestCase):

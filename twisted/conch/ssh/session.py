@@ -19,6 +19,8 @@ from twisted.python import log
 from twisted.conch.interfaces import ISession
 from twisted.conch.ssh import common, channel
 
+
+
 class SSHSession(channel.SSHChannel):
 
     name = 'session'
@@ -124,13 +126,6 @@ class SSHSession(channel.SSHChannel):
         elif self.client:
             self.client.transport.loseConnection()
 
-    #def closeReceived(self):
-    #    self.loseConnection() # don't know what to do with this
-
-    def loseConnection(self):
-        if self.client:
-            self.client.transport.loseConnection()
-        channel.SSHChannel.loseConnection(self)
 
 class _ProtocolWrapper(protocol.ProcessProtocol):
     """
