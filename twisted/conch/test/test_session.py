@@ -159,6 +159,8 @@ class StubSessionForStubAvatar(object):
         Note that close has been received.
         """
         self.gotClosed = True
+        if getattr(self, "execTransport", None) is not None:
+            self.execTransport.loseConnection()
 
 
 
