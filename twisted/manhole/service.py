@@ -202,8 +202,7 @@ class Perspective(pb.Avatar):
     def __getstate__(self):
         state = self.__dict__.copy()
         state['clients'] = {}
-        if state['localNamespace'].has_key("__builtins__"):
-            del state['localNamespace']['__builtins__']
+        state['localNamespace'].pop('__builtins__', None)
         return state
 
     def attached(self, client, identity):
@@ -255,7 +254,7 @@ class Perspective(pb.Avatar):
         compatMessage = None
         for client in clients:
             try:
-                if not client.capabilities.has_key("Failure"):
+                if "Failure" not in client.capabilities:
                     if compatMessage is None:
                         compatMessage = origMessage[:]
                         for i in xrange(len(message)):
@@ -394,6 +393,5 @@ class Service(service.Service):
         dict = self.__dict__.copy()
         ns = dict['namespace'].copy()
         dict['namespace'] = ns
-        if ns.has_key('__builtins__'):
-            del ns['__builtins__']
+        ns.pop('__builtins__', None)
         return dict

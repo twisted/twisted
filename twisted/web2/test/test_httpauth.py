@@ -149,8 +149,8 @@ class DigestAuthTestCase(unittest.TestCase):
         self.assertEquals(challenge['qop'], 'auth')
         self.assertEquals(challenge['realm'], 'test realm')
         self.assertEquals(challenge['algorithm'], 'md5')
-        self.assertTrue(challenge.has_key("nonce"))
-        self.assertTrue(challenge.has_key("opaque"))
+        self.failUnlessIn("nonce", challenge)
+        self.failUnlessIn("opaque", challenge)
 
     def test_response(self):
         """

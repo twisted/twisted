@@ -91,7 +91,7 @@ class LoginDialog(GladeKeeper):
 
 
     def setDefaults(self, defaults):
-        if not defaults.has_key('port'):
+        if 'port' not in defaults:
             defaults['port'] = str(pb.portno)
         elif isinstance(defaults['port'], (int, long)):
             defaults['port'] = str(defaults['port'])

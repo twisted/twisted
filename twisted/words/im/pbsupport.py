@@ -145,7 +145,7 @@ class TwistedWordsClient(pb.Referenceable, basesupport.AbstractClientMixin):
             self.chat.getPerson(name, self).setStatus(status)
 
     def remote_setGroupMetadata(self, dict_, groupName):
-        if dict_.has_key("topic"):
+        if "topic" in dict_:
             self.getGroupConversation(groupName).setTopic(dict_["topic"], dict_.get("topic_author", None))
 
     def joinGroup(self, name):

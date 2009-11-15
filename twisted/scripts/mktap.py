@@ -157,7 +157,7 @@ class FirstPassOptions(usage.Options):
             raise usage.UsageError(str(self))
         if hasattr(self, 'subOptions') and self.subOptions.get('help'):
             raise usage.UsageError(str(self.subOptions))
-        if not self.tapLookup.has_key(self.subCommand):
+        if self.subCommand not in self.tapLookup:
             raise usage.UsageError("Please select one of: "+
                                    ' '.join(self.tapLookup))
 

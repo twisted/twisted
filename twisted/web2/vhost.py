@@ -78,7 +78,7 @@ class NameVirtualHost(resource.Resource):
         host = req.host.lower()
         
         if self.supportNested:
-            while not self.hosts.has_key(host) and len(host.split('.')) > 1:
+            while host not in self.hosts and len(host.split('.')) > 1:
                 host = '.'.join(host.split('.')[1:])
 
         # Default being None is okay, it'll turn into a 404

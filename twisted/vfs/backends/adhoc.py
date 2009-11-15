@@ -35,7 +35,7 @@ class AdhocDirectory:
         return {}
 
     def exists(self, childName):
-        return self._children.has_key(childName)
+        return self.childName in _children
 
     def putChild(self, name, node):
         node.parent = self

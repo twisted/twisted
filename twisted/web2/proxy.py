@@ -37,8 +37,7 @@ class ProxyClient(http.HTTPClient):
         self.father = father
         self.command = command
         self.rest = rest
-        if headers.has_key("proxy-connection"):
-            del headers["proxy-connection"]
+        headers.pop("proxy-connection", None)
         headers["connection"] = "close"
         self.headers = headers
         self.data = data
@@ -111,7 +110,7 @@ class ProxyRequest(http.Request):
             rest = rest+'/'
         class_ = self.protocols[protocol]
         headers = self.getAllHeaders().copy()
-        if not headers.has_key('host'):
+        if 'host' not in headers:
             headers['host'] = host
         self.content.seek(0, 0)
         s = self.content.read()

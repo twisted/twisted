@@ -213,9 +213,9 @@ class IRCUser(irc.IRC):
 
     # Make sendMessage a bit more useful to us
     def sendMessage(self, command, *parameter_list, **kw):
-        if not kw.has_key('prefix'):
+        if 'prefix' not in kw:
             kw['prefix'] = self.hostname
-        if not kw.has_key('to'):
+        if 'to' not in kw:
             kw['to'] = self.name.encode(self.encoding)
 
         arglist = [self, command, kw['to']] + list(parameter_list)

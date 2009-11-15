@@ -218,7 +218,7 @@ class DirDBM:
         @param value: The value to associate with key if key is not already
         associated with a value.
         """
-        if not self.has_key(key):
+        if key not in self:
             self[key] = value
             return value
         return self[key]
@@ -233,7 +233,7 @@ class DirDBM:
         @return: The value associated with C{key} or C{default} if not
         C{self.has_key(key)}
         """
-        if self.has_key(key):
+        if key in self:
             return self[key]
         else:
             return default

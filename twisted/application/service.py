@@ -168,7 +168,7 @@ class Service:
 
     def __getstate__(self):
         dict = self.__dict__.copy()
-        if dict.has_key("running"):
+        if "running" in dict:
             del dict['running']
         return dict
 
@@ -294,7 +294,7 @@ class MultiService(Service):
 
     def addService(self, service):
         if service.name is not None:
-            if self.namedServices.has_key(service.name):
+            if service.name in self.namedServices:
                 raise RuntimeError("cannot have two services with same name"
                                    " '%s'" % service.name)
             self.namedServices[service.name] = service

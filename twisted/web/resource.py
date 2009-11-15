@@ -109,7 +109,7 @@ class Resource:
         return self.children.get(name)
 
     def getDynamicEntity(self, name, request):
-        if not self.children.has_key(name):
+        if name not in self.children:
             return self.getChild(name, request)
         else:
             return None

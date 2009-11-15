@@ -14,7 +14,7 @@ class ChatServer:
         self.groups = {} # indexed by name
 
     def joinGroup(self, groupname, user, allowMattress):
-        if not self.groups.has_key(groupname):
+        if groupname not in self.groups:
             self.groups[groupname] = Group(groupname, allowMattress)
         self.groups[groupname].addUser(user)
         return self.groups[groupname]

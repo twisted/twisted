@@ -338,8 +338,7 @@ class FilePath(_PathHelper):
 
     def __getstate__(self):
         d = self.__dict__.copy()
-        if d.has_key('statinfo'):
-            del d['statinfo']
+        d.pop('statinfo', None)
         return d
 
     def child(self, path):

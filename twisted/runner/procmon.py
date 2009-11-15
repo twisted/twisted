@@ -109,7 +109,7 @@ class ProcessMonitor(service.Service):
     def __getstate__(self):
         dct = service.Service.__getstate__(self)
         for k in ('active', 'consistency'):
-            if dct.has_key(k):
+            if k in dct:
                 del dct[k]
         dct['protocols'] = {}
         dct['delay'] = {}
@@ -175,20 +175,20 @@ class ProcessMonitor(service.Service):
         self.consistency.cancel()
 
     def connectionLost(self, name):
-        if self.murder.has_key(name):
+        if name in self.murder:
             self.murder[name].cancel()
             del self.murder[name]
-        if self.protocols.has_key(name):
+        if name in self.protocols:
             del self.protocols[name]
         if time.time()-self.timeStarted[name]<self.threshold:
             delay = self.delay[name] = min(1+2*self.delay.get(name, 0), 3600)
         else:
             delay = self.delay[name] = 0
-        if self.active and self.processes.has_key(name):
+        if self.active and self.name in processes:
             reactor.callLater(delay, self.startProcess, name)
 
     def startProcess(self, name):
-        if self.protocols.has_key(name):
+        if name in self.protocols:
             return
         p = self.protocols[name] = LoggingProtocol()
         p.service = self
@@ -204,7 +204,7 @@ class ProcessMonitor(service.Service):
             pass
 
     def stopProcess(self, name):
-        if not self.protocols.has_key(name):
+        if name not in self.protocols:
             return
         proc = self.protocols[name].transport
         del self.protocols[name]

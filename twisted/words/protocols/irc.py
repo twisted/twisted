@@ -202,7 +202,7 @@ class IRC(protocol.Protocol):
                   " look like a command to me: %s" % command
 
         line = string.join([command] + list(parameter_list))
-        if prefix.has_key('prefix'):
+        if 'prefix' in prefix:
             line = ":%s %s" % (prefix['prefix'], line)
         self.sendLine(line)
 
@@ -2152,7 +2152,7 @@ class IRCClient(basic.LineReceiver):
 
     def ctcpReply_PING(self, user, channel, data):
         nick = user.split('!', 1)[0]
-        if (not self._pings) or (not self._pings.has_key((nick, data))):
+        if (not self._pings) or ((nick, data) not in self._pings):
             raise IRCBadMessage,\
                   "Bogus PING response from %s: %s" % (user, data)
 
@@ -2201,7 +2201,7 @@ class IRCClient(basic.LineReceiver):
         line = lowDequote(line)
         try:
             prefix, command, params = parsemsg(line)
-            if numeric_to_symbolic.has_key(command):
+            if command in numeric_to_symbolic:
                 command = numeric_to_symbolic[command]
             self.handleCommand(command, prefix, params)
         except IRCBadMessage:

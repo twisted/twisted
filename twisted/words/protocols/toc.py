@@ -406,7 +406,7 @@ class TOC(protocol.Protocol):
             user=""
         else:
             user=self.saved.nick
-        if not(self.factory.users.has_key(username)):
+        if username not in self.factory.users:
             self.sendError(CANT_WARN,username)
             return
         if self.factory.users[username].saved.evilness>=100:
@@ -456,7 +456,7 @@ class TOC(protocol.Protocol):
             auto=1
             data=data[:-5]
         data=unquote(data)
-        if not(self.factory.users.has_key(username)):
+        if username not in self.factory.users:
             self.sendError(NOT_AVAILABLE,username)
             return
         user=self.factory.users[username]
@@ -576,7 +576,7 @@ class TOC(protocol.Protocol):
 
         toc_get_info <username>
         """
-        if not self.factory.users.has_key(data):
+        if data not in self.factory.users:
             self.sendError(901,data)
             return
         self.sendFlap(2,"GOTO_URL:TIC:info/%s"%data)
@@ -651,7 +651,7 @@ class TOC(protocol.Protocol):
         """
         if not self.canContact(user): return
         status=user.getStatus(self)
-        if not self._laststatus.has_key(user):
+        if user not in self._laststatus:
             self._laststatus[user]=()
         if self._laststatus[user]!=status:
             send="UPDATE_BUDDY:%s:%s:%s:%s:%s:%s"%status
@@ -878,7 +878,7 @@ class TOCClient(protocol.Protocol):
             self._debug("bad SNAC:%s"%(flap[1]))
             return
         command,rest=string.split(flap[1],":",1)
-        if MAXARGS.has_key(command):
+        if command in MAXARGS:
             maxsplit=MAXARGS[command]
         else:
             maxsplit=-1
@@ -1078,7 +1078,7 @@ class TOCClient(protocol.Protocol):
         func(user,cookie,seq,pip,vip,port,tlvs)
 
     def tocSEND_FILE(self,user,cookie,seq,pip,vip,port,tlvs):
-        if tlvs.has_key('12'):
+        if 12 in tlvs:
             description=tlvs['12']
         else:
             description=""

@@ -54,7 +54,7 @@ class ADBAPITestBase:
         if not conn:
             self.failUnless(self.openfun_called)
         else:
-            self.failUnless(self.openfun_called.has_key(conn))
+            self.failUnless(conn in self.openfun_called)
 
     def testPool(self):
         d = self.dbpool.runOperation(simple_table_schema)

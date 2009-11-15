@@ -21,7 +21,7 @@ def makeService(config):
         k.setServiceParent(s)
 
     # irc fingerbot
-    if config.has_key('ircnick'):
+    if 'ircnick' in config:
         i = IIRCClientFactory(f)
         i.nickname = config['ircnick']
         ircserver = config['ircserver']
@@ -29,7 +29,7 @@ def makeService(config):
         b.setServiceParent(s)
 
     # Pespective Broker on port 8889
-    if config.has_key('pbport'):
+    if 'pbport' in config:
         m = internet.TCPServer(
             int(config['pbport']),
             pb.PBServerFactory(IPerspectiveFinger(f)))

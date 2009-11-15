@@ -69,7 +69,7 @@ class Article:
 
     def getHeader(self, header):
         h = header.lower()
-        if self.headers.has_key(h):
+        if h in self.headers:
             return self.headers[h][1]
         else:
             return ''

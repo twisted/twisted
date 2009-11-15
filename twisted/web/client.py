@@ -306,7 +306,7 @@ class HTTPClientFactory(protocol.ClientFactory):
 
     def gotHeaders(self, headers):
         self.response_headers = headers
-        if headers.has_key('set-cookie'):
+        if 'set-cookie' in headers:
             for cookie in headers['set-cookie']:
                 cookparts = cookie.split(';')
                 cook = cookparts[0]

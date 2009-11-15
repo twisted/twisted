@@ -50,7 +50,7 @@ def getSerial(filename = '/tmp/twisted-names.serial'):
 #            self._cache = {}
 #            self._meth = super(LookupCacherMixin, self)._lookup
 #
-#        if self._cache.has_key((name, cls, type)):
+#        if (name, cls, type) in self._cache:
 #            return self._cache[(name, cls, type)]
 #        else:
 #            r = self._meth(name, cls, type, timeout)
@@ -160,7 +160,7 @@ class PySourceAuthority(FileAuthority):
     def loadFile(self, filename):
         g, l = self.setupConfigNamespace(), {}
         execfile(filename, g, l)
-        if not l.has_key('zone'):
+        if 'zone' not in l:
             raise ValueError, "No zone defined in " + filename
 
         self.records = {}

@@ -112,6 +112,5 @@ class ShellFactory(protocol.Factory):
         dict = self.__dict__
         ns = copy.copy(dict['namespace'])
         dict['namespace'] = ns
-        if ns.has_key('__builtins__'):
-            del ns['__builtins__']
+        ns.pop('__builtins__', None)
         return dict

@@ -168,7 +168,7 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
         for ui in range(len(users)):
             while users[ui][0] in ["@","+"]: # channel modes
                 users[ui]=users[ui][1:]
-        if not self._namreplies.has_key(group):
+        if group not in self._namreplies:
             self._namreplies[group]=[]
         self._namreplies[group].extend(users)
         for nickname in users:
@@ -218,7 +218,7 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
 
     def irc_QUIT(self,prefix,params):
         nickname=string.split(prefix,"!")[0]
-        if self._ingroups.has_key(nickname):
+        if nickname in self._ingroups:
             for group in self._ingroups[nickname]:
                 self.getGroupConversation(group).memberLeft(nickname)
             self._ingroups[nickname]=[]
@@ -228,7 +228,7 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
     def irc_NICK(self, prefix, params):
         fromNick = string.split(prefix, "!")[0]
         toNick = params[0]
-        if not self._ingroups.has_key(fromNick):
+        if fromNick not in self._ingroups:
             print "%s changed nick to %s. But she's not in any groups!?" % (fromNick, toNick)
             return
         for group in self._ingroups[fromNick]:

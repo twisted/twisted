@@ -102,7 +102,7 @@ class TOCProto(basesupport.AbstractClientMixin, toc.TOCClient):
 
     def addContact(self, name):
         self.add_buddy([name])
-        if not self._buddylist.has_key('TwistedIM'):
+        if 'TwistedIM' not in self._buddylist:
             self._buddylist['TwistedIM'] = []
         if name in self._buddylist['TwistedIM']:
             # whoops, don't add again

@@ -197,7 +197,7 @@ class ConnectionPool:
 
         for arg in self.CP_ARGS:
             cp_arg = 'cp_%s' % arg
-            if connkw.has_key(cp_arg):
+            if cp_arg in connkw:
                 setattr(self, arg, connkw[cp_arg])
                 del connkw[cp_arg]
 

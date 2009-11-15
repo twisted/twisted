@@ -171,10 +171,10 @@ class Request(http.Request):
                        error.defaultErrorHandler, defaultHeadersFilter]
 
     def __init__(self, *args, **kw):
-        if kw.has_key('site'):
+        if 'site' in kw:
             self.site = kw['site']
             del kw['site']
-        if kw.has_key('prepathuri'):
+        if 'prepathuri' in kw:
             self._initialprepath = kw['prepathuri']
             del kw['prepathuri']
 

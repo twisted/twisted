@@ -1323,7 +1323,7 @@ class Headers(object):
     def hasHeader(self, name):
         """Does a header with the given name exist?"""
         name=name.lower()
-        return self._raw_headers.has_key(name)
+        return name in self._raw_headers
 
     def getRawHeaders(self, name, default=None):
         """Returns a list of headers matching the given name as the raw string given."""
@@ -1389,7 +1389,7 @@ class Headers(object):
         """Removes the header named."""
 
         name=name.lower()
-        if self._raw_headers.has_key(name):
+        if name in self._raw_headers:
             del self._raw_headers[name]
             del self._headers[name]
 

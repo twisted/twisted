@@ -238,8 +238,8 @@ class Failure:
             else:
                 globalz = f.f_globals.copy()
             for d in globalz, localz:
-                if d.has_key("__builtins__"):
-                    del d["__builtins__"]
+                # Remove __builtins__ if present.
+                d.pop("__builtins__", None)
             stack.insert(0, [
                 f.f_code.co_name,
                 f.f_code.co_filename,
@@ -257,8 +257,8 @@ class Failure:
             else:
                 globalz = f.f_globals.copy()
             for d in globalz, localz:
-                if d.has_key("__builtins__"):
-                    del d["__builtins__"]
+                # Remove __builtins__ if present.
+                d.pop("__builtins__", None)
 
             frames.append([
                 f.f_code.co_name,

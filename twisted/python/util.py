@@ -55,11 +55,11 @@ class InsensitiveDict:
         k = self._lowerOrReturn(key)
         self.data[k] = (key, value)
 
-    def has_key(self, key):
+    def __contains__(self, key):
         """Case insensitive test whether 'key' exists."""
         k = self._lowerOrReturn(key)
-        return self.data.has_key(k)
-    __contains__=has_key
+        return k in self.data
+    has_key = __contains__
 
     def _doPreserve(self, key):
         if not self.preserve and (isinstance(key, str)
@@ -91,7 +91,7 @@ class InsensitiveDict:
     def setdefault(self, key, default):
         """If 'key' doesn't exists, associate it with the 'default' value.
         Return value associated with 'key'."""
-        if not self.has_key(key):
+        if not key in self:
             self[key] = default
         return self[key]
 
@@ -155,7 +155,7 @@ class OrderedDict(UserDict):
         return '{'+', '.join([('%r: %r' % item) for item in self.items()])+'}'
 
     def __setitem__(self, key, value):
-        if not self.has_key(key):
+        if not key in self:
             self._order.append(key)
         UserDict.__setitem__(self, key, value)
 
@@ -193,7 +193,7 @@ class OrderedDict(UserDict):
         return (key, value)
 
     def setdefault(self, item, default):
-        if self.has_key(item):
+        if item in self:
             return self[item]
         self[item] = default
         return default
@@ -209,7 +209,7 @@ def uniquify(lst):
     dct = {}
     result = []
     for k in lst:
-        if not dct.has_key(k): result.append(k)
+        if not k in dct: result.append(k)
         dct[k] = 1
     return result
 
@@ -370,7 +370,7 @@ def makeStatBar(width, maxPosition, doneChar = '=', undoneChar = '-', currentCha
 def spewer(frame, s, ignored):
     """A trace function for sys.settrace that prints every function or method call."""
     from twisted.python import reflect
-    if frame.f_locals.has_key('self'):
+    if 'self' in frame.f_locals:
         se = frame.f_locals['self']
         if hasattr(se, '__class__'):
             k = reflect.qual(se.__class__)

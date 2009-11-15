@@ -20,7 +20,7 @@ def parseModuliFile(filename):
         size = int(size) + 1
         gen = long(gen)
         mod = long(mod, 16)
-        if not primes.has_key(size):
+        if not size in primes:
             primes[size] = []
         primes[size].append((gen, mod))
     return primes

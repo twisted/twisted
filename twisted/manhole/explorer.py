@@ -29,7 +29,7 @@ False=not True
 class Pool(UserDict.UserDict):
     def getExplorer(self, object, identifier):
         oid = id(object)
-        if self.data.has_key(oid):
+        if oid in self.data:
             # XXX: This potentially returns something with
             # 'identifier' set to a different value.
             return self.data[oid]

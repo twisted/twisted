@@ -20,7 +20,7 @@ def installReactor(reactor):
     # this stuff should be common to all reactors.
     import twisted.internet
     import sys
-    assert not sys.modules.has_key('twisted.internet.reactor'), \
+    assert 'twisted.internet.reactor' not in sys.modules, \
            "reactor already installed"
     twisted.internet.reactor = reactor
     sys.modules['twisted.internet.reactor'] = reactor

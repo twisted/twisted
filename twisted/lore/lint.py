@@ -205,12 +205,19 @@ a = list2dict(['listing', 'py-listing', 'html-listing', 'absolute'])
 
 pre = list2dict(['python', 'shell', 'python-interpreter', 'elisp'])
 
-allowed = {'code': classes.has_key, 'span': span.has_key, 'div': div.has_key,
-           'a': a.has_key, 'pre': pre.has_key, 'ul': lambda x: x=='toc',
-           'ol': lambda x: x=='toc', 'li': lambda x: x=='ignoretoc'}
+allowed = {
+        'code': lambda x: x in classes,
+        'span': lambda x: x in span,
+        'div': lambda x: x in div,
+        'a': lambda x: x in a,
+        'pre': lambda x: x in pre,
+        'ul': lambda x: x=='toc',
+        'ol': lambda x: x=='toc',
+        'li': lambda x: x=='ignoretoc',
+    }
 
 def getDefaultChecker():
-    return DefaultTagChecker(tags.has_key, allowed)
+    return DefaultTagChecker(lambda x: x in tags, allowed)
 
 def doFile(file, checker):
     doc = tree.parseFileAndReport(file)

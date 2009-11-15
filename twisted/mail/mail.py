@@ -33,9 +33,6 @@ class DomainWithDefaultDict:
     def setDefaultDomain(self, domain):
         self.default = domain
 
-    def has_key(self, name):
-        return 1
-
     def fromkeys(klass, keys, value=None):
         d = klass()
         for k in keys:
@@ -45,6 +42,7 @@ class DomainWithDefaultDict:
 
     def __contains__(self, name):
         return 1
+    has_key = __contains__
 
     def __getitem__(self, name):
         return self.domains.get(name, self.default)

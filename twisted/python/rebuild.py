@@ -176,7 +176,7 @@ def rebuild(module, doLog=1):
 
     values.update(classes)
     values.update(functions)
-    fromOldModule = values.has_key
+    fromOldModule = lambda key: key in values
     newclasses = newclasses.keys()
     classes = classes.keys()
     functions = functions.keys()

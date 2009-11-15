@@ -113,7 +113,7 @@ class TestRealm:
         self.avatars = {}
 
     def requestAvatar(self, avatarId, mind, *interfaces):
-        if self.avatars.has_key(avatarId):
+        if avatarId in self.avatars:
             avatar = self.avatars[avatarId]
         else:
             avatar = TestAvatar(avatarId)

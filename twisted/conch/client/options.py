@@ -59,7 +59,7 @@ class ConchOptions(usage.Options):
         "Select encryption algorithms"
         ciphers = ciphers.split(',')
         for cipher in ciphers:
-            if not SSHCiphers.cipherMap.has_key(cipher):
+            if cipher not in SSHCiphers.cipherMap:
                 sys.exit("Unknown cipher type '%s'" % cipher)
         self['ciphers'] = ciphers
 
@@ -68,7 +68,7 @@ class ConchOptions(usage.Options):
         "Specify MAC algorithms"
         macs = macs.split(',')
         for mac in macs:
-            if not SSHCiphers.macMap.has_key(mac):
+            if mac not in SSHCiphers.macMap:
                 sys.exit("Unknown mac type '%s'" % mac)
         self['macs'] = macs
 

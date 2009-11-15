@@ -136,7 +136,7 @@ def loadMimeTypes(mimetype_locations=['/etc/mime.types']):
 def getTypeAndEncoding(filename, types, encodings, defaultType):
     p, ext = os.path.splitext(filename)
     ext = ext.lower()
-    if encodings.has_key(ext):
+    if ext in encodings:
         enc = encodings[ext]
         ext = os.path.splitext(p)[1].lower()
     else:

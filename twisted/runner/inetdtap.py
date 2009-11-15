@@ -81,7 +81,7 @@ def makeService(config):
         if rpc:
             # RPC has extra options, so extract that
             protocol = protocol[4:]     # trim 'rpc/'
-            if not protocolDict.has_key(protocol):
+            if protocol not in protocolDict:
                 log.msg('Bad protocol: ' + protocol)
                 continue
             
@@ -91,7 +91,7 @@ def makeService(config):
                 log.msg('Bad RPC service/version: ' + service.name)
                 continue
 
-            if not rpcConf.services.has_key(name):
+            if rpcConf.name not in services:
                 log.msg('Unknown RPC service: ' + repr(service.name))
                 continue
 
@@ -140,7 +140,7 @@ def makeService(config):
                 continue
 
             # Internal services can use a standard ServerFactory
-            if not inetd.internalProtocols.has_key(service.name):
+            if inetd.service.name not in internalProtocols:
                 log.msg('Unknown internal service: ' + service.name)
                 continue
             factory = ServerFactory()
