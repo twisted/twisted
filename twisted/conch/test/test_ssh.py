@@ -47,8 +47,8 @@ class ConchTestRealm:
 
     def requestAvatar(self, avatarID, mind, *interfaces):
         """
-        Return a new avatar.If avatar implements a C{logout} method it'll be
-        invoked at the end of avatar's existance.
+        Return a new avatar. If avatar implements a C{logout} method it'll be
+        invoked at the end of avatar's existence.
         """
         unittest.assertEquals(avatarID, 'testuser')
         logout = getattr(self.avatar, 'logout', lambda: None)
@@ -243,9 +243,9 @@ class CrazySubsystem(protocol.Protocol):
 
 class TestConnectionLostSubsystem(protocol.Protocol):
     """
-    A SSH subsystem that disconnect at first received data. It also records the
-    number of times C{connectionLost} is called with the C{connectionLostCount}
-    of the session transport.
+    A SSH subsystem that disconnects at first received data. It also records
+    the number of times C{connectionLost} is called with the
+    C{connectionLostCount} of the session transport.
     """
 
     def __init__(self, *args, **kw):
