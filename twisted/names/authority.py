@@ -42,21 +42,6 @@ def getSerial(filename = '/tmp/twisted-names.serial'):
     return serial
 
 
-#class LookupCacherMixin(object):
-#    _cache = None
-#
-#    def _lookup(self, name, cls, type, timeout = 10):
-#        if not self._cache:
-#            self._cache = {}
-#            self._meth = super(LookupCacherMixin, self)._lookup
-#
-#        if (name, cls, type) in self._cache:
-#            return self._cache[(name, cls, type)]
-#        else:
-#            r = self._meth(name, cls, type, timeout)
-#            self._cache[(name, cls, type)] = r
-#            return r
-
 
 class FileAuthority(common.ResolverBase):
     """An Authority that is loaded from a file."""

@@ -99,7 +99,7 @@ class MaildirBroker(pb.Broker):
             self.sendAnswer(requestID, collection)
 
     def getCollection(self, name, domain, password):
-        if not domain in self.domains:
+        if domain not in self.domains:
             return
         domain = self.domains[domain]
         if (name in domain.dbm and

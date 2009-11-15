@@ -481,7 +481,7 @@ def macro(name, filename, source, **identifiers):
 
     This allows you to create macro-like behaviors in python.
     """
-    if not 'name' in identifiers:
+    if 'name' not in identifiers:
         identifiers['name'] = name
     source = source % identifiers
     codeplace = "<%s (macro)>" % filename
@@ -490,7 +490,7 @@ def macro(name, filename, source, **identifiers):
     # shield your eyes!
     sm = sys.modules
     tprm = "twisted.python.reflect.macros"
-    if not tprm in sm:
+    if tprm not in sm:
         macros = new.module(tprm)
         sm[tprm] = macros
         macros.count = 0

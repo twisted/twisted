@@ -91,7 +91,7 @@ def makeService(config):
                 log.msg('Bad RPC service/version: ' + service.name)
                 continue
 
-            if rpcConf.name not in services:
+            if name not in rpcConf.services:
                 log.msg('Unknown RPC service: ' + repr(service.name))
                 continue
 
@@ -140,7 +140,7 @@ def makeService(config):
                 continue
 
             # Internal services can use a standard ServerFactory
-            if inetd.service.name not in internalProtocols:
+            if service.name not in inetd.internalProtocols:
                 log.msg('Unknown internal service: ' + service.name)
                 continue
             factory = ServerFactory()

@@ -211,9 +211,9 @@ allowed = {
         'div': lambda x: x in div,
         'a': lambda x: x in a,
         'pre': lambda x: x in pre,
-        'ul': lambda x: x=='toc',
-        'ol': lambda x: x=='toc',
-        'li': lambda x: x=='ignoretoc',
+        'ul': lambda x: x == 'toc',
+        'ol': lambda x: x == 'toc',
+        'li': lambda x: x == 'ignoretoc',
     }
 
 def getDefaultChecker():

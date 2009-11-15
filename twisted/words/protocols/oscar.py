@@ -692,7 +692,8 @@ class BOSConnection(SNACBased):
                 groups[groupID].addUser(buddyID, SSIBuddy(name, tlvs))
             elif itemType == 1: # group
                 g = SSIGroup(name, tlvs)
-                if 0 in groups: groups[0].addUser(groupID, g)
+                if 0 in groups:
+                    groups[0].addUser(groupID, g)
                 groups[groupID] = g
             elif itemType == 2: # permit
                 permit.append(name)

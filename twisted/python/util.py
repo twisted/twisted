@@ -91,7 +91,7 @@ class InsensitiveDict:
     def setdefault(self, key, default):
         """If 'key' doesn't exists, associate it with the 'default' value.
         Return value associated with 'key'."""
-        if not key in self:
+        if key not in self:
             self[key] = default
         return self[key]
 
@@ -155,7 +155,7 @@ class OrderedDict(UserDict):
         return '{'+', '.join([('%r: %r' % item) for item in self.items()])+'}'
 
     def __setitem__(self, key, value):
-        if not key in self:
+        if key not in self:
             self._order.append(key)
         UserDict.__setitem__(self, key, value)
 
@@ -209,7 +209,8 @@ def uniquify(lst):
     dct = {}
     result = []
     for k in lst:
-        if not k in dct: result.append(k)
+        if k not in dct:
+            result.append(k)
         dct[k] = 1
     return result
 

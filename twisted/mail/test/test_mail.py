@@ -631,7 +631,7 @@ class ServiceDomainTestCase(unittest.TestCase):
          fp = StringIO.StringIO(hdr)
          m = rfc822.Message(fp)
          self.assertEquals(len(m.items()), 1)
-         self.failUnless('Received' in m)
+         self.assertIn('Received', m)
 
     def testValidateTo(self):
         user = smtp.User('user@test.domain', 'helo', None, 'wherever@whatever')

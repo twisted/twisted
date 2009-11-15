@@ -97,7 +97,7 @@ class DirDbmTestCase(unittest.TestCase):
         # delete items
         for k, v in self.items:
             del d[k]
-            assert not k in d, "has_key() even though we deleted it"
+            assert k not in d, "key in dbm even though we deleted it"
         assert len(d.keys()) == 0, "database has keys"
         assert len(d.values()) == 0, "database has values"
         assert len(d.items()) == 0, "database has items"
