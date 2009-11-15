@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.conch.test.test_ssh -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import struct
@@ -31,7 +31,7 @@ from zope.interface import implements
 
 class ConchTestRealm:
     """
-    I'm generating avatars for an authenticated users.
+    Realm generating avatars for an authenticated users.
     """
     implements(portal.IRealm)
 
