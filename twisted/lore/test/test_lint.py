@@ -7,11 +7,12 @@ Tests for L{twisted.lore.lint}.
 
 import sys
 from xml.dom import minidom
-from StringIO import StringIO
+from cStringIO import StringIO
 
 from twisted.trial.unittest import TestCase
 from twisted.lore.lint import getDefaultChecker
 from twisted.lore.process import ProcessingFailure
+
 
 
 class DefaultTagCheckerTests(TestCase):
@@ -50,6 +51,27 @@ class DefaultTagCheckerTests(TestCase):
             '<html>'
             '<head><title>foo</title></head>'
             '<body><h1>foo</h1><!-- " --></body>'
+            '</html>')
+        document = minidom.parseString(documentSource)
+        filename = self.mktemp()
+        checker = getDefaultChecker()
+
+        output = StringIO()
+        patch = self.patch(sys, 'stdout', output)
+        checker.check(document, filename)
+        patch.restore()
+
+        self.assertEqual(output.getvalue(), "")
+
+    def test_aNode(self):
+        """
+        If there is an <a> tag in the document, the checker returned by
+        L{getDefaultChecker} does not report an error.
+        """
+        documentSource = (
+            '<html>'
+            '<head><title>foo</title></head>'
+            '<body><h1>foo</h1><a>A link.</a></body>'
             '</html>')
         document = minidom.parseString(documentSource)
         filename = self.mktemp()

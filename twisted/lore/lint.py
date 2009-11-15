@@ -97,12 +97,12 @@ class DefaultTagChecker(TagChecker):
             # page.
             for line in domhelpers.gatherTextNodes(node, 1).split('\n'):
                 if len(line.rstrip()) > 80:
-                    self._reportError(filename, node, 
+                    self._reportError(filename, node,
                                       'text wider than 80 columns in pre')
         for node in domhelpers.findNodesNamed(dom, 'a'):
-            if node.getAttribute('class', '').endswith('listing'):
+            if node.getAttribute('class').endswith('listing'):
                 try:
-                    fn = os.path.dirname(filename) 
+                    fn = os.path.dirname(filename)
                     fn = os.path.join(fn, node.getAttribute('href'))
                     lines = open(fn,'r').readlines()
                 except:
@@ -113,7 +113,7 @@ class DefaultTagChecker(TagChecker):
 
                 for line in lines:
                     if len(line.rstrip()) > 80:
-                        self._reportError(filename, node, 
+                        self._reportError(filename, node,
                                           'listing wider than 80 columns')
 
     def check_pre_py_listing(self, dom, filename):
@@ -136,7 +136,7 @@ class DefaultTagChecker(TagChecker):
                         text = text.replace("...","'...'")
                         parser.suite(text)
                 except parserErrors, e:
-                    self._reportError(filename, node, 
+                    self._reportError(filename, node,
                                       'invalid python code:' + str(e))
 
     def check_anchor_in_heading(self, dom, filename):
@@ -154,13 +154,13 @@ class DefaultTagChecker(TagChecker):
             proto = urlparse.urlparse(text)[0]
             if proto and ' ' not in text:
                 if text != node.getAttribute('href',''):
-                    self._reportError(filename, node, 
+                    self._reportError(filename, node,
                                       'link text does not match href')
 
     def check_a_py_listing(self, dom, filename):
         for node in domhelpers.findNodesNamed(dom, 'a'):
             if node.getAttribute('class') == 'py-listing':
-                fn = os.path.join(os.path.dirname(filename), 
+                fn = os.path.join(os.path.dirname(filename),
                                   node.getAttribute('href'))
                 lines = open(fn).readlines()
                 lines = lines[int(node.getAttribute('skipLines', 0)):]
