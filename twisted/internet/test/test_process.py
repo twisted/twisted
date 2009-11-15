@@ -17,7 +17,7 @@ from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
 from twisted.python.failure import Failure
 from twisted.internet import utils
-from twisted.internet.defer import Deferred
+from twisted.internet.defer import Deferred, succeed
 from twisted.internet.protocol import ProcessProtocol
 from twisted.internet.error import ProcessDone, PotentialZombieWarning
 from twisted.internet.error import ProcessTerminated
@@ -396,6 +396,53 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
 
         reactor.callWhenRunning(start)
         self.runReactor(reactor)
+
+
+    def test_processCommandLineArguments(self):
+        """
+        Arguments given to spawnProcess are passed to the child process as
+        originally intended.
+        """
+        source = (
+            # On Windows, stdout is not opened in binary mode by default,
+            # so newline characters are munged on writing, interfering with
+            # the tests.
+            'import sys, os\n'
+            'try:\n'
+            '  import msvcrt\n'
+            '  msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)\n'
+            'except ImportError:\n'
+            '  pass\n'
+            'for arg in sys.argv[1:]:\n'
+            '  sys.stdout.write(arg + chr(0))\n'
+            '  sys.stdout.flush()')
+
+        args = ['hello', '"', ' \t|<>^&', r'"\\"hello\\"', r'"foo\ bar baz\""']
+        # Ensure that all non-NUL characters can be passed too.
+        args.append(''.join(map(chr, xrange(1, 256))))
+
+        reactor = self.buildReactor()
+
+        def processFinished(output):
+            output = output.split('\0')
+            # Drop the trailing \0.
+            output.pop()
+            self.assertEquals(args, output)
+
+        def shutdown(result):
+            reactor.stop()
+            return result
+
+        def spawnChild():
+            d = succeed(None)
+            d.addCallback(lambda dummy: utils.getProcessOutput(
+                sys.executable, ['-c', source] + args, reactor=reactor))
+            d.addCallback(processFinished)
+            d.addBoth(shutdown)
+
+        reactor.callWhenRunning(spawnChild)
+        self.runReactor(reactor)
+
 
 
 ProcessTestsBuilder.skip = skipWindowsNopywin32
