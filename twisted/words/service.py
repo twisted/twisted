@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.words.test.test_service -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -129,6 +129,22 @@ class Group(object):
 
 
 class User(object):
+    """
+    Object representing a user's avatar
+
+    @ivar realm: The L{IRealm} this user is logged into
+    @type realm: L{IRealm}
+    @ivar mind: The L{IChatClient} object that handles this user's connection
+    @type mind: L{IChatClient}
+    @ivar name: This user's name
+    @type name: C{str}
+    @ivar groups: The L{Group}s this user is a member of
+    @type groups: C{list} of C{str}
+    @ivar lastMessage: Time (time.time()) this user's last message was sent
+    @type lastMessage: C{float}
+    @ivar awayMessage: This user's away message or C{None} if not away
+    @type awayMessage: C{str} or C{NoneType}
+    """
     implements(iwords.IUser)
 
     realm = None
@@ -138,6 +154,7 @@ class User(object):
         self.name = name
         self.groups = []
         self.lastMessage = time()
+        self.awayMessage = None
 
 
     def loggedIn(self, realm, mind):
@@ -247,11 +264,15 @@ class IRCUser(irc.IRC):
             recipientName = recipient.name
 
         text = message.get('text', '<an unrepresentable message>')
-        for L in text.splitlines():
-            self.privmsg(
-                '%s!%s@%s' % (sender.name, sender.name, self.hostname),
-                recipientName,
-                L)
+        away = recipient.avatar.awayMessage
+        if away:
+            sender.sendMessage(irc.RPL_AWAY, ':' + away)
+        else:
+            for L in text.splitlines():
+                self.privmsg(
+                    '%s!%s@%s' % (sender.name, sender.name, self.hostname),
+                    recipientName,
+                    L)
 
 
     def groupMetaUpdate(self, group, meta):
@@ -860,6 +881,27 @@ class IRCUser(irc.IRC):
         self.realm.lookupUser(user).addCallbacks(cbUser, ebUser)
 
 
+    def irc_AWAY(self, prefix, params):
+        """
+        Away status
+
+        @param prefix: The prefix substring of the line received.
+        @type prefix: C{str}
+        @param params: Parameters to this command.
+            "AWAY [message]"
+            sets away when given a message, unaway when no parameter.
+        @type params: C{list} of C{str}
+        """
+        if len(params) > 0:
+            self.avatar.awayMessage = params[-1]
+            self.sendMessage(irc.RPL_NOWAWAY,
+                ':You have been marked as being away')
+        else:
+            self.avatar.awayMessage = None
+            self.sendMessage(irc.RPL_UNAWAY,
+                ':You are no longer marked as being away')
+
+
     # Unsupported commands, here for legacy compatibility
     def irc_OPER(self, prefix, params):
         """Oper message
@@ -872,7 +914,7 @@ class IRCUser(irc.IRC):
 class IRCFactory(protocol.ServerFactory):
     """
     IRC server that creates instances of the L{IRCUser} protocol.
-    
+
     @ivar _serverInfo: A dictionary mapping:
         "serviceName" to the name of the server,
         "serviceVersion" to the copyright version,
