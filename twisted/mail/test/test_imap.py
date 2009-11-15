@@ -282,7 +282,6 @@ class MessageProducerTestCase(unittest.TestCase):
         return d.addCallback(cbProduced)
 
 
-
 class IMAP4HelperTestCase(unittest.TestCase):
     def testFileProducer(self):
         b = (('x' * 1) + ('y' * 1) + ('z' * 1)) * 10
@@ -3483,82 +3482,6 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
         return self.testFetchFast(1)
 
 
-
-class DefaultSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
-    """
-    Test the behavior of the server's SEARCH implementation, particularly in
-    the face of unhandled search terms.
-    """
-    def setUp(self):
-        self.server = imap4.IMAP4Server()
-        self.server.state = 'select'
-        self.server.mbox = self
-        self.connected = defer.Deferred()
-        self.client = SimpleClient(self.connected)
-        self.msgObjs = [
-            FakeyMessage({}, (), '', '', 999, None),
-            FakeyMessage({}, (), '', '', 10101, None),
-            FakeyMessage({}, (), '', '', 12345, None),
-        ]
-
-
-    def fetch(self, messages, uid):
-        """
-        Pretend to be a mailbox and let C{self.server} lookup messages on me.
-        """
-        return list(enumerate(self.msgObjs, 1))
-
-
-    def _messageSetSearchTest(self, queryTerms, expectedMessages):
-        """
-        Issue a search with given query and verify that the returned messages
-        match the given expected messages.
-
-        @param queryTerms: A string giving the search query.
-        @param expectedMessages: A list of the message sequence numbers
-            expected as the result of the search.
-        @return: A L{Deferred} which fires when the test is complete.
-        """
-        def search():
-            return self.client.search(queryTerms)
-
-        d = self.connected.addCallback(strip(search))
-        def searched(results):
-            self.assertEquals(results, expectedMessages)
-        d.addCallback(searched)
-        d.addCallback(self._cbStopClient)
-        d.addErrback(self._ebGeneral)
-        self.loopback()
-        return d
-
-
-    def test_searchMessageSet(self):
-        """
-        Test that a search which starts with a message set properly limits
-        the search results to messages in that set.
-        """
-        return self._messageSetSearchTest('1', [1])
-
-
-    def test_searchMessageSetWithStar(self):
-        """
-        If the search filter ends with a star, all the message from the
-        starting point are returned.
-        """
-        return self._messageSetSearchTest('2:*', [2, 3])
-
-
-    def test_searchMessageSetWithList(self):
-        """
-        If the search filter contains nesting terms, one of which includes a
-        message sequence set with a wildcard, IT ALL WORKS GOOD.
-        """
-        # 5 is bigger than the biggest message sequence number, but that's
-        # okay, because N:* includes the biggest message sequence number even
-        # if N is bigger than that (read the rfc nub).
-        return self._messageSetSearchTest('(5:*)', [3])
-
-
 class FetchSearchStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
     implements(imap4.ISearchableMailbox)
 
@@ -3669,8 +3592,6 @@ class FetchSearchStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
         d = loopback.loopbackTCP(self.server, self.client, noisy=False)
         d.addCallback(check)
         return d
-
-
 
 class FakeMailbox:
     def __init__(self):

@@ -21,7 +21,6 @@ import base64
 import binascii
 import hmac
 import re
-import copy
 import tempfile
 import string
 import time
@@ -48,8 +47,6 @@ from twisted.internet import interfaces
 from twisted import cred
 import twisted.cred.error
 import twisted.cred.credentials
-
-
 
 class MessageSet(object):
     """
@@ -93,12 +90,12 @@ class MessageSet(object):
 
     # Ooo.  A property.
     def last():
-        def _setLast(self, value):
+        def _setLast(self,value):
             if self._last is not self._empty:
                 raise ValueError("last already set")
 
             self._last = value
-            for i, (l, h) in enumerate(self.ranges):
+            for i,(l,h) in enumerate(self.ranges):
                 if l is not None:
                     break # There are no more Nones after this
                 l = value
@@ -106,7 +103,7 @@ class MessageSet(object):
                     h = value
                 if l > h:
                     l, h = h, l
-                self.ranges[i] = (l, h)
+                self.ranges[i] = (l,h)
 
             self.clean()
 
@@ -145,7 +142,7 @@ class MessageSet(object):
             # None at the start of the ranges list)
             start, end = end, start
 
-        self.ranges.append((start, end))
+        self.ranges.append((start,end))
         self.clean()
 
     def __add__(self, other):
@@ -160,7 +157,6 @@ class MessageSet(object):
                 res.add(other)
             return res
 
-
     def extend(self, other):
         if isinstance(other, MessageSet):
             self.ranges.extend(other.ranges)
@@ -173,7 +169,6 @@ class MessageSet(object):
 
         return self
 
-
     def clean(self):
         """
         Clean ranges list, combining adjacent ranges
@@ -182,26 +177,25 @@ class MessageSet(object):
         self.ranges.sort()
 
         oldl, oldh = None, None
-        for i,(l, h) in enumerate(self.ranges):
+        for i,(l,h) in enumerate(self.ranges):
             if l is None:
                 continue
             # l is >= oldl and h is >= oldh due to sort()
-            if oldl is not None and l <= oldh + 1:
+            if oldl is not None and l <= oldh+1:
                 l = oldl
-                h = max(oldh, h)
-                self.ranges[i - 1] = None
-                self.ranges[i] = (l, h)
+                h = max(oldh,h)
+                self.ranges[i-1] = None
+                self.ranges[i] = (l,h)
 
-            oldl, oldh = l, h
+            oldl,oldh = l,h
 
         self.ranges = filter(None, self.ranges)
-
 
     def __contains__(self, value):
         """
         May raise TypeError if we encounter unknown "high" values
         """
-        for l, h in self.ranges:
+        for l,h in self.ranges:
             if l is None:
                 raise TypeError(
                     "Can't determine membership; last value not set")
@@ -210,9 +204,8 @@ class MessageSet(object):
 
         return False
 
-
     def _iterator(self):
-        for l, h in self.ranges:
+        for l,h in self.ranges:
             l = self.getnext(l-1)
             while l <= h:
                 yield l
@@ -565,7 +558,12 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if self.blocked is not None:
             self.blocked.extend(commands)
 
+#    def sendLine(self, line):
+#        print 'C:', repr(line)
+#        return basic.LineReceiver.sendLine(self, line)
+
     def lineReceived(self, line):
+#        print 'S:', repr(line)
         if self.blocked is not None:
             self.blocked.append(line)
             return
@@ -1425,94 +1423,53 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         self.sendUntaggedResponse('SEARCH ' + ids)
         self.sendPositiveResponse(tag, 'SEARCH completed')
 
-
-    def __cbManualSearch(self, result, tag, mbox, query, uid,
-                         searchResults=None):
+    def __cbManualSearch(self, result, tag, mbox, query, uid, searchResults = None):
         if searchResults is None:
             searchResults = []
         i = 0
-
-        lastSequenceId = result[-1][0]
-
         for (i, (id, msg)) in zip(range(5), result):
-            # searchFilter and singleSearchStep will mutate the query.  Dang.
-            # Copy it here or else things will go poorly for subsequent
-            # messages.
-            if self._searchFilter(copy.deepcopy(query), id, msg, lastSequenceId):
+            if self.searchFilter(query, id, msg):
                 if uid:
                     searchResults.append(str(msg.getUID()))
                 else:
                     searchResults.append(str(id))
         if i == 4:
             from twisted.internet import reactor
-            reactor.callLater(
-                0, self.__cbManualSearch, result, tag, mbox, query, uid,
-                searchResults)
+            reactor.callLater(0, self.__cbManualSearch, result, tag, mbox, query, uid, searchResults)
         else:
             if searchResults:
                 self.sendUntaggedResponse('SEARCH ' + ' '.join(searchResults))
             self.sendPositiveResponse(tag, 'SEARCH completed')
 
-
-    def _searchFilter(self, query, id, msg, lastSequenceId):
-        """
-        Pop search terms from the beginning of C{query} until there are none
-        left and apply them to the given message.
-
-        @param query: A list representing the parsed form of the search query.
-
-        @param id: The sequence number of the message being checked.
-
-        @param msg: The message being checked.
-
-        @param lastSequenceId: The highest sequence number of any message in
-            the mailbox being searched.
-
-        @return: Boolean indicating whether all of the query terms match the
-            message.
-        """
+    def searchFilter(self, query, id, msg):
         while query:
-            if not self._singleSearchStep(query, id, msg, lastSequenceId):
+            if not self.singleSearchStep(query, id, msg):
                 return False
         return True
 
-
-    def _singleSearchStep(self, query, id, msg, lastSequenceId):
-        """
-        Pop one search term from the beginning of C{query} (possibly more than
-        one element) and return whether it matches the given message.
-
-        @param query: A list representing the parsed form of the search query.
-
-        @param id: The sequence number of the message being checked.
-
-        @param msg: The message being checked.
-
-        @param lastSequenceId: The highest sequence number of any message in
-            the mailbox being searched.
-
-        @return: Boolean indicating whether the query term matched the message.
-        """
+    def singleSearchStep(self, query, id, msg):
         q = query.pop(0)
         if isinstance(q, list):
-            if not self._searchFilter(q, id, msg, lastSequenceId):
+            if not self.searchFilter(q, id, msg):
                 return False
         else:
             c = q.upper()
-            if not c[:1].isalpha():
-                # A search term may be a word like ALL, ANSWERED, BCC, etc (see
-                # below) or it may be a message sequence set.  Here we
-                # recognize a message sequence set "N:M".
-                messageSet = parseIdList(c)
-                messageSet.last = lastSequenceId
-                return id in messageSet
+            f = getattr(self, 'search_' + c)
+            if f:
+                if not f(query, id, msg):
+                    return False
             else:
-                f = getattr(self, 'search_' + c)
-                if f is not None:
-                    if not f(query, id, msg):
+                # IMAP goes *out of its way* to be complex
+                # Sequence sets to search should be specified
+                # with a command, like EVERYTHING ELSE.
+                try:
+                    m = parseIdList(c)
+                except:
+                    log.err('Unknown search term: ' + c)
+                else:
+                    if id not in m:
                         return False
         return True
-
 
     def search_ALL(self, query, id, msg):
         return True
