@@ -7,6 +7,8 @@ Tests for L{twisted.web.wsgi}.
 
 __metaclass__ = type
 
+import tempfile
+
 from sys import exc_info
 from urllib import quote
 from StringIO import StringIO
@@ -113,7 +115,7 @@ class WSGITestsMixin:
     def lowLevelRender(
         self, requestFactory, applicationFactory, channelFactory, method,
         version, resourceSegments, requestSegments, query=None, headers=[],
-        body=None, safe=''):
+        body=None, safe='', useTempfile=False):
         """
         @param method: A C{str} giving the request method to use.
 
@@ -136,6 +138,10 @@ class WSGITestsMixin:
         @param safe: A C{str} giving the bytes which are to be considered
             I{safe} for inclusion in the request URI and not quoted.
 
+        @param useTempfile: A boolean flag indicating that an instance of
+            L{tempfile.TemporaryFile} should be used to expose the the request
+            content rather than a L{StringIO.StringIO}.
+
         @return: A L{Deferred} which will be called back with a two-tuple of
             the arguments passed which would be passed to the WSGI application
             object for this configuration and request (ie, the environment and
@@ -156,7 +162,12 @@ class WSGITestsMixin:
             request.requestHeaders.addRawHeader(k, v)
         request.gotLength(0)
         if body:
-            request.content = StringIO(body)
+            if useTempfile:
+                request.content = tempfile.TemporaryFile()
+                request.content.write(body)
+                request.content.seek(0)
+            else:
+                request.content = StringIO(body)
         uri = '/' + '/'.join([quote(seg, safe) for seg in requestSegments])
         if query is not None:
             uri += '?' + '&'.join(['='.join([quote(k, safe), quote(v, safe)])
@@ -602,8 +613,31 @@ class EnvironTests(WSGITestsMixin, TestCase):
             self.assertEqual, [
                 'hello, world\n', 'how are you\n', 'I am great\n',
                 'goodbye now\n', 'no da', 'ta he', 're\n'])
-
-
+       
+        inputReadlineNonePOST, appFactory = appFactoryFactory(
+            lambda input: [input.readline(), input.readline(-1),
+                           input.readline(None), input.readline(),
+                           input.readline(-1)])
+        
+        self.lowLevelRender(
+            Request, appFactory, DummyChannel,
+            'POST', '1.1', [], [''], None, [
+                ('Content-Type', 'multipart/form-data; boundary=---------------------------168072824752491622650073'),
+                ('Content-Length', '130'),
+            ],
+            "\n".join((["-----------------------------168072824752491622650073\n"
+            "Content-Disposition: form-data; name=\"search-query\"\n\n"
+            "this-is-my-search-query\n"])),
+            useTempfile=True)
+        inputReadlineNonePOST.addCallback(
+            self.assertEqual, [
+                '-----------------------------168072824752491622650073\n',
+                'Content-Disposition: form-data; name="search-query"\n',
+                '\n',
+                'this-is-my-search-query\n',
+                ''
+            ])
+        
         inputReadlinesNoArg, appFactory = appFactoryFactory(
             lambda input: input.readlines())
         self.lowLevelRender(
@@ -648,8 +682,8 @@ class EnvironTests(WSGITestsMixin, TestCase):
             self.assertEqual, ['foo\n', 'bar\n'])
 
         return gatherResults([
-                inputRead, inputReadline, inputReadlinesNoArg,
-                inputReadlinesNone, inputReadlinesLength,
+                inputRead, inputReadline, inputReadlineNonePOST,
+                inputReadlinesNoArg, inputReadlinesNone, inputReadlinesLength,
                 inputIter])
 
 

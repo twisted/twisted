@@ -98,7 +98,12 @@ class _InputStream:
         """
         if size == -1:
             size = None
-        return self._wrapped.readline(size)
+        # We'll do it like this because tempfiles (used for large POSTs)
+        # don't like being given None as an argument.
+        if size is None:
+            return self._wrapped.readline()
+        else:
+            return self._wrapped.readline(size)
 
 
     def readlines(self, size=None):
