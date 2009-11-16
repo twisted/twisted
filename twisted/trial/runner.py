@@ -844,7 +844,10 @@ class TrialRunner(object):
         suite = TrialSuite([test])
         startTime = time.time()
         if self.mode == self.DRY_RUN:
-            suite.visit(DryRunVisitor(result).markSuccessful)
+            for single in unittest._iterateTests(suite):
+                result.startTest(single)
+                result.addSuccess(single)
+                result.stopTest(single)
         else:
             if self.mode == self.DEBUG:
                 # open question - should this be self.debug() instead.

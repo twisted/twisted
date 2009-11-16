@@ -360,4 +360,4 @@ _runSequentially = defer.deferredGenerator(_runSequentially)
 
 
 __all__ = ['FailureError', 'DirtyReactorWarning', 'DirtyReactorError',
-           'PendingTimedCallsError', 'runSequentially']
+           'PendingTimedCallsError']
