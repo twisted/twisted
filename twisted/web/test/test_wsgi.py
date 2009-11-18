@@ -17,7 +17,7 @@ from thread import get_ident
 from zope.interface.verify import verifyObject
 
 from twisted.python.compat import set
-from twisted.python.log import addObserver, removeObserver
+from twisted.python.log import addObserver, removeObserver, err
 from twisted.python.failure import Failure
 from twisted.python.threadpool import ThreadPool
 from twisted.internet.defer import Deferred, gatherResults
@@ -43,7 +43,13 @@ class SynchronousThreadPool:
         Call C{f(*a, **kw)} in this thread rather than scheduling it to be
         called in a thread.
         """
-        f(*a, **kw)
+        try:
+            f(*a, **kw)
+        except:
+            # callInThread doesn't let exceptions propagate to the caller.
+            # None is always returned and any exception raised gets logged
+            # later on.
+            err(None, "Callable passed to SynchronousThreadPool.callInThread failed")
 
 
 
@@ -1253,3 +1259,121 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             'GET', '1.1', [], [''])
 
         return self.assertFailure(d, ConnectionLost)
+
+
+    def _internalServerErrorTest(self, application):
+        channel = DummyChannel()
+
+        def applicationFactory():
+            return application
+
+        d, requestFactory = self.requestFactoryFactory()
+        def cbRendered(ignored):
+            errors = self.flushLoggedErrors(RuntimeError)
+            self.assertEquals(len(errors), 1)
+
+            self.assertTrue(
+                channel.transport.written.getvalue().startswith(
+                    'HTTP/1.1 500 Internal Server Error'))
+        d.addCallback(cbRendered)
+
+        request = self.lowLevelRender(
+            requestFactory, applicationFactory,
+            lambda: channel, 'GET', '1.1', [], [''], None, [])
+
+        return d
+
+
+    def test_applicationExceptionBeforeStartResponse(self):
+        """
+        If the application raises an exception before calling I{start_response}
+        then the response status is I{500} and the exception is logged.
+        """
+        def application(environ, startResponse):
+            raise RuntimeError("This application had some error.")
+        return self._internalServerErrorTest(application)
+
+
+    def test_applicationExceptionAfterStartResponse(self):
+        """
+        If the application calls I{start_response} but then raises an exception
+        before any data is written to the response then the response status is
+        I{500} and the exception is logged.
+        """
+        def application(environ, startResponse):
+            startResponse('200 OK', [])
+            raise RuntimeError("This application had some error.")
+        return self._internalServerErrorTest(application)
+
+
+    def _connectionClosedTest(self, application, responseContent):
+        channel = DummyChannel()
+
+        def applicationFactory():
+            return application
+
+        d, requestFactory = self.requestFactoryFactory()
+
+        # Capture the request so we can disconnect it later on.
+        requests = []
+        def requestFactoryWrapper(*a, **kw):
+            requests.append(requestFactory(*a, **kw))
+            return requests[-1]
+
+        def ebRendered(ignored):
+            errors = self.flushLoggedErrors(RuntimeError)
+            self.assertEquals(len(errors), 1)
+
+            response = channel.transport.written.getvalue()
+            self.assertTrue(response.startswith('HTTP/1.1 200 OK'))
+            # Chunked transfer-encoding makes this a little messy.
+            self.assertIn(responseContent, response)
+        d.addErrback(ebRendered)
+
+        request = self.lowLevelRender(
+            requestFactoryWrapper, applicationFactory,
+            lambda: channel, 'GET', '1.1', [], [''], None, [])
+
+        # By now the connection should be closed.
+        self.assertTrue(channel.transport.disconnected)
+        # Give it a little push to go the rest of the way.
+        requests[0].connectionLost(Failure(ConnectionLost("All gone")))
+
+        return d
+
+
+    def test_applicationExceptionAfterWrite(self):
+        """
+        If the application raises an exception after the response status has
+        already been sent then the connection is closed and the exception is
+        logged.
+        """
+        responseContent = (
+            'Some bytes, triggering the server to start sending the response')
+
+        def application(environ, startResponse):
+            startResponse('200 OK', [])
+            yield responseContent
+            raise RuntimeError("This application had some error.")
+        return self._connectionClosedTest(application, responseContent)
+
+
+    def test_applicationCloseException(self):
+        """
+        If the application returns a closeable iterator and the C{close} method
+        raises an exception when called then the connection is still closed and
+        the exception is logged.
+        """
+        responseContent = 'foo'
+
+        class Application(object):
+            def __init__(self, environ, startResponse):
+                startResponse('200 OK', [])
+
+            def __iter__(self):
+                yield responseContent
+
+            def close(self):
+                raise RuntimeError("This application had some error.")
+
+        return self._connectionClosedTest(Application, responseContent)

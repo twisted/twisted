@@ -186,6 +186,7 @@ class SimpleResource(resource.Resource):
 class DummyChannel:
     class TCP:
         port = 80
+        disconnected = False
 
         def __init__(self):
             self.written = StringIO()
@@ -207,6 +208,9 @@ class DummyChannel:
         def registerProducer(self, producer, streaming):
             self.producers.append((producer, streaming))
 
+        def loseConnection(self):
+            self.disconnected = True
+
 
     class SSL(TCP):
         implements(interfaces.ISSLTransport)
@@ -219,7 +223,6 @@ class DummyChannel:
 
     def requestDone(self, request):
         pass
-
 
 
 

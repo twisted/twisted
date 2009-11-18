@@ -9,12 +9,15 @@ U{Web Resource Gateway Interface<http://www.python.org/dev/peps/pep-0333/>}.
 __metaclass__ = type
 
 from urllib import unquote
+from sys import exc_info
 
 from zope.interface import implements
 
-from twisted.python.log import msg
+from twisted.python.log import msg, err
+from twisted.python.failure import Failure
 from twisted.web.resource import IResource
 from twisted.web.server import NOT_DONE_YET
+from twisted.web.http import INTERNAL_SERVER_ERROR
 
 
 class _ErrorStream:
@@ -304,21 +307,32 @@ class _WSGIResponse:
         This must be called in a non-I/O thread (ie, a WSGI application
         thread).
         """
-        appIterator = self.application(self.environ, self.startResponse)
-        for elem in appIterator:
-            if elem:
-                self.write(elem)
-            if self._requestFinished:
-                break
-        close = getattr(appIterator, 'close', None)
-        if close is not None:
-            close()
-        def wsgiFinish(started):
-            if not self._requestFinished:
-                if not started:
-                    self._sendResponseHeaders()
-                self.request.finish()
-        self.reactor.callFromThread(wsgiFinish, self.started)
+        try:
+            appIterator = self.application(self.environ, self.startResponse)
+            for elem in appIterator:
+                if elem:
+                    self.write(elem)
+                if self._requestFinished:
+                    break
+            close = getattr(appIterator, 'close', None)
+            if close is not None:
+                close()
+        except:
+            def wsgiError(started, type, value, traceback):
+                err(Failure(value, type, traceback), "WSGI application error")
+                if started:
+                    self.request.transport.loseConnection()
+                else:
+                    self.request.setResponseCode(INTERNAL_SERVER_ERROR)
+                    self.request.finish()
+            self.reactor.callFromThread(wsgiError, self.started, *exc_info())
+        else:
+            def wsgiFinish(started):
+                if not self._requestFinished:
+                    if not started:
+                        self._sendResponseHeaders()
+                    self.request.finish()
+            self.reactor.callFromThread(wsgiFinish, self.started)
         self.started = True
 
 
