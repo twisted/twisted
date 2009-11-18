@@ -14,6 +14,8 @@ try:
 except ImportError:
     pyasn1 = None
 
+from zope.interface import implements
+
 from twisted.conch.ssh import common, session, forwarding
 from twisted.conch import avatar, error
 from twisted.conch.test.keydata import publicRSA_openssh, privateRSA_openssh
@@ -24,8 +26,6 @@ from twisted.internet.error import ProcessTerminated
 from twisted.python import failure, log
 from twisted.trial import unittest
 from twisted.protocols.loopback import loopbackAsync
-
-from zope.interface import implements
 
 
 
@@ -52,21 +52,19 @@ class ConchTestRealm:
         """
         unittest.assertEquals(avatarID, 'testuser')
         logout = getattr(self.avatar, 'logout', lambda: None)
-        if not callable(logout):
-            logout = lambda: None
         return interfaces[0], self.avatar, logout
 
 
 
 class ConchTestBaseAvatar(avatar.ConchUser):
     """
-    Base class for creating avatars.
+    Base test class for creating avatars with SSH session channel support.
     """
 
 
     def __init__(self):
         """
-        Add C{session.SSHSession} to avaliable channels.
+        Add C{session.SSHSession} to available channels.
         """
         avatar.ConchUser.__init__(self)
         self.channelLookup.update({'session': session.SSHSession})
@@ -74,6 +72,11 @@ class ConchTestBaseAvatar(avatar.ConchUser):
 
 
 class ConchTestAvatar(ConchTestBaseAvatar):
+    """
+    An avatar with C{direct-tcpip} channel support, and 2 subsystems for test
+    C{crazy} and C{test_connectionLost}. It also supports C{foo} and C{foo-2}
+    global requests.
+    """
     loggedOut = False
 
     def __init__(self):
@@ -130,6 +133,9 @@ class ConchTestAvatar(ConchTestBaseAvatar):
 
 
 class ConchSessionForTestAvatar:
+    """
+    A L{session.ISession} implementation for tests.
+    """
     implements(session.ISession)
 
     def __init__(self, avatar):
@@ -197,9 +203,11 @@ class ConchSessionForTestAvatar:
             unittest.assert_(self.eof)
 
 
+
 class ConchSessionTestLoseConnection:
     """
-    Test if closing client's session is raising an exception.
+    L{session.ISession} implementation helping test if closing client's session
+    is raising an exception.
     """
     implements(session.ISession)
 

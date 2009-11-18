@@ -53,7 +53,8 @@ class _LoopbackAddress(object):
 
 
 class _LoopbackTransport(object):
-    implements(interfaces.ITransport, interfaces.IConsumer)
+    implements(interfaces.ITransport, interfaces.IConsumer,
+               interfaces.ILoggingContext)
 
     disconnecting = False
     producer = None
