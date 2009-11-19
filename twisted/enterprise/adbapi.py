@@ -314,7 +314,8 @@ class ConnectionPool:
 
 
     def runQuery(self, *args, **kw):
-        """Execute an SQL query and return the result.
+        """
+        Execute an SQL query and return the result.
 
         A DB-API cursor will will be invoked with cursor.execute(*args, **kw).
         The exact nature of the arguments will depend on the specific flavor
@@ -332,7 +333,7 @@ class ConnectionPool:
             time with a subsequent cursor.fetchall() or cursor.fetchmany().
 
         @return: a Deferred which will fire the return value of a DB-API
-        cursor's 'fetchall' method, or a Failure.
+            cursor's 'fetchall' method, or a Failure.
         """
         return self.runInteraction(self._runQuery, *args, **kw)
 

@@ -19,7 +19,7 @@ class Connection(object):
 
 
     def cursor(self):
-        return Cursor(self)
+        return Cursor()
 
 
     def commit(self):
@@ -37,11 +37,7 @@ class Cursor(object):
     """
 
     # track arraysize attribute by passed in 'sizeId' attribute on cursor
-    __sizes = {}
-
-    def __init__(self, conn):
-        self.conn = conn
-
+    _sizes = {}
 
     def execute(self, sql, *args, **kwargs):
         """
@@ -49,7 +45,7 @@ class Cursor(object):
         """
 
         try:
-            self.__sizes[kwargs.pop('sizeId')] = self.arraysize
+            self._sizes[kwargs.pop('sizeId')] = self.arraysize
         except:
             pass
         return None
@@ -69,7 +65,7 @@ class Cursor(object):
         with this sizeId.
         """
 
-        return self.__sizes.get(sizeId)
+        return self._sizes.get(sizeId)
 
 
 
