@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_adbapi -*-
-# Copyright (c) 2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
