@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_adbapi -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -327,6 +327,10 @@ class ConnectionPool:
         The  *args and **kw arguments will be passed to the DB-API cursor's
         'execute' method.
 
+        @param arraysize: Change the cursor's arraysize from the DB-API's
+            default.  This is the number of rows that will be fetched at a
+            time with a subsequent cursor.fetchall() or cursor.fetchmany().
+
         @return: a Deferred which will fire the return value of a DB-API
         cursor's 'fetchall' method, or a Failure.
         """
@@ -440,6 +444,8 @@ class ConnectionPool:
 
 
     def _runQuery(self, trans, *args, **kw):
+        if 'arraysize' in kw:
+            trans._cursor.arraysize = kw.pop('arraysize')
         trans.execute(*args, **kw)
         return trans.fetchall()
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -772,3 +772,45 @@ class ConnectionPoolTestCase(unittest.TestCase):
         d.addCallback(cbFailed)
         return d
 
+
+
+class ArraySizeTestCase(unittest.TestCase):
+    """
+    Test setting cursor attribute, arraysize.
+    Test is run with mock_dbapi module to verify database independent behaviour.
+    """
+
+    def test_arraysize(self):
+        """
+        Test that passing in arraysize to runQuery actually sets the
+        attribute on the cursor that the transaction is executed with.
+        """
+        self.dbpool = ConnectionPool('twisted.test.mock_dbapi')
+
+        def _verifyArraysize(ignored, actualSize, sizeId):
+            """
+            Verify the arraysize attribute was actually set on the cursor.
+
+            @param ignored: the result of the database query (not used)
+            @param actualSize: The actual arraysize that was passed in to the
+                               cursor when the query was executed.
+            @param sizeId: The unique reference that was passed into the
+                           cursor to track the cursor's arraysize attribute.
+            """
+            expectedSize = (self.dbpool.connections.values()[0].cursor()
+                            .getArraysize(sizeId))
+            self.assertEquals(actualSize, expectedSize,
+                              "arraysize is: %s, expected: %s" %
+                              (actualSize, expectedSize))
+
+        def _callRunQuery(sizeId, arraysize):
+            """Run a database query with an arraysize attribute."""
+            d = self.dbpool.runQuery("select count(1) from simple",
+                    arraysize=arraysize, sizeId=sizeId)
+            return d.addCallback(_verifyArraysize, arraysize, sizeId)
+
+        dl = []
+        for sizeId, arraysize in enumerate((50, 100, 150, 200)):
+            dl.append(_callRunQuery(sizeId, arraysize))
+
+        return defer.DeferredList(dl)
