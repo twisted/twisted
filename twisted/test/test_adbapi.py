@@ -666,6 +666,13 @@ class TransactionTestCase(unittest.TestCase):
         self.assertEquals(errors[0].value.args[0], "problem!")
 
 
+    def test_cursor(self):
+        """
+        The C{cursor} attribute of a L{Transaction} instance evaluates to the
+        current cursor object.
+        """
+
+
 
 class NonThreadPool(object):
     def callInThreadWithCallback(self, onResult, f, *a, **kw):
@@ -785,7 +792,8 @@ class ArraySizeTestCase(unittest.TestCase):
         Test that passing in arraysize to runQuery actually sets the
         attribute on the cursor that the transaction is executed with.
         """
-        self.dbpool = ConnectionPool('twisted.test.mock_dbapi')
+        self.dbpool = ConnectionPool('twisted.test.mock_dbapi',
+                                     cp_min=1, cp_max=1)
 
         def _verifyArraysize(ignored, actualSize, sizeId):
             """
@@ -797,20 +805,24 @@ class ArraySizeTestCase(unittest.TestCase):
             @param sizeId: The unique reference that was passed into the
                            cursor to track the cursor's arraysize attribute.
             """
-            expectedSize = (self.dbpool.connections.values()[0].cursor()
-                            .getArraysize(sizeId))
+            connection = self.dbpool.connections.values()[0]
+            expectedSize = connection.getArraysize(sizeId)
             self.assertEquals(actualSize, expectedSize,
                               "arraysize is: %s, expected: %s" %
                               (actualSize, expectedSize))
 
         def _callRunQuery(sizeId, arraysize):
-            """Run a database query with an arraysize attribute."""
-            d = self.dbpool.runQuery("select count(1) from simple",
-                    arraysize=arraysize, sizeId=sizeId)
-            return d.addCallback(_verifyArraysize, arraysize, sizeId)
+            """
+            Run a database query with an arraysize attribute.
+            """
+            d = self.dbpool.runQuery(
+                "select count(1) from simple",
+                arraysize=arraysize, sizeId=sizeId)
+            d.addCallback(_verifyArraysize, arraysize, sizeId)
+            return d
 
         dl = []
-        for sizeId, arraysize in enumerate((50, 100, 150, 200)):
+        for sizeId, arraysize in enumerate((50, 150, 100, 200)):
             dl.append(_callRunQuery(sizeId, arraysize))
 
         return defer.gatherResults(dl)

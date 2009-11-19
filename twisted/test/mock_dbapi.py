@@ -15,44 +15,15 @@ class Connection(object):
     """
 
     def __init__(self, *args, **kwargs):
-        pass
+        self._sizes = {}
 
 
     def cursor(self):
-        return Cursor()
+        return Cursor(self)
 
 
     def commit(self):
         pass
-
-
-    def close(self):
-        pass
-
-
-
-class Cursor(object):
-    """
-    A mock DB-API 2.0 Cursor class.
-    """
-
-    # track arraysize attribute by passed in 'sizeId' attribute on cursor
-    _sizes = {}
-
-    def execute(self, sql, *args, **kwargs):
-        """
-        Track the arraysize attribute of the cursor.
-        """
-
-        try:
-            self._sizes[kwargs.pop('sizeId')] = self.arraysize
-        except:
-            pass
-        return None
-
-
-    def fetchall(self):
-        return [[1]]
 
 
     def close(self):
@@ -66,6 +37,39 @@ class Cursor(object):
         """
 
         return self._sizes.get(sizeId)
+
+
+
+class Cursor(object):
+    """
+    A mock DB-API 2.0 Cursor class.
+
+    @ivar _connection: A reference to the L{Connection} which created the
+        cursor, used to keep track of arraysizes.
+    """
+
+    def __init__(self, connection):
+        self._connection = connection
+
+
+    def execute(self, sql, *args, **kwargs):
+        """
+        Track the arraysize attribute of the cursor.
+        """
+        try:
+            sizeId = kwargs.pop('sizeId')
+        except KeyError:
+            pass
+        else:
+            self._connection._sizes[sizeId] = self.arraysize
+
+
+    def fetchall(self):
+        return [[1]]
+
+
+    def close(self):
+        pass
 
 
 

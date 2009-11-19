@@ -31,7 +31,6 @@ class Connection(object):
     the same API. However, the Connection knows about its pool and also
     handle reconnecting should when the real connection dies.
     """
-
     def __init__(self, pool):
         self._pool = pool
         self._connection = None
@@ -79,14 +78,18 @@ class Connection(object):
 
 
 class Transaction:
-    """A lightweight wrapper for a DB-API 'cursor' object.
+    """
+    A lightweight wrapper for a DB-API 'cursor' object.
 
     Relays attribute access to the DB cursor. That is, you can call
     execute(), fetchall(), etc., and they will be called on the
     underlying DB-API cursor object. Attributes will also be
     retrieved from there.
+
+    @ivar cursor: The currently active cursor object or L{None} if there isn't
+        one.
     """
-    _cursor = None
+    cursor = None
 
     def __init__(self, pool, connection):
         self._pool = pool
@@ -94,16 +97,16 @@ class Transaction:
         self.reopen()
 
     def close(self):
-        _cursor = self._cursor
-        self._cursor = None
-        _cursor.close()
+        cursor = self.cursor
+        self.cursor = None
+        cursor.close()
 
     def reopen(self):
-        if self._cursor is not None:
+        if self.cursor is not None:
             self.close()
 
         try:
-            self._cursor = self._connection.cursor()
+            self.cursor = self._connection.cursor()
             return
         except:
             if not self._pool.reconnect:
@@ -115,14 +118,14 @@ class Transaction:
             log.msg('Connection lost, reconnecting')
 
         self.reconnect()
-        self._cursor = self._connection.cursor()
+        self.cursor = self._connection.cursor()
 
     def reconnect(self):
         self._connection.reconnect()
-        self._cursor = None
+        self.cursor = None
 
     def __getattr__(self, name):
-        return getattr(self._cursor, name)
+        return getattr(self.cursor, name)
 
 
 class ConnectionPool:
@@ -446,7 +449,7 @@ class ConnectionPool:
 
     def _runQuery(self, trans, *args, **kw):
         if 'arraysize' in kw:
-            trans._cursor.arraysize = kw.pop('arraysize')
+            trans.cursor.arraysize = kw.pop('arraysize')
         trans.execute(*args, **kw)
         return trans.fetchall()
 
