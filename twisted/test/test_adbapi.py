@@ -813,4 +813,4 @@ class ArraySizeTestCase(unittest.TestCase):
         for sizeId, arraysize in enumerate((50, 100, 150, 200)):
             dl.append(_callRunQuery(sizeId, arraysize))
 
-        return defer.DeferredList(dl)
+        return defer.gatherResults(dl)
