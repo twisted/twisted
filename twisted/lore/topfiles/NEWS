@@ -13,6 +13,8 @@ Fixes
  - Lore now uses minidom instead of Twisted's microdom, which incidentally
    fixes some Lore bugs such as throwing away certain whitespace
    (#3560, #414, #3619)
+ - Lore's "lint" command should no longer break on documents with links in them
+   (#4051, #4115)
 
 Deprecations and Removals
 -------------------------
@@ -20,7 +22,7 @@ Deprecations and Removals
 
 Other
 -----
- - #3565, #3246, #3540, #3750
+ - #3565, #3246, #3540, #3750, #4050
 
 
 Lore 8.2.0 (2008-12-16)

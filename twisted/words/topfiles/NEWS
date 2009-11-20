@@ -10,6 +10,9 @@ Features
    CTCP ACTION messages with less confusing behavior (#3910)
  - The XMPP client protocol implementation now supports ANONYMOUS SASL
    authentication (#4067)
+ - The IRC client protocol implementation now has better support for the
+   ISUPPORT server->client message, storing the data in a new
+   ServerSupportedFeatures object accessible via IRCClient.supported (#3285)
 
 Fixes
 -----
@@ -32,7 +35,7 @@ Deprecations and Removals
 
 Other
 -----
- - #2763, #3540, #3647, #3750, #3895, #3968
+ - #2763, #3540, #3647, #3750, #3895, #3968, #4050
 
 Words 8.2.0 (2008-12-16)
 ========================

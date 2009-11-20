@@ -83,6 +83,10 @@ Fixes
    (#4014)
  - twisted.web's wsgi support should no longer attempt to call request.finish
    twice, which would cause errors in certain cases (#4025)
+ - WSGI applications should now be able to handle requests with large bodies
+   (#4029)
+ - Exceptions raised from WSGI applications should now more reliably be turned
+   into 500 errors on the HTTP level (#4019)
 
 
 Deprecations and Removals
@@ -102,7 +106,7 @@ Deprecations and Removals
 Other
 -----
  - #2763, #3540, #3575, #3610, #3605, #1176, #3539, #3750, #3761, #3779, #2677,
-   #3782, #3904, #3919, #3418, #3990
+   #3782, #3904, #3919, #3418, #3990, #1404, #4050
 
 
 Web 8.2.0 (2008-12-16)

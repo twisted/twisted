@@ -73,6 +73,9 @@ Fixes
  - FilePath's walk method now calls its "descend" parameter even on the first
    level of children, instead of only on grandchildren. This allows for better
    symlink cycle detection (#3911)
+ - Attempting to write unicode data to process pipes on Windows will no longer
+   result in arbitrarily encoded messages being written to the pipe, but instead
+   will immediately raise an error (#3930)
 
 Deprecations and Removals
 -------------------------
@@ -98,7 +101,7 @@ Other
    #3376, #3652, #3695, #3735, #3786, #3783, #3699, #3340, #3810, #3822, #3817,
    #3791, #3859, #2459, #3677, #3883, #3894, #3861, #3822, #3852, #3875, #2722,
    #3768, #3914, #3885, #2719, #3905, #3942, #2820, #3990, #3954, #1627, #2326,
-   #2972, #3253, #3937
+   #2972, #3253, #3937, #4058, #1200, #3639, #4079, #4063, #4050
 
 
 Core 8.2.0 (2008-12-16)
