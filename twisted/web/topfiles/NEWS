@@ -88,7 +88,6 @@ Fixes
  - Exceptions raised from WSGI applications should now more reliably be turned
    into 500 errors on the HTTP level (#4019)
 
-
 Deprecations and Removals
 -------------------------
  - The unmaintained and untested twisted.web.monitor module was removed (#2763)
