@@ -40,9 +40,9 @@ Fixes
    in particular threads was fixed (#1997)
  - The passivePortRange attribute of FTPFactory is now honored (#3593)
  - TestCase.flushWarnings now flushes warnings even if they were produced by a
-   file that was renamed while tests were being run (#3598)
+   file that was renamed since it was byte compiled (#3598)
  - Some internal file descriptors are now marked as close-on-exec, so these will
-   no longer be leaked (#3576)
+   no longer be leaked to child processes (#3576)
  - twisted.python.zipstream now correctly extracts the first file in a directory
    as a file, and not an empty directory (#3625)
  - proxyForInterface now returns classes which correctly *implement* interfaces
