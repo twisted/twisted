@@ -1,6 +1,42 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Words 9.0.0pre1 (?)
+===========================
+
+Features
+--------
+ - IRCClient.describe is a new method meant to replace IRCClient.me to send
+   CTCP ACTION messages with less confusing behavior (#3910)
+ - The XMPP client protocol implementation now supports ANONYMOUS SASL
+   authentication (#4067)
+ - The IRC client protocol implementation now has better support for the
+   ISUPPORT server->client message, storing the data in a new
+   ServerSupportedFeatures object accessible via IRCClient.supported (#3285)
+
+Fixes
+-----
+ - The twisted.words IRC server now always sends an MOTD, which at least makes
+   Pidgin able to successfully connect to a twisted.words IRC server (#2385)
+ - The IRC client will now dispatch "RPL MOTD" messages received before a
+   "RPL MOTD START" instead of raising an exception (#3676)
+ - The IRC client protocol implementation no longer updates its 'nickname'
+   attribute directly; instead, that attribute will be updated when the server
+   acknowledges the change (#3377)
+ - The IRC client protocol implementation now supports falling back to another
+   nickname when a nick change request fails (#3377, #4010)
+
+Deprecations and Removals
+-------------------------
+ - The TOC protocol implementation is now deprecated, since the protocol itself
+   has been deprecated and obselete for quite a long time (#3580)
+ - The gui "im" application has been removed, since it relied on GTK1, which is
+   hard to find these days (#3699, #3340)
+
+Other
+-----
+ - #2763, #3540, #3647, #3750, #3895, #3968, #4050
+
 Words 8.2.0 (2008-12-16)
 ========================
 

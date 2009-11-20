@@ -1,6 +1,39 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Conch 9.0.0pre1 (2009-05-30)
+====================================
+
+Fixes
+-----
+ - The SSH key parser has been removed and conch now uses pyASN1 to parse keys.
+   This should fix a number of cases where parsing a key would fail, but it now
+   requires users to have pyASN1 installed (#3391)
+ - The time field on SFTP file listings should now be correct (#3503)
+ - The day field on SFTP file listings should now be correct on Windows (#3503)
+ - The "cftp" sftp client now truncates files it is uploading over (#2519)
+ - The telnet server protocol can now properly respond to subnegotiation
+   requests (#3655)
+ - Tests and factoring of the SSHv2 server implementation are now much better
+   (#2682)
+ - The SSHv2 server now sends "exit-signal" messages to the client, instead of
+   raising an exception, when a process dies due to a signal (#2687)
+ - cftp's client-side "exec" command now uses /bin/sh if the current user has
+   no shell (#3914)
+
+Deprecations and Removals
+-------------------------
+ - The buggy SSH connection sharing feature of the SSHv2 client was removed
+   (#3498)
+ - Use of strings and PyCrypto objects to represent keys is deprecated in favor
+   of using Conch Key objects (#2682)
+
+Other
+-----
+ - #3548, #3537, #3551, #3220, #3568, #3689, #3709, #3809, #2763, #3540, #3750,
+   #3897, #3813, #3871, #3916, #4047, #3940, #4050
+
+
 Conch 8.2.0 (2008-12-16)
 ========================
 

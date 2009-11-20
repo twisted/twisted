@@ -1,6 +1,19 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Runner 9.0.0pre1 (?)
+============================
+
+Features
+--------
+ - procmon.ProcessMonitor.addProcess now accepts an 'env' parameter which allows
+   users to specify the environment in which a process will be run (#3691)
+
+Other
+-----
+ - #3540
+
+
 Runner 8.2.0 (2008-12-16)
 =========================
 
