@@ -789,7 +789,7 @@ class ArraySizeTestCase(unittest.TestCase):
 
     def test_arraysize(self):
         """
-        Test that passing in arraysize to runQuery actually sets the
+        Test that passing in C{cp_arraysize} to runQuery actually sets the
         attribute on the cursor that the transaction is executed with.
         """
         self.dbpool = ConnectionPool('twisted.test.mock_dbapi',
@@ -817,7 +817,7 @@ class ArraySizeTestCase(unittest.TestCase):
             """
             d = self.dbpool.runQuery(
                 "select count(1) from simple",
-                arraysize=arraysize, sizeId=sizeId)
+                cp_arraysize=arraysize, sizeId=sizeId)
             d.addCallback(_verifyArraysize, arraysize, sizeId)
             return d
 

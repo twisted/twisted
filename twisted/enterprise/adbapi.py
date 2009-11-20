@@ -331,7 +331,7 @@ class ConnectionPool:
         The  *args and **kw arguments will be passed to the DB-API cursor's
         'execute' method.
 
-        @param arraysize: Change the cursor's arraysize from the DB-API's
+        @param cp_arraysize: Change the cursor's arraysize from the DB-API's
             default.  This is the number of rows that will be fetched at a
             time with a subsequent cursor.fetchall() or cursor.fetchmany().
 
@@ -448,8 +448,8 @@ class ConnectionPool:
 
 
     def _runQuery(self, trans, *args, **kw):
-        if 'arraysize' in kw:
-            trans.cursor.arraysize = kw.pop('arraysize')
+        if 'cp_arraysize' in kw:
+            trans.cursor.arraysize = kw.pop('cp_arraysize')
         trans.execute(*args, **kw)
         return trans.fetchall()
 
