@@ -237,7 +237,7 @@ class AppLogger(object):
         If an L{ILogObserver} component has been set on C{application}, then
         it will be used as the log observer.  Otherwise a log observer will be
         created based on the command-line options.
-        
+
         @param application: The application on which to check for an
             L{ILogObserver}.
         """
@@ -580,6 +580,9 @@ class ReactorSelectionMixin:
 
 
 class ServerOptions(usage.Options, ReactorSelectionMixin):
+
+    longdesc = ("twistd reads a twisted.application.service.Application out "
+                "of a file and runs it.")
 
     optFlags = [['savestats', None,
                  "save the Stats object rather than the text output of "

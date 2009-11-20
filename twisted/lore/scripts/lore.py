@@ -24,6 +24,8 @@ class IProcessor(Interface):
 
 class Options(usage.Options):
 
+    longdesc = "lore converts documentation formats."
+
     optFlags = [["plain", 'p', "Report filenames without progress bar"],
                 ["null", 'n', "Do not report filenames"],
                 ["number", 'N', "Add chapter/section numbers to section headings"],

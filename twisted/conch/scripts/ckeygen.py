@@ -23,6 +23,8 @@ class GeneralOptions(usage.Options):
     synopsis = """Usage:    ckeygen [options]
  """
 
+    longdesc = "ckeygen manipulates public/private keys in various ways."
+
     optParameters = [['bits', 'b', 1024, 'Number of bits in the key to create.'],
                      ['filename', 'f', None, 'Filename of the key file.'],
                      ['type', 't', None, 'Specify type of key to create.'],

@@ -21,6 +21,8 @@ class ClientOptions(options.ConchOptions):
 
     synopsis = """Usage:   conch [options] host [command]
 """
+    longdesc = ("conch is a SSHv2 client that allows logging into a remote "
+                "machine and executing commands.")
 
     optParameters = [['escape', 'e', '~'],
                       ['localforward', 'L', None, 'listen-port:host:port   Forward local port to remote address'],

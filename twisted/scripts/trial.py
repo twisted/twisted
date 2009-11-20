@@ -91,6 +91,8 @@ def _zshReporterAction():
 class Options(usage.Options, app.ReactorSelectionMixin):
     synopsis = """%s [options] [[file|package|module|TestCase|testmethod]...]
     """ % (os.path.basename(sys.argv[0]),)
+    longdesc = ("trial loads and executes a suite of unit tests, obtained "
+                "from modules, packages and files listed on the command line.")
 
     optFlags = [["help", "h"],
                 ["rterrors", "e", "realtime errors, print out tracebacks as "
