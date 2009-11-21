@@ -92,7 +92,7 @@ class LoopingCall:
 
         @rtype: L{LoopingCall}
 
-        @since: 9.1
+        @since: 9.0
         """
 
         def counter():

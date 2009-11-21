@@ -1,6 +1,113 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Web 9.0.0pre1 (2009-11-19)
+==================================
+
+Features
+--------
+ - There is now an iweb.IRequest interface which specifies the interface that
+   request objects provide (#3416)
+ - downloadPage now supports the same cookie, redirect, and timeout features
+   that getPage supports (#2971)
+ - A chapter about WSGI has been added to the twisted.web documentation (#3510)
+ - The HTTP auth support in the web server now allows anonymous sessions by
+   logging in with ANONYMOUS credentials when no Authorization header is
+   provided in a request (#3924, #3936)
+ - HTTPClientFactory now accepts a parameter to enable a common deviation from
+   the HTTP 1.1 standard by responding to redirects in a POSTed request with a
+   GET instead of another POST (#3624)
+ - A new basic HTTP/1.1 client API is included in twisted.web.client.Agent
+   (#886, #3987)
+
+Fixes
+-----
+ - Requests for "insecure" children of a static.File (such as paths containing
+   encoded directory separators) will now result in a 404 instead of a 500
+   (#3549, #3469)
+ - When specifying a followRedirect argument to the getPage function, the state
+   of redirect-following for other getPage calls should now be unaffected.  It
+   was previously overwriting a class attribute which would affect outstanding
+   getPage calls (#3192)
+ - Downloading an URL of the form "http://example.com:/" will now work,
+   ignoring the extraneous colon (#2402)
+ - microdom's appendChild method will no longer issue a spurious warning, and
+   microdom's methods in general should now issue more meaningful exceptions
+   when invalid parameters are passed (#3421)
+ - WSGI applications will no longer have spurious Content-Type headers added to
+   their responses by the twisted.web server. In addition, WSGI applications
+   will no longer be able to specify the server-restricted headers Server and
+   Date (#3569)
+ - http_headers.Headers now normalizes the case of raw headers passed directly
+   to it in the same way that it normalizes the headers passed to setRawHeaders
+   (#3557)
+ - The distrib module no longer relies on the deprecated woven package (#3559)
+ - twisted.web.domhelpers now works with both microdom and minidom (#3600)
+ - twisted.web servers will now ignore invalid If-Modified-Since headers instead
+   of returning a 500 error (#3601)
+ - Certain request-bound memory and file resources are cleaned up slightly
+   sooner by the request when the connection is lost (#1621, #3176)
+ - xmlrpclib.DateTime objects should now correctly round-trip over twisted.web's
+   XMLRPC support in all supported versions of Python, and errors during error
+   serialization will no longer hang a twisted.web XMLRPC response (#2446)
+ - request.content should now always be seeked to the beginning when
+   request.process is called, so application code should never need to seek 
+   back manually (#3585)
+ - Fetching a child of static.File with a double-slash in the URL (such as
+   "example//foo.html") should now return a 404 instead of a traceback and
+   500 error (#3631)
+ - downloadPage will now fire a Failure on its returned Deferred instead of
+   indicating success when the connection is prematurely lost (#3645)
+ - static.File will now provide a 404 instead of a 500 error when it was
+   constructed with a non-existent file (#3634)
+ - microdom should now serialize namespaces correctly (#3672)
+ - The HTTP Auth support resource wrapper should no longer corrupt requests and
+   cause them to skip a segment in the request path (#3679)
+ - The twisted.web WSGI support should now include leading slashes in PATH_INFO,
+   and SCRIPT_NAME will be empty if the application is at the root of the
+   resource tree. This means that WSGI applications should no longer generate
+   URLs with double-slashes in them even if they naively concatenate the values
+   (#3721)
+ - WSGI applications should now receive the requesting client's IP in the
+   REMOTE_ADDR environment variable (#3730)
+ - The distrib module should work again. It was unfortunately broken with the
+   refactoring of twisted.web's header support (#3697)
+ - static.File now supports multiple ranges specified in the Range header
+   (#3574)
+ - static.File should now generate a correct Content-Length value when the
+   requested Range value doesn't fit entirely within the file's contents (#3814)
+ - Attempting to call request.finish() after the connection has been lost will
+   now immediately raise a RuntimeError (#4013)
+ - An HTTP-auth resource should now be able to directly render the wrapped
+   avatar, whereas before it would only allow retrieval of child resources
+   (#4014)
+ - twisted.web's wsgi support should no longer attempt to call request.finish
+   twice, which would cause errors in certain cases (#4025)
+ - WSGI applications should now be able to handle requests with large bodies
+   (#4029)
+ - Exceptions raised from WSGI applications should now more reliably be turned
+   into 500 errors on the HTTP level (#4019)
+
+Deprecations and Removals
+-------------------------
+ - The unmaintained and untested twisted.web.monitor module was removed (#2763)
+ - The twisted.web.woven package has been removed (#1522)
+ - All of the error resources in twisted.web.error are now in
+   twisted.web.resource, and accessing them through twisted.web.error is now
+   deprecated (#3035)
+ - To facilitate a simplification of the timeout logic in server.Session,
+   various things have been deprecated (#3457)
+   - the loopFactory attribute is now ignored
+   - the checkExpired method now does nothing
+   - the lifetime parameter to startCheckingExpiration is now ignored
+ - The twisted.web.trp module is now deprecated (#2030)
+
+Other
+-----
+ - #2763, #3540, #3575, #3610, #3605, #1176, #3539, #3750, #3761, #3779, #2677,
+   #3782, #3904, #3919, #3418, #3990, #1404, #4050
+
+
 Web 8.2.0 (2008-12-16)
 ======================
 
