@@ -1,4 +1,8 @@
-# -*- test-case-name: twisted.test.test_process.ProcessTestCase.testStdio -*-
+# -*- test-case-name: twisted.test.test_stdio -*-
+
+"""
+Windows-specific implementation of the L{twisted.internet.stdio} interface.
+"""
 
 import win32api
 import os, msvcrt
@@ -9,9 +13,13 @@ from twisted.internet.interfaces import IHalfCloseableProtocol, ITransport, IAdd
 from twisted.internet.interfaces import IConsumer, IPushProducer
 
 from twisted.internet import _pollingfile, main
+from twisted.python.failure import Failure
+
 
 class Win32PipeAddress(object):
     implements(IAddress)
+
+
 
 class StandardIO(_pollingfile._PollingTimer):
 
@@ -70,7 +78,7 @@ class StandardIO(_pollingfile._PollingTimer):
         if self.connsLost >= 2:
             self.disconnecting = True
             self.disconnected = True
-            self.proto.connectionLost(main.CONNECTION_DONE)
+            self.proto.connectionLost(Failure(main.CONNECTION_DONE))
 
     # ITransport
 

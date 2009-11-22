@@ -4,7 +4,7 @@
 import os, sys
 
 from twisted.trial import unittest
-from twisted.python import filepath
+from twisted.python import filepath, log
 from twisted.python.runtime import platform
 from twisted.internet import error, defer, protocol, reactor
 
@@ -121,11 +121,17 @@ class StandardInputOutputTestCase(unittest.TestCase):
         Verify that a protocol connected to L{StandardIO} can disconnect
         itself using C{transport.loseConnection}.
         """
+        errorLogFile = self.mktemp()
+        log.msg("Child process logging to " + errorLogFile)
         p = StandardIOTestProcessProtocol()
         d = p.onCompletion
-        self._spawnProcess(p, 'stdio_test_loseconn.py')
+        self._spawnProcess(p, 'stdio_test_loseconn.py', errorLogFile)
 
         def processEnded(reason):
+            # Copy the child's log to ours so it's more visible.
+            for line in file(errorLogFile):
+                log.msg("Child logged: " + line.rstrip())
+
             self.failIfIn(1, p.data)
             reason.trap(error.ProcessDone)
         return self._requireFailure(d, processEnded)
