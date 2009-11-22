@@ -1,20 +1,16 @@
 # -*- test-case-name: twisted.web.test.test_web -*-
-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
 from cStringIO import StringIO
-
-from twisted.python import failure
-
-import html
-import resource
-
-
 import linecache
 import string, re
 import types
+
+from twisted.python import failure
+
+from twisted.web import html, resource
 
 
 def redirectTo(URL, request):
@@ -33,7 +29,7 @@ def redirectTo(URL, request):
 class Redirect(resource.Resource):
 
     isLeaf = 1
-    
+
     def __init__(self, url):
         resource.Resource.__init__(self)
         self.url = url
@@ -82,14 +78,14 @@ class DeferredResource(resource.Resource):
     object.
     """
     isLeaf = 1
-    
+
     def __init__(self, d):
         resource.Resource.__init__(self)
         self.d = d
 
     def getChild(self, name, request):
         return self
-    
+
     def render(self, request):
         self.d.addCallback(self._cbChild, request).addErrback(
             self._ebChild,request)
@@ -97,13 +93,7 @@ class DeferredResource(resource.Resource):
         return NOT_DONE_YET
 
     def _cbChild(self, child, request):
-        result = resource.getChildForRequest(child, request).render(request)
-        from twisted.web.server import NOT_DONE_YET
-        if result == NOT_DONE_YET:
-            return
-        else:
-            request.write(result)
-            request.finish()
+        request.render(resource.getChildForRequest(child, request))
 
     def _ebChild(self, reason, request):
         request.processingFailed(reason)
@@ -324,7 +314,7 @@ def formatFailure(myFailure):
     variableHTML = """
 <tr class="varRow"><td class="varName">%s</td><td class="varValue">%s</td></tr>
 """
-    
+
     if not isinstance(myFailure, failure.Failure):
         return html.PRE(str(myFailure))
     io = StringIO()
@@ -380,7 +370,7 @@ def formatFailure(myFailure):
                 for name, var in usedVars:
                     w(variableHTML % (name, htmlrepr(var)))
                 w('</table></div>')
-            
+
         w('</div>') # frame
     w('</div>') # stacktrace
     w('<a name="tbend"> </a>')

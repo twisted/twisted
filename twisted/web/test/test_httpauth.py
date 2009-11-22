@@ -215,16 +215,6 @@ class DigestAuthTestCase(RequestMixin, unittest.TestCase):
 
 
 
-
-
-def render(resource, request):
-    result = resource.render(request)
-    if result is NOT_DONE_YET:
-        return
-    request.write(result)
-    request.finish()
-
-
 class UnauthorizedResourceTests(unittest.TestCase):
     """
     Tests for L{UnauthorizedResource}.
@@ -249,7 +239,7 @@ class UnauthorizedResourceTests(unittest.TestCase):
         resource = UnauthorizedResource([
                 BasicCredentialFactory('example.com')])
         request = DummyRequest([''])
-        render(resource, request)
+        request.render(resource)
         self.assertEqual(request.responseCode, 401)
         self.assertEqual(
             request.responseHeaders.getRawHeaders('www-authenticate'),
@@ -266,7 +256,7 @@ class UnauthorizedResourceTests(unittest.TestCase):
         resource = UnauthorizedResource([
                 BasicCredentialFactory('example\\"foo')])
         request = DummyRequest([''])
-        render(resource, request)
+        request.render(resource)
         self.assertEqual(
             request.responseHeaders.getRawHeaders('www-authenticate'),
             ['basic realm="example\\\\\\"foo"'])
@@ -356,7 +346,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         def cbFinished(result):
             self.assertEquals(request.responseCode, 401)
         d.addCallback(cbFinished)
-        render(child, request)
+        request.render(child)
         return d
 
 
@@ -375,7 +365,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         def cbFinished(result):
             self.assertEqual(request.responseCode, 401)
         d.addCallback(cbFinished)
-        render(child, request)
+        request.render(child)
         return d
 
 
@@ -422,7 +412,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         def cbFinished(ignored):
             self.assertEquals(request.written, [self.childContent])
         d.addCallback(cbFinished)
-        render(child, request)
+        request.render(child)
         return d
 
 
@@ -441,7 +431,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         def cbFinished(ignored):
             self.assertEquals(request.written, [self.avatarContent])
         d.addCallback(cbFinished)
-        render(child, request)
+        request.render(child)
         return d
 
 
@@ -470,7 +460,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         def cbFinished(ignored):
             self.assertEqual(factory.requests, [request])
         d.addCallback(cbFinished)
-        render(child, request)
+        request.render(child)
         return d
 
 
@@ -487,7 +477,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         self.avatar.putChild(self.childName, SlowerResource())
         request = self.makeRequest([self.childName])
         child = self._authorizedBasicLogin(request)
-        render(child, request)
+        request.render(child)
         self.assertEqual(self.realm.loggedOut, 0)
         request.finish()
         self.assertEqual(self.realm.loggedOut, 1)
@@ -545,7 +535,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         request = self.makeRequest([self.childName])
         request.headers['authorization'] = 'Bad abc'
         child = getChildForRequest(self.wrapper, request)
-        render(child, request)
+        request.render(child)
         self.assertEqual(request.responseCode, 500)
         self.assertEqual(len(self.flushLoggedErrors(UnexpectedException)), 1)
 
@@ -568,7 +558,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         self.credentialFactories.append(BasicCredentialFactory('example.com'))
         request = self.makeRequest([self.childName])
         child = self._authorizedBasicLogin(request)
-        render(child, request)
+        request.render(child)
         self.assertEqual(request.responseCode, 500)
         self.assertEqual(len(self.flushLoggedErrors(UnexpectedException)), 1)
 
@@ -592,5 +582,5 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         def cbFinished(ignored):
             self.assertEquals(request.written, [unprotectedContents])
         d.addCallback(cbFinished)
-        render(child, request)
+        request.render(child)
         return d

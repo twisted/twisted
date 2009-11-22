@@ -15,7 +15,7 @@ from twisted.internet import reactor
 from twisted.internet.address import IPv4Address
 from twisted.internet.defer import Deferred
 from twisted.web import server, resource, util
-from twisted.internet import defer, interfaces, error, task
+from twisted.internet import defer, interfaces, task
 from twisted.web import iweb, http, http_headers
 from twisted.python import log
 
@@ -97,6 +97,27 @@ class DummyRequest:
         assert not self.written, "Session cannot be requested after data has been written."
         self.session = self.protoSession
         return self.session
+
+
+    def render(self, resource):
+        """
+        Render the given resource as a response to this request.
+
+        This implementation only handles a few of the most common behaviors of
+        resources.  It can handle a render method that returns a string or
+        C{NOT_DONE_YET}.  It doesn't know anything about the semantics of
+        request methods (eg HEAD) nor how to set any particular headers.
+        Basically, it's largely broken, but sufficient for some tests at least.
+        It should B{not} be expanded to do all the same stuff L{Request} does.
+        Instead, L{DummyRequest} should be phased out and L{Request} (or some
+        other real code factored in a different way) used.
+        """
+        result = resource.render(self)
+        if result is server.NOT_DONE_YET:
+            return
+        self.write(result)
+        self.finish()
+
 
     def write(self, data):
         self.written.append(data)
@@ -722,13 +743,23 @@ class NewRenderTestCase(unittest.TestCase):
         self.assertEquals(-1, req.transport.getvalue().find('hi hi'))
 
 
-class SDResource(resource.Resource):
-    def __init__(self,default):  self.default=default
-    def getChildWithDefault(self,name,request):
-        d=defer.succeed(self.default)
-        return util.DeferredResource(d).getChildWithDefault(name, request)
 
-class SDTest(unittest.TestCase):
+class SDResource(resource.Resource):
+    def __init__(self,default):
+        self.default = default
+
+
+    def getChildWithDefault(self, name, request):
+        d = defer.succeed(self.default)
+        resource = util.DeferredResource(d)
+        return resource.getChildWithDefault(name, request)
+
+
+
+class DeferredResourceTests(unittest.TestCase):
+    """
+    Tests for L{DeferredResource}.
+    """
 
     def testDeferredResource(self):
         r = resource.Resource()
@@ -737,6 +768,22 @@ class SDTest(unittest.TestCase):
         d = DummyRequest(['foo', 'bar', 'baz'])
         resource.getChildForRequest(s, d)
         self.assertEqual(d.postpath, ['bar', 'baz'])
+
+
+    def test_render(self):
+        """
+        L{DeferredResource} uses the request object's C{render} method to
+        render the resource which is the result of the L{Deferred} being
+        handled.
+        """
+        rendered = []
+        request = DummyRequest([])
+        request.render = rendered.append
+
+        result = resource.Resource()
+        deferredResource = util.DeferredResource(defer.succeed(result))
+        deferredResource.render(request)
+        self.assertEquals(rendered, [result])
 
 
 
