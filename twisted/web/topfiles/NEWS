@@ -87,6 +87,10 @@ Fixes
    (#4029)
  - Exceptions raised from WSGI applications should now more reliably be turned
    into 500 errors on the HTTP level (#4019)
+ - DeferredResource now correctly passes through exceptions raised from the
+   wrapped resource, instead of turning them all into 500 errors (#3932)
+ - Agent.request now generates a Host header when no headers are passed at
+   (#4131)
 
 Deprecations and Removals
 -------------------------
