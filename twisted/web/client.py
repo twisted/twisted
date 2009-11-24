@@ -596,7 +596,7 @@ class Agent(object):
         d = cc.connectTCP(host, port)
         if headers is None:
             headers = Headers()
-        elif not headers.hasHeader('host'):
+        if not headers.hasHeader('host'):
             # This is a lot of copying.  It might be nice if there were a bit
             # less.
             headers = Headers(dict(headers.getAllRawHeaders()))

@@ -949,6 +949,25 @@ class AgentTests(unittest.TestCase):
         self.assertIdentical(req.bodyProducer, body)
 
 
+    def test_hostProvided(self):
+        """
+        If C{None} is passed to L{Agent.request} for the C{headers}
+        parameter, a L{Headers} instance is created for the request and a
+        I{Host} header added to it.
+        """
+        self.agent._protocol = StubHTTPProtocol
+
+        self.agent.request('GET', 'http://example.com/foo')
+
+        protocol = self._verifyAndCompleteConnectionTo('example.com', 80)
+
+        # The request should have been issued with a host header based on
+        # the request URL.
+        self.assertEquals(len(protocol.requests), 1)
+        req, res = protocol.requests.pop()
+        self.assertEquals(req.headers.getRawHeaders('host'), ['example.com'])
+
+
     def test_hostOverride(self):
         """
         If the headers passed to L{Agent.request} includes a value for the
