@@ -225,7 +225,7 @@ def run():
     description = config['description'] or ('A TCP server for %(protocol)s' %
                                             vars())
     long_description = (config['long_description']
-                        or 'Automatically created by tap2deb')
+                        or "Automatically created by tap2rpm")
     twistd_option = type_dict[config['type']]
     date = time.strftime('%a %b %d %Y', time.localtime(time.time()))
     directory = rpm_file + '-' + version
