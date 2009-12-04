@@ -1357,6 +1357,59 @@ class Path(Unicode):
 
 
 
+class ListOf(Argument):
+    """
+    Encode and decode lists of instances of a single other argument type.
+
+    For example, if you want to pass::
+
+        [3, 7, 9, 15]
+
+    You can create an argument like this::
+
+        ListOf(Integer())
+
+    The serialized form of the entire list is subject to the limit imposed by
+    L{MAX_VALUE_LENGTH}.  List elements are represented as 16-bit length
+    prefixed strings.  The argument type passed to the L{ListOf} initializer is
+    responsible for producing the serialized form of each element.
+
+    @ivar elementType: The L{Argument} instance used to encode and decode list
+        elements (note, not an arbitrary L{IArgument} implementation:
+        arguments must be implemented using only the C{fromString} and
+        C{toString} methods, not the C{fromBox} and C{toBox} methods).
+
+    @since: 10.0
+    """
+    def __init__(self, elementType):
+        self.elementType = elementType
+
+
+    def fromString(self, inString):
+        """
+        Convert the serialized form of a list of instances of some type back
+        into that list.
+        """
+        strings = []
+        parser = Int16StringReceiver()
+        parser.stringReceived = strings.append
+        parser.dataReceived(inString)
+        return map(self.elementType.fromString, strings)
+
+
+    def toString(self, inObject):
+        """
+        Serialize the given list of objects to a single string.
+        """
+        strings = []
+        for obj in inObject:
+            serialized = self.elementType.toString(obj)
+            strings.append(pack('!H', len(serialized)))
+            strings.append(serialized)
+        return ''.join(strings)
+
+
+
 class AmpList(Argument):
     """
     Convert a list of dictionaries into a list of AMP boxes on the wire.
@@ -1376,7 +1429,7 @@ class AmpList(Argument):
 
         @param subargs: a list of 2-tuples of ('name', argument) describing the
         schema of the dictionaries in the sequence of amp boxes.
-        
+
         @param optional: a boolean indicating whether this argument can be
         omitted in the protocol.
         """
@@ -2339,5 +2392,3 @@ def _objectsToStrings(objects, arglist, strings, proto):
     for argname, argparser in arglist:
         argparser.toBox(argname, strings, myObjects, proto)
     return strings
-
-

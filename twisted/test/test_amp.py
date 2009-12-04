@@ -61,9 +61,9 @@ class TestProto(protocol.Protocol):
 
     def __repr__(self):
         """
-        Custom repr for testing to avoid coupling amp tests with repr from 
+        Custom repr for testing to avoid coupling amp tests with repr from
         L{Protocol}
-        
+
         Returns a string which contains a unique identifier that can be looked
         up using the instanceId property::
 
@@ -1433,7 +1433,7 @@ class AMPTest(unittest.TestCase):
         designated as optional does not raise an InvalidSignature error.
         """
         dontRejectMeCommand = DontRejectMe(magicWord=u'please')
-   
+
 
     def test_optionalAmpListPresent(self):
         """
@@ -2450,6 +2450,102 @@ class CommandTestCase(unittest.TestCase):
             None)
 
 
+class ListOfTestsMixin:
+    """
+    Base class for testing L{ListOf}, a parameterized zero-or-more argument
+    type.
+
+    @ivar elementType: Subclasses should set this to an L{Argument}
+        instance.  The tests will make a L{ListOf} using this.
+
+    @ivar strings: Subclasses should set this to a dictionary mapping some
+        number of keys to the correct serialized form for some example
+        values.  These should agree with what L{elementType}
+        produces/accepts.
+
+    @ivar objects: Subclasses should set this to a dictionary with the same
+        keys as C{strings} and with values which are the lists which should
+        serialize to the values in the C{strings} dictionary.
+    """
+    def test_toBox(self):
+        """
+        L{ListOf.toBox} extracts the list of objects from the C{objects}
+        dictionary passed to it, using the C{name} key also passed to it,
+        serializes each of the elements in that list using the L{Argument}
+        instance previously passed to its initializer, combines the serialized
+        results, and inserts the result into the C{strings} dictionary using
+        the same C{name} key.
+        """
+        stringList = amp.ListOf(self.elementType)
+        strings = amp.AmpBox()
+        for key in self.objects:
+            stringList.toBox(key, strings, self.objects.copy(), None)
+        self.assertEquals(strings, self.strings)
+
+
+    def test_fromBox(self):
+        """
+        L{ListOf.fromBox} reverses the operation performed by L{ListOf.toBox}.
+        """
+        stringList = amp.ListOf(self.elementType)
+        objects = {}
+        for key in self.strings:
+            stringList.fromBox(key, self.strings.copy(), objects, None)
+        self.assertEquals(objects, self.objects)
+
+
+
+class ListOfStringsTests(unittest.TestCase, ListOfTestsMixin):
+    """
+    Tests for L{ListOf} combined with L{String}.
+    """
+    elementType = amp.String()
+
+    strings = {
+        "empty": "",
+        "single": "\x00\x03foo",
+        "multiple": "\x00\x03bar\x00\x03baz\x00\x04quux"}
+
+    objects = {
+        "empty": [],
+        "single": ["foo"],
+        "multiple": ["bar", "baz", "quux"]}
+
+
+class ListOfIntegersTests(unittest.TestCase, ListOfTestsMixin):
+    """
+    Tests for L{ListOf} combined with L{Integer}.
+    """
+    elementType = amp.Integer()
+
+    strings = {
+        "empty": "",
+        "single": "\x00\x0210",
+        "multiple": "\x00\x011\x00\x0220\x00\x03500"}
+
+    objects = {
+        "empty": [],
+        "single": [10],
+        "multiple": [1, 20, 500]}
+
+
+class ListOfUnicodeTests(unittest.TestCase, ListOfTestsMixin):
+    """
+    Tests for L{ListOf} combined with L{Unicode}.
+    """
+    elementType = amp.Unicode()
+
+    strings = {
+        "empty": "",
+        "single": "\x00\x03foo",
+        "multiple": "\x00\x03\xe2\x98\x83\x00\x05Hello\x00\x05world"}
+
+    objects = {
+        "empty": [],
+        "single": [u"foo"],
+        "multiple": [u"\N{SNOWMAN}", u"Hello", u"world"]}
+
+
 
 if not interfaces.IReactorSSL.providedBy(reactor):
     skipMsg = 'This test case requires SSL support in the reactor'
@@ -2457,4 +2553,3 @@ if not interfaces.IReactorSSL.providedBy(reactor):
     LiveFireTLSTestCase.skip = skipMsg
     PlainVanillaLiveFire.skip = skipMsg
     WithServerTLSVerification.skip = skipMsg
-
