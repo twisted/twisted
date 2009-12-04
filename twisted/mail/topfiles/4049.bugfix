@@ -1,0 +1,2 @@
+twisted.mail.imap4.IMAP4Client will no longer misparse all html-formatted
+message bodies received in response to a fetch command.

@@ -2821,6 +2821,23 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
             imap4.IllegalServerResponse, self._extractDeferredResult, d)
 
 
+    def test_fetchSpecificHTML(self):
+        """
+        If the body of a message begins with I{<} and ends with I{>} (as,
+        for example, HTML bodies typically will), this is still interpreted
+        as the body by L{IMAP4Client.fetchSpecific} (and particularly, not
+        as a length indicator for a response to a request for a partial
+        body).
+        """
+        d = self.client.fetchSpecific('7')
+        self.assertEquals(
+            self.transport.value(), '0001 FETCH 7 BODY[]\r\n')
+        self.client.lineReceived('* 7 FETCH (BODY[] "<html>test</html>")')
+        self.client.lineReceived('0001 OK FETCH completed')
+        self.assertEquals(
+            self._extractDeferredResult(d), {7: [['BODY', [], "<html>test</html>"]]})
+
+
 
 class IMAP4ClientStoreTests(PreauthIMAP4ClientMixin, unittest.TestCase):
     """

@@ -3436,12 +3436,18 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
                 # Handle partial ranges
                 if value.startswith('<') and value.endswith('>'):
-                    key = key + (value,)
                     try:
-                        value = responseParts.next()
-                    except StopIteration:
-                        raise IllegalServerResponse(
-                            "Not enough arguments", fetchResponseList)
+                        int(value[1:-1])
+                    except ValueError:
+                        # This isn't really a range, it's some content.
+                        pass
+                    else:
+                        key = key + (value,)
+                        try:
+                            value = responseParts.next()
+                        except StopIteration:
+                            raise IllegalServerResponse(
+                                "Not enough arguments", fetchResponseList)
 
             values[key] = value
         return values
