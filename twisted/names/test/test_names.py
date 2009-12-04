@@ -1,11 +1,10 @@
 # -*- test-case-name: twisted.names.test.test_names -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
 Test cases for twisted.names.
 """
-from __future__ import nested_scopes
 
 import socket, operator, copy
 
@@ -23,6 +22,7 @@ from twisted.names.dns import Message
 from twisted.names.client import Resolver
 
 from twisted.names.test.test_client import StubPort
+from twisted.python.compat import reduce
 
 def justPayload(results):
     return [r.payload for r in results[0]]
@@ -383,8 +383,10 @@ class ServerDNSTestCase(unittest.TestCase):
          )
 
 
-    def testZoneTransfer(self):
-        """Test DNS 'AXFR' queries (Zone transfer)"""
+    def test_zoneTransfer(self):
+        """
+        Test DNS 'AXFR' queries (Zone transfer)
+        """
         default_ttl = soa_record.expire
         results = [copy.copy(r) for r in reduce(operator.add, test_domain_com.records.values())]
         for r in results:
@@ -394,6 +396,7 @@ class ServerDNSTestCase(unittest.TestCase):
             self.resolver.lookupZone('test-domain.com').addCallback(lambda r: (r[0][:-1],)),
             results
         )
+
 
     def testSimilarZonesDontInterfere(self):
         """Tests that unrelated zones don't mess with each other."""

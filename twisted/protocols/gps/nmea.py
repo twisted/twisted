@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_nmea -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """NMEA 0183 implementation
@@ -21,6 +21,7 @@ Other desired features::
 
 import operator
 from twisted.protocols import basic
+from twisted.python.compat import reduce
 
 POSFIX_INVALID, POSFIX_SPS, POSFIX_DGPS, POSFIX_PPS = 0, 1, 2, 3
 MODE_AUTO, MODE_FORCED = 'A', 'M'

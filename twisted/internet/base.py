@@ -11,7 +11,6 @@ from zope.interface import implements, classImplements
 
 import sys
 import warnings
-import operator
 from heapq import heappush, heappop, heapify
 
 import traceback
@@ -243,7 +242,7 @@ class ThreadedResolver(object):
         is left up to the platform via L{socket.gethostbyname}.
         """
         if timeout:
-            timeoutDelay = reduce(operator.add, timeout)
+            timeoutDelay = sum(timeout)
         else:
             timeoutDelay = 60
         userDeferred = defer.Deferred()

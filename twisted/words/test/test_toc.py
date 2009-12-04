@@ -93,7 +93,7 @@ class TOCGeneralTestCase(unittest.TestCase):
             dummy[i]=DummyTOC()
             dummy[i].factory=fac
             dummy[i].makeConnection(protocol.FileWrapper(strings[i]))
-        while reduce(lambda x,y:x+y,map(lambda x:x==(),data))!=USERS:
+        while sum(map(lambda x: x == (), data)) != USERS:
             for i in range(USERS):
                 d=data[i]
                 if len(d)>0:

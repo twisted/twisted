@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.names.test.test_srvconnect -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import random
@@ -10,6 +10,7 @@ from twisted.internet import error, interfaces
 
 from twisted.names import client, dns
 from twisted.names.error import DNSNameError
+from twisted.python.compat import reduce
 
 class _SRVConnector_ClientFactoryWrapper:
     def __init__(self, connector, wrappedFactory):

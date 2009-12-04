@@ -10,7 +10,7 @@ import types, socket
 
 from twisted.trial import unittest
 
-from twisted.python.compat import set, frozenset
+from twisted.python.compat import set, frozenset, reduce
 
 
 
@@ -190,3 +190,10 @@ class CompatTestCase(unittest.TestCase):
         b.sort()
         self.assertEquals(b, ['a', 'b', 'r', 's'])
 
+
+    def test_reduce(self):
+        """
+        L{reduce} should behave like the builtin reduce.
+        """
+        self.assertEquals(15, reduce(lambda x, y: x + y, [1, 2, 3, 4, 5]))
+        self.assertEquals(16, reduce(lambda x, y: x + y, [1, 2, 3, 4, 5], 1))

@@ -166,3 +166,8 @@ try:
 except NameError:
     from sets import ImmutableSet as frozenset
 
+
+try:
+    from functools import reduce
+except ImportError:
+    reduce = reduce

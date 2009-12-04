@@ -1,14 +1,10 @@
 # -*- test-case-name: twisted.test.test_pcp -*-
-#
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-"""Producer-Consumer Proxy."""
-
-__version__ = '$Revision: 1.4 $'[11:-2]
-
-import operator
+"""
+Producer-Consumer Proxy.
+"""
 
 from zope.interface import implements
 
@@ -16,7 +12,8 @@ from twisted.internet import interfaces
 
 
 class BasicProducerConsumerProxy:
-    """ I can act as a man in the middle between any Producer and Consumer.
+    """
+    I can act as a man in the middle between any Producer and Consumer.
 
     @ivar producer: the Producer I subscribe to.
     @type producer: L{IProducer<interfaces.IProducer>}
@@ -138,8 +135,7 @@ class ProducerConsumerProxy(BasicProducerConsumerProxy):
             self.outstandingPull = not bytesSent
 
         if self.producer is not None:
-            bytesBuffered = reduce(operator.add,
-                                   [len(s) for s in self._buffer], 0)
+            bytesBuffered = sum([len(s) for s in self._buffer])
             # TODO: You can see here the potential for high and low
             # watermarks, where bufferSize would be the high mark when we
             # ask the upstream producer to pause, and we wouldn't have
@@ -177,8 +173,7 @@ class ProducerConsumerProxy(BasicProducerConsumerProxy):
                 self._buffer.append(data[bytesSent:])
 
         if (self.producer is not None) and self.producerIsStreaming:
-            bytesBuffered = reduce(operator.add,
-                                   [len(s) for s in self._buffer], 0)
+            bytesBuffered = sum([len(s) for s in self._buffer])
             if bytesBuffered >= self.bufferSize:
 
                 self.producer.pauseProducing()

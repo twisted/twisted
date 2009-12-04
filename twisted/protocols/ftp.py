@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_ftp -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -33,6 +33,7 @@ from twisted.internet import reactor, interfaces, protocol, error, defer
 from twisted.protocols import basic, policies
 
 from twisted.python import log, failure, filepath
+from twisted.python.compat import reduce
 
 from twisted.cred import error as cred_error, portal, credentials, checkers
 

@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_jelly -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -114,6 +114,7 @@ from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod
 from twisted.persisted.crefutil import _DictKeyAndValue, _Dereference
 from twisted.persisted.crefutil import _Container
 from twisted.python import runtime
+from twisted.python.compat import reduce
 
 from twisted.spread.interfaces import IJellyable, IUnjellyable
 
