@@ -5,6 +5,7 @@
 Tests for L{twisted.python.release} and L{twisted.python._release}.
 """
 
+
 import warnings
 import operator
 import os, sys, signal
@@ -51,6 +52,7 @@ from twisted.python._release import BuildAPIDocsScript
 from twisted.python._release import buildAllTarballs, runCommand
 from twisted.python._release import UncleanWorkingDirectory, NotWorkingDirectory
 from twisted.python._release import ChangeVersionsScript, BuildTarballsScript
+from twisted.python._release import NewsBuilder
 
 try:
     from twisted.lore.scripts import lore
@@ -79,7 +81,8 @@ class StructureAssertingMixin(object):
         Create a set of directories and files given a dict defining their
         structure.
 
-        @param root: The directory in which to create the structure.
+        @param root: The directory in which to create the structure.  It must
+            already exist.
         @type root: L{FilePath}
 
         @param dirDict: The dict defining the structure. Keys should be strings
@@ -1421,6 +1424,366 @@ class FilePathDeltaTest(TestCase):
 
 
 
+class NewsBuilderTests(TestCase, StructureAssertingMixin):
+    """
+    Tests for L{NewsBuilder}.
+    """
+    def setUp(self):
+        """
+        Create a fake project and stuff some basic structure and content into
+        it.
+        """
+        self.builder = NewsBuilder()
+        self.project = FilePath(self.mktemp())
+        self.project.createDirectory()
+        self.existingText = 'Here is stuff which was present previously.\n'
+        self.createStructure(self.project, {
+                'NEWS': self.existingText,
+                '5.feature': 'We now support the web.\n',
+                '12.feature': 'The widget is more robust.\n',
+                '15.feature': (
+                    'A very long feature which takes many words to '
+                    'describe with any accuracy was introduced so that '
+                    'the line wrapping behavior of the news generating '
+                    'code could be verified.\n'),
+                '16.feature': (
+                    'A simpler feature\ndescribed on multiple lines\n'
+                    'was added.\n'),
+                '23.bugfix': 'Broken stuff was fixed.\n',
+                '25.removal': 'Stupid stuff was deprecated.\n',
+                '30.misc': '',
+                '35.misc': ''})
+
+
+    def test_today(self):
+        """
+        L{NewsBuilder._today} returns today's date in YYYY-MM-DD form.
+        """
+        self.assertEquals(
+            self.builder._today(), date.today().strftime('%Y-%m-%d'))
+
+
+    def test_findFeatures(self):
+        """
+        When called with L{NewsBuilder._FEATURE}, L{NewsBuilder._findChanges}
+        returns a list of bugfix ticket numbers and descriptions as a list of
+        two-tuples.
+        """
+        features = self.builder._findChanges(
+            self.project, self.builder._FEATURE)
+        self.assertEquals(
+            features,
+            [(5, "We now support the web."),
+             (12, "The widget is more robust."),
+             (15,
+              "A very long feature which takes many words to describe with "
+              "any accuracy was introduced so that the line wrapping behavior "
+              "of the news generating code could be verified."),
+             (16, "A simpler feature described on multiple lines was added.")])
+
+
+    def test_findBugfixes(self):
+        """
+        When called with L{NewsBuilder._BUGFIX}, L{NewsBuilder._findChanges}
+        returns a list of bugfix ticket numbers and descriptions as a list of
+        two-tuples.
+        """
+        bugfixes = self.builder._findChanges(
+            self.project, self.builder._BUGFIX)
+        self.assertEquals(
+            bugfixes,
+            [(23, 'Broken stuff was fixed.')])
+
+
+    def test_findRemovals(self):
+        """
+        When called with L{NewsBuilder._REMOVAL}, L{NewsBuilder._findChanges}
+        returns a list of removal/deprecation ticket numbers and descriptions
+        as a list of two-tuples.
+        """
+        removals = self.builder._findChanges(
+            self.project, self.builder._REMOVAL)
+        self.assertEquals(
+            removals,
+            [(25, 'Stupid stuff was deprecated.')])
+
+
+    def test_findMiscellaneous(self):
+        """
+        When called with L{NewsBuilder._MISC}, L{NewsBuilder._findChanges}
+        returns a list of removal/deprecation ticket numbers and descriptions
+        as a list of two-tuples.
+        """
+        misc = self.builder._findChanges(
+            self.project, self.builder._MISC)
+        self.assertEquals(
+            misc,
+            [(30, ''),
+             (35, '')])
+
+
+    def test_writeHeader(self):
+        """
+        L{NewsBuilder._writeHeader} accepts a file-like object opened for
+        writing and a header string and writes out a news file header to it.
+        """
+        output = StringIO()
+        self.builder._writeHeader(output, "Super Awesometastic 32.16")
+        self.assertEquals(
+            output.getvalue(),
+            "Super Awesometastic 32.16\n"
+            "=========================\n"
+            "\n")
+
+
+    def test_writeSection(self):
+        """
+        L{NewsBuilder._writeSection} accepts a file-like object opened for
+        writing, a section name, and a list of ticket information (as returned
+        by L{NewsBuilder._findChanges}) and writes out a section header and all
+        of the given ticket information.
+        """
+        output = StringIO()
+        self.builder._writeSection(
+            output, "Features",
+            [(3, "Great stuff."),
+             (17, "Very long line which goes on and on and on, seemingly "
+              "without end until suddenly without warning it does end.")])
+        self.assertEquals(
+            output.getvalue(),
+            "Features\n"
+            "--------\n"
+            " - Great stuff. (#3)\n"
+            " - Very long line which goes on and on and on, seemingly without end\n"
+            "   until suddenly without warning it does end. (#17)\n"
+            "\n")
+
+
+    def test_writeMisc(self):
+        """
+        L{NewsBuilder._writeMisc} accepts a file-like object opened for
+        writing, a section name, and a list of ticket information (as returned
+        by L{NewsBuilder._findChanges} and writes out a section header and all
+        of the ticket numbers, but excludes any descriptions.
+        """
+        output = StringIO()
+        self.builder._writeMisc(
+            output, "Other",
+            [(x, "") for x in range(2, 50, 3)])
+        self.assertEquals(
+            output.getvalue(),
+            "Other\n"
+            "-----\n"
+            " - #2, #5, #8, #11, #14, #17, #20, #23, #26, #29, #32, #35, #38, #41,\n"
+            "   #44, #47\n"
+            "\n")
+
+
+    def test_build(self):
+        """
+        L{NewsBuilder.build} updates a NEWS file with new features based on the
+        I{<ticket>.feature} files found in the directory specified.
+        """
+        header = ''
+        self.builder.build(
+            self.project, self.project.child('NEWS'),
+            "Super Awesometastic 32.16")
+
+        results = self.project.child('NEWS').getContent()
+        self.assertEquals(
+            results,
+            'Super Awesometastic 32.16\n'
+            '=========================\n'
+            '\n'
+            'Features\n'
+            '--------\n'
+            ' - We now support the web. (#5)\n'
+            ' - The widget is more robust. (#12)\n'
+            ' - A very long feature which takes many words to describe with any\n'
+            '   accuracy was introduced so that the line wrapping behavior of the\n'
+            '   news generating code could be verified. (#15)\n'
+            ' - A simpler feature described on multiple lines was added. (#16)\n'
+            '\n'
+            'Bugfixes\n'
+            '--------\n'
+            ' - Broken stuff was fixed. (#23)\n'
+            '\n'
+            'Deprecations and Removals\n'
+            '-------------------------\n'
+            ' - Stupid stuff was deprecated. (#25)\n'
+            '\n'
+            'Other\n'
+            '-----\n'
+            ' - #30, #35\n'
+            '\n' + self.existingText)
+
+
+    def test_preserveTicketHint(self):
+        """
+        If a I{NEWS} file begins with the two magic lines which point readers
+        at the issue tracker, those lines are kept at the top of the new file.
+        """
+        news = self.project.child('NEWS')
+        news.setContent(
+            'Ticket numbers in this file can be looked up by visiting\n'
+            'http://twistedmatrix.com/trac/ticket/<number>\n'
+            '\n'
+            'Blah blah other stuff.\n')
+
+        self.builder.build(self.project, news, "Super Awesometastic 32.16")
+
+        self.assertEquals(
+            news.getContent(),
+            'Ticket numbers in this file can be looked up by visiting\n'
+            'http://twistedmatrix.com/trac/ticket/<number>\n'
+            '\n'
+            'Super Awesometastic 32.16\n'
+            '=========================\n'
+            '\n'
+            'Features\n'
+            '--------\n'
+            ' - We now support the web. (#5)\n'
+            ' - The widget is more robust. (#12)\n'
+            ' - A very long feature which takes many words to describe with any\n'
+            '   accuracy was introduced so that the line wrapping behavior of the\n'
+            '   news generating code could be verified. (#15)\n'
+            ' - A simpler feature described on multiple lines was added. (#16)\n'
+            '\n'
+            'Bugfixes\n'
+            '--------\n'
+            ' - Broken stuff was fixed. (#23)\n'
+            '\n'
+            'Deprecations and Removals\n'
+            '-------------------------\n'
+            ' - Stupid stuff was deprecated. (#25)\n'
+            '\n'
+            'Other\n'
+            '-----\n'
+            ' - #30, #35\n'
+            '\n'
+            'Blah blah other stuff.\n')
+
+
+    def test_emptySectionsOmitted(self):
+        """
+        If there are no changes of a particular type (feature, bugfix, etc), no
+        section for that type is written by L{NewsBuilder.build}.
+        """
+        for ticket in self.project.children():
+            basename = ticket.basename()
+            if basename.endswith('.feature') or basename.endswith('.misc'):
+                ticket.remove()
+
+        self.builder.build(
+            self.project, self.project.child('NEWS'),
+            'Some Thing 1.2')
+
+        self.assertEquals(
+            self.project.child('NEWS').getContent(),
+            'Some Thing 1.2\n'
+            '==============\n'
+            '\n'
+            'Bugfixes\n'
+            '--------\n'
+            ' - Broken stuff was fixed. (#23)\n'
+            '\n'
+            'Deprecations and Removals\n'
+            '-------------------------\n'
+            ' - Stupid stuff was deprecated. (#25)\n'
+            '\n'
+            'Here is stuff which was present previously.\n')
+
+
+    def test_duplicatesMerged(self):
+        """
+        If two change files have the same contents, they are merged in the
+        generated news entry.
+        """
+        def feature(s):
+            return self.project.child(s + '.feature')
+        feature('5').copyTo(feature('15'))
+        feature('5').copyTo(feature('16'))
+
+        self.builder.build(
+            self.project, self.project.child('NEWS'),
+            'Project Name 5.0')
+
+        self.assertEquals(
+            self.project.child('NEWS').getContent(),
+            'Project Name 5.0\n'
+            '================\n'
+            '\n'
+            'Features\n'
+            '--------\n'
+            ' - We now support the web. (#5, #15, #16)\n'
+            ' - The widget is more robust. (#12)\n'
+            '\n'
+            'Bugfixes\n'
+            '--------\n'
+            ' - Broken stuff was fixed. (#23)\n'
+            '\n'
+            'Deprecations and Removals\n'
+            '-------------------------\n'
+            ' - Stupid stuff was deprecated. (#25)\n'
+            '\n'
+            'Other\n'
+            '-----\n'
+            ' - #30, #35\n'
+            '\n'
+            'Here is stuff which was present previously.\n')
+
+
+    def test_buildAll(self):
+        """
+        L{NewsBuilder.buildAll} calls L{NewsBuilder.build} once for each
+        subproject, passing that subproject's I{topfiles} directory as C{path},
+        the I{NEWS} file in that directory as C{output}, and the subproject's
+        name as C{header}, and then again for each subproject with the
+        top-level I{NEWS} file for C{output}.
+        """
+        builds = []
+        builder = NewsBuilder()
+        builder.build = lambda path, output, header: builds.append((
+                path, output, header))
+        builder._today = lambda: '2009-12-01'
+
+        # Create a fake looking Twisted project to build from
+        project = FilePath(self.mktemp()).child("twisted")
+        project.makedirs()
+        self.createStructure(project, {
+                'NEWS': 'Old boring stuff from the past.\n',
+                '_version.py': genVersion("twisted", 1, 2, 3),
+                'topfiles': {
+                    'NEWS': 'Old core news.\n',
+                    '3.feature': 'Third feature addition.\n',
+                    '5.misc': ''},
+                'conch': {
+                    '_version.py': genVersion("twisted.conch", 3, 4, 5),
+                    'topfiles': {
+                        'NEWS': 'Old conch news.\n',
+                        '7.bugfix': 'Fixed that bug.\n'}}})
+
+        builder.buildAll(project)
+
+        coreTopfiles = project.child("topfiles")
+        coreNews = coreTopfiles.child("NEWS")
+        coreHeader = "Twisted Core 1.2.3 (2009-12-01)"
+
+        conchTopfiles = project.child("conch").child("topfiles")
+        conchNews = conchTopfiles.child("NEWS")
+        conchHeader = "Twisted Conch 3.4.5 (2009-12-01)"
+
+        aggregateNews = project.child("NEWS")
+
+        self.assertEquals(
+            builds,
+            [(conchTopfiles, conchNews, conchHeader),
+             (coreTopfiles, coreNews, coreHeader),
+             (conchTopfiles, aggregateNews, conchHeader),
+             (coreTopfiles, aggregateNews, coreHeader)])
+
+
+
 class DistributionBuilderTestBase(BuilderTestsMixin, StructureAssertingMixin,
                                    TestCase):
     """
@@ -2058,6 +2421,29 @@ class ScriptTests(BuilderTestsMixin, StructureAssertingMixin, TestCase):
         """
         tarballBuilder = BuildTarballsScript()
         self.assertRaises(SystemExit, tarballBuilder.main, [])
+
+
+    def test_badNumberOfArgumentsToBuildNews(self):
+        """
+        L{NewsBuilder.main} raises L{SystemExit} when other than 1 argument is
+        passed to it.
+        """
+        newsBuilder = NewsBuilder()
+        self.assertRaises(SystemExit, newsBuilder.main, [])
+        self.assertRaises(SystemExit, newsBuilder.main, ["hello", "world"])
+
+
+    def test_buildNews(self):
+        """
+        L{NewsBuilder.main} calls L{NewsBuilder.buildAll} with a L{FilePath}
+        instance constructed from the path passed to it.
+        """
+        builds = []
+        newsBuilder = NewsBuilder()
+        newsBuilder.buildAll = builds.append
+        newsBuilder.main(["/foo/bar/baz"])
+        self.assertEquals(builds, [FilePath("/foo/bar/baz")])
+
 
 
 if lore is None:
