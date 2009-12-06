@@ -1,8 +1,6 @@
 # -*- test-case-name: twisted.test.test_udp -*-
-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 Various asynchronous UDP classes.
@@ -13,11 +11,11 @@ Maintainer: Itamar Shtull-Trauring
 """
 
 # System Imports
-import os
 import socket
 import operator
 import struct
 import warnings
+
 from zope.interface import implements
 
 from twisted.python.runtime import platformType
@@ -32,12 +30,9 @@ else:
     from errno import EWOULDBLOCK, EINTR, EMSGSIZE, ECONNREFUSED, EAGAIN
 
 # Twisted Imports
-from twisted.internet import protocol, base, defer, address
-from twisted.persisted import styles
+from twisted.internet import base, defer, address
 from twisted.python import log, reflect, failure
-
-# Sibling Imports
-import abstract, error, interfaces
+from twisted.internet import abstract, error, interfaces
 
 
 class Port(base.BasePort):
@@ -203,10 +198,7 @@ class Port(base.BasePort):
         log.msg('(Port %s Closed)' % self._realPortNumber)
         self._realPortNumber = None
         base.BasePort.connectionLost(self, reason)
-        if hasattr(self, "protocol"):
-            # we won't have attribute in ConnectedPort, in cases
-            # where there was an error in connection process
-            self.protocol.doStop()
+        self.protocol.doStop()
         self.connected = 0
         self.socket.close()
         del self.socket
@@ -231,78 +223,6 @@ class Port(base.BasePort):
         """
         return address.IPv4Address('UDP', *(self.socket.getsockname() + ('INET_UDP',)))
 
-
-class ConnectedPort(Port):
-    """DEPRECATED.
-
-    A connected UDP socket."""
-
-    implements(interfaces.IUDPConnectedTransport)
-
-    def __init__(self, (remotehost, remoteport), port, proto, interface='', maxPacketSize=8192, reactor=None):
-        Port.__init__(self, port, proto, interface, maxPacketSize, reactor)
-        self.remotehost = remotehost
-        self.remoteport = remoteport
-
-    def startListening(self):
-        self._bindSocket()
-        if abstract.isIPAddress(self.remotehost):
-            self.setRealAddress(self.remotehost)
-        else:
-            self.realAddress = None
-            d = self.reactor.resolve(self.remotehost)
-            d.addCallback(self.setRealAddress).addErrback(self.connectionFailed)
-
-    def setRealAddress(self, addr):
-        self.realAddress = addr
-        self.socket.connect((addr, self.remoteport))
-        self._connectToProtocol()
-
-    def connectionFailed(self, reason):
-        self._loseConnection()
-        self.protocol.connectionFailed(reason)
-        del self.protocol
-
-    def doRead(self):
-        """Called when my socket is ready for reading."""
-        read = 0
-        while read < self.maxThroughput:
-            try:
-                data, addr = self.socket.recvfrom(self.maxPacketSize)
-                read += len(data)
-                self.protocol.datagramReceived(data)
-            except socket.error, se:
-                no = se.args[0]
-                if no in (EAGAIN, EINTR, EWOULDBLOCK):
-                    return
-                if (no == ECONNREFUSED) or (platformType == "win32" and no == WSAECONNRESET):
-                    self.protocol.connectionRefused()
-                else:
-                    raise
-            except:
-                log.deferr()
-
-    def write(self, data):
-        """Write a datagram."""
-        try:
-            return self.socket.send(data)
-        except socket.error, se:
-            no = se.args[0]
-            if no == EINTR:
-                return self.write(data)
-            elif no == EMSGSIZE:
-                raise error.MessageLengthError, "message too long"
-            elif no == ECONNREFUSED:
-                self.protocol.connectionRefused()
-            else:
-                raise
-
-    def getPeer(self):
-        """
-        Returns a tuple of ('INET_UDP', hostname, port), indicating
-        the remote address.
-        """
-        return address.IPv4Address('UDP', self.remotehost, self.remoteport, 'INET_UDP')
 
 
 class MulticastMixin:
@@ -375,11 +295,3 @@ class MulticastPort(MulticastMixin, Port):
             if hasattr(socket, "SO_REUSEPORT"):
                 skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         return skt
-
-
-class ConnectedMulticastPort(MulticastMixin, ConnectedPort):
-    """DEPRECATED.
-
-    Connected UDP Port that supports multicasting."""
-
-    implements(interfaces.IMulticastTransport)

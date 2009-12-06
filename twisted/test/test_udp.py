@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_udp -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -108,144 +108,6 @@ class BadClient(protocol.DatagramProtocol):
             d, self.d = self.d, None
             d.callback(bytes)
         raise BadClientError("Application code is very buggy!")
-
-
-
-class OldConnectedUDPTestCase(unittest.TestCase):
-    def testStartStop(self):
-        client = Client()
-        d = client.startedDeferred = defer.Deferred()
-        port2 = reactor.connectUDP("127.0.0.1", 8888, client)
-
-        def assertName():
-            self.failUnless(repr(port2).find('test_udp.Client') >= 0)
-
-        def cbStarted(ignored):
-            self.assertEquals(client.started, 1)
-            self.assertEquals(client.stopped, 0)
-            assertName()
-            d = defer.maybeDeferred(port2.stopListening)
-            d.addCallback(lambda ign: assertName())
-            return d
-
-        return d.addCallback(cbStarted)
-    testStartStop.suppress = [
-        util.suppress(message='use listenUDP and then transport.connect',
-                      category=DeprecationWarning)]
-
-
-    def testDNSFailure(self):
-        client = Client()
-        d = client.startedDeferred = defer.Deferred()
-        # if this domain exists, shoot your sysadmin
-        reactor.connectUDP("xxxxxxxxx.zzzzzzzzz.yyyyy.", 8888, client)
-
-        def didNotConnect(ign):
-            self.assertEquals(client.stopped, 0)
-            self.assertEquals(client.started, 0)
-
-        d = self.assertFailure(d, error.DNSLookupError)
-        d.addCallback(didNotConnect)
-        return d
-    testDNSFailure.suppress = [
-        util.suppress(message='use listenUDP and then transport.connect',
-                      category=DeprecationWarning)]
-
-
-    def testSendPackets(self):
-        server = Server()
-        serverStarted = server.startedDeferred = defer.Deferred()
-
-        client = Client()
-        clientStarted = client.startedDeferred = defer.Deferred()
-
-        port1 = reactor.listenUDP(0, server, interface="127.0.0.1")
-
-        def cbServerStarted(ignored):
-            self.port2 = reactor.connectUDP("127.0.0.1",
-                                            server.transport.getHost().port,
-                                            client)
-            return clientStarted
-
-        d = serverStarted.addCallback(cbServerStarted)
-
-        def cbClientStarted(ignored):
-            clientSend = server.packetReceived = defer.Deferred()
-            serverSend = client.packetReceived = defer.Deferred()
-
-            cAddr = client.transport.getHost()
-            server.transport.write("hello", (cAddr.host, cAddr.port))
-            client.transport.write("world")
-
-            # No one will ever call errback on either of these Deferreds,
-            # otherwise I would pass fireOnOneErrback=True here.
-            return defer.DeferredList([clientSend, serverSend])
-
-        d.addCallback(cbClientStarted)
-
-        def cbPackets(ignored):
-            self.assertEquals(client.packets, ["hello"])
-            self.assertEquals(server.packets,
-                              [("world", ("127.0.0.1",
-                                          client.transport.getHost().port))])
-
-            return defer.DeferredList([
-                defer.maybeDeferred(port1.stopListening),
-                defer.maybeDeferred(self.port2.stopListening)],
-                fireOnOneErrback=True)
-
-        d.addCallback(cbPackets)
-        return d
-    testSendPackets.suppress = [
-        util.suppress(message='use listenUDP and then transport.connect',
-                      category=DeprecationWarning)]
-
-
-    def test_connectionRefused(self):
-        """
-        Test that using the connected UDP API will deliver connection refused
-        notification when packets are sent to an address at which no one is
-        listening.
-        """
-        # XXX - assume no one listening on port 80 UDP
-        client = Client()
-        clientStarted = client.startedDeferred = Deferred()
-        server = Server()
-        serverStarted = server.startedDeferred = Deferred()
-        started = gatherResults([clientStarted, serverStarted])
-
-        clientPort = reactor.connectUDP("127.0.0.1", 80, client)
-        serverPort = reactor.listenUDP(0, server, interface="127.0.0.1")
-
-        def cbStarted(ignored):
-            clientRefused = client.startedDeferred = Deferred()
-
-            client.transport.write("a")
-            client.transport.write("b")
-            server.transport.write("c", ("127.0.0.1", 80))
-            server.transport.write("d", ("127.0.0.1", 80))
-            server.transport.write("e", ("127.0.0.1", 80))
-
-            c = clientPort.getHost()
-            s = serverPort.getHost()
-            server.transport.write("toserver", (s.host, s.port))
-            server.transport.write("toclient", (c.host, c.port))
-
-            return self.assertFailure(clientRefused, error.ConnectionRefusedError)
-        started.addCallback(cbStarted)
-
-        def cleanup(passthrough):
-            result = gatherResults([
-                maybeDeferred(clientPort.stopListening),
-                maybeDeferred(serverPort.stopListening)])
-            result.addCallback(lambda ign: passthrough)
-            return result
-
-        started.addBoth(cleanup)
-        return started
-    test_connectionRefused.suppress = [
-        util.suppress(message='use listenUDP and then transport.connect',
-                      category=DeprecationWarning)]
 
 
 
@@ -784,8 +646,6 @@ class MulticastTestCase(unittest.TestCase):
 if not interfaces.IReactorUDP(reactor, None):
     UDPTestCase.skip = "This reactor does not support UDP"
     ReactorShutdownInteraction.skip = "This reactor does not support UDP"
-if not hasattr(reactor, "connectUDP"):
-    OldConnectedUDPTestCase.skip = "This reactor does not support connectUDP"
 if not interfaces.IReactorMulticast(reactor, None):
     MulticastTestCase.skip = "This reactor does not support multicast"
 

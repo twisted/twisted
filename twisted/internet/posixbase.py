@@ -248,18 +248,6 @@ class PosixReactorBase(_SignalReactorMixin, ReactorBase):
         p.startListening()
         return p
 
-    def connectUDP(self, remotehost, remoteport, protocol, localport=0,
-                  interface='', maxPacketSize=8192):
-        """DEPRECATED.
-
-        Connects a L{ConnectedDatagramProtocol} instance to a UDP port.
-        """
-        warnings.warn("use listenUDP and then transport.connect().", DeprecationWarning, stacklevel=2)
-        p = udp.ConnectedPort((remotehost, remoteport), localport, protocol, interface, maxPacketSize, self)
-        p.startListening()
-        return p
-
-
     # IReactorMulticast
 
     def listenMulticast(self, port, protocol, interface='', maxPacketSize=8192, listenMultiple=False):
