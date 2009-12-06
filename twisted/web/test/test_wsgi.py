@@ -7,12 +7,10 @@ Tests for L{twisted.web.wsgi}.
 
 __metaclass__ = type
 
-import tempfile
-
 from sys import exc_info
 from urllib import quote
-from StringIO import StringIO
 from thread import get_ident
+import StringIO, cStringIO, tempfile
 
 from zope.interface.verify import verifyObject
 
@@ -121,7 +119,7 @@ class WSGITestsMixin:
     def lowLevelRender(
         self, requestFactory, applicationFactory, channelFactory, method,
         version, resourceSegments, requestSegments, query=None, headers=[],
-        body=None, safe='', useTempfile=False):
+        body=None, safe=''):
         """
         @param method: A C{str} giving the request method to use.
 
@@ -144,10 +142,6 @@ class WSGITestsMixin:
         @param safe: A C{str} giving the bytes which are to be considered
             I{safe} for inclusion in the request URI and not quoted.
 
-        @param useTempfile: A boolean flag indicating that an instance of
-            L{tempfile.TemporaryFile} should be used to expose the the request
-            content rather than a L{StringIO.StringIO}.
-
         @return: A L{Deferred} which will be called back with a two-tuple of
             the arguments passed which would be passed to the WSGI application
             object for this configuration and request (ie, the environment and
@@ -168,12 +162,8 @@ class WSGITestsMixin:
             request.requestHeaders.addRawHeader(k, v)
         request.gotLength(0)
         if body:
-            if useTempfile:
-                request.content = tempfile.TemporaryFile()
-                request.content.write(body)
-                request.content.seek(0)
-            else:
-                request.content = StringIO(body)
+            request.content.write(body)
+            request.content.seek(0)
         uri = '/' + '/'.join([quote(seg, safe) for seg in requestSegments])
         if query is not None:
             uri += '?' + '&'.join(['='.join([quote(k, safe), quote(v, safe)])
@@ -481,9 +471,9 @@ class EnvironTests(WSGITestsMixin, TestCase):
         application has the value C{(1, 0)} indicating that this is a WSGI 1.0
         container.
         """
-        version = self.render('GET', '1.1', [], [''])
-        version.addCallback(self.environKeyEqual('wsgi.version', (1, 0)))
-        return version
+        versionDeferred = self.render('GET', '1.1', [], [''])
+        versionDeferred.addCallback(self.environKeyEqual('wsgi.version', (1, 0)))
+        return versionDeferred
 
 
     def test_wsgiRunOnce(self):
@@ -529,14 +519,14 @@ class EnvironTests(WSGITestsMixin, TestCase):
             return channel
 
         self.channelFactory = DummyChannel
-        http = self.render('GET', '1.1', [], [''])
-        http.addCallback(self.environKeyEqual('wsgi.url_scheme', 'http'))
+        httpDeferred = self.render('GET', '1.1', [], [''])
+        httpDeferred.addCallback(self.environKeyEqual('wsgi.url_scheme', 'http'))
 
         self.channelFactory = channelFactory
-        https = self.render('GET', '1.1', [], [''])
-        https.addCallback(self.environKeyEqual('wsgi.url_scheme', 'https'))
+        httpsDeferred = self.render('GET', '1.1', [], [''])
+        httpsDeferred.addCallback(self.environKeyEqual('wsgi.url_scheme', 'https'))
 
-        return gatherResults([http, https])
+        return gatherResults([httpDeferred, httpsDeferred])
 
 
     def test_wsgiErrors(self):
@@ -568,14 +558,26 @@ class EnvironTests(WSGITestsMixin, TestCase):
         return errors
 
 
-    def test_wsgiInput(self):
-        """
-        The C{'wsgi.input'} key of the C{environ} C{dict} passed to the
-        application is a file-like object (as defined in the U{Input and Errors
-        Streams<http://www.python.org/dev/peps/pep-0333/#input-and-error-streams>}
-        section of PEP 333) which makes the request body available to the
-        application.
-        """
+class InputStreamTestMixin(WSGITestsMixin):
+    """
+    A mixin for L{TestCase} subclasses which defines a number of tests against
+    L{_InputStream}.  The subclass is expected to create a file-like object to
+    be wrapped by an L{_InputStream} under test.
+    """
+    def getFileType(self):
+        raise NotImplementedError(
+            "%s.getFile must be implemented" % (self.__class__.__name__,))
+
+
+    def _renderAndReturnReaderResult(self, reader, content):
+        contentType = self.getFileType()
+        class CustomizedRequest(Request):
+            def gotLength(self, length):
+                # Always allocate a file of the specified type, instead of
+                # using the base behavior of selecting one depending on the
+                # length.
+                self.content = contentType()
+
         def appFactoryFactory(reader):
             result = Deferred()
             def applicationFactory():
@@ -586,111 +588,302 @@ class EnvironTests(WSGITestsMixin, TestCase):
                     return iter(())
                 return application
             return result, applicationFactory
-
-        inputRead, appFactory = appFactoryFactory(
-            lambda input: [input.read(1), input.read()])
+        d, appFactory = appFactoryFactory(reader)
         self.lowLevelRender(
-            Request, appFactory, DummyChannel,
-            'GET', '1.1', [], [''], None, [],
-            "hello, world\n"
-            "how are you\n")
-        inputRead.addCallback(
-            self.assertEqual, ['h', 'ello, world\nhow are you\n'])
-
-        # COMPATIBILITY NOTE: the size argument is excluded from the WSGI
-        # specification, but is provided here anyhow, because useful libraries
-        # such as python stdlib's cgi.py assume their input file-like-object
-        # supports readline with a size argument. If you use it, be aware your
-        # application may not be portable to other conformant WSGI servers.
-        inputReadline, appFactory = appFactoryFactory(
-            lambda input: [input.readline(), input.readline(None),
-                           input.readline(-1), input.readline(20),
-                           input.readline(5), input.readline(5),
-                           input.readline(5)])
-        self.lowLevelRender(
-            Request, appFactory, DummyChannel,
-            'GET', '1.1', [], [''], None, [],
-            "hello, world\n"
-            "how are you\n"
-            "I am great\n"
-            "goodbye now\n"
-            "no data here\n")
-        inputReadline.addCallback(
-            self.assertEqual, [
-                'hello, world\n', 'how are you\n', 'I am great\n',
-                'goodbye now\n', 'no da', 'ta he', 're\n'])
-       
-        inputReadlineNonePOST, appFactory = appFactoryFactory(
-            lambda input: [input.readline(), input.readline(-1),
-                           input.readline(None), input.readline(),
-                           input.readline(-1)])
-        
-        self.lowLevelRender(
-            Request, appFactory, DummyChannel,
-            'POST', '1.1', [], [''], None, [
-                ('Content-Type', 'multipart/form-data; boundary=---------------------------168072824752491622650073'),
-                ('Content-Length', '130'),
-            ],
-            "\n".join((["-----------------------------168072824752491622650073\n"
-            "Content-Disposition: form-data; name=\"search-query\"\n\n"
-            "this-is-my-search-query\n"])),
-            useTempfile=True)
-        inputReadlineNonePOST.addCallback(
-            self.assertEqual, [
-                '-----------------------------168072824752491622650073\n',
-                'Content-Disposition: form-data; name="search-query"\n',
-                '\n',
-                'this-is-my-search-query\n',
-                ''
-            ])
-        
-        inputReadlinesNoArg, appFactory = appFactoryFactory(
-            lambda input: input.readlines())
-        self.lowLevelRender(
-            Request, appFactory, DummyChannel,
-            'GET', '1.1', [], [''], None, [],
-            "foo\n"
-            "bar\n")
-        inputReadlinesNoArg.addCallback(
-            self.assertEqual, ["foo\n", "bar\n"])
+            CustomizedRequest, appFactory, DummyChannel,
+            'PUT', '1.1', [], [''], None, [],
+            content)
+        return d
 
 
-        inputReadlinesNone, appFactory = appFactoryFactory(
-            lambda input: input.readlines(None))
-        self.lowLevelRender(
-            Request, appFactory, DummyChannel,
-            'GET', '1.1', [], [''], None, [],
-            "foo\n"
-            "bar\n")
-        inputReadlinesNone.addCallback(
-            self.assertEqual, ["foo\n", "bar\n"])
+    def test_readAll(self):
+        """
+        Calling L{_InputStream.read} with no arguments returns the entire input
+        stream.
+        """
+        bytes = "some bytes are here"
+        d = self._renderAndReturnReaderResult(lambda input: input.read(), bytes)
+        d.addCallback(self.assertEquals, bytes)
+        return d
 
 
-        inputReadlinesLength, appFactory = appFactoryFactory(
-            lambda input: input.readlines(6))
-        self.lowLevelRender(
-            Request, appFactory, DummyChannel,
-            'GET', '1.1', [], [''], None, [],
-            "foo\n"
-            "bar\n")
-        inputReadlinesLength.addCallback(
-            self.assertEqual, ["foo\n", "bar\n"])
+    def test_readSome(self):
+        """
+        Calling L{_InputStream.read} with an integer returns that many bytes
+        from the input stream, as long as it is less than or equal to the total
+        number of bytes available.
+        """
+        bytes = "hello, world."
+        d = self._renderAndReturnReaderResult(lambda input: input.read(3), bytes)
+        d.addCallback(self.assertEquals, "hel")
+        return d
 
 
-        inputIter, appFactory = appFactoryFactory(
-            lambda input: list(input))
-        self.lowLevelRender(
-            Request, appFactory, DummyChannel,
-            'GET', '1.1', [], [''], None, [],
-            'foo\n'
-            'bar\n')
-        inputIter.addCallback(
-            self.assertEqual, ['foo\n', 'bar\n'])
+    def test_readMoreThan(self):
+        """
+        Calling L{_InputStream.read} with an integer that is greater than the
+        total number of bytes in the input stream returns all bytes in the
+        input stream.
+        """
+        bytes = "some bytes are here"
+        d = self._renderAndReturnReaderResult(
+            lambda input: input.read(len(bytes) + 3), bytes)
+        d.addCallback(self.assertEquals, bytes)
+        return d
 
-        return gatherResults([
-                inputRead, inputReadline, inputReadlineNonePOST,
-                inputReadlinesNoArg, inputReadlinesNone, inputReadlinesLength,
-                inputIter])
+
+    def test_readTwice(self):
+        """
+        Calling L{_InputStream.read} a second time returns bytes starting from
+        the position after the last byte returned by the previous read.
+        """
+        bytes = "some bytes, hello"
+        def read(input):
+            input.read(3)
+            return input.read()
+        d = self._renderAndReturnReaderResult(read, bytes)
+        d.addCallback(self.assertEquals, bytes[3:])
+        return d
+
+
+    def test_readNone(self):
+        """
+        Calling L{_InputStream.read} with C{None} as an argument returns all
+        bytes in the input stream.
+        """
+        bytes = "the entire stream"
+        d = self._renderAndReturnReaderResult(
+            lambda input: input.read(None), bytes)
+        d.addCallback(self.assertEquals, bytes)
+        return d
+
+
+    def test_readNegative(self):
+        """
+        Calling L{_InputStream.read} with a negative integer as an argument
+        returns all bytes in the input stream.
+        """
+        bytes = "all of the input"
+        d = self._renderAndReturnReaderResult(
+            lambda input: input.read(-1), bytes)
+        d.addCallback(self.assertEquals, bytes)
+        return d
+
+
+    def test_readline(self):
+        """
+        Calling L{_InputStream.readline} with no argument returns one line from
+        the input stream.
+        """
+        bytes = "hello\nworld"
+        d = self._renderAndReturnReaderResult(
+            lambda input: input.readline(), bytes)
+        d.addCallback(self.assertEquals, "hello\n")
+        return d
+
+
+    def test_readlineSome(self):
+        """
+        Calling L{_InputStream.readline} with an integer returns at most that
+        many bytes, even if it is not enough to make up a complete line.
+
+        COMPATIBILITY NOTE: the size argument is excluded from the WSGI
+        specification, but is provided here anyhow, because useful libraries
+        such as python stdlib's cgi.py assume their input file-like-object
+        supports readline with a size argument. If you use it, be aware your
+        application may not be portable to other conformant WSGI servers.
+        """
+        bytes = "goodbye\nworld"
+        d = self._renderAndReturnReaderResult(
+            lambda input: input.readline(3), bytes)
+        d.addCallback(self.assertEquals, "goo")
+        return d
+
+
+    def test_readlineMoreThan(self):
+        """
+        Calling L{_InputStream.readline} with an integer which is greater than
+        the number of bytes in the next line returns only the next line.
+        """
+        bytes = "some lines\nof text"
+        d = self._renderAndReturnReaderResult(
+            lambda input: input.readline(20), bytes)
+        d.addCallback(self.assertEquals, "some lines\n")
+        return d
+
+
+    def test_readlineTwice(self):
+        """
+        Calling L{_InputStream.readline} a second time returns the line
+        following the line returned by the first call.
+        """
+        bytes = "first line\nsecond line\nlast line"
+        def readline(input):
+            input.readline()
+            return input.readline()
+        d = self._renderAndReturnReaderResult(readline, bytes)
+        d.addCallback(self.assertEquals, "second line\n")
+        return d
+
+
+    def test_readlineNone(self):
+        """
+        Calling L{_InputStream.readline} with C{None} as an argument returns
+        one line from the input stream.
+        """
+        bytes = "this is one line\nthis is another line"
+        d = self._renderAndReturnReaderResult(
+            lambda input: input.readline(None), bytes)
+        d.addCallback(self.assertEquals, "this is one line\n")
+        return d
+
+
+    def test_readlineNegative(self):
+        """
+        Calling L{_InputStream.readline} with a negative integer as an argument
+        returns one line from the input stream.
+        """
+        bytes = "input stream line one\nline two"
+        d = self._renderAndReturnReaderResult(
+            lambda input: input.readline(-1), bytes)
+        d.addCallback(self.assertEquals, "input stream line one\n")
+        return d
+
+
+    def test_readlines(self):
+        """
+        Calling L{_InputStream.readlines} with no arguments returns a list of
+        all lines from the input stream.
+        """
+        bytes = "alice\nbob\ncarol"
+        d = self._renderAndReturnReaderResult(
+            lambda input: input.readlines(), bytes)
+        d.addCallback(self.assertEquals, ["alice\n", "bob\n", "carol"])
+        return d
+
+
+    def test_readlinesSome(self):
+        """
+        Calling L{_InputStream.readlines} with an integer as an argument
+        returns a list of lines from the input stream with the argument serving
+        as an approximate bound on the total number of bytes to read.
+        """
+        bytes = "123\n456\n789\n0"
+        d = self._renderAndReturnReaderResult(
+            lambda input: input.readlines(5), bytes)
+        def cbLines(lines):
+            # Make sure we got enough lines to make 5 bytes.  Anything beyond
+            # that is fine too.
+            self.assertEquals(lines[:2], ["123\n", "456\n"])
+        d.addCallback(cbLines)
+        return d
+
+
+    def test_readlinesMoreThan(self):
+        """
+        Calling L{_InputStream.readlines} with an integer which is greater than
+        the total number of bytes in the input stream returns a list of all
+        lines from the input.
+        """
+        bytes = "one potato\ntwo potato\nthree potato"
+        d = self._renderAndReturnReaderResult(
+            lambda input: input.readlines(100), bytes)
+        d.addCallback(
+            self.assertEquals,
+            ["one potato\n", "two potato\n", "three potato"])
+        return d
+
+
+    def test_readlinesAfterRead(self):
+        """
+        Calling L{_InputStream.readlines} after a call to L{_InputStream.read}
+        returns lines starting at the byte after the last byte returned by the
+        C{read} call.
+        """
+        bytes = "hello\nworld\nfoo"
+        def readlines(input):
+            input.read(7)
+            return input.readlines()
+        d = self._renderAndReturnReaderResult(readlines, bytes)
+        d.addCallback(self.assertEquals, ["orld\n", "foo"])
+        return d
+
+
+    def test_readlinesNone(self):
+        """
+        Calling L{_InputStream.readlines} with C{None} as an argument returns
+        all lines from the input.
+        """
+        bytes = "one fish\ntwo fish\n"
+        d = self._renderAndReturnReaderResult(
+            lambda input: input.readlines(None), bytes)
+        d.addCallback(self.assertEquals, ["one fish\n", "two fish\n"])
+        return d
+
+
+    def test_readlinesNegative(self):
+        """
+        Calling L{_InputStream.readlines} with a negative integer as an
+        argument returns a list of all lines from the input.
+        """
+        bytes = "red fish\nblue fish\n"
+        d = self._renderAndReturnReaderResult(
+            lambda input: input.readlines(-1), bytes)
+        d.addCallback(self.assertEquals, ["red fish\n", "blue fish\n"])
+        return d
+
+
+    def test_iterable(self):
+        """
+        Iterating over L{_InputStream} produces lines from the input stream.
+        """
+        bytes = "green eggs\nand ham\n"
+        d = self._renderAndReturnReaderResult(lambda input: list(input), bytes)
+        d.addCallback(self.assertEquals, ["green eggs\n", "and ham\n"])
+        return d
+
+
+    def test_iterableAfterRead(self):
+        """
+        Iterating over L{_InputStream} after calling L{_InputStream.read}
+        produces lines from the input stream starting from the first byte after
+        the last byte returned by the C{read} call.
+        """
+        bytes = "green eggs\nand ham\n"
+        def iterate(input):
+            input.read(3)
+            return list(input)
+        d = self._renderAndReturnReaderResult(iterate, bytes)
+        d.addCallback(self.assertEquals, ["en eggs\n", "and ham\n"])
+        return d
+
+
+
+class InputStreamStringIOTests(InputStreamTestMixin, TestCase):
+    """
+    Tests for L{_InputStream} when it is wrapped around a L{StringIO.StringIO}.
+    """
+    def getFileType(self):
+        return StringIO.StringIO
+
+
+
+class InputStreamCStringIOTests(InputStreamTestMixin, TestCase):
+    """
+    Tests for L{_InputStream} when it is wrapped around a
+    L{cStringIO.StringIO}.
+    """
+    def getFileType(self):
+        return cStringIO.StringIO
+
+
+
+class InputStreamTemporaryFileTests(InputStreamTestMixin, TestCase):
+    """
+    Tests for L{_InputStream} when it is wrapped around a L{tempfile.TemporaryFile}.
+    """
+    def getFileType(self):
+        return tempfile.TemporaryFile
 
 
 

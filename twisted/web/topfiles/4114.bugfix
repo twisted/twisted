@@ -1,0 +1,2 @@
+The 'wsgi.input' WSGI environment object now supports -1 and None as
+arguments to the read and readlines methods.

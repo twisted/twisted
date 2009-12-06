@@ -89,6 +89,9 @@ class _InputStream:
 
         This is called in a WSGI application thread, not the I/O thread.
         """
+        # Avoid passing None because cStringIO and file don't like it.
+        if size is None:
+            return self._wrapped.read()
         return self._wrapped.read(size)
 
 
@@ -99,14 +102,11 @@ class _InputStream:
 
         This is called in a WSGI application thread, not the I/O thread.
         """
-        if size == -1:
-            size = None
-        # We'll do it like this because tempfiles (used for large POSTs)
-        # don't like being given None as an argument.
-        if size is None:
+        # Check for -1 because StringIO doesn't handle it correctly.  Check for
+        # None because files and tempfiles don't accept that.
+        if size == -1 or size is None:
             return self._wrapped.readline()
-        else:
-            return self._wrapped.readline(size)
+        return self._wrapped.readline(size)
 
 
     def readlines(self, size=None):
@@ -115,6 +115,9 @@ class _InputStream:
 
         This is called in a WSGI application thread, not the I/O thread.
         """
+        # Avoid passing None because cStringIO and file don't like it.
+        if size is None:
+            return self._wrapped.readlines()
         return self._wrapped.readlines(size)
 
 
