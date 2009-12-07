@@ -197,7 +197,7 @@ class _PathHelper:
                 raise
             raise _WindowsUnlistableError(winErrObj)
         except OSError, ose:
-            if ose.errno not in (errno.ENOENT, errno.ENOTDIR):
+            if ose.errno not in (errno.ENOENT, errno.ENOTDIR, 0):
                 # Other possible errors here, according to linux manpages:
                 # EACCES, EMIFLE, ENFILE, ENOMEM.  None of these seem like the
                 # sort of thing which should be handled normally. -glyph

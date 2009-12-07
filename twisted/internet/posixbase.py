@@ -68,7 +68,7 @@ class _Win32Waker(log.Logger, styles.Ephemeral):
         # Following select_trigger (from asyncore)'s example;
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client.setsockopt(socket.IPPROTO_TCP, 1, 1)
+        # client.setsockopt(socket.IPPROTO_TCP, 1, 1)
         server.bind(('127.0.0.1', 0))
         server.listen(1)
         client.connect(server.getsockname())
@@ -154,7 +154,7 @@ class _UnixWaker(log.Logger, styles.Ephemeral):
 
 if platformType == 'posix':
     _Waker = _UnixWaker
-elif platformType == 'win32':
+else:
     _Waker = _Win32Waker
 
 

@@ -57,14 +57,9 @@ class ThreadPool:
         self.min = minthreads
         self.max = maxthreads
         self.name = name
-        if runtime.platform.getType() != "java":
-            self.waiters = []
-            self.threads = []
-            self.working = []
-        else:
-            self.waiters = ThreadSafeList()
-            self.threads = ThreadSafeList()
-            self.working = ThreadSafeList()
+        self.waiters = []
+        self.threads = []
+        self.working = []
 
     def start(self):
         """
@@ -278,31 +273,3 @@ class ThreadPool:
         log.msg('waiters: %s' % self.waiters)
         log.msg('workers: %s' % self.working)
         log.msg('total: %s'   % self.threads)
-
-
-class ThreadSafeList:
-    """
-    In Jython 2.1 lists aren't thread-safe, so this wraps it.
-    """
-
-    def __init__(self):
-        self.lock = threading.Lock()
-        self.l = []
-
-    def append(self, i):
-        self.lock.acquire()
-        try:
-            self.l.append(i)
-        finally:
-            self.lock.release()
-
-    def remove(self, i):
-        self.lock.acquire()
-        try:
-            self.l.remove(i)
-        finally:
-            self.lock.release()
-
-    def __len__(self):
-        return len(self.l)
-

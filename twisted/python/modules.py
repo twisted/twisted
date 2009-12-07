@@ -56,7 +56,7 @@ the modules outside the standard library's python-files directory::
 __metaclass__ = type
 
 # let's try to keep path imports to a minimum...
-from os.path import dirname, split as splitpath
+from os.path import dirname
 
 import sys
 import zipimport
@@ -71,7 +71,7 @@ from twisted.python.reflect import namedAny
 
 _nothing = object()
 
-PYTHON_EXTENSIONS = ['.py']
+PYTHON_EXTENSIONS = ['.py', '$py.class']
 OPTIMIZED_MODE = __doc__ is None
 if OPTIMIZED_MODE:
     PYTHON_EXTENSIONS.append('.pyo')
@@ -95,9 +95,12 @@ def _isPythonIdentifier(string):
 def _isPackagePath(fpath):
     # Determine if a FilePath-like object is a Python package.  TODO: deal with
     # __init__module.(so|dll|pyd)?
-    extless = fpath.splitext()[0]
-    basend = splitpath(extless)[1]
-    return basend == "__init__"
+    base = fpath.basename()
+    for ext in PYTHON_EXTENSIONS:
+        if base.endswith(ext):
+            if base[:-len(ext)] == '__init__':
+                return True
+    return False
 
 
 
@@ -133,27 +136,28 @@ class _ModuleIteratorHelper:
 
             children.sort()
             for potentialTopLevel in children:
-                ext = potentialTopLevel.splitext()[1]
-                potentialBasename = potentialTopLevel.basename()[:-len(ext)]
-                if ext in PYTHON_EXTENSIONS:
-                    # TODO: this should be a little choosier about which path entry
-                    # it selects first, and it should do all the .so checking and
-                    # crud
-                    if not _isPythonIdentifier(potentialBasename):
-                        continue
-                    modname = self._subModuleName(potentialBasename)
-                    if modname.split(".")[-1] == '__init__':
-                        # This marks the directory as a package so it can't be
-                        # a module.
-                        continue
-                    if modname not in yielded:
-                        yielded[modname] = True
-                        pm = PythonModule(modname, potentialTopLevel, self._getEntry())
-                        assert pm != self
-                        yield pm
+                for maybeExt in PYTHON_EXTENSIONS:
+                    if potentialTopLevel.basename().endswith(maybeExt):
+                        potentialBasename = potentialTopLevel.basename()[:
+                            -len(maybeExt)]
+                        # TODO: this should be a little choosier about which path entry
+                        # it selects first, and it should do all the .so checking and
+                        # crud
+                        if not _isPythonIdentifier(potentialBasename):
+                            continue
+                        modname = self._subModuleName(potentialBasename)
+                        if modname.split(".")[-1] == '__init__':
+                            # This marks the directory as a package so it can't be
+                            # a module.
+                            continue
+                        if modname not in yielded:
+                            yielded[modname] = True
+                            pm = PythonModule(modname, potentialTopLevel, self._getEntry())
+                            assert pm != self
+                            yield pm
                 else:
-                    if (ext or not _isPythonIdentifier(potentialBasename)
-                        or not potentialTopLevel.isdir()):
+                    if (not potentialTopLevel.isdir() or not
+                        _isPythonIdentifier(potentialTopLevel.basename())):
                         continue
                     modname = self._subModuleName(potentialTopLevel.basename())
                     for ext in PYTHON_EXTENSIONS:
