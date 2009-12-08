@@ -96,12 +96,21 @@ class Transaction:
         self._connection = connection
         self.reopen()
 
+
     def close(self):
+        """
+        Close the current cursor.
+        """
         cursor = self.cursor
         self.cursor = None
         cursor.close()
 
+
     def reopen(self):
+        """
+        Acquire a new cursor, closing the current one if there is one, and
+        re-establishing the connection if necessary.
+        """
         if self.cursor is not None:
             self.close()
 
@@ -120,12 +129,21 @@ class Transaction:
         self.reconnect()
         self.cursor = self._connection.cursor()
 
+
     def reconnect(self):
+        """
+        Discard the cursor and re-establish the connection.
+        """
         self._connection.reconnect()
         self.cursor = None
 
+
     def __getattr__(self, name):
+        """
+        Pass through all attribute access to the underlying cursor object.
+        """
         return getattr(self.cursor, name)
+
 
 
 class ConnectionPool:
