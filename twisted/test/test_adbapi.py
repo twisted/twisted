@@ -671,6 +671,15 @@ class TransactionTestCase(unittest.TestCase):
         The C{cursor} attribute of a L{Transaction} instance evaluates to the
         current cursor object.
         """
+        cursor = object()
+
+        class SingleCursorConnection(object):
+            def cursor(self):
+                return cursor
+
+        pool = FakePool(None)
+        transaction = Transaction(pool, SingleCursorConnection())
+        self.assertIdentical(cursor, transaction.cursor)
 
 
 
