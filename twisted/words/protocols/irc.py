@@ -52,6 +52,15 @@ class IRCBadMessage(Exception):
 class IRCPasswordMismatch(Exception):
     pass
 
+
+
+class IRCBadModes(ValueError):
+    """
+    A malformed mode was encountered while attempting to parse a mode string.
+    """
+
+
+
 def parsemsg(s):
     """Breaks a message from an IRC server into its prefix, command, and arguments.
     """
@@ -159,6 +168,67 @@ class _CommandDispatcherMixin(object):
         if method is None:
             raise UnhandledCommand("No handler for %r could be found" % (_getMethodName(commandName),))
         return method(commandName, *args)
+
+
+
+
+
+def parseModes(modes, params, paramModes=('', '')):
+    """
+    Parse an IRC mode string.
+
+    The mode string is parsed into two lists of mode changes (added and
+    removed), with each mode change represented as C{(mode, param)} where mode
+    is the mode character, and param is the parameter passed for that mode, or
+    C{None} if no parameter is required.
+
+    @type modes: C{str}
+    @param modes: Modes string to parse.
+
+    @type params: C{list}
+    @param params: Parameters specified along with L{modes}.
+
+    @type paramModes: C{(str, str)}
+    @param paramModes: A pair of strings (C{(add, remove)}) that indicate which modes take
+        parameters when added or removed.
+
+    @returns: Two lists of mode changes, one for modes added and the other for
+        modes removed respectively, mode changes in each list are represented as
+        C{(mode, param)}.
+    """
+    if len(modes) == 0:
+        raise IRCBadModes('Empty mode string')
+
+    if modes[0] not in '+-':
+        raise IRCBadModes('Malformed modes string: %r' % (modes,))
+
+    changes = ([], [])
+
+    direction = None
+    count = -1
+    for ch in modes:
+        if ch in '+-':
+            if count == 0:
+                raise IRCBadModes('Empty mode sequence: %r' % (modes,))
+            direction = '+-'.index(ch)
+            count = 0
+        else:
+            param = None
+            if ch in paramModes[direction]:
+                try:
+                    param = params.pop(0)
+                except IndexError:
+                    raise IRCBadModes('Not enough parameters: %r' % (ch,))
+            changes[direction].append((ch, param))
+            count += 1
+
+    if len(params) > 0:
+        raise IRCBadModes('Too many parameters: %r %r' % (modes, params))
+
+    if count == 0:
+        raise IRCBadModes('Empty mode sequence: %r' % (modes,))
+
+    return changes
 
 
 
@@ -556,7 +626,12 @@ class ServerSupportedFeatures(_CommandDispatcherMixin):
             'CHANTYPES': tuple('#&'),
             'MODES': 3,
             'NICKLEN': 9,
-            'PREFIX': self._parsePrefixParam('(ov)@+')}
+            'PREFIX': self._parsePrefixParam('(ovh)@+%'),
+            # The ISUPPORT draft explicitly says that there is no default for
+            # CHANMODES, but we're defaulting it here to handle the case where
+            # the IRC server doesn't send us any ISUPPORT information, since
+            # IRCClient.getChannelModeParams relies on this value.
+            'CHANMODES': self._parseChanModesParam(['b', '', 'lk'])}
 
 
     def _splitParamArgs(cls, params, valueProcessor=None):
@@ -658,6 +733,22 @@ class ServerSupportedFeatures(_CommandDispatcherMixin):
     _parsePrefixParam = classmethod(_parsePrefixParam)
 
 
+    def _parseChanModesParam(self, params):
+        """
+        Parse the ISUPPORT "CHANMODES" parameter.
+
+        See L{isupport_CHANMODES} for a detailed explanation of this parameter.
+        """
+        names = ('addressModes', 'param', 'setParam', 'noParam')
+        if len(params) > len(names):
+            raise ValueError(
+                'Expecting a maximum of %d channel mode parameters, got %d' % (
+                    len(names), len(params)))
+        items = map(lambda key, value: (key, value or ''), names, params)
+        return dict(items)
+    _parseChanModesParam = classmethod(_parseChanModesParam)
+
+
     def getFeature(self, feature, default=None):
         """
         Get a server supported feature's value.
@@ -736,9 +827,10 @@ class ServerSupportedFeatures(_CommandDispatcherMixin):
             noParam - Modes that change a setting on a channel, these modes
             never take a parameter.
         """
-        names = ('addressModes', 'param', 'setParam', 'noParam')
-        items = map(lambda key, value: (key, value or ''), names, params)
-        return dict(items)
+        try:
+            return self._parseChanModesParam(params)
+        except ValueError:
+            return self.getFeature('CHANMODES')
 
 
     def isupport_CHANNELLEN(self, params):
@@ -829,7 +921,7 @@ class ServerSupportedFeatures(_CommandDispatcherMixin):
         """
         try:
             return self._parsePrefixParam(params[0])
-        except:
+        except ValueError:
             return self.getFeature('PREFIX')
 
 
@@ -950,26 +1042,6 @@ class IRCClient(basic.LineReceiver):
 
     dcc_destdir = '.'
     dcc_sessions = None
-
-    # 'mode': (added, removed) i.e.:
-    # 'l': (True, False) accepts an arg when added and no arg when removed
-    # from http://www.faqs.org/rfcs/rfc1459.html - 4.2.3.1 Channel modes
-    # if you want other modes to accept args, add them here, by default unknown
-    # modes won't accept any arg
-    _modeAcceptsArg = {
-        'o': (True, True),    # op/deop a user
-        'h': (True, True),    # hop/dehop (halfop) a user (not defined in RFC)
-        'v': (True, True),    # voice/devoice a user
-        'b': (True, True),    # ban/unban a user/mask
-        'l': (True, False),   # set the user limit to channel
-        'k': (True, False),   # set a channel key (password)
-        't': (False, False),  # only ops set topic
-        's': (False, False),  # secret channel
-        'p': (False, False),  # private channel
-        'i': (False, False),  # invite-only channel
-        'm': (False, False),  # moderated channel
-        'n': (False, False),  # no external messages
-    }
 
     # If this is false, no attempt will be made to identify
     # ourself to the server.
@@ -1669,40 +1741,35 @@ class IRCClient(basic.LineReceiver):
         self.userQuit(nick, params[0])
 
 
-    def irc_MODE(self, prefix, params):
+    def irc_MODE(self, user, params):
         """
-        Parse the server message when one or more modes are changed
+        Parse a server mode change message.
         """
-        user, channel, modes, args = prefix, params[0], params[1], params[2:]
-        if modes[0] not in '+-':
-            # add a '+' before the modes if it isn't specified (e.g. MODE s)
-            modes = '+' + modes
-        if ((modes[0] == '+' and '-' not in modes[1:]) or
-            (modes[0] == '-' and '+' not in modes[1:])):
-            # all modes are added or removed
-            set = (modes[0] == '+')
-            modes = modes[1:].replace('-+'[set], '')
-            self.modeChanged(user, channel, set, modes, tuple(args))
-        else:
-            # some modes added and other removed
-            modes2, args2 = ['', ''], [[], []]
-            for c in modes:
-                if c == '+':
-                    i = 0
-                elif c == '-':
-                    i = 1
-                else:
-                    modes2[i] += c
-                    # take an arg only if the mode accepts it (e.g. +o nick)
-                    if args and self._modeAcceptsArg.get(c, (False, False))[i]:
-                        args2[i].append(args.pop(0))
-            if args:
-                log.msg('Too many args (%s) received for %s. If one or more '
-                    'modes are supposed to accept an arg and they are not in '
-                    '_modeAcceptsArg, add them.' % (' '.join(args), modes))
+        channel, modes, args = params[0], params[1], params[2:]
 
-            self.modeChanged(user, channel, True, modes2[0], tuple(args2[0]))
-            self.modeChanged(user, channel, False, modes2[1], tuple(args2[1]))
+        if modes[0] not in '-+':
+            modes = '+' + modes
+
+        if channel == self.nickname:
+            # This is a mode change to our individual user, not a channel mode
+            # that involves us.
+            paramModes = self.getUserModeParams()
+        else:
+            paramModes = self.getChannelModeParams()
+
+        try:
+            added, removed = parseModes(modes, args, paramModes)
+        except IRCBadModes:
+            log.err(None, 'An error occured while parsing the following '
+                          'MODE message: MODE %s' % (' '.join(params),))
+        else:
+            if added:
+                modes, params = zip(*added)
+                self.modeChanged(user, channel, True, ''.join(modes), params)
+
+            if removed:
+                modes, params = zip(*removed)
+                self.modeChanged(user, channel, False, ''.join(modes), params)
 
 
     def irc_PING(self, prefix, params):
@@ -2206,6 +2273,38 @@ class IRCClient(basic.LineReceiver):
             self.handleCommand(command, prefix, params)
         except IRCBadMessage:
             self.badMessage(line, *sys.exc_info())
+
+
+    def getUserModeParams(self):
+        """
+        Get user modes that require parameters for correct parsing.
+
+        @rtype: C{[str, str]}
+        @return C{[add, remove]}
+        """
+        return ['', '']
+
+
+    def getChannelModeParams(self):
+        """
+        Get channel modes that require parameters for correct parsing.
+
+        @rtype: C{[str, str]}
+        @return C{[add, remove]}
+        """
+        # PREFIX modes are treated as "type B" CHANMODES, they always take
+        # parameter.
+        params = ['', '']
+        prefixes = self.supported.getFeature('PREFIX', {})
+        params[0] = params[1] = ''.join(prefixes.iterkeys())
+
+        chanmodes = self.supported.getFeature('CHANMODES')
+        if chanmodes is not None:
+            params[0] += chanmodes.get('addressModes', '')
+            params[0] += chanmodes.get('param', '')
+            params[1] = params[0]
+            params[0] += chanmodes.get('setParam', '')
+        return params
 
 
     def handleCommand(self, command, prefix, params):
