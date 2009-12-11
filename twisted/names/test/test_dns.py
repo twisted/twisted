@@ -721,6 +721,50 @@ class EqualityTests(unittest.TestCase):
             cls('example.org', 123))
 
 
+    def test_rrheader(self):
+        """
+        Two L{dns.RRHeader} instances compare equal if and only if they have
+        the same name, type, class, time to live, payload, and authoritative
+        bit.
+        """
+        # Vary the name
+        self._equalityTest(
+            dns.RRHeader('example.com', payload=dns.Record_A('1.2.3.4')),
+            dns.RRHeader('example.com', payload=dns.Record_A('1.2.3.4')),
+            dns.RRHeader('example.org', payload=dns.Record_A('1.2.3.4')))
+
+        # Vary the payload
+        self._equalityTest(
+            dns.RRHeader('example.com', payload=dns.Record_A('1.2.3.4')),
+            dns.RRHeader('example.com', payload=dns.Record_A('1.2.3.4')),
+            dns.RRHeader('example.com', payload=dns.Record_A('1.2.3.5')))
+
+        # Vary the type.  Leave the payload as None so that we don't have to
+        # provide non-equal values.
+        self._equalityTest(
+            dns.RRHeader('example.com', dns.A),
+            dns.RRHeader('example.com', dns.A),
+            dns.RRHeader('example.com', dns.MX))
+
+        # Probably not likely to come up.  Most people use the internet.
+        self._equalityTest(
+            dns.RRHeader('example.com', cls=dns.IN, payload=dns.Record_A('1.2.3.4')),
+            dns.RRHeader('example.com', cls=dns.IN, payload=dns.Record_A('1.2.3.4')),
+            dns.RRHeader('example.com', cls=dns.CS, payload=dns.Record_A('1.2.3.4')))
+
+        # Vary the ttl
+        self._equalityTest(
+            dns.RRHeader('example.com', ttl=60, payload=dns.Record_A('1.2.3.4')),
+            dns.RRHeader('example.com', ttl=60, payload=dns.Record_A('1.2.3.4')),
+            dns.RRHeader('example.com', ttl=120, payload=dns.Record_A('1.2.3.4')))
+
+        # Vary the auth bit
+        self._equalityTest(
+            dns.RRHeader('example.com', auth=1, payload=dns.Record_A('1.2.3.4')),
+            dns.RRHeader('example.com', auth=1, payload=dns.Record_A('1.2.3.4')),
+            dns.RRHeader('example.com', auth=0, payload=dns.Record_A('1.2.3.4')))
+
+
     def test_ns(self):
         """
         Two L{dns.Record_NS} instances compare equal if and only if they have

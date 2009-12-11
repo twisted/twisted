@@ -80,9 +80,16 @@ class DNSUnknownError(DomainError):
 
 
 
+class ResolverError(Exception):
+    """
+    Indicates a query failed because of a decision made by the local
+    resolver object.
+    """
+
+
 __all__ = [
     'DomainError', 'AuthoritativeDomainError', 'DNSQueryTimeoutError',
 
     'DNSFormatError', 'DNSServerError', 'DNSNameError',
     'DNSNotImplementedError', 'DNSQueryRefusedError',
-    'DNSUnknownError']
+    'DNSUnknownError', 'ResolverError']

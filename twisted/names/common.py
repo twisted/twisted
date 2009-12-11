@@ -1,23 +1,56 @@
 # -*- test-case-name: twisted.names.test -*-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+Base functionality useful to various parts of Twisted Names.
+"""
 
 import socket
 
 from twisted.names import dns
+from twisted.names.error import DNSFormatError, DNSServerError, DNSNameError
+from twisted.names.error import DNSNotImplementedError, DNSQueryRefusedError
+from twisted.names.error import DNSUnknownError
+
 from twisted.internet import defer, error
 from twisted.python import failure
 
 EMPTY_RESULT = (), (), ()
 
 class ResolverBase:
+    """
+    L{ResolverBase} is a base class for L{IResolver} implementations which
+    deals with a lot of the boilerplate of implementing all of the lookup
+    methods.
+
+    @cvar _errormap: A C{dict} mapping DNS protocol failure response codes
+        to exception classes which will be used to represent those failures.
+    """
+    _errormap = {
+        dns.EFORMAT: DNSFormatError,
+        dns.ESERVER: DNSServerError,
+        dns.ENAME: DNSNameError,
+        dns.ENOTIMP: DNSNotImplementedError,
+        dns.EREFUSED: DNSQueryRefusedError}
+
     typeToMethod = None
 
     def __init__(self):
         self.typeToMethod = {}
         for (k, v) in typeToMethod.items():
             self.typeToMethod[k] = getattr(self, v)
+
+
+    def exceptionForCode(self, responseCode):
+        """
+        Convert a response code (one of the possible values of
+        L{dns.Message.rCode} to an exception instance representing it.
+
+        @since: 10.0
+        """
+        return self._errormap.get(responseCode, DNSUnknownError)
+
 
     def query(self, query, timeout = None):
         try:

@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.names.test.test_names -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -30,9 +30,6 @@ from twisted.internet import error, defer, protocol, interfaces
 from twisted.python import log, failure
 from twisted.python.deprecate import getWarningMethod
 from twisted.names import dns, common
-from twisted.names.error import DNSFormatError, DNSServerError, DNSNameError
-from twisted.names.error import DNSNotImplementedError, DNSQueryRefusedError
-from twisted.names.error import DNSUnknownError
 
 
 class Resolver(common.ResolverBase):
@@ -64,13 +61,6 @@ class Resolver(common.ResolverBase):
     _lastResolvTime = None
     _resolvReadInterval = 60
 
-    _errormap = {
-        dns.EFORMAT: DNSFormatError,
-        dns.ESERVER: DNSServerError,
-        dns.ENAME: DNSNameError,
-        dns.ENOTIMP: DNSNotImplementedError,
-        dns.EREFUSED: DNSQueryRefusedError}
-
     def _getProtocol(self):
         getWarningMethod()(
             "Resolver.protocol is deprecated; use Resolver.queryUDP instead.",
@@ -81,7 +71,7 @@ class Resolver(common.ResolverBase):
     protocol = property(_getProtocol)
 
 
-    def __init__(self, resolv=None, servers=None, timeout=(1, 3, 11, 45)):
+    def __init__(self, resolv=None, servers=None, timeout=(1, 3, 11, 45), reactor=None):
         """
         Construct a resolver which will query domain name servers listed in
         the C{resolv.conf(5)}-format file given by C{resolv} as well as
@@ -104,10 +94,17 @@ class Resolver(common.ResolverBase):
             query.  When the last timeout expires, the query is considered
             failed.
 
+        @param reactor: A provider of L{IReactorTime}, L{IReactorUDP}, and
+            L{IReactorTCP} which will be used to establish connections, listen
+            for DNS datagrams, and enforce timeouts.  If not provided, the
+            global reactor will be used.
+
         @raise ValueError: Raised if no nameserver addresses can be found.
         """
         common.ResolverBase.__init__(self)
-        from twisted.internet import reactor
+
+        if reactor is None:
+            from twisted.internet import reactor
         self._reactor = reactor
 
         self.timeout = timeout
@@ -372,7 +369,7 @@ class Resolver(common.ResolverBase):
         if message.trunc:
             return self.queryTCP(message.queries).addCallback(self.filterAnswers)
         if message.rCode != dns.OK:
-            return failure.Failure(self._errormap.get(message.rCode, DNSUnknownError)(message))
+            return failure.Failure(self.exceptionForCode(message.rCode)(message))
         return (message.answers, message.authority, message.additional)
 
 

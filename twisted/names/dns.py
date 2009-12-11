@@ -399,7 +399,7 @@ class Query:
         return 'Query(%r, %r, %r)' % (str(self.name), self.type, self.cls)
 
 
-class RRHeader:
+class RRHeader(tputil.FancyEqMixin):
     """
     A resource record header.
 
@@ -414,6 +414,8 @@ class RRHeader:
     """
 
     implements(IEncodable)
+
+    compareAttributes = ('name', 'type', 'cls', 'ttl', 'payload', 'auth')
 
     fmt = "!HHIH"
 
@@ -1560,13 +1562,19 @@ class Message:
 class DNSMixin(object):
     """
     DNS protocol mixin shared by UDP and TCP implementations.
+
+    @ivar _reactor: A L{IReactorTime} and L{IReactorUDP} provider which will
+        be used to issue DNS queries and manage request timeouts.
     """
     id = None
     liveMessages = None
 
-    def __init__(self, controller):
+    def __init__(self, controller, reactor=None):
         self.controller = controller
         self.id = random.randrange(2 ** 10, 2 ** 15)
+        if reactor is None:
+            from twisted.internet import reactor
+        self._reactor = reactor
 
 
     def pickID(self):
@@ -1583,8 +1591,8 @@ class DNSMixin(object):
         """
         Wrapper around reactor.callLater, mainly for test purpose.
         """
-        from twisted.internet import reactor
-        return reactor.callLater(period, func, *args)
+        return self._reactor.callLater(period, func, *args)
+
 
     def _query(self, queries, timeout, id, writeMessage):
         """
@@ -1662,8 +1670,7 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
         self.transport.write(message.toStr(), address)
 
     def startListening(self):
-        from twisted.internet import reactor
-        reactor.listenUDP(0, self, maxPacketSize=512)
+        self._reactor.listenUDP(0, self, maxPacketSize=512)
 
     def datagramReceived(self, data, addr):
         """

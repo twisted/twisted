@@ -1,0 +1,1 @@
+twisted.names.root.Resolver no longer leaks UDP sockets while resolving names.
