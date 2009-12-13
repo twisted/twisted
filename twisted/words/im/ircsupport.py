@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -48,7 +48,7 @@ class IRCGroup(basesupport.AbstractGroup):
     implements(interfaces.IGroup)
 
     def imgroup_testAction(self):
-        print 'action test!'
+        pass
 
     def imtarget_kick(self, target):
         if self.account.client is None:
@@ -102,7 +102,6 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
     def connectionMade(self):
         # XXX: Why do I duplicate code in IRCClient.register?
         try:
-            print 'connection made on irc service!?', self
             if self.account.password:
                 self.sendLine("PASS :%s" % self.account.password)
             self.setNick(self.account.username)
@@ -110,7 +109,6 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
             for channel in self.account.channels:
                 self.joinGroup(channel)
             self.account._isOnline=1
-            print 'uh, registering irc acct'
             if self._logonDeferred is not None:
                 self._logonDeferred.callback(self)
             self.chat.getContactsList()
@@ -124,14 +122,14 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
         irc.IRCClient.setNick(self,nick)
 
     def kickedFrom(self, channel, kicker, message):
-        """Called when I am kicked from a channel.
         """
-        print 'ono i was kicked', channel, kicker, message
+        Called when I am kicked from a channel.
+        """
         return self.chat.getGroupConversation(
             self.chat.getGroup(channel[1:], self), 1)
 
     def userKicked(self, kickee, channel, kicker, message):
-        print 'whew somebody else', kickee, channel, kicker, message
+        pass
 
     def noticed(self, username, channel, message):
         self.privmsg(username, channel, message, {"dontAutoRespond": 1})
@@ -213,8 +211,6 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
             if group in self._ingroups[nickname]:
                 self._ingroups[nickname].remove(group)
                 self.getGroupConversation(group).memberLeft(nickname)
-            else:
-                print "%s left %s, but wasn't in the room."%(nickname,group)
 
     def irc_QUIT(self,prefix,params):
         nickname=string.split(prefix,"!")[0]
@@ -222,14 +218,11 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
             for group in self._ingroups[nickname]:
                 self.getGroupConversation(group).memberLeft(nickname)
             self._ingroups[nickname]=[]
-        else:
-            print '*** WARNING: ingroups had no such key %s' % nickname
 
     def irc_NICK(self, prefix, params):
         fromNick = string.split(prefix, "!")[0]
         toNick = params[0]
         if not self._ingroups.has_key(fromNick):
-            print "%s changed nick to %s. But she's not in any groups!?" % (fromNick, toNick)
             return
         for group in self._ingroups[fromNick]:
             self.getGroupConversation(group).memberChangedNick(fromNick, toNick)
@@ -237,7 +230,7 @@ class IRCProto(basesupport.AbstractClientMixin, irc.IRCClient):
         del self._ingroups[fromNick]
 
     def irc_unknown(self, prefix, command, params):
-        print "unknown message from IRCserver. prefix: %s, command: %s, params: %s" % (prefix, command, params)
+        pass
 
     # GTKIM calls
     def joinGroup(self,name):
