@@ -569,6 +569,13 @@ def dsu(list, key):
     L2.sort()
     return [e[2] for e in L2]
 
+try:
+    from twisted.python._initgroups import initgroups as _c_initgroups
+except ImportError:
+    _c_initgroups = None
+
+
+
 if pwd is None or grp is None or setgroups is None or getgroups is None:
     def initgroups(uid, primaryGid):
         """
@@ -577,6 +584,7 @@ if pwd is None or grp is None or setgroups is None or getgroups is None:
         Underlying platform support require to manipulate groups is missing.
         """
 else:
+    # Fallback to the inefficient Python version
     def _setgroups_until_success(l):
         while(1):
             # NASTY NASTY HACK (but glibc does it so it must be okay):
@@ -606,8 +614,11 @@ else:
         """
         Initializes the group access list.
 
-        This is done by reading the group database /etc/group and using all
-        groups of which C{uid} is a member.  The additional group
+        If the C extension is present, we're calling it, which in turn calls
+        initgroups(3).
+        
+        If not, this is done by reading the group database /etc/group and using
+        all groups of which C{uid} is a member.  The additional group
         C{primaryGid} is also added to the list.
 
         If the given user is a member of more than C{NGROUPS}, arbitrary
@@ -621,6 +632,8 @@ else:
         @param primaryGid: If provided, an additional GID to include when
             setting the groups.
         """
+        if _c_initgroups is not None:
+            return _c_initgroups(pwd.getpwuid(uid)[0], primaryGid)
         try:
             # Try to get the maximum number of groups
             max_groups = os.sysconf("SC_NGROUPS_MAX")

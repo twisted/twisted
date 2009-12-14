@@ -1,0 +1,3 @@
+twisted.python.util.initgroups now calls the low-level C initgroups by default
+if available: the python version can create lots of I/O with certain
+authentication setup to retrieve all the necessary information.
