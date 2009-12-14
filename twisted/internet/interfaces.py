@@ -442,8 +442,24 @@ class IReactorProcess(Interface):
                      sequence of strings. The first string should be the
                      executable's name.
 
-        @param env: the environment variables to pass to the processs; a
-                    dictionary of strings. If 'None', use os.environ.
+        @type env: a C{dict} mapping C{str} to C{str}, or C{None}.
+        @param env: the environment variables to pass to the child process. The
+                    resulting behavior varies between platforms. If
+                      - C{env} is not set:
+                        - On POSIX: pass an empty environment.
+                        - On Windows: pass C{os.environ}.
+                      - C{env} is C{None}:
+                        - On POSIX: pass C{os.environ}.
+                        - On Windows: pass C{os.environ}.
+                      - C{env} is a C{dict}:
+                        - On POSIX: pass the key/value pairs in C{env} as the
+                          complete environment.
+                        - On Windows: update C{os.environ} with the key/value
+                          pairs in the C{dict} before passing it. As a
+                          consequence of U{bug #1640
+                          <http://twistedmatrix.com/trac/ticket/1640>}, passing
+                          keys with empty values in an effort to unset
+                          environment variables I{won't} unset them.
 
         @param path: the path to run the subprocess in - defaults to the
                      current directory.
