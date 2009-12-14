@@ -53,7 +53,7 @@ class ZipPath(_PathHelper):
                    (other.archive, other.pathInArchive))
 
     def __repr__(self):
-        return 'ZipPath(%r)' % (self.path,)
+        return 'ZipPath(%r)' % (os.path.abspath(self.path),)
 
     def parent(self):
         splitup = self.pathInArchive.split(ZIP_PATH_SEP)
@@ -213,3 +213,5 @@ class ZipArchive(ZipPath):
         return FilePath(self.zipfile.filename).getStatusChangeTime()
 
 
+    def __repr__(self):
+        return 'ZipArchive(%r)' % (os.path.abspath(self.path),)

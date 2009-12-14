@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -274,14 +274,59 @@ def zipit(dirname, zfname):
             zf.write(fspath, arcpath)
     zf.close()
 
-class ZipFilePathTestCase(AbstractFilePathTestCase):
 
+
+class ZipFilePathTestCase(AbstractFilePathTestCase):
+    """
+    Test various L{ZipPath} path manipulations as well as reprs for L{ZipPath}
+    and L{ZipArchive}.
+    """
     def setUp(self):
         AbstractFilePathTestCase.setUp(self)
-        zipit(self.cmn, self.cmn+'.zip')
-        self.path = ZipArchive(self.cmn+'.zip')
+        zipit(self.cmn, self.cmn + '.zip')
+        self.path = ZipArchive(self.cmn + '.zip')
         self.root = self.path
-        self.all = [x.replace(self.cmn, self.cmn+'.zip') for x in self.all]
+        self.all = [x.replace(self.cmn, self.cmn + '.zip') for x in self.all]
+
+
+    def test_zipPathRepr(self):
+        """
+        Make sure that invoking ZipPath's repr prints the correct class name
+        and an absolute path to the zip file.
+        """
+        child = self.path.child("foo")
+        pathRepr = "ZipPath(%r)" % (
+            os.path.abspath(self.cmn + ".zip" + os.sep + 'foo'),)
+
+        # Check for an absolute path
+        self.assertEquals(repr(child), pathRepr)
+
+        # Create a path to the file rooted in the current working directory
+        relativeCommon = self.cmn.replace(os.getcwd() + os.sep, "", 1) + ".zip"
+        relpath = ZipArchive(relativeCommon)
+        child = relpath.child("foo")
+
+        # Check using a path without the cwd prepended
+        self.assertEquals(repr(child), pathRepr)
+
+
+    def test_zipArchiveRepr(self):
+        """
+        Make sure that invoking ZipArchive's repr prints the correct class
+        name and an absolute path to the zip file.
+        """
+        pathRepr = 'ZipArchive(%r)' % (os.path.abspath(self.cmn + '.zip'),)
+
+        # Check for an absolute path
+        self.assertEquals(repr(self.path), pathRepr)
+
+        # Create a path to the file rooted in the current working directory
+        relativeCommon = self.cmn.replace(os.getcwd() + os.sep, "", 1) + ".zip"
+        relpath = ZipArchive(relativeCommon)
+
+        # Check using a path without the cwd prepended
+        self.assertEquals(repr(relpath), pathRepr)
+
 
 
 class FilePathTestCase(AbstractFilePathTestCase):
