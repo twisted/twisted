@@ -16,6 +16,7 @@ import win32file
 import win32pipe
 import win32process
 import win32security
+import win32job
 
 import pywintypes
 
@@ -34,10 +35,7 @@ from twisted.python import failure
 from twisted.internet import _pollingfile
 from twisted.internet._baseprocess import BaseProcess
 
-def debug(msg):
-    import sys
-    print msg
-    sys.stdout.flush()
+
 
 class _Reaper(_pollingfile._PollableResource):
 
@@ -168,10 +166,13 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         env.update(environment or {})
 
         cmdline = quoteArguments(args)
+
+        self.job = win32job.CreateJobObject(None, None)
         # TODO: error detection here.
         def doCreate():
             self.hProcess, self.hThread, self.pid, dwTid = win32process.CreateProcess(
-                command, cmdline, None, None, 1, 0, env, path, StartupInfo)
+                command, cmdline, None, None, 1, win32con.CREATE_SUSPENDED,
+                env, path, StartupInfo)
         try:
             doCreate()
         except pywintypes.error, pwte:
@@ -205,6 +206,11 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
                                     origcmd, sheb))
                         raise OSError(pwte2)
 
+        win32job.AssignProcessToJobObject(self.job, self.hProcess)
+        win32process.ResumeThread(self.hThread)
+
+        win32file.CloseHandle(self.hThread)
+
         # close handles which only the child will use
         win32file.CloseHandle(hStderrW)
         win32file.CloseHandle(hStdoutW)
@@ -234,11 +240,42 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         self._addPollableResource(_Reaper(self))
 
 
+    def _raiseUnknownSignal(self, signalID):
+        """
+        Helper method raising an error when a given signal can't be handled.
+        """
+        raise ValueError(
+            "Signal not handled: %s. "
+            "Only 'INT', 'TERM' or 'KILL' can be used." % (signalID,))
+
+
     def signalProcess(self, signalID):
+        """
+        Terminate process if C{signalID} is one of "INT", "TERM", or "KILL".
+
+        @type signalID: C{str}
+        """
         if self.pid is None:
             raise error.ProcessExitedAlready()
         if signalID in ("INT", "TERM", "KILL"):
             win32process.TerminateProcess(self.hProcess, 1)
+        else:
+            self._raiseUnknownSignal(signalID)
+
+
+    def signalProcessGroup(self, signalID):
+        """
+        Terminate process group if C{signalID} is one of "INT", "TERM", or
+        "KILL".
+
+        @type signalID: C{str}
+        """
+        if self.pid is None:
+            raise error.ProcessExitedAlready()
+        if signalID in ("INT", "TERM", "KILL"):
+            win32job.TerminateJobObject(self.job, 1)
+        else:
+            self._raiseUnknownSignal(signalID)
 
 
     def _getReason(self, status):

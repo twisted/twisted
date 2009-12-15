@@ -334,6 +334,21 @@ class _BaseProcess(BaseProcess, object):
         os.kill(self.pid, signalID)
 
 
+    def signalProcessGroup(self, signalID):
+        """
+        Send the given signal C{signalID} to the process group. It does the
+        same translation as L{signalProcess}.
+
+        @type signalID: C{str} or C{int}
+        """
+        if signalID in ('HUP', 'STOP', 'INT', 'KILL', 'TERM'):
+            signalID = getattr(signal, 'SIG%s' % (signalID,))
+        if self.pid is None:
+            raise ProcessExitedAlready()
+        self.pid = -self.pid
+        os.kill(self.pid, signalID)
+
+
     def _fork(self, path, uid, gid, executable, args, environment, **kwargs):
         """
         Fork and then exec sub-process.

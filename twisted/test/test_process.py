@@ -265,13 +265,14 @@ class SignalProtocol(protocol.ProcessProtocol):
     @type signal: C{str}
     """
 
-    def __init__(self, deferred, sig):
+    def __init__(self, deferred, sig, method="signalProcess"):
         self.deferred = deferred
         self.signal = sig
+        self.method = method
 
 
     def outReceived(self, data):
-        self.transport.signalProcess(self.signal)
+        getattr(self.transport, self.method)(self.signal)
 
 
     def processEnded(self, reason):
@@ -1096,6 +1097,25 @@ class PosixProcessBase:
         finally:
             os.execvpe = oldexecvpe
         return d
+
+
+    def test_signalProcessGroup(self):
+        """
+        Send a INT signal to a group of processes.
+        """
+        exe = sys.executable
+        scriptPath = util.sibpath(__file__, "process_signalgroup.py")
+        d = defer.Deferred()
+        p = SignalProtocol(d, "INT", "signalProcessGroup")
+        reactor._handleSignals()
+        proc = reactor.spawnProcess(p, exe, [exe, "-u", scriptPath, "parent"],
+                                    env=None,
+                                    usePTY=self.usePTY)
+        pid = proc.pid
+        def check(result):
+            error = self.assertRaises(OSError, os.kill, -pid, 0)
+            self.assertEquals(error[0], errno.ESRCH)
+        return d.addCallback(check)
 
 
     def test_errorInProcessEnded(self):
@@ -1936,6 +1956,8 @@ class PosixProcessTestCase(unittest.TestCase, PosixProcessBase):
 
 
 
+
+
 class PosixProcessTestCasePTY(unittest.TestCase, PosixProcessBase):
     """
     Just like PosixProcessTestCase, but use ptys instead of pipes.
@@ -2075,7 +2097,6 @@ class Win32ProcessTestCase(unittest.TestCase):
         The win32 handles should be properly closed when the process exits.
         """
         import win32api
-
         connected = defer.Deferred()
         ended = defer.Deferred()
 
@@ -2118,6 +2139,28 @@ class Win32ProcessTestCase(unittest.TestCase):
         ended.addCallback(checkTerminated)
 
         return defer.gatherResults([connected, ended])
+
+
+    def test_signalProcessGroup(self):
+        """
+        Send a INT signal to a group of processes.
+        """
+        exe = sys.executable
+        scriptPath = util.sibpath(__file__, "process_signaljob.py")
+        d = defer.Deferred()
+        p = Win32SignalProtocol(d, "INT", "signalProcessGroup")
+        reactor._handleSignals()
+        proc = reactor.spawnProcess(p, exe, [exe, "-u", scriptPath, "parent"],
+                                    env=None)
+
+        def check(result):
+            # If we're here, both processes must have terminated, so it's just
+            # a sanity check
+            import win32job
+            jobProcesses = win32job.QueryInformationJobObject(proc.job,
+                win32job.JobObjectBasicProcessIdList)
+            self.assertEquals(len(jobProcesses), 0)
+        return d.addCallback(check)
 
 
 

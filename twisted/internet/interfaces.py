@@ -1505,6 +1505,7 @@ class IProcessTransport(ITransport):
         Close stdin, stderr and stdout.
         """
 
+
     def signalProcess(signalID):
         """
         Send a signal to the process.
@@ -1518,8 +1519,16 @@ class IProcessTransport(ITransport):
               signal ID.
 
         @raise twisted.internet.error.ProcessExitedAlready: The process has
-        already exited.
+            already exited.
         """
+
+
+    def signalProcessGroup(signalID):
+        """
+        Send a signal to every processes in the process group. C{signalID}
+        takes the value as in L{signalProcess}.
+        """
+
 
 
 class IServiceCollection(Interface):
