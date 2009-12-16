@@ -1586,17 +1586,47 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         return '\\Seen' in msg.getFlags()
 
     def search_SENTBEFORE(self, query, id, msg):
-        date = msg.getHeader(False, 'date').get('date', '')
+        """
+        Returns C{True} if the message date is earlier than the query date.
+
+        @type query: A C{list} of C{str}
+        @param query: A list whose first element starts with a stringified date
+            that is a fragment of an L{imap4.Query()}. The date must be in the
+            format 'DD-Mon-YYYY', for example '03-March-2003' or '03-Mar-2003'.
+
+        @type msg: Provider of L{imap4.IMessage}
+        """
+        date = msg.getHeaders(False, 'date').get('date', '')
         date = rfc822.parsedate(date)
         return date < parseTime(query.pop(0))
 
     def search_SENTON(self, query, id, msg):
-        date = msg.getHeader(False, 'date').get('date', '')
+        """
+        Returns C{True} if the message date is the same as the query date.
+
+        @type query: A C{list} of C{str}
+        @param query: A list whose first element starts with a stringified date
+            that is a fragment of an L{imap4.Query()}. The date must be in the
+            format 'DD-Mon-YYYY', for example '03-March-2003' or '03-Mar-2003'.
+
+        @type msg: Provider of L{imap4.IMessage}
+        """
+        date = msg.getHeaders(False, 'date').get('date', '')
         date = rfc822.parsedate(date)
         return date[:3] == parseTime(query.pop(0))[:3]
 
     def search_SENTSINCE(self, query, id, msg):
-        date = msg.getHeader(False, 'date').get('date', '')
+        """
+        Returns C{True} if the message date is later than the query date.
+
+        @type query: A C{list} of C{str}
+        @param query: A list whose first element starts with a stringified date
+            that is a fragment of an L{imap4.Query()}. The date must be in the
+            format 'DD-Mon-YYYY', for example '03-March-2003' or '03-Mar-2003'.
+
+        @type msg: Provider of L{imap4.IMessage}
+        """
+        date = msg.getHeaders(False, 'date').get('date', '')
         date = rfc822.parsedate(date)
         return date > parseTime(query.pop(0))
 

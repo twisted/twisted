@@ -1556,6 +1556,58 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
 
         self.assertEquals(self.results, [0, 2])
 
+
+
+class IMAP4ServerSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
+    """
+    Tests for the behavior of the search_* functions in L{imap4.IMAP4Server}.
+    """
+    def setUp(self):
+        IMAP4HelperMixin.setUp(self)
+        self.earlierQuery = ["10-Dec-2009"]
+        self.sameDateQuery = ["13-Dec-2009"]
+        self.laterQuery = ["16-Dec-2009"]
+        self.seq = 0
+        self.msg = FakeyMessage({"date" : "Mon, 13 Dec 2009 21:25:10 GMT"}, [],
+                                '', '', None, None)
+
+
+    def test_searchSentBefore(self):
+        """
+        L{imap4.IMAP4Server.search_SENTBEFORE} returns True if the message date
+        is earlier than the query date.
+        """
+        self.assertFalse(
+            self.server.search_SENTBEFORE(self.earlierQuery, self.seq, self.msg))
+        self.assertTrue(
+            self.server.search_SENTBEFORE(self.laterQuery, self.seq, self.msg))
+
+
+    def test_searchSentOn(self):
+        """
+        L{imap4.IMAP4Server.search_SENTON} returns True if the message date is
+        the same as the query date.
+        """
+        self.assertFalse(
+            self.server.search_SENTON(self.earlierQuery, self.seq, self.msg))
+        self.assertTrue(
+            self.server.search_SENTON(self.sameDateQuery, self.seq, self.msg))
+        self.assertFalse(
+            self.server.search_SENTON(self.laterQuery, self.seq, self.msg))
+
+
+    def test_searchSentSince(self):
+        """
+        L{imap4.IMAP4Server.search_SENTSINCE} returns True if the message date
+        is later than the query date.
+        """
+        self.assertTrue(
+            self.server.search_SENTSINCE(self.earlierQuery, self.seq, self.msg))
+        self.assertFalse(
+            self.server.search_SENTSINCE(self.laterQuery, self.seq, self.msg))
+
+
+
 class TestRealm:
     theAccount = None
 
