@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_protocols -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -12,6 +12,7 @@ Maintainer: Itamar Shtull-Trauring
 # System imports
 import re
 import struct
+import warnings
 
 from zope.interface import implements
 
@@ -107,6 +108,18 @@ class NetstringReceiver(protocol.Protocol):
             self.brokenPeer = 1
 
     def sendString(self, data):
+        """
+        A method for sending a Netstring. This method accepts a string and
+        writes it to the transport.
+
+        @type data: C{str}
+        """
+        if not isinstance(data, str):
+            warnings.warn(
+                "data passed to sendString() must be a string. Non-string "
+                "support is deprecated since Twisted 10.0",
+                DeprecationWarning, 2)
+            data = str(data)
         self.transport.write('%d:%s,' % (len(data), data))
 
 

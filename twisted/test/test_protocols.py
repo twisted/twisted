@@ -406,6 +406,37 @@ class NetstringReceiverTestCase(unittest.TestCase, LPTestCaseMixin):
                     a.dataReceived(s)
             self.assertEquals(a.received, self.strings)
 
+    def test_sendNonStrings(self):
+        """
+        L{basic.NetstringReceiver.sendString} will send objects that are not
+        strings by sending their string representation according to str().
+        """
+        nonStrings = [ [], { 1 : 'a', 2 : 'b' }, ['a', 'b', 'c'], 673,
+                       (12, "fine", "and", "you?") ]
+        a = TestNetstring()
+        t = proto_helpers.StringTransport()
+        a.MAX_LENGTH = 100
+        a.makeConnection(t)
+        for s in nonStrings:
+            a.sendString(s)
+            out = t.value()
+            t.clear()
+            length = out[:out.find(":")]
+            data = out[out.find(":") + 1:-1] #[:-1] to ignore the trailing ","
+            self.assertEquals(int(length), len(str(s)))
+            self.assertEquals(data, str(s))
+
+        warnings = self.flushWarnings(
+            offendingFunctions=[self.test_sendNonStrings])
+        self.assertEqual(len(warnings), 5)
+        self.assertEqual(
+            warnings[0]["message"],
+            "data passed to sendString() must be a string. Non-string support "
+            "is deprecated since Twisted 10.0")
+        self.assertEqual(
+            warnings[0]['category'],
+            DeprecationWarning)
+
 
 class IntNTestCaseMixin(LPTestCaseMixin):
     """
