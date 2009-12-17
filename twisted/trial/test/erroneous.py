@@ -1,4 +1,7 @@
 # -*- test-case-name: twisted.trial.test.test_tests -*-
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 from twisted.trial import unittest, util
 from twisted.internet import reactor, protocol, defer
 
@@ -18,26 +21,6 @@ class TestFailureInSetUp(unittest.TestCase):
 class TestFailureInTearDown(unittest.TestCase):
     def tearDown(self):
         raise FoolishError, "I am a broken tearDown method"
-
-    def test_noop(self):
-        pass
-
-
-class TestFailureInSetUpClass(unittest.TestCase):
-    _suppressUpDownWarning = True
-
-    def setUpClass(self):
-        raise FoolishError, "I am a broken setUpClass method"
-
-    def test_noop(self):
-        pass
-
-
-class TestFailureInTearDownClass(unittest.TestCase):
-    _suppressUpDownWarning = True
-
-    def tearDownClass(self):
-        raise FoolishError, "I am a broken setUp method"
 
     def test_noop(self):
         pass
@@ -85,16 +68,6 @@ class TestSkipTestCase(unittest.TestCase):
     pass
 
 TestSkipTestCase.skip = "skipping this test"
-
-
-class TestSkipTestCase2(unittest.TestCase):
-    _suppressUpDownWarning = True
-
-    def setUpClass(self):
-        raise unittest.SkipTest, "thi stest is fukct"
-
-    def test_thisTestWillBeSkipped(self):
-        pass
 
 
 class DelayedCall(unittest.TestCase):

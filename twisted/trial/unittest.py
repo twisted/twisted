@@ -43,9 +43,6 @@ except ImportError:
 
 from twisted.internet import defer, utils
 from twisted.python import components, failure, log, monkey
-from twisted.python.reflect import qual
-from twisted.python.compat import set
-from twisted.python import deprecate
 from twisted.python.deprecate import getDeprecationWarningString
 
 from twisted.trial import itrial, reporter, util
@@ -623,10 +620,6 @@ _logObserver = _LogObserver()
 
 _wait_is_running = []
 
-_classFixturesDeprecationMessage = (
-    "%(method)s, deprecated since Twisted 8.2.0, was overridden by "
-    "%(class)s.  Use %(replace)s instead.")
-
 class TestCase(_Assertions):
     """
     A unit test. The atom of the unit testing universe.
@@ -670,13 +663,6 @@ class TestCase(_Assertions):
     C{errors} is either an exception class or an iterable of exception
     classes, and C{reason} is a string. See L{Todo} or L{makeTodo} for more
     information.
-
-    @ivar _suppressUpDownWarning: Private flag used by tests for C{setUpClass}
-        and C{tearDownClass} to suppress the deprecation warnings for these
-        methods.  This is necessary since the normal warning suppression
-        mechanism does not work for these warnings.  No code should use this
-        flag aside from tests for these methods.  When support for the methods
-        is removed altogether, so should this flag be removed.
     """
 
     implements(itrial.ITestCase)
@@ -696,20 +682,8 @@ class TestCase(_Assertions):
         testMethod = getattr(self, methodName)
         self._parents = [testMethod, self]
         self._parents.extend(util.getPythonContainers(testMethod))
-        self._shared = (hasattr(self, 'setUpClass') or
-                        hasattr(self, 'tearDownClass'))
-        if self._shared:
-            self._prepareClassFixture()
-            if not hasattr(self.__class__, '_instances'):
-                self._initInstances()
-            self.__class__._instances.add(self)
         self._passed = False
         self._cleanups = []
-
-    def _initInstances(cls):
-        cls._instances = set()
-        cls._instancesRun = set()
-    _initInstances = classmethod(_initInstances)
 
     if sys.version_info >= (2, 6):
         # Override the comparison defined by the base TestCase which considers
@@ -728,24 +702,6 @@ class TestCase(_Assertions):
         def __ne__(self, other):
             return self is not other
 
-
-
-    def _isFirst(self):
-        return len(self.__class__._instancesRun) == 0
-
-    def _isLast(self):
-        return self.__class__._instancesRun == self.__class__._instances
-
-    def _prepareClassFixture(self):
-        """Lots of tests assume that test methods all run in the same instance
-        of TestCase.  This isn't true. Calling this method ensures that
-        self.__class__._testCaseInstance contains an instance of this class
-        that will remain the same for all tests from this class.
-        """
-        if not hasattr(self.__class__, '_testCaseInstance'):
-            self.__class__._testCaseInstance = self
-        if self.__class__._testCaseInstance.__class__ != self.__class__:
-            self.__class__._testCaseInstance = self
 
     def _run(self, methodName, result):
         from twisted.internet import reactor
@@ -772,11 +728,7 @@ class TestCase(_Assertions):
                     result.addError(self, f)
         onTimeout = utils.suppressWarnings(
             onTimeout, util.suppress(category=DeprecationWarning))
-        if self._shared:
-            test = self.__class__._testCaseInstance
-        else:
-            test = self
-        method = getattr(test, methodName)
+        method = getattr(self, methodName)
         d = defer.maybeDeferred(utils.runWithWarningsSuppressed,
                                 self.getSuppress(), method)
         call = reactor.callLater(timeout, onTimeout, d)
@@ -791,49 +743,6 @@ class TestCase(_Assertions):
 
     def __call__(self, *args, **kwargs):
         return self.run(*args, **kwargs)
-
-    def deferSetUpClass(self, result):
-        """
-        Run the per-class set up fixture, C{setUpClass}, for this test case.
-
-        This must be called only once per TestCase subclass, since it will
-        run the fixture unconditionally.
-
-        @type result: L{IReporter} provider
-        @param result: The result which will be used to report any problems
-            encountered in C{setUpClass}.
-
-        @return: A L{Deferred} which will fire with the result of
-            C{setUpClass} or with C{None} if there is no C{setUpClass}
-            defined.
-        """
-        if not hasattr(self, 'setUpClass'):
-            d = defer.succeed(None)
-            d.addCallback(self.deferSetUp, result)
-            return d
-        if not getattr(self, '_suppressUpDownWarning', None):
-            warn = deprecate.getWarningMethod()
-            warn(_classFixturesDeprecationMessage % {
-                    'method': 'setUpClass',
-                    'class': qual(self.__class__),
-                    'replace': 'setUp'},
-                category=DeprecationWarning,
-                stacklevel=0)
-        d = self._run('setUpClass', result)
-        d.addCallbacks(self.deferSetUp, self._ebDeferSetUpClass,
-                       callbackArgs=(result,),
-                       errbackArgs=(result,))
-        return d
-
-    def _ebDeferSetUpClass(self, error, result):
-        if error.check(SkipTest):
-            result.addSkip(self, self._getReason(error))
-            self.__class__._instancesRun.remove(self)
-        elif error.check(KeyboardInterrupt):
-            result.stop()
-        else:
-            result.addError(self, error)
-            self.__class__._instancesRun.remove(self)
 
     def deferSetUp(self, ignored, result):
         d = self._run('setUp', result)
@@ -858,8 +767,6 @@ class TestCase(_Assertions):
                        errbackArgs=(result,))
         d.addBoth(self.deferRunCleanups, result)
         d.addBoth(self.deferTearDown, result)
-        if self._shared and hasattr(self, 'tearDownClass') and self._isLast():
-            d.addBoth(self.deferTearDownClass, result)
         return d
 
     def _cbDeferTestMethod(self, ignored, result):
@@ -910,41 +817,6 @@ class TestCase(_Assertions):
                 if failure.check(KeyboardInterrupt):
                     result.stop()
                 self._passed = False
-
-    def deferTearDownClass(self, ignored, result):
-        """
-        Run the per-class tear down fixture, C{tearDownClass}, for this test
-        case.
-
-        This must be called only once per TestCase subclass, since it will
-        run the fixture unconditionally.  This must not be called if there
-        is no C{tearDownClass} method.
-
-        @param ignored: An ignored parameter.
-
-        @type result: L{IReporter} provider
-        @param result: The result which will be used to report any problems
-            encountered in C{tearDownClass}.
-
-        @return: A L{Deferred} which will fire with the result of
-            C{tearDownClass}.
-        """
-        if not getattr(self, '_suppressUpDownWarning', None):
-            warn = deprecate.getWarningMethod()
-            warn(_classFixturesDeprecationMessage % {
-                    'method': 'tearDownClass',
-                    'class': qual(self.__class__),
-                    'replace': 'tearDown'},
-                category=DeprecationWarning,
-                stacklevel=1)
-        d = self._run('tearDownClass', result)
-        d.addErrback(self._ebTearDownClass, result)
-        return d
-
-    def _ebTearDownClass(self, error, result):
-        if error.check(KeyboardInterrupt):
-            result.stop()
-        result.addError(self, error)
 
     def _cleanUp(self, result):
         try:
@@ -1205,8 +1077,6 @@ class TestCase(_Assertions):
         else:
             result = new_result
         self._timedOut = False
-        if self._shared and self not in self.__class__._instances:
-            self.__class__._instances.add(self)
         result.startTest(self)
         if self.getSkip(): # don't run test methods that are marked as .skip
             result.addSkip(self, self.getSkip())
@@ -1218,25 +1088,14 @@ class TestCase(_Assertions):
         # by it will be collected and retrievable by flushWarnings.
         def runThunk():
             self._passed = False
-            first = False
-            if self._shared:
-                first = self._isFirst()
-                self.__class__._instancesRun.add(self)
             self._deprecateReactor(reactor)
             try:
-                if first:
-                    d = self.deferSetUpClass(result)
-                else:
-                    d = self.deferSetUp(None, result)
+                d = self.deferSetUp(None, result)
                 try:
                     self._wait(d)
                 finally:
                     self._cleanUp(result)
-                    if self._shared and self._isLast():
-                        self._initInstances()
-                        self._classCleanUp(result)
-                    if not self._shared:
-                        self._classCleanUp(result)
+                    self._classCleanUp(result)
             finally:
                 self._undeprecateReactor(reactor)
 
@@ -1737,4 +1596,4 @@ for methodName in _assertions:
     globals()[methodName] = _deprecate(methodName)
 
 
-__all__ = ['TestCase', 'wait', 'FailTest', 'SkipTest']
+__all__ = ['TestCase', 'FailTest', 'SkipTest']

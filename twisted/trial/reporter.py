@@ -1,6 +1,5 @@
 # -*- test-case-name: twisted.trial.test.test_reporter -*-
-#
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 #
 # Maintainer: Jonathan Lange
@@ -26,8 +25,9 @@ pyunit = __import__('unittest')
 
 
 class BrokenTestCaseWarning(Warning):
-    """emitted as a warning when an exception occurs in one of
-    setUp, tearDown, setUpClass, or tearDownClass"""
+    """
+    Emitted as a warning when an exception occurs in one of setUp or tearDown.
+    """
 
 
 class SafeStream(object):

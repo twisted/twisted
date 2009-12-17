@@ -299,6 +299,25 @@ class LoaderTest(packages.SysPathManglingTest):
                                       'package.test_import_module'])
 
 
+    def test_differentInstances(self):
+        """
+        L{TestLoader.loadClass} returns a suite with each test method
+        represented by a different instances of the L{TestCase} they are
+        defined on.
+        """
+        class DistinctInstances(unittest.TestCase):
+            def test_1(self):
+                self.first = 'test1Run'
+
+            def test_2(self):
+                self.assertFalse(hasattr(self, 'first'))
+
+        suite = self.loader.loadClass(DistinctInstances)
+        result = reporter.Reporter()
+        suite.run(result)
+        self.assertTrue(result.wasSuccessful())
+
+
     def test_loadModuleWith_test_suite(self):
         """
         Check that C{test_suite} is used when present and other L{TestCase}s are
@@ -350,7 +369,6 @@ class LoaderTest(packages.SysPathManglingTest):
 
     # XXX - duplicated and modified from test_script
     def assertSuitesEqual(self, test1, test2):
-        loader = runner.TestLoader()
         names1 = testNames(test1)
         names2 = testNames(test2)
         names1.sort()

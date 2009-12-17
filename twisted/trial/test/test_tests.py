@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -145,15 +145,9 @@ class TestSkipMethods(unittest.TestCase, ResultsTestMixin):
 
 class TestSkipClasses(unittest.TestCase, ResultsTestMixin):
     class SkippedClass(unittest.TestCase):
-        _suppressUpDownWarning = True
-
         skip = 'class'
-        def setUpClass(self):
-            self.__class__._setUpClassRan = True
         def setUp(self):
             self.__class__._setUpRan = True
-        def tearDownClass(self):
-            self.__class__._tearDownClassRan = True
         def test_skip1(self):
             raise unittest.SkipTest('skip1')
         def test_skip2(self):
@@ -163,92 +157,52 @@ class TestSkipClasses(unittest.TestCase, ResultsTestMixin):
             pass
         def test_skip4(self):
             raise RuntimeError("Skip me too")
+
 
     def setUp(self):
         self.loadSuite(TestSkipClasses.SkippedClass)
         TestSkipClasses.SkippedClass._setUpRan = False
-        TestSkipClasses.SkippedClass._setUpClassRan = False
-        TestSkipClasses.SkippedClass._tearDownClassRan = False
+
 
     def test_counting(self):
+        """
+        Skipped test methods still contribute to the total test count.
+        """
         self.assertCount(4)
 
+
     def test_setUpRan(self):
+        """
+        The C{setUp} method is not called if the class is set to skip.
+        """
         self.suite(self.reporter)
-        self.failUnlessEqual(TestSkipClasses.SkippedClass._setUpRan, False)
-        self.failUnlessEqual(TestSkipClasses.SkippedClass._setUpClassRan,
-                             False)
-        self.failUnlessEqual(TestSkipClasses.SkippedClass._tearDownClassRan,
-                             False)
+        self.assertFalse(TestSkipClasses.SkippedClass._setUpRan)
+
 
     def test_results(self):
+        """
+        Skipped test methods don't cause C{wasSuccessful} to return C{False},
+        nor do they contribute to the C{errors} or C{failures} of the reporter.
+        They do, however, add elements to the reporter's C{skips} list.
+        """
         self.suite(self.reporter)
         self.failUnless(self.reporter.wasSuccessful())
         self.failUnlessEqual(self.reporter.errors, [])
         self.failUnlessEqual(self.reporter.failures, [])
         self.failUnlessEqual(len(self.reporter.skips), 4)
 
+
     def test_reasons(self):
+        """
+        Test methods which raise L{unittest.SkipTest} or have their C{skip}
+        attribute set to something are skipped.
+        """
         self.suite(self.reporter)
         expectedReasons = ['class', 'skip2', 'class', 'class']
         # whitebox reporter
-        reasonsGiven = [ reason for test, reason in self.reporter.skips ]
-        self.failUnlessEqual(expectedReasons, reasonsGiven)
+        reasonsGiven = [reason for test, reason in self.reporter.skips]
+        self.assertEquals(expectedReasons, reasonsGiven)
 
-
-class TestSkipClassesRaised(unittest.TestCase, ResultsTestMixin):
-    class SkippedClass(unittest.TestCase):
-        _suppressUpDownWarning = True
-
-        def setUpClass(self):
-            raise unittest.SkipTest("class")
-        def setUp(self):
-            self.__class__._setUpRan = True
-        def tearDownClass(self):
-            self.__class__._tearDownClassRan = True
-        def test_skip1(self):
-            raise unittest.SkipTest('skip1')
-        def test_skip2(self):
-            raise RuntimeError("Ought to skip me")
-        test_skip2.skip = 'skip2'
-        def test_skip3(self):
-            pass
-        def test_skip4(self):
-            raise RuntimeError("Skip me too")
-
-    def setUp(self):
-        if hasattr(TestSkipClassesRaised.SkippedClass, 'skip'):
-            delattr(TestSkipClassesRaised.SkippedClass, 'skip')
-        self.loadSuite(TestSkipClassesRaised.SkippedClass)
-        TestSkipClassesRaised.SkippedClass._setUpRan = False
-        TestSkipClassesRaised.SkippedClass._tearDownClassRan = False
-
-    def test_counting(self):
-        self.assertCount(4)
-
-    def test_setUpRan(self):
-        self.suite(self.reporter)
-        self.failUnlessEqual(
-            TestSkipClassesRaised.SkippedClass._setUpRan, False)
-
-    def test_tearDownClassRan(self):
-        self.suite(self.reporter)
-        self.failUnlessEqual(
-            TestSkipClassesRaised.SkippedClass._tearDownClassRan, False)
-
-    def test_results(self):
-        self.suite(self.reporter)
-        self.failUnless(self.reporter.wasSuccessful())
-        self.failUnlessEqual(self.reporter.errors, [])
-        self.failUnlessEqual(self.reporter.failures, [])
-        self.failUnlessEqual(len(self.reporter.skips), 4)
-
-    def test_reasons(self):
-        self.suite(self.reporter)
-        expectedReasons = ['class', 'skip2', 'class', 'class']
-        # whitebox reporter
-        reasonsGiven = [ reason for test, reason in self.reporter.skips ]
-        self.failUnlessEqual(expectedReasons, reasonsGiven)
 
 
 class TestTodo(unittest.TestCase, ResultsTestMixin):
@@ -469,39 +423,6 @@ class FixtureTest(unittest.TestCase):
         self.assert_(isinstance(errors[0][1].value, erroneous.FoolishError))
 
 
-    def testBrokenSetUpClass(self):
-        """
-        When setUpClass fails, an error is recorded in the result object.
-        """
-        suite = self.loader.loadClass(erroneous.TestFailureInSetUpClass)
-        suite.run(self.reporter)
-        self.assert_(self.reporter.errors)
-
-
-    def testBrokenTearDownClass(self):
-        """
-        When setUpClass fails, an error is recorded in the result object.
-        """
-        suite = self.loader.loadClass(erroneous.TestFailureInTearDownClass)
-        suite.run(self.reporter)
-        self.assert_(self.reporter.errors)
-
-
-
-class FixtureMetaTest(unittest.TestCase):
-
-    def test_testBrokenTearDownClass(self):
-        """FixtureTest.testBrokenTearDownClass succeeds when run twice
-        """
-        test = FixtureTest('testBrokenTearDownClass')
-        result = reporter.TestResult()
-        test(result)
-        self.failUnless(result.wasSuccessful())
-        result2 = reporter.TestResult()
-        test(result2)
-        self.failUnless(result2.wasSuccessful())
-
-
 
 class SuppressionTest(unittest.TestCase):
 
@@ -599,14 +520,10 @@ class GCMixin:
             self._log('tearDown')
 
     class ClassTest(unittest.TestCase):
-        _suppressUpDownWarning = True
-
         def test_1(self):
             self._log('test1')
         def test_2(self):
             self._log('test2')
-        def tearDownClass(self):
-            self._log('tearDownClass')
 
     def _log(self, msg):
         self._collectCalled.append(msg)
@@ -652,24 +569,6 @@ class TestGarbageCollection(GCMixin, unittest.TestCase):
         self.failUnlessEqual(
             self._collectCalled,
             ['collect', 'setUp', 'test', 'tearDown', 'collect'])
-
-    def test_collectCalledWhenTearDownClass(self):
-        """
-        test gc.collect is called after tearDownClass.
-        """
-        test = unittest.TestSuite(
-            [TestGarbageCollection.ClassTest('test_1'),
-             TestGarbageCollection.ClassTest('test_2')])
-        test = unittest.decorate(
-            test, unittest._ForceGarbageCollectionDecorator)
-        result = reporter.TestResult()
-        test.run(result)
-        # check that collect gets called after individual tests, and
-        # after tearDownClass
-        self.failUnlessEqual(
-            self._collectCalled,
-            ['collect', 'test1', 'collect',
-             'collect', 'test2', 'tearDownClass', 'collect'])
 
 
 

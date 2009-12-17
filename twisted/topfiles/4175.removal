@@ -1,0 +1,1 @@
+twisted.trial.unittest.TestCase now ignores the previously deprecated setUpClass and tearDownClass methods.
