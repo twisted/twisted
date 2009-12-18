@@ -3,6 +3,9 @@
 
 """
 Tests for L{twisted.python.release} and L{twisted.python._release}.
+
+All of these tests are skipped on platforms other than Linux, as the release is
+only ever performed on Linux.
 """
 
 
@@ -13,22 +16,7 @@ from StringIO import StringIO
 import tarfile
 from xml.dom import minidom as dom
 
-try:
-    from popen2 import Popen4
-except:
-    popen4Available = False
-else:
-    popen4Available = True
-    del Popen4
-
 from datetime import date
-
-try:
-    import pydoctor.driver
-    # it might not be installed, or it might use syntax not available in
-    # this version of Python.
-except (ImportError, SyntaxError):
-    pydoctor = None
 
 from twisted.trial.unittest import TestCase
 
@@ -54,10 +42,52 @@ from twisted.python._release import UncleanWorkingDirectory, NotWorkingDirectory
 from twisted.python._release import ChangeVersionsScript, BuildTarballsScript
 from twisted.python._release import NewsBuilder
 
+if sys.platform != 'linux2':
+    skip = "Release toolchain only supported on Linux."
+else:
+    skip = None
+
+
+# Check a bunch of dependencies to skip tests if necessary.
 try:
     from twisted.lore.scripts import lore
 except ImportError:
-    lore = None
+    loreSkip = "Lore is not present."
+else:
+    loreSkip = skip
+
+
+try:
+    from popen2 import Popen4
+except ImportError:
+    popen4Skip = "popen2.Popen4 is not available."
+else:
+    popen4Skip = skip
+
+
+try:
+    import pydoctor.driver
+    # it might not be installed, or it might use syntax not available in
+    # this version of Python.
+except (ImportError, SyntaxError):
+    pydoctorSkip = "Pydoctor is not present."
+else:
+    if getattr(pydoctor, "version_info", (0,)) < (0, 1):
+        pydoctorSkip = "Pydoctor is too old."
+    else:
+        pydoctorSkip = skip
+
+
+if which("latex") and which("dvips") and which("ps2pdf13"):
+    latexSkip = skip
+else:
+    latexSkip = "LaTeX is not available."
+
+
+if which("svn") and which("svnadmin"):
+    svnSkip = skip
+else:
+    svnSkip = "svn or svnadmin is not present."
 
 
 def genVersion(*args, **kwargs):
@@ -656,7 +686,6 @@ with this.</p>
 
 
 
-
 class DocBuilderTestCase(TestCase, BuilderTestsMixin):
     """
     Tests for L{DocBuilder}.
@@ -667,6 +696,7 @@ class DocBuilderTestCase(TestCase, BuilderTestsMixin):
     forever. Feel free to update the tests when Lore changes, but please be
     careful.
     """
+    skip = loreSkip
 
     def setUp(self):
         """
@@ -838,9 +868,7 @@ class APIBuilderTestCase(TestCase):
     """
     Tests for L{APIBuilder}.
     """
-    if pydoctor is None or getattr(pydoctor, "version_info", (0,)) < (0, 1):
-        skip = "APIBuilder requires Pydoctor 0.1 or newer"
-
+    skip = pydoctorSkip
 
     def test_build(self):
         """
@@ -979,6 +1007,7 @@ class ManBuilderTestCase(TestCase, BuilderTestsMixin):
     """
     Tests for L{ManBuilder}.
     """
+    skip = loreSkip
 
     def setUp(self):
         """
@@ -1070,10 +1099,7 @@ class BookBuilderTests(TestCase, BuilderTestsMixin):
     """
     Tests for L{BookBuilder}.
     """
-    if not (which("latex") and which("dvips") and which("ps2pdf13")):
-        skip = "Book Builder tests require latex."
-    if not popen4Available:
-        skip = "Book Builder requires popen2.Popen4."
+    skip = latexSkip or popen4Skip or loreSkip
 
     def setUp(self):
         """
@@ -1584,7 +1610,6 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         L{NewsBuilder.build} updates a NEWS file with new features based on the
         I{<ticket>.feature} files found in the directory specified.
         """
-        header = ''
         self.builder.build(
             self.project, self.project.child('NEWS'),
             "Super Awesometastic 32.16")
@@ -1789,6 +1814,7 @@ class DistributionBuilderTestBase(BuilderTestsMixin, StructureAssertingMixin,
     """
     Base for tests of L{DistributionBuilder}.
     """
+    skip = loreSkip
 
     def setUp(self):
         BuilderTestsMixin.setUp(self)
@@ -2127,12 +2153,7 @@ class BuildAllTarballsTest(DistributionBuilderTestBase):
     """
     Tests for L{DistributionBuilder.buildAllTarballs}.
     """
-
-    if not (which("svn") and which("svnadmin")):
-        skip = "buildAllTarballs requires svn to be installed."
-    if not popen4Available:
-        skip = "buildAllTarballs requires popen2.Popen4."
-
+    skip = svnSkip or popen4Skip
 
     def setUp(self):
         self.oldHandler = signal.signal(signal.SIGCHLD, signal.SIG_DFL)
@@ -2443,12 +2464,3 @@ class ScriptTests(BuilderTestsMixin, StructureAssertingMixin, TestCase):
         newsBuilder.buildAll = builds.append
         newsBuilder.main(["/foo/bar/baz"])
         self.assertEquals(builds, [FilePath("/foo/bar/baz")])
-
-
-
-if lore is None:
-    skipMessage = "Lore is not present."
-    BookBuilderTests.skip = skipMessage
-    DocBuilderTestCase.skip = skipMessage
-    ManBuilderTestCase.skip = skipMessage
-    DistributionBuilderTest.skip = skipMessage

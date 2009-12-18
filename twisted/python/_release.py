@@ -7,6 +7,9 @@ Twisted's automated release system.
 
 This module is only for use within Twisted's release system. If you are anyone
 else, do not use it. The interface and behaviour will change without notice.
+
+Only Linux is supported by this code.  It should not be used by any tools
+which must run on multiple platforms (eg the setup.py script).
 """
 
 import textwrap
