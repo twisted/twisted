@@ -1,4 +1,4 @@
-# Copyright (c) 2008 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -76,6 +76,9 @@ class FinderTest(packages.PackageTest):
 
 
 class FileTest(packages.SysPathManglingTest):
+    """
+    Tests for L{runner.filenameToModule}.
+    """
     def test_notFile(self):
         self.failUnlessRaises(ValueError,
                               runner.filenameToModule, 'doesntexist')
@@ -85,15 +88,29 @@ class FileTest(packages.SysPathManglingTest):
         import sample as sample2
         self.failUnlessEqual(sample2, sample1)
 
+
     def test_moduleNotInPath(self):
+        """
+        If passed the path to a file containing the implementation of a
+        module within a package which is not on the import path,
+        L{runner.filenameToModule} returns a module object loosely
+        resembling the module defined by that file anyway.
+        """
+        # "test_sample" isn't actually the name of this module.  However,
+        # filenameToModule can't seem to figure that out.  So clean up this
+        # mis-named module.  It would be better if this weren't necessary
+        # and filenameToModule either didn't exist or added a correctly
+        # named module to sys.modules.
+        self.addCleanup(sys.modules.pop, 'test_sample', None)
+
         self.mangleSysPath(self.oldPath)
-        sample1 = runner.filenameToModule(os.path.join(self.parent,
-                                                       'goodpackage',
-                                                       'test_sample.py'))
+        sample1 = runner.filenameToModule(
+            os.path.join(self.parent, 'goodpackage', 'test_sample.py'))
         self.mangleSysPath(self.newPath)
         from goodpackage import test_sample as sample2
         self.failUnlessEqual(os.path.splitext(sample2.__file__)[0],
                              os.path.splitext(sample1.__file__)[0])
+
 
     def test_packageInPath(self):
         package1 = runner.filenameToModule(os.path.join(self.parent,
@@ -101,14 +118,29 @@ class FileTest(packages.SysPathManglingTest):
         import goodpackage
         self.failUnlessEqual(goodpackage, package1)
 
+
     def test_packageNotInPath(self):
+        """
+        If passed the path to a directory which represents a package which
+        is not on the import path, L{runner.filenameToModule} returns a
+        module object loosely resembling the package defined by that
+        directory anyway.
+        """
+        # "__init__" isn't actually the name of the package!  However,
+        # filenameToModule is pretty stupid and decides that is its name
+        # after all.  Make sure it gets cleaned up.  See the comment in
+        # test_moduleNotInPath for possible courses of action related to
+        # this.
+        self.addCleanup(sys.modules.pop, "__init__")
+
         self.mangleSysPath(self.oldPath)
-        package1 = runner.filenameToModule(os.path.join(self.parent,
-                                                        'goodpackage'))
+        package1 = runner.filenameToModule(
+            os.path.join(self.parent, 'goodpackage'))
         self.mangleSysPath(self.newPath)
         import goodpackage
         self.failUnlessEqual(os.path.splitext(goodpackage.__file__)[0],
                              os.path.splitext(package1.__file__)[0])
+
 
     def test_directoryNotPackage(self):
         self.failUnlessRaises(ValueError, runner.filenameToModule,
