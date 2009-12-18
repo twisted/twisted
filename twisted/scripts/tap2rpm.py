@@ -1,7 +1,7 @@
-# -*- test-case-name: twisted.scripts.test.test_tap2rpm -*-
+#  based off the tap2deb.py file
+#  tap2rpm.py built by Sean Reifschneider, <jafo@tummy.com>
 
-# Copyright (c) 2003-2009 Twisted Matrix Laboratories.
-# See LICENSE for details.
+#  TODO: need to implement log-file rotation
 
 import sys, os, shutil, time, glob
 
@@ -88,7 +88,7 @@ Summary:    %(description)s
 Name:       %(rpm_file)s
 Version:    %(version)s
 Release:    1
-License:    Unknown
+Copyright:  Unknown
 Group:      Networking/Daemons
 Source:     %(tarfile_basename)s
 BuildRoot:  /var/tmp/%%{name}-%%{version}-root
@@ -207,11 +207,11 @@ def makeBuildDir(baseDir):
 
 
 ##########
-def run(options=None):
+def run():
     #  parse options
     try:
         config = MyOptions()
-        config.parseOptions(options)
+        config.parseOptions()
     except usage.error, ue:
          sys.exit("%s: %s" % (sys.argv[0], ue))
 
@@ -271,8 +271,3 @@ def run(options=None):
     
     #  remove the build directory
     shutil.rmtree(tmp_dir)
-
-    return [
-            os.path.basename(rpm_path),
-            os.path.basename(srpm_path),
-        ]
