@@ -1,6 +1,5 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 Exceptions and errors for use in twisted.internet modules.
@@ -9,6 +8,14 @@ Maintainer: Itamar Shtull-Trauring
 """
 
 import socket
+
+# There is a cyclic dependency between reflect and deprecate.  Things only
+# work if reflect is imported first.  See #4166.
+import twisted.python.reflect
+
+from twisted.python import deprecate
+from twisted.python.versions import Version
+
 
 
 class BindError(Exception):
@@ -233,6 +240,8 @@ class PotentialZombieWarning(Warning):
     """
     Emitted when L{IReactorProcess.spawnProcess} is called in a way which may
     result in termination of the created child process not being reported.
+
+    Deprecated in Twisted 10.0.
     """
     MESSAGE = (
         "spawnProcess called, but the SIGCHLD handler is not "
@@ -241,6 +250,12 @@ class PotentialZombieWarning(Warning):
         "reactor.run(installSignalHandler=0). You will probably "
         "never see this process finish, and it may become a "
         "zombie process.")
+
+deprecate.deprecatedModuleAttribute(
+    Version("Twisted", 10, 0, 0),
+    "There is no longer any potential for zombie process.",
+    __name__,
+    "PotentialZombieWarning")
 
 
 

@@ -1111,6 +1111,11 @@ class _SignalReactorMixin:
 
         if platformType == 'posix':
             signal.signal(signal.SIGCHLD, self._handleSigchld)
+            # Also call the signal handler right now, in case we missed any
+            # signals before we installed it.  This should only happen if
+            # someone used spawnProcess before calling reactor.run (and the
+            # process also exited already).
+            self._handleSigchld(signal.SIGCHLD, None)
 
 
     def _handleSigchld(self, signum, frame, _threadSupport=platform.supportsThreads()):

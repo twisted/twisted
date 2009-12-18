@@ -12,7 +12,6 @@ Maintainer: Itamar Shtull-Trauring
 
 # System Imports
 import gc, os, sys, traceback, select, signal, errno
-import warnings
 
 try:
     import pty
@@ -24,7 +23,6 @@ try:
 except ImportError:
     fcntl = None
 
-from twisted.persisted import styles
 from twisted.python import log, failure
 from twisted.python.util import switchUID
 from twisted.internet import fdesc, abstract, error
@@ -266,15 +264,6 @@ class _BaseProcess(BaseProcess, object):
     """
     status = None
     pid = None
-
-    def __init__(self, protocol):
-        BaseProcess.__init__(self, protocol)
-        if not signal.getsignal(signal.SIGCHLD):
-            warnings.warn(
-                error.PotentialZombieWarning.MESSAGE,
-                error.PotentialZombieWarning,
-                stacklevel=4)
-
 
     def reapProcess(self):
         """
@@ -566,7 +555,13 @@ class Process(_BaseProcess):
                 self.proto.makeConnection(self)
         except:
             log.err()
+
+        # The reactor might not be running yet.  This might call back into
+        # processEnded synchronously, triggering an application-visible
+        # callback.  That's probably not ideal.  The replacement API for
+        # spawnProcess should improve upon this situation.
         registerReapProcessHandler(self.pid, self)
+
 
     def _setupChild(self, fdmap):
         """

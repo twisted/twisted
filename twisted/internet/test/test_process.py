@@ -7,28 +7,20 @@ Tests for implementations of L{IReactorProcess}.
 
 __metaclass__ = type
 
-import os
-import warnings, sys, signal
+import os, sys, signal, threading
 
+from twisted.trial.unittest import TestCase
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.compat import set
 from twisted.python.log import msg, err
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
-from twisted.python.failure import Failure
 from twisted.internet import utils
+from twisted.internet.interfaces import IReactorProcess
 from twisted.internet.defer import Deferred, succeed
 from twisted.internet.protocol import ProcessProtocol
-from twisted.internet.error import ProcessDone, PotentialZombieWarning
-from twisted.internet.error import ProcessTerminated
+from twisted.internet.error import ProcessDone, ProcessTerminated
 
-skipWindowsNopywin32 = None
-if platform.isWindows():
-    try:
-        import win32process
-    except ImportError:
-        skipWindowsNopywin32 = ("On windows, spawnProcess is not available "
-                                "in the absence of win32process.")
 
 class _ShutdownCallbackProcessProtocol(ProcessProtocol):
     """
@@ -45,75 +37,72 @@ class _ShutdownCallbackProcessProtocol(ProcessProtocol):
 
 
 class ProcessTestsBuilderBase(ReactorBuilder):
-    def spawnProcess(self, reactor):
-        """
-        Call C{reactor.spawnProcess} with some simple arguments.  Do this here
-        so that code object referenced by the stack frame has a C{co_filename}
-        attribute set to this file so that L{TestCase.assertWarns} can be used.
+    """
+    Base class for L{IReactorProcess} tests which defines some tests which
+    can be applied to PTY or non-PTY uses of C{spawnProcess}.
 
-        Return a L{Deferred} which fires when the process has exited.
+    Subclasses are expected to set the C{usePTY} attribute to C{True} or
+    C{False}.
+    """
+    requiredInterfaces = [IReactorProcess]
+
+    def test_spawnProcessEarlyIsReaped(self):
         """
-        onConnection = Deferred()
+        If, before the reactor is started with L{IReactorCore.run}, a
+        process is started with L{IReactorProcess.spawnProcess} and
+        terminates, the process is reaped once the reactor is started.
+        """
+        reactor = self.buildReactor()
+
+        # Create the process with no shared file descriptors, so that there
+        # are no other events for the reactor to notice and "cheat" with.
+        # We want to be sure it's really dealing with the process exiting,
+        # not some associated event.
+        if self.usePTY:
+            childFDs = None
+        else:
+            childFDs = {}
+
+        # Arrange to notice the SIGCHLD.
+        signaled = threading.Event()
+        def handler(*args):
+            signaled.set()
+        signal.signal(signal.SIGCHLD, handler)
+
+        # Start a process - before starting the reactor!
+        ended = Deferred()
         reactor.spawnProcess(
-            _ShutdownCallbackProcessProtocol(onConnection), sys.executable,
-            [sys.executable, "-c", ""], usePTY=self.usePTY)
-        return onConnection
+            _ShutdownCallbackProcessProtocol(ended), sys.executable,
+            [sys.executable, "-c", ""], usePTY=self.usePTY, childFDs=childFDs)
 
+        # Wait for the SIGCHLD (which might have been delivered before we got
+        # here, but that's okay because the signal handler was installed above,
+        # before we could have gotten it).
+        signaled.wait(120)
+        if not signaled.isSet():
+            self.fail("Timed out waiting for child process to exit.")
 
-    def test_spawnProcessTooEarlyWarns(self):
-        """
-        C{reactor.spawnProcess} emits a warning if it is called before
-        C{reactor.run}.
+        # Capture the processEnded callback.
+        result = []
+        ended.addCallback(result.append)
 
-        If you can figure out a way to make it safe to run
-        C{reactor.spawnProcess} before C{reactor.run}, you may delete the
-        warning and this test.
-        """
-        reactor = self.buildReactor()
-        whenFinished = self.assertWarns(
-            PotentialZombieWarning,
-            PotentialZombieWarning.MESSAGE, __file__,
-            self.spawnProcess, reactor)
+        if result:
+            # The synchronous path through spawnProcess / Process.__init__ /
+            # registerReapProcessHandler was encountered.  There's no reason to
+            # start the reactor, because everything is done already.
+            return
 
-        def check():
-            # Handle the exact problem the warning we're testing for is about.
-            # If the SIGCHLD arrives before we install our SIGCHLD handler,
-            # we'll never see the process exit.  So after the SIGCHLD handler
-            # is installed, try to reap children, just in case.
-            from twisted.internet.process import reapAllProcesses
-            reapAllProcesses()
-        reactor.callWhenRunning(check)
-
-        # Now wait for the process to exit before finishing the test.  If we
-        # don't do this, tearDown might close the PTY before the child is done
-        # with it.
-        whenFinished.addCallback(
-            lambda ignored: reactor.callWhenRunning(reactor.stop))
-
+        # Otherwise, though, start the reactor so it can tell us the process
+        # exited.
+        ended.addCallback(lambda ignored: reactor.stop())
         self.runReactor(reactor)
 
-
-    def test_callWhenRunningSpawnProcessWarningFree(self):
-        """
-        L{PotentialZombieWarning} is not emitted when the reactor is run after
-        C{reactor.callWhenRunning(reactor.spawnProcess, ...)} has been called.
-        """
-        reactor = self.buildReactor()
-        def spawnProcess():
-            whenFinished = self.spawnProcess(reactor)
-            # Wait for the process to exit before finishing the test.  If we
-            # don't do this, tearDown might close the PTY before the child is
-            # done with it.
-            whenFinished.addCallback(lambda ign: reactor.stop())
-        reactor.callWhenRunning(spawnProcess)
-        self.runReactor(reactor)
-        self.assertEqual(self.flushWarnings(), [])
-
+        # Make sure the reactor stopped because the Deferred fired.
+        self.assertTrue(result)
 
     if getattr(signal, 'SIGCHLD', None) is None:
-        skipMsg = "No SIGCHLD, no zombies possible."
-        test_spawnProcessTooEarlyWarns.skip = skipMsg
-        test_callWhenRunningSpawnProcessWarningFree.skip = skipMsg
+        test_spawnProcessEarlyIsReaped.skip = (
+            "Platform lacks SIGCHLD, early-spawnProcess test can't work.")
 
 
     def test_processExitedWithSignal(self):
@@ -442,10 +431,6 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
 
         reactor.callWhenRunning(spawnChild)
         self.runReactor(reactor)
-
-
-
-ProcessTestsBuilder.skip = skipWindowsNopywin32
 globals().update(ProcessTestsBuilder.makeTestCaseClasses())
 
 
@@ -463,6 +448,28 @@ class PTYProcessTestsBuilder(ProcessTestsBuilderBase):
         skippedReactors = {
             "twisted.internet.pollreactor.PollReactor":
                 "OS X's poll() does not support PTYs"}
-
-
 globals().update(PTYProcessTestsBuilder.makeTestCaseClasses())
+
+
+
+class PotentialZombieWarningTests(TestCase):
+    """
+    Tests for L{twisted.internet.error.PotentialZombieWarning}.
+    """
+    def test_deprecated(self):
+        """
+        Accessing L{PotentialZombieWarning} via the
+        I{PotentialZombieWarning} attribute of L{twisted.internet.error}
+        results in a deprecation warning being emitted.
+        """
+        from twisted.internet import error
+        error.PotentialZombieWarning
+
+        warnings = self.flushWarnings([self.test_deprecated])
+        self.assertEquals(warnings[0]['category'], DeprecationWarning)
+        self.assertEquals(
+            warnings[0]['message'],
+            "twisted.internet.error.PotentialZombieWarning was deprecated in "
+            "Twisted 10.0.0: There is no longer any potential for zombie "
+            "process.")
+        self.assertEquals(len(warnings), 1)

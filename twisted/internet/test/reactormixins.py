@@ -32,6 +32,9 @@ class ReactorBuilder:
     @cvar skippedReactors: A dict mapping FQPN strings of reactors for
         which the tests defined by this class will be skipped to strings
         giving the skip message.
+    @cvar requiredInterfaces: A C{list} of interfaces which the reactor must
+        provide or these tests will be skipped.  The default, C{None}, means
+        that no interfaces are required.
     @ivar reactorFactory: A no-argument callable which returns the reactor to
         use for testing.
     @ivar originalHandler: The SIGCHLD handler which was installed when setUp
