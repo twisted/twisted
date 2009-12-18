@@ -538,7 +538,8 @@ class DummyChecker:
         'testuser': 'testpassword'
     }
 
-    credentialInterfaces = (cred.credentials.IUsernameHashedPassword,)
+    credentialInterfaces = (cred.credentials.IUsernamePassword,
+                            cred.credentials.IUsernameHashedPassword)
 
     def requestAvatarId(self, credentials):
         return defer.maybeDeferred(
@@ -583,7 +584,12 @@ class DummyRealm:
 
 
 class AuthTestCase(unittest.TestCase, LoopbackMixin):
-    def testAuth(self):
+    def test_crammd5Auth(self):
+        """
+        L{ESMTPClient} can authenticate using the I{CRAM-MD5} SASL mechanism.
+
+        @see: U{http://tools.ietf.org/html/rfc2195}
+        """
         realm = DummyRealm()
         p = cred.portal.Portal(realm)
         p.registerChecker(DummyChecker())
@@ -592,12 +598,64 @@ class AuthTestCase(unittest.TestCase, LoopbackMixin):
         server.portal = p
         client = MyESMTPClient('testpassword')
 
-        cAuth = imap4.CramMD5ClientAuthenticator('testuser')
+        cAuth = smtp.CramMD5ClientAuthenticator('testuser')
         client.registerAuthenticator(cAuth)
 
         d = self.loopback(server, client)
         d.addCallback(lambda x : self.assertEquals(server.authenticated, 1))
         return d
+
+
+    def test_loginAuth(self):
+        """
+        L{ESMTPClient} can authenticate using the I{LOGIN} SASL mechanism.
+
+        @see: U{http://sepp.oetiker.ch/sasl-2.1.19-ds/draft-murchison-sasl-login-00.txt}
+        """
+        realm = DummyRealm()
+        p = cred.portal.Portal(realm)
+        p.registerChecker(DummyChecker())
+
+        server = DummyESMTP({'LOGIN': imap4.LOGINCredentials})
+        server.portal = p
+        client = MyESMTPClient('testpassword')
+
+        cAuth = smtp.LOGINAuthenticator('testuser')
+        client.registerAuthenticator(cAuth)
+
+        d = self.loopback(server, client)
+        d.addCallback(lambda x: self.assertTrue(server.authenticated))
+        return d
+
+
+    def test_loginAgainstWeirdServer(self):
+        """
+        When communicating with a server which implements the I{LOGIN} SASL
+        mechanism using C{"Username:"} as the challenge (rather than C{"User
+        Name\\0"}), L{ESMTPClient} can still authenticate successfully using
+        the I{LOGIN} mechanism.
+        """
+        realm = DummyRealm()
+        p = cred.portal.Portal(realm)
+        p.registerChecker(DummyChecker())
+
+        class WeirdLOGIN(imap4.LOGINCredentials):
+            def __init__(self):
+                imap4.LOGINCredentials.__init__(self)
+                self.challenges[1] = 'Username:'
+
+        server = DummyESMTP({'LOGIN': WeirdLOGIN})
+        server.portal = p
+
+        client = MyESMTPClient('testpassword')
+        cAuth = smtp.LOGINAuthenticator('testuser')
+        client.registerAuthenticator(cAuth)
+
+        d = self.loopback(server, client)
+        d.addCallback(lambda x: self.assertTrue(server.authenticated))
+        return d
+
+
 
 class SMTPHelperTestCase(unittest.TestCase):
     def testMessageID(self):
@@ -1301,6 +1359,7 @@ class ESMTPAuthenticationTestCase(unittest.TestCase):
         self.assertServerResponse('\r\n', [])
         self.assertServerAuthenticated(loginArgs, password='')
 
+
     def test_plainAuthenticationInitialResponse(self):
         """
         The response to the first challenge may be included on the AUTH command
@@ -1370,6 +1429,36 @@ class ESMTPAuthenticationTestCase(unittest.TestCase):
             ['501 Syntax error in parameters or arguments'])
 
         self.assertEqual(loginArgs, [])
+
+
+    def test_unexpectedLoginFailure(self):
+        """
+        If the L{Deferred} returned by L{Portal.login} fires with an
+        exception of any type other than L{UnauthorizedLogin}, the exception
+        is logged and the client is informed that the authentication attempt
+        has failed.
+        """
+        loginArgs = []
+        self.server.portal = self.portalFactory(loginArgs)
+
+        self.server.dataReceived('EHLO\r\n')
+        self.transport.clear()
+
+        self.assertServerResponse(
+            'AUTH LOGIN ' + 'username'.encode('base64').strip() + '\r\n',
+            ['334 ' + 'Password\0'.encode('base64').strip()])
+        self.assertServerResponse(
+            'password'.encode('base64').strip() + '\r\n',
+            [])
+
+        d, credentials, mind, interfaces = loginArgs.pop()
+        d.errback(RuntimeError("Something wrong with the server"))
+
+        self.assertEquals(
+            '451 Requested action aborted: local error in processing\r\n',
+            self.transport.value())
+
+        self.assertEquals(len(self.flushLoggedErrors(RuntimeError)), 1)
 
 
 

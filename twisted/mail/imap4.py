@@ -4196,6 +4196,8 @@ class IClientAuthentication(Interface):
     def challengeResponse(secret, challenge):
         """Generate a challenge response string"""
 
+
+
 class CramMD5ClientAuthenticator:
     implements(IClientAuthentication)
 
@@ -4208,6 +4210,8 @@ class CramMD5ClientAuthenticator:
     def challengeResponse(self, secret, chal):
         response = hmac.HMAC(secret, chal).hexdigest()
         return '%s %s' % (self.user, response)
+
+
 
 class LOGINAuthenticator:
     implements(IClientAuthentication)

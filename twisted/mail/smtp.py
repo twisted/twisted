@@ -1396,13 +1396,10 @@ class ESMTPClient(SMTPClient):
         self.sendLine('AUTH PLAIN ' + challenge)
 
     def esmtpState_challenge(self, code, resp):
-        auth = self._authinfo
-        del self._authinfo
-        self._authResponse(auth, resp)
+        self._authResponse(self._authinfo, resp)
 
     def _authResponse(self, auth, challenge):
         self._failresponse = self.esmtpAUTHDeclined
-
         try:
             challenge = base64.decodestring(challenge)
         except binascii.Error, e:
@@ -1412,14 +1409,25 @@ class ESMTPClient(SMTPClient):
             self._failresponse = self.esmtpAUTHMalformedChallenge
         else:
             resp = auth.challengeResponse(self.secret, challenge)
-            self._expected = [235]
-            self._okresponse = self.smtpState_from
+            self._expected = [235, 334]
+            self._okresponse = self.smtpState_maybeAuthenticated
             self.sendLine(encode_base64(resp, eol=""))
 
-        if auth.getName() == "LOGIN" and challenge == "Username:":
-            self._expected = [334]
-            self._authinfo = auth
-            self._okresponse = self.esmtpState_challenge
+
+    def smtpState_maybeAuthenticated(self, code, resp):
+        """
+        Called to handle the next message from the server after sending a
+        response to a SASL challenge.  The server response might be another
+        challenge or it might indicate authentication has succeeded.
+        """
+        if code == 235:
+            # Yes, authenticated!
+            del self._authinfo
+            self.smtpState_from(code, resp)
+        else:
+            # No, not authenticated yet.  Keep trying.
+            self._authResponse(self._authinfo, resp)
+
 
 
 class ESMTP(SMTP):
@@ -1536,7 +1544,7 @@ class ESMTP(SMTP):
         if reason.check(cred.error.UnauthorizedLogin):
             self.sendCode(535, 'Authentication failed')
         else:
-            log.err(failure, "SMTP authentication failure")
+            log.err(reason, "SMTP authentication failure")
             self.sendCode(
                 451,
                 'Requested action aborted: local error in processing')
@@ -1727,45 +1735,9 @@ class SMTPSenderFactory(protocol.ClientFactory):
         return p
 
 
-class IClientAuthentication(Interface):
-    def getName():
-        """Return an identifier associated with this authentication scheme.
 
-        @rtype: C{str}
-        """
-
-    def challengeResponse(secret, challenge):
-        """Generate a challenge response string"""
-
-
-class CramMD5ClientAuthenticator:
-    implements(IClientAuthentication)
-
-    def __init__(self, user):
-        self.user = user
-
-    def getName(self):
-        return "CRAM-MD5"
-
-    def challengeResponse(self, secret, chal):
-        response = hmac.HMAC(secret, chal).hexdigest()
-        return '%s %s' % (self.user, response)
-
-
-class LOGINAuthenticator:
-    implements(IClientAuthentication)
-
-    def __init__(self, user):
-        self.user = user
-
-    def getName(self):
-        return "LOGIN"
-
-    def challengeResponse(self, secret, chal):
-        if chal== "Username:":
-            return self.user
-        elif chal == 'Password:':
-            return secret
+from twisted.mail.imap4 import IClientAuthentication
+from twisted.mail.imap4 import CramMD5ClientAuthenticator, LOGINAuthenticator
 
 class PLAINAuthenticator:
     implements(IClientAuthentication)
@@ -1781,6 +1753,7 @@ class PLAINAuthenticator:
            return "%s\0%s\0%s" % (self.user, self.user, secret)
         else:
            return "%s\0%s" % (self.user, secret)
+
 
 
 class ESMTPSender(SenderMixin, ESMTPClient):
