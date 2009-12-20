@@ -869,6 +869,20 @@ class PluggableReactorTestCase(unittest.TestCase):
     test_qtStub.skip = skipWindowsNopywin32
 
 
+    def test_importQtreactor(self):
+        """
+        Attempting to import L{twisted.internet.qtreactor} should raise an
+        C{ImportError} indicating that C{qtreactor} is no longer a part of
+        Twisted.
+        """
+        sys.modules["qtreactor"] = None
+        from twisted.plugins.twisted_qtstub import errorMessage
+        try:
+            import twisted.internet.qtreactor
+        except ImportError, e:
+            self.assertEquals(e.message, errorMessage)
+
+
 
 class ReportProfileTestCase(unittest.TestCase):
     """
