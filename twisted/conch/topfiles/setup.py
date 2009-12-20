@@ -1,4 +1,4 @@
-# Copyright (c) 2008 Twisted Matrix Laboratories.
+# Copyright (c) 2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import sys
@@ -34,7 +34,7 @@ if __name__ == '__main__':
         twisted_subproject="conch",
         scripts=dist.getScripts("conch"),
         # metadata
-        name="Conch",
+        name="Twisted Conch",
         description="Twisted SSHv2 implementation.",
         author="Twisted Matrix Laboratories",
         author_email="twisted-python@twistedmatrix.com",
