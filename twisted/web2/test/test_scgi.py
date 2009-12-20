@@ -1,3 +1,5 @@
+import StringIO
+
 from twisted.trial import unittest
 
 from twisted.internet import defer
@@ -9,6 +11,7 @@ from twisted.web2.test.test_http import TestClient, HTTPTests, TestRequest
 from twisted.web2.test.test_client import TestServer, ClientTests
 from twisted.web2.test.test_server import SimpleRequest
 
+from twisted.web2.channel import scgi
 from twisted.web2 import server
 from twisted.web2 import http_headers
 from twisted.web2 import stream
@@ -105,3 +108,38 @@ class SCGIClientTests(SCGITests, ClientTests):
                                    '42'])
         
         return d
+
+
+
+class TestSCGIChannelRequest(unittest.TestCase):
+    """
+    Test the L{SCGIChannelRequest} class directly.
+    """
+
+
+    def test_trivialHeadersAreCRLFSeparated(self):
+        """
+        HTTP headers must always be CR LF separated. The simplest possible
+        header section is a status header.
+        """
+
+        class FakeTransport:
+            """
+            Fake transport that implements just enough to handle an
+            L{SCGIChannelRequest.writeHeaders} call.
+            """
+
+            def __init__(self, stream):
+                self._stream = stream
+
+            def writeSequence(self, data):
+                for datum in data:
+                    self._stream.write(datum)
+
+        request = scgi.SCGIChannelRequest()
+        outputStream = StringIO.StringIO()
+        transport = FakeTransport(outputStream)
+        request.transport = transport
+        request.writeHeaders(200, None)
+        headerData = outputStream.getvalue()
+        self.assertEquals("Status: 200 OK\r\n\r\n", headerData)

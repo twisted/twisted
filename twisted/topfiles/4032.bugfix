@@ -1,0 +1,2 @@
+twisted.web2.channel.scgi now uses consistent line separators, fixing display
+issues when used with lighttpd.

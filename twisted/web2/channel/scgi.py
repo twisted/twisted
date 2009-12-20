@@ -15,7 +15,7 @@ class SCGIChannelRequest(cgichannel.BaseCGIChannelRequest):
         l = []
         code_message = responsecode.RESPONSES.get(code, "Unknown Status")
         
-        l.append("Status: %s %s\n" % (code, code_message))
+        l.append("Status: %s %s\r\n" % (code, code_message))
         if headers is not None:
             for name, valuelist in headers.getAllRawHeaders():
                 for value in valuelist:
