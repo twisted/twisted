@@ -1,4 +1,4 @@
-# Copyright (c) 2008 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -661,4 +661,11 @@ class DigestAuthTests(TestCase):
                 preHA1=preHA1)
 
 
-
+    def test_noNewlineOpaque(self):
+        """
+        L{DigestCredentialFactory._generateOpaque} returns a value without
+        newlines, regardless of the length of the nonce.
+        """
+        opaque = self.credentialFactory._generateOpaque(
+            "long nonce " * 10, None)
+        self.assertNotIn('\n', opaque)

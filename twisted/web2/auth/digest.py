@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.web2.test.test_httpauth -*-
-# Copyright (c) 2006-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2006-2009 Twisted Matrix Laboratories.
 
 """
 Implementation of RFC2617: HTTP Digest Authentication
@@ -231,7 +231,7 @@ class DigestCredentialFactory(object):
         key = "%s,%s,%s" % (nonce, clientip, str(int(self._getTime())))
         digest = md5(key + self.privateKey).hexdigest()
         ekey = key.encode('base64')
-        return "%s-%s" % (digest, ekey.strip('\n'))
+        return "%s-%s" % (digest, ekey.replace('\n', ''))
 
     def verifyOpaque(self, opaque, nonce, clientip):
         """

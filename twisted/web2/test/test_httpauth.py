@@ -1,4 +1,4 @@
-# Copyright (c) 2006-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2006-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 from twisted.python.hashlib import md5
@@ -430,6 +430,17 @@ class DigestAuthTestCase(unittest.TestCase):
                 "cnonce",
                 preHA1=preHA1
                 )
+
+
+    def test_noNewlineOpaque(self):
+        """
+        L{digest.DigestCredentialFactory._generateOpaque} returns a value
+        without newlines, regardless of the length of the nonce.
+        """
+        opaque = self.credentialFactory.generateOpaque(
+            "long nonce " * 10, None)
+        self.assertNotIn('\n', opaque)
+
 
 
 from zope.interface import implements

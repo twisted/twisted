@@ -242,7 +242,7 @@ class DigestCredentialFactory(object):
         key = "%s,%s,%s" % (nonce, clientip, now)
         digest = md5(key + self.privateKey).hexdigest()
         ekey = key.encode('base64')
-        return "%s-%s" % (digest, ekey.strip('\n'))
+        return "%s-%s" % (digest, ekey.replace('\n', ''))
 
 
     def _verifyOpaque(self, opaque, nonce, clientip):
