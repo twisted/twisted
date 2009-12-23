@@ -178,8 +178,8 @@ _arguments -s -A "-*" \
 "(-l)--logfile=[Path to web CLF (Combined Log Format) log file.]:logfile:_files -g '*.log'" \
 '(--mime-type)-m[Specify the default mime-type for static files.]:mime-type:_files' \
 '(-m)--mime-type=[Specify the default mime-type for static files.]:mime-type:_files' \
-'(--notracebacks)-n[Display tracebacks in broken web pages. Displaying tracebacks to users may be security risk!]' \
-'(-n)--notracebacks[Display tracebacks in broken web pages. Displaying tracebacks to users may be security risk!]' \
+'(--notracebacks)-n[Do not display tracebacks in broken web pages. Displaying tracebacks to users may be security risk!]' \
+'(-n)--notracebacks[Do not display tracebacks in broken web pages. Displaying tracebacks to users may be security risk!]' \
 '--path=[<path> is either a specific file or a directory to]:path:_files' \
 '--personal[Instead of generating a webserver, generate a ResourcePublisher which listens on ~/.twistd-web-pb]' \
 '(--port)-p[Port to start the server on.]:port:_files' \

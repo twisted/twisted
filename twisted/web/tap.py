@@ -34,7 +34,7 @@ class Options(usage.Options):
                  "ResourcePublisher which listens on  the port given by "
                  "--port, or ~/%s " % (distrib.UserDirectory.userSocketName,) +
                  "if --port is not specified."],
-                ["notracebacks", "n", "Display tracebacks in broken web pages. " +
+                ["notracebacks", "n", "Do not display tracebacks in broken web pages. " +
                  "Displaying tracebacks to users may be security risk!"],
                 ]
 
