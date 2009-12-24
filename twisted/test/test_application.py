@@ -13,7 +13,6 @@ from twisted.trial import unittest, util
 from twisted.application import service, internet, app
 from twisted.persisted import sob
 from twisted.python import usage
-from twisted.python.util import sibpath
 from twisted.python.runtime import platform
 from twisted.internet import interfaces, defer
 from twisted.protocols import wire, basic
@@ -851,22 +850,6 @@ class PluggableReactorTestCase(unittest.TestCase):
                                ['--reactor', 'fakereactortest', 'subcommand'])
         self.assertIn(message, e.args[0])
         self.assertIn("help-reactors", e.args[0])
-
-
-    def test_qtStub(self):
-        """
-        Test that installing qtreactor when it's absent fails properly.
-        """
-        scriptPath = sibpath(__file__, "app_qtstub.py")
-        def _checkOutput((output, err, code)):
-            self.failIf(output, output)
-        result = getProcessOutputAndValue(
-            sys.executable,
-            args=(sys.executable, scriptPath),
-            env=None)
-        result.addCallback(_checkOutput)
-        return result
-    test_qtStub.skip = skipWindowsNopywin32
 
 
 
