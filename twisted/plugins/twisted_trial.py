@@ -51,3 +51,9 @@ Timing = _Reporter("Timing Reporter",
                    shortOpt=None,
                    klass="TimingTextReporter")
 
+Subunit = _Reporter("Subunit Reporter",
+                    "twisted.trial.reporter",
+                    description="subunit output",
+                    longOpt="subunit",
+                    shortOpt=None,
+                    klass="SubunitReporter")

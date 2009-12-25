@@ -1277,6 +1277,7 @@ class UnsupportedTrialFeature(Exception):
     """A feature of twisted.trial was used that pyunit cannot support."""
 
 
+
 class PyUnitResultAdapter(object):
     """
     Wrap a C{TestResult} from the standard library's C{unittest} so that it
@@ -1292,10 +1293,7 @@ class PyUnitResultAdapter(object):
         self.original = original
 
     def _exc_info(self, err):
-        if isinstance(err, failure.Failure):
-            # Unwrap the Failure into a exc_info tuple.
-            err = (err.type, err.value, err.getTracebackObject())
-        return err
+        return util.excInfoOrFailureToExcInfo(err)
 
     def startTest(self, method):
         self.original.startTest(method)

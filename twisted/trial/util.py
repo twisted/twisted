@@ -209,6 +209,21 @@ class _Janitor(object):
         return selectableStrings
 
 
+def excInfoOrFailureToExcInfo(err):
+    """
+    Coerce a Failure to an _exc_info, if err is a Failure.
+
+    @param err: Either a tuple such as returned by L{sys.exc_info} or a
+        L{Failure} object.
+    @return: A tuple like the one returned by L{sys.exc_info}. e.g.
+        C{exception_type, exception_object, traceback_object}.
+    """
+    if isinstance(err, Failure):
+        # Unwrap the Failure into a exc_info tuple.
+        err = (err.type, err.value, err.getTracebackObject())
+    return err
+
+
 def suppress(action='ignore', **kwarg):
     """
     Sets up the .suppress tuple properly, pass options to this method as you
@@ -360,4 +375,4 @@ _runSequentially = defer.deferredGenerator(_runSequentially)
 
 
 __all__ = ['FailureError', 'DirtyReactorWarning', 'DirtyReactorError',
-           'PendingTimedCallsError']
+           'PendingTimedCallsError', 'excInfoOrFailureToExcInfo']

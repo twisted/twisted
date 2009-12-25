@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 #
 # Maintainer: Jonathan Lange
@@ -812,7 +812,19 @@ class TestTreeReporter(unittest.TestCase):
         self.assertEqual([], self.result._getPreludeSegments('foo'))
 
 
-class TestReporter(unittest.TestCase):
+
+class TestReporterInterface(unittest.TestCase):
+    """
+    Tests for the bare interface of a trial reporter.
+
+    Subclass this test case and provide a different 'resultFactory' to test
+    that a particular reporter implementation will work with the rest of
+    Trial.
+
+    @cvar resultFactory: A callable that returns a reporter to be tested. The
+        callable must take the same parameters as L{reporter.Reporter}.
+    """
+
     resultFactory = reporter.Reporter
 
     def setUp(self):
@@ -821,12 +833,77 @@ class TestReporter(unittest.TestCase):
         self.stream = StringIO.StringIO()
         self.publisher = log.LogPublisher()
         self.result = self.resultFactory(self.stream, publisher=self.publisher)
+
+
+    def test_shouldStopInitiallyFalse(self):
+        """
+        shouldStop is False to begin with.
+        """
+        self.assertEquals(False, self.result.shouldStop)
+
+
+    def test_shouldStopTrueAfterStop(self):
+        """
+        shouldStop becomes True soon as someone calls stop().
+        """
+        self.result.stop()
+        self.assertEquals(True, self.result.shouldStop)
+
+
+    def test_wasSuccessfulInitiallyTrue(self):
+        """
+        wasSuccessful() is True when there have been no results reported.
+        """
+        self.assertEquals(True, self.result.wasSuccessful())
+
+
+    def test_wasSuccessfulTrueAfterSuccesses(self):
+        """
+        wasSuccessful() is True when there have been only successes, False
+        otherwise.
+        """
+        self.result.addSuccess(self.test)
+        self.assertEquals(True, self.result.wasSuccessful())
+
+
+    def test_wasSuccessfulFalseAfterErrors(self):
+        """
+        wasSuccessful() becomes False after errors have been reported.
+        """
+        try:
+            1 / 0
+        except ZeroDivisionError:
+            self.result.addError(self.test, sys.exc_info())
+        self.assertEquals(False, self.result.wasSuccessful())
+
+
+    def test_wasSuccessfulFalseAfterFailures(self):
+        """
+        wasSuccessful() becomes False after failures have been reported.
+        """
+        try:
+            self.fail("foo")
+        except self.failureException:
+            self.result.addFailure(self.test, sys.exc_info())
+        self.assertEquals(False, self.result.wasSuccessful())
+
+
+
+class TestReporter(TestReporterInterface):
+    """
+    Tests for the base L{reporter.Reporter} class.
+    """
+
+    def setUp(self):
+        TestReporterInterface.setUp(self)
         self._timer = 0
         self.result._getTime = self._getTime
+
 
     def _getTime(self):
         self._timer += 1
         return self._timer
+
 
     def test_startStop(self):
         self.result.startTest(self.test)
@@ -846,7 +923,6 @@ class TestReporter(unittest.TestCase):
         self.stream.truncate(0)
         result._writeln("Hello %s!", 'World')
         self.assertEqual(self.stream.getvalue(), 'Hello World!\n')
-
 
 
     def test_printErrorsDeprecated(self):
@@ -944,7 +1020,6 @@ class TestReporter(unittest.TestCase):
                 filename, lineno, category.split('.')[-1], message))
 
 
-
     def test_duplicateWarningSuppressed(self):
         """
         A warning emitted twice within a single test is only written to the
@@ -1017,6 +1092,216 @@ class TestSafeStream(unittest.TestCase):
         safe = reporter.SafeStream(broken)
         safe.write("Hello")
         self.assertEqual(stream.getvalue(), "Hello")
+
+
+
+class TestSubunitReporter(TestReporterInterface):
+    """
+    Tests for the subunit reporter.
+
+    This just tests that the subunit reporter implements the basic interface.
+    """
+
+    resultFactory = reporter.SubunitReporter
+
+
+    def setUp(self):
+        if reporter.TestProtocolClient is None:
+            raise SkipTest(
+                "Subunit not installed, cannot test SubunitReporter")
+        TestReporterInterface.setUp(self)
+
+
+    def assertForwardsToSubunit(self, methodName, *args, **kwargs):
+        """
+        Assert that 'methodName' on L{SubunitReporter} forwards to the
+        equivalent method on subunit.
+
+        Checks that the return value from subunit is returned from the
+        L{SubunitReporter} and that the reporter writes the same data to its
+        stream as subunit does to its own.
+
+        Assumes that the method on subunit has the same name as the method on
+        L{SubunitReporter}.
+        """
+        stream = StringIO.StringIO()
+        subunitClient = reporter.TestProtocolClient(stream)
+        subunitReturn = getattr(subunitClient, methodName)(*args, **kwargs)
+        subunitOutput = stream.getvalue()
+        reporterReturn = getattr(self.result, methodName)(*args, **kwargs)
+        self.assertEquals(subunitReturn, reporterReturn)
+        self.assertEquals(subunitOutput, self.stream.getvalue())
+
+
+    def test_subunitWithoutAddExpectedFailureInstalled(self):
+        """
+        Some versions of subunit don't have "addExpectedFailure". For these
+        versions, we report expected failures as successes.
+        """
+        try:
+            addExpectedFailure = reporter.TestProtocolClient.addExpectedFailure
+        except AttributeError:
+            # Then we've actually got one of those old versions installed, and
+            # the test is immediately applicable.
+            pass
+        else:
+            del reporter.TestProtocolClient.addExpectedFailure
+            self.addCleanup(
+                setattr, reporter.TestProtocolClient, 'addExpectedFailure',
+                addExpectedFailure)
+        try:
+            1 / 0
+        except ZeroDivisionError:
+            self.result.addExpectedFailure(self.test, sys.exc_info(), "todo")
+        expectedFailureOutput = self.stream.getvalue()
+        self.stream.truncate(0)
+        self.result.addSuccess(self.test)
+        successOutput = self.stream.getvalue()
+        self.assertEquals(successOutput, expectedFailureOutput)
+
+
+    def test_subunitWithoutAddSkipInstalled(self):
+        """
+        Some versions of subunit don't have "addSkip". For these versions, we
+        report skips as successes.
+        """
+        try:
+            addSkip = reporter.TestProtocolClient.addSkip
+        except AttributeError:
+            # Then we've actually got one of those old versions installed, and
+            # the test is immediately applicable.
+            pass
+        else:
+            del reporter.TestProtocolClient.addSkip
+            self.addCleanup(
+                setattr, reporter.TestProtocolClient, 'addSkip', addSkip)
+        self.result.addSkip(self.test, "reason")
+        skipOutput = self.stream.getvalue()
+        self.stream.truncate(0)
+        self.result.addSuccess(self.test)
+        successOutput = self.stream.getvalue()
+        self.assertEquals(successOutput, skipOutput)
+
+
+    def test_addExpectedFailurePassedThrough(self):
+        """
+        Some versions of subunit have "addExpectedFailure". For these
+        versions, when we call 'addExpectedFailure' on the test result, we
+        pass the error and test through to the subunit client.
+        """
+        addExpectedFailureCalls = []
+        def addExpectedFailure(test, error):
+            addExpectedFailureCalls.append((test, error))
+
+        # Provide our own addExpectedFailure, whether or not the locally
+        # installed subunit has addExpectedFailure.
+        self.result._subunit.addExpectedFailure = addExpectedFailure
+        try:
+            1 / 0
+        except ZeroDivisionError:
+            exc_info = sys.exc_info()
+            self.result.addExpectedFailure(self.test, exc_info, 'todo')
+        self.assertEquals(addExpectedFailureCalls, [(self.test, exc_info)])
+
+
+    def test_addSkipSendsSubunitAddSkip(self):
+        """
+        Some versions of subunit have "addSkip". For these versions, when we
+        call 'addSkip' on the test result, we pass the test and reason through
+        to the subunit client.
+        """
+        addSkipCalls = []
+        def addSkip(test, reason):
+            addSkipCalls.append((test, reason))
+
+        # Provide our own addSkip, whether or not the locally-installed
+        # subunit has addSkip.
+        self.result._subunit.addSkip = addSkip
+        self.result.addSkip(self.test, 'reason')
+        self.assertEquals(addSkipCalls, [(self.test, 'reason')])
+
+
+    def test_doneDoesNothing(self):
+        """
+        The subunit reporter doesn't need to print out a summary -- the stream
+        of results is everything. Thus, done() does nothing.
+        """
+        self.result.done()
+        self.assertEquals('', self.stream.getvalue())
+
+
+    def test_startTestSendsSubunitStartTest(self):
+        """
+        SubunitReporter.startTest() sends the subunit 'startTest' message.
+        """
+        self.assertForwardsToSubunit('startTest', self.test)
+
+
+    def test_stopTestSendsSubunitStopTest(self):
+        """
+        SubunitReporter.stopTest() sends the subunit 'stopTest' message.
+        """
+        self.assertForwardsToSubunit('stopTest', self.test)
+
+
+    def test_addSuccessSendsSubunitAddSuccess(self):
+        """
+        SubunitReporter.addSuccess() sends the subunit 'addSuccess' message.
+        """
+        self.assertForwardsToSubunit('addSuccess', self.test)
+
+
+    def test_addErrorSendsSubunitAddError(self):
+        """
+        SubunitReporter.addError() sends the subunit 'addError' message.
+        """
+        try:
+            1 / 0
+        except ZeroDivisionError:
+            error = sys.exc_info()
+        self.assertForwardsToSubunit('addError', self.test, error)
+
+
+    def test_addFailureSendsSubunitAddFailure(self):
+        """
+        SubunitReporter.addFailure() sends the subunit 'addFailure' message.
+        """
+        try:
+            self.fail('hello')
+        except self.failureException:
+            failure = sys.exc_info()
+        self.assertForwardsToSubunit('addFailure', self.test, failure)
+
+
+    def test_addUnexpectedSuccessSendsSubunitAddSuccess(self):
+        """
+        SubunitReporter.addFailure() sends the subunit 'addSuccess' message,
+        since subunit doesn't model unexpected success.
+        """
+        stream = StringIO.StringIO()
+        subunitClient = reporter.TestProtocolClient(stream)
+        subunitClient.addSuccess(self.test)
+        subunitOutput = stream.getvalue()
+        self.result.addUnexpectedSuccess(self.test, 'todo')
+        self.assertEquals(subunitOutput, self.stream.getvalue())
+
+
+
+class TestSubunitReporterNotInstalled(unittest.TestCase):
+    """
+    Test behaviour when the subunit reporter is not installed.
+    """
+
+    def test_subunitNotInstalled(self):
+        """
+        If subunit is not installed, TestProtocolClient will be None, and
+        SubunitReporter will raise an error when you try to construct it.
+        """
+        stream = StringIO.StringIO()
+        self.patch(reporter, 'TestProtocolClient', None)
+        e = self.assertRaises(Exception, reporter.SubunitReporter, stream)
+        self.assertEquals("Subunit not available", str(e))
+
 
 
 class TestTimingReporter(TestReporter):

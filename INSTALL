@@ -11,6 +11,9 @@ Requirements
       http://sourceforge.net/project/showfiles.php?group_id=78018
   The Windows IOCP reactor requires pywin32 build 205 or later.
 
+  If you would like to use Trial's subunit reporter, then you will need to
+  install Subunit 0.0.2 or later (https://launchpad.net/subunit).
+
 Installation
 
   * Debian and Ubuntu
