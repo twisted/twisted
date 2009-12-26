@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -7,12 +7,46 @@ An error to represent bad things happening in Conch.
 Maintainer: Paul Swartz
 """
 
+import warnings
 from twisted.cred.error import UnauthorizedLogin
 
 
 
+class GeneralConchError(Exception):
+    """
+    Raised as a general conch exception if a more specific exception doesn't
+    exist.
+
+    @type errorMessage: C{str}
+    @ivar errorMessage: textual information about the error.
+
+    @type code: C{int}
+    @ivar code: the error code.
+    """
+    def __init__(self, errorMessage, code=None):
+        Exception.__init__(self, errorMessage, code)
+        self.errorMessage = errorMessage
+        self.code = code
+
+
+
 class ConchError(Exception):
+    """
+    Deprecated alias for L{twisted.conch.error.GeneralConchError}.
+
+    Raised as a general conch exception if a more specific exception doesn't
+    exist.
+
+    @ivar value: the error code.
+    @type value: C{int}
+    @ivar data: textual information about the error.
+    @type data: C{str}
+    """
     def __init__(self, value, data = None):
+        warnings.warn(
+            "twisted.conch.error.ConchError is deprecated since Twisted 10.0. "
+            "See twisted.conch.error.GeneralConchError.", DeprecationWarning,
+            stacklevel=2)
         Exception.__init__(self, value, data)
         self.value = value
         self.data = data
