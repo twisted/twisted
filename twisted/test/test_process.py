@@ -24,6 +24,7 @@ else:
 
 from zope.interface.verify import verifyObject
 
+from twisted.python.log import msg
 from twisted.internet import reactor, protocol, error, interfaces, defer
 from twisted.trial import unittest
 from twisted.python import util, runtime, procutils
@@ -263,15 +264,36 @@ class SignalProtocol(protocol.ProcessProtocol):
 
     @ivar signal: the signal to send to the process.
     @type signal: C{str}
+
+    @ivar signaled: A flag tracking whether the signal has been sent to the
+        child or not yet.  C{False} until it is sent, then C{True}.
+    @type signaled: C{bool}
     """
 
     def __init__(self, deferred, sig):
         self.deferred = deferred
         self.signal = sig
+        self.signaled = False
 
 
     def outReceived(self, data):
-        self.transport.signalProcess(self.signal)
+        """
+        Handle the first output from the child process (which indicates it
+        is set up and ready to receive the signal) by sending the signal to
+        it.  Also log all output to help with debugging.
+        """
+        msg("Received %r from child stdout" % (data,))
+        if not self.signaled:
+            self.signaled = True
+            self.transport.signalProcess(self.signal)
+
+
+    def errReceived(self, data):
+        """
+        Log all data received from the child's stderr to help with
+        debugging.
+        """
+        msg("Received %r from child stderr" % (data,))
 
 
     def processEnded(self, reason):
@@ -282,6 +304,7 @@ class SignalProtocol(protocol.ProcessProtocol):
         of the exited process. Otherwise, errback with a C{ValueError}
         describing the problem.
         """
+        msg("Child exited: %r" % (reason.getTraceback(),))
         if not reason.check(error.ProcessTerminated):
             return self.deferred.errback(
                 ValueError("wrong termination: %s" % (reason,)))
