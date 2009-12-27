@@ -12,7 +12,7 @@ from zope.interface import implements
 from twisted.internet.interfaces import IConsumer, IPushProducer
 
 
-MIN_TIMEOUT = 0.000000001
+MIN_TIMEOUT = 0.0
 MAX_TIMEOUT = 0.1
 
 

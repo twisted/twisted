@@ -300,10 +300,9 @@ class _Timer(object):
 
 
 
-_EPSILON = 0.00000001
 def _defaultScheduler(x):
     from twisted.internet import reactor
-    return reactor.callLater(_EPSILON, x)
+    return reactor.callLater(0, x)
 
 
 class CooperativeTask(object):
