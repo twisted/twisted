@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.conch.test.test_error -*-
 # Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
