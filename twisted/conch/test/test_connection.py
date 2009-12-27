@@ -7,7 +7,7 @@ This module tests twisted.conch.ssh.connection.
 
 import struct
 
-from twisted.conch import error
+from twisted.conch import avatar, error
 from twisted.conch.ssh import channel, common, connection
 from twisted.trial import unittest
 from twisted.conch.test import test_userauth
@@ -621,3 +621,23 @@ class ConnectionTestCase(unittest.TestCase):
         self.assertEquals(self.conn.gotGlobalRequest('Test-Data', 'data'),
                 (True, 'data'))
         self.assertFalse(self.conn.gotGlobalRequest('BadGlobal', 'data'))
+
+    def test_lookupChannel(self):
+        """
+        If L{conch.avatar.lookupChannel} raises a L{conch.error.ConchError} the
+        first argument to the error should be textual information about the
+        error. If this happens as part of a call to
+        L{conch.conection.ssh_CHANNEL_OPEN}, a packet containing the textual
+        information will be sent.
+        """
+        self.transport.avatar = avatar.ConchUser()
+        self.conn.ssh_CHANNEL_OPEN(
+            struct.pack('>2L',
+                        0, 255) + '\x00\x02\x00\x00\x00\x00\x80\x00')
+        self.assertEquals(
+            self.transport.packets,
+            [(92, '\x00\x00\x00\xff\x00\x00\x00\x03\x00\x00\x00\x0f'
+              'unknown channel\x00\x00\x00\x00')])
+        errors = self.flushLoggedErrors()
+        self.assertEquals(len(errors), 1)
+        self.assertEquals(errors[0].getErrorMessage(), "('unknown channel', 3)")
