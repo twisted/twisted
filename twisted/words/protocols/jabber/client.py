@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.words.test.test_jabberclient -*-
 #
-# Copyright (c) 2001-2005 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 from twisted.internet import defer
@@ -116,7 +116,7 @@ class IQAuthInitializer(object):
 
         # Prefer digest over plaintext
         if DigestAuthQry.matches(iq):
-            digest = xmlstream.hashPassword(self.xmlstream.sid, password)
+            digest = xmlstream.hashPassword(self.xmlstream.sid, unicode(password))
             reply.query.addElement("digest", content = digest)
         else:
             reply.query.addElement("password", content = password)

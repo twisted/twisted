@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.words.test.test_jabbercomponent -*-
 #
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -58,7 +58,7 @@ class ComponentInitiatingInitializer(object):
         xs = self.xmlstream
         hs = domish.Element((self.xmlstream.namespace, "handshake"))
         hs.addContent(xmlstream.hashPassword(xs.sid,
-                                             xs.authenticator.password))
+                                             unicode(xs.authenticator.password)))
 
         # Setup observer to watch for handshake result
         xs.addOnetimeObserver("/handshake", self._cbHandshake)
@@ -107,8 +107,9 @@ class ListenComponentAuthenticator(xmlstream.ListenAuthenticator):
     Authenticator for accepting components.
 
     @since: 8.2
-    @ivar secret: The shared used to authorized incoming component connections.
-    @type secret: C{str}.
+    @ivar secret: The shared secret used to authorized incoming component
+                  connections.
+    @type secret: C{unicode}.
     """
 
     namespace = NS_COMPONENT_ACCEPT
@@ -182,7 +183,8 @@ class ListenComponentAuthenticator(xmlstream.ListenAuthenticator):
         If the handshake was ok, the stream is authorized, and  XML Stanzas may
         be exchanged.
         """
-        calculatedHash = xmlstream.hashPassword(self.xmlstream.sid, self.secret)
+        calculatedHash = xmlstream.hashPassword(self.xmlstream.sid,
+                                                unicode(self.secret))
         if handshake != calculatedHash:
             exc = error.StreamError('not-authorized', text='Invalid hash')
             self.xmlstream.sendStreamError(exc)

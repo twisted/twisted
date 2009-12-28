@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.words.test.test_jabberxmlstream -*-
 #
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -16,6 +16,7 @@ from zope.interface import directlyProvides, implements
 from twisted.internet import defer, protocol
 from twisted.internet.error import ConnectionLost
 from twisted.python import failure, log, randbytes
+from twisted.python.hashlib import sha1
 from twisted.words.protocols.jabber import error, ijabber, jid
 from twisted.words.xish import domish, xmlstream
 from twisted.words.xish.xmlstream import STREAM_CONNECTED_EVENT
@@ -41,9 +42,18 @@ Reset = object()
 def hashPassword(sid, password):
     """
     Create a SHA1-digest string of a session identifier and password.
+
+    @param sid: The stream session identifier.
+    @type sid: C{unicode}.
+    @param password: The password to be hashed.
+    @type password: C{unicode}.
     """
-    from twisted.python.hashlib import sha1
-    return sha1("%s%s" % (sid, password)).hexdigest()
+    if not isinstance(sid, unicode):
+        raise TypeError("The session identifier must be a unicode object")
+    if not isinstance(password, unicode):
+        raise TypeError("The password must be a unicode object")
+    input = u"%s%s" % (sid, password)
+    return sha1(input.encode('utf-8')).hexdigest()
 
 
 
@@ -1111,3 +1121,16 @@ class StreamManager(XMPPHandlerCollection):
             self.xmlstream.send(obj)
         else:
             self._packetQueue.append(obj)
+
+
+
+__all__ = ['Authenticator', 'BaseFeatureInitiatingInitializer',
+           'ConnectAuthenticator', 'ConnectionLost', 'FeatureNotAdvertized',
+           'INIT_FAILED_EVENT', 'IQ', 'ListenAuthenticator', 'NS_STREAMS',
+           'NS_XMPP_TLS', 'Reset', 'STREAM_AUTHD_EVENT',
+           'STREAM_CONNECTED_EVENT', 'STREAM_END_EVENT', 'STREAM_ERROR_EVENT',
+           'STREAM_START_EVENT', 'StreamManager', 'TLSError', 'TLSFailed',
+           'TLSInitiatingInitializer', 'TLSNotSupported', 'TLSRequired',
+           'TimeoutError', 'XMPPHandler', 'XMPPHandlerCollection', 'XmlStream',
+           'XmlStreamFactory', 'XmlStreamServerFactory', 'hashPassword',
+           'toResponse', 'upgradeWithIQResponseTracker']

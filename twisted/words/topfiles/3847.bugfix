@@ -1,0 +1,2 @@
+twisted.words.protocols.jabber.xmlstream.hashPassword now only accepts unicode
+as input

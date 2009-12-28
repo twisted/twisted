@@ -1,14 +1,23 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
 Tests for L{twisted.words.protocols.jabber.client}
 """
 
+from twisted.internet import defer
 from twisted.python.hashlib import sha1
 from twisted.trial import unittest
 from twisted.words.protocols.jabber import client, error, jid, xmlstream
 from twisted.words.protocols.jabber.sasl import SASLInitiatingInitializer
+from twisted.words.xish import utility
+
+IQ_AUTH_GET = '/iq[@type="get"]/query[@xmlns="jabber:iq:auth"]'
+IQ_AUTH_SET = '/iq[@type="set"]/query[@xmlns="jabber:iq:auth"]'
+NS_BIND = 'urn:ietf:params:xml:ns:xmpp-bind'
+IQ_BIND_SET = '/iq[@type="set"]/bind[@xmlns="%s"]' % NS_BIND
+NS_SESSION = 'urn:ietf:params:xml:ns:xmpp-session'
+IQ_SESSION_SET = '/iq[@type="set"]/session[@xmlns="%s"]' % NS_SESSION
 
 class CheckVersionInitializerTest(unittest.TestCase):
     def setUp(self):
@@ -16,12 +25,14 @@ class CheckVersionInitializerTest(unittest.TestCase):
         xs = xmlstream.XmlStream(a)
         self.init = client.CheckVersionInitializer(xs)
 
+
     def testSupported(self):
         """
         Test supported version number 1.0
         """
         self.init.xmlstream.version = (1, 0)
         self.init.initialize()
+
 
     def testNotSupported(self):
         """
@@ -32,205 +43,336 @@ class CheckVersionInitializerTest(unittest.TestCase):
         self.assertEquals('unsupported-version', exc.condition)
 
 
+
 class InitiatingInitializerHarness(object):
+    """
+    Testing harness for interacting with XML stream initializers.
+
+    This sets up an L{utility.XmlPipe} to create a communication channel between
+    the initializer and the stubbed receiving entity. It features a sink and
+    source side that both act similarly to a real L{xmlstream.XmlStream}. The
+    sink is augmented with an authenticator to which initializers can be added.
+
+    The harness also provides some utility methods to work with event observers
+    and deferreds.
+    """
+
     def setUp(self):
         self.output = []
+        self.pipe = utility.XmlPipe()
+        self.xmlstream = self.pipe.sink
         self.authenticator = xmlstream.ConnectAuthenticator('example.org')
-        self.xmlstream = xmlstream.XmlStream(self.authenticator)
-        self.xmlstream.send = self.output.append
-        self.xmlstream.connectionMade()
-        self.xmlstream.dataReceived("<stream:stream xmlns='jabber:client' "
-                        "xmlns:stream='http://etherx.jabber.org/streams' "
-                        "from='example.com' id='12345' version='1.0'>")
+        self.xmlstream.authenticator = self.authenticator
+
+
+    def waitFor(self, event, handler):
+        """
+        Observe an output event, returning a deferred.
+
+        The returned deferred will be fired when the given event has been
+        observed on the source end of the L{XmlPipe} tied to the protocol
+        under test. The handler is added as the first callback.
+
+        @param event: The event to be observed. See
+            L{utility.EventDispatcher.addOnetimeObserver}.
+        @param handler: The handler to be called with the observed event object.
+        @rtype: L{defer.Deferred}.
+        """
+        d = defer.Deferred()
+        d.addCallback(handler)
+        self.pipe.source.addOnetimeObserver(event, d.callback)
+        return d
+
 
 
 class IQAuthInitializerTest(InitiatingInitializerHarness, unittest.TestCase):
+    """
+    Tests for L{client.IQAuthInitializer}.
+    """
+
     def setUp(self):
         super(IQAuthInitializerTest, self).setUp()
         self.init = client.IQAuthInitializer(self.xmlstream)
         self.authenticator.jid = jid.JID('user@example.com/resource')
         self.authenticator.password = 'secret'
 
-    def testBasic(self):
+
+    def testPlainText(self):
         """
-        Test basic operations with plain text authentication.
+        Test plain-text authentication.
 
-        Set up a stream, and act as if authentication succeeds.
+        Act as a server supporting plain-text authentication and expect the
+        C{password} field to be filled with the password. Then act as if
+        authentication succeeds.
         """
-        d = self.init.initialize()
 
-        # The initializer should have sent query to find out auth methods.
+        def onAuthGet(iq):
+            """
+            Called when the initializer sent a query for authentication methods.
 
-        # Examine query.
-        iq = self.output[-1]
-        self.assertEquals('iq', iq.name)
-        self.assertEquals('get', iq['type'])
-        self.assertEquals(('jabber:iq:auth', 'query'),
-                          (iq.children[0].uri, iq.children[0].name))
+            The response informs the client that plain-text authentication
+            is supported.
+            """
 
-        # Send server response
-        iq['type'] = 'result'
-        iq.query.addElement('username')
-        iq.query.addElement('password')
-        iq.query.addElement('resource')
-        self.xmlstream.dataReceived(iq.toXml())
+            # Create server response
+            response = xmlstream.toResponse(iq, 'result')
+            response.addElement(('jabber:iq:auth', 'query'))
+            response.query.addElement('username')
+            response.query.addElement('password')
+            response.query.addElement('resource')
 
-        # Upon receiving the response, the initializer can start authentication
+            # Set up an observer for the next request we expect.
+            d = self.waitFor(IQ_AUTH_SET, onAuthSet)
 
-        iq = self.output[-1]
-        self.assertEquals('iq', iq.name)
-        self.assertEquals('set', iq['type'])
-        self.assertEquals(('jabber:iq:auth', 'query'),
-                          (iq.children[0].uri, iq.children[0].name))
-        self.assertEquals('user', unicode(iq.query.username))
-        self.assertEquals('secret', unicode(iq.query.password))
-        self.assertEquals('resource', unicode(iq.query.resource))
+            # Send server response
+            self.pipe.source.send(response)
 
-        # Send server response
-        self.xmlstream.dataReceived("<iq type='result' id='%s'/>" % iq['id'])
-        return d
+            return d
+
+        def onAuthSet(iq):
+            """
+            Called when the initializer sent the authentication request.
+
+            The server checks the credentials and responds with an empty result
+            signalling success.
+            """
+            self.assertEquals('user', unicode(iq.query.username))
+            self.assertEquals('secret', unicode(iq.query.password))
+            self.assertEquals('resource', unicode(iq.query.resource))
+
+            # Send server response
+            response = xmlstream.toResponse(iq, 'result')
+            self.pipe.source.send(response)
+
+        # Set up an observer for the request for authentication fields
+        d1 = self.waitFor(IQ_AUTH_GET, onAuthGet)
+
+        # Start the initializer
+        d2 = self.init.initialize()
+        return defer.gatherResults([d1, d2])
+
 
     def testDigest(self):
         """
         Test digest authentication.
 
-        Set up a stream, and act as if authentication succeeds.
+        Act as a server supporting digest authentication and expect the
+        C{digest} field to be filled with a sha1 digest of the concatenated
+        stream session identifier and password. Then act as if authentication
+        succeeds.
         """
-        d = self.init.initialize()
 
-        # The initializer should have sent query to find out auth methods.
+        def onAuthGet(iq):
+            """
+            Called when the initializer sent a query for authentication methods.
 
-        iq = self.output[-1]
+            The response informs the client that digest authentication is
+            supported.
+            """
 
-        # Send server response
-        iq['type'] = 'result'
-        iq.query.addElement('username')
-        iq.query.addElement('digest')
-        iq.query.addElement('resource')
-        self.xmlstream.dataReceived(iq.toXml())
+            # Create server response
+            response = xmlstream.toResponse(iq, 'result')
+            response.addElement(('jabber:iq:auth', 'query'))
+            response.query.addElement('username')
+            response.query.addElement('digest')
+            response.query.addElement('resource')
 
-        # Upon receiving the response, the initializer can start authentication
+            # Set up an observer for the next request we expect.
+            d = self.waitFor(IQ_AUTH_SET, onAuthSet)
 
-        iq = self.output[-1]
-        self.assertEquals('iq', iq.name)
-        self.assertEquals('set', iq['type'])
-        self.assertEquals(('jabber:iq:auth', 'query'),
-                          (iq.children[0].uri, iq.children[0].name))
-        self.assertEquals('user', unicode(iq.query.username))
-        self.assertEquals(sha1('12345secret').hexdigest(),
-                          unicode(iq.query.digest))
-        self.assertEquals('resource', unicode(iq.query.resource))
+            # Send server response
+            self.pipe.source.send(response)
 
-        # Send server response
-        self.xmlstream.dataReceived("<iq type='result' id='%s'/>" % iq['id'])
-        return d
+            return d
+
+        def onAuthSet(iq):
+            """
+            Called when the initializer sent the authentication request.
+
+            The server checks the credentials and responds with an empty result
+            signalling success.
+            """
+            self.assertEquals('user', unicode(iq.query.username))
+            self.assertEquals(sha1('12345secret').hexdigest(),
+                              unicode(iq.query.digest).encode('utf-8'))
+            self.assertEquals('resource', unicode(iq.query.resource))
+
+            # Send server response
+            response = xmlstream.toResponse(iq, 'result')
+            self.pipe.source.send(response)
+
+        # Digest authentication relies on the stream session identifier. Set it.
+        self.xmlstream.sid = u'12345'
+
+        # Set up an observer for the request for authentication fields
+        d1 = self.waitFor(IQ_AUTH_GET, onAuthGet)
+
+        # Start the initializer
+        d2 = self.init.initialize()
+
+        return defer.gatherResults([d1, d2])
+
 
     def testFailRequestFields(self):
         """
-        Test failure of request for fields.
+        Test initializer failure of request for fields for authentication.
         """
-        d = self.init.initialize()
-        iq = self.output[-1]
-        response = error.StanzaError('not-authorized').toResponse(iq)
-        self.xmlstream.dataReceived(response.toXml())
-        self.assertFailure(d, error.StanzaError)
-        return d
+        def onAuthGet(iq):
+            """
+            Called when the initializer sent a query for authentication methods.
+
+            The server responds that the client is not authorized to authenticate.
+            """
+            response = error.StanzaError('not-authorized').toResponse(iq)
+            self.pipe.source.send(response)
+
+        # Set up an observer for the request for authentication fields
+        d1 = self.waitFor(IQ_AUTH_GET, onAuthGet)
+
+        # Start the initializer
+        d2 = self.init.initialize()
+
+        # The initialized should fail with a stanza error.
+        self.assertFailure(d2, error.StanzaError)
+
+        return defer.gatherResults([d1, d2])
+
 
     def testFailAuth(self):
         """
-        Test failure of request for fields.
+        Test initializer failure to authenticate.
         """
-        d = self.init.initialize()
-        iq = self.output[-1]
-        iq['type'] = 'result'
-        iq.query.addElement('username')
-        iq.query.addElement('password')
-        iq.query.addElement('resource')
-        self.xmlstream.dataReceived(iq.toXml())
-        iq = self.output[-1]
-        response = error.StanzaError('not-authorized').toResponse(iq)
-        self.xmlstream.dataReceived(response.toXml())
-        self.assertFailure(d, error.StanzaError)
-        return d
+
+        def onAuthGet(iq):
+            """
+            Called when the initializer sent a query for authentication methods.
+
+            The response informs the client that plain-text authentication
+            is supported.
+            """
+
+            # Send server response
+            response = xmlstream.toResponse(iq, 'result')
+            response.addElement(('jabber:iq:auth', 'query'))
+            response.query.addElement('username')
+            response.query.addElement('password')
+            response.query.addElement('resource')
+
+            # Set up an observer for the next request we expect.
+            d = self.waitFor(IQ_AUTH_SET, onAuthSet)
+
+            # Send server response
+            self.pipe.source.send(response)
+
+            return d
+
+        def onAuthSet(iq):
+            """
+            Called when the initializer sent the authentication request.
+
+            The server checks the credentials and responds with a not-authorized
+            stanza error.
+            """
+            response = error.StanzaError('not-authorized').toResponse(iq)
+            self.pipe.source.send(response)
+
+        # Set up an observer for the request for authentication fields
+        d1 = self.waitFor(IQ_AUTH_GET, onAuthGet)
+
+        # Start the initializer
+        d2 = self.init.initialize()
+
+        # The initializer should fail with a stanza error.
+        self.assertFailure(d2, error.StanzaError)
+
+        return defer.gatherResults([d1, d2])
+
 
 
 class BindInitializerTest(InitiatingInitializerHarness, unittest.TestCase):
+    """
+    Tests for L{client.BindInitializer}.
+    """
+
     def setUp(self):
         super(BindInitializerTest, self).setUp()
         self.init = client.BindInitializer(self.xmlstream)
         self.authenticator.jid = jid.JID('user@example.com/resource')
 
+
     def testBasic(self):
         """
-        Test basic operations.
-
         Set up a stream, and act as if resource binding succeeds.
         """
+        def onBind(iq):
+            response = xmlstream.toResponse(iq, 'result')
+            response.addElement((NS_BIND, 'bind'))
+            response.bind.addElement('jid',
+                                     content='user@example.com/other resource')
+            self.pipe.source.send(response)
+
         def cb(result):
             self.assertEquals(jid.JID('user@example.com/other resource'),
                               self.authenticator.jid)
 
-        d = self.init.start().addCallback(cb)
-        iq = self.output[-1]
-        self.assertEquals('iq', iq.name)
-        self.assertEquals('set', iq['type'])
-        self.assertEquals(('urn:ietf:params:xml:ns:xmpp-bind', 'bind'),
-                          (iq.children[0].uri, iq.children[0].name))
-        iq['type'] = 'result'
-        iq.bind.children = []
-        iq.bind.addElement('jid', content='user@example.com/other resource')
-        self.xmlstream.dataReceived(iq.toXml())
-        return d
+        d1 = self.waitFor(IQ_BIND_SET, onBind)
+        d2 = self.init.start()
+        d2.addCallback(cb)
+        return defer.gatherResults([d1, d2])
+
 
     def testFailure(self):
         """
-        Test basic operations.
-
         Set up a stream, and act as if resource binding fails.
         """
-        def cb(result):
-            self.assertEquals(jid.JID('user@example.com/resource'),
-                              self.authenticator.jid)
+        def onBind(iq):
+            response = error.StanzaError('conflict').toResponse(iq)
+            self.pipe.source.send(response)
 
-        d = self.init.start()
-        id = self.output[-1]['id']
-        self.xmlstream.dataReceived("<iq type='error' id='%s'/>" % id)
-        self.assertFailure(d, error.StanzaError)
-        return d
+        d1 = self.waitFor(IQ_BIND_SET, onBind)
+        d2 = self.init.start()
+        self.assertFailure(d2, error.StanzaError)
+        return defer.gatherResults([d1, d2])
+
 
 
 class SessionInitializerTest(InitiatingInitializerHarness, unittest.TestCase):
+    """
+    Tests for L{client.SessionInitializer}.
+    """
 
     def setUp(self):
         super(SessionInitializerTest, self).setUp()
         self.init = client.SessionInitializer(self.xmlstream)
 
+
     def testSuccess(self):
         """
-        Test basic operations.
-
-        Set up a stream, and act as if resource binding succeeds.
+        Set up a stream, and act as if session establishment succeeds.
         """
-        d = self.init.start()
-        iq = self.output[-1]
-        self.assertEquals('iq', iq.name)
-        self.assertEquals('set', iq['type'])
-        self.assertEquals(('urn:ietf:params:xml:ns:xmpp-session', 'session'),
-                          (iq.children[0].uri, iq.children[0].name))
-        self.xmlstream.dataReceived("<iq type='result' id='%s'/>" % iq['id'])
-        return d
+
+        def onSession(iq):
+            response = xmlstream.toResponse(iq, 'result')
+            self.pipe.source.send(response)
+
+        d1 = self.waitFor(IQ_SESSION_SET, onSession)
+        d2 = self.init.start()
+        return defer.gatherResults([d1, d2])
+
 
     def testFailure(self):
         """
-        Test basic operations.
-
-        Set up a stream, and act as if session establishment succeeds.
+        Set up a stream, and act as if session establishment fails.
         """
-        d = self.init.start()
-        id = self.output[-1]['id']
-        self.xmlstream.dataReceived("<iq type='error' id='%s'/>" % id)
-        self.assertFailure(d, error.StanzaError)
-        return d
+        def onSession(iq):
+            response = error.StanzaError('forbidden').toResponse(iq)
+            self.pipe.source.send(response)
+
+        d1 = self.waitFor(IQ_SESSION_SET, onSession)
+        d2 = self.init.start()
+        self.assertFailure(d2, error.StanzaError)
+        return defer.gatherResults([d1, d2])
+
 
 
 class XMPPAuthenticatorTest(unittest.TestCase):

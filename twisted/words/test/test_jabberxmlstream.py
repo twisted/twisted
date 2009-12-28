@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -20,6 +20,44 @@ from twisted.words.protocols.jabber import error, ijabber, jid, xmlstream
 
 
 NS_XMPP_TLS = 'urn:ietf:params:xml:ns:xmpp-tls'
+
+
+
+class HashPasswordTest(unittest.TestCase):
+    """
+    Tests for L{xmlstream.hashPassword}.
+    """
+
+    def test_basic(self):
+        """
+        The sid and secret are concatenated to calculate sha1 hex digest.
+        """
+        hash = xmlstream.hashPassword(u"12345", u"secret")
+        self.assertEqual('99567ee91b2c7cabf607f10cb9f4a3634fa820e0', hash)
+
+
+    def test_sidNotUnicode(self):
+        """
+        The session identifier must be a unicode object.
+        """
+        self.assertRaises(TypeError, xmlstream.hashPassword, "\xc2\xb92345",
+                                                             u"secret")
+
+
+    def test_passwordNotUnicode(self):
+        """
+        The password must be a unicode object.
+        """
+        self.assertRaises(TypeError, xmlstream.hashPassword, u"12345",
+                                                             "secr\xc3\xa9t")
+
+
+    def test_unicodeSecret(self):
+        """
+        The concatenated sid and password must be encoded to UTF-8 before hashing.
+        """
+        hash = xmlstream.hashPassword(u"12345", u"secr\u00e9t")
+        self.assertEqual('659bf88d8f8e179081f7f3b4a8e7d224652d2853', hash)
 
 
 

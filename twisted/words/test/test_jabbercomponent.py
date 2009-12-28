@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -34,7 +34,7 @@ class ComponentInitiatingInitializerTest(unittest.TestCase):
                 "<stream:stream xmlns='test:component' "
                 "xmlns:stream='http://etherx.jabber.org/streams' "
                 "from='example.com' id='12345' version='1.0'>")
-        self.xmlstream.sid = '12345'
+        self.xmlstream.sid = u'12345'
         self.init = component.ComponentInitiatingInitializer(self.xmlstream)
 
     def testHandshake(self):
@@ -323,7 +323,7 @@ class ListenComponentAuthenticatorTest(unittest.TestCase):
 
         xs = self.xmlstream
         xs.addOnetimeObserver(xmlstream.STREAM_AUTHD_EVENT, authenticated)
-        xs.sid = '1234'
+        xs.sid = u'1234'
         theHash = '32532c0f7dbf1253c095b18b18e36d38d94c1256'
         xs.authenticator.onHandshake(theHash)
         self.assertEqual('<handshake/>', self.output[-1])
@@ -344,7 +344,7 @@ class ListenComponentAuthenticatorTest(unittest.TestCase):
         xs.addOnetimeObserver(xmlstream.STREAM_AUTHD_EVENT, authenticated)
         xs.sendStreamError = streamErrors.append
 
-        xs.sid = '1234'
+        xs.sid = u'1234'
         theHash = '1234'
         xs.authenticator.onHandshake(theHash)
         self.assertEquals('not-authorized', streamErrors[-1].condition)
