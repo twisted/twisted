@@ -23,7 +23,7 @@ extern "C" {
 
 static PyObject* UrlargError;
 
-#define OUTPUTCHAR(c,n) PycStringIO->cwrite(output, c, n)
+#define OUTPUTCHAR(c,n) PycStringIO->cwrite(output, (const char *)c, n)
 
 #define STATE_INITIAL 0
 #define STATE_PERCENT 1
@@ -46,6 +46,9 @@ static PyObject *unquote(PyObject *self, PyObject *args, PyObject *kwargs)
     PyObject *output, *str;
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|c:unquote", kwlist, &s, &length, &escchar)) {
         return NULL;
+    }
+    if (length == 0) {
+        return PyString_FromStringAndSize("", 0);
     }
     /* output = cStringIO() */
     output = PycStringIO->NewOutput(length);
