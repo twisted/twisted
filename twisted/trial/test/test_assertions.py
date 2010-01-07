@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details
 
 """
@@ -29,7 +29,8 @@ class MockEquality(object):
 
 
 class TestAssertions(unittest.TestCase):
-    """Tests for TestCase's assertion methods.  That is, failUnless*,
+    """
+    Tests for TestCase's assertion methods.  That is, failUnless*,
     failIf*, assert*.
 
     This is pretty paranoid.  Still, a certain paranoia is healthy if you
@@ -307,7 +308,8 @@ class TestAssertions(unittest.TestCase):
         return d
 
     def test_assertFailure_moreInfo(self):
-        """In the case of assertFailure failing, check that we get lots of
+        """
+        In the case of assertFailure failing, check that we get lots of
         information about the exception that was raised.
         """
         try:
@@ -326,7 +328,8 @@ class TestAssertions(unittest.TestCase):
         self.assertIn(f.getBriefTraceback(), output)
 
     def test_assertFailure_masked(self):
-        """A single wrong assertFailure should fail the whole test.
+        """
+        A single wrong assertFailure should fail the whole test.
         """
         class ExampleFailure(Exception):
             pass
@@ -436,7 +439,7 @@ class TestAssertions(unittest.TestCase):
 
     def test_assertWarnsOnClass(self):
         """
-        Test asserWarns works when creating a class instance.
+        Test assertWarns works when creating a class instance.
         """
         class Warn:
             def __init__(self):
@@ -616,7 +619,8 @@ class TestAssertions(unittest.TestCase):
 
 
 class TestAssertionNames(unittest.TestCase):
-    """Tests for consistency of naming within TestCase assertion methods
+    """
+    Tests for consistency of naming within TestCase assertion methods
     """
     def _getAsserts(self):
         dct = {}
