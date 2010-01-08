@@ -1,5 +1,5 @@
-# -*- test-case-name: twisted.test.test_defer -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.test.test_defer,twisted.test.test_defgen,twisted.internet.test.test_inlinecb -*-
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -10,6 +10,7 @@ Maintainer: Glyph Lefkowitz
 
 import traceback
 import warnings
+from sys import exc_info
 
 # Twisted imports
 from twisted.python import log, failure, lockfile
@@ -740,7 +741,8 @@ def _inlineCallbacks(result, g, deferred):
     while 1:
         try:
             # Send the last result back as the result of the yield expression.
-            if isinstance(result, failure.Failure):
+            isFailure = isinstance(result, failure.Failure)
+            if isFailure:
                 result = result.throwExceptionIntoGenerator(g)
             else:
                 result = g.send(result)
@@ -749,7 +751,43 @@ def _inlineCallbacks(result, g, deferred):
             deferred.callback(None)
             return deferred
         except _DefGen_Return, e:
-            # returnValue call
+            # returnValue() was called; time to give a result to the original
+            # Deferred.  First though, let's try to identify the potentially
+            # confusing situation which results when returnValue() is
+            # accidentally invoked from a different function, one that wasn't
+            # decorated with @inlineCallbacks.
+
+            # The traceback starts in this frame (the one for
+            # _inlineCallbacks); the next one down should be the application
+            # code.
+            appCodeTrace = exc_info()[2].tb_next
+            if isFailure:
+                # If we invoked this generator frame by throwing an exception
+                # into it, then throwExceptionIntoGenerator will consume an
+                # additional stack frame itself, so we need to skip that too.
+                appCodeTrace = appCodeTrace.tb_next
+            # Now that we've identified the frame being exited by the
+            # exception, let's figure out if returnValue was called from it
+            # directly.  returnValue itself consumes a stack frame, so the
+            # application code will have a tb_next, but it will *not* have a
+            # second tb_next.
+            if appCodeTrace.tb_next.tb_next:
+                # If returnValue was invoked non-local to the frame which it is
+                # exiting, identify the frame that ultimately invoked
+                # returnValue so that we can warn the user, as this behavior is
+                # confusing.
+                ultimateTrace = appCodeTrace
+                while ultimateTrace.tb_next.tb_next:
+                    ultimateTrace = ultimateTrace.tb_next
+                filename = ultimateTrace.tb_frame.f_code.co_filename
+                lineno = ultimateTrace.tb_lineno
+                warnings.warn_explicit(
+                    "returnValue() in %r causing %r to exit: "
+                    "returnValue should only be invoked by functions decorated "
+                    "with inlineCallbacks" % (
+                        ultimateTrace.tb_frame.f_code.co_name,
+                        appCodeTrace.tb_frame.f_code.co_name),
+                    DeprecationWarning, filename, lineno)
             deferred.callback(e.value)
             return deferred
         except:
