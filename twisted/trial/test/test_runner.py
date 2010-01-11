@@ -1,16 +1,16 @@
-# Copyright (c) 2005-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2005-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 #
 # Maintainer: Jonathan Lange
 # Author: Robert Collins
 
 
-import StringIO, os
+import StringIO, os, sys
 from zope.interface import implements
 
 from twisted.trial.itrial import IReporter, ITestCase
 from twisted.trial import unittest, runner, reporter, util
-from twisted.python import failure, log, reflect
+from twisted.python import failure, log, reflect, filepath
 from twisted.scripts import trial
 from twisted.plugins import twisted_trial
 from twisted import plugin
@@ -477,21 +477,92 @@ class TestRunner(unittest.TestCase):
         self.assertEqual(['runcall'], debugger._calls)
 
 
-    def test_noMarker(self):
+    def test_removeSafelyNoTrialMarker(self):
         """
-        Specifying a temp directory that does not have a trial marker results
-        in an exception and does not remove the specified directory.
+        If a path doesn't contain a node named C{"_trial_marker"}, that path is
+        not removed by L{runner._removeSafely} and a L{runner._NoTrialMarker}
+        exception is raised instead.
         """
-        tempPath = self.mktemp()
-        # Create our working directory outside of trial.
-        os.mkdir(tempPath)
-        self.parseOptions(['--temp-directory', tempPath,
-                           'twisted.trial.test.sample'])
+        directory = self.mktemp()
+        os.mkdir(directory)
+        dirPath = filepath.FilePath(directory)
+
+        self.parseOptions([])
         myRunner = self.getRunner()
-        loader = runner.TestLoader()
-        suite = loader.loadByName('twisted.trial.test.sample', True)
-        self.assertRaises(runner._NoTrialMarker, myRunner.run, suite)
-        self.assertTrue(os.path.exists(tempPath))
+        self.assertRaises(runner._NoTrialMarker,
+                          myRunner._removeSafely, dirPath)
+
+
+    def test_removeSafelyRemoveFailsMoveSucceeds(self):
+        """
+        If an L{OSError} is raised while removing a path in
+        L{runner._removeSafely}, an attempt is made to move the path to a new
+        name.
+        """
+        def dummyRemove():
+            """
+            Raise an C{OSError} to emulate the branch of L{runner._removeSafely}
+            in which path removal fails.
+            """
+            raise OSError()
+
+        # Patch stdout so we can check the print statements in _removeSafely
+        out = StringIO.StringIO()
+        stdout = self.patch(sys, 'stdout', out)
+
+        # Set up a trial directory with a _trial_marker
+        directory = self.mktemp()
+        os.mkdir(directory)
+        dirPath = filepath.FilePath(directory)
+        dirPath.child('_trial_marker').touch()
+        # Ensure that path.remove() raises an OSError
+        dirPath.remove = dummyRemove
+
+        self.parseOptions([])
+        myRunner = self.getRunner()
+        myRunner._removeSafely(dirPath)
+        self.assertIn("could not remove FilePath", out.getvalue())
+
+
+    def test_removeSafelyRemoveFailsMoveFails(self):
+        """
+        If an L{OSError} is raised while removing a path in
+        L{runner._removeSafely}, an attempt is made to move the path to a new
+        name. If that attempt fails, the L{OSError} is re-raised.
+        """
+        def dummyRemove():
+            """
+            Raise an C{OSError} to emulate the branch of L{runner._removeSafely}
+            in which path removal fails.
+            """
+            raise OSError("path removal failed")
+
+        def dummyMoveTo(path):
+            """
+            Raise an C{OSError} to emulate the branch of L{runner._removeSafely}
+            in which path movement fails.
+            """
+            raise OSError("path movement failed")
+
+        # Patch stdout so we can check the print statements in _removeSafely
+        out = StringIO.StringIO()
+        stdout = self.patch(sys, 'stdout', out)
+
+        # Set up a trial directory with a _trial_marker
+        directory = self.mktemp()
+        os.mkdir(directory)
+        dirPath = filepath.FilePath(directory)
+        dirPath.child('_trial_marker').touch()
+
+        # Ensure that path.remove() and path.moveTo() both raise OSErrors
+        dirPath.remove = dummyRemove
+        dirPath.moveTo = dummyMoveTo
+
+        self.parseOptions([])
+        myRunner = self.getRunner()
+        error = self.assertRaises(OSError, myRunner._removeSafely, dirPath)
+        self.assertEquals(str(error), "path movement failed")
+        self.assertIn("could not remove FilePath", out.getvalue())
 
 
 

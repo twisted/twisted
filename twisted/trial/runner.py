@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.trial.test.test_runner -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -711,8 +711,11 @@ class TrialRunner(object):
         """
         Safely remove a path, recursively.
 
-        If C{path} does not contain a node named C{_trial_marker}, a
-        L{_NoTrialmarker} exception is raised and the path is not removed.
+        If C{path} does not contain a node named C{"_trial_marker"}, a
+        L{_NoTrialMarker} exception is raised and the path is not removed.
+
+        @type path: L{twisted.python.filepath.FilePath}
+        @param path: The absolute path to a test directory
         """
         if not path.child('_trial_marker').exists():
             raise _NoTrialMarker(
@@ -725,12 +728,12 @@ class TrialRunner(object):
             print ("could not remove %r, caught OSError [Errno %s]: %s"
                    % (path, e.errno, e.strerror))
             try:
-                newPath = FilePath('_trial_temp_old%s'
-                                   % random.randint(0, 99999999))
+                newPath = filepath.FilePath('_trial_temp_old%s'
+                                            % random.randint(0, 99999999))
                 path.moveTo(newPath)
             except OSError, e:
                 print ("could not rename path, caught OSError [Errno %s]: %s"
-                       % (e.errno,e.strerror))
+                       % (e.errno, e.strerror))
                 raise
 
 
