@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_ftp -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -926,9 +926,24 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
 
     def ftp_NLST(self, path):
-        # XXX: why is this check different to ftp_RETR/ftp_STOR?
+        """
+        This command causes a directory listing to be sent from the server to
+        the client. The pathname should specify a directory or other
+        system-specific file group descriptor. An empty path implies the current
+        working directory. If the path is non-existent, send nothing. If the
+        path is to a file, send only the file name.
+
+        @type path: C{str}
+        @param path: The path for which a directory listing should be returned.
+
+        @rtype: L{Deferred}
+        @return: a L{Deferred} which will be fired when the listing request
+            is finished.
+        """
+        # XXX: why is this check different from ftp_RETR/ftp_STOR? See #4180
         if self.dtpInstance is None or not self.dtpInstance.isConnected:
-            return defer.fail(BadCmdSequenceError('must send PORT or PASV before RETR'))
+            return defer.fail(
+                BadCmdSequenceError('must send PORT or PASV before RETR'))
 
         try:
             segments = toSegments(self.workingDirectory, path)
@@ -936,6 +951,18 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             return defer.fail(FileNotFoundError(path))
 
         def cbList(results):
+            """
+            Send, line by line, each file in the directory listing, and then
+            close the connection.
+
+            @type results: A C{list} of C{tuple}. The first element of each
+                C{tuple} is a C{str} and the second element is a C{list}.
+            @param results: The names of the files in the directory.
+
+            @rtype: C{tuple}
+            @return: A C{tuple} containing the status code for a successful
+                transfer.
+            """
             self.reply(DATA_CNX_ALREADY_OPEN_START_XFR)
             for (name, ignored) in results:
                 self.dtpInstance.sendLine(name)
@@ -950,8 +977,24 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
             self.dtpInstance.transport.loseConnection()
             return (TXFR_COMPLETE_OK,)
 
-        # XXX Maybe this globbing is incomplete, but who cares.
-        # Stupid people probably.
+        def listErr(results):
+            """
+            RFC 959 specifies that an NLST request may only return directory
+            listings. Thus, send nothing and just close the connection.
+
+            @type results: L{Failure}
+            @param results: The L{Failure} wrapping a L{FileNotFoundError} that
+                occurred while trying to list the contents of a nonexistent
+                directory.
+
+            @rtype: C{tuple}
+            @returns: A C{tuple} containing the status code for a successful
+                transfer.
+            """
+            self.dtpInstance.transport.loseConnection()
+            return (TXFR_COMPLETE_OK,)
+
+        # XXX This globbing may be incomplete: see #4181
         if segments and (
             '*' in segments[-1] or '?' in segments[-1] or
             ('[' in segments[-1] and ']' in segments[-1])):
@@ -960,6 +1003,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         else:
             d = self.shell.list(segments)
             d.addCallback(cbList)
+            # self.shell.list will generate an error if the path is invalid
+            d.addErrback(listErr)
         return d
 
 

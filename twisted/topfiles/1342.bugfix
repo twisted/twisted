@@ -1,0 +1,2 @@
+FTP.ftp_NLST now handles requests on invalid paths in a way consistent with RFC
+959.

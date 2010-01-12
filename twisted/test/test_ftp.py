@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -7,7 +7,7 @@ FTP tests.
 Maintainer: Andrew Bennetts
 """
 
-import os.path
+import os
 import errno
 
 from zope.interface import implements
@@ -69,6 +69,7 @@ class FTPServerTestCase(unittest.TestCase):
         # Create a directory
         self.directory = self.mktemp()
         os.mkdir(self.directory)
+        self.dirPath = filepath.FilePath(self.directory)
 
         # Start the server
         p = portal.Portal(ftp.FTPRealm(self.directory))
@@ -492,6 +493,58 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
                 self.assertEqual('x' * size, download)
             d.addCallback(checkDownload)
         return d
+
+
+    def test_NLSTEmpty(self):
+        """
+        NLST with no argument returns the directory listing for the current
+        working directory.
+        """
+        # Login
+        d = self._anonymousLogin()
+
+        # Touch a file in the current working directory
+        self.dirPath.child('test.txt').touch()
+        # Make a directory in the current working directory
+        self.dirPath.child('foo').createDirectory()
+
+        self._download('NLST ', chainDeferred=d)
+        def checkDownload(download):
+            filenames = download[:-2].split('\r\n')
+            filenames.sort()
+            self.assertEquals(['foo', 'test.txt'], filenames)
+        return d.addCallback(checkDownload)
+
+
+    def test_NLSTNonexistent(self):
+        """
+        NLST on a non-existent file/directory returns nothing.
+        """
+        # Login
+        d = self._anonymousLogin()
+
+        self._download('NLST nonexistent.txt', chainDeferred=d)
+        def checkDownload(download):
+            self.assertEquals('', download)
+        return d.addCallback(checkDownload)
+
+
+    def test_NLSTOnPathToFile(self):
+        """
+        NLST on an existent file returns only the path to that file.
+        """
+        # Login
+        d = self._anonymousLogin()
+
+        # Touch a file in the current working directory
+        self.dirPath.child('test.txt').touch()
+
+        self._download('NLST test.txt', chainDeferred=d)
+        def checkDownload(download):
+            filenames = download[:-2].split('\r\n')
+            self.assertEquals(['test.txt'], filenames)
+        return d.addCallback(checkDownload)
+
 
 
 class FTPServerPortDataConnectionTestCase(FTPServerPasvDataConnectionTestCase):
