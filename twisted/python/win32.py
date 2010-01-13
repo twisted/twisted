@@ -14,6 +14,8 @@ import os
 try:
     import win32api
     import win32con
+    from win32com import shell
+    from win32com.shell.shellcon import CSIDL_PROGRAMS, CSIDL_PROGRAM_FILES
 except ImportError:
     pass
 
@@ -50,18 +52,12 @@ def getProgramsMenuPath():
     """
     if not platform.isWinNT():
         return "C:\\Windows\\Start Menu\\Programs"
-    keyname = 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Shell Folders'
-    hShellFolders = win32api.RegOpenKeyEx(win32con.HKEY_LOCAL_MACHINE,
-                                          keyname, 0, win32con.KEY_READ)
-    return win32api.RegQueryValueEx(hShellFolders, 'Common Programs')[0]
+    return shell.SHGetSpecialFolderPath(0, CSIDL_COMMON_PROGRAMS)
 
 
 def getProgramFilesPath():
     """Get the path to the Program Files folder."""
-    keyname = 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion'
-    currentV = win32api.RegOpenKeyEx(win32con.HKEY_LOCAL_MACHINE,
-                                     keyname, 0, win32con.KEY_READ)
-    return win32api.RegQueryValueEx(currentV, 'ProgramFilesDir')[0]
+    return shell.SHGetSpecialFolderPath(0, CSIDL_PROGRAM_FILES)
 
 _cmdLineQuoteRe = re.compile(r'(\\*)"')
 _cmdLineQuoteRe2 = re.compile(r'(\\+)\Z')
