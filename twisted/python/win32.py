@@ -1,10 +1,10 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
 Win32 utilities.
 
-See also twisted.python.shortcut.
+See also L{twisted.python.shortcut}.
 """
 
 import re
@@ -12,26 +12,26 @@ import exceptions
 import os
 
 try:
-    import win32api
-    import win32con
     from win32com import shell
-    from win32com.shell.shellcon import CSIDL_PROGRAMS, CSIDL_PROGRAM_FILES
+    from win32com.shell.shellcon import CSIDL_COMMON_PROGRAMS, CSIDL_PROGRAM_FILES
 except ImportError:
     pass
 
 from twisted.python.runtime import platform
 
-# http://msdn.microsoft.com/library/default.asp?url=/library/en-us/debug/base/system_error_codes.asp
+# http://msdn.microsoft.com/en-us/library/ms681381(VS.85).aspx
 ERROR_FILE_NOT_FOUND = 2
 ERROR_PATH_NOT_FOUND = 3
 ERROR_INVALID_NAME = 123
 ERROR_DIRECTORY = 267
+
 
 def _determineWindowsError():
     """
     Determine which WindowsError name to export.
     """
     return getattr(exceptions, 'WindowsError', FakeWindowsError)
+
 
 class FakeWindowsError(OSError):
     """
@@ -44,23 +44,30 @@ WindowsError = _determineWindowsError()
 # XXX fix this to use python's builtin _winreg?
 
 def getProgramsMenuPath():
-    """Get the path to the Programs menu.
+    """
+    Get the path to the Programs menu.
 
     Probably will break on non-US Windows.
 
-    @returns: the filesystem location of the common Start Menu->Programs.
+    @return: the filesystem location of the common Start Menu->Programs.
     """
     if not platform.isWinNT():
         return "C:\\Windows\\Start Menu\\Programs"
+
     return shell.SHGetSpecialFolderPath(0, CSIDL_COMMON_PROGRAMS)
 
 
 def getProgramFilesPath():
-    """Get the path to the Program Files folder."""
+    """
+    Get the path to the Program Files folder.
+    """
     return shell.SHGetSpecialFolderPath(0, CSIDL_PROGRAM_FILES)
+
 
 _cmdLineQuoteRe = re.compile(r'(\\*)"')
 _cmdLineQuoteRe2 = re.compile(r'(\\+)\Z')
+
+
 def cmdLineQuote(s):
     """
     Internal method for quoting a single command-line argument.
@@ -73,6 +80,7 @@ def cmdLineQuote(s):
     """
     quote = ((" " in s) or ("\t" in s) or ('"' in s)) and '"' or ''
     return quote + _cmdLineQuoteRe2.sub(r"\1\1", _cmdLineQuoteRe.sub(r'\1\1\\"', s)) + quote
+
 
 def quoteArguments(arguments):
     """
