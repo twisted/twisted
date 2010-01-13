@@ -330,22 +330,22 @@ class FasterLinker(Linker):
       using <code class="python">child</code>-prefixed methods. The
       solution is really quite simple:</p>
 
-    <pre class="literal-block">
+    <pre class="python">
 class DotChildren(resource.Resource):
     def render(self, request):
         return http.Response(200, stream="""
-<html>
-  <head>
-    <script type="text/javascript" src="scripts.js" />
-  </head>
-</html>""")
+&lt;html&gt;
+  &lt;head&gt;
+    &lt;script type="text/javascript" src="scripts.js" /&gt;
+  &lt;/head&gt;
+&lt;/html&gt;""")
     </pre>
     
     <p>If you only wish to add a child to specific instance of
       DotChildren then you should use the putChild method.
     </p>
 
-    <pre class="literal-block">
+    <pre class="python">
 rsrc = DotChildren()
 rsrc.putChild('child_scripts.js', static.File('/Users/dp/scripts.js'))
     </pre>
@@ -354,7 +354,7 @@ rsrc.putChild('child_scripts.js', static.File('/Users/dp/scripts.js'))
       setattr like so.
     </p>
 
-    <pre class="literal-block">
+    <pre class="python">
 setattr(DotChildren, 'child_scripts.js', static.File('/Users/dp/scripts.js'))
     </pre>
 
