@@ -24,7 +24,7 @@ href="servers.xhtml">servers</a> and/or <a href="clients.xhtml">clients</a>.</p>
 
 <ul>
   <li>To introduce the Twisted Application infrastructure.</li>
-  
+
   <li>To explain how to deploy your Twisted application using <code>.tac</code>
   files and <code>twistd</code></li>
 
@@ -161,14 +161,12 @@ servers.  For example, TCPServer corresponds to reactor.listenTCP and TCPClient
 corresponds to reactor.connectTCP.  </p>
 
 <dl>
-  <dt><code class="API"
-    base="twisted.application.internet">TCPServer</code>
+  <dt><code>TCPServer</code>
   </dt>
-    
-  <dt><code class="API"
-    base="twisted.application.internet">TCPClient</code>
+
+  <dt><code>TCPClient</code>
   </dt>
-      
+
   <dd>
     Services which allow you to make connections and listen for connections
     on TCP ports.
@@ -179,12 +177,10 @@ corresponds to reactor.connectTCP.  </p>
       base="twisted.internet.interfaces.IReactorTCP">connectTCP</code></li>
     </ul>
   </dd>
-  
-  <dt><code class="API"
-  base="twisted.application.internet">UNIXServer</code></dt>
 
-  <dt><code class="API"
-  base="twisted.application.internet">UNIXClient</code></dt>
+  <dt><code>UNIXServer</code></dt>
+
+  <dt><code>UNIXClient</code></dt>
 
   <dd>
     Services which listen and make connections over UNIX sockets.
@@ -194,13 +190,11 @@ corresponds to reactor.connectTCP.  </p>
       <li><code class="API"
       base="twisted.internet.interfaces.IReactorUNIX">connectUNIX</code></li>
     </ul>
-  </dd>  
+  </dd>
 
-  <dt><code class="API"
-  base="twisted.application.internet">SSLServer</code></dt>
+  <dt><code>SSLServer</code></dt>
 
-  <dt><code class="API"
-  base="twisted.application.internet">SSLClient</code></dt>
+  <dt><code>SSLClient</code></dt>
 
   <dd>Services which allow you to make SSL connections and run SSL servers.
     <ul>
@@ -209,13 +203,11 @@ corresponds to reactor.connectTCP.  </p>
       <li><code class="API"
       base="twisted.internet.interfaces.IReactorSSL">connectSSL</code></li>
     </ul>
-  </dd>  
+  </dd>
 
-  <dt><code class="API"
-  base="twisted.application.internet">UDPServer</code></dt>
+  <dt><code>UDPServer</code></dt>
 
-  <dt><code class="API"
-  base="twisted.application.internet">UDPClient</code></dt>
+  <dt><code>UDPClient</code></dt>
 
   <dd>Services which allow you to send and receive data over UDP
     <ul>
@@ -226,11 +218,9 @@ corresponds to reactor.connectTCP.  </p>
     <p>See also the <a href="udp.xhtml">UDP documentation</a>.</p>
   </dd>
 
-  <dt><code class="API"
-  base="twisted.application.internet">UNIXDatagramServer</code></dt>
+  <dt><code>UNIXDatagramServer</code></dt>
 
-  <dt><code class="API"
-  base="twisted.application.internet">UNIXDatagramClient</code></dt>
+  <dt><code>UNIXDatagramClient</code></dt>
 
   <dd>Services which send and receive data over UNIX datagram sockets.
     <ul>
@@ -241,8 +231,7 @@ corresponds to reactor.connectTCP.  </p>
     </ul>
   </dd>
 
-  <dt><code class="API"
-  base="twisted.application.internet">MulticastServer</code></dt>
+  <dt><code>MulticastServer</code></dt>
 
   <dd>
     A server for UDP socket methods that support multicast.
@@ -251,14 +240,14 @@ corresponds to reactor.connectTCP.  </p>
       base="twisted.internet.interfaces.IReactorUDP">listenMulticast</code></li>
     </ul>
   </dd>
-  
+
   <dt><code class="API"
   base="twisted.application.internet">TimerService</code></dt>
 
   <dd>
     A service to periodically call a function.
   </dd>
-  
+
 </dl>
 
 <h3>Service Collection</h3>

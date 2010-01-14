@@ -101,9 +101,9 @@ d.addCallback(printResult)
 reactor.run()
 </pre>
 
-    <p>If you wish to call a method in the reactor thread and get its
-    result, you can use <code base="twisted.internet.threads" class="API">
-    blockingCallFromThread</code>:</p>
+    <p>If you wish to call a method in the reactor thread and get its result,
+    you can use <code class="API"
+    base="twisted.internet.threads">blockingCallFromThread</code>:</p>
 
 <pre class="python">
 from twisted.internet import threads, reactor, defer

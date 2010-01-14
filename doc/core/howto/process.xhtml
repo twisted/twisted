@@ -24,14 +24,14 @@ more detail in the documentation of:
 
     <h2>Running Another Process</h2>
 
-<p>Processes are run through the reactor, using <code
-class="python">reactor.spawnProcess()</code>. Pipes are created to the child
-process, and added to the reactor core so that the application will not
-block while sending data into or pulling data out of the new process. <code
-class="python">reactor.spawnProcess()</code> requires two arguments,
+<p>Processes are run through the reactor,
+using <code>reactor.spawnProcess</code>. Pipes are created to the child process,
+and added to the reactor core so that the application will not block while
+sending data into or pulling data out of the new
+process. <code>reactor.spawnProcess</code> requires two arguments,
 processProtocol and executable, and optionally takes several more: arguments,
-environment, path, userID, groupID, usePTY, and childFDs.  Not all of these
-are available on Windows.</p>
+environment, path, userID, groupID, usePTY, and childFDs.  Not all of these are
+available on Windows.</p>
 
 
 <pre class="python">
@@ -94,28 +94,9 @@ usually the civilized thing to do (unless you want to explicitly clean the
 environment as a security precaution). The default is to give an empty
 <code>env</code> to the child.</p>
 
-<p><code class="python">reactor.spawnProcess()</code> returns an instance
-that implements <code base="twisted.internet.interfaces" class="API">
+<p><code>reactor.spawnProcess</code> returns an instance that
+implements <code base="twisted.internet.interfaces" class="API">
 IProcessTransport</code>.</p>
-
-<p>Calling <code base="twisted.internet" class="API">reactor.spawnProcess()</code>
-before <code base="twisted.internet" class="API">reactor.run()</code> can lead to
-a race condition where exit isn't noticed (and a warning emitted). The use of
-<code base="twisted.internet" class="API">reactor.callWhenRunning()</code>
-prevents this issue as demonstrated in the example below:</p>
-
-<pre class="python">
-from twisted.internet.utils import getProcessOutput
-from twisted.internet import reactor
-def getOutput():
-    d = getProcessOutput('/bin/echo', ['foo'])
-    def cbOutput(output):
-        print output
-        reactor.stop()
-    d.addCallback(cbOutput)
-reactor.callWhenRunning(getOutput)
-reactor.run()
-</pre>
 
   <h2>Writing a ProcessProtocol</h2>
 
@@ -193,7 +174,7 @@ reactor.run()
 
   <li><code>.connectionMade()</code>: This is called when the program is
   started, and makes a good place to write data into the stdin pipe (using
-  <code class="python">self.transport.write()</code>).</li>
+  <code class="python">self.transport.write</code>).</li>
 
   <li><code>.outReceived(data)</code>: This is called with data that was
   received from the process' stdout pipe. Pipes tend to provide data in
@@ -211,7 +192,7 @@ reactor.run()
   that the process' stdin pipe has closed. Programs don't typically close
   their own stdin, so this will probably get called when your
   ProcessProtocol has shut down the write side with <code
-  class="python">self.transport.loseConnection()</code>.</li>
+  class="python">self.transport.loseConnection</code>.</li>
 
   <li><code>.outConnectionLost</code>: This is called when the program closes
   its stdout pipe. This usually happens when the program terminates.</li>
