@@ -31,6 +31,18 @@
       of new plugins installed after the program has started).</li>
     </ul>
 
+    <h2>Installing a plugin</h2>
+
+    <p>Before using a Twisted plugin, make sure the following packages
+    are installed:</p>
+    <p><ul>
+    <li><a href='http://pypi.python.org/pypi/zope.interface'>zope.interface</a></li>
+    </ul></p>
+
+    <p>You can install these packages using the <code>easy_install</code>
+    tool provided by <a href='http://pypi.python.org/pypi/setuptools'>setuptools</a>
+    .</p>
+
     <h2>Writing Extensible Programs</h2>
 
     <p>Taking advantage of <code class="API">twisted.plugin</code> is
@@ -40,8 +52,8 @@
       <li>
         <p>
         Define an interface which plugins will be required to implement.
-        This is done using the zope.interface package in the same way one
-        would define an interface for any other purpose.
+        This is done using the <code>zope.interface</code> package in
+        the same way one would define an interface for any other purpose.
         </p>
 
         <p>
