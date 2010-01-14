@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.conch.test.test_checkers -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -35,6 +35,8 @@ from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.internet import defer
 from twisted.python import failure, reflect, log
 from twisted.python.util import runAsEffectiveUser
+from twisted.python.filepath import FilePath
+
 
 def verifyCryptedPassword(crypted, pw):
     if crypted[0] == '$': # md5_crypt encrypted
@@ -127,26 +129,44 @@ class SSHPublicKeyDatabase:
                 return failure.Failure(UnauthorizedLogin('error while verifying key'))
         return failure.Failure(UnauthorizedLogin("unable to verify key"))
 
+
+    def getAuthorizedKeysFiles(self, credentials):
+        """
+        Return a list of L{FilePath} instances for I{authorized_keys} files
+        which might contain information about authorized keys for the given
+        credentials.
+
+        On OpenSSH servers, the default location of the file containing the
+        list of authorized public keys is
+        U{$HOME/.ssh/authorized_keys<http://www.openbsd.org/cgi-bin/man.cgi?query=sshd_config>}.
+
+        I{$HOME/.ssh/authorized_keys2} is also returned, though it has been
+        U{deprecated by OpenSSH since
+        2001<http://marc.info/?m=100508718416162>}.
+
+        @return: A list of L{FilePath} instances to files with the authorized keys.
+        """
+        pwent = pwd.getpwnam(credentials.username)
+        root = FilePath(pwent.pw_dir).child('.ssh')
+        files = ['authorized_keys', 'authorized_keys2']
+        return [root.child(f) for f in files]
+
+
     def checkKey(self, credentials):
         """
-        Retrieve the keys of the user specified by the credentials, and check
-        if one matches the blob in the credentials.
+        Retrieve files containing authorized keys and check against user
+        credentials.
         """
-        sshDir = os.path.expanduser(
-            os.path.join("~", credentials.username, ".ssh"))
-        if sshDir.startswith('~'): # didn't expand
-            return False
         uid, gid = os.geteuid(), os.getegid()
         ouid, ogid = pwd.getpwnam(credentials.username)[2:4]
-        for name in ['authorized_keys2', 'authorized_keys']:
-            filename = os.path.join(sshDir, name)
-            if not os.path.exists(filename):
+        for filepath in self.getAuthorizedKeysFiles(credentials):
+            if not filepath.exists():
                 continue
             try:
-                lines = open(filename)
+                lines = filepath.open()
             except IOError, e:
                 if e.errno == errno.EACCES:
-                    lines = runAsEffectiveUser(ouid, ogid, open, filename)
+                    lines = runAsEffectiveUser(ouid, ogid, filepath.open)
                 else:
                     raise
             for l in lines:

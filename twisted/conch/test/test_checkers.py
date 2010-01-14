@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -18,6 +18,7 @@ from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
 from twisted.cred.credentials import UsernamePassword, IUsernamePassword, \
     SSHPrivateKey, ISSHPrivateKey
 from twisted.cred.error import UnhandledCredentials, UnauthorizedLogin
+from twisted.python.fakepwd import UserDatabase
 from twisted.test.test_process import MockOS
 
 try:
@@ -44,17 +45,21 @@ class SSHPublicKeyDatabaseTestCase(TestCase):
 
     def setUp(self):
         self.checker = SSHPublicKeyDatabase()
-        self.sshDir = FilePath(self.mktemp())
-        self.sshDir.makedirs()
-
         self.key1 = base64.encodestring("foobar")
         self.key2 = base64.encodestring("eggspam")
         self.content = "t1 %s foo\nt2 %s egg\n" % (self.key1, self.key2)
 
         self.mockos = MockOS()
-        self.mockos.path = self.sshDir.path
-        self.patch(os.path, "expanduser", self.mockos.expanduser)
-        self.patch(pwd, "getpwnam", self.mockos.getpwnam)
+        self.mockos.path = FilePath(self.mktemp())
+        self.mockos.path.makedirs()
+        self.sshDir = self.mockos.path.child('.ssh')
+        self.sshDir.makedirs()
+
+        userdb = UserDatabase()
+        userdb.addUser('user', 'password', 1, 2, 'first last',
+                self.mockos.path.path, '/bin/shell')
+
+        self.patch(pwd, "getpwnam", userdb.getpwnam)
         self.patch(os, "seteuid", self.mockos.seteuid)
         self.patch(os, "setegid", self.mockos.setegid)
 
