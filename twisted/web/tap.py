@@ -100,14 +100,6 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         ext, klass = proc.split('=', 1)
         self['root'].processors[ext] = reflect.namedClass(klass)
 
-    def opt_static(self, path):
-        """Same as --path, this is deprecated and will be removed in a
-        future release."""
-        print ("WARNING: --static is deprecated and will be removed in"
-               "a future release. Please use --path.")
-        self.opt_path(path)
-    opt_s = opt_static
-
     def opt_class(self, className):
         """Create a Resource subclass with a zero-argument constructor.
         """
