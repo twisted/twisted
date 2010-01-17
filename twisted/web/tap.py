@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -52,7 +52,8 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         self['root'] = None
 
     def opt_index(self, indexName):
-        """Add the name of a file used to check for directory indexes.
+        """
+        Add the name of a file used to check for directory indexes.
         [default: index, index.html]
         """
         self['indexes'].append(indexName)
@@ -60,7 +61,8 @@ demo webserver that has the Test class from twisted.web.demo in it."""
     opt_i = opt_index
 
     def opt_user(self):
-        """Makes a server with ~/public_html and ~/.twistd-web-pb support for
+        """
+        Makes a server with ~/public_html and ~/.twistd-web-pb support for
         users.
         """
         self['root'] = distrib.UserDirectory()
@@ -92,7 +94,8 @@ demo webserver that has the Test class from twisted.web.demo in it."""
             }
 
     def opt_processor(self, proc):
-        """`ext=class' where `class' is added as a Processor for files ending
+        """
+        `ext=class' where `class' is added as a Processor for files ending
         with `ext'.
         """
         if not isinstance(self['root'], static.File):
@@ -100,23 +103,18 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         ext, klass = proc.split('=', 1)
         self['root'].processors[ext] = reflect.namedClass(klass)
 
-    def opt_static(self, path):
-        """Same as --path, this is deprecated and will be removed in a
-        future release."""
-        print ("WARNING: --static is deprecated and will be removed in"
-               "a future release. Please use --path.")
-        self.opt_path(path)
-    opt_s = opt_static
-
     def opt_class(self, className):
-        """Create a Resource subclass with a zero-argument constructor.
+        """
+        Create a Resource subclass with a zero-argument constructor.
         """
         classObj = reflect.namedClass(className)
         self['root'] = classObj()
 
 
     def opt_resource_script(self, name):
-        """An .rpy file to be used as the root resource of the webserver."""
+        """
+        An .rpy file to be used as the root resource of the webserver.
+        """
         self['root'] = script.ResourceScriptWrapper(name)
 
 
@@ -136,7 +134,9 @@ demo webserver that has the Test class from twisted.web.demo in it."""
 
 
     def opt_mime_type(self, defaultType):
-        """Specify the default mime-type for static files."""
+        """
+        Specify the default mime-type for static files.
+        """
         if not isinstance(self['root'], static.File):
             raise usage.UsageError("You can only use --mime_type after --path.")
         self['root'].defaultType = defaultType
@@ -144,14 +144,17 @@ demo webserver that has the Test class from twisted.web.demo in it."""
 
 
     def opt_allow_ignore_ext(self):
-        """Specify whether or not a request for 'foo' should return 'foo.ext'"""
+        """
+        Specify whether or not a request for 'foo' should return 'foo.ext'
+        """
         if not isinstance(self['root'], static.File):
             raise usage.UsageError("You can only use --allow_ignore_ext "
                                    "after --path.")
         self['root'].ignoreExt('*')
 
     def opt_ignore_ext(self, ext):
-        """Specify an extension to ignore.  These will be processed in order.
+        """
+        Specify an extension to ignore.  These will be processed in order.
         """
         if not isinstance(self['root'], static.File):
             raise usage.UsageError("You can only use --ignore_ext "

@@ -1,0 +1,1 @@
+Remove '--static' option from twistd web, that served as an alias for the '--path' option.
