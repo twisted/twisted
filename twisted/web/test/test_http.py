@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -1417,3 +1417,115 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         req = http.Request(channel, False)
         req.connectionLost(Failure(ConnectionLost("The end.")))
         self.assertRaises(RuntimeError, req.finish)
+
+
+
+class MultilineHeadersTestCase(unittest.TestCase):
+    """
+    Tests to exercise handling of multiline headers by L{HTTPClient}.  RFCs 1945
+    (HTTP 1.0) and 2616 (HTTP 1.1) state that HTTP message header fields can
+    span multiple lines if each extra line is preceded by at least one space or
+    horizontal tab.
+    """
+    def setUp(self):
+        """
+        Initialize variables used to verify that the header-processing functions
+        are getting called.
+        """
+        self.handleHeaderCalled = False
+        self.handleEndHeadersCalled = False
+
+    # Dictionary of sample complete HTTP header key/value pairs, including
+    # multiline headers.
+    expectedHeaders = {'Content-Length': '10',
+                       'X-Multiline' : 'line-0\tline-1',
+                       'X-Multiline2' : 'line-2 line-3'}
+
+    def ourHandleHeader(self, key, val):
+        """
+        Dummy implementation of L{HTTPClient.handleHeader}.
+        """
+        self.handleHeaderCalled = True
+        self.assertEquals(val, self.expectedHeaders[key])
+
+
+    def ourHandleEndHeaders(self):
+        """
+        Dummy implementation of L{HTTPClient.handleEndHeaders}.
+        """
+        self.handleEndHeadersCalled = True
+
+
+    def test_extractHeader(self):
+        """
+        A header isn't processed by L{HTTPClient.extractHeader} until it is
+        confirmed in L{HTTPClient.lineReceived} that the header has been
+        received completely.
+        """
+        c = ClientDriver()
+        c.handleHeader = self.ourHandleHeader
+        c.handleEndHeaders = self.ourHandleEndHeaders
+
+        c.lineReceived('HTTP/1.0 201')
+        c.lineReceived('Content-Length: 10')
+        self.assertIdentical(c.length, None)
+        self.assertFalse(self.handleHeaderCalled)
+        self.assertFalse(self.handleEndHeadersCalled)
+
+        # Signal end of headers.
+        c.lineReceived('')
+        self.assertTrue(self.handleHeaderCalled)
+        self.assertTrue(self.handleEndHeadersCalled)
+
+        self.assertEquals(c.length, 10)
+
+
+    def test_noHeaders(self):
+        """
+        An HTTP request with no headers will not cause any calls to
+        L{handleHeader} but will cause L{handleEndHeaders} to be called on
+        L{HTTPClient} subclasses.
+        """
+        c = ClientDriver()
+        c.handleHeader = self.ourHandleHeader
+        c.handleEndHeaders = self.ourHandleEndHeaders
+        c.lineReceived('HTTP/1.0 201')
+
+        # Signal end of headers.
+        c.lineReceived('')
+        self.assertFalse(self.handleHeaderCalled)
+        self.assertTrue(self.handleEndHeadersCalled)
+
+        self.assertEquals(c.version, 'HTTP/1.0')
+        self.assertEquals(c.status, '201')
+
+
+    def test_multilineHeaders(self):
+        """
+        L{HTTPClient} parses multiline headers by buffering header lines until
+        an empty line or a line that does not start with whitespace hits
+        lineReceived, confirming that the header has been received completely.
+        """
+        c = ClientDriver()
+        c.handleHeader = self.ourHandleHeader
+        c.handleEndHeaders = self.ourHandleEndHeaders
+
+        c.lineReceived('HTTP/1.0 201')
+        c.lineReceived('X-Multiline: line-0')
+        self.assertFalse(self.handleHeaderCalled)
+        # Start continuing line with a tab.
+        c.lineReceived('\tline-1')
+        c.lineReceived('X-Multiline2: line-2')
+        # The previous header must be complete, so now it can be processed.
+        self.assertTrue(self.handleHeaderCalled)
+        # Start continuing line with a space.
+        c.lineReceived(' line-3')
+        c.lineReceived('Content-Length: 10')
+
+        # Signal end of headers.
+        c.lineReceived('')
+        self.assertTrue(self.handleEndHeadersCalled)
+
+        self.assertEquals(c.version, 'HTTP/1.0')
+        self.assertEquals(c.status, '201')
+        self.assertEquals(c.length, 10)

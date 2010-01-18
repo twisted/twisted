@@ -1,0 +1,1 @@
+twisted.web.http.HTTPClient now supports multi-line headers.

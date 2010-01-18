@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.web.test.test_http -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -193,7 +193,9 @@ def urlparse(url):
 
 
 def parse_qs(qs, keep_blank_values=0, strict_parsing=0, unquote=unquote):
-    """like cgi.parse_qs, only with custom unquote function"""
+    """
+    like cgi.parse_qs, only with custom unquote function
+    """
     d = {}
     items = [s2 for s1 in qs.split("&") for s2 in s1.split(";")]
     for item in items:
@@ -213,7 +215,9 @@ def parse_qs(qs, keep_blank_values=0, strict_parsing=0, unquote=unquote):
     return d
 
 def datetimeToString(msSinceEpoch=None):
-    """Convert seconds since epoch to HTTP datetime string."""
+    """
+    Convert seconds since epoch to HTTP datetime string.
+    """
     if msSinceEpoch == None:
         msSinceEpoch = time.time()
     year, month, day, hh, mm, ss, wd, y, z = time.gmtime(msSinceEpoch)
@@ -224,7 +228,9 @@ def datetimeToString(msSinceEpoch=None):
     return s
 
 def datetimeToLogString(msSinceEpoch=None):
-    """Convert seconds since epoch to log datetime string."""
+    """
+    Convert seconds since epoch to log datetime string.
+    """
     if msSinceEpoch == None:
         msSinceEpoch = time.time()
     year, month, day, hh, mm, ss, wd, y, z = time.gmtime(msSinceEpoch)
@@ -261,7 +267,9 @@ def _logDateTimeStop():
         _resetLogDateTimeID.cancel()
 
 def timegm(year, month, day, hour, minute, second):
-    """Convert time tuple in GMT to seconds since epoch, GMT"""
+    """
+    Convert time tuple in GMT to seconds since epoch, GMT
+    """
     EPOCH = 1970
     if year < EPOCH:
         raise ValueError("Years prior to %d not supported" % (EPOCH,))
@@ -278,7 +286,9 @@ def timegm(year, month, day, hour, minute, second):
     return seconds
 
 def stringToDatetime(dateString):
-    """Convert an HTTP date string (one of three formats) to seconds since epoch."""
+    """
+    Convert an HTTP date string (one of three formats) to seconds since epoch.
+    """
     parts = dateString.split()
 
     if not parts[0][0:3].lower() in weekdayname_lower:
@@ -328,13 +338,16 @@ def stringToDatetime(dateString):
     return int(timegm(year, month, day, hour, min, sec))
 
 def toChunk(data):
-    """Convert string to a chunk.
+    """
+    Convert string to a chunk.
 
-    @returns: a tuple of strings representing the chunked encoding of data"""
+    @returns: a tuple of strings representing the chunked encoding of data
+    """
     return ("%x\r\n" % len(data), data, "\r\n")
 
 def fromChunk(data):
-    """Convert chunk to string.
+    """
+    Convert chunk to string.
 
     @returns: tuple (result, remaining), may raise ValueError.
     """
@@ -348,7 +361,8 @@ def fromChunk(data):
 
 
 def parseContentRange(header):
-    """Parse a content-range header into (start, end, realLength).
+    """
+    Parse a content-range header into (start, end, realLength).
 
     realLength might be None if real length is not known ('*').
     """
@@ -379,16 +393,29 @@ class StringTransport:
 
 
 class HTTPClient(basic.LineReceiver):
-    """A client for HTTP 1.0
+    """
+    A client for HTTP 1.0.
 
     Notes:
-    You probably want to send a 'Host' header with the name of
-    the site you're connecting to, in order to not break name
-    based virtual hosting.
+    You probably want to send a 'Host' header with the name of the site you're
+    connecting to, in order to not break name based virtual hosting.
+
+    @ivar length: The length of the request body in bytes.
+    @type length: C{int}
+
+    @ivar firstLine: Are we waiting for the first header line?
+    @type firstLine: C{bool}
+
+    @ivar __buffer: The buffer that stores the response to the HTTP request.
+    @type __buffer: A C{StringIO} object.
+
+    @ivar _header: Part or all of an HTTP request header.
+    @type _header: C{str}
     """
     length = None
-    firstLine = 1
+    firstLine = True
     __buffer = None
+    _header = ""
 
     def sendCommand(self, command, path):
         self.transport.write('%s %s HTTP/1.0\r\n' % (command, path))
@@ -399,9 +426,33 @@ class HTTPClient(basic.LineReceiver):
     def endHeaders(self):
         self.transport.write('\r\n')
 
+
+    def extractHeader(self, header):
+        """
+        Given a complete HTTP header, extract the field name and value and
+        process the header.
+
+        @param header: a complete HTTP request header of the form
+            'field-name: value'.
+        @type header: C{str}
+        """
+        key, val = header.split(':', 1)
+        val = val.lstrip()
+        self.handleHeader(key, val)
+        if key.lower() == 'content-length':
+            self.length = int(val)
+
+
     def lineReceived(self, line):
+        """
+        Parse the status line and headers for an HTTP request.
+
+        @param line: Part of an HTTP request header. Request bodies are parsed
+            in L{rawDataReceived}.
+        @type line: C{str}
+        """
         if self.firstLine:
-            self.firstLine = 0
+            self.firstLine = False
             l = line.split(None, 2)
             version = l[0]
             status = l[1]
@@ -412,16 +463,27 @@ class HTTPClient(basic.LineReceiver):
                 message = ""
             self.handleStatus(version, status, message)
             return
-        if line:
-            key, val = line.split(':', 1)
-            val = val.lstrip()
-            self.handleHeader(key, val)
-            if key.lower() == 'content-length':
-                self.length = int(val)
-        else:
+        if not line:
+            if self._header != "":
+                # Only extract headers if there are any
+                self.extractHeader(self._header)
             self.__buffer = StringIO()
             self.handleEndHeaders()
             self.setRawMode()
+            return
+
+        if line.startswith('\t') or line.startswith(' '):
+            # This line is part of a multiline header. According to RFC 822, in
+            # "unfolding" multiline headers you do not strip the leading
+            # whitespace on the continuing line.
+            self._header = self._header + line
+        elif self._header:
+            # This line starts a new header, so process the previous one.
+            self.extractHeader(self._header)
+            self._header = line
+        else: # First header
+            self._header = line
+
 
     def connectionLost(self, reason):
         self.handleResponseEnd()
@@ -586,7 +648,9 @@ class Request:
 
 
     def _cleanup(self):
-        """Called when have finished responding and are no longer queued."""
+        """
+        Called when have finished responding and are no longer queued.
+        """
         if self.producer:
             log.err(RuntimeError("Producer was not unregistered for %s" % self.uri))
             self.unregisterProducer()
@@ -605,7 +669,8 @@ class Request:
     # methods for channel - end users should not use these
 
     def noLongerQueued(self):
-        """Notify the object that it is no longer queued.
+        """
+        Notify the object that it is no longer queued.
 
         We start writing whatever data we have to the transport, etc.
 
@@ -669,7 +734,8 @@ class Request:
 
 
     def handleContentChunk(self, data):
-        """Write a chunk of data.
+        """
+        Write a chunk of data.
 
         This method is not intended for users.
         """
@@ -745,7 +811,8 @@ class Request:
         return '<%s %s %s>'% (self.method, self.uri, self.clientproto)
 
     def process(self):
-        """Override in subclasses.
+        """
+        Override in subclasses.
 
         This method is not intended for users.
         """
@@ -755,7 +822,9 @@ class Request:
     # consumer interface
 
     def registerProducer(self, producer, streaming):
-        """Register a producer."""
+        """
+        Register a producer.
+        """
         if self.producer:
             raise ValueError, "registering producer %s before previous one (%s) was unregistered" % (producer, self.producer)
 
@@ -769,7 +838,9 @@ class Request:
             self.transport.registerProducer(producer, streaming)
 
     def unregisterProducer(self):
-        """Unregister the producer."""
+        """
+        Unregister the producer.
+        """
         if not self.queued:
             self.transport.unregisterProducer()
         self.producer = None
@@ -799,7 +870,8 @@ class Request:
 
 
     def getCookie(self, key):
-        """Get a cookie that was sent from the network.
+        """
+        Get a cookie that was sent from the network.
         """
         return self.received_cookies.get(key)
 
@@ -911,11 +983,12 @@ class Request:
                 self.transport.write(data)
 
     def addCookie(self, k, v, expires=None, domain=None, path=None, max_age=None, comment=None, secure=None):
-        """Set an outgoing HTTP cookie.
+        """
+        Set an outgoing HTTP cookie.
 
         In general, you should consider using sessions instead of cookies, see
-        twisted.web.server.Request.getSession and the
-        twisted.web.server.Session class for details.
+        L{twisted.web.server.Request.getSession} and the
+        L{twisted.web.server.Session} class for details.
         """
         cookie = '%s=%s' % (k, v)
         if expires is not None:
@@ -933,7 +1006,8 @@ class Request:
         self.cookies.append(cookie)
 
     def setResponseCode(self, code, message=None):
-        """Set the HTTP response code.
+        """
+        Set the HTTP response code.
         """
         if not isinstance(code, (int, long)):
             raise TypeError("HTTP response code must be int or long")
@@ -959,7 +1033,8 @@ class Request:
 
 
     def redirect(self, url):
-        """Utility function that does a redirect.
+        """
+        Utility function that does a redirect.
 
         The request should have finish() called after this.
         """
@@ -1624,7 +1699,9 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
 
     def requestDone(self, request):
-        """Called by first request in queue when it is done."""
+        """
+        Called by first request in queue when it is done.
+        """
         if request != self.requests[0]: raise TypeError
         del self.requests[0]
 
@@ -1649,7 +1726,9 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
 
 class HTTPFactory(protocol.ServerFactory):
-    """Factory for HTTP server."""
+    """
+    Factory for HTTP server.
+    """
 
     protocol = HTTPChannel
 
@@ -1685,7 +1764,9 @@ class HTTPFactory(protocol.ServerFactory):
         _logDateTimeStop()
 
     def _openLogFile(self, path):
-        """Override in subclasses, e.g. to use twisted.python.logfile."""
+        """
+        Override in subclasses, e.g. to use twisted.python.logfile.
+        """
         f = open(path, "a", 1)
         return f
 
@@ -1698,7 +1779,9 @@ class HTTPFactory(protocol.ServerFactory):
         return r[1:-1]
 
     def log(self, request):
-        """Log a request's result to the logfile, by default in combined log format."""
+        """
+        Log a request's result to the logfile, by default in combined log format.
+        """
         if hasattr(self, "logFile"):
             line = '%s - - %s "%s" %d %s "%s" "%s"\n' % (
                 request.getClientIP(),
