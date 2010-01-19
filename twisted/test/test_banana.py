@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import StringIO
@@ -45,24 +45,38 @@ class BananaTestCase(unittest.TestCase):
         self.enc.dataReceived(self.io.getvalue())
         assert self.result == 'hello'
 
-    def testLong(self):
-        self.enc.sendEncoded(1015l)
-        self.enc.dataReceived(self.io.getvalue())
-        assert self.result == 1015l, "should be 1015l, got %s" % self.result
+    def test_int(self):
+        """
+        A positive integer less than 2 ** 32 should round-trip through
+        banana without changing value and should come out represented
+        as an C{int} (regardless of the type which was encoded).
+        """
+        for value in (10151, 10151L):
+            self.enc.sendEncoded(value)
+            self.enc.dataReceived(self.io.getvalue())
+            self.assertEquals(self.result, 10151)
+            self.assertIsInstance(self.result, int)
 
 
     def test_largeLong(self):
         """
-        Test that various longs greater than 2 ** 32 - 1 round-trip through
-        banana properly.
+        Integers greater than 2 ** 32 and less than -2 ** 32 should
+        round-trip through banana without changing value and should
+        come out represented as C{int} instances if the value fits
+        into that type on the receiving platform.
         """
         for exp in (32, 64, 128, 256):
             for add in (0, 1):
-                n = 2 ** exp + add
-                self.io.truncate(0)
-                self.enc.sendEncoded(n)
-                self.enc.dataReceived(self.io.getvalue())
-                self.assertEqual(self.result, n)
+                m = 2 ** exp + add
+                for n in (m, -m-1):
+                    self.io.truncate(0)
+                    self.enc.sendEncoded(n)
+                    self.enc.dataReceived(self.io.getvalue())
+                    self.assertEquals(self.result, n)
+                    if n > sys.maxint or n < -sys.maxint - 1:
+                        self.assertIsInstance(self.result, long)
+                    else:
+                        self.assertIsInstance(self.result, int)
 
 
     def _getSmallest(self):

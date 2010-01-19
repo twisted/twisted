@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.test.test_banana -*-
 #
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -41,10 +41,7 @@ def b1282int(st):
         num = ord(char)
         i = i + (num * (oneHundredAndTwentyEight ** place))
         place = place + 1
-    if i <= 2147483647:
-        return int(i)
-    else:
-        return i
+    return int(i)
 
 # delimiter characters.
 LIST     = chr(0x80)
@@ -188,15 +185,15 @@ class Banana(protocol.Protocol, styles.Ephemeral):
             elif typebyte == INT:
                 buffer = rest
                 num = b1282int(num)
-                gotItem(int(num))
+                gotItem(num)
             elif typebyte == LONGINT:
                 buffer = rest
                 num = b1282int(num)
-                gotItem(long(num))
+                gotItem(num)
             elif typebyte == LONGNEG:
                 buffer = rest
                 num = b1282int(num)
-                gotItem(-long(num))
+                gotItem(-num)
             elif typebyte == NEG:
                 buffer = rest
                 num = -b1282int(num)
