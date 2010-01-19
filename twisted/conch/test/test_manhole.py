@@ -24,7 +24,10 @@ def determineDefaultFunctionName():
     try:
         1 / 0
     except:
-        return traceback.extract_stack()[0][2]
+        # The last frame is this function.  The second to last frame is this
+        # function's caller, which is module-scope, which is what we want,
+        # so -2.
+        return traceback.extract_stack()[-2][2]
 defaultFunctionName = determineDefaultFunctionName()
 
 
@@ -176,15 +179,15 @@ class ManholeLoopbackMixin:
         done = self.recvlineClient.expect("done")
 
         self._testwrite(
-            "1 / 0\n"
+            "raise Exception('foo bar baz')\n"
             "done")
 
         def finished(ign):
             self._assertBuffer(
-                [">>> 1 / 0",
+                [">>> raise Exception('foo bar baz')",
                  "Traceback (most recent call last):",
                  '  File "<console>", line 1, in ' + defaultFunctionName,
-                 "ZeroDivisionError: integer division or modulo by zero",
+                 "Exception: foo bar baz",
                  ">>> done"])
 
         return done.addCallback(finished)

@@ -505,7 +505,8 @@ class _StdioMixin(_BaseMixin):
         if module.endswith('.pyc') or module.endswith('.pyo'):
             module = module[:-1]
         args = [exe, module, reflect.qual(self.serverProtocol)]
-        env = {"PYTHONPATH": os.pathsep.join(sys.path)}
+        env = os.environ.copy()
+        env["PYTHONPATH"] = os.pathsep.join(sys.path)
 
         from twisted.internet import reactor
         clientTransport = reactor.spawnProcess(processClient, exe, args,
