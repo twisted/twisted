@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -7,6 +7,13 @@ Helper class to writing deterministic time-based unit tests.
 Do not use this module.  It is a lie.  See L{twisted.internet.task.Clock}
 instead.
 """
+
+import warnings
+warnings.warn(
+    "twisted.test.time_helpers is deprecated since Twisted 10.0.  "
+    "See twisted.internet.task.Clock instead.",
+    category=DeprecationWarning, stacklevel=2)
+
 
 class Clock(object):
     """

@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -12,8 +12,6 @@ import time
 from twisted.trial import unittest
 from twisted.internet import reactor, protocol, error, abstract, defer
 from twisted.internet import interfaces, base
-
-from twisted.test.time_helpers import Clock
 
 try:
     from twisted.internet import ssl
@@ -780,49 +778,6 @@ class TimeTestCase(unittest.TestCase):
             reactor.callLater(0, check)
         call = reactor.callLater(0, later)
         return d
-
-
-    def testCallLaterDelayAndReset(self):
-        """
-        Test that the reactor handles DelayedCalls which have been
-        reset or delayed.
-        """
-        clock = Clock()
-        clock.install()
-        try:
-            callbackTimes = [None, None]
-
-            def resetCallback():
-                callbackTimes[0] = clock()
-
-            def delayCallback():
-                callbackTimes[1] = clock()
-
-            ireset = reactor.callLater(2, resetCallback)
-            idelay = reactor.callLater(3, delayCallback)
-
-            clock.pump(reactor, [0, 1])
-
-            self.assertIdentical(callbackTimes[0], None)
-            self.assertIdentical(callbackTimes[1], None)
-
-            ireset.reset(2) # (now)1 + 2 = 3
-            idelay.delay(3) # (orig)3 + 3 = 6
-
-            clock.pump(reactor, [0, 1])
-
-            self.assertIdentical(callbackTimes[0], None)
-            self.assertIdentical(callbackTimes[1], None)
-
-            clock.pump(reactor, [0, 1])
-
-            self.assertEquals(callbackTimes[0], 3)
-            self.assertEquals(callbackTimes[1], None)
-
-            clock.pump(reactor, [0, 3])
-            self.assertEquals(callbackTimes[1], 6)
-        finally:
-            clock.uninstall()
 
 
     def testCallLaterTime(self):

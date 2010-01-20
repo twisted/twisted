@@ -1,4 +1,4 @@
-# Copyright (c) 2009 Twisted Matrix Laboratories.
+# Copyright (c) 2009-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -7,6 +7,7 @@ Tests for L{twisted.internet.posixbase} and supporting code.
 
 from twisted.python.compat import set
 from twisted.trial.unittest import TestCase
+from twisted.internet.defer import Deferred
 from twisted.internet.posixbase import PosixReactorBase, _Waker
 from twisted.internet.protocol import ServerFactory
 from twisted.internet.tcp import Port
@@ -107,3 +108,152 @@ class TCPPortTests(TestCase):
         port.connected = True
         port.connectionLost = lambda reason: 1 / 0
         return self.assertFailure(port.stopListening(), ZeroDivisionError)
+
+
+
+class TimeoutReportReactor(PosixReactorBase):
+    """
+    A reactor which is just barely runnable and which cannot monitor any
+    readers or writers, and which fires a L{Deferred} with the timeout
+    passed to its C{doIteration} method as soon as that method is invoked.
+    """
+    def __init__(self):
+        PosixReactorBase.__init__(self)
+        self.iterationTimeout = Deferred()
+        self.now = 100
+
+
+    def addReader(self, reader):
+        """
+        Ignore the reader.  This is necessary because the waker will be
+        added.  However, we won't actually monitor it for any events.
+        """
+
+
+    def removeAll(self):
+        """
+        There are no readers or writers, so there is nothing to remove. 
+        This will be called when the reactor stops, though, so it must be
+        implemented.
+        """
+        return []
+
+
+    def seconds(self):
+        """
+        Override the real clock with a deterministic one that can be easily
+        controlled in a unit test.
+        """
+        return self.now
+
+
+    def doIteration(self, timeout):
+        d = self.iterationTimeout
+        if d is not None:
+            self.iterationTimeout = None
+            d.callback(timeout)
+
+
+
+class IterationTimeoutTests(TestCase):
+    """
+    Tests for the timeout argument L{PosixReactorBase.run} calls
+    L{PosixReactorBase.doIteration} with in the presence of various delayed
+    calls.
+    """
+    def _checkIterationTimeout(self, reactor):
+        timeout = []
+        reactor.iterationTimeout.addCallback(timeout.append)
+        reactor.iterationTimeout.addCallback(lambda ignored: reactor.stop())
+        reactor.run()
+        return timeout[0]
+
+
+    def test_noCalls(self):
+        """
+        If there are no delayed calls, C{doIteration} is called with a
+        timeout of C{None}.
+        """
+        reactor = TimeoutReportReactor()
+        timeout = self._checkIterationTimeout(reactor)
+        self.assertEquals(timeout, None)
+
+
+    def test_delayedCall(self):
+        """
+        If there is a delayed call, C{doIteration} is called with a timeout
+        which is the difference between the current time and the time at
+        which that call is to run.
+        """
+        reactor = TimeoutReportReactor()
+        reactor.callLater(100, lambda: None)
+        timeout = self._checkIterationTimeout(reactor)
+        self.assertEquals(timeout, 100)
+
+
+    def test_timePasses(self):
+        """ 
+        If a delayed call is scheduled and then some time passes, the
+        timeout passed to C{doIteration} is reduced by the amount of time
+        which passed.
+        """
+        reactor = TimeoutReportReactor()
+        reactor.callLater(100, lambda: None)
+        reactor.now += 25
+        timeout = self._checkIterationTimeout(reactor)
+        self.assertEquals(timeout, 75)
+
+
+    def test_multipleDelayedCalls(self):
+        """
+        If there are several delayed calls, C{doIteration} is called with a
+        timeout which is the difference between the current time and the
+        time at which the earlier of the two calls is to run.
+        """
+        reactor = TimeoutReportReactor()
+        reactor.callLater(50, lambda: None)
+        reactor.callLater(10, lambda: None)
+        reactor.callLater(100, lambda: None)
+        timeout = self._checkIterationTimeout(reactor)
+        self.assertEquals(timeout, 10)
+
+
+    def test_resetDelayedCall(self):
+        """
+        If a delayed call is reset, the timeout passed to C{doIteration} is
+        based on the interval between the time when reset is called and the
+        new delay of the call.
+        """
+        reactor = TimeoutReportReactor()
+        call = reactor.callLater(50, lambda: None)
+        reactor.now += 25
+        call.reset(15)
+        timeout = self._checkIterationTimeout(reactor)
+        self.assertEquals(timeout, 15)
+
+
+    def test_delayDelayedCall(self):
+        """
+        If a delayed call is re-delayed, the timeout passed to
+        C{doIteration} is based on the remaining time before the call would
+        have been made and the additional amount of time passed to the delay
+        method.
+        """
+        reactor = TimeoutReportReactor()
+        call = reactor.callLater(50, lambda: None)
+        reactor.now += 10
+        call.delay(20)
+        timeout = self._checkIterationTimeout(reactor)
+        self.assertEquals(timeout, 60)
+
+
+    def test_cancelDelayedCall(self):
+        """
+        If the only delayed call is canceled, C{None} is the timeout passed
+        to C{doIteration}.
+        """
+        reactor = TimeoutReportReactor()
+        call = reactor.callLater(50, lambda: None)
+        call.cancel()
+        timeout = self._checkIterationTimeout(reactor)
+        self.assertEquals(timeout, None)
