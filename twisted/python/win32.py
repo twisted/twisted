@@ -12,7 +12,7 @@ import exceptions
 import os
 
 try:
-    from win32com import shell
+    from win32com.shell import shell
     from win32com.shell.shellcon import CSIDL_COMMON_PROGRAMS, CSIDL_PROGRAM_FILES
 except ImportError:
     pass
