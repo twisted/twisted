@@ -180,6 +180,34 @@ Lore markup of the form &lt;code class=&quot;API&quot;&gt; is supposed to
 turn into a link to the corresponding API reference page. These links will
 probably be wrong unless the correct base URL is provided to Lore.</p>
 
+<h2>Committing and Post-commit Hooks</h2>
+
+<p>Twisted uses a customized
+<a href="http://bazaar.launchpad.net/~exarkun/twisted-trac-integration/trunk/annotate/head%3A/trac-hooks/trac-post-commit-hook">
+trac-post-commit-hook</a> to enable ticket updates based on svn commit
+logs. When making a branch for a ticket, the branch name should end
+in <code>-&lt;ticket number&gt;</code>, for
+example <code>my-branch-9999</code>. This will add a ticket comment containing a
+changeset link and branch name. To make your commit message show up as a comment
+on a Trac ticket, add a <code>refs #&lt;ticket number&gt;</code> line at the
+bottom of your commit message. To automatically close a ticket on Trac
+as <code>Fixed</code> and add a comment with the closing commit message, add
+a <code>Fixes: #&lt;ticket number&gt;</code> line to your commit message. In
+general, a commit message closing a ticket looks like this:</p>
+
+<pre>
+Merge my-branch-9999: A single-line summary.
+
+Author: jesstess
+Reviewers: exarkun, glyph
+Fixes: #9999
+
+My longer description of the changes made.
+</pre>
+
+<p>The <a href="coding-standard.xhtml#commits">Twisted Coding Standard</a>
+elaborates on commit messages and source control.</p>
+
 <h2>Emacs</h2>
 
 <p>A minor mode for development with Twisted using Emacs is available.  See
