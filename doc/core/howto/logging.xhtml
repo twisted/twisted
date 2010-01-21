@@ -24,14 +24,14 @@ from twisted.python import log
 log.msg('Hello, world.')
         </pre>
       </dd>
-      
+
       <dt><code class="API" base="twisted.python.log">err</code></dt>
       <dd>Writes a failure to the log, including traceback information (if any).
       You can pass it a <code class="API"
       base="twisted.python.failure">Failure</code> or Exception instance, or
       nothing.  If you pass something else, it will be converted to a string
       with <code>repr</code> and logged.
-      
+
       If you pass nothing, it will construct a Failure from the
       currently active exception, which makes it convenient to use in an <code
       class="python">except</code> clause:
@@ -132,7 +132,7 @@ twisted.python.log.addObserver(yourCallable)
       <dd>The message (a list, usually of strings)
       for this log event, as passed to <code>log.msg</code> or the
       message in the failure passed to <code>log.err</code>.</dd>
-      
+
       <dt>isError</dt>
       <dd>This is a boolean that will be true if this event came from a call to
       <code>log.err</code>.  If this is set, there may be a <code>failure</code>
@@ -154,11 +154,8 @@ twisted.python.log.addObserver(yourCallable)
     log observers will ignore dictionary items they don't use.</p>
 
     <p>Important notes:</p>
-    
-    <ul>
-      <li>Never raise an exception from a log observer.  If your log observer
-      raises an exception, it will be removed.</li>
 
+    <ul>
       <li>Never block in a log observer, as it may run in main Twisted thread.
       This means you can't use socket or syslog Python-logging backends.</li>
 
