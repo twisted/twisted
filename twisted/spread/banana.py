@@ -1,10 +1,9 @@
 # -*- test-case-name: twisted.test.test_banana -*-
-#
 # Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-"""Banana -- s-exp based protocol.
+"""
+Banana -- s-exp based protocol.
 
 Future Plans: This module is almost entirely stable.  The same caveat applies
 to it as applies to L{twisted.spread.jelly}, however.  Read its future plans
@@ -13,13 +12,11 @@ for more details.
 @author: Glyph Lefkowitz
 """
 
-__version__ = "$Revision: 1.37 $"[11:-2]
+import copy, cStringIO, struct
 
 from twisted.internet import protocol
 from twisted.persisted import styles
 from twisted.python import log
-
-import copy, cStringIO, struct
 
 class BananaError(Exception):
     pass
@@ -33,15 +30,26 @@ def int2b128(integer, stream):
         stream(chr(integer & 0x7f))
         integer = integer >> 7
 
+
 def b1282int(st):
-    oneHundredAndTwentyEight = 128l
+    """
+    Convert an integer represented as a base 128 string into an C{int} or
+    C{long}.
+
+    @param st: The integer encoded in a string.
+    @type st: C{str}
+
+    @return: The integer value extracted from the string.
+    @rtype: C{int} or C{long}
+    """
+    e = 1
     i = 0
-    place = 0
     for char in st:
-        num = ord(char)
-        i = i + (num * (oneHundredAndTwentyEight ** place))
-        place = place + 1
-    return int(i)
+        n = ord(char)
+        i += (n * e)
+        e <<= 7
+    return i
+
 
 # delimiter characters.
 LIST     = chr(0x80)
