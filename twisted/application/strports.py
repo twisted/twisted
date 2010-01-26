@@ -1,9 +1,8 @@
 # -*- test-case-name: twisted.test.test_strports -*-
 
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
 """
 Port description language
 
@@ -11,24 +10,42 @@ This module implements a description mini-language for ports, and provides
 functions to parse it and to use it to directly construct appropriate
 network server services or to directly listen on them.
 
-Here are some examples::
- >>> s=service("80", server.Site())
- >>> s=service("tcp:80", server.Site())
- >>> s=service("tcp:80:interface=127.0.0.1", server.Site())
- >>> s=service("ssl:443", server.Site())
- >>> s=service("ssl:443:privateKey=mykey.pem", server.Site())
- >>> s=service("ssl:443:privateKey=mykey.pem:certKey=cert.pem", server.Site())
- >>> s=service("unix:/var/run/finger", FingerFactory())
- >>> s=service("unix:/var/run/finger:mode=660", FingerFactory())
- >>> p=listen("80", server.Site())
- >>> p=listen("tcp:80", server.Site())
- >>> p=listen("tcp:80:interface=127.0.0.1", server.Site())
- >>> p=listen("ssl:443", server.Site())
- >>> p=listen("ssl:443:privateKey=mykey.pem", server.Site())
- >>> p=listen("ssl:443:privateKey=mykey.pem:certKey=cert.pem", server.Site())
- >>> p=listen("unix:/var/run/finger", FingerFactory())
- >>> p=listen("unix:/var/run/finger:mode=660", FingerFactory())
- >>> p=listen("unix:/var/run/finger:lockfile=0", FingerFactory())
+Here are some examples. They assume the following toy resource and factory
+definitions::
+    class Simple(resource.Resource):
+        isLeaf = True
+        def render_GET(self, request):
+            return "<html>Hello, world!</html>"
+
+     class FingerProtocol(protocol.Protocol):
+         def connectionMade(self):
+             self.transport.loseConnection()
+
+     class FingerFactory(protocol.ServerFactory):
+         protocol = FingerProtocol
+
+Examples using SSL require a private key and a certificate. If a private key
+file name (C{privateKey}) isn't provided, a "server.pem" file is assumed to
+exist which contains the private key. If the certificate file name (C{certKey})
+isn't provided, the private key file is assumed to contain the certificate as
+well::
+    >>> s=service("80", server.Site(Simple()))
+    >>> s=service("tcp:80", server.Site(Simple()))
+    >>> s=service("tcp:80:interface=127.0.0.1", server.Site(Simple()))
+    >>> s=service("ssl:443", server.Site(Simple()))
+    >>> s=service("ssl:443:privateKey=mykey.pem", server.Site(Simple()))
+    >>> s=service("ssl:443:privateKey=mykey.pem:certKey=cert.pem", server.Site(Simple()))
+    >>> s=service("unix:/var/run/finger", FingerFactory())
+    >>> s=service("unix:/var/run/finger:mode=660", FingerFactory())
+    >>> p=listen("80", server.Site(Simple()))
+    >>> p=listen("tcp:80", server.Site(Simple()))
+    >>> p=listen("tcp:80:interface=127.0.0.1", server.Site(Simple()))
+    >>> p=listen("ssl:443", server.Site(Simple()))
+    >>> p=listen("ssl:443:privateKey=mykey.pem", server.Site(Simple()))
+    >>> p=listen("ssl:443:privateKey=mykey.pem:certKey=cert.pem", server.Site(Simple()))
+    >>> p=listen("unix:/var/run/finger", FingerFactory())
+    >>> p=listen("unix:/var/run/finger:mode=660", FingerFactory())
+    >>> p=listen("unix:/var/run/finger:lockfile=0", FingerFactory())
 
 See specific function documentation for more information.
 
@@ -99,7 +116,7 @@ def _parse(description):
             add(sofar)
             sofar = ()
     add(sofar)
-    return args, kw 
+    return args, kw
 
 def parse(description, factory, default=None):
     """
