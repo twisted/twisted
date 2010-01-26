@@ -1,50 +1,8 @@
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
-ProcessMonitor: run processes, monitor progress, and restart when
-they die.
-
-The ProcessMonitor will not attempt to restart a process that appears
-to die instantly -- with each "instant" death (less than 1 second, by
-default), it will delay approximately twice as long before restarting
-it. A successful run will reset the counter.
-
-The primary interface is "addProcess" and "removeProcess". When the
-service is active (that is, when the application it is attached to
-is running), adding a process automatically starts it.
-
-Each process has a name (a string). This string must uniquely identify
-the process. In particular, attempting to add two processes with the
-same name will result in a key error.
-
-The arguments to addProcess are:
-  - name -- a string, uniquely specifying the process
-  - args -- a list of arguments. the first will be used to determine the
-          executable
-  - optionally, the uid and gid this process should be run as (by default,
-    it does not change uid/gid before running processes).
-
-Note that args are passed to the system call, not to the shell. If running
-the shell is desired, the common idiom is to use
-.addProcess("name", ['/bin/sh', '-c', shell_script])
-
-removeProcess takes just the name argument. If the process is started, it
-kills it, and will never restart it.
-
-The "restartAll" method restarts all processes. This is useful for 3rd
-parties management services to allow a user to restart servers because
-of an outside circumstances change -- for example, a new version of a library
-which is installed.
-
-The following attributes on the monitor can be set to configure behaviour
-  - threshold -- how long a process has to live before the death is considered
-                 instant (default 1, measured in seconds)
-  - killTime -- how long a process being killed has to get its affairs in
-                order before it gets killed with an unmaskable signal
-                (default 5, measured in seconds)
-  - consistencyDelay -- time between consistency checks
-                        (default 60, measured in seconds)
+Support for starting, monitoring, and restarting child process.
 """
 
 import os, time
@@ -58,7 +16,7 @@ class DummyTransport:
 
     disconnecting = 0
 
-transport = DummyTransport() 
+transport = DummyTransport()
 
 class LineLogger(basic.LineReceiver):
 
@@ -92,7 +50,36 @@ class LoggingProtocol(protocol.ProcessProtocol):
 
 
 class ProcessMonitor(service.Service):
+    """
+    ProcessMonitor runs processes, monitors their progress, and restarts them
+    when they die.
 
+    The ProcessMonitor will not attempt to restart a process that appears to die
+    instantly -- with each "instant" death (less than 1 second, by default), it
+    will delay approximately twice as long before restarting it. A successful
+    run will reset the counter.
+
+    The primary interface is L{addProcess} and L{removeProcess}. When the service
+    is active (that is, when the application it is attached to is running),
+    adding a process automatically starts it.
+
+    Each process has a name. This name string must uniquely identify the
+    process. In particular, attempting to add two processes with the same name
+    will result in a C{KeyError}.
+
+    @type threshold: C{float}
+    @ivar threshold: How long a process has to live before the death is
+        considered instant, in seconds. The default value is 1 second.
+
+    @type killTime: C{float}
+    @ivar killTime: How long a process being killed has to get its affairs in
+        order before it gets killed with an unmaskable signal. The default value
+        is 5 seconds.
+
+    @type consistencyDelay: C{float}
+    @ivar consistencyDelay: The time between consistency checks. The default
+        value is 60 seconds.
+    """
     threshold = 1
     active = 0
     killTime = 5
@@ -134,9 +121,15 @@ class ProcessMonitor(service.Service):
         """
         Add a new process to launch, monitor, and restart when necessary.
 
+        Note that args are passed to the system call, not to the shell. If
+        running the shell is desired, the common idiom is to use
+        C{.addProcess("name", ['/bin/sh', '-c', shell_script])}
+
+        See L{removeProcess} for removing processes from the monitor.
+
         @param name: A label for this process.  This value must be unique
             across all processes added to this monitor.
-
+        @type name: C{str}
         @param args: The argv sequence for the process to launch.
         @param uid: The user ID to use to run the process.  If C{None}, the
             current UID is used.
@@ -156,8 +149,17 @@ class ProcessMonitor(service.Service):
 
 
     def removeProcess(self, name):
+        """
+        If the process is started, kill it. It will never get restarted.
+
+        See L{addProcess} for adding processes to the monitor.
+
+        @type name: C{str}
+        @param name: The string that uniquely identifies the process.
+        """
         del self.processes[name]
         self.stopProcess(name)
+
 
     def startService(self):
         service.Service.startService(self)
@@ -215,9 +217,17 @@ class ProcessMonitor(service.Service):
         else:
             self.murder[name] = reactor.callLater(self.killTime, self._forceStopProcess, proc)
 
+
     def restartAll(self):
+        """
+        Restart all processes. This is useful for third party management
+        services to allow a user to restart servers because of an outside change
+        in circumstances -- for example, a new version of a library is
+        installed.
+        """
         for name in self.processes.keys():
             self.stopProcess(name)
+
 
     def __repr__(self):
         l = []
