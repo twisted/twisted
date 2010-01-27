@@ -1,6 +1,5 @@
-# -*- test-case-name: twisted.test.test_process.ProcessTestCase.testStdio -*-
-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.test.test_stdio -*-
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -29,3 +28,5 @@ if platform.isWindows():
     from twisted.internet._win32stdio import StandardIO
 else:
     from twisted.internet._posixstdio import StandardIO
+
+__all__ = ['StandardIO']
