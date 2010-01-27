@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.python.test.test_deprecate -*-
-# Copyright (c) 2008 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -23,7 +23,7 @@ To mark module-level attributes as being deprecated you can use::
 
     ...
 
-    deprecatedModuleAttributes(
+    deprecatedModuleAttribute(
         Version("Twisted", 8, 0, 0),
         "Use goodAttribute instead.",
         "your.full.module.name",
@@ -31,7 +31,7 @@ To mark module-level attributes as being deprecated you can use::
 
 The deprecated attributes will issue a warning whenever they are accessed. If
 the attributes being deprecated are in the same module as the
-L{deprecatedModuleAttributes} call is being made from, the C{__name__} global
+L{deprecatedModuleAttribute} call is being made from, the C{__name__} global
 can be used as the C{moduleName} parameter.
 
 See also L{Version}.
