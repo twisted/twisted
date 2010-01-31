@@ -10,7 +10,6 @@
 extern "C" {
 #endif
 #include <Python.h>
-#include <cStringIO.h>
 #ifdef __cplusplus
 }
 #endif
@@ -23,7 +22,7 @@ extern "C" {
 
 static PyObject* UrlargError;
 
-#define OUTPUTCHAR(c,n) PycStringIO->cwrite(output, (const char *)c, n)
+#define OUTPUTCHAR(c,n) do{memcpy(output, c, n);output+=n;}while(0)
 
 #define STATE_INITIAL 0
 #define STATE_PERCENT 1
@@ -38,23 +37,25 @@ TM_INLINE int ishexdigit(unsigned char c) {
 
 static PyObject *unquote(PyObject *self, PyObject *args, PyObject *kwargs)
 {
-    unsigned char *s, *r, *end;
+    unsigned char *s, *r, *end, *output_start, *output;
     unsigned char quotedchar, quotedchartmp = 0, tmp;
     unsigned char escchar = '%'; /* the character we use to begin %AB sequences */
     static char *kwlist[] = {"s", "escchar", NULL};
     int state = STATE_INITIAL, length;
-    PyObject *output, *str;
+    PyObject *str;
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|c:unquote", kwlist, &s, &length, &escchar)) {
         return NULL;
     }
     if (length == 0) {
         return PyString_FromStringAndSize("", 0);
     }
-    /* output = cStringIO() */
-    output = PycStringIO->NewOutput(length);
-    if (output == NULL) {
+    /* Allocating an output buffer of length will be sufficient,
+       as the output can only be smaller. We resize the output in the end. */
+    str = PyString_FromStringAndSize(NULL, length);
+    if (str == NULL) {
         return NULL;
     }
+    output = output_start = (unsigned char*)PyString_AsString(str);
     end = s + length;
     s = s - 1;
     while ((++s) < end) {
@@ -101,9 +102,7 @@ static PyObject *unquote(PyObject *self, PyObject *args, PyObject *kwargs)
         break;
     }
 
-    /* return output.getvalue() */
-    str = PycStringIO->cgetvalue(output);
-    Py_DECREF(output);
+    _PyString_Resize(&str, output-output_start);
     return str;
 }
 
@@ -118,7 +117,6 @@ DL_EXPORT(void) init_c_urlarg(void)
     PyObject* d;
     unsigned char i;
 
-    PycString_IMPORT;
     m = Py_InitModule("_c_urlarg", _c_urlarg_methods);
     d = PyModule_GetDict(m);
 

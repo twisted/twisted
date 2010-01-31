@@ -1,0 +1,3 @@
+The optional _c_urlarg extension no longer uses cStringIO (which is not
+available in Python 3), instead it builds a PyString directly.  In addition to
+improving readiness for Python 3, this method may be a little faster.
