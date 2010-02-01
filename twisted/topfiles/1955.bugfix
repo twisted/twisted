@@ -1,0 +1,2 @@
+Disable the timeout mechanism for a postfix server while it is sending
+to avoid spurious timeouts.

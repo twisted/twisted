@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_postfix -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -24,7 +24,8 @@ def unquote(s):
     return urllib.unquote(s)
 
 class PostfixTCPMapServer(basic.LineReceiver, policies.TimeoutMixin):
-    """Postfix mail transport agent TCP map protocol implementation.
+    """
+    Postfix mail transport agent TCP map protocol implementation.
 
     Receive requests for data matching given key via lineReceived,
     asks it's factory for the data with self.factory.get(key), and
@@ -43,8 +44,18 @@ class PostfixTCPMapServer(basic.LineReceiver, policies.TimeoutMixin):
         self.setTimeout(self.timeout)
 
     def sendCode(self, code, message=''):
-        "Send an SMTP-like code with a message."
+        """
+        Send an SMTP-like code with a message.
+
+        @type code: C{int}
+        @param code: An RFC 3863-compatible status code.
+
+        @type message: C{str}
+        @param message: A textual description of the status.
+        """
+        self.setTimeout(None)
         self.sendLine('%3.3d %s' % (code, message or ''))
+        self.setTimeout(self.timeout)
 
     def lineReceived(self, line):
         self.resetTimeout()

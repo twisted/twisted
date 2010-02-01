@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -86,6 +86,32 @@ class PostfixTCPMapServerTestCase:
                     input, expected_output, transport.value()))
             transport.clear()
         protocol.setTimeout(None)
+
+
+    def test_timeoutResetInSendCode(self):
+        """
+        The server must disable the timeout before it begins any possibly long
+        response in L{sendCode} to avoid timing out during the send. It must
+        then re-enable the timeout.
+        """
+        def fakeSendLine(dummy):
+            """
+            The timeout has been disabled in L{sendCode} before L{sendLine} is
+            called.
+            """
+            self.assertEquals(protocol.timeOut, None)
+
+        protocol = postfix.PostfixTCPMapServer()
+        protocol.sendLine = fakeSendLine
+        protocol.connectionMade()
+
+        protocol.sendCode(400, "unknown command")
+        # The timeout is enabled after sendLine has returned in sendCode.
+        self.assertEquals(protocol.timeout, 600)
+
+        # Clean up after ourselves
+        protocol.setTimeout(None)
+        protocol.connectionLost()
 
 
 
