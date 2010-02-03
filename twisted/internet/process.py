@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_process -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -321,6 +321,18 @@ class _BaseProcess(BaseProcess, object):
         if self.pid is None:
             raise ProcessExitedAlready()
         os.kill(self.pid, signalID)
+
+
+    def _resetSignalDisposition(self):
+        # The Python interpreter ignores some signals, and our child
+        # process will inherit that behaviour. To have a child process
+        # that responds to signals normally, we need to reset our
+        # child process's signal handling (just) after we fork and
+        # before we execvpe.
+        for signalnum in range(1, signal.NSIG):
+            if signal.getsignal(signalnum) == signal.SIG_IGN:
+                # Reset signal handling to the default
+                signal.signal(signalnum, signal.SIG_DFL)
 
 
     def _fork(self, path, uid, gid, executable, args, environment, **kwargs):
@@ -665,6 +677,9 @@ class Process(_BaseProcess):
         for fd in old:
             os.close(fd)
 
+        self._resetSignalDisposition()
+
+
     def writeToChild(self, childFD, data):
         self.pipes[childFD].write(data)
 
@@ -862,6 +877,9 @@ class PTYProcess(abstract.FileDescriptor, _BaseProcess):
             except:
                 pass
 
+        self._resetSignalDisposition()
+
+
     # PTYs do not have stdin/stdout/stderr. They only have in and out, just
     # like sockets. You cannot close one without closing off the entire PTY.
     def closeStdin(self):
@@ -911,4 +929,3 @@ class PTYProcess(abstract.FileDescriptor, _BaseProcess):
         Write some data to the open process.
         """
         return fdesc.writeToFD(self.fd, data)
-

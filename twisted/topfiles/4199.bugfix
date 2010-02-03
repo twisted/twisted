@@ -1,0 +1,3 @@
+On POSIX, child processes created with reactor.spawnProcess will no longer
+automatically ignore the signals which the parent process has set to be
+ignored.

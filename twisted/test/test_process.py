@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -309,7 +309,10 @@ class SignalProtocol(protocol.ProcessProtocol):
             return self.deferred.errback(
                 ValueError("wrong termination: %s" % (reason,)))
         v = reason.value
-        signalValue = getattr(signal, 'SIG' + self.signal)
+        if isinstance(self.signal, str):
+            signalValue = getattr(signal, 'SIG' + self.signal)
+        else:
+            signalValue = self.signal
         if v.exitCode is not None:
             return self.deferred.errback(
                 ValueError("SIG%s: exitCode is %s, not None" %
@@ -1095,6 +1098,33 @@ class PosixProcessBase:
         return self._testSignal('TERM')
 
 
+    def test_childSignalHandling(self):
+        """
+        The disposition of signals which are ignored in the parent
+        process is reset to the default behavior for the child
+        process.
+        """
+        # Somewhat arbitrarily select SIGUSR1 here.  It satisfies our
+        # requirements that:
+        #    - The interpreter not fiddle around with the handler
+        #      behind our backs at startup time (this disqualifies
+        #      signals like SIGINT and SIGPIPE).
+        #    - The default behavior is to exit.
+        #
+        # This lets us send the signal to the child and then verify
+        # that it exits with a status code indicating that it was
+        # indeed the signal which caused it to exit.
+        which = signal.SIGUSR1
+
+        # Ignore the signal in the parent (and make sure we clean it
+        # up).
+        handler = signal.signal(which, signal.SIG_IGN)
+        self.addCleanup(signal.signal, signal.SIGUSR1, handler)
+
+        # Now do the test.
+        return self._testSignal(signal.SIGUSR1)
+
+
     def test_executionError(self):
         """
         Raise an error during execvpe to check error management.
@@ -1171,6 +1201,17 @@ class PosixProcessBase:
 
         return ended
 
+
+
+class MockSignal(object):
+    """
+    Neuter L{signal.signal}, but pass other attributes unscathed
+    """
+    def signal(self, sig, action):
+        return signal.getsignal(sig)
+
+    def __getattr__(self, attr):
+        return getattr(signal, attr)
 
 
 class MockOS(object):
@@ -1553,6 +1594,9 @@ class MockProcessTestCase(unittest.TestCase):
         self.patch(process.Process, "processWriterFactory", DumbProcessWriter)
         self.patch(process, "pty", self.mockos)
 
+        self.mocksig = MockSignal()
+        self.patch(process, "signal", self.mocksig)
+
 
     def tearDown(self):
         """
@@ -1922,7 +1966,7 @@ class MockProcessTestCase(unittest.TestCase):
 
 
 class PosixProcessTestCase(unittest.TestCase, PosixProcessBase):
-    # add three non-pty test cases
+    # add two non-pty test cases
 
     def testStderr(self):
         # we assume there is no file named ZZXXX..., both in . and in /tmp
