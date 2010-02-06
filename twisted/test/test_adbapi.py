@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -793,18 +793,17 @@ class ConnectionPoolTestCase(unittest.TestCase):
 class ArraySizeTestCase(unittest.TestCase):
     """
     Test setting cursor attribute, arraysize.
-    Test is run with mock_dbapi module to verify database independent behaviour.
+    Test is run with mock_dbapi module to verify database independent
+    behaviour.
     """
 
-    def test_arraysize(self):
+    def test_arraysizeAffectsRunQuery(self):
         """
-        Test that passing in C{cp_arraysize} to runQuery actually sets the
-        attribute on the cursor that the transaction is executed with.
+        Test that passing in C{cp_arraysize} to ConnectionPool actually sets
+        the attribute on the cursor that the query is executed with.
         """
-        self.dbpool = ConnectionPool('twisted.test.mock_dbapi',
-                                     cp_min=1, cp_max=1)
 
-        def _verifyArraysize(ignored, actualSize, sizeId):
+        def _verifyArraysize(ignored, dbpool, actualSize, sizeId):
             """
             Verify the arraysize attribute was actually set on the cursor.
 
@@ -814,7 +813,7 @@ class ArraySizeTestCase(unittest.TestCase):
             @param sizeId: The unique reference that was passed into the
                            cursor to track the cursor's arraysize attribute.
             """
-            connection = self.dbpool.connections.values()[0]
+            connection = dbpool.connections.values()[0]
             expectedSize = connection.getArraysize(sizeId)
             self.assertEquals(actualSize, expectedSize,
                               "arraysize is: %s, expected: %s" %
@@ -824,14 +823,33 @@ class ArraySizeTestCase(unittest.TestCase):
             """
             Run a database query with an arraysize attribute.
             """
-            d = self.dbpool.runQuery(
-                "select count(1) from simple",
-                cp_arraysize=arraysize, sizeId=sizeId)
-            d.addCallback(_verifyArraysize, arraysize, sizeId)
+            dbpool = ConnectionPool('twisted.test.mock_dbapi',
+                cp_min=1, cp_max=1, cp_arraysize=arraysize)
+            d = dbpool.runQuery(
+                "select count(1) from simple", sizeId=sizeId)
+            d.addCallback(_verifyArraysize, dbpool, arraysize, sizeId)
             return d
 
         dl = []
         for sizeId, arraysize in enumerate((50, 150, 100, 200)):
             dl.append(_callRunQuery(sizeId, arraysize))
+
+        return defer.gatherResults(dl)
+
+
+    def test_arraysizeAffectsRunInteraction(self):
+        """
+        ConnectionPool sets runInteraction's cursor size.
+        """
+
+        def _interaction(cursor, expectedArraysize):
+            self.failUnlessEqual(cursor.arraysize, expectedArraysize)
+
+        dl = []
+        for arraysize in [50, 100, 150, 200]:
+            dbpool = ConnectionPool('twisted.test.mock_dbapi',
+                cp_min=1, cp_max=1, cp_arraysize=arraysize)
+
+            dl.append(dbpool.runInteraction(_interaction, arraysize))
 
         return defer.gatherResults(dl)

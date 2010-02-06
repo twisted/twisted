@@ -1,4 +1,4 @@
-# Copyright (c) 2009 Twisted Matrix Laboratories.
+# Copyright (c) 2009-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -50,6 +50,7 @@ class Cursor(object):
 
     def __init__(self, connection):
         self._connection = connection
+        self.arraysize = 1 # default as required by DBAPI
 
 
     def execute(self, sql, *args, **kwargs):

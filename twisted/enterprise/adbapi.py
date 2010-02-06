@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_adbapi -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -158,7 +158,7 @@ class ConnectionPool:
     @type transactionFactory: any callable
     """
 
-    CP_ARGS = "min max name noisy openfun reconnect good_sql".split()
+    CP_ARGS = "min max name noisy openfun reconnect good_sql arraysize".split()
 
     noisy = False # if true, generate informational log messages
     min = 3 # minimum number of connections in pool
@@ -167,6 +167,7 @@ class ConnectionPool:
     openfun = None # A function to call on new connections
     reconnect = False # reconnect when connections fail
     good_sql = 'select 1' # a query which should always succeed
+    arraysize = 1 # The arraysize to push into cursors we create.
 
     running = False # true when the pool is operating
     connectionFactory = Connection
@@ -202,6 +203,12 @@ class ConnectionPool:
 
         @param cp_good_sql: an sql query which should always succeed and change
                             no state (default 'select 1')
+
+        @param cp_arraysize: Cursor objects that this ConnectionPool creates to
+            handle the results of L{runQuery} or L{runInteraction} will have
+            their arraysize attribute set to this value. This is the number of
+            rows that will be fetched at a time with a subsequent
+            cursor.fetchall() or cursor.fetchmany() (default 1).
         """
 
         self.dbapiName = dbapiName
@@ -349,10 +356,6 @@ class ConnectionPool:
         The  *args and **kw arguments will be passed to the DB-API cursor's
         'execute' method.
 
-        @param cp_arraysize: Change the cursor's arraysize from the DB-API's
-            default.  This is the number of rows that will be fetched at a
-            time with a subsequent cursor.fetchall() or cursor.fetchmany().
-
         @return: a Deferred which will fire the return value of a DB-API
             cursor's 'fetchall' method, or a Failure.
         """
@@ -451,6 +454,13 @@ class ConnectionPool:
     def _runInteraction(self, interaction, *args, **kw):
         conn = self.connectionFactory(self)
         trans = self.transactionFactory(self, conn)
+
+        # The public cursor object on the Transaction class was introduced
+        # after Twisted 9.0.0, so check whether it exists before prodding it.
+        cursor = getattr(trans, "cursor", None)
+        if cursor:
+            cursor.arraysize = self.arraysize
+
         try:
             result = interaction(trans, *args, **kw)
             trans.close()
@@ -466,8 +476,6 @@ class ConnectionPool:
 
 
     def _runQuery(self, trans, *args, **kw):
-        if 'cp_arraysize' in kw:
-            trans.cursor.arraysize = kw.pop('cp_arraysize')
         trans.execute(*args, **kw)
         return trans.fetchall()
 
