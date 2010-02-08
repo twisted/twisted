@@ -1,4 +1,4 @@
-# Copyright (c) 2009 Twisted Matrix Laboratories.
+# Copyright (c) 2009-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -148,3 +148,13 @@ class StringTransportTests(TestCase):
         """
         self.transport.loseConnection()
         self.assertRaises(RuntimeError, self.transport.resumeProducing)
+
+
+    def test_loseConnectionSetsDisconnecting(self):
+        """
+        L{StringTransport.loseConnection} toggles the C{disconnecting} instance
+        variable to C{True}.
+        """
+        self.assertFalse(self.transport.disconnecting)
+        self.transport.loseConnection()
+        self.assertTrue(self.transport.disconnecting)

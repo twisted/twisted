@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_stringtransport -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -128,7 +128,7 @@ class StringTransport:
     """
     implements(ITransport, IConsumer, IPushProducer)
 
-    disconnecting = 0
+    disconnecting = False
 
     producer = None
     streaming = None
@@ -182,6 +182,10 @@ class StringTransport:
 
 
     def loseConnection(self):
+        """
+        Close the connection. Does nothing besides toggle the C{disconnecting}
+        instance variable to C{True}.
+        """
         self.disconnecting = True
 
 
