@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.web.test.test_webclient -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -28,6 +28,13 @@ class PartialDownloadError(error.Error):
 
 
 class HTTPPageGetter(http.HTTPClient):
+    """
+    Gets a resource via HTTP, then quits.
+
+    Typically used with L{HTTPClientFactory}.  Note that this class does not, by
+    itself, do anything with the response.  If you want to download a resource
+    into a file, use L{HTTPPageDownloader} instead.
+    """
 
     quietLoss = 0
     followRedirect = True
@@ -62,8 +69,18 @@ class HTTPPageGetter(http.HTTPClient):
             self.transport.write(data)
 
     def handleHeader(self, key, value):
+        """
+        Called every time a header is received. Stores the header information
+        as key-value pairs in the C{headers} attribute.
+
+        @type key: C{str}
+        @param key: An HTTP header field name.
+
+        @type value: C{str}
+        @param value: An HTTP header field value.
+        """
         key = key.lower()
-        l = self.headers[key] = self.headers.get(key, [])
+        l = self.headers.setdefault(key, [])
         l.append(value)
 
     def handleStatus(self, version, status, message):
