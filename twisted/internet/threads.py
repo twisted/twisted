@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -113,5 +113,5 @@ def blockingCallFromThread(reactor, f, *a, **kw):
     return result
 
 
-__all__ = ["deferToThread", "callMultipleInThread", "blockingCallFromThread"]
-
+__all__ = ["deferToThread", "deferToThreadPool", "callMultipleInThread",
+           "blockingCallFromThread"]
