@@ -837,7 +837,7 @@ class IReactorFDSet(Interface):
         I add writer to the set of file descriptors to get write events for.
 
         @param writer: An L{IWriteDescriptor} provider that will be checked for
-                       read events until it is removed from the reactor with
+                       write events until it is removed from the reactor with
                        L{removeWriter}.
 
         @return: C{None}.
