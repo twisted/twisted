@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.conch.test.test_userauth -*-
-# Copyright (c) 2007-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2007-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -931,7 +931,9 @@ class SSHUserAuthClientTestCase(unittest.TestCase):
         self.authClient.auth_firstmethod = auth_firstmethod
         self.authClient.auth_anothermethod = auth_anothermethod
 
-        self.authClient.ssh_USERAUTH_FAILURE(NS('afirstmethod,password') +
+        # although they shouldn't get called, method callbacks auth_* MUST
+        # exist in order for the test to work properly.
+        self.authClient.ssh_USERAUTH_FAILURE(NS('anothermethod,password') +
                                              '\x00')
         # should send password packet
         self.assertEquals(self.authClient.transport.packets[-1],

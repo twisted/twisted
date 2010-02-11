@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.conch.test.test_userauth -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -481,23 +481,44 @@ class SSHUserAuthClient(service.SSHService):
             string methods
             byte partial success
 
-        If partial success is True, then the previous method succeeded but is
-        not sufficent for authentication.  methods is a comma-separated list of
-        accepted authentication methods.
+        If partial success is C{True}, then the previous method succeeded but is
+        not sufficent for authentication. C{methods} is a comma-separated list
+        of accepted authentication methods.
 
-        We sort the list of methods by their position in self.preferredOrder,
-        removing methods that have already succeeded.  We then call
-        self.tryAuth with the most preferred method,
+        We sort the list of methods by their position in C{self.preferredOrder},
+        removing methods that have already succeeded. We then call
+        C{self.tryAuth} with the most preferred method.
+
+        @param packet: the L{MSG_USERAUTH_FAILURE} payload.
+        @type packet: C{str}
+
+        @return: a L{defer.Deferred} that will be callbacked with C{None} as
+            soon as all authentication methods have been tried, or C{None} if no
+            more authentication methods are available.
+        @rtype: C{defer.Deferred} or C{None}
         """
         canContinue, partial = getNS(packet)
         partial = ord(partial)
         if partial:
             self.authenticatedWith.append(self.lastAuth)
+
         def orderByPreference(meth):
+            """
+            Invoked once per authentication method in order to extract a
+            comparison key which is then used for sorting.
+
+            @param meth: the authentication method.
+            @type meth: C{str}
+
+            @return: the comparison key for C{meth}.
+            @rtype: C{int}
+            """
             if meth in self.preferredOrder:
                 return self.preferredOrder.index(meth)
             else:
-                return -1
+                # put the element at the end of the list.
+                return len(self.preferredOrder)
+
         canContinue = util.dsu([meth for meth in canContinue.split(',')
                                 if meth not in self.authenticatedWith],
                                orderByPreference)
