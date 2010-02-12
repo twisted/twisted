@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.words.test.test_irc -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -15,8 +15,8 @@ be destroyed as soon as the TCP transport drops.  Someone oughta do
 something about that, ya know?
 
 The DCC support needs to have more hooks for the client for it to be
-able to ask the user things like \"Do you want to accept this session?\"
-and \"Transfer #2 is 67% done.\" and otherwise manage the DCC sessions.
+able to ask the user things like "Do you want to accept this session?"
+and "Transfer #2 is 67% done." and otherwise manage the DCC sessions.
 
 Test coverage needs to be better.
 
@@ -233,7 +233,8 @@ def parseModes(modes, params, paramModes=('', '')):
 
 
 class IRC(protocol.Protocol):
-    """Internet Relay Chat server protocol.
+    """
+    Internet Relay Chat server protocol.
     """
 
     buffer = ""
@@ -255,11 +256,12 @@ class IRC(protocol.Protocol):
 
 
     def sendMessage(self, command, *parameter_list, **prefix):
-        """Send a line formatted as an IRC message.
+        """
+        Send a line formatted as an IRC message.
 
-        First argument is the command, all subsequent arguments
-        are parameters to that command.  If a prefix is desired,
-        it may be specified with the keyword argument 'prefix'.
+        First argument is the command, all subsequent arguments are parameters
+        to that command.  If a prefix is desired, it may be specified with the
+        keyword argument 'prefix'.
         """
 
         if not command:
@@ -282,10 +284,10 @@ class IRC(protocol.Protocol):
 
 
     def dataReceived(self, data):
-        """This hack is to support mIRC, which sends LF only,
-        even though the RFC says CRLF.  (Also, the flexibility
-        of LineReceiver to turn "line mode" on and off was not
-        required.)
+        """
+        This hack is to support mIRC, which sends LF only, even though the RFC
+        says CRLF.  (Also, the flexibility of LineReceiver to turn "line mode"
+        on and off was not required.)
         """
         lines = (self.buffer + data).split(LF)
         # Put the (possibly empty) element after the last LF back in the
@@ -307,8 +309,9 @@ class IRC(protocol.Protocol):
 
 
     def handleCommand(self, command, prefix, params):
-        """Determine the function to call for the given command and call
-        it with the given arguments.
+        """
+        Determine the function to call for the given command and call it with
+        the given arguments.
         """
         method = getattr(self, "irc_%s" % command, None)
         try:
@@ -321,21 +324,25 @@ class IRC(protocol.Protocol):
 
 
     def irc_unknown(self, prefix, command, params):
-        """Implement me!"""
+        """
+        Called by L{handleCommand} on a command that doesn't have a defined
+        handler. Subclasses should override this method.
+        """
         raise NotImplementedError(command, prefix, params)
 
 
     # Helper methods
     def privmsg(self, sender, recip, message):
-        """Send a message to a channel or user
+        """
+        Send a message to a channel or user
 
         @type sender: C{str} or C{unicode}
         @param sender: Who is sending this message.  Should be of the form
-        username!ident@hostmask (unless you know better!).
+            username!ident@hostmask (unless you know better!).
 
         @type recip: C{str} or C{unicode}
-        @param recip: The recipient of this message.  If a channel, it
-        must start with a channel prefix.
+        @param recip: The recipient of this message.  If a channel, it must
+            start with a channel prefix.
 
         @type message: C{str} or C{unicode}
         @param message: The message being sent.
@@ -344,7 +351,8 @@ class IRC(protocol.Protocol):
 
 
     def notice(self, sender, recip, message):
-        """Send a \"notice\" to a channel or user.
+        """
+        Send a "notice" to a channel or user.
 
         Notices differ from privmsgs in that the RFC claims they are different.
         Robots are supposed to send notices and not respond to them.  Clients
@@ -352,11 +360,11 @@ class IRC(protocol.Protocol):
 
         @type sender: C{str} or C{unicode}
         @param sender: Who is sending this message.  Should be of the form
-        username!ident@hostmask (unless you know better!).
+            username!ident@hostmask (unless you know better!).
 
         @type recip: C{str} or C{unicode}
-        @param recip: The recipient of this message.  If a channel, it
-        must start with a channel prefix.
+        @param recip: The recipient of this message.  If a channel, it must
+            start with a channel prefix.
 
         @type message: C{str} or C{unicode}
         @param message: The message being sent.
@@ -365,15 +373,16 @@ class IRC(protocol.Protocol):
 
 
     def action(self, sender, recip, message):
-        """Send an action to a channel or user.
+        """
+        Send an action to a channel or user.
 
         @type sender: C{str} or C{unicode}
         @param sender: Who is sending this message.  Should be of the form
-        username!ident@hostmask (unless you know better!).
+            username!ident@hostmask (unless you know better!).
 
         @type recip: C{str} or C{unicode}
-        @param recip: The recipient of this message.  If a channel, it
-        must start with a channel prefix.
+        @param recip: The recipient of this message.  If a channel, it must
+            start with a channel prefix.
 
         @type message: C{str} or C{unicode}
         @param message: The action being sent.
@@ -382,22 +391,22 @@ class IRC(protocol.Protocol):
 
 
     def topic(self, user, channel, topic, author=None):
-        """Send the topic to a user.
+        """
+        Send the topic to a user.
 
         @type user: C{str} or C{unicode}
         @param user: The user receiving the topic.  Only their nick name, not
-        the full hostmask.
+            the full hostmask.
 
         @type channel: C{str} or C{unicode}
         @param channel: The channel for which this is the topic.
 
         @type topic: C{str} or C{unicode} or C{None}
-        @param topic: The topic string, unquoted, or None if there is
-        no topic.
+        @param topic: The topic string, unquoted, or None if there is no topic.
 
         @type author: C{str} or C{unicode}
-        @param author: If the topic is being changed, the full username and hostmask
-        of the person changing it.
+        @param author: If the topic is being changed, the full username and
+            hostmask of the person changing it.
         """
         if author is None:
             if topic is None:
@@ -419,29 +428,30 @@ class IRC(protocol.Protocol):
 
         @type user: C{str} or C{unicode}
         @param user: The user receiving the topic.  Only their nick name, not
-        the full hostmask.
+            the full hostmask.
 
         @type channel: C{str} or C{unicode}
         @param channel: The channel for which this information is relevant.
 
         @type author: C{str} or C{unicode}
-        @param author: The nickname (without hostmask) of the user who last
-        set the topic.
+        @param author: The nickname (without hostmask) of the user who last set
+            the topic.
 
         @type date: C{int}
-        @param date: A POSIX timestamp (number of seconds since the epoch)
-        at which the topic was last set.
+        @param date: A POSIX timestamp (number of seconds since the epoch) at
+            which the topic was last set.
         """
         self.sendLine(':%s %d %s %s %s %d' % (
             self.hostname, 333, user, channel, author, date))
 
 
     def names(self, user, channel, names):
-        """Send the names of a channel's participants to a user.
+        """
+        Send the names of a channel's participants to a user.
 
         @type user: C{str} or C{unicode}
-        @param user: The user receiving the name list.  Only their nick
-        name, not the full hostmask.
+        @param user: The user receiving the name list.  Only their nick name,
+            not the full hostmask.
 
         @type channel: C{str} or C{unicode}
         @param channel: The channel for which this is the namelist.
@@ -477,18 +487,17 @@ class IRC(protocol.Protocol):
 
         @type user: C{str} or C{unicode}
         @param user: The user receiving this member information.  Only their
-        nick name, not the full hostmask.
+            nick name, not the full hostmask.
 
         @type channel: C{str} or C{unicode}
-        @param channel: The channel for which this is the member
-        information.
+        @param channel: The channel for which this is the member information.
 
         @type memberInfo: C{list} of C{tuples}
         @param memberInfo: For each member of the given channel, a 7-tuple
-        containing their username, their hostmask, the server to which they
-        are connected, their nickname, the letter "H" or "G" (wtf do these
-        mean?), the hopcount from C{user} to this member, and this member's
-        real name.
+            containing their username, their hostmask, the server to which they
+            are connected, their nickname, the letter "H" or "G" (standing for
+            "Here" or "Gone"), the hopcount from C{user} to this member, and
+            this member's real name.
         """
         for info in memberInfo:
             (username, hostmask, server, nickname, flag, hops, realName) = info
@@ -506,8 +515,8 @@ class IRC(protocol.Protocol):
         Send information about the state of a particular user.
 
         @type user: C{str} or C{unicode}
-        @param user: The user receiving this information.  Only their nick
-        name, not the full hostmask.
+        @param user: The user receiving this information.  Only their nick name,
+            not the full hostmask.
 
         @type nick: C{str} or C{unicode}
         @param nick: The nickname of the user this information describes.
@@ -535,7 +544,7 @@ class IRC(protocol.Protocol):
 
         @type signOn: C{int}
         @param signOn: A POSIX timestamp (number of seconds since the epoch)
-        indicating the time the user signed on
+            indicating the time the user signed on
 
         @type channels: C{list} of C{str} or C{unicode}
         @param channels: A list of the channels which the user is participating in
@@ -556,11 +565,12 @@ class IRC(protocol.Protocol):
 
 
     def join(self, who, where):
-        """Send a join message.
+        """
+        Send a join message.
 
         @type who: C{str} or C{unicode}
         @param who: The name of the user joining.  Should be of the form
-        username!ident@hostmask (unless you know better!).
+            username!ident@hostmask (unless you know better!).
 
         @type where: C{str} or C{unicode}
         @param where: The channel the user is joining.
@@ -569,18 +579,19 @@ class IRC(protocol.Protocol):
 
 
     def part(self, who, where, reason=None):
-        """Send a part message.
+        """
+        Send a part message.
 
         @type who: C{str} or C{unicode}
         @param who: The name of the user joining.  Should be of the form
-        username!ident@hostmask (unless you know better!).
+            username!ident@hostmask (unless you know better!).
 
         @type where: C{str} or C{unicode}
         @param where: The channel the user is joining.
 
         @type reason: C{str} or C{unicode}
-        @param reason: A string describing the misery which caused
-        this poor soul to depart.
+        @param reason: A string describing the misery which caused this poor
+            soul to depart.
         """
         if reason:
             self.sendLine(":%s PART %s :%s" % (who, where, reason))
@@ -593,8 +604,8 @@ class IRC(protocol.Protocol):
         Send information about the mode of a channel.
 
         @type user: C{str} or C{unicode}
-        @param user: The user receiving the name list.  Only their nick
-        name, not the full hostmask.
+        @param user: The user receiving the name list.  Only their nick name,
+            not the full hostmask.
 
         @type channel: C{str} or C{unicode}
         @param channel: The channel for which this is the namelist.
@@ -971,22 +982,22 @@ class IRCClient(basic.LineReceiver):
      - Add flood protection/rate limiting for my CTCP replies.
      - NickServ cooperation.  (a mix-in?)
      - Heartbeat.  The transport may die in such a way that it does not realize
-       it is dead until it is written to.  Sending something (like \"PING
-       this.irc-host.net\") during idle peroids would alleviate that.  If
+       it is dead until it is written to.  Sending something (like "PING
+       this.irc-host.net") during idle peroids would alleviate that.  If
        you're concerned with the stability of the host as well as that of the
        transport, you might care to watch for the corresponding PONG.
 
     @ivar nickname: Nickname the client will use.
     @ivar password: Password used to log on to the server.  May be C{None}.
-    @ivar realname: Supplied to the server during login as the \"Real name\"
-        or \"ircname\".  May be C{None}.
-    @ivar username: Supplied to the server during login as the \"User name\".
+    @ivar realname: Supplied to the server during login as the "Real name"
+        or "ircname".  May be C{None}.
+    @ivar username: Supplied to the server during login as the "User name".
         May be C{None}
 
     @ivar userinfo: Sent in reply to a C{USERINFO} CTCP query.  If C{None}, no
         USERINFO reply will be sent.
-        \"This is used to transmit a string which is settable by
-        the user (and never should be set by the client).\"
+        "This is used to transmit a string which is settable by
+        the user (and never should be set by the client)."
     @ivar fingerReply: Sent in reply to a C{FINGER} CTCP query.  If C{None}, no
         FINGER reply will be sent.
     @type fingerReply: Callable or String
@@ -2605,7 +2616,7 @@ class DccFileReceive(DccFileReceiveBasic):
 
     XXX: I need to let the client know when I am finished.
     XXX: I need to decide how to keep a progress indicator updated.
-    XXX: Client needs a way to tell me \"Do not finish until I say so.\"
+    XXX: Client needs a way to tell me "Do not finish until I say so."
     XXX: I need to make sure the client understands if the file cannot be written.
     """
 
