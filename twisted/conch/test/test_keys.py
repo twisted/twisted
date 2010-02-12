@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -51,7 +51,7 @@ class SSHKeysHandlingTestCase(unittest.TestCase):
         """
         self.assertEquals(self.assertWarns(DeprecationWarning,
             "getPublicKeyString is deprecated since Twisted Conch 0.9.  "
-            "Use Key.fromString().", unittest.__file__,
+            "Use Key.fromString().blob().", unittest.__file__,
             keys.getPublicKeyString, self.publicKeyFile, 1),
                 keys.Key.fromString(keydata.publicRSA_openssh).blob())
         self.assertEquals(self.assertWarns(DeprecationWarning,
@@ -114,7 +114,8 @@ class SSHKeysHandlingTestCase(unittest.TestCase):
             "openssh" or "lsh".
         """
         pubBlob = self.assertWarns(DeprecationWarning, "getPublicKeyString is "
-                "deprecated since Twisted Conch 0.9.  Use Key.fromString().",
+                "deprecated since Twisted Conch 0.9.  "
+                "Use Key.fromString().blob().",
                 unittest.__file__, keys.getPublicKeyString, data=pubStr)
         pubObj = self.assertWarns(DeprecationWarning, "getPublicKeyObject is "
                 "deprecated since Twisted Conch 0.9.  Use Key.fromString().",
@@ -190,12 +191,12 @@ class SSHKeysHandlingTestCase(unittest.TestCase):
         """
         self.assertEquals(self.assertWarns(DeprecationWarning,
             "makePublicKeyString is deprecated since Twisted Conch 0.9.  "
-            "Use Key(obj).toString().", unittest.__file__,
+            "Use Key(obj).public().toString().", unittest.__file__,
                 keys.makePublicKeyString, pubObj, 'comment',
             keyType), pubStr)
         self.assertEquals(self.assertWarns(DeprecationWarning,
             "makePublicKeyString is deprecated since Twisted Conch 0.9.  "
-            "Use Key(obj).toString().", unittest.__file__,
+            "Use Key(obj).public().toString().", unittest.__file__,
                 keys.makePublicKeyString, privObj, 'comment',
             keyType), pubStr)
 
@@ -238,17 +239,17 @@ class SSHKeysHandlingTestCase(unittest.TestCase):
         Test that getPublicKeyString raises errors in appropriate cases.
         """
         self.assertWarns(DeprecationWarning, "getPublicKeyString is deprecated"
-                " since Twisted Conch 0.9.  Use Key.fromString().",
+                " since Twisted Conch 0.9.  Use Key.fromString().blob().",
                 unittest.__file__, self.assertRaises, keys.BadKeyError,
                 keys.getPublicKeyString, self.publicKeyFile, 1,
                 data=keydata.publicRSA_openssh)
         self.assertWarns(DeprecationWarning, "getPublicKeyString is deprecated"
-                " since Twisted Conch 0.9.  Use Key.fromString().",
+                " since Twisted Conch 0.9.  Use Key.fromString().blob().",
                 unittest.__file__, self.assertRaises, keys.BadKeyError,
                 keys.getPublicKeyString, data = 'invalid key')
         sexp = sexpy.pack([['public-key', ['bad-key', ['p', '2']]]])
         self.assertWarns(DeprecationWarning, "getPublicKeyString is deprecated"
-                " since Twisted Conch 0.9.  Use Key.fromString().",
+                " since Twisted Conch 0.9.  Use Key.fromString().blob().",
                 unittest.__file__, self.assertRaises, keys.BadKeyError,
                 keys.getPublicKeyString, data='{'+base64.encodestring(sexp)+'}')
 
@@ -281,15 +282,15 @@ class SSHKeysHandlingTestCase(unittest.TestCase):
         Test that makePublicKeyString raises errors in appropriate cases.
         """
         self.assertWarns(DeprecationWarning, "makePublicKeyString is deprecated"
-                " since Twisted Conch 0.9.  Use Key(obj).toString().",
+                " since Twisted Conch 0.9.  Use Key(obj).public().toString().",
                 unittest.__file__, self.assertRaises, Exception,
                 keys.makePublicKeyString, None, kind='bad type')
         self.assertWarns(DeprecationWarning, "makePublicKeyString is deprecated"
-                " since Twisted Conch 0.9.  Use Key(obj).toString().",
+                " since Twisted Conch 0.9.  Use Key(obj).public().toString().",
                 unittest.__file__, self.assertRaises, Exception,
                 keys.makePublicKeyString, None)
         self.assertWarns(DeprecationWarning, "makePublicKeyString is deprecated"
-                " since Twisted Conch 0.9.  Use Key(obj).toString().",
+                " since Twisted Conch 0.9.  Use Key(obj).public().toString().",
                 unittest.__file__, self.assertRaises, Exception,
                 keys.makePublicKeyString, None, kind='lsh')
 
@@ -882,7 +883,7 @@ class WarningsTestCase(unittest.TestCase):
         """
         self.assertWarns(DeprecationWarning,
             "getPublicKeyString is deprecated since Twisted Conch 0.9."
-            "  Use Key.fromString().",
+            "  Use Key.fromString().blob().",
             unittest.__file__, keys.getPublicKeyString,
             data=keydata.publicRSA_openssh)
 
@@ -892,7 +893,7 @@ class WarningsTestCase(unittest.TestCase):
         """
         self.assertWarns(DeprecationWarning,
             "makePublicKeyString is deprecated since Twisted Conch 0.9."
-            "  Use Key(obj).toString().", unittest.__file__,
+            "  Use Key(obj).public().toString().", unittest.__file__,
             keys.makePublicKeyString, self.keyObject)
 
     def test_getPublicKeyObject(self):

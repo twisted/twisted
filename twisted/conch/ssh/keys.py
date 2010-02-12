@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.conch.test.test_keys -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -744,7 +744,7 @@ def getPublicKeyString(filename=None, line=0, data=''):
     @rtype:         C{str}
     """
     warnings.warn("getPublicKeyString is deprecated since Twisted Conch 0.9."
-            "  Use Key.fromString().",
+            "  Use Key.fromString().blob().",
             DeprecationWarning, stacklevel=2)
     if filename and data:
         raise BadKeyError("either filename or data, not both")
@@ -768,7 +768,7 @@ def makePublicKeyString(obj, comment='', kind='openssh'):
     @rtype:         C{str}
     """
     warnings.warn("makePublicKeyString is deprecated since Twisted Conch 0.9."
-            "  Use Key(obj).toString().",
+            "  Use Key(obj).public().toString().",
             DeprecationWarning, stacklevel=2)
     return Key(obj).public().toString(kind, comment)
 
