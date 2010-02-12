@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2009 Twisted Matrix Laboratories.
+# Copyright (c) 2009-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 from twisted.internet import protocol
@@ -18,7 +18,7 @@ class MyPP(protocol.ProcessProtocol):
                                  "Aleph-null bottles of beer,\n" +
                                  "Take one down and pass it around,\n" +
                                  "Aleph-null bottles of beer on the wall.\n")
-            self.transport.closeStdin() # tell them we're done
+        self.transport.closeStdin() # tell them we're done
     def outReceived(self, data):
         print "outReceived! with %d bytes!" % len(data)
         self.data = self.data + data
