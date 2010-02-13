@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_reflect -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -15,7 +15,6 @@ import traceback
 import weakref
 import re
 import warnings
-import inspect
 import new
 try:
     from collections import deque
@@ -31,6 +30,9 @@ except ImportError:
     from StringIO import StringIO
 
 from twisted.python.util import unsignedID
+from twisted.python.deprecate import deprecated
+from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
+from twisted.python.versions import Version
 
 
 
@@ -512,7 +514,7 @@ def macro(name, filename, source, **identifiers):
 
     exec code in dict, dict
     return dict[name]
-
+macro = deprecated(Version("Twisted", 8, 2, 0))(macro)
 
 
 
@@ -738,7 +740,6 @@ def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None, showUnknowns
         maxDepth -= 1
     seen[id(start)] = start
     if isinstance(start, types.DictionaryType):
-        r = []
         for k, v in start.items():
             objgrep(k, goal, eq, path+'{'+repr(v)+'}', paths, seen, showUnknowns, maxDepth)
             objgrep(v, goal, eq, path+'['+repr(k)+']', paths, seen, showUnknowns, maxDepth)
@@ -794,32 +795,6 @@ def filenameToModuleName(fn):
 
 
 
-def fullyQualifiedName(obj):
-    """
-    Return the fully qualified name of a module, class, method or function.
-    Classes and functions need to be module level ones to be correctly
-    qualified.
-
-    @rtype: C{str}.
-    """
-    name = obj.__name__
-    if inspect.isclass(obj) or inspect.isfunction(obj):
-        moduleName = obj.__module__
-        return "%s.%s" % (moduleName, name)
-    elif inspect.ismethod(obj):
-        className = fullyQualifiedName(obj.im_class)
-        return "%s.%s" % (className, name)
-    return name
-
-
-
-# At the end for dependency reason
-from twisted.python.deprecate import deprecated
-from twisted.python.versions import Version
-macro = deprecated(Version("Twisted", 8, 2, 0))(macro)
-
-
-
 __all__ = [
     'InvalidName', 'ModuleNotFound', 'ObjectNotFound',
 
@@ -830,7 +805,7 @@ __all__ = [
 
     'funcinfo', 'fullFuncName', 'qual', 'getcurrent', 'getClass', 'isinst',
     'namedModule', 'namedObject', 'namedClass', 'namedAny', 'macro',
-    'safe_repr', 'safe_str', 'allYourBase', 'accumulatedBases',
+    'safe_repr', 'safe_str', 'allYourBase', 'accumulateBases',
     'prefixedMethodNames', 'addMethodNamesToDict', 'prefixedMethods',
     'accumulateClassDict', 'accumulateClassList', 'isSame', 'isLike',
     'modgrep', 'isOfType', 'findInstances', 'objgrep', 'filenameToModuleName',

@@ -51,17 +51,39 @@ __all__ = [
     ]
 
 
-import sys
+import sys, inspect
 from warnings import warn
 
 from twisted.python.versions import getVersionString
-from twisted.python.reflect import fullyQualifiedName
 from twisted.python.util import mergeFunctionMetadata
 
 
 
 DEPRECATION_WARNING_FORMAT = '%(fqpn)s was deprecated in %(version)s'
 
+
+# Notionally, part of twisted.python.reflect, but defining it there causes a
+# cyclic dependency between this module and that module.  Define it here,
+# instead, and let reflect import it to re-expose to the public.
+def _fullyQualifiedName(obj):
+    """
+    Return the fully qualified name of a module, class, method or function.
+    Classes and functions need to be module level ones to be correctly
+    qualified.
+
+    @rtype: C{str}.
+    """
+    name = obj.__name__
+    if inspect.isclass(obj) or inspect.isfunction(obj):
+        moduleName = obj.__module__
+        return "%s.%s" % (moduleName, name)
+    elif inspect.ismethod(obj):
+        className = _fullyQualifiedName(obj.im_class)
+        return "%s.%s" % (className, name)
+    return name
+# Try to keep it looking like something in twisted.python.reflect.
+_fullyQualifiedName.__module__ = 'twisted.python.reflect'
+_fullyQualifiedName.__name__ = 'fullyQualifiedName'
 
 
 def getWarningMethod():
@@ -134,7 +156,7 @@ def getDeprecationWarningString(callableThing, version, format=None):
     @return: A textual description of the deprecation
     """
     return _getDeprecationWarningString(
-        fullyQualifiedName(callableThing), version, format)
+        _fullyQualifiedName(callableThing), version, format)
 
 
 

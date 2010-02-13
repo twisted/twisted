@@ -9,10 +9,6 @@ Maintainer: Itamar Shtull-Trauring
 
 import socket
 
-# There is a cyclic dependency between reflect and deprecate.  Things only
-# work if reflect is imported first.  See #4166.
-import twisted.python.reflect
-
 from twisted.python import deprecate
 from twisted.python.versions import Version
 
