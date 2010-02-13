@@ -1,4 +1,4 @@
-# Copyright (c) 2008-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -18,6 +18,7 @@ from twisted.python import log, filepath
 from twisted.internet import reactor, defer
 from twisted.trial import unittest
 from twisted.spread import pb
+from twisted.spread.banana import SIZE_LIMIT
 from twisted.web import http, distrib, client, resource, static, server
 from twisted.web.test.test_web import DummyRequest
 from twisted.web.test._util import _render
@@ -31,10 +32,21 @@ class MySite(server.Site):
             del self.logFile
 
 
+
 class PBServerFactory(pb.PBServerFactory):
+    """
+    A PB server factory which keeps track of the most recent protocol it
+    created.
+
+    @ivar proto: L{None} or the L{Broker} instance most recently returned
+        from C{buildProtocol}.
+    """
+    proto = None
+
     def buildProtocol(self, addr):
         self.proto = pb.PBServerFactory.buildProtocol(self, addr)
         return self.proto
+
 
 
 class DistribTest(unittest.TestCase):
@@ -44,12 +56,16 @@ class DistribTest(unittest.TestCase):
     f1 = None
 
     def tearDown(self):
+        """
+        Clean up all the event sources left behind by either directly by
+        test methods or indirectly via some distrib API.
+        """
         dl = [defer.Deferred(), defer.Deferred()]
-        if self.f1 is not None:
+        if self.f1 is not None and self.f1.proto is not None:
             self.f1.proto.notifyOnDisconnect(lambda: dl[0].callback(None))
         else:
             dl[0].callback(None)
-        if self.sub is not None:
+        if self.sub is not None and self.sub.publisher is not None:
             self.sub.publisher.broker.notifyOnDisconnect(
                 lambda: dl[1].callback(None))
             self.sub.publisher.broker.transport.loseConnection()
@@ -61,6 +77,7 @@ class DistribTest(unittest.TestCase):
         if self.port2 is not None:
             dl.append(self.port2.stopListening())
         return defer.gatherResults(dl)
+
 
     def testDistrib(self):
         # site1 is the publisher
@@ -81,21 +98,19 @@ class DistribTest(unittest.TestCase):
         return d
 
 
-    def test_requestHeaders(self):
+    def _requestTest(self, child, **kwargs):
         """
-        The request headers are available on the request object passed to a
-        distributed resource's C{render} method.
+        Set up a resource on a distrib site using L{ResourcePublisher} and
+        then retrieve it from a L{ResourceSubscription} via an HTTP client.
+
+        @param child: The resource to publish using distrib.
+        @param **kwargs: Extra keyword arguments to pass to L{getPage} when
+            requesting the resource.
+
+        @return: A L{Deferred} which fires with the result of the request.
         """
-        requestHeaders = {}
-
-        class ReportRequestHeaders(resource.Resource):
-            def render(self, request):
-                requestHeaders.update(dict(
-                    request.requestHeaders.getAllRawHeaders()))
-                return ""
-
         distribRoot = resource.Resource()
-        distribRoot.putChild("headers", ReportRequestHeaders())
+        distribRoot.putChild("child", child)
         distribSite = server.Site(distribRoot)
         self.f1 = distribFactory = PBServerFactory(
             distrib.ResourcePublisher(distribSite))
@@ -111,12 +126,60 @@ class DistribTest(unittest.TestCase):
         self.addCleanup(mainPort.stopListening)
         mainAddr = mainPort.getHost()
 
-        request = client.getPage("http://%s:%s/headers" % (
-            mainAddr.host, mainAddr.port),
-            headers={'foo': 'bar'})
+        return client.getPage("http://%s:%s/child" % (
+            mainAddr.host, mainAddr.port), **kwargs)
+
+
+
+    def test_requestHeaders(self):
+        """
+        The request headers are available on the request object passed to a
+        distributed resource's C{render} method.
+        """
+        requestHeaders = {}
+
+        class ReportRequestHeaders(resource.Resource):
+            def render(self, request):
+                requestHeaders.update(dict(
+                    request.requestHeaders.getAllRawHeaders()))
+                return ""
+
+        request = self._requestTest(
+            ReportRequestHeaders(), headers={'foo': 'bar'})
         def cbRequested(result):
             self.assertEquals(requestHeaders['Foo'], ['bar'])
         request.addCallback(cbRequested)
+        return request
+
+
+    def test_largeWrite(self):
+        """
+        If a string longer than the Banana size limit is passed to the
+        L{distrib.Request} passed to the remote resource, it is broken into
+        smaller strings to be transported over the PB connection.
+        """
+        class LargeWrite(resource.Resource):
+            def render(self, request):
+                request.write('x' * SIZE_LIMIT + 'y')
+                request.finish()
+                return server.NOT_DONE_YET
+
+        request = self._requestTest(LargeWrite())
+        request.addCallback(self.assertEquals, 'x' * SIZE_LIMIT + 'y')
+        return request
+
+
+    def test_largeReturn(self):
+        """
+        Like L{test_largeWrite}, but for the case where C{render} returns a
+        long string rather than explicitly passing it to L{Request.write}.
+        """
+        class LargeReturn(resource.Resource):
+            def render(self, request):
+                return 'x' * SIZE_LIMIT + 'y'
+
+        request = self._requestTest(LargeReturn())
+        request.addCallback(self.assertEquals, 'x' * SIZE_LIMIT + 'y')
         return request
 
 

@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.web.test.test_web -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -20,6 +20,7 @@ from xml.dom.minidom import Element, Text
 
 # Twisted Imports
 from twisted.spread import pb
+from twisted.spread.banana import SIZE_LIMIT
 from twisted.web import http, resource, server, html, static
 from twisted.web.http_headers import Headers
 from twisted.python import log
@@ -42,7 +43,15 @@ class _ReferenceableProducerWrapper(pb.Referenceable):
 
 
 class Request(pb.RemoteCopy, server.Request):
+    """
+    A request which was received by a L{ResourceSubscription} and sent via
+    PB to a distributed node.
+    """
     def setCopyableState(self, state):
+        """
+        Initialize this L{twisted.web.distrib.Request} based on the copied
+        state so that it closely resembles a L{twisted.web.server.Request}.
+        """
         for k in 'host', 'client':
             tup = state[k]
             addrdesc = {'INET': 'TCP', 'UNIX': 'UNIX'}[tup[0]]
@@ -55,13 +64,34 @@ class Request(pb.RemoteCopy, server.Request):
         pb.RemoteCopy.setCopyableState(self, state)
         # Emulate the local request interface --
         self.content = cStringIO.StringIO(self.content_data)
-        self.write            = self.remote.remoteMethod('write')
         self.finish           = self.remote.remoteMethod('finish')
         self.setHeader        = self.remote.remoteMethod('setHeader')
         self.addCookie        = self.remote.remoteMethod('addCookie')
         self.setETag          = self.remote.remoteMethod('setETag')
         self.setResponseCode  = self.remote.remoteMethod('setResponseCode')
         self.setLastModified  = self.remote.remoteMethod('setLastModified')
+
+        # To avoid failing if a resource tries to write a very long string
+        # all at once, this one will be handled slightly differently.
+        self._write = self.remote.remoteMethod('write')
+
+
+    def write(self, bytes):
+        """
+        Write the given bytes to the response body.
+
+        @param bytes: The bytes to write.  If this is longer than 640k, it
+            will be split up into smaller pieces.
+        """
+        start = 0
+        end = SIZE_LIMIT
+        while True:
+            self._write(bytes[start:end])
+            start += SIZE_LIMIT
+            end += SIZE_LIMIT
+            if start >= len(bytes):
+                break
+
 
     def registerProducer(self, producer, streaming):
         self.remote.callRemote("registerProducer",
@@ -176,7 +206,16 @@ class ResourceSubscription(resource.Resource):
             self.publisher.callRemote('request', request).addCallbacks(i.finished, i.failed)
         return server.NOT_DONE_YET
 
+
+
 class ResourcePublisher(pb.Root, styles.Versioned):
+    """
+    L{ResourcePublisher} exposes a remote API which can be used to respond
+    to request.
+
+    @ivar site: The site which will be used for resource lookup.
+    @type site: L{twisted.web.server.Site}
+    """
     def __init__(self, site):
         self.site = site
 
@@ -192,10 +231,20 @@ class ResourcePublisher(pb.Root, styles.Versioned):
     def getPerspectiveNamed(self, name):
         return self
 
+
     def remote_request(self, request):
+        """
+        Look up the resource for the given request and render it.
+        """
         res = self.site.getResourceFor(request)
         log.msg( request )
-        return res.render(request)
+        result = res.render(request)
+        if result is not server.NOT_DONE_YET:
+            request.write(result)
+            request.finish()
+        return server.NOT_DONE_YET
+
+
 
 class UserDirectory(resource.Resource):
     """
