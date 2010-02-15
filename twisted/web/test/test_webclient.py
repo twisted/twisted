@@ -1,11 +1,11 @@
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
 Tests for L{twisted.web.client}.
 """
 
-import StringIO, os
+import os
 from errno import ENOSPC
 
 from urlparse import urlparse
@@ -279,6 +279,11 @@ class WebClientTestCase(unittest.TestCase):
         r.putChild("payload", PayloadResource())
         r.putChild("broken", BrokenDownloadResource())
         r.putChild("cookiemirror", CookieMirrorResource())
+
+        miscasedHead = static.Data("miscased-head GET response content", "major/minor")
+        miscasedHead.render_Head = lambda request: "miscased-head content"
+        r.putChild("miscased-head", miscasedHead)
+
         self.extendedRedirect = ExtendedRedirect('/extendedRedirect')
         r.putChild("extendedRedirect", self.extendedRedirect)
         self.site = server.Site(r, timeout=None)
@@ -377,17 +382,27 @@ class WebClientTestCase(unittest.TestCase):
         return d
 
 
-    def test_getPageHead(self):
+    def test_getPageHEAD(self):
         """
         L{client.getPage} returns a L{Deferred} which is called back with
-        the empty string if the method is C{HEAD} and there is a successful
+        the empty string if the method is I{HEAD} and there is a successful
         response code.
         """
-        def getPage(method):
-            return client.getPage(self.getURL("file"), method=method)
-        return defer.gatherResults([
-            getPage("head").addCallback(self.assertEqual, ""),
-            getPage("HEAD").addCallback(self.assertEqual, "")])
+        d = client.getPage(self.getURL("file"), method="HEAD")
+        d.addCallback(self.assertEquals, "")
+        return d
+
+
+
+    def test_getPageNotQuiteHEAD(self):
+        """
+        If the request method is a different casing of I{HEAD} (ie, not all
+        capitalized) then it is not a I{HEAD} request and the response body
+        is returned.
+        """
+        d = client.getPage(self.getURL("miscased-head"), method='Head')
+        d.addCallback(self.assertEquals, "miscased-head content")
+        return d
 
 
     def test_timeoutNotTriggering(self):
@@ -573,7 +588,6 @@ class WebClientTestCase(unittest.TestCase):
         f.write("abcd")
         f.close()
 
-        downloads = []
         partialDownload = [(True, "abcd456789"),
                            (True, "abcd456789"),
                            (False, "0123456789")]
@@ -788,7 +802,6 @@ class CookieTestCase(unittest.TestCase):
             )
 
     def testCookieHeaderParsing(self):
-        d = defer.Deferred()
         factory = client.HTTPClientFactory('http://foo.example.com/')
         proto = factory.buildProtocol('127.42.42.42')
         proto.transport = FakeTransport()
@@ -931,7 +944,7 @@ class AgentTests(unittest.TestCase):
         # Just going to check the body for identity, so it doesn't need to be
         # real.
         body = object()
-        result = self.agent.request(
+        self.agent.request(
             'GET', 'http://example.com:1234/foo?bar', headers, body)
 
         protocol = self._verifyAndCompleteConnectionTo('example.com', 1234)
@@ -978,7 +991,7 @@ class AgentTests(unittest.TestCase):
 
         headers = http_headers.Headers({'foo': ['bar'], 'host': ['quux']})
         body = object()
-        result = self.agent.request(
+        self.agent.request(
             'GET', 'http://example.com/baz', headers, body)
 
         protocol = self._verifyAndCompleteConnectionTo('example.com', 80)
@@ -999,7 +1012,7 @@ class AgentTests(unittest.TestCase):
 
         headers = http_headers.Headers()
         body = object()
-        result = self.agent.request(
+        self.agent.request(
             'GET', 'http://example.com/foo', headers, body)
 
         protocol = self._verifyAndCompleteConnectionTo('example.com', 80)

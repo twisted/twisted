@@ -1,5 +1,4 @@
-# -*- test-case-name: twisted.web.test.test_web -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -17,8 +16,38 @@ from twisted.python.filepath import FilePath
 from twisted.python import log
 from twisted.trial.unittest import TestCase
 from twisted.web import static, http, script, resource
+from twisted.web.server import UnsupportedMethod
 from twisted.web.test.test_web import DummyRequest
 from twisted.web.test._util import _render
+
+
+class StaticDataTests(TestCase):
+    """
+    Tests for L{Data}.
+    """
+    def test_headRequest(self):
+        """
+        L{Data.render} returns an empty response body for a I{HEAD} request.
+        """
+        data = static.Data("foo", "bar")
+        request = DummyRequest([''])
+        request.method = 'HEAD'
+        d = _render(data, request)
+        def cbRendered(ignored):
+            self.assertEqual(''.join(request.written), "")
+        d.addCallback(cbRendered)
+        return d
+
+
+    def test_invalidMethod(self):
+        """
+        L{Data.render} raises L{UnsupportedMethod} in response to a non-I{GET},
+        non-I{HEAD} request.
+        """
+        data = static.Data("foo", "bar")
+        request = DummyRequest([''])
+        request.method = 'POST'
+        self.assertRaises(UnsupportedMethod, data.render, request)
 
 
 
@@ -28,6 +57,19 @@ class StaticFileTests(TestCase):
     """
     def _render(self, resource, request):
         return _render(resource, request)
+
+
+    def test_invalidMethod(self):
+        """
+        L{File.render} raises L{UnsupportedMethod} in response to a non-I{GET},
+        non-I{HEAD} request.
+        """
+        request = DummyRequest([''])
+        request.method = 'POST'
+        path = FilePath(self.mktemp())
+        path.setContent("foo")
+        file = static.File(path.path)
+        self.assertRaises(UnsupportedMethod, file.render, request)
 
 
     def test_notFound(self):
@@ -184,6 +226,23 @@ class StaticFileTests(TestCase):
             return d
         d2.addCallback(cbRendered2)
         return d2
+
+
+    def test_headRequest(self):
+        """
+        L{static.File.render} returns an empty response body for I{HEAD}
+        requests.
+        """
+        path = FilePath(self.mktemp())
+        path.setContent("foo")
+        file = static.File(path.path)
+        request = DummyRequest([''])
+        request.method = 'HEAD'
+        d = _render(file, request)
+        def cbRendered(ignored):
+            self.assertEqual("".join(request.written), "")
+        d.addCallback(cbRendered)
+        return d
 
 
     def test_processors(self):

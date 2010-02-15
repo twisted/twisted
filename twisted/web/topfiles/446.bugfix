@@ -1,0 +1,5 @@
+Data and File from twisted.web.static and twisted.web.distrib.UserDirectory
+will now only generate a 200 response for GET or HEAD requests. 
+twisted.web.client.HTTPPageGetter will no longer ignore the case of a
+request method when considering whether to apply special HEAD processing to
+a response.

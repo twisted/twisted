@@ -306,9 +306,21 @@ class UserDirectoryTests(unittest.TestCase):
         self.assertEqual(abspath(result.port), web.path)
 
 
+    def test_invalidMethod(self):
+        """
+        L{UserDirectory.render} raises L{UnsupportedMethod} in response to a
+        non-I{GET} request.
+        """
+        request = DummyRequest([''])
+        request.method = 'POST'
+        self.assertRaises(
+            server.UnsupportedMethod, self.directory.render, request)
+
+
     def test_render(self):
         """
-        L{UserDirectory} renders a list of links to available user content.
+        L{UserDirectory} renders a list of links to available user content
+        in response to a I{GET} request.
         """
         public_html = filepath.FilePath(self.alice[-2]).child('public_html')
         public_html.makedirs()

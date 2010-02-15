@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.web.test.test_static -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -44,12 +44,15 @@ class Data(resource.Resource):
         self.data = data
         self.type = type
 
-    def render(self, request):
+
+    def render_GET(self, request):
         request.setHeader("content-type", self.type)
         request.setHeader("content-length", str(len(self.data)))
         if request.method == "HEAD":
             return ''
         return self.data
+    render_HEAD = render_GET
+
 
 def addSlash(request):
     qs = ''
@@ -587,7 +590,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
                 request, fileForReading, rangeInfo)
 
 
-    def render(self, request):
+    def render_GET(self, request):
         """
         Begin sending the contents of this L{File} (or a subset of the
         contents, based on the 'range' header) to the given request.
@@ -629,6 +632,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         producer.start()
         # and make sure the connection doesn't get closed
         return server.NOT_DONE_YET
+    render_HEAD = render_GET
 
 
     def redirect(self, request):

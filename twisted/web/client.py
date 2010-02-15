@@ -164,7 +164,7 @@ class HTTPPageGetter(http.HTTPClient):
                 failure.Failure(
                     error.Error(
                         self.status, self.message, response)))
-        if self.factory.method.upper() == 'HEAD':
+        if self.factory.method == 'HEAD':
             # Callback with empty string, since there is never a response
             # body for HEAD requests.
             self.factory.page('')

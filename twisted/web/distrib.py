@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.web.test.test_web -*-
+# -*- test-case-name: twisted.web.test.test_distrib -*-
 # Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -327,7 +327,7 @@ class UserDirectory(resource.Resource):
         return users
 
 
-    def render(self, request):
+    def render_GET(self, request):
         """
         Render as HTML a listing of all known users with links to their
         personal resources.
