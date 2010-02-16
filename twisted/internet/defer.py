@@ -16,27 +16,35 @@ from sys import exc_info
 from twisted.python import log, failure, lockfile
 from twisted.python.util import unsignedID, mergeFunctionMetadata
 
+
+
 class AlreadyCalledError(Exception):
     pass
 
+
+
 class TimeoutError(Exception):
     pass
+
+
 
 def logError(err):
     log.err(err)
     return err
 
+
+
 def succeed(result):
     """
-    Return a Deferred that has already had '.callback(result)' called.
+    Return a L{Deferred} that has already had C{.callback(result)} called.
 
     This is useful when you're writing synchronous code to an
     asynchronous interface: i.e., some code is calling you expecting a
-    Deferred result, but you don't actually need to do anything
-    asynchronous. Just return defer.succeed(theResult).
+    L{Deferred} result, but you don't actually need to do anything
+    asynchronous. Just return C{defer.succeed(theResult)}.
 
     See L{fail} for a version of this function that uses a failing
-    Deferred rather than a successful one.
+    L{Deferred} rather than a successful one.
 
     @param result: The result to give to the Deferred's 'callback'
            method.
@@ -48,9 +56,10 @@ def succeed(result):
     return d
 
 
+
 def fail(result=None):
     """
-    Return a Deferred that has already had '.errback(result)' called.
+    Return a L{Deferred} that has already had C{.errback(result)} called.
 
     See L{succeed}'s docstring for rationale.
 
@@ -66,12 +75,14 @@ def fail(result=None):
     return d
 
 
-def execute(callable, *args, **kw):
-    """Create a deferred from a callable and arguments.
 
-    Call the given function with the given arguments.  Return a deferred which
-    has been fired with its callback as the result of that invocation or its
-    errback with a Failure for the exception thrown.
+def execute(callable, *args, **kw):
+    """
+    Create a L{Deferred} from a callable and arguments.
+
+    Call the given function with the given arguments.  Return a L{Deferred}
+    which has been fired with its callback as the result of that invocation
+    or its C{errback} with a L{Failure} for the exception thrown.
     """
     try:
         result = callable(*args, **kw)
@@ -80,14 +91,17 @@ def execute(callable, *args, **kw):
     else:
         return succeed(result)
 
+
+
 def maybeDeferred(f, *args, **kw):
-    """Invoke a function that may or may not return a deferred.
+    """
+    Invoke a function that may or may not return a L{Deferred}.
 
     Call the given function with the given arguments.  If the returned
-    object is a C{Deferred}, return it.  If the returned object is a C{Failure},
-    wrap it with C{fail} and return it.  Otherwise, wrap it in C{succeed} and
-    return it.  If an exception is raised, convert it to a C{Failure}, wrap it
-    in C{fail}, and then return it.
+    object is a L{Deferred}, return it.  If the returned object is a L{Failure},
+    wrap it with L{fail} and return it.  Otherwise, wrap it in L{succeed} and
+    return it.  If an exception is raised, convert it to a L{Failure}, wrap it
+    in L{fail}, and then return it.
 
     @type f: Any callable
     @param f: The callable to invoke
@@ -95,8 +109,8 @@ def maybeDeferred(f, *args, **kw):
     @param args: The arguments to pass to C{f}
     @param kw: The keyword arguments to pass to C{f}
 
-    @rtype: C{Deferred}
-    @return: The result of the function call, wrapped in a C{Deferred} if
+    @rtype: L{Deferred}
+    @return: The result of the function call, wrapped in a L{Deferred} if
     necessary.
     """
     try:
@@ -111,40 +125,54 @@ def maybeDeferred(f, *args, **kw):
     else:
         return succeed(result)
 
+
+
 def timeout(deferred):
     deferred.errback(failure.Failure(TimeoutError("Callback timed out")))
+
+
 
 def passthru(arg):
     return arg
 
+
+
 def setDebugging(on):
-    """Enable or disable Deferred debugging.
+    """
+    Enable or disable L{Deferred} debugging.
 
     When debugging is on, the call stacks from creation and invocation are
-    recorded, and added to any AlreadyCalledErrors we raise.
+    recorded, and added to any L{AlreadyCalledErrors} we raise.
     """
     Deferred.debug=bool(on)
 
+
+
 def getDebugging():
-    """Determine whether Deferred debugging is enabled.
+    """
+    Determine whether L{Deferred} debugging is enabled.
     """
     return Deferred.debug
 
+
+
 class Deferred:
-    """This is a callback which will be put off until later.
+    """
+    This is a callback which will be put off until later.
 
     Why do we want this? Well, in cases where a function in a threaded
     program would block until it gets a result, for Twisted it should
-    not block. Instead, it should return a Deferred.
+    not block. Instead, it should return a L{Deferred}.
 
     This can be implemented for protocols that run over the network by
-    writing an asynchronous protocol for twisted.internet. For methods
+    writing an asynchronous protocol for L{twisted.internet}. For methods
     that come from outside packages that are not under our control, we use
     threads (see for example L{twisted.enterprise.adbapi}).
 
     For more information about Deferreds, see doc/howto/defer.html or
     U{http://twistedmatrix.com/projects/core/documentation/howto/defer.html}
     """
+
     called = 0
     paused = 0
     timeoutCall = None
@@ -159,16 +187,19 @@ class Deferred:
     # sets it directly.
     debug = False
 
+
     def __init__(self):
         self.callbacks = []
         if self.debug:
             self._debugInfo = DebugInfo()
             self._debugInfo.creator = traceback.format_stack()[:-1]
 
+
     def addCallbacks(self, callback, errback=None,
                      callbackArgs=None, callbackKeywords=None,
                      errbackArgs=None, errbackKeywords=None):
-        """Add a pair of callbacks (success and error) to this Deferred.
+        """
+        Add a pair of callbacks (success and error) to this L{Deferred}.
 
         These will be executed when the 'master' callback is run.
         """
@@ -182,16 +213,20 @@ class Deferred:
             self._runCallbacks()
         return self
 
+
     def addCallback(self, callback, *args, **kw):
-        """Convenience method for adding just a callback.
+        """
+        Convenience method for adding just a callback.
 
         See L{addCallbacks}.
         """
         return self.addCallbacks(callback, callbackArgs=args,
                                  callbackKeywords=kw)
 
+
     def addErrback(self, errback, *args, **kw):
-        """Convenience method for adding just an errback.
+        """
+        Convenience method for adding just an errback.
 
         See L{addCallbacks}.
         """
@@ -199,8 +234,10 @@ class Deferred:
                                  errbackArgs=args,
                                  errbackKeywords=kw)
 
+
     def addBoth(self, callback, *args, **kw):
-        """Convenience method for adding a single callable as both a callback
+        """
+        Convenience method for adding a single callable as both a callback
         and an errback.
 
         See L{addCallbacks}.
@@ -209,11 +246,13 @@ class Deferred:
                                  callbackArgs=args, errbackArgs=args,
                                  callbackKeywords=kw, errbackKeywords=kw)
 
-    def chainDeferred(self, d):
-        """Chain another Deferred to this Deferred.
 
-        This method adds callbacks to this Deferred to call d's callback or
-        errback, as appropriate. It is merely a shorthand way of performing
+    def chainDeferred(self, d):
+        """
+        Chain another L{Deferred} to this L{Deferred}.
+
+        This method adds callbacks to this L{Deferred} to call C{d}'s callback
+        or errback, as appropriate. It is merely a shorthand way of performing
         the following::
 
             self.addCallbacks(d.callback, d.errback)
@@ -226,13 +265,15 @@ class Deferred:
         """
         return self.addCallbacks(d.callback, d.errback)
 
+
     def callback(self, result):
-        """Run all success callbacks that have been added to this Deferred.
+        """
+        Run all success callbacks that have been added to this L{Deferred}.
 
         Each callback will have its result passed as the first
         argument to the next; this way, the callbacks act as a
-        'processing chain'. Also, if the success-callback returns a Failure
-        or raises an Exception, processing will continue on the *error*-
+        'processing chain'. Also, if the success-callback returns a L{Failure}
+        or raises an L{Exception}, processing will continue on the *error*-
         callback chain.
         """
         assert not isinstance(result, Deferred)
@@ -241,17 +282,18 @@ class Deferred:
 
     def errback(self, fail=None):
         """
-        Run all error callbacks that have been added to this Deferred.
+        Run all error callbacks that have been added to this L{Deferred}.
 
         Each callback will have its result passed as the first
         argument to the next; this way, the callbacks act as a
         'processing chain'. Also, if the error-callback returns a non-Failure
-        or doesn't raise an Exception, processing will continue on the
+        or doesn't raise an L{Exception}, processing will continue on the
         *success*-callback chain.
 
-        If the argument that's passed to me is not a failure.Failure instance,
-        it will be embedded in one. If no argument is passed, a failure.Failure
-        instance will be created based on the current traceback stack.
+        If the argument that's passed to me is not a L{failure.Failure} instance,
+        it will be embedded in one. If no argument is passed, a
+        L{failure.Failure} instance will be created based on the current
+        traceback stack.
 
         Passing a string as `fail' is deprecated, and will be punished with
         a warning message.
@@ -266,13 +308,15 @@ class Deferred:
 
 
     def pause(self):
-        """Stop processing on a Deferred until L{unpause}() is called.
+        """
+        Stop processing on a L{Deferred} until L{unpause}() is called.
         """
         self.paused = self.paused + 1
 
 
     def unpause(self):
-        """Process all callbacks made since L{pause}() was called.
+        """
+        Process all callbacks made since L{pause}() was called.
         """
         self.paused = self.paused - 1
         if self.paused:
@@ -280,9 +324,11 @@ class Deferred:
         if self.called:
             self._runCallbacks()
 
+
     def _continue(self, result):
         self.result = result
         self.unpause()
+
 
     def _startRunCallbacks(self, result):
         if self.called:
@@ -306,6 +352,7 @@ class Deferred:
 
             del self.timeoutCall
         self._runCallbacks()
+
 
     def _runCallbacks(self):
         if self._runningCallbacks:
@@ -348,14 +395,16 @@ class Deferred:
             if self._debugInfo is not None:
                 self._debugInfo.failResult = None
 
+
     def setTimeout(self, seconds, timeoutFunc=timeout, *args, **kw):
-        """Set a timeout function to be triggered if I am not called.
+        """
+        Set a timeout function to be triggered if I am not called.
 
         @param seconds: How long to wait (from now) before firing the
-        timeoutFunc.
+        C{timeoutFunc}.
 
-        @param timeoutFunc: will receive the Deferred and *args, **kw as its
-        arguments.  The default timeoutFunc will call the errback with a
+        @param timeoutFunc: will receive the L{Deferred} and *args, **kw as its
+        arguments.  The default C{timeoutFunc} will call the errback with a
         L{TimeoutError}.
         """
         warnings.warn(
@@ -381,9 +430,15 @@ class Deferred:
         return "<%s at %s>" % (cname, hex(unsignedID(self)))
     __repr__ = __str__
 
+
+
 class DebugInfo:
-    """Deferred debug helper"""
+    """
+    Deferred debug helper.
+    """
+
     failResult = None
+
 
     def _getDebugTracebacks(self):
         info = ''
@@ -397,11 +452,13 @@ class DebugInfo:
             info += "\n"
         return info
 
+
     def __del__(self):
-        """Print tracebacks and die.
+        """
+        Print tracebacks and die.
 
         If the *last* (and I do mean *last*) callback leaves me in an error
-        state, print a traceback (if said errback is a Failure).
+        state, print a traceback (if said errback is a L{Failure}).
         """
         if self.failResult is not None:
             log.msg("Unhandled error in Deferred:", isError=True)
@@ -464,7 +521,8 @@ class FirstError(Exception):
 
 
 class DeferredList(Deferred):
-    """I combine a group of deferreds into one callback.
+    """
+    I combine a group of deferreds into one callback.
 
     I track a list of L{Deferred}s for their callbacks, and make a single
     callback when they have all completed, a list of (success, result)
@@ -480,9 +538,11 @@ class DeferredList(Deferred):
     fireOnOneCallback = 0
     fireOnOneErrback = 0
 
+
     def __init__(self, deferredList, fireOnOneCallback=0, fireOnOneErrback=0,
                  consumeErrors=0):
-        """Initialize a DeferredList.
+        """
+        Initialize a DeferredList.
 
         @type deferredList:  C{list} of L{Deferred}s
         @param deferredList: The list of deferreds to track.
@@ -517,8 +577,10 @@ class DeferredList(Deferred):
                                   errbackArgs=(index,FAILURE))
             index = index + 1
 
+
     def _cbDeferred(self, result, index, succeeded):
-        """(internal) Callback for when one of my deferreds fires.
+        """
+        (internal) Callback for when one of my deferreds fires.
         """
         self.resultList[index] = (succeeded, result)
 
@@ -537,16 +599,20 @@ class DeferredList(Deferred):
         return result
 
 
+
 def _parseDListResult(l, fireOnOneErrback=0):
     if __debug__:
         for success, value in l:
             assert success
     return [x[1] for x in l]
 
-def gatherResults(deferredList):
-    """Returns list with result of given Deferreds.
 
-    This builds on C{DeferredList} but is useful since you don't
+
+def gatherResults(deferredList):
+    """
+    Returns list with result of given L{Deferred}s.
+
+    This builds on L{DeferredList} but is useful since you don't
     need to parse the result for success/failure.
 
     @type deferredList:  C{list} of L{Deferred}s
@@ -554,6 +620,8 @@ def gatherResults(deferredList):
     d = DeferredList(deferredList, fireOnOneErrback=1)
     d.addCallback(_parseDListResult)
     return d
+
+
 
 # Constants for use with DeferredList
 
@@ -640,13 +708,13 @@ def _deferGenerator(g, deferred):
 
 def deferredGenerator(f):
     """
-    deferredGenerator and waitForDeferred help you write Deferred-using code
+    deferredGenerator and waitForDeferred help you write L{Deferred}-using code
     that looks like a regular sequential function. If your code has a minimum
     requirement of Python 2.5, consider the use of L{inlineCallbacks} instead,
     which can accomplish the same thing in a more concise manner.
 
-    There are two important functions involved: waitForDeferred, and
-    deferredGenerator.  They are used together, like this::
+    There are two important functions involved: L{waitForDeferred}, and
+    L{deferredGenerator}.  They are used together, like this::
 
         def thingummy():
             thing = waitForDeferred(makeSomeRequestResultingInDeferred())
@@ -655,25 +723,25 @@ def deferredGenerator(f):
             print thing #the result! hoorj!
         thingummy = deferredGenerator(thingummy)
 
-    waitForDeferred returns something that you should immediately yield; when
-    your generator is resumed, calling thing.getResult() will either give you
-    the result of the Deferred if it was a success, or raise an exception if it
+    L{waitForDeferred} returns something that you should immediately yield; when
+    your generator is resumed, calling C{thing.getResult()} will either give you
+    the result of the L{Deferred} if it was a success, or raise an exception if it
     was a failure.  Calling C{getResult} is B{absolutely mandatory}.  If you do
     not call it, I{your program will not work}.
 
-    deferredGenerator takes one of these waitForDeferred-using generator
-    functions and converts it into a function that returns a Deferred. The
-    result of the Deferred will be the last value that your generator yielded
-    unless the last value is a waitForDeferred instance, in which case the
+    L{deferredGenerator} takes one of these waitForDeferred-using generator
+    functions and converts it into a function that returns a L{Deferred}. The
+    result of the L{Deferred} will be the last value that your generator yielded
+    unless the last value is a L{waitForDeferred} instance, in which case the
     result will be C{None}.  If the function raises an unhandled exception, the
-    Deferred will errback instead.  Remember that 'return result' won't work;
-    use 'yield result; return' in place of that.
+    L{Deferred} will errback instead.  Remember that C{return result} won't work;
+    use C{yield result; return} in place of that.
 
-    Note that not yielding anything from your generator will make the Deferred
-    result in None. Yielding a Deferred from your generator is also an error
-    condition; always yield waitForDeferred(d) instead.
+    Note that not yielding anything from your generator will make the L{Deferred}
+    result in C{None}. Yielding a L{Deferred} from your generator is also an error
+    condition; always yield C{waitForDeferred(d)} instead.
 
-    The Deferred returned from your deferred generator may also errback if your
+    The L{Deferred} returned from your deferred generator may also errback if your
     generator raised an exception.  For example::
 
         def thingummy():
@@ -690,10 +758,11 @@ def deferredGenerator(f):
         thingummy = deferredGenerator(thingummy)
 
     Put succinctly, these functions connect deferred-using code with this 'fake
-    blocking' style in both directions: waitForDeferred converts from a
-    Deferred to the 'blocking' style, and deferredGenerator converts from the
-    'blocking' style to a Deferred.
+    blocking' style in both directions: L{waitForDeferred} converts from a
+    L{Deferred} to the 'blocking' style, and L{deferredGenerator} converts from the
+    'blocking' style to a L{Deferred}.
     """
+
     def unwindGenerator(*args, **kwargs):
         return _deferGenerator(f(*args, **kwargs), Deferred())
     return mergeFunctionMetadata(f, unwindGenerator)
@@ -707,16 +776,20 @@ try:
 except NameError:
     BaseException=Exception
 
+
+
 class _DefGen_Return(BaseException):
     def __init__(self, value):
         self.value = value
+
+
 
 def returnValue(val):
     """
     Return val from a L{inlineCallbacks} generator.
 
     Note: this is currently implemented by raising an exception
-    derived from BaseException.  You might want to change any
+    derived from L{BaseException}.  You might want to change any
     'except:' clauses to an 'except Exception:' clause so as not to
     catch this exception.
 
@@ -725,6 +798,8 @@ def returnValue(val):
     not rely upon this behavior.
     """
     raise _DefGen_Return(val)
+
+
 
 def _inlineCallbacks(result, g, deferred):
     """
@@ -823,6 +898,8 @@ def _inlineCallbacks(result, g, deferred):
 
     return deferred
 
+
+
 def inlineCallbacks(f):
     """
     WARNING: this function will not work in Python 2.4 and earlier!
@@ -838,19 +915,19 @@ def inlineCallbacks(f):
             print thing #the result! hoorj!
         thingummy = inlineCallbacks(thingummy)
 
-    When you call anything that results in a Deferred, you can simply yield it;
+    When you call anything that results in a L{Deferred}, you can simply yield it;
     your generator will automatically be resumed when the Deferred's result is
-    available. The generator will be sent the result of the Deferred with the
+    available. The generator will be sent the result of the L{Deferred} with the
     'send' method on generators, or if the result was a failure, 'throw'.
 
-    Your inlineCallbacks-enabled generator will return a Deferred object, which
+    Your inlineCallbacks-enabled generator will return a L{Deferred} object, which
     will result in the return value of the generator (or will fail with a
     failure object if your generator raises an unhandled exception). Note that
-    you can't use 'return result' to return a value; use 'returnValue(result)'
-    instead. Falling off the end of the generator, or simply using 'return'
-    will cause the Deferred to have a result of None.
+    you can't use C{return result} to return a value; use C{returnValue(result)}
+    instead. Falling off the end of the generator, or simply using C{return}
+    will cause the L{Deferred} to have a result of C{None}.
 
-    The Deferred returned from your deferred generator may errback if your
+    The L{Deferred} returned from your deferred generator may errback if your
     generator raised an exception::
 
         def thingummy():
@@ -874,22 +951,25 @@ class _ConcurrencyPrimitive(object):
     def __init__(self):
         self.waiting = []
 
+
     def _releaseAndReturn(self, r):
         self.release()
         return r
 
+
     def run(*args, **kwargs):
-        """Acquire, run, release.
+        """
+        Acquire, run, release.
 
         This function takes a callable as its first argument and any
         number of other positional and keyword arguments.  When the
         lock or semaphore is acquired, the callable will be invoked
         with those arguments.
 
-        The callable may return a Deferred; if it does, the lock or
-        semaphore won't be released until that Deferred fires.
+        The callable may return a L{Deferred}; if it does, the lock or
+        semaphore won't be released until that L{Deferred} fires.
 
-        @return: Deferred of function result.
+        @return: L{Deferred} of function result.
         """
         if len(args) < 2:
             if not args:
@@ -909,21 +989,27 @@ class _ConcurrencyPrimitive(object):
         return d
 
 
+
 class DeferredLock(_ConcurrencyPrimitive):
     """
     A lock for event driven systems.
 
-    @ivar locked: True when this Lock has been acquired, false at all
+    @ivar locked: C{True} when this Lock has been acquired, false at all
     other times.  Do not change this value, but it is useful to
-    examine for the equivalent of a \"non-blocking\" acquisition.
+    examine for the equivalent of a "non-blocking" acquisition.
     """
 
     locked = 0
 
-    def acquire(self):
-        """Attempt to acquire the lock.
 
-        @return: a Deferred which fires on lock acquisition.
+    def acquire(self):
+        """
+        Attempt to acquire the lock.  Returns a L{Deferred} that fires on
+        lock acquisition with the L{DeferredLock} as the value.  If the lock
+        is locked, then the Deferred is placed at the end of a waiting list.
+
+        @return: a L{Deferred} which fires on lock acquisition.
+        @rtype: a L{Deferred}
         """
         d = Deferred()
         if self.locked:
@@ -933,10 +1019,13 @@ class DeferredLock(_ConcurrencyPrimitive):
             d.callback(self)
         return d
 
-    def release(self):
-        """Release the lock.
 
-        Should be called by whomever did the acquire() when the shared
+    def release(self):
+        """
+        Release the lock.  If there is a waiting list, then the first
+        L{Deferred} in that waiting list will be called back.
+
+        Should be called by whomever did the L{acquire}() when the shared
         resource is free.
         """
         assert self.locked, "Tried to release an unlocked lock"
@@ -947,20 +1036,25 @@ class DeferredLock(_ConcurrencyPrimitive):
             d = self.waiting.pop(0)
             d.callback(self)
 
+
+
 class DeferredSemaphore(_ConcurrencyPrimitive):
     """
     A semaphore for event driven systems.
     """
+
 
     def __init__(self, tokens):
         _ConcurrencyPrimitive.__init__(self)
         self.tokens = tokens
         self.limit = tokens
 
-    def acquire(self):
-        """Attempt to acquire the token.
 
-        @return: a Deferred which fires on token acquisition.
+    def acquire(self):
+        """
+        Attempt to acquire the token.
+
+        @return: a L{Deferred} which fires on token acquisition.
         """
         assert self.tokens >= 0, "Internal inconsistency??  tokens should never be negative"
         d = Deferred()
@@ -971,10 +1065,12 @@ class DeferredSemaphore(_ConcurrencyPrimitive):
             d.callback(self)
         return d
 
-    def release(self):
-        """Release the token.
 
-        Should be called by whoever did the acquire() when the shared
+    def release(self):
+        """
+        Release the token.
+
+        Should be called by whoever did the L{acquire}() when the shared
         resource is free.
         """
         assert self.tokens < self.limit, "Someone released me too many times: too many tokens!"
@@ -985,11 +1081,16 @@ class DeferredSemaphore(_ConcurrencyPrimitive):
             d = self.waiting.pop(0)
             d.callback(self)
 
+
+
 class QueueOverflow(Exception):
     pass
 
+
+
 class QueueUnderflow(Exception):
     pass
+
 
 
 class DeferredQueue(object):
@@ -997,16 +1098,16 @@ class DeferredQueue(object):
     An event driven queue.
 
     Objects may be added as usual to this queue.  When an attempt is
-    made to retrieve an object when the queue is empty, a Deferred is
+    made to retrieve an object when the queue is empty, a L{Deferred} is
     returned which will fire when an object becomes available.
 
     @ivar size: The maximum number of objects to allow into the queue
     at a time.  When an attempt to add a new object would exceed this
-    limit, QueueOverflow is raised synchronously.  None for no limit.
+    limit, L{QueueOverflow} is raised synchronously.  C{None} for no limit.
 
-    @ivar backlog: The maximum number of Deferred gets to allow at
+    @ivar backlog: The maximum number of L{Deferred} gets to allow at
     one time.  When an attempt is made to get an object which would
-    exceed this limit, QueueUnderflow is raised synchronously.  None
+    exceed this limit, L{QueueUnderflow} is raised synchronously.  C{None}
     for no limit.
     """
 
@@ -1016,8 +1117,10 @@ class DeferredQueue(object):
         self.size = size
         self.backlog = backlog
 
+
     def put(self, obj):
-        """Add an object to this queue.
+        """
+        Add an object to this queue.
 
         @raise QueueOverflow: Too many objects are in this queue.
         """
@@ -1028,13 +1131,16 @@ class DeferredQueue(object):
         else:
             raise QueueOverflow()
 
-    def get(self):
-        """Attempt to retrieve and remove an object from the queue.
 
-        @return: a Deferred which fires with the next object available in the queue.
+    def get(self):
+        """
+        Attempt to retrieve and remove an object from the queue.
+
+        @return: a L{Deferred} which fires with the next object available in
+        the queue.
 
         @raise QueueUnderflow: Too many (more than C{backlog})
-        Deferreds are already waiting for an object from this queue.
+        L{Deferred}s are already waiting for an object from this queue.
         """
         if self.pending:
             return succeed(self.pending.pop(0))
@@ -1046,16 +1152,18 @@ class DeferredQueue(object):
             raise QueueUnderflow()
 
 
+
 class AlreadyTryingToLockError(Exception):
     """
-    Raised when DeferredFilesystemLock.deferUntilLocked is called twice on a
-    single DeferredFilesystemLock.
+    Raised when L{DeferredFilesystemLock.deferUntilLocked} is called twice on a
+    single L{DeferredFilesystemLock}.
     """
+
 
 
 class DeferredFilesystemLock(lockfile.FilesystemLock):
     """
-    A FilesystemLock that allows for a deferred to be fired when the lock is
+    A L{FilesystemLock} that allows for a L{Deferred} to be fired when the lock is
     acquired.
 
     @ivar _scheduler: The object in charge of scheduling retries. In this
@@ -1063,16 +1171,17 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
 
     @ivar _interval: The retry interval for an L{IReactorTime} based scheduler.
 
-    @ivar _tryLockCall: A L{DelayedCall} based on _interval that will managex
+    @ivar _tryLockCall: A L{DelayedCall} based on C{_interval} that will manage
         the next retry for aquiring the lock.
 
-    @ivar _timeoutCall: A L{DelayedCall} based on deferUntilLocked's timeout
+    @ivar _timeoutCall: A L{DelayedCall} based on C{deferUntilLocked}'s timeout
         argument.  This is in charge of timing out our attempt to acquire the
         lock.
     """
     _interval = 1
     _tryLockCall = None
     _timeoutCall = None
+
 
     def __init__(self, name, scheduler=None):
         """
@@ -1087,6 +1196,7 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
 
         self._scheduler = scheduler
 
+
     def deferUntilLocked(self, timeout=None):
         """
         Wait until we acquire this lock.  This method is not safe for
@@ -1096,7 +1206,7 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
         @param timeout: the number of seconds after which to time out if the
             lock has not been acquired.
 
-        @return: a deferred which will callback when the lock is acquired, or
+        @return: a L{Deferred} which will callback when the lock is acquired, or
             errback with a L{TimeoutError} after timing out or an
             L{AlreadyTryingToLockError} if the L{deferUntilLocked} has already
             been called and not successfully locked the file.
@@ -1141,6 +1251,7 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
         _tryLock()
 
         return d
+
 
 
 __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
