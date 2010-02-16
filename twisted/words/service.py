@@ -264,15 +264,16 @@ class IRCUser(irc.IRC):
             recipientName = recipient.name
 
         text = message.get('text', '<an unrepresentable message>')
-        away = recipient.avatar.awayMessage
-        if away:
-            sender.sendMessage(irc.RPL_AWAY, ':' + away)
-        else:
-            for L in text.splitlines():
-                self.privmsg(
-                    '%s!%s@%s' % (sender.name, sender.name, self.hostname),
-                    recipientName,
-                    L)
+
+        # Messages directed at me while I'm away will be get an automatic
+        # reply.
+        if recipient is self.avatar and self.avatar.awayMessage:
+            sender.sendMessage(irc.RPL_AWAY, ':' + self.avatar.awayMessage)
+        for L in text.splitlines():
+            self.privmsg(
+                '%s!%s@%s' % (sender.name, sender.name, self.hostname),
+                recipientName,
+                L)
 
 
     def groupMetaUpdate(self, group, meta):
