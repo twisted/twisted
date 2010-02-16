@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -717,6 +717,44 @@ class CTCPTest(unittest.TestCase):
         reply = self.file.getvalue()
 
         self.failUnlessEqual(errReply, reply)
+
+
+    def test_noNumbersVERSION(self):
+        """
+        If attributes for version information on L{IRCClient} are set to
+        C{None}, the parts of the CTCP VERSION response they correspond to
+        are omitted.
+        """
+        self.client.versionName = "FrobozzIRC"
+        self.client.ctcpQuery_VERSION("nick!guy@over.there", "#theChan", None)
+        versionReply = ("NOTICE nick :%(X)cVERSION %(vname)s::"
+                        "%(X)c%(EOL)s"
+                        % {'X': irc.X_DELIM,
+                           'EOL': irc.CR + irc.LF,
+                           'vname': self.client.versionName})
+        reply = self.file.getvalue()
+        self.assertEquals(versionReply, reply)
+
+
+    def test_fullVERSION(self):
+        """
+        The response to a CTCP VERSION query includes the version number and
+        environment information, as specified by L{IRCClient.versionNum} and
+        L{IRCClient.versionEnv}.
+        """
+        self.client.versionName = "FrobozzIRC"
+        self.client.versionNum = "1.2g"
+        self.client.versionEnv = "ZorkOS"
+        self.client.ctcpQuery_VERSION("nick!guy@over.there", "#theChan", None)
+        versionReply = ("NOTICE nick :%(X)cVERSION %(vname)s:%(vnum)s:%(venv)s"
+                        "%(X)c%(EOL)s"
+                        % {'X': irc.X_DELIM,
+                           'EOL': irc.CR + irc.LF,
+                           'vname': self.client.versionName,
+                           'vnum': self.client.versionNum,
+                           'venv': self.client.versionEnv})
+        reply = self.file.getvalue()
+        self.assertEquals(versionReply, reply)
 
 
     def tearDown(self):

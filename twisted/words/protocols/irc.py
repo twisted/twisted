@@ -1004,8 +1004,11 @@ class IRCClient(basic.LineReceiver):
 
     @ivar versionName: CTCP VERSION reply, client name.  If C{None}, no VERSION
         reply will be sent.
-    @ivar versionNum: CTCP VERSION reply, client version,
+    @type versionName: C{str}, or None.
+    @ivar versionNum: CTCP VERSION reply, client version.
+    @type versionNum: C{str}, or None.
     @ivar versionEnv: CTCP VERSION reply, environment the client is running in.
+    @type versionEnv: C{str}, or None.
 
     @ivar sourceURL: CTCP SOURCE reply, a URL where the source code of this
         client may be found.  If C{None}, no SOURCE reply will be sent.
@@ -1992,8 +1995,8 @@ class IRCClient(basic.LineReceiver):
             nick = string.split(user,"!")[0]
             self.ctcpMakeReply(nick, [('VERSION', '%s:%s:%s' %
                                        (self.versionName,
-                                        self.versionNum,
-                                        self.versionEnv))])
+                                        self.versionNum or '',
+                                        self.versionEnv or ''))])
 
     def ctcpQuery_SOURCE(self, user, channel, data):
         if data is not None:

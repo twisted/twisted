@@ -1,0 +1,3 @@
+When twisted.words.protocols.irc.IRCClient's versionNum and versionEnv
+attributes are set to None, they will no longer be included in the client's
+response to CTCP VERSION queries.
