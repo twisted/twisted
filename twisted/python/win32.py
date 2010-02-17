@@ -1,4 +1,5 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.python.test.test_win32 -*-
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -70,12 +71,14 @@ def cmdLineQuote(s):
     Internal method for quoting a single command-line argument.
 
     @param s: an unquoted string that you want to quote so that something that
-    does cmd.exe-style unquoting will interpret it as a single argument, even
-    if it contains spaces.
+        does cmd.exe-style unquoting will interpret it as a single argument,
+        even if it contains spaces.
+    @type s: C{str}
 
     @return: a quoted string.
+    @rtype: C{str}
     """
-    quote = ((" " in s) or ("\t" in s) or ('"' in s)) and '"' or ''
+    quote = ((" " in s) or ("\t" in s) or ('"' in s) or s == '') and '"' or ''
     return quote + _cmdLineQuoteRe2.sub(r"\1\1", _cmdLineQuoteRe.sub(r'\1\1\\"', s)) + quote
 
 def quoteArguments(arguments):
