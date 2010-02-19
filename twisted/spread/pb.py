@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_pb -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -1207,34 +1207,44 @@ class PBServerFactory(protocol.ServerFactory):
 
 
 class IUsernameMD5Password(ICredentials):
-    """I encapsulate a username and a hashed password.
+    """
+    I encapsulate a username and a hashed password.
 
-    This credential is used for username/password over
-    PB. CredentialCheckers which check this kind of credential must
-    store the passwords in plaintext form or as a MD5 digest.
+    This credential is used for username/password over PB. CredentialCheckers
+    which check this kind of credential must store the passwords in plaintext
+    form or as a MD5 digest.
 
     @type username: C{str} or C{Deferred}
     @ivar username: The username associated with these credentials.
     """
 
     def checkPassword(password):
-        """Validate these credentials against the correct password.
+        """
+        Validate these credentials against the correct password.
 
+        @type password: C{str}
         @param password: The correct, plaintext password against which to
             check.
 
-        @return: a deferred which becomes, or a boolean indicating if the
-            password matches.
+        @rtype: C{bool} or L{Deferred}
+        @return: C{True} if the credentials represented by this object match the
+            given password, C{False} if they do not, or a L{Deferred} which will
+            be called back with one of these values.
         """
 
     def checkMD5Password(password):
-        """Validate these credentials against the correct MD5 digest of password.
+        """
+        Validate these credentials against the correct MD5 digest of the
+        password.
 
-        @param password: The correct, plaintext password against which to
+        @type password: C{str}
+        @param password: The correct MD5 digest of a password against which to
             check.
 
-        @return: a deferred which becomes, or a boolean indicating if the
-            password matches.
+        @rtype: C{bool} or L{Deferred}
+        @return: C{True} if the credentials represented by this object match the
+            given digest, C{False} if they do not, or a L{Deferred} which will
+            be called back with one of these values.
         """
 
 

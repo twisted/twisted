@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.test.test_newcred-*-
 
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -53,13 +53,17 @@ class IUsernameHashedPassword(ICredentials):
     """
 
     def checkPassword(password):
-        """Validate these credentials against the correct password.
+        """
+        Validate these credentials against the correct password.
 
+        @type password: C{str}
         @param password: The correct, plaintext password against which to
         check.
 
-        @return: a deferred which becomes, or a boolean indicating if the
-        password matches.
+        @rtype: C{bool} or L{Deferred}
+        @return: C{True} if the credentials represented by this object match the
+            given password, C{False} if they do not, or a L{Deferred} which will
+            be called back with one of these values.
         """
 
 
@@ -82,13 +86,17 @@ class IUsernamePassword(ICredentials):
     """
 
     def checkPassword(password):
-        """Validate these credentials against the correct password.
+        """
+        Validate these credentials against the correct password.
 
+        @type password: C{str}
         @param password: The correct, plaintext password against which to
         check.
 
-        @return: a deferred which becomes, or a boolean indicating if the
-        password matches.
+        @rtype: C{bool} or L{Deferred}
+        @return: C{True} if the credentials represented by this object match the
+            given password, C{False} if they do not, or a L{Deferred} which will
+            be called back with one of these values.
         """
 
 
