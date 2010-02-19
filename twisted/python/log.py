@@ -572,9 +572,16 @@ except NameError:
 def startLogging(file, *a, **kw):
     """
     Initialize logging to a specified file.
+
+    @return: A L{FileLogObserver} if a new observer is added, None otherwise.
     """
+    if isinstance(file, StdioOnnaStick):
+        return
     flo = FileLogObserver(file)
     startLoggingWithObserver(flo.emit, *a, **kw)
+    return flo
+
+
 
 def startLoggingWithObserver(observer, setStdout=1):
     """

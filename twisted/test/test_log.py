@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -417,6 +417,33 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.TestCase):
         """
         self.lp.msg(message='', isError=False)
         self.assertEquals(len(self.out), 0)
+
+
+    def test_startLoggingTwice(self):
+        """
+        There are some obscure error conditions that can occur when logging is
+        started twice. See http://twistedmatrix.com/trac/ticket/3289 for more
+        information.
+        """
+        # The bug is particular to the way that the t.p.log 'global' function
+        # handle stdout. If we use our own stream, the error doesn't occur. If
+        # we use our own LogPublisher, the error doesn't occur.
+        sys.stdout = StringIO()
+        self.addCleanup(setattr, sys, 'stdout', sys.__stdout__)
+
+        def showError(eventDict):
+            if eventDict['isError']:
+                sys.__stdout__.write(eventDict['failure'].getTraceback())
+
+        log.addObserver(showError)
+        self.addCleanup(log.removeObserver, showError)
+        observer = log.startLogging(sys.stdout)
+        self.addCleanup(observer.stop)
+        # At this point, we expect that sys.stdout is a StdioOnnaStick object.
+        self.assertIsInstance(sys.stdout, log.StdioOnnaStick)
+        fakeStdout = sys.stdout
+        observer = log.startLogging(sys.stdout)
+        self.assertIdentical(sys.stdout, fakeStdout)
 
 
 class PythonLoggingObserverTestCase(unittest.TestCase):

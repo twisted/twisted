@@ -1,0 +1,2 @@
+startLogging now does nothing on subsequent invocations, thus fixing a
+terrible infinite recursion bug that's only on edge case.
