@@ -1,0 +1,1 @@
+All SOCKSv4a tests now use a dummy reactor with a deterministic resolve method.

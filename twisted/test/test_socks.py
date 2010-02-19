@@ -177,7 +177,7 @@ class Connect(unittest.TestCase):
         Failed hostname resolution on a SOCKSv4a packet results in a 91 error
         response and the connection getting closed.
         """
-        # send the domain name "localhost" to be resolved
+        # send the domain name "failinghost" to be resolved
         clientRequest = (
             struct.pack('!BBH', 4, 1, 34)
             + socket.inet_aton('0.0.0.1')
@@ -261,6 +261,7 @@ class Bind(unittest.TestCase):
         self.sock = SOCKSv4Driver()
         self.sock.transport = StringTCPTransport()
         self.sock.connectionMade()
+        self.sock.reactor = FakeResolverReactor({"localhost":"127.0.0.1"})
 
 ##     def tearDown(self):
 ##         # TODO ensure the listen port is closed
@@ -318,47 +319,6 @@ class Bind(unittest.TestCase):
 
         @see: U{http://en.wikipedia.org/wiki/SOCKS#SOCKS_4a_protocol}
         """
-        def afterResolution(dummy):
-            """
-            Now that the host name has been resolved, check the data.
-            """
-            sent = self.sock.transport.value()
-            self.sock.transport.clear()
-
-            # Verify that the server responded with the address which will be
-            # connected to.
-            self.assertEquals(
-                sent,
-                struct.pack('!BBH', 0, 90, 1234) + socket.inet_aton('6.7.8.9'))
-            self.assertFalse(self.sock.transport.stringTCPTransport_closing)
-            self.assertNotIdentical(self.sock.driver_listen, None)
-
-            # connect
-            incoming = self.sock.driver_listen.buildProtocol(('127.0.0.1', 5345))
-            self.assertNotIdentical(incoming, None)
-            incoming.transport = StringTCPTransport()
-            incoming.connectionMade()
-
-            # now we should have the second reply packet
-            sent = self.sock.transport.value()
-            self.sock.transport.clear()
-            self.assertEqual(sent,
-                             struct.pack('!BBH', 0, 90, 0)
-                             + socket.inet_aton('0.0.0.0'))
-            self.assertNotIdentical(
-                self.sock.transport.stringTCPTransport_closing, None)
-
-            # Deliver some data from the output connection and verify it is
-            # passed along to the incoming side.
-            self.sock.dataReceived('hi there')
-            self.assertEquals(incoming.transport.value(), 'hi there')
-
-            # the other way around
-            incoming.dataReceived('hi there')
-            self.assertEqual(self.sock.transport.value(), 'hi there')
-
-            self.sock.connectionLost('fake reason')
-
         # send the domain name "localhost" to be resolved
         clientRequest = (
             struct.pack('!BBH', 4, 2, 34)
@@ -367,16 +327,76 @@ class Bind(unittest.TestCase):
             + 'localhost\0')
 
         # Deliver the bytes one by one to exercise the protocol's buffering
-        # logic.
+        # logic. FakeResolverReactor's resolve method is invoked to "resolve"
+        # the hostname.
         for byte in clientRequest:
             self.sock.dataReceived(byte)
 
-        # Defer the assertions about the data because the host name resolution
-        # is waiting in the deferred pipeline.
-        d = defer.Deferred()
-        d.addCallback(afterResolution)
-        reactor.callLater(0.1, d.callback, "foo")
-        return d
+        sent = self.sock.transport.value()
+        self.sock.transport.clear()
+
+        # Verify that the server responded with the address which will be
+        # connected to.
+        self.assertEquals(
+            sent,
+            struct.pack('!BBH', 0, 90, 1234) + socket.inet_aton('6.7.8.9'))
+        self.assertFalse(self.sock.transport.stringTCPTransport_closing)
+        self.assertNotIdentical(self.sock.driver_listen, None)
+
+        # connect
+        incoming = self.sock.driver_listen.buildProtocol(('127.0.0.1', 5345))
+        self.assertNotIdentical(incoming, None)
+        incoming.transport = StringTCPTransport()
+        incoming.connectionMade()
+
+        # now we should have the second reply packet
+        sent = self.sock.transport.value()
+        self.sock.transport.clear()
+        self.assertEqual(sent,
+                         struct.pack('!BBH', 0, 90, 0)
+                         + socket.inet_aton('0.0.0.0'))
+        self.assertNotIdentical(
+            self.sock.transport.stringTCPTransport_closing, None)
+
+        # Deliver some data from the output connection and verify it is
+        # passed along to the incoming side.
+        self.sock.dataReceived('hi there')
+        self.assertEquals(incoming.transport.value(), 'hi there')
+
+        # the other way around
+        incoming.dataReceived('hi there')
+        self.assertEqual(self.sock.transport.value(), 'hi there')
+
+        self.sock.connectionLost('fake reason')
+
+
+    def test_socks4aFailedResolution(self):
+        """
+        Failed hostname resolution on a SOCKSv4a packet results in a 91 error
+        response and the connection getting closed.
+        """
+        # send the domain name "failinghost" to be resolved
+        clientRequest = (
+            struct.pack('!BBH', 4, 2, 34)
+            + socket.inet_aton('0.0.0.1')
+            + 'fooBAZ\0'
+            + 'failinghost\0')
+
+        # Deliver the bytes one by one to exercise the protocol's buffering
+        # logic. FakeResolverReactor's resolve method is invoked to "resolve"
+        # the hostname.
+        for byte in clientRequest:
+            self.sock.dataReceived(byte)
+
+        # Verify that the server responds with a 91 error.
+        sent = self.sock.transport.value()
+        self.assertEquals(
+            sent,
+            struct.pack('!BBH', 0, 91, 0) + socket.inet_aton('0.0.0.0'))
+
+        # A failed resolution causes the transport to drop the connection.
+        self.assertTrue(self.sock.transport.stringTCPTransport_closing)
+        self.assertIdentical(self.sock.driver_outgoing, None)
 
 
     def test_accessDenied(self):
