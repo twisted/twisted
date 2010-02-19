@@ -63,7 +63,7 @@ class ExtendedRedirect(resource.Resource):
 
     def getChild(self, name, request):
         return self
-    
+
 
     def redirectTo(self, url, request, code):
         request.setResponseCode(code)
@@ -338,6 +338,17 @@ class WebClientTestCase(unittest.TestCase):
         path = FilePath(self.mktemp())
         d = client.downloadPage(self.getURL("broken"), path.path)
         d = self.assertFailure(d, client.PartialDownloadError)
+
+        def checkResponse(response):
+            """
+            The HTTP status code from the server is propagated through the
+            C{PartialDownloadError}.
+            """
+            self.assertEquals(response.status, "200")
+            self.assertEquals(response.message, "OK")
+            return response
+        d.addCallback(checkResponse)
+
         def cbFailed(ignored):
             self.assertEquals(path.getContent(), "abc")
         d.addCallback(cbFailed)
@@ -575,13 +586,13 @@ class WebClientTestCase(unittest.TestCase):
                 self.extendedRedirect.lastMethod,
                 "GET",
                 "With afterFoundGet, the HTTP method must change to GET")
-        
+
         d = client.getPage(
             url, followRedirect=True, afterFoundGet=True, method="POST")
         d.addCallback(gotPage)
         return d
 
-    
+
     def testPartial(self):
         name = self.mktemp()
         f = open(name, "wb")

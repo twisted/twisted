@@ -205,7 +205,7 @@ class HTTPPageDownloader(HTTPPageGetter):
             self.transmittingPage = 0
             self.factory.noPage(
                 failure.Failure(
-                    PartialDownloadError(None)))
+                    PartialDownloadError(self.status)))
         if self.transmittingPage:
             self.factory.pageEnd()
             self.transmittingPage = 0

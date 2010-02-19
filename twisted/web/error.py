@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.web.test -*-
+# -*- test-case-name: twisted.web.test.test_error -*-
 # Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -12,18 +12,45 @@ from twisted.web import http
 
 
 class Error(Exception):
+    """
+    A basic HTTP error.
+
+    @type status: C{str}
+    @ivar status: Refers to an HTTP status code, for example L{http.NOT_FOUND}.
+
+    @type message: C{str}
+    @param message: A short error message, for example "NOT FOUND".
+
+    @type response: C{str}
+    @ivar response: A complete HTML document for an error page.
+    """
     def __init__(self, code, message=None, response=None):
         """
         Initializes a basic exception.
 
-        @param code: Refers to an HTTP status code for example http.NOT_FOUND.
-        If no message is given the given code is mapped to a descriptive
-        string and used instead.
-        """
+        @type code: C{str}
+        @param code: Refers to an HTTP status code, for example
+            L{http.NOT_FOUND}. If no C{message} is given, C{code} is mapped to a
+            descriptive string that is used instead.
 
-        message = message or http.responses.get(code)
+        @type message: C{str}
+        @param message: A short error message, for example "NOT FOUND".
+
+        @type response: C{str}
+        @param response: A complete HTML document for an error page.
+        """
+        if not message:
+            try:
+                message = http.responses.get(int(code))
+            except ValueError:
+                # If code wasn't a stringified int, can't map the
+                # status code to a descriptive string so keep message
+                # unchanged.
+                pass
+
         Exception.__init__(self, code, message, response)
         self.status = code
+        self.message = message
         self.response = response
 
 
@@ -40,7 +67,37 @@ class PageRedirect(Error):
     @ivar location: The location of the redirect which was not followed.
     """
     def __init__(self, code, message=None, response=None, location=None):
-        message = message or ("%s to %s" % (http.responses.get(code), location))
+        """
+        Initializes a page redirect exception.
+
+        @type code: C{str}
+        @param code: Refers to an HTTP status code, for example
+            L{http.NOT_FOUND}. If no C{message} is given, C{code} is mapped to a
+            descriptive string that is used instead.
+
+        @type message: C{str}
+        @param message: A short error message, for example "NOT FOUND".
+
+        @type response: C{str}
+        @param response: A complete HTML document for an error page.
+
+        @type location: C{str}
+        @param location: The location response-header field value. It is an
+            absolute URI used to redirect the receiver to a location other than
+            the Request-URI so the request can be completed.
+        """
+        if not message:
+            try:
+                message = http.responses.get(int(code))
+            except ValueError:
+                # If code wasn't a stringified int, can't map the
+                # status code to a descriptive string so keep message
+                # unchanged.
+                pass
+
+        if location and message:
+            message = "%s to %s" % (message, location)
+
         Error.__init__(self, code, message, response)
         self.location = location
 
@@ -55,9 +112,40 @@ class InfiniteRedirection(Error):
         not followed.
     """
     def __init__(self, code, message=None, response=None, location=None):
-        message = message or ("%s to %s" % (http.responses.get(code), location))
+        """
+        Initializes an infinite redirection exception.
+
+        @type code: C{str}
+        @param code: Refers to an HTTP status code, for example
+            L{http.NOT_FOUND}. If no C{message} is given, C{code} is mapped to a
+            descriptive string that is used instead.
+
+        @type message: C{str}
+        @param message: A short error message, for example "NOT FOUND".
+
+        @type response: C{str}
+        @param response: A complete HTML document for an error page.
+
+        @type location: C{str}
+        @param location: The location response-header field value. It is an
+            absolute URI used to redirect the receiver to a location other than
+            the Request-URI so the request can be completed.
+        """
+        if not message:
+            try:
+                message = http.responses.get(int(code))
+            except ValueError:
+                # If code wasn't a stringified int, can't map the
+                # status code to a descriptive string so keep message
+                # unchanged.
+                pass
+
+        if location and message:
+            message = "%s to %s" % (message, location)
+
         Error.__init__(self, code, message, response)
         self.location = location
+
 
 
 class UnsupportedMethod(Exception):
