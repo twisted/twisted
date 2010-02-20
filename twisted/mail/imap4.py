@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.mail.test.test_imap -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -499,6 +499,10 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     # IChallengeResponse factories for AUTHENTICATE command
     challengers = None
+
+    # Search terms the implementation of which needs to be passed the
+    # last sequence id value.
+    _requiresLastSequenceId = set(["OR", "NOT"])
 
     state = 'unauth'
 
@@ -1509,10 +1513,13 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             else:
                 f = getattr(self, 'search_' + c)
                 if f is not None:
-                    if not f(query, id, msg):
+                    if c in self._requiresLastSequenceId:
+                        result = f(query, id, msg, lastSequenceId)
+                    else:
+                        result = f(query, id, msg)
+                    if not result:
                         return False
         return True
-
 
     def search_ALL(self, query, id, msg):
         return True
@@ -1564,8 +1571,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def search_NEW(self, query, id, msg):
         return '\\Recent' in msg.getFlags() and '\\Seen' not in msg.getFlags()
 
-    def search_NOT(self, query, id, msg):
-        return not self.singleSearchStep(query, id, msg)
+    def search_NOT(self, query, id, msg, lastSequenceId):
+        return not self._singleSearchStep(query, id, msg, lastSequenceId)
 
     def search_OLD(self, query, id, msg):
         return '\\Recent' not in msg.getFlags()
@@ -1574,9 +1581,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         date = parseTime(query.pop(0))
         return rfc822.parsedate(msg.getInternalDate()) == date
 
-    def search_OR(self, query, id, msg):
-        a = self.singleSearchStep(query, id, msg)
-        b = self.singleSearchStep(query, id, msg)
+    def search_OR(self, query, id, msg, lastSequenceId):
+        a = self._singleSearchStep(query, id, msg, lastSequenceId)
+        b = self._singleSearchStep(query, id, msg, lastSequenceId)
         return a or b
 
     def search_RECENT(self, query, id, msg):

@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.mail.test.test_imap -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -1605,6 +1605,40 @@ class IMAP4ServerSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
             self.server.search_SENTSINCE(self.earlierQuery, self.seq, self.msg))
         self.assertFalse(
             self.server.search_SENTSINCE(self.laterQuery, self.seq, self.msg))
+
+
+    def test_searchOr(self):
+        """
+        L{imap4.IMAP4Server.search_OR} returns true if either of the two
+        expressions supplied to it returns true and returns false if neither
+        does.
+        """
+        self.assertTrue(
+            self.server.search_OR(
+                ["SENTSINCE"] + self.earlierQuery +
+                ["SENTSINCE"] + self.laterQuery,
+            self.seq, self.msg, None))
+        self.assertTrue(
+            self.server.search_OR(
+                ["SENTSINCE"] + self.laterQuery +
+                ["SENTSINCE"] + self.earlierQuery,
+            self.seq, self.msg, None))
+        self.assertFalse(
+            self.server.search_OR(
+                ["SENTON"] + self.laterQuery +
+                ["SENTSINCE"] + self.laterQuery,
+            self.seq, self.msg, None))
+
+
+    def test_searchNot(self):
+        """
+        L{imap4.IMAP4Server.search_NOT} returns the negation of the result
+        of the expression supplied to it.
+        """
+        self.assertFalse(self.server.search_NOT(
+                ["SENTSINCE"] + self.earlierQuery, self.seq, self.msg, None))
+        self.assertTrue(self.server.search_NOT(
+                ["SENTON"] + self.laterQuery, self.seq, self.msg, None))
 
 
 
@@ -3626,6 +3660,52 @@ class DefaultSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
         # okay, because N:* includes the biggest message sequence number even
         # if N is bigger than that (read the rfc nub).
         return self._messageSetSearchTest('(5:*)', [3])
+
+
+    def test_searchOr(self):
+        """
+        If the search filter contains an I{OR} term, all messages
+        which match either subexpression are returned.
+        """
+        return self._messageSetSearchTest('OR 1 2', [1, 2])
+
+
+    def test_searchOrMessageSet(self):
+        """
+        If the search filter contains an I{OR} term with a
+        subexpression which includes a message sequence set wildcard,
+        all messages in that set are considered for inclusion in the
+        results.
+        """
+        return self._messageSetSearchTest('OR 2:* 2:*', [2, 3])
+
+
+    def test_searchNot(self):
+        """
+        If the search filter contains a I{NOT} term, all messages
+        which do not match the subexpression are returned.
+        """
+        return self._messageSetSearchTest('NOT 3', [1, 2])
+
+
+    def test_searchNotMessageSet(self):
+        """
+        If the search filter contains a I{NOT} term with a
+        subexpression which includes a message sequence set wildcard,
+        no messages in that set are considered for inclusion in the
+        result.
+        """
+        return self._messageSetSearchTest('NOT 2:*', [1])
+
+
+    def test_searchAndMessageSet(self):
+        """
+        If the search filter contains multiple terms implicitly
+        conjoined with a message sequence set wildcard, only the
+        intersection of the results of each term are returned.
+        """
+        return self._messageSetSearchTest('2:* 3', [3])
+
 
 
 class FetchSearchStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
