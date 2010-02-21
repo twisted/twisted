@@ -328,7 +328,7 @@ class EnvironTests(WSGITestsMixin, TestCase):
         present.addCallback(self.environKeyEqual('QUERY_STRING', 'foo=bar'))
 
         unencoded = self.render('GET', '1.1', [], [''], [('/', '/')])
-        unencoded.addCallback(self.environKeyEqual('QUERY_STRING', '/=/'))
+        unencoded.addCallback(self.environKeyEqual('QUERY_STRING', '%2F=%2F'))
 
         # "?" is reserved in the <searchpart> portion of a URL.  However, it
         # seems to be a common mistake of clients to forget to quote it.  So,

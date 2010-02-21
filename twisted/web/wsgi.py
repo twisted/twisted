@@ -8,7 +8,6 @@ U{Web Resource Gateway Interface<http://www.python.org/dev/peps/pep-0333/>}.
 
 __metaclass__ = type
 
-from urllib import unquote
 from sys import exc_info
 
 from zope.interface import implements
@@ -188,7 +187,7 @@ class _WSGIResponse:
         if len(parts) == 1:
             queryString = ''
         else:
-            queryString = unquote(parts[1])
+            queryString = parts[1]
 
         self.environ = {
             'REQUEST_METHOD': request.method,
