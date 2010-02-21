@@ -1,0 +1,3 @@
+The HTTP proxy will no longer pass on keep-alive request headers from the
+client, preventing pages from loading then "hanging" (leaving the connection
+open with no hope of termination).

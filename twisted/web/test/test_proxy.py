@@ -124,6 +124,43 @@ class ProxyClientTestCase(TestCase):
     Tests for L{ProxyClient}.
     """
 
+    def _parseOutHeaders(self, content):
+        """
+        Parse the headers out of some web content.
+
+        @param content: Bytes received from a web server.
+        @return: A tuple of (requestLine, headers, body). C{headers} is a dict
+            of headers, C{requestLine} is the first line (e.g. "POST /foo ...")
+            and C{body} is whatever is left.
+        """
+        headers, body = content.split('\r\n\r\n')
+        headers = headers.split('\r\n')
+        requestLine = headers.pop(0)
+        return (
+            requestLine, dict(header.split(': ') for header in headers), body)
+
+
+    def assertSendsHeaders(self, proxyClient, requestLine, headers):
+        """
+        Assert that C{proxyClient} sends C{headers} when it connects.
+
+        @param proxyClient: A L{ProxyClient}.
+        @param requestLine: The request line we expect to be sent.
+        @param headers: A dict of headers we expect to be sent.
+        @return: If the assertion is successful, return the request body as
+            bytes.
+        """
+        clientTransport = StringTransportWithDisconnection()
+        clientTransport.protocol = proxyClient
+        proxyClient.makeConnection(clientTransport)
+        requestContent = clientTransport.value()
+        receivedLine, receivedHeaders, body = self._parseOutHeaders(
+            requestContent)
+        self.assertEquals(receivedLine, requestLine)
+        self.assertEquals(receivedHeaders, headers)
+        return body
+
+
     def _testDataForward(self, code, message, headers, body, method="GET",
                          requestBody="", loseConnection=True):
         """
@@ -132,10 +169,14 @@ class ProxyClientTestCase(TestCase):
         """
         request = DummyRequest(['foo'])
 
-        # Connect a proxy client to a fake transport.
-        clientTransport = StringTransportWithDisconnection()
         client = ProxyClient(method, '/foo', 'HTTP/1.0',
                              {"accept": "text/html"}, requestBody, request)
+        self.assertSendsHeaders(
+            client, '%s /foo HTTP/1.0' % (method,),
+            {'connection': 'close', 'accept': 'text/html'})
+
+        # Connect a proxy client to a fake transport.
+        clientTransport = StringTransportWithDisconnection()
         clientTransport.protocol = client
         client.makeConnection(clientTransport)
 
@@ -233,6 +274,24 @@ class ProxyClientTestCase(TestCase):
                 {"accept": "text/html", "proxy-connection": "foo"}, '', None)
         self.assertEquals(client.headers,
                 {"accept": "text/html", "connection": "close"})
+
+
+    def test_keepaliveNotForwarded(self):
+        """
+        The proxy doesn't really know what to do with keepalive things from
+        the remote server, so we stomp over any keepalive header we get from
+        the client.
+        """
+        headers = {
+            "accept": "text/html",
+            'keep-alive': '300',
+            'connection': 'keep-alive',
+            }
+        expectedHeaders = headers.copy()
+        expectedHeaders['connection'] = 'close'
+        del expectedHeaders['keep-alive']
+        client = ProxyClient('GET', '/foo', 'HTTP/1.0', headers, '', None)
+        self.assertSendsHeaders(client, 'GET /foo HTTP/1.0', expectedHeaders)
 
 
 

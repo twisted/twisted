@@ -46,6 +46,7 @@ class ProxyClient(HTTPClient):
         if "proxy-connection" in headers:
             del headers["proxy-connection"]
         headers["connection"] = "close"
+        headers.pop('keep-alive', None)
         self.headers = headers
         self.data = data
 
