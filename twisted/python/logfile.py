@@ -113,6 +113,16 @@ class BaseLogFile:
         self._file.close()
         self._file = None
 
+
+    def reopen(self):
+        """
+        Reopen the log file. This is mainly useful if you use an external log
+        rotation tool, which moves under your feet.
+        """
+        self.close()
+        self._openFile()
+
+
     def getCurrentLog(self):
         """
         Return a LogReader for the current log file.
