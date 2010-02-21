@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_internet -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -53,11 +53,12 @@ if platform.isWindows():
         win32process = None
 
 
-class _Win32Waker(log.Logger, styles.Ephemeral):
-    """I am a workaround for the lack of pipes on win32.
-
-    I am a pair of connected sockets which can wake up the main loop
-    from another thread.
+class _SocketWaker(log.Logger, styles.Ephemeral):
+    """
+    The I{self-pipe trick<http://cr.yp.to/docs/selfpipe.html>}, implemented
+    using a pair of sockets rather than pipes (due to the lack of support in
+    select() on Windows for pipes), used to wake up the main loop from
+    another thread.
     """
     disconnected = 0
 
@@ -68,7 +69,7 @@ class _Win32Waker(log.Logger, styles.Ephemeral):
         # Following select_trigger (from asyncore)'s example;
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client.setsockopt(socket.IPPROTO_TCP, 1, 1)
+        client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         server.bind(('127.0.0.1', 0))
         server.listen(1)
         client.connect(server.getsockname())
@@ -101,10 +102,11 @@ class _Win32Waker(log.Logger, styles.Ephemeral):
         self.w.close()
 
 
-class _UnixWaker(log.Logger, styles.Ephemeral):
-    """This class provides a simple interface to wake up the event loop.
 
-    This is used by threads or signals to wake up the event loop.
+class _PipeWaker(log.Logger, styles.Ephemeral):
+    """
+    The I{self-pipe trick<http://cr.yp.to/docs/selfpipe.html>}, used to wake
+    up the main loop from another thread or a signal handler.
     """
     disconnected = 0
 
@@ -153,9 +155,10 @@ class _UnixWaker(log.Logger, styles.Ephemeral):
 
 
 if platformType == 'posix':
-    _Waker = _UnixWaker
-elif platformType == 'win32':
-    _Waker = _Win32Waker
+    _Waker = _PipeWaker
+else:
+    # Primarily Windows and Jython.
+    _Waker = _SocketWaker
 
 
 class PosixReactorBase(_SignalReactorMixin, ReactorBase):
