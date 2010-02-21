@@ -213,7 +213,6 @@ class LogFileTestCase(unittest.TestCase):
         self.assertEquals(stat.S_IMODE(os.stat(self.path)[stat.ST_MODE]),
                           currentMode)
 
-
     def test_specifiedPermissions(self):
         """
         Test specifying the permissions used on the log file.
@@ -225,31 +224,6 @@ class LogFileTestCase(unittest.TestCase):
             self.assertEquals(mode, 0444)
         else:
             self.assertEquals(mode, 0066)
-
-
-    def test_reopen(self):
-        """
-        L[logfile.LogFile.reopen} allows to rename the currently used file and
-        make L{logfile.LogFile} create a new file.
-        """
-        log1 = logfile.LogFile(self.name, self.dir)
-        log1.write("hello1")
-        savePath = os.path.join(self.dir, "save.log")
-        os.rename(self.path, savePath)
-        log1.reopen()
-        log1.write("hello2")
-        log1.close()
-
-        f = open(self.path, "r")
-        self.assertEquals(f.read(), "hello2")
-        f.close()
-        f = open(savePath, "r")
-        self.assertEquals(f.read(), "hello1")
-        f.close()
-
-    if runtime.platform.isWindows():
-        test_reopen.skip = "Can't test reopen on Windows"
-
 
 
 class RiggedDailyLogFile(logfile.DailyLogFile):

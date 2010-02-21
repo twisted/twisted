@@ -12,8 +12,6 @@ import os, glob, time, stat
 
 from twisted.python import threadable
 
-
-
 class BaseLogFile:
     """
     The base class for a log file that can be rotated.
@@ -114,19 +112,6 @@ class BaseLogFile:
         self.closed = True
         self._file.close()
         self._file = None
-
-
-    def reopen(self):
-        """
-        Reopen the log file. This is mainly useful if you use an external log
-        rotation tool, which moves under your feet.
-
-        Note that on Windows you probably need a specific API to rename the
-        file, as it's not supported to simply use os.rename, for example.
-        """
-        self.close()
-        self._openFile()
-
 
     def getCurrentLog(self):
         """
