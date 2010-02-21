@@ -1,4 +1,4 @@
-# Copyright (c) 2007-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2007-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -14,6 +14,7 @@ from twisted.web.server import Site
 from twisted.web.proxy import ReverseProxyResource, ProxyClientFactory
 from twisted.web.proxy import ProxyClient, ProxyRequest, ReverseProxyRequest
 from twisted.web.test.test_web import DummyRequest
+
 
 class ReverseProxyResourceTestCase(TestCase):
     """
@@ -140,7 +141,50 @@ class ProxyClientTestCase(TestCase):
             requestLine, dict(header.split(': ') for header in headers), body)
 
 
-    def assertSendsHeaders(self, proxyClient, requestLine, headers):
+    def makeRequest(self, path):
+        """
+        Make a dummy request object for the URL path.
+
+        @param path: A URL path, beginning with a slash.
+        @return: A L{DummyRequest}.
+        """
+        return DummyRequest(path)
+
+
+    def makeProxyClient(self, request, method="GET", headers=None,
+                        requestBody=""):
+        """
+        Make a L{ProxyClient} object used for testing.
+
+        @param request: The request to use.
+        @param method: The HTTP method to use, GET by default.
+        @param headers: The HTTP headers to use expressed as a dict. If not
+            provided, defaults to {'accept': 'text/html'}.
+        @param requestBody: The body of the request. Defaults to the empty
+            string.
+        @return: A L{ProxyClient}
+        """
+        if headers is None:
+            headers = {"accept": "text/html"}
+        path = '/' + request.postpath
+        return ProxyClient(
+            method, path, 'HTTP/1.0', headers, requestBody, request)
+
+
+    def connectProxy(self, proxyClient):
+        """
+        Connect a proxy client to a L{StringTransportWithDisconnection}.
+
+        @param proxyClient: A L{ProxyClient}.
+        @return: The L{StringTransportWithDisconnection}.
+        """
+        clientTransport = StringTransportWithDisconnection()
+        clientTransport.protocol = proxyClient
+        proxyClient.makeConnection(clientTransport)
+        return clientTransport
+
+
+    def assertForwardsHeaders(self, proxyClient, requestLine, headers):
         """
         Assert that C{proxyClient} sends C{headers} when it connects.
 
@@ -150,10 +194,8 @@ class ProxyClientTestCase(TestCase):
         @return: If the assertion is successful, return the request body as
             bytes.
         """
-        clientTransport = StringTransportWithDisconnection()
-        clientTransport.protocol = proxyClient
-        proxyClient.makeConnection(clientTransport)
-        requestContent = clientTransport.value()
+        self.connectProxy(proxyClient)
+        requestContent = proxyClient.transport.value()
         receivedLine, receivedHeaders, body = self._parseOutHeaders(
             requestContent)
         self.assertEquals(receivedLine, requestLine)
@@ -161,40 +203,25 @@ class ProxyClientTestCase(TestCase):
         return body
 
 
-    def _testDataForward(self, code, message, headers, body, method="GET",
-                         requestBody="", loseConnection=True):
-        """
-        Build a fake proxy connection, and send C{data} over it, checking that
-        it's forwarded to the originating request.
-        """
-        request = DummyRequest(['foo'])
-
-        client = ProxyClient(method, '/foo', 'HTTP/1.0',
-                             {"accept": "text/html"}, requestBody, request)
-        self.assertSendsHeaders(
-            client, '%s /foo HTTP/1.0' % (method,),
-            {'connection': 'close', 'accept': 'text/html'})
-
-        # Connect a proxy client to a fake transport.
-        clientTransport = StringTransportWithDisconnection()
-        clientTransport.protocol = client
-        client.makeConnection(clientTransport)
-
-        # Check data sent
-        self.assertEquals(clientTransport.value(),
-            "%s /foo HTTP/1.0\r\n"
-            "connection: close\r\n"
-            "accept: text/html\r\n\r\n%s" % (method, requestBody))
-
-        # Fake an answer
-        client.dataReceived("HTTP/1.0 %d %s\r\n" % (code, message))
-        for (header, values) in headers:
+    def makeResponseBytes(self, code, message, headers, body):
+        lines = ["HTTP/1.0 %d %s" % (code, message)]
+        for header, values in headers:
             for value in values:
-                client.dataReceived("%s: %s\r\n" % (header, value))
-        client.dataReceived("\r\n" + body)
+                lines.append("%s: %s" % (header, value))
+        lines.extend(['', body])
+        return '\r\n'.join(lines)
 
-        # Check that the response data has been forwarded back to the original
-        # requester.
+
+    def assertForwardsResponse(self, request, code, message, headers, body):
+        """
+        Assert that C{request} has forwarded a response from the server.
+
+        @param request: A L{DummyRequest}.
+        @param code: The expected HTTP response code.
+        @param message: The expected HTTP message.
+        @param headers: The expected HTTP headers.
+        @param body: The expected response body.
+        """
         self.assertEquals(request.responseCode, code)
         self.assertEquals(request.responseMessage, message)
         receivedHeaders = list(request.responseHeaders.getAllRawHeaders())
@@ -204,14 +231,39 @@ class ProxyClientTestCase(TestCase):
         self.assertEquals(receivedHeaders, expectedHeaders)
         self.assertEquals(''.join(request.written), body)
 
+
+    def _testDataForward(self, code, message, headers, body, method="GET",
+                         requestBody="", loseConnection=True):
+        """
+        Build a fake proxy connection, and send C{data} over it, checking that
+        it's forwarded to the originating request.
+        """
+        request = self.makeRequest('foo')
+        client = self.makeProxyClient(
+            request, method, {'accept': 'text/html'}, requestBody)
+
+        receivedBody = self.assertForwardsHeaders(
+            client, '%s /foo HTTP/1.0' % (method,),
+            {'connection': 'close', 'accept': 'text/html'})
+
+        self.assertEquals(receivedBody, requestBody)
+
+        # Fake an answer
+        client.dataReceived(
+            self.makeResponseBytes(code, message, headers, body))
+
+        # Check that the response data has been forwarded back to the original
+        # requester.
+        self.assertForwardsResponse(request, code, message, headers, body)
+
         # Check that when the response is done, the request is finished.
         if loseConnection:
-            clientTransport.loseConnection()
+            client.transport.loseConnection()
 
         # Even if we didn't call loseConnection, the transport should be
         # disconnected.  This lets us not rely on the server to close our
         # sockets for us.
-        self.assertFalse(clientTransport.connected)
+        self.assertFalse(client.transport.connected)
         self.assertEquals(request.finished, 1)
 
 
@@ -291,7 +343,31 @@ class ProxyClientTestCase(TestCase):
         expectedHeaders['connection'] = 'close'
         del expectedHeaders['keep-alive']
         client = ProxyClient('GET', '/foo', 'HTTP/1.0', headers, '', None)
-        self.assertSendsHeaders(client, 'GET /foo HTTP/1.0', expectedHeaders)
+        self.assertForwardsHeaders(
+            client, 'GET /foo HTTP/1.0', expectedHeaders)
+
+
+    def test_defaultHeadersOverridden(self):
+        """
+        L{server.Request} within the proxy sets certain response headers by
+        default. When we get these headers back from the remote server, the
+        defaults are overridden rather than simply appended.
+        """
+        request = self.makeRequest('foo')
+        request.responseHeaders.setRawHeaders('server', ['old-bar'])
+        request.responseHeaders.setRawHeaders('date', ['old-baz'])
+        request.responseHeaders.setRawHeaders('content-type', ["old/qux"])
+        client = self.makeProxyClient(request, headers={'accept': 'text/html'})
+        self.connectProxy(client)
+        headers = {
+            'Server': ['bar'],
+            'Date': ['2010-01-01'],
+            'Content-Type': ['application/x-baz'],
+            }
+        client.dataReceived(
+            self.makeResponseBytes(200, "OK", headers.items(), ''))
+        self.assertForwardsResponse(
+            request, 200, 'OK', headers.items(), '')
 
 
 

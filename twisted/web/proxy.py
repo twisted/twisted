@@ -64,7 +64,14 @@ class ProxyClient(HTTPClient):
 
 
     def handleHeader(self, key, value):
-        self.father.responseHeaders.addRawHeader(key, value)
+        # t.web.server.Request sets default values for these headers in its
+        # 'process' method. When these headers are received from the remote
+        # server, they ought to override the defaults, rather than append to
+        # them.
+        if key.lower() in ['server', 'date', 'content-type']:
+            self.father.responseHeaders.setRawHeaders(key, [value])
+        else:
+            self.father.responseHeaders.addRawHeader(key, value)
 
 
     def handleResponsePart(self, buffer):

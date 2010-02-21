@@ -1,0 +1,1 @@
+Prevent extraneous server, date and content-type headers in proxy responses.
