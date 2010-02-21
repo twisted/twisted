@@ -826,6 +826,8 @@ def filePathDelta(origin, destination):
     for elem1, elem2 in zip(path1, path2):
         if elem1 == elem2:
             commonItems += 1
+        else:
+            break
     path = [".."] * (len(path1) - commonItems)
     return path + path2[commonItems:]
 

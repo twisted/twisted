@@ -1449,6 +1449,16 @@ class FilePathDeltaTest(TestCase):
                           ["..", "..", "baz", "quux"])
 
 
+    def test_filePathDeltaSimilarEndElements(self):
+        """
+        L{filePathDelta} doesn't take into account final elements when
+        comparing 2 paths, but stops at the first difference.
+        """
+        self.assertEquals(filePathDelta(FilePath("/foo/bar/bar/spam"),
+                                        FilePath("/foo/bar/baz/spam")),
+                          ["..", "..", "baz", "spam"])
+
+
 
 class NewsBuilderTests(TestCase, StructureAssertingMixin):
     """
