@@ -1071,7 +1071,7 @@ class BasePort(abstract.FileDescriptor):
 
 
 
-class _SignalReactorMixin:
+class _SignalReactorMixin(object):
     """
     Private mixin to manage signals: it installs signal handlers at start time,
     and define run method.

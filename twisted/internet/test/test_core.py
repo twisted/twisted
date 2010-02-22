@@ -9,11 +9,31 @@ __metaclass__ = type
 
 import signal
 import time
+import inspect
 
 from twisted.internet.abstract import FileDescriptor
 from twisted.internet.error import ReactorAlreadyRunning
 from twisted.internet.defer import Deferred
 from twisted.internet.test.reactormixins import ReactorBuilder
+
+
+
+class ObjectModelIntegrationTest(ReactorBuilder):
+    """
+    Test details of object model integration against all reactors.
+    """
+
+    def test_newstyleReactor(self):
+        """
+        Checks that all reactors on a platform have method resolution order
+        containing only new style classes.
+        """
+        reactor = self.buildReactor()
+        self.assertTrue(isinstance(reactor, object))
+        mro = inspect.getmro(type(reactor))
+        for subclass in mro:
+            self.assertTrue(issubclass(subclass, object))
+
 
 
 class SystemEventTestsBuilder(ReactorBuilder):
@@ -273,3 +293,4 @@ class SystemEventTestsBuilder(ReactorBuilder):
 
 
 globals().update(SystemEventTestsBuilder.makeTestCaseClasses())
+globals().update(ObjectModelIntegrationTest.makeTestCaseClasses())
