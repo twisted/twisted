@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.web.test.test_web -*-
+# -*- test-case-name: twisted.web.test.test_util -*-
 # Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -352,7 +352,7 @@ def formatFailure(myFailure):
         for name, var in localVars:
             if name == 'self' and hasattr(var, '__dict__'):
                 usedVars = [ (key, value) for (key, value) in var.__dict__.items()
-                             if re.search(r'\W'+'self.'+key+r'\W', textSnippet) ]
+                             if _hasSubstring('self.' + key, textSnippet) ]
                 if usedVars:
                     w('<div class="variables"><b>Self</b>')
                     w('<table class="variables">')
@@ -364,7 +364,7 @@ def formatFailure(myFailure):
         # Local and global vars
         for nm, varList in ('Locals', localVars), ('Globals', globalVars):
             usedVars = [ (name, var) for (name, var) in varList
-                         if re.search(r'\W'+name+r'\W', textSnippet) ]
+                         if _hasSubstring(name, textSnippet) ]
             if usedVars:
                 w('<div class="variables"><b>%s</b><table class="variables">' % nm)
                 for name, var in usedVars:
@@ -378,3 +378,10 @@ def formatFailure(myFailure):
                        html.escape(str(myFailure.value))))
 
     return io.getvalue()
+
+
+
+def _hasSubstring(key, text):
+    """I return True if key is part of text."""
+    escapedKey = re.escape(key)
+    return bool(re.search(r'\W' + escapedKey + r'\W', text))

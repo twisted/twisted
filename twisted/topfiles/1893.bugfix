@@ -1,0 +1,3 @@
+Substrings are escaped before being passed to a regular expression
+for searching to ensure that they don't get interpreted as part of
+the expression.
