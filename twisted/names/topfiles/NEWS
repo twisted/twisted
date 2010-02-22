@@ -1,6 +1,23 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Names 10.0.0pre1 (2010-02-21)
+=====================================
+
+Bugfixes
+--------
+ - twisted.names.root.Resolver no longer leaks UDP sockets while
+   resolving names. (#970)
+
+Deprecations and Removals
+-------------------------
+ - Several top-level functions in twisted.names.root are now
+   deprecated. (#970)
+
+Other
+-----
+ - #4066
+
 Twisted Names 9.0.0 (2009-11-24)
 ================================
 
