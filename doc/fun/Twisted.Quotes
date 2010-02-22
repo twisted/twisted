@@ -5723,3 +5723,5 @@ How do I use it?
 [on picking the quote of the release]
 <glyph> Man, we're going to have to get a lot funnier if we're going to do time-based releases
 %
+<dreid> Why does twisted.web suck so much? we should write a new thing that doesn't suck.
+%

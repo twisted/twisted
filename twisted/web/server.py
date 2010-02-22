@@ -53,11 +53,15 @@ def _addressToTuple(addr):
         return tuple(addr)
 
 class Request(pb.Copyable, http.Request, components.Componentized):
+    """
+    An HTTP request.
+    """
     implements(iweb.IRequest)
 
     site = None
     appRootURL = None
     __pychecker__ = 'unusednames=issuer'
+    _inFakeHead = False
 
     def __init__(self, *args, **kw):
         http.Request.__init__(self, *args, **kw)
@@ -126,8 +130,21 @@ class Request(pb.Copyable, http.Request, components.Componentized):
         except:
             self.processingFailed(failure.Failure())
 
+    def write(self, data):
+        """
+        Write data to the transport (if not responding to a HEAD request).
+
+        @param data: A string to write to the response.
+        """
+        if not self._inFakeHead:
+            http.Request.write(self, data)
 
     def render(self, resrc):
+        """
+        Ask a resource to render itself.
+
+        @param resrc: a L{twisted.web.resource.IResource}.
+        """
         try:
             body = resrc.render(self)
         except UnsupportedMethod, e:
@@ -140,6 +157,7 @@ class Request(pb.Copyable, http.Request, components.Componentized):
                 log.msg("Using GET to fake a HEAD request for %s" %
                         (resrc,))
                 self.method = "GET"
+                self._inFakeHead = True
                 body = resrc.render(self)
 
                 if body is NOT_DONE_YET:
@@ -149,6 +167,8 @@ class Request(pb.Copyable, http.Request, components.Componentized):
                 else:
                     self.setHeader('content-length', str(len(body)))
 
+                self._inFakeHead = False
+                self.method = "HEAD"
                 self.write('')
                 self.finish()
                 return
