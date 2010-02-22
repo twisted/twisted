@@ -9,13 +9,17 @@ An implementation of the OpenSSH known_hosts database.
 """
 
 from binascii import Error as DecodeError, b2a_base64
+import hmac
+import sys
 
 from zope.interface import implements
 
-from Crypto.Hash.HMAC import HMAC
-from Crypto.Hash import SHA
-
 from twisted.python.randbytes import secureRandom
+if sys.version_info >= (2, 5):
+    from twisted.python.hashlib import sha1
+else:
+    # We need to have an object with a method named 'new'.
+    import sha as sha1
 
 from twisted.internet import defer
 
@@ -202,7 +206,7 @@ def _hmacedString(key, string):
     """
     Return the SHA-1 HMAC hash of the given key and string.
     """
-    hash = HMAC(key, digestmod=SHA)
+    hash = hmac.HMAC(key, digestmod=sha1)
     hash.update(string)
     return hash.digest()
 
