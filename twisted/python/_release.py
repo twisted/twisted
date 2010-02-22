@@ -734,6 +734,15 @@ class NewsBuilder(object):
         @param header: The top-level header to use when writing the news.
         @type header: L{str}
         """
+        changes = []
+        for part in (self._FEATURE, self._BUGFIX, self._REMOVAL):
+            tickets = self._findChanges(path, part)
+            if tickets:
+                changes.append((part, tickets))
+        misc = self._findChanges(path, self._MISC)
+        if not (misc or changes):
+            return
+
         oldNews = output.getContent()
         newNews = output.sibling('NEWS.new').open('w')
         if oldNews.startswith(self._TICKET_HINT):
@@ -741,13 +750,10 @@ class NewsBuilder(object):
             oldNews = oldNews[len(self._TICKET_HINT):]
 
         self._writeHeader(newNews, header)
-        for part in (self._FEATURE, self._BUGFIX, self._REMOVAL):
-            tickets = self._findChanges(path, part)
+        for (part, tickets) in changes:
             self._writeSection(newNews, self._headings.get(part), tickets)
-        self._writeMisc(
-            newNews,
-            self._headings.get(self._MISC),
-            self._findChanges(path, self._MISC))
+        self._writeMisc(newNews, self._headings.get(self._MISC), misc)
+        newNews.write('\n')
         newNews.write(oldNews)
         newNews.close()
         output.sibling('NEWS.new').moveTo(output)

@@ -1650,7 +1650,24 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
             'Other\n'
             '-----\n'
             ' - #30, #35\n'
-            '\n' + self.existingText)
+            '\n\n' + self.existingText)
+
+
+    def test_emptyProjectOmitted(self):
+        """
+        If no changes exist for a project, I{NEWS} file stays the same, rather
+        than empty section being prepended to file.
+        """
+        project = FilePath(self.mktemp()).child("twisted")
+        project.makedirs()
+        self.createStructure(project, {
+                'NEWS': self.existingText })
+
+        self.builder.build(
+            project, project.child('NEWS'),
+            "Super Awesometastic 32.16")
+        results = project.child('NEWS').getContent()
+        self.assertEquals(results, self.existingText)
 
 
     def test_preserveTicketHint(self):
@@ -1695,7 +1712,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
             'Other\n'
             '-----\n'
             ' - #30, #35\n'
-            '\n'
+            '\n\n'
             'Blah blah other stuff.\n')
 
 
@@ -1725,7 +1742,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
             'Deprecations and Removals\n'
             '-------------------------\n'
             ' - Stupid stuff was deprecated. (#25)\n'
-            '\n'
+            '\n\n'
             'Here is stuff which was present previously.\n')
 
 
@@ -1764,7 +1781,7 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
             'Other\n'
             '-----\n'
             ' - #30, #35\n'
-            '\n'
+            '\n\n'
             'Here is stuff which was present previously.\n')
 
 
