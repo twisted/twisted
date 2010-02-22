@@ -9,7 +9,7 @@ Distutils file for building low-level IOCP bindings from their Pyrex source
 
 from distutils.core import setup
 from distutils.extension import Extension
-from Pyrex.Distutils import build_ext
+from Cython.Distutils import build_ext
 
 setup(name='iocpsupport',
       ext_modules=[Extension('iocpsupport',

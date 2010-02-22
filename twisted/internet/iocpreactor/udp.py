@@ -56,6 +56,9 @@ class Port(abstract.FileHandle):
         skt = socket.socket(self.addressFamily, self.socketType)
         addrLen = _iocp.maxAddrLen(skt.fileno())
         self.addressBuffer = _iocp.AllocateReadBuffer(addrLen)
+        # WSARecvFrom takes an int
+        self.addressLengthBuffer = _iocp.AllocateReadBuffer(
+                struct.calcsize('i'))
 
 
     def __repr__(self):
@@ -142,8 +145,9 @@ class Port(abstract.FileHandle):
 
             evt.buff = buff = self._readBuffers[0]
             evt.addr_buff = addr_buff = self.addressBuffer
+            evt.addr_len_buff = addr_len_buff = self.addressLengthBuffer
             rc, bytes = _iocp.recvfrom(self.getFileHandle(), buff,
-                                       addr_buff, evt)
+                                       addr_buff, addr_len_buff, evt)
 
             if (rc == ERROR_IO_PENDING
                 or (not rc and read >= self.maxThroughput)):

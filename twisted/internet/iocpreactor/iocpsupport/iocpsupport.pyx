@@ -80,8 +80,8 @@ cdef extern from '':
     int WSAGetLastError()
     char *inet_ntoa(in_addr ina)
     unsigned long inet_addr(char *cp)
-    short ntohs(short netshort)
-    short htons(short hostshort)
+    unsigned short ntohs(unsigned short netshort)
+    unsigned short htons(unsigned short hostshort)
     ctypedef struct WSABUF:
         long len
         char *buf
@@ -201,7 +201,7 @@ cdef object _makesockaddr(sockaddr *addr, int len):
         return PyString_FromStringAndSize(addr.sa_data, sizeof(addr.sa_data))
 
 cdef object fillinetaddr(sockaddr_in *dest, object addr):
-    cdef short port
+    cdef unsigned short port
     cdef unsigned long res
     cdef char *hoststr
     host, port = addr
