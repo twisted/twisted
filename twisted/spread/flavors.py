@@ -133,8 +133,6 @@ class Root(Referenceable):
     When a L{pb.BrokerFactory} produces a L{pb.Broker}, it supplies that
     L{pb.Broker} with an object named \"root\".  That object is obtained
     by calling my rootObject method.
-
-    See also: L{pb.getObjectAt}
     """
 
     implements(IPBRoot)
