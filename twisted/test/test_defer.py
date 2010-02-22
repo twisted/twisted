@@ -28,40 +28,40 @@ _setTimeoutSuppression = util.suppress(
 class DeferredTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.callback_results = None
-        self.errback_results = None
-        self.callback2_results = None
+        self.callbackResults = None
+        self.errbackResults = None
+        self.callback2Results = None
 
     def _callback(self, *args, **kw):
-        self.callback_results = args, kw
+        self.callbackResults = args, kw
         return args[0]
 
     def _callback2(self, *args, **kw):
-        self.callback2_results = args, kw
+        self.callback2Results = args, kw
 
     def _errback(self, *args, **kw):
-        self.errback_results = args, kw
+        self.errbackResults = args, kw
 
     def testCallbackWithoutArgs(self):
         deferred = defer.Deferred()
         deferred.addCallback(self._callback)
         deferred.callback("hello")
-        self.failUnlessEqual(self.errback_results, None)
-        self.failUnlessEqual(self.callback_results, (('hello',), {}))
+        self.failUnlessEqual(self.errbackResults, None)
+        self.failUnlessEqual(self.callbackResults, (('hello',), {}))
 
     def testCallbackWithArgs(self):
         deferred = defer.Deferred()
         deferred.addCallback(self._callback, "world")
         deferred.callback("hello")
-        self.failUnlessEqual(self.errback_results, None)
-        self.failUnlessEqual(self.callback_results, (('hello', 'world'), {}))
+        self.failUnlessEqual(self.errbackResults, None)
+        self.failUnlessEqual(self.callbackResults, (('hello', 'world'), {}))
 
     def testCallbackWithKwArgs(self):
         deferred = defer.Deferred()
         deferred.addCallback(self._callback, world="world")
         deferred.callback("hello")
-        self.failUnlessEqual(self.errback_results, None)
-        self.failUnlessEqual(self.callback_results,
+        self.failUnlessEqual(self.errbackResults, None)
+        self.failUnlessEqual(self.callbackResults,
                              (('hello',), {'world': 'world'}))
 
     def testTwoCallbacks(self):
@@ -69,10 +69,10 @@ class DeferredTestCase(unittest.TestCase):
         deferred.addCallback(self._callback)
         deferred.addCallback(self._callback2)
         deferred.callback("hello")
-        self.failUnlessEqual(self.errback_results, None)
-        self.failUnlessEqual(self.callback_results,
+        self.failUnlessEqual(self.errbackResults, None)
+        self.failUnlessEqual(self.callbackResults,
                              (('hello',), {}))
-        self.failUnlessEqual(self.callback2_results,
+        self.failUnlessEqual(self.callback2Results,
                              (('hello',), {}))
 
     def testDeferredList(self):
@@ -142,15 +142,15 @@ class DeferredTestCase(unittest.TestCase):
         self.failUnlessEqual(len(result), 1)
 
         # extract the result from the list
-        failure = result[0]
+        aFailure = result[0]
 
         # the type of the failure is a FirstError
-        self.failUnless(issubclass(failure.type, defer.FirstError),
-            'issubclass(failure.type, defer.FirstError) failed: '
-            'failure.type is %r' % (failure.type,)
+        self.failUnless(issubclass(aFailure.type, defer.FirstError),
+            'issubclass(aFailure.type, defer.FirstError) failed: '
+            "failure's type is %r" % (aFailure.type,)
         )
 
-        firstError = failure.value
+        firstError = aFailure.value
 
         # check that the GenericError("2") from the deferred at index 1
         # (defr2) is intact inside failure.value
@@ -295,11 +295,11 @@ class DeferredTestCase(unittest.TestCase):
         d.addCallback(lambda r, d2=d2: d2)
         d.addCallback(self._callback)
         d.callback(1)
-        assert self.callback_results is None, "Should not have been called yet."
+        assert self.callbackResults is None, "Should not have been called yet."
         d2.callback(2)
-        assert self.callback_results is None, "Still should not have been called yet."
+        assert self.callbackResults is None, "Still should not have been called yet."
         d2.unpause()
-        assert self.callback_results[0][0] == 2, "Result should have been from second deferred:%s"% (self.callback_results,)
+        assert self.callbackResults[0][0] == 2, "Result should have been from second deferred:%s"% (self.callbackResults,)
 
     def testGatherResults(self):
         # test successful list of deferreds
@@ -641,6 +641,269 @@ class AlreadyCalledTestCase(unittest.TestCase):
 
 
 
+class DeferredCancellerTest(unittest.TestCase):
+    def setUp(self):
+        self.callbackResults = None
+        self.errbackResults = None
+        self.callback2Results = None
+        self.cancellerCallCount = 0
+
+
+    def tearDown(self):
+        # Sanity check that the canceller was called at most once.
+        self.assertTrue(self.cancellerCallCount in (0, 1))
+
+
+    def _callback(self, data):
+        self.callbackResults = data
+        return data
+
+
+    def _callback2(self, data):
+        self.callback2Results = data
+
+
+    def _errback(self, data):
+        self.errbackResults = data
+
+
+    def test_noCanceller(self):
+        """
+        A L{defer.Deferred} without a canceller must errback with a
+        L{defer.CancelledError} and not callback.
+        """
+        d = defer.Deferred()
+        d.addCallbacks(self._callback, self._errback)
+        d.cancel()
+        self.assertEquals(self.errbackResults.type, defer.CancelledError)
+        self.assertEquals(self.callbackResults, None)
+
+
+    def test_raisesAfterCancelAndCallback(self):
+        """
+        A L{defer.Deferred} without a canceller, when cancelled must allow
+        a single extra call to callback, and raise
+        L{defer.AlreadyCalledError} if callbacked or errbacked thereafter.
+        """
+        d = defer.Deferred()
+        d.addCallbacks(self._callback, self._errback)
+        d.cancel()
+
+        # A single extra callback should be swallowed.
+        d.callback(None)
+
+        # But a second call to callback or errback is not.
+        self.assertRaises(defer.AlreadyCalledError, d.callback, None)
+        self.assertRaises(defer.AlreadyCalledError, d.errback, Exception())
+
+
+    def test_raisesAfterCancelAndErrback(self):
+        """
+        A L{defer.Deferred} without a canceller, when cancelled must allow
+        a single extra call to errback, and raise
+        L{defer.AlreadyCalledError} if callbacked or errbacked thereafter.
+        """
+        d = defer.Deferred()
+        d.addCallbacks(self._callback, self._errback)
+        d.cancel()
+
+        # A single extra errback should be swallowed.
+        d.errback(Exception())
+
+        # But a second call to callback or errback is not.
+        self.assertRaises(defer.AlreadyCalledError, d.callback, None)
+        self.assertRaises(defer.AlreadyCalledError, d.errback, Exception())
+
+
+    def test_noCancellerMultipleCancelsAfterCancelAndCallback(self):
+        """
+        A L{Deferred} without a canceller, when cancelled and then
+        callbacked, ignores multiple cancels thereafter.
+        """
+        d = defer.Deferred()
+        d.addCallbacks(self._callback, self._errback)
+        d.cancel()
+        currentFailure = self.errbackResults
+        # One callback will be ignored
+        d.callback(None)
+        # Cancel should have no effect.
+        d.cancel()
+        self.assertIdentical(currentFailure, self.errbackResults)
+
+
+    def test_noCancellerMultipleCancelsAfterCancelAndErrback(self):
+        """
+        A L{defer.Deferred} without a canceller, when cancelled and then
+        errbacked, ignores multiple cancels thereafter.
+        """
+        d = defer.Deferred()
+        d.addCallbacks(self._callback, self._errback)
+        d.cancel()
+        self.assertEquals(self.errbackResults.type, defer.CancelledError)
+        currentFailure = self.errbackResults
+        # One errback will be ignored
+        d.errback(GenericError())
+        # I.e., we should still have a CancelledError.
+        self.assertEquals(self.errbackResults.type, defer.CancelledError)
+        d.cancel()
+        self.assertIdentical(currentFailure, self.errbackResults)
+
+
+    def test_noCancellerMultipleCancel(self):
+        """
+        Calling cancel multiple times on a deferred with no canceller
+        results in a L{defer.CancelledError}. Subsequent calls to cancel
+        do not cause an error.
+        """
+        d = defer.Deferred()
+        d.addCallbacks(self._callback, self._errback)
+        d.cancel()
+        self.assertEquals(self.errbackResults.type, defer.CancelledError)
+        currentFailure = self.errbackResults
+        d.cancel()
+        self.assertIdentical(currentFailure, self.errbackResults)
+
+
+    def test_cancellerMultipleCancel(self):
+        """
+        Verify that calling cancel multiple times on a deferred with a
+        canceller that does not errback results in a
+        L{defer.CancelledError} and that subsequent calls to cancel do not
+        cause an error and that after all that, the canceller was only
+        called once.
+        """
+        def cancel(d):
+            self.cancellerCallCount += 1
+
+        d = defer.Deferred(canceller=cancel)
+        d.addCallbacks(self._callback, self._errback)
+        d.cancel()
+        self.assertEquals(self.errbackResults.type, defer.CancelledError)
+        currentFailure = self.errbackResults
+        d.cancel()
+        self.assertIdentical(currentFailure, self.errbackResults)
+        self.assertEquals(self.cancellerCallCount, 1)
+
+
+    def test_simpleCanceller(self):
+        """
+        Verify that a L{defer.Deferred} calls its specified canceller when
+        it is cancelled, and that further call/errbacks raise
+        L{defer.AlreadyCalledError}.
+        """
+        def cancel(d):
+            self.cancellerCallCount += 1
+
+        d = defer.Deferred(canceller=cancel)
+        d.addCallbacks(self._callback, self._errback)
+        d.cancel()
+        self.assertEquals(self.cancellerCallCount, 1)
+        self.assertEquals(self.errbackResults.type, defer.CancelledError)
+
+        # Test that further call/errbacks are *not* swallowed
+        self.assertRaises(defer.AlreadyCalledError, d.callback, None)
+        self.assertRaises(defer.AlreadyCalledError, d.errback, Exception())
+
+
+    def test_cancellerArg(self):
+        """
+        Verify that a canceller is given the correct deferred argument.
+        """
+        def cancel(d1):
+            self.assertIdentical(d1, d)
+        d = defer.Deferred(canceller=cancel)
+        d.addCallbacks(self._callback, self._errback)
+        d.cancel()
+
+
+    def test_cancelAfterCallback(self):
+        """
+        Test that cancelling a deferred after it has been callbacked does
+        not cause an error.
+        """
+        def cancel(d):
+            self.cancellerCallCount += 1
+            d.errback(GenericError())
+        d = defer.Deferred(canceller=cancel)
+        d.addCallbacks(self._callback, self._errback)
+        d.callback('biff!')
+        d.cancel()
+        self.assertEquals(self.cancellerCallCount, 0)
+        self.assertEquals(self.errbackResults, None)
+        self.assertEquals(self.callbackResults, 'biff!')
+
+
+    def test_cancelAfterErrback(self):
+        """
+        Test that cancelling a L{Deferred} after it has been errbacked does
+        not result in a L{defer.CancelledError}.
+        """
+        def cancel(d):
+            self.cancellerCallCount += 1
+            d.errback(GenericError())
+        d = defer.Deferred(canceller=cancel)
+        d.addCallbacks(self._callback, self._errback)
+        d.errback(GenericError())
+        d.cancel()
+        self.assertEquals(self.cancellerCallCount, 0)
+        self.assertEquals(self.errbackResults.type, GenericError)
+        self.assertEquals(self.callbackResults, None)
+
+
+    def test_cancellerThatErrbacks(self):
+        """
+        Test a canceller which errbacks its deferred.
+        """
+        def cancel(d):
+            self.cancellerCallCount += 1
+            d.errback(GenericError())
+        d = defer.Deferred(canceller=cancel)
+        d.addCallbacks(self._callback, self._errback)
+        d.cancel()
+        self.assertEquals(self.cancellerCallCount, 1)
+        self.assertEquals(self.errbackResults.type, GenericError)
+
+
+    def test_cancellerThatCallbacks(self):
+        """
+        Test a canceller which calls its deferred.
+        """
+        def cancel(d):
+            self.cancellerCallCount += 1
+            d.callback('hello!')
+        d = defer.Deferred(canceller=cancel)
+        d.addCallbacks(self._callback, self._errback)
+        d.cancel()
+        self.assertEquals(self.cancellerCallCount, 1)
+        self.assertEquals(self.callbackResults, 'hello!')
+        self.assertEquals(self.errbackResults, None)
+
+
+    def test_cancelNestedDeferred(self):
+        """
+        Verify that a Deferred, a, which is waiting on another Deferred, b,
+        returned from one of its callbacks, will propagate
+        L{defer.CancelledError} when a is cancelled.
+        """
+        def innerCancel(d):
+            self.cancellerCallCount += 1
+        def cancel(d):
+            self.assert_(False)
+
+        b = defer.Deferred(canceller=innerCancel)
+        a = defer.Deferred(canceller=cancel)
+        a.callback(None)
+        a.addCallback(lambda data: b)
+        a.cancel()
+        a.addCallbacks(self._callback, self._errback)
+        # The cancel count should be one (the cancellation done by B)
+        self.assertEquals(self.cancellerCallCount, 1)
+        # B's canceller didn't errback, so defer.py will have called errback
+        # with a CancelledError.
+        self.assertEquals(self.errbackResults.type, defer.CancelledError)
+
+
+
 class LogTestCase(unittest.TestCase):
     """
     Test logging of unhandled errors.
@@ -670,9 +933,9 @@ class LogTestCase(unittest.TestCase):
 
     def test_errorLog(self):
         """
-        Verify that when a Deferred with no references to it is fired, and its
-        final result (the one not handled by any callback) is an exception,
-        that exception will be logged immediately.
+        Verify that when a L{Deferred} with no references to it is fired,
+        and its final result (the one not handled by any callback) is an
+        exception, that exception will be logged immediately.
         """
         defer.Deferred().addCallback(lambda x: 1/0).callback(1)
         gc.collect()
@@ -772,8 +1035,39 @@ class OtherPrimitives(unittest.TestCase):
         self.failUnless(lock.locked)
         self.assertEquals(self.counter, 3)
 
+        d = lock.acquire().addBoth(lambda x: setattr(self, 'result', x))
+        d.cancel()
+        self.assertEquals(self.result.type, defer.CancelledError)
+
         lock.release()
         self.failIf(lock.locked)
+
+
+    def test_cancelLockAfterAcquired(self):
+        """
+        When canceling a L{Deferred} from a L{DeferredLock} that already
+        has the lock, the cancel should have no effect.
+        """
+        def _failOnErrback(_):
+            self.fail("Unexpected errback call!")
+        lock = defer.DeferredLock()
+        d = lock.acquire()
+        d.addErrback(_failOnErrback)
+        d.cancel()
+
+
+    def test_cancelLockBeforeAcquired(self):
+        """
+        When canceling a L{Deferred} from a L{DeferredLock} that does not
+        yet have the lock (i.e., the L{Deferred} has not fired), the cancel
+        should cause a L{defer.CancelledError} failure.
+        """
+        lock = defer.DeferredLock()
+        _ign = lock.acquire()
+        d = lock.acquire()
+        self.assertFailure(d, defer.CancelledError)
+        d.cancel()
+
 
     def testSemaphore(self):
         N = 13
@@ -800,6 +1094,16 @@ class OtherPrimitives(unittest.TestCase):
             sem.acquire().addCallback(self._incr)
             self.assertEquals(self.counter, i)
 
+
+        success = []
+        def fail(r):
+            success.append(False)
+        def succeed(r):
+            success.append(True)
+        d = sem.acquire().addCallbacks(fail, succeed)
+        d.cancel()
+        self.assertEquals(success, [True])
+
         sem.acquire().addCallback(self._incr)
         self.assertEquals(self.counter, N)
 
@@ -809,6 +1113,35 @@ class OtherPrimitives(unittest.TestCase):
         for i in range(1, 1 + N):
             sem.release()
             self.assertEquals(self.counter, N + 1)
+
+
+    def test_cancelSemaphoreAfterAcquired(self):
+        """
+        When canceling a L{Deferred} from a L{DeferredSemaphore} that
+        already has the semaphore, the cancel should have no effect.
+        """
+        def _failOnErrback(_):
+            self.fail("Unexpected errback call!")
+
+        sem = defer.DeferredSemaphore(1)
+        d = sem.acquire()
+        d.addErrback(_failOnErrback)
+        d.cancel()
+
+
+    def test_cancelSemaphoreBeforeAcquired(self):
+        """
+        When canceling a L{Deferred} from a L{DeferredSemaphore} that does
+        not yet have the semaphore (i.e., the L{Deferred} has not fired),
+        the cancel should cause a L{defer.CancelledError} failure.
+        """
+        sem = defer.DeferredSemaphore(1)
+        _ign = sem.acquire()
+        d = sem.acquire()
+        self.assertFailure(d, defer.CancelledError)
+        d.cancel()
+        return d
+
 
     def testQueue(self):
         N, M = 2, 2
@@ -846,6 +1179,40 @@ class OtherPrimitives(unittest.TestCase):
 
         queue = defer.DeferredQueue(backlog=0)
         self.assertRaises(defer.QueueUnderflow, queue.get)
+
+
+    def test_cancelQueueAfterSynchronousGet(self):
+        """
+        When canceling a L{Deferred} from a L{DeferredQueue} that already has
+        a result, the cancel should have no effect.
+        """
+        def _failOnErrback(_):
+            self.fail("Unexpected errback call!")
+
+        queue = defer.DeferredQueue()
+        d = queue.get()
+        d.addErrback(_failOnErrback)
+        queue.put(None)
+        d.cancel()
+
+
+    def test_cancelQueueAfterGet(self):
+        """
+        When canceling a L{Deferred} from a L{DeferredQueue} that does not
+        have a result (i.e., the L{Deferred} has not fired), the cancel
+        causes a L{defer.CancelledError} failure. If the queue has a result
+        later on, it doesn't try to fire the deferred.
+        """
+        queue = defer.DeferredQueue()
+        d = queue.get()
+        self.assertFailure(d, defer.CancelledError)
+        d.cancel()
+        def cb(ignore):
+            # If the deferred is still linked with the deferred queue, it will
+            # fail with an AlreadyCalledError
+            queue.put(None)
+            return queue.get().addCallback(self.assertIdentical, None)
+        return d.addCallback(cb)
 
 
 

@@ -22,9 +22,17 @@ class AlreadyCalledError(Exception):
     pass
 
 
+class CancelledError(Exception):
+    """
+    This error is raised by default when a L{Deferred} is cancelled.
+    """
+
 
 class TimeoutError(Exception):
-    pass
+    """
+    This exception is deprecated.  It is used only by the deprecated
+    L{Deferred.setTimeout} method.
+    """
 
 
 
@@ -171,12 +179,17 @@ class Deferred:
 
     For more information about Deferreds, see doc/howto/defer.html or
     U{http://twistedmatrix.com/projects/core/documentation/howto/defer.html}
+
+    When creating a Deferred, you may provide a canceller function, which
+    will be called by d.cancel() to let you do any clean-up necessary if the
+    user decides not to wait for the deferred to complete.
     """
 
     called = 0
     paused = 0
     timeoutCall = None
     _debugInfo = None
+    _suppressAlreadyCalled = 0
 
     # Are we currently running a user-installed callback?  Meant to prevent
     # recursive running of callbacks when a reentrant call to add a callback is
@@ -187,9 +200,32 @@ class Deferred:
     # sets it directly.
     debug = False
 
+    def __init__(self, canceller=None):
+        """
+        Initialize a L{Deferred}.
 
-    def __init__(self):
+        @param canceller: a callable used to stop the pending operation
+            scheduled by this L{Deferred} when L{Deferred.cancel} is
+            invoked. The canceller will be passed the deferred whose
+            cancelation is requested (i.e., self).
+
+            If a canceller is not given, or does not invoke its argument's
+            C{callback} or C{errback} method, L{Deferred.cancel} will
+            invoke L{Deferred.errback} with a L{CancelledError}.
+
+            Note that if a canceller is not given, C{callback} or
+            C{errback} may still be invoked exactly once, even though
+            defer.py will have already invoked C{errback}, as described
+            above.  This allows clients of code which returns a L{Deferred}
+            to cancel it without requiring the L{Deferred} instantiator to
+            provide any specific implementation support for cancellation.
+            New in 10.0.
+
+        @type canceller: a 1-argument callable which takes a L{Deferred}. The
+            return result is ignored.
+        """
         self.callbacks = []
+        self._canceller = canceller
         if self.debug:
             self._debugInfo = DebugInfo()
             self._debugInfo.creator = traceback.format_stack()[:-1]
@@ -325,6 +361,35 @@ class Deferred:
             self._runCallbacks()
 
 
+    def cancel(self):
+        """
+        Cancel this L{Deferred}.
+
+        If the L{Deferred} has not yet had its C{errback} or C{callback} method
+        invoked, call the canceller function provided to the constructor. If
+        that function does not invoke C{callback} or C{errback}, or if no
+        canceller function was provided, errback with L{CancelledError}.
+
+        If this L{Deferred} is waiting on another L{Deferred}, forward the
+        cancellation to the other L{Deferred}.
+        """
+        if not self.called:
+            canceller = self._canceller
+            if canceller:
+                canceller(self)
+            else:
+                # Arrange to eat the callback that will eventually be fired
+                # since there was no real canceller.
+                self._suppressAlreadyCalled = 1
+            if not self.called:
+                # There was no canceller, or the canceller didn't call
+                # callback or errback.
+                self.errback(failure.Failure(CancelledError()))
+        elif isinstance(self.result, Deferred):
+            # Waiting for another deferred -- cancel it instead.
+            self.result.cancel()
+
+
     def _continue(self, result):
         self.result = result
         self.unpause()
@@ -332,6 +397,9 @@ class Deferred:
 
     def _startRunCallbacks(self, result):
         if self.called:
+            if self._suppressAlreadyCalled:
+                self._suppressAlreadyCalled = 0
+                return
             if self.debug:
                 if self._debugInfo is None:
                     self._debugInfo = DebugInfo()
@@ -1002,6 +1070,21 @@ class DeferredLock(_ConcurrencyPrimitive):
     locked = 0
 
 
+    def _cancelAcquire(self, d):
+        """
+        Remove a deferred d from our waiting list, as the deferred has been
+        canceled.
+
+        Note: We do not need to wrap this in a try/except to catch d not
+        being in self.waiting because this canceller will not be called if
+        d has fired. release() pops a deferred out of self.waiting and
+        calls it, so the canceller will no longer be called.
+
+        @param d: The deferred that has been canceled.
+        """
+        self.waiting.remove(d)
+
+
     def acquire(self):
         """
         Attempt to acquire the lock.  Returns a L{Deferred} that fires on
@@ -1011,7 +1094,7 @@ class DeferredLock(_ConcurrencyPrimitive):
         @return: a L{Deferred} which fires on lock acquisition.
         @rtype: a L{Deferred}
         """
-        d = Deferred()
+        d = Deferred(canceller=self._cancelAcquire)
         if self.locked:
             self.waiting.append(d)
         else:
@@ -1050,6 +1133,21 @@ class DeferredSemaphore(_ConcurrencyPrimitive):
         self.limit = tokens
 
 
+    def _cancelAcquire(self, d):
+        """
+        Remove a deferred d from our waiting list, as the deferred has been
+        canceled.
+
+        Note: We do not need to wrap this in a try/except to catch d not
+        being in self.waiting because this canceller will not be called if
+        d has fired. release() pops a deferred out of self.waiting and
+        calls it, so the canceller will no longer be called.
+
+        @param d: The deferred that has been canceled.
+        """
+        self.waiting.remove(d)
+
+
     def acquire(self):
         """
         Attempt to acquire the token.
@@ -1057,7 +1155,7 @@ class DeferredSemaphore(_ConcurrencyPrimitive):
         @return: a L{Deferred} which fires on token acquisition.
         """
         assert self.tokens >= 0, "Internal inconsistency??  tokens should never be negative"
-        d = Deferred()
+        d = Deferred(canceller=self._cancelAcquire)
         if not self.tokens:
             self.waiting.append(d)
         else:
@@ -1118,6 +1216,21 @@ class DeferredQueue(object):
         self.backlog = backlog
 
 
+    def _cancelGet(self, d):
+        """
+        Remove a deferred d from our waiting list, as the deferred has been
+        canceled.
+
+        Note: We do not need to wrap this in a try/except to catch d not
+        being in self.waiting because this canceller will not be called if
+        d has fired. put() pops a deferred out of self.waiting and calls
+        it, so the canceller will no longer be called.
+
+        @param d: The deferred that has been canceled.
+        """
+        self.waiting.remove(d)
+
+
     def put(self, obj):
         """
         Add an object to this queue.
@@ -1145,7 +1258,7 @@ class DeferredQueue(object):
         if self.pending:
             return succeed(self.pending.pop(0))
         elif self.backlog is None or len(self.waiting) < self.backlog:
-            d = Deferred()
+            d = Deferred(canceller=self._cancelGet)
             self.waiting.append(d)
             return d
         else:
