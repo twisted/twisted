@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.internet.test.test_gtk2reactor -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -39,6 +39,7 @@ if hasattr(gobject, "threads_init"):
 
 # Twisted Imports
 from twisted.python import log, runtime, failure
+from twisted.python.compat import set
 from twisted.internet.interfaces import IReactorFDSet
 from twisted.internet import main, posixbase, error, selectreactor
 
@@ -50,6 +51,8 @@ POLL_DISCONNECTED = gobject.IO_HUP | gobject.IO_ERR | gobject.IO_NVAL
 INFLAGS = gobject.IO_IN | POLL_DISCONNECTED
 OUTFLAGS = gobject.IO_OUT | POLL_DISCONNECTED
 
+
+
 def _our_mainquit():
     # XXX: gtk.main_quit() (which is used for crash()) raises an exception if
     # gtk.main_level() == 0; however, all the tests freeze if we use this
@@ -60,15 +63,20 @@ def _our_mainquit():
     if gtk.main_level():
         gtk.main_quit()
 
+
+
 class Gtk2Reactor(posixbase.PosixReactorBase):
     """
     GTK+-2 event loop reactor.
 
-    @ivar _reads: A dictionary mapping L{FileDescriptor} instances to gtk
-        INPUT_READ watch handles.
+    @ivar _sources: A dictionary mapping L{FileDescriptor} instances to gtk
+        watch handles.
 
-    @ivar _writes: A dictionary mapping L{FileDescriptor} instances to gtk
-        INTPUT_WRITE watch handles.
+    @ivar _reads: A set of L{FileDescriptor} instances currently monitored for
+        reading.
+
+    @ivar _writes: A set of L{FileDescriptor} instances currently monitored for
+        writing.
 
     @ivar _simtag: A gtk timeout handle for the next L{simulate} call.
     """
@@ -76,8 +84,9 @@ class Gtk2Reactor(posixbase.PosixReactorBase):
 
     def __init__(self, useGtk=True):
         self._simtag = None
-        self._reads = {}
-        self._writes = {}
+        self._reads = set()
+        self._writes = set()
+        self._sources = {}
         posixbase.PosixReactorBase.__init__(self)
         # pre 2.3.91 the glib iteration and mainloop functions didn't release
         # global interpreter lock, thus breaking thread and signal support.
@@ -113,42 +122,96 @@ class Gtk2Reactor(posixbase.PosixReactorBase):
         else:
             return gobject.io_add_watch(source, condition, callback)
 
+
+    def _add(self, source, primary, other, primaryFlag, otherFlag):
+        """
+        Add the given L{FileDescriptor} for monitoring either for reading or
+        writing. If the file is already monitored for the other operation, we
+        delete the previous registration and re-register it for both reading
+        and writing.
+        """
+        if source in primary:
+            return
+        flags = primaryFlag
+        if source in other:
+            gobject.source_remove(self._sources[source])
+            flags |= otherFlag
+        self._sources[source] = self.input_add(source, flags, self.callback)
+        primary.add(source)
+
+
     def addReader(self, reader):
-        if reader not in self._reads:
-            self._reads[reader] = self.input_add(reader, INFLAGS, self.callback)
+        """
+        Add a L{FileDescriptor} for monitoring of data available to read.
+        """
+        self._add(reader, self._reads, self._writes, INFLAGS, OUTFLAGS)
+
 
     def addWriter(self, writer):
-        if writer not in self._writes:
-            self._writes[writer] = self.input_add(writer, OUTFLAGS, self.callback)
+        """
+        Add a L{FileDescriptor} for monitoring ability to write data.
+        """
+        self._add(writer, self._writes, self._reads, OUTFLAGS, INFLAGS)
 
 
     def getReaders(self):
-        return self._reads.keys()
+        """
+        Retrieve the list of current L{FileDescriptor} monitored for reading.
+        """
+        return list(self._reads)
 
 
     def getWriters(self):
-        return self._writes.keys()
+        """
+        Retrieve the list of current L{FileDescriptor} monitored for writing.
+        """
+        return list(self._writes)
 
 
     def removeAll(self):
+        """
+        Remove monitoring for all registered L{FileDescriptor}s.
+        """
         return self._removeAll(self._reads, self._writes)
 
 
+    def _remove(self, source, primary, other, flags):
+        """
+        Remove monitoring the given L{FileDescriptor} for either reading or
+        writing. If it's still monitored for the other operation, we
+        re-register the L{FileDescriptor} for only that operation.
+        """
+        if source not in primary:
+            return
+        gobject.source_remove(self._sources[source])
+        primary.remove(source)
+        if source in other:
+            self._sources[source] = self.input_add(
+                source, flags, self.callback)
+        else:
+            self._sources.pop(source)
+
+
     def removeReader(self, reader):
-        if reader in self._reads:
-            gobject.source_remove(self._reads[reader])
-            del self._reads[reader]
+        """
+        Stop monitoring the given L{FileDescriptor} for reading.
+        """
+        self._remove(reader, self._reads, self._writes, OUTFLAGS)
+
 
     def removeWriter(self, writer):
-        if writer in self._writes:
-            gobject.source_remove(self._writes[writer])
-            del self._writes[writer]
+        """
+        Stop monitoring the given L{FileDescriptor} for writing.
+        """
+        self._remove(writer, self._writes, self._reads, INFLAGS)
+
 
     doIterationTimer = None
 
     def doIterationTimeout(self, *args):
         self.doIterationTimer = None
         return 0 # auto-remove
+
 
     def doIteration(self, delay):
         # flush some pending events, return if there was something to do
@@ -173,15 +236,18 @@ class Gtk2Reactor(posixbase.PosixReactorBase):
             gobject.source_remove(self.doIterationTimer)
             self.doIterationTimer = None
 
+
     def crash(self):
         posixbase.PosixReactorBase.crash(self)
         self.__crash()
+
 
     def run(self, installSignalHandlers=1):
         self.startRunning(installSignalHandlers=installSignalHandlers)
         gobject.timeout_add(0, self.simulate)
         if self._started:
             self.__run()
+
 
     def _doReadOrWrite(self, source, condition, faildict={
         error.ConnectionDone: failure.Failure(error.ConnectionDone()),
@@ -211,13 +277,16 @@ class Gtk2Reactor(posixbase.PosixReactorBase):
         if why:
             self._disconnectSelectable(source, why, didRead == source.doRead)
 
+
     def callback(self, source, condition):
         log.callWithLogger(source, self._doReadOrWrite, source, condition)
         self.simulate() # fire Twisted timers
         return 1 # 1=don't auto-remove the source
 
+
     def simulate(self):
-        """Run simulation loops and reschedule callbacks.
+        """
+        Run simulation loops and reschedule callbacks.
         """
         if self._simtag is not None:
             gobject.source_remove(self._simtag)
@@ -227,6 +296,7 @@ class Gtk2Reactor(posixbase.PosixReactorBase):
             timeout = 0.1
         # grumble
         self._simtag = gobject.timeout_add(int(timeout * 1010), self.simulate)
+
 
 
 class PortableGtkReactor(selectreactor.SelectReactor):
@@ -247,6 +317,7 @@ class PortableGtkReactor(selectreactor.SelectReactor):
             else:
                 gtk.mainquit()
 
+
     def run(self, installSignalHandlers=1):
         import gtk
         self.startRunning(installSignalHandlers=installSignalHandlers)
@@ -257,8 +328,10 @@ class PortableGtkReactor(selectreactor.SelectReactor):
         else:
             gtk.mainloop()
 
+
     def simulate(self):
-        """Run simulation loops and reschedule callbacks.
+        """
+        Run simulation loops and reschedule callbacks.
         """
         if self._simtag is not None:
             gobject.source_remove(self._simtag)
@@ -270,27 +343,35 @@ class PortableGtkReactor(selectreactor.SelectReactor):
         self._simtag = gobject.timeout_add(int(timeout * 1010), self.simulate)
 
 
+
 def install(useGtk=True):
-    """Configure the twisted mainloop to be run inside the gtk mainloop.
+    """
+    Configure the twisted mainloop to be run inside the gtk mainloop.
 
     @param useGtk: should glib rather than GTK+ event loop be
-    used (this will be slightly faster but does not support GUI).
+        used (this will be slightly faster but does not support GUI).
     """
     reactor = Gtk2Reactor(useGtk)
     from twisted.internet.main import installReactor
     installReactor(reactor)
     return reactor
 
+
+
 def portableInstall(useGtk=True):
-    """Configure the twisted mainloop to be run inside the gtk mainloop.
+    """
+    Configure the twisted mainloop to be run inside the gtk mainloop.
     """
     reactor = PortableGtkReactor()
     from twisted.internet.main import installReactor
     installReactor(reactor)
     return reactor
 
+
+
 if runtime.platform.getType() != 'posix':
     install = portableInstall
+
 
 
 __all__ = ['install']

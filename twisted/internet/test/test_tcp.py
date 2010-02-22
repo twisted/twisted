@@ -111,5 +111,33 @@ class TCPClientTestsBuilder(ReactorBuilder):
             IPv4Address('TCP', '127.0.0.1', serverAddress.port))
 
 
+    def test_connectEvent(self):
+        """
+        This test checks that we correctly get notifications event for a
+        client. This ought to prevent a regression under Windows using the GTK2
+        reactor. See #3925.
+        """
+        reactor = self.buildReactor()
+
+        serverFactory = ServerFactory()
+        serverFactory.protocol = Protocol
+        server = reactor.listenTCP(0, serverFactory)
+        connected = []
+
+        class CheckConnection(Protocol):
+            def connectionMade(self):
+                connected.append(self)
+                reactor.stop()
+
+        clientFactory = Stop(reactor)
+        clientFactory.protocol = CheckConnection
+        client = reactor.connectTCP(
+            '127.0.0.1', server.getHost().port, clientFactory)
+
+        reactor.run()
+
+        self.assertTrue(connected)
+
+
 
 globals().update(TCPClientTestsBuilder.makeTestCaseClasses())

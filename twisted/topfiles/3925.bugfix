@@ -1,0 +1,4 @@
+Change the behavior of the Gtk2Reactor to register only one source watch for
+each file descriptor, instead of one for reading and one for writing. In
+particular, it fixes a bug with Glib under Windows where we failed to notify
+when a client is connected.
