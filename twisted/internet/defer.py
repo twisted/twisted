@@ -163,6 +163,13 @@ def getDebugging():
     return Deferred.debug
 
 
+# The result used to represent the fact that there is no result. NEVER EVER
+# EVER USE THIS AS AN ACTUAL RESULT FOR A DEFERRED.
+#
+# You have been warned.
+_NO_RESULT = object()
+
+
 
 class Deferred:
     """
@@ -177,8 +184,8 @@ class Deferred:
     that come from outside packages that are not under our control, we use
     threads (see for example L{twisted.enterprise.adbapi}).
 
-    For more information about Deferreds, see doc/howto/defer.html or
-    U{http://twistedmatrix.com/projects/core/documentation/howto/defer.html}
+    For more information about Deferreds, see doc/howto/core/defer.html or
+    U{http://twistedmatrix.com/documents/current/core/howto/defer.html}
 
     When creating a Deferred, you may provide a canceller function, which
     will be called by d.cancel() to let you do any clean-up necessary if the
@@ -226,6 +233,7 @@ class Deferred:
         """
         self.callbacks = []
         self._canceller = canceller
+        self._chainedTo = None
         if self.debug:
             self._debugInfo = DebugInfo()
             self._debugInfo.creator = traceback.format_stack()[:-1]
@@ -299,6 +307,7 @@ class Deferred:
         However, the converse is B{not} true; if d2 is fired d1 will not be
         affected.
         """
+        d._chainedTo = self
         return self.addCallbacks(d.callback, d.errback)
 
 
@@ -427,6 +436,7 @@ class Deferred:
             # Don't recursively run callbacks
             return
         if not self.paused:
+            self._chainedTo = None
             while self.callbacks:
                 item = self.callbacks.pop(0)
                 callback, args, kw = item[
@@ -449,6 +459,7 @@ class Deferred:
                         # where there is no more work to be done, so this call
                         # will return as well.
                         self.pause()
+                        self._chainedTo = self.result
                         self.result.addBoth(self._continue)
                         break
                 except:
@@ -490,12 +501,23 @@ class Deferred:
             lambda: self.called or timeoutFunc(self, *args, **kw))
         return self.timeoutCall
 
+
     def __str__(self):
+        """
+        Return a string representation of this C{Deferred}.
+        """
         cname = self.__class__.__name__
-        if hasattr(self, 'result'):
-            return "<%s at %s  current result: %r>" % (cname, hex(unsignedID(self)),
-                                                       self.result)
-        return "<%s at %s>" % (cname, hex(unsignedID(self)))
+        result = getattr(self, 'result', _NO_RESULT)
+        myID = hex(unsignedID(self))
+        if result is _NO_RESULT:
+            result = ''
+        else:
+            result = ' current result: %r' % (result,)
+        if self._chainedTo:
+            waitingOn = " waiting on %r" % (self._chainedTo,)
+        else:
+            waitingOn = ''
+        return "<%s at %s%s%s>" % (cname, myID, result, waitingOn)
     __repr__ = __str__
 
 
