@@ -12,7 +12,7 @@ import warnings, socket, sys, math
 
 from Queue import Queue
 
-from win32event import CreateEvent, SetEvent, ResetEvent, WaitForMultipleObjects, INFINITE, MAXIMUM_WAIT_OBJECTS, WAIT_OBJECT_0
+from win32event import CreateEvent, SetEvent, ResetEvent, WaitForMultipleObjects, INFINITE, MAXIMUM_WAIT_OBJECTS, WAIT_OBJECT_0, WAIT_FAILED
 
 from zope.interface import implements
 
@@ -93,7 +93,8 @@ class IOCPReactor(base._SignalReactorMixin, base.ReactorBase):
         """
         Remove an event.
         """
-        del self._events[event]
+        if event in self._events:
+            del self._events[event]
 
 
     def _stopEventPool(self):
@@ -130,12 +131,14 @@ class IOCPReactor(base._SignalReactorMixin, base.ReactorBase):
         # here and GetQueuedCompletionStatus in a thread. Or I could poll with
         # a reasonable interval. Guess what! Threads are hard.
 
+        log.msg(channel='system', event='iteration', reactor=self)
+
         self._startEventPool()
         ResetEvent(self.stop_event)
 
         num_threads = int(math.ceil(len(self._events)/EVENTS_PER_THREAD))
         if num_threads > self.event_pool.max:
-            self.event_pool.adjustPoolSize(maxthreads = num_threads)
+            self.event_pool.adjustPoolsize(maxthreads = num_threads)
 
         evs = self._events.keys()
         for i in range(0, len(evs), EVENTS_PER_THREAD):
@@ -146,17 +149,17 @@ class IOCPReactor(base._SignalReactorMixin, base.ReactorBase):
             timeout = MAX_TIMEOUT
         else:
             timeout = min(MAX_TIMEOUT, int(1000*timeout))
-        print 'getEvent', timeout
+#        log.msg('getEvent', timeout)
         rc, bytes, key, evt = self.port.getEvent(timeout)
         SetEvent(self.stop_event)
 
-        print 'getting', num_threads, 'queue items'
+#        log.msg('getting', num_threads, 'queue items')
         for _ in range(num_threads):
             ev = self.event_queue.get()
             if ev and ev in self._events:
                 fd, action = self._events[ev]
-                log.callWithLogger(fd, getattr(fd, action))
-        print 'woo queues'
+                log.callWithLogger(fd, self._runAction, ev)
+#        log.msg('woo queues')
 
         while processed_events < EVENTS_PER_LOOP:
             if rc == WAIT_TIMEOUT:
@@ -171,13 +174,15 @@ class IOCPReactor(base._SignalReactorMixin, base.ReactorBase):
 
 
     def eventWorker(self, evs):
-        print 'WFMO with', [self.stop_event] + evs
-        res = WaitForMultipleObjects([self.stop_event] + evs, False, INFINITE)
-        print 'WFMO returns', res
+#        log.msg('WFMO with', [self.stop_event] + evs)
+        try:
+            res = WaitForMultipleObjects([self.stop_event] + evs, False, INFINITE)
+        except:
+#        log.msg('WFMO returns', res)
         SetEvent(self.stop_event)
 
         if res < WAIT_OBJECT_0 or res > WAIT_OBJECT_0 + len(evs) + 1:
-            log.msg('Unexpected WFMO return')
+#            log.msg('Unexpected WFMO return')
             self.event_queue.put(None)
         elif res == WAIT_OBJECT_0:
             self.event_queue.put(None)
@@ -187,7 +192,8 @@ class IOCPReactor(base._SignalReactorMixin, base.ReactorBase):
         self.wakeUp()
 
 
-    def _runAction(self, action, fd):
+    def _runAction(self, event):
+        fd, action = self._events[event]
         try:
             closed = getattr(fd, action)()
         except:
@@ -195,6 +201,7 @@ class IOCPReactor(base._SignalReactorMixin, base.ReactorBase):
             log.err()
 
         if closed:
+            self.removeEvent(event)
             fd.connectionLost(failure.Failure(closed))
 
 

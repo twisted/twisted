@@ -6,7 +6,7 @@ from twisted.python import log
 
 from zope.interface.verify import verifyClass
 
-from win32event import CreateEvent, SetEvent, ResetEvent
+from win32event import CreateEvent, SetEvent
 from win32file import CloseHandle
 
 class StopStartReadingProtocol(Protocol):
@@ -117,6 +117,33 @@ class EventFD:
 
 
 
+class MyEventException(Exception):
+    pass
+
+
+
+class RaisingEventFD:
+    fRaise = False
+    def __init__(self, d):
+        self.d = d
+
+
+    def logPrefix(self):
+        return 'FD'
+
+
+    def doEvent(self):
+        if self.fRaise:
+            raise MyEventException, 'I am so bad'
+        else:
+            return MyEventException('I am pretty bad')
+
+
+    def connectionLost(self, reason):
+        self.d.errback(reason)
+
+
+
 class IOCPReactorEventsTestCase(unittest.TestCase):
     def test_oneEvent(self):
         """
@@ -163,6 +190,73 @@ class IOCPReactorEventsTestCase(unittest.TestCase):
         event = CreateEvent(None, True, False, None)
         reactor.addEvent(event, None, None)
         self.assertEquals(reactor.removeAll(), [event])
+        CloseHandle(event)
+
+
+    def test_removeTwice(self):
+        """
+        Attempt to removeEvent the same event twice in a row
+        """
+        event = CreateEvent(None, True, False, None)
+        reactor.addEvent(event, None, None)
+        reactor.removeEvent(event)
+        reactor.removeEvent(event)
+        CloseHandle(event)
+
+
+    def test_connectionLost(self):
+        """
+        Test that connectionLost is called on event FD if the event handler
+        returns a true value or raises an exception
+        """
+        def cleanup(_, event):
+            self.flushLoggedErrors(MyEventException)
+            CloseHandle(event)
+        d1 = Deferred()
+        fd = RaisingEventFD(d1)
+        event1 = CreateEvent(None, False, True, None)
+        reactor.addEvent(event1, fd, 'doEvent')
+
+        d2 = Deferred()
+        fd = RaisingEventFD(d2)
+        fd.fRaise = True
+        event2 = CreateEvent(None, False, True, None)
+        reactor.addEvent(event2, fd, 'doEvent')
+        return DeferredList([
+                self.failUnlessFailure(d1, MyEventException).addCallback(
+                    cleanup, event1),
+                self.failUnlessFailure(d2, MyEventException).addCallback(
+                    cleanup, event2)
+                ])
+
+
+    def test_lotsOfEvents(self):
+        """
+        Waits for over 9000 signalled events and makes sure all of the
+        callbacks are invoked
+        """
+        NUM_EVENTS = 200
+        def gotEvent(_):
+            self.counter += 1
+            if self.counter == NUM_EVENTS:
+                d.callback(None)
+
+        def cleanup(_):
+            for event in evts:
+                reactor.removeEvent(event)
+                CloseHandle(event)
+
+        self.counter = 0
+        evts = []
+        for i in range(NUM_EVENTS):
+            d = Deferred()
+            d.addCallback(gotEvent)
+            fd = EventFD(d)
+            event = CreateEvent(None, False, True, None)
+            reactor.addEvent(event, fd, 'doEvent')
+            evts.append(event)
+        d = Deferred()
+        return d.addCallback(cleanup)
 
 
 
