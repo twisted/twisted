@@ -6,7 +6,7 @@ import sys
 
 # Twisted Imports
 from twisted.trial import unittest
-from twisted.spread import banana
+from twisted.spread import _banana as banana
 from twisted.python import failure
 from twisted.internet import protocol, main
 
@@ -168,7 +168,7 @@ class BananaTestCase(unittest.TestCase):
         foo = [1, 2, [3, 4], [30.5, 40.2], 5, ["six", "seven", ["eight", 9]], [10], []]
         self.enc.sendEncoded(foo)
         self.enc.dataReceived(self.io.getvalue())
-        assert self.result == foo, "%s!=%s" % (repr(self.result), repr(self.result))
+        assert self.result == foo, "%s!=%s" % (repr(self.result), repr(foo))
 
     def testPartial(self):
         foo = [1, 2, [3, 4], [30.5, 40.2], 5,
@@ -259,6 +259,14 @@ class BananaTestCase(unittest.TestCase):
         self.assertEqual(encoded(baseNegIn - 2), '\x02' + baseLongNegOut)
         self.assertEqual(encoded(baseNegIn - 3), '\x03' + baseLongNegOut)
 
+    def test_LargePartial(self):
+        data = ["hello" * 1000]
+        self.enc.sendEncoded(data)
+        v = self.io.getvalue()
+        for i in range(0, len(v), 10):
+            chunk = v[i:i+10]
+            self.enc.dataReceived(chunk)
+        assert self.result == data, "%s != %s" % (self.result, data)
 
 
 class GlobalCoderTests(unittest.TestCase):

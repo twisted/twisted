@@ -13,7 +13,11 @@ Future Plans: None known.
 import time
 
 from twisted.internet import defer
-from twisted.spread import banana, jelly, flavors
+from twisted.spread import jelly, flavors
+try:
+    from twisted.spread import _banana as banana
+except ImportError:
+    from twisted.spread import banana
 
 
 class Publishable(flavors.Cacheable):

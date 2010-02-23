@@ -47,7 +47,10 @@ from twisted.python.components import registerAdapter
 
 from twisted.spread.interfaces import IJellyable, IUnjellyable
 from twisted.spread.jelly import jelly, unjelly, globalSecurity
-from twisted.spread import banana
+try:
+    from twisted.spread import _banana as banana
+except ImportError:
+    from twisted.spread import banana
 
 from twisted.spread.flavors import Serializable
 from twisted.spread.flavors import Referenceable, NoSuchMethod

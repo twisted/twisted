@@ -50,6 +50,8 @@ extensions = [
     Extension("twisted.internet._sigchld",
               ["twisted/internet/_sigchld.c"],
               condition=lambda builder: sys.platform != "win32"),
+    Extension("twisted.spread._banana",
+              ["twisted/spread/_banana.c"]),
 ]
 
 # Figure out which plugins to include: all plugins except subproject ones

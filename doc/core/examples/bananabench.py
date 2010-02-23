@@ -11,6 +11,7 @@ except ImportError:
     
 # Twisted Imports
 from twisted.spread import banana
+from twisted.spread import _banana
 from twisted.internet import protocol
 
 iterationCount = 10000
@@ -60,6 +61,9 @@ class BananaBench:
         print '  Using Pure Python Banana:'
         self.performTest(self.testEncode, testData, banana.Banana)
         self.performTest(self.testDecode, testData, banana.Banana)
+        print '  Using Cython Banana:'
+        self.performTest(self.testEncode, testData, _banana.Banana)
+        self.performTest(self.testDecode, testData, _banana.Banana)
 
 bench = BananaBench()
 print 'Doing %s iterations of each test.' % iterationCount

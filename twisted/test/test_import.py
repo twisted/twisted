@@ -50,6 +50,7 @@ class AtLeastImportTestCase(unittest.TestCase):
         from twisted.spread import pb
         from twisted.spread import jelly
         from twisted.spread import banana
+        from twisted.spread import _banana
         from twisted.spread import flavors
     
     def test_twistedPython(self):

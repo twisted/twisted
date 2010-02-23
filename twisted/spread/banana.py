@@ -89,6 +89,56 @@ class Banana(protocol.Protocol, styles.Ephemeral):
     prefixLimit = None
     sizeLimit = SIZE_LIMIT
 
+    outgoingVocabulary = {
+        # Jelly Data Types
+        'None'           :  1,
+        'class'          :  2,
+        'dereference'    :  3,
+        'reference'      :  4,
+        'dictionary'     :  5,
+        'function'       :  6,
+        'instance'       :  7,
+        'list'           :  8,
+        'module'         :  9,
+        'persistent'     : 10,
+        'tuple'          : 11,
+        'unpersistable'  : 12,
+
+        # PB Data Types
+        'copy'           : 13,
+        'cache'          : 14,
+        'cached'         : 15,
+        'remote'         : 16,
+        'local'          : 17,
+        'lcache'         : 18,
+
+        # PB Protocol Messages
+        'version'        : 19,
+        'login'          : 20,
+        'password'       : 21,
+        'challenge'      : 22,
+        'logged_in'      : 23,
+        'not_logged_in'  : 24,
+        'cachemessage'   : 25,
+        'message'        : 26,
+        'answer'         : 27,
+        'error'          : 28,
+        'decref'         : 29,
+        'decache'        : 30,
+        'uncache'        : 31,
+        }
+
+    incomingVocabulary = {}
+    for k, v in outgoingVocabulary.items():
+        incomingVocabulary[v] = k
+
+    def __init__(self, isClient=1):
+        self.listStack = []
+        self.outgoingSymbols = copy.copy(self.outgoingVocabulary)
+        self.outgoingSymbolCount = 0
+        self.isClient = isClient
+        self.buf = ''
+
     def setPrefixLimit(self, limit):
         """
         Set the prefix limit for decoding done by this protocol instance.
@@ -152,27 +202,29 @@ class Banana(protocol.Protocol, styles.Ephemeral):
         else:
             self.callExpressionReceived(item)
 
-    buffer = ''
-
     def dataReceived(self, chunk):
-        buffer = self.buffer + chunk
+        self.buf += chunk
+        buf = self.buf
         listStack = self.listStack
         gotItem = self.gotItem
-        while buffer:
-            assert self.buffer != buffer, "This ain't right: %s %s" % (repr(self.buffer), repr(buffer))
-            self.buffer = buffer
-            pos = 0
-            for ch in buffer:
+        n = len(buf)
+        i = 0
+        while i < n:
+            orig_i = i
+            pos = i
+            while pos < n:
+                ch = buf[pos]
                 if ch >= HIGH_BIT_SET:
                     break
-                pos = pos + 1
+                pos += 1
             else:
                 if pos > self.prefixLimit:
                     raise BananaError("Security precaution: more than %d bytes of prefix" % (self.prefixLimit,))
+                self.buf = buf[orig_i:]
                 return
-            num = buffer[:pos]
-            typebyte = buffer[pos]
-            rest = buffer[pos+1:]
+            num = buf[i:pos]
+            typebyte = buf[pos]
+            i = pos+1
             if len(num) > self.prefixLimit:
                 raise BananaError("Security precaution: longer than %d bytes worth of prefix" % (self.prefixLimit,))
             if typebyte == LIST:
@@ -180,48 +232,44 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                 if num > SIZE_LIMIT:
                     raise BananaError("Security precaution: List too long.")
                 listStack.append((num, []))
-                buffer = rest
             elif typebyte == STRING:
                 num = b1282int(num)
                 if num > SIZE_LIMIT:
                     raise BananaError("Security precaution: String too long.")
-                if len(rest) >= num:
-                    buffer = rest[num:]
-                    gotItem(rest[:num])
+                if n-i >= num:
+                    gotItem(buf[i:i+num])
+                    i += num
                 else:
+                    self.buf = buf[orig_i:]
                     return
             elif typebyte == INT:
-                buffer = rest
                 num = b1282int(num)
                 gotItem(num)
             elif typebyte == LONGINT:
-                buffer = rest
                 num = b1282int(num)
                 gotItem(num)
             elif typebyte == LONGNEG:
-                buffer = rest
                 num = b1282int(num)
                 gotItem(-num)
             elif typebyte == NEG:
-                buffer = rest
                 num = -b1282int(num)
                 gotItem(num)
             elif typebyte == VOCAB:
-                buffer = rest
                 num = b1282int(num)
                 gotItem(self.incomingVocabulary[num])
             elif typebyte == FLOAT:
-                if len(rest) >= 8:
-                    buffer = rest[8:]
-                    gotItem(struct.unpack("!d", rest[:8])[0])
+                if n-i >= 8:
+                    gotItem(struct.unpack("!d", buf[i:i+8])[0])
+                    i += 8
                 else:
+                    self.buf = buf[orig_i:]
                     return
             else:
                 raise NotImplementedError(("Invalid Type Byte %r" % (typebyte,)))
             while listStack and (len(listStack[-1][1]) == listStack[-1][0]):
                 item = listStack.pop()[1]
                 gotItem(item)
-        self.buffer = ''
+        self.buf = ''
 
 
     def expressionReceived(self, lst):
@@ -229,55 +277,6 @@ class Banana(protocol.Protocol, styles.Ephemeral):
         """
         raise NotImplementedError()
 
-
-    outgoingVocabulary = {
-        # Jelly Data Types
-        'None'           :  1,
-        'class'          :  2,
-        'dereference'    :  3,
-        'reference'      :  4,
-        'dictionary'     :  5,
-        'function'       :  6,
-        'instance'       :  7,
-        'list'           :  8,
-        'module'         :  9,
-        'persistent'     : 10,
-        'tuple'          : 11,
-        'unpersistable'  : 12,
-
-        # PB Data Types
-        'copy'           : 13,
-        'cache'          : 14,
-        'cached'         : 15,
-        'remote'         : 16,
-        'local'          : 17,
-        'lcache'         : 18,
-
-        # PB Protocol Messages
-        'version'        : 19,
-        'login'          : 20,
-        'password'       : 21,
-        'challenge'      : 22,
-        'logged_in'      : 23,
-        'not_logged_in'  : 24,
-        'cachemessage'   : 25,
-        'message'        : 26,
-        'answer'         : 27,
-        'error'          : 28,
-        'decref'         : 29,
-        'decache'        : 30,
-        'uncache'        : 31,
-        }
-
-    incomingVocabulary = {}
-    for k, v in outgoingVocabulary.items():
-        incomingVocabulary[v] = k
-
-    def __init__(self, isClient=1):
-        self.listStack = []
-        self.outgoingSymbols = copy.copy(self.outgoingVocabulary)
-        self.outgoingSymbolCount = 0
-        self.isClient = isClient
 
     def sendEncoded(self, obj):
         io = cStringIO.StringIO()
@@ -353,6 +352,6 @@ def decode(st):
     try:
         _i.dataReceived(st)
     finally:
-        _i.buffer = ''
+        _i.buf = ''
         del _i.expressionReceived
     return l[0]
