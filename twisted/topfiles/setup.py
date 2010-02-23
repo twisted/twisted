@@ -1,8 +1,6 @@
 #!/usr/bin/env python
-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 Distutils installer for Twisted.
@@ -47,9 +45,11 @@ extensions = [
                                '-framework','CoreServices',
                                '-framework','Carbon'],
               condition=lambda builder: sys.platform == "darwin"),
-
     Extension("twisted.python._initgroups",
               ["twisted/python/_initgroups.c"]),
+    Extension("twisted.internet._sigchld",
+              ["twisted/internet/_sigchld.c"],
+              condition=lambda builder: sys.platform != "win32"),
 ]
 
 # Figure out which plugins to include: all plugins except subproject ones

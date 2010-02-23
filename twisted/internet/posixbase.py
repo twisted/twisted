@@ -41,8 +41,7 @@ except ImportError:
 
 processEnabled = False
 if platformType == 'posix':
-    from twisted.internet import fdesc
-    import process
+    from twisted.internet import fdesc, process, _signals
     processEnabled = True
 
 if platform.isWindows():
@@ -103,10 +102,19 @@ class _SocketWaker(log.Logger, styles.Ephemeral):
 
 
 
-class _PipeWaker(log.Logger, styles.Ephemeral):
+class _FDWaker(object, log.Logger, styles.Ephemeral):
     """
     The I{self-pipe trick<http://cr.yp.to/docs/selfpipe.html>}, used to wake
     up the main loop from another thread or a signal handler.
+
+    L{_FDWaker} is a base class for waker implementations based on
+    writing to a pipe being monitored by the reactor.
+
+    @ivar o: The file descriptor for the end of the pipe which can be
+        written to to wake up a reactor monitoring this waker.
+
+    @ivar i: The file descriptor which should be monitored in order to
+        be awoken by this waker.
     """
     disconnected = 0
 
@@ -124,22 +132,13 @@ class _PipeWaker(log.Logger, styles.Ephemeral):
         fdesc._setCloseOnExec(self.o)
         self.fileno = lambda: self.i
 
+
     def doRead(self):
-        """Read some bytes from the pipe.
+        """
+        Read some bytes from the pipe and discard them.
         """
         fdesc.readFromFD(self.fileno(), lambda data: None)
 
-    def wakeUp(self):
-        """Write one byte to the pipe, and flush it.
-        """
-        # We don't use fdesc.writeToFD since we need to distinguish
-        # between EINTR (try again) and EAGAIN (do nothing).
-        if self.o is not None:
-            try:
-                util.untilConcludes(os.write, self.o, 'x')
-            except OSError, e:
-                if e.errno != errno.EAGAIN:
-                    raise
 
     def connectionLost(self, reason):
         """Close both ends of my pipe.
@@ -154,24 +153,84 @@ class _PipeWaker(log.Logger, styles.Ephemeral):
         del self.i, self.o
 
 
+
+class _UnixWaker(_FDWaker):
+    """
+    This class provides a simple interface to wake up the event loop.
+
+    This is used by threads or signals to wake up the event loop.
+    """
+
+    def wakeUp(self):
+        """Write one byte to the pipe, and flush it.
+        """
+        # We don't use fdesc.writeToFD since we need to distinguish
+        # between EINTR (try again) and EAGAIN (do nothing).
+        if self.o is not None:
+            try:
+                util.untilConcludes(os.write, self.o, 'x')
+            except OSError, e:
+                # XXX There is no unit test for raising the exception
+                # for other errnos. See #4285.
+                if e.errno != errno.EAGAIN:
+                    raise
+
+
+
 if platformType == 'posix':
-    _Waker = _PipeWaker
+    _Waker = _UnixWaker
 else:
     # Primarily Windows and Jython.
     _Waker = _SocketWaker
 
 
+class _SIGCHLDWaker(_FDWaker):
+    """
+    L{_SIGCHLDWaker} can wake up a reactor whenever C{SIGCHLD} is
+    received.
+
+    @see: L{twisted.internet._signals}
+    """
+    def __init__(self, reactor):
+        _FDWaker.__init__(self, reactor)
+
+
+    def install(self):
+        """
+        Install the handler necessary to make this waker active.
+        """
+        _signals.installHandler(self.o)
+
+
+    def uninstall(self):
+        """
+        Remove the handler which makes this waker active.
+        """
+        _signals.installHandler(-1)
+
+
+    def doRead(self):
+        """
+        Having woken up the reactor in response to receipt of
+        C{SIGCHLD}, reap the process which exited.
+
+        This is called whenever the reactor notices the waker pipe is
+        writeable, which happens soon after any call to the C{wakeUp}
+        method.
+        """
+        _FDWaker.doRead(self)
+        process.reapAllProcesses()
+
+
+
 class PosixReactorBase(_SignalReactorMixin, ReactorBase):
     """
     A basis for reactors that use file descriptors.
+
+    @ivar _childWaker: C{None} or a reference to the L{_SIGCHLDWaker}
+        which is used to properly notice child process termination.
     """
     implements(IReactorArbitrary, IReactorTCP, IReactorUDP, IReactorMulticast)
-
-    def __init__(self):
-        ReactorBase.__init__(self)
-        if self.usingThreads or platformType == "posix":
-            self.installWaker()
-
 
     def _disconnectSelectable(self, selectable, why, isRead, faildict={
         error.ConnectionDone: failure.Failure(error.ConnectionDone()),
@@ -208,6 +267,43 @@ class PosixReactorBase(_SignalReactorMixin, ReactorBase):
             self._internalReaders.add(self.waker)
             self.addReader(self.waker)
 
+
+    _childWaker = None
+    def _handleSignals(self):
+        """
+        Extend the basic signal handling logic to also support
+        handling SIGCHLD to know when to try to reap child processes.
+        """
+        _SignalReactorMixin._handleSignals(self)
+        if platformType == 'posix':
+            if not self._childWaker:
+                self._childWaker = _SIGCHLDWaker(self)
+                self._internalReaders.add(self._childWaker)
+                self.addReader(self._childWaker)
+            self._childWaker.install()
+            # Also reap all processes right now, in case we missed any
+            # signals before we installed the SIGCHLD waker/handler.
+            # This should only happen if someone used spawnProcess
+            # before calling reactor.run (and the process also exited
+            # already).
+            process.reapAllProcesses()
+
+    def _uninstallHandler(self):
+        """
+        If a child waker was created and installed, uninstall it now.
+
+        Since this disables reactor functionality and is only called
+        when the reactor is stopping, it doesn't provide any directly
+        useful functionality, but the cleanup of reactor-related
+        process-global state that it does helps in unit tests
+        involving multiple reactors and is generally just a nice
+        thing.
+        """
+        # XXX This would probably be an alright place to put all of
+        # the cleanup code for all internal readers (here and in the
+        # base class, anyway).  See #3063 for that cleanup task.
+        if self._childWaker:
+            self._childWaker.uninstall()
 
     # IReactorProcess
 

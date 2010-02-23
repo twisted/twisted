@@ -1,4 +1,4 @@
-# Copyright (c) 2008-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -95,6 +95,7 @@ class ReactorBuilder:
         # branch that fixes it.
         #
         # -exarkun
+        reactor._uninstallHandler()
         if getattr(reactor, '_internalReaders', None) is not None:
             for reader in reactor._internalReaders:
                 reactor.removeReader(reader)
@@ -119,10 +120,14 @@ class ReactorBuilder:
         try:
             reactor = self.reactorFactory()
         except:
-            # Unfortunately, not all errors which result in a reactor being
-            # unusable are detectable without actually instantiating the
-            # reactor.  So we catch some more here and skip the test if
-            # necessary.
+            # Unfortunately, not all errors which result in a reactor
+            # being unusable are detectable without actually
+            # instantiating the reactor.  So we catch some more here
+            # and skip the test if necessary.  We also log it to aid
+            # with debugging, but flush the logged error so the test
+            # doesn't fail.
+            log.err(None, "Failed to install reactor")
+            self.flushLoggedErrors()
             raise SkipTest(Failure().getErrorMessage())
         else:
             if self.requiredInterface is not None:

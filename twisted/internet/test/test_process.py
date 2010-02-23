@@ -1,4 +1,4 @@
-# Copyright (c) 2008-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -9,7 +9,7 @@ __metaclass__ = type
 
 import os, sys, signal, threading
 
-from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import TestCase, SkipTest
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.compat import set
 from twisted.python.log import msg, err
@@ -20,6 +20,7 @@ from twisted.internet.interfaces import IReactorProcess
 from twisted.internet.defer import Deferred, succeed
 from twisted.internet.protocol import ProcessProtocol
 from twisted.internet.error import ProcessDone, ProcessTerminated
+
 
 
 class _ShutdownCallbackProcessProtocol(ProcessProtocol):
@@ -172,6 +173,50 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         exited.addCallback(lambda ign: reactor.stop())
 
         self.runReactor(reactor)
+
+
+    def test_systemCallUninterruptedByChildExit(self):
+        """
+        If a child process exits while a system call is in progress, the system
+        call should not be interfered with.  In particular, it should not fail
+        with EINTR.
+
+        Older versions of Twisted installed a SIGCHLD handler on POSIX without
+        using the feature exposed by the SA_RESTART flag to sigaction(2).  The
+        most noticable problem this caused was for blocking reads and writes to
+        sometimes fail with EINTR.
+        """
+        reactor = self.buildReactor()
+
+        # XXX Since pygobject/pygtk wants to use signal.set_wakeup_fd,
+        # we aren't actually providing this functionality on the glib2
+        # or gtk2 reactors yet.  See #4286 for the possibility of
+        # improving this.
+        skippedReactors = ["Glib2Reactor", "Gtk2Reactor"]
+        hasSigInterrupt = getattr(signal, "siginterrupt", None) is not None
+        reactorClassName = reactor.__class__.__name__
+        if reactorClassName in skippedReactors and not hasSigInterrupt:
+            raise SkipTest(
+                "%s is not supported without siginterrupt" % reactorClassName)
+
+        result = []
+
+        def f():
+            try:
+                f1 = os.popen('%s -c "import time; time.sleep(0.1)"' %
+                    (sys.executable,))
+                f2 = os.popen('%s -c "import time; time.sleep(0.5); print \'Foo\'"' %
+                    (sys.executable,))
+                # The read call below will blow up with an EINTR from the
+                # SIGCHLD from the first process exiting if we install a
+                # SIGCHLD handler without SA_RESTART.  (which we used to do)
+                result.append(f2.read())
+            finally:
+                reactor.stop()
+
+        reactor.callWhenRunning(f)
+        self.runReactor(reactor)
+        self.assertEqual(result, ["Foo\n"])
 
 
 

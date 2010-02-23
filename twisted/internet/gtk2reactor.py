@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.internet.test.test_gtk2reactor -*-
+# -*- test-case-name: twisted.internet.test -*-
 # Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -21,8 +21,10 @@ integration.
 """
 
 # System Imports
-import sys
+import sys, signal
+
 from zope.interface import implements
+
 try:
     if not hasattr(sys, 'frozen'):
         # Don't want to check this for py2exe
@@ -41,7 +43,7 @@ if hasattr(gobject, "threads_init"):
 from twisted.python import log, runtime, failure
 from twisted.python.compat import set
 from twisted.internet.interfaces import IReactorFDSet
-from twisted.internet import main, posixbase, error, selectreactor
+from twisted.internet import main, base, posixbase, error, selectreactor
 
 POLL_DISCONNECTED = gobject.IO_HUP | gobject.IO_ERR | gobject.IO_NVAL
 
@@ -103,6 +105,25 @@ class Gtk2Reactor(posixbase.PosixReactorBase):
             self.__iteration = gtk.main_iteration
             self.__crash = _our_mainquit
             self.__run = gtk.main
+
+
+    if runtime.platformType == 'posix':
+        def _handleSignals(self):
+            # Let the base class do its thing, but pygtk is probably
+            # going to stomp on us so go beyond that and set up some
+            # signal handling which pygtk won't mess with.  This would
+            # be better done by letting this reactor select a
+            # different implementation of installHandler for
+            # _SIGCHLDWaker to use.  Then, at least, we could fall
+            # back to our extension module.  See #4286.
+            from twisted.internet.process import reapAllProcesses as _reapAllProcesses
+            base._SignalReactorMixin._handleSignals(self)
+            signal.signal(signal.SIGCHLD, lambda *a: self.callFromThread(_reapAllProcesses))
+            if getattr(signal, "siginterrupt", None) is not None:
+                signal.siginterrupt(signal.SIGCHLD, False)
+            # Like the base, reap processes now in case a process
+            # exited before the handlers above were installed.
+            _reapAllProcesses()
 
     # The input_add function in pygtk1 checks for objects with a
     # 'fileno' method and, if present, uses the result of that method

@@ -1,0 +1,4 @@
+On POSIX platforms, reactors now support child processes in a way
+which doesn't cause other syscalls to sometimes fail with EINTR (if
+running on Python 2.6 or if Twisted's extension modules have been
+built).

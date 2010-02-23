@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_internet -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -22,7 +22,7 @@ from twisted.internet.interfaces import IResolverSimple, IReactorPluggableResolv
 from twisted.internet.interfaces import IConnector, IDelayedCall
 from twisted.internet import fdesc, main, error, abstract, defer, threads
 from twisted.python import log, failure, reflect
-from twisted.python.runtime import seconds as runtimeSeconds, platform, platformType
+from twisted.python.runtime import seconds as runtimeSeconds, platform
 from twisted.internet.defer import Deferred, DeferredList
 from twisted.persisted import styles
 
@@ -468,6 +468,7 @@ class ReactorBase(object):
 
         if platform.supportsThreads():
             self._initThreads()
+        self.installWaker()
 
     # override in subclasses
 
@@ -889,7 +890,6 @@ class ReactorBase(object):
         def _initThreads(self):
             self.usingThreads = True
             self.resolver = ThreadedResolver(self)
-            self.installWaker()
 
         def callFromThread(self, f, *args, **kw):
             """
@@ -913,6 +913,9 @@ class ReactorBase(object):
                 self.threadpool.start)
             self.threadpoolShutdownID = self.addSystemEventTrigger(
                 'during', 'shutdown', self._stopThreadPool)
+
+        def _uninstallHandler(self):
+            pass
 
         def _stopThreadPool(self):
             """
@@ -1108,31 +1111,6 @@ class _SignalReactorMixin(object):
         # Catch Ctrl-Break in windows
         if hasattr(signal, "SIGBREAK"):
             signal.signal(signal.SIGBREAK, self.sigBreak)
-
-        if platformType == 'posix':
-            signal.signal(signal.SIGCHLD, self._handleSigchld)
-            # Also call the signal handler right now, in case we missed any
-            # signals before we installed it.  This should only happen if
-            # someone used spawnProcess before calling reactor.run (and the
-            # process also exited already).
-            self._handleSigchld(signal.SIGCHLD, None)
-
-
-    def _handleSigchld(self, signum, frame, _threadSupport=platform.supportsThreads()):
-        """
-        Reap all processes on SIGCHLD.
-
-        This gets called on SIGCHLD. We do no processing inside a signal
-        handler, as the calls we make here could occur between any two
-        python bytecode instructions. Deferring processing to the next
-        eventloop round prevents us from violating the state constraints
-        of arbitrary classes.
-        """
-        from twisted.internet.process import reapAllProcesses
-        if _threadSupport:
-            self.callFromThread(reapAllProcesses)
-        else:
-            self.callLater(0, reapAllProcesses)
 
 
     def startRunning(self, installSignalHandlers=True):
