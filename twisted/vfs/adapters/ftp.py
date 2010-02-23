@@ -295,6 +295,11 @@ class FTPWriteVFS(object):
         """
         return defer.succeed(IConsumer(self.node))
 
+    def close(self):
+        """
+        Perform post-write actions.
+        """
+        return defer.succeed(None)
 
 
 class _FileToConsumerAdapter(object):

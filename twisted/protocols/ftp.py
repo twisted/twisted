@@ -1122,7 +1122,6 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
                 cons = ASCIIConsumerWrapper(cons)
 
             d = self.dtpInstance.registerConsumer(cons)
-            d.addCallbacks(cbSent, ebSent)
 
             # Tell them what to doooo
             if self.dtpInstance.isConnected:
@@ -1135,6 +1134,8 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
         def cbOpened(file):
             d = file.receive()
             d.addCallback(cbConsumer)
+            d.addCallback(lambda ignored: file.close())
+            d.addCallbacks(cbSent, ebSent)
             return d
 
         def ebOpened(err):
@@ -1507,7 +1508,16 @@ class IWriteFile(Interface):
         @rtype: C{Deferred} of C{IConsumer}
         """
 
+    def close():
+        """
+        Perform any post-write work that needs to be done. This method may
+        only be invoked once on each provider, and will always be invoked
+        after receive().
 
+        @rtype: C{Deferred} of anything: the value is ignored. The FTP client
+        will not see their upload request complete until this Deferred has
+        been fired.
+        """
 
 def _getgroups(uid):
     """Return the primary and supplementary groups for the given UID.
@@ -1868,6 +1878,8 @@ class _FileWriter(object):
         # FileConsumer will close the file object
         return defer.succeed(FileConsumer(self.fObj))
 
+    def close(self):
+        return defer.succeed(None)
 
 
 class FTPRealm:

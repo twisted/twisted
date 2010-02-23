@@ -9,6 +9,7 @@ Maintainer: Andrew Bennetts
 
 import os
 import errno
+from StringIO import StringIO
 
 from zope.interface import implements
 
@@ -2616,18 +2617,21 @@ class IReadWriteTestsMixin:
 
     def test_write(self):
         """
-        Test L{ftp.IWriteFile}: the implementation should have a receive method
-        returning a C{Deferred} with fires with a consumer ready to receive
-        data to be written.
+        Test L{ftp.IWriteFile}: the implementation should have a receive
+        method returning a C{Deferred} which fires with a consumer ready to
+        receive data to be written. It should also have a close() method that
+        returns a Deferred.
         """
         content = 'elbbow\n'
         def cbGet(writer):
-            return writer.receive().addCallback(cbReceive)
-        def cbReceive(consumer):
+            return writer.receive().addCallback(cbReceive, writer)
+        def cbReceive(consumer, writer):
             producer = TestProducer(content, consumer)
             consumer.registerProducer(None, True)
             producer.start()
             consumer.unregisterProducer()
+            return writer.close().addCallback(cbClose)
+        def cbClose(ignored):
             self.assertEquals(self.getFileContent(), content)
         return self.getFileWriter().addCallback(cbGet)
 
@@ -2669,3 +2673,55 @@ class FTPReadWriteTestCase(unittest.TestCase, IReadWriteTestsMixin):
         Return the content of the temporary file.
         """
         return self.root.child(self.filename).getContent()
+
+
+class CloseTestWriter:
+    implements(ftp.IWriteFile)
+    closeStarted = False
+    def receive(self):
+        self.s = StringIO()
+        fc = ftp.FileConsumer(self.s)
+        return defer.succeed(fc)
+    def close(self):
+        self.closeStarted = True
+        return self.d
+
+class CloseTestShell:
+    def openForWriting(self, segs):
+        return defer.succeed(self.writer)
+
+class FTPCloseTest(unittest.TestCase):
+    """Tests that the server invokes IWriteFile.close"""
+
+    def test_write(self):
+        """Confirm that FTP uploads (i.e. ftp_STOR) correctly call and wait
+        upon the IWriteFile object's close() method"""
+        f = ftp.FTP()
+        f.workingDirectory = ["root"]
+        f.shell = CloseTestShell()
+        f.shell.writer = CloseTestWriter()
+        f.shell.writer.d = defer.Deferred()
+        f.factory = ftp.FTPFactory()
+        f.factory.timeOut = None
+        f.makeConnection(StringIO())
+
+        di = ftp.DTP()
+        di.factory = ftp.DTPFactory(f)
+        f.dtpInstance = di
+        di.makeConnection(None)#
+
+        stor_done = []
+        d = f.ftp_STOR("path")
+        d.addCallback(stor_done.append)
+        # the writer is still receiving data
+        self.assertFalse(f.shell.writer.closeStarted, "close() called early")
+        di.dataReceived("some data here")
+        self.assertFalse(f.shell.writer.closeStarted, "close() called early")
+        di.connectionLost("reason is ignored")
+        # now we should be waiting in close()
+        self.assertTrue(f.shell.writer.closeStarted, "close() not called")
+        self.assertFalse(stor_done)
+        f.shell.writer.d.callback("allow close() to finish")
+        self.assertTrue(stor_done)
+
+        return d # just in case an errback occurred
