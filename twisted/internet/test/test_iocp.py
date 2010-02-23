@@ -120,16 +120,49 @@ class EventFD:
 class IOCPReactorEventsTestCase(unittest.TestCase):
     def test_oneEvent(self):
         """
-        Wait on an event, then make it signalled
+        Wait on a signalled event. Make sure its callback is invoked
         """
         def cleanup(_):
             reactor.removeEvent(event)
             CloseHandle(event)
+
         d = Deferred()
         fd = EventFD(d)
         event = CreateEvent(None, True, True, None)
         reactor.addEvent(event, fd, 'doEvent')
         return d.addCallback(cleanup)
+
+
+    def test_63events(self):
+        """
+        Wait on 63 events, one of them signalled. Make sure its callback
+        is invoked
+        """
+        def cleanup(_):
+            for event in evts:
+                reactor.removeEvent(event)
+                CloseHandle(event)
+
+        evts = []
+        for i in range(63):
+            d = Deferred()
+            fd = EventFD(d)
+            event = CreateEvent(None, True, False, None)
+            reactor.addEvent(event, fd, 'doEvent')
+            evts.append(event)
+        SetEvent(event)
+        return d.addCallback(cleanup)
+
+
+
+    def test_removeAll(self):
+        """
+        Make sure reactor.removeAll removes events
+        """
+        self.assertEquals(reactor.removeAll(), [])
+        event = CreateEvent(None, True, False, None)
+        reactor.addEvent(event, None, None)
+        self.assertEquals(reactor.removeAll(), [event])
 
 
 

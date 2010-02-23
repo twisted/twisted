@@ -343,9 +343,11 @@ class IOCPReactor(base._SignalReactorMixin, base.ReactorBase):
 
 
     def removeAll(self):
-        res = list(self.handles)
+        handles = list(self.handles)
         self.handles.clear()
-        return res
+        events = self._events.keys()
+        self._events.clear()
+        return handles + events
 
 
 
