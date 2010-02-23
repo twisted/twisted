@@ -5717,8 +5717,8 @@ How do I use it?
 <idnar> look on the bright side
 <idnar> it's a single point of success
 %
-11:44 < vatts> wvd, it used to work before (as i said) and i didn't change anything :s
-11:44 < exarkun> vatts: Denial is only very rarely a useful debugging technique.
+<vatts> wvd, it used to work before (as i said) and i didn't change anything :s
+<exarkun> vatts: Denial is only very rarely a useful debugging technique.
 %
 [on picking the quote of the release]
 <glyph> Man, we're going to have to get a lot funnier if we're going to do time-based releases
