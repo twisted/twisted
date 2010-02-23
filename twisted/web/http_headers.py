@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.web.test.test_http_headers
-# Copyright (c) 2008-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -196,6 +196,9 @@ class Headers(object):
 
         @return: C{None}
         """
+        if not isinstance(values, list):
+            raise TypeError("Header entry %r should be list but found "
+                            "instance of %r instead" % (name, type(values)))
         self._rawHeaders[name.lower()] = values
 
 

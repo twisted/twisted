@@ -1,4 +1,4 @@
-# Copyright (c) 2008-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -36,6 +36,14 @@ class HeadersTests(TestCase):
         self.assertTrue(h.hasHeader("test"))
         self.assertTrue(h.hasHeader("Test"))
         self.assertEqual(h.getRawHeaders("test"), rawValue)
+
+
+    def test_rawHeadersTypeChecking(self):
+        """
+        L{Headers.setRawHeaders} requires values to be of type list.
+        """
+        h = Headers()
+        self.assertRaises(TypeError, h.setRawHeaders, {'Foo': 'bar'})
 
 
     def test_addRawHeader(self):
