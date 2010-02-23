@@ -1,7 +1,7 @@
 # -*- test-case-name: twisted.test.test_failure -*-
 # See also test suite twisted.test.test_pbfailure
 
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -539,10 +539,17 @@ DO_POST_MORTEM = True
 
 def _debuginit(self, exc_value=None, exc_type=None, exc_tb=None,
              Failure__init__=Failure.__init__.im_func):
+    """
+    Initialize failure object, possibly spawning pdb.
+    """
     if (exc_value, exc_type, exc_tb) == (None, None, None):
         exc = sys.exc_info()
         if not exc[0] == self.__class__ and DO_POST_MORTEM:
-            print "Jumping into debugger for post-mortem of exception '%s':" % exc[1]
+            try:
+                strrepr = str(exc[1])
+            except:
+                strrepr = "broken str"
+            print "Jumping into debugger for post-mortem of exception '%s':" % (strrepr,)
             import pdb
             pdb.post_mortem(exc[2])
     Failure__init__(self, exc_value, exc_type, exc_tb)
