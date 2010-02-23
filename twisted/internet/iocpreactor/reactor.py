@@ -6,12 +6,18 @@
 Reactor that uses IO completion ports
 """
 
-import warnings, socket, sys
+from __future__ import division
+
+import warnings, socket, sys, math
+
+from Queue import Queue
+
+from win32event import CreateEvent, SetEvent, ResetEvent, WaitForMultipleObjects, INFINITE, MAXIMUM_WAIT_OBJECTS, WAIT_OBJECT_0
 
 from zope.interface import implements
 
 from twisted.internet import base, interfaces, main, error
-from twisted.python import log, failure
+from twisted.python import log, failure, threadpool
 from twisted.internet._dumbwin32proc import Process
 
 from twisted.internet.iocpreactor import iocpsupport as _iocp
@@ -37,6 +43,8 @@ MAX_TIMEOUT = 2000 # 2 seconds, see doIteration for explanation
 
 EVENTS_PER_LOOP = 1000 # XXX: what's a good value here?
 
+EVENTS_PER_THREAD = MAXIMUM_WAIT_OBJECTS - 1
+
 # keys to associate with normal and waker events
 KEY_NORMAL, KEY_WAKEUP = range(2)
 
@@ -52,11 +60,18 @@ class IOCPReactor(base._SignalReactorMixin, base.ReactorBase):
                *_extraInterfaces)
 
     port = None
+    work_semaphore = None
+    go_event = None
+    event_pool = None
+    stop_event = None
 
     def __init__(self):
         base.ReactorBase.__init__(self)
         self.port = _iocp.CompletionPort()
         self.handles = set()
+        self._events = {}
+        self.stop_event = CreateEvent(None, True, True, None)
+        self.event_queue = Queue()
 
 
     def addActiveHandle(self, handle):
@@ -65,6 +80,32 @@ class IOCPReactor(base._SignalReactorMixin, base.ReactorBase):
 
     def removeActiveHandle(self, handle):
         self.handles.discard(handle)
+
+
+    def addEvent(self, event, fd, action):
+        """
+        Add a new win32 event to the event loop.
+        """
+        self._events[event] = (fd, action)
+
+
+    def removeEvent(self, event):
+        """
+        Remove an event.
+        """
+        del self._events[event]
+
+
+    def _stopEventPool(self):
+        self.event_pool.stop()
+        self.event_pool = None
+
+
+    def _startEventPool(self):
+        if not self.event_pool:
+            self.event_pool = threadpool.ThreadPool(1, 1, 'iocpreactor WFMO workers')
+            self.event_pool.start()
+            self.addSystemEventTrigger('during', 'shutdown', self._stopEventPool)
 
 
     def doIteration(self, timeout):
@@ -89,12 +130,34 @@ class IOCPReactor(base._SignalReactorMixin, base.ReactorBase):
         # here and GetQueuedCompletionStatus in a thread. Or I could poll with
         # a reasonable interval. Guess what! Threads are hard.
 
+        self._startEventPool()
+        ResetEvent(self.stop_event)
+
+        num_threads = int(math.ceil(len(self._events)/EVENTS_PER_THREAD))
+        if num_threads > self.event_pool.max:
+            self.event_pool.adjustPoolSize(maxthreads = num_threads)
+
+        evs = self._events.keys()
+        for i in range(0, len(evs), EVENTS_PER_THREAD):
+            self.event_pool.callInThread(self.eventWorker, evs[i:i+EVENTS_PER_THREAD])
+
         processed_events = 0
         if timeout is None:
             timeout = MAX_TIMEOUT
         else:
             timeout = min(MAX_TIMEOUT, int(1000*timeout))
+        print 'getEvent', timeout
         rc, bytes, key, evt = self.port.getEvent(timeout)
+        SetEvent(self.stop_event)
+
+        print 'getting', num_threads, 'queue items'
+        for _ in range(num_threads):
+            ev = self.event_queue.get()
+            if ev and ev in self._events:
+                fd, action = self._events[ev]
+                log.callWithLogger(fd, getattr(fd, action))
+        print 'woo queues'
+
         while processed_events < EVENTS_PER_LOOP:
             if rc == WAIT_TIMEOUT:
                 break
@@ -105,6 +168,34 @@ class IOCPReactor(base._SignalReactorMixin, base.ReactorBase):
                                        rc, bytes, evt)
                     processed_events += 1
             rc, bytes, key, evt = self.port.getEvent(0)
+
+
+    def eventWorker(self, evs):
+        print 'WFMO with', [self.stop_event] + evs
+        res = WaitForMultipleObjects([self.stop_event] + evs, False, INFINITE)
+        print 'WFMO returns', res
+        SetEvent(self.stop_event)
+
+        if res < WAIT_OBJECT_0 or res > WAIT_OBJECT_0 + len(evs) + 1:
+            log.msg('Unexpected WFMO return')
+            self.event_queue.put(None)
+        elif res == WAIT_OBJECT_0:
+            self.event_queue.put(None)
+        else:
+            self.event_queue.put(evs[res - WAIT_OBJECT_0 - 1])
+
+        self.wakeUp()
+
+
+    def _runAction(self, action, fd):
+        try:
+            closed = getattr(fd, action)()
+        except:
+            closed = sys.exc_info()[1]
+            log.err()
+
+        if closed:
+            fd.connectionLost(failure.Failure(closed))
 
 
     def _callEventCallback(self, rc, bytes, evt):

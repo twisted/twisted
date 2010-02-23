@@ -6,6 +6,9 @@ from twisted.python import log
 
 from zope.interface.verify import verifyClass
 
+from win32event import CreateEvent, SetEvent, ResetEvent
+from win32file import CloseHandle
+
 class StopStartReadingProtocol(Protocol):
     def connectionMade(self):
         self.transport.pauseProducing()
@@ -100,6 +103,37 @@ class IOCPReactorTestCase(unittest.TestCase):
 
 
 
+class EventFD:
+    def __init__(self, d):
+        self.d = d
+
+
+    def logPrefix(self):
+        return 'FD'
+
+
+    def doEvent(self):
+        self.d.callback(None)
+
+
+
+class IOCPReactorEventsTestCase(unittest.TestCase):
+    def test_oneEvent(self):
+        """
+        Wait on an event, then make it signalled
+        """
+        def cleanup(_):
+            reactor.removeEvent(event)
+            CloseHandle(event)
+        d = Deferred()
+        fd = EventFD(d)
+        event = CreateEvent(None, True, True, None)
+        reactor.addEvent(event, fd, 'doEvent')
+        return d.addCallback(cleanup)
+
+
+
 if reactor.__class__.__name__ != 'IOCPReactor':
     IOCPReactorTestCase.skip = 'This test only applies to IOCPReactor'
+    IOCPReactorEventsTestCase.skip = 'This test only applies to IOCPReactor'
 
