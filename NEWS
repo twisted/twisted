@@ -1,7 +1,7 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Twisted Core 10.0.0pre1 (2010-02-21)
+Twisted Core 10.0.0pre2 (2010-02-24)
 ====================================
 
 Features
@@ -82,7 +82,7 @@ Other
    #4222, #4234, #4235, #4238, #4240, #4245, #4251, #4264, #4268,
    #4269, #4282
 
-Twisted Conch 10.0.0pre1 (2010-02-21)
+Twisted Conch 10.0.0pre2 (2010-02-24)
 =====================================
 
 Bugfixes
@@ -96,14 +96,14 @@ Other
 -----
  - #2391, #4203, #4265
 
-Twisted Lore 10.0.0pre1 (2010-02-21)
+Twisted Lore 10.0.0pre2 (2010-02-24)
 ====================================
 
 Other
 -----
  - #4241
 
-Twisted Mail 10.0.0pre1 (2010-02-21)
+Twisted Mail 10.0.0pre2 (2010-02-24)
 ====================================
 
 Bugfixes
@@ -121,7 +121,7 @@ Other
 -----
  - #4028, #4170, #4200
 
-Twisted Names 10.0.0pre1 (2010-02-21)
+Twisted Names 10.0.0pre2 (2010-02-24)
 =====================================
 
 Bugfixes
@@ -138,24 +138,24 @@ Other
 -----
  - #4066
 
-Twisted News 10.0.0pre1 (2010-02-21)
+Twisted News 10.0.0pre2 (2010-02-24)
 ====================================
 
-Twisted Pair 10.0.0pre1 (2010-02-21)
+Twisted Pair 10.0.0pre2 (2010-02-24)
 ====================================
 
 Other
 -----
  - #4170
 
-Twisted Runner 10.0.0pre1 (2010-02-21)
+Twisted Runner 10.0.0pre2 (2010-02-24)
 ======================================
 
 Other
 -----
  - #3961
 
-Twisted Web 10.0.0pre1 (2010-02-21)
+Twisted Web 10.0.0pre2 (2010-02-24)
 ===================================
 
 Features
@@ -198,7 +198,7 @@ Other
 -----
  - #3784, #4216, #4242
 
-Twisted Web2 10.0.0pre1 (2010-02-21)
+Twisted Web2 10.0.0pre2 (2010-02-24)
 ====================================
 
 Bugfixes
@@ -210,7 +210,7 @@ Other
 -----
  - #3693, #4202
 
-Twisted Words 10.0.0pre1 (2010-02-21)
+Twisted Words 10.0.0pre2 (2010-02-24)
 =====================================
 
 Features
