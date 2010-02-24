@@ -54,14 +54,9 @@ Bugfixes
    where we failed to notify when a client is connected. (#3925)
  - Twisted Trial no longer crashes if it can't remove an old
    _trial_temp directory.  (#4020)
- - twisted.web2.channel.scgi now uses consistent line separators,
-   fixing display issues when used with lighttpd. (#4032)
  - The optional _c_urlarg extension now handles unquote("") correctly
    on platforms where malloc(0) returns NULL, such as AIX.  It also
    compiles with less warnings. (#4142)
- - The HTTP proxy will no longer pass on keep-alive request headers
-   from the client, preventing pages from loading then "hanging"
-   (leaving the connection open with no hope of termination). (#4179)
  - On POSIX, child processes created with reactor.spawnProcess will no
    longer automatically ignore the signals which the parent process
    has set to be ignored. (#4199)
@@ -191,6 +186,9 @@ Bugfixes
    as arguments to the read and readlines methods. (#4114)
  - twisted.web.wsgi doesn't unquote QUERY_STRING anymore, thus
    complying with the WSGI reference implementation. (#4143)
+ - The HTTP proxy will no longer pass on keep-alive request headers
+   from the client, preventing pages from loading then "hanging"
+   (leaving the connection open with no hope of termination). (#4179)
 
 Deprecations and Removals
 -------------------------
@@ -203,6 +201,11 @@ Other
 
 Twisted Web2 10.0.0pre1 (2010-02-21)
 ====================================
+
+Bugfixes
+--------
+ - twisted.web2.channel.scgi now uses consistent line separators,
+   fixing display issues when used with lighttpd. (#4032)
 
 Other
 -----

@@ -31,6 +31,9 @@ Bugfixes
    as arguments to the read and readlines methods. (#4114)
  - twisted.web.wsgi doesn't unquote QUERY_STRING anymore, thus
    complying with the WSGI reference implementation. (#4143)
+ - The HTTP proxy will no longer pass on keep-alive request headers
+   from the client, preventing pages from loading then "hanging"
+   (leaving the connection open with no hope of termination). (#4179)
 
 Deprecations and Removals
 -------------------------
