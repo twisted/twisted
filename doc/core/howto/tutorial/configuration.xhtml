@@ -64,12 +64,11 @@ integration:</p>
 <h3>Red Hat / Mandrake</h3>
 
 <pre class="shell">
-% tap2rpm --type=python finger.tac
-% sudo rpm -i *.rpm
+% tap2rpm --type=python finger.tac #[maybe other options needed]
+% sudo rpm -i .build/*.rpm
 </pre>
 
-<p>These packages will properly install and register init.d scripts, etc. for
-the given file.</p>
+<p>Will properly register the tap/tac, init.d scripts, etc. for the given file.</p>
 
 <p>If it doesn't work on your favorite OS: patches accepted!</p>
 </body>
