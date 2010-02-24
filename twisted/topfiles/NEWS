@@ -42,7 +42,6 @@ Bugfixes
  - startLogging now does nothing on subsequent invocations, thus
    fixing a terrible infinite recursion bug that's only on edge case.
    (#3289)
- - The tap2rpm script now works with modern versions of RPM. (#3292)
  - Stringify non-string data to NetstringReceiver.sendString before
    calculating the length so that the calculated length is equal to
    the actual length of the transported data. (#3299)
