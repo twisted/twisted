@@ -92,6 +92,24 @@ class Platform:
         except ImportError:
             return False
 
+
+    def supportsINotify(self):
+        """
+        Return C{True} if we can use the inotify API on this platform.
+
+        @since: 10.1
+        """
+        try:
+            from twisted.python._inotify import INotifyError, init
+        except ImportError:
+            return False
+        try:
+            os.close(init())
+        except INotifyError:
+            return False
+        return True
+
+
 platform = Platform()
 platformType = platform.getType()
 seconds = platform.seconds
