@@ -175,7 +175,7 @@ Bugfixes
    processing to a response. (#446)
  - twisted.web.http.HTTPClient now supports multi-line headers.
    (#2062)
- - Resources server via twisted.web.distrib will no longer encounter a
+ - Resources served via twisted.web.distrib will no longer encounter a
    Banana error when writing more than 640kB at once to the request
    object. (#3212)
  - The Error, PageRedirect, and InfiniteRedirection exception in
