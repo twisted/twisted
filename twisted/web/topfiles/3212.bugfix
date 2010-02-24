@@ -1,2 +1,0 @@
-Resources server via twisted.web.distrib will no longer encounter a Banana
-error when writing more than 640kB at once to the request object.

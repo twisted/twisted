@@ -1,2 +1,0 @@
-twisted.web.wsgi doesn't unquote QUERY_STRING anymore, thus complying with the
-WSGI reference implementation.

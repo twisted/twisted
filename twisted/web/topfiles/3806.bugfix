@@ -1,5 +1,0 @@
-The Error, PageRedirect, and InfiniteRedirection exception in twisted.web now
-initialize an empty message parameter by mapping the HTTP status code parameter
-to a descriptive string. Previously the lookup would always fail, leaving
-message empty.
-
