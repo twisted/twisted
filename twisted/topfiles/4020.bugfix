@@ -1,3 +1,0 @@
-Twisted Trial no longer crashes if it can't remove an old _trial_temp
-directory.
-
