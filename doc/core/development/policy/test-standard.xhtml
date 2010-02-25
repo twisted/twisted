@@ -19,18 +19,15 @@
 
     <h2>Unit Tests in the Twisted Philosophy</h2>
 
-    <p>The Twisted development team
-    adheres to the practice of <a href=
-    "http://c2.com/cgi/wiki?ExtremeProgramming" >Extreme
-    Programming</a> (XP), and the usage of unit tests is a cornerstone
-    XP practice.  Unit tests are a tool to give you increased
-    confidence.  You changed an algorithm -- did you break something?
-    Run the unit tests.  If a test fails, you know where to look,
-    because each test covers only a small amount of code, and you know
-    it has something to do with the changes you just made.  If all the
-    tests pass, you're good to go, and you don't need to second-guess
-    yourself or worry that you just accidently broke someone else's
-    program.</p>
+    <p>The Twisted development team adheres to the practice of <a href=
+    "http://c2.com/cgi/wiki?ExtremeProgramming" >Extreme Programming</a> (XP),
+    and the usage of unit tests is a cornerstone XP practice.  Unit tests are a
+    tool to give you increased confidence.  You changed an algorithm -- did you
+    break something?  Run the unit tests.  If a test fails, you know where to
+    look, because each test covers only a small amount of code, and you know it
+    has something to do with the changes you just made.  If all the tests pass,
+    you're good to go, and you don't need to second-guess yourself or worry that
+    you just accidentally broke someone else's program.</p>
 
     <h2>What to Test, What Not to Test</h2>
 
@@ -70,13 +67,13 @@ $ bin/trial twisted
      failing tests, they will not be happy and may decide to <em>hunt
      you down</em>.</p>
 
-    <p>Since this is a geographically dispersed team, the person who
-    can help you get your code working probably isn't in the room with
-    you.  You may want to share your work in progress over the
-    network, but you want to leave the main Subversion tree in good working
-    order.  So <a href="http://svnbook.red-bean.com/en/1.0/ch04.html">use a branch</a>,
-    and merge your changes back in only after your problem is solved
-    and all the unit tests pass again.</p>
+    <p>Since this is a geographically dispersed team, the person who can help
+    you get your code working probably isn't in the room with you.  You may want
+    to share your work in progress over the network, but you want to leave the
+    main Subversion tree in good working order.
+    So <a href="http://svnbook.red-bean.com/en/1.0/ch04.html">use a branch</a>,
+    and merge your changes back in only after your problem is solved and all the
+    unit tests pass again.</p>
 
     <h2>Adding a Test</h2>
 
@@ -118,8 +115,8 @@ $ bin/trial twisted
     some test code and notice the wrong method being used in nearby code,
     feel free to adjust it.</p>
 
-    <p>When you add a unit test, make sure all methods have docstrings 
-    specifying at a high level the intent of the test. That is, a description 
+    <p>When you add a unit test, make sure all methods have docstrings
+    specifying at a high level the intent of the test. That is, a description
     that users of the method would understand.</p>
 
 <h2>Skipping tests, TODO items</h2>
@@ -146,9 +143,9 @@ def test_sshClient(self):
     foo() # do actual test after the SkipTest
 </pre>
 
-<p>You can also set the <code>.skip</code> attribute on the method, with a string to
-indicate why the test is being skipped. This is convenient for temporarily
-turning off a test case, but it can also be set conditionally (by
+<p>You can also set the <code>.skip</code> attribute on the method, with a
+string to indicate why the test is being skipped. This is convenient for
+temporarily turning off a test case, but it can also be set conditionally (by
 manipulating the class attributes after they've been defined):</p>
 
 <pre class="python">
@@ -312,12 +309,12 @@ run the right tests.</p>
       Python</a>.</li>
 
       <li><a href=
-      "http://docs.python.org/lib/module-unittest.html"
+      "http://docs.python.org/library/unittest.html"
       ><code>unittest</code></a> module documentation, in the <a href=
       "http://docs.python.org/library">Python Library
       Reference</a>.</li>
 
-      <li><a href="http://c2.com/cgi/wiki?UnitTests">UnitTests</a> on
+      <li><a href="http://c2.com/cgi/wiki?UnitTest">UnitTest</a> on
       the <a href="http://c2.com/cgi/wiki">PortlandPatternRepository
       Wiki</a>, where all the cool <a href=
       "http://c2.com/cgi/wiki?ExtremeProgramming"
@@ -340,14 +337,14 @@ run the right tests.</p>
 
       <li><a href="http://pyunit.sourceforge.net">PyUnit's homepage</a>.</li>
 
-      <li>The <a href=
-      "http://svn.twistedmatrix.com/cvs/trunk/twisted/?root=Twisted"
-      >twisted/test directory</a> in Subversion.</li>
+      <li>The top-level tests directory, <a href=
+      "http://twistedmatrix.com/trac/browser/trunk/twisted/test"
+      >twisted/test</a>, in Subversion.</li>
 
     </ul>
 
-  <p>See also <a href="../../howto/testing.xhtml">Tips for writing tests for Twisted
-  code</a>.</p>
+  <p>See also <a href="../../howto/testing.xhtml">Tips for writing tests for
+  Twisted code</a>.</p>
 
   </body>
 </html>
