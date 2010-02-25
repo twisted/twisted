@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.words.test.test_jabbererror -*-
 #
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -32,7 +32,7 @@ STANZA_CONDITIONS = {
     'redirect':                 {'code': '302', 'type': 'modify'},
     'registration-required':    {'code': '407', 'type': 'auth'},
     'remote-server-not-found':  {'code': '404', 'type': 'cancel'},
-    'remove-server-timeout':    {'code': '504', 'type': 'wait'},
+    'remote-server-timeout':    {'code': '504', 'type': 'wait'},
     'resource-constraint':      {'code': '500', 'type': 'wait'},
     'service-unavailable':      {'code': '503', 'type': 'cancel'},
     'subscription-required':    {'code': '407', 'type': 'auth'},

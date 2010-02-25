@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -82,7 +82,22 @@ class StreamErrorTest(unittest.TestCase):
         element = e.getElement()
         self.assertEquals(NS_XMPP_STREAMS, element.text.uri)
 
+
+
 class StanzaErrorTest(unittest.TestCase):
+    """
+    Tests for L{error.StreamError}.
+    """
+
+
+    def test_typeRemoteServerTimeout(self):
+        """
+        Remote Server Timeout should yield type wait, code 504.
+        """
+        e = error.StanzaError('remote-server-timeout')
+        self.assertEquals('wait', e.type)
+        self.assertEquals('504', e.code)
+
 
     def test_getElementPlain(self):
         """
@@ -94,6 +109,7 @@ class StanzaErrorTest(unittest.TestCase):
         self.assertEquals(element['type'], 'cancel')
         self.assertEquals(element['code'], '501')
 
+
     def test_getElementType(self):
         """
         Test getting an element for a stanza error with a given type.
@@ -104,6 +120,7 @@ class StanzaErrorTest(unittest.TestCase):
         self.assertEquals(element['type'], 'auth')
         self.assertEquals(element['code'], '501')
 
+
     def test_getElementConditionNamespace(self):
         """
         Test that the error condition element has the correct namespace.
@@ -112,6 +129,7 @@ class StanzaErrorTest(unittest.TestCase):
         element = e.getElement()
         self.assertEquals(NS_XMPP_STANZAS, getattr(element, 'feature-not-implemented').uri)
 
+
     def test_getElementTextNamespace(self):
         """
         Test that the error text element has the correct namespace.
@@ -119,6 +137,7 @@ class StanzaErrorTest(unittest.TestCase):
         e = error.StanzaError('feature-not-implemented', text='text')
         element = e.getElement()
         self.assertEquals(NS_XMPP_STANZAS, element.text.uri)
+
 
     def test_toResponse(self):
         """
@@ -143,10 +162,17 @@ class StanzaErrorTest(unittest.TestCase):
         self.assertEqual(response.error['type'], 'cancel')
         self.assertNotEqual(stanza.children, response.children)
 
+
+
 class ParseErrorTest(unittest.TestCase):
+    """
+    Tests for L{error._parseError}.
+    """
+
 
     def setUp(self):
         self.error = domish.Element((None, 'error'))
+
 
     def test_empty(self):
         """
@@ -158,6 +184,7 @@ class ParseErrorTest(unittest.TestCase):
                           'textLang': None,
                           'appCondition': None}, result)
 
+
     def test_condition(self):
         """
         Test parsing of an error element with a condition.
@@ -165,6 +192,7 @@ class ParseErrorTest(unittest.TestCase):
         self.error.addElement(('errorns', 'bad-request'))
         result = error._parseError(self.error, 'errorns')
         self.assertEqual('bad-request', result['condition'])
+
 
     def test_text(self):
         """
@@ -176,6 +204,7 @@ class ParseErrorTest(unittest.TestCase):
         self.assertEqual('test', result['text'])
         self.assertEqual(None, result['textLang'])
 
+
     def test_textLang(self):
         """
         Test parsing of an error element with a text with a defined language.
@@ -185,6 +214,7 @@ class ParseErrorTest(unittest.TestCase):
         text.addContent('test')
         result = error._parseError(self.error, 'errorns')
         self.assertEqual('en_US', result['textLang'])
+
 
     def test_textLangInherited(self):
         """
@@ -197,6 +227,7 @@ class ParseErrorTest(unittest.TestCase):
         self.assertEqual('en_US', result['textLang'])
     test_textLangInherited.todo = "xml:lang inheritance not implemented"
 
+
     def test_appCondition(self):
         """
         Test parsing of an error element with an app specific condition.
@@ -205,14 +236,17 @@ class ParseErrorTest(unittest.TestCase):
         result = error._parseError(self.error, 'errorns')
         self.assertEqual(condition, result['appCondition'])
 
+
     def test_appConditionMultiple(self):
         """
         Test parsing of an error element with multiple app specific conditions.
         """
-        condition = self.error.addElement(('testns', 'condition'))
-        condition2 = self.error.addElement(('testns', 'condition2'))
+        self.error.addElement(('testns', 'condition'))
+        condition = self.error.addElement(('testns', 'condition2'))
         result = error._parseError(self.error, 'errorns')
-        self.assertEqual(condition2, result['appCondition'])
+        self.assertEquals(condition, result['appCondition'])
+
+
 
 class ExceptionFromStanzaTest(unittest.TestCase):
 
