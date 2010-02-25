@@ -119,6 +119,13 @@ class RequestTransmissionFailed(_WrapperException):
 
 
 
+class ConnectionAborted(Exception):
+    """
+    The connection was explicitly aborted by application code.
+    """
+
+
+
 class WrongBodyLength(Exception):
     """
     An L{IBodyProducer} declared the number of bytes it was going to
@@ -1203,9 +1210,7 @@ class HTTP11ClientProtocol(Protocol):
 
     @ivar _state: Indicates what state this L{HTTP11ClientProtocol} instance
         is in with respect to transmission of a request and reception of a
-        response.  This may be one of C{'QUIESCENT'}, C{'TRANSMITTING'},
-        C{'TRANSMITTING_AFTER_RECEIVING_RESPONSE'}, C{'GENERATION_FAILED'},
-        C{'WAITING'}, or C{'CONNECTION_LOST'}, with the following meanings:
+        response.  This may be one of the following strings:
 
           - QUIESCENT: This is the state L{HTTP11ClientProtocol} instances
             start in.  Nothing is happening: no request is being sent and no
@@ -1226,7 +1231,11 @@ class HTTP11ClientProtocol(Protocol):
           - WAITING: The request was fully sent to the network.  The
             instance is now waiting for the response to be fully received.
 
+          - ABORTING: Application code has requested that the HTTP connection
+            be aborted.
+
           - CONNECTION_LOST: The connection has been lost.
+
     """
     _state = 'QUIESCENT'
     _parser = None
@@ -1411,3 +1420,21 @@ class HTTP11ClientProtocol(Protocol):
         """
         self._disconnectParser(reason)
         self._state = 'CONNECTION_LOST'
+
+
+    def _connectionLost_ABORTING(self, reason):
+        """
+        Disconnect the response parser with a L{ConnectionAborted} failure, and
+        move to the C{'CONNECTION_LOST'} state.
+        """
+        self._disconnectParser(Failure(ConnectionAborted()))
+        self._state = 'CONNECTION_LOST'
+
+
+    def abort(self):
+        """
+        Close the connection and cause all outstanding L{request} L{Deferred}s
+        to fire with an error.
+        """
+        self.transport.loseConnection()
+        self._state = 'ABORTING'

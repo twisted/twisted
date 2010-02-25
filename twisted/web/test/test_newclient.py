@@ -20,7 +20,10 @@ from twisted.test.proto_helpers import StringTransport, AccumulatingProtocol
 from twisted.web._newclient import UNKNOWN_LENGTH, STATUS, HEADER, BODY, DONE
 from twisted.web._newclient import Request, Response, HTTPParser, HTTPClientParser
 from twisted.web._newclient import BadResponseVersion, ParseError, HTTP11ClientProtocol
-from twisted.web._newclient import ChunkedEncoder, RequestGenerationFailed, RequestTransmissionFailed, ResponseFailed, WrongBodyLength, RequestNotSent
+from twisted.web._newclient import ChunkedEncoder, RequestGenerationFailed
+from twisted.web._newclient import RequestTransmissionFailed, ResponseFailed
+from twisted.web._newclient import WrongBodyLength, RequestNotSent
+from twisted.web._newclient import ConnectionAborted
 from twisted.web._newclient import BadHeaders, ResponseDone, PotentialDataLoss, ExcessWrite
 from twisted.web._newclient import TransportProxyProducer, LengthEnforcingConsumer, makeStatefulDispatcher
 from twisted.web.http_headers import Headers
@@ -74,7 +77,8 @@ def assertWrapperExceptionTypes(self, deferred, mainType, reasonTypes):
     def cbFailed(err):
         for reason, type in zip(err.reasons, reasonTypes):
             reason.trap(type)
-        self.assertEqual(len(err.reasons), len(reasonTypes))
+        self.assertEqual(len(err.reasons), len(reasonTypes),
+                         "len(%s) != len(%s)" % (err.reasons, reasonTypes))
         return err
     d = self.assertFailure(deferred, mainType)
     d.addCallback(cbFailed)
@@ -735,7 +739,8 @@ class HTTPClientParserTests(TestCase):
         is logged and not re-raised.
         """
         transport = StringTransport()
-        protocol = HTTPClientParser(Request('GET', '/', _boringHeaders, None), None)
+        protocol = HTTPClientParser(Request('GET', '/', _boringHeaders, None),
+                                    None)
         protocol.makeConnection(transport)
 
         response = []
@@ -1148,6 +1153,90 @@ class HTTP11ClientProtocolTests(TestCase):
         self.protocol._disconnectParser(Failure(ConnectionDone("connection done")))
         self.assertIdentical(transport._producer, None)
         return assertResponseFailed(self, requestDeferred, [ConnectionDone])
+
+
+    def test_abortClosesConnection(self):
+        """
+        The transport will be told to close its connection when
+        L{HTTP11ClientProtocol.abort} is invoked.
+        """
+        transport = StringTransport()
+        protocol = HTTP11ClientProtocol()
+        protocol.makeConnection(transport)
+        protocol.abort()
+        self.assertTrue(transport.disconnecting)
+
+
+    def test_abortBeforeResponseBody(self):
+        """
+        The Deferred returned by L{HTTP11ClientProtocol.request} will fire
+        with a L{ResponseFailed} failure containing a L{ConnectionAborted}
+        exception, if the connection was aborted before all response headers
+        have been received.
+        """
+        transport = StringTransport()
+        protocol = HTTP11ClientProtocol()
+        protocol.makeConnection(transport)
+        result = protocol.request(Request('GET', '/', _boringHeaders, None))
+        protocol.abort()
+        self.assertTrue(transport.disconnecting)
+        protocol.connectionLost(Failure(ConnectionDone()))
+        return assertResponseFailed(self, result, [ConnectionAborted])
+
+
+    def test_abortAfterResponseHeaders(self):
+        """
+        When the connection is aborted after the response headers have
+        been received and the L{Response} has been made available to
+        application code, the response body protocol's C{connectionLost}
+        method will be invoked with a L{ResponseFailed} failure containing a
+        L{ConnectionAborted} exception.
+        """
+        transport = StringTransport()
+        protocol = HTTP11ClientProtocol()
+        protocol.makeConnection(transport)
+        result = protocol.request(Request('GET', '/', _boringHeaders, None))
+
+        protocol.dataReceived(
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Length: 1\r\n"
+            "\r\n"
+            )
+
+        testResult = Deferred()
+
+        class BodyDestination(Protocol):
+            """
+            A body response protocol which immediately aborts the HTTP
+            connection.
+            """
+            def connectionMade(self):
+                """
+                Abort the HTTP connection.
+                """
+                protocol.abort()
+
+            def connectionLost(self, reason):
+                """
+                Make the reason for the losing of the connection available to
+                the unit test via C{testResult}.
+                """
+                testResult.errback(reason)
+
+
+        def deliverBody(response):
+            """
+            Connect the L{BodyDestination} response body protocol to the
+            response, and then simulate connection loss after ensuring that
+            the HTTP connection has been aborted.
+            """
+            response.deliverBody(BodyDestination())
+            self.assertTrue(transport.disconnecting)
+            protocol.connectionLost(Failure(ConnectionDone()))
+
+        result.addCallback(deliverBody)
+        return assertResponseFailed(self, testResult,
+                                    [ConnectionAborted, _DataLoss])
 
 
 
