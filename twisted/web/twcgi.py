@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.web.test.test_cgi -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -10,7 +10,6 @@ I hold resource classes and helper classes that deal with CGI scripts.
 # System Imports
 import string
 import os
-import sys
 import urllib
 
 # Twisted Imports
@@ -18,6 +17,8 @@ from twisted.web import http
 from twisted.internet import reactor, protocol
 from twisted.spread import pb
 from twisted.python import log, filepath
+from twisted.python.deprecate import deprecatedModuleAttribute
+from twisted.python.versions import Version
 from twisted.web import resource, server, static
 
 
@@ -42,25 +43,32 @@ class CGIDirectory(resource.Resource, filepath.FilePath):
         return notFound.render(request)
 
 class CGIScript(resource.Resource):
-    """I represent a CGI script.
+    """
+    L{CGIScript} is a resource which runs child processes according to the CGI
+    specification.
 
-    My implementation is complex due to the fact that it requires asynchronous
+    The implementation is complex due to the fact that it requires asynchronous
     IPC with an external process with an unpleasant protocol.
     """
     isLeaf = 1
     def __init__(self, filename, registry=None):
-        """Initialize, with the name of a CGI script file.
+        """
+        Initialize, with the name of a CGI script file.
         """
         self.filename = filename
 
+
     def render(self, request):
-        """Do various things to conform to the CGI specification.
+        """
+        Do various things to conform to the CGI specification.
 
         I will set up the usual slew of environment variables, then spin off a
         process.
+
+        @type request: L{twisted.web.http.Request}
+        @param request: An HTTP request.
         """
         script_name = "/"+string.join(request.prepath, '/')
-        python_path = string.join(sys.path, os.pathsep)
         serverName = string.split(request.getRequestHostname(), ':')[0]
         env = {"SERVER_SOFTWARE":   server.version,
                "SERVER_NAME":       serverName,
@@ -116,40 +124,106 @@ class CGIScript(resource.Resource):
         self.runProcess(env, request, qargs)
         return server.NOT_DONE_YET
 
+
     def runProcess(self, env, request, qargs=[]):
+        """
+        Run the cgi script.
+
+        @type env: A C{dict} of C{str}, or C{None}
+        @param env: The environment variables to pass to the processs that will
+            get spawned. See
+            L{twisted.internet.interfaces.IReactorProcess.spawnProcess} for more
+            information about environments and process creation.
+
+        @type request: L{twisted.web.http.Request}
+        @param request: An HTTP request.
+
+        @type qargs: A C{list} of C{str}
+        @param qargs: The command line arguments to pass to the process that
+            will get spawned.
+        """
         p = CGIProcessProtocol(request)
-        reactor.spawnProcess(p, self.filename, [self.filename]+qargs, env, os.path.dirname(self.filename))
+        reactor.spawnProcess(p, self.filename, [self.filename] + qargs, env,
+                             os.path.dirname(self.filename))
+
 
 
 class FilteredScript(CGIScript):
-    """I am a special version of a CGI script, that uses a specific executable.
+    """
+    I am a special version of a CGI script, that uses a specific executable.
 
-    This is useful for interfacing with other scripting languages that adhere
-    to the CGI standard (cf. PHPScript).  My 'filter' attribute specifies what
-    executable to run, and my 'filename' init parameter describes which script
-    to pass to the first argument of that script.
+    This is useful for interfacing with other scripting languages that adhere to
+    the CGI standard. My C{filter} attribute specifies what executable to run,
+    and my C{filename} init parameter describes which script to pass to the
+    first argument of that script.
+
+    To customize me for a particular location of a CGI interpreter, override
+    C{filter}.
+
+    @type filter: C{str}
+    @ivar filter: The absolute path to the executable.
     """
 
     filter = '/usr/bin/cat'
 
+
     def runProcess(self, env, request, qargs=[]):
+        """
+        Run a script through the C{filter} executable.
+
+        @type env: A C{dict} of C{str}, or C{None}
+        @param env: The environment variables to pass to the processs that will
+            get spawned. See
+            L{twisted.internet.interfaces.IReactorProcess.spawnProcess} for more
+            information about environments and process creation.
+
+        @type request: L{twisted.web.http.Request}
+        @param request: An HTTP request.
+
+        @type qargs: A C{list} of C{str}
+        @param qargs: The command line arguments to pass to the process that
+            will get spawned.
+        """
         p = CGIProcessProtocol(request)
-        reactor.spawnProcess(p, self.filter, [self.filter, self.filename]+qargs, env, os.path.dirname(self.filename))
+        reactor.spawnProcess(p, self.filter,
+                             [self.filter, self.filename] + qargs, env,
+                             os.path.dirname(self.filename))
+
 
 
 class PHP3Script(FilteredScript):
-    """I am a FilteredScript that uses the default PHP3 command on most systems.
     """
+    L{PHP3Script} is deprecated. See L{FilteredScript} for how to create a
+    platform-specific configuration for the location of a PHP CGI interpreter.
+
+    I am a L{FilteredScript} that uses the default PHP3 command on most systems.
+    """
+    deprecatedModuleAttribute(
+        Version("Twisted", 10, 1, 0),
+        "PHP3Script is deprecated. Use twisted.web.twcgi.FilteredScript "
+        "instead.",
+        __name__, "PHP3Script")
 
     filter = '/usr/bin/php3'
 
 
+
 class PHPScript(FilteredScript):
-    """I am a FilteredScript that uses the PHP command on most systems.
-    Sometimes, php wants the path to itself as argv[0]. This is that time.
     """
+    L{PHPScript} is deprecated. See L{FilteredScript} for how to create a
+    platform-specific configuration for the location of a PHP CGI interpreter.
+
+    I am a L{FilteredScript} that uses the PHP command on most systems.
+    Sometimes, PHP wants the path to itself as C{argv[0]}. This is that time.
+    """
+    deprecatedModuleAttribute(
+        Version("Twisted", 10, 1, 0),
+        "PHPScript is deprecated. Use twisted.web.twcgi.FilteredScript "
+        "instead.",
+        __name__, "PHPScript")
 
     filter = '/usr/bin/php4'
+
 
 
 class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):

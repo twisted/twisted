@@ -51,6 +51,7 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         self['indexes'] = []
         self['root'] = None
 
+
     def opt_index(self, indexName):
         """
         Add the name of a file used to check for directory indexes.
@@ -60,6 +61,7 @@ demo webserver that has the Test class from twisted.web.demo in it."""
 
     opt_i = opt_index
 
+
     def opt_user(self):
         """
         Makes a server with ~/public_html and ~/.twistd-web-pb support for
@@ -68,6 +70,7 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         self['root'] = distrib.UserDirectory()
 
     opt_u = opt_user
+
 
     def opt_path(self, path):
         """
@@ -83,15 +86,30 @@ demo webserver that has the Test class from twisted.web.demo in it."""
             from twisted.web import trp
             return trp.ResourceUnpickler(*args, **kwargs)
 
+        def php3(*args, **kwargs):
+            # Help avoid actually importing twisted.web.twcgi.PHP3Script until
+            # it is really needed. This avoids getting a deprecation warning if
+            # you're not using deprecated functionality.
+            from twisted.web.twcgi import PHP3Script
+            return PHP3Script(*args, **kwargs)
+
+        def php(*args, **kwargs):
+            # Help avoid actually importing twisted.web.twcgi.PHPScript until it
+            # is really needed. This avoids getting a deprecation warning if
+            # you're not using deprecated functionality.
+            from twisted.web.twcgi import PHPScript
+            return PHPScript(*args, **kwargs)
+
         self['root'] = static.File(os.path.abspath(path))
         self['root'].processors = {
             '.cgi': twcgi.CGIScript,
-            '.php3': twcgi.PHP3Script,
-            '.php': twcgi.PHPScript,
+            '.php3': php3,
+            '.php': php,
             '.epy': script.PythonScript,
             '.rpy': script.ResourceScript,
             '.trp': trp,
             }
+
 
     def opt_processor(self, proc):
         """
@@ -102,6 +120,7 @@ demo webserver that has the Test class from twisted.web.demo in it."""
             raise usage.UsageError("You can only use --processor after --path.")
         ext, klass = proc.split('=', 1)
         self['root'].processors[ext] = reflect.namedClass(klass)
+
 
     def opt_class(self, className):
         """
@@ -152,6 +171,7 @@ demo webserver that has the Test class from twisted.web.demo in it."""
                                    "after --path.")
         self['root'].ignoreExt('*')
 
+
     def opt_ignore_ext(self, ext):
         """
         Specify an extension to ignore.  These will be processed in order.
@@ -160,6 +180,7 @@ demo webserver that has the Test class from twisted.web.demo in it."""
             raise usage.UsageError("You can only use --ignore_ext "
                                    "after --path.")
         self['root'].ignoreExt(ext)
+
 
     def postOptions(self):
         """

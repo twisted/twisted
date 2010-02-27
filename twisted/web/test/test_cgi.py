@@ -1,4 +1,4 @@
-# Copyright (c) 2009 Twisted Matrix Laboratories.
+# Copyright (c) 2009-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -82,6 +82,8 @@ class CGI(unittest.TestCase):
         d = client.getPage("http://localhost:%d/cgi" % portnum)
         d.addCallback(self._testCGI_1)
         return d
+
+
     def _testCGI_1(self, res):
         self.failUnlessEqual(res, "cgi output" + os.linesep)
 
@@ -188,3 +190,36 @@ class CGIProcessProtocolTests(unittest.TestCase):
         protocol.processEnded(failure.Failure(error.ProcessTerminated()))
         self.assertEqual(request.responseCode, INTERNAL_SERVER_ERROR)
 
+
+
+class CGIDeprecationTests(unittest.TestCase):
+    """
+    Tests for deprecations in L{twisted.web.twcgi}.
+    """
+
+    def test_PHP3ScriptIsDeprecated(self):
+        """
+        L{twcgi.PHP3Script} is deprecated.
+        """
+        twcgi.PHP3Script
+
+        warnings = self.flushWarnings([self.test_PHP3ScriptIsDeprecated])
+        self.assertEquals(len(warnings), 1)
+        self.assertEquals(warnings[0]['category'], DeprecationWarning)
+        self.assertIn("PHP3Script is deprecated. "
+                      "Use twisted.web.twcgi.FilteredScript instead.",
+                      warnings[0]['message'])
+
+
+    def test_PHPScriptIsDeprecated(self):
+        """
+        L{twcgi.PHPScript} is deprecated.
+        """
+        twcgi.PHPScript
+
+        warnings = self.flushWarnings([self.test_PHPScriptIsDeprecated])
+        self.assertEquals(len(warnings), 1)
+        self.assertEquals(warnings[0]['category'], DeprecationWarning)
+        self.assertIn("PHPScript is deprecated. "
+                      "Use twisted.web.twcgi.FilteredScript instead.",
+                      warnings[0]['message'])
