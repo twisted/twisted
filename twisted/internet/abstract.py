@@ -17,7 +17,7 @@ from twisted.persisted import styles
 from twisted.internet import interfaces, main
 
 
-class FileDescriptor(log.Logger, styles.Ephemeral, object):
+class FileDescriptor(object):
     """An object which can be operated on by select().
 
     This is an abstract superclass of all objects which may be notified when
@@ -39,6 +39,12 @@ class FileDescriptor(log.Logger, styles.Ephemeral, object):
 
     implements(interfaces.IProducer, interfaces.IReadWriteDescriptor,
                interfaces.IConsumer, interfaces.ITransport, interfaces.IHalfCloseableDescriptor)
+
+    def logPrefix(self):
+        """
+        Returns the default log prefix
+        """
+        return "-"
 
     def __init__(self, reactor=None):
         if not reactor:
