@@ -1,12 +1,14 @@
-#  based off the tap2deb.py file
-#  tap2rpm.py built by Sean Reifschneider, <jafo@tummy.com>
-
-#  TODO: need to implement log-file rotation
+# -*- test-case-name: twisted.scripts.test.test_tap2rpm -*-
+# Copyright (c) 2003-2010 Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 import sys, os, shutil, time, glob
+import subprocess
+import tempfile
+import tarfile
+from StringIO import StringIO
 
-from twisted.python import usage
-from twisted.scripts import tap2deb
+from twisted.python import usage, log
 
 
 #################################
@@ -88,10 +90,10 @@ Summary:    %(description)s
 Name:       %(rpm_file)s
 Version:    %(version)s
 Release:    1
-Copyright:  Unknown
+License:    Unknown
 Group:      Networking/Daemons
 Source:     %(tarfile_basename)s
-BuildRoot:  /var/tmp/%%{name}-%%{version}-root
+BuildRoot:  %%{_tmppath}/%%{name}-%%{version}-root
 Requires:   /usr/bin/twistd
 BuildArch:  noarch
 
@@ -130,19 +132,20 @@ cp "%(rpm_file)s.init" "$RPM_BUILD_ROOT"/etc/init.d/"%(rpm_file)s"
 %%attr(0660,root,root) /etc/twisted-taps/%(tap_file)s
 
 %%changelog
-* %(date)s %(maintainer)s 
+* %(date)s %(maintainer)s
 - Created by tap2rpm: %(rpm_file)s (%(version)s)
 '''
 
 ###############################
 class MyOptions(usage.Options):
-    optFlags = [["unsigned", "u"]]
+    optFlags = [["unsigned", "u"], ['quiet', 'q']]
     optParameters = [
                      ["tapfile", "t", "twistd.tap"],
-                     ["maintainer", "m", ""],
-                     ["protocol", "p", ""],
-                     ["description", "e", ""],
-                     ["long_description", "l", ""],
+                     ["maintainer", "m", "tap2rpm"],
+                     ["protocol", "p", None],
+                     ["description", "e", None],
+                     ["long_description", "l",
+                         "Automatically created by tap2rpm"],
                      ["set-version", "V", "1.0"],
                      ["rpmfile", "r", None],
                      ["type", "y", "tap", "type of configuration: 'tap', 'xml, "
@@ -156,6 +159,25 @@ class MyOptions(usage.Options):
                    "rpmfile":'_files -g "*.rpm"'}
     #zsh_actionDescr = {"logfile":"log file name", "random":"random seed"}
 
+    def postOptions(self):
+        """
+        Calculate the default values for certain command-line options.
+        """
+        # Options whose defaults depend on other parameters.
+        if self['protocol'] is None:
+            base_tapfile = os.path.basename(self['tapfile'])
+            self['protocol'] = os.path.splitext(base_tapfile)[0]
+        if self['description'] is None:
+            self['description'] = "A TCP server for %s" % (self['protocol'],)
+        if self['rpmfile'] is None:
+            self['rpmfile'] = 'twisted-%s' % (self['protocol'],)
+
+        # Values that aren't options, but are calculated from options and are
+        # handy to have around.
+        self['twistd_option'] = type_dict[self['type']]
+        self['release-name'] = '%s-%s' % (self['rpmfile'], self['set-version'])
+
+
 
 type_dict = {
     'tap': 'file',
@@ -165,23 +187,15 @@ type_dict = {
 }
 
 
+
 ##########################
-def makeBuildDir(baseDir):
-    '''Set up the temporary directory for building RPMs.
-    Returns: Tuple: ( buildDir, rpmrcFile )
-    '''
-    import random, string
+def makeBuildDir():
+    """
+    Set up the temporary directory for building RPMs.
 
-    #  make top directory
-    oldMask = os.umask(0077)
-    while 1:
-        tmpDir = os.path.join(baseDir, 'tap2rpm-%s-%s' % ( os.getpid(),
-                                        random.randint(0, 999999999) ))
-        if not os.path.exists(tmpDir):
-            os.makedirs(tmpDir)
-            break
-    os.umask(oldMask)
-
+    Returns: buildDir, a randomly-named subdirectory of baseDir.
+    """
+    tmpDir = tempfile.mkdtemp()
     #  set up initial directory contents
     os.makedirs(os.path.join(tmpDir, 'RPMS', 'noarch'))
     os.makedirs(os.path.join(tmpDir, 'SPECS'))
@@ -189,85 +203,117 @@ def makeBuildDir(baseDir):
     os.makedirs(os.path.join(tmpDir, 'SOURCES'))
     os.makedirs(os.path.join(tmpDir, 'SRPMS'))
 
-    #  set up rpmmacros file
-    macroFile = os.path.join(tmpDir, 'rpmmacros')
-    rcFile = os.path.join(tmpDir, 'rpmrc')
-    rpmrcData = open('/usr/lib/rpm/rpmrc', 'r').read()
-    rpmrcData = string.replace(rpmrcData, '~/.rpmmacros', macroFile)
-    fp = open(macroFile, 'w')
-    fp.write('%%_topdir %s\n' % tmpDir)
-    fp.close()
-
-    #  set up the rpmrc file
-    fp = open(rcFile, 'w')
-    fp.write(rpmrcData)
-    fp.close()
-
-    return(( tmpDir, rcFile ))
+    log.msg(format="Created RPM build structure in %(path)r",
+            path=tmpDir)
+    return tmpDir
 
 
-##########
-def run():
+
+def setupBuildFiles(buildDir, config):
+    """
+    Create files required to build an RPM in the build directory.
+    """
+    # Create the source tarball in the SOURCES directory.
+    tarballName = "%s.tar" % (config['release-name'],)
+    tarballPath = os.path.join(buildDir, "SOURCES", tarballName)
+    tarballHandle = tarfile.open(tarballPath, "w")
+
+    sourceDirInfo = tarfile.TarInfo(config['release-name'])
+    sourceDirInfo.type = tarfile.DIRTYPE
+    sourceDirInfo.mode = 0755
+    tarballHandle.addfile(sourceDirInfo)
+
+    tapFileBase = os.path.basename(config['tapfile'])
+
+    initFileInfo = tarfile.TarInfo(
+            os.path.join(
+                config['release-name'],
+                '%s.init' % config['rpmfile'],
+            )
+        )
+    initFileInfo.type = tarfile.REGTYPE
+    initFileInfo.mode = 0755
+    initFileRealData = initFileData % {
+            'tap_file': tapFileBase,
+            'rpm_file': config['release-name'],
+            'twistd_option': config['twistd_option'],
+        }
+    initFileInfo.size = len(initFileRealData)
+    tarballHandle.addfile(initFileInfo, StringIO(initFileRealData))
+
+    tapFileHandle = open(config['tapfile'], 'rb')
+    tapFileInfo = tarballHandle.gettarinfo(
+            arcname=os.path.join(config['release-name'], tapFileBase),
+            fileobj=tapFileHandle,
+        )
+    tapFileInfo.mode = 0644
+    tarballHandle.addfile(tapFileInfo, tapFileHandle)
+
+    tarballHandle.close()
+
+    log.msg(format="Created dummy source tarball %(tarballPath)r",
+            tarballPath=tarballPath)
+
+    # Create the spec file in the SPECS directory.
+    specName = "%s.spec" % (config['release-name'],)
+    specPath = os.path.join(buildDir, "SPECS", specName)
+    specHandle = open(specPath, "w")
+    specFileRealData = specFileData % {
+            'description': config['description'],
+            'rpm_file': config['rpmfile'],
+            'version': config['set-version'],
+            'tarfile_basename': tarballName,
+            'tap_file': tapFileBase,
+            'date': time.strftime('%a %b %d %Y', time.localtime(time.time())),
+            'maintainer': config['maintainer'],
+            'long_description': config['long_description'],
+        }
+    specHandle.write(specFileRealData)
+    specHandle.close()
+
+    log.msg(format="Created RPM spec file %(specPath)r",
+            specPath=specPath)
+
+    return specPath
+
+
+
+def run(options=None):
     #  parse options
     try:
         config = MyOptions()
-        config.parseOptions()
+        config.parseOptions(options)
     except usage.error, ue:
          sys.exit("%s: %s" % (sys.argv[0], ue))
 
-    #  set up some useful local variables
-    tap_file = config['tapfile']
-    base_tap_file = os.path.basename(config['tapfile'])
-    protocol = (config['protocol'] or os.path.splitext(base_tap_file)[0])
-    rpm_file = config['rpmfile'] or 'twisted-'+protocol
-    version = config['set-version']
-    maintainer = config['maintainer']
-    description = config['description'] or ('A TCP server for %(protocol)s' %
-                                            vars())
-    long_description = (config['long_description']
-                        or "Automatically created by tap2rpm")
-    twistd_option = type_dict[config['type']]
-    date = time.strftime('%a %b %d %Y', time.localtime(time.time()))
-    directory = rpm_file + '-' + version
-    python_version = '%s.%s' % sys.version_info[:2]
+    #  create RPM build environment
+    tmpDir = makeBuildDir()
+    specPath = setupBuildFiles(tmpDir, config)
 
-    #  set up a blank maintainer if not present
-    if not maintainer:
-        maintainer = 'tap2rpm'
-
-    #  create source archive directory
-    tmp_dir, rpmrc_file = makeBuildDir('/var/tmp')
-    source_dir = os.path.join(tmp_dir, directory)
-    os.makedirs(source_dir)
-
-    #  populate source directory
-    tarfile_name = source_dir + '.tar.gz'
-    tarfile_basename = os.path.basename(tarfile_name)
-    tap2deb.save_to_file(os.path.join(source_dir, '%s.spec' % rpm_file),
-                                      specFileData % vars())
-    tap2deb.save_to_file(os.path.join(source_dir, '%s.init' % rpm_file),
-                                      initFileData % vars())
-    shutil.copy(tap_file, source_dir)
-
-    #  create source tar
-    os.system('cd "%(tmp_dir)s"; tar cfz "%(tarfile_name)s" "%(directory)s"'
-              % vars())
-    
     #  build rpm
-    print 'Starting build...'
-    print '=' * 70
-    sys.stdout.flush()
-    os.system('rpmbuild -ta --rcfile "%s" %s' % ( rpmrc_file, tarfile_name ))
-    print 'Done with build...'
-    print '=' * 70
-    
+    job = subprocess.Popen([
+            "rpmbuild",
+            "-vv",
+            "--define", "_topdir %s" % (tmpDir,),
+            "-ba", specPath,
+        ], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    stdout, _ = job.communicate()
+
+    # If there was a problem, show people what it was.
+    if job.returncode != 0:
+        print stdout
+
     #  copy the RPMs to the local directory
-    rpm_path = glob.glob(os.path.join(tmp_dir, 'RPMS', 'noarch', '*'))[0]
-    srpm_path = glob.glob(os.path.join(tmp_dir, 'SRPMS', '*'))[0]
-    print 'Writing "%s"...' % os.path.basename(rpm_path)
-    shutil.copy(rpm_path, '.')
-    print 'Writing "%s"...' % os.path.basename(srpm_path)
-    shutil.copy(srpm_path, '.')
-    
+    rpmPath = glob.glob(os.path.join(tmpDir, 'RPMS', 'noarch', '*'))[0]
+    srpmPath = glob.glob(os.path.join(tmpDir, 'SRPMS', '*'))[0]
+    if not config['quiet']:
+        print 'Writing "%s"...' % os.path.basename(rpmPath)
+    shutil.copy(rpmPath, '.')
+    if not config['quiet']:
+        print 'Writing "%s"...' % os.path.basename(srpmPath)
+    shutil.copy(srpmPath, '.')
+
     #  remove the build directory
-    shutil.rmtree(tmp_dir)
+    shutil.rmtree(tmpDir)
+
+    return [os.path.basename(rpmPath), os.path.basename(srpmPath)]
