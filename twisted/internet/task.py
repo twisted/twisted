@@ -732,9 +732,11 @@ def deferLater(clock, delay, callable, *args, **kw):
     @return: A deferred that fires with the result of the callable when the
         specified time has elapsed.
     """
-    d = defer.Deferred()
+    def deferLaterCancel(deferred):
+        delayedCall.cancel()
+    d = defer.Deferred(deferLaterCancel)
     d.addCallback(lambda ignored: callable(*args, **kw))
-    clock.callLater(delay, d.callback, None)
+    delayedCall = clock.callLater(delay, d.callback, None)
     return d
 
 

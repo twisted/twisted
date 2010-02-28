@@ -625,3 +625,22 @@ class DeferLaterTests(unittest.TestCase):
         d = task.deferLater(clock, 1, callable)
         clock.advance(1)
         return self.assertFailure(d, TestException)
+
+
+    def test_cancel(self):
+        """
+        The L{Deferred} returned by L{task.deferLater} can be
+        cancelled to prevent the call from actually being performed.
+        """
+        called = []
+        clock = task.Clock()
+        d = task.deferLater(clock, 1, called.append, None)
+        d.cancel()
+        def cbCancelled(ignored):
+            # Make sure there are no calls outstanding.
+            self.assertEquals([], clock.getDelayedCalls())
+            # And make sure the call didn't somehow happen already.
+            self.assertFalse(called)
+        self.assertFailure(d, defer.CancelledError)
+        d.addCallback(cbCancelled)
+        return d
