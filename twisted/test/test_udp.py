@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_udp -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -9,7 +9,7 @@ Tests for implementations of L{IReactorUDP} and L{IReactorMulticast}.
 from twisted.trial import unittest, util
 
 from twisted.internet.defer import Deferred, gatherResults, maybeDeferred
-from twisted.internet import protocol, reactor, error, defer, interfaces
+from twisted.internet import protocol, reactor, error, defer, interfaces, udp
 from twisted.python import runtime
 
 
@@ -405,6 +405,27 @@ class UDPTestCase(unittest.TestCase):
         d = defer.maybeDeferred(p.stopListening)
         d.addCallback(stoppedListening)
         return d
+
+
+    def test_NoWarningOnBroadcast(self):
+        """
+        C{'<broadcast>'} is an alternative way to say C{'255.255.255.255'}
+        ({socket.gethostbyname("<broadcast>")} returns C{'255.255.255.255'}),
+        so because it becomes a valid IP address, no deprecation warning about
+        passing hostnames to L{twisted.internet.udp.Port.write} needs to be
+        emitted by C{write()} in this case.
+        """
+        class fakeSocket:
+            def sendto(self, foo, bar):
+                pass
+
+        p = udp.Port(0, Server())
+        p.socket = fakeSocket()
+        p.write("test", ("<broadcast>", 1234))
+
+        warnings = self.flushWarnings([self.test_NoWarningOnBroadcast])
+        self.assertEquals(len(warnings), 0)
+
 
 
 class ReactorShutdownInteraction(unittest.TestCase):

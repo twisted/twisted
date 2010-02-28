@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_udp -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -36,7 +36,9 @@ from twisted.internet import abstract, error, interfaces
 
 
 class Port(base.BasePort):
-    """UDP port, listening for packets."""
+    """
+    UDP port, listening for packets.
+    """
 
     implements(interfaces.IUDPTransport, interfaces.ISystemHandle)
 
@@ -49,7 +51,8 @@ class Port(base.BasePort):
     _realPortNumber = None
 
     def __init__(self, port, proto, interface='', maxPacketSize=8192, reactor=None):
-        """Initialize with a numeric port to listen on.
+        """
+        Initialize with a numeric port to listen on.
         """
         base.BasePort.__init__(self, reactor)
         self.port = port
@@ -66,11 +69,14 @@ class Port(base.BasePort):
             return "<%s not connected>" % (self.protocol.__class__,)
 
     def getHandle(self):
-        """Return a socket object."""
+        """
+        Return a socket object.
+        """
         return self.socket
 
     def startListening(self):
-        """Create and bind my socket, and begin listening on it.
+        """
+        Create and bind my socket, and begin listening on it.
 
         This is called on unserialization, and must be called after creating a
         server to begin listening on the specified port.
@@ -101,7 +107,9 @@ class Port(base.BasePort):
 
 
     def doRead(self):
-        """Called when my socket is ready for reading."""
+        """
+        Called when my socket is ready for reading.
+        """
         read = 0
         while read < self.maxThroughput:
             try:
@@ -124,9 +132,16 @@ class Port(base.BasePort):
 
 
     def write(self, datagram, addr=None):
-        """Write a datagram.
+        """
+        Write a datagram.
 
-        @param addr: should be a tuple (ip, port), can be None in connected mode.
+        @type datagram: C{str}
+        @param datagram: The datagram to be sent.
+
+        @type addr: C{tuple} containing C{str} as first element and C{int} as
+            second element, or C{None}
+        @param addr: A tuple of (I{stringified dotted-quad IP address},
+            I{integer port number}); can be C{None} in connected mode.
         """
         if self._connectedAddr:
             assert addr in (None, self._connectedAddr)
@@ -144,8 +159,9 @@ class Port(base.BasePort):
                     raise
         else:
             assert addr != None
-            if not addr[0].replace(".", "").isdigit():
-                warnings.warn("Please only pass IPs to write(), not hostnames", DeprecationWarning, stacklevel=2)
+            if not addr[0].replace(".", "").isdigit() and addr[0] != "<broadcast>":
+                warnings.warn("Please only pass IPs to write(), not hostnames",
+                              DeprecationWarning, stacklevel=2)
             try:
                 return self.socket.sendto(datagram, addr)
             except socket.error, se:
@@ -155,9 +171,9 @@ class Port(base.BasePort):
                 elif no == EMSGSIZE:
                     raise error.MessageLengthError, "message too long"
                 elif no == ECONNREFUSED:
-                    # in non-connected UDP ECONNREFUSED is platform dependent, I think
-                    # and the info is not necessarily useful. Nevertheless maybe we
-                    # should call connectionRefused? XXX
+                    # in non-connected UDP ECONNREFUSED is platform dependent, I
+                    # think and the info is not necessarily useful. Nevertheless
+                    # maybe we should call connectionRefused? XXX
                     return
                 else:
                     raise
@@ -166,7 +182,9 @@ class Port(base.BasePort):
         self.write("".join(seq), addr)
 
     def connect(self, host, port):
-        """'Connect' to remote server."""
+        """
+        'Connect' to remote server.
+        """
         if self._connectedAddr:
             raise RuntimeError, "already connected, reconnecting is not currently supported (talk to itamar if you want this)"
         if not abstract.isIPAddress(host):
@@ -193,7 +211,8 @@ class Port(base.BasePort):
         self.stopListening()
 
     def connectionLost(self, reason=None):
-        """Cleans up my socket.
+        """
+        Cleans up my socket.
         """
         log.msg('(Port %s Closed)' % self._realPortNumber)
         self._realPortNumber = None
@@ -211,7 +230,8 @@ class Port(base.BasePort):
         self.logstr = reflect.qual(self.protocol.__class__) + " (UDP)"
 
     def logPrefix(self):
-        """Returns the name of my class, to prefix log entries with.
+        """
+        Returns the name of my class, to prefix log entries with.
         """
         return self.logstr
 
@@ -226,7 +246,9 @@ class Port(base.BasePort):
 
 
 class MulticastMixin:
-    """Implement multicast functionality."""
+    """
+    Implement multicast functionality.
+    """
 
     def getOutgoingInterface(self):
         i = self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF)
@@ -280,7 +302,9 @@ class MulticastMixin:
 
 
 class MulticastPort(MulticastMixin, Port):
-    """UDP Port that supports multicasting."""
+    """
+    UDP Port that supports multicasting.
+    """
 
     implements(interfaces.IMulticastTransport)
 
