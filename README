@@ -1,11 +1,14 @@
-Twisted 9.0.0
+Twisted 10.0.0
 
 Quote of the Release:
 
-  <ivan> RFCs are generally known for their superb quality
+  [on picking the quote of the release]
+  <glyph> Man, we're going to have to get a lot funnier if we're going
+          to do time-based releases
 
-For information on what's new in Twisted 9.0.0, see the NEWS file that
-comes with the distribution.
+
+For information on what's new in Twisted 10.0.0, see the NEWS file that comes
+with the distribution.
 
 What is this?
 =============
@@ -84,7 +87,7 @@ Documentation and Support
   Help is available on the Twisted mailing list::
 
     http://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python
-  
+
   There is also a very lively IRC channel, #twisted, on
   irc.freenode.net.
 
@@ -92,7 +95,7 @@ Documentation and Support
 Copyright
 =========
 
-  All of the code in this distribution is Copyright (c) 2001-2008
+  All of the code in this distribution is Copyright (c) 2001-2010
   Twisted Matrix Laboratories.
 
   Twisted is made available under the MIT license. The included

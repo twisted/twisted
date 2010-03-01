@@ -1,3 +1,0 @@
-The optional _c_urlarg extension now handles unquote("") correctly on
-platforms where malloc(0) returns NULL, such as AIX.  It also compiles with
-less warnings.

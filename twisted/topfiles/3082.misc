@@ -1,1 +1,0 @@
-The docstring for twisted.internet.defer.DeferredLock() now better describes it's FIFO-like nature.

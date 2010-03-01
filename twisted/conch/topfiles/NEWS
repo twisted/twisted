@@ -1,6 +1,22 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Conch 10.0.0 (2010-03-01)
+=================================
+
+Bugfixes
+--------
+ - twisted.conch.checkers.SSHPublicKeyDatabase now looks in the
+   correct user directory for authorized_keys files. (#3984)
+
+ - twisted.conch.ssh.SSHUserAuthClient now honors preferredOrder when
+   authenticating. (#4266)
+
+Other
+-----
+ - #2391, #4203, #4265
+
+
 Twisted Conch 9.0.0 (2009-11-24)
 ================================
 

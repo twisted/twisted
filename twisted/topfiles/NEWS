@@ -1,6 +1,109 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Core 10.0.0 (2010-03-01)
+================================
+
+Features
+--------
+ - The twistd man page now has a SIGNALS section. (#689)
+
+ - reactor.spawnProcess now will not emit a PotentialZombieWarning
+   when called before reactor.run, and there will be no potential for
+   zombie processes in this case. (#2078)
+
+ - High-throughput applications based on Perspective Broker should now
+   run noticably faster thanks to the use of a more efficient decoding
+   function in Twisted Spread. (#2310)
+
+ - Documentation for trac-post-commit-hook functionality in svn-dev
+   policy. (#3867)
+
+ - twisted.protocols.socks.SOCKSv4 now supports the SOCKSv4a protocol.
+   (#3886)
+
+ - Trial can now output test results according to the subunit
+   protocol, as long as Subunit is installed (see
+   https://launchpad.net/subunit). (#4004)
+
+ - twisted.protocols.amp now provides a ListOf argument type which can
+   be composed with some other argument types to create a zero or more
+   element sequence of that type. (#4116)
+
+ - If returnValue is invoked outside of a function decorated with
+   @inlineCallbacks, but causes a function thusly decorated to exit, a
+   DeprecationWarning will be emitted explaining this potentially
+   confusing behavior.  In a future release, this will cause an
+   exception. (#4157)
+
+ - twisted.python.logfile.BaseLogFile now has a reopen method allowing
+   you to use an external logrotate mechanism. (#4255)
+
+Bugfixes
+--------
+ - FTP.ftp_NLST now handles requests on invalid paths in a way
+   consistent with RFC 959. (#1342)
+
+ - twisted.python.util.initgroups now calls the low-level C initgroups
+   by default if available: the python version can create lots of I/O
+   with certain authentication setup to retrieve all the necessary
+   information. (#3226)
+
+ - startLogging now does nothing on subsequent invocations, thus
+   fixing a terrible infinite recursion bug that's only on edge case.
+   (#3289)
+
+ - Stringify non-string data to NetstringReceiver.sendString before
+   calculating the length so that the calculated length is equal to
+   the actual length of the transported data. (#3299)
+
+ - twisted.python.win32.cmdLineQuote now correctly quotes empty
+   strings arguments (#3876)
+
+ - Change the behavior of the Gtk2Reactor to register only one source
+   watch for each file descriptor, instead of one for reading and one
+   for writing. In particular, it fixes a bug with Glib under Windows
+   where we failed to notify when a client is connected. (#3925)
+
+ - Twisted Trial no longer crashes if it can't remove an old
+   _trial_temp directory.  (#4020)
+
+ - The optional _c_urlarg extension now handles unquote("") correctly
+   on platforms where malloc(0) returns NULL, such as AIX.  It also
+   compiles with less warnings. (#4142)
+
+ - On POSIX, child processes created with reactor.spawnProcess will no
+   longer automatically ignore the signals which the parent process
+   has set to be ignored. (#4199)
+
+ - All SOCKSv4a tests now use a dummy reactor with a deterministic
+   resolve method. (#4275)
+
+ - Prevent extraneous server, date and content-type headers in proxy
+   responses. (#4277)
+
+Deprecations and Removals
+-------------------------
+ - twisted.internet.error.PotentialZombieWarning is now deprecated.
+   (#2078)
+
+ - twisted.test.time_helpers is now deprecated. (#3719)
+
+ - The deprecated connectUDP method of IReactorUDP has now been
+   removed. (#4075)
+
+ - twisted.trial.unittest.TestCase now ignores the previously
+   deprecated setUpClass and tearDownClass methods. (#4175)
+
+Other
+-----
+ - #917, #2406, #2481, #2608, #2689, #2884, #3056, #3082, #3199,
+   #3480, #3592, #3718, #3935, #4066, #4083, #4154, #4166, #4169,
+   #4176, #4183, #4186, #4188, #4189, #4194, #4201, #4204, #4209,
+   #4222, #4234, #4235, #4238, #4240, #4245, #4251, #4264, #4268,
+   #4269, #4282
+
+
 Twisted Core 9.0.0 (2009-11-24)
 ===============================
 

@@ -1,1 +1,0 @@
-twisted.mail.smtp.ESMTPClient and twisted.mail.smtp.LOGINAuthenticator now implement the (obsolete) LOGIN SASL mechanism according to the draft specification.

@@ -1,3 +1,0 @@
-Stringify non-string data to NetstringReceiver.sendString before calculating the
-length so that the calculated length is equal to the actual length of the
-transported data.

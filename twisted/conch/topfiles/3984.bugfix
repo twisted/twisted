@@ -1,2 +1,0 @@
-twisted.conch.checkers.SSHPublicKeyDatabase now looks in the correct user
-directory for authorized_keys files.
