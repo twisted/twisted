@@ -18,19 +18,25 @@ Bugfixes
    twisted.web.client.HTTPPageGetter will no longer ignore the case of
    a request method when considering whether to apply special HEAD
    processing to a response. (#446)
+
  - twisted.web.http.HTTPClient now supports multi-line headers.
    (#2062)
+
  - Resources served via twisted.web.distrib will no longer encounter a
    Banana error when writing more than 640kB at once to the request
    object. (#3212)
+
  - The Error, PageRedirect, and InfiniteRedirection exception in
    twisted.web now initialize an empty message parameter by mapping
    the HTTP status code parameter to a descriptive string. Previously
    the lookup would always fail, leaving message empty.  (#3806)
+
  - The 'wsgi.input' WSGI environment object now supports -1 and None
    as arguments to the read and readlines methods. (#4114)
+
  - twisted.web.wsgi doesn't unquote QUERY_STRING anymore, thus
    complying with the WSGI reference implementation. (#4143)
+
  - The HTTP proxy will no longer pass on keep-alive request headers
    from the client, preventing pages from loading then "hanging"
    (leaving the connection open with no hope of termination). (#4179)
@@ -43,6 +49,7 @@ Deprecations and Removals
 Other
 -----
  - #3784, #4216, #4242
+
 
 Twisted Web 9.0.0 (2009-11-24)
 ==============================

@@ -15,12 +15,14 @@ Bugfixes
  - When twisted.words.protocols.irc.IRCClient's versionNum and
    versionEnv attributes are set to None, they will no longer be
    included in the client's response to CTCP VERSION queries. (#3660)
+
  - twisted.words.protocols.jabber.xmlstream.hashPassword now only
    accepts unicode as input (#3741, #3742, #3847)
 
 Other
 -----
  - #2503, #4066, #4261
+
 
 Twisted Words 9.0.0 (2009-11-24)
 ================================

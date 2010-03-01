@@ -8,12 +8,14 @@ Bugfixes
 --------
  - twisted.conch.checkers.SSHPublicKeyDatabase now looks in the
    correct user directory for authorized_keys files. (#3984)
+
  - twisted.conch.ssh.SSHUserAuthClient now honors preferredOrder when
    authenticating. (#4266)
 
 Other
 -----
  - #2391, #4203, #4265
+
 
 Twisted Conch 9.0.0 (2009-11-24)
 ================================
