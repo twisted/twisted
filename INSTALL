@@ -1,6 +1,6 @@
 Requirements
 
-  Python 2.3 or later.
+  Python 2.4 through 2.6.
 
   Zope Interfaces 3.0.1 (http://zope.org/Products/ZopeInterface) - if
   you have ZopeX3 (at least version 3.0.0c1) installed that should
