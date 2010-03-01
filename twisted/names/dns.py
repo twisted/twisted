@@ -1,18 +1,47 @@
 # -*- test-case-name: twisted.names.test.test_dns -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 DNS protocol implementation.
 
 Future Plans:
     - Get rid of some toplevels, maybe.
-    - Put in a better lookupRecordType implementation.
 
 @author: Moshe Zadka
-@author: Jp Calderone
+@author: Jean-Paul Calderone
 """
+
+__all__ = [
+    'IEncodable', 'IRecord',
+
+    'A', 'A6', 'AAAA', 'AFSDB', 'CNAME', 'DNAME', 'HINFO',
+    'MAILA', 'MAILB', 'MB', 'MD', 'MF', 'MG', 'MINFO', 'MR', 'MX',
+    'NAPTR', 'NS', 'NULL', 'PTR', 'RP', 'SOA', 'SRV', 'TXT', 'WKS',
+
+    'ANY', 'CH', 'CS', 'HS', 'IN',
+
+    'ALL_RECORDS', 'AXFR', 'IXFR',
+
+    'EFORMAT', 'ENAME', 'ENOTIMP', 'EREFUSED', 'ESERVER',
+
+    'Record_A', 'Record_A6', 'Record_AAAA', 'Record_AFSDB', 'Record_CNAME',
+    'Record_DNAME', 'Record_HINFO', 'Record_MB', 'Record_MD', 'Record_MF',
+    'Record_MG', 'Record_MINFO', 'Record_MR', 'Record_MX', 'Record_NAPTR',
+    'Record_NS', 'Record_NULL', 'Record_PTR', 'Record_RP', 'Record_SOA',
+    'Record_SRV', 'Record_TXT', 'Record_WKS',
+
+    'QUERY_CLASSES', 'QUERY_TYPES', 'REV_CLASSES', 'REV_TYPES', 'EXT_QUERIES',
+
+    'Charstr', 'Message', 'Name', 'Query', 'RRHeader', 'SimpleRecord',
+    'DNSDatagramProtocol', 'DNSMixin', 'DNSProtocol',
+
+    'OK', 'OP_INVERSE', 'OP_NOTIFY', 'OP_QUERY', 'OP_STATUS', 'OP_UPDATE',
+    'PORT',
+
+    'AuthoritativeDomainError', 'DNSQueryTimeoutError', 'DomainError',
+    ]
+
 
 # System imports
 import warnings
@@ -1431,6 +1460,10 @@ class Record_TXT(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
 
 class Message:
+    """
+    L{Message} contains all the information represented by a single
+    DNS request or response.
+    """
     headerFmt = "!H2B4H"
     headerSize = struct.calcsize(headerFmt)
 
@@ -1545,8 +1578,32 @@ class Message:
             list.append(header)
 
 
+    # Create a mapping from record types to their corresponding Record_*
+    # classes.  This relies on the global state which has been created so
+    # far in initializing this module (so don't define Record classes after
+    # this).
+    _recordTypes = {}
+    for name in globals():
+        if name.startswith('Record_'):
+            _recordTypes[globals()[name].TYPE] = globals()[name]
+
+    # Clear the iteration variable out of the class namespace so it
+    # doesn't become an attribute.
+    del name
+
+
     def lookupRecordType(self, type):
-        return globals().get('Record_' + QUERY_TYPES.get(type, ''), None)
+        """
+        Retrieve the L{IRecord} implementation for the given record type.
+
+        @param type: A record type, such as L{A} or L{NS}.
+        @type type: C{int}
+
+        @return: An object which implements L{IRecord} or C{None} if none
+            can be found for the given type.
+        @rtype: L{types.ClassType}
+        """
+        return self._recordTypes.get(type, None)
 
 
     def toStr(self):
@@ -1558,6 +1615,8 @@ class Message:
     def fromStr(self, str):
         strio = StringIO.StringIO(str)
         self.decode(strio)
+
+
 
 class DNSMixin(object):
     """
@@ -1819,4 +1878,3 @@ class DNSProtocol(DNSMixin, protocol.Protocol):
         """
         id = self.pickID()
         return self._query(queries, timeout, id, self.writeMessage)
-

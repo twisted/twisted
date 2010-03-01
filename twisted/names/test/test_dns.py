@@ -1,5 +1,5 @@
 # test-case-name: twisted.names.test.test_dns
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -151,6 +151,10 @@ class RoundtripDNSTestCase(unittest.TestCase):
 
 
 class MessageTestCase(unittest.TestCase):
+    """
+    Tests for L{twisted.names.dns.Message}.
+    """
+
     def testEmptyMessage(self):
         """
         Test that a message which has been truncated causes an EOFError to
@@ -200,6 +204,18 @@ class MessageTestCase(unittest.TestCase):
 
         self.failUnless(isinstance(msg2.answers[0].payload, dns.Record_NULL))
         self.assertEquals(msg2.answers[0].payload.payload, bytes)
+
+
+    def test_lookupRecordTypeDefault(self):
+        """
+        L{Message.lookupRecordType} returns C{None} if it is called
+        with an integer which doesn't correspond to any known record
+        type.
+        """
+        # 65280 is the first value in the range reserved for private
+        # use, so it shouldn't ever conflict with an officially
+        # allocated value.
+        self.assertIdentical(dns.Message().lookupRecordType(65280), None)
 
 
 
