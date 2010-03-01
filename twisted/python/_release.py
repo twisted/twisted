@@ -1267,5 +1267,5 @@ class BuildAPIDocsScript(object):
         """
         if len(args) != 2:
             sys.exit("Must specify two arguments: "
-                     "Twisted checkout and distination path")
+                     "Twisted checkout and destination path")
         self.buildAPIDocs(FilePath(args[0]), FilePath(args[1]))
