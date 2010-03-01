@@ -4,6 +4,7 @@
 """
 Tests for L{twisted.scripts.tap2rpm}.
 """
+import os
 from twisted.trial.unittest import TestCase, SkipTest
 from twisted.python import procutils
 from twisted.python.failure import Failure
@@ -364,3 +365,16 @@ class TestTap2RPM(TestCase):
             ))
 
         return d
+
+
+    def test_tapInOtherDirectory(self):
+        """
+        tap2rpm handles tapfiles outside the current directory.
+        """
+        # Make a tapfile outside the current directory.
+        tempdir = self.mktemp()
+        os.mkdir(tempdir)
+        tapfile = self._makeTapFile(os.path.join(tempdir, "bacon"))
+
+        # Try and make an RPM from that tapfile.
+        _makeRPMs(tapfile=tapfile)
