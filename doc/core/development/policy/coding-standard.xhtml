@@ -49,7 +49,7 @@
     <p>The Twisted test suite is spread across many subpackages of the
      <code>twisted</code> package.  Many tests are in
      <code>twisted.test</code>.  Others can be found at places such as
-     <code>twisted.web.test</code> or <code>twisted.internet.test</code>. 
+     <code>twisted.web.test</code> or <code>twisted.internet.test</code>.
      Parts of the Twisted test suite may serve as good examples of how to
      write tests for Twisted or for Twisted-based libraries (newer parts of
      the test suite are generally better examples than older parts - check
@@ -79,7 +79,7 @@
 $ bin/trial twisted
     </pre>
 
-    <p>To run an individual test module, such as 
+    <p>To run an individual test module, such as
      <code>twisted/mail/test/test_pop3.py</code>, specify the module
      name:</p>
 
@@ -95,8 +95,8 @@ $ bin/trial twisted.mail.test.test_pop3
 $ bin/trial twisted/mail/pop3.py
     </pre>
 
-    <p>All unit test methods should have docstrings specifying at a high 
-    level the intent of the test. That is, a description that users of the 
+    <p>All unit test methods should have docstrings specifying at a high
+    level the intent of the test. That is, a description that users of the
     method would understand.</p>
 
     <p>If you modify, or write a new, HOWTO, please read the <a
@@ -418,13 +418,12 @@ except ImportError:
     example, Python 2.3's <code>sets</code> module was deprecated in Python 2.6
     in favor of the <code>set</code> and <code>frozenset</code> builtins. When
     you need to use sets or frozensets in your code, please use
-    <code class="API">twisted.python.compat.set</code> and
-    <code class="API">twisted.python.compat.frozenset</code>. There are some
+    the <code>set</code> and <code>frozenset</code> provided
+    by <code class="API">twisted.python.compat</code>. There are some
     differences between <code>sets.Set</code> and <code>set</code>, that are
-    explained in the
-    <a href="http://www.python.org/dev/peps/pep-0218/">set PEP</a>. Please be
-    sure to not rely on the behavior of one or the other implementation.
-    </p>
+    explained in the <a href="http://www.python.org/dev/peps/pep-0218/">set
+    PEP</a>. Please be sure to not rely on the behavior of one or the other
+    implementation.</p>
 
     <h2>Classes</h2>
 
@@ -705,11 +704,11 @@ global-ignores = dropin.cache *.pyc *.pyo *.o *.lo *.la #*# .*.rej *.rej .*~
     code can't be easily checked for compliance) but are a good
     idea to keep in mind while working on Twisted.</p>
 
-    <p>If you're going to work on a fragment of the Twisted 
-    codebase, please consider finding a way that you would <em>use</em> 
+    <p>If you're going to work on a fragment of the Twisted
+    codebase, please consider finding a way that you would <em>use</em>
     such a fragment in daily life. Using a Twisted Web server on your
     website  encourages you to actively maintain and improve your code,
-    as the little everyday issues with using it become apparent.</p> 
+    as the little everyday issues with using it become apparent.</p>
 
     <p>Twisted is a <strong>big</strong> codebase! If you're
     refactoring something, please make sure to recursively grep for

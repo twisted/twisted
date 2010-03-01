@@ -68,12 +68,12 @@ listening.</p>
 
 <h3>The Reactor</h3>
 
-<p>
-You don't call Twisted, Twisted calls you. The <code class="API" base="twisted.internet">reactor</code>
-is Twisted's main event loop, similar to the main loop in other toolkits available
-in Python (Qt, wx, and Gtk). There is exactly one reactor in any running Twisted
-application. Once started it loops over and over again, responding to network
-events and making scheduled calls to code.</p>
+<p>You don't call Twisted, Twisted calls you. The <code class="API"
+base="twisted.internet">reactor</code> is Twisted's main event loop, similar to
+the main loop in other toolkits available in Python (Qt, wx, and Gtk). There is
+exactly one reactor in any running Twisted application. Once started it loops
+over and over again, responding to network events and making scheduled calls to
+code.</p>
 
 <p>Note that there are actually several different reactors to choose from;
 <code>from twisted.internet import reactor</code> returns the current reactor.
@@ -104,12 +104,12 @@ the connection is closed.</p>
 <a href="listings/finger/finger03.py" class="py-listing">finger03.py</a>
 
 <p>Here we add to the protocol the ability to respond to the event of beginning
-a connection &mdash; by terminating it.  Perhaps not an interesting behavior, but
-it is already close to behaving according to the letter of the standard finger protocol. After
-all, there is no requirement to send any data to the remote connection in the
-standard.  The only problem, as far as the standard is concerned, is that we
-terminate the connection too soon. A client which is slow enough will see his
-send() of the username result in an error.</p>
+a connection &mdash; by terminating it.  Perhaps not an interesting behavior,
+but it is already close to behaving according to the letter of the standard
+finger protocol. After all, there is no requirement to send any data to the
+remote connection in the standard.  The only problem, as far as the standard is
+concerned, is that we terminate the connection too soon. A client which is slow
+enough will see his send() of the username result in an error.</p>
 
 
 <h2>Read Username, Drop Connections</h2>
@@ -274,7 +274,7 @@ root% twistd -y finger11.tac --syslog --prefix=twistedfinger # use given prefix
 
 <p>There are several ways to tell twistd where your application is; here we
 show how it is done using the <code>application</code> global variable in a
-Python source file (a <a href="glossary.xhtml#TAC">Twisted Application
+Python source file (a <a href="../glossary.xhtml#TAC">Twisted Application
 Configuration</a> file).</p>
 
 <a href="listings/finger/finger11.tac" class="py-listing">finger11.tac</a>
