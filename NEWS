@@ -232,19 +232,6 @@ Other
  - #3784, #4216, #4242
 
 
-Twisted Web2 10.0.0 (2010-03-01)
-================================
-
-Bugfixes
---------
- - twisted.web2.channel.scgi now uses consistent line separators,
-   fixing display issues when used with lighttpd. (#4032)
-
-Other
------
- - #3693, #4202
-
-
 Twisted Words 10.0.0 (2010-03-01)
 =================================
 
