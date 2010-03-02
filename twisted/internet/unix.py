@@ -1,6 +1,5 @@
-# -*- test-case-name: twisted.test.test_unix -*-
-
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.test.test_unix,twisted.internet.test.test_unix,twisted.internet.test.test_posixbase -*-
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -230,16 +229,22 @@ class DatagramPort(udp.Port):
         return address.UNIXAddress(self.socket.getsockname())
 
 
+
 class ConnectedDatagramPort(DatagramPort):
-    """A connected datagram UNIX socket."""
+    """
+    A connected datagram UNIX socket.
+    """
 
     implementsOnly(interfaces.IUNIXDatagramConnectedTransport,
                    *(implementedBy(base.BasePort)))
 
-    def __init__(self, addr, proto, maxPacketSize=8192, mode=0666, bindAddress=None, reactor=None):
+    def __init__(self, addr, proto, maxPacketSize=8192, mode=0666,
+                 bindAddress=None, reactor=None):
         assert isinstance(proto, protocol.ConnectedDatagramProtocol)
-        DatagramPort.__init__(self, bindAddress, proto, maxPacketSize, mode, reactor)
+        DatagramPort.__init__(self, bindAddress, proto, maxPacketSize, mode,
+                              reactor)
         self.remoteaddr = addr
+
 
     def startListening(self):
         try:
@@ -249,13 +254,23 @@ class ConnectedDatagramPort(DatagramPort):
         except:
             self.connectionFailed(failure.Failure())
 
+
     def connectionFailed(self, reason):
-        self.loseConnection()
+        """
+        Called when a connection fails. Stop listening on the socket.
+
+        @type reason: L{Failure}
+        @param reason: Why the connection failed.
+        """
+        self.stopListening()
         self.protocol.connectionFailed(reason)
         del self.protocol
 
+
     def doRead(self):
-        """Called when my socket is ready for reading."""
+        """
+        Called when my socket is ready for reading.
+        """
         read = 0
         while read < self.maxThroughput:
             try:
@@ -273,8 +288,11 @@ class ConnectedDatagramPort(DatagramPort):
             except:
                 log.deferr()
 
+
     def write(self, data):
-        """Write a datagram."""
+        """
+        Write a datagram.
+        """
         try:
             return self.socket.send(data)
         except socket.error, se:
@@ -292,6 +310,7 @@ class ConnectedDatagramPort(DatagramPort):
                 pass
             else:
                 raise
+
 
     def getPeer(self):
         return address.UNIXAddress(self.remoteaddr)

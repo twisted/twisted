@@ -1,0 +1,2 @@
+ConnectedDatagramPort now uses stopListening when a connection fails
+instead of the deprecated loseConnection.
