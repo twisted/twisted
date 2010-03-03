@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_internet -*-
+# -*- test-case-name: twisted.test.test_internet,twisted.internet.test.test_posixbase -*-
 # Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -15,7 +15,7 @@ from zope.interface import implements, classImplements
 
 from twisted.python.compat import set
 from twisted.internet.interfaces import IReactorUNIX, IReactorUNIXDatagram
-from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL, IReactorArbitrary
+from twisted.internet.interfaces import IReactorTCP, IReactorUDP, IReactorSSL, _IReactorArbitrary
 from twisted.internet.interfaces import IReactorProcess, IReactorMulticast
 from twisted.internet.interfaces import IHalfCloseableDescriptor
 from twisted.internet import error
@@ -230,7 +230,7 @@ class PosixReactorBase(_SignalReactorMixin, ReactorBase):
     @ivar _childWaker: C{None} or a reference to the L{_SIGCHLDWaker}
         which is used to properly notice child process termination.
     """
-    implements(IReactorArbitrary, IReactorTCP, IReactorUDP, IReactorMulticast)
+    implements(_IReactorArbitrary, IReactorTCP, IReactorUDP, IReactorMulticast)
 
     def _disconnectSelectable(self, selectable, why, isRead, faildict={
         error.ConnectionDone: failure.Failure(error.ConnectionDone()),
@@ -467,18 +467,31 @@ class PosixReactorBase(_SignalReactorMixin, ReactorBase):
         p.startListening()
         return p
 
+
     # IReactorArbitrary
     def listenWith(self, portType, *args, **kw):
+        warnings.warn(
+            "listenWith is deprecated since Twisted 10.1.  "
+            "See IReactorFDSet.",
+            category=DeprecationWarning,
+            stacklevel=2)
         kw['reactor'] = self
         p = portType(*args, **kw)
         p.startListening()
         return p
 
+
     def connectWith(self, connectorType, *args, **kw):
+        warnings.warn(
+            "connectWith is deprecated since Twisted 10.1.  "
+            "See IReactorFDSet.",
+            category=DeprecationWarning,
+            stacklevel=2)
         kw['reactor'] = self
         c = connectorType(*args, **kw)
         c.connect()
         return c
+
 
     def _removeAll(self, readers, writers):
         """

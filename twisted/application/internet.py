@@ -1,6 +1,5 @@
 # -*- test-case-name: twisted.test.test_application,twisted.test.test_cooperator -*-
-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -31,6 +30,8 @@ reactor.listen/connect* methods for more information.
 
 Maintainer: Moshe Zadka
 """
+
+import warnings
 
 from twisted.python import log
 from twisted.application import service
@@ -192,7 +193,7 @@ on arguments to the reactor method.
 }
 
 import new
-for tran in 'Generic TCP UNIX SSL UDP UNIXDatagram Multicast'.split():
+for tran in 'TCP UNIX SSL UDP UNIXDatagram Multicast'.split():
     for side in 'Server Client'.split():
         if tran == "Multicast" and side == "Client":
             continue
@@ -202,6 +203,49 @@ for tran in 'Generic TCP UNIX SSL UDP UNIXDatagram Multicast'.split():
         klass = new.classobj(tran+side, (base,),
                              {'method': method, '__doc__': doc})
         globals()[tran+side] = klass
+
+
+
+class GenericServer(_AbstractServer):
+    """
+    Serve Generic clients
+
+    Call reactor.listenWith when the service starts, with the arguments given to
+    the constructor. When the service stops, stop listening. See
+    twisted.internet.interfaces for documentation on arguments to the reactor
+    method.
+
+    This service is deprecated (because reactor.listenWith is deprecated).
+    """
+    method = 'With'
+
+    def __init__(self, *args, **kwargs):
+        warnings.warn(
+            'GenericServer was deprecated in Twisted 10.1.',
+            category=DeprecationWarning,
+            stacklevel=2)
+        _AbstractServer.__init__(self, *args, **kwargs)
+
+
+
+class GenericClient(_AbstractClient):
+    """
+    Connect to Generic.
+
+    Call reactor.connectWith when the service starts, with the arguments given
+    to the constructor.
+
+    This service is deprecated (because reactor.connectWith is deprecated).
+    """
+    method = 'With'
+
+    def __init__(self, *args, **kwargs):
+        warnings.warn(
+            'GenericClient was deprecated in Twisted 10.1.',
+            category=DeprecationWarning,
+            stacklevel=2)
+        _AbstractClient.__init__(self, *args, **kwargs)
+
 
 
 class TimerService(_VolatileDataService):

@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -8,6 +8,8 @@ Maintainer: Itamar Shtull-Trauring
 """
 
 from zope.interface import Interface, Attribute
+from twisted.python.deprecate import deprecatedModuleAttribute
+from twisted.python.versions import Version
 
 
 class IAddress(Interface):
@@ -192,7 +194,17 @@ class IResolver(IResolverSimple):
         """
 
 
+
 class IReactorArbitrary(Interface):
+    """
+    This interface is redundant with L{IReactorFDSet} and is deprecated.
+    """
+    deprecatedModuleAttribute(
+        Version("Twisted", 10, 1, 0),
+        "See IReactorFDSet.",
+        __name__,
+        "IReactorArbitrary")
+
 
     def listenWith(portType, *args, **kw):
         """
@@ -206,6 +218,7 @@ class IReactorArbitrary(Interface):
         @return: an object which provides L{IListeningPort}.
         """
 
+
     def connectWith(connectorType, *args, **kw):
         """
         Start an instance of the given C{connectorType} connecting.
@@ -217,6 +230,13 @@ class IReactorArbitrary(Interface):
 
         @return:  An object which provides L{IConnector}.
         """
+
+# Alias for IReactorArbitrary so that internal Twisted code can continue to
+# provide the interface without emitting a deprecation warning.  This can be
+# removed when IReactorArbitrary is removed.
+_IReactorArbitrary = IReactorArbitrary
+
+
 
 class IReactorTCP(Interface):
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -6,7 +6,7 @@ Tests for L{twisted.application} and its interaction with
 L{twisted.persisted.sob}.
 """
 
-import sys, copy, os, pickle
+import copy, os, pickle
 from StringIO import StringIO
 
 from twisted.trial import unittest, util
@@ -17,13 +17,9 @@ from twisted.python.runtime import platform
 from twisted.internet import interfaces, defer
 from twisted.protocols import wire, basic
 from twisted.internet import protocol, reactor
-from twisted.internet.utils import getProcessOutputAndValue
 from twisted.application import reactors
 from twisted.test.proto_helpers import MemoryReactor
 
-
-oldAppSuppressions = [util.suppress(message='twisted.internet.app is deprecated',
-                                    category=DeprecationWarning)]
 
 skipWindowsNopywin32 = None
 if platform.isWindows():
@@ -517,7 +513,36 @@ class TestInternet2(unittest.TestCase):
             [o.value.__class__ for o in self.flushLoggedErrors(ZeroDivisionError)]))
         return d
 
-    def testEverythingThere(self):
+
+    def test_genericServerDeprecated(self):
+        """
+        Instantiating L{GenericServer} emits a deprecation warning.
+        """
+        internet.GenericServer()
+        warnings = self.flushWarnings(
+            offendingFunctions=[self.test_genericServerDeprecated])
+        self.assertEquals(
+            warnings[0]['message'],
+            'GenericServer was deprecated in Twisted 10.1.')
+        self.assertEquals(warnings[0]['category'], DeprecationWarning)
+        self.assertEquals(len(warnings), 1)
+
+
+    def test_genericClientDeprecated(self):
+        """
+        Instantiating L{GenericClient} emits a deprecation warning.
+        """
+        internet.GenericClient()
+        warnings = self.flushWarnings(
+            offendingFunctions=[self.test_genericClientDeprecated])
+        self.assertEquals(
+            warnings[0]['message'],
+            'GenericClient was deprecated in Twisted 10.1.')
+        self.assertEquals(warnings[0]['category'], DeprecationWarning)
+        self.assertEquals(len(warnings), 1)
+
+
+    def test_everythingThere(self):
         trans = 'TCP UNIX SSL UDP UNIXDatagram Multicast'.split()
         for tran in trans[:]:
             if not getattr(interfaces, "IReactor"+tran)(reactor, None):
@@ -535,6 +560,15 @@ class TestInternet2(unittest.TestCase):
                         (prefix == "connect" and method == "UDP"))
                 o = getattr(internet, tran+side)()
                 self.assertEqual(service.IService(o), o)
+    test_everythingThere.suppress = [
+        util.suppress(message='GenericServer was deprecated in Twisted 10.1.',
+                      category=DeprecationWarning),
+        util.suppress(message='GenericClient was deprecated in Twisted 10.1.',
+                      category=DeprecationWarning),
+        util.suppress(message='twisted.internet.interfaces.IReactorArbitrary was '
+                      'deprecated in Twisted 10.1.0: See IReactorFDSet.')]
+
+
 
 
     def test_reactorParametrizationInServer(self):

@@ -98,6 +98,80 @@ class PosixReactorBaseTests(TestCase):
         self.assertNotIn(writer, reactor._writers)
 
 
+    def test_IReactorArbitraryIsDeprecated(self):
+        """
+        L{twisted.internet.interfaces.IReactorArbitrary} is redundant with
+        L{twisted.internet.interfaces.IReactorFDSet} and is deprecated.
+        """
+        from twisted.internet import interfaces
+        interfaces.IReactorArbitrary
+
+        warningsShown = self.flushWarnings(
+            [self.test_IReactorArbitraryIsDeprecated])
+        self.assertEquals(len(warningsShown), 1)
+        self.assertEquals(warningsShown[0]['category'], DeprecationWarning)
+        self.assertEquals(
+            "twisted.internet.interfaces.IReactorArbitrary was deprecated "
+            "in Twisted 10.1.0: See IReactorFDSet.",
+            warningsShown[0]['message'])
+
+
+    def test_listenWithIsDeprecated(self):
+        """
+        L{PosixReactorBase} implements the deprecated L{IReactorArbitrary}, and
+        L{PosixReactorBase.listenWith} is a part of that interface. To avoid
+        unnecessary deprecation warnings when importing posixbase, the
+        L{twisted.internet.interfaces._IReactorArbitrary} alias that doesn't
+        have the deprecation warning is imported, and instead
+        L{PosixReactorBase.listenWith} generates its own deprecation warning.
+        """
+        class fakePort:
+            def __init__(self, *args, **kw):
+                pass
+
+            def startListening(self):
+                pass
+
+        reactor = TrivialReactor()
+        reactor.listenWith(fakePort)
+
+        warnings = self.flushWarnings([self.test_listenWithIsDeprecated])
+        self.assertEquals(len(warnings), 1)
+        self.assertEquals(warnings[0]['category'], DeprecationWarning)
+        self.assertEquals(
+            "listenWith is deprecated since Twisted 10.1.  "
+            "See IReactorFDSet.",
+            warnings[0]['message'])
+
+
+    def test_connectWithIsDeprecated(self):
+        """
+        L{PosixReactorBase} implements the deprecated L{IReactorArbitrary}, and
+        L{PosixReactorBase.connectWith} is a part of that interface. To avoid
+        unnecessary deprecation warnings when importing posixbase, the
+        L{twisted.internet.interfaces._IReactorArbitrary} alias that doesn't
+        have the deprecation warning is imported, and instead
+        L{PosixReactorBase.connectWith} generates its own deprecation warning.
+        """
+        class fakeConnector:
+            def __init__(self, *args, **kw):
+                pass
+
+            def connect(self):
+                pass
+
+        reactor = TrivialReactor()
+        reactor.connectWith(fakeConnector)
+
+        warnings = self.flushWarnings([self.test_connectWithIsDeprecated])
+        self.assertEquals(len(warnings), 1)
+        self.assertEquals(warnings[0]['category'], DeprecationWarning)
+        self.assertEquals(
+            "connectWith is deprecated since Twisted 10.1.  "
+            "See IReactorFDSet.",
+            warnings[0]['message'])
+
+
 
 class TCPPortTests(TestCase):
     """
@@ -140,7 +214,7 @@ class TimeoutReportReactor(PosixReactorBase):
 
     def removeAll(self):
         """
-        There are no readers or writers, so there is nothing to remove. 
+        There are no readers or writers, so there is nothing to remove.
         This will be called when the reactor stops, though, so it must be
         implemented.
         """
