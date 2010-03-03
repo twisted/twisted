@@ -1,6 +1,6 @@
 Requirements
 
-  Python 2.4 through 2.6.
+  Python 2.4, 2.5 or 2.6.
 
   Zope Interfaces 3.0.1 (http://zope.org/Products/ZopeInterface) - if
   you have ZopeX3 (at least version 3.0.0c1) installed that should
@@ -21,9 +21,6 @@ Installation
 
   * FreeBSD, Gentoo
     Twisted is in their package repositories.
-
-  * Mac OS X
-    Packages are available from http://twistedmatrix.com/
 
   * Win32
     EXEs are available from http://twistedmatrix.com/
