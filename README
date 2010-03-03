@@ -14,7 +14,7 @@ What is this?
 =============
 
   Twisted is an event-based framework for internet applications which works on
-  Python 2.3 through 2.6.  The following are some of the modules included
+  Python 2.4 through 2.6.  The following are some of the modules included
   with Twisted::
 
   - twisted.application
