@@ -2,7 +2,6 @@
 # Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
 An IMAP4 protocol implementation
 
@@ -2654,8 +2653,10 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         log.err("No NAMESPACE response to NAMESPACE command")
         return [[], [], []]
 
+
     def select(self, mailbox):
-        """Select a mailbox
+        """
+        Select a mailbox
 
         This command is allowed in the Authenticated and Selected states.
 
@@ -2674,11 +2675,11 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                 EXISTS: An integer indicating the number of messages in this
                         mailbox.
 
-                RECENT: An integer indicating the number of \"recent\"
+                RECENT: An integer indicating the number of "recent"
                         messages in this mailbox.
 
-                UNSEEN: An integer indicating the number of messages not
-                        flagged \\Seen in this mailbox.
+                UNSEEN: The message sequence number (an integer) of the
+                        first unseen message in the mailbox.
 
                 PERMANENTFLAGS: A list of strings containing the flags that
                         can be permanently set on messages in this mailbox.
@@ -2691,6 +2692,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         d = self.sendCommand(Command(cmd, args, wantResponse=resp))
         d.addCallback(self.__cbSelect, 1)
         return d
+
 
     def examine(self, mailbox):
         """Select a mailbox in read-only mode
