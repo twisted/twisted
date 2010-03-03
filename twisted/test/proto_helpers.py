@@ -12,7 +12,7 @@ from zope.interface import implements
 from zope.interface.verify import verifyObject
 
 from twisted.internet.interfaces import ITransport, IConsumer, IPushProducer
-from twisted.internet.interfaces import IReactorTCP
+from twisted.internet.interfaces import IReactorTCP, IReactorUNIX, IReactorSSL
 from twisted.protocols import basic
 from twisted.internet import protocol, error
 
@@ -272,8 +272,24 @@ class MemoryReactor(object):
     @ivar tcpServers: a list that keeps track of server listen attempts (ie, calls
         to C{listenTCP}).
     @type tcpServers: C{list}
+
+    @ivar sslClients: a list that keeps track of connection attempts (ie,
+        calls to C{connectSSL}).
+    @type sslClients: C{list}
+
+    @ivar sslServers: a list that keeps track of server listen attempts (ie,
+        calls to C{listenSSL}).
+    @type sslServers: C{list}
+
+    @ivar unixClients: a list that keeps track of connection attempts (ie,
+        calls to C{connectUNIX}).
+    @type unixClients: C{list}
+
+    @ivar unixServers: a list that keeps track of server listen attempts (ie,
+        calls to C{listenUNIX}).
+    @type unixServers: C{list}
     """
-    implements(IReactorTCP)
+    implements(IReactorTCP, IReactorSSL, IReactorUNIX)
 
     def __init__(self):
         """
@@ -281,6 +297,10 @@ class MemoryReactor(object):
         """
         self.tcpClients = []
         self.tcpServers = []
+        self.sslClients = []
+        self.sslServers = []
+        self.unixClients = []
+        self.unixServers = []
 
 
     def listenTCP(self, port, factory, backlog=50, interface=''):
@@ -296,4 +316,40 @@ class MemoryReactor(object):
         """
         self.tcpClients.append((host, port, factory, timeout, bindAddress))
 
+
+    def listenSSL(self, port, factory, contextFactory,
+                  backlog=50, interface=''):
+        """
+        Fake L{reactor.listenSSL}, that logs the call and returns an.
+        """
+        self.sslServers.append((port, factory, contextFactory,
+                                backlog, interface))
+
+
+    def connectSSL(self, host, port, factory, contextFactory,
+                   timeout=30, bindAddress=None):
+        """
+        Fake L{reactor.connectSSL}, that does nothing but log the call.
+        """
+        self.sslClients.append((host, port, factory, contextFactory,
+                                timeout, bindAddress))
+
+
+    def listenUNIX(self, address, factory,
+                   backlog=50, mode=0666, wantPID=0):
+        """
+        Fake L{reactor.listenUNIX}, that logs the call and returns an.
+        """
+        self.unixServers.append((address, factory, backlog, mode, wantPID))
+
+
+    def connectUNIX(self, address, factory, timeout=30, checkPID=0):
+        """
+        Fake L{reactor.connectUNIX}, that does nothing but log the call.
+        """
+        self.unixClients.append((address, factory, timeout, checkPID))
+
+
 verifyObject(IReactorTCP, MemoryReactor())
+verifyObject(IReactorSSL, MemoryReactor())
+verifyObject(IReactorUNIX, MemoryReactor())

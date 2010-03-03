@@ -1,8 +1,6 @@
-# -*- test-case-name: twisted.test.test_factories -*-
-#
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# -*- test-case-name: twisted.test.test_factories,twisted.internet.test.test_protocol -*-
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 Standard implementations of Twisted protocol-related interfaces.
@@ -133,30 +131,63 @@ class ClientFactory(Factory):
 
 
 class _InstanceFactory(ClientFactory):
-    """Factory used by ClientCreator."""
+    """
+    Factory used by ClientCreator.
+
+    @ivar deferred: The L{Deferred} which represents this connection attempt and
+        which will be fired when it succeeds or fails.
+
+    @ivar pending: After a connection attempt succeeds or fails, a delayed call
+        which will fire the L{Deferred} representing this connection attempt.
+    """
 
     noisy = False
+    pending = None
 
     def __init__(self, reactor, instance, deferred):
         self.reactor = reactor
         self.instance = instance
         self.deferred = deferred
 
+
     def __repr__(self):
         return "<ClientCreator factory: %r>" % (self.instance, )
 
+
     def buildProtocol(self, addr):
-        self.reactor.callLater(0, self.deferred.callback, self.instance)
-        del self.deferred
+        """
+        Return the pre-constructed protocol instance and arrange to fire the
+        waiting L{Deferred} to indicate success establishing the connection.
+        """
+        self.pending = self.reactor.callLater(
+            0, self.fire, self.deferred.callback, self.instance)
+        self.deferred = None
         return self.instance
 
+
     def clientConnectionFailed(self, connector, reason):
-        self.reactor.callLater(0, self.deferred.errback, reason)
-        del self.deferred
+        """
+        Arrange to fire the waiting L{Deferred} with the given failure to
+        indicate the connection could not be established.
+        """
+        self.pending = self.reactor.callLater(
+            0, self.fire, self.deferred.errback, reason)
+        self.deferred = None
+
+
+    def fire(self, callable, value):
+        """
+        Clear C{self.pending} to avoid a reference cycle and then invoke the
+        callable with the value.
+        """
+        self.pending = None
+        callable(value)
+
 
 
 class ClientCreator:
-    """Client connections that do not require a factory.
+    """
+    Client connections that do not require a factory.
 
     The various connect* methods create a protocol instance using the given
     protocol class and arguments, and connect it, returning a Deferred of the
@@ -165,6 +196,14 @@ class ClientCreator:
     Useful for cases when we don't really need a factory.  Mainly this
     is when there is no shared state between protocol instances, and no need
     to reconnect.
+
+    The C{connectTCP}, C{connectUNIX}, and C{connectSSL} methods each return a
+    L{Deferred} which will fire with an instance of the protocol class passed to
+    L{ClientCreator.__init__}.  These Deferred can be cancelled to abort the
+    connection attempt (in a very unlikely case, cancelling the Deferred may not
+    prevent the protocol from being instantiated and connected to a transport;
+    if this happens, it will be disconnected immediately afterwards and the
+    Deferred will still errback with L{CancelledError}).
     """
 
     def __init__(self, reactor, protocolClass, *args, **kwargs):
@@ -173,26 +212,82 @@ class ClientCreator:
         self.args = args
         self.kwargs = kwargs
 
-    def connectTCP(self, host, port, timeout=30, bindAddress=None):
-        """Connect to remote host, return Deferred of resulting protocol instance."""
-        d = defer.Deferred()
-        f = _InstanceFactory(self.reactor, self.protocolClass(*self.args, **self.kwargs), d)
-        self.reactor.connectTCP(host, port, f, timeout=timeout, bindAddress=bindAddress)
+
+    def _connect(self, method, *args, **kwargs):
+        """
+        Initiate a connection attempt.
+
+        @param method: A callable which will actually start the connection
+            attempt.  For example, C{reactor.connectTCP}.
+
+        @param *args: Positional arguments to pass to C{method}, excluding the
+            factory.
+
+        @param **kwargs: Keyword arguments to pass to C{method}.
+
+        @return: A L{Deferred} which fires with an instance of the protocol
+            class passed to this L{ClientCreator}'s initializer or fails if the
+            connection cannot be set up for some reason.
+        """
+        def cancelConnect(deferred):
+            connector.disconnect()
+            if f.pending is not None:
+                f.pending.cancel()
+        d = defer.Deferred(cancelConnect)
+        f = _InstanceFactory(
+            self.reactor, self.protocolClass(*self.args, **self.kwargs), d)
+        connector = method(factory=f, *args, **kwargs)
         return d
 
-    def connectUNIX(self, address, timeout = 30, checkPID=0):
-        """Connect to Unix socket, return Deferred of resulting protocol instance."""
-        d = defer.Deferred()
-        f = _InstanceFactory(self.reactor, self.protocolClass(*self.args, **self.kwargs), d)
-        self.reactor.connectUNIX(address, f, timeout = timeout, checkPID=checkPID)
-        return d
+
+    def connectTCP(self, host, port, timeout=30, bindAddress=None):
+        """
+        Connect to a TCP server.
+
+        The parameters are all the same as to L{IReactorTCP.connectTCP} except
+        that the factory parameter is omitted.
+
+        @return: A L{Deferred} which fires with an instance of the protocol
+            class passed to this L{ClientCreator}'s initializer or fails if the
+            connection cannot be set up for some reason.
+        """
+        return self._connect(
+            self.reactor.connectTCP, host, port, timeout=timeout,
+            bindAddress=bindAddress)
+
+
+    def connectUNIX(self, address, timeout=30, checkPID=False):
+        """
+        Connect to a Unix socket.
+
+        The parameters are all the same as to L{IReactorUNIX.connectUNIX} except
+        that the factory parameter is omitted.
+
+        @return: A L{Deferred} which fires with an instance of the protocol
+            class passed to this L{ClientCreator}'s initializer or fails if the
+            connection cannot be set up for some reason.
+        """
+        return self._connect(
+            self.reactor.connectUNIX, address, timeout=timeout,
+            checkPID=checkPID)
+
 
     def connectSSL(self, host, port, contextFactory, timeout=30, bindAddress=None):
-        """Connect to SSL server, return Deferred of resulting protocol instance."""
-        d = defer.Deferred()
-        f = _InstanceFactory(self.reactor, self.protocolClass(*self.args, **self.kwargs), d)
-        self.reactor.connectSSL(host, port, f, contextFactory, timeout=timeout, bindAddress=bindAddress)
-        return d
+        """
+        Connect to an SSL server.
+
+        The parameters are all the same as to L{IReactorSSL.connectSSL} except
+        that the factory parameter is omitted.
+
+        @return: A L{Deferred} which fires with an instance of the protocol
+            class passed to this L{ClientCreator}'s initializer or fails if the
+            connection cannot be set up for some reason.
+        """
+        return self._connect(
+            self.reactor.connectSSL, host, port,
+            contextFactory=contextFactory, timeout=timeout,
+            bindAddress=bindAddress)
+
 
 
 class ReconnectingClientFactory(ClientFactory):
