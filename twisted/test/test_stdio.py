@@ -1,5 +1,9 @@
-# Copyright (c) 2006-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2006-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
+
+"""
+Tests for L{twisted.internet.stdio}.
+"""
 
 import os, sys
 
@@ -72,6 +76,9 @@ class StandardIOTestProcessProtocol(protocol.ProcessProtocol):
 
 
 class StandardInputOutputTestCase(unittest.TestCase):
+
+    skip = skipWindowsNopywin32
+
     def _spawnProcess(self, proto, sibling, *args, **kw):
         """
         Launch a child Python process and communicate with it using the
@@ -135,7 +142,32 @@ class StandardInputOutputTestCase(unittest.TestCase):
             self.failIfIn(1, p.data)
             reason.trap(error.ProcessDone)
         return self._requireFailure(d, processEnded)
-    test_loseConnection.skip = skipWindowsNopywin32
+
+
+    def test_readConnectionLost(self):
+        """
+        When stdin is closed and the protocol connected to it implements
+        L{IHalfCloseableProtocol}, the protocol's C{readConnectionLost} method
+        is called.
+        """
+        errorLogFile = self.mktemp()
+        log.msg("Child process logging to " + errorLogFile)
+        p = StandardIOTestProcessProtocol()
+        p.onDataReceived = defer.Deferred()
+
+        def cbBytes(ignored):
+            d = p.onCompletion
+            p.transport.closeStdin()
+            return d
+        p.onDataReceived.addCallback(cbBytes)
+
+        def processEnded(reason):
+            reason.trap(error.ProcessDone)
+        d = self._requireFailure(p.onDataReceived, processEnded)
+
+        self._spawnProcess(
+            p, 'stdio_test_halfclose.py', errorLogFile)
+        return d
 
 
     def test_lastWriteReceived(self):
@@ -175,7 +207,6 @@ class StandardInputOutputTestCase(unittest.TestCase):
                     p.data,))
             reason.trap(error.ProcessDone)
         return self._requireFailure(p.onCompletion, processEnded)
-    test_lastWriteReceived.skip = skipWindowsNopywin32
 
 
     def test_hostAndPeer(self):
@@ -193,7 +224,6 @@ class StandardInputOutputTestCase(unittest.TestCase):
             self.failUnless(peer)
             reason.trap(error.ProcessDone)
         return self._requireFailure(d, processEnded)
-    test_hostAndPeer.skip = skipWindowsNopywin32
 
 
     def test_write(self):
@@ -210,7 +240,6 @@ class StandardInputOutputTestCase(unittest.TestCase):
             self.assertEquals(p.data[1], 'ok!')
             reason.trap(error.ProcessDone)
         return self._requireFailure(d, processEnded)
-    test_write.skip = skipWindowsNopywin32
 
 
     def test_writeSequence(self):
@@ -227,7 +256,6 @@ class StandardInputOutputTestCase(unittest.TestCase):
             self.assertEquals(p.data[1], 'ok!')
             reason.trap(error.ProcessDone)
         return self._requireFailure(d, processEnded)
-    test_writeSequence.skip = skipWindowsNopywin32
 
 
     def _junkPath(self):
@@ -265,7 +293,6 @@ class StandardInputOutputTestCase(unittest.TestCase):
             self.failIf(toWrite, "Connection lost with %d writes left to go." % (len(toWrite),))
             reason.trap(error.ProcessDone)
         return self._requireFailure(d, processEnded)
-    test_producer.skip = skipWindowsNopywin32
 
 
     def test_consumer(self):
@@ -284,4 +311,3 @@ class StandardInputOutputTestCase(unittest.TestCase):
             self.assertEquals(p.data[1], file(junkPath).read())
             reason.trap(error.ProcessDone)
         return self._requireFailure(d, processEnded)
-    test_consumer.skip = skipWindowsNopywin32

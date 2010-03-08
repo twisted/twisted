@@ -275,28 +275,30 @@ class Gtk2Reactor(posixbase.PosixReactorBase):
         error.ConnectionLost: failure.Failure(error.ConnectionLost()),
         }):
         why = None
-        didRead = None
-        if condition & POLL_DISCONNECTED and \
-               not (condition & gobject.IO_IN):
-            why = main.CONNECTION_LOST
+        inRead = False
+        if condition & POLL_DISCONNECTED and not (condition & gobject.IO_IN):
+            if source in self._reads:
+                why = main.CONNECTION_DONE
+                inRead = True
+            else:
+                why = main.CONNECTION_LOST
         else:
             try:
                 if condition & gobject.IO_IN:
                     why = source.doRead()
-                    didRead = source.doRead
+                    inRead = True
                 if not why and condition & gobject.IO_OUT:
                     # if doRead caused connectionLost, don't call doWrite
                     # if doRead is doWrite, don't call it again.
-                    if not source.disconnected and source.doWrite != didRead:
+                    if not source.disconnected:
                         why = source.doWrite()
-                        didRead = source.doWrite # if failed it was in write
             except:
                 why = sys.exc_info()[1]
                 log.msg('Error In %s' % source)
                 log.deferr()
 
         if why:
-            self._disconnectSelectable(source, why, didRead == source.doRead)
+            self._disconnectSelectable(source, why, inRead)
 
 
     def callback(self, source, condition):

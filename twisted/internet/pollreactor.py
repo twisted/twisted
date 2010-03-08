@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
@@ -170,7 +170,11 @@ class PollReactor(posixbase.PosixReactorBase):
         why = None
         inRead = False
         if event & POLL_DISCONNECTED and not (event & POLLIN):
-            why = main.CONNECTION_LOST
+            if fd in self._reads:
+                why = main.CONNECTION_DONE
+                inRead = True
+            else:
+                why = main.CONNECTION_LOST
         else:
             try:
                 if event & POLLIN:

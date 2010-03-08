@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -20,7 +20,7 @@ from twisted.internet.interfaces import IReactorFDSet
 from twisted.python import _epoll
 from twisted.python import log
 from twisted.internet import posixbase, error
-from twisted.internet.main import CONNECTION_LOST
+from twisted.internet.main import CONNECTION_DONE, CONNECTION_LOST
 
 
 _POLL_DISCONNECTED = (_epoll.HUP | _epoll.ERR)
@@ -203,7 +203,11 @@ class EPollReactor(posixbase.PosixReactorBase):
         why = None
         inRead = False
         if event & _POLL_DISCONNECTED and not (event & _epoll.IN):
-            why = CONNECTION_LOST
+            if fd in self._reads:
+                inRead = True
+                why = CONNECTION_DONE
+            else:
+                why = CONNECTION_LOST
         else:
             try:
                 if event & _epoll.IN:

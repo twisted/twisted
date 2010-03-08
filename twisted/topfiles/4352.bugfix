@@ -1,0 +1,1 @@
+The poll, epoll, glib2, and gtk2 reactors now all support half-close in the twisted.internet.stdio.StandardIO transport.
