@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.words.test.test_jabberxmlstream -*-
 #
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -279,7 +279,7 @@ class ListenAuthenticator(Authenticator):
         for prefix, uri in rootElement.localPrefixes.iteritems():
             self.xmlstream.prefixes[uri] = prefix
 
-        self.xmlstream.sid = randbytes.secureRandom(8).encode('hex')
+        self.xmlstream.sid = unicode(randbytes.secureRandom(8).encode('hex'))
 
 
 
@@ -455,25 +455,25 @@ class XmlStream(xmlstream.XmlStream):
                    receiving the stream header of the peer, it is set to the
                    minimum of that value and the version on the received
                    header.
-    @type version: (L{int}, L{int})
+    @type version: (C{int}, C{int})
     @ivar namespace: default namespace URI for stream
-    @type namespace: L{str}
+    @type namespace: C{unicode}
     @ivar thisEntity: JID of this entity
     @type thisEntity: L{JID}
     @ivar otherEntity: JID of the peer entity
     @type otherEntity: L{JID}
     @ivar sid: session identifier
-    @type sid: L{str}
+    @type sid: C{unicode}
     @ivar initiating: True if this is the initiating stream
-    @type initiating: L{bool}
+    @type initiating: C{bool}
     @ivar features: map of (uri, name) to stream features element received from
                     the receiving entity.
-    @type features: L{dict} of (L{str}, L{str}) to L{domish.Element}.
+    @type features: C{dict} of (C{unicode}, C{unicode}) to L{domish.Element}.
     @ivar prefixes: map of URI to prefixes that are to appear on stream
                     header.
-    @type prefixes: L{dict} of L{str} to L{str}
+    @type prefixes: C{dict} of C{unicode} to C{unicode}
     @ivar initializers: list of stream initializer objects
-    @type initializers: L{list} of objects that provide L{IInitializer}
+    @type initializers: C{list} of objects that provide L{IInitializer}
     @ivar authenticator: associated authenticator that uses C{initializers} to
                          initialize the XML stream.
     """

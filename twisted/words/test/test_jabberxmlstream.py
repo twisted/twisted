@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -608,6 +608,10 @@ class ConnectAuthenticatorTest(unittest.TestCase):
 
 
 class ListenAuthenticatorTest(unittest.TestCase):
+    """
+    Tests for L{xmlstream.ListenAuthenticator}
+    """
+
     def setUp(self):
         self.authenticator = xmlstream.ListenAuthenticator()
         self.xmlstream = xmlstream.XmlStream(self.authenticator)
@@ -631,6 +635,19 @@ class ListenAuthenticatorTest(unittest.TestCase):
         self.assertEqual('jabber:client', xs.namespace)
         self.assertIdentical(None, xs.otherEntity)
         self.assertEqual('example.com', xs.thisEntity.host)
+
+
+    def test_streamStartUnicodeSessionID(self):
+        """
+        The generated session id must be a unicode object.
+        """
+        xs = self.xmlstream
+        xs.makeConnection(proto_helpers.StringTransport())
+        xs.dataReceived("<stream:stream xmlns='jabber:client' "
+                         "xmlns:stream='http://etherx.jabber.org/streams' "
+                         "from='example.org' to='example.com' id='12345' "
+                         "version='1.0'>")
+        self.assertIsInstance(xs.sid, unicode)
 
 
 
