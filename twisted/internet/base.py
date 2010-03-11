@@ -15,11 +15,13 @@ from heapq import heappush, heappop, heapify
 
 import traceback
 
+from twisted.python.util import FancyEqMixin
 from twisted.python.compat import set
 from twisted.python.util import unsignedID
 from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorThreads
 from twisted.internet.interfaces import IResolverSimple, IReactorPluggableResolver
 from twisted.internet.interfaces import IConnector, IDelayedCall
+from twisted.internet.interfaces import INameResolver
 from twisted.internet import fdesc, main, error, abstract, defer, threads
 from twisted.python import log, failure, reflect
 from twisted.python.runtime import seconds as runtimeSeconds, platform
@@ -189,6 +191,28 @@ class DelayedCall(styles.Ephemeral):
 
 
 
+class _ResolverComplexifier(object):
+    implements(INameResolver)
+
+    def __init__(self, resolver):
+        self._resolver = resolver
+
+
+    def getAddressInformation(self, name, service, *args):
+        d = self._resolver.getHostByName(name)
+        def cbResolved(address):
+            return [
+                AddressInformation(
+                    socket.AF_INET,
+                    socket.SOCK_STREAM,
+                    socket.IPPROTO_TCP,
+                    "",
+                    (address, service))]
+        d.addCallback(cbResolved)
+        return d
+
+
+
 class ThreadedResolver(object):
     """
     L{ThreadedResolver} uses a reactor, a threadpool, and
@@ -254,6 +278,18 @@ class ThreadedResolver(object):
         self._runningQueries[lookupDeferred] = (userDeferred, cancelCall)
         lookupDeferred.addBoth(self._checkTimeout, name, lookupDeferred)
         return userDeferred
+
+
+
+class AddressInformation(object, FancyEqMixin):
+    compareAttributes = ('family', 'type', 'protocol', 'canonicalName', 'address')
+
+    def __init__(self, family, type, protocol, canonicalName, address):
+        self.family = family
+        self.type = type
+        self.protocol = protocol
+        self.canonicalName = canonicalName
+        self.address = address
 
 
 

@@ -9,14 +9,20 @@ import socket
 from Queue import Queue
 
 from zope.interface import implements
+from zope.interface.verify import verifyClass
 
 from twisted.python.threadpool import ThreadPool
 from twisted.python.util import setIDFunction
-from twisted.internet.interfaces import IReactorTime, IReactorThreads
+from twisted.internet.interfaces import (
+    IReactorTime, IReactorThreads, INameResolver)
 from twisted.internet.error import DNSLookupError
-from twisted.internet.base import ThreadedResolver, DelayedCall
+from twisted.internet.base import (
+    ThreadedResolver, AddressInformation, _ResolverComplexifier,
+    DelayedCall)
 from twisted.internet.task import Clock
 from twisted.trial.unittest import TestCase
+
+from twisted.internet.test.test_tcp import FakeResolver
 
 
 class FakeReactor(object):
@@ -48,6 +54,40 @@ class FakeReactor(object):
 
     def _stop(self):
         self._threadpool.stop()
+
+
+
+class NameResolverAdapterTests(TestCase):
+    """
+    L{_ResolverComplexifier} adapters an L{IResolverSimple} provider
+    to L{INameResolver}.
+    """
+    def test_interface(self):
+        """
+        L{_ResolverComplexifier} implements L{INameResolver}.
+        """
+        self.assertTrue(verifyClass(INameResolver, _ResolverComplexifier))
+
+
+    def test_success(self):
+        """
+        L{_ResolverComplexifier} calls the wrapped object's
+        C{getHostByName} method and returns a L{Deferred} which fires
+        with a list of one element containing the result which
+        C{getHostByName}'s L{Deferred} fired with.
+        """
+        simple = FakeResolver({'example.com': '192.168.1.12'})
+        resolver = _ResolverComplexifier(simple)
+        d = resolver.getAddressInformation('example.com', 1234)
+        d.addCallback(
+            self.assertEquals, [
+                AddressInformation(
+                    socket.AF_INET,
+                    socket.SOCK_STREAM,
+                    socket.IPPROTO_TCP,
+                    "",
+                    ("192.168.1.12", 1234))])
+        return d
 
 
 

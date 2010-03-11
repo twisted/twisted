@@ -42,7 +42,7 @@ class FakeResolver:
         self.names = names
 
 
-    def getHostByName(self, name, timeout):
+    def getHostByName(self, name, timeout=None):
         try:
             return succeed(self.names[name])
         except KeyError:
