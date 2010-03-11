@@ -10,11 +10,33 @@ __metaclass__ = type
 import signal
 import time
 import inspect
+import socket
 
+from zope.interface import implements
+
+from twisted.internet.interfaces import INameResolver
 from twisted.internet.abstract import FileDescriptor
 from twisted.internet.error import ReactorAlreadyRunning
-from twisted.internet.defer import Deferred
+from twisted.internet.defer import Deferred, succeed
+from twisted.internet.base import AddressInformation
 from twisted.internet.test.reactormixins import ReactorBuilder
+
+
+class MemoryNameResolver(object):
+    implements(INameResolver)
+    
+    def __init__(self, names):
+        self._names = names
+
+    def getAddressInformation(self, name, service, family=None, type=None, 
+                              protocol=None, flags=None):
+        return succeed([
+                address 
+                for address 
+                in self._names[name, service]
+                if family is None or family == address.family 
+                and type is None or type == address.type
+                and protocol is None or protocol == address.protocol])
 
 
 
@@ -290,6 +312,34 @@ class SystemEventTestsBuilder(ReactorBuilder):
         reactor.callWhenRunning(stop)
         reactor.run()
         self.assertEqual(events, ['crash', ('stop', True)])
+
+
+    def test_resolve(self):
+        """
+        C{reactor.resolve(name)} calls the C{getAddressInformation}
+        method of the installed resolver and returns a L{Deferred}
+        which fires with the first C{AF_INET} family element from the
+        result of C{getAddressInformation}.
+        """
+        resolver = MemoryNameResolver({
+                ('example.com', 0): [
+                    AddressInformation(
+                        socket.AF_INET6,
+                        socket.SOCK_STREAM,
+                        socket.IPPROTO_TCP,
+                        "",
+                        ("::1", 0)),
+                    AddressInformation(
+                        socket.AF_INET,
+                        socket.SOCK_STREAM,
+                        socket.IPPROTO_TCP,
+                        "",
+                        ("127.0.0.1", 22))]})
+        reactor = self.buildReactor()
+        reactor.installResolver(resolver)
+        d = reactor.resolve("example.com")
+        d.addCallback(self.assertEquals, "127.0.0.1")
+        return d
 
 
 globals().update(SystemEventTestsBuilder.makeTestCaseClasses())

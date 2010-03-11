@@ -516,7 +516,7 @@ class ReactorBase(object):
             reflect.qual(self.__class__) + " did not implement installWaker")
 
     def installResolver(self, resolver):
-        assert IResolverSimple.providedBy(resolver)
+        resolver = INameResolver(resolver)
         oldResolver = self.resolver
         self.resolver = resolver
         return oldResolver
@@ -576,7 +576,15 @@ class ReactorBase(object):
             return defer.succeed('0.0.0.0')
         if abstract.isIPAddress(name):
             return defer.succeed(name)
-        return self.resolver.getHostByName(name, timeout)
+        d = self.resolver.getAddressInformation(name, 0)
+        def cbGotInfo(addresses):
+            for info in addresses:
+                if info.family == socket.AF_INET:
+                    return info.address[0]
+            # XXX Test me
+        d.addCallback(cbGotInfo)
+        return d
+
 
     # Installation.
 
