@@ -1078,7 +1078,7 @@ class TOCClient(protocol.Protocol):
         func(user,cookie,seq,pip,vip,port,tlvs)
 
     def tocSEND_FILE(self,user,cookie,seq,pip,vip,port,tlvs):
-        if 12 in tlvs:
+        if '12' in tlvs:
             description=tlvs['12']
         else:
             description=""

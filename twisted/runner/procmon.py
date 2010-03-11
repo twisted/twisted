@@ -184,7 +184,7 @@ class ProcessMonitor(service.Service):
             delay = self.delay[name] = min(1+2*self.delay.get(name, 0), 3600)
         else:
             delay = self.delay[name] = 0
-        if self.active and self.name in processes:
+        if self.active and name in processes:
             reactor.callLater(delay, self.startProcess, name)
 
     def startProcess(self, name):

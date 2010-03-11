@@ -71,12 +71,12 @@ class AdaptFileSystemUserToISFTP:
         NOTE: this function assumes it runs as the logged-in user:
         i.e. under _runAsUser()
         """
-        if "uid" in attrs and gid in attrs:
+        if "uid" in attrs and "gid" in attrs:
             os.lchown(path, attrs["uid"], attrs["gid"])
         if "permissions" in attrs:
             os.chmod(path, attrs["permissions"])
-        if "atime" in attrs and mtime in attrs:
-            os.utime(path, (attrs["atime"]. attrs["mtime"]))
+        if "atime" in attrs and "mtime" in attrs:
+            os.utime(path, (attrs["atime"], attrs["mtime"]))
 
     def gotVersion(self, otherVersion, extData):
         return {}
