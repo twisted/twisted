@@ -201,9 +201,10 @@ class _ResolverComplexifier(object):
     def getAddressInformation(self, name, service, *args):
         d = self._resolver.getHostByName(name)
         def cbResolved(address):
+            family = socket.getaddrinfo(address, 0)[0][0]
             return [
                 AddressInformation(
-                    socket.AF_INET,
+                    family,
                     socket.SOCK_STREAM,
                     socket.IPPROTO_TCP,
                     "",
