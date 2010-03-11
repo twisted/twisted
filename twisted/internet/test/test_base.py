@@ -69,25 +69,41 @@ class NameResolverAdapterTests(TestCase):
         self.assertTrue(verifyClass(INameResolver, _ResolverComplexifier))
 
 
-    def test_success(self):
-        """
-        L{_ResolverComplexifier} calls the wrapped object's
-        C{getHostByName} method and returns a L{Deferred} which fires
-        with a list of one element containing the result which
-        C{getHostByName}'s L{Deferred} fired with.
-        """
-        simple = FakeResolver({'example.com': '192.168.1.12'})
+    def _successTest(self, address, family):
+        simple = FakeResolver({'example.com': address})
         resolver = _ResolverComplexifier(simple)
         d = resolver.getAddressInformation('example.com', 1234)
         d.addCallback(
             self.assertEquals, [
                 AddressInformation(
-                    socket.AF_INET,
+                    family,
                     socket.SOCK_STREAM,
                     socket.IPPROTO_TCP,
                     "",
-                    ("192.168.1.12", 1234))])
+                    (address, 1234))])
         return d
+
+
+    def test_ipv4Success(self):
+        """
+        L{_ResolverComplexifier} calls the wrapped object's
+        C{getHostByName} method and returns a L{Deferred} which fires
+        with a list of one element containing an AF_INET element with
+        the IPv4 address which C{getHostByName}'s L{Deferred} fired
+        with.
+        """
+        return self._successTest('192.168.1.12', socket.AF_INET)
+
+
+    def test_ipv6Success(self):
+        """
+        L{_ResolverComplexifier} calls the wrapped object's
+        C{getHostByName} method and returns a L{Deferred} which fires
+        with a list of one element containing an AF_INET6 element with
+        the IPv6 address which C{getHostByName}'s L{Deferred} fired
+        with.
+        """
+        return self._successTest('::1', socket.AF_INET6)
 
 
 
