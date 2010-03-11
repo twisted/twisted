@@ -54,6 +54,56 @@ class IConnector(Interface):
         """
 
 
+
+class INameResolver(Interface):
+    """
+    XXX Write me.
+
+    RFC 3484.
+    """
+    def getAddressInformation(name, service, family=None, socktype=None,
+                              proto=None, flags=None):
+        """
+        Get the address information associated with the given name.
+
+        @param name: A hostname to resolve.
+        @type name: C{str}
+
+        @param service: A port number or the name of the service for which to find address
+            information.  For example, C{22} or C{"ssh"}.
+        @type service: C{int} or C{str}
+
+        @param family: If specified, limit results to addresses from this family.  Must be one
+            of the address family constants from the socket module.  For example,
+            L{socket.AF_INET}.
+
+        @param socktype: If specified, limit results to addresses for this socket type.  Must be
+            one of the socket type constants from the socket module.  For example,
+            L{socket.SOCK_STREAM}.
+
+        @param proto: If specified, limit results to addresses for this socket protocol.  Must
+            be one of the protocol constants from the socket module.  For example,
+            L{socket.IPPROTO_TCP}.
+
+        @param flags: A bitvector specifying zero or more of the following::
+            - Yea right.  Go read the `getaddrinfo(3)` man page.
+
+        @raise ValueError: If one of the specified flags is not supported by the
+            implementation.  All flags are optional.
+
+        @return: A L{Deferred} which will fire when the resolution completes.  If resolution is
+            successful, the result will be a list of objects with the following attributes:
+
+            - C{family}: the family of this address
+            - C{type}: the type of this address
+            - C{protocol}: the protocol of this address
+            - C{canonicalName}: the canonical name associated with this address, or an empty
+                                string.
+            - C{address}: The actual address itself, including a port number.  This is suitable
+                          to be passed directly to L{socket.socket.connect}.
+        """
+
+
 class IResolverSimple(Interface):
 
     def getHostByName(name, timeout = (1, 3, 11, 45)):
