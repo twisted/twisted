@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.python.test.test_util -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import os, sys, hmac, errno, new, inspect, warnings
@@ -565,9 +565,17 @@ class FancyEqMixin:
 
 
 def dsu(list, key):
+    """
+    decorate-sort-undecorate (aka "Schwartzian transform")
+
+    DEPRECATED. Use the built-in C{sorted()} instead.
+    """
+    warnings.warn(("dsu is deprecated since Twisted 10.1. "
+        "Use the built-in sorted() instead."), DeprecationWarning, stacklevel=2)
     L2 = [(key(e), i, e) for (i, e) in zip(range(len(list)), list)]
     L2.sort()
     return [e[2] for e in L2]
+
 
 try:
     from twisted.python._initgroups import initgroups as _c_initgroups

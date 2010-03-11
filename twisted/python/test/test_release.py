@@ -1,4 +1,4 @@
-# Copyright (c) 2007-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2007-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -24,7 +24,6 @@ from twisted.python.compat import set
 from twisted.python.procutils import which
 from twisted.python import release
 from twisted.python.filepath import FilePath
-from twisted.python.util import dsu
 from twisted.python.versions import Version
 from twisted.python._release import _changeVersionInFile, getNextVersion
 from twisted.python._release import findTwistedProjects, replaceInFile
@@ -295,10 +294,10 @@ class ProjectTest(TestCase):
         Assert that two lists of L{Project}s are equal.
         """
         self.assertEqual(len(observedProjects), len(expectedProjects))
-        observedProjects = dsu(observedProjects,
-                               key=operator.attrgetter('directory'))
-        expectedProjects = dsu(expectedProjects,
-                               key=operator.attrgetter('directory'))
+        observedProjects = sorted(observedProjects,
+                                  key=operator.attrgetter('directory'))
+        expectedProjects = sorted(expectedProjects,
+                                  key=operator.attrgetter('directory'))
         for observed, expected in zip(observedProjects, expectedProjects):
             self.assertEqual(observed.directory, expected.directory)
 

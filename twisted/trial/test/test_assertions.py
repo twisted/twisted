@@ -11,7 +11,6 @@ from pprint import pformat
 from twisted.python import reflect, failure
 from twisted.python.deprecate import deprecated, getVersionString
 from twisted.python.versions import Version
-from twisted.python.util import dsu
 from twisted.internet import defer
 from twisted.trial import unittest, runner, reporter
 
@@ -633,14 +632,14 @@ class TestAssertionNames(unittest.TestCase):
     def test_failUnless_matches_assert(self):
         asserts = self._getAsserts()
         failUnlesses = reflect.prefixedMethods(self, 'failUnless')
-        self.failUnlessEqual(dsu(asserts, self._name),
-                             dsu(failUnlesses, self._name))
+        self.failUnlessEqual(sorted(asserts, key=self._name),
+                             sorted(failUnlesses, key=self._name))
 
     def test_failIf_matches_assertNot(self):
         asserts = reflect.prefixedMethods(unittest.TestCase, 'assertNot')
         failIfs = reflect.prefixedMethods(unittest.TestCase, 'failIf')
-        self.failUnlessEqual(dsu(asserts, self._name),
-                             dsu(failIfs, self._name))
+        self.failUnlessEqual(sorted(asserts, key=self._name),
+                             sorted(failIfs, key=self._name))
 
     def test_equalSpelling(self):
         for name, value in vars(self).items():

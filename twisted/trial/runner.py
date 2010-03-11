@@ -14,7 +14,6 @@ import os, types, warnings, sys, inspect, imp
 import random, doctest, time
 
 from twisted.python import reflect, log, failure, modules, filepath
-from twisted.python.util import dsu
 from twisted.python.compat import set
 from twisted.python.lockfile import FilesystemLock
 
@@ -436,7 +435,7 @@ class TestLoader(object):
 
         @param xs: A list of test cases, class or modules.
         """
-        return dsu(xs, self.sorter)
+        return sorted(xs, key=self.sorter)
 
     def findTestClasses(self, module):
         """Given a module, return all Trial test classes"""

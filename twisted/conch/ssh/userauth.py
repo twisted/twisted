@@ -16,7 +16,7 @@ from twisted.conch.ssh.common import NS, getNS
 from twisted.cred import credentials
 from twisted.cred.error import UnauthorizedLogin
 from twisted.internet import defer, reactor
-from twisted.python import failure, log, util
+from twisted.python import failure, log
 
 
 
@@ -519,9 +519,9 @@ class SSHUserAuthClient(service.SSHService):
                 # put the element at the end of the list.
                 return len(self.preferredOrder)
 
-        canContinue = util.dsu([meth for meth in canContinue.split(',')
-                                if meth not in self.authenticatedWith],
-                               orderByPreference)
+        canContinue = sorted([meth for meth in canContinue.split(',')
+                              if meth not in self.authenticatedWith],
+                             key=orderByPreference)
 
         log.msg('can continue with: %s' % canContinue)
         return self._cbUserauthFailure(None, iter(canContinue))

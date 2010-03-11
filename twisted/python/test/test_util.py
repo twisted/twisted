@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_util -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import os.path, sys
@@ -359,10 +359,22 @@ class Foo:
         self.x = x
 
 class DSU(unittest.TestCase):
-    def testDSU(self):
+    """
+    Tests for L{util.dsu}
+    """
+    def test_dsu(self):
         L = [Foo(x) for x in range(20, 9, -1)]
         L2 = util.dsu(L, lambda o: o.x)
         self.assertEquals(range(10, 21), [o.x for o in L2])
+
+
+    def test_deprecation(self):
+        self.assertWarns(DeprecationWarning,
+                         ("dsu is deprecated since Twisted 10.1. "
+                          "Use the built-in sorted() instead."),
+                         __file__, lambda: util.dsu([], lambda: 0))
+
+
 
 class IntervalDifferentialTestCase(unittest.TestCase):
     def testDefault(self):

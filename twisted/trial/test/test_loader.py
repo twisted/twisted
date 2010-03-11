@@ -1,4 +1,4 @@
-# Copyright (c) 2008-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -480,7 +480,7 @@ class PackageOrderingTest(packages.SysPathManglingTest):
         for testModule in pkg.walkModules():
             if testModule.name.split(".")[-1].startswith("test_"):
                 testModules.append(testModule)
-        sortedModules = util.dsu(testModules, sorter) # ONE
+        sortedModules = sorted(testModules, key=sorter) # ONE
         for modinfo in sortedModules:
             # Now let's find all the classes.
             module = modinfo.load(None)
@@ -491,13 +491,13 @@ class PackageOrderingTest(packages.SysPathManglingTest):
                 for attrib in modinfo.iterAttributes():
                     if runner.isTestCase(attrib.load()):
                         testClasses.append(attrib)
-                sortedClasses = util.dsu(testClasses, sorter) # TWO
+                sortedClasses = sorted(testClasses, key=sorter) # TWO
                 for clsinfo in sortedClasses:
                     testMethods = []
                     for attr in clsinfo.iterAttributes():
                         if attr.name.split(".")[-1].startswith('test'):
                             testMethods.append(attr)
-                    sortedMethods = util.dsu(testMethods, sorter) # THREE
+                    sortedMethods = sorted(testMethods, key=sorter) # THREE
                     for methinfo in sortedMethods:
                         yield methinfo
 
