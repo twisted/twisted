@@ -43,11 +43,11 @@ as the uniform interface which lets different parts of an asynchronous
 application interact and isolates them from implementation details they
 shouldn't be concerned with.</p>
 
-<p>That's almost all there is to Deferred. To solidify your new understanding,
-now consider this rewritten version of DelayedResource which uses a
-Deferred-based delay API. It does exactly the same thing as the <a
-href="asynchronous.xhtml">previous example</a>. Only the implementation is
-different.</p>
+<p>That's almost all there is to <code>Deferred</code>. To solidify your new
+understanding, now consider this rewritten version
+of <code>DelayedResource</code> which uses a <code>Deferred</code>-based delay
+API. It does exactly the same thing as the <a href="asynchronous.xhtml">previous
+example</a>. Only the implementation is different.</p>
 
 <p>First, the example must import that new API that was just mentioned, <code
 class="API" base="twisted.internet.task">deferLater</code>:</p>
@@ -71,7 +71,7 @@ identical to the previous version:</p>
 <pre class="python">
 class DelayedResource(Resource):
     def _delayedRender(self, request):
-        request.write("<html><body>Sorry to keep you waiting.</body></html>")
+        request.write("&lt;html&gt;&lt;body&gt;Sorry to keep you waiting.&lt;/body&gt;&lt;/html&gt;")
         request.finish()
 </pre>
 
@@ -81,8 +81,8 @@ base="twisted.internet.interfaces.IReactorTime">callLater</code>, We're going to
 use <code class="API" base="twisted.internet.task">deferLater</code> this
 time. <code>deferLater</code> accepts a reactor, delay (in seconds, as with
 <code>callLater</code>), and a function to call after the delay to produce that
-elusive object discussed in the description of Deferreds. We're also going to
-use <code>_delayedRender</code> as the callback to add to the
+elusive object discussed in the description of <code>Deferred</code>s. We're
+also going to use <code>_delayedRender</code> as the callback to add to the
 <code>Deferred</code> returned by <code>deferLater</code>. Since it expects the
 request object as an argument, we're going to set up the <code>deferLater</code>
 call to return a <code>Deferred</code> which has the request object as its
@@ -113,9 +113,9 @@ return NOT_DONE_YET
 
 <p>And with that, <code>DelayedResource</code> is now implemented based on a
 <code>Deferred</code>. The example still isn't very realistic, but remember that
-since Deferreds offer a uniform interface to many different asynchronous event
-sources, this code now resembles a real application even more closely; you could
-easily replace <code>deferLater</code> with another
+since <code>Deferred</code>s offer a uniform interface to many different
+asynchronous event sources, this code now resembles a real application even more
+closely; you could easily replace <code>deferLater</code> with another
 <code>Deferred</code>-returning API and suddenly you might have a resource that
 does something useful.</p>
 
@@ -129,7 +129,7 @@ from twisted.internet import reactor
 
 class DelayedResource(Resource):
     def _delayedRender(self, request):
-        request.write("Sorry to keep you waiting.")
+        request.write("&lt;html&gt;&lt;body&gt;Sorry to keep you waiting.&lt;/body&gt;&lt;/html&gt;")
         request.finish()
 
     def render_GET(self, request):

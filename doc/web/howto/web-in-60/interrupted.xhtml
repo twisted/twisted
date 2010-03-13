@@ -41,7 +41,7 @@ a resource class with the same <code>_delayedRender</code> used previously:</p>
 
  class DelayedResource(Resource):
      def _delayedRender(self, request):
-         request.write("<html><body>Sorry to keep you waiting.</body></html>")
+         request.write("&lt;html&gt;&lt;body&gt;Sorry to keep you waiting.&lt;/body&gt;&lt;/html&gt;")
          request.finish()
 </pre>
 
@@ -87,7 +87,7 @@ from twisted.internet import reactor
 
 class DelayedResource(Resource):
     def _delayedRender(self, request):
-        request.write("Sorry to keep you waiting.")
+        request.write("&lt;html&gt;&lt;body&gt;Sorry to keep you waiting.&lt;/body&gt;&lt;/html&gt;")
         request.finish()
 
     def _responseFailed(self, err, call):
@@ -101,9 +101,9 @@ class DelayedResource(Resource):
 resource = DelayedResource()
 </pre>
 
-<p>Toss this into example.rpy, fire it up with <code>twistd -n web --path
-.</code>, and hit <a
-href="http://localhost:8080/example.rpy">http://localhost:8080/example.rpy</a>. If
+<p>Toss this into <code>example.rpy</code>, fire it up with <code>twistd -n
+web --path .</code>, and
+hit <a href="http://localhost:8080/example.rpy">http://localhost:8080/example.rpy</a>. If
 you wait five seconds, you'll get the page content. If you interrupt the request
 before then, say by hitting escape (in Firefox, at least), then you'll see
 perhaps the most boring demonstration ever - no page content, and nothing in the

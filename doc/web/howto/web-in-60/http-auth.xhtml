@@ -49,11 +49,11 @@ decides which resources are used for which users. This can be as complex or as
 simple as it suitable for your application. For this example we'll keep it very
 simple: each user will have a resource which is a static file listing of the
 <code>public_html</code> directory in their UNIX home directory. First, we need
-to import <code>implements</code> from <code>zope.interface</code> and <code>IRealm</code> from
-<code>twisted.cred.portal</code>. Together these will let me mark this class as
-a realm (this is mostly - but not entirely - a documentation thing). We'll also
-need <code class="API" base="twisted.web.static">File</code> for the actual
-implementation later.</p>
+to import <code>implements</code> from <code>zope.interface</code> and
+<code>IRealm</code> from <code>twisted.cred.portal</code>. Together these will
+let me mark this class as a realm (this is mostly - but not entirely - a
+documentation thing). We'll also need <code class="API"
+base="twisted.web.static">File</code> for the actual implementation later.</p>
 
 <pre class="python">
 from zope.interface import implements

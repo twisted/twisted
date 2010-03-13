@@ -57,7 +57,7 @@ from twisted.python.log import err
 
 class DelayedResource(Resource):
     def _delayedRender(self, request):
-        request.write("Sorry to keep you waiting.")
+        request.write("&lt;html&gt;&lt;body&gt;Sorry to keep you waiting.&lt;/body&gt;&lt;/html&gt;")
         request.finish()
 
     def _responseFailed(self, failure, call):

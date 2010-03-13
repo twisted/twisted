@@ -50,7 +50,7 @@ want. Here's a resource which generates a page giving the time:</p>
 class ClockPage(Resource):
     isLeaf = True
     def render_GET(self, request):
-        return "<html><body>%s</body></html>" % (time.ctime(),)
+        return "&lt;html&gt;&lt;body&gt;%s&lt;/body&gt;&lt;/html&gt;" % (time.ctime(),)
 </pre>
 
 <p>Setting <code>isLeaf</code> to <code>True</code> indicates that
@@ -89,7 +89,7 @@ import time
 class ClockPage(Resource):
     isLeaf = True
     def render_GET(self, request):
-        return "<html><body>%s</body></html>" % (time.ctime(),)
+        return "&lt;html&gt;&lt;body&gt;%s&lt;/body&gt;&lt;/html&gt;" % (time.ctime(),)
 
 resource = ClockPage()
 factory = Site(resource)

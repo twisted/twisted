@@ -45,7 +45,7 @@ class YearPage(Resource):
         self.year = year
 
     def render_GET(self, request):
-        return "<html><body><pre>%s</pre></body></html>" % (calendar(self.year),)
+        return "&lt;html&gt;&lt;body&gt;&lt;pre&gt;%s&lt;/pre&gt;&lt;/body&gt;&lt;/html&gt;" % (calendar(self.year),)
 </pre>
 
 <p>Pretty simple - not all that different from the first dynamic resource
@@ -92,7 +92,7 @@ class YearPage(Resource):
         self.year = year
 
     def render_GET(self, request):
-        return "<html><body><pre>%s</pre></body></html>" % (calendar(self.year),)
+        return "&lt;html&gt;&lt;body&gt;&lt;pre&gt;%s&lt;/pre&gt;&lt;/body&gt;&lt;/html&gt;" % (calendar(self.year),)
 
 class Calendar(Resource):
   def getChild(self, name, request):

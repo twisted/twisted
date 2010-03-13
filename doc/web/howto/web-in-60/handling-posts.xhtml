@@ -43,7 +43,7 @@ respond to <code>GET</code> requests with a static HTML form:</p>
 <pre class="python">
 class FormPage(Resource):
     def render_GET(self, request):
-        return '<html><body><form method="POST"><input name="the-field" type="text" /></form></body></html>'
+        return '&lt;html&gt;&lt;body&gt;&lt;form method="POST"&gt;&lt;input name="the-field" type="text" /&gt;&lt;/form&gt;&lt;/body&gt;&lt;/html&gt;'
 </pre>
 
 <p>This is similar to the resource used in a <a
@@ -53,7 +53,7 @@ method will allow it to accept <code>POST</code> requests:</p>
 
 <pre class="python">
 def render_POST(self, request):
-    return '<html><body>You submitted: %s</body></html>' % (cgi.escape(request.args["the-field"][0]),)
+    return '&lt;html&gt;&lt;body&gt;You submitted: %s&lt;/body&gt;&lt;/html&gt;' % (cgi.escape(request.args["the-field"][0]),)
 </pre>
 
 <p>The main thing to note here is the use of <code>request.args</code>. This is
@@ -77,10 +77,10 @@ reactor.listenTCP(8880, factory)
 reactor.run()
 </pre>
 
-<p>Run the server and visit <a
-href="http://localhost:8880/form">http://localhost:8880/form</a>, submit the
-form, and watch it generate a page including the value you entered into the
-single field.</p>
+<p>Run the server and
+visit <a href="http://localhost:8880/form">http://localhost:8880/form</a>,
+submit the form, and watch it generate a page including the value you entered
+into the single field.</p>
 
 <p>Here's the complete source for the example:</p>
 
@@ -93,10 +93,10 @@ import cgi
 
 class FormPage(Resource):
     def render_GET(self, request):
-        return '<html><body><form method="POST"><input name="the-field" type="text" /></form></body></html>'
+        return '&lt;html&gt;&lt;body&gt;&lt;form method="POST"&gt;&lt;input name="the-field" type="text" /&gt;&lt;/form&gt;&lt;/body&gt;&lt;/html&gt;'
 
     def render_POST(self, request):
-        return '<html><body>You submitted: %s</body></html>' % (cgi.escape(request.args["the-field"][0]),)
+        return '&lt;html&gt;&lt;body&gt;You submitted: %s&lt;/body&gt;&lt;/html&gt;' % (cgi.escape(request.args["the-field"][0]),)
 
 root = Resource()
 root.putChild("form", FormPage())

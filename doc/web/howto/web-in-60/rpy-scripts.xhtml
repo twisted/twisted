@@ -41,13 +41,13 @@ from twisted.web.resource import Resource
 class ClockPage(Resource):
     isLeaf = True
     def render_GET(self, request):
-        return "<html><body>%s</body></html>" % (time.ctime(),)
+        return "&lt;html&gt;&lt;body&gt;%s&lt;/body&gt;&lt;/html&gt;" % (time.ctime(),)
 
 resource = ClockPage()
 </pre>
 
-<p>You may recognize this as the resource from the <a
-href="dynamic-content.xhtml">first dynamic rendering example</a>. What's
+<p>You may recognize this as the resource from
+the <a href="dynamic-content.xhtml">first dynamic rendering example</a>. What's
 different is what you don't see: we didn't import <code>reactor</code> or
 <code>Site</code>. There are no calls to <code>listenTCP</code> or
 <code>run</code>. Instead, and this is the core idea for rpy scripts, we just
@@ -62,8 +62,8 @@ are a few ways to do this. The simplest way is with <code>twistd</code>:</p>
 $ twistd -n web --path .
 </pre>
 
-<p>Hit <a
-href="http://localhost:8080/example.rpy">http://localhost:8080/example.rpy</a>
+<p>Hit 
+<a href="http://localhost:8080/example.rpy">http://localhost:8080/example.rpy</a>
 to see it run. You can pass other arguments here too. <code>twistd web</code>
 has options for specifying which port number to bind, whether to set up an HTTPS
 server, and plenty more. Other options you can pass to <code>twistd</code> allow

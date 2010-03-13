@@ -21,10 +21,10 @@ addressing scheme considers only the path segments of the URL. Starting with the
 root resource (the one used to construct the <code>Site</code>) and the first
 path segment, a child resource is looked up. As long as there are more path
 segments, this process is repeated using the result of the previous lookup and
-the next path segment. For example, to handle a request for
-<code>/foo/bar</code>, first the root's "<code>foo</code>" child is retrieved,
-then that resource's "<code>bar</code>" child is retrieved, then that resource
-is used to create the response.</p>
+the next path segment. For example, to handle a request
+for <code>"/foo/bar"</code>, first the root's <code>"foo"</code> child is
+retrieved, then that resource's <code>"bar"</code> child is retrieved, then that
+resource is used to create the response.</p>
 
 <p>With that out of the way, let's consider an example that can serve a few
 different resources at a few different URLs.</p>

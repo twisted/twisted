@@ -34,8 +34,8 @@ from twisted.web.error import NoResource
 </pre>
 
 <p>Next, we'll define a custom resource which does some dynamic URL
-dispatch. This example is going to be just like the <a
-href="dynamic-dispatch.xhtml">previous one</a>, where the path segment is
+dispatch. This example is going to be just like
+the <a href="dynamic-dispatch.xhtml">previous one</a>, where the path segment is
 interpreted as a year; the difference is that this time we'll handle requests
 which don't conform to that pattern by returning the not found response:</p>
 
@@ -69,7 +69,7 @@ class YearPage(Resource):
         self.year = year
 
     def render_GET(self, request):
-        return "<html><body><pre>%s</pre></body></html>" % (calendar(self.year),)
+        return "&lt;html&gt;&lt;body&gt;&lt;pre&gt;%s&lt;/pre&gt;&lt;/body&gt;&lt;/html&gt;" % (calendar(self.year),)
 
 class Calendar(Resource):
     def getChild(self, name, request):

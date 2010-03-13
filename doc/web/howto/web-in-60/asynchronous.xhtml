@@ -17,9 +17,10 @@ leaving the server free to respond to other requests. In other words,
 asynchronously. In this installment, we'll write a resource like this.</p>
 
 <p>A resource that generates a response asynchronously looks like one that
-generates a response synchronously in many ways. The same base class, <code
-class="API" base="twisted.web.resource">Resource</code>, is used either way; the
-same render methods are used. There are three basic differences, though.</p>
+generates a response synchronously in many ways. The same base
+class, <code class="API" base="twisted.web.resource">Resource</code>, is used
+either way; the same render methods are used. There are three basic differences,
+though.</p>
 
 <p>First, instead of returning the string which will be used as the body of the
 response, the resource uses <code class="API"
@@ -39,7 +40,7 @@ from twisted.internet import reactor
 
 class DelayedResource(Resource):
     def _delayedRender(self, request):
-        request.write("<html><body>Sorry to keep you waiting.</body></html>")
+        request.write("&lt;html&gt;&lt;body&gt;Sorry to keep you waiting.&lt;/body&gt;&lt;/html&gt;")
         request.finish()
 
     def render_GET(self, request):
@@ -72,7 +73,7 @@ from twisted.internet import reactor
 
 class DelayedResource(Resource):
     def _delayedRender(self, request):
-        request.write("<html><body>Sorry to keep you waiting.</body></html>")
+        request.write("&lt;html&gt;&lt;body&gt;Sorry to keep you waiting.&lt;/body&gt;&lt;/html&gt;")
         request.finish()
 
     def render_GET(self, request):
