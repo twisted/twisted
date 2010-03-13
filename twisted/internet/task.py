@@ -55,6 +55,7 @@ class LoopingCall:
     interval = None
     _expectNextCallAt = 0.0
     _runAtStart = False
+    _waitingOnDeferred = False
     starttime = None
 
     def __init__(self, f, *a, **kw):
@@ -154,6 +155,8 @@ class LoopingCall:
         if interval < 0:
             raise ValueError, "interval must be >= 0"
         self.running = True
+        if self._waitingOnDeferred:
+            return self.deferred
         d = self.deferred = defer.Deferred()
         self.starttime = self.clock.seconds()
         self._expectNextCallAt = self.starttime
@@ -184,14 +187,17 @@ class LoopingCall:
             else:
                 d, self.deferred = self.deferred, None
                 d.callback(self)
+            self._waitingOnDeferred = False
 
         def eb(failure):
             self.running = False
             d, self.deferred = self.deferred, None
             d.errback(failure)
+            self._waitingOnDeferred = False
 
         self.call = None
         d = defer.maybeDeferred(self.f, *self.a, **self.kw)
+        self._waitingOnDeferred = True
         d.addCallback(cb)
         d.addErrback(eb)
 
