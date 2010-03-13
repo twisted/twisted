@@ -1,0 +1,2 @@
+twisted.words.im.basechat.ChatUI now has a functional
+contactChangedNick with unit tests.
