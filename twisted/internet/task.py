@@ -156,7 +156,12 @@ class LoopingCall:
             raise ValueError, "interval must be >= 0"
         self.running = True
         if self._waitingOnDeferred:
-            return self.deferred
+            nd = defer.Deferred()
+            def chainDeferreds(result):
+                nd.callback(self)
+                return result
+            self.deferred.addCallback(chainDeferreds)
+            return nd
         d = self.deferred = defer.Deferred()
         self.starttime = self.clock.seconds()
         self._expectNextCallAt = self.starttime
