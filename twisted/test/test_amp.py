@@ -1,5 +1,5 @@
 # Copyright (c) 2005 Divmod, Inc.
-# Copyright (c) 2007-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2007-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -598,9 +598,10 @@ class SimpleGreeting(amp.Command):
     response = [('cookieplus', amp.Integer())]
 
 
+
 class TestLocator(amp.CommandLocator):
     """
-    A locator which implements a responder to a 'hello' command.
+    A locator which implements a responder to the 'simple' command.
     """
     def __init__(self):
         self.greetings = []
@@ -610,6 +611,28 @@ class TestLocator(amp.CommandLocator):
         self.greetings.append((greeting, cookie))
         return dict(cookieplus=cookie + 3)
     greetingResponder = SimpleGreeting.responder(greetingResponder)
+
+
+
+class OverridingLocator(TestLocator):
+    """
+    A locator which overrides the responder to the 'simple' command.
+    """
+
+    def greetingResponder(self, greeting, cookie):
+        """
+        Return a different cookieplus than L{TestLocator.greetingResponder}.
+        """
+        self.greetings.append((greeting, cookie))
+        return dict(cookieplus=cookie + 4)
+    greetingResponder = SimpleGreeting.responder(greetingResponder)
+
+
+
+class InheritingLocator(OverridingLocator):
+    """
+    This locator should inherit the responder from L{OverridingLocator}.
+    """
 
 
 
@@ -646,6 +669,21 @@ class CommandLocatorTests(unittest.TestCase):
     functions that take structured objects, annotated with metadata.
     """
 
+    def _checkSimpleGreeting(self, locatorClass, expected):
+        """
+        Check that a locator of type C{locatorClass} finds a responder
+        for command named I{simple} and that the found responder answers
+        with the C{expected} result to a C{SimpleGreeting<"ni hao", 5>}
+        command.
+        """
+        locator = locatorClass()
+        responderCallable = locator.locateResponder("simple")
+        result = responderCallable(amp.Box(greeting="ni hao", cookie="5"))
+        def done(values):
+            self.assertEquals(values, amp.AmpBox(cookieplus=str(expected)))
+        return result.addCallback(done)
+
+
     def test_responderDecorator(self):
         """
         A method on a L{CommandLocator} subclass decorated with a L{Command}
@@ -653,12 +691,24 @@ class CommandLocatorTests(unittest.TestCase):
         locateResponder, wrapped in logic to serialize and deserialize its
         arguments.
         """
-        locator = TestLocator()
-        responderCallable = locator.locateResponder("simple")
-        result = responderCallable(amp.Box(greeting="ni hao", cookie="5"))
-        def done(values):
-            self.assertEquals(values, amp.AmpBox(cookieplus='8'))
-        return result.addCallback(done)
+        return self._checkSimpleGreeting(TestLocator, 8)
+
+
+    def test_responderOverriding(self):
+        """
+        L{CommandLocator} subclasses can override a responder inherited from
+        a base class by using the L{Command.responder} decorator to register
+        a new responder method.
+        """
+        return self._checkSimpleGreeting(OverridingLocator, 9)
+
+
+    def test_responderInheritance(self):
+        """
+        Responder lookup follows the same rules as normal method lookup
+        rules, particularly with respect to inheritance.
+        """
+        return self._checkSimpleGreeting(InheritingLocator, 9)
 
 
     def test_lookupFunctionDeprecatedOverride(self):

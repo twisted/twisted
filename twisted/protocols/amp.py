@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.test.test_amp -*-
 # Copyright (c) 2005 Divmod, Inc.
-# Copyright (c) 2007-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2007-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -945,6 +945,9 @@ class CommandLocator:
         Command.responder decorator outside the context of a CommandLocator
         class declaration.
 
+        Command responders defined on subclasses are given precedence over
+        those inherited from a base class.
+
         The Command.responder decorator explicitly cooperates with this
         metaclass.
         """
@@ -954,11 +957,13 @@ class CommandLocator:
             commands = cls._currentClassCommands[:]
             cls._currentClassCommands[:] = []
             cd = attrs['_commandDispatch'] = {}
-            for base in bases:
-                cls._grabFromBase(cd, base)
+            subcls = type.__new__(cls, name, bases, attrs)
+            ancestors = list(subcls.__mro__[1:])
+            ancestors.reverse()
+            for ancestor in ancestors:
+                cd.update(getattr(ancestor, '_commandDispatch', {}))
             for commandClass, responderFunc in commands:
                 cd[commandClass.commandName] = (commandClass, responderFunc)
-            subcls = type.__new__(cls, name, bases, attrs)
             if (bases and (
                     subcls.lookupFunction != CommandLocator.lookupFunction)):
                 def locateResponder(self, name):
@@ -970,12 +975,6 @@ class CommandLocator:
                 subcls.locateResponder = locateResponder
             return subcls
 
-        def _grabFromBase(cls, cd, base):
-            if hasattr(base, "_commandDispatch"):
-                cd.update(base._commandDispatch)
-                for subbase in base.__bases__:
-                    cls._grabFromBase(cd, subbase)
-        _grabFromBase = classmethod(_grabFromBase)
 
     implements(IResponderLocator)
 

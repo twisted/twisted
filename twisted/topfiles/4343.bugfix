@@ -1,0 +1,2 @@
+twisted.protocols.amp.CommandLocator now allows subclasses to override
+responders inherited from base classes.
