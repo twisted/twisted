@@ -106,6 +106,19 @@ class NameResolverAdapterTests(TestCase):
         return self._successTest('::1', socket.AF_INET6)
 
 
+    def test_failure(self):
+        """
+        The L{Deferred} L{_ResolverComplexifier.getAddressInformation}
+        returns fails if the wrapped resolver's C{getHostByName}
+        L{Deferred} fails.
+        """
+        error = DNSLookupError("Problems abound")
+        simple = FakeResolver({'example.com': error})
+        resolver = _ResolverComplexifier(simple)
+        d = resolver.getAddressInformation('example.com', 1234)
+        return self.assertFailure(d, DNSLookupError)
+
+
 
 class ThreadedResolverTests(TestCase):
     """
