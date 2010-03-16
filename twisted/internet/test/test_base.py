@@ -120,6 +120,27 @@ class NameResolverAdapterTests(TestCase):
 
 
 
+class ThreadedNameResolverTests(TestCase):
+    """
+    Tests for L{ThreadedNameResolver}.
+    """
+    def test_interface(self):
+        """
+        L{ThreadedNameResolver} implements L{INameResolver}.
+        """
+        self.assertTrue(verifyClass(INameResolver, ThreadedNameResolver))
+
+
+    def test_success(self):
+        """
+        If the underlying C{getaddrinfo} library call completes
+        successfully and returns results, the L{Deferred} returned by
+        L{ThreadedNameResolver.getAddressInformation} fires with a
+        list of L{AddressInformation} instances representing those
+        results.
+        """
+
+
 class ThreadedResolverTests(TestCase):
     """
     Tests for L{ThreadedResolver}.
