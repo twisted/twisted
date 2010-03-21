@@ -15,7 +15,7 @@ What is this?
 
   Twisted is an event-based framework for internet applications which works on
   Python 2.4 through 2.6.  The following are some of the modules included
-  with Twisted::
+  with Twisted:
 
   - twisted.application
     A "Service" system that allows you to organize your application in
@@ -43,9 +43,9 @@ What is this?
   - twisted.trial
     A unit testing framework that integrates well with Twisted-based code.
 
-  Twisted supports integration of the Tk, GTK+, GTK+ 2, Qt, Mac OS X,
-  or wxPython event loop with its main event loop. The Win32 event
-  loop is also supported.
+  Twisted supports integration of the Win32, Tk, GTK+ and GTK+ 2 event loops
+  with its main event loop.  There is experimental support for Mac OS X and
+  wxPython event loop integration, which you use at your peril.
 
   For more information, visit http://www.twistedmatrix.com, or join the list
   at http://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python
@@ -64,7 +64,7 @@ Unit Tests
 ==========
 
 
-  See our unit tests run proving that the software is BugFree(TM)::
+  See our unit tests run proving that the software is BugFree(TM):
 
    % trial twisted
 
@@ -78,18 +78,18 @@ Unit Tests
 Documentation and Support
 =========================
 
-  Examples on how to use Twisted APIs are located in doc/examples;
-  this might ease the learning curve a little bit, since all these
-  files are kept as short as possible.  The file doc/howto/index.xhtml
-  contains an index of all the HOWTOs: this should be your starting
-  point when looking for documentation.
+  Examples on how to use Twisted APIs are located in doc/core/examples; this
+  might ease the learning curve a little bit, since all these files are kept
+  as short as possible.  The file doc/core/howto/index.xhtml contains an index
+  of all the core HOWTOs: this should be your starting point when looking for
+  documentation.
 
-  Help is available on the Twisted mailing list::
+  Help is available on the Twisted mailing list:
 
     http://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python
 
   There is also a very lively IRC channel, #twisted, on
-  irc.freenode.net.
+  chat.freenode.net.
 
 
 Copyright

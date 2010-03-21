@@ -2,14 +2,12 @@ Requirements
 
   Python 2.4, 2.5 or 2.6.
 
-  Zope Interfaces 3.0.1 (http://zope.org/Products/ZopeInterface) - if
-  you have ZopeX3 (at least version 3.0.0c1) installed that should
-  work too.
+  Zope Interfaces 3.3.0 or better (http://pypi.python.org/pypi/zope.interface)
 
-  On Windows pywin32 is recommended (this is built in to ActivePython,
-  so no need to reinstall if you use it instead of standard Python)
-      http://sourceforge.net/project/showfiles.php?group_id=78018
-  The Windows IOCP reactor requires pywin32 build 205 or later.
+  On Windows pywin32 is recommended (this is built in to ActivePython, so no
+  need to reinstall if you use it instead of standard Python)
+  http://sourceforge.net/project/showfiles.php?group_id=78018 The Windows IOCP
+  reactor requires pywin32 build 205 or later.
 
   If you would like to use Trial's subunit reporter, then you will need to
   install Subunit 0.0.2 or later (https://launchpad.net/subunit).
@@ -23,7 +21,7 @@ Installation
     Twisted is in their package repositories.
 
   * Win32
-    EXEs are available from http://twistedmatrix.com/
+    Installers are available from http://twistedmatrix.com/
 
   * Other
     As with other Python packages, the standard way of installing from source
