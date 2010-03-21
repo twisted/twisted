@@ -27,7 +27,7 @@ class Draw(insults.TerminalProtocol):
 
     def connectionMade(self):
         self.terminal.eraseDisplay()
-        self.terminal.resetModes([insults.IRM])
+        self.terminal.resetModes([insults.modes.IRM])
         self.cursor = self.cursors[0]
 
     def keystrokeReceived(self, keyID, modifier):
