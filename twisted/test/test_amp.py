@@ -17,10 +17,12 @@ from twisted.internet import protocol, defer, error, reactor, interfaces
 from twisted.test import iosim
 from twisted.test.proto_helpers import StringTransport
 
+ssl = None
 try:
     from twisted.internet import ssl
 except ImportError:
-    ssl = None
+    pass
+
 if ssl and not ssl.supported:
     ssl = None
 
@@ -2568,15 +2570,23 @@ class ListOfIntegersTests(unittest.TestCase, ListOfTestsMixin):
     """
     elementType = amp.Integer()
 
+    huge = (
+        9999999999999999999999999999999999999999999999999999999999 *
+        9999999999999999999999999999999999999999999999999999999999)
+
     strings = {
         "empty": "",
         "single": "\x00\x0210",
-        "multiple": "\x00\x011\x00\x0220\x00\x03500"}
+        "multiple": "\x00\x011\x00\x0220\x00\x03500",
+        "huge": "\x00\x74%d" % (huge,),
+        "negative": "\x00\x02-1"}
 
     objects = {
         "empty": [],
         "single": [10],
-        "multiple": [1, 20, 500]}
+        "multiple": [1, 20, 500],
+        "huge": [huge],
+        "negative": [-1]}
 
 
 class ListOfUnicodeTests(unittest.TestCase, ListOfTestsMixin):

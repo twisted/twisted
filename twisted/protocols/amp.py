@@ -1271,7 +1271,10 @@ class Argument:
 
 class Integer(Argument):
     """
-    Convert to and from 'int'.
+    Encode any integer values of any size on the wire as the string
+    representation.
+
+    Example: C{123} becomes C{"123"}
     """
     fromString = int
     def toString(self, inObject):
