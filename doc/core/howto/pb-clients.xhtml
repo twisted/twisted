@@ -39,7 +39,7 @@ from zope.interface import implements
 
 class SimpleAvatar(pb.Avatar):
     greetings = 0
-    def __init__(self, name): 
+    def __init__(self, name):
         self.name = name
     def perspective_greet(self):
         self.greetings += 1
@@ -55,10 +55,10 @@ class CachingRealm:
         if pb.IPerspective not in interfaces: raise NotImplementedError
         if avatarId in self.avatars:
             p = self.avatars[avatarId]
-        else: 
+        else:
             p = self.avatars[avatarId] = SimpleAvatar(avatarId)
         return pb.IPerspective, p, lambda:None
-</pre>       
+</pre>
 
 <p>This gives us a perspective which counts the number of greetings it
 sent its client. Implementing a caching strategy, as opposed to generating
@@ -83,7 +83,7 @@ class Greeter:
 
 class SimpleAvatar(pb.Avatar):
     greetings = 0
-    def __init__(self, name, greeter): 
+    def __init__(self, name, greeter):
         self.name = name
         self.greeter = greeter
     def perspective_greet(self):
@@ -99,7 +99,7 @@ class CachingRealm:
         if pb.IPerspective not in interfaces: raise NotImplementedError
         if avatarId in self.greeters:
             p = self.greeters[avatarId]
-        else: 
+        else:
             p = self.greeters[avatarId] = Greeter()
         return pb.IPerspective, SimpleAvatar(avatarId, p), lambda:None
 </pre>
@@ -116,7 +116,7 @@ from zope.interface import implements
 class SimpleAvatar(pb.Avatar):
     greetings = 0
     connections = 0
-    def __init__(self, name): 
+    def __init__(self, name):
         self.name = name
     def connect(self):
         self.connections += 1
@@ -136,7 +136,7 @@ class CachingRealm:
         if pb.IPerspective not in interfaces: raise NotImplementedError
         if avatarId in self.avatars:
             p = self.avatars[avatarId]
-        else: 
+        else:
             p = self.avatars[avatarId] = SimpleAvatar(avatarId)
         p.connect()
         return pb.IPerspective, p, p.disconnect
@@ -151,7 +151,7 @@ from zope.interface import implements
 class SimpleAvatar(pb.Avatar):
     greetings = 0
     connections = 0
-    def __init__(self, name): 
+    def __init__(self, name):
         self.name = name
     def connect(self):
         self.connections += 1
@@ -172,7 +172,7 @@ class CachingRealm:
         if pb.IPerspective not in interfaces: raise NotImplementedError
         if avatarId in self.avatars:
             p = self.avatars[avatarId]
-        else: 
+        else:
             p = self.avatars[avatarId] = SimpleAvatar(avatarId)
         if p.connections &gt;= self.max:
             raise ValueError("too many connections")
@@ -208,7 +208,7 @@ class SimpleAvatar(pb.Avatar):
         self.s.startService()
     def logout(self):
         self.s.stopService()
-         
+
 class Realm:
     implements(portal.IRealm)
 

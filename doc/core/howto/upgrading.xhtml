@@ -190,7 +190,7 @@ instance contained inside:</p>
   dimension, like [(5, <q>inches</q>)]. The old <code>.length</code>
   attribute is deleted, and a new <code>.name</code> is created with the
   type of shape this instance represents (<q>line</q>).</li>
-  
+
 </ol>
 
 <p>Some hints for the <code>upgradeVersion</code> methods:</p>
@@ -232,12 +232,12 @@ instance contained inside:</p>
   This means it is probably only useful for compatibility in one direction:
   the newer-to-older direction must still be explicitly handled by the
   application.</li>
-  
+
   <li>In general, backwards compatibility is handled by pretending that the
   old code was restricting itself to a narrow subset of the capabilities of
   the new code. The job of the upgrade routines is then to translate the old
   representation into a new one.</li>
-  
+
 </ul>
 
 <p>For more information, look at the doc strings for <code class="API"

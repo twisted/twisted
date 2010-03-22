@@ -1,3 +1,6 @@
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 from twisted.internet import reactor, protocol
 from twisted.pair import ethernet, rawudp, ip
 from twisted.pair import tuntap
