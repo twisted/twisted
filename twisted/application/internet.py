@@ -308,7 +308,7 @@ class CooperatorService(service.Service):
 
 
 
-__all__ = (['TimerService', 'CooperatorService'] +
+__all__ = (['TimerService', 'CooperatorService', 'MulticastServer'] +
            [tran+side
-         for tran in 'Generic TCP UNIX SSL UDP UNIXDatagram Multicast'.split()
-         for side in 'Server Client'.split()])
+            for tran in 'Generic TCP UNIX SSL UDP UNIXDatagram'.split()
+            for side in 'Server Client'.split()])

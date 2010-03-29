@@ -21,14 +21,6 @@ from twisted.application import reactors
 from twisted.test.proto_helpers import MemoryReactor
 
 
-skipWindowsNopywin32 = None
-if platform.isWindows():
-    try:
-        import win32process
-    except ImportError:
-        skipWindowsNopywin32 = ("On windows, spawnProcess is not available "
-                                "in the absence of win32process.")
-
 class Dummy:
     processName=None
 
@@ -543,9 +535,14 @@ class TestInternet2(unittest.TestCase):
 
 
     def test_everythingThere(self):
+        """
+        L{twisted.application.internet} dynamically defines a set of
+        L{service.Service} subclasses that in general have corresponding
+        reactor.listenXXX or reactor.connectXXX calls.
+        """
         trans = 'TCP UNIX SSL UDP UNIXDatagram Multicast'.split()
         for tran in trans[:]:
-            if not getattr(interfaces, "IReactor"+tran)(reactor, None):
+            if not getattr(interfaces, "IReactor" + tran)(reactor, None):
                 trans.remove(tran)
         if interfaces.IReactorArbitrary(reactor, None) is not None:
             trans.insert(0, "Generic")
@@ -553,13 +550,13 @@ class TestInternet2(unittest.TestCase):
             for side in 'Server Client'.split():
                 if tran == "Multicast" and side == "Client":
                     continue
-                self.assert_(hasattr(internet, tran+side))
-                method = getattr(internet, tran+side).method
+                self.assertTrue(hasattr(internet, tran + side))
+                method = getattr(internet, tran + side).method
                 prefix = {'Server': 'listen', 'Client': 'connect'}[side]
-                self.assert_(hasattr(reactor, prefix+method) or
+                self.assertTrue(hasattr(reactor, prefix + method) or
                         (prefix == "connect" and method == "UDP"))
-                o = getattr(internet, tran+side)()
-                self.assertEqual(service.IService(o), o)
+                o = getattr(internet, tran + side)()
+                self.assertEquals(service.IService(o), o)
     test_everythingThere.suppress = [
         util.suppress(message='GenericServer was deprecated in Twisted 10.1.',
                       category=DeprecationWarning),
@@ -569,6 +566,16 @@ class TestInternet2(unittest.TestCase):
                       'deprecated in Twisted 10.1.0: See IReactorFDSet.')]
 
 
+    def test_importAll(self):
+        """
+        L{twisted.application.internet} dynamically defines L{service.Service}
+        subclasses. This test ensures that the subclasses exposed by C{__all__}
+        are valid attributes of the module.
+        """
+        for cls in internet.__all__:
+            self.assertTrue(
+                hasattr(internet, cls),
+                '%s not importable from twisted.application.internet' % (cls,))
 
 
     def test_reactorParametrizationInServer(self):
