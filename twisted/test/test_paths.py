@@ -1,4 +1,4 @@
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -265,7 +265,6 @@ def zipit(dirname, zfname):
     create a zipfile on zfname, containing the contents of dirname'
     """
     zf = zipfile.ZipFile(zfname, "w")
-    basedir = os.path.basename(dirname)
     for root, dirs, files, in os.walk(dirname):
         for fname in files:
             fspath = os.path.join(root, fname)
@@ -330,6 +329,9 @@ class ZipFilePathTestCase(AbstractFilePathTestCase):
 
 
 class FilePathTestCase(AbstractFilePathTestCase):
+    """
+    Test various L{FilePath} path manipulations.
+    """
 
     def test_chmod(self):
         """
@@ -844,6 +846,39 @@ class FilePathTestCase(AbstractFilePathTestCase):
         existent = nonexistent
         del nonexistent
         self.assertRaises((OSError, IOError), existent.open)
+
+
+    def test_openWithExplicitBinaryMode(self):
+        """
+        Due to a bug in Python 2.7 on Windows including multiple 'b'
+        characters in the mode passed to the built-in open() will cause an
+        error.  FilePath.open() ensures that only a single 'b' character is
+        included in the mode passed to the built-in open().
+
+        See http://bugs.python.org/issue7686 for details about the bug.
+        """
+        writer = self.path.child('explicit-binary')
+        file = writer.open('wb')
+        file.write('abc\ndef')
+        file.close()
+        self.assertTrue(writer.exists)
+
+
+    def test_openWithRedundantExplicitBinaryModes(self):
+        """
+        Due to a bug in Python 2.7 on Windows including multiple 'b'
+        characters in the mode passed to the built-in open() will cause an
+        error.  No matter how many 'b' modes are specified, FilePath.open()
+        ensures that only a single 'b' character is included in the mode
+        passed to the built-in open().
+
+        See http://bugs.python.org/issue7686 for details about the bug.
+        """
+        writer = self.path.child('multiple-binary')
+        file = writer.open('wbb')
+        file.write('abc\ndef')
+        file.close()
+        self.assertTrue(writer.exists)
 
 
     def test_existsCache(self):

@@ -1,6 +1,6 @@
 # -*- test-case-name: twisted.test.test_plugin -*-
 # Copyright (c) 2005 Divmod, Inc.
-# Copyright (c) 2007 Twisted Matrix Laboratories.
+# Copyright (c) 2007-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -130,7 +130,6 @@ def getCache(module):
     allCachesCombined = {}
     mod = getModule(module.__name__)
     # don't want to walk deep, only immediate children.
-    lastPath = None
     buckets = {}
     # Fill buckets with modules by related entry on the given package's
     # __path__.  There's an abstraction inversion going on here, because this
@@ -148,7 +147,7 @@ def getCache(module):
         dropinPath = pseudoPackagePath.child('dropin.cache')
         try:
             lastCached = dropinPath.getModificationTime()
-            dropinDotCache = pickle.load(dropinPath.open('rb'))
+            dropinDotCache = pickle.load(dropinPath.open('r'))
         except:
             dropinDotCache = {}
             lastCached = 0

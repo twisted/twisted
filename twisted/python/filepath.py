@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.test.test_paths -*-
-# Copyright (c) 2001-2008 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -325,8 +325,10 @@ class FilePath(_PathHelper):
     later.
 
     @type alwaysCreate: C{bool}
-    @ivar alwaysCreate: When opening this file, only succeed if the file does not
-    already exist.
+    @ivar alwaysCreate: When opening this file, only succeed if the file does
+        not already exist.
+    @type path: C{str}
+    @ivar path: The path from which 'downward' traversal is permitted.
     """
 
     statinfo = None
@@ -448,10 +450,28 @@ class FilePath(_PathHelper):
 
 
     def open(self, mode='r'):
+        """
+        Open this file using C{mode} or for writing if C{alwaysCreate} is
+        C{True}.
+
+        In all cases the file is opened in binary mode, so it is not necessary
+        to include C{b} in C{mode}.
+
+        @param mode: The mode to open the file in.  Default is C{r}.
+        @type mode: C{str}
+        @raises AssertionError: If C{a} is included in the mode and
+            C{alwaysCreate} is C{True}.
+        @rtype: C{file}
+        @return: An open C{file} object.
+        """
         if self.alwaysCreate:
-            assert 'a' not in mode, "Appending not supported when alwaysCreate == True"
+            assert 'a' not in mode, ("Appending not supported when "
+                                     "alwaysCreate == True")
             return self.create()
-        return open(self.path, mode+'b')
+        # This hack is necessary because of a bug in Python 2.7 on Windows:
+        # http://bugs.python.org/issue7686
+        mode = mode.replace('b', '')
+        return open(self.path, mode + 'b')
 
     # stat methods below
 

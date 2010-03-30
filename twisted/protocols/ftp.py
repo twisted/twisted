@@ -914,7 +914,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
         try:
             segments = toSegments(self.workingDirectory, path)
-        except InvalidPath, e:
+        except InvalidPath:
             return defer.fail(FileNotFoundError(path))
 
         d = self.shell.list(
@@ -947,7 +947,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
 
         try:
             segments = toSegments(self.workingDirectory, path)
-        except InvalidPath, e:
+        except InvalidPath:
             return defer.fail(FileNotFoundError(path))
 
         def cbList(results):
@@ -1011,7 +1011,7 @@ class FTP(object, basic.LineReceiver, policies.TimeoutMixin):
     def ftp_CWD(self, path):
         try:
             segments = toSegments(self.workingDirectory, path)
-        except InvalidPath, e:
+        except InvalidPath:
             # XXX Eh, what to fail with here?
             return defer.fail(FileNotFoundError(path))
 
@@ -1631,13 +1631,23 @@ class FTPAnonymousShell(object):
 
 
     def openForReading(self, path):
+        """
+        Open C{path} for reading.
+
+        @param path: The path, as a list of segments, to open.
+        @type path: C{list} of C{unicode}
+        @return: A L{Deferred} is returned that will fire with an object
+            implementing L{IReadFile} if the file is successfully opened.  If
+            C{path} is a directory, or if an exception is raised while trying
+            to open the file, the L{Deferred} will fire with an error.
+        """
         p = self._path(path)
         if p.isdir():
             # Normally, we would only check for EISDIR in open, but win32
             # returns EACCES in this case, so we check before
             return defer.fail(IsADirectoryError(path))
         try:
-            f = p.open('rb')
+            f = p.open('r')
         except (IOError, OSError), e:
             return errnoToFailure(e.errno, path)
         except:
@@ -1850,13 +1860,23 @@ class FTPShell(FTPAnonymousShell):
 
 
     def openForWriting(self, path):
+        """
+        Open C{path} for writing.
+
+        @param path: The path, as a list of segments, to open.
+        @type path: C{list} of C{unicode}
+        @return: A L{Deferred} is returned that will fire with an object
+            implementing L{IWriteFile} if the file is successfully opened.  If
+            C{path} is a directory, or if an exception is raised while trying
+            to open the file, the L{Deferred} will fire with an error.
+        """
         p = self._path(path)
         if p.isdir():
             # Normally, we would only check for EISDIR in open, but win32
             # returns EACCES in this case, so we check before
             return defer.fail(IsADirectoryError(path))
         try:
-            fObj = p.open('wb')
+            fObj = p.open('w')
         except (IOError, OSError), e:
             return errnoToFailure(e.errno, path)
         except:
@@ -2696,7 +2716,7 @@ class FTPClient(FTPClientBasic):
                 # The only valid code is 257
                 if int(result[0].split(' ', 1)[0]) != 257:
                     raise ValueError
-            except (IndexError, ValueError), e:
+            except (IndexError, ValueError):
                 return failure.Failure(CommandFailed(result))
             path = parsePWDResponse(result[0])
             if path is None:
