@@ -1113,11 +1113,25 @@ class SSHSessionProcessProtocolTestCase(unittest.TestCase):
                 [(1, 'test data')])
 
 
-    def test_inConnectionLost(self):
+    def test_outConnectionLost(self):
         """
-        When inConnectionLost is called, it should send an EOF message,
+        When outConnectionLost and errConnectionLost are both called, we should
+        send an EOF message.
         """
-        self.pp.inConnectionLost()
+        self.pp.outConnectionLost()
+        self.assertFalse(self.session in self.session.conn.eofs)
+        self.pp.errConnectionLost()
+        self.assertTrue(self.session.conn.eofs[self.session])
+
+
+    def test_errConnectionLost(self):
+        """
+        Make sure reverse ordering of events in test_outConnectionLost also
+        sends EOF.
+        """
+        self.pp.errConnectionLost()
+        self.assertFalse(self.session in self.session.conn.eofs)
+        self.pp.outConnectionLost()
         self.assertTrue(self.session.conn.eofs[self.session])
 
 

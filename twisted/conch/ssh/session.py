@@ -188,6 +188,7 @@ class SSHSessionProcessProtocol(protocol.ProcessProtocol):
 
     def __init__(self, session):
         self.session = session
+        self.lostOutOrErrFlag = False
 
     def connectionMade(self):
         if self.session.buf:
@@ -200,8 +201,20 @@ class SSHSessionProcessProtocol(protocol.ProcessProtocol):
     def errReceived(self, err):
         self.session.writeExtended(connection.EXTENDED_DATA_STDERR, err)
 
-    def inConnectionLost(self):
-        self.session.conn.sendEOF(self.session)
+    def outConnectionLost(self):
+        """
+        EOF should only be sent when both STDOUT and STDERR have been closed.
+        """
+        if self.lostOutOrErrFlag:
+            self.session.conn.sendEOF(self.session)
+        else:
+            self.lostOutOrErrFlag = True
+
+    def errConnectionLost(self):
+        """
+        See outConnectionLost().
+        """
+        self.outConnectionLost()
 
     def connectionLost(self, reason = None):
         self.session.loseConnection()
