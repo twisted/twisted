@@ -198,7 +198,7 @@ class MessageSet(object):
 
     def __contains__(self, value):
         """
-        May raise TypeError if we encounter unknown "high" values
+        May raise TypeError if we encounter an open-ended range
         """
         for l, h in self.ranges:
             if l is None:
@@ -229,8 +229,12 @@ class MessageSet(object):
         res = 0
         for l, h in self.ranges:
             if l is None:
-                raise TypeError("Can't size object; last value not set")
-            res += (h - l) + 1
+                if h is None:
+                    res += 1
+                else:
+                    raise TypeError("Can't size object; last value not set")
+            else:
+                res += (h - l) + 1
 
         return res
 
@@ -499,9 +503,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     # IChallengeResponse factories for AUTHENTICATE command
     challengers = None
 
-    # Search terms the implementation of which needs to be passed the
-    # last sequence id value.
-    _requiresLastSequenceId = set(["OR", "NOT"])
+    # Search terms the implementation of which needs to be passed both the last
+    # message identifier (UID) and the last sequence id.
+    _requiresLastMessageInfo = set(["OR", "NOT", "UID"])
 
     state = 'unauth'
 
@@ -1413,6 +1417,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 (tag, self.mbox, uid), None, (tag,), None
             )
         else:
+            # that's not the ideal way to get all messages, there should be a
+            # method on mailboxes that gives you all of them
             s = parseIdList('1:*')
             maybeDeferred(self.mbox.fetch, s, uid=uid).addCallbacks(
                 self.__cbManualSearch, self.__ebSearch,
@@ -1431,17 +1437,45 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def __cbManualSearch(self, result, tag, mbox, query, uid,
                          searchResults=None):
+        """
+        Apply the search filter to a set of messages. Send the response to the
+        client.
+
+        @type result: C{list} of C{tuple} of (C{int}, provider of
+            L{imap4.IMessage})
+        @param result: A list two tuples of messages with their sequence ids,
+            sorted by the ids in descending order.
+
+        @type tag: C{str}
+        @param tag: A command tag.
+
+        @type mbox: Provider of L{imap4.IMailbox}
+        @param mbox: The searched mailbox.
+
+        @type query: C{list}
+        @param query: A list representing the parsed form of the search query.
+
+        @param uid: A flag indicating whether the search is over message
+            sequence numbers or UIDs.
+
+        @type searchResults: C{list}
+        @param searchResults: The search results so far or C{None} if no
+            results yet.
+        """
         if searchResults is None:
             searchResults = []
         i = 0
 
+        # result is a list of tuples (sequenceId, Message)
         lastSequenceId = result[-1][0]
+        lastMessageId = result[-1][1].getUID()
 
         for (i, (id, msg)) in zip(range(5), result):
             # searchFilter and singleSearchStep will mutate the query.  Dang.
             # Copy it here or else things will go poorly for subsequent
             # messages.
-            if self._searchFilter(copy.deepcopy(query), id, msg, lastSequenceId):
+            if self._searchFilter(copy.deepcopy(query), id, msg,
+                                  lastSequenceId, lastMessageId):
                 if uid:
                     searchResults.append(str(msg.getUID()))
                 else:
@@ -1457,7 +1491,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.sendPositiveResponse(tag, 'SEARCH completed')
 
 
-    def _searchFilter(self, query, id, msg, lastSequenceId):
+    def _searchFilter(self, query, id, msg, lastSequenceId, lastMessageId):
         """
         Pop search terms from the beginning of C{query} until there are none
         left and apply them to the given message.
@@ -1468,19 +1502,25 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
         @param msg: The message being checked.
 
+        @type lastSequenceId: C{int}
         @param lastSequenceId: The highest sequence number of any message in
             the mailbox being searched.
+
+        @type lastMessageId: C{int}
+        @param lastMessageId: The highest UID of any message in the mailbox
+            being searched.
 
         @return: Boolean indicating whether all of the query terms match the
             message.
         """
         while query:
-            if not self._singleSearchStep(query, id, msg, lastSequenceId):
+            if not self._singleSearchStep(query, id, msg,
+                                          lastSequenceId, lastMessageId):
                 return False
         return True
 
 
-    def _singleSearchStep(self, query, id, msg, lastSequenceId):
+    def _singleSearchStep(self, query, id, msg, lastSequenceId, lastMessageId):
         """
         Pop one search term from the beginning of C{query} (possibly more than
         one element) and return whether it matches the given message.
@@ -1494,11 +1534,16 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         @param lastSequenceId: The highest sequence number of any message in
             the mailbox being searched.
 
+        @param lastMessageId: The highest UID of any message in the mailbox
+            being searched.
+
         @return: Boolean indicating whether the query term matched the message.
         """
+
         q = query.pop(0)
         if isinstance(q, list):
-            if not self._searchFilter(q, id, msg, lastSequenceId):
+            if not self._searchFilter(q, id, msg,
+                                      lastSequenceId, lastMessageId):
                 return False
         else:
             c = q.upper()
@@ -1506,14 +1551,14 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 # A search term may be a word like ALL, ANSWERED, BCC, etc (see
                 # below) or it may be a message sequence set.  Here we
                 # recognize a message sequence set "N:M".
-                messageSet = parseIdList(c)
-                messageSet.last = lastSequenceId
+                messageSet = parseIdList(c, lastSequenceId)
                 return id in messageSet
             else:
                 f = getattr(self, 'search_' + c)
                 if f is not None:
-                    if c in self._requiresLastSequenceId:
-                        result = f(query, id, msg, lastSequenceId)
+                    if c in self._requiresLastMessageInfo:
+                        result = f(query, id, msg, (lastSequenceId,
+                                                    lastMessageId))
                     else:
                         result = f(query, id, msg)
                     if not result:
@@ -1521,12 +1566,45 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         return True
 
     def search_ALL(self, query, id, msg):
+        """
+        Returns C{True} if the message matches the ALL search key (always).
+
+        @type query: A C{list} of C{str}
+        @param query: A list representing the parsed query string.
+
+        @type id: C{int}
+        @param id: The sequence number of the message being checked.
+
+        @type msg: Provider of L{imap4.IMessage}
+        """
         return True
 
     def search_ANSWERED(self, query, id, msg):
+        """
+        Returns C{True} if the message has been answered.
+
+        @type query: A C{list} of C{str}
+        @param query: A list representing the parsed query string.
+
+        @type id: C{int}
+        @param id: The sequence number of the message being checked.
+
+        @type msg: Provider of L{imap4.IMessage}
+        """
         return '\\Answered' in msg.getFlags()
 
     def search_BCC(self, query, id, msg):
+        """
+        Returns C{True} if the message has a BCC address matching the query.
+
+        @type query: A C{list} of C{str}
+        @param query: A list whose first element is a BCC C{str}
+
+        @type id: C{int}
+        @param id: The sequence number of the message being checked.
+
+        @type msg: Provider of L{imap4.IMessage}
+        """
         bcc = msg.getHeaders(False, 'bcc').get('bcc', '')
         return bcc.lower().find(query.pop(0).lower()) != -1
 
@@ -1570,8 +1648,28 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def search_NEW(self, query, id, msg):
         return '\\Recent' in msg.getFlags() and '\\Seen' not in msg.getFlags()
 
-    def search_NOT(self, query, id, msg, lastSequenceId):
-        return not self._singleSearchStep(query, id, msg, lastSequenceId)
+    def search_NOT(self, query, id, msg, (lastSequenceId, lastMessageId)):
+        """
+        Returns C{True} if the message does not match the query.
+
+        @type query: A C{list} of C{str}
+        @param query: A list representing the parsed form of the search query.
+
+        @type id: C{int}
+        @param id: The sequence number of the message being checked.
+
+        @type msg: Provider of L{imap4.IMessage}
+        @param msg: The message being checked.
+
+        @type lastSequenceId: C{int}
+        @param lastSequenceId: The highest sequence number of a message in the
+            mailbox.
+
+        @type lastMessageId: C{int}
+        @param lastMessageId: The highest UID of a message in the mailbox.
+        """
+        return not self._singleSearchStep(query, id, msg,
+                                          lastSequenceId, lastMessageId)
 
     def search_OLD(self, query, id, msg):
         return '\\Recent' not in msg.getFlags()
@@ -1580,9 +1678,31 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         date = parseTime(query.pop(0))
         return rfc822.parsedate(msg.getInternalDate()) == date
 
-    def search_OR(self, query, id, msg, lastSequenceId):
-        a = self._singleSearchStep(query, id, msg, lastSequenceId)
-        b = self._singleSearchStep(query, id, msg, lastSequenceId)
+    def search_OR(self, query, id, msg, (lastSequenceId, lastMessageId)):
+        """
+        Returns C{True} if the message matches any of the first two query
+        items.
+
+        @type query: A C{list} of C{str}
+        @param query: A list representing the parsed form of the search query.
+
+        @type id: C{int}
+        @param id: The sequence number of the message being checked.
+
+        @type msg: Provider of L{imap4.IMessage}
+        @param msg: The message being checked.
+
+        @type lastSequenceId: C{int}
+        @param lastSequenceId: The highest sequence number of a message in the
+                               mailbox.
+
+        @type lastMessageId: C{int}
+        @param lastMessageId: The highest UID of a message in the mailbox.
+        """
+        a = self._singleSearchStep(query, id, msg,
+                                   lastSequenceId, lastMessageId)
+        b = self._singleSearchStep(query, id, msg,
+                                   lastSequenceId, lastMessageId)
         return a or b
 
     def search_RECENT(self, query, id, msg):
@@ -1599,6 +1719,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         @param query: A list whose first element starts with a stringified date
             that is a fragment of an L{imap4.Query()}. The date must be in the
             format 'DD-Mon-YYYY', for example '03-March-2003' or '03-Mar-2003'.
+
+        @type id: C{int}
+        @param id: The sequence number of the message being checked.
 
         @type msg: Provider of L{imap4.IMessage}
         """
@@ -1656,9 +1779,31 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         to = msg.getHeaders(False, 'to').get('to', '')
         return to.lower().find(query.pop(0).lower()) != -1
 
-    def search_UID(self, query, id, msg):
+    def search_UID(self, query, id, msg, (lastSequenceId, lastMessageId)):
+        """
+        Returns C{True} if the message UID is in the range defined by the
+        search query.
+
+        @type query: A C{list} of C{str}
+        @param query: A list representing the parsed form of the search
+            query. Its first element should be a C{str} that can be interpreted
+            as a sequence range, for example '2:4,5:*'.
+
+        @type id: C{int}
+        @param id: The sequence number of the message being checked.
+
+        @type msg: Provider of L{imap4.IMessage}
+        @param msg: The message being checked.
+
+        @type lastSequenceId: C{int}
+        @param lastSequenceId: The highest sequence number of a message in the
+            mailbox.
+
+        @type lastMessageId: C{int}
+        @param lastMessageId: The highest UID of a message in the mailbox.
+        """
         c = query.pop(0)
-        m = parseIdList(c)
+        m = parseIdList(c, lastMessageId)
         return msg.getUID() in m
 
     def search_UNANSWERED(self, query, id, msg):
@@ -3761,7 +3906,21 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
 class IllegalIdentifierError(IMAP4Exception): pass
 
-def parseIdList(s):
+def parseIdList(s, lastMessageId=None):
+    """
+    Parse a message set search key into a C{MessageSet}.
+
+    @type s: C{str}
+    @param s: A string description of a id list, for example "1:3, 4:*"
+
+    @type lastMessageId: C{int}
+    @param lastMessageId: The last message sequence id or UID, depending on
+        whether we are parsing the list in UID or sequence id context. The
+        caller should pass in the correct value.
+
+    @rtype: C{MessageSet}
+    @return: A C{MessageSet} that contains the ids defined in the list
+    """
     res = MessageSet()
     parts = s.split(',')
     for p in parts:
@@ -3776,6 +3935,20 @@ def parseIdList(s):
                     high = None
                 else:
                     high = long(high)
+                if low is high is None:
+                    # *:* does not make sense
+                    raise IllegalIdentifierError(p)
+                # non-positive values are illegal according to RFC 3501
+                if ((low is not None and low <= 0) or
+                    (high is not None and high <= 0)):
+                    raise IllegalIdentifierError(p)
+                # star means "highest value of an id in the mailbox"
+                high = high or lastMessageId
+                low = low or lastMessageId
+
+                # RFC says that 2:4 and 4:2 are equivalent
+                if low > high:
+                    low, high = high, low
                 res.extend((low, high))
             except ValueError:
                 raise IllegalIdentifierError(p)
@@ -3785,10 +3958,12 @@ def parseIdList(s):
                     p = None
                 else:
                     p = long(p)
+                if p is not None and p <= 0:
+                    raise IllegalIdentifierError(p)
             except ValueError:
                 raise IllegalIdentifierError(p)
             else:
-                res.extend(p)
+                res.extend(p or lastMessageId)
     return res
 
 class IllegalQueryError(IMAP4Exception): pass

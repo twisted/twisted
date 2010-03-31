@@ -284,7 +284,11 @@ class MessageProducerTestCase(unittest.TestCase):
 
 
 class IMAP4HelperTestCase(unittest.TestCase):
-    def testFileProducer(self):
+    """
+    Tests for various helper utilities in the IMAP4 module.
+    """
+
+    def test_fileProducer(self):
         b = (('x' * 1) + ('y' * 1) + ('z' * 1)) * 10
         c = BufferingConsumer()
         f = StringIO(b)
@@ -298,7 +302,8 @@ class IMAP4HelperTestCase(unittest.TestCase):
                 ''.join(c.buffer))
         return d.addCallback(cbProduced)
 
-    def testWildcard(self):
+
+    def test_wildcard(self):
         cases = [
             ['foo/%gum/bar',
                 ['foo/bar', 'oo/lalagum/bar', 'foo/gumx/bar', 'foo/gum/baz'],
@@ -319,7 +324,8 @@ class IMAP4HelperTestCase(unittest.TestCase):
             for x in succeed:
                 self.failUnless(wildcard.match(x))
 
-    def testWildcardNoDelim(self):
+
+    def test_wildcardNoDelim(self):
         cases = [
             ['foo/%gum/bar',
                 ['foo/bar', 'oo/lalagum/bar', 'foo/gumx/bar', 'foo/gum/baz'],
@@ -340,7 +346,8 @@ class IMAP4HelperTestCase(unittest.TestCase):
             for x in succeed:
                 self.failUnless(wildcard.match(x), x)
 
-    def testHeaderFormatter(self):
+
+    def test_headerFormatter(self):
         cases = [
             ({'Header1': 'Value1', 'Header2': 'Value2'}, 'Header2: Value2\r\nHeader1: Value1\r\n'),
         ]
@@ -348,7 +355,8 @@ class IMAP4HelperTestCase(unittest.TestCase):
         for (input, output) in cases:
             self.assertEquals(imap4._formatHeaders(input), output)
 
-    def testMessageSet(self):
+
+    def test_messageSet(self):
         m1 = MessageSet()
         m2 = MessageSet()
 
@@ -362,7 +370,49 @@ class IMAP4HelperTestCase(unittest.TestCase):
         self.assertEquals(m1, m2)
         self.assertEquals(list(m1 + m2), [1, 2, 3])
 
-    def testQuotedSplitter(self):
+
+    def test_messageSetStringRepresentationWithWildcards(self):
+        """
+        In a L{MessageSet}, in the presence of wildcards, if the highest message
+        id is known, the wildcard should get replaced by that high value.
+        """
+        inputs = [
+            MessageSet(imap4.parseIdList('*')),
+            MessageSet(imap4.parseIdList('3:*', 6)),
+            MessageSet(imap4.parseIdList('*:2', 6)),
+        ]
+
+        outputs = [
+            "*",
+            "3:6",
+            "2:6",
+        ]
+
+        for i, o in zip(inputs, outputs):
+            self.assertEquals(str(i), o)
+
+
+    def test_messageSetStringRepresentationWithInversion(self):
+        """
+        In a L{MessageSet}, inverting the high and low numbers in a range
+        doesn't affect the meaning of the range. For example, 3:2 displays just
+        like 2:3, because according to the RFC they have the same meaning.
+        """
+        inputs = [
+            MessageSet(imap4.parseIdList('2:3')),
+            MessageSet(imap4.parseIdList('3:2')),
+        ]
+
+        outputs = [
+            "2:3",
+            "2:3",
+        ]
+
+        for i, o in zip(inputs, outputs):
+            self.assertEquals(str(i), o)
+
+
+    def test_quotedSplitter(self):
         cases = [
             '''Hello World''',
             '''Hello "World!"''',
@@ -422,7 +472,7 @@ class IMAP4HelperTestCase(unittest.TestCase):
             self.assertEquals(imap4.splitQuoted(case), expected)
 
 
-    def testStringCollapser(self):
+    def test_stringCollapser(self):
         cases = [
             ['a', 'b', 'c', 'd', 'e'],
             ['a', ' ', '"', 'b', 'c', ' ', '"', ' ', 'd', 'e'],
@@ -446,7 +496,8 @@ class IMAP4HelperTestCase(unittest.TestCase):
         for (case, expected) in zip(cases, answers):
             self.assertEquals(imap4.collapseStrings(case), expected)
 
-    def testParenParser(self):
+
+    def test_parenParser(self):
         s = '\r\n'.join(['xx'] * 4)
         cases = [
             '(BODY.PEEK[HEADER.FIELDS.NOT (subject bcc cc)] {%d}\r\n%s)' % (len(s), s,),
@@ -522,7 +573,8 @@ class IMAP4HelperTestCase(unittest.TestCase):
 #        for (case, expected) in zip(answers, cases):
 #            self.assertEquals('(' + imap4.collapseNestedLists(case) + ')', expected)
 
-    def testFetchParserSimple(self):
+
+    def test_fetchParserSimple(self):
         cases = [
             ['ENVELOPE', 'Envelope'],
             ['FLAGS', 'Flags'],
@@ -541,7 +593,8 @@ class IMAP4HelperTestCase(unittest.TestCase):
             self.assertEquals(len(p.result), 1)
             self.failUnless(isinstance(p.result[0], getattr(p, outp)))
 
-    def testFetchParserMacros(self):
+
+    def test_fetchParserMacros(self):
         cases = [
             ['ALL', (4, ['flags', 'internaldate', 'rfc822.size', 'envelope'])],
             ['FULL', (5, ['flags', 'internaldate', 'rfc822.size', 'envelope', 'body'])],
@@ -557,7 +610,8 @@ class IMAP4HelperTestCase(unittest.TestCase):
             outp[1].sort()
             self.assertEquals(p, outp[1])
 
-    def testFetchParserBody(self):
+
+    def test_fetchParserBody(self):
         P = imap4._FetchParser
 
         p = P()
@@ -663,7 +717,7 @@ class IMAP4HelperTestCase(unittest.TestCase):
         self.assertEquals(str(p.result[0]), 'BODY[1.3.9.11.HEADER.FIELDS.NOT (Message-Id Date)]<103.69>')
 
 
-    def testFiles(self):
+    def test_files(self):
         inputStructure = [
             'foo', 'bar', 'baz', StringIO('this is a file\r\n'), 'buz'
         ]
@@ -672,7 +726,8 @@ class IMAP4HelperTestCase(unittest.TestCase):
 
         self.assertEquals(imap4.collapseNestedLists(inputStructure), output)
 
-    def testQuoteAvoider(self):
+
+    def test_quoteAvoider(self):
         input = [
             'foo', imap4.DontQuoteMe('bar'), "baz", StringIO('this is a file\r\n'),
             imap4.DontQuoteMe('buz'), ""
@@ -682,7 +737,8 @@ class IMAP4HelperTestCase(unittest.TestCase):
 
         self.assertEquals(imap4.collapseNestedLists(input), output)
 
-    def testLiterals(self):
+
+    def test_literals(self):
         cases = [
             ('({10}\r\n0123456789)', [['0123456789']]),
         ]
@@ -690,7 +746,8 @@ class IMAP4HelperTestCase(unittest.TestCase):
         for (case, expected) in cases:
             self.assertEquals(imap4.parseNestedParens(case), expected)
 
-    def testQueryBuilder(self):
+
+    def test_queryBuilder(self):
         inputs = [
             imap4.Query(flagged=1),
             imap4.Query(sorted=1, unflagged=1, deleted=1),
@@ -733,11 +790,55 @@ class IMAP4HelperTestCase(unittest.TestCase):
         for (query, expected) in zip(inputs, outputs):
             self.assertEquals(query, expected)
 
-    def testIdListParser(self):
+
+    def test_invalidIdListParser(self):
+        """
+        Trying to parse an invalid representation of a sequence range raises an
+        L{IllegalIdentifierError}.
+        """
+        inputs = [
+            '*:*',
+            'foo',
+            '4:',
+            'bar:5'
+        ]
+
+        for input in inputs:
+            self.assertRaises(imap4.IllegalIdentifierError,
+                              imap4.parseIdList, input, 12345)
+
+
+    def test_invalidIdListParserNonPositive(self):
+        """
+        Zeroes and negative values are not accepted in id range expressions. RFC
+        3501 states that sequence numbers and sequence ranges consist of
+        non-negative numbers (RFC 3501 section 9, the seq-number grammar item).
+        """
+        inputs = [
+            '0:5',
+            '0:0',
+            '*:0',
+            '0',
+            '-3:5',
+            '1:-2',
+            '-1'
+        ]
+
+        for input in inputs:
+            self.assertRaises(imap4.IllegalIdentifierError,
+                              imap4.parseIdList, input, 12345)
+
+
+    def test_parseIdList(self):
+        """
+        The function to parse sequence ranges yields appropriate L{MessageSet}
+        objects.
+        """
         inputs = [
             '1:*',
             '5:*',
             '1:2,5:*',
+            '*',
             '1',
             '1,2',
             '1,3,5',
@@ -747,12 +848,14 @@ class IMAP4HelperTestCase(unittest.TestCase):
             '1,5:10',
             '1,5:10,15:20',
             '1:10,15,20:25',
+            '4:2'
         ]
 
         outputs = [
             MessageSet(1, None),
             MessageSet(5, None),
             MessageSet(5, None) + MessageSet(1, 2),
+            MessageSet(None, None),
             MessageSet(1),
             MessageSet(1, 2),
             MessageSet(1) + MessageSet(3) + MessageSet(5),
@@ -762,23 +865,24 @@ class IMAP4HelperTestCase(unittest.TestCase):
             MessageSet(1) + MessageSet(5, 10),
             MessageSet(1) + MessageSet(5, 10) + MessageSet(15, 20),
             MessageSet(1, 10) + MessageSet(15) + MessageSet(20, 25),
+            MessageSet(2, 4),
         ]
 
         lengths = [
             None, None, None,
-            1, 2, 3, 10, 11, 16, 7, 13, 17,
+            1, 1, 2, 3, 10, 11, 16, 7, 13, 17, 3
         ]
 
         for (input, expected) in zip(inputs, outputs):
             self.assertEquals(imap4.parseIdList(input), expected)
 
         for (input, expected) in zip(inputs, lengths):
-            try:
+            if expected is None:
+                self.assertRaises(TypeError, len, imap4.parseIdList(input))
+            else:
                 L = len(imap4.parseIdList(input))
-            except TypeError:
-                L = None
-            self.assertEquals(L, expected,
-                "len(%r) = %r != %r" % (input, L, expected))
+                self.assertEquals(L, expected,
+                                  "len(%r) = %r != %r" % (input, L, expected))
 
 class SimpleMailbox:
     implements(imap4.IMailboxInfo, imap4.IMailbox, imap4.ICloseableMailbox)
@@ -914,6 +1018,7 @@ class SimpleClient(imap4.IMAP4Client):
 
 
 class IMAP4HelperMixin:
+
     serverCTX = None
     clientCTX = None
 
@@ -1569,7 +1674,7 @@ class IMAP4ServerSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
         self.laterQuery = ["16-Dec-2009"]
         self.seq = 0
         self.msg = FakeyMessage({"date" : "Mon, 13 Dec 2009 21:25:10 GMT"}, [],
-                                '', '', None, None)
+                                '', '', 1234, None)
 
 
     def test_searchSentBefore(self):
@@ -1582,6 +1687,34 @@ class IMAP4ServerSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
         self.assertTrue(
             self.server.search_SENTBEFORE(self.laterQuery, self.seq, self.msg))
 
+    def test_searchWildcard(self):
+        """
+        L{imap4.IMAP4Server.search_UID} returns True if the message UID is in
+        the search range.
+        """
+        self.assertFalse(
+            self.server.search_UID(['2:3'], self.seq, self.msg, (1, 1234)))
+        # 2:* should get translated to 2:<max UID> and then to 1:2
+        self.assertTrue(
+            self.server.search_UID(['2:*'], self.seq, self.msg, (1, 1234)))
+        self.assertTrue(
+            self.server.search_UID(['*'], self.seq, self.msg, (1, 1234)))
+
+    def test_searchWildcardHigh(self):
+        """
+        L{imap4.IMAP4Server.search_UID} should return True if there is a
+        wildcard, because a wildcard means "highest UID in the mailbox".
+        """
+        self.assertTrue(
+            self.server.search_UID(['1235:*'], self.seq, self.msg, (1234, 1)))
+
+    def test_reversedSearchTerms(self):
+        """
+        L{imap4.IMAP4Server.search_SENTON} returns True if the message date is
+        the same as the query date.
+        """
+        msgset = imap4.parseIdList('4:2')
+        self.assertEquals(list(msgset), [2, 3, 4])
 
     def test_searchSentOn(self):
         """
@@ -1617,17 +1750,17 @@ class IMAP4ServerSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
             self.server.search_OR(
                 ["SENTSINCE"] + self.earlierQuery +
                 ["SENTSINCE"] + self.laterQuery,
-            self.seq, self.msg, None))
+            self.seq, self.msg, (None, None)))
         self.assertTrue(
             self.server.search_OR(
                 ["SENTSINCE"] + self.laterQuery +
                 ["SENTSINCE"] + self.earlierQuery,
-            self.seq, self.msg, None))
+            self.seq, self.msg, (None, None)))
         self.assertFalse(
             self.server.search_OR(
                 ["SENTON"] + self.laterQuery +
                 ["SENTSINCE"] + self.laterQuery,
-            self.seq, self.msg, None))
+            self.seq, self.msg, (None, None)))
 
 
     def test_searchNot(self):
@@ -1636,9 +1769,11 @@ class IMAP4ServerSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
         of the expression supplied to it.
         """
         self.assertFalse(self.server.search_NOT(
-                ["SENTSINCE"] + self.earlierQuery, self.seq, self.msg, None))
+                ["SENTSINCE"] + self.earlierQuery, self.seq, self.msg,
+                (None, None)))
         self.assertTrue(self.server.search_NOT(
-                ["SENTON"] + self.laterQuery, self.seq, self.msg, None))
+                ["SENTON"] + self.laterQuery, self.seq, self.msg,
+                (None, None)))
 
 
 
@@ -3086,8 +3221,10 @@ class FakeyServer(imap4.IMAP4Server):
     def sendServerGreeting(self):
         pass
 
-class FakeyMessage:
+class FakeyMessage(util.FancyStrMixin):
     implements(imap4.IMessage)
+
+    showAttributes = ('headers', 'flags', 'date', 'body', 'uid')
 
     def __init__(self, headers, flags, date, body, uid, subpart):
         self.headers = headers
@@ -3649,6 +3786,39 @@ class DefaultSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
         starting point are returned.
         """
         return self._messageSetSearchTest('2:*', [2, 3])
+
+
+    def test_searchMessageSetWithStarFirst(self):
+        """
+        If the search filter starts with a star, the result should be identical
+        with if the filter would end with a star.
+        """
+        return self._messageSetSearchTest('*:2', [2, 3])
+
+
+    def test_searchMessageSetUIDWithStar(self):
+        """
+        If the search filter ends with a star, all the message from the
+        starting point are returned (also for the SEARCH UID case).
+        """
+        return self._messageSetSearchTest('UID 10000:*', [2, 3])
+
+
+    def test_searchMessageSetUIDWithStarFirst(self):
+        """
+        If the search filter starts with a star, the result should be identical
+        with if the filter would end with a star (also for the SEARCH UID case).
+        """
+        return self._messageSetSearchTest('UID *:10000', [2, 3])
+
+
+    def test_searchMessageSetUIDWithStarAndHighStart(self):
+        """
+        A search filter of 1234:* should include the UID of the last message in
+        the mailbox, even if its UID is less than 1234.
+        """
+        # in our fake mbox the highest message UID is 12345
+        return self._messageSetSearchTest('UID 30000:*', [3])
 
 
     def test_searchMessageSetWithList(self):
