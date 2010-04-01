@@ -2489,7 +2489,232 @@ class PreauthIMAP4ClientMixin:
 
 
 
-class IMAP4ClientExamineTests(PreauthIMAP4ClientMixin, unittest.TestCase):
+class SelectionTestsMixin(PreauthIMAP4ClientMixin):
+    """
+    Mixin for test cases which defines tests which apply to both I{EXAMINE} and
+    I{SELECT} support.
+    """
+    def _examineOrSelect(self):
+        """
+        Issue either an I{EXAMINE} or I{SELECT} command (depending on
+        C{self.method}), assert that the correct bytes are written to the
+        transport, and return the L{Deferred} returned by whichever method was
+        called.
+        """
+        d = getattr(self.client, self.method)('foobox')
+        self.assertEquals(
+            self.transport.value(), '0001 %s foobox\r\n' % (self.command,))
+        return d
+
+
+    def _response(self, *lines):
+        """
+        Deliver the given (unterminated) response lines to C{self.client} and
+        then deliver a tagged SELECT or EXAMINE completion line to finish the
+        SELECT or EXAMINE response.
+        """
+        for line in lines:
+            self.client.dataReceived(line + '\r\n')
+        self.client.dataReceived(
+            '0001 OK [READ-ONLY] %s completed\r\n' % (self.command,))
+
+
+    def test_exists(self):
+        """
+        If the server response to a I{SELECT} or I{EXAMINE} command includes an
+        I{EXISTS} response, the L{Deferred} return by L{IMAP4Client.select} or
+        L{IMAP4Client.examine} fires with a C{dict} including the value
+        associated with the C{'EXISTS'} key.
+        """
+        d = self._examineOrSelect()
+        self._response('* 3 EXISTS')
+        self.assertEquals(
+            self._extractDeferredResult(d),
+            {'READ-WRITE': False, 'EXISTS': 3})
+
+
+    def test_nonIntegerExists(self):
+        """
+        If the server returns a non-integer EXISTS value in its response to a
+        I{SELECT} or I{EXAMINE} command, the L{Deferred} returned by
+        L{IMAP4Client.select} or L{IMAP4Client.examine} fails with
+        L{IllegalServerResponse}.
+        """
+        d = self._examineOrSelect()
+        self._response('* foo EXISTS')
+        self.assertRaises(
+            imap4.IllegalServerResponse, self._extractDeferredResult, d)
+
+
+    def test_recent(self):
+        """
+        If the server response to a I{SELECT} or I{EXAMINE} command includes an
+        I{RECENT} response, the L{Deferred} return by L{IMAP4Client.select} or
+        L{IMAP4Client.examine} fires with a C{dict} including the value
+        associated with the C{'RECENT'} key.
+        """
+        d = self._examineOrSelect()
+        self._response('* 5 RECENT')
+        self.assertEquals(
+            self._extractDeferredResult(d),
+            {'READ-WRITE': False, 'RECENT': 5})
+
+
+    def test_nonIntegerRecent(self):
+        """
+        If the server returns a non-integer RECENT value in its response to a
+        I{SELECT} or I{EXAMINE} command, the L{Deferred} returned by
+        L{IMAP4Client.select} or L{IMAP4Client.examine} fails with
+        L{IllegalServerResponse}.
+        """
+        d = self._examineOrSelect()
+        self._response('* foo RECENT')
+        self.assertRaises(
+            imap4.IllegalServerResponse, self._extractDeferredResult, d)
+
+
+    def test_unseen(self):
+        """
+        If the server response to a I{SELECT} or I{EXAMINE} command includes an
+        I{UNSEEN} response, the L{Deferred} returned by L{IMAP4Client.select} or
+        L{IMAP4Client.examine} fires with a C{dict} including the value
+        associated with the C{'UNSEEN'} key.
+        """
+        d = self._examineOrSelect()
+        self._response('* OK [UNSEEN 8] Message 8 is first unseen')
+        self.assertEquals(
+            self._extractDeferredResult(d),
+            {'READ-WRITE': False, 'UNSEEN': 8})
+
+
+    def test_nonIntegerUnseen(self):
+        """
+        If the server returns a non-integer UNSEEN value in its response to a
+        I{SELECT} or I{EXAMINE} command, the L{Deferred} returned by
+        L{IMAP4Client.select} or L{IMAP4Client.examine} fails with
+        L{IllegalServerResponse}.
+        """
+        d = self._examineOrSelect()
+        self._response('* OK [UNSEEN foo] Message foo is first unseen')
+        self.assertRaises(
+            imap4.IllegalServerResponse, self._extractDeferredResult, d)
+
+
+    def test_uidvalidity(self):
+        """
+        If the server response to a I{SELECT} or I{EXAMINE} command includes an
+        I{UIDVALIDITY} response, the L{Deferred} returned by
+        L{IMAP4Client.select} or L{IMAP4Client.examine} fires with a C{dict}
+        including the value associated with the C{'UIDVALIDITY'} key.
+        """
+        d = self._examineOrSelect()
+        self._response('* OK [UIDVALIDITY 12345] UIDs valid')
+        self.assertEquals(
+            self._extractDeferredResult(d),
+            {'READ-WRITE': False, 'UIDVALIDITY': 12345})
+
+
+    def test_nonIntegerUIDVALIDITY(self):
+        """
+        If the server returns a non-integer UIDVALIDITY value in its response to
+        a I{SELECT} or I{EXAMINE} command, the L{Deferred} returned by
+        L{IMAP4Client.select} or L{IMAP4Client.examine} fails with
+        L{IllegalServerResponse}.
+        """
+        d = self._examineOrSelect()
+        self._response('* OK [UIDVALIDITY foo] UIDs valid')
+        self.assertRaises(
+            imap4.IllegalServerResponse, self._extractDeferredResult, d)
+
+
+    def test_uidnext(self):
+        """
+        If the server response to a I{SELECT} or I{EXAMINE} command includes an
+        I{UIDNEXT} response, the L{Deferred} returned by L{IMAP4Client.select}
+        or L{IMAP4Client.examine} fires with a C{dict} including the value
+        associated with the C{'UIDNEXT'} key.
+        """
+        d = self._examineOrSelect()
+        self._response('* OK [UIDNEXT 4392] Predicted next UID')
+        self.assertEquals(
+            self._extractDeferredResult(d),
+            {'READ-WRITE': False, 'UIDNEXT': 4392})
+
+
+    def test_nonIntegerUIDNEXT(self):
+        """
+        If the server returns a non-integer UIDNEXT value in its response to a
+        I{SELECT} or I{EXAMINE} command, the L{Deferred} returned by
+        L{IMAP4Client.select} or L{IMAP4Client.examine} fails with
+        L{IllegalServerResponse}.
+        """
+        d = self._examineOrSelect()
+        self._response('* OK [UIDNEXT foo] Predicted next UID')
+        self.assertRaises(
+            imap4.IllegalServerResponse, self._extractDeferredResult, d)
+
+
+    def test_flags(self):
+        """
+        If the server response to a I{SELECT} or I{EXAMINE} command includes an
+        I{FLAGS} response, the L{Deferred} returned by L{IMAP4Client.select} or
+        L{IMAP4Client.examine} fires with a C{dict} including the value
+        associated with the C{'FLAGS'} key.
+        """
+        d = self._examineOrSelect()
+        self._response(
+            '* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)')
+        self.assertEquals(
+            self._extractDeferredResult(d), {
+                'READ-WRITE': False,
+                'FLAGS': ('\\Answered', '\\Flagged', '\\Deleted', '\\Seen',
+                          '\\Draft')})
+
+
+    def test_permanentflags(self):
+        """
+        If the server response to a I{SELECT} or I{EXAMINE} command includes an
+        I{FLAGS} response, the L{Deferred} returned by L{IMAP4Client.select} or
+        L{IMAP4Client.examine} fires with a C{dict} including the value
+        associated with the C{'FLAGS'} key.
+        """
+        d = self._examineOrSelect()
+        self._response(
+            '* OK [PERMANENTFLAGS (\\Starred)] Just one permanent flag in '
+            'that list up there')
+        self.assertEquals(
+            self._extractDeferredResult(d), {
+                'READ-WRITE': False,
+                'PERMANENTFLAGS': ('\\Starred',)})
+
+
+    def test_unrecognizedOk(self):
+        """
+        If the server response to a I{SELECT} or I{EXAMINE} command includes an
+        I{OK} with unrecognized response code text, parsing does not fail.
+        """
+        d = self._examineOrSelect()
+        self._response(
+            '* OK [X-MADE-UP] I just made this response text up.')
+        # The value won't show up in the result.  It would be okay if it did
+        # someday, perhaps.  This shouldn't ever happen, though.
+        self.assertEquals(
+            self._extractDeferredResult(d), {'READ-WRITE': False})
+
+
+    def test_bareOk(self):
+        """
+        If the server response to a I{SELECT} or I{EXAMINE} command includes an
+        I{OK} with no response code text, parsing does not fail.
+        """
+        d = self._examineOrSelect()
+        self._response('* OK')
+        self.assertEquals(
+            self._extractDeferredResult(d), {'READ-WRITE': False})
+
+
+
+class IMAP4ClientExamineTests(SelectionTestsMixin, unittest.TestCase):
     """
     Tests for the L{IMAP4Client.examine} method.
 
@@ -2504,209 +2729,30 @@ class IMAP4ClientExamineTests(PreauthIMAP4ClientMixin, unittest.TestCase):
         S: * OK [PERMANENTFLAGS ()] No permanent flags permitted
         S: A932 OK [READ-ONLY] EXAMINE completed
     """
-    def _examine(self):
-        """
-        Issue an examine command, assert that the correct bytes are written to
-        the transport, and return the L{Deferred} returned by the C{examine}
-        method.
-        """
-        d = self.client.examine('foobox')
-        self.assertEqual(self.transport.value(), '0001 EXAMINE foobox\r\n')
-        return d
+    method = 'examine'
+    command = 'EXAMINE'
 
 
-    def _response(self, *lines):
-        """
-        Deliver the given (unterminated) response lines to C{self.client} and
-        then deliver a tagged EXAMINE completion line to finish the EXAMINE
-        response.
-        """
-        for line in lines:
-            self.client.dataReceived(line + '\r\n')
-        self.client.dataReceived('0001 OK [READ-ONLY] EXAMINE completed\r\n')
 
 
-    def test_exists(self):
-        """
-        If the server response to an I{EXAMINE} command includes an I{EXISTS}
-        response, the L{Deferred} return by L{IMAP4Client.examine} fires with a
-        C{dict} including the value associated with the C{'EXISTS'} key.
-        """
-        d = self._examine()
-        self._response('* 3 EXISTS')
-        self.assertEquals(
-            self._extractDeferredResult(d),
-            {'READ-WRITE': False, 'EXISTS': 3})
+class IMAP4ClientSelectTests(SelectionTestsMixin, unittest.TestCase):
+    """
+    Tests for the L{IMAP4Client.select} method.
 
+    An example of usage of the SELECT command from RFC 3501, section 6.3.1::
 
-    def test_nonIntegerExists(self):
-        """
-        If the server returns a non-integer EXISTS value in its response to an
-        I{EXAMINE} command, the L{Deferred} returned by L{IMAP4Client.examine}
-        fails with L{IllegalServerResponse}.
-        """
-        d = self._examine()
-        self._response('* foo EXISTS')
-        self.assertRaises(
-            imap4.IllegalServerResponse, self._extractDeferredResult, d)
-
-
-    def test_recent(self):
-        """
-        If the server response to an I{EXAMINE} command includes an I{RECENT}
-        response, the L{Deferred} return by L{IMAP4Client.examine} fires with a
-        C{dict} including the value associated with the C{'RECENT'} key.
-        """
-        d = self._examine()
-        self._response('* 5 RECENT')
-        self.assertEquals(
-            self._extractDeferredResult(d),
-            {'READ-WRITE': False, 'RECENT': 5})
-
-
-    def test_nonIntegerRecent(self):
-        """
-        If the server returns a non-integer RECENT value in its response to an
-        I{EXAMINE} command, the L{Deferred} returned by L{IMAP4Client.examine}
-        fails with L{IllegalServerResponse}.
-        """
-        d = self._examine()
-        self._response('* foo RECENT')
-        self.assertRaises(
-            imap4.IllegalServerResponse, self._extractDeferredResult, d)
-
-
-    def test_unseen(self):
-        """
-        If the server response to an I{EXAMINE} command includes an I{UNSEEN}
-        response, the L{Deferred} returned by L{IMAP4Client.examine} fires with
-        a C{dict} including the value associated with the C{'UNSEEN'} key.
-        """
-        d = self._examine()
-        self._response('* OK [UNSEEN 8] Message 8 is first unseen')
-        self.assertEquals(
-            self._extractDeferredResult(d),
-            {'READ-WRITE': False, 'UNSEEN': 8})
-
-
-    def test_nonIntegerUnseen(self):
-        """
-        If the server returns a non-integer UNSEEN value in its response to an
-        I{EXAMINE} command, the L{Deferred} returned by L{IMAP4Client.examine}
-        fails with L{IllegalServerResponse}.
-        """
-        d = self._examine()
-        self._response('* OK [UNSEEN foo] Message foo is first unseen')
-        self.assertRaises(
-            imap4.IllegalServerResponse, self._extractDeferredResult, d)
-
-
-    def test_uidvalidity(self):
-        """
-        If the server response to an I{EXAMINE} command includes an
-        I{UIDVALIDITY} response, the L{Deferred} returned by
-        L{IMAP4Client.examine} fires with a C{dict} including the value
-        associated with the C{'UIDVALIDITY'} key.
-        """
-        d = self._examine()
-        self._response('* OK [UIDVALIDITY 12345] UIDs valid')
-        self.assertEquals(
-            self._extractDeferredResult(d),
-            {'READ-WRITE': False, 'UIDVALIDITY': 12345})
-
-
-    def test_nonIntegerUIDVALIDITY(self):
-        """
-        If the server returns a non-integer UIDVALIDITY value in its response
-        to an I{EXAMINE} command, the L{Deferred} returned by
-        L{IMAP4Client.examine} fails with L{IllegalServerResponse}.
-        """
-        d = self._examine()
-        self._response('* OK [UIDVALIDITY foo] UIDs valid')
-        self.assertRaises(
-            imap4.IllegalServerResponse, self._extractDeferredResult, d)
-
-
-    def test_uidnext(self):
-        """
-        If the server response to an I{EXAMINE} command includes an I{UIDNEXT}
-        response, the L{Deferred} returned by L{IMAP4Client.examine} fires with
-        a C{dict} including the value associated with the C{'UIDNEXT'} key.
-        """
-        d = self._examine()
-        self._response('* OK [UIDNEXT 4392] Predicted next UID')
-        self.assertEquals(
-            self._extractDeferredResult(d),
-            {'READ-WRITE': False, 'UIDNEXT': 4392})
-
-
-    def test_nonIntegerUIDNEXT(self):
-        """
-        If the server returns a non-integer UIDNEXT value in its response to an
-        I{EXAMINE} command, the L{Deferred} returned by L{IMAP4Client.examine}
-        fails with L{IllegalServerResponse}.
-        """
-        d = self._examine()
-        self._response('* OK [UIDNEXT foo] Predicted next UID')
-        self.assertRaises(
-            imap4.IllegalServerResponse, self._extractDeferredResult, d)
-
-
-    def test_flags(self):
-        """
-        If the server response to an I{EXAMINE} command includes an I{FLAGS}
-        response, the L{Deferred} returned by L{IMAP4Client.examine} fires with
-        a C{dict} including the value associated with the C{'FLAGS'} key.
-        """
-        d = self._examine()
-        self._response(
-            '* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)')
-        self.assertEquals(
-            self._extractDeferredResult(d), {
-                'READ-WRITE': False,
-                'FLAGS': ('\\Answered', '\\Flagged', '\\Deleted', '\\Seen',
-                          '\\Draft')})
-
-
-    def test_permanentflags(self):
-        """
-        If the server response to an I{EXAMINE} command includes an I{FLAGS}
-        response, the L{Deferred} returned by L{IMAP4Client.examine} fires with
-        a C{dict} including the value associated with the C{'FLAGS'} key.
-        """
-        d = self._examine()
-        self._response(
-            '* OK [PERMANENTFLAGS (\\Starred)] Just one permanent flag in '
-            'that list up there')
-        self.assertEquals(
-            self._extractDeferredResult(d), {
-                'READ-WRITE': False,
-                'PERMANENTFLAGS': ('\\Starred',)})
-
-
-    def test_unrecognizedOk(self):
-        """
-        If the server response to an I{EXAMINE} command includes an I{OK} with
-        unrecognized response code text, parsing does not fail.
-        """
-        d = self._examine()
-        self._response(
-            '* OK [X-MADE-UP] I just made this response text up.')
-        # The value won't show up in the result.  It would be okay if it did
-        # someday, perhaps.  This shouldn't ever happen, though.
-        self.assertEquals(
-            self._extractDeferredResult(d), {'READ-WRITE': False})
-
-
-    def test_bareOk(self):
-        """
-        If the server response to an I{EXAMINE} command includes an I{OK} with
-        no response code text, parsing does not fail.
-        """
-        d = self._examine()
-        self._response('* OK')
-        self.assertEquals(
-            self._extractDeferredResult(d), {'READ-WRITE': False})
+        C: A142 SELECT INBOX
+        S: * 172 EXISTS
+        S: * 1 RECENT
+        S: * OK [UNSEEN 12] Message 12 is first unseen
+        S: * OK [UIDVALIDITY 3857529045] UIDs valid
+        S: * OK [UIDNEXT 4392] Predicted next UID
+        S: * FLAGS (\Answered \Flagged \Deleted \Seen \Draft)
+        S: * OK [PERMANENTFLAGS (\Deleted \Seen \*)] Limited
+        S: A142 OK [READ-WRITE] SELECT completed
+    """
+    method = 'select'
+    command = 'SELECT'
 
 
 
