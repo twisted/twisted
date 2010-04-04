@@ -139,6 +139,23 @@ class ITerminalTransport(iinternet.ITransport):
         """
 
 
+    def setScrollRegion(self, first=None, last=None):
+        """
+        Set the scroll region.
+
+        @param first: The first line of the scroll region.
+        @type first: C{int}
+        @param last: The last line of the scroll region.
+        @type last: C{int}
+        """
+
+
+    def resetScrollRegion(self):
+        """
+        Reset the scroll region to the default size.
+        """
+
+
     def applicationKeypadMode():
         """Cause keypad to generate control functions.
 
