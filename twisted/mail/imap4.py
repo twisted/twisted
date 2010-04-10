@@ -1467,8 +1467,8 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         i = 0
 
         # result is a list of tuples (sequenceId, Message)
-        lastSequenceId = result[-1][0]
-        lastMessageId = result[-1][1].getUID()
+        lastSequenceId = result and result[-1][0]
+        lastMessageId = result and result[-1][1].getUID()
 
         for (i, (id, msg)) in zip(range(5), result):
             # searchFilter and singleSearchStep will mutate the query.  Dang.
@@ -1483,7 +1483,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         if i == 4:
             from twisted.internet import reactor
             reactor.callLater(
-                0, self.__cbManualSearch, result, tag, mbox, query, uid,
+                0, self.__cbManualSearch, result[5:], tag, mbox, query, uid,
                 searchResults)
         else:
             if searchResults:

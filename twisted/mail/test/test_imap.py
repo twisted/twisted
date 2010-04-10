@@ -3785,6 +3785,8 @@ class DefaultSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
             FakeyMessage({}, (), '', '', 999, None),
             FakeyMessage({}, (), '', '', 10101, None),
             FakeyMessage({}, (), '', '', 12345, None),
+            FakeyMessage({}, (), '', '', 20001, None),
+            FakeyMessage({}, (), '', '', 20002, None),
         ]
 
 
@@ -3831,7 +3833,7 @@ class DefaultSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
         If the search filter ends with a star, all the message from the
         starting point are returned.
         """
-        return self._messageSetSearchTest('2:*', [2, 3])
+        return self._messageSetSearchTest('2:*', [2, 3, 4, 5])
 
 
     def test_searchMessageSetWithStarFirst(self):
@@ -3839,7 +3841,7 @@ class DefaultSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
         If the search filter starts with a star, the result should be identical
         with if the filter would end with a star.
         """
-        return self._messageSetSearchTest('*:2', [2, 3])
+        return self._messageSetSearchTest('*:2', [2, 3, 4, 5])
 
 
     def test_searchMessageSetUIDWithStar(self):
@@ -3847,7 +3849,7 @@ class DefaultSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
         If the search filter ends with a star, all the message from the
         starting point are returned (also for the SEARCH UID case).
         """
-        return self._messageSetSearchTest('UID 10000:*', [2, 3])
+        return self._messageSetSearchTest('UID 10000:*', [2, 3, 4, 5])
 
 
     def test_searchMessageSetUIDWithStarFirst(self):
@@ -3855,7 +3857,7 @@ class DefaultSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
         If the search filter starts with a star, the result should be identical
         with if the filter would end with a star (also for the SEARCH UID case).
         """
-        return self._messageSetSearchTest('UID *:10000', [2, 3])
+        return self._messageSetSearchTest('UID *:10000', [2, 3, 4, 5])
 
 
     def test_searchMessageSetUIDWithStarAndHighStart(self):
@@ -3863,8 +3865,8 @@ class DefaultSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
         A search filter of 1234:* should include the UID of the last message in
         the mailbox, even if its UID is less than 1234.
         """
-        # in our fake mbox the highest message UID is 12345
-        return self._messageSetSearchTest('UID 30000:*', [3])
+        # in our fake mbox the highest message UID is 20002
+        return self._messageSetSearchTest('UID 30000:*', [5])
 
 
     def test_searchMessageSetWithList(self):
@@ -3872,10 +3874,10 @@ class DefaultSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
         If the search filter contains nesting terms, one of which includes a
         message sequence set with a wildcard, IT ALL WORKS GOOD.
         """
-        # 5 is bigger than the biggest message sequence number, but that's
+        # 6 is bigger than the biggest message sequence number, but that's
         # okay, because N:* includes the biggest message sequence number even
         # if N is bigger than that (read the rfc nub).
-        return self._messageSetSearchTest('(5:*)', [3])
+        return self._messageSetSearchTest('(6:*)', [5])
 
 
     def test_searchOr(self):
@@ -3893,7 +3895,7 @@ class DefaultSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
         all messages in that set are considered for inclusion in the
         results.
         """
-        return self._messageSetSearchTest('OR 2:* 2:*', [2, 3])
+        return self._messageSetSearchTest('OR 2:* 2:*', [2, 3, 4, 5])
 
 
     def test_searchNot(self):
@@ -3901,7 +3903,7 @@ class DefaultSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
         If the search filter contains a I{NOT} term, all messages
         which do not match the subexpression are returned.
         """
-        return self._messageSetSearchTest('NOT 3', [1, 2])
+        return self._messageSetSearchTest('NOT 3', [1, 2, 4, 5])
 
 
     def test_searchNotMessageSet(self):
