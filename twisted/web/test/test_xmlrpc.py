@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.web.test.test_xmlrpc -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -128,6 +128,16 @@ class TestQueryFactory(xmlrpc._QueryFactory):
         xmlrpc._QueryFactory.__init__(self, *args, **kwargs)
 
 
+class TestQueryFactoryCancel(xmlrpc._QueryFactory):
+    """
+    QueryFactory that saves a reference to the
+    L{twisted.internet.interfaces.IConnector} to test connection lost.
+    """
+
+    def startedConnecting(self, connector):
+        self.connector = connector
+
+
 class XMLRPCTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -149,9 +159,17 @@ class XMLRPCTestCase(unittest.TestCase):
         self.factories.append(factory)
         return factory
 
-    def proxy(self):
+    def proxy(self, factory=None):
+        """
+        Return a new xmlrpc.Proxy for the test site created in
+        setUp(), using the given factory as the queryFactory, or
+        self.queryFactory if no factory is provided.
+        """
         p = xmlrpc.Proxy("http://127.0.0.1:%d/" % self.port)
-        p.queryFactory = self.queryFactory
+        if factory is None:
+            p.queryFactory = self.queryFactory
+        else:
+            p.queryFactory = factory
         return p
 
     def test_results(self):
@@ -193,6 +211,23 @@ class XMLRPCTestCase(unittest.TestCase):
             self.flushLoggedErrors(TestRuntimeError, TestValueError)
         d.addCallback(cb)
         return d
+
+
+    def test_cancel(self):
+        """
+        A deferred from the Proxy can be cancelled, disconnecting
+        the L{twisted.internet.interfaces.IConnector}.
+        """
+        def factory(*args, **kw):
+            factory.f = TestQueryFactoryCancel(*args, **kw)
+            return factory.f
+        d = self.proxy(factory).callRemote('add', 2, 3)
+        self.assertNotEquals(factory.f.connector.state, "disconnected")
+        d.cancel()
+        self.assertEquals(factory.f.connector.state, "disconnected")
+        d = self.assertFailure(d, defer.CancelledError)
+        return d
+
 
     def test_errorGet(self):
         """
@@ -260,9 +295,12 @@ class XMLRPCTestCase2(XMLRPCTestCase):
     Test with proxy that doesn't add a slash.
     """
 
-    def proxy(self):
+    def proxy(self, factory=None):
         p = xmlrpc.Proxy("http://127.0.0.1:%d" % self.port)
-        p.queryFactory = self.queryFactory
+        if factory is None:
+            p.queryFactory = self.queryFactory
+        else:
+            p.queryFactory = factory
         return p
 
 

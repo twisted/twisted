@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.web.test.test_xmlrpc -*-
-# Copyright (c) 2001-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -303,12 +303,41 @@ class _QueryFactory(protocol.ClientFactory):
     protocol = QueryProtocol
 
     def __init__(self, path, host, method, user=None, password=None,
-                 allowNone=False, args=()):
+                 allowNone=False, args=(), canceller=None):
+        """
+        @type path: C{str}
+        @param path: The path portion of the URL to which to post method calls.
+
+        @type host: C{str}
+        @param host: The value to use for the Host HTTP header.
+
+        @type method: C{str}
+        @param method: The name of the method to call.
+
+        @type user: C{str} or C{NoneType}
+        @param user: The username with which to authenticate with the server
+            when making calls.
+
+        @type password: C{str} or C{NoneType}
+        @param password: The password with which to authenticate with the server
+            when making calls.
+
+        @type allowNone: C{bool} or C{NoneType}
+        @param allowNone: allow the use of None values in parameters. It's
+            passed to the underlying xmlrpclib implementation. Default to False.
+
+        @type args: C{tuple}
+        @param args: the arguments to pass to the method.
+
+        @type canceller: C{callable} or C{NoneType}
+        @param canceller: a 1-argument callable passed to the deferred as the
+            canceller callback.
+        """
         self.path, self.host = path, host
         self.user, self.password = user, password
         self.payload = payloadTemplate % (method,
             xmlrpclib.dumps(args, allow_none=allowNone))
-        self.deferred = defer.Deferred()
+        self.deferred = defer.Deferred(canceller)
 
     def parseResponse(self, contents):
         if not self.deferred:
@@ -353,25 +382,25 @@ class Proxy:
         """
         @type url: C{str}
         @param url: The URL to which to post method calls.  Calls will be made
-        over SSL if the scheme is HTTPS.  If netloc contains username or
-        password information, these will be used to authenticate, as long as
-        the C{user} and C{password} arguments are not specified.
+            over SSL if the scheme is HTTPS.  If netloc contains username or
+            password information, these will be used to authenticate, as long as
+            the C{user} and C{password} arguments are not specified.
 
-        @type user: C{str} or None
+        @type user: C{str} or C{NoneType}
         @param user: The username with which to authenticate with the server
-        when making calls.  If specified, overrides any username information
-        embedded in C{url}.  If not specified, a value may be taken from C{url}
-        if present.
+            when making calls.  If specified, overrides any username information
+            embedded in C{url}.  If not specified, a value may be taken from
+            C{url} if present.
 
-        @type password: C{str} or None
-        @param password: The password with which to authenticate with the
-        server when making calls.  If specified, overrides any password
-        information embedded in C{url}.  If not specified, a value may be taken
-        from C{url} if present.
+        @type password: C{str} or C{NoneType}
+        @param password: The password with which to authenticate with the server
+            when making calls.  If specified, overrides any password information
+            embedded in C{url}.  If not specified, a value may be taken from
+            C{url} if present.
 
-        @type allowNone: C{bool} or None
+        @type allowNone: C{bool} or C{NoneType}
         @param allowNone: allow the use of None values in parameters. It's
-        passed to the underlying xmlrpclib implementation. Default to False.
+            passed to the underlying xmlrpclib implementation. Default to False.
         """
         scheme, netloc, path, params, query, fragment = urlparse.urlparse(url)
         netlocParts = netloc.split('@')
@@ -408,16 +437,23 @@ class Proxy:
             or a failure if the method failed. Generally, the failure type will
             be L{Fault}, but you can also have an C{IndexError} on some buggy
             servers giving empty responses.
+
+            If the deferred is cancelled before the request completes, the
+            connection is closed and the deferred will fire with a
+            L{defer.CancelledError}.
         """
+        def cancel(d):
+            factory.deferred = None
+            connector.disconnect()
         factory = self.queryFactory(
             self.path, self.host, method, self.user,
-            self.password, self.allowNone, args)
+            self.password, self.allowNone, args, cancel)
         if self.secure:
             from twisted.internet import ssl
-            reactor.connectSSL(self.host, self.port or 443,
-                               factory, ssl.ClientContextFactory())
+            connector = reactor.connectSSL(self.host, self.port or 443,
+                                           factory, ssl.ClientContextFactory())
         else:
-            reactor.connectTCP(self.host, self.port or 80, factory)
+            connector = reactor.connectTCP(self.host, self.port or 80, factory)
         return factory.deferred
 
 
