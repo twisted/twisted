@@ -72,16 +72,19 @@ class ReverseProxyResourceTestCase(TestCase):
     def test_getChild(self):
         """
         The L{ReverseProxyResource.getChild} method should return a resource
-        instance with the same class as the originating resource, forward port
-        and host values, and update the path value with the value passed.
+        instance with the same class as the originating resource, forward
+        port, host, and reactor values, and update the path value with the
+        value passed.
         """
-        resource = ReverseProxyResource("127.0.0.1", 1234, "/path")
+        reactor = MemoryReactor()
+        resource = ReverseProxyResource("127.0.0.1", 1234, "/path", reactor)
         child = resource.getChild('foo', None)
         # The child should keep the same class
         self.assertIsInstance(child, ReverseProxyResource)
         self.assertEquals(child.path, "/path/foo")
         self.assertEquals(child.port, 1234)
         self.assertEquals(child.host, "127.0.0.1")
+        self.assertIdentical(child.reactor, resource.reactor)
 
 
     def test_getChildWithSpecial(self):

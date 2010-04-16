@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.web.test.test_proxy -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -275,7 +275,8 @@ class ReverseProxyResource(Resource):
         C{path} at the end.
         """
         return ReverseProxyResource(
-            self.host, self.port, self.path + '/' + urlquote(path, safe=""))
+            self.host, self.port, self.path + '/' + urlquote(path, safe=""),
+            self.reactor)
 
 
     def render(self, request):
