@@ -131,7 +131,11 @@ class _PathHelper:
     """
 
     def getContent(self):
-        return self.open().read()
+        fp = self.open()
+        try:
+            return fp.read()
+        finally:
+            fp.close()
 
 
     def parents(self):
@@ -662,8 +666,10 @@ class FilePath(_PathHelper):
     def setContent(self, content, ext='.new'):
         sib = self.siblingExtension(ext)
         f = sib.open('w')
-        f.write(content)
-        f.close()
+        try:
+            f.write(content)
+        finally:
+            f.close()
         if platform.isWindows() and exists(self.path):
             os.unlink(self.path)
         os.rename(sib.path, self.path)
@@ -755,19 +761,23 @@ class FilePath(_PathHelper):
                 child.copyTo(destChild, followLinks)
         elif self.isfile():
             writefile = destination.open('w')
-            readfile = self.open()
-            while 1:
-                # XXX TODO: optionally use os.open, os.read and O_DIRECT and
-                # use os.fstatvfs to determine chunk sizes and make
-                # *****sure**** copy is page-atomic; the following is good
-                # enough for 99.9% of everybody and won't take a week to audit
-                # though.
-                chunk = readfile.read(self._chunkSize)
-                writefile.write(chunk)
-                if len(chunk) < self._chunkSize:
-                    break
-            writefile.close()
-            readfile.close()
+            try:
+                readfile = self.open()
+                try:
+                    while 1:
+                        # XXX TODO: optionally use os.open, os.read and O_DIRECT
+                        # and use os.fstatvfs to determine chunk sizes and make
+                        # *****sure**** copy is page-atomic; the following is
+                        # good enough for 99.9% of everybody and won't take a
+                        # week to audit though.
+                        chunk = readfile.read(self._chunkSize)
+                        writefile.write(chunk)
+                        if len(chunk) < self._chunkSize:
+                            break
+                finally:
+                    readfile.close()
+            finally:
+                writefile.close()
         else:
             # If you see the following message because you want to copy
             # symlinks, fifos, block devices, character devices, or unix

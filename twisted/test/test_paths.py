@@ -328,6 +328,59 @@ class ZipFilePathTestCase(AbstractFilePathTestCase):
 
 
 
+class ExplodingFile:
+    """
+    A C{file}-alike which raises exceptions from its I/O methods and keeps track
+    of whether it has been closed.
+
+    @ivar closed: A C{bool} which is C{False} until C{close} is called, then it
+        is C{True}.
+    """
+    closed = False
+
+    def read(self, n=0):
+        """
+        @raise IOError: Always raised.
+        """
+        raise IOError()
+
+
+    def write(self, what):
+        """
+        @raise IOError: Always raised.
+        """
+        raise IOError()
+
+
+    def close(self):
+        """
+        Mark the file as having been closed.
+        """
+        self.closed = True
+
+
+
+class ExplodingFilePath(filepath.FilePath):
+    """
+    A specialized L{FilePath} which always returns an instance of
+    L{ExplodingFile} from its C{open} method.
+
+    @ivar fp: The L{ExplodingFile} instance most recently returned from the
+        C{open} method.
+    """
+    def open(self, mode=None):
+        """
+        Create, save, and return a new C{ExplodingFile}.
+
+        @param mode: Present for signature compatibility.  Ignored.
+
+        @return: A new C{ExplodingFile}.
+        """
+        self.fp = ExplodingFile()
+        return self.fp
+
+
+
 class FilePathTestCase(AbstractFilePathTestCase):
     """
     Test various L{FilePath} path manipulations.
@@ -454,6 +507,27 @@ class FilePathTestCase(AbstractFilePathTestCase):
         self.path.child('new').setContent(content, '.tmp')
         newcontent = self.path.child('new').getContent()
         self.failUnlessEqual(content, newcontent)
+
+
+    def test_getContentFileClosing(self):
+        """
+        If reading from the underlying file raises an exception,
+        L{FilePath.getContent} raises that exception after closing the file.
+        """
+        fp = ExplodingFilePath("")
+        self.assertRaises(IOError, fp.getContent)
+        self.assertTrue(fp.fp.closed)
+
+
+    def test_setContentFileClosing(self):
+        """
+        If writing to the underlying file raises an exception,
+        L{FilePath.setContent} raises that exception after closing the file.
+        """
+        fp = ExplodingFilePath("")
+        fp.siblingExtension = lambda filepath: fp
+        self.assertRaises(IOError, fp.setContent, "blah")
+        self.assertTrue(fp.fp.closed)
 
 
     def test_symbolicLink(self):
@@ -640,6 +714,39 @@ class FilePathTestCase(AbstractFilePathTestCase):
         newPaths.sort()
         oldPaths.sort()
         self.assertEquals(newPaths, oldPaths)
+
+
+    def test_copyToMissingDestFileClosing(self):
+        """
+        If an exception is raised while L{FilePath.copyTo} is trying to open
+        source file to read from, the destination file is closed and the
+        exception is raised to the caller of L{FilePath.copyTo}.
+        """
+        nosuch = self.path.child("nothere")
+        # Make it look like something to copy, even though it doesn't exist.
+        # This could happen if the file is deleted between the isfile check and
+        # the file actually being opened.
+        nosuch.isfile = lambda: True
+
+        # We won't get as far as writing to this file, but it's still useful for
+        # tracking whether we closed it.
+        destination = ExplodingFilePath(self.mktemp())
+
+        self.assertRaises(IOError, nosuch.copyTo, destination)
+        self.assertTrue(destination.fp.closed)
+
+
+    def test_copyToFileClosing(self):
+        """
+        If an exception is raised while L{FilePath.copyTo} is copying bytes
+        between two regular files, the source and destination files are closed
+        and the exception propagates to the caller of L{FilePath.copyTo}.
+        """
+        destination = ExplodingFilePath(self.mktemp())
+        source = ExplodingFilePath(__file__)
+        self.assertRaises(IOError, source.copyTo, destination)
+        self.assertTrue(source.fp.closed)
+        self.assertTrue(destination.fp.closed)
 
 
     def test_copyToWithSymlink(self):
