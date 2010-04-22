@@ -13,6 +13,7 @@ from urlparse import urlparse
 from twisted.trial import unittest
 from twisted.web import server, static, client, error, util, resource, http_headers
 from twisted.internet import reactor, defer, interfaces
+from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.log import msg
 from twisted.protocols.policies import WrappingFactory
@@ -22,15 +23,17 @@ from twisted.internet.address import IPv4Address
 from twisted.internet.task import Clock
 from twisted.internet.error import ConnectionRefusedError
 from twisted.internet.protocol import Protocol
-from twisted.internet.defer import Deferred
+from twisted.internet.defer import Deferred, succeed
 from twisted.web.client import Request
+from twisted.web._newclient import HTTP11ClientProtocol
 from twisted.web.error import SchemeNotSupported
 
 try:
     from twisted.internet import ssl
 except:
     ssl = None
-
+else:
+    from OpenSSL.SSL import ContextType
 
 
 class ExtendedRedirect(resource.Resource):
@@ -207,9 +210,9 @@ class ParseUrlTestCase(unittest.TestCase):
         goodInput = badInput.encode('ascii')
         urlparse(badInput)
         scheme, host, port, path = client._parse(goodInput)
-        self.assertTrue(isinstance(scheme, str))
-        self.assertTrue(isinstance(host, str))
-        self.assertTrue(isinstance(path, str))
+        self.assertIsInstance(scheme, str)
+        self.assertIsInstance(host, str)
+        self.assertIsInstance(path, str)
 
 
 
@@ -896,25 +899,6 @@ class AgentTests(unittest.TestCase):
         self.reactor.advance(0)
 
 
-    def _verifyAndCompleteConnectionTo(self, host, port):
-        """
-        Assert that the destination of the oldest unverified TCP connection
-        attempt is the given host and port.  Then pop it, create a protocol,
-        connect it to a L{StringTransport}, and return the protocol.
-        """
-        # Grab the connection attempt, make sure it goes to the right place,
-        # and cause it to succeed.
-        host, port, factory = self.reactor.tcpClients.pop()[:3]
-        self.assertEquals(host, host)
-        self.assertEquals(port, port)
-
-        protocol = factory.buildProtocol(IPv4Address('TCP', '10.0.0.3', 1234))
-        transport = StringTransport()
-        protocol.makeConnection(transport)
-        self.completeConnection()
-        return protocol
-
-
     def test_unsupportedScheme(self):
         """
         L{Agent.request} returns a L{Deferred} which fails with
@@ -935,10 +919,104 @@ class AgentTests(unittest.TestCase):
 
         # Cause the connection to be refused
         host, port, factory = self.reactor.tcpClients.pop()[:3]
-        factory.clientConnectionFailed(None, ConnectionRefusedError())
+        factory.clientConnectionFailed(None, Failure(ConnectionRefusedError()))
         self.completeConnection()
 
         return self.assertFailure(result, ConnectionRefusedError)
+
+
+    def test_connectHTTP(self):
+        """
+        L{Agent._connect} uses C{connectTCP} to set up a connection to
+        a server when passed a scheme of C{'http'} and returns a
+        L{Deferred} which fires (when that connection is established)
+        with the protocol associated with that connection.
+        """
+        expectedHost = 'example.com'
+        expectedPort = 1234
+        d = self.agent._connect('http', expectedHost, expectedPort)
+        host, port, factory = self.reactor.tcpClients.pop()[:3]
+        self.assertEquals(host, expectedHost)
+        self.assertEquals(port, expectedPort)
+        protocol = factory.buildProtocol(IPv4Address('TCP', '10.0.0.1', port))
+        self.assertIsInstance(protocol, HTTP11ClientProtocol)
+        self.completeConnection()
+        d.addCallback(self.assertIdentical, protocol)
+        return d
+
+
+    def test_connectHTTPS(self):
+        """
+        L{Agent._connect} uses C{connectSSL} to set up a connection to
+        a server when passed a scheme of C{'https'} and returns a
+        L{Deferred} which fires (when that connection is established)
+        with the protocol associated with that connection.
+        """
+        expectedHost = 'example.com'
+        expectedPort = 4321
+        d = self.agent._connect('https', expectedHost, expectedPort)
+        host, port, factory, contextFactory = self.reactor.sslClients.pop()[:4]
+        self.assertEquals(host, expectedHost)
+        self.assertEquals(port, expectedPort)
+        context = contextFactory.getContext()
+
+        # This is a pretty weak assertion.  It's true that the context must be
+        # an instance of OpenSSL.SSL.Context, Unfortunately these are pretty
+        # opaque and there's not much more than checking its type that we could
+        # do here.  It would be nice if the SSL APIs involved more testable (ie,
+        # inspectable) objects.
+        self.assertIsInstance(context, ContextType)
+
+        protocol = factory.buildProtocol(IPv4Address('TCP', '10.0.0.1', port))
+        self.assertIsInstance(protocol, HTTP11ClientProtocol)
+        self.completeConnection()
+        d.addCallback(self.assertIdentical, protocol)
+        return d
+    if ssl is None:
+        test_connectHTTPS.skip = "OpenSSL not present"
+
+
+    def test_connectHTTPSCustomContextFactory(self):
+        """
+        If a context factory is passed to L{Agent.__init__} it will be used to
+        determine the SSL parameters for HTTPS requests.  When an HTTPS request
+        is made, the hostname and port number of the request URL will be passed
+        to the context factory's C{getContext} method.  The resulting context
+        object will be used to establish the SSL connection.
+        """
+        expectedHost = 'example.org'
+        expectedPort = 20443
+        expectedContext = object()
+
+        contextArgs = []
+        class StubWebContextFactory(object):
+            def getContext(self, hostname, port):
+                contextArgs.append((hostname, port))
+                return expectedContext
+
+        agent = client.Agent(self.reactor, StubWebContextFactory())
+        d = agent._connect('https', expectedHost, expectedPort)
+        host, port, factory, contextFactory = self.reactor.sslClients.pop()[:4]
+        context = contextFactory.getContext()
+        self.assertEquals(context, expectedContext)
+        self.assertEquals(contextArgs, [(expectedHost, expectedPort)])
+        protocol = factory.buildProtocol(IPv4Address('TCP', '10.0.0.1', port))
+        self.assertIsInstance(protocol, HTTP11ClientProtocol)
+        self.completeConnection()
+        d.addCallback(self.assertIdentical, protocol)
+        return d
+
+
+    def _dummyConnect(self, scheme, host, port):
+        """
+        Fake implementation of L{Agent._connect} which synchronously
+        succeeds with an instance of L{StubHTTPProtocol} for ease of
+        testing.
+        """
+        protocol = StubHTTPProtocol()
+        protocol.makeConnection(None)
+        self.protocol = protocol
+        return succeed(protocol)
 
 
     def test_request(self):
@@ -949,7 +1027,7 @@ class AgentTests(unittest.TestCase):
         passed to it.  It returns a L{Deferred} which fires with a L{Response}
         from the server.
         """
-        self.agent._protocol = StubHTTPProtocol
+        self.agent._connect = self._dummyConnect
 
         headers = http_headers.Headers({'foo': ['bar']})
         # Just going to check the body for identity, so it doesn't need to be
@@ -958,12 +1036,12 @@ class AgentTests(unittest.TestCase):
         self.agent.request(
             'GET', 'http://example.com:1234/foo?bar', headers, body)
 
-        protocol = self._verifyAndCompleteConnectionTo('example.com', 1234)
+        protocol = self.protocol
 
         # The request should be issued.
         self.assertEquals(len(protocol.requests), 1)
         req, res = protocol.requests.pop()
-        self.assertTrue(isinstance(req, Request))
+        self.assertIsInstance(req, Request)
         self.assertEquals(req.method, 'GET')
         self.assertEquals(req.uri, '/foo?bar')
         self.assertEquals(
@@ -979,11 +1057,11 @@ class AgentTests(unittest.TestCase):
         parameter, a L{Headers} instance is created for the request and a
         I{Host} header added to it.
         """
-        self.agent._protocol = StubHTTPProtocol
+        self.agent._connect = self._dummyConnect
 
         self.agent.request('GET', 'http://example.com/foo')
 
-        protocol = self._verifyAndCompleteConnectionTo('example.com', 80)
+        protocol = self.protocol
 
         # The request should have been issued with a host header based on
         # the request URL.
@@ -998,14 +1076,14 @@ class AgentTests(unittest.TestCase):
         I{Host} header, that value takes precedence over the one which would
         otherwise be automatically provided.
         """
-        self.agent._protocol = StubHTTPProtocol
+        self.agent._connect = self._dummyConnect
 
         headers = http_headers.Headers({'foo': ['bar'], 'host': ['quux']})
         body = object()
         self.agent.request(
             'GET', 'http://example.com/baz', headers, body)
 
-        protocol = self._verifyAndCompleteConnectionTo('example.com', 80)
+        protocol = self.protocol
 
         # The request should have been issued with the host header specified
         # above, not one based on the request URI.
@@ -1019,14 +1097,14 @@ class AgentTests(unittest.TestCase):
         If a I{Host} header must be added to the request, the L{Headers}
         instance passed to L{Agent.request} is not modified.
         """
-        self.agent._protocol = StubHTTPProtocol
+        self.agent._connect = self._dummyConnect
 
         headers = http_headers.Headers()
         body = object()
         self.agent.request(
             'GET', 'http://example.com/foo', headers, body)
 
-        protocol = self._verifyAndCompleteConnectionTo('example.com', 80)
+        protocol = self.protocol
 
         # The request should have been issued.
         self.assertEquals(len(protocol.requests), 1)
@@ -1034,19 +1112,48 @@ class AgentTests(unittest.TestCase):
         self.assertEquals(headers, http_headers.Headers())
 
 
-    def test_hostValue(self):
+    def test_hostValueStandardHTTP(self):
         """
-        L{Agent._computeHostValue} returns just the hostname it is passed if
-        the port number it is passed is the default for the scheme it is
-        passed, otherwise it returns a string containing both the host and port
-        separated by C{":"}.
+        When passed a scheme of C{'http'} and a port of C{80},
+        L{Agent._computeHostValue} returns a string giving just the
+        host name passed to it.
         """
         self.assertEquals(
             self.agent._computeHostValue('http', 'example.com', 80),
             'example.com')
 
+
+    def test_hostValueNonStandardHTTP(self):
+        """
+        When passed a scheme of C{'http'} and a port other than C{80},
+        L{Agent._computeHostValue} returns a string giving the host
+        passed to it joined together with the port number by C{":"}.
+        """
         self.assertEquals(
             self.agent._computeHostValue('http', 'example.com', 54321),
+            'example.com:54321')
+
+
+    def test_hostValueStandardHTTPS(self):
+        """
+        When passed a scheme of C{'https'} and a port of C{443},
+        L{Agent._computeHostValue} returns a string giving just the
+        host name passed to it.
+        """
+        self.assertEquals(
+            self.agent._computeHostValue('https', 'example.com', 443),
+            'example.com')
+
+
+    def test_hostValueNonStandardHTTPS(self):
+        """
+        When passed a scheme of C{'https'} and a port other than
+        C{443}, L{Agent._computeHostValue} returns a string giving the
+        host passed to it joined together with the port number by
+        C{":"}.
+        """
+        self.assertEquals(
+            self.agent._computeHostValue('https', 'example.com', 54321),
             'example.com:54321')
 
 

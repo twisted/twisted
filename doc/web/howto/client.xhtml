@@ -15,10 +15,10 @@
 
     <p>
       This document describes how to use the HTTP client included in Twisted
-      Web.  After reading it, you should be able to make HTTP requests using
-      Twisted Web.  You will be able to specify the request method, headers,
-      and body and you will be able to retrieve the response code, headers, and
-      body.
+      Web.  After reading it, you should be able to make HTTP and HTTPS
+      requests using Twisted Web.  You will be able to specify the request
+      method, headers, and body and you will be able to retrieve the response
+      code, headers, and body.
     </p>
 
     <h3>
@@ -26,11 +26,15 @@
     </h3>
 
     <p>
+
       This document assumes that you are familiar with <a
       href="../../core/howto/defer.xhtml">Deferreds and Failures</a>, and <a
-      href="../../core/howto/producers.xhtml">producers and consumers</a>. 
+      href="../../core/howto/producers.xhtml">producers and consumers</a>.
       It also assumes you are familiar with the basic concepts of HTTP, such
-      as requests and responses, methods, headers, and message bodies.
+      as requests and responses, methods, headers, and message bodies.  The
+      HTTPS section of this document also assumes you are somewhat familiar with
+      SSL and have read about <a href="../../core/howto/ssl.xhtml">using SSL in
+      Twisted</a>.
     </p>
 
     <h2>
@@ -58,10 +62,12 @@
       As may be obvious, this issues a new <em>GET</em> request for <em>/</em>
       to the web server on <code>example.com</code>.  <code>Agent</code> is
       responsible for resolving the hostname into an IP address and connecting
-      to it on port 80.  It is also responsible for cleaning up the connection
-      afterwards.  This code sends a request which includes one custom header,
-      <em>User-Agent</em>.  The last argument passed to <code>Agent.request</code> is
-      <code>None</code>, though, so the request has no body.
+      to it on port 80 (for <em>HTTP</em> URIs), port 443 (for <em>HTTPS</em>
+      URIs), or on the port number specified in the URI itself.  It is also
+      responsible for cleaning up the connection afterwards.  This code sends
+      a request which includes one custom header, <em>User-Agent</em>.  The
+      last argument passed to <code>Agent.request</code> is <code>None</code>,
+      though, so the request has no body.
     </p>
 
     <p>
@@ -206,6 +212,74 @@
       application is not interested in the body, it should issue a
       <em>HEAD</em> request or use a protocol which immediately calls
       <code>stopProducing</code> on its transport.
+    </p>
+
+    <h3>HTTP over SSL</h3>
+
+    <p>
+      Everything you've read so far applies whether the scheme of the request
+      URI is <em>HTTP</em> or <em>HTTPS</em>.  However, to control the SSL
+      negotiation performed when an <em>HTTPS</em> URI is requested, there's
+      one extra object to pay attention to: the SSL context factory.
+    </p>
+
+    <p>
+      <code>Agent</code>'s constructor takes an optional second argument, a
+      context factory.  This is an object like the context factory described
+      in <a href="../../core/howto/ssl.xhtml">Using SSL in Twisted</a> but has
+      one small difference.  The <code>getContext</code> method of this factory
+      accepts the address from the URL being requested.  This allows it to
+      return a context object which verifies that the server's certificate
+      matches the URL being requested.
+    </p>
+
+    <p>
+      Here's an example which shows how to use <code>Agent</code> to request
+      an <em>HTTPS</em> URL with no certificate verification.
+    </p>
+
+    <pre class="python">
+from twisted.python.log import err
+from twisted.web.client import Agent
+from twisted.internet import reactor
+from twisted.internet.ssl import ClientContextFactory
+
+class WebClientContextFactory(ClientContextFactory):
+    def getContext(self, hostname, port):
+        return ClientContextFactory.getContext(self)
+
+def display(response):
+    print "Received response"
+    print response
+
+def main():
+    contextFactory = WebClientContextFactory()
+    agent = Agent(reactor, contextFactory)
+    d = agent.request("GET", "https://example.com/")
+    d.addCallbacks(display, err)
+    d.addCallback(lambda ignored: reactor.stop())
+    reactor.run()
+
+if __name__ == "__main__":
+    main()
+    </pre>
+
+    <p>
+      The important point to notice here is that <code>getContext</code> now
+      accepts two arguments, a hostname and a port number.  These two arguments,
+      a <code>str</code> and an <code>int</code>, give the address to which a
+      connection is being established to request an HTTPS URL.  Because an agent
+      might make multiple requests over a single connection,
+      <code>getContext</code> may not be called once for each request.  A second
+      or later request for a URL with the same hostname as a previous request
+      may re-use an existing connection, and therefore will re-use the
+      previously returned context object.
+    </p>
+
+    <p>
+      To configure SSL options or enable certificate verification or hostname
+      checking, provide a context factory which creates suitably configured
+      context objects.
     </p>
 
     <h2>

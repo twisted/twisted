@@ -564,20 +564,118 @@ from twisted.web.error import SchemeNotSupported
 from twisted.web._newclient import ResponseDone, Request, HTTP11ClientProtocol
 from twisted.web._newclient import Response
 
+try:
+    from twisted.internet.ssl import ClientContextFactory
+except ImportError:
+    class WebClientContextFactory(object):
+        """
+        A web context factory which doesn't work because the necessary SSL
+        support is missing.
+        """
+        def getContext(self, hostname, port):
+            raise NotImplementedError("SSL support unavailable")
+else:
+    class WebClientContextFactory(ClientContextFactory):
+        """
+        A web context factory which ignores the hostname and port and does no
+        certificate verification.
+        """
+        def getContext(self, hostname, port):
+            return ClientContextFactory.getContext(self)
+
+
+
+class _WebToNormalContextFactory(object):
+    """
+    Adapt a web context factory to a normal context factory.
+
+    @ivar _webContext: A web context factory which accepts a hostname and port
+        number to its C{getContext} method.
+
+    @ivar _hostname: The hostname which will be passed to
+        C{_webContext.getContext}.
+
+    @ivar _port: The port number which will be passed to
+        C{_webContext.getContext}.
+    """
+    def __init__(self, webContext, hostname, port):
+        self._webContext = webContext
+        self._hostname = hostname
+        self._port = port
+
+
+    def getContext(self):
+        """
+        Called the wrapped web context factory's C{getContext} method with a
+        hostname and port number and return the resulting context object.
+        """
+        return self._webContext.getContext(self._hostname, self._port)
+
+
+
 class Agent(object):
     """
-    L{Agent} is a very basic HTTP client.  It supports I{HTTP} scheme URIs.  It
-    does not support persistent connections.
+    L{Agent} is a very basic HTTP client.  It supports I{HTTP} and I{HTTPS}
+    scheme URIs (but performs no certificate checking by default).  It does not
+    support persistent connections.
 
-    @ivar _reactor: The L{IReactorTCP} implementation which will be used to set
-        up connections over which to issue requests.
+    @ivar _reactor: The L{IReactorTCP} and L{IReactorSSL} implementation which
+        will be used to set up connections over which to issue requests.
+
+    @ivar _contextFactory: A web context factory which will be used to create
+        SSL context objects for any SSL connections the agent needs to make.
 
     @since: 9.0
     """
     _protocol = HTTP11ClientProtocol
 
-    def __init__(self, reactor):
+    def __init__(self, reactor, contextFactory=WebClientContextFactory()):
         self._reactor = reactor
+        self._contextFactory = contextFactory
+
+
+    def _wrapContextFactory(self, host, port):
+        """
+        Create and return a normal context factory wrapped around
+        C{self._contextFactory} in such a way that C{self._contextFactory} will
+        have the host and port information passed to it.
+
+        @param host: A C{str} giving the hostname which will be connected to in
+            order to issue a request.
+
+        @param port: An C{int} giving the port number the connection will be on.
+
+        @return: A context factory suitable to be passed to C{reactor.connectSSL}.
+        """
+        return _WebToNormalContextFactory(self._contextFactory, host, port)
+
+
+    def _connect(self, scheme, host, port):
+        """
+        Connect to the given host and port, using a transport selected based on
+        scheme.
+
+        @param scheme: A string like C{'http'} or C{'https'} (the only two
+            supported values) to use to determine how to establish the
+            connection.
+
+        @param host: A C{str} giving the hostname which will be connected to in
+            order to issue a request.
+
+        @param port: An C{int} giving the port number the connection will be on.
+
+        @return: A L{Deferred} which fires with a connected instance of
+            C{self._protocol}.
+        """
+        cc = ClientCreator(self._reactor, self._protocol)
+        if scheme == 'http':
+            d = cc.connectTCP(host, port)
+        elif scheme == 'https':
+            d = cc.connectSSL(host, port, self._wrapContextFactory(host, port))
+        else:
+            d = defer.fail(SchemeNotSupported(
+                    "Unsupported scheme: %r" % (scheme,)))
+        return d
 
 
     def request(self, method, uri, headers=None, bodyProducer=None):
@@ -606,11 +704,7 @@ class Agent(object):
         @rtype: L{Deferred}
         """
         scheme, host, port, path = _parse(uri)
-        if scheme != 'http':
-            return defer.fail(SchemeNotSupported(
-                    "Unsupported scheme: %r" % (scheme,)))
-        cc = ClientCreator(self._reactor, self._protocol)
-        d = cc.connectTCP(host, port)
+        d = self._connect(scheme, host, port)
         if headers is None:
             headers = Headers()
         if not headers.hasHeader('host'):
@@ -630,7 +724,7 @@ class Agent(object):
         Compute the string to use for the value of the I{Host} header, based on
         the given scheme, host name, and port number.
         """
-        if port == 80:
+        if (scheme, port) in (('http', 80), ('https', 443)):
             return host
         return '%s:%d' % (host, port)
 
