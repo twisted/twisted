@@ -5,17 +5,19 @@
 """
 This module provides support for Twisted to linux inotify API.
 
-In order to use this support, simply do the following::
+In order to use this support, simply do the following (and start a reactor
+at some point)::
 
     from twisted.internet import inotify
+    from twisted.python import filepath
 
-    def notify(self, iwp, filepath, mask, extraArg):
-        print "event %s on %s %s" % (
-            ', '.join(inotify.humanReadableMask(mask)), iwp.path, filepath)
+    def notify(self, filepath, mask):
+        print "event %s on %s" % (
+            ', '.join(inotify.humanReadableMask(mask)), filepath)
 
     notifier = inotify.INotify()
     notifier.startReading()
-    notifier.watch("/some/directory", callbacks=[notify])
+    notifier.watch(filepath.FilePath("/some/directory"), callbacks=[notify])
 
 @since: 10.1
 """
