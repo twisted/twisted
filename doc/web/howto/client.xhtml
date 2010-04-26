@@ -91,14 +91,14 @@
       </li>
 
       <li>
-        An additional method is required on <code>IEntityBodyProvider</code>
+        An additional method is required on <code>IBodyProducer</code>
         implementations: <code>startProducing</code>.  This method is used to
         associate a consumer with the producer.  It should return a
         <code>Deferred</code> which fires when all data has been produced.
       </li>
 
       <li>
-        <code>IEntityBodyProvider</code> implementations should never call the
+        <code>IBodyProducer</code> implementations should never call the
         consumer's <code>unregisterProducer</code> method.  Instead, when it
         has produced all of the data it is going to produce, it should only
         fire the <code>Deferred</code> returned by <code>startProducing</code>.
@@ -112,7 +112,7 @@
     </p>
 
     <p>
-      Here's a simple <code>IEntityBodyProvider</code> implementation which
+      Here's a simple <code>IBodyProducer</code> implementation which
       writes an in-memory string to the consumer:
     </p>
 
