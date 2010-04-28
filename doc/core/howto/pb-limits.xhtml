@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+
+  <title>PB Limits</title>
+</head>
+
+<body>
+  <h1>PB Limits</h1>
+
+  <p>There are a number of limits you might encounter when using Perspective
+Broker.  This document is an attempt to prepare you for as many of them as
+possible so you can avoid them or at least recognize them when you do run
+into them.</p>
+
+  <h2>Banana Limits</h2>
+
+  <p>Perspective Broker is implemented in terms of a simpler, less
+functional protocol called Banana.  Twisted's implementation of Banana
+imposes a limit on the length of any sequence-like data type.  This applies
+directly to lists and strings and indirectly to dictionaries, instances and
+other types.  The purpose of this limit is to put an upper bound on the
+amount of memory which will be allocated to handle a message received over
+the network.  Without, a malicious peer could easily perform a denial of
+service attack resulting in exhaustion of the receiver's memory.  The basic
+limit is 640 * 1024, defined by <code>twisted.spread.banana.SIZE_LIMIT</code>.
+It's possible to raise this limit by changing this value (but take care to
+change it on both sides of the connection).</p>
+
+  <p>Another limit imposed by Twisted's Banana implementation is a limit on
+the size of long integers.  The purpose of this limit is the same as the
+<code>SIZE_LIMIT</code>.  By default, only integers between -2 ** 448 and 2
+** 448 (exclusive) can be transferred.  This limit can be changed using
+<code class="API">twisted.spread.banana.setPrefixLimit</code>.</p>
+
+  <h2>Perspective Broker Limits</h2>
+
+  <p>Perspective Broker imposes an additional limit on top of these lower
+level limits.  The number of local objects for which remote references may
+exist at a single time over a single connection, by default, is limited to
+1024, defined by <code>twisted.spread.pb.MAX_BROKER_REFS</code>.  This limit
+also exists to prevent memory exhaustion attacks.</p>
+
+</body>
+</html>
+
