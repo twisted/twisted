@@ -8,6 +8,7 @@ Tests for L{twisted.test.proto_helpers.StringTransport}.
 from zope.interface.verify import verifyObject
 
 from twisted.internet.interfaces import ITransport, IPushProducer, IConsumer
+from twisted.internet.address import IPv4Address
 from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import StringTransport
 
@@ -158,3 +159,40 @@ class StringTransportTests(TestCase):
         self.assertFalse(self.transport.disconnecting)
         self.transport.loseConnection()
         self.assertTrue(self.transport.disconnecting)
+
+
+    def test_specifiedHostAddress(self):
+        """
+        If a host address is passed to L{StringTransport.__init__}, that
+        value is returned from L{StringTransport.getHost}.
+        """
+        address = object()
+        self.assertIdentical(StringTransport(address).getHost(), address)
+
+
+    def test_specifiedPeerAddress(self):
+        """
+        If a peer address is passed to L{StringTransport.__init__}, that
+        value is returned from L{StringTransport.getPeer}.
+        """        
+        address = object()
+        self.assertIdentical(
+            StringTransport(peerAddress=address).getPeer(), address)
+
+
+    def test_defaultHostAddress(self):
+        """
+        If no host address is passed to L{StringTransport.__init__}, an
+        L{IPv4Address} is returned from L{StringTransport.getHost}.
+        """
+        address = StringTransport().getHost()
+        self.assertIsInstance(address, IPv4Address)
+
+
+    def test_defaultPeerAddress(self):
+        """
+        If no peer address is passed to L{StringTransport.__init__}, an
+        L{IPv4Address} is returned from L{StringTransport.getPeer}.
+        """
+        address = StringTransport().getPeer()
+        self.assertIsInstance(address, IPv4Address)

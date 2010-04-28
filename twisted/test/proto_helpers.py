@@ -14,7 +14,7 @@ from zope.interface.verify import verifyObject
 from twisted.internet.interfaces import ITransport, IConsumer, IPushProducer
 from twisted.internet.interfaces import IReactorTCP, IReactorUNIX, IReactorSSL
 from twisted.protocols import basic
-from twisted.internet import protocol, error
+from twisted.internet import protocol, error, address
 
 
 class AccumulatingProtocol(protocol.Protocol):
@@ -191,13 +191,13 @@ class StringTransport:
 
     def getPeer(self):
         if self.peerAddr is None:
-            return ('StringIO', repr(self.io))
+            return address.IPv4Address('TCP', '192.168.1.1', 54321)
         return self.peerAddr
 
 
     def getHost(self):
         if self.hostAddr is None:
-            return ('StringIO', repr(self.io))
+            return address.IPv4Address('TCP', '10.0.0.1', 12345)
         return self.hostAddr
 
 
