@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.conch.test.test_ssh -*-
-# Copyright (c) 2001-2007 Twisted Matrix Laboratories.
+# Copyright (c) 2001-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import struct
@@ -252,7 +252,7 @@ if Crypto is not None and pyasn1 is not None:
     class ConchTestPublicKeyChecker(checkers.SSHPublicKeyDatabase):
         def checkKey(self, credentials):
             unittest.assertEquals(credentials.username, 'testuser', 'bad username')
-            unittest.assertEquals(credentials.blob, keys.getPublicKeyString(data=publicDSA_openssh))
+            unittest.assertEquals(credentials.blob, keys.Key.fromString(publicDSA_openssh).blob())
             return 1
 
     class ConchTestPasswordChecker:
@@ -293,14 +293,14 @@ if Crypto is not None and pyasn1 is not None:
 
         def getPublicKeys(self):
             return {
-                'ssh-rsa':keys.getPublicKeyString(data=publicRSA_openssh),
-                'ssh-dss':keys.getPublicKeyString(data=publicDSA_openssh)
+                'ssh-rsa': keys.Key.fromString(publicRSA_openssh),
+                'ssh-dss': keys.Key.fromString(publicDSA_openssh)
             }
 
         def getPrivateKeys(self):
             return {
-                'ssh-rsa':keys.getPrivateKeyObject(data=privateRSA_openssh),
-                'ssh-dss':keys.getPrivateKeyObject(data=privateDSA_openssh)
+                'ssh-rsa': keys.Key.fromString(privateRSA_openssh),
+                'ssh-dss': keys.Key.fromString(privateDSA_openssh)
             }
 
         def getPrimes(self):
@@ -348,7 +348,7 @@ if Crypto is not None and pyasn1 is not None:
             transport.SSHClientTransport.connectionLost(self, reason)
 
         def verifyHostKey(self, key, fp):
-            unittest.assertEquals(key, keys.getPublicKeyString(data = publicRSA_openssh))
+            unittest.assertEquals(key, keys.Key.fromString(publicRSA_openssh).blob())
             unittest.assertEquals(fp,'3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af')
             return defer.succeed(1)
 
@@ -373,10 +373,10 @@ if Crypto is not None and pyasn1 is not None:
 
         def getPrivateKey(self):
             self.canSucceedPublicKey = 1
-            return defer.succeed(keys.getPrivateKeyObject(data=privateDSA_openssh))
+            return defer.succeed(keys.Key.fromString(privateDSA_openssh))
 
         def getPublicKey(self):
-            return keys.getPublicKeyString(data=publicDSA_openssh)
+            return keys.Key.fromString(publicDSA_openssh)
 
     class ConchTestClientConnection(connection.SSHConnection):
 
