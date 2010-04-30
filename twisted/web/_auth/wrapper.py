@@ -1,5 +1,5 @@
 # -*- test-case-name: twisted.web.test.test_httpauth -*-
-# Copyright (c) 2008-2009 Twisted Matrix Laboratories.
+# Copyright (c) 2008-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -181,9 +181,10 @@ class HTTPAuthSessionWrapper(object):
             def render(self, request):
                 """
                 Hook into response generation so that when rendering has
-                finished completely, C{logout} is called.
+                finished completely (with or without error), C{logout} is
+                called.
                 """
-                request.notifyFinish().addCallback(lambda ign: logout())
+                request.notifyFinish().addBoth(lambda ign: logout())
                 return super(ResourceWrapper, self).render(request)
 
         return ResourceWrapper(avatar)

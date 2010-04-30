@@ -1,4 +1,4 @@
-# Copyright (c) 2009 Twisted Matrix Laboratories.
+# Copyright (c) 2009-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -11,6 +11,8 @@ from zope.interface.verify import verifyObject
 
 from twisted.trial import unittest
 
+from twisted.python.failure import Failure
+from twisted.internet.error import ConnectionDone
 from twisted.internet.address import IPv4Address
 
 from twisted.cred import error, portal
@@ -464,9 +466,14 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         return d
 
 
-    def test_logout(self):
+    def _logoutTest(self):
         """
-        The realm's logout callback is invoked after the resource is rendered.
+        Issue a request for an authentication-protected resource using valid
+        credentials and then return the C{DummyRequest} instance which was
+        used.
+
+        This is a helper for tests about the behavior of the logout
+        callback.
         """
         self.credentialFactories.append(BasicCredentialFactory('example.com'))
 
@@ -478,9 +485,29 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         request = self.makeRequest([self.childName])
         child = self._authorizedBasicLogin(request)
         request.render(child)
-        self.assertEqual(self.realm.loggedOut, 0)
+        self.assertEquals(self.realm.loggedOut, 0)
+        return request
+
+
+    def test_logout(self):
+        """
+        The realm's logout callback is invoked after the resource is rendered.
+        """
+        request = self._logoutTest()
         request.finish()
-        self.assertEqual(self.realm.loggedOut, 1)
+        self.assertEquals(self.realm.loggedOut, 1)
+
+
+    def test_logoutOnError(self):
+        """
+        The realm's logout callback is also invoked if there is an error
+        generating the response (for example, if the client disconnects
+        early).
+        """
+        request = self._logoutTest()
+        request.processingFailed(
+            Failure(ConnectionDone("Simulated disconnect")))
+        self.assertEquals(self.realm.loggedOut, 1)
 
 
     def test_decodeRaises(self):
