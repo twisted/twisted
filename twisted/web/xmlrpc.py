@@ -81,6 +81,13 @@ class XMLRPC(resource.Resource):
     Sub-handlers for prefixed methods (e.g., system.listMethods)
     can be added with putSubHandler. By default, prefixes are
     separated with a '.'. Override self.separator to change this.
+
+    @ivar allowNone: Permit XML translating of Python constant None.
+    @type allowNone: C{bool}
+
+    @ivar useDateTime: Present datetime values as datetime.datetime objects?
+        Requires Python >= 2.5.
+    @type useDateTime: C{bool}
     """
 
     # Error codes for Twisted, if they conflict with yours then
@@ -92,10 +99,18 @@ class XMLRPC(resource.Resource):
     separator = '.'
     allowedMethods = ('POST',)
 
-    def __init__(self, allowNone=False):
+    def __init__(self, allowNone=False, useDateTime=False):
         resource.Resource.__init__(self)
         self.subHandlers = {}
         self.allowNone = allowNone
+        self.useDateTime = useDateTime
+
+
+    def __setattr__(self, name, value):
+        if name == "useDateTime" and value and sys.version_info[:2] < (2, 5):
+            raise RuntimeError("useDateTime requires Python 2.5 or later.")
+        self.__dict__[name] = value
+
 
     def putSubHandler(self, prefix, handler):
         self.subHandlers[prefix] = handler
@@ -110,7 +125,12 @@ class XMLRPC(resource.Resource):
         request.content.seek(0, 0)
         request.setHeader("content-type", "text/xml")
         try:
-            args, functionPath = xmlrpclib.loads(request.content.read())
+            if self.useDateTime:
+                args, functionPath = xmlrpclib.loads(request.content.read(),
+                    use_datetime=True)
+            else:
+                # Maintain backwards compatibility with Python < 2.5
+                args, functionPath = xmlrpclib.loads(request.content.read())
         except Exception, e:
             f = Fault(self.FAILURE, "Can't deserialize input: %s" % (e,))
             self._cbRender(f, request)
@@ -210,8 +230,8 @@ class XMLRPCIntrospection(XMLRPC):
         Implement Introspection support for an XMLRPC server.
 
         @param parent: the XMLRPC server to add Introspection support to.
+        @type parent: L{XMLRPC}
         """
-
         XMLRPC.__init__(self)
         self._xmlrpc_parent = parent
 
@@ -261,7 +281,8 @@ def addIntrospection(xmlrpc):
     """
     Add Introspection support to an XMLRPC server.
 
-    @param xmlrpc: The xmlrpc server to add Introspection support to.
+    @param parent: the XMLRPC server to add Introspection support to.
+    @type parent: L{XMLRPC}
     """
     xmlrpc.putSubHandler('system', XMLRPCIntrospection(xmlrpc))
 
@@ -298,52 +319,66 @@ payloadTemplate = """<?xml version="1.0"?>
 
 
 class _QueryFactory(protocol.ClientFactory):
+    """
+    XML-RPC Client Factory
+
+    @ivar path: The path portion of the URL to which to post method calls.
+    @type path: C{str}
+
+    @ivar host: The value to use for the Host HTTP header.
+    @type host: C{str}
+
+    @ivar user: The username with which to authenticate with the server
+        when making calls.
+    @type user: C{str} or C{NoneType}
+
+    @ivar password: The password with which to authenticate with the server
+        when making calls.
+    @type password: C{str} or C{NoneType}
+
+    @ivar useDateTime: Accept datetime values as datetime.datetime objects.
+        also passed to the underlying xmlrpclib implementation.  Default to
+        False.  Requires Python >= 2.5.
+    @type useDateTime: C{bool}
+    """
 
     deferred = None
     protocol = QueryProtocol
 
     def __init__(self, path, host, method, user=None, password=None,
-                 allowNone=False, args=(), canceller=None):
+                 allowNone=False, args=(), canceller=None, useDateTime=False):
         """
-        @type path: C{str}
-        @param path: The path portion of the URL to which to post method calls.
-
-        @type host: C{str}
-        @param host: The value to use for the Host HTTP header.
-
-        @type method: C{str}
         @param method: The name of the method to call.
+        @type method: C{str}
 
-        @type user: C{str} or C{NoneType}
-        @param user: The username with which to authenticate with the server
-            when making calls.
-
-        @type password: C{str} or C{NoneType}
-        @param password: The password with which to authenticate with the server
-            when making calls.
-
-        @type allowNone: C{bool} or C{NoneType}
         @param allowNone: allow the use of None values in parameters. It's
             passed to the underlying xmlrpclib implementation. Default to False.
+        @type allowNone: C{bool} or C{NoneType}
 
-        @type args: C{tuple}
         @param args: the arguments to pass to the method.
+        @type args: C{tuple}
 
-        @type canceller: C{callable} or C{NoneType}
-        @param canceller: a 1-argument callable passed to the deferred as the
+        @param canceller: A 1-argument callable passed to the deferred as the
             canceller callback.
+        @type canceller: callable or C{NoneType}
         """
         self.path, self.host = path, host
         self.user, self.password = user, password
         self.payload = payloadTemplate % (method,
             xmlrpclib.dumps(args, allow_none=allowNone))
         self.deferred = defer.Deferred(canceller)
+        self.useDateTime = useDateTime
 
     def parseResponse(self, contents):
         if not self.deferred:
             return
         try:
-            response = xmlrpclib.loads(contents)[0][0]
+            if self.useDateTime:
+                response = xmlrpclib.loads(contents,
+                    use_datetime=True)[0][0]
+            else:
+                # Maintain backwards compatibility with Python < 2.5
+                response = xmlrpclib.loads(contents)[0][0]
         except:
             deferred, self.deferred = self.deferred, None
             deferred.errback(failure.Failure())
@@ -373,34 +408,41 @@ class Proxy:
     Use proxy.callRemote('foobar', *args) to call remote method
     'foobar' with *args.
 
+    @ivar user: The username with which to authenticate with the server
+        when making calls.  If specified, overrides any username information
+        embedded in C{url}.  If not specified, a value may be taken from
+        C{url} if present.
+    @type user: C{str} or C{NoneType}
+
+    @ivar password: The password with which to authenticate with the server
+        when making calls.  If specified, overrides any password information
+        embedded in C{url}.  If not specified, a value may be taken from
+        C{url} if present.
+    @type password: C{str} or C{NoneType}
+
+    @ivar allowNone: allow the use of None values in parameters. It's
+        passed to the underlying xmlrpclib implementation. Default to False.
+    @type allowNone: C{bool} or C{NoneType}
+
+    @ivar useDateTime: Accept datetime values as datetime.datetime objects.
+        also passed to the underlying xmlrpclib implementation.  Default to
+        False.  Requires Python >= 2.5.
+    @type useDateTime: C{bool}
+
     @ivar queryFactory: object returning a factory for XML-RPC protocol. Mainly
         useful for tests.
     """
     queryFactory = _QueryFactory
 
-    def __init__(self, url, user=None, password=None, allowNone=False):
+    def __init__(self, url, user=None, password=None, allowNone=False,
+                 useDateTime=False):
         """
-        @type url: C{str}
         @param url: The URL to which to post method calls.  Calls will be made
             over SSL if the scheme is HTTPS.  If netloc contains username or
             password information, these will be used to authenticate, as long as
             the C{user} and C{password} arguments are not specified.
+        @type url: C{str}
 
-        @type user: C{str} or C{NoneType}
-        @param user: The username with which to authenticate with the server
-            when making calls.  If specified, overrides any username information
-            embedded in C{url}.  If not specified, a value may be taken from
-            C{url} if present.
-
-        @type password: C{str} or C{NoneType}
-        @param password: The password with which to authenticate with the server
-            when making calls.  If specified, overrides any password information
-            embedded in C{url}.  If not specified, a value may be taken from
-            C{url} if present.
-
-        @type allowNone: C{bool} or C{NoneType}
-        @param allowNone: allow the use of None values in parameters. It's
-            passed to the underlying xmlrpclib implementation. Default to False.
         """
         scheme, netloc, path, params, query, fragment = urlparse.urlparse(url)
         netlocParts = netloc.split('@')
@@ -428,6 +470,14 @@ class Proxy:
         if password is not None:
             self.password = password
         self.allowNone = allowNone
+        self.useDateTime = useDateTime
+
+
+    def __setattr__(self, name, value):
+        if name == "useDateTime" and value and sys.version_info[:2] < (2, 5):
+            raise RuntimeError("useDateTime requires Python 2.5 or later.")
+        self.__dict__[name] = value
+
 
     def callRemote(self, method, *args):
         """
@@ -447,7 +497,7 @@ class Proxy:
             connector.disconnect()
         factory = self.queryFactory(
             self.path, self.host, method, self.user,
-            self.password, self.allowNone, args, cancel)
+            self.password, self.allowNone, args, cancel, self.useDateTime)
         if self.secure:
             from twisted.internet import ssl
             connector = reactor.connectSSL(self.host, self.port or 443,

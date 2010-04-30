@@ -6,11 +6,12 @@
 Tests for  XML-RPC support in L{twisted.web.xmlrpc}.
 """
 
+import datetime
 import xmlrpclib
 
 from twisted.trial import unittest
 from twisted.web import xmlrpc
-from twisted.web.xmlrpc import XMLRPC, addIntrospection, _QueryFactory
+from twisted.web.xmlrpc import XMLRPC, addIntrospection, _QueryFactory, Proxy
 from twisted.web import server, static, client, error, http
 from twisted.internet import reactor, defer
 from twisted.internet.error import ConnectionDone
@@ -304,50 +305,112 @@ class XMLRPCTestCase2(XMLRPCTestCase):
         return p
 
 
-
-class XMLRPCAllowNoneTestCase(unittest.TestCase):
+class SerializationConfigMixin:
     """
-    Test with allowNone set to True.
+    Mixin which defines a couple tests which should pass when a particular flag
+    is passed to L{XMLRPC}.
 
-    These are not meant to be exhaustive serialization tests, since
-    L{xmlrpclib} does all of the actual serialization work.  They are just
-    meant to exercise a few codepaths to make sure we are calling into
-    xmlrpclib correctly.
+    These are not meant to be exhaustive serialization tests, since L{xmlrpclib}
+    does all of the actual serialization work.  They are just meant to exercise
+    a few codepaths to make sure we are calling into xmlrpclib correctly.
+
+    @ivar flagName: A C{str} giving the name of the flag which must be passed to
+        L{XMLRPC} to allow the tests to pass.  Subclasses should set this.
+
+    @ivar value: A value which the specified flag will allow the serialization
+        of.  Subclasses should set this.
     """
-
     def setUp(self):
+        """
+        Create a new XML-RPC server with C{allowNone} set to C{True}.
+        """
+        kwargs = {self.flagName: True}
         self.p = reactor.listenTCP(
-            0, server.Site(Test(allowNone=True)), interface="127.0.0.1")
+            0, server.Site(Test(**kwargs)), interface="127.0.0.1")
+        self.addCleanup(self.p.stopListening)
         self.port = self.p.getHost().port
+        self.proxy = xmlrpc.Proxy(
+            "http://127.0.0.1:%d/" % (self.port,), **kwargs)
 
 
-    def tearDown(self):
-        return self.p.stopListening()
-
-
-    def proxy(self):
-        return xmlrpc.Proxy("http://127.0.0.1:%d" % (self.port,),
-                            allowNone=True)
-
-
-    def test_deferredNone(self):
+    def test_roundtripValue(self):
         """
-        Test that passing a C{None} as an argument to a remote method and
-        returning a L{Deferred} which fires with C{None} properly passes
-        </nil> over the network if allowNone is set to True.
+        C{self.value} can be round-tripped over an XMLRPC method call/response.
         """
-        d = self.proxy().callRemote('defer', None)
-        d.addCallback(self.assertEquals, None)
+        d = self.proxy.callRemote('defer', self.value)
+        d.addCallback(self.assertEquals, self.value)
         return d
 
 
-    def test_dictWithNoneValue(self):
+    def test_roundtripNestedValue(self):
         """
-        Test that return a C{dict} with C{None} as a value works properly.
+        A C{dict} which contains C{self.value} can be round-tripped over an
+        XMLRPC method call/response.
         """
-        d = self.proxy().callRemote('defer', {'a': None})
-        d.addCallback(self.assertEquals, {'a': None})
+        d = self.proxy.callRemote('defer', {'a': self.value})
+        d.addCallback(self.assertEquals, {'a': self.value})
         return d
+
+
+
+class XMLRPCAllowNoneTestCase(SerializationConfigMixin, unittest.TestCase):
+    """
+    Tests for passing C{None} when the C{allowNone} flag is set.
+    """
+    flagName = "allowNone"
+    value = None
+
+
+try:
+    xmlrpclib.loads(xmlrpclib.dumps(({}, {})), use_datetime=True)
+except TypeError:
+    _datetimeSupported = False
+else:
+    _datetimeSupported = True
+
+
+
+class XMLRPCUseDateTimeTestCase(SerializationConfigMixin, unittest.TestCase):
+    """
+    Tests for passing a C{datetime.datetime} instance when the C{useDateTime}
+    flag is set.
+    """
+    flagName = "useDateTime"
+    value = datetime.datetime(2000, 12, 28, 3, 45, 59)
+
+    if not _datetimeSupported:
+        skip = (
+            "Available version of xmlrpclib does not support datetime "
+            "objects.")
+
+
+
+class XMLRPCDisableUseDateTimeTestCase(unittest.TestCase):
+    """
+    Tests for the C{useDateTime} flag on Python 2.4.
+    """
+    if _datetimeSupported:
+        skip = (
+            "Available version of xmlrpclib supports datetime objects.")
+
+    def test_cannotInitializeWithDateTime(self):
+        """
+        L{XMLRPC} raises L{RuntimeError} if passed C{True} for C{useDateTime}.
+        """
+        self.assertRaises(RuntimeError, XMLRPC, useDateTime=True)
+        self.assertRaises(
+            RuntimeError, Proxy, "http://localhost/", useDateTime=True)
+
+
+    def test_cannotSetDateTime(self):
+        """
+        Setting L{XMLRPC.useDateTime} to C{True} after initialization raises
+        L{RuntimeError}.
+        """
+        xmlrpc = XMLRPC(useDateTime=False)
+        self.assertRaises(RuntimeError, setattr, xmlrpc, "useDateTime", True)
+        proxy = Proxy("http://localhost/", useDateTime=False)
+        self.assertRaises(RuntimeError, setattr, proxy, "useDateTime", True)
 
 
 
