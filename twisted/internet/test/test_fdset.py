@@ -1,4 +1,4 @@
-# Copyright (c) 2009 Twisted Matrix Laboratories.
+# Copyright (c) 2009-2010 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -40,8 +40,8 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
             client.connect(('127.0.0.1', serverSocket.getsockname()[1]))
         except socket.error, e:
             self.assertIn(e.args[0], (EINPROGRESS, EWOULDBLOCK))
-        else:
-            self.fail("Connect should have raised EINPROGRESS or EWOULDBLOCK")
+        except Exception, e:
+            self.fail("Connect should have succeeded or raised EINPROGRESS or EWOULDBLOCK")
         server, addr = serverSocket.accept()
         self.addCleanup(server.close)
 
